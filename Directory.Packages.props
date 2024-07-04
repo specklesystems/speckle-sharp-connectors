@@ -1,5 +1,6 @@
 <Project>
   <ItemGroup>
+    <PackageVersion Include="altcover" Version="8.8.74" />
     <PackageVersion Include="Autofac" Version="5.2.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.0" />
     <PackageVersion Include="Serilog.Extensions.Logging" Version="7.0.0" />

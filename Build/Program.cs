@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.IO.Compression;
 using Build;
 using GlobExpressions;
@@ -107,10 +104,7 @@ Target(
     var version = Environment.GetEnvironmentVariable("GitVersion_FullSemVer") ?? "3.0.0-localBuild";
     var fileVersion = Environment.GetEnvironmentVariable("GitVersion_AssemblySemFileVer") ?? "3.0.0.0";
     Console.WriteLine($"Version: {version} & {fileVersion}");
-    Run(
-      "dotnet",
-      $"build {s} -c Release --no-restore -p:IsDesktopBuild=false -p:Version={version} -p:FileVersion={fileVersion} -v:m"
-    );
+    Run("dotnet", $"build {s} -c Release --no-restore -p:Version={version} -p:FileVersion={fileVersion} -v:m");
   }
 );
 
@@ -127,7 +121,7 @@ Target(
 
     foreach (var file in GetFiles($"**/{t}.csproj"))
     {
-      Run("dotnet", $"test {file} -c Release --no-build --no-restore --verbosity=normal");
+      Run("dotnet", $"test {file} -c Release --no-build --no-restore --verbosity=normal  /p:AltCover=true");
     }
   }
 );
