@@ -45,7 +45,7 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.codecov_token }}
-          files: "**/*.Tests/coverage.xml"
+          files: Converters/**/*.Tests/coverage.xml
 
       - name: ⬆️ Upload artifacts
         uses: actions/upload-artifact@v4
