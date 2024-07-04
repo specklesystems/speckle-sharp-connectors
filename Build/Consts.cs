@@ -1,21 +1,19 @@
-﻿using System.Collections.Generic;
-
-namespace Build;
+﻿namespace Build;
 
 public static class Consts
 {
-  public static readonly string[] Solutions = { "DUI3-DX.slnf" };
-  public static readonly string[] TestProjects = System.Array.Empty<string>();
+  public static readonly string[] Solutions = ["Speckle.Connectors.sln" ];
+  public static readonly string[] TestProjects = [];
 
   public static readonly InstallerProject[] InstallerManifests =
   {
     new(
       "arcgis",
-      new InstallerAsset[] { new("DUI3-DX/Connectors/ArcGIS/Speckle.Connectors.ArcGIS3", "net6.0-windows") }
+      new InstallerAsset[] { new("Connectors/ArcGIS/Speckle.Connectors.ArcGIS3", "net6.0-windows") }
     ),
-    new("rhino", new InstallerAsset[] { new("DUI3-DX/Connectors/Rhino/Speckle.Connectors.Rhino7", "net48") }),
-    new("revit", new InstallerAsset[] { new("DUI3-DX/Connectors/Revit/Speckle.Connectors.Revit2023", "net48") }),
-    new("autocad", new InstallerAsset[] { new("DUI3-DX/Connectors/Autocad/Speckle.Connectors.Autocad2023", "net48") })
+    new("rhino", new InstallerAsset[] { new("Connectors/Rhino/Speckle.Connectors.Rhino7", "net48") }),
+    new("revit", new InstallerAsset[] { new("Connectors/Revit/Speckle.Connectors.Revit2023", "net48") }),
+    new("autocad", new InstallerAsset[] { new("Connectors/Autocad/Speckle.Connectors.Autocad2023", "net48") })
   };
 }
 
