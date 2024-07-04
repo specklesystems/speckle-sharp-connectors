@@ -11,7 +11,7 @@ jobs:
   build:
     uses: ./.github/workflows/ci.yml
     secrets:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      codecov_token: ${{ secrets.CODECOV_TOKEN }}
 
 #  deploy-installers:
 #    runs-on: ubuntu-latest
