@@ -63,9 +63,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Autocad", "Autocad", "{804E
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Converters.AutocadShared", "Converters\Autocad\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.shproj", "{9ADD1B7A-6401-4202-8613-F668E2FBC0A4}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Converters.Autocad2023", "Converters\Autocad\2023\Speckle.Converters.Autocad2023\Speckle.Converters.Autocad2023.csproj", "{631C295A-7CCF-4B42-8686-7034E31469E7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Converters.Autocad2023", "Converters\Autocad\Speckle.Converters.Autocad2023\Speckle.Converters.Autocad2023.csproj", "{631C295A-7CCF-4B42-8686-7034E31469E7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Converters.Autocad2023.DependencyInjection", "Converters\Autocad\2023\Speckle.Converters.Autocad2023.DependencyInjection\Speckle.Converters.Autocad2023.DependencyInjection.csproj", "{D940853C-003A-482C-BDB0-665367F274A0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Converters.Autocad2023.DependencyInjection", "Converters\Autocad\Speckle.Converters.Autocad2023.DependencyInjection\Speckle.Converters.Autocad2023.DependencyInjection.csproj", "{D940853C-003A-482C-BDB0-665367F274A0}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Connectors.DUI.WebView", "DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj", "{7420652C-3046-4F38-BE64-9B9E69D76FA2}"
 EndProject
@@ -78,6 +78,18 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{59E8E8F3
 		.github\workflows\main.yml = .github\workflows\main.yml
 		.github\workflows\ci.yml = .github\workflows\ci.yml
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Civil3d2024", "Connectors\Autocad\Speckle.Connectors.Civil3d2024\Speckle.Connectors.Civil3d2024.csproj", "{CA8EAE01-AB9F-4EC1-B6F3-73721487E9E1}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Converters.Civil3dShared", "Converters\Civil3d\Speckle.Converters.Civil3dShared\Speckle.Converters.Civil3dShared.shproj", "{35175682-DA83-4C0A-A49D-B191F5885D8E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Civil3d2024.DependencyInjection", "Converters\Civil3d\Speckle.Converters.Civil3d2024.DependencyInjection\Speckle.Converters.Civil3d2024.DependencyInjection.csproj", "{80F965C4-E2A8-4F54-985D-73D06E45F9CE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Autocad2024", "Converters\Autocad\Speckle.Converters.Autocad2024\Speckle.Converters.Autocad2024.csproj", "{C2DE264A-AA87-4012-B954-17E3F403A237}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Autocad2024.DependencyInjection", "Converters\Autocad\Speckle.Converters.Autocad2024.DependencyInjection\Speckle.Converters.Autocad2024.DependencyInjection.csproj", "{AF507D61-6766-4C20-9F58-23DC29508219}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Civil3d2024", "Converters\Civil3d\Speckle.Converters.Civil3d2024\Speckle.Converters.Civil3d2024.csproj", "{25172C49-7AA4-4739-BB07-69785094C379}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -161,6 +173,26 @@ Global
 		{C50AA3E3-8C31-4131-9DEC-1D8B377D5A89}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C50AA3E3-8C31-4131-9DEC-1D8B377D5A89}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C50AA3E3-8C31-4131-9DEC-1D8B377D5A89}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CA8EAE01-AB9F-4EC1-B6F3-73721487E9E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CA8EAE01-AB9F-4EC1-B6F3-73721487E9E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CA8EAE01-AB9F-4EC1-B6F3-73721487E9E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CA8EAE01-AB9F-4EC1-B6F3-73721487E9E1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{80F965C4-E2A8-4F54-985D-73D06E45F9CE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{80F965C4-E2A8-4F54-985D-73D06E45F9CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{80F965C4-E2A8-4F54-985D-73D06E45F9CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{80F965C4-E2A8-4F54-985D-73D06E45F9CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C2DE264A-AA87-4012-B954-17E3F403A237}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C2DE264A-AA87-4012-B954-17E3F403A237}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C2DE264A-AA87-4012-B954-17E3F403A237}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C2DE264A-AA87-4012-B954-17E3F403A237}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AF507D61-6766-4C20-9F58-23DC29508219}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AF507D61-6766-4C20-9F58-23DC29508219}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AF507D61-6766-4C20-9F58-23DC29508219}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AF507D61-6766-4C20-9F58-23DC29508219}.Release|Any CPU.Build.0 = Release|Any CPU
+		{25172C49-7AA4-4739-BB07-69785094C379}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{25172C49-7AA4-4739-BB07-69785094C379}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{25172C49-7AA4-4739-BB07-69785094C379}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{25172C49-7AA4-4739-BB07-69785094C379}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{C9D4CA21-182B-4ED2-81BB-280A6FD713F6} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
@@ -190,5 +222,11 @@ Global
 		{D92751C8-1039-4005-90B2-913E55E0B8BD} = {42826721-9A18-4762-8BA9-F1429DD5C5B1}
 		{9584AEE5-CD59-46E6-93E6-2DC2B5285B75} = {42826721-9A18-4762-8BA9-F1429DD5C5B1}
 		{C50AA3E3-8C31-4131-9DEC-1D8B377D5A89} = {59E8E8F3-4E42-4E92-83B3-B1C2AB901D18}
+		{CA8EAE01-AB9F-4EC1-B6F3-73721487E9E1} = {804E065F-914C-414A-AF84-009312C3CFF6}
+		{35175682-DA83-4C0A-A49D-B191F5885D8E} = {804E065F-914C-414A-AF84-009312C3CFF6}
+		{80F965C4-E2A8-4F54-985D-73D06E45F9CE} = {804E065F-914C-414A-AF84-009312C3CFF6}
+		{C2DE264A-AA87-4012-B954-17E3F403A237} = {804E065F-914C-414A-AF84-009312C3CFF6}
+		{AF507D61-6766-4C20-9F58-23DC29508219} = {804E065F-914C-414A-AF84-009312C3CFF6}
+		{25172C49-7AA4-4739-BB07-69785094C379} = {804E065F-914C-414A-AF84-009312C3CFF6}
 	EndGlobalSection
 EndGlobal
