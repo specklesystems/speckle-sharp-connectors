@@ -79,6 +79,7 @@ Target(
 
 Target(
   RESTORE,
+  DependsOn(FORMAT),
   Consts.Solutions,
   s =>
   {
@@ -111,18 +112,10 @@ Target(
 Target(
   TEST,
   DependsOn(BUILD),
-  Consts.TestProjects,
-  t =>
+  Glob.Files(".", "**/*.Tests.csproj"),
+  file =>
   {
-    IEnumerable<string> GetFiles(string d)
-    {
-      return Glob.Files(".", d);
-    }
-
-    foreach (var file in GetFiles($"**/{t}.csproj"))
-    {
-      Run("dotnet", $"test {file} -c Release --no-build --no-restore --verbosity=normal  /p:AltCover=true");
-    }
+    Run("dotnet", $"test {file} -c Release --no-build --no-restore --verbosity=normal  /p:AltCover=true");
   }
 );
 

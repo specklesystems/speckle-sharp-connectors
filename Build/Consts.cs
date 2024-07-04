@@ -3,7 +3,6 @@
 public static class Consts
 {
   public static readonly string[] Solutions = ["Speckle.Connectors.sln" ];
-  public static readonly string[] TestProjects = [];
 
   public static readonly InstallerProject[] InstallerManifests =
   {

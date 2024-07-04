@@ -2,6 +2,12 @@
   "version": 2,
   "dependencies": {
     "net8.0": {
+      "altcover": {
+        "type": "Direct",
+        "requested": "[8.8.74, )",
+        "resolved": "8.8.74",
+        "contentHash": "e8RZNE0vZnuBk/gOAWu9K5wm3S7dOrOlZje3PHI9PJUHqvP1cxVJD1eXAAmddFVlixowB7C7/zvC16GnunC2LQ=="
+      },
       "FluentAssertions": {
         "type": "Direct",
         "requested": "[6.12.0, )",
