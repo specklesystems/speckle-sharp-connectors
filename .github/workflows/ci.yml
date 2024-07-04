@@ -31,8 +31,6 @@ jobs:
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
 
       - name: ⚒️ Run GitVersion
         run: ./build.ps1 build-server-version
