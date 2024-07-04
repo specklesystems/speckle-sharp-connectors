@@ -486,6 +486,13 @@
           "Speckle.Objects": "[3.0.1-alpha.14, )"
         }
       },
+      "speckle.testing": {
+        "type": "Project",
+        "dependencies": {
+          "Moq": "[4.20.70, )",
+          "NUnit": "[4.1.0, )"
+        }
+      },
       "Microsoft.Extensions.Logging.Abstractions": {
         "type": "CentralTransitive",
         "requested": "[7.0.0, )",
