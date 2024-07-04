@@ -9,6 +9,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{85A13E
 		Directory.Packages.props = Directory.Packages.props
 		global.json = global.json
 		README.md = README.md
+		codecov.yml = codecov.yml
 	EndProjectSection
 EndProject
 roject("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Revit", "Revit", "{4838C66E-8677-4FBD-9609-25376042E981}"
@@ -90,6 +91,12 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Autocad2024.DependencyInjection", "Converters\Autocad\Speckle.Converters.Autocad2024.DependencyInjection\Speckle.Converters.Autocad2024.DependencyInjection.csproj", "{AF507D61-6766-4C20-9F58-23DC29508219}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Civil3d2024", "Converters\Civil3d\Speckle.Converters.Civil3d2024\Speckle.Converters.Civil3d2024.csproj", "{25172C49-7AA4-4739-BB07-69785094C379}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Converters.RhinoShared", "Converters\Rhino\Speckle.Converters.RhinoShared\Speckle.Converters.RhinoShared.shproj", "{E1C43415-3200-45F4-8BF9-A4DD7D7F2ED9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Rhino7.Tests", "Converters\Rhino\Speckle.Converters.Rhino7.Tests\Speckle.Converters.Rhino7.Tests.csproj", "{AC2DB416-F05C-4296-9040-56D6AD4FCD27}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Revit2023.Tests", "Converters\Revit\Speckle.Converters.Revit2023.Tests\Speckle.Converters.Revit2023.Tests.csproj", "{68CF9BDF-94AC-4D2D-A7BD-D1C064F97051}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -193,6 +200,14 @@ Global
 		{25172C49-7AA4-4739-BB07-69785094C379}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{25172C49-7AA4-4739-BB07-69785094C379}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{25172C49-7AA4-4739-BB07-69785094C379}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AC2DB416-F05C-4296-9040-56D6AD4FCD27}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AC2DB416-F05C-4296-9040-56D6AD4FCD27}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AC2DB416-F05C-4296-9040-56D6AD4FCD27}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AC2DB416-F05C-4296-9040-56D6AD4FCD27}.Release|Any CPU.Build.0 = Release|Any CPU
+		{68CF9BDF-94AC-4D2D-A7BD-D1C064F97051}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{68CF9BDF-94AC-4D2D-A7BD-D1C064F97051}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{68CF9BDF-94AC-4D2D-A7BD-D1C064F97051}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{68CF9BDF-94AC-4D2D-A7BD-D1C064F97051}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{C9D4CA21-182B-4ED2-81BB-280A6FD713F6} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
@@ -228,5 +243,8 @@ Global
 		{C2DE264A-AA87-4012-B954-17E3F403A237} = {804E065F-914C-414A-AF84-009312C3CFF6}
 		{AF507D61-6766-4C20-9F58-23DC29508219} = {804E065F-914C-414A-AF84-009312C3CFF6}
 		{25172C49-7AA4-4739-BB07-69785094C379} = {804E065F-914C-414A-AF84-009312C3CFF6}
+		{E1C43415-3200-45F4-8BF9-A4DD7D7F2ED9} = {9584AEE5-CD59-46E6-93E6-2DC2B5285B75}
+		{AC2DB416-F05C-4296-9040-56D6AD4FCD27} = {9584AEE5-CD59-46E6-93E6-2DC2B5285B75}
+		{68CF9BDF-94AC-4D2D-A7BD-D1C064F97051} = {D92751C8-1039-4005-90B2-913E55E0B8BD}
 	EndGlobalSection
 EndGlobal
