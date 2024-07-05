@@ -122,10 +122,11 @@ Target(
 
 Target(
   TEST_ONLY,
-  DependsOn(RESTORE),
+  DependsOn(FORMAT),
   Glob.Files(".", "**/*.Tests.csproj"),
   file =>
   {
+    Run("dotnet", $"restore {file} --locked-mode");
     Run("dotnet", $"test {file} -c Release --no-restore --verbosity=normal  /p:AltCover=true");
   }
 );
