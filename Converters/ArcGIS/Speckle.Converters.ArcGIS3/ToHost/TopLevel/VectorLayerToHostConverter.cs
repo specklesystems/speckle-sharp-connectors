@@ -14,19 +14,16 @@ public class VectorLayerToHostConverter : IToHostTopLevelConverter, ITypedConver
   private readonly ITypedConverter<VectorLayer, FeatureClass> _featureClassConverter;
   private readonly ITypedConverter<VectorLayer, Table> _tableConverter;
   private readonly ITypedConverter<VectorLayer, LasDatasetLayer> _pointcloudLayerConverter;
-  private readonly IFeatureClassUtils _featureClassUtils;
 
   public VectorLayerToHostConverter(
     ITypedConverter<VectorLayer, FeatureClass> featureClassConverter,
     ITypedConverter<VectorLayer, Table> tableConverter,
-    ITypedConverter<VectorLayer, LasDatasetLayer> pointcloudLayerConverter,
-    IFeatureClassUtils featureClassUtils
+    ITypedConverter<VectorLayer, LasDatasetLayer> pointcloudLayerConverter
   )
   {
     _featureClassConverter = featureClassConverter;
     _tableConverter = tableConverter;
     _pointcloudLayerConverter = pointcloudLayerConverter;
-    _featureClassUtils = featureClassUtils;
   }
 
   public object Convert(Base target) => Convert((VectorLayer)target);

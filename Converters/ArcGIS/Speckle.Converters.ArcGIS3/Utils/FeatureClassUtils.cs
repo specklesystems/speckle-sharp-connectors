@@ -3,10 +3,12 @@ using Objects.GIS;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Core.Models;
+using Speckle.InterfaceGenerator;
 using FieldDescription = ArcGIS.Core.Data.DDL.FieldDescription;
 
 namespace Speckle.Converters.ArcGIS3.Utils;
 
+[GenerateAutoInterface]
 public class FeatureClassUtils : IFeatureClassUtils
 {
   private readonly IArcGISFieldUtils _fieldsUtils;

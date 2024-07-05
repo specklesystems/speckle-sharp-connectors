@@ -85,7 +85,7 @@ public class FeatureClassToHostConverter : ITypedConverter<VectorLayer, FeatureC
     string wktString = string.Empty;
     if (target.crs is not null && target.crs.wkt is not null)
     {
-      wktString = target.crs.wkt.ToString();
+      wktString = target.crs.wkt;
     }
     ACG.SpatialReference spatialRef = ACG.SpatialReferenceBuilder.CreateSpatialReference(wktString);
 

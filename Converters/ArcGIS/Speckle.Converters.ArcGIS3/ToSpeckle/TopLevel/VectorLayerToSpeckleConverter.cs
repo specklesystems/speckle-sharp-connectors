@@ -14,20 +14,14 @@ namespace Speckle.Converters.ArcGIS3.ToSpeckle.TopLevel;
 public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConverter<FeatureLayer, VectorLayer>
 {
   private readonly ITypedConverter<Row, GisFeature> _gisFeatureConverter;
-  private readonly IFeatureClassUtils _featureClassUtils;
-  private readonly IArcGISFieldUtils _fieldsUtils;
   private readonly IConversionContextStack<ArcGISDocument, Unit> _contextStack;
 
   public VectorLayerToSpeckleConverter(
     ITypedConverter<Row, GisFeature> gisFeatureConverter,
-    IFeatureClassUtils featureClassUtils,
-    IArcGISFieldUtils fieldsUtils,
     IConversionContextStack<ArcGISDocument, Unit> contextStack
   )
   {
     _gisFeatureConverter = gisFeatureConverter;
-    _featureClassUtils = featureClassUtils;
-    _fieldsUtils = fieldsUtils;
     _contextStack = contextStack;
   }
 

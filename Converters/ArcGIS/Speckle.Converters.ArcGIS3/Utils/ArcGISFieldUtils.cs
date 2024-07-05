@@ -4,10 +4,12 @@ using ArcGIS.Core.Data.Exceptions;
 using Objects.GIS;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
+using Speckle.InterfaceGenerator;
 using FieldDescription = ArcGIS.Core.Data.DDL.FieldDescription;
 
 namespace Speckle.Converters.ArcGIS3.Utils;
 
+[GenerateAutoInterface]
 public class ArcGISFieldUtils : IArcGISFieldUtils
 {
   private readonly ICharacterCleaner _characterCleaner;
