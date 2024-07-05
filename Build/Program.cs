@@ -127,7 +127,10 @@ Target(
   file =>
   {
     Run("dotnet", $"restore {file} --locked-mode");
-    Run("dotnet", $"test {file} -c Release --no-restore --verbosity=normal  /p:AltCover=true");
+    Run(
+      "dotnet",
+      $"test {file} -c Release --no-restore --verbosity=normal  /p:AltCover=true /p:AltCoverLocalSource=true /p:AltCoverAttributeFilter=ExcludeFromCodeCoverage"
+    );
   }
 );
 
