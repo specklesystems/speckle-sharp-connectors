@@ -537,7 +537,7 @@
         "type": "Project",
         "dependencies": {
           "Serilog.Extensions.Logging": "[7.0.0, )",
-          "Speckle.Autofac": "[2.0.999-local, )",
+          "Speckle.Autofac": "[1.0.0, )",
           "Speckle.Core": "[3.0.1-alpha.14, )"
         }
       },
