@@ -50,7 +50,7 @@ jobs:
 
       - id: set-version
         name: Set version to output
-        run: echo "version=${{ env.GitVersion_FullSemVer }}" >> "$GITHUB_OUTPUT"   
+        run: echo "version=${{ env.GitVersion_FullSemVer }}" >> "$Env:GITHUB_OUTPUT"   
   test:
     runs-on: ubuntu-latest
     steps:
