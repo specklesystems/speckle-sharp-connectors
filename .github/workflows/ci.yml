@@ -44,8 +44,8 @@ jobs:
       - name: Upload coverage reports to Codecov with GitHub Action
         uses: codecov/codecov-action@v4
         with:
+          file: Converters/**/coverage.xml
           token: ${{ secrets.codecov_token }}
-          files: Converters/**/coverage.xml
 
       - name: ⬆️ Upload artifacts
         uses: actions/upload-artifact@v4
