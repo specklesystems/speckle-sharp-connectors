@@ -74,7 +74,7 @@ public class FeatureClassToHostConverter : ITypedConverter<VectorLayer, FeatureC
 
   public FeatureClass Convert(VectorLayer target)
   {
-    ACG.GeometryType geomType = _featureClassUtils.GetLayerGeometryType(target);
+    ACG.GeometryType geomType = GISLayerGeometryType.GetNativeLayerGeometryType(target);
 
     FileGeodatabaseConnectionPath fileGeodatabaseConnectionPath =
       new(_contextStack.Current.Document.SpeckleDatabasePath);
@@ -85,7 +85,7 @@ public class FeatureClassToHostConverter : ITypedConverter<VectorLayer, FeatureC
     string wktString = string.Empty;
     if (target.crs is not null && target.crs.wkt is not null)
     {
-      wktString = target.crs.wkt.ToString();
+      wktString = target.crs.wkt;
     }
     ACG.SpatialReference spatialRef = ACG.SpatialReferenceBuilder.CreateSpatialReference(wktString);
 

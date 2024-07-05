@@ -14,19 +14,16 @@ public class VectorLayerToHostConverter : IToHostTopLevelConverter, ITypedConver
   private readonly ITypedConverter<VectorLayer, FeatureClass> _featureClassConverter;
   private readonly ITypedConverter<VectorLayer, Table> _tableConverter;
   private readonly ITypedConverter<VectorLayer, LasDatasetLayer> _pointcloudLayerConverter;
-  private readonly IFeatureClassUtils _featureClassUtils;
 
   public VectorLayerToHostConverter(
     ITypedConverter<VectorLayer, FeatureClass> featureClassConverter,
     ITypedConverter<VectorLayer, Table> tableConverter,
-    ITypedConverter<VectorLayer, LasDatasetLayer> pointcloudLayerConverter,
-    IFeatureClassUtils featureClassUtils
+    ITypedConverter<VectorLayer, LasDatasetLayer> pointcloudLayerConverter
   )
   {
     _featureClassConverter = featureClassConverter;
     _tableConverter = tableConverter;
     _pointcloudLayerConverter = pointcloudLayerConverter;
-    _featureClassUtils = featureClassUtils;
   }
 
   public object Convert(Base target) => Convert((VectorLayer)target);
@@ -34,7 +31,7 @@ public class VectorLayerToHostConverter : IToHostTopLevelConverter, ITypedConver
   public string Convert(VectorLayer target)
   {
     // pointcloud layers need to be checked separately, because there is no ArcGIS Geometry type
-    // for Pointcloud. In ArcGIS it's a completely different layer class, so "GetLayerGeometryType"
+    // for Pointcloud. In ArcGIS it's a completely different layer class, so "GetNativeLayerGeometryType"
     // will return "Invalid" type
     if (target.geomType == GISLayerGeometryType.POINTCLOUD)
     {
@@ -42,7 +39,7 @@ public class VectorLayerToHostConverter : IToHostTopLevelConverter, ITypedConver
     }
 
     // check if Speckle VectorLayer should become a FeatureClass, StandaloneTable or PointcloudLayer
-    ACG.GeometryType geomType = _featureClassUtils.GetLayerGeometryType(target);
+    ACG.GeometryType geomType = GISLayerGeometryType.GetNativeLayerGeometryType(target);
     if (geomType != ACG.GeometryType.Unknown) // feature class
     {
       return _featureClassConverter.Convert(target).GetName();
