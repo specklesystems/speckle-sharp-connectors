@@ -6,6 +6,9 @@ on:
       - main
       - dev
   workflow_call:
+    secrets:
+      codecov_token:
+        required: true
     outputs:
       version:
         value: ${{ jobs.build.outputs.version }}
@@ -37,13 +40,6 @@ jobs:
 
       - name: ⚒️ Run build
         run: ./build.ps1
-        
-      - name: Upload coverage reports to Codecov with GitHub Action
-        uses: codecov/codecov-action@v4
-        with:
-          files: ./**/*.Tests/coverage.xml
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
       - name: ⬆️ Upload artifacts
         uses: actions/upload-artifact@v4
@@ -54,4 +50,29 @@ jobs:
 
       - id: set-version
         name: Set version to output
-        run: echo "version=${{ env.GitVersion_FullSemVer }}" >> "$Env:GITHUB_OUTPUT" 
+        run: echo "version=${{ env.GitVersion_FullSemVer }}" >> "$Env:GITHUB_OUTPUT"   
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.2xx # Align with global.json (including roll forward rules)
+      
+      - name: Cache Nuget     
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+
+      - name: ⚒️ Run build
+        run: ./build.sh test-only
+        
+      - name: Upload coverage reports to Codecov with GitHub Action
+        uses: codecov/codecov-action@v4
+        with:
+          file: Converters/**/coverage.xml
+          token: ${{ secrets.codecov_token }}
