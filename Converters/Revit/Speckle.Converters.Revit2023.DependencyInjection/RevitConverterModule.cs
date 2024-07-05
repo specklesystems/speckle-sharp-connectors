@@ -35,6 +35,7 @@ public class RevitConverterModule : ISpeckleModule
     builder.AddScoped<IRevitVersionConversionHelper, RevitVersionConversionHelper>();
 
     builder.AddScoped<ParameterValueExtractor>();
+    builder.AddScoped<ParameterValueSetter>();
     builder.AddScoped<DisplayValueExtractor>();
     builder.AddScoped<HostedElementConversionToSpeckle>();
     builder.AddScoped<ParameterObjectAssigner>();

@@ -1,4 +1,4 @@
-using Autodesk.Revit.DB;
+using Objects.BuiltElements.Revit;
 
 namespace Speckle.Converters.RevitShared.Helpers;
 
@@ -12,139 +12,37 @@ namespace Speckle.Converters.RevitShared.Helpers;
 // some whitespace between each at the least!
 public static class RevitCategories
 {
-  public static Dictionary<string, RevitCategoryInfo> All { get; }
-
-  static RevitCategories()
+  /// <summary>
+  /// Returns the corresponding <see cref="RevitCategory"/> based on a given built-in category name
+  /// </summary>
+  /// <param name="builtInCategory">The name of the built-in category</param>
+  /// <returns>The RevitCategory enum value that corresponds to the given name</returns>
+  public static RevitCategory GetSchemaBuilderCategoryFromBuiltIn(string builtInCategory)
   {
-    All = new(StringComparer.OrdinalIgnoreCase)
+    // Clean up built-in name "OST_Walls" to be just "WALLS"
+    var cleanName = builtInCategory
+      .Replace("OST_IOS", "") //for OST_IOSModelGroups
+      .Replace("OST_MEP", "") //for OST_MEPSpaces
+      .Replace("OST_", "") //for any other OST_blablabla
+      .Replace("_", " ");
+
+    var res = Enum.TryParse(cleanName, out RevitCategory cat);
+    if (!res)
     {
-      { nameof(CableTray), CableTray },
-      { nameof(Ceiling), Ceiling },
-      { nameof(Column), Column },
-      { nameof(Conduit), Conduit },
-      { nameof(Door), Door },
-      { nameof(Duct), Duct },
-      { nameof(FamilyInstance), FamilyInstance },
-      { nameof(Floor), Floor },
-      { nameof(Furniture), Furniture },
-      { nameof(Pipe), Pipe },
-      { nameof(PlumbingFixture), PlumbingFixture },
-      { nameof(Roof), Roof },
-      { nameof(Railing), Railing },
-      { nameof(StructuralFraming), StructuralFraming },
-      { nameof(Wall), Wall },
-      { nameof(Window), Window },
-      { nameof(Wire), Wire },
-      { nameof(Undefined), Undefined },
-    };
+      throw new NotSupportedException($"Built-in category {builtInCategory} is not supported.");
+    }
+
+    return cat;
   }
 
-  public static RevitCategoryInfo CableTray { get; } =
-    new(
-      nameof(CableTray),
-      typeof(DB.Electrical.CableTray),
-      typeof(DB.Electrical.CableTrayType),
-      new List<BuiltInCategory>()
-    );
-  public static RevitCategoryInfo Ceiling { get; } =
-    new(nameof(Ceiling), typeof(DB.Ceiling), typeof(CeilingType), new List<BuiltInCategory>());
-  public static RevitCategoryInfo Column { get; } =
-    new(
-      nameof(Column),
-      typeof(FamilyInstance),
-      typeof(FamilySymbol),
-      new List<BuiltInCategory> { BuiltInCategory.OST_Columns, BuiltInCategory.OST_StructuralColumns }
-    );
-  public static RevitCategoryInfo Conduit { get; } =
-    new(nameof(Conduit), typeof(DB.Electrical.Conduit), typeof(DB.Electrical.ConduitType), new List<BuiltInCategory>());
-  public static RevitCategoryInfo Door { get; } =
-    new(
-      nameof(Door),
-      typeof(DB.FamilyInstance),
-      typeof(DB.FamilySymbol),
-      new List<BuiltInCategory> { BuiltInCategory.OST_Doors }
-    );
-  public static RevitCategoryInfo Duct { get; } =
-    new(
-      nameof(Duct),
-      typeof(DB.Mechanical.Duct),
-      typeof(DB.MEPCurveType),
-      new List<BuiltInCategory> { BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_FlexDuctCurves }
-    );
-  public static RevitCategoryInfo FamilyInstance { get; } =
-    new(nameof(FamilyInstance), typeof(DB.FamilyInstance), typeof(DB.FamilySymbol), new List<BuiltInCategory>());
-  public static RevitCategoryInfo Floor { get; } =
-    new(
-      nameof(Floor),
-      typeof(DB.Floor),
-      typeof(DB.FloorType),
-      new List<BuiltInCategory> { BuiltInCategory.OST_Floors }
-    );
-  public static RevitCategoryInfo Furniture { get; } =
-    new(
-      nameof(Furniture),
-      typeof(DB.FamilyInstance),
-      typeof(DB.FamilySymbol),
-      new List<BuiltInCategory> { BuiltInCategory.OST_Furniture }
-    );
-
-  //public static RevitCategoryInfo Material { get; } = new(
-  //  nameof(Material),
-  //  typeof(DB.Material),
-  //  null,
-  //  new List<BuiltInCategory>
-  //  {
-  //    BuiltInCategory.OST_Materials,
-  //    BuiltInCategory.OST_PipeMaterials,
-  //    BuiltInCategory.OST_WireMaterials
-  //  });
-  public static RevitCategoryInfo Pipe { get; } =
-    new(
-      nameof(Pipe),
-      typeof(DB.Plumbing.Pipe),
-      typeof(DB.MEPCurveType),
-      new List<BuiltInCategory> { BuiltInCategory.OST_PipeCurves, BuiltInCategory.OST_FlexPipeCurves }
-    );
-  public static RevitCategoryInfo PlumbingFixture { get; } =
-    new(
-      nameof(PlumbingFixture),
-      typeof(DB.FamilyInstance),
-      typeof(DB.FamilySymbol),
-      new List<BuiltInCategory> { BuiltInCategory.OST_PlumbingFixtures }
-    );
-  public static RevitCategoryInfo Roof { get; } =
-    new(
-      nameof(Roof),
-      typeof(DB.RoofBase),
-      typeof(DB.RoofType),
-      new List<BuiltInCategory> { BuiltInCategory.OST_Roofs, }
-    );
-  public static RevitCategoryInfo Railing { get; } =
-    new(
-      nameof(Railing),
-      typeof(DB.Architecture.Railing),
-      typeof(DB.Architecture.RailingType),
-      new List<BuiltInCategory>()
-    );
-  public static RevitCategoryInfo StructuralFraming { get; } =
-    new(
-      nameof(StructuralFraming),
-      typeof(DB.FamilyInstance),
-      typeof(DB.FamilySymbol),
-      new List<BuiltInCategory> { BuiltInCategory.OST_StructuralFraming },
-      new List<string> { "beam", "brace", "framing" }
-    );
-  public static RevitCategoryInfo Wall { get; } =
-    new(nameof(Wall), typeof(DB.Wall), typeof(DB.WallType), new List<BuiltInCategory> { BuiltInCategory.OST_Walls });
-  public static RevitCategoryInfo Window { get; } =
-    new(
-      nameof(Window),
-      typeof(DB.FamilyInstance),
-      typeof(DB.FamilySymbol),
-      new List<BuiltInCategory> { BuiltInCategory.OST_Windows }
-    );
-  public static RevitCategoryInfo Wire { get; } =
-    new(nameof(Wire), typeof(DB.Electrical.Wire), typeof(DB.Electrical.WireType), new List<BuiltInCategory>());
-  public static RevitCategoryInfo Undefined { get; } =
-    new(nameof(Undefined), typeof(RevitCategoryInfo), typeof(RevitCategoryInfo), new List<BuiltInCategory>());
+  /// <summary>
+  /// Returns the corresponding built-in category name from a specific <see cref="RevitCategory"/>
+  /// </summary>
+  /// <param name="c">The RevitCategory to convert</param>
+  /// <returns>The name of the built-in category that corresponds to the input RevitCategory</returns>
+  public static string GetBuiltInFromSchemaBuilderCategory(RevitCategory c)
+  {
+    var name = Enum.GetName(typeof(RevitCategory), c);
+    return $"OST_{name}";
+  }
 }

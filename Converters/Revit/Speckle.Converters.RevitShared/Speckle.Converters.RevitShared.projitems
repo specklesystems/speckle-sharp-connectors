@@ -10,6 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\ISlopeArrowExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Helpers\ParameterValueSetter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\SlopeArrowExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)IReferencePointConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\CategoryExtensions.cs" />
@@ -36,9 +37,14 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\PointConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\PolylineConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\VectorConverterToHost.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\RenderMaterialToHostConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\SurfaceConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\BaseTopLevelConverterToHost.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\BrepToHostTopLevelConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\DirectShapeTopLevelConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\LevelToHostTopLevelConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\GridlineToHostTopLevelConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\MeshToHostTopLevelConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\ModelCurveToSpeckleTopLevelConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\BeamConversionToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\BoundarySegmentConversionToSpeckle.cs" />
