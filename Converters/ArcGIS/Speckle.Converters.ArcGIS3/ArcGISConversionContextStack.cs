@@ -3,6 +3,7 @@ using ArcGIS.Core.Data.DDL;
 using ArcGIS.Core.Data;
 using ArcGIS.Desktop.Core;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
+using Speckle.Converters.ArcGIS3.Utils;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Converters.Common;
 
@@ -13,12 +14,16 @@ public class ArcGISDocument
   public Project Project { get; }
   public Map Map { get; }
   public Uri SpeckleDatabasePath { get; }
+  public CRSoffsetRotation ActiveCRSoffsetRotation { get; set; }
 
   public ArcGISDocument()
   {
     Project = Project.Current;
     Map = MapView.Active.Map;
     SpeckleDatabasePath = EnsureOrAddSpeckleDatabase();
+    // CRS of either: incoming commit to be applied to all received objects, or CRS to convert all objects to, before sending
+    // created per Send/Receive operation, will be the same for all objects in the operation
+    ActiveCRSoffsetRotation = new CRSoffsetRotation(MapView.Active.Map.SpatialReference);
   }
 
   private const string FGDB_NAME = "Speckle.gdb";
