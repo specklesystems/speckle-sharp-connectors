@@ -1,8 +1,10 @@
-﻿using Moq;
+﻿using System.Diagnostics.CodeAnalysis;
+using Moq;
 using NUnit.Framework;
 
 namespace Speckle.Testing;
 
+[ExcludeFromCodeCoverage]
 public abstract class MoqTest
 {
   [SetUp]
