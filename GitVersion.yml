@@ -1,0 +1,11 @@
+next-version: 3.0.0
+mode: ContinuousDelivery
+assembly-informational-format: "{Major}.{Minor}.{Patch}-{PreReleaseTag}"
+branches:
+  main:
+    regex: ^main$
+    tag: rc
+  dev:
+    tag: beta
+  pull-request:
+    tag: pr
