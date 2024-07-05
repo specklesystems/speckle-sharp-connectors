@@ -74,14 +74,20 @@ public class RhinoInstanceObjectsManager : IInstanceObjectsManager<RhinoObject, 
     // We ensure that all previous instance proxies that have the same definition are at this max depth. I kind of have a feeling this can be done more elegantly, but YOLO
     foreach (var instanceProxy in instanceProxiesWithSameDefinition)
     {
-      instanceProxy.MaxDepth = depth;
+      if (instanceProxy.MaxDepth < depth)
+      {
+        instanceProxy.MaxDepth = depth;
+      }
     }
 
     instanceProxiesWithSameDefinition.Add(_instanceProxies[instanceId]);
 
     if (_definitionProxies.TryGetValue(instanceDefinitionId, out InstanceDefinitionProxy value))
     {
-      value.MaxDepth = depth;
+      if (value.MaxDepth < depth)
+      {
+        value.MaxDepth = depth;
+      }
       return;
     }
 
