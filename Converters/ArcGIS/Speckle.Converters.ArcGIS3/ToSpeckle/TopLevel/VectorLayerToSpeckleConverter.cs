@@ -14,40 +14,20 @@ namespace Speckle.Converters.ArcGIS3.ToSpeckle.TopLevel;
 public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConverter<FeatureLayer, VectorLayer>
 {
   private readonly ITypedConverter<Row, GisFeature> _gisFeatureConverter;
-  private readonly IFeatureClassUtils _featureClassUtils;
-  private readonly IArcGISFieldUtils _fieldsUtils;
   private readonly IConversionContextStack<ArcGISDocument, Unit> _contextStack;
 
   public VectorLayerToSpeckleConverter(
     ITypedConverter<Row, GisFeature> gisFeatureConverter,
-    IFeatureClassUtils featureClassUtils,
-    IArcGISFieldUtils fieldsUtils,
     IConversionContextStack<ArcGISDocument, Unit> contextStack
   )
   {
     _gisFeatureConverter = gisFeatureConverter;
-    _featureClassUtils = featureClassUtils;
-    _fieldsUtils = fieldsUtils;
     _contextStack = contextStack;
   }
 
   public Base Convert(object target)
   {
     return Convert((FeatureLayer)target);
-  }
-
-  private string AssignSpeckleGeometryType(esriGeometryType nativeGeometryType)
-  {
-    return nativeGeometryType switch
-    {
-      esriGeometryType.esriGeometryMultipoint => GISLayerGeometryType.POINT,
-      esriGeometryType.esriGeometryPoint => GISLayerGeometryType.POINT,
-      esriGeometryType.esriGeometryLine => GISLayerGeometryType.POLYLINE,
-      esriGeometryType.esriGeometryPolyline => GISLayerGeometryType.POLYLINE,
-      esriGeometryType.esriGeometryPolygon => GISLayerGeometryType.POLYGON,
-      esriGeometryType.esriGeometryMultiPatch => GISLayerGeometryType.MULTIPATCH,
-      _ => GISLayerGeometryType.NONE,
-    };
   }
 
   public VectorLayer Convert(FeatureLayer target)
@@ -93,7 +73,7 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
     speckleLayer.attributes = allLayerAttributes;
 
     // get a simple geometry type
-    string spekleGeometryType = AssignSpeckleGeometryType(target.ShapeType);
+    string spekleGeometryType = GISLayerGeometryType.LayerGeometryTypeToSpeckle(target.ShapeType);
     speckleLayer.geomType = spekleGeometryType;
 
     // search the rows

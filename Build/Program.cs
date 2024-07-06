@@ -8,6 +8,7 @@ const string CLEAN = "clean";
 const string RESTORE = "restore";
 const string BUILD = "build";
 const string TEST = "test";
+const string TEST_ONLY = "test-only";
 const string FORMAT = "format";
 const string ZIP = "zip";
 const string VERSION = "version";
@@ -115,7 +116,21 @@ Target(
   Glob.Files(".", "**/*.Tests.csproj"),
   file =>
   {
-    Run("dotnet", $"test {file} -c Release --no-build --no-restore --verbosity=normal  /p:AltCover=true");
+    Run("dotnet", $"test {file} -c Release --no-build --no-restore --verbosity=normal");
+  }
+);
+
+Target(
+  TEST_ONLY,
+  DependsOn(FORMAT),
+  Glob.Files(".", "**/*.Tests.csproj"),
+  file =>
+  {
+    Run("dotnet", $"restore {file} --locked-mode");
+    Run(
+      "dotnet",
+      $"test {file} -c Release --no-restore --verbosity=normal  /p:AltCover=true /p:AltCoverLocalSource=true /p:AltCoverAttributeFilter=ExcludeFromCodeCoverage"
+    );
   }
 );
 

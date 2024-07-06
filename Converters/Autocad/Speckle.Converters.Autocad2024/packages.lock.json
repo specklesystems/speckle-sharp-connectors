@@ -363,7 +363,7 @@
       "speckle.converters.common": {
         "type": "Project",
         "dependencies": {
-          "Speckle.Autofac": "[2.0.999-local, )",
+          "Speckle.Autofac": "[1.0.0, )",
           "Speckle.Objects": "[3.0.1-alpha.14, )"
         }
       },
