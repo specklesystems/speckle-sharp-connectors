@@ -82,11 +82,15 @@ public class RhinoInstanceObjectsManager : IInstanceObjectsManager<RhinoObject, 
 
     instanceProxiesWithSameDefinition.Add(_instanceProxies[instanceId]);
 
+    
+    
     if (_definitionProxies.TryGetValue(instanceDefinitionId, out InstanceDefinitionProxy value))
     {
-      if (value.MaxDepth < depth)
+      int depthDifference = depth - value.MaxDepth;
+      if (depthDifference > 0)
       {
-        value.MaxDepth = depth;
+        // all MaxDepth of children definitions and its instances should be increased with difference of depth
+        UpdateChildrenMaxDepth(value, depthDifference);
       }
       return;
     }
@@ -110,6 +114,39 @@ public class RhinoInstanceObjectsManager : IInstanceObjectsManager<RhinoObject, 
         UnpackInstance(localInstance, depth + 1);
       }
       _flatAtomicObjects[obj.Id.ToString()] = obj;
+    }
+  }
+  
+  private void UpdateChildrenMaxDepth(InstanceDefinitionProxy definitionProxy, int depthDifference)
+  {
+    // Increase depth of definition
+    definitionProxy.MaxDepth += depthDifference;
+    
+    // Find instance proxies of given definition
+    var definitionInstanceProxies = definitionProxy.Objects
+      .Where(id => _instanceProxies.TryGetValue(id, out _))
+      .Select(id => _instanceProxies[id])
+      .ToList();
+
+    // Break the loop if no instance found under definition.
+    if (!definitionInstanceProxies.Any())
+    {
+      return;
+    }
+
+    var subDefinitions = new Dictionary<string, InstanceDefinitionProxy>();
+    foreach (InstanceProxy instanceProxy in definitionInstanceProxies)
+    {
+      // Increase depth of instance
+      instanceProxy.MaxDepth += depthDifference;
+      // Collect sub definitions
+      subDefinitions[instanceProxy.DefinitionId] = _definitionProxies[instanceProxy.DefinitionId];
+    }
+
+    // Iterate through sub definitions
+    foreach (var subDefinition in subDefinitions.Values)
+    {
+      UpdateChildrenMaxDepth(subDefinition, depthDifference);
     }
   }
 
