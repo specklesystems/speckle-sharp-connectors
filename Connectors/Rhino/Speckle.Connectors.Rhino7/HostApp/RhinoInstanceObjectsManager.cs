@@ -81,8 +81,6 @@ public class RhinoInstanceObjectsManager : IInstanceObjectsManager<RhinoObject, 
     }
 
     instanceProxiesWithSameDefinition.Add(_instanceProxies[instanceId]);
-
-    
     
     if (_definitionProxies.TryGetValue(instanceDefinitionId, out InstanceDefinitionProxy value))
     {
@@ -128,7 +126,7 @@ public class RhinoInstanceObjectsManager : IInstanceObjectsManager<RhinoObject, 
       .Select(id => _instanceProxies[id])
       .ToList();
 
-    // Break the loop if no instance found under definition.
+    // Break the loop if no instance proxy found under definition.
     if (!definitionInstanceProxies.Any())
     {
       return;
