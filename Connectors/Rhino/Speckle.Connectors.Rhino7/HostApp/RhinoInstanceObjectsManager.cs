@@ -81,7 +81,7 @@ public class RhinoInstanceObjectsManager : IInstanceObjectsManager<RhinoObject, 
     }
 
     instanceProxiesWithSameDefinition.Add(_instanceProxies[instanceId]);
-    
+
     if (_definitionProxies.TryGetValue(instanceDefinitionId, out InstanceDefinitionProxy value))
     {
       int depthDifference = depth - value.MaxDepth;
@@ -114,12 +114,12 @@ public class RhinoInstanceObjectsManager : IInstanceObjectsManager<RhinoObject, 
       _flatAtomicObjects[obj.Id.ToString()] = obj;
     }
   }
-  
+
   private void UpdateChildrenMaxDepth(InstanceDefinitionProxy definitionProxy, int depthDifference)
   {
     // Increase depth of definition
     definitionProxy.MaxDepth += depthDifference;
-    
+
     // Find instance proxies of given definition
     var definitionInstanceProxies = definitionProxy.Objects
       .Where(id => _instanceProxies.TryGetValue(id, out _))
