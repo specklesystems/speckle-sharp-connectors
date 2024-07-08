@@ -5,10 +5,6 @@ using Speckle.Core.Models;
 
 namespace Speckle.Converters.RevitShared.Helpers;
 
-// POC: needs reviewing, it may be fine, not sure how open/closed it is
-// really if we have to edit a switch statement...
-// maybe also better as an extension method, but maybe is fine?
-// POC: there are a lot of public methods here. Maybe consider consolodating
 public class ParameterValueSetter(ScalingServiceToHost scalingService)
 {
   public void SetInstanceParameters(DB.Element revitElement, Base speckleElement, List<string>? exclusions = null)
