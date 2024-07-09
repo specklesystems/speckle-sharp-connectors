@@ -9,7 +9,6 @@ using Speckle.Connectors.Rhino7.HostApp;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Conversion;
-using Speckle.Connectors.Utils.Instances;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Core.Logging;
 
@@ -22,7 +21,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
 {
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
   private readonly ISendConversionCache _sendConversionCache;
-  private readonly IInstanceObjectsManager<RhinoObject, List<string>> _instanceObjectsManager;
+  private readonly RhinoInstanceObjectsManager _instanceObjectsManager;
   private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
   private readonly RhinoLayerManager _layerManager;
 
@@ -31,7 +30,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     ISendConversionCache sendConversionCache,
     IConversionContextStack<RhinoDoc, UnitSystem> contextStack,
     RhinoLayerManager layerManager,
-    IInstanceObjectsManager<RhinoObject, List<string>> instanceObjectsManager
+    RhinoInstanceObjectsManager instanceObjectsManager
   )
   {
     _unitOfWorkFactory = unitOfWorkFactory;

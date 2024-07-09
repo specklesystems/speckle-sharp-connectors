@@ -4,7 +4,6 @@ using Rhino.Geometry;
 using Speckle.Connectors.Rhino7.HostApp;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
-using Speckle.Connectors.Utils.Instances;
 using Speckle.Converters.Common;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
@@ -22,7 +21,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
   private readonly GraphTraversal _traverseFunction;
 
-  private readonly IInstanceObjectsManager<RhinoObject, List<string>> _instanceObjectsManager;
+  private readonly RhinoInstanceObjectsManager _instanceObjectsManager;
   private readonly RhinoLayerManager _layerManager;
 
   public RhinoHostObjectBuilder(
@@ -30,7 +29,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     IConversionContextStack<RhinoDoc, UnitSystem> contextStack,
     GraphTraversal traverseFunction,
     RhinoLayerManager layerManager,
-    IInstanceObjectsManager<RhinoObject, List<string>> instanceObjectsManager
+    RhinoInstanceObjectsManager instanceObjectsManager
   )
   {
     _converter = converter;

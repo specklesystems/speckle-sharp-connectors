@@ -13,20 +13,21 @@ using Speckle.Core.Models.Instances;
 namespace Speckle.Connectors.Rhino7.HostApp;
 
 /// <summary>
-/// <inheritdoc/>
 ///  Expects to be a scoped dependency per send or receive operation.
+/// POC: Split later unpacker and baker.
 /// </summary>
-public class RhinoInstanceObjectsManager : IInstanceObjectsManager<RhinoObject, List<string>>
+public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInstanceBaker<List<string>>
 {
-  private readonly Dictionary<string, InstanceProxy> _instanceProxies = new();
-  private readonly Dictionary<string, List<InstanceProxy>> _instanceProxiesByDefinitionId = new();
-  private readonly Dictionary<string, InstanceDefinitionProxy> _definitionProxies = new();
-  private readonly Dictionary<string, RhinoObject> _flatAtomicObjects = new();
   private readonly RhinoLayerManager _layerManager;
+  private readonly IInstanceObjectsManager<RhinoObject, List<string>> _instanceObjectsManager;
 
-  public RhinoInstanceObjectsManager(RhinoLayerManager layerManager)
+  public RhinoInstanceObjectsManager(
+    RhinoLayerManager layerManager,
+    IInstanceObjectsManager<RhinoObject, List<string>> instanceObjectsManager
+  )
   {
     _layerManager = layerManager;
+    _instanceObjectsManager = instanceObjectsManager;
   }
 
   public UnpackResult<RhinoObject> UnpackSelection(IEnumerable<RhinoObject> objects)
@@ -37,9 +38,9 @@ public class RhinoInstanceObjectsManager : IInstanceObjectsManager<RhinoObject, 
       {
         UnpackInstance(instanceObject);
       }
-      _flatAtomicObjects[obj.Id.ToString()] = obj;
+      _instanceObjectsManager.AddAtomicObject(obj.Id.ToString(), obj);
     }
-    return new(_flatAtomicObjects.Values.ToList(), _instanceProxies, _definitionProxies.Values.ToList());
+    return _instanceObjectsManager.GetUnpackResult();
   }
 
   private void UnpackInstance(InstanceObject instance, int depth = 0)
@@ -48,40 +49,50 @@ public class RhinoInstanceObjectsManager : IInstanceObjectsManager<RhinoObject, 
     var instanceDefinitionId = instance.InstanceDefinition.Id.ToString();
     var currentDoc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
 
-    _instanceProxies[instanceId] = new InstanceProxy()
-    {
-      applicationId = instanceId,
-      DefinitionId = instance.InstanceDefinition.Id.ToString(),
-      Transform = XFormToMatrix(instance.InstanceXform),
-      MaxDepth = depth,
-      Units = currentDoc.ModelUnitSystem.ToSpeckleString()
-    };
+    InstanceProxy instanceProxy =
+      new()
+      {
+        applicationId = instanceId,
+        DefinitionId = instance.InstanceDefinition.Id.ToString(),
+        Transform = XFormToMatrix(instance.InstanceXform),
+        MaxDepth = depth,
+        Units = currentDoc.ModelUnitSystem.ToSpeckleString()
+      };
+    _instanceObjectsManager.AddInstanceProxy(instanceId, instanceProxy);
 
     // For each block instance that has the same definition, we need to keep track of the "maximum depth" at which is found.
     // This will enable on receive to create them in the correct order (descending by max depth, interleaved definitions and instances).
     // We need to interleave the creation of definitions and instances, as some definitions may depend on instances.
     if (
-      !_instanceProxiesByDefinitionId.TryGetValue(
+      !_instanceObjectsManager.TryGetInstanceProxiesFromDefinitionId(
         instanceDefinitionId,
         out List<InstanceProxy> instanceProxiesWithSameDefinition
       )
     )
     {
       instanceProxiesWithSameDefinition = new List<InstanceProxy>();
-      _instanceProxiesByDefinitionId[instanceDefinitionId] = instanceProxiesWithSameDefinition;
+      _instanceObjectsManager.AddInstanceProxiesByDefinitionId(instanceDefinitionId, instanceProxiesWithSameDefinition);
     }
 
     // We ensure that all previous instance proxies that have the same definition are at this max depth. I kind of have a feeling this can be done more elegantly, but YOLO
-    foreach (var instanceProxy in instanceProxiesWithSameDefinition)
+    foreach (var instanceProxyWithSameDefinition in instanceProxiesWithSameDefinition)
     {
-      instanceProxy.MaxDepth = depth;
+      if (instanceProxyWithSameDefinition.MaxDepth < depth)
+      {
+        instanceProxyWithSameDefinition.MaxDepth = depth;
+      }
     }
 
-    instanceProxiesWithSameDefinition.Add(_instanceProxies[instanceId]);
+    instanceProxiesWithSameDefinition.Add(_instanceObjectsManager.GetInstanceProxy(instanceId));
 
-    if (_definitionProxies.TryGetValue(instanceDefinitionId, out InstanceDefinitionProxy value))
+    if (_instanceObjectsManager.TryGetInstanceDefinitionProxy(instanceDefinitionId, out InstanceDefinitionProxy value))
     {
-      value.MaxDepth = depth;
+      int depthDifference = depth - value.MaxDepth;
+      if (depthDifference > 0)
+      {
+        // all MaxDepth of children definitions and its instances should be increased with difference of depth
+        _instanceObjectsManager.UpdateChildrenMaxDepth(value, depthDifference);
+      }
       return;
     }
 
@@ -94,7 +105,7 @@ public class RhinoInstanceObjectsManager : IInstanceObjectsManager<RhinoObject, 
       ["description"] = instance.InstanceDefinition.Description
     };
 
-    _definitionProxies[instance.InstanceDefinition.Id.ToString()] = definition;
+    _instanceObjectsManager.AddDefinitionProxy(instance.InstanceDefinition.Id.ToString(), definition);
 
     foreach (var obj in instance.InstanceDefinition.GetObjects())
     {
@@ -103,7 +114,7 @@ public class RhinoInstanceObjectsManager : IInstanceObjectsManager<RhinoObject, 
       {
         UnpackInstance(localInstance, depth + 1);
       }
-      _flatAtomicObjects[obj.Id.ToString()] = obj;
+      _instanceObjectsManager.AddAtomicObject(obj.Id.ToString(), obj);
     }
   }
 
