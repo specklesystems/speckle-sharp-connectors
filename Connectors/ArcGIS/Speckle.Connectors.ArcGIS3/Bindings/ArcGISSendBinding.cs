@@ -17,6 +17,7 @@ using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Operations;
+using Speckle.Core.Transports;
 
 namespace Speckle.Connectors.ArcGIS.Bindings;
 
@@ -321,13 +322,6 @@ public sealed class ArcGISSendBinding : ISendBinding
       // Init cancellation token source -> Manager also cancel it if exist before
       CancellationTokenSource cts = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
-      var sendInfo = new SendInfo(
-        modelCard.AccountId.NotNull(),
-        modelCard.ProjectId.NotNull(),
-        modelCard.ModelId.NotNull(),
-        "ArcGIS"
-      );
-
       var sendResult = await QueuedTask
         .Run(async () =>
         {
@@ -349,7 +343,7 @@ public sealed class ArcGISSendBinding : ISendBinding
           var result = await unitOfWork.Service
             .Execute(
               mapMembers,
-              sendInfo,
+              modelCard.GetSendInfo("ArcGIS"), // POC: get host app name from settings?
               (status, progress) =>
                 Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts),
               cts.Token
@@ -364,6 +358,10 @@ public sealed class ArcGISSendBinding : ISendBinding
     }
     // Catch here specific exceptions if they related to model card.
     catch (SpeckleSendFilterException e)
+    {
+      Commands.SetModelError(modelCardId, e);
+    }
+    catch (TransportException e)
     {
       Commands.SetModelError(modelCardId, e);
     }

@@ -101,17 +101,10 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
       }
 
-      var sendInfo = new SendInfo(
-        modelCard.AccountId.NotNull(),
-        modelCard.ProjectId.NotNull(),
-        modelCard.ModelId.NotNull(),
-        _revitSettings.HostSlug.NotNull()
-      );
-
       var sendResult = await sendOperation.Service
         .Execute(
           revitObjects,
-          sendInfo,
+          modelCard.GetSendInfo(_revitSettings.HostSlug.NotNull()),
           (status, progress) =>
             Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts),
           cts.Token

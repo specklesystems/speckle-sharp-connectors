@@ -163,17 +163,10 @@ public sealed class RhinoSendBinding : ISendBinding
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
       }
 
-      var sendInfo = new SendInfo(
-        modelCard.AccountId.NotNull(),
-        modelCard.ProjectId.NotNull(),
-        modelCard.ModelId.NotNull(),
-        _rhinoSettings.HostAppInfo.Name
-      );
-
       var sendResult = await unitOfWork.Service
         .Execute(
           rhinoObjects,
-          sendInfo,
+          modelCard.GetSendInfo(_rhinoSettings.HostAppInfo.Name),
           (status, progress) =>
             Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts),
           cts.Token
