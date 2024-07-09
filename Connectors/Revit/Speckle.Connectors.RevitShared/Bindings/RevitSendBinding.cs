@@ -12,6 +12,7 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
+using Speckle.Core.Transports;
 
 namespace Speckle.Connectors.Revit.Bindings;
 
@@ -115,6 +116,10 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     }
     // Catch here specific exceptions if they related to model card.
     catch (SpeckleSendFilterException e)
+    {
+      Commands.SetModelError(modelCardId, e);
+    }
+    catch (TransportException e)
     {
       Commands.SetModelError(modelCardId, e);
     }

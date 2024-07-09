@@ -7,6 +7,7 @@ using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
+using Speckle.Core.Transports;
 
 namespace Speckle.Connectors.Rhino7.Bindings;
 
@@ -67,6 +68,10 @@ public class RhinoReceiveBinding : IReceiveBinding
         conversionResults.BakedObjectIds,
         conversionResults.ConversionResults
       );
+    }
+    catch (TransportException e)
+    {
+      Commands.SetModelError(modelCardId, e);
     }
     // Catch here specific exceptions if they related to model card.
     catch (OperationCanceledException)

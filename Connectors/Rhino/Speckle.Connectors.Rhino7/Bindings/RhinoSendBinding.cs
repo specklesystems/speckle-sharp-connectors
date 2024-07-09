@@ -14,6 +14,7 @@ using Speckle.Connectors.Utils.Operations;
 using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Caching;
+using Speckle.Core.Transports;
 
 namespace Speckle.Connectors.Rhino7.Bindings;
 
@@ -177,6 +178,10 @@ public sealed class RhinoSendBinding : ISendBinding
     }
     // Catch here specific exceptions if they related to model card.
     catch (SpeckleSendFilterException e)
+    {
+      Commands.SetModelError(modelCardId, e);
+    }
+    catch (TransportException e)
     {
       Commands.SetModelError(modelCardId, e);
     }

@@ -13,6 +13,7 @@ using Speckle.Connectors.Utils.Operations;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Caching;
+using Speckle.Core.Transports;
 
 namespace Speckle.Connectors.Autocad.Bindings;
 
@@ -173,6 +174,10 @@ public sealed class AutocadSendBinding : ISendBinding
     {
       // SWALLOW -> UI handles it immediately, so we do not need to handle anything
       return;
+    }
+    catch (TransportException e)
+    {
+      Commands.SetModelError(modelCardId, e);
     }
     catch (SpeckleSendFilterException e)
     {

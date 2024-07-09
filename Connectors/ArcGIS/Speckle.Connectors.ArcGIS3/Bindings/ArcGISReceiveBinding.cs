@@ -6,6 +6,7 @@ using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
+using Speckle.Core.Transports;
 
 namespace Speckle.Connectors.ArcGIS.Bindings;
 
@@ -65,6 +66,10 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
         receiveOperationResults.BakedObjectIds,
         receiveOperationResults.ConversionResults
       );
+    }
+    catch (TransportException e)
+    {
+      Commands.SetModelError(modelCardId, e);
     }
     // Catch here specific exceptions if they related to model card.
     catch (OperationCanceledException)
