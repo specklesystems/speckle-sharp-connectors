@@ -1,0 +1,28 @@
+﻿using Speckle.Core.Models.Instances;
+
+namespace Speckle.Connectors.Utils.Instances;
+
+public interface IInstanceBaker<TAppIdMapValueType>
+{
+  /// <summary>
+  /// Will bake a set of instance components (instances and instance definitions) in the host app.
+  /// </summary>
+  /// <param name="instanceComponents"></param>
+  /// <param name="applicationIdMap"></param>
+  /// <param name="baseLayerName"></param>
+  /// <param name="onOperationProgressed"></param>
+  /// <returns></returns>
+  BakeResult BakeInstances(
+    List<(string[] layerPath, IInstanceComponent obj)> instanceComponents,
+    Dictionary<string, TAppIdMapValueType> applicationIdMap,
+    string baseLayerName,
+    Action<string, double?>? onOperationProgressed
+  );
+
+  /// <summary>
+  /// <para>Cleans up previously baked instances and associated definitions containing the `namePrefix` in their name.</para>
+  /// <para>Note: this is based on the convention that all defintions have their name set to a model based prefix.</para>
+  /// </summary>
+  /// <param name="namePrefix">The name prefix to search and delete by.</param>
+  void PurgeInstances(string namePrefix);
+}

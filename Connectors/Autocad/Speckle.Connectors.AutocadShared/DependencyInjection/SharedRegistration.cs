@@ -65,7 +65,11 @@ public static class SharedRegistration
 
     // register send conversion cache
     builder.AddSingleton<ISendConversionCache, SendConversionCache>();
-    builder.AddScoped<IInstanceObjectsManager<AutocadRootObject, List<Entity>>, AutocadInstanceObjectManager>();
+    builder.AddScoped<
+      IInstanceObjectsManager<AutocadRootObject, List<Entity>>,
+      InstanceObjectsManager<AutocadRootObject, List<Entity>>
+    >();
+    builder.AddScoped<AutocadInstanceObjectManager>();
   }
 
   public static void LoadReceive(SpeckleContainerBuilder builder)
