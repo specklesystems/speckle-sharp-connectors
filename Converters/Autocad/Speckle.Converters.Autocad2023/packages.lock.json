@@ -379,7 +379,7 @@
       },
       "Speckle.Core": {
         "type": "CentralTransitive",
-        "requested": "[3.0.1-alpha.14, )",
+        "requested": "[3.0.1-alpha.15, )",
         "resolved": "3.0.1-alpha.14",
         "contentHash": "RzQPVIGFFkKvG56YLr8ACtiwdWJE6IJ9vCQ4qHa0PIsUEpfzAIAi59jnzqtByOFC0FiFrFPow9bkfzylaZorAA==",
         "dependencies": {
