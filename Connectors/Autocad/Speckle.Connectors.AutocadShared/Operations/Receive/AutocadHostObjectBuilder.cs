@@ -23,13 +23,13 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
   private readonly GraphTraversal _traversalFunction;
 
   // private readonly HashSet<string> _uniqueLayerNames = new();
-  private readonly IInstanceObjectsManager<AutocadRootObject, List<Entity>> _instanceObjectsManager;
+  private readonly AutocadInstanceObjectManager _instanceObjectsManager;
 
   public AutocadHostObjectBuilder(
     IRootToHostConverter converter,
     GraphTraversal traversalFunction,
     AutocadLayerManager autocadLayerManager,
-    IInstanceObjectsManager<AutocadRootObject, List<Entity>> instanceObjectsManager
+    AutocadInstanceObjectManager instanceObjectsManager
   )
   {
     _converter = converter;

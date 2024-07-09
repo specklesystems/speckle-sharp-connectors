@@ -16,16 +16,22 @@ namespace Speckle.Connectors.Autocad.HostApp;
 /// <inheritdoc/>
 ///  Expects to be a scoped dependency per send or receive operation.
 /// </summary>
-public class AutocadInstanceObjectManager : InstanceObjectsManager<AutocadRootObject, List<Entity>>
+public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>, IInstanceBaker<List<Entity>>
 {
   private readonly AutocadLayerManager _autocadLayerManager;
 
-  public AutocadInstanceObjectManager(AutocadLayerManager autocadLayerManager)
+  private readonly IInstanceObjectsManager<AutocadRootObject, List<Entity>> _instanceObjectsManager;
+
+  public AutocadInstanceObjectManager(
+    AutocadLayerManager autocadLayerManager,
+    IInstanceObjectsManager<AutocadRootObject, List<Entity>> instanceObjectsManager
+  )
   {
     _autocadLayerManager = autocadLayerManager;
+    _instanceObjectsManager = instanceObjectsManager;
   }
 
-  public override UnpackResult<AutocadRootObject> UnpackSelection(IEnumerable<AutocadRootObject> objects)
+  public UnpackResult<AutocadRootObject> UnpackSelection(IEnumerable<AutocadRootObject> objects)
   {
     using var transaction = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
 
@@ -35,10 +41,9 @@ public class AutocadInstanceObjectManager : InstanceObjectsManager<AutocadRootOb
       {
         UnpackInstance(blockReference, 0, transaction);
       }
-
-      FlatAtomicObjects[obj.ApplicationId] = obj;
+      _instanceObjectsManager.AddAtomicObject(obj.ApplicationId, obj);
     }
-    return new(FlatAtomicObjects.Values.ToList(), InstanceProxies, DefinitionProxies.Values.ToList());
+    return _instanceObjectsManager.GetUnpackResult();
   }
 
   private void UnpackInstance(BlockReference instance, int depth, Transaction transaction)
@@ -46,47 +51,54 @@ public class AutocadInstanceObjectManager : InstanceObjectsManager<AutocadRootOb
     var instanceIdString = instance.Handle.Value.ToString();
     var definitionId = instance.BlockTableRecord;
 
-    InstanceProxies[instanceIdString] = new InstanceProxy()
-    {
-      applicationId = instanceIdString,
-      DefinitionId = definitionId.ToString(),
-      MaxDepth = depth,
-      Transform = GetMatrix(instance.BlockTransform.ToArray()),
-      Units = Application.DocumentManager.CurrentDocument.Database.Insunits.ToSpeckleString()
-    };
+    InstanceProxy instanceProxy =
+      new()
+      {
+        applicationId = instanceIdString,
+        DefinitionId = definitionId.ToString(),
+        MaxDepth = depth,
+        Transform = GetMatrix(instance.BlockTransform.ToArray()),
+        Units = Application.DocumentManager.CurrentDocument.Database.Insunits.ToSpeckleString()
+      };
+    _instanceObjectsManager.AddInstanceProxy(instanceIdString, instanceProxy);
 
     // For each block instance that has the same definition, we need to keep track of the "maximum depth" at which is found.
     // This will enable on receive to create them in the correct order (descending by max depth, interleaved definitions and instances).
     // We need to interleave the creation of definitions and instances, as some definitions may depend on instances.
     if (
-      !InstanceProxiesByDefinitionId.TryGetValue(
+      !_instanceObjectsManager.TryGetInstanceProxiesFromDefinitionId(
         definitionId.ToString(),
         out List<InstanceProxy> instanceProxiesWithSameDefinition
       )
     )
     {
       instanceProxiesWithSameDefinition = new List<InstanceProxy>();
-      InstanceProxiesByDefinitionId[definitionId.ToString()] = instanceProxiesWithSameDefinition;
+      _instanceObjectsManager.AddInstanceProxiesByDefinitionId(
+        definitionId.ToString(),
+        instanceProxiesWithSameDefinition
+      );
     }
 
     // We ensure that all previous instance proxies that have the same definition are at this max depth. I kind of have a feeling this can be done more elegantly, but YOLO
-    foreach (var instanceProxy in instanceProxiesWithSameDefinition)
+    foreach (var instanceProxyWithSameDefinition in instanceProxiesWithSameDefinition)
     {
-      if (instanceProxy.MaxDepth < depth)
+      if (instanceProxyWithSameDefinition.MaxDepth < depth)
       {
-        instanceProxy.MaxDepth = depth;
+        instanceProxyWithSameDefinition.MaxDepth = depth;
       }
     }
 
-    instanceProxiesWithSameDefinition.Add(InstanceProxies[instanceIdString]);
+    instanceProxiesWithSameDefinition.Add(_instanceObjectsManager.GetInstanceProxy(instanceIdString));
 
-    if (DefinitionProxies.TryGetValue(definitionId.ToString(), out InstanceDefinitionProxy value))
+    if (
+      _instanceObjectsManager.TryGetInstanceDefinitionProxy(definitionId.ToString(), out InstanceDefinitionProxy value)
+    )
     {
       int depthDifference = depth - value.MaxDepth;
       if (depthDifference > 0)
       {
         // all MaxDepth of children definitions and its instances should be increased with difference of depth
-        UpdateChildrenMaxDepth(value, depthDifference);
+        _instanceObjectsManager.UpdateChildrenMaxDepth(value, depthDifference);
       }
       return;
     }
@@ -114,13 +126,13 @@ public class AutocadInstanceObjectManager : InstanceObjectsManager<AutocadRootOb
       {
         UnpackInstance(blockReference, depth + 1, transaction);
       }
-      FlatAtomicObjects[handleIdString] = new(obj, handleIdString);
+      _instanceObjectsManager.AddAtomicObject(handleIdString, new(obj, handleIdString));
     }
 
-    DefinitionProxies[definitionId.ToString()] = definitionProxy;
+    _instanceObjectsManager.AddDefinitionProxy(definitionId.ToString(), definitionProxy);
   }
 
-  public override BakeResult BakeInstances(
+  public BakeResult BakeInstances(
     List<(string[] layerPath, IInstanceComponent obj)> instanceComponents,
     Dictionary<string, List<Entity>> applicationIdMap,
     string baseLayerName,
@@ -229,7 +241,7 @@ public class AutocadInstanceObjectManager : InstanceObjectsManager<AutocadRootOb
   /// POC: This function will not be able to delete block definitions if the user creates a new one composed out of received definitions.
   /// </summary>
   /// <param name="namePrefix"></param>
-  public override void PurgeInstances(string namePrefix)
+  public void PurgeInstances(string namePrefix)
   {
     using var transaction = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
     var instanceDefinitionsToDelete = new Dictionary<string, BlockTableRecord>();

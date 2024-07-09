@@ -1,44 +1,80 @@
 ﻿using Speckle.Core.Models.Instances;
+using Speckle.InterfaceGenerator;
 
 namespace Speckle.Connectors.Utils.Instances;
 
-/// <summary>
-/// Abstract class to cover common functionalities of inheritors.
-/// </summary>
-public abstract class InstanceObjectsManager<THostObjectType, TAppIdMapValueType>
+[GenerateAutoInterface]
+public class InstanceObjectsManager<THostObjectType, TAppIdMapValueType>
   : IInstanceObjectsManager<THostObjectType, TAppIdMapValueType>
 {
-  protected readonly Dictionary<string, InstanceProxy> InstanceProxies = new();
-  protected readonly Dictionary<string, List<InstanceProxy>> InstanceProxiesByDefinitionId = new();
-  protected readonly Dictionary<string, InstanceDefinitionProxy> DefinitionProxies = new();
-  protected readonly Dictionary<string, THostObjectType> FlatAtomicObjects = new();
+  private readonly Dictionary<string, InstanceProxy> _instanceProxies = new();
+  private readonly Dictionary<string, List<InstanceProxy>> _instanceProxiesByDefinitionId = new();
+  private readonly Dictionary<string, InstanceDefinitionProxy> _definitionProxies = new();
+  private readonly Dictionary<string, THostObjectType> _flatAtomicObjects = new();
 
-  public abstract UnpackResult<THostObjectType> UnpackSelection(IEnumerable<THostObjectType> objects);
+  public void AddInstanceProxy(string objectId, InstanceProxy instanceProxy) =>
+    _instanceProxies[objectId] = instanceProxy;
 
-  public abstract BakeResult BakeInstances(
-    List<(string[] layerPath, IInstanceComponent obj)> instanceComponents,
-    Dictionary<string, TAppIdMapValueType> applicationIdMap,
-    string baseLayerName,
-    Action<string, double?>? onOperationProgressed
-  );
+  public void AddDefinitionProxy(string objectId, InstanceDefinitionProxy instanceDefinitionProxy) =>
+    _definitionProxies[objectId] = instanceDefinitionProxy;
 
-  public abstract void PurgeInstances(string namePrefix);
+  public void AddAtomicObject(string objectId, THostObjectType obj) => _flatAtomicObjects[objectId] = obj;
+
+  public void AddInstanceProxiesByDefinitionId(string definitionId, List<InstanceProxy> instanceProxies) =>
+    _instanceProxiesByDefinitionId[definitionId] = instanceProxies;
+
+  public UnpackResult<THostObjectType> GetUnpackResult() =>
+    new(GetAtomicObjects(), GetInstanceProxies(), GetDefinitionProxies());
+
+  public bool TryGetInstanceProxiesFromDefinitionId(
+    string definitionId,
+    out List<InstanceProxy> instanceProxiesWithSameDefinition
+  )
+  {
+    instanceProxiesWithSameDefinition = new List<InstanceProxy>();
+    if (_instanceProxiesByDefinitionId.TryGetValue(definitionId, out List<InstanceProxy> value))
+    {
+      instanceProxiesWithSameDefinition = value;
+      return true;
+    }
+    return false;
+  }
+
+  public bool TryGetInstanceDefinitionProxy(string definitionId, out InstanceDefinitionProxy instanceDefinitionProxy)
+  {
+    instanceDefinitionProxy = new InstanceDefinitionProxy();
+    if (_definitionProxies.TryGetValue(definitionId, out InstanceDefinitionProxy value))
+    {
+      instanceDefinitionProxy = value;
+      return true;
+    }
+
+    return false;
+  }
+
+  public InstanceProxy GetInstanceProxy(string instanceId) => _instanceProxies[instanceId];
+
+  private List<THostObjectType> GetAtomicObjects() => _flatAtomicObjects.Values.ToList();
+
+  private List<InstanceDefinitionProxy> GetDefinitionProxies() => _definitionProxies.Values.ToList();
+
+  private Dictionary<string, InstanceProxy> GetInstanceProxies() => _instanceProxies;
 
   /// <summary>
-  /// Update children max depths whenever definition proxy is found on the unpacked dictionary (<see cref="DefinitionProxies"/>).
+  /// Update children max depths whenever definition proxy is found on the unpacked dictionary (<see cref="_definitionProxies"/>).
   /// Even if definition unpacked before, max depth of its children must be updated if upcoming max depth is higher than existing one.
   /// </summary>
   /// <param name="definitionProxy"> Definition proxy to update max depth of its children.</param>
   /// <param name="depthDifference"> Value to increase max depth of children.</param>
-  protected void UpdateChildrenMaxDepth(InstanceDefinitionProxy definitionProxy, int depthDifference)
+  public void UpdateChildrenMaxDepth(InstanceDefinitionProxy definitionProxy, int depthDifference)
   {
     // Increase depth of definition
     definitionProxy.MaxDepth += depthDifference;
 
     // Find instance proxies of given definition
     var definitionInstanceProxies = definitionProxy.Objects
-      .Where(id => InstanceProxies.TryGetValue(id, out _))
-      .Select(id => InstanceProxies[id])
+      .Where(id => _instanceProxies.TryGetValue(id, out _))
+      .Select(id => _instanceProxies[id])
       .ToList();
 
     // Break the loop if no instance proxy found under definition.
@@ -53,7 +89,7 @@ public abstract class InstanceObjectsManager<THostObjectType, TAppIdMapValueType
       // Increase depth of instance
       instanceProxy.MaxDepth += depthDifference;
       // Collect sub definitions
-      subDefinitions[instanceProxy.DefinitionId] = DefinitionProxies[instanceProxy.DefinitionId];
+      subDefinitions[instanceProxy.DefinitionId] = _definitionProxies[instanceProxy.DefinitionId];
     }
 
     // Iterate through sub definitions
