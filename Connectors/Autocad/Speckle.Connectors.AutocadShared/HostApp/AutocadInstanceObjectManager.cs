@@ -13,8 +13,8 @@ using Speckle.Core.Models.Instances;
 namespace Speckle.Connectors.Autocad.HostApp;
 
 /// <summary>
-/// <inheritdoc/>
 ///  Expects to be a scoped dependency per send or receive operation.
+/// POC: Split later unpacker and baker.
 /// </summary>
 public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>, IInstanceBaker<List<Entity>>
 {
