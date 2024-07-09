@@ -16,12 +16,8 @@ namespace Speckle.Connectors.Rhino7.HostApp;
 /// <inheritdoc/>
 ///  Expects to be a scoped dependency per send or receive operation.
 /// </summary>
-public class RhinoInstanceObjectsManager : IInstanceObjectsManager<RhinoObject, List<string>>
+public class RhinoInstanceObjectsManager : InstanceObjectsManager<RhinoObject, List<string>>
 {
-  private readonly Dictionary<string, InstanceProxy> _instanceProxies = new();
-  private readonly Dictionary<string, List<InstanceProxy>> _instanceProxiesByDefinitionId = new();
-  private readonly Dictionary<string, InstanceDefinitionProxy> _definitionProxies = new();
-  private readonly Dictionary<string, RhinoObject> _flatAtomicObjects = new();
   private readonly RhinoLayerManager _layerManager;
 
   public RhinoInstanceObjectsManager(RhinoLayerManager layerManager)
@@ -29,7 +25,7 @@ public class RhinoInstanceObjectsManager : IInstanceObjectsManager<RhinoObject, 
     _layerManager = layerManager;
   }
 
-  public UnpackResult<RhinoObject> UnpackSelection(IEnumerable<RhinoObject> objects)
+  public override UnpackResult<RhinoObject> UnpackSelection(IEnumerable<RhinoObject> objects)
   {
     foreach (var obj in objects)
     {
@@ -37,9 +33,9 @@ public class RhinoInstanceObjectsManager : IInstanceObjectsManager<RhinoObject, 
       {
         UnpackInstance(instanceObject);
       }
-      _flatAtomicObjects[obj.Id.ToString()] = obj;
+      FlatAtomicObjects[obj.Id.ToString()] = obj;
     }
-    return new(_flatAtomicObjects.Values.ToList(), _instanceProxies, _definitionProxies.Values.ToList());
+    return new(FlatAtomicObjects.Values.ToList(), InstanceProxies, DefinitionProxies.Values.ToList());
   }
 
   private void UnpackInstance(InstanceObject instance, int depth = 0)
@@ -48,7 +44,7 @@ public class RhinoInstanceObjectsManager : IInstanceObjectsManager<RhinoObject, 
     var instanceDefinitionId = instance.InstanceDefinition.Id.ToString();
     var currentDoc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
 
-    _instanceProxies[instanceId] = new InstanceProxy()
+    InstanceProxies[instanceId] = new InstanceProxy()
     {
       applicationId = instanceId,
       DefinitionId = instance.InstanceDefinition.Id.ToString(),
@@ -61,14 +57,14 @@ public class RhinoInstanceObjectsManager : IInstanceObjectsManager<RhinoObject, 
     // This will enable on receive to create them in the correct order (descending by max depth, interleaved definitions and instances).
     // We need to interleave the creation of definitions and instances, as some definitions may depend on instances.
     if (
-      !_instanceProxiesByDefinitionId.TryGetValue(
+      !InstanceProxiesByDefinitionId.TryGetValue(
         instanceDefinitionId,
         out List<InstanceProxy> instanceProxiesWithSameDefinition
       )
     )
     {
       instanceProxiesWithSameDefinition = new List<InstanceProxy>();
-      _instanceProxiesByDefinitionId[instanceDefinitionId] = instanceProxiesWithSameDefinition;
+      InstanceProxiesByDefinitionId[instanceDefinitionId] = instanceProxiesWithSameDefinition;
     }
 
     // We ensure that all previous instance proxies that have the same definition are at this max depth. I kind of have a feeling this can be done more elegantly, but YOLO
@@ -80,9 +76,9 @@ public class RhinoInstanceObjectsManager : IInstanceObjectsManager<RhinoObject, 
       }
     }
 
-    instanceProxiesWithSameDefinition.Add(_instanceProxies[instanceId]);
+    instanceProxiesWithSameDefinition.Add(InstanceProxies[instanceId]);
 
-    if (_definitionProxies.TryGetValue(instanceDefinitionId, out InstanceDefinitionProxy value))
+    if (DefinitionProxies.TryGetValue(instanceDefinitionId, out InstanceDefinitionProxy value))
     {
       int depthDifference = depth - value.MaxDepth;
       if (depthDifference > 0)
@@ -102,7 +98,7 @@ public class RhinoInstanceObjectsManager : IInstanceObjectsManager<RhinoObject, 
       ["description"] = instance.InstanceDefinition.Description
     };
 
-    _definitionProxies[instance.InstanceDefinition.Id.ToString()] = definition;
+    DefinitionProxies[instance.InstanceDefinition.Id.ToString()] = definition;
 
     foreach (var obj in instance.InstanceDefinition.GetObjects())
     {
@@ -111,11 +107,11 @@ public class RhinoInstanceObjectsManager : IInstanceObjectsManager<RhinoObject, 
       {
         UnpackInstance(localInstance, depth + 1);
       }
-      _flatAtomicObjects[obj.Id.ToString()] = obj;
+      FlatAtomicObjects[obj.Id.ToString()] = obj;
     }
   }
 
-  private void UpdateChildrenMaxDepth(InstanceDefinitionProxy definitionProxy, int depthDifference)
+  /*private void UpdateChildrenMaxDepth(InstanceDefinitionProxy definitionProxy, int depthDifference)
   {
     // Increase depth of definition
     definitionProxy.MaxDepth += depthDifference;
@@ -146,7 +142,7 @@ public class RhinoInstanceObjectsManager : IInstanceObjectsManager<RhinoObject, 
     {
       UpdateChildrenMaxDepth(subDefinition, depthDifference);
     }
-  }
+  }*/
 
   /// <summary>
   /// Bakes in the host app doc instances. Assumes constituent atomic objects already present in the host app.
@@ -154,7 +150,7 @@ public class RhinoInstanceObjectsManager : IInstanceObjectsManager<RhinoObject, 
   /// <param name="instanceComponents">Instance definitions and instances that need creating.</param>
   /// <param name="applicationIdMap">A dict mapping { original application id -> [resulting application ids post conversion] }</param>
   /// <param name="onOperationProgressed"></param>
-  public BakeResult BakeInstances(
+  public override BakeResult BakeInstances(
     List<(string[] layerPath, IInstanceComponent obj)> instanceComponents,
     Dictionary<string, List<string>> applicationIdMap,
     string baseLayerName,
@@ -250,7 +246,7 @@ public class RhinoInstanceObjectsManager : IInstanceObjectsManager<RhinoObject, 
     return new(createdObjectIds, consumedObjectIds, conversionResults);
   }
 
-  public void PurgeInstances(string namePrefix)
+  public override void PurgeInstances(string namePrefix)
   {
     var currentDoc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
     foreach (var definition in currentDoc.InstanceDefinitions)

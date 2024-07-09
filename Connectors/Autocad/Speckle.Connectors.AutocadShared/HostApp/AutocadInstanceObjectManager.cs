@@ -16,20 +16,16 @@ namespace Speckle.Connectors.Autocad.HostApp;
 /// <inheritdoc/>
 ///  Expects to be a scoped dependency per send or receive operation.
 /// </summary>
-public class AutocadInstanceObjectManager : IInstanceObjectsManager<AutocadRootObject, List<Entity>>
+public class AutocadInstanceObjectManager : InstanceObjectsManager<AutocadRootObject, List<Entity>>
 {
   private readonly AutocadLayerManager _autocadLayerManager;
-  private Dictionary<string, InstanceProxy> InstanceProxies { get; set; } = new();
-  private Dictionary<string, List<InstanceProxy>> InstanceProxiesByDefinitionId { get; set; } = new();
-  private Dictionary<string, InstanceDefinitionProxy> DefinitionProxies { get; set; } = new();
-  private Dictionary<string, AutocadRootObject> FlatAtomicObjects { get; set; } = new();
 
   public AutocadInstanceObjectManager(AutocadLayerManager autocadLayerManager)
   {
     _autocadLayerManager = autocadLayerManager;
   }
 
-  public UnpackResult<AutocadRootObject> UnpackSelection(IEnumerable<AutocadRootObject> objects)
+  public override UnpackResult<AutocadRootObject> UnpackSelection(IEnumerable<AutocadRootObject> objects)
   {
     using var transaction = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
 
@@ -76,15 +72,23 @@ public class AutocadInstanceObjectManager : IInstanceObjectsManager<AutocadRootO
     // We ensure that all previous instance proxies that have the same definition are at this max depth. I kind of have a feeling this can be done more elegantly, but YOLO
     foreach (var instanceProxy in instanceProxiesWithSameDefinition)
     {
-      instanceProxy.MaxDepth = depth;
+      if (instanceProxy.MaxDepth < depth)
+      {
+        instanceProxy.MaxDepth = depth;
+      }
     }
 
     instanceProxiesWithSameDefinition.Add(InstanceProxies[instanceIdString]);
 
     if (DefinitionProxies.TryGetValue(definitionId.ToString(), out InstanceDefinitionProxy value))
     {
-      value.MaxDepth = depth;
-      return; // exit fast - we've parsed this one so no need to go further
+      int depthDifference = depth - value.MaxDepth;
+      if (depthDifference > 0)
+      {
+        // all MaxDepth of children definitions and its instances should be increased with difference of depth
+        UpdateChildrenMaxDepth(value, depthDifference);
+      }
+      return;
     }
 
     var definition = (BlockTableRecord)transaction.GetObject(definitionId, OpenMode.ForRead);
@@ -116,7 +120,7 @@ public class AutocadInstanceObjectManager : IInstanceObjectsManager<AutocadRootO
     DefinitionProxies[definitionId.ToString()] = definitionProxy;
   }
 
-  public BakeResult BakeInstances(
+  public override BakeResult BakeInstances(
     List<(string[] layerPath, IInstanceComponent obj)> instanceComponents,
     Dictionary<string, List<Entity>> applicationIdMap,
     string baseLayerName,
@@ -225,7 +229,7 @@ public class AutocadInstanceObjectManager : IInstanceObjectsManager<AutocadRootO
   /// POC: This function will not be able to delete block definitions if the user creates a new one composed out of received definitions.
   /// </summary>
   /// <param name="namePrefix"></param>
-  public void PurgeInstances(string namePrefix)
+  public override void PurgeInstances(string namePrefix)
   {
     using var transaction = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
     var instanceDefinitionsToDelete = new Dictionary<string, BlockTableRecord>();
