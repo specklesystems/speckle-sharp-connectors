@@ -13,6 +13,7 @@ public sealed class DirectShapeTopLevelConverterToHost(
   ITypedConverter<Brep, DB.Solid> brepConverter,
   ITypedConverter<ICurve, DB.CurveArray> curveConverter,
   ITypedConverter<SOG.Mesh, DB.GeometryObject[]> meshConverter,
+  IRevitCategories revitCategories,
   ParameterValueSetter parameterValueSetter
   )
     : BaseTopLevelConverterToHost<SOBR.DirectShape, List<DB.GeometryObject>>
@@ -49,7 +50,7 @@ public sealed class DirectShapeTopLevelConverterToHost(
       //TODO: move away from enum logic
       if ((int)target.category != -1)
       {
-        var bicName = RevitCategories.GetBuiltInFromSchemaBuilderCategory(target.category);
+        var bicName = revitCategories.GetBuiltInFromSchemaBuilderCategory(target.category);
 #pragma warning disable IDE0002 // Simplify Member Access
         _ = DB.BuiltInCategory.TryParse(bicName, out bic);
 #pragma warning restore IDE0002 // Simplify Member Access
