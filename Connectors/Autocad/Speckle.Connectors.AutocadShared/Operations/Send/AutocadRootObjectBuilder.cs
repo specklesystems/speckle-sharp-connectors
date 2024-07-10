@@ -40,7 +40,8 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     Collection modelWithLayers =
       new()
       {
-        name = Application.DocumentManager.CurrentDocument.Name // POC: https://spockle.atlassian.net/browse/CNX-9319
+        name = Application
+          .DocumentManager.CurrentDocument.Name // POC: https://spockle.atlassian.net/browse/CNX-9319
           .Split(_documentPathSeparator, StringSplitOptions.None)
           .Reverse()
           .First(),

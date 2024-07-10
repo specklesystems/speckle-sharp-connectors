@@ -1,6 +1,6 @@
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
-using Speckle.Connectors.Utils.Operations;
 using Speckle.Connectors.Utils;
+using Speckle.Connectors.Utils.Operations;
 
 namespace Speckle.Connectors.DUI.Models.Card;
 

@@ -53,8 +53,8 @@ public class RhinoReceiveBinding : IReceiveBinding
       CancellationTokenSource cts = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
       // Receive host objects
-      HostObjectBuilderResult conversionResults = await unitOfWork.Service
-        .Execute(
+      HostObjectBuilderResult conversionResults = await unitOfWork
+        .Service.Execute(
           modelCard.GetReceiveInfo(),
           cts.Token,
           (status, progress) =>

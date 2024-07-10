@@ -1,16 +1,16 @@
-using Autodesk.Revit.UI;
-using Autodesk.Revit.ApplicationServices;
-using Revit.Async;
-using CefSharp;
-using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Bindings;
 using System.Diagnostics;
+using System.IO;
+using System.Reflection;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using Autodesk.Revit.ApplicationServices;
+using Autodesk.Revit.UI;
+using CefSharp;
+using Revit.Async;
+using Speckle.Connectors.DUI.Bindings;
+using Speckle.Connectors.DUI.Bridge;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Core.Logging;
-using System.Reflection;
-using System.Windows.Media.Imaging;
-using System.Windows.Media;
-using System.IO;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
@@ -150,17 +150,17 @@ internal sealed class RevitPlugin : IRevitPlugin
 
       // POC: not sure where this comes from
 #if REVIT2020
-              // NOTE: Cef65 does not work with DUI3 in yarn dev mode. To test things you need to do `yarn build` and serve the build
-              // folder at port 3000 (or change it to something else if you want to). Guru  meditation: Je sais, pas ideal. Mais q'est que nous pouvons faire? Rien. C'est l'autodesk vie.
-              // NOTE: To run the ui from a build, follow these steps:
-              // - run `yarn build` in the DUI3 folder
-              // - run ` PORT=3003  node .output/server/index.mjs` after the build
-    
-              CefSharpPanel.Browser.Load("http://localhost:3003");
-              CefSharpPanel.Browser.ShowDevTools();
+      // NOTE: Cef65 does not work with DUI3 in yarn dev mode. To test things you need to do `yarn build` and serve the build
+      // folder at port 3000 (or change it to something else if you want to). Guru  meditation: Je sais, pas ideal. Mais q'est que nous pouvons faire? Rien. C'est l'autodesk vie.
+      // NOTE: To run the ui from a build, follow these steps:
+      // - run `yarn build` in the DUI3 folder
+      // - run ` PORT=3003  node .output/server/index.mjs` after the build
+
+      CefSharpPanel.Browser.Load("http://localhost:3003");
+      CefSharpPanel.Browser.ShowDevTools();
 #endif
 #if REVIT2023
-              CefSharpPanel.Browser.Load("http://localhost:8082");
+      CefSharpPanel.Browser.Load("http://localhost:8082");
 #endif
     };
   }

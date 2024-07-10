@@ -1,14 +1,14 @@
 using System.Collections.Concurrent;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using Speckle.Newtonsoft.Json;
-using Speckle.Connectors.DUI.Bindings;
-using System.Threading.Tasks.Dataflow;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks.Dataflow;
 using Microsoft.Extensions.Logging;
+using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.Utils;
 using Speckle.Core.Models.Extensions;
+using Speckle.Newtonsoft.Json;
 
 namespace Speckle.Connectors.DUI.Bridge;
 

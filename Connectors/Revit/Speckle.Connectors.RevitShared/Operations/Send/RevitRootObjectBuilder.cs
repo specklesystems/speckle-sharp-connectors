@@ -1,14 +1,14 @@
 using System.Diagnostics;
-using Speckle.Converters.Common;
-using Speckle.Core.Models;
 using Autodesk.Revit.DB;
 using Speckle.Connectors.DUI.Exceptions;
-using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Operations;
+using Speckle.Converters.Common;
+using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Core.Logging;
+using Speckle.Core.Models;
 
 namespace Speckle.Connectors.Revit.Operations.Send;
 
