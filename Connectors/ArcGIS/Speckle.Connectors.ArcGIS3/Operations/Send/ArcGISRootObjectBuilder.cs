@@ -42,11 +42,8 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
   )
   {
     // set active CRS & offsets on Send, add offsets if we find a way to set them up
-    double trueNorth = 0;
-    double latOffset = 0;
-    double lonOffset = 0;
     CRSoffsetRotation crsOffsetRotation =
-      new(_contextStack.Current.Document.Map.SpatialReference, latOffset, lonOffset, trueNorth);
+      new(_contextStack.Current.Document.Map.SpatialReference, _contextStack.Current.Document.Map);
     _contextStack.Current.Document.ActiveCRSoffsetRotation = crsOffsetRotation;
     
     // POC: does this feel like the right place? I am wondering if this should be called from within send/rcv?

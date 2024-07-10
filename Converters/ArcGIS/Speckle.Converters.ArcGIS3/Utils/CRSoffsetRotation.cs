@@ -1,3 +1,5 @@
+using System.Xml.Linq;
+using ArcGIS.Desktop.Mapping;
 using Objects.BuiltElements.Revit;
 using Speckle.Core.Kits;
 using Speckle.Core.Models;
@@ -115,19 +117,30 @@ public struct CRSoffsetRotation
     LonOffset = 0;
     TrueNorthRadians = 0;
   }
-
+  
   /// <summary>
   /// Initializes a new instance of <see cref="CRSoffsetRotation"/>.
   /// </summary>
   /// <param name="spatialReference">SpatialReference to apply offsets and rotation to.</param>
-  /// <param name="trueNorthRadians">Angle to True North in radians.</param>
-  public CRSoffsetRotation(ACG.SpatialReference spatialReference, double trueNorthRadians)
+  /// <param name="map">Map to read metadata from.</param>
+  public CRSoffsetRotation(ACG.SpatialReference spatialReference, Map map)
   {
     SpatialReference = spatialReference;
     SpeckleUnitString = GetSpeckleUnit(spatialReference);
-    LatOffset = 0;
-    LonOffset = 0;
-    TrueNorthRadians = trueNorthRadians;
+    
+    // read from metadata 
+    string metadata = map.GetMetadata();
+    var root = XDocument.Parse(metadata).Root;
+    string? textData = root?.Element("dataIdInfo")?.Element("resConst")?.Element("Consts")?.Element("useLimit")?.Value;
+    
+    string? latElement = textData?.Split("speckle_lat=")[^1].Split("<")[0];
+    string? lonElement = textData?.Split("speckle_lon=")[^1].Split("<")[0];
+    string? northElement = textData?.Split("speckle_north=")[^1].Split("<")[0];
+    
+    // set offseta and rotation from metadata
+    LatOffset = latElement is null ? 0 : Convert.ToDouble(latElement);
+    LonOffset = lonElement is null ? 0 : Convert.ToDouble(lonElement);
+    TrueNorthRadians = northElement is null ? 0 : Convert.ToDouble(northElement);
   }
 
   /// <summary>
