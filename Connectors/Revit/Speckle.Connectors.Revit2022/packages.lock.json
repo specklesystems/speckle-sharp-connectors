@@ -494,6 +494,14 @@
           "Speckle.Converters.Common.DependencyInjection": "[1.0.0, )"
         }
       },
+      "speckle.converters.revit2022.dependencyinjection": {
+        "type": "Project",
+        "dependencies": {
+          "Speckle.Converters.Common": "[1.0.0, )",
+          "Speckle.Converters.Common.DependencyInjection": "[1.0.0, )",
+          "Speckle.Converters.Revit2022": "[1.0.0, )"
+        }
+      },
       "Microsoft.Extensions.Logging.Abstractions": {
         "type": "CentralTransitive",
         "requested": "[7.0.0, )",

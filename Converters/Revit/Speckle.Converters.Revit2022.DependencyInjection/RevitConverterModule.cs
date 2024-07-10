@@ -7,7 +7,7 @@ using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.ToSpeckle;
 
-namespace Speckle.Converters.Revit2022;
+namespace Speckle.Converters.Revit2022.DependencyInjection;
 
 public class RevitConverterModule : ISpeckleModule
 {
