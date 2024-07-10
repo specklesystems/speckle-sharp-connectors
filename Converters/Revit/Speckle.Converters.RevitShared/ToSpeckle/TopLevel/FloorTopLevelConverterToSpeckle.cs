@@ -42,7 +42,7 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
   {
     SOBR.RevitFloor speckleFloor = new();
 
-#if REVIT2020 || REVIT2021
+#if REVIT2020 || REVIT2021 || REVIT2022
     List<SOG.Polycurve> profiles = new List<SOG.Polycurve>();
 
     speckleFloor.family = target.FloorType.FamilyName;

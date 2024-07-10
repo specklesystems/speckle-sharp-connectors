@@ -12,17 +12,17 @@
           "Microsoft.SourceLink.Common": "8.0.0"
         }
       },
-      "ModPlus.Revit.API.2022": {
-        "type": "Direct",
-        "requested": "[4.0.0, )",
-        "resolved": "4.0.0",
-        "contentHash": "Wrm/y6tlPepgytvtfR9NN3y+WdGyK8+H9JEC45krdfd+TAdpndWzG12VlfXvMR/9FTw2qlmUxCTi8A6uwTZ9cA=="
-      },
       "PolySharp": {
         "type": "Direct",
         "requested": "[1.14.1, )",
         "resolved": "1.14.1",
         "contentHash": "mOOmFYwad3MIOL14VCjj02LljyF1GNw1wP0YVlxtcPvqdxjGGMNdNJJxHptlry3MOd8b40Flm8RPOM8JOlN2sQ=="
+      },
+      "Revit_All_Main_Versions_API_x64": {
+        "type": "Direct",
+        "requested": "[2021.1.4, )",
+        "resolved": "2021.1.4",
+        "contentHash": "Lf3CERslH3IEN4g/aDdaQFDvSeBMlpEQPwY0CsuthIUageys559XMDKHnlsIf6kyvgSuGmaxdKL7DyAB6E23Mg=="
       },
       "Speckle.InterfaceGenerator": {
         "type": "Direct",

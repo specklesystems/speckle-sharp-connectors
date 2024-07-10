@@ -96,11 +96,6 @@
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
       },
-      "ModPlus.Revit.API.2022": {
-        "type": "Transitive",
-        "resolved": "4.0.0",
-        "contentHash": "Wrm/y6tlPepgytvtfR9NN3y+WdGyK8+H9JEC45krdfd+TAdpndWzG12VlfXvMR/9FTw2qlmUxCTi8A6uwTZ9cA=="
-      },
       "Polly": {
         "type": "Transitive",
         "resolved": "7.2.3",
@@ -376,7 +371,7 @@
       "speckle.converters.revit2022": {
         "type": "Project",
         "dependencies": {
-          "ModPlus.Revit.API.2022": "[4.0.0, )",
+          "Revit_All_Main_Versions_API_x64": "[2021.1.4, )",
           "Speckle.Converters.Common": "[1.0.0, )",
           "Speckle.Converters.Common.DependencyInjection": "[1.0.0, )"
         }
@@ -390,6 +385,12 @@
           "System.Buffers": "4.5.1",
           "System.Memory": "4.5.5"
         }
+      },
+      "Revit_All_Main_Versions_API_x64": {
+        "type": "CentralTransitive",
+        "requested": "[2021.0.0, )",
+        "resolved": "2021.1.4",
+        "contentHash": "Lf3CERslH3IEN4g/aDdaQFDvSeBMlpEQPwY0CsuthIUageys559XMDKHnlsIf6kyvgSuGmaxdKL7DyAB6E23Mg=="
       },
       "Speckle.Core": {
         "type": "CentralTransitive",

@@ -4,11 +4,11 @@
     ".NETFramework,Version=v4.8": {
       "CefSharp.Wpf": {
         "type": "Direct",
-        "requested": "[92.0.260, )",
-        "resolved": "92.0.260",
-        "contentHash": "b0TW/HpHsvz2x3M1IQa/8fbCIRKShOgpmSqj5gKiibXY0v2cHgnWssfEX+3Q3UCpizkBJBQ+0fVp+fN8JCPcNQ==",
+        "requested": "[65.0.1, )",
+        "resolved": "65.0.1",
+        "contentHash": "yvBDI2B/i8TWTr7SfR2C2W0mWY5UCfVXtnDnxyownlg49NMidHJemW1WMGK0Or3e8y0DUofK3jwBeMt0kKm25Q==",
         "dependencies": {
-          "CefSharp.Common": "[92.0.260]"
+          "CefSharp.Common": "[65.0.1]"
         }
       },
       "Microsoft.SourceLink.GitHub": {
@@ -41,13 +41,13 @@
       },
       "cef.redist.x64": {
         "type": "Transitive",
-        "resolved": "92.0.26",
-        "contentHash": "wwwSGVgO9sdlj5TRnjVdzuCkNuYpTOXT90Z+dasnqGrnihrxKU+1UvulxxJa83O2k+l3kaNlAU9uBhiwGX7YyQ=="
+        "resolved": "3.3325.1758",
+        "contentHash": "g6Q7rYKMq0yzfzmdj0AipkJWBknjY3htqf73geLJqRhOHrmslCGHHwnDzvvnmj90f4iCg835fLW7Touz11q1AA=="
       },
       "cef.redist.x86": {
         "type": "Transitive",
-        "resolved": "92.0.26",
-        "contentHash": "VT93sU6hH7LoUILjfaAxWbLc+m+b9QafeeRkuulnj3twJnb0PQ7nXd8PMUeOmYg96NzZi14G7qBYSY0dkxqztg=="
+        "resolved": "3.3325.1758",
+        "contentHash": "aOkrPLMC81agfbwaZQ8Z0610zUO3BwfKZgsEtwsyMxYwTViL72kAEyjA87KVhC1b96rzpCnk3vQ6PY9zNyCDGA=="
       },
       "GraphQL.Client": {
         "type": "Transitive",
@@ -475,17 +475,26 @@
         "type": "Project",
         "dependencies": {
           "Revit_All_Main_Versions_API_x64": "[2021.0.0, )",
-          "Speckle.Converters.Common": "[1.0.0, )"
+          "Speckle.Converters.Common": "[1.0.0, )",
+          "Speckle.Converters.Common.DependencyInjection": "[1.0.0, )"
+        }
+      },
+      "speckle.converters.revit2021.dependencyinjection": {
+        "type": "Project",
+        "dependencies": {
+          "Speckle.Converters.Common": "[1.0.0, )",
+          "Speckle.Converters.Common.DependencyInjection": "[1.0.0, )",
+          "Speckle.Converters.Revit2021": "[1.0.0, )"
         }
       },
       "CefSharp.Common": {
         "type": "CentralTransitive",
         "requested": "[92.0.260, )",
-        "resolved": "92.0.260",
-        "contentHash": "0KS5z+kqg+mmB1X2KM17w3S7KQI5UTuJv+UOIQauJPvFYfRGWwTqmBbBxL3kCklGx8WSkaeBjPdSFxdzzXCSew==",
+        "resolved": "65.0.1",
+        "contentHash": "XrqS8XJPvYX+LXZ3r4IGTcASrmx4veoubNsVlC7MN669GbQi20L50wRQ0Yz+jazpp6JeYLN7tMpKgz2Gv9CdLA==",
         "dependencies": {
-          "cef.redist.x64": "[92.0.26]",
-          "cef.redist.x86": "[92.0.26]"
+          "cef.redist.x64": "[3.3325.1758]",
+          "cef.redist.x86": "[3.3325.1758]"
         }
       },
       "Microsoft.Extensions.Logging.Abstractions": {

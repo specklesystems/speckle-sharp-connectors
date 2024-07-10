@@ -3,12 +3,13 @@
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
+    <DefineConstants>$(DefineConstants);REVIT2022</DefineConstants>
   </PropertyGroup>
 
   <Import Project="..\Speckle.Converters.RevitShared\Speckle.Converters.RevitShared.projitems" Label="Shared" />
 
   <ItemGroup>
-    <PackageReference Include="ModPlus.Revit.API.2022" VersionOverride="4.0.0" />
+    <PackageReference Include="Revit_All_Main_Versions_API_x64" VersionOverride="2021.1.4" />
   </ItemGroup>
 
   <ItemGroup>

@@ -7,7 +7,7 @@ public static class DefinitionExtensions
   // POC: can we just interface these specialisations out and thereby avoid this kind of BS :D
   public static string GetUnitTypeString(this Definition definition)
   {
-#if REVIT2020 || REVIT2021
+#if REVIT2020 || REVIT2021 || REVIT2022
     return definition.UnitType.ToString();
 #else
     return definition.GetDataType().TypeId;

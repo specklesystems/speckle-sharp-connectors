@@ -2,16 +2,6 @@
   "version": 2,
   "dependencies": {
     ".NETFramework,Version=v4.8": {
-      "CefSharp.Common": {
-        "type": "Direct",
-        "requested": "[65.0.1, )",
-        "resolved": "65.0.1",
-        "contentHash": "XrqS8XJPvYX+LXZ3r4IGTcASrmx4veoubNsVlC7MN669GbQi20L50wRQ0Yz+jazpp6JeYLN7tMpKgz2Gv9CdLA==",
-        "dependencies": {
-          "cef.redist.x64": "[3.3325.1758]",
-          "cef.redist.x86": "[3.3325.1758]"
-        }
-      },
       "CefSharp.Wpf": {
         "type": "Direct",
         "requested": "[65.0.1, )",
@@ -181,11 +171,6 @@
         "type": "Transitive",
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
-      },
-      "ModPlus.Revit.API.2022": {
-        "type": "Transitive",
-        "resolved": "4.0.0",
-        "contentHash": "Wrm/y6tlPepgytvtfR9NN3y+WdGyK8+H9JEC45krdfd+TAdpndWzG12VlfXvMR/9FTw2qlmUxCTi8A6uwTZ9cA=="
       },
       "Polly": {
         "type": "Transitive",
@@ -489,7 +474,7 @@
       "speckle.converters.revit2022": {
         "type": "Project",
         "dependencies": {
-          "ModPlus.Revit.API.2022": "[4.0.0, )",
+          "Revit_All_Main_Versions_API_x64": "[2021.1.4, )",
           "Speckle.Converters.Common": "[1.0.0, )",
           "Speckle.Converters.Common.DependencyInjection": "[1.0.0, )"
         }
@@ -502,6 +487,16 @@
           "Speckle.Converters.Revit2022": "[1.0.0, )"
         }
       },
+      "CefSharp.Common": {
+        "type": "CentralTransitive",
+        "requested": "[92.0.260, )",
+        "resolved": "65.0.1",
+        "contentHash": "XrqS8XJPvYX+LXZ3r4IGTcASrmx4veoubNsVlC7MN669GbQi20L50wRQ0Yz+jazpp6JeYLN7tMpKgz2Gv9CdLA==",
+        "dependencies": {
+          "cef.redist.x64": "[3.3325.1758]",
+          "cef.redist.x86": "[3.3325.1758]"
+        }
+      },
       "Microsoft.Extensions.Logging.Abstractions": {
         "type": "CentralTransitive",
         "requested": "[7.0.0, )",
@@ -511,6 +506,12 @@
           "System.Buffers": "4.5.1",
           "System.Memory": "4.5.5"
         }
+      },
+      "Revit_All_Main_Versions_API_x64": {
+        "type": "CentralTransitive",
+        "requested": "[2021.0.0, )",
+        "resolved": "2021.1.4",
+        "contentHash": "Lf3CERslH3IEN4g/aDdaQFDvSeBMlpEQPwY0CsuthIUageys559XMDKHnlsIf6kyvgSuGmaxdKL7DyAB6E23Mg=="
       },
       "Serilog.Extensions.Logging": {
         "type": "CentralTransitive",

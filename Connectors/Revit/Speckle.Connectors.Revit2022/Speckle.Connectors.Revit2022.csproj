@@ -34,7 +34,6 @@
 
   <ItemGroup>
     <PackageReference Include="CefSharp.Wpf" NoWarn="NU1903, NU1902" VersionOverride="65.0.1"/>
-    <PackageReference Include="CefSharp.Common" NoWarn="NU1904, NU1903, NU1902" VersionOverride="65.0.1"/>
     <PackageReference Include="Revit.Async" />
   </ItemGroup>
 </Project>

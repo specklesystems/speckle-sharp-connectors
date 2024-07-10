@@ -18,12 +18,6 @@
         "resolved": "1.14.1",
         "contentHash": "mOOmFYwad3MIOL14VCjj02LljyF1GNw1wP0YVlxtcPvqdxjGGMNdNJJxHptlry3MOd8b40Flm8RPOM8JOlN2sQ=="
       },
-      "Revit_All_Main_Versions_API_x64": {
-        "type": "Direct",
-        "requested": "[2021.0.0, )",
-        "resolved": "2021.0.0",
-        "contentHash": "eP2HySoRPFMEMrfeKsIoFSXFzh8DTxhkq9WBR+BvTV3hVHJCULayhcbxtLLBX0npvIn3APrStlWl9G7hDqwbFA=="
-      },
       "Speckle.InterfaceGenerator": {
         "type": "Direct",
         "requested": "[0.9.5, )",
@@ -374,6 +368,14 @@
           "Speckle.Converters.Common": "[1.0.0, )"
         }
       },
+      "speckle.converters.revit2021": {
+        "type": "Project",
+        "dependencies": {
+          "Revit_All_Main_Versions_API_x64": "[2021.0.0, )",
+          "Speckle.Converters.Common": "[1.0.0, )",
+          "Speckle.Converters.Common.DependencyInjection": "[1.0.0, )"
+        }
+      },
       "Microsoft.Extensions.Logging.Abstractions": {
         "type": "CentralTransitive",
         "requested": "[7.0.0, )",
@@ -383,6 +385,12 @@
           "System.Buffers": "4.5.1",
           "System.Memory": "4.5.5"
         }
+      },
+      "Revit_All_Main_Versions_API_x64": {
+        "type": "CentralTransitive",
+        "requested": "[2021.0.0, )",
+        "resolved": "2021.0.0",
+        "contentHash": "eP2HySoRPFMEMrfeKsIoFSXFzh8DTxhkq9WBR+BvTV3hVHJCULayhcbxtLLBX0npvIn3APrStlWl9G7hDqwbFA=="
       },
       "Speckle.Core": {
         "type": "CentralTransitive",

@@ -115,6 +115,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Revit202
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Revit2022.DependencyInjection", "Converters\Revit\Speckle.Converters.Revit2022.DependencyInjection\Speckle.Converters.Revit2022.DependencyInjection.csproj", "{881D71A3-D276-4108-98C6-0FFD32129B9C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Revit2021.DependencyInjection", "Converters\Revit\Speckle.Converters.Revit2021.DependencyInjection\Speckle.Converters.Revit2021.DependencyInjection.csproj", "{63425B42-422B-4FDF-B647-97E13281BE9C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -233,10 +235,10 @@ Global
 		{12769C52-B992-4412-BD34-7AC71C6BDCF2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{12769C52-B992-4412-BD34-7AC71C6BDCF2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{12769C52-B992-4412-BD34-7AC71C6BDCF2}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B18FF9B1-CDB2-4DC8-B61A-4C12E74B453A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B18FF9B1-CDB2-4DC8-B61A-4C12E74B453A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B18FF9B1-CDB2-4DC8-B61A-4C12E74B453A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B18FF9B1-CDB2-4DC8-B61A-4C12E74B453A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B18FF9B1-CDB2-4DC8-B61A-4C12E74B453A}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{B18FF9B1-CDB2-4DC8-B61A-4C12E74B453A}.Debug|Any CPU.Build.0 = Debug|x64
+		{B18FF9B1-CDB2-4DC8-B61A-4C12E74B453A}.Release|Any CPU.ActiveCfg = Release|x64
+		{B18FF9B1-CDB2-4DC8-B61A-4C12E74B453A}.Release|Any CPU.Build.0 = Release|x64
 		{7F1FDCF2-0CE8-4119-B3C1-F2CC6D7E1C36}.Debug|Any CPU.ActiveCfg = Debug|x64
 		{7F1FDCF2-0CE8-4119-B3C1-F2CC6D7E1C36}.Debug|Any CPU.Build.0 = Debug|x64
 		{7F1FDCF2-0CE8-4119-B3C1-F2CC6D7E1C36}.Release|Any CPU.ActiveCfg = Debug|x64
@@ -249,6 +251,10 @@ Global
 		{881D71A3-D276-4108-98C6-0FFD32129B9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{881D71A3-D276-4108-98C6-0FFD32129B9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{881D71A3-D276-4108-98C6-0FFD32129B9C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{63425B42-422B-4FDF-B647-97E13281BE9C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{63425B42-422B-4FDF-B647-97E13281BE9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{63425B42-422B-4FDF-B647-97E13281BE9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{63425B42-422B-4FDF-B647-97E13281BE9C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{C9D4CA21-182B-4ED2-81BB-280A6FD713F6} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
@@ -295,5 +301,6 @@ Global
 		{83EAD6F0-3CB3-456A-AD81-072127D0DE0E} = {B9DE08BB-1188-4E6C-8790-10252A48381C}
 		{E1C43415-3200-45F4-8BF9-A4DD7D7F2ED6} = {B9DE08BB-1188-4E6C-8790-10252A48381C}
 		{881D71A3-D276-4108-98C6-0FFD32129B9C} = {B9DE08BB-1188-4E6C-8790-10252A48381C}
+		{63425B42-422B-4FDF-B647-97E13281BE9C} = {B9DE08BB-1188-4E6C-8790-10252A48381C}
 	EndGlobalSection
 EndGlobal
