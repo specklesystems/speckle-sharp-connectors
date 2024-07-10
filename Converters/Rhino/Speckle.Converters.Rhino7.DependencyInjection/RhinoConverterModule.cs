@@ -1,6 +1,6 @@
+using Rhino;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Converters.Common;
-using Rhino;
 using Speckle.Converters.Common.DependencyInjection;
 using Speckle.Converters.Rhino7.ToSpeckle.Raw;
 

@@ -39,8 +39,8 @@ public sealed class ReceiveOperation
       .ConfigureAwait(false);
 
     using ServerTransport transport = new(account, receiveInfo.ProjectId);
-    Base commitObject = await Speckle.Core.Api.Operations
-      .Receive(version.referencedObject, transport, cancellationToken: cancellationToken)
+    Base commitObject = await Speckle
+      .Core.Api.Operations.Receive(version.referencedObject, transport, cancellationToken: cancellationToken)
       .ConfigureAwait(false);
 
     cancellationToken.ThrowIfCancellationRequested();

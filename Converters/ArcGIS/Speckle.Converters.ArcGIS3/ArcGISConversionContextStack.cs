@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
-using ArcGIS.Core.Data.DDL;
 using ArcGIS.Core.Data;
+using ArcGIS.Core.Data.DDL;
 using ArcGIS.Desktop.Core;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;

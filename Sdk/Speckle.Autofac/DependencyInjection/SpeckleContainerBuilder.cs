@@ -88,8 +88,8 @@ public class SpeckleContainerBuilder
     {
       var types = new List<Type>();
       foreach (
-        var asm in AppDomain.CurrentDomain
-          .GetAssemblies()
+        var asm in AppDomain
+          .CurrentDomain.GetAssemblies()
           .Where(x => x.GetName().Name.StartsWith("Speckle", StringComparison.OrdinalIgnoreCase))
       )
       {

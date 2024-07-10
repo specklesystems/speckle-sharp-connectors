@@ -1,7 +1,7 @@
 using System.Windows.Controls;
+using System.Windows.Threading;
 using Autodesk.Revit.UI;
 using CefSharp;
-using System.Windows.Threading;
 
 namespace Speckle.Connectors.Revit;
 

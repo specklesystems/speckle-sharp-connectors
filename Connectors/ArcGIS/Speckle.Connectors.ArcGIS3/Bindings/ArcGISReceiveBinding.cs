@@ -51,8 +51,8 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
       using IUnitOfWork<ReceiveOperation> unitOfWork = _unitOfWorkFactory.Resolve<ReceiveOperation>();
 
       // Receive host objects
-      var receiveOperationResults = await unitOfWork.Service
-        .Execute(
+      var receiveOperationResults = await unitOfWork
+        .Service.Execute(
           modelCard.GetReceiveInfo(),
           cts.Token,
           (status, progress) =>

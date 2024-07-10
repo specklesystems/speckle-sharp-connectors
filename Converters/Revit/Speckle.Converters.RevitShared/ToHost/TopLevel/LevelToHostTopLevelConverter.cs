@@ -1,7 +1,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Converters.RevitShared.ToSpeckle;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Converters.RevitShared.ToSpeckle;
 
 namespace Speckle.Converters.RevitShared.ToHost.ToLevel;
 
