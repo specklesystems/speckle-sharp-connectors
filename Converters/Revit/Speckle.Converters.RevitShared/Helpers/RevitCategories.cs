@@ -42,9 +42,3 @@ public class RevitCategories : IRevitCategories
     return $"OST_{name}";
   }
 }
-
-public interface IRevitCategories
-{
-  string GetBuiltInFromSchemaBuilderCategory(RevitCategory c);
-  RevitCategory GetSchemaBuilderCategoryFromBuiltIn(string builtInCategory);
-}
