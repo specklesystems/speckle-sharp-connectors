@@ -45,8 +45,8 @@ public class ParameterValueSetter(ScalingServiceToHost scalingService)
     }
     else
     {
-      revitParameters = revitElement.ParametersMap
-        .Cast<DB.Parameter>()
+      revitParameters = revitElement
+        .ParametersMap.Cast<DB.Parameter>()
         .Where(x => x != null && !x.IsReadOnly && !exclusions.Contains(GetParamInternalName(x)));
     }
 

@@ -15,8 +15,7 @@ public sealed class DirectShapeTopLevelConverterToHost(
   ITypedConverter<SOG.Mesh, DB.GeometryObject[]> meshConverter,
   IRevitCategories revitCategories,
   ParameterValueSetter parameterValueSetter
-  )
-    : BaseTopLevelConverterToHost<SOBR.DirectShape, List<DB.GeometryObject>>
+) : BaseTopLevelConverterToHost<SOBR.DirectShape, List<DB.GeometryObject>>
 {
   public override List<DB.GeometryObject> Convert(SOBR.DirectShape target)
   {
