@@ -78,13 +78,12 @@ public class SurfaceConverterToHost : ITypedConverter<SOG.Surface, DB.BRepBuilde
     var points = new DB.XYZ[count];
     int p = 0;
 
-    controlPoints.ForEach(
-      row =>
-        row.ForEach(pt =>
-        {
-          var point = new SOG.Point(pt.x, pt.y, pt.z, pt.units);
-          points[p++] = _pointConverter.Convert(point);
-        })
+    controlPoints.ForEach(row =>
+      row.ForEach(pt =>
+      {
+        var point = new SOG.Point(pt.x, pt.y, pt.z, pt.units);
+        points[p++] = _pointConverter.Convert(point);
+      })
     );
 
     return points;
