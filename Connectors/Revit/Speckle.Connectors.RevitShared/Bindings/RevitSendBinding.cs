@@ -12,6 +12,7 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
+using Speckle.Core.Transports;
 
 namespace Speckle.Connectors.Revit.Bindings;
 
@@ -101,17 +102,10 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
       }
 
-      var sendInfo = new SendInfo(
-        modelCard.AccountId.NotNull(),
-        modelCard.ProjectId.NotNull(),
-        modelCard.ModelId.NotNull(),
-        _revitSettings.HostSlug.NotNull()
-      );
-
       var sendResult = await sendOperation.Service
         .Execute(
           revitObjects,
-          sendInfo,
+          modelCard.GetSendInfo(_revitSettings.HostSlug.NotNull()),
           (status, progress) =>
             Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts),
           cts.Token
@@ -122,6 +116,10 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     }
     // Catch here specific exceptions if they related to model card.
     catch (SpeckleSendFilterException e)
+    {
+      Commands.SetModelError(modelCardId, e);
+    }
+    catch (TransportException e)
     {
       Commands.SetModelError(modelCardId, e);
     }

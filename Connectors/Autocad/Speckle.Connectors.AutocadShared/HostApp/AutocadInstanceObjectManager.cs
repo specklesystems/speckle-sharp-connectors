@@ -13,20 +13,22 @@ using Speckle.Core.Models.Instances;
 namespace Speckle.Connectors.Autocad.HostApp;
 
 /// <summary>
-/// <inheritdoc/>
 ///  Expects to be a scoped dependency per send or receive operation.
+/// POC: Split later unpacker and baker.
 /// </summary>
-public class AutocadInstanceObjectManager : IInstanceObjectsManager<AutocadRootObject, List<Entity>>
+public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>, IInstanceBaker<List<Entity>>
 {
   private readonly AutocadLayerManager _autocadLayerManager;
-  private Dictionary<string, InstanceProxy> InstanceProxies { get; set; } = new();
-  private Dictionary<string, List<InstanceProxy>> InstanceProxiesByDefinitionId { get; set; } = new();
-  private Dictionary<string, InstanceDefinitionProxy> DefinitionProxies { get; set; } = new();
-  private Dictionary<string, AutocadRootObject> FlatAtomicObjects { get; set; } = new();
 
-  public AutocadInstanceObjectManager(AutocadLayerManager autocadLayerManager)
+  private readonly IInstanceObjectsManager<AutocadRootObject, List<Entity>> _instanceObjectsManager;
+
+  public AutocadInstanceObjectManager(
+    AutocadLayerManager autocadLayerManager,
+    IInstanceObjectsManager<AutocadRootObject, List<Entity>> instanceObjectsManager
+  )
   {
     _autocadLayerManager = autocadLayerManager;
+    _instanceObjectsManager = instanceObjectsManager;
   }
 
   public UnpackResult<AutocadRootObject> UnpackSelection(IEnumerable<AutocadRootObject> objects)
@@ -39,10 +41,9 @@ public class AutocadInstanceObjectManager : IInstanceObjectsManager<AutocadRootO
       {
         UnpackInstance(blockReference, 0, transaction);
       }
-
-      FlatAtomicObjects[obj.ApplicationId] = obj;
+      _instanceObjectsManager.AddAtomicObject(obj.ApplicationId, obj);
     }
-    return new(FlatAtomicObjects.Values.ToList(), InstanceProxies, DefinitionProxies.Values.ToList());
+    return _instanceObjectsManager.GetUnpackResult();
   }
 
   private void UnpackInstance(BlockReference instance, int depth, Transaction transaction)
@@ -50,41 +51,56 @@ public class AutocadInstanceObjectManager : IInstanceObjectsManager<AutocadRootO
     var instanceIdString = instance.Handle.Value.ToString();
     var definitionId = instance.BlockTableRecord;
 
-    InstanceProxies[instanceIdString] = new InstanceProxy()
-    {
-      applicationId = instanceIdString,
-      DefinitionId = definitionId.ToString(),
-      MaxDepth = depth,
-      Transform = GetMatrix(instance.BlockTransform.ToArray()),
-      Units = Application.DocumentManager.CurrentDocument.Database.Insunits.ToSpeckleString()
-    };
+    InstanceProxy instanceProxy =
+      new()
+      {
+        applicationId = instanceIdString,
+        DefinitionId = definitionId.ToString(),
+        MaxDepth = depth,
+        Transform = GetMatrix(instance.BlockTransform.ToArray()),
+        Units = Application.DocumentManager.CurrentDocument.Database.Insunits.ToSpeckleString()
+      };
+    _instanceObjectsManager.AddInstanceProxy(instanceIdString, instanceProxy);
 
     // For each block instance that has the same definition, we need to keep track of the "maximum depth" at which is found.
     // This will enable on receive to create them in the correct order (descending by max depth, interleaved definitions and instances).
     // We need to interleave the creation of definitions and instances, as some definitions may depend on instances.
     if (
-      !InstanceProxiesByDefinitionId.TryGetValue(
+      !_instanceObjectsManager.TryGetInstanceProxiesFromDefinitionId(
         definitionId.ToString(),
         out List<InstanceProxy> instanceProxiesWithSameDefinition
       )
     )
     {
       instanceProxiesWithSameDefinition = new List<InstanceProxy>();
-      InstanceProxiesByDefinitionId[definitionId.ToString()] = instanceProxiesWithSameDefinition;
+      _instanceObjectsManager.AddInstanceProxiesByDefinitionId(
+        definitionId.ToString(),
+        instanceProxiesWithSameDefinition
+      );
     }
 
     // We ensure that all previous instance proxies that have the same definition are at this max depth. I kind of have a feeling this can be done more elegantly, but YOLO
-    foreach (var instanceProxy in instanceProxiesWithSameDefinition)
+    foreach (var instanceProxyWithSameDefinition in instanceProxiesWithSameDefinition)
     {
-      instanceProxy.MaxDepth = depth;
+      if (instanceProxyWithSameDefinition.MaxDepth < depth)
+      {
+        instanceProxyWithSameDefinition.MaxDepth = depth;
+      }
     }
 
-    instanceProxiesWithSameDefinition.Add(InstanceProxies[instanceIdString]);
+    instanceProxiesWithSameDefinition.Add(_instanceObjectsManager.GetInstanceProxy(instanceIdString));
 
-    if (DefinitionProxies.TryGetValue(definitionId.ToString(), out InstanceDefinitionProxy value))
+    if (
+      _instanceObjectsManager.TryGetInstanceDefinitionProxy(definitionId.ToString(), out InstanceDefinitionProxy value)
+    )
     {
-      value.MaxDepth = depth;
-      return; // exit fast - we've parsed this one so no need to go further
+      int depthDifference = depth - value.MaxDepth;
+      if (depthDifference > 0)
+      {
+        // all MaxDepth of children definitions and its instances should be increased with difference of depth
+        _instanceObjectsManager.UpdateChildrenMaxDepth(value, depthDifference);
+      }
+      return;
     }
 
     var definition = (BlockTableRecord)transaction.GetObject(definitionId, OpenMode.ForRead);
@@ -110,10 +126,10 @@ public class AutocadInstanceObjectManager : IInstanceObjectsManager<AutocadRootO
       {
         UnpackInstance(blockReference, depth + 1, transaction);
       }
-      FlatAtomicObjects[handleIdString] = new(obj, handleIdString);
+      _instanceObjectsManager.AddAtomicObject(handleIdString, new(obj, handleIdString));
     }
 
-    DefinitionProxies[definitionId.ToString()] = definitionProxy;
+    _instanceObjectsManager.AddDefinitionProxy(definitionId.ToString(), definitionProxy);
   }
 
   public BakeResult BakeInstances(

@@ -6,6 +6,7 @@ using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Operations;
+using Speckle.Core.Transports;
 
 namespace Speckle.Connectors.Autocad.Bindings;
 
@@ -59,11 +60,7 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
       // Receive host objects
       var operationResults = await unitOfWork.Service
         .Execute(
-          modelCard.AccountId.NotNull(), // POC: I hear -you are saying why we're passing them separately. Not sure pass the DUI3-> Connectors.DUI project dependency to the SDK-> Connector.Utils
-          modelCard.ProjectId.NotNull(),
-          modelCard.ProjectName.NotNull(),
-          modelCard.ModelName.NotNull(),
-          modelCard.SelectedVersionId.NotNull(),
+          modelCard.GetReceiveInfo(),
           cts.Token,
           (status, progress) =>
             Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts)
@@ -77,6 +74,10 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
     {
       // SWALLOW -> UI handles it immediately, so we do not need to handle anything
       return;
+    }
+    catch (TransportException e)
+    {
+      Commands.SetModelError(modelCardId, e);
     }
     finally
     {

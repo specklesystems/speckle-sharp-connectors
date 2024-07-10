@@ -7,6 +7,7 @@ using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Utils;
+using Speckle.Core.Transports;
 
 namespace Speckle.Connectors.Revit.Bindings;
 
@@ -54,11 +55,7 @@ internal class RevitReceiveBinding : IReceiveBinding
       // Receive host objects
       HostObjectBuilderResult conversionResults = await unitOfWork.Service
         .Execute(
-          modelCard.AccountId.NotNull(), // POC: I hear -you are saying why we're passing them separately. Not sure pass the DUI3-> Connectors.DUI project dependency to the SDK-> Connector.Utils
-          modelCard.ProjectId.NotNull(),
-          modelCard.ProjectName.NotNull(),
-          modelCard.ModelName.NotNull(),
-          modelCard.SelectedVersionId.NotNull(),
+          modelCard.GetReceiveInfo(),
           cts.Token,
           (status, progress) =>
             Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts)
@@ -71,6 +68,10 @@ internal class RevitReceiveBinding : IReceiveBinding
         conversionResults.BakedObjectIds,
         conversionResults.ConversionResults
       );
+    }
+    catch (TransportException e)
+    {
+      Commands.SetModelError(modelCardId, e);
     }
     // Catch here specific exceptions if they related to model card.
     catch (OperationCanceledException)

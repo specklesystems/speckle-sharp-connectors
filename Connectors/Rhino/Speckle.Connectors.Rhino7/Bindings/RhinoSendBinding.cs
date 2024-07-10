@@ -14,6 +14,7 @@ using Speckle.Connectors.Utils.Operations;
 using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Caching;
+using Speckle.Core.Transports;
 
 namespace Speckle.Connectors.Rhino7.Bindings;
 
@@ -163,17 +164,10 @@ public sealed class RhinoSendBinding : ISendBinding
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
       }
 
-      var sendInfo = new SendInfo(
-        modelCard.AccountId.NotNull(),
-        modelCard.ProjectId.NotNull(),
-        modelCard.ModelId.NotNull(),
-        _rhinoSettings.HostAppInfo.Name
-      );
-
       var sendResult = await unitOfWork.Service
         .Execute(
           rhinoObjects,
-          sendInfo,
+          modelCard.GetSendInfo(_rhinoSettings.HostAppInfo.Name),
           (status, progress) =>
             Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts),
           cts.Token
@@ -184,6 +178,10 @@ public sealed class RhinoSendBinding : ISendBinding
     }
     // Catch here specific exceptions if they related to model card.
     catch (SpeckleSendFilterException e)
+    {
+      Commands.SetModelError(modelCardId, e);
+    }
+    catch (TransportException e)
     {
       Commands.SetModelError(modelCardId, e);
     }
