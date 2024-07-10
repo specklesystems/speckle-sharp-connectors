@@ -1,22 +1,23 @@
 using System.Diagnostics.CodeAnalysis;
+using ArcGIS.Core.Data;
+using ArcGIS.Desktop.Editing.Events;
+using ArcGIS.Desktop.Framework.Threading.Tasks;
+using ArcGIS.Desktop.Mapping;
+using ArcGIS.Desktop.Mapping.Events;
 using Speckle.Autofac.DependencyInjection;
+using Speckle.Connectors.ArcGIS.Filters;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.Utils.Cancellation;
+using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
-using ArcGIS.Desktop.Mapping.Events;
-using ArcGIS.Desktop.Mapping;
-using Speckle.Connectors.ArcGIS.Filters;
-using ArcGIS.Desktop.Editing.Events;
-using ArcGIS.Desktop.Framework.Threading.Tasks;
-using ArcGIS.Core.Data;
-using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Caching;
+using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
+using Speckle.Core.Transports;
 
 namespace Speckle.Connectors.ArcGIS.Bindings;
 
@@ -321,18 +322,11 @@ public sealed class ArcGISSendBinding : ISendBinding
       // Init cancellation token source -> Manager also cancel it if exist before
       CancellationTokenSource cts = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
-      var sendInfo = new SendInfo(
-        modelCard.AccountId.NotNull(),
-        modelCard.ProjectId.NotNull(),
-        modelCard.ModelId.NotNull(),
-        "ArcGIS"
-      );
-
       var sendResult = await QueuedTask
         .Run(async () =>
         {
-          List<MapMember> mapMembers = modelCard.SendFilter
-            .NotNull()
+          List<MapMember> mapMembers = modelCard
+            .SendFilter.NotNull()
             .GetObjectIds()
             .Select(id => (MapMember)MapView.Active.Map.FindLayer(id) ?? MapView.Active.Map.FindStandaloneTable(id))
             .Where(obj => obj != null)
@@ -346,10 +340,10 @@ public sealed class ArcGISSendBinding : ISendBinding
             );
           }
 
-          var result = await unitOfWork.Service
-            .Execute(
+          var result = await unitOfWork
+            .Service.Execute(
               mapMembers,
-              sendInfo,
+              modelCard.GetSendInfo("ArcGIS"), // POC: get host app name from settings?
               (status, progress) =>
                 Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts),
               cts.Token
@@ -364,6 +358,10 @@ public sealed class ArcGISSendBinding : ISendBinding
     }
     // Catch here specific exceptions if they related to model card.
     catch (SpeckleSendFilterException e)
+    {
+      Commands.SetModelError(modelCardId, e);
+    }
+    catch (TransportException e)
     {
       Commands.SetModelError(modelCardId, e);
     }

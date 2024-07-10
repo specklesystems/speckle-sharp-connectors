@@ -1,17 +1,17 @@
 using System.Diagnostics.Contracts;
+using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Mapping;
+using Objects.GIS;
+using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.Utils.Builders;
+using Speckle.Connectors.Utils.Conversion;
+using Speckle.Converters.ArcGIS3;
+using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
-using Speckle.Converters.ArcGIS3.Utils;
-using ArcGIS.Core.Geometry;
-using Objects.GIS;
-using Speckle.Connectors.Utils.Conversion;
 using Speckle.Core.Models.GraphTraversal;
-using Speckle.Converters.ArcGIS3;
 using RasterLayer = Objects.GIS.RasterLayer;
-using Speckle.Connectors.ArcGIS.Utils;
 
 namespace Speckle.Connectors.ArcGIS.Operations.Receive;
 

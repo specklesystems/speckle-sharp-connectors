@@ -1,18 +1,19 @@
 using Autodesk.AutoCAD.DatabaseServices;
+using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
+using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.Utils.Cancellation;
-using Speckle.Autofac.DependencyInjection;
-using Speckle.Connectors.Autocad.Operations.Send;
-using Speckle.Connectors.DUI.Exceptions;
-using Speckle.Connectors.Utils.Operations;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Caching;
+using Speckle.Connectors.Utils.Cancellation;
+using Speckle.Connectors.Utils.Operations;
+using Speckle.Core.Transports;
 
 namespace Speckle.Connectors.Autocad.Bindings;
 
@@ -156,17 +157,10 @@ public sealed class AutocadSendBinding : ISendBinding
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
       }
 
-      var sendInfo = new SendInfo(
-        modelCard.AccountId.NotNull(),
-        modelCard.ProjectId.NotNull(),
-        modelCard.ModelId.NotNull(),
-        _autocadSettings.HostAppInfo.Name
-      );
-
-      var sendResult = await uow.Service
-        .Execute(
+      var sendResult = await uow
+        .Service.Execute(
           autocadObjects,
-          sendInfo,
+          modelCard.GetSendInfo(_autocadSettings.HostAppInfo.Name),
           (status, progress) =>
             Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts),
           cts.Token
@@ -180,6 +174,10 @@ public sealed class AutocadSendBinding : ISendBinding
     {
       // SWALLOW -> UI handles it immediately, so we do not need to handle anything
       return;
+    }
+    catch (TransportException e)
+    {
+      Commands.SetModelError(modelCardId, e);
     }
     catch (SpeckleSendFilterException e)
     {

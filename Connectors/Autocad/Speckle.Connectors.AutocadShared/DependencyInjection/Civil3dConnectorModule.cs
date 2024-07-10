@@ -11,7 +11,7 @@ public class Civil3dConnectorModule : ISpeckleModule
   {
     SharedRegistration.Load(builder);
     SharedRegistration.LoadSend(builder);
-    
+
     // Register bindings
     builder.AddSingleton<IBinding, ConfigBinding>("connectorName", "Civil3d"); // POC: Easier like this for now, should be cleaned up later
   }

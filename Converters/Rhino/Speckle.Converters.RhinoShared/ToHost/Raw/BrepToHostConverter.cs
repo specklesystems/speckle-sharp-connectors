@@ -88,8 +88,8 @@ public class BrepToHostConverter : ITypedConverter<SOG.Brep, RG.Brep>
 
     // POC: This works but it doesn't fully cover all Brep edge cases and could be the cause of some of our failed Rhino->Rhino breps.
     // We should check Rhino.Inside as they have similar code structure.
-    speckleLoop.Trims
-      .ToList()
+    speckleLoop
+      .Trims.ToList()
       .ForEach(trim =>
       {
         RG.BrepTrim rhTrim;

@@ -1,13 +1,13 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Sentry.Reflection;
 using Speckle.Connectors.Autocad.HostApp;
+using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Core.Credentials;
-using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Utils;
+using Speckle.Core.Credentials;
 using Speckle.Core.Logging;
 
 namespace Speckle.Connectors.Autocad.Bindings;
