@@ -65,7 +65,9 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<Row, SGIS.GisFeature
       }
       // Raster FieldType is not properly supported through API
       else if (
-        field.FieldType == FieldType.Raster || field.FieldType == FieldType.Blob || field.FieldType == FieldType.XML
+        field.FieldType == FieldType.Raster
+        || field.FieldType == FieldType.Blob
+        || field.FieldType == FieldType.XML
       )
       {
         attributes[field.Name] = null;

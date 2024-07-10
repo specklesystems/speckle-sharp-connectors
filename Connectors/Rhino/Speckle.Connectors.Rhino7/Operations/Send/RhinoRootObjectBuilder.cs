@@ -1,16 +1,16 @@
 using System.Diagnostics;
 using Rhino;
 using Rhino.DocObjects;
-using Speckle.Core.Models;
 using Speckle.Autofac.DependencyInjection;
-using Speckle.Converters.Common;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.Rhino7.HostApp;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Operations;
+using Speckle.Converters.Common;
 using Speckle.Core.Logging;
+using Speckle.Core.Models;
 
 namespace Speckle.Connectors.Rhino7.Operations.Send;
 

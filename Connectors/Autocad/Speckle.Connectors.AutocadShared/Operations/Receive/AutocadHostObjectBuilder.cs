@@ -2,12 +2,12 @@ using Autodesk.AutoCAD.DatabaseServices;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
-using Speckle.Core.Models;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Instances;
 using Speckle.Converters.Common;
 using Speckle.Core.Logging;
+using Speckle.Core.Models;
 using Speckle.Core.Models.GraphTraversal;
 using Speckle.Core.Models.Instances;
 
@@ -108,15 +108,12 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
         }
 
         results.AddRange(
-          convertedObjects.Select(
-            e =>
-              new ReceiveConversionResult(
-                Status.SUCCESS,
-                atomicObject,
-                e.Handle.Value.ToString(),
-                e.GetType().ToString()
-              )
-          )
+          convertedObjects.Select(e => new ReceiveConversionResult(
+            Status.SUCCESS,
+            atomicObject,
+            e.Handle.Value.ToString(),
+            e.GetType().ToString()
+          ))
         );
 
         bakedObjectIds.AddRange(convertedObjects.Select(e => e.Handle.Value.ToString()));

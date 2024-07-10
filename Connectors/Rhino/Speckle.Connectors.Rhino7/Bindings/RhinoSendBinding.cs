@@ -1,19 +1,19 @@
 using Rhino;
 using Rhino.Commands;
+using Rhino.DocObjects;
+using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.Rhino7.HostApp;
-using Speckle.Connectors.Utils.Cancellation;
-using Speckle.Autofac.DependencyInjection;
-using Rhino.DocObjects;
-using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
-using Speckle.Connectors.Utils.Operations;
 using Speckle.Connectors.DUI.Settings;
+using Speckle.Connectors.Rhino7.HostApp;
 using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Caching;
+using Speckle.Connectors.Utils.Cancellation;
+using Speckle.Connectors.Utils.Operations;
 using Speckle.Core.Transports;
 
 namespace Speckle.Connectors.Rhino7.Bindings;
@@ -151,8 +151,8 @@ public sealed class RhinoSendBinding : ISendBinding
       //  Init cancellation token source -> Manager also cancel it if exist before
       CancellationTokenSource cts = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
-      List<RhinoObject> rhinoObjects = modelCard.SendFilter
-        .NotNull()
+      List<RhinoObject> rhinoObjects = modelCard
+        .SendFilter.NotNull()
         .GetObjectIds()
         .Select(id => RhinoDoc.ActiveDoc.Objects.FindId(new Guid(id)))
         .Where(obj => obj != null)
@@ -164,8 +164,8 @@ public sealed class RhinoSendBinding : ISendBinding
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
       }
 
-      var sendResult = await unitOfWork.Service
-        .Execute(
+      var sendResult = await unitOfWork
+        .Service.Execute(
           rhinoObjects,
           modelCard.GetSendInfo(_rhinoSettings.HostAppInfo.Name),
           (status, progress) =>

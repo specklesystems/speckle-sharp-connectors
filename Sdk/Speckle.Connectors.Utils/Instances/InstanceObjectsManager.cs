@@ -72,8 +72,8 @@ public class InstanceObjectsManager<THostObjectType, TAppIdMapValueType>
     definitionProxy.MaxDepth += depthDifference;
 
     // Find instance proxies of given definition
-    var definitionInstanceProxies = definitionProxy.Objects
-      .Where(id => _instanceProxies.TryGetValue(id, out _))
+    var definitionInstanceProxies = definitionProxy
+      .Objects.Where(id => _instanceProxies.TryGetValue(id, out _))
       .Select(id => _instanceProxies[id])
       .ToList();
 
