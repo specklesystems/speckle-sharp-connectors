@@ -1,6 +1,4 @@
-﻿using Speckle.Converters.RevitShared;
-
-namespace Speckle.Converters.Revit2023;
+﻿namespace Speckle.Converters.RevitShared.Helpers;
 
 public class RevitVersionConversionHelper : IRevitVersionConversionHelper
 {

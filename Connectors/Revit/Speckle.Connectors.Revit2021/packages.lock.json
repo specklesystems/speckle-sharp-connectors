@@ -471,19 +471,11 @@
           "Speckle.Converters.Common": "[1.0.0, )"
         }
       },
-      "speckle.converters.revit2023": {
+      "speckle.converters.revit2021": {
         "type": "Project",
         "dependencies": {
-          "Speckle.Converters.Common": "[1.0.0, )",
-          "Speckle.Revit.API": "[2023.0.0, )"
-        }
-      },
-      "speckle.converters.revit2023.dependencyinjection": {
-        "type": "Project",
-        "dependencies": {
-          "Speckle.Converters.Common": "[1.0.0, )",
-          "Speckle.Converters.Common.DependencyInjection": "[1.0.0, )",
-          "Speckle.Converters.Revit2023": "[1.0.0, )"
+          "Revit_All_Main_Versions_API_x64": "[2021.0.0, )",
+          "Speckle.Converters.Common": "[1.0.0, )"
         }
       },
       "CefSharp.Common": {
@@ -505,6 +497,12 @@
           "System.Buffers": "4.5.1",
           "System.Memory": "4.5.5"
         }
+      },
+      "Revit_All_Main_Versions_API_x64": {
+        "type": "CentralTransitive",
+        "requested": "[2021.0.0, )",
+        "resolved": "2021.0.0",
+        "contentHash": "eP2HySoRPFMEMrfeKsIoFSXFzh8DTxhkq9WBR+BvTV3hVHJCULayhcbxtLLBX0npvIn3APrStlWl9G7hDqwbFA=="
       },
       "Serilog.Extensions.Logging": {
         "type": "CentralTransitive",
@@ -548,12 +546,6 @@
         "dependencies": {
           "Speckle.Core": "3.0.1-alpha.14"
         }
-      },
-      "Speckle.Revit.API": {
-        "type": "CentralTransitive",
-        "requested": "[2023.0.0, )",
-        "resolved": "2023.0.0",
-        "contentHash": "tq40eD7psgTbV+epNouYyqfo6+hEi7FmXZqcxEOsAV7zfYyWhL6Rt3vmojkWGNuerGbH6oRI6KIIxrnlCNb8Hw=="
       },
       "System.Threading.Tasks.Dataflow": {
         "type": "CentralTransitive",

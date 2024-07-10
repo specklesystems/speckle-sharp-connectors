@@ -26,8 +26,10 @@ internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding
     _topLevelExceptionHandler = topLevelExceptionHandler;
     // POC: we can inject the solution here
     // TODO: Need to figure it out equivalent of SelectionChanged for Revit2020
+#if !REVIT2020 && !REVIT2021 && !REVIT2022
     RevitContext.UIApplication.NotNull().SelectionChanged += (_, _) =>
       topLevelExceptionHandler.CatchUnhandled(() => _revitIdleManager.SubscribeToIdle(OnSelectionChanged));
+#endif
   }
 
   private void OnSelectionChanged()

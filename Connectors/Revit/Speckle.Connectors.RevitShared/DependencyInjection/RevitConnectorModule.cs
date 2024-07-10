@@ -34,8 +34,10 @@ public class RevitConnectorModule : ISpeckleModule
     builder.AddSingleton(BindingOptions.DefaultBinder);
 
     var panel = new CefSharpPanel();
+#if !REVIT2022
     panel.Browser.JavascriptObjectRepository.NameConverter = null;
-
+    
+#endif
     builder.AddSingleton(panel);
     builder.AddSingleton<IRevitPlugin, RevitPlugin>();
 

@@ -9,6 +9,7 @@ using Speckle.Connectors.DUI.Bindings;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Models;
+using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
@@ -93,7 +94,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       List<ElementId> revitObjects = modelCard.SendFilter
         .NotNull()
         .GetObjectIds()
-        .Select(id => ElementId.Parse(id))
+        .Select(ElementIdHelper.Parse)
         .ToList();
 
       if (revitObjects.Count == 0)

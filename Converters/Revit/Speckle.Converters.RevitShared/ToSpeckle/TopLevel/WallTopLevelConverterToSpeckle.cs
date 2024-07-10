@@ -161,6 +161,7 @@ public class WallTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.
 
   private void AssignVoids(DB.Wall target, SOBR.RevitWall speckleWall)
   {
+#if !REVIT2020 && !REVIT2021
     DB.CurveArrArray? profile = ((DB.Sketch)target.Document.GetElement(target.SketchId))?.Profile;
     if (profile is null)
     {
@@ -176,5 +177,6 @@ public class WallTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.
       // https://spockle.atlassian.net/browse/CNX-9396
       speckleWall["voids"] = polycurves.Skip(1).ToList();
     }
+#endif
   }
 }
