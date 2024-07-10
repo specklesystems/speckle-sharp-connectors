@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Mapping;
+using Objects.GIS;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
@@ -45,7 +46,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     CRSoffsetRotation crsOffsetRotation =
       new(_contextStack.Current.Document.Map.SpatialReference, _contextStack.Current.Document.Map);
     _contextStack.Current.Document.ActiveCRSoffsetRotation = crsOffsetRotation;
-    
+
     // POC: does this feel like the right place? I am wondering if this should be called from within send/rcv?
     // begin the unit of work
     using var uow = _unitOfWorkFactory.Resolve<IRootToSpeckleConverter>();
@@ -75,6 +76,22 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
         else
         {
           converted = converter.Convert(mapMember);
+
+          // get Active CRS (for writing geometry coords)
+          var spatialRef = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference;
+          converted["crs"] = new CRS
+          {
+            wkt = spatialRef.Wkt,
+            name = spatialRef.Name,
+            offset_y = System.Convert.ToSingle(_contextStack.Current.Document.ActiveCRSoffsetRotation.LatOffset),
+            offset_x = System.Convert.ToSingle(_contextStack.Current.Document.ActiveCRSoffsetRotation.LonOffset),
+            rotation = System.Convert.ToSingle(_contextStack.Current.Document.ActiveCRSoffsetRotation.TrueNorthRadians),
+            units_native = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString,
+          };
+
+          // other properties
+          converted["name"] = mapMember.Name;
+          converted["units"] = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString;
           converted.applicationId = applicationId;
         }
 

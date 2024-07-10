@@ -74,22 +74,6 @@ public class PointCloudToSpeckleConverter
   public SGIS.VectorLayer Convert(LasDatasetLayer target)
   {
     SGIS.VectorLayer speckleLayer = new();
-
-    // get document CRS (for writing geometry coords)
-    var spatialRef = _contextStack.Current.Document.Map.SpatialReference;
-    speckleLayer.crs = new SGIS.CRS
-    {
-      wkt = spatialRef.Wkt,
-      name = spatialRef.Name,
-      offset_y = System.Convert.ToSingle(_contextStack.Current.Document.ActiveCRSoffsetRotation.LatOffset),
-      offset_x = System.Convert.ToSingle(_contextStack.Current.Document.ActiveCRSoffsetRotation.LonOffset),
-      rotation = System.Convert.ToSingle(_contextStack.Current.Document.ActiveCRSoffsetRotation.TrueNorthRadians),
-      units_native = spatialRef.Unit.ToString(),
-    };
-
-    // other properties
-    speckleLayer.name = target.Name;
-    speckleLayer.units = _contextStack.Current.SpeckleUnits;
     speckleLayer.nativeGeomType = target.MapLayerType.ToString();
     speckleLayer.geomType = GISLayerGeometryType.POINTCLOUD;
 
@@ -120,7 +104,7 @@ public class PointCloudToSpeckleConverter
         colors = speckleColors,
         sizes = values,
         bbox = _boxConverter.Convert(target.QueryExtent()),
-        units = _contextStack.Current.SpeckleUnits
+        units = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString
       };
 
     speckleLayer.elements.Add(cloud);
