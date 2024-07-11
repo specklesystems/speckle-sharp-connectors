@@ -49,6 +49,15 @@
         "resolved": "92.0.26",
         "contentHash": "VT93sU6hH7LoUILjfaAxWbLc+m+b9QafeeRkuulnj3twJnb0PQ7nXd8PMUeOmYg96NzZi14G7qBYSY0dkxqztg=="
       },
+      "CefSharp.Common": {
+        "type": "Transitive",
+        "resolved": "92.0.260",
+        "contentHash": "0KS5z+kqg+mmB1X2KM17w3S7KQI5UTuJv+UOIQauJPvFYfRGWwTqmBbBxL3kCklGx8WSkaeBjPdSFxdzzXCSew==",
+        "dependencies": {
+          "cef.redist.x64": "[92.0.26]",
+          "cef.redist.x86": "[92.0.26]"
+        }
+      },
       "GraphQL.Client": {
         "type": "Transitive",
         "resolved": "6.0.0",
@@ -481,16 +490,6 @@
           "Speckle.Converters.Common": "[1.0.0, )",
           "Speckle.Converters.Common.DependencyInjection": "[1.0.0, )",
           "Speckle.Converters.Revit2023": "[1.0.0, )"
-        }
-      },
-      "CefSharp.Common": {
-        "type": "CentralTransitive",
-        "requested": "[92.0.260, )",
-        "resolved": "92.0.260",
-        "contentHash": "0KS5z+kqg+mmB1X2KM17w3S7KQI5UTuJv+UOIQauJPvFYfRGWwTqmBbBxL3kCklGx8WSkaeBjPdSFxdzzXCSew==",
-        "dependencies": {
-          "cef.redist.x64": "[92.0.26]",
-          "cef.redist.x86": "[92.0.26]"
         }
       },
       "Microsoft.Extensions.Logging.Abstractions": {
