@@ -8,11 +8,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{85A13E
 		.editorconfig = .editorconfig
 		codecov.yml = codecov.yml
 		Directory.Build.props = Directory.Build.props
+		Directory.Build.targets = Directory.Build.targets
 		Directory.Packages.props = Directory.Packages.props
 		global.json = global.json
 		README.md = README.md
-		codecov.yml = codecov.yml
-		Directory.Build.targets = Directory.Build.targets
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DUI3", "DUI3", "{FD4D6594-D81E-456F-8F2E-35B09E04A755}"
@@ -105,11 +104,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Connectors", "Connectors", 
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Converters", "Converters", "{B9DE08BB-1188-4E6C-8790-10252A48381C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Revit2022", "Connectors\Revit\Speckle.Connectors.Revit2022\Speckle.Connectors.Revit2022.csproj", "{7F1FDCF2-0CE8-4119-B3C1-F2CC6D7E1C36}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Connectors.Revit2022", "Connectors\Revit\Speckle.Connectors.Revit2022\Speckle.Connectors.Revit2022.csproj", "{7F1FDCF2-0CE8-4119-B3C1-F2CC6D7E1C36}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Revit2022", "Converters\Revit\Speckle.Converters.Revit2022\Speckle.Converters.Revit2022.csproj", "{19424B55-058C-4E9C-B86F-700AEF9EAEC3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Converters.Revit2022", "Converters\Revit\Speckle.Converters.Revit2022\Speckle.Converters.Revit2022.csproj", "{19424B55-058C-4E9C-B86F-700AEF9EAEC3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Revit2022.DependencyInjection", "Converters\Revit\Speckle.Converters.Revit2022.DependencyInjection\Speckle.Converters.Revit2022.DependencyInjection.csproj", "{881D71A3-D276-4108-98C6-0FFD32129B9C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Converters.Revit2022.DependencyInjection", "Converters\Revit\Speckle.Converters.Revit2022.DependencyInjection\Speckle.Converters.Revit2022.DependencyInjection.csproj", "{881D71A3-D276-4108-98C6-0FFD32129B9C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -243,11 +242,11 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{D92751C8-1039-4005-90B2-913E55E0B8BD} = {42826721-9A18-4762-8BA9-F1429DD5C5B1}
-		{01F98733-7352-47AD-A594-537D979DE3DE} = {D92751C8-1039-4005-90B2-913E55E0B8BD}
-		{DC570FFF-6FE5-47BD-8BC1-B471A6067786} = {D92751C8-1039-4005-90B2-913E55E0B8BD}
-		{E1C43415-3200-45F4-8BF9-A4DD7D7F2ED6} = {D92751C8-1039-4005-90B2-913E55E0B8BD}
-		{83EAD6F0-3CB3-456A-AD81-072127D0DE0E} = {D92751C8-1039-4005-90B2-913E55E0B8BD}
-		{26391930-F86F-47E0-A5F6-B89919E38CE1} = {D92751C8-1039-4005-90B2-913E55E0B8BD}
+		{01F98733-7352-47AD-A594-537D979DE3DE} = {C9F9A53F-8C16-4358-A4C2-EBF52C670B2C}
+		{DC570FFF-6FE5-47BD-8BC1-B471A6067786} = {C9F9A53F-8C16-4358-A4C2-EBF52C670B2C}
+		{E1C43415-3200-45F4-8BF9-A4DD7D7F2ED6} = {B9DE08BB-1188-4E6C-8790-10252A48381C}
+		{83EAD6F0-3CB3-456A-AD81-072127D0DE0E} = {B9DE08BB-1188-4E6C-8790-10252A48381C}
+		{26391930-F86F-47E0-A5F6-B89919E38CE1} = {B9DE08BB-1188-4E6C-8790-10252A48381C}
 		{D81C0B87-F0C1-4297-A147-02F001FB7E1E} = {FD4D6594-D81E-456F-8F2E-35B09E04A755}
 		{C9D4CA21-182B-4ED2-81BB-280A6FD713F6} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
 		{7291B93C-615D-42DE-B8C1-3F9DF643E0FC} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
@@ -277,21 +276,17 @@ Global
 		{25172C49-7AA4-4739-BB07-69785094C379} = {804E065F-914C-414A-AF84-009312C3CFF6}
 		{E1C43415-3200-45F4-8BF9-A4DD7D7F2ED9} = {9584AEE5-CD59-46E6-93E6-2DC2B5285B75}
 		{AC2DB416-F05C-4296-9040-56D6AD4FCD27} = {9584AEE5-CD59-46E6-93E6-2DC2B5285B75}
+		{68CF9BDF-94AC-4D2D-A7BD-D1C064F97051} = {B9DE08BB-1188-4E6C-8790-10252A48381C}
 		{A3869243-B462-4986-914B-94E407D8D20F} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
 		{C9F9A53F-8C16-4358-A4C2-EBF52C670B2C} = {D92751C8-1039-4005-90B2-913E55E0B8BD}
 		{B9DE08BB-1188-4E6C-8790-10252A48381C} = {D92751C8-1039-4005-90B2-913E55E0B8BD}
-		{68CF9BDF-94AC-4D2D-A7BD-D1C064F97051} = {B9DE08BB-1188-4E6C-8790-10252A48381C}
 		{7F1FDCF2-0CE8-4119-B3C1-F2CC6D7E1C36} = {C9F9A53F-8C16-4358-A4C2-EBF52C670B2C}
 		{19424B55-058C-4E9C-B86F-700AEF9EAEC3} = {B9DE08BB-1188-4E6C-8790-10252A48381C}
-		{01F98733-7352-47AD-A594-537D979DE3DE} = {C9F9A53F-8C16-4358-A4C2-EBF52C670B2C}
-		{DC570FFF-6FE5-47BD-8BC1-B471A6067786} = {C9F9A53F-8C16-4358-A4C2-EBF52C670B2C}
-		{26391930-F86F-47E0-A5F6-B89919E38CE1} = {B9DE08BB-1188-4E6C-8790-10252A48381C}
-		{83EAD6F0-3CB3-456A-AD81-072127D0DE0E} = {B9DE08BB-1188-4E6C-8790-10252A48381C}
-		{E1C43415-3200-45F4-8BF9-A4DD7D7F2ED6} = {B9DE08BB-1188-4E6C-8790-10252A48381C}
 		{881D71A3-D276-4108-98C6-0FFD32129B9C} = {B9DE08BB-1188-4E6C-8790-10252A48381C}
 	EndGlobalSection
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		Connectors\Revit\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems*{01f98733-7352-47ad-a594-537d979de3de}*SharedItemsImports = 5
+		Converters\Revit\Speckle.Converters.RevitShared\Speckle.Converters.RevitShared.projitems*{19424b55-058c-4e9c-b86f-700aef9eaec3}*SharedItemsImports = 5
 		Converters\Autocad\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.projitems*{25172c49-7aa4-4739-bb07-69785094c379}*SharedItemsImports = 5
 		Converters\Civil3d\Speckle.Converters.Civil3dShared\Speckle.Converters.Civil3dShared.projitems*{25172c49-7aa4-4739-bb07-69785094c379}*SharedItemsImports = 5
 		Converters\Revit\Speckle.Converters.RevitShared\Speckle.Converters.RevitShared.projitems*{26391930-f86f-47e0-a5f6-b89919e38ce1}*SharedItemsImports = 5
@@ -300,6 +295,7 @@ Global
 		Converters\Autocad\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.projitems*{631c295a-7ccf-4b42-8686-7034e31469e7}*SharedItemsImports = 5
 		Converters\Rhino\Speckle.Converters.RhinoShared\Speckle.Converters.RhinoShared.projitems*{65a2f556-f14a-49f3-8a92-7f2e1e7ed3b5}*SharedItemsImports = 5
 		Converters\Revit\Speckle.Converters.RevitShared\Speckle.Converters.RevitShared.projitems*{68cf9bdf-94ac-4d2d-a7bd-d1c064f97051}*SharedItemsImports = 5
+		Connectors\Revit\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems*{7f1fdcf2-0ce8-4119-b3c1-f2cc6d7e1c36}*SharedItemsImports = 5
 		Connectors\Autocad\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems*{89c4cbc7-1606-40de-b6da-fbe3aac98395}*SharedItemsImports = 5
 		Converters\Autocad\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.projitems*{9add1b7a-6401-4202-8613-f668e2fbc0a4}*SharedItemsImports = 13
 		Converters\Rhino\Speckle.Converters.RhinoShared\Speckle.Converters.RhinoShared.projitems*{ac2db416-f05c-4296-9040-56d6ad4fcd27}*SharedItemsImports = 5
