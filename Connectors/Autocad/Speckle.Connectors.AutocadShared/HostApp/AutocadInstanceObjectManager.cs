@@ -1,4 +1,3 @@
-using System.DoubleNumerics;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Geometry;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
@@ -9,6 +8,7 @@ using Speckle.Core.Kits;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
 using Speckle.Core.Models.Instances;
+using Speckle.DoubleNumerics;
 
 namespace Speckle.Connectors.Autocad.HostApp;
 

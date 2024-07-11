@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Extensions;
@@ -121,7 +122,11 @@ public class ParameterValueExtractor
     );
   }
 
-  public bool TryGetValueAsElementId(Element element, BuiltInParameter builtInParameter, out ElementId? elementId)
+  public bool TryGetValueAsElementId(
+    Element element,
+    BuiltInParameter builtInParameter,
+    [NotNullWhen(true)] out ElementId? elementId
+  )
   {
     if (
       GetValueGeneric(element, builtInParameter, StorageType.ElementId, (parameter) => parameter.AsElementId())
@@ -141,7 +146,12 @@ public class ParameterValueExtractor
     return GetValueGeneric(parameter, StorageType.ElementId, (parameter) => parameter.AsElementId());
   }
 
-  public bool TryGetValueAsDocumentObject<T>(Element element, BuiltInParameter builtInParameter, out T? value)
+  public bool TryGetValueAsDocumentObject<T>(
+    Element element,
+    BuiltInParameter builtInParameter,
+    [NotNullWhen(true)] out T? value
+  )
+    where T : class
   {
     if (!TryGetValueAsElementId(element, builtInParameter, out var elementId))
     {
@@ -152,7 +162,7 @@ public class ParameterValueExtractor
     Element paramElement = element.Document.GetElement(elementId.NotNull());
     if (paramElement is not T typedElement)
     {
-      value = default;
+      value = null;
       return false;
     }
 
@@ -168,7 +178,7 @@ public class ParameterValueExtractor
       throw new SpeckleConversionException($"Failed to get {builtInParameter} as an element of type {typeof(T)}");
     }
 
-    return value!; // If TryGet returns true, we succeeded in obtaining the value, and it will not be null.
+    return value;
   }
 
   private TResult? GetValueGeneric<TResult>(
