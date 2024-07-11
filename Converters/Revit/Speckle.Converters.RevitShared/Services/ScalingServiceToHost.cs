@@ -12,10 +12,18 @@ public sealed class ScalingServiceToHost
       return value;
     }
 
-    return UnitUtils.ConvertToInternalUnits(value, UnitsToNative(units));
+    return ScaleToNative(
+      value,
+      UnitsToNative(units) ?? throw new SpeckleConversionException($"The Unit System \"{units}\" is unsupported.")
+    );
   }
 
-  public ForgeTypeId UnitsToNative(string units)
+  public double ScaleToNative(double value, ForgeTypeId typeId)
+  {
+    return UnitUtils.ConvertToInternalUnits(value, typeId);
+  }
+
+  public ForgeTypeId? UnitsToNative(string units)
   {
     var u = Core.Kits.Units.GetUnitsFromString(units);
 
@@ -26,7 +34,7 @@ public sealed class ScalingServiceToHost
       Core.Kits.Units.Meters => UnitTypeId.Meters,
       Core.Kits.Units.Inches => UnitTypeId.Inches,
       Core.Kits.Units.Feet => UnitTypeId.Feet,
-      _ => throw new SpeckleConversionException($"The Unit System \"{units}\" is unsupported."),
+      _ => null,
     };
   }
 }
