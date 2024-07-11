@@ -61,13 +61,13 @@ public class EllipseToHostConverter : IToHostTopLevelConverter, ITypedConverter<
       majorAxisRadius * scaleFactor,
       minorAxisRatio,
       ACG.ArcOrientation.ArcCounterClockwise,
-      _contextStack.Current.Document.Map.SpatialReference
+      _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference
     );
 
     return new ACG.PolylineBuilderEx(
       segment,
       ACG.AttributeFlags.HasZ,
-      _contextStack.Current.Document.Map.SpatialReference
+      _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference
     ).ToGeometry();
   }
 }

@@ -28,7 +28,7 @@ public class LineSingleToHostConverter : IToHostTopLevelConverter, ITypedConvert
     return new ACG.PolylineBuilderEx(
       points,
       ACG.AttributeFlags.HasZ,
-      _contextStack.Current.Document.Map.SpatialReference
+      _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference
     ).ToGeometry();
   }
 }
