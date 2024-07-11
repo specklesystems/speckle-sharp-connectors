@@ -3,7 +3,7 @@
 
 ## Formatting
 
-Use CSharpier to format.  There are a few options:
+Use [CSharpier](https://github.com/belav/csharpier) to format.  There are a few options:
 - Install CSharpier as a local tool: `dotnet tool install csharpier`
     - This allows CLI use of CSharpier: `dotnet csharpier .` after `dotnet tool restore`
 - Install the CSharpier Visual Studio 2022 extension: https://marketplace.visualstudio.com/items?itemName=csharpier.CSharpier
