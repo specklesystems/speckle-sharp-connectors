@@ -48,20 +48,9 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     // get active CRS & offsets on Receive
     SpatialReference activeSpatialRef = _contextStack.Current.Document.Map.SpatialReference;
 
-    // TODO: Browse for any trace of geolocation in non-GIS apps (e.g. Revit: implemented, Blender: todo on Blender side, Civil3d: ?)
+    // TODO get spatialRef and offsets & rotation from ProjectInfo
     // ATM, GIS commit CRS is stored per layer (in FeatureClass converter), but should be moved to the Root level too
-    // should be standardized in ProjectInfo attachment to rootObject
-    CRSorigin? dataOrigin = null; // e.g. CRSorigin.FromRevitData(rootObject);
-    if (dataOrigin is CRSorigin crsOrigin)
-    {
-      activeSpatialRef = crsOrigin.CreateCustomCRS();
-    }
-
-    // TODO also after ProjectInfo: get offsets & rotation
-    double trueNorthRadians = 0; // example = CRSoffsetRotation.RotationFromRevitData(rootObject);
-    double latOffset = 0;
-    double lonOffset = 0;
-    CRSoffsetRotation crsOffsetRotation = new(activeSpatialRef, latOffset, lonOffset, trueNorthRadians);
+    CRSoffsetRotation crsOffsetRotation = new(activeSpatialRef, _contextStack.Current.Document.Map);
 
     // set active CRS & offsets on Receive to ContextStack as ActiveCRSoffsetRotation
     _contextStack.Current.Document.ActiveCRSoffsetRotation = crsOffsetRotation;

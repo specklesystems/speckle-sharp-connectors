@@ -117,7 +117,7 @@ public struct CRSoffsetRotation
     LonOffset = 0;
     TrueNorthRadians = 0;
   }
-  
+
   /// <summary>
   /// Initializes a new instance of <see cref="CRSoffsetRotation"/>.
   /// </summary>
@@ -127,20 +127,43 @@ public struct CRSoffsetRotation
   {
     SpatialReference = spatialReference;
     SpeckleUnitString = GetSpeckleUnit(spatialReference);
-    
-    // read from metadata 
+
+    // read from metadata
     string metadata = map.GetMetadata();
     var root = XDocument.Parse(metadata).Root;
     string? textData = root?.Element("dataIdInfo")?.Element("resConst")?.Element("Consts")?.Element("useLimit")?.Value;
-    
-    string? latElement = textData?.Split("speckle_lat=")[^1].Split("<")[0];
-    string? lonElement = textData?.Split("speckle_lon=")[^1].Split("<")[0];
-    string? northElement = textData?.Split("speckle_north=")[^1].Split("<")[0];
-    
-    // set offseta and rotation from metadata
-    LatOffset = latElement is null ? 0 : Convert.ToDouble(latElement);
-    LonOffset = lonElement is null ? 0 : Convert.ToDouble(lonElement);
-    TrueNorthRadians = northElement is null ? 0 : Convert.ToDouble(northElement);
+    textData = textData?.Replace("<SPAN>", "").Replace("</SPAN>", "");
+
+    // set offsets and rotation from metadata if available
+    if (
+      textData != null
+      && textData.Contains("_specklelat=")
+      && textData.Contains("_specklelon=")
+      && textData.Contains("_specklenorth=")
+    )
+    {
+      string? latElement = textData?.Split("specklelat=")[^1].Split("_")[0];
+      string? lonElement = textData?.Split("specklelon=")[^1].Split("_")[0];
+      string? northElement = textData?.Split("specklenorth=")[^1].Split("_")[0];
+      try
+      {
+        LatOffset = latElement is null ? 0 : Convert.ToDouble(latElement);
+        LonOffset = lonElement is null ? 0 : Convert.ToDouble(lonElement);
+        TrueNorthRadians = northElement is null ? 0 : Convert.ToDouble(northElement);
+      }
+      catch (Exception ex) when (ex is FormatException or OverflowException)
+      {
+        LatOffset = 0;
+        LonOffset = 0;
+        TrueNorthRadians = 0;
+      }
+    }
+    else
+    {
+      LatOffset = 0;
+      LonOffset = 0;
+      TrueNorthRadians = 0;
+    }
   }
 
   /// <summary>
