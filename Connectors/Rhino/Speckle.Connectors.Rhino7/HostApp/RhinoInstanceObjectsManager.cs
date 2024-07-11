@@ -1,4 +1,3 @@
-using System.DoubleNumerics;
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
@@ -9,6 +8,7 @@ using Speckle.Core.Kits;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
 using Speckle.Core.Models.Instances;
+using Speckle.DoubleNumerics;
 
 namespace Speckle.Connectors.Rhino7.HostApp;
 
