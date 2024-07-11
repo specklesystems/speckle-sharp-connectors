@@ -57,12 +57,15 @@ public class DBSubDMeshToSpeckleConverter : IToSpeckleTopLevelConverter
     }
 
     // colors
-    var colors = target.VertexColorArray
-      .Select(
-        o =>
-          System.Drawing.Color
-            .FromArgb(System.Convert.ToInt32(o.Red), System.Convert.ToInt32(o.Green), System.Convert.ToInt32(o.Blue))
-            .ToArgb()
+    var colors = target
+      .VertexColorArray.Select(o =>
+        System
+          .Drawing.Color.FromArgb(
+            System.Convert.ToInt32(o.Red),
+            System.Convert.ToInt32(o.Green),
+            System.Convert.ToInt32(o.Blue)
+          )
+          .ToArgb()
       )
       .ToList();
 

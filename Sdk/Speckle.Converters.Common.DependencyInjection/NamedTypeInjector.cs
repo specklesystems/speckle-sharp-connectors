@@ -44,8 +44,8 @@ public static class ConversionTypesInjector
       // POC: should we explode if no found?
       if (secondaryType != null)
       {
-        containerBuilder.ContainerBuilder
-          .RegisterType(first.type)
+        containerBuilder
+          .ContainerBuilder.RegisterType(first.type)
           .As(secondaryType)
           .PropertiesAutowired(PropertyWiringOptions.AllowCircularDependencies)
           .InstancePerLifetimeScope();
@@ -56,8 +56,8 @@ public static class ConversionTypesInjector
       foreach (var other in namedTypes)
       {
         // POC: is this the right scope?
-        containerBuilder.ContainerBuilder
-          .RegisterType(other.type)
+        containerBuilder
+          .ContainerBuilder.RegisterType(other.type)
           .Keyed<T>($"{other.name}|{other.rank}")
           .InstancePerLifetimeScope();
 

@@ -13,6 +13,8 @@ public class RevitConverterModule : ISpeckleModule
 {
   public void Load(SpeckleContainerBuilder builder)
   {
+    //register types by default
+    builder.ScanAssemblyOfType<SlopeArrowExtractor>();
     // Register single root
     builder.AddRootCommon<RevitRootToSpeckleConverter>();
 
@@ -38,6 +40,5 @@ public class RevitConverterModule : ISpeckleModule
     builder.AddScoped<DisplayValueExtractor>();
     builder.AddScoped<HostedElementConversionToSpeckle>();
     builder.AddScoped<ParameterObjectAssigner>();
-    builder.AddScoped<ISlopeArrowExtractor, SlopeArrowExtractor>();
   }
 }

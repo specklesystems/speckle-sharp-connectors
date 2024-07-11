@@ -151,8 +151,8 @@ public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInst
       {
         if (instanceOrDefinition is InstanceDefinitionProxy definitionProxy)
         {
-          var currentApplicationObjectsIds = definitionProxy.Objects
-            .Select(x => applicationIdMap.TryGetValue(x, out List<string> value) ? value : null)
+          var currentApplicationObjectsIds = definitionProxy
+            .Objects.Select(x => applicationIdMap.TryGetValue(x, out List<string> value) ? value : null)
             .Where(x => x is not null)
             .SelectMany(id => id)
             .ToList();

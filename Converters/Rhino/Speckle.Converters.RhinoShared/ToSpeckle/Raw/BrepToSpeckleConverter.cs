@@ -107,38 +107,32 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.Brep>
   }
 
   private static List<SOG.BrepFace> ConvertBrepFaces(RG.Brep brep, SOG.Brep speckleParent) =>
-    brep.Faces
-      .Select(
-        f =>
-          new SOG.BrepFace(
-            speckleParent,
-            f.SurfaceIndex,
-            f.Loops.Select(l => l.LoopIndex).ToList(),
-            f.OuterLoop.LoopIndex,
-            f.OrientationIsReversed
-          )
-      )
+    brep
+      .Faces.Select(f => new SOG.BrepFace(
+        speckleParent,
+        f.SurfaceIndex,
+        f.Loops.Select(l => l.LoopIndex).ToList(),
+        f.OuterLoop.LoopIndex,
+        f.OrientationIsReversed
+      ))
       .ToList();
 
   private List<SOG.BrepEdge> ConvertBrepEdges(RG.Brep brep, SOG.Brep speckleParent) =>
-    brep.Edges
-      .Select(
-        edge =>
-          new SOG.BrepEdge(
-            speckleParent,
-            edge.EdgeCurveIndex,
-            edge.TrimIndices(),
-            edge.StartVertex.VertexIndex,
-            edge.EndVertex.VertexIndex,
-            edge.ProxyCurveIsReversed,
-            _intervalConverter.Convert(edge.Domain)
-          )
-      )
+    brep
+      .Edges.Select(edge => new SOG.BrepEdge(
+        speckleParent,
+        edge.EdgeCurveIndex,
+        edge.TrimIndices(),
+        edge.StartVertex.VertexIndex,
+        edge.EndVertex.VertexIndex,
+        edge.ProxyCurveIsReversed,
+        _intervalConverter.Convert(edge.Domain)
+      ))
       .ToList();
 
   private List<SOG.BrepTrim> ConvertBrepTrims(RG.Brep brep, SOG.Brep speckleParent) =>
-    brep.Trims
-      .Select(trim =>
+    brep
+      .Trims.Select(trim =>
       {
         var t = new SOG.BrepTrim(
           speckleParent,
@@ -161,16 +155,13 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.Brep>
       .ToList();
 
   private List<SOG.BrepLoop> ConvertBrepLoops(RG.Brep brep, SOG.Brep speckleParent) =>
-    brep.Loops
-      .Select(
-        loop =>
-          new SOG.BrepLoop(
-            speckleParent,
-            loop.Face.FaceIndex,
-            loop.Trims.Select(t => t.TrimIndex).ToList(),
-            (SOG.BrepLoopType)loop.LoopType
-          )
-      )
+    brep
+      .Loops.Select(loop => new SOG.BrepLoop(
+        speckleParent,
+        loop.Face.FaceIndex,
+        loop.Trims.Select(t => t.TrimIndex).ToList(),
+        (SOG.BrepLoopType)loop.LoopType
+      ))
       .ToList();
 
   private RG.Mesh? GetBrepDisplayMesh(RG.Brep brep)

@@ -98,8 +98,8 @@ public class ReferencePointConverter : IReferencePointConverter
         var angle = projectPoint.get_Parameter(DB.BuiltInParameter.BASEPOINT_ANGLETON_PARAM)?.AsDouble() ?? 0;
 
         // POC: following disposed incorrectly or early or maybe a false negative?
-        referencePointTransform = DB.Transform
-          .CreateTranslation(surveyPoint.Position)
+        referencePointTransform = DB
+          .Transform.CreateTranslation(surveyPoint.Position)
           .Multiply(DB.Transform.CreateRotation(DB.XYZ.BasisZ, angle));
 
         break;

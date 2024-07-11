@@ -160,8 +160,8 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
         if (instanceOrDefinition is InstanceDefinitionProxy { applicationId: not null } definitionProxy)
         {
           // TODO: create definition (block table record)
-          var constituentEntities = definitionProxy.Objects
-            .Select(id => applicationIdMap.TryGetValue(id, out List<Entity> value) ? value : null)
+          var constituentEntities = definitionProxy
+            .Objects.Select(id => applicationIdMap.TryGetValue(id, out List<Entity> value) ? value : null)
             .Where(x => x is not null)
             .SelectMany(ent => ent)
             .ToList();
