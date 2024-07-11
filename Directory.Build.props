@@ -9,6 +9,7 @@
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageVersionOverrideEnabled>true</CentralPackageVersionOverrideEnabled>
+    <WarningsAsErrors>$(WarningsAsErrors);CS0618</WarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>

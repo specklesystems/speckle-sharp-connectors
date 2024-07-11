@@ -53,7 +53,7 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
       // Receive host objects
       var receiveOperationResults = await unitOfWork
         .Service.Execute(
-          modelCard.GetReceiveInfo(),
+          modelCard.GetReceiveInfo("ArcGIS"), // POC: get host app name from settings? same for GetSendInfo
           cts.Token,
           (status, progress) =>
             Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts)

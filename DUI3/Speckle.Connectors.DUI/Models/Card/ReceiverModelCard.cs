@@ -12,13 +12,15 @@ public class ReceiverModelCard : ModelCard
   public bool HasDismissedUpdateWarning { get; set; }
   public List<string>? BakedObjectIds { get; set; }
 
-  public ReceiveInfo GetReceiveInfo() =>
+  public ReceiveInfo GetReceiveInfo(string sourceApplication) =>
     new(
       AccountId.NotNull(),
       new Uri(ServerUrl.NotNull()),
       ProjectId.NotNull(),
       ProjectName.NotNull(),
+      ModelId.NotNull(),
       ModelName.NotNull(),
-      SelectedVersionId.NotNull()
+      SelectedVersionId.NotNull(),
+      sourceApplication
     );
 }

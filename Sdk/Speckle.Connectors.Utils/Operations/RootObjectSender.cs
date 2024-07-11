@@ -1,5 +1,6 @@
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Core.Api;
+using Speckle.Core.Api.GraphQL.Inputs;
 using Speckle.Core.Credentials;
 using Speckle.Core.Models;
 using Speckle.Core.Transports;
@@ -55,14 +56,13 @@ public sealed class RootObjectSender : IRootObjectSender
     // 8 - Create the version (commit)
     using var apiClient = new Client(account);
     _ = await apiClient
-      .CommitCreate(
-        new CommitCreateInput
-        {
-          streamId = sendInfo.ProjectId,
-          branchName = sendInfo.ModelId,
-          sourceApplication = sendInfo.SourceApplication,
-          objectId = sendResult.rootObjId
-        },
+      .Version.Create(
+        new CreateVersionInput(
+          sendResult.rootObjId,
+          sendInfo.ModelId,
+          sendInfo.ProjectId,
+          sourceApplication: sendInfo.SourceApplication
+        ),
         ct
       )
       .ConfigureAwait(true);
