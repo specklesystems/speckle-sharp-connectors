@@ -28,6 +28,12 @@ public class ArcGISToSpeckleUnitConverter : IHostToSpeckleUnitConverter<Unit>
 
   public string ConvertOrThrow(Unit hostUnit)
   {
+    // allow to send data in degrees (RootObjBuilder will send a warning)
+    if (hostUnit.UnitType == UnitType.Angular && hostUnit.FactoryCode == 9102)
+    {
+      return Units.Meters;
+    }
+
     int linearUnit = LinearUnit.CreateLinearUnit(hostUnit.Wkt).FactoryCode;
 
     if (s_unitMapping.TryGetValue(linearUnit, out string? value))

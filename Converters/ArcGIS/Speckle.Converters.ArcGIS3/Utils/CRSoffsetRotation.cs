@@ -137,14 +137,14 @@ public struct CRSoffsetRotation
     // set offsets and rotation from metadata if available
     if (
       textData != null
-      && textData.Contains("_specklelat=")
-      && textData.Contains("_specklelon=")
+      && textData.Contains("_specklexoffset=")
+      && textData.Contains("_speckleyoffset=")
       && textData.Contains("_specklenorth=")
     )
     {
-      string? latElement = textData?.Split("specklelat=")[^1].Split("_")[0];
-      string? lonElement = textData?.Split("specklelon=")[^1].Split("_")[0];
-      string? northElement = textData?.Split("specklenorth=")[^1].Split("_")[0];
+      string? latElement = textData?.Split("_specklexoffset=")[^1].Split("_")[0];
+      string? lonElement = textData?.Split("_speckleyoffset=")[^1].Split("_")[0];
+      string? northElement = textData?.Split("_specklenorth=")[^1].Split("_")[0];
       try
       {
         LatOffset = latElement is null ? 0 : Convert.ToDouble(latElement);

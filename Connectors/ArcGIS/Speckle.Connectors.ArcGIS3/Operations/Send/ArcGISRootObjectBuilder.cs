@@ -42,6 +42,9 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     CancellationToken ct = default
   )
   {
+    // TODO: add a warning
+    // "Data has been sent in the units 'degrees'. It is advisable to set the project CRS to Projected type (e.g. EPSG:32631) to be able to receive geometry correctly in CAD/BIM software"
+
     // set active CRS & offsets on Send, add offsets if we find a way to set them up
     CRSoffsetRotation crsOffsetRotation =
       new(_contextStack.Current.Document.Map.SpatialReference, _contextStack.Current.Document.Map);
