@@ -51,7 +51,7 @@ public class ColumnConversionToSpeckle : ITypedConverter<DB.FamilyInstance, Revi
       )
     )
     {
-      speckleColumn.level = _levelConverter.Convert(level.NotNull());
+      speckleColumn.level = _levelConverter.Convert(level);
     }
     if (
       _parameterValueExtractor.TryGetValueAsDocumentObject<Level>(
@@ -61,7 +61,7 @@ public class ColumnConversionToSpeckle : ITypedConverter<DB.FamilyInstance, Revi
       )
     )
     {
-      speckleColumn.topLevel = _levelConverter.Convert(topLevel.NotNull());
+      speckleColumn.topLevel = _levelConverter.Convert(topLevel);
     }
 
     if (

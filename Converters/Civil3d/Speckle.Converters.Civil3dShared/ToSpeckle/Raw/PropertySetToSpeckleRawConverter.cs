@@ -46,7 +46,7 @@ public class PropertySetToSpeckleRawConverter : ITypedConverter<AECPropDB.Proper
         : data.FieldBucketId;
 
       object fieldData = data.GetData();
-      DataField field = new(fieldName, fieldData.GetType().Name, data.UnitType.PluralName(false), fieldData);
+      DataField field = new(fieldName, fieldData.GetType().Name, fieldData, data.UnitType.PluralName(false));
       properties.Add(field);
     }
 
