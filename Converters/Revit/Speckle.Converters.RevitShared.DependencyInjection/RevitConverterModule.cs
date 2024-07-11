@@ -2,17 +2,18 @@ using Autodesk.Revit.DB;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.DependencyInjection;
-using Speckle.Converters.RevitShared;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.ToSpeckle;
 
-namespace Speckle.Converters.Revit2022.DependencyInjection;
+namespace Speckle.Converters.RevitShared.DependencyInjection;
 
 public class RevitConverterModule : ISpeckleModule
 {
   public void Load(SpeckleContainerBuilder builder)
   {
+    //register types by default
+    builder.ScanAssemblyOfType<SlopeArrowExtractor>();
     // Register single root
     builder.AddRootCommon<RevitRootToSpeckleConverter>();
 
