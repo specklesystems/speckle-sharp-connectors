@@ -18,6 +18,6 @@ public class RhinoConverterModule : ISpeckleModule
     builder.AddScoped<IConversionContextStack<RhinoDoc, UnitSystem>, RhinoConversionContextStack>();
 
     // register factories
-    builder.AddSingleton<IBoxFactory, BoxFactory>();
+    builder.ScanAssemblyOfType<BoxFactory>();
   }
 }
