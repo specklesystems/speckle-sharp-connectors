@@ -161,7 +161,7 @@ public class WallTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.
 
   private void AssignVoids(DB.Wall target, SOBR.RevitWall speckleWall)
   {
-#if !REVIT2020 && !REVIT2021 && !REVIT2022
+#if !REVIT2022
     DB.CurveArrArray? profile = ((DB.Sketch)target.Document.GetElement(target.SketchId))?.Profile;
     if (profile is null)
     {

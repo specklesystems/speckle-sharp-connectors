@@ -143,25 +143,6 @@ internal sealed class RevitPlugin : IRevitPlugin
           _bindingOptions
         );
       }
-
-      // POC: Below line seems unneccesary but not removing just in case we did it like this? Maybe check it later
-      //  with some other revit connectors again since CefSharp version is different
-      // _cefSharpPanel.Browser.Load("https://boisterous-douhua-e3cefb.netlify.app/");
-
-      // POC: not sure where this comes from
-#if REVIT2020
-      // NOTE: Cef65 does not work with DUI3 in yarn dev mode. To test things you need to do `yarn build` and serve the build
-      // folder at port 3000 (or change it to something else if you want to). Guru  meditation: Je sais, pas ideal. Mais q'est que nous pouvons faire? Rien. C'est l'autodesk vie.
-      // NOTE: To run the ui from a build, follow these steps:
-      // - run `yarn build` in the DUI3 folder
-      // - run ` PORT=3003  node .output/server/index.mjs` after the build
-
-      CefSharpPanel.Browser.Load("http://localhost:3003");
-      CefSharpPanel.Browser.ShowDevTools();
-#endif
-#if REVIT2023
-      CefSharpPanel.Browser.Load("http://localhost:8082");
-#endif
     };
   }
 
