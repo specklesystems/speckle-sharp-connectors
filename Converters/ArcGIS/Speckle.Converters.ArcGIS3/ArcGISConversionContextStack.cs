@@ -3,8 +3,8 @@ using ArcGIS.Core.Data;
 using ArcGIS.Core.Data.DDL;
 using ArcGIS.Desktop.Core;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
-using Speckle.Converters.ArcGIS3.Utils;
 using ArcGIS.Desktop.Mapping;
+using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 
 namespace Speckle.Converters.ArcGIS3;
