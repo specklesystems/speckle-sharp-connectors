@@ -2,9 +2,9 @@ using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
-using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Utils;
+using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Core.Transports;
 
@@ -58,8 +58,8 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
       Application.DocumentManager.DocumentActivationEnabled = false;
 
       // Receive host objects
-      var operationResults = await unitOfWork.Service
-        .Execute(
+      var operationResults = await unitOfWork
+        .Service.Execute(
           modelCard.GetReceiveInfo(),
           cts.Token,
           (status, progress) =>

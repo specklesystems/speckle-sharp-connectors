@@ -1,8 +1,8 @@
-using Autodesk.Revit.UI;
-using Speckle.Autofac.DependencyInjection;
 using System.IO;
 using System.Reflection;
+using Autodesk.Revit.UI;
 using Speckle.Autofac;
+using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Utils;
 
 namespace Speckle.Connectors.Revit.Plugin;

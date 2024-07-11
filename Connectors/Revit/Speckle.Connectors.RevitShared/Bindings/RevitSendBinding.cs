@@ -1,18 +1,17 @@
 using Autodesk.Revit.DB;
-using Speckle.Connectors.DUI.Models.Card.SendFilter;
-using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.Revit.Plugin;
-using Speckle.Connectors.Utils;
-using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.DUI.Bindings;
 using Speckle.Autofac.DependencyInjection;
+using Speckle.Connectors.DUI.Bindings;
+using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Models;
-using Speckle.Connectors.RevitShared;
+using Speckle.Connectors.DUI.Models.Card;
+using Speckle.Connectors.DUI.Models.Card.SendFilter;
+using Speckle.Connectors.Revit.Plugin;
+using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
+using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Core.Transports;
 
 namespace Speckle.Connectors.Revit.Bindings;
@@ -91,8 +90,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         SendOperation<ElementId>
       >();
 
-      List<ElementId> revitObjects = modelCard.SendFilter
-        .NotNull()
+      List<ElementId> revitObjects = modelCard
+        .SendFilter.NotNull()
         .GetObjectIds()
         .Select(ElementIdHelper.Parse)
         .ToList();
@@ -103,8 +102,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
       }
 
-      var sendResult = await sendOperation.Service
-        .Execute(
+      var sendResult = await sendOperation
+        .Service.Execute(
           revitObjects,
           modelCard.GetSendInfo(_revitSettings.HostSlug.NotNull()),
           (status, progress) =>

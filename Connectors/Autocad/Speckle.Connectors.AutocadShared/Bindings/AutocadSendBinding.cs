@@ -1,18 +1,18 @@
 using Autodesk.AutoCAD.DatabaseServices;
+using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
+using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.Utils.Cancellation;
-using Speckle.Autofac.DependencyInjection;
-using Speckle.Connectors.Autocad.Operations.Send;
-using Speckle.Connectors.DUI.Exceptions;
-using Speckle.Connectors.Utils.Operations;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Caching;
+using Speckle.Connectors.Utils.Cancellation;
+using Speckle.Connectors.Utils.Operations;
 using Speckle.Core.Transports;
 
 namespace Speckle.Connectors.Autocad.Bindings;
@@ -157,8 +157,8 @@ public sealed class AutocadSendBinding : ISendBinding
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
       }
 
-      var sendResult = await uow.Service
-        .Execute(
+      var sendResult = await uow
+        .Service.Execute(
           autocadObjects,
           modelCard.GetSendInfo(_autocadSettings.HostAppInfo.Name),
           (status, progress) =>

@@ -1,8 +1,8 @@
+using System.Collections;
 using Objects;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
-using System.Collections;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 

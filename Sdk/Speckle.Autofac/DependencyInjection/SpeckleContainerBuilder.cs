@@ -88,8 +88,8 @@ public class SpeckleContainerBuilder
     {
       var types = new List<Type>();
       foreach (
-        var asm in AppDomain.CurrentDomain
-          .GetAssemblies()
+        var asm in AppDomain
+          .CurrentDomain.GetAssemblies()
           .Where(x => x.GetName().Name.StartsWith("Speckle", StringComparison.OrdinalIgnoreCase))
       )
       {
@@ -202,7 +202,11 @@ public class SpeckleContainerBuilder
     return this;
   }
 
-  //Scans assembly for classes that implement the same name interface and registers as transient
+  /// <summary>
+  /// Scans the assembly.
+  /// Scan matches classes with interfaces that match Iclass and registers them as Transient with the interface.
+  /// Do this when scoping isn't known but all types should be registered for DI.
+  /// </summary>
   public SpeckleContainerBuilder ScanAssembly(Assembly assembly)
   {
     ContainerBuilder
@@ -213,6 +217,13 @@ public class SpeckleContainerBuilder
     return this;
   }
 
+  /// <summary>
+  /// Scans the assembly containing the type T.
+  /// Scan matches classes with interfaces that match Iclass and registers them as Transient with the interface.
+  /// Do this when scoping isn't known but all types should be registered for DI.
+  /// </summary>
+  /// <typeparam name="T"></typeparam>
+  /// <returns></returns>
   public SpeckleContainerBuilder ScanAssemblyOfType<T>() => ScanAssembly(typeof(T).Assembly);
 
   private static IEnumerable<Type> GetInterfacesWithNameName(Type type) =>
