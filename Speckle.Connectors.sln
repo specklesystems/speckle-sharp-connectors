@@ -287,6 +287,9 @@ Global
 		{881D71A3-D276-4108-98C6-0FFD32129B9C} = {B9DE08BB-1188-4E6C-8790-10252A48381C}
 		{E1C43415-3200-45F4-8BF9-A4DD8D7F2ED6} = {B9DE08BB-1188-4E6C-8790-10252A48381C}
 	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}
+	EndGlobalSection
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		Connectors\Revit\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems*{01f98733-7352-47ad-a594-537d979de3de}*SharedItemsImports = 5
 		Converters\Revit\Speckle.Converters.RevitShared\Speckle.Converters.RevitShared.projitems*{19424b55-058c-4e9c-b86f-700aef9eaec3}*SharedItemsImports = 5

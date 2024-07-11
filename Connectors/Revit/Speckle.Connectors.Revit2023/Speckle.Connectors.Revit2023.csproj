@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
-    <UseWpf>true</UseWpf>
+    <UseWpf>true</UseWpf>    
     <RevitVersion>2023</RevitVersion>
   </PropertyGroup>
 
