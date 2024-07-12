@@ -49,7 +49,20 @@ public class NonNativeFeaturesUtils : INonNativeFeaturesUtils
 
           // add dictionnary item if doesn't exist yet
           // Key must be unique per parent and speckle_type
-          string uniqueKey = $"speckleTYPE_{speckle_type}_speckleID_{parentId}";
+          // Adding Offsets/rotation to Unique key, so the modified CAD geometry doesn't overwrite non-modified one
+          // or, same commit received with different Offsets are saved to separate datasets
+          string XOffset = Convert
+            .ToString(_contextStack.Current.Document.ActiveCRSoffsetRotation.LonOffset)
+            .Replace(".", "_");
+          string YOffset = Convert
+            .ToString(_contextStack.Current.Document.ActiveCRSoffsetRotation.LatOffset)
+            .Replace(".", "_");
+          string TrueNorth = Convert
+            .ToString(_contextStack.Current.Document.ActiveCRSoffsetRotation.TrueNorthRadians)
+            .Replace(".", "_");
+
+          string uniqueKey =
+            $"speckleTYPE_{speckle_type}_speckleX_{XOffset}_speckleY_{YOffset}_speckleNorth_{TrueNorth}_speckleID_{parentId}";
           if (!geometryGroups.TryGetValue(uniqueKey, out _))
           {
             geometryGroups[uniqueKey] = new();

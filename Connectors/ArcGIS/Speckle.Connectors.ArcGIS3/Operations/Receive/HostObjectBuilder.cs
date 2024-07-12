@@ -45,15 +45,8 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     CancellationToken cancellationToken
   )
   {
-    // get active CRS & offsets on Receive
-    SpatialReference activeSpatialRef = _contextStack.Current.Document.Map.SpatialReference;
-
-    // TODO get spatialRef and offsets & rotation from ProjectInfo
+    // TODO get spatialRef and offsets & rotation from ProjectInfo in CommitObject
     // ATM, GIS commit CRS is stored per layer (in FeatureClass converter), but should be moved to the Root level too
-    CRSoffsetRotation crsOffsetRotation = new(activeSpatialRef, _contextStack.Current.Document.Map);
-
-    // set active CRS & offsets on Receive to ContextStack as ActiveCRSoffsetRotation
-    _contextStack.Current.Document.ActiveCRSoffsetRotation = crsOffsetRotation;
 
     // Prompt the UI conversion started. Progress bar will swoosh.
     onOperationProgressed?.Invoke("Converting", null);

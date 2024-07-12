@@ -23,7 +23,7 @@ public class ArcGISDocument
     SpeckleDatabasePath = EnsureOrAddSpeckleDatabase();
     // CRS of either: incoming commit to be applied to all received objects, or CRS to convert all objects to, before sending
     // created per Send/Receive operation, will be the same for all objects in the operation
-    ActiveCRSoffsetRotation = new CRSoffsetRotation(MapView.Active.Map.SpatialReference);
+    ActiveCRSoffsetRotation = new CRSoffsetRotation(MapView.Active.Map);
   }
 
   private const string FGDB_NAME = "Speckle.gdb";

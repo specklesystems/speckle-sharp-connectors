@@ -123,8 +123,10 @@ public struct CRSoffsetRotation
   /// </summary>
   /// <param name="spatialReference">SpatialReference to apply offsets and rotation to.</param>
   /// <param name="map">Map to read metadata from.</param>
-  public CRSoffsetRotation(ACG.SpatialReference spatialReference, Map map)
+  public CRSoffsetRotation(Map map)
   {
+    ACG.SpatialReference spatialReference = map.SpatialReference;
+
     SpatialReference = spatialReference;
     SpeckleUnitString = GetSpeckleUnit(spatialReference);
 
@@ -135,16 +137,19 @@ public struct CRSoffsetRotation
     textData = textData?.Replace("<SPAN>", "").Replace("</SPAN>", "");
 
     // set offsets and rotation from metadata if available
+    // format to write to Metadata "Use Limitations" field:
+    // _specklexoffset=100_speckleyoffset=200_specklenorth=0_
+
     if (
       textData != null
-      && textData.Contains("_specklexoffset=")
-      && textData.Contains("_speckleyoffset=")
-      && textData.Contains("_specklenorth=")
+      && textData.ToLower().Contains("_specklexoffset=")
+      && textData.ToLower().Contains("_speckleyoffset=")
+      && textData.ToLower().Contains("_specklenorth=")
     )
     {
-      string? latElement = textData?.Split("_specklexoffset=")[^1].Split("_")[0];
-      string? lonElement = textData?.Split("_speckleyoffset=")[^1].Split("_")[0];
-      string? northElement = textData?.Split("_specklenorth=")[^1].Split("_")[0];
+      string? latElement = textData.ToLower().Split("_speckleyoffset=")[^1].Split("_")[0];
+      string? lonElement = textData.ToLower().Split("_specklexoffset=")[^1].Split("_")[0];
+      string? northElement = textData.ToLower().Split("_specklenorth=")[^1].Split("_")[0];
       try
       {
         LatOffset = latElement is null ? 0 : Convert.ToDouble(latElement);
