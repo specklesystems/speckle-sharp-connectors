@@ -56,17 +56,17 @@ public class NonNativeFeaturesUtils : INonNativeFeaturesUtils
           string XOffset = Convert
             .ToString(_contextStack.Current.Document.ActiveCRSoffsetRotation.LonOffset)
             .Replace(".", "_");
-          XOffset = XOffset.Length > 15 ? XOffset.Substring(15) : XOffset;
+          XOffset = XOffset.Length > 15 ? XOffset.Substring(0, 15) : XOffset;
 
           string YOffset = Convert
             .ToString(_contextStack.Current.Document.ActiveCRSoffsetRotation.LatOffset)
             .Replace(".", "_");
-          YOffset = YOffset.Length > 15 ? YOffset.Substring(15) : YOffset;
+          YOffset = YOffset.Length > 15 ? YOffset.Substring(0, 15) : YOffset;
 
           string TrueNorth = Convert
             .ToString(_contextStack.Current.Document.ActiveCRSoffsetRotation.TrueNorthRadians)
             .Replace(".", "_");
-          TrueNorth = TrueNorth.Length > 10 ? TrueNorth.Substring(10) : TrueNorth;
+          TrueNorth = TrueNorth.Length > 10 ? TrueNorth.Substring(0, 10) : TrueNorth;
 
           string uniqueKey =
             $"speckleTYPE_{speckle_type}_X_{XOffset}_Y_{YOffset}_North_{TrueNorth}_speckleID_{parentId}";
