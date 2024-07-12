@@ -42,7 +42,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   public RootObjectBuilderResult Build(
     IReadOnlyList<RhinoObject> rhinoObjects,
     SendInfo sendInfo,
-    Action<string, double?>? onOperationProgressed,
+    Action<string, double?>? onOperationProgressed = null,
     CancellationToken cancellationToken = default
   )
   {
