@@ -2,12 +2,13 @@ using Autodesk.Revit.DB;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.DependencyInjection;
+using Speckle.Converters.Revit2025;
 using Speckle.Converters.RevitShared;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.ToSpeckle;
 
-namespace Speckle.Converters.Revit2023.DependencyInjection;
+namespace Speckle.Converters.Revit2025.DependencyInjection;
 
 public class RevitConverterModule : ISpeckleModule
 {

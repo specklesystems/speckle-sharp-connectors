@@ -30,24 +30,9 @@ public class RevitConnectorModule : ISpeckleModule
     builder.AddAutofac();
     builder.AddConnectorUtils();
     builder.AddDUI();
-#if REVIT2025
-    builder.AddDUIView();
-    builder.AddSingleton<IRevitPlugin, RevitWebViewPlugin>();
-    builder.AddSingleton<DUI3ControlWebView>();
-    builder.AddSingleton<DUI3ControlWebViewDockable>();
-#else
+    RegisterUiDependencies(builder);
+
     builder.AddSingletonInstance<ISyncToThread, RevitContextAccessor>();
-
-    // POC: different versons for different versions of CEF
-    builder.AddSingleton(BindingOptions.DefaultBinder);
-
-    var panel = new CefSharpPanel();
-    panel.Browser.JavascriptObjectRepository.NameConverter = null;
-
-    builder.AddSingleton(panel);
-    builder.AddSingleton<IRevitPlugin, RevitCefPlugin>();
-#endif
-
     // register
     builder.AddSingleton<DocumentModelStore, RevitDocumentStore>();
 
@@ -77,5 +62,26 @@ public class RevitConnectorModule : ISpeckleModule
     builder.AddScoped<IHostObjectBuilder, RevitHostObjectBuilder>();
     builder.AddScoped<ITransactionManager, TransactionManager>();
     builder.AddSingleton(DefaultTraversal.CreateTraversalFunc());
+  }
+
+  public void RegisterUiDependencies(SpeckleContainerBuilder builder)
+  {
+    // if revit 2025 or higher, register webview2 dependencies
+    // else register cefSharp depenedencies
+#if REVIT2025
+    builder.AddDUIView();
+    builder.AddSingleton<IRevitPlugin, RevitWebViewPlugin>();
+    builder.AddSingleton<DUI3ControlWebView>();
+    builder.AddSingleton<DUI3ControlWebViewDockable>();
+#else
+    // POC: different versons for different versions of CEF
+    builder.AddSingleton(BindingOptions.DefaultBinder);
+
+    var panel = new CefSharpPanel();
+    panel.Browser.JavascriptObjectRepository.NameConverter = null;
+
+    builder.AddSingleton(panel);
+    builder.AddSingleton<IRevitPlugin, RevitCefPlugin>();
+#endif
   }
 }

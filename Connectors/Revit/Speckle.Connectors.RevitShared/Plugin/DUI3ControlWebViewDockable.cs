@@ -4,6 +4,10 @@ using Autodesk.Revit.UI;
 
 namespace Speckle.Connectors.DUI.WebView;
 
+/// <summary>
+/// Wrapper that takes the <see cref="DUI3ControlWebView"/> and wraps it so that it can implement a revit specific
+/// interface
+/// </summary>
 public sealed partial class DUI3ControlWebViewDockable : UserControl, Autodesk.Revit.UI.IDockablePaneProvider
 {
   public DUI3ControlWebViewDockable(DUI3ControlWebView dUI3ControlWebView)
