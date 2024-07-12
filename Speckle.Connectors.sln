@@ -99,6 +99,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Converters.Revit202
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Testing", "Sdk\Speckle.Testing\Speckle.Testing.csproj", "{A3869243-B462-4986-914B-94E407D8D20F}"
 EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Converters.RevitShared.DependencyInjection", "Converters\Revit\Speckle.Converters.RevitShared.DependencyInjection\Speckle.Converters.RevitShared.DependencyInjection.shproj", "{E1C43415-3200-45F4-8BF9-A4DD7D7F2ED6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
