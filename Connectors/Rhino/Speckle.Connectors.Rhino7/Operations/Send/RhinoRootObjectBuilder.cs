@@ -54,9 +54,6 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     CancellationToken cancellationToken = default
   )
   {
-    // POC: does this feel like the right place? I am wondering if this should be called from within send/rcv?
-    // begin the unit of work
-
     var rootObjectCollection = new Collection { name = _contextStack.Current.Document.Name ?? "Unnamed document" };
     int count = 0;
 
