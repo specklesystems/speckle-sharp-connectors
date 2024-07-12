@@ -30,10 +30,7 @@ public class EllipseToHostConverter : IToHostTopLevelConverter, ITypedConverter<
       throw new ArgumentException("Ellipse is missing the first or second radius");
     }
     if (
-      target.plane.normal.x != 0
-      || target.plane.normal.y != 0
-      || target.plane.xdir.z != 0
-      || target.plane.ydir.z != 0
+      target.plane.normal.x != 0 || target.plane.normal.y != 0 || target.plane.xdir.z != 0 || target.plane.ydir.z != 0
     )
     {
       throw new ArgumentException("Only Ellipses in XY plane are supported");
@@ -43,7 +40,9 @@ public class EllipseToHostConverter : IToHostTopLevelConverter, ITypedConverter<
     double scaleFactor = Units.GetConversionFactor(target.units, _contextStack.Current.SpeckleUnits);
 
     // set default values
-    double angle = Math.Atan2(target.plane.xdir.y, target.plane.xdir.x);
+    double angle =
+      Math.Atan2(target.plane.xdir.y, target.plane.xdir.x)
+      + _contextStack.Current.Document.ActiveCRSoffsetRotation.TrueNorthRadians;
     double majorAxisRadius = (double)target.firstRadius;
     double minorAxisRatio = (double)target.secondRadius / majorAxisRadius;
 
