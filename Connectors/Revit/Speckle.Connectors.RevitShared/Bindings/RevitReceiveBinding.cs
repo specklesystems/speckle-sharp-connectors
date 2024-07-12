@@ -3,6 +3,7 @@ using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
+using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Cancellation;
@@ -16,6 +17,7 @@ internal class RevitReceiveBinding : IReceiveBinding
   public string Name => "receiveBinding";
   public IBridge Parent { get; }
 
+  private readonly RevitSettings _revitSettings;
   private readonly CancellationManager _cancellationManager;
   private readonly DocumentModelStore _store;
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
@@ -25,12 +27,14 @@ internal class RevitReceiveBinding : IReceiveBinding
     DocumentModelStore store,
     CancellationManager cancellationManager,
     IBridge parent,
-    IUnitOfWorkFactory unitOfWorkFactory
+    IUnitOfWorkFactory unitOfWorkFactory,
+    RevitSettings revitSettings
   )
   {
     Parent = parent;
     _store = store;
     _unitOfWorkFactory = unitOfWorkFactory;
+    _revitSettings = revitSettings;
     _cancellationManager = cancellationManager;
     Commands = new ReceiveBindingUICommands(parent);
   }
@@ -55,7 +59,7 @@ internal class RevitReceiveBinding : IReceiveBinding
       // Receive host objects
       HostObjectBuilderResult conversionResults = await unitOfWork
         .Service.Execute(
-          modelCard.GetReceiveInfo(),
+          modelCard.GetReceiveInfo(_revitSettings.HostSlug.NotNull()),
           cts.Token,
           (status, progress) =>
             Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts)

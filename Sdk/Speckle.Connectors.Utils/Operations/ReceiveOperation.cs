@@ -1,6 +1,7 @@
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Core.Api;
 using Speckle.Core.Credentials;
+using Speckle.Core.Logging;
 using Speckle.Core.Models;
 using Speckle.Core.Transports;
 
@@ -34,8 +35,8 @@ public sealed class ReceiveOperation
 
     // 3 - Get commit object from server
     using Client apiClient = new(account);
-    Commit version = await apiClient
-      .CommitGet(receiveInfo.ProjectId, receiveInfo.SelectedVersionId, cancellationToken)
+    var version = await apiClient
+      .Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ModelId, receiveInfo.ProjectId, cancellationToken)
       .ConfigureAwait(false);
 
     using ServerTransport transport = new(account, receiveInfo.ProjectId);
@@ -46,7 +47,7 @@ public sealed class ReceiveOperation
     cancellationToken.ThrowIfCancellationRequested();
 
     // 4 - Convert objects
-    return await _syncToThread
+    var res = await _syncToThread
       .RunOnThread(() =>
       {
         return _hostObjectBuilder.Build(
@@ -58,5 +59,11 @@ public sealed class ReceiveOperation
         );
       })
       .ConfigureAwait(false);
+
+    await apiClient
+      .Version.Received(new(version.id, receiveInfo.ProjectId, receiveInfo.SourceApplication), cancellationToken)
+      .ConfigureAwait(false);
+
+    return res;
   }
 }

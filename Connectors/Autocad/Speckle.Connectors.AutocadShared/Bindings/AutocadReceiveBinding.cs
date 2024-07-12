@@ -1,4 +1,5 @@
 using Speckle.Autofac.DependencyInjection;
+using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
@@ -18,6 +19,7 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
   private readonly DocumentModelStore _store;
   private readonly CancellationManager _cancellationManager;
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
+  private readonly AutocadSettings _autocadSettings;
 
   public ReceiveBindingUICommands Commands { get; }
 
@@ -25,12 +27,14 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
     DocumentModelStore store,
     IBridge parent,
     CancellationManager cancellationManager,
-    IUnitOfWorkFactory unitOfWorkFactory
+    IUnitOfWorkFactory unitOfWorkFactory,
+    AutocadSettings autocadSettings
   )
   {
     _store = store;
     _cancellationManager = cancellationManager;
     _unitOfWorkFactory = unitOfWorkFactory;
+    _autocadSettings = autocadSettings;
     Parent = parent;
     Commands = new ReceiveBindingUICommands(parent);
   }
@@ -60,7 +64,7 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
       // Receive host objects
       var operationResults = await unitOfWork
         .Service.Execute(
-          modelCard.GetReceiveInfo(),
+          modelCard.GetReceiveInfo(_autocadSettings.HostAppInfo.Name),
           cts.Token,
           (status, progress) =>
             Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts)

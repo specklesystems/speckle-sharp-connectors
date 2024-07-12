@@ -343,7 +343,7 @@ public sealed class ArcGISSendBinding : ISendBinding
           var result = await unitOfWork
             .Service.Execute(
               mapMembers,
-              modelCard.GetSendInfo("ArcGIS"), // POC: get host app name from settings?
+              modelCard.GetSendInfo("ArcGIS"), // POC: get host app name from settings? same for GetReceiveInfo
               (status, progress) =>
                 Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts),
               cts.Token

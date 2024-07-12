@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "ConnectorRevit2023": {
+    "Speckle.Connectors.Revit2023": {
       "commandName": "Executable",
       "executablePath": "C:\\Program Files\\Autodesk\\Revit 2023\\Revit.exe"
     }
