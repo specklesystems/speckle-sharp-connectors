@@ -26,18 +26,20 @@ public class RevitConnectorModule : ISpeckleModule
     builder.AddAutofac();
     builder.AddConnectorUtils();
     builder.AddDUI();
-    //builder.AddDUIView();
 
     builder.AddSingletonInstance<ISyncToThread, RevitContextAccessor>();
-
-    // POC: different versons for different versions of CEF
-    builder.AddSingleton(BindingOptions.DefaultBinder);
-
     var panel = new CefSharpPanel();
+    
+#if !REVIT2022
+    builder.AddSingleton(BindingOptions.DefaultBinder);
+#else
+    builder.AddSingleton(new BindingOptions() { CamelCaseJavascriptNames = false });
+#endif
+    
 #if !REVIT2022
     panel.Browser.JavascriptObjectRepository.NameConverter = null;
-
 #endif
+    
     builder.AddSingleton(panel);
     builder.AddSingleton<IRevitPlugin, RevitPlugin>();
 

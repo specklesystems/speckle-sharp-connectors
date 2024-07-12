@@ -131,6 +131,8 @@ internal sealed class RevitPlugin : IRevitPlugin
       {
         return;
       }
+      
+      _cefSharpPanel.Browser.ShowDevTools();
 
       foreach (IBinding binding in _bindings.Select(x => x.Value))
       {
