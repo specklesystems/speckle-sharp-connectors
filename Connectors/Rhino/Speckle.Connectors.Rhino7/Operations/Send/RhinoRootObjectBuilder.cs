@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Rhino;
 using Rhino.DocObjects;
 using Speckle.Autofac.DependencyInjection;
@@ -41,16 +40,9 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   }
 
   public RootObjectBuilderResult Build(
-    IReadOnlyList<RhinoObject> objects,
-    SendInfo sendInfo,
-    Action<string, double?>? onOperationProgressed = null,
-    CancellationToken ct = default
-  ) => ConvertObjects(objects, sendInfo, onOperationProgressed, ct);
-
-  private RootObjectBuilderResult ConvertObjects(
     IReadOnlyList<RhinoObject> rhinoObjects,
     SendInfo sendInfo,
-    Action<string, double?>? onOperationProgressed = null,
+    Action<string, double?>? onOperationProgressed,
     CancellationToken cancellationToken = default
   )
   {
@@ -62,8 +54,6 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     var rootObjectCollection = new Collection { name = _contextStack.Current.Document.Name ?? "Unnamed document" };
     int count = 0;
 
-    Dictionary<int, Collection> layerCollectionCache = new();
-
     var (atomicObjects, instanceProxies, instanceDefinitionProxies) = _instanceObjectsManager.UnpackSelection(
       rhinoObjects
     );
@@ -72,8 +62,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     rootObjectCollection["instanceDefinitionProxies"] = instanceDefinitionProxies; // this won't work re traversal on receive
 
     // POC: Handle blocks.
-    List<SendConversionResult> results = new(rhinoObjects.Count);
-    var cacheHitCount = 0;
+    List<SendConversionResult> results = new(atomicObjects.Count);
     foreach (RhinoObject rhinoObject in atomicObjects)
     {
       cancellationToken.ThrowIfCancellationRequested();
@@ -96,7 +85,6 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         else if (_sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference value))
         {
           converted = value;
-          cacheHitCount++;
         }
         else
         {
@@ -114,16 +102,12 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         results.Add(new(Status.ERROR, applicationId, rhinoObject.ObjectType.ToString(), null, ex));
       }
 
-      onOperationProgressed?.Invoke("Converting", (double)++count / rhinoObjects.Count);
+      ++count;
+      onOperationProgressed?.Invoke("Converting", (double)count / atomicObjects.Count);
 
       // NOTE: useful for testing ui states, pls keep for now so we can easily uncomment
       // Thread.Sleep(550);
     }
-
-    // POC: Log would be nice, or can be removed.
-    Debug.WriteLine(
-      $"Cache hit count {cacheHitCount} out of {rhinoObjects.Count} ({(double)cacheHitCount / rhinoObjects.Count})"
-    );
 
     // 5. profit
     return new(rootObjectCollection, results);
