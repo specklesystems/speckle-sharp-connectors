@@ -1,7 +1,8 @@
-﻿using Speckle.Converters.RevitShared;
+﻿using Speckle.InterfaceGenerator;
 
-namespace Speckle.Converters.Revit2023;
+namespace Speckle.Converters.RevitShared;
 
+[GenerateAutoInterface]
 public class RevitVersionConversionHelper : IRevitVersionConversionHelper
 {
   public bool IsCurveClosed(DB.NurbSpline nurbsSpline)

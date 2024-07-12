@@ -14,14 +14,16 @@
     <PackageReference Include="NUnit.Analyzers" />
     <PackageReference Include="NUnit3TestAdapter" />
   </ItemGroup>
-  <Import Project="..\Speckle.Converters.RhinoShared\Speckle.Converters.RhinoShared.projitems" Label="Shared" />
+  <Import Project="..\Speckle.Converters.RevitShared\Speckle.Converters.RevitShared.projitems" Label="Shared" />
+  <Import Project="..\Speckle.Converters.RevitShared.Tests\Speckle.Converters.RevitShared.Tests.projitems" Label="Shared" />
+
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" /> 
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
     <ProjectReference Include="..\..\..\Sdk\Speckle.Testing\Speckle.Testing.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Speckle.Rhino7.Fakes" VersionOverride="0.2.2-preview.2" />
+    <PackageReference Include="Speckle.Revit2024.Fakes" VersionOverride="0.2.2-preview.2" />
   </ItemGroup>
 </Project>

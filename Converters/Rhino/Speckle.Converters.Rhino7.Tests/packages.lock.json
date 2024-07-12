@@ -58,6 +58,12 @@
         "resolved": "4.2.0",
         "contentHash": "4fJojPkzdoa4nB2+p6U+fITvPnVvwWSnsmiJ/Dl30xqiL3oxNbYvfeSLVd91hOmEjoUqSwN3Z7j1aFedjqWbUA=="
       },
+      "NUnit3TestAdapter": {
+        "type": "Direct",
+        "requested": "[4.5.0, )",
+        "resolved": "4.5.0",
+        "contentHash": "s8JpqTe9bI2f49Pfr3dFRfoVSuFQyraTj68c3XXjIS/MRGvvkLnrg6RLqnTjdShX+AdFUCCU/4Xex58AdUfs6A=="
+      },
       "PolySharp": {
         "type": "Direct",
         "requested": "[1.14.1, )",
@@ -72,9 +78,9 @@
       },
       "Speckle.Rhino7.Fakes": {
         "type": "Direct",
-        "requested": "[0.2.1-preview.6, )",
-        "resolved": "0.2.1-preview.6",
-        "contentHash": "2sbblditOPe+xuqRXLIWYHMS77tKjo8fscfKK7nlAZaUbAJGCKmH0B0MLHPwkBlTAfaNZCyiWwoEoaaa27jZbA==",
+        "requested": "[0.2.2-preview.2, )",
+        "resolved": "0.2.2-preview.2",
+        "contentHash": "l4sP+NW1RPfI7/agOGHkXtcvpq24CLRsnUsK3QJwgDydHnsS4TWAM/OslkyLiytTzA6i4Hdsu7UQXRlizKv48g==",
         "dependencies": {
           "System.Drawing.Common": "8.0.6"
         }
