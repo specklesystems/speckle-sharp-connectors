@@ -113,6 +113,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2024", "2024", "{57F59C0C-5
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shared", "Shared", "{FC224610-32D3-454E-9BC1-1219FE8ACD5F}"
 EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Converters.RevitShared.Tests", "Converters\Revit\Speckle.Converters.RevitShared.Tests\Speckle.Converters.RevitShared.Tests.shproj", "{E1C43415-3202-45F4-8BF9-A4DD7D7F2ED6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -287,6 +289,7 @@ Global
 		{FC224610-32D3-454E-9BC1-1219FE8ACD5F} = {D92751C8-1039-4005-90B2-913E55E0B8BD}
 		{DC570FFF-6FE5-47BD-8BC1-B471A6067786} = {FC224610-32D3-454E-9BC1-1219FE8ACD5F}
 		{E1C43415-3200-45F4-8BF9-A4DD7D7F2ED6} = {FC224610-32D3-454E-9BC1-1219FE8ACD5F}
+		{E1C43415-3202-45F4-8BF9-A4DD7D7F2ED6} = {FC224610-32D3-454E-9BC1-1219FE8ACD5F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}
