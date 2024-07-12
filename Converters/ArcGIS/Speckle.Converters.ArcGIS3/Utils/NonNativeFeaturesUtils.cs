@@ -51,18 +51,25 @@ public class NonNativeFeaturesUtils : INonNativeFeaturesUtils
           // Key must be unique per parent and speckle_type
           // Adding Offsets/rotation to Unique key, so the modified CAD geometry doesn't overwrite non-modified one
           // or, same commit received with different Offsets are saved to separate datasets
+
+          // Also, keep char limit for dataset name: https://pro.arcgis.com/en/pro-app/latest/help/data/geodatabases/manage-saphana/enterprise-geodatabase-limits.htm
           string XOffset = Convert
             .ToString(_contextStack.Current.Document.ActiveCRSoffsetRotation.LonOffset)
             .Replace(".", "_");
+          XOffset = XOffset.Length > 15 ? XOffset.Substring(15) : XOffset;
+
           string YOffset = Convert
             .ToString(_contextStack.Current.Document.ActiveCRSoffsetRotation.LatOffset)
             .Replace(".", "_");
+          YOffset = YOffset.Length > 15 ? YOffset.Substring(15) : YOffset;
+
           string TrueNorth = Convert
             .ToString(_contextStack.Current.Document.ActiveCRSoffsetRotation.TrueNorthRadians)
             .Replace(".", "_");
+          TrueNorth = TrueNorth.Length > 10 ? TrueNorth.Substring(10) : TrueNorth;
 
           string uniqueKey =
-            $"speckleTYPE_{speckle_type}_speckleX_{XOffset}_speckleY_{YOffset}_speckleNorth_{TrueNorth}_speckleID_{parentId}";
+            $"speckleTYPE_{speckle_type}_X_{XOffset}_Y_{YOffset}_North_{TrueNorth}_speckleID_{parentId}";
           if (!geometryGroups.TryGetValue(uniqueKey, out _))
           {
             geometryGroups[uniqueKey] = new();
