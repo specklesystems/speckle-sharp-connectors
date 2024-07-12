@@ -14,7 +14,7 @@
     <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.1823.32" />
     <PackageVersion Include="Esri.ArcGISPro.Extensions30" Version="3.2.0.49743" />
     <PackageVersion Include="CefSharp.Wpf" Version="92.0.260"/>
-    <PackageVersion Include="Revit.Async" Version="2.0.1" />   
+    <PackageVersion Include="Revit.Async" Version="2.1.1" />
     <PackageVersion Include="Speckle.Core" Version="3.0.1-dev.25" />
     <PackageVersion Include="Speckle.Objects" Version="3.0.1-dev.25" />
     <PackageVersion Include="Speckle.AutoCAD.API" Version="2023.0.0" />

@@ -1,3 +1,4 @@
+#if !REVIT2025
 using Revit.Async;
 using Speckle.Connectors.Utils.Operations;
 
@@ -7,3 +8,4 @@ internal class RevitContextAccessor : ISyncToThread
 {
   public Task<T> RunOnThread<T>(Func<T> func) => RevitTask.RunAsync(func);
 }
+#endif

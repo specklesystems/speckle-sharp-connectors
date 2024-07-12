@@ -29,9 +29,9 @@
       },
       "Revit.Async": {
         "type": "Direct",
-        "requested": "[2.0.1, )",
-        "resolved": "2.0.1",
-        "contentHash": "B7D5zXznqgxMryBYdGgWob20ALfGSP7hJ6+bh9JdLM/LRkYN5dNf0AaI0+7VID9X7e8MA0koAxv9fIijJnmSnw=="
+        "requested": "[2.1.1, )",
+        "resolved": "2.1.1",
+        "contentHash": "aK6R/fxrn3jpiKc8LYqfWZ+OfEKNnwgkiln1uyuvaPnTWBOvfiisnOfe7+Sgogr4iEuMmuMDsmBRMCycMlUpnw=="
       },
       "Speckle.InterfaceGenerator": {
         "type": "Direct",

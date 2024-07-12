@@ -1,5 +1,4 @@
 using Autodesk.Revit.DB;
-using CefSharp;
 using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI;
@@ -15,6 +14,11 @@ using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Core.Models.GraphTraversal;
+#if REVIT2025
+using Speckle.Connectors.DUI.WebView;
+#else
+using CefSharp;
+#endif
 
 namespace Speckle.Connectors.Revit.DependencyInjection;
 
@@ -26,8 +30,12 @@ public class RevitConnectorModule : ISpeckleModule
     builder.AddAutofac();
     builder.AddConnectorUtils();
     builder.AddDUI();
-    //builder.AddDUIView();
-
+#if REVIT2025
+    builder.AddDUIView();
+    builder.AddSingleton<IRevitPlugin, RevitWebViewPlugin>();
+    builder.AddSingleton<DUI3ControlWebView>();
+    builder.AddSingleton<DUI3ControlWebViewDockable>();
+#else
     builder.AddSingletonInstance<ISyncToThread, RevitContextAccessor>();
 
     // POC: different versons for different versions of CEF
@@ -37,7 +45,8 @@ public class RevitConnectorModule : ISpeckleModule
     panel.Browser.JavascriptObjectRepository.NameConverter = null;
 
     builder.AddSingleton(panel);
-    builder.AddSingleton<IRevitPlugin, RevitPlugin>();
+    builder.AddSingleton<IRevitPlugin, RevitCefPlugin>();
+#endif
 
     // register
     builder.AddSingleton<DocumentModelStore, RevitDocumentStore>();
