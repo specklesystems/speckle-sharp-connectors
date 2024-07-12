@@ -514,7 +514,7 @@
       },
       "Speckle.Core": {
         "type": "CentralTransitive",
-        "requested": "[3.0.1-alpha.15, )",
+        "requested": "[3.0.1-dev.23, )",
         "resolved": "3.0.1-dev.23",
         "contentHash": "Mep7zls6FJQ8NR79cL6wNNqEpqNbVNXkKOfvY6oebe2MMnE89FKDr29nb2dRgEhynV1ankVzz+YYCiFGxXZfyQ==",
         "dependencies": {
@@ -538,7 +538,7 @@
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.0.1-alpha.14, )",
+        "requested": "[3.0.1-dev.23, )",
         "resolved": "3.0.1-dev.23",
         "contentHash": "UrhwEiRxJAMCgnOfp5IjUXfbQU8OZ1bEd04GoFl5/nA6KMIMQbz01aLyRROuHpliVOH2ae3jLCORDIYy6feU5Q==",
         "dependencies": {
