@@ -1,6 +1,11 @@
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Converters.Common.DependencyInjection.ToHost;
 using Speckle.Converters.Common.Objects;
+using Speckle.Core.Models;
+using Speckle.Core.Reflection;
+using Speckle.Core.SchemaVersioning;
+using Speckle.Core.Serialisation.TypeCache;
+using Speckle.Objects;
 
 namespace Speckle.Converters.Common.DependencyInjection;
 
@@ -9,6 +14,13 @@ public static class ContainerRegistration
   public static void AddRootCommon<TRootToSpeckleConverter>(this SpeckleContainerBuilder builder)
     where TRootToSpeckleConverter : class, IRootToSpeckleConverter
   {
+    // some of these scopes might need consideration, probably could be scoped
+    // but...  there's a bit of reflection on creation/initialisation for some of these...
+    builder.AddSingleton<ITypeCache, ObjectsTypeCache>();
+    builder.AddSingleton<ITypeFinder, TypeFinder>();
+    builder.AddSingleton<ITypeInstanceResolver<ISchemaObjectUpgrader<Base, Base>>, SingletonTypeInstanceResolver<ISchemaObjectUpgrader<Base, Base>>>();
+    builder.AddSingleton<ISchemaObjectUpgradeManager<Base, Base>, SchemaObjectUpgradeManager<Base, Base>>();
+    
     builder.AddScoped<IRootToSpeckleConverter, TRootToSpeckleConverter>();
     /*
       POC: CNX-9267 Moved the Injection of converters into the converter module. Not sure if this is 100% right, as this doesn't just register the conversions within this converter, but any conversions found in any Speckle.*.dll file.
