@@ -37,12 +37,8 @@ internal sealed class CeilingTopLevelConverterToSpeckle : BaseTopLevelConverterT
   public override RevitCeiling Convert(DB.Ceiling target)
   {
     var speckleCeiling = new RevitCeiling();
-#if REVIT2022
-    List<SOG.Polycurve> profiles = new();
-#else
     var sketch = (Sketch)target.Document.GetElement(target.SketchId);
     List<SOG.Polycurve> profiles = _curveArrArrayConverter.Convert(sketch.Profile);
-#endif
 
     var elementType = (ElementType)target.Document.GetElement(target.GetTypeId());
     speckleCeiling.type = elementType.Name;

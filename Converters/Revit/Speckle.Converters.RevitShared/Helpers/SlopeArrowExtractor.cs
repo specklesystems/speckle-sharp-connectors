@@ -21,9 +21,7 @@ public class SlopeArrowExtractor : ISlopeArrowExtractor
     IList<DB.ElementId>? elementIds = null;
     if (element is DB.Floor floor)
     {
-#if !REVIT2022
       elementIds = ((DB.Sketch)floor.Document.GetElement(floor.SketchId)).GetAllElements();
-#endif
     }
 
     if (elementIds == null)

@@ -42,12 +42,6 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
   {
     SOBR.RevitFloor speckleFloor = new();
 
-#if REVIT2022
-    List<SOG.Polycurve> profiles = new List<SOG.Polycurve>();
-
-    speckleFloor.family = target.FloorType.FamilyName;
-    speckleFloor.type = target.FloorType.Name;
-#else
     var sketch = (DB.Sketch)target.Document.GetElement(target.SketchId);
     List<SOG.Polycurve> profiles = _curveArrArrayConverter.Convert(sketch.Profile);
 
@@ -55,7 +49,6 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
 
     speckleFloor.family = type.FamilyName;
     speckleFloor.type = type.Name;
-#endif
 
     // POC: Re-evaluate Wall sketch curve extraction, assumption of only one outline is wrong. https://spockle.atlassian.net/browse/CNX-9396
     if (profiles.Count > 0)
