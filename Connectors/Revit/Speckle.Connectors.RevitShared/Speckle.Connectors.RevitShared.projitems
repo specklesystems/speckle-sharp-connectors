@@ -12,17 +12,17 @@
     <Content Include="$(MSBuildThisFileDirectory)Plugin\Speckle.Connectors.Revit2022.addin">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(MSBuildThisFileDirectory)Plugin\Speckle.Connectors.Revit2025.addin">
+    <Content Include="$(MSBuildThisFileDirectory)Plugin\Speckle.Connectors.Revit2023.addin">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="$(MSBuildThisFileDirectory)Plugin\Speckle.Connectors.Revit2024.addin">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Assets\logo16.png" />
-    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Assets\logo32.png" />
-    <Content Include="$(MSBuildThisFileDirectory)Plugin\Speckle.Connectors.Revit2023.addin">
+    <Content Include="$(MSBuildThisFileDirectory)Plugin\Speckle.Connectors.Revit2025.addin">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Assets\logo16.png" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Assets\logo32.png" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\BasicConnectorBindingRevit.cs" />
