@@ -3,6 +3,7 @@ using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Core.Common;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
@@ -21,7 +22,7 @@ internal sealed class RevitIdleManager : IRevitIdleManager
   public RevitIdleManager(RevitContext revitContext, ITopLevelExceptionHandler topLevelExceptionHandler)
   {
     _topLevelExceptionHandler = topLevelExceptionHandler;
-    _uiApplication = revitContext.UIApplication!;
+    _uiApplication = revitContext.UIApplication.NotNull();
   }
 
   /// <summary>
@@ -47,7 +48,7 @@ internal sealed class RevitIdleManager : IRevitIdleManager
     _uiApplication.Idling += RevitAppOnIdle;
   }
 
-  private void RevitAppOnIdle(object sender, IdlingEventArgs e)
+  private void RevitAppOnIdle(object? sender, IdlingEventArgs e)
   {
     _topLevelExceptionHandler.CatchUnhandled(() =>
     {
