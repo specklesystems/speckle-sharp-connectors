@@ -44,32 +44,31 @@ public class NonNativeFeaturesUtils : INonNativeFeaturesUtils
         string? datasetId = trackerItem.DatasetId;
         if (geom != null && datasetId == null) // only non-native geomerties, not written into a dataset yet
         {
-          string speckle_type = trackerItem.Base.speckle_type.Split(".")[^1];
-          string? parentId = context.Parent?.Current.id;
-
           // add dictionnary item if doesn't exist yet
-          // Key must be unique per parent and speckle_type
+          // Key must be unique per parent and speckleType
           // Adding Offsets/rotation to Unique key, so the modified CAD geometry doesn't overwrite non-modified one
           // or, same commit received with different Offsets are saved to separate datasets
 
-          // Also, keep char limit for dataset name: https://pro.arcgis.com/en/pro-app/latest/help/data/geodatabases/manage-saphana/enterprise-geodatabase-limits.htm
-          string XOffset = Convert
-            .ToString(_contextStack.Current.Document.ActiveCRSoffsetRotation.LonOffset)
-            .Replace(".", "_");
+          // Also, keep char limit for dataset name under 128: https://pro.arcgis.com/en/pro-app/latest/help/data/geodatabases/manage-saphana/enterprise-geodatabase-limits.htm
+
+          string speckleType = trackerItem.Base.speckle_type.Split(".")[^1];
+          speckleType = speckleType.Substring(0, Math.Max(10, speckleType.Length));
+          string? parentId = context.Parent?.Current.id;
+
+          CRSoffsetRotation activeSR = _contextStack.Current.Document.ActiveCRSoffsetRotation;
+          string XOffset = Convert.ToString(activeSR.LonOffset).Replace(".", "_");
           XOffset = XOffset.Length > 15 ? XOffset.Substring(0, 15) : XOffset;
 
-          string YOffset = Convert
-            .ToString(_contextStack.Current.Document.ActiveCRSoffsetRotation.LatOffset)
-            .Replace(".", "_");
+          string YOffset = Convert.ToString(activeSR.LatOffset).Replace(".", "_");
           YOffset = YOffset.Length > 15 ? YOffset.Substring(0, 15) : YOffset;
 
-          string TrueNorth = Convert
-            .ToString(_contextStack.Current.Document.ActiveCRSoffsetRotation.TrueNorthRadians)
-            .Replace(".", "_");
+          string TrueNorth = Convert.ToString(activeSR.TrueNorthRadians).Replace(".", "_");
           TrueNorth = TrueNorth.Length > 10 ? TrueNorth.Substring(0, 10) : TrueNorth;
 
+          // text: 36 symbols, speckleTYPE: 10, sr: 10, offsets: 40, id: 32 = 128
           string uniqueKey =
-            $"speckleTYPE_{speckle_type}_X_{XOffset}_Y_{YOffset}_North_{TrueNorth}_speckleID_{parentId}";
+            $"speckle_{speckleType}_SR_{activeSR.SpatialReference.Name.Substring(0, Math.Max(15, activeSR.SpatialReference.Name.Length))}_X_{XOffset}_Y_{YOffset}_North_{TrueNorth}_speckleID_{parentId}";
+
           if (!geometryGroups.TryGetValue(uniqueKey, out _))
           {
             geometryGroups[uniqueKey] = new();
