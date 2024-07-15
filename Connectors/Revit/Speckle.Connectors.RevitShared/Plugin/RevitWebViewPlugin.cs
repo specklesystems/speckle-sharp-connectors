@@ -1,43 +1,39 @@
-using System.Diagnostics;
+#if REVIT2025
 using System.IO;
 using System.Reflection;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Autodesk.Revit.ApplicationServices;
 using Autodesk.Revit.UI;
-using CefSharp;
-using Revit.Async;
-using Speckle.Connectors.DUI.Bindings;
-using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.WebView;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Core.Logging;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
-internal sealed class RevitPlugin : IRevitPlugin
+internal sealed class RevitWebViewPlugin : IRevitPlugin
 {
   private readonly UIControlledApplication _uIControlledApplication;
   private readonly RevitSettings _revitSettings;
-  private readonly IEnumerable<Lazy<IBinding>> _bindings; // should be lazy to ensure the bindings are not created too early
-  private readonly BindingOptions _bindingOptions;
   private readonly RevitContext _revitContext;
-  private readonly CefSharpPanel _cefSharpPanel;
+  private readonly DUI3ControlWebViewDockable _webViewPanel;
 
-  public RevitPlugin(
+  [System.Diagnostics.CodeAnalysis.SuppressMessage(
+    "Style",
+    "IDE0290:Use primary constructor",
+    Justification = "<Pending>"
+  )]
+  public RevitWebViewPlugin(
     UIControlledApplication uIControlledApplication,
     RevitSettings revitSettings,
-    IEnumerable<Lazy<IBinding>> bindings,
-    BindingOptions bindingOptions,
     RevitContext revitContext,
-    CefSharpPanel cefSharpPanel
+    DUI3ControlWebViewDockable webViewPanel
   )
   {
     _uIControlledApplication = uIControlledApplication;
     _revitSettings = revitSettings;
-    _bindings = bindings;
-    _bindingOptions = bindingOptions;
     _revitContext = revitContext;
-    _cefSharpPanel = cefSharpPanel;
+    _webViewPanel = webViewPanel;
   }
 
   public void Initialise()
@@ -79,7 +75,7 @@ internal sealed class RevitPlugin : IRevitPlugin
         )
       );
 
-    string path = typeof(RevitPlugin).Assembly.Location;
+    string path = typeof(RevitWebViewPlugin).Assembly.Location;
     dui3Button.Image = LoadPngImgSource(
       $"Speckle.Connectors.Revit{_revitSettings.RevitVersionName}.Assets.logo16.png",
       path
@@ -97,67 +93,23 @@ internal sealed class RevitPlugin : IRevitPlugin
     dui3Button.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://speckle.systems"));
   }
 
-  private void OnApplicationInitialized(object sender, Autodesk.Revit.DB.Events.ApplicationInitializedEventArgs e)
+  private void OnApplicationInitialized(object? sender, Autodesk.Revit.DB.Events.ApplicationInitializedEventArgs e)
   {
     var uiApplication = new UIApplication(sender as Application);
     _revitContext.UIApplication = uiApplication;
 
     // POC: might be worth to interface this out, we shall see...
-    RevitTask.Initialize(uiApplication);
-
-    PostApplicationInit(); // for double-click file open
-  }
-
-  /// <summary>
-  /// Actions to run after UiApplication initialized. This is needed for double-click file open issue.
-  /// </summary>
-  private void PostApplicationInit()
-  {
-    // binding the bindings to each bridge
-    foreach (IBinding binding in _bindings.Select(x => x.Value))
-    {
-      Debug.WriteLine(binding.Name);
-      binding.Parent.AssociateWithBinding(
-        binding,
-        _cefSharpPanel.ExecuteScriptAsync,
-        _cefSharpPanel,
-        _cefSharpPanel.ShowDevTools
-      );
-    }
-
-    _cefSharpPanel.Browser.IsBrowserInitializedChanged += (sender, e) =>
-    {
-      if (e.NewValue is false)
-      {
-        return;
-      }
-      
-      _cefSharpPanel.Browser.ShowDevTools();
-
-      foreach (IBinding binding in _bindings.Select(x => x.Value))
-      {
-        IBridge bridge = binding.Parent;
-
-        _cefSharpPanel.Browser.JavascriptObjectRepository.Register(
-          bridge.FrontendBoundName,
-          bridge,
-          true,
-          _bindingOptions
-        );
-      }
-    };
+    //RevitTask.Initialize(uiApplication);
   }
 
   private void RegisterDockablePane()
   {
-    CefSharpSettings.ConcurrentTaskExecution = true;
-
     // Registering dockable pane should happen before UiApplication is initialized with RevitTask.
     // Otherwise pane cannot be registered for double-click file open.
     _uIControlledApplication.RegisterDockablePane(
       RevitExternalApplication.DoackablePanelId,
       _revitSettings.RevitPanelName,
-      _cefSharpPanel
+      _webViewPanel
     );
   }
 
@@ -179,3 +131,4 @@ internal sealed class RevitPlugin : IRevitPlugin
     return null;
   }
 }
+#endif

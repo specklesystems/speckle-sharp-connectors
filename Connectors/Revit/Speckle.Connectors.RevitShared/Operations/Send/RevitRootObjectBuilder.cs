@@ -125,7 +125,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
   private Collection GetAndCreateObjectHostCollection(string[] path)
   {
     string fullPathName = string.Concat(path);
-    if (_collectionCache.TryGetValue(fullPathName, out Collection value))
+    if (_collectionCache.TryGetValue(fullPathName, out Collection? value))
     {
       return value;
     }

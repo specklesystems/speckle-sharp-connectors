@@ -58,6 +58,12 @@
         "resolved": "4.2.0",
         "contentHash": "4fJojPkzdoa4nB2+p6U+fITvPnVvwWSnsmiJ/Dl30xqiL3oxNbYvfeSLVd91hOmEjoUqSwN3Z7j1aFedjqWbUA=="
       },
+      "NUnit3TestAdapter": {
+        "type": "Direct",
+        "requested": "[4.5.0, )",
+        "resolved": "4.5.0",
+        "contentHash": "s8JpqTe9bI2f49Pfr3dFRfoVSuFQyraTj68c3XXjIS/MRGvvkLnrg6RLqnTjdShX+AdFUCCU/4Xex58AdUfs6A=="
+      },
       "PolySharp": {
         "type": "Direct",
         "requested": "[1.14.1, )",
@@ -72,9 +78,9 @@
       },
       "Speckle.Rhino7.Fakes": {
         "type": "Direct",
-        "requested": "[0.2.1-preview.6, )",
-        "resolved": "0.2.1-preview.6",
-        "contentHash": "2sbblditOPe+xuqRXLIWYHMS77tKjo8fscfKK7nlAZaUbAJGCKmH0B0MLHPwkBlTAfaNZCyiWwoEoaaa27jZbA==",
+        "requested": "[0.2.2-preview.2, )",
+        "resolved": "0.2.2-preview.2",
+        "contentHash": "l4sP+NW1RPfI7/agOGHkXtcvpq24CLRsnUsK3QJwgDydHnsS4TWAM/OslkyLiytTzA6i4Hdsu7UQXRlizKv48g==",
         "dependencies": {
           "System.Drawing.Common": "8.0.6"
         }
@@ -480,7 +486,7 @@
         "type": "Project",
         "dependencies": {
           "Speckle.Autofac": "[1.0.0, )",
-          "Speckle.Objects": "[3.0.1-dev.23, )"
+          "Speckle.Objects": "[3.0.1-dev.25, )"
         }
       },
       "speckle.testing": {
@@ -498,9 +504,9 @@
       },
       "Speckle.Core": {
         "type": "CentralTransitive",
-        "requested": "[3.0.1-dev.23, )",
-        "resolved": "3.0.1-dev.23",
-        "contentHash": "Mep7zls6FJQ8NR79cL6wNNqEpqNbVNXkKOfvY6oebe2MMnE89FKDr29nb2dRgEhynV1ankVzz+YYCiFGxXZfyQ==",
+        "requested": "[3.0.1-dev.25, )",
+        "resolved": "3.0.1-dev.25",
+        "contentHash": "wcLNocrTfNCmhtJH/Hp/1u18Fp57apIdYvQnfCAAfo0txfNjL5hzx+wtFt5PlHPjF/mPssESuhLa89pvrMFvxw==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.CSharp": "4.7.0",
@@ -522,11 +528,11 @@
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.0.1-dev.23, )",
-        "resolved": "3.0.1-dev.23",
-        "contentHash": "UrhwEiRxJAMCgnOfp5IjUXfbQU8OZ1bEd04GoFl5/nA6KMIMQbz01aLyRROuHpliVOH2ae3jLCORDIYy6feU5Q==",
+        "requested": "[3.0.1-dev.25, )",
+        "resolved": "3.0.1-dev.25",
+        "contentHash": "bxYDptn2hnUFdzFOgmEU/YS8ZjcrHCHz4bFwKLDz1rA9ytkBIUvNuTYZpKZz3h9jVJxrgPhh1qDLqUNgK56hdA==",
         "dependencies": {
-          "Speckle.Core": "3.0.1-dev.23"
+          "Speckle.Core": "3.0.1-dev.25"
         }
       }
     }

@@ -48,7 +48,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
   public string GetConnectorVersion()
   {
-    return Assembly.GetAssembly(GetType()).GetVersion();
+    return Assembly.GetAssembly(GetType()).NotNull().GetVersion();
   }
 
   public string GetSourceApplicationName() => _revitSettings.HostSlug.ToLower(); // POC: maybe not right place but... // ANOTHER POC: We should align this naming from somewhere in common DUI projects instead old structs. I know there are other POC comments around this

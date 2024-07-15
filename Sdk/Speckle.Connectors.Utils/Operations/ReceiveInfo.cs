@@ -5,6 +5,8 @@ public record ReceiveInfo(
   Uri ServerUrl,
   string ProjectId,
   string ProjectName,
+  string ModelId,
   string ModelName,
-  string SelectedVersionId
+  string SelectedVersionId,
+  string SourceApplication
 );

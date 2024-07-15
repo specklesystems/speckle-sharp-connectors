@@ -12,6 +12,7 @@
     <PackageReference Include="Moq"  />
     <PackageReference Include="NUnit" />
     <PackageReference Include="NUnit.Analyzers" />
+    <PackageReference Include="NUnit3TestAdapter" />
   </ItemGroup>
   <Import Project="..\Speckle.Converters.RhinoShared\Speckle.Converters.RhinoShared.projitems" Label="Shared" />
 
@@ -21,6 +22,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Speckle.Rhino7.Fakes" VersionOverride="0.2.1-preview.6" />
+    <PackageReference Include="Speckle.Rhino7.Fakes" VersionOverride="0.2.2-preview.2" />
   </ItemGroup>
 </Project>

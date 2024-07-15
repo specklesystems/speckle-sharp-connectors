@@ -12,6 +12,12 @@
     <Content Include="$(MSBuildThisFileDirectory)Plugin\Speckle.Connectors.Revit2022.addin">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="$(MSBuildThisFileDirectory)Plugin\Speckle.Connectors.Revit2025.addin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(MSBuildThisFileDirectory)Plugin\Speckle.Connectors.Revit2024.addin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Assets\logo16.png" />
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Assets\logo32.png" />
     <Content Include="$(MSBuildThisFileDirectory)Plugin\Speckle.Connectors.Revit2023.addin">
@@ -37,21 +43,14 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\RevitHostObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\TransactionManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\RevitRootObjectBuilder.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Plugin\CefSharpPanel.xaml.cs">
-      <DependentUpon>CefSharpPanel.xaml</DependentUpon>
-    </Compile>
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\DUI3ControlWebViewDockable.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\IRevitPlugin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitCommand.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitExternalApplication.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\IRevitIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitIdleManager.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitPlugin.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)plugin\RevitWebViewPlugin.cs" />
+    <Compile Include="..\Speckle.Connectors.RevitShared\Plugin\RevitCefPlugin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitSettings.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <Page Include="$(MSBuildThisFileDirectory)Plugin\CefSharpPanel.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
   </ItemGroup>
 </Project>

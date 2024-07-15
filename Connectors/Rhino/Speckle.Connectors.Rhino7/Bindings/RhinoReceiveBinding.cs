@@ -3,6 +3,7 @@ using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
+using Speckle.Connectors.Rhino7.HostApp;
 using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Cancellation;
@@ -19,18 +20,21 @@ public class RhinoReceiveBinding : IReceiveBinding
   private readonly CancellationManager _cancellationManager;
   private readonly DocumentModelStore _store;
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
+  private readonly RhinoSettings _rhinoSettings;
   public ReceiveBindingUICommands Commands { get; }
 
   public RhinoReceiveBinding(
     DocumentModelStore store,
     CancellationManager cancellationManager,
     IBridge parent,
-    IUnitOfWorkFactory unitOfWorkFactory
+    IUnitOfWorkFactory unitOfWorkFactory,
+    RhinoSettings rhinoSettings
   )
   {
     Parent = parent;
     _store = store;
     _unitOfWorkFactory = unitOfWorkFactory;
+    _rhinoSettings = rhinoSettings;
     _cancellationManager = cancellationManager;
     Commands = new ReceiveBindingUICommands(parent);
   }
@@ -55,7 +59,7 @@ public class RhinoReceiveBinding : IReceiveBinding
       // Receive host objects
       HostObjectBuilderResult conversionResults = await unitOfWork
         .Service.Execute(
-          modelCard.GetReceiveInfo(),
+          modelCard.GetReceiveInfo(_rhinoSettings.HostAppInfo.Name),
           cts.Token,
           (status, progress) =>
             Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts)

@@ -26,7 +26,7 @@ public class StandaloneTableToSpeckleConverter
 
   public VectorLayer Convert(StandaloneTable target)
   {
-    VectorLayer speckleLayer = new() { name = target.Name, };
+    VectorLayer speckleLayer = new() { };
 
     // get feature class fields
     var attributes = new Base();

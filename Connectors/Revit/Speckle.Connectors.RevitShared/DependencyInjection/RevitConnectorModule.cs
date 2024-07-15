@@ -1,5 +1,4 @@
 using Autodesk.Revit.DB;
-using CefSharp;
 using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI;
@@ -15,6 +14,11 @@ using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Core.Models.GraphTraversal;
+#if REVIT2025
+using Speckle.Connectors.DUI.WebView;
+#else
+using CefSharp;
+#endif
 
 namespace Speckle.Connectors.Revit.DependencyInjection;
 
@@ -26,23 +30,9 @@ public class RevitConnectorModule : ISpeckleModule
     builder.AddAutofac();
     builder.AddConnectorUtils();
     builder.AddDUI();
+    RegisterUiDependencies(builder);
 
     builder.AddSingletonInstance<ISyncToThread, RevitContextAccessor>();
-    var panel = new CefSharpPanel();
-    
-#if !REVIT2022
-    builder.AddSingleton(BindingOptions.DefaultBinder);
-#else
-    builder.AddSingleton(new BindingOptions() { CamelCaseJavascriptNames = false });
-#endif
-    
-#if !REVIT2022
-    panel.Browser.JavascriptObjectRepository.NameConverter = null;
-#endif
-    
-    builder.AddSingleton(panel);
-    builder.AddSingleton<IRevitPlugin, RevitPlugin>();
-
     // register
     builder.AddSingleton<DocumentModelStore, RevitDocumentStore>();
 
@@ -72,5 +62,26 @@ public class RevitConnectorModule : ISpeckleModule
     builder.AddScoped<IHostObjectBuilder, RevitHostObjectBuilder>();
     builder.AddScoped<ITransactionManager, TransactionManager>();
     builder.AddSingleton(DefaultTraversal.CreateTraversalFunc());
+  }
+
+  public void RegisterUiDependencies(SpeckleContainerBuilder builder)
+  {
+    // if revit 2025 or higher, register webview2 dependencies
+    // else register cefSharp depenedencies
+#if REVIT2025
+    builder.AddDUIView();
+    builder.AddSingleton<IRevitPlugin, RevitWebViewPlugin>();
+    builder.AddSingleton<DUI3ControlWebView>();
+    builder.AddSingleton<DUI3ControlWebViewDockable>();
+#else
+    // POC: different versons for different versions of CEF
+    builder.AddSingleton(BindingOptions.DefaultBinder);
+
+    var panel = new CefSharpPanel();
+    panel.Browser.JavascriptObjectRepository.NameConverter = null;
+
+    builder.AddSingleton(panel);
+    builder.AddSingleton<IRevitPlugin, RevitCefPlugin>();
+#endif
   }
 }
