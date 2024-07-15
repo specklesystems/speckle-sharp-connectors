@@ -49,8 +49,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitExternalApplication.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\IRevitIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitIdleManager.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)plugin\RevitWebViewPlugin.cs" />
-    <Compile Include="..\Speckle.Connectors.RevitShared\Plugin\RevitCefPlugin.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitWebViewPlugin.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitCefPlugin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitSettings.cs" />
   </ItemGroup>
 </Project>
