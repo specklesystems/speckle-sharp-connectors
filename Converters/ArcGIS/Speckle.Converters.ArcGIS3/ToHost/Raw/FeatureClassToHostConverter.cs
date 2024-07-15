@@ -5,6 +5,7 @@ using Objects.GIS;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Core.Logging;
 using Speckle.Core.Models;
 using FieldDescription = ArcGIS.Core.Data.DDL.FieldDescription;
 
@@ -97,14 +98,27 @@ public class FeatureClassToHostConverter : ITypedConverter<VectorLayer, FeatureC
     string featureClassName = "speckleID_" + target.id;
 
     // delete FeatureClass if already exists
-    foreach (FeatureClassDefinition fClassDefinition in geodatabase.GetDefinitions<FeatureClassDefinition>())
+    try
     {
-      // will cause GeodatabaseCatalogDatasetException if doesn't exist in the database
-      if (fClassDefinition.GetName() == featureClassName)
+      FeatureClassDefinition fClassDefinition = geodatabase.GetDefinition<FeatureClassDefinition>(featureClassName);
+      FeatureClassDescription existingDescription = new(fClassDefinition);
+      schemaBuilder.Delete(existingDescription);
+      schemaBuilder.Build();
+    }
+    catch (Exception ex) when (!ex.IsFatal()) //(GeodatabaseTableException)
+    {
+      // "The table was not found."
+      // delete Table if already exists
+      try
       {
-        FeatureClassDescription existingDescription = new(fClassDefinition);
+        TableDefinition fClassDefinition = geodatabase.GetDefinition<TableDefinition>(featureClassName);
+        TableDescription existingDescription = new(fClassDefinition);
         schemaBuilder.Delete(existingDescription);
         schemaBuilder.Build();
+      }
+      catch (Exception ex2) when (!ex2.IsFatal()) //(GeodatabaseTableException)
+      {
+        // "The table was not found.", do nothing
       }
     }
 
