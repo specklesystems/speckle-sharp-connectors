@@ -46,13 +46,13 @@ public class CircleToHostConverter : IToHostTopLevelConverter, ITypedConverter<S
       new ACG.Coordinate2D(centerPt.X, centerPt.Y),
       (double)target.radius * scaleFactor,
       ACG.ArcOrientation.ArcClockwise,
-      _contextStack.Current.Document.Map.SpatialReference
+      _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference
     );
 
     return new ACG.PolylineBuilderEx(
       circleSegment,
       ACG.AttributeFlags.HasZ,
-      _contextStack.Current.Document.Map.SpatialReference
+      _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference
     ).ToGeometry();
   }
 }

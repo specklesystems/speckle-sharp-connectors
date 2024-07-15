@@ -45,6 +45,9 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     CancellationToken cancellationToken
   )
   {
+    // TODO get spatialRef and offsets & rotation from ProjectInfo in CommitObject
+    // ATM, GIS commit CRS is stored per layer (in FeatureClass converter), but should be moved to the Root level too
+
     // Prompt the UI conversion started. Progress bar will swoosh.
     onOperationProgressed?.Invoke("Converting", null);
 
@@ -211,7 +214,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
   )
   {
     // get layer details
-    string? datasetId = trackerItem.DatasetId; // should not ne null here
+    string? datasetId = trackerItem.DatasetId; // should not be null here
     Uri uri = new($"{_contextStack.Current.Document.SpeckleDatabasePath.AbsolutePath.Replace('/', '\\')}\\{datasetId}");
     string nestedLayerName = trackerItem.NestedLayerName;
 
