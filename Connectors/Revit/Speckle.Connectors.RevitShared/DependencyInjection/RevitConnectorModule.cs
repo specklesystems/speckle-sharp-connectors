@@ -75,12 +75,8 @@ public class RevitConnectorModule : ISpeckleModule
     builder.AddSingleton<DUI3ControlWebViewDockable>();
 #elif REVIT2022
     // POC: different versons for different versions of CEF
-   builder.AddSingleton(new BindingOptions() { CamelCaseJavascriptNames = false });
-
-    var panel = new CefSharpPanel();
-    panel.Browser.JavascriptObjectRepository.NameConverter = null;
-
-    builder.AddSingleton(panel);
+    builder.AddSingleton(new BindingOptions() { CamelCaseJavascriptNames = false });
+    builder.AddSingleton<CefSharpPanel>();
     builder.AddSingleton<IRevitPlugin, RevitCefPlugin>();
 #else
     // POC: different versons for different versions of CEF

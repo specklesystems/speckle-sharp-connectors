@@ -5,12 +5,5 @@ namespace Speckle.Converters.RevitShared.Extensions;
 public static class DefinitionExtensions
 {
   // POC: can we just interface these specialisations out and thereby avoid this kind of BS :D
-  public static string GetUnitTypeString(this Definition definition)
-  {
-#if REVIT2022
-    return definition.UnitType.ToString();
-#else
-    return definition.GetDataType().TypeId;
-#endif
-  }
+  public static string GetUnitTypeString(this Definition definition) => definition.GetDataType().TypeId;
 }
