@@ -1,3 +1,4 @@
+#if !REVIT2025
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
@@ -14,7 +15,7 @@ using Speckle.Core.Logging;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
-internal sealed class RevitPlugin : IRevitPlugin
+internal sealed class RevitCefPlugin : IRevitPlugin
 {
   private readonly UIControlledApplication _uIControlledApplication;
   private readonly RevitSettings _revitSettings;
@@ -23,7 +24,7 @@ internal sealed class RevitPlugin : IRevitPlugin
   private readonly RevitContext _revitContext;
   private readonly CefSharpPanel _cefSharpPanel;
 
-  public RevitPlugin(
+  public RevitCefPlugin(
     UIControlledApplication uIControlledApplication,
     RevitSettings revitSettings,
     IEnumerable<Lazy<IBinding>> bindings,
@@ -79,7 +80,7 @@ internal sealed class RevitPlugin : IRevitPlugin
         )
       );
 
-    string path = typeof(RevitPlugin).Assembly.Location;
+    string path = typeof(RevitCefPlugin).Assembly.Location;
     dui3Button.Image = LoadPngImgSource(
       $"Speckle.Connectors.Revit{_revitSettings.RevitVersionName}.Assets.logo16.png",
       path
@@ -196,3 +197,4 @@ internal sealed class RevitPlugin : IRevitPlugin
     return null;
   }
 }
+#endif
