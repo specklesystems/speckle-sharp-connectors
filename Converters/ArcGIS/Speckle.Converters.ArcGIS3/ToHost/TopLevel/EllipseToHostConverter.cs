@@ -30,7 +30,10 @@ public class EllipseToHostConverter : IToHostTopLevelConverter, ITypedConverter<
       throw new ArgumentException("Ellipse is missing the first or second radius");
     }
     if (
-      target.plane.normal.x != 0 || target.plane.normal.y != 0 || target.plane.xdir.z != 0 || target.plane.ydir.z != 0
+      target.plane.normal.x != 0
+      || target.plane.normal.y != 0
+      || target.plane.xdir.z != 0
+      || target.plane.ydir.z != 0
     )
     {
       throw new ArgumentException("Only Ellipses in XY plane are supported");
