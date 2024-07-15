@@ -54,7 +54,7 @@ public class PolycurveToHostConverter : IToHostTopLevelConverter, ITypedConverte
     return new ACG.PolylineBuilderEx(
       segments,
       ACG.AttributeFlags.HasZ,
-      _contextStack.Current.Document.Map.SpatialReference
+      _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference
     ).ToGeometry();
   }
 }

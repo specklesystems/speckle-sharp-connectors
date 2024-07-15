@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Rhino;
 using Rhino.DocObjects;
 using Speckle.Autofac.DependencyInjection;
@@ -19,50 +18,36 @@ namespace Speckle.Connectors.Rhino7.Operations.Send;
 /// </summary>
 public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
 {
-  private readonly IUnitOfWorkFactory _unitOfWorkFactory;
+  private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly RhinoInstanceObjectsManager _instanceObjectsManager;
   private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
   private readonly RhinoLayerManager _layerManager;
 
   public RhinoRootObjectBuilder(
-    IUnitOfWorkFactory unitOfWorkFactory,
     ISendConversionCache sendConversionCache,
     IConversionContextStack<RhinoDoc, UnitSystem> contextStack,
     RhinoLayerManager layerManager,
-    RhinoInstanceObjectsManager instanceObjectsManager
+    RhinoInstanceObjectsManager instanceObjectsManager,
+    IRootToSpeckleConverter rootToSpeckleConverter
   )
   {
-    _unitOfWorkFactory = unitOfWorkFactory;
     _sendConversionCache = sendConversionCache;
     _contextStack = contextStack;
     _layerManager = layerManager;
     _instanceObjectsManager = instanceObjectsManager;
+    _rootToSpeckleConverter = rootToSpeckleConverter;
   }
 
   public RootObjectBuilderResult Build(
-    IReadOnlyList<RhinoObject> objects,
-    SendInfo sendInfo,
-    Action<string, double?>? onOperationProgressed = null,
-    CancellationToken ct = default
-  ) => ConvertObjects(objects, sendInfo, onOperationProgressed, ct);
-
-  private RootObjectBuilderResult ConvertObjects(
     IReadOnlyList<RhinoObject> rhinoObjects,
     SendInfo sendInfo,
     Action<string, double?>? onOperationProgressed = null,
     CancellationToken cancellationToken = default
   )
   {
-    // POC: does this feel like the right place? I am wondering if this should be called from within send/rcv?
-    // begin the unit of work
-    using var uow = _unitOfWorkFactory.Resolve<IRootToSpeckleConverter>();
-    var converter = uow.Service;
-
     var rootObjectCollection = new Collection { name = _contextStack.Current.Document.Name ?? "Unnamed document" };
     int count = 0;
-
-    Dictionary<int, Collection> layerCollectionCache = new();
 
     var (atomicObjects, instanceProxies, instanceDefinitionProxies) = _instanceObjectsManager.UnpackSelection(
       rhinoObjects
@@ -72,8 +57,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     rootObjectCollection["instanceDefinitionProxies"] = instanceDefinitionProxies; // this won't work re traversal on receive
 
     // POC: Handle blocks.
-    List<SendConversionResult> results = new(rhinoObjects.Count);
-    var cacheHitCount = 0;
+    List<SendConversionResult> results = new(atomicObjects.Count);
     foreach (RhinoObject rhinoObject in atomicObjects)
     {
       cancellationToken.ThrowIfCancellationRequested();
@@ -96,11 +80,10 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         else if (_sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference value))
         {
           converted = value;
-          cacheHitCount++;
         }
         else
         {
-          converted = converter.Convert(rhinoObject);
+          converted = _rootToSpeckleConverter.Convert(rhinoObject);
           converted.applicationId = applicationId;
         }
 
@@ -114,16 +97,12 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         results.Add(new(Status.ERROR, applicationId, rhinoObject.ObjectType.ToString(), null, ex));
       }
 
-      onOperationProgressed?.Invoke("Converting", (double)++count / rhinoObjects.Count);
+      ++count;
+      onOperationProgressed?.Invoke("Converting", (double)count / atomicObjects.Count);
 
       // NOTE: useful for testing ui states, pls keep for now so we can easily uncomment
       // Thread.Sleep(550);
     }
-
-    // POC: Log would be nice, or can be removed.
-    Debug.WriteLine(
-      $"Cache hit count {cacheHitCount} out of {rhinoObjects.Count} ({(double)cacheHitCount / rhinoObjects.Count})"
-    );
 
     // 5. profit
     return new(rootObjectCollection, results);
