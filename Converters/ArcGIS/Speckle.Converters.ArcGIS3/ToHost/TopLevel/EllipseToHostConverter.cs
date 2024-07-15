@@ -43,7 +43,9 @@ public class EllipseToHostConverter : IToHostTopLevelConverter, ITypedConverter<
     double scaleFactor = Units.GetConversionFactor(target.units, _contextStack.Current.SpeckleUnits);
 
     // set default values
-    double angle = Math.Atan2(target.plane.xdir.y, target.plane.xdir.x);
+    double angle =
+      Math.Atan2(target.plane.xdir.y, target.plane.xdir.x)
+      + _contextStack.Current.Document.ActiveCRSoffsetRotation.TrueNorthRadians;
     double majorAxisRadius = (double)target.firstRadius;
     double minorAxisRatio = (double)target.secondRadius / majorAxisRadius;
 
@@ -61,13 +63,13 @@ public class EllipseToHostConverter : IToHostTopLevelConverter, ITypedConverter<
       majorAxisRadius * scaleFactor,
       minorAxisRatio,
       ACG.ArcOrientation.ArcCounterClockwise,
-      _contextStack.Current.Document.Map.SpatialReference
+      _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference
     );
 
     return new ACG.PolylineBuilderEx(
       segment,
       ACG.AttributeFlags.HasZ,
-      _contextStack.Current.Document.Map.SpatialReference
+      _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference
     ).ToGeometry();
   }
 }

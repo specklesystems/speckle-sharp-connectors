@@ -19,25 +19,25 @@ namespace Speckle.Connectors.Rhino7.Operations.Send;
 /// </summary>
 public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
 {
-  private readonly IUnitOfWorkFactory _unitOfWorkFactory;
+  private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly RhinoInstanceObjectsManager _instanceObjectsManager;
   private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
   private readonly RhinoLayerManager _layerManager;
 
   public RhinoRootObjectBuilder(
-    IUnitOfWorkFactory unitOfWorkFactory,
     ISendConversionCache sendConversionCache,
     IConversionContextStack<RhinoDoc, UnitSystem> contextStack,
     RhinoLayerManager layerManager,
-    RhinoInstanceObjectsManager instanceObjectsManager
+    RhinoInstanceObjectsManager instanceObjectsManager,
+    IRootToSpeckleConverter rootToSpeckleConverter
   )
   {
-    _unitOfWorkFactory = unitOfWorkFactory;
     _sendConversionCache = sendConversionCache;
     _contextStack = contextStack;
     _layerManager = layerManager;
     _instanceObjectsManager = instanceObjectsManager;
+    _rootToSpeckleConverter = rootToSpeckleConverter;
   }
 
   public RootObjectBuilderResult Build(
@@ -54,11 +54,6 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     CancellationToken cancellationToken = default
   )
   {
-    // POC: does this feel like the right place? I am wondering if this should be called from within send/rcv?
-    // begin the unit of work
-    using var uow = _unitOfWorkFactory.Resolve<IRootToSpeckleConverter>();
-    var converter = uow.Service;
-
     var rootObjectCollection = new Collection { name = _contextStack.Current.Document.Name ?? "Unnamed document" };
     int count = 0;
 
@@ -100,7 +95,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         }
         else
         {
-          converted = converter.Convert(rhinoObject);
+          converted = _rootToSpeckleConverter.Convert(rhinoObject);
           converted.applicationId = applicationId;
         }
 
