@@ -1,8 +1,8 @@
 using System.Diagnostics.Contracts;
 using Rhino;
-using Rhino.DocObjects;
 using Speckle.Core.Models;
 using Speckle.Core.Models.GraphTraversal;
+using Layer = Rhino.DocObjects.Layer;
 
 namespace Speckle.Connectors.Rhino7.HostApp;
 
