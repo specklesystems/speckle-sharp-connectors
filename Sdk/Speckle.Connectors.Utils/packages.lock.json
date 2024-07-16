@@ -530,6 +530,12 @@
           "Speckle.Newtonsoft.Json": "[13.0.2, )"
         }
       },
+      "speckle.objects": {
+        "type": "Project",
+        "dependencies": {
+          "Speckle.Core": "[1.0.0, )"
+        }
+      },
       "Microsoft.Extensions.Logging.Abstractions": {
         "type": "CentralTransitive",
         "requested": "[7.0.0, )",
