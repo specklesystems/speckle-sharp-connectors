@@ -125,16 +125,18 @@ internal sealed class RevitCefPlugin : IRevitPlugin
         _cefSharpPanel.ShowDevTools
       );
     }
-
+    
     _cefSharpPanel.Browser.IsBrowserInitializedChanged += (sender, e) =>
     {
       if (e.NewValue is false)
       {
         return;
       }
-
-      //_cefSharpPanel.Browser.ShowDevTools();
-
+      
+#if DEBUG
+      _cefSharpPanel.Browser.ShowDevTools();
+#endif
+      
       foreach (IBinding binding in _bindings.Select(x => x.Value))
       {
         IBridge bridge = binding.Parent;
