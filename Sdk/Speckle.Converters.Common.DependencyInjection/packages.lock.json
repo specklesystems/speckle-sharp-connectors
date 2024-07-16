@@ -310,8 +310,8 @@
       },
       "Speckle.DoubleNumerics": {
         "type": "Transitive",
-        "resolved": "4.0.1-alpha.3",
-        "contentHash": "7/lg9LDI3TZLiI7FhI2IhRrTzsZyDrQw1rG/S3kRtx0IU3raWzRHL4W5zvHV8LdWkqJEztS/9dUgLNYHV70o5Q=="
+        "resolved": "4.0.1",
+        "contentHash": "MzEQ1Im0zTja+tEsdRIk/WlPiKqb22NmTOJcR1ZKm/mz46pezyyID3/wRz6vJUELMpSLnG7LhsxBL+nxbr7V0w=="
       },
       "Speckle.Newtonsoft.Json": {
         "type": "Transitive",
@@ -461,7 +461,7 @@
         "type": "Project",
         "dependencies": {
           "Speckle.Autofac": "[1.0.0, )",
-          "Speckle.Objects": "[3.0.1-dev.25, )"
+          "Speckle.Objects": "[3.0.0-dev.51, )"
         }
       },
       "Microsoft.Extensions.Logging.Abstractions": {
@@ -476,9 +476,9 @@
       },
       "Speckle.Core": {
         "type": "CentralTransitive",
-        "requested": "[3.0.1-dev.25, )",
-        "resolved": "3.0.1-dev.25",
-        "contentHash": "wcLNocrTfNCmhtJH/Hp/1u18Fp57apIdYvQnfCAAfo0txfNjL5hzx+wtFt5PlHPjF/mPssESuhLa89pvrMFvxw==",
+        "requested": "[3.0.0-dev.51, )",
+        "resolved": "3.0.0-dev.51",
+        "contentHash": "RdknA3s6GJ+F3uQiVrkJfqULg+utIyzfgffXg2eKW9K9tIcQiGwouzNkWAEhCvqIHJDf/CCcpoRXsD1ajGiYwA==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.CSharp": "4.7.0",
@@ -494,17 +494,17 @@
           "Serilog.Sinks.Console": "4.1.0",
           "Serilog.Sinks.Seq": "5.2.2",
           "SerilogTimings": "3.0.1",
-          "Speckle.DoubleNumerics": "4.0.1-alpha.3",
+          "Speckle.DoubleNumerics": "4.0.1",
           "Speckle.Newtonsoft.Json": "13.0.2"
         }
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.0.1-dev.25, )",
-        "resolved": "3.0.1-dev.25",
-        "contentHash": "bxYDptn2hnUFdzFOgmEU/YS8ZjcrHCHz4bFwKLDz1rA9ytkBIUvNuTYZpKZz3h9jVJxrgPhh1qDLqUNgK56hdA==",
+        "requested": "[3.0.0-dev.51, )",
+        "resolved": "3.0.0-dev.51",
+        "contentHash": "9453uaTJtavJ7rlPEi1G4vLY/cwESzW3JSZMO1emJB5zrahoPCJWu916hFRCwFKbyQQf4rKmkNyv7fAnCx/2sA==",
         "dependencies": {
-          "Speckle.Core": "3.0.1-dev.25"
+          "Speckle.Core": "3.0.0-dev.51"
         }
       }
     }
