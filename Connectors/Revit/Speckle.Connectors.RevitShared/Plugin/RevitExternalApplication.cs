@@ -46,7 +46,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
     return "2023";
 #elif REVIT2024
     return "2024";
-#elif REVIT2023
+#elif REVIT2025
     return "2025";
 #else
     throw new NotImplementedException();
