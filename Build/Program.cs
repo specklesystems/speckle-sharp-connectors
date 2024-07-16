@@ -30,11 +30,13 @@ if (args.Length > 1)
 
 Target(
   CLEAN_LOCKS,
-  ForEach("**/*.lock.json"),
-  f =>
+  () =>
   {
-    Console.WriteLine("Found and will delete: " + f);
-    File.Delete(f);
+    foreach (var f in Glob.Files(".", "**/*.lock.json"))
+    {
+      Console.WriteLine("Found and will delete: " + f);
+      File.Delete(f);
+    }
   }
 );
 
