@@ -9,17 +9,20 @@
     <Import_RootNamespace>Speckle.Connectors.Revit</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Content Include="$(MSBuildThisFileDirectory)Plugin\Speckle.Connectors.Revit2025.addin">
+    <Content Include="$(MSBuildThisFileDirectory)Plugin\Speckle.Connectors.Revit2022.addin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(MSBuildThisFileDirectory)Plugin\Speckle.Connectors.Revit2023.addin">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="$(MSBuildThisFileDirectory)Plugin\Speckle.Connectors.Revit2024.addin">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Assets\logo16.png" />
-    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Assets\logo32.png" />
-    <Content Include="$(MSBuildThisFileDirectory)Plugin\Speckle.Connectors.Revit2023.addin">
+    <Content Include="$(MSBuildThisFileDirectory)Plugin\Speckle.Connectors.Revit2025.addin">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Assets\logo16.png" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Assets\logo32.png" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\BasicConnectorBindingRevit.cs" />
@@ -28,6 +31,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RevitReceiveBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\SelectionBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RevitSendBinding.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ElementIdHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\DocumentModelStorageSchema.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Elements.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\IdStorageSchema.cs" />
@@ -45,8 +49,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitExternalApplication.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\IRevitIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitIdleManager.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)plugin\RevitWebViewPlugin.cs" />
-    <Compile Include="..\Speckle.Connectors.RevitShared\Plugin\RevitCefPlugin.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitWebViewPlugin.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitCefPlugin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitSettings.cs" />
   </ItemGroup>
 </Project>

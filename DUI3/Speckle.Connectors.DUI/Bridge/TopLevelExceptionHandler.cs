@@ -62,9 +62,9 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
 
   private const string UNHANDLED_LOGGER_TEMPLATE = "An unhandled Exception occured";
 
-  public TopLevelExceptionHandler(ILoggerFactory loggerFactory, IBridge bridge)
+  public TopLevelExceptionHandler(ILogger<TopLevelExceptionHandler> logger, IBridge bridge)
   {
-    _logger = loggerFactory.CreateLogger<TopLevelExceptionHandler>();
+    _logger = logger;
     _bridge = bridge;
   }
 

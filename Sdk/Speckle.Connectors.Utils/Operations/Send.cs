@@ -1,10 +1,12 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using Serilog.Context;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
 using Speckle.Core.Serialisation;
 using Speckle.Core.Transports;
+using Speckle.InterfaceGenerator;
 using Speckle.Newtonsoft.Json.Linq;
 
 namespace Speckle.Connectors.Utils.Operations;
@@ -12,7 +14,8 @@ namespace Speckle.Connectors.Utils.Operations;
 /// <summary>
 /// NOTE: Contains copy pasted code from the OG Send operations in Core (the non-obsolete ones).
 /// </summary>
-public static class SendHelper
+[GenerateAutoInterface]
+public class SendHelper(ILogger<SendHelper> logger) : ISendHelper
 {
   /// <summary>
   /// IMPORTANT: Copy pasted function from Operations.Send in Core, but this time returning the converted references from the serializer.
@@ -30,7 +33,7 @@ public static class SendHelper
   /// using ServerTransport destination = new(account, streamId);
   /// string objectId = await Send(mySpeckleObject, destination, true);
   /// </code></example>
-  public static async Task<(string rootObjId, Dictionary<string, ObjectReference> convertedReferences)> Send(
+  public async Task<(string rootObjId, Dictionary<string, ObjectReference> convertedReferences)> Send(
     Base value,
     ITransport transport,
     bool useDefaultCache,
@@ -66,7 +69,7 @@ public static class SendHelper
   /// <exception cref="ArgumentNullException"></exception>
   /// <exception cref="ArgumentException"></exception>
   /// <exception cref="SpeckleException"></exception>
-  private static async Task<(string rootObjId, Dictionary<string, ObjectReference> convertedReferences)> Send(
+  private async Task<(string rootObjId, Dictionary<string, ObjectReference> convertedReferences)> Send(
     Base value,
     IReadOnlyCollection<ITransport> transports,
     Action<ConcurrentDictionary<string, int>>? onProgressAction = null,
@@ -90,7 +93,7 @@ public static class SendHelper
     using (LogContext.PushProperty("correlationId", Guid.NewGuid().ToString()))
     {
       var sendTimer = Stopwatch.StartNew();
-      SpeckleLog.Logger.Information("Starting send operation");
+      logger.LogInformation("Starting send operation");
 
       var internalProgressAction = GetInternalProgressAction(onProgressAction);
 
@@ -111,11 +114,7 @@ public static class SendHelper
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        SpeckleLog.Logger.Information(
-          ex,
-          "Send operation failed after {elapsed} seconds",
-          sendTimer.Elapsed.TotalSeconds
-        );
+        logger.LogInformation(ex, "Send operation failed after {elapsed} seconds", sendTimer.Elapsed.TotalSeconds);
         if (ex is OperationCanceledException or SpeckleException)
         {
           throw;
@@ -132,17 +131,28 @@ public static class SendHelper
       }
 
       sendTimer.Stop();
-      SpeckleLog
-        .Logger.ForContext("transportElapsedBreakdown", transports.ToDictionary(t => t.TransportName, t => t.Elapsed))
-        .ForContext("note", "the elapsed summary doesn't need to add up to the total elapsed... Threading magic...")
-        .ForContext("serializerElapsed", serializerV2.Elapsed)
-        .Information(
+      using (
+        LogContext.PushProperty(
+          "transportElapsedBreakdown",
+          transports.ToDictionary(t => t.TransportName, t => t.Elapsed)
+        )
+      )
+      using (
+        LogContext.PushProperty(
+          "note",
+          "the elapsed summary doesn't need to add up to the total elapsed... Threading magic..."
+        )
+      )
+      using (LogContext.PushProperty("serializerElapsed", serializerV2.Elapsed.ToString()))
+      {
+        logger.LogInformation(
           "Finished sending {objectCount} objects after {elapsed}, result {objectId}",
           transports.Max(t => t.SavedObjectCount),
           sendTimer.Elapsed.TotalSeconds,
           serializerReturnValue.rootObjId
         );
-      return serializerReturnValue;
+        return serializerReturnValue;
+      }
     }
   }
 

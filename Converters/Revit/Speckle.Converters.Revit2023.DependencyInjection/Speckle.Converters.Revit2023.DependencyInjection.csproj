@@ -4,7 +4,7 @@
     <TargetFramework>net48</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
-
+  
   <Import Project="..\Speckle.Converters.RevitShared.DependencyInjection\Speckle.Converters.RevitShared.DependencyInjection.projitems" Label="Shared" />
 
   <ItemGroup>

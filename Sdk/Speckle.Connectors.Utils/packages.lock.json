@@ -48,9 +48,9 @@
       },
       "Speckle.Core": {
         "type": "Direct",
-        "requested": "[3.0.1-dev.25, )",
-        "resolved": "3.0.1-dev.25",
-        "contentHash": "wcLNocrTfNCmhtJH/Hp/1u18Fp57apIdYvQnfCAAfo0txfNjL5hzx+wtFt5PlHPjF/mPssESuhLa89pvrMFvxw==",
+        "requested": "[3.0.0-dev.56, )",
+        "resolved": "3.0.0-dev.56",
+        "contentHash": "4pYlMqr7iOtYx7m8ZeHzFgNTQLXJxTAcU08wd5Zw37n40FOj/pz22LDNmVIcy/78bccf2mhal1MWCWqd6IkMPw==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.CSharp": "4.7.0",
@@ -66,7 +66,7 @@
           "Serilog.Sinks.Console": "4.1.0",
           "Serilog.Sinks.Seq": "5.2.2",
           "SerilogTimings": "3.0.1",
-          "Speckle.DoubleNumerics": "4.0.1-alpha.3",
+          "Speckle.DoubleNumerics": "4.0.1",
           "Speckle.Newtonsoft.Json": "13.0.2"
         }
       },
@@ -372,8 +372,8 @@
       },
       "Speckle.DoubleNumerics": {
         "type": "Transitive",
-        "resolved": "4.0.1-alpha.3",
-        "contentHash": "7/lg9LDI3TZLiI7FhI2IhRrTzsZyDrQw1rG/S3kRtx0IU3raWzRHL4W5zvHV8LdWkqJEztS/9dUgLNYHV70o5Q=="
+        "resolved": "4.0.1",
+        "contentHash": "MzEQ1Im0zTja+tEsdRIk/WlPiKqb22NmTOJcR1ZKm/mz46pezyyID3/wRz6vJUELMpSLnG7LhsxBL+nxbr7V0w=="
       },
       "Speckle.Newtonsoft.Json": {
         "type": "Transitive",

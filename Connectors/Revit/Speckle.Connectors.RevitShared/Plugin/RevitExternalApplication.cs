@@ -29,13 +29,28 @@ internal sealed class RevitExternalApplication : IExternalApplication
       "Speckle New UI",
       "Speckle",
       "Speckle New UI",
-      "2023",
+      GetVersionAsString(),
       "Speckle New UI",
       "Revit",
       [Path.GetDirectoryName(typeof(RevitExternalApplication).Assembly.Location).NotNull()],
       "Revit Connector",
-      "2023" //POC: app version?
+      GetVersionAsString() //POC: app version?
     );
+  }
+
+  private string GetVersionAsString()
+  {
+#if REVIT2022
+    return "2022";
+#elif REVIT2023
+    return "2023";
+#elif REVIT2024
+    return "2024";
+#elif REVIT2025
+    return "2025";
+#else
+    throw new NotImplementedException();
+#endif
   }
 
   public Result OnStartup(UIControlledApplication application)
