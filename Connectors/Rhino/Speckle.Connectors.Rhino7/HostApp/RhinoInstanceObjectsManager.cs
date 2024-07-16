@@ -101,7 +101,7 @@ public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInst
       applicationId = instanceDefinitionId,
       Objects = new List<string>(),
       MaxDepth = depth,
-      ["name"] = instance.InstanceDefinition.Name,
+      Name = instance.InstanceDefinition.Name,
       ["description"] = instance.InstanceDefinition.Description
     };
 
@@ -168,7 +168,7 @@ public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInst
           }
 
           // POC: Currently we're relying on the definition name for identification if it's coming from speckle and from which model; could we do something else?
-          var defName = $"{baseLayerName} ({definitionProxy.applicationId})";
+          var defName = $"{definitionProxy.Name}-({definitionProxy.applicationId})-{baseLayerName}";
           var defIndex = doc.InstanceDefinitions.Add(
             defName,
             "No description", // POC: perhaps bring it along from source? We'd need to look at ACAD first
