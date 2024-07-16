@@ -4,6 +4,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <UseWpf>true</UseWpf>
     <RevitVersion>2024</RevitVersion>
+    <DefineConstants>$(DefineConstants);REVIT2024</DefineConstants>
   </PropertyGroup>
 
   <Import Project="..\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems" Label="Shared" />
