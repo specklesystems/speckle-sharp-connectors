@@ -17,6 +17,7 @@ const string VERSION = "version";
 const string RESTORE_TOOLS = "restore-tools";
 const string BUILD_SERVER_VERSION = "build-server-version";
 const string LOCAL_SDK = "add-local-sdk";
+const string CLEAN_LOCKS = "clean-locks";
 
 //need to pass arguments
 /*var arguments = new List<string>();
@@ -26,6 +27,16 @@ if (args.Length > 1)
   args = new[] { arguments.First() };
   //arguments = arguments.Skip(1).ToList();
 }*/
+
+Target(
+  CLEAN_LOCKS,
+  ForEach("**/*.lock.json"),
+  f =>
+  {
+    Console.WriteLine("Found and will delete: " + f);
+    File.Delete(f);
+  }
+);
 
 Target(
   CLEAN,
