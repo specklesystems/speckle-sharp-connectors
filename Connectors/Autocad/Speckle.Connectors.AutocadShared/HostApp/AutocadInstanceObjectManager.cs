@@ -110,7 +110,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
       applicationId = definitionId.ToString(),
       Objects = new(),
       MaxDepth = depth,
-      ["name"] = definition.Name,
+      Name = definition.Name,
       ["comments"] = definition.Comments,
       ["units"] = definition.Units // ? not sure needed?
     };
@@ -168,15 +168,8 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
 
           var record = new BlockTableRecord();
           var objectIds = new ObjectIdCollection();
-          record.Name = baseLayerName;
-          if (definitionProxy["name"] is string name)
-          {
-            record.Name += name;
-          }
-          else
-          {
-            record.Name += definitionProxy.applicationId;
-          }
+          // We're expecting to have Name prop always for definitions. If there is an edge case, ask to Dim or Ogu
+          record.Name = $"{definitionProxy.Name}-({definitionProxy.applicationId})-{baseLayerName}";
 
           foreach (var entity in constituentEntities)
           {
