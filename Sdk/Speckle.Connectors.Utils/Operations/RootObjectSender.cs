@@ -19,16 +19,19 @@ public sealed class RootObjectSender : IRootObjectSender
   private readonly ServerTransport.Factory _transportFactory;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly AccountService _accountService;
+  private readonly ISendHelper _sendHelper;
 
   public RootObjectSender(
     ServerTransport.Factory transportFactory,
     ISendConversionCache sendConversionCache,
-    AccountService accountService
+    AccountService accountService,
+    ISendHelper sendHelper
   )
   {
     _transportFactory = transportFactory;
     _sendConversionCache = sendConversionCache;
     _accountService = accountService;
+    _sendHelper = sendHelper;
   }
 
   public async Task<(string rootObjId, Dictionary<string, ObjectReference> convertedReferences)> Send(
@@ -45,7 +48,7 @@ public sealed class RootObjectSender : IRootObjectSender
     Account account = _accountService.GetAccountWithServerUrlFallback(sendInfo.AccountId, sendInfo.ServerUrl);
 
     ITransport transport = _transportFactory(account, sendInfo.ProjectId, 60, null);
-    var sendResult = await SendHelper.Send(commitObject, transport, true, null, ct).ConfigureAwait(false);
+    var sendResult = await _sendHelper.Send(commitObject, transport, true, null, ct).ConfigureAwait(false);
 
     _sendConversionCache.StoreSendResult(sendInfo.ProjectId, sendResult.convertedReferences);
 
