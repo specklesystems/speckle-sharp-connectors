@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Autodesk.AutoCAD.DatabaseServices;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Utils.Builders;
@@ -15,7 +15,7 @@ namespace Speckle.Connectors.Autocad.Operations.Send;
 public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
 {
   private readonly IRootToSpeckleConverter _converter;
-  private readonly string[] _documentPathSeparator = { "\\" };
+  private readonly string[] _documentPathSeparator = ["\\"];
   private readonly ISendConversionCache _sendConversionCache;
   private readonly AutocadInstanceObjectManager _instanceObjectsManager;
 
@@ -44,12 +44,15 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
           .DocumentManager.CurrentDocument.Name // POC: https://spockle.atlassian.net/browse/CNX-9319
           .Split(_documentPathSeparator, StringSplitOptions.None)
           .Reverse()
-          .First(),
-        collectionType = "root"
+          .First()
       };
 
+    // TODO: better handling for document and transactions!!
+    Document doc = Application.DocumentManager.CurrentDocument;
+    Transaction tr = doc.TransactionManager.TopTransaction;
+
     // Cached dictionary to create Collection for autocad entity layers. We first look if collection exists. If so use it otherwise create new one for that layer.
-    Dictionary<string, Collection> collectionCache = new();
+    Dictionary<string, Layer> collectionCache = new();
     int count = 0;
 
     var (atomicObjects, instanceProxies, instanceDefinitionProxies) = _instanceObjectsManager.UnpackSelection(objects);
@@ -81,16 +84,29 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
         }
 
         // Create and add a collection for each layer if not done so already.
-        if ((dbObject as Entity)?.Layer is string layer)
+        if (dbObject is Entity entity)
         {
-          if (!collectionCache.TryGetValue(layer, out Collection? collection))
+          string layerName = entity.Layer;
+
+          if (!collectionCache.TryGetValue(layerName, out Layer? speckleLayer))
           {
-            collection = new Collection() { name = layer, collectionType = "layer" };
-            collectionCache[layer] = collection;
-            modelWithLayers.elements.Add(collectionCache[layer]);
+            if (tr.GetObject(entity.LayerId, OpenMode.ForRead) is LayerTableRecord autocadLayer)
+            {
+              speckleLayer = new Layer(layerName, autocadLayer.Color.ColorValue.ToArgb());
+              collectionCache[layerName] = speckleLayer;
+              modelWithLayers.elements.Add(collectionCache[layerName]);
+            }
+            else
+            {
+              // TODO: error
+            }
           }
 
-          collection.elements.Add(converted);
+          speckleLayer.elements.Add(converted);
+        }
+        else
+        {
+          // TODO: error
         }
 
         results.Add(new(Status.SUCCESS, applicationId, dbObject.GetType().ToString(), converted));
