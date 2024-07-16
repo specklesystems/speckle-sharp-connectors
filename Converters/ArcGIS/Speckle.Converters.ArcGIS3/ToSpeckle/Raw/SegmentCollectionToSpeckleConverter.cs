@@ -33,11 +33,17 @@ public class SegmentCollectionToSpeckleConverter : ITypedConverter<ACG.ReadOnlyS
         ACG.Polyline polylineFromSegment = new ACG.PolylineBuilderEx(
           segment,
           ACG.AttributeFlags.HasZ,
-          _contextStack.Current.Document.Map.SpatialReference
+          _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference
         ).ToGeometry();
 
-        double tolerance = _contextStack.Current.Document.Map.SpatialReference.XYTolerance;
-        double conversionFactorToMeter = _contextStack.Current.Document.Map.SpatialReference.Unit.ConversionFactor;
+        double tolerance = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference.XYTolerance;
+        double conversionFactorToMeter = _contextStack
+          .Current
+          .Document
+          .ActiveCRSoffsetRotation
+          .SpatialReference
+          .Unit
+          .ConversionFactor;
         var densifiedPolyline = ACG.GeometryEngine.Instance.DensifyByDeviation(
           polylineFromSegment,
           tolerance * conversionFactorToMeter

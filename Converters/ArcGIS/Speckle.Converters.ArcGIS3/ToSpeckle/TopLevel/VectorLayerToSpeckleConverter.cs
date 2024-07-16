@@ -34,19 +34,6 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
   {
     VectorLayer speckleLayer = new();
 
-    // get document CRS (for writing geometry coords)
-    var spatialRef = _contextStack.Current.Document.Map.SpatialReference;
-    speckleLayer.crs = new CRS
-    {
-      wkt = spatialRef.Wkt,
-      name = spatialRef.Name,
-      units_native = spatialRef.Unit.ToString(),
-    };
-
-    // other properties
-    speckleLayer.name = target.Name;
-    speckleLayer.units = _contextStack.Current.SpeckleUnits;
-
     // get feature class fields
     var allLayerAttributes = new Base();
     var dispayTable = target as IDisplayTable;

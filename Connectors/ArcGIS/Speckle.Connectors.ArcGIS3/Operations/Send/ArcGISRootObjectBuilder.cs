@@ -1,10 +1,14 @@
 using System.Diagnostics;
+using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Mapping;
+using Objects.GIS;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Operations;
+using Speckle.Converters.ArcGIS3;
+using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
@@ -16,13 +20,19 @@ namespace Speckle.Connectors.ArcGis.Operations.Send;
 /// </summary>
 public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
 {
-  private readonly IUnitOfWorkFactory _unitOfWorkFactory;
+  private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;
+  private readonly IConversionContextStack<ArcGISDocument, Unit> _contextStack;
 
-  public ArcGISRootObjectBuilder(IUnitOfWorkFactory unitOfWorkFactory, ISendConversionCache sendConversionCache)
+  public ArcGISRootObjectBuilder(
+    ISendConversionCache sendConversionCache,
+    IConversionContextStack<ArcGISDocument, Unit> contextStack,
+    IRootToSpeckleConverter rootToSpeckleConverter
+  )
   {
-    _unitOfWorkFactory = unitOfWorkFactory;
     _sendConversionCache = sendConversionCache;
+    _contextStack = contextStack;
+    _rootToSpeckleConverter = rootToSpeckleConverter;
   }
 
   public RootObjectBuilderResult Build(
@@ -32,10 +42,8 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     CancellationToken ct = default
   )
   {
-    // POC: does this feel like the right place? I am wondering if this should be called from within send/rcv?
-    // begin the unit of work
-    using var uow = _unitOfWorkFactory.Resolve<IRootToSpeckleConverter>();
-    var converter = uow.Service;
+    // TODO: add a warning if Geographic CRS is set
+    // "Data has been sent in the units 'degrees'. It is advisable to set the project CRS to Projected type (e.g. EPSG:32631) to be able to receive geometry correctly in CAD/BIM software"
 
     int count = 0;
 
@@ -60,7 +68,23 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
         }
         else
         {
-          converted = converter.Convert(mapMember);
+          converted = _rootToSpeckleConverter.Convert(mapMember);
+
+          // get Active CRS (for writing geometry coords)
+          var spatialRef = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference;
+          converted["crs"] = new CRS
+          {
+            wkt = spatialRef.Wkt,
+            name = spatialRef.Name,
+            offset_y = System.Convert.ToSingle(_contextStack.Current.Document.ActiveCRSoffsetRotation.LatOffset),
+            offset_x = System.Convert.ToSingle(_contextStack.Current.Document.ActiveCRSoffsetRotation.LonOffset),
+            rotation = System.Convert.ToSingle(_contextStack.Current.Document.ActiveCRSoffsetRotation.TrueNorthRadians),
+            units_native = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString,
+          };
+
+          // other properties
+          converted["name"] = mapMember.Name;
+          converted["units"] = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString;
           converted.applicationId = applicationId;
         }
 

@@ -35,13 +35,13 @@ public class ArcToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG.
       fromPt,
       toPt,
       new ACG.Coordinate2D(midPt),
-      _contextStack.Current.Document.Map.SpatialReference
+      _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference
     );
 
     return new ACG.PolylineBuilderEx(
       segment,
       ACG.AttributeFlags.HasZ,
-      _contextStack.Current.Document.Map.SpatialReference
+      _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference
     ).ToGeometry();
   }
 }

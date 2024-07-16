@@ -25,13 +25,13 @@ public class EnvelopToSpeckleConverter : ITypedConverter<Envelope, SOG.Box>
       target.XMin,
       target.YMin,
       target.ZMin,
-      _contextStack.Current.Document.Map.SpatialReference
+      _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference
     ).ToGeometry();
     MapPoint pointMax = new MapPointBuilderEx(
       target.XMax,
       target.YMax,
       target.ZMax,
-      _contextStack.Current.Document.Map.SpatialReference
+      _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference
     ).ToGeometry();
     SOG.Point minPtSpeckle = _pointConverter.Convert(pointMin);
     SOG.Point maxPtSpeckle = _pointConverter.Convert(pointMax);

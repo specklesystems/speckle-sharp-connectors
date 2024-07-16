@@ -61,7 +61,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
   /// <summary>
   /// This is the place where we track document switch for new document -> Responsible to Read from new doc
   /// </summary>
-  private void OnViewActivated(object sender, ViewActivatedEventArgs e)
+  private void OnViewActivated(object? _, ViewActivatedEventArgs e)
   {
     if (e.Document == null)
     {
