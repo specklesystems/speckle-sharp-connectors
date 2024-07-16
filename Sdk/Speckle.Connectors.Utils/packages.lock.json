@@ -48,9 +48,9 @@
       },
       "Speckle.Core": {
         "type": "Direct",
-        "requested": "[3.0.0-dev.51, )",
-        "resolved": "3.0.0-dev.51",
-        "contentHash": "RdknA3s6GJ+F3uQiVrkJfqULg+utIyzfgffXg2eKW9K9tIcQiGwouzNkWAEhCvqIHJDf/CCcpoRXsD1ajGiYwA==",
+        "requested": "[3.0.0-dev.56, )",
+        "resolved": "3.0.0-dev.56",
+        "contentHash": "4pYlMqr7iOtYx7m8ZeHzFgNTQLXJxTAcU08wd5Zw37n40FOj/pz22LDNmVIcy/78bccf2mhal1MWCWqd6IkMPw==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.CSharp": "4.7.0",
