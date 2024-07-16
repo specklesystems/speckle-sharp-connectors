@@ -26,6 +26,6 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" IncludeAssets="compile" />
     <PackageReference Include="Revit.Async" />
-    <PackageReference Include="Speckle.Core" />
+<!--    <PackageReference Include="Speckle.Core" />-->
   </ItemGroup>
 </Project>
