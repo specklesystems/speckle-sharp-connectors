@@ -7,6 +7,7 @@
     <PackageReference Include="Serilog.Extensions.Logging" />
     <PackageReference Include="Speckle.Core" />
     <PackageReference Include="Autofac" PrivateAssets="All"/>
+    <PackageReference Include="OpenTelemetry" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Speckle.Autofac\Speckle.Autofac.csproj" />
