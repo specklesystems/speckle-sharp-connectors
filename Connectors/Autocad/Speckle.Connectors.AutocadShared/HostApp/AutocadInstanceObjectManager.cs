@@ -7,6 +7,7 @@ using Speckle.Connectors.Utils.Instances;
 using Speckle.Core.Kits;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
+using Speckle.Core.Models.Collections;
 using Speckle.Core.Models.Instances;
 using Speckle.DoubleNumerics;
 
@@ -133,7 +134,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
   }
 
   public BakeResult BakeInstances(
-    List<(string[] layerPath, IInstanceComponent obj)> instanceComponents,
+    List<(Collection layerCollection, IInstanceComponent obj)> instanceComponents,
     Dictionary<string, List<Entity>> applicationIdMap,
     string baseLayerName,
     Action<string, double?>? onOperationProgressed
@@ -152,7 +153,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
     var consumedObjectIds = new List<string>();
     var count = 0;
 
-    foreach (var (path, instanceOrDefinition) in sortedInstanceComponents)
+    foreach (var (layerCollection, instanceOrDefinition) in sortedInstanceComponents)
     {
       try
       {
@@ -199,11 +200,11 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
           var modelSpaceBlockTableRecord = Application.DocumentManager.CurrentDocument.Database.GetModelSpace(
             OpenMode.ForWrite
           );
-          _autocadLayerManager.CreateLayerForReceive(path[0]);
+          _autocadLayerManager.CreateLayerForReceive(layerCollection);
           var blockRef = new BlockReference(insertionPoint, definitionId)
           {
             BlockTransform = matrix3d,
-            Layer = path[0],
+            Layer = layerCollection.name,
           };
 
           modelSpaceBlockTableRecord.AppendEntity(blockRef);

@@ -37,7 +37,8 @@ public class AutocadLayerManager
     }
 
     // get layer color
-    int layerColorInt = layerCollection["color"] is int color ? color : -1;
+    int layerColorInt = layerCollection is IHasColor coloredLayer ? coloredLayer.color : -1; // default is white
+
     var systemColor = System.Drawing.Color.FromArgb(layerColorInt);
     Autodesk.AutoCAD.Colors.Color layerColor = Autodesk.AutoCAD.Colors.Color.FromRgb(
       systemColor.R,
