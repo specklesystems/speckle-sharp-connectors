@@ -8,7 +8,7 @@ namespace Speckle.Connectors.Rhino7.HostApp;
 /// Unpacks the group lists for each object and sub-objects.
 /// It should be in scoped lifetime.
 /// </summary>
-public class RhinoGroupManager
+public class RhinoGroupManager // POC: later make it more clean with RhinoGroupUnpacker Packer??? + see same POC comments in instance managers
 {
   public Dictionary<string, GroupProxy> GroupProxies { get; } = new();
 
