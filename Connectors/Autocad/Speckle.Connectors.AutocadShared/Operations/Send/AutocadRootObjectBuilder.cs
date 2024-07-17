@@ -50,7 +50,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
 
     // TODO: better handling for document and transactions!!
     Document doc = Application.DocumentManager.CurrentDocument;
-    Transaction tr = doc.TransactionManager.TopTransaction;
+    using Transaction tr = doc.Database.TransactionManager.StartTransaction();
 
     // Cached dictionary to create Collection for autocad entity layers. We first look if collection exists. If so use it otherwise create new one for that layer.
     Dictionary<string, Layer> collectionCache = new();
