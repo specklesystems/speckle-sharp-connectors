@@ -12,10 +12,15 @@ internal class PointToHostTopLevelConverter
     ITypedConverter<SOG.Point, DB.Solid>
 {
   private readonly IRevitConversionContextStack _contextStack;
+  private readonly ITypedConverter<SOG.Point, DB.XYZ> _pointConverter;
 
-  public PointToHostTopLevelConverter(IRevitConversionContextStack contextStack)
+  public PointToHostTopLevelConverter(
+    IRevitConversionContextStack contextStack,
+    ITypedConverter<SOG.Point, XYZ> pointConverter
+  )
   {
     _contextStack = contextStack;
+    _pointConverter = pointConverter;
   }
 
   public override DB.Solid Convert(SOG.Point target)
@@ -23,9 +28,9 @@ internal class PointToHostTopLevelConverter
     List<Curve> profile = new();
 
     // first create sphere with 2' radius
-    XYZ center = new(target.x, target.y, target.z);
+    XYZ center = _pointConverter.Convert(target);
 
-    double radius = 2.0;
+    double radius = .2;
     //XYZ profile00 = center;
     XYZ profilePlus = center.Add(new XYZ(0, radius, 0));
     XYZ profileMinus = center.Subtract(new XYZ(0, radius, 0));
