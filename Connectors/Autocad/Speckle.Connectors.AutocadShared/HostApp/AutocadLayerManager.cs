@@ -1,7 +1,7 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.LayerManager;
-using Speckle.Core.Models;
+using Speckle.Core.Models.Collections;
 using Speckle.Core.Models.GraphTraversal;
 
 namespace Speckle.Connectors.Autocad.HostApp;

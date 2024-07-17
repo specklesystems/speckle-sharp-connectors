@@ -10,6 +10,7 @@ using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
+using Speckle.Core.Models.Collections;
 
 namespace Speckle.Connectors.Rhino7.Operations.Send;
 
@@ -21,6 +22,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly RhinoInstanceObjectsManager _instanceObjectsManager;
+  private readonly RhinoGroupManager _rhinoGroupManager;
   private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
   private readonly RhinoLayerManager _layerManager;
 
@@ -29,6 +31,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     IConversionContextStack<RhinoDoc, UnitSystem> contextStack,
     RhinoLayerManager layerManager,
     RhinoInstanceObjectsManager instanceObjectsManager,
+    RhinoGroupManager rhinoGroupManager,
     IRootToSpeckleConverter rootToSpeckleConverter
   )
   {
@@ -36,6 +39,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     _contextStack = contextStack;
     _layerManager = layerManager;
     _instanceObjectsManager = instanceObjectsManager;
+    _rhinoGroupManager = rhinoGroupManager;
     _rootToSpeckleConverter = rootToSpeckleConverter;
   }
 
@@ -55,6 +59,9 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
 
     // POC: we should formalise this, sooner or later - or somehow fix it a bit more
     rootObjectCollection["instanceDefinitionProxies"] = instanceDefinitionProxies; // this won't work re traversal on receive
+
+    _rhinoGroupManager.UnpackGroups(rhinoObjects);
+    rootObjectCollection["groupProxies"] = _rhinoGroupManager.GroupProxies.Values;
 
     // POC: Handle blocks.
     List<SendConversionResult> results = new(atomicObjects.Count);

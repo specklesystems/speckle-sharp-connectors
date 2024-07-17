@@ -1,6 +1,6 @@
 using System.Diagnostics.Contracts;
 using Rhino;
-using Speckle.Core.Models;
+using Speckle.Core.Models.Collections;
 using Speckle.Core.Models.GraphTraversal;
 using Layer = Rhino.DocObjects.Layer;
 

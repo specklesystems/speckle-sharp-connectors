@@ -12,6 +12,7 @@ using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
+using Speckle.Core.Models.Collections;
 
 namespace Speckle.Connectors.ArcGis.Operations.Send;
 
