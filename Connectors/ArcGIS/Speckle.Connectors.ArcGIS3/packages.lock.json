@@ -300,8 +300,8 @@
       },
       "Speckle.DoubleNumerics": {
         "type": "Transitive",
-        "resolved": "4.0.1-alpha.3",
-        "contentHash": "7/lg9LDI3TZLiI7FhI2IhRrTzsZyDrQw1rG/S3kRtx0IU3raWzRHL4W5zvHV8LdWkqJEztS/9dUgLNYHV70o5Q=="
+        "resolved": "4.0.1",
+        "contentHash": "MzEQ1Im0zTja+tEsdRIk/WlPiKqb22NmTOJcR1ZKm/mz46pezyyID3/wRz6vJUELMpSLnG7LhsxBL+nxbr7V0w=="
       },
       "Speckle.Newtonsoft.Json": {
         "type": "Transitive",
@@ -380,7 +380,7 @@
           "Microsoft.Extensions.Logging.Abstractions": "[7.0.0, )",
           "Speckle.Autofac": "[1.0.0, )",
           "Speckle.Connectors.Utils": "[1.0.0, )",
-          "Speckle.Core": "[3.0.1-dev.25, )",
+          "Speckle.Core": "[3.1.0-dev.68, )",
           "System.Threading.Tasks.Dataflow": "[6.0.0, )"
         }
       },
@@ -396,7 +396,7 @@
         "dependencies": {
           "Serilog.Extensions.Logging": "[7.0.0, )",
           "Speckle.Autofac": "[1.0.0, )",
-          "Speckle.Core": "[3.0.1-dev.25, )"
+          "Speckle.Core": "[3.1.0-dev.68, )"
         }
       },
       "speckle.converters.arcgis3": {
@@ -418,7 +418,7 @@
         "type": "Project",
         "dependencies": {
           "Speckle.Autofac": "[1.0.0, )",
-          "Speckle.Objects": "[3.0.1-dev.25, )"
+          "Speckle.Objects": "[3.1.0-dev.68, )"
         }
       },
       "speckle.converters.common.dependencyinjection": {
@@ -452,9 +452,9 @@
       },
       "Speckle.Core": {
         "type": "CentralTransitive",
-        "requested": "[3.0.1-dev.25, )",
-        "resolved": "3.0.1-dev.25",
-        "contentHash": "wcLNocrTfNCmhtJH/Hp/1u18Fp57apIdYvQnfCAAfo0txfNjL5hzx+wtFt5PlHPjF/mPssESuhLa89pvrMFvxw==",
+        "requested": "[3.1.0-dev.68, )",
+        "resolved": "3.1.0-dev.68",
+        "contentHash": "+N3hCSKPXz2Qm2rEFXBv/cEiAfO9c2VicULm4CUoyyqSvwh+k+k5qJnEkzAd0yuWQtvJHyub8TsarBjes34eww==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.CSharp": "4.7.0",
@@ -470,17 +470,17 @@
           "Serilog.Sinks.Console": "4.1.0",
           "Serilog.Sinks.Seq": "5.2.2",
           "SerilogTimings": "3.0.1",
-          "Speckle.DoubleNumerics": "4.0.1-alpha.3",
+          "Speckle.DoubleNumerics": "4.0.1",
           "Speckle.Newtonsoft.Json": "13.0.2"
         }
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.0.1-dev.25, )",
-        "resolved": "3.0.1-dev.25",
-        "contentHash": "bxYDptn2hnUFdzFOgmEU/YS8ZjcrHCHz4bFwKLDz1rA9ytkBIUvNuTYZpKZz3h9jVJxrgPhh1qDLqUNgK56hdA==",
+        "requested": "[3.1.0-dev.68, )",
+        "resolved": "3.1.0-dev.68",
+        "contentHash": "zeDL5zAbjRWsEMCgkhcKK6DDs/S9PrD6Rpx1AWiq+Ix7ThD3LstR+JsN9qLyCJ2i02tnHnHxi9nhxA/v2c7eWA==",
         "dependencies": {
-          "Speckle.Core": "3.0.1-dev.25"
+          "Speckle.Core": "3.1.0-dev.68"
         }
       },
       "System.Threading.Tasks.Dataflow": {

@@ -5,6 +5,7 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Revit.Plugin;
+using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Reflection;
 using Speckle.Converters.RevitShared.Helpers;
@@ -87,7 +88,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
   {
     SenderModelCard model = (SenderModelCard)_store.GetModelById(modelCardId);
 
-    var elementIds = model.SendFilter.NotNull().GetObjectIds().Select(ElementId.Parse).ToList();
+    var elementIds = model.SendFilter.NotNull().GetObjectIds().Select(ElementIdHelper.Parse).ToList();
     if (elementIds.Count == 0)
     {
       Commands.SetModelError(modelCardId, new InvalidOperationException("No objects found to highlight."));
@@ -98,7 +99,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
   }
 
   public void HighlightObjects(List<string> objectIds) =>
-    HighlightObjectsOnView(objectIds.Select(ElementId.Parse).ToList());
+    HighlightObjectsOnView(objectIds.Select(ElementIdHelper.Parse).ToList());
 
   private void HighlightObjectsOnView(List<ElementId> objectIds)
   {

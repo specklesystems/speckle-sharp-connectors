@@ -9,6 +9,7 @@ using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
+using Speckle.Core.Models.Collections;
 
 namespace Speckle.Connectors.Revit.Operations.Send;
 

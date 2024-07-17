@@ -233,6 +233,8 @@ dotnet_diagnostic.ide0042.severity = suggestion # Deconstruct variable declarati
 dotnet_diagnostic.ide0028.severity = suggestion # Use collection initializers: Subjective
 dotnet_diagnostic.ide0072.severity = suggestion # Populate switch statement: Subjective
 dotnet_diagnostic.ide0074.severity = suggestion # Use compound assignment: Subjective
+dotnet_diagnostic.ide0300.severity = suggestion # collection can be simplied
+dotnet_diagnostic.ide0290.severity = suggestion # primary constructors
 dotnet_diagnostic.ide0290.severity = suggestion # Use primary constructor: Subjective
 
 # Maintainability rules
