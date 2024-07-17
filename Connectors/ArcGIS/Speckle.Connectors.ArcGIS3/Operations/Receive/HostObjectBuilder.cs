@@ -12,9 +12,114 @@ using Speckle.Core.Logging;
 using Speckle.Core.Models;
 using Speckle.Core.Models.Collections;
 using Speckle.Core.Models.GraphTraversal;
+using Speckle.Core.Models.Instances;
+using Speckle.DoubleNumerics;
 using RasterLayer = Objects.GIS.RasterLayer;
 
 namespace Speckle.Connectors.ArcGIS.Operations.Receive;
+
+public record LocalToGlobalMap(Base AtomicObject, List<Matrix4x4> Matrix);
+
+public class LocalToGlobal
+{
+  public List<LocalToGlobalMap> LocalToGlobalMaps { get; } = new();
+
+  private static string[] GetLayerPath(TraversalContext context)
+  {
+    string[] collectionBasedPath = context.GetAscendantOfType<Collection>().Select(c => c.name).ToArray();
+    string[] reverseOrderPath =
+      collectionBasedPath.Length != 0 ? collectionBasedPath : context.GetPropertyPath().ToArray();
+
+    var originalPath = reverseOrderPath.Reverse().ToArray();
+    return originalPath.Where(x => !string.IsNullOrEmpty(x)).ToArray();
+  }
+
+  public List<LocalToGlobalMap> UnpackRelativeAtomicObjects(Base rootObject, List<TraversalContext> objectsToConvert)
+  {
+    var instanceDefinitionProxies = (rootObject["instanceDefinitionProxies"] as List<object>)
+      ?.Cast<InstanceDefinitionProxy>()
+      .ToList();
+
+    var instanceComponents = new List<(string[] layerPath, InstanceProxy obj)>();
+    var atomicObjects = new List<(string[] layerPath, Base obj)>();
+
+    // Split up the instances from the non-instances
+    foreach (TraversalContext tc in objectsToConvert)
+    {
+      var path = GetLayerPath(tc);
+      if (tc.Current is InstanceProxy instanceComponent)
+      {
+        instanceComponents.Add((path, instanceComponent));
+      }
+      else
+      {
+        atomicObjects.Add((path, tc.Current));
+      }
+    }
+
+    var objectsAtAbsolute = new List<(string[] layerPath, Base obj)>();
+    var objectsAtRelative = new List<(string[] layerPath, Base obj)>();
+
+    foreach ((string[] layerPath, Base obj) in atomicObjects)
+    {
+      if (obj.applicationId is null)
+      {
+        continue;
+      }
+      if (
+        instanceDefinitionProxies is not null
+        && instanceDefinitionProxies.Any(idp => idp.objects.Contains(obj.applicationId))
+      )
+      {
+        objectsAtRelative.Add((layerPath, obj)); // to use in Instances only
+      }
+      else
+      {
+        objectsAtAbsolute.Add((layerPath, obj)); // to bake
+      }
+    }
+
+    foreach ((string[] layerPath, Base obj) in objectsAtAbsolute)
+    {
+      LocalToGlobalMaps.Add(new LocalToGlobalMap(obj, new List<Matrix4x4>()));
+    }
+
+    if (instanceDefinitionProxies is null)
+    {
+      return LocalToGlobalMaps;
+    }
+
+    void UnpackMatrix(Base objectToUnpack, List<Matrix4x4> matrices)
+    {
+      if (objectToUnpack.applicationId is null)
+      {
+        return;
+      }
+      InstanceDefinitionProxy? definitionProxy = instanceDefinitionProxies.Find(idp =>
+        idp.objects.Contains(objectToUnpack.applicationId)
+      );
+      if (definitionProxy is null)
+      {
+        LocalToGlobalMaps.Add(new LocalToGlobalMap(objectToUnpack, matrices));
+        return;
+      }
+      var instances = instanceComponents.Where(ic => ic.obj.definitionId == definitionProxy.applicationId);
+      foreach ((string[] layerPathOfInstance, InstanceProxy instance) in instances)
+      {
+        matrices.Add(instance.transform);
+        UnpackMatrix(instance, matrices);
+        matrices = new List<Matrix4x4>();
+      }
+    }
+
+    foreach ((string[] layerPath, Base objectAtRelative) in objectsAtRelative)
+    {
+      UnpackMatrix(objectAtRelative, new List<Matrix4x4>());
+    }
+
+    return LocalToGlobalMaps;
+  }
+}
 
 public class ArcGISHostObjectBuilder : IHostObjectBuilder
 {
@@ -57,6 +162,9 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       .Where(ctx => ctx.Current is not Collection || IsGISType(ctx.Current))
       .Where(ctx => HasGISParent(ctx) is false)
       .ToList();
+
+    var localToGlobal = new LocalToGlobal();
+    var localToGlobalMap = localToGlobal.UnpackRelativeAtomicObjects(rootObject, objectsToConvert);
 
     int allCount = objectsToConvert.Count;
     int count = 0;
