@@ -451,7 +451,7 @@
           "Microsoft.Extensions.Logging.Abstractions": "[7.0.0, )",
           "Speckle.Autofac": "[1.0.0, )",
           "Speckle.Connectors.Utils": "[1.0.0, )",
-          "Speckle.Core": "[3.1.0-dev.63, )",
+          "Speckle.Core": "[3.1.0-dev.68, )",
           "System.Threading.Tasks.Dataflow": "[6.0.0, )"
         }
       },
@@ -460,14 +460,14 @@
         "dependencies": {
           "Serilog.Extensions.Logging": "[7.0.0, )",
           "Speckle.Autofac": "[1.0.0, )",
-          "Speckle.Core": "[3.1.0-dev.63, )"
+          "Speckle.Core": "[3.1.0-dev.68, )"
         }
       },
       "speckle.converters.common": {
         "type": "Project",
         "dependencies": {
           "Speckle.Autofac": "[1.0.0, )",
-          "Speckle.Objects": "[3.1.0-dev.63, )"
+          "Speckle.Objects": "[3.1.0-dev.68, )"
         }
       },
       "speckle.converters.common.dependencyinjection": {
@@ -515,9 +515,9 @@
       },
       "Speckle.Core": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.63, )",
-        "resolved": "3.1.0-dev.63",
-        "contentHash": "Sh+sEcdI29UUf8zVSuQ3GrwWvAiVrqTH7jqEOc7bI5CjCEE1mRFwxxWqQgNrsTnwhdbR2uJ7iJIY5uEJU2Ebxg==",
+        "requested": "[3.1.0-dev.68, )",
+        "resolved": "3.1.0-dev.68",
+        "contentHash": "+N3hCSKPXz2Qm2rEFXBv/cEiAfO9c2VicULm4CUoyyqSvwh+k+k5qJnEkzAd0yuWQtvJHyub8TsarBjes34eww==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.CSharp": "4.7.0",
@@ -539,11 +539,11 @@
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.63, )",
-        "resolved": "3.1.0-dev.63",
-        "contentHash": "qvHuxM/h1y386Xymvv+lgREnrwf/bGVM91R+J8x5ma1CtLS9RucgSw1aCinVIofMndig+g9sqO/vrBZq6iUiXg==",
+        "requested": "[3.1.0-dev.68, )",
+        "resolved": "3.1.0-dev.68",
+        "contentHash": "zeDL5zAbjRWsEMCgkhcKK6DDs/S9PrD6Rpx1AWiq+Ix7ThD3LstR+JsN9qLyCJ2i02tnHnHxi9nhxA/v2c7eWA==",
         "dependencies": {
-          "Speckle.Core": "3.1.0-dev.63"
+          "Speckle.Core": "3.1.0-dev.68"
         }
       },
       "Speckle.Revit.API": {
