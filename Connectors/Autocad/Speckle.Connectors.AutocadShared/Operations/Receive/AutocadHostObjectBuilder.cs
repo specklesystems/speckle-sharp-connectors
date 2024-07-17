@@ -1,10 +1,8 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
-using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
-using Speckle.Connectors.Utils.Instances;
 using Speckle.Converters.Common;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
@@ -77,30 +75,33 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       instanceComponents.AddRange(transformed);
     }
 
-    var atomicObjects = new List<(string layerName, Base obj)>();
+    var atomicObjects = new List<(Collection collection, Base obj)>();
 
     foreach (TraversalContext tc in objectGraph)
     {
-      var layerName = _autocadLayerManager.GetLayerPath(tc, baseLayerPrefix);
+      string layerName = _autocadLayerManager.GetLayerPath(tc, baseLayerPrefix, out Collection? lastLayerCollection);
+      Collection layerCollection = lastLayerCollection ?? new();
+      layerCollection.name = layerName;
+
       if (tc.Current is IInstanceComponent instanceComponent)
       {
         instanceComponents.Add((new string[] { layerName }, instanceComponent));
       }
       else
       {
-        atomicObjects.Add((layerName, tc.Current));
+        atomicObjects.Add((layerCollection, tc.Current));
       }
     }
 
     // Stage 1: Convert atomic objects
     Dictionary<string, List<Entity>> applicationIdMap = new();
     var count = 0;
-    foreach (var (layerName, atomicObject) in atomicObjects)
+    foreach (var (layerCollection, atomicObject) in atomicObjects)
     {
       onOperationProgressed?.Invoke("Converting objects", (double)++count / atomicObjects.Count);
       try
       {
-        var convertedObjects = ConvertObject(atomicObject, layerName).ToList();
+        var convertedObjects = ConvertObject(atomicObject, layerCollection).ToList();
 
         if (atomicObject.applicationId != null)
         {
@@ -146,13 +147,13 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     _instanceObjectsManager.PurgeInstances(baseLayerPrefix);
   }
 
-  private IEnumerable<Entity> ConvertObject(Base obj, string layerName)
+  private IEnumerable<Entity> ConvertObject(Base obj, Collection layerCollection)
   {
     using TransactionContext transactionContext = TransactionContext.StartTransaction(
       Application.DocumentManager.MdiActiveDocument
     );
 
-    _autocadLayerManager.CreateLayerForReceive(layerName);
+    _autocadLayerManager.CreateLayerForReceive(layerCollection);
 
     object converted;
     using (var tr = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction())
@@ -171,7 +172,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
         continue;
       }
 
-      conversionResult.AppendToDb(layerName);
+      conversionResult.AppendToDb(layerCollection.name);
       yield return conversionResult;
     }
   }
