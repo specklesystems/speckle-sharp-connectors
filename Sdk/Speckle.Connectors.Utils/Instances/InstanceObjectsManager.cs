@@ -69,11 +69,11 @@ public class InstanceObjectsManager<THostObjectType, TAppIdMapValueType>
   public void UpdateChildrenMaxDepth(InstanceDefinitionProxy definitionProxy, int depthDifference)
   {
     // Increase depth of definition
-    definitionProxy.MaxDepth += depthDifference;
+    definitionProxy.maxDepth += depthDifference;
 
     // Find instance proxies of given definition
     var definitionInstanceProxies = definitionProxy
-      .Objects.Where(id => _instanceProxies.TryGetValue(id, out _))
+      .objects.Where(id => _instanceProxies.TryGetValue(id, out _))
       .Select(id => _instanceProxies[id])
       .ToList();
 
@@ -87,9 +87,9 @@ public class InstanceObjectsManager<THostObjectType, TAppIdMapValueType>
     foreach (InstanceProxy instanceProxy in definitionInstanceProxies)
     {
       // Increase depth of instance
-      instanceProxy.MaxDepth += depthDifference;
+      instanceProxy.maxDepth += depthDifference;
       // Collect sub definitions
-      subDefinitions[instanceProxy.DefinitionId] = _definitionProxies[instanceProxy.DefinitionId];
+      subDefinitions[instanceProxy.definitionId] = _definitionProxies[instanceProxy.definitionId];
     }
 
     // Iterate through sub definitions

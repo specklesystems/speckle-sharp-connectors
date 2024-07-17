@@ -10,6 +10,7 @@ using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
+using Speckle.Core.Models.Collections;
 using Speckle.Core.Models.GraphTraversal;
 using RasterLayer = Objects.GIS.RasterLayer;
 
