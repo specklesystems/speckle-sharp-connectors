@@ -477,7 +477,7 @@
         "type": "Project",
         "dependencies": {
           "Speckle.Autofac": "[1.0.0, )",
-          "Speckle.Objects": "[3.1.0-otel.56, )"
+          "Speckle.Objects": "[3.1.0-otel.59, )"
         }
       },
       "speckle.testing": {
@@ -495,9 +495,9 @@
       },
       "Speckle.Core": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-otel.56, )",
-        "resolved": "3.1.0-otel.56",
-        "contentHash": "85QZSOFuLHf2QaJ2iS7i7+/zZ2uL12B82YYtRq6CMf5l1S5aFyKlaDSlxNcC5akwLifZyRdPpm+PaQy+r7H0VA==",
+        "requested": "[3.1.0-otel.59, )",
+        "resolved": "3.1.0-otel.59",
+        "contentHash": "dA3ZU2390PVMI05fdXTNZjYG/Zp9ajpQg72kipvU3bnIbZdcsmPv973ZOgkzO9n8gx+xMZQPwREd7Zj75Z5nxw==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.CSharp": "4.7.0",
@@ -518,11 +518,11 @@
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-otel.56, )",
-        "resolved": "3.1.0-otel.56",
-        "contentHash": "LJYonPlF+Ki7yYesGwRkgdzcgoRmN/U2MJtzs9BEKkCp16w9OIUOcVtaq3bOfwRwXO14qTG+cQiMYNYYSpNceA==",
+        "requested": "[3.1.0-otel.59, )",
+        "resolved": "3.1.0-otel.59",
+        "contentHash": "1oSXl4U73k0dIh5q9wD6mU9z9WAK0+ujbTDY2X3hbTix8NEDJQDn0pblApCqiIIB4+KRm1sW1Ybt9LfBRbOy2A==",
         "dependencies": {
-          "Speckle.Core": "3.1.0-otel.56"
+          "Speckle.Core": "3.1.0-otel.59"
         }
       }
     }
