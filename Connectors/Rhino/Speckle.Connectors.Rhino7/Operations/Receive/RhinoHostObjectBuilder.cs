@@ -58,9 +58,12 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       ?.Cast<InstanceDefinitionProxy>()
       .ToList();
 
+    var groupProxies = (rootObject["groupProxies"] as List<object>)?.Cast<GroupProxy>().ToList();
+
     var conversionResults = BakeObjects(
       objectsToConvert,
       instanceDefinitionProxies,
+      groupProxies,
       baseLayerName,
       onOperationProgressed
     );
@@ -73,6 +76,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private HostObjectBuilderResult BakeObjects(
     IEnumerable<TraversalContext> objectsGraph,
     List<InstanceDefinitionProxy>? instanceDefinitionProxies,
+    List<GroupProxy>? groupProxies,
     string baseLayerName,
     Action<string, double?>? onOperationProgressed
   )
@@ -155,7 +159,17 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     conversionResults.RemoveAll(result => result.ResultId != null && consumedObjectIds.Contains(result.ResultId)); // remove all conversion results for atomic objects that have been consumed (POC: not that cool, but prevents problems on object highlighting)
     conversionResults.AddRange(instanceConversionResults); // add instance conversion results to our list
 
-    // Stage 3: Return
+    // Stage 3: Group
+    if (groupProxies is not null)
+    {
+      foreach (GroupProxy groupProxy in groupProxies)
+      {
+        var appIds = groupProxy.objects.SelectMany(oldObjId => applicationIdMap[oldObjId]).Select(id => new Guid(id));
+        RhinoDoc.ActiveDoc.Groups.Add(appIds);
+      }
+    }
+
+    // Stage 4: Return
     return new(bakedObjectIds, conversionResults);
   }
 
