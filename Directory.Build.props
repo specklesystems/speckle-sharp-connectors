@@ -1,14 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
   <PropertyGroup>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>12</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <IsPackable>false</IsPackable>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageVersionOverrideEnabled>true</CentralPackageVersionOverrideEnabled>
+  </PropertyGroup>
+  <PropertyGroup>
+
+    <EnableNetAnalyzers>true</EnableNetAnalyzers>
+    <AnalysisLevel>latest-AllEnabledByDefault</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    
+    <!-- Ingored warnings, most aspirational but too noisy for now, some by design.  -->
+    <NoWarn>
+      <!--Disabled by design-->
+      CA5399;
+      <!--XML comment-->
+      CS1591;CS1573;
+      <!-- Globalization rules -->
+      CA1303;CA1304;CA1305;CA1307;CA1308;CA1309;CA1310;CA1311;
+      <!-- Logging -->
+      CA1848
+      $(NoWarn)
+    </NoWarn>
+    
   </PropertyGroup>
   <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
