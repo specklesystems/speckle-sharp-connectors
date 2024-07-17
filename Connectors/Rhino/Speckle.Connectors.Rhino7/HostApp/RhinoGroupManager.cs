@@ -5,7 +5,8 @@ using Speckle.Core.Models.Instances;
 namespace Speckle.Connectors.Rhino7.HostApp;
 
 /// <summary>
-/// Unpacks the group lists for each object and sub-objects
+/// Unpacks the group lists for each object and sub-objects.
+/// It should be in scoped lifetime.
 /// </summary>
 public class RhinoGroupManager
 {
