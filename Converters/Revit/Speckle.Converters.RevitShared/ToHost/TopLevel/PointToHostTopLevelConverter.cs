@@ -27,11 +27,10 @@ internal class PointToHostTopLevelConverter
   {
     List<Curve> profile = new();
 
-    // first create sphere with 2' radius
     XYZ center = _pointConverter.Convert(target);
 
     double radius = .2;
-    //XYZ profile00 = center;
+
     XYZ profilePlus = center.Add(new XYZ(0, radius, 0));
     XYZ profileMinus = center.Subtract(new XYZ(0, radius, 0));
 
@@ -50,7 +49,6 @@ internal class PointToHostTopLevelConverter
 
     Solid sphere = GeometryCreationUtilities.CreateRevolvedGeometry(frame, [curveLoop], 0, 2 * Math.PI, options);
 
-    // create direct shape and assign the sphere shape
     DirectShape ds = DirectShape.CreateElement(
       _contextStack.Current.Document,
       new ElementId(BuiltInCategory.OST_GenericModel)
