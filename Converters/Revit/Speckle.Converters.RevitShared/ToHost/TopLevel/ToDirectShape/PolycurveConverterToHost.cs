@@ -7,7 +7,7 @@ using Speckle.Converters.RevitShared.ToHost.TopLevel;
 namespace Speckle.Converters.RevitShared.ToHost.Raw.Geometry;
 
 [NameAndRankValue(nameof(SOG.Polycurve), 0)]
-public class PolycurveToDirectShapeConverterToHost : ICurveToDirectShapeConverterToHostBase<SOG.Polycurve>
+public class PolycurveToDirectShapeConverterToHost : CurveToDirectShapeConverterToHostBase<SOG.Polycurve>
 {
   public PolycurveToDirectShapeConverterToHost(
     IRevitConversionContextStack contextStack,

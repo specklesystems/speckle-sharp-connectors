@@ -5,7 +5,7 @@ using Speckle.Core.Models;
 
 namespace Speckle.Converters.RevitShared.ToHost.TopLevel;
 
-public abstract class ICurveToDirectShapeConverterToHostBase<TCurve>
+public abstract class CurveToDirectShapeConverterToHostBase<TCurve>
   : ITypedConverter<TCurve, List<DB.GeometryObject>>,
     IToHostTopLevelConverter
   where TCurve : Base, ICurve
@@ -13,7 +13,7 @@ public abstract class ICurveToDirectShapeConverterToHostBase<TCurve>
   private readonly IRevitConversionContextStack _contextStack;
   private readonly ITypedConverter<ICurve, DB.CurveArray> _curveConverter;
 
-  public ICurveToDirectShapeConverterToHostBase(
+  public CurveToDirectShapeConverterToHostBase(
     IRevitConversionContextStack contextStack,
     ITypedConverter<ICurve, DB.CurveArray> curveConverter
   )
