@@ -1,6 +1,4 @@
 using System.IO.Compression;
-using System.Net;
-using System.Runtime.InteropServices;
 using Build;
 using GlobExpressions;
 using static Bullseye.Targets;
@@ -16,7 +14,6 @@ const string ZIP = "zip";
 const string VERSION = "version";
 const string RESTORE_TOOLS = "restore-tools";
 const string BUILD_SERVER_VERSION = "build-server-version";
-const string LOCAL_SDK = "add-local-sdk";
 const string CLEAN_LOCKS = "clean-locks";
 
 //need to pass arguments
@@ -193,67 +190,6 @@ Target(
     Console.WriteLine($"Zipping: '{slugDir}' to '{outputPath}'");
     ZipFile.CreateFromDirectory(slugDir, outputPath);
     // Directory.Delete(slugDir, true);
-  }
-);
-
-Target(
-  LOCAL_SDK,
-  async () =>
-  {
-    var path = Environment.CurrentDirectory;
-    var gitRoot = Directory.GetParent(path)?.FullName ?? "..";
-    var sdkRepo = Path.Combine(gitRoot, "speckle-sharp-sdk");
-    var output = Path.Combine(sdkRepo, "output");
-    var localFeed = Path.Combine(gitRoot, "speckle-local-feed");
-    Console.WriteLine($"Creating/cleaning output from SDK at: {output}");
-    if (Directory.Exists(localFeed))
-    {
-      Directory.Delete(localFeed, true);
-    }
-    Directory.CreateDirectory(localFeed);
-    Console.WriteLine($"Creating/cleaning local repo at: {localFeed}");
-    if (Directory.Exists(localFeed))
-    {
-      Directory.Delete(localFeed, true);
-    }
-    Directory.CreateDirectory(localFeed);
-    var nugetCli = Path.Combine(localFeed, "nuget.exe");
-    if (File.Exists(nugetCli))
-    {
-      Console.WriteLine($"Updating nuget: {nugetCli}");
-      await RunAsync(nugetCli, "update -self");
-    }
-    else
-    {
-      Console.WriteLine($"Downloading nuget: {nugetCli}");
-      using var client = new HttpClient();
-      await using var s = await client.GetStreamAsync("https://dist.nuget.org/win-x86-commandline/latest/nuget.exe");
-      await using var fs = new FileStream(nugetCli, FileMode.OpenOrCreate);
-      await s.CopyToAsync(fs);
-    }
-
-    var nugets = Glob.Files(output, "*.nupkg").ToList();
-    if (!nugets.Any())
-    {
-      Console.WriteLine($"No nugets found in: {output}");
-    }
-    foreach (var nuget in nugets)
-    {
-      await RunAsync(nugetCli, $"add {Path.Combine(output, nuget)} -source {localFeed}");
-    }
-    Console.WriteLine($"Adding local source: {localFeed}");
-    await RunAsync(
-      "dotnet",
-      $"nuget add source {localFeed} --name \"Speckle SDK Local\"",
-      handleExitCode: i =>
-      {
-        if (i != 0)
-        {
-          Console.WriteLine($"Adding nuget local feed failed: {i}");
-        }
-        return true;
-      }
-    );
   }
 );
 
