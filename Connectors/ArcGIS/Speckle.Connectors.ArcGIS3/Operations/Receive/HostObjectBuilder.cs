@@ -25,34 +25,18 @@ public record LocalToGlobalMap(Base AtomicObject, TraversalContext tc, List<Matr
 
 public class LocalToGlobal
 {
-  public static Base TransformObjects(Base atomicObject, TraversalContext ctx, List<Matrix4x4> matrixx)
+  private static Vector3 TransformPt(Vector3 vector, Matrix4x4 matrix)
   {
-    List<System.Numerics.Matrix4x4> matrix = new();
+    var divisor = matrix.M41 + matrix.M42 + matrix.M43 + matrix.M44;
+    var x = (vector.X * matrix.M11 + vector.Y * matrix.M12 + vector.Z * matrix.M13 + matrix.M14) / divisor;
+    var y = (vector.X * matrix.M21 + vector.Y * matrix.M22 + vector.Z * matrix.M23 + matrix.M24) / divisor;
+    var z = (vector.X * matrix.M31 + vector.Y * matrix.M32 + vector.Z * matrix.M33 + matrix.M34) / divisor;
 
-    foreach (var m in matrixx)
-    {
-      matrix.Add(
-        new(
-          (float)m.M11,
-          (float)m.M12,
-          (float)m.M13,
-          (float)m.M14,
-          (float)m.M21,
-          (float)m.M22,
-          (float)m.M23,
-          (float)m.M24,
-          (float)m.M31,
-          (float)m.M32,
-          (float)m.M33,
-          (float)m.M34,
-          (float)m.M41,
-          (float)m.M42,
-          (float)m.M43,
-          (float)m.M44
-        )
-      );
-    }
+    return new Vector3(x, y, z);
+  }
 
+  public static Base TransformObjects(Base atomicObject, TraversalContext ctx, List<Matrix4x4> matrix)
+  {
     if (matrix.Count == 0)
     {
       return atomicObject;
@@ -78,16 +62,16 @@ public class LocalToGlobal
           {
             continue;
           }
-          var ptVector = new System.Numerics.Vector3(
-            (float)displayMesh.vertices[i],
-            (float)displayMesh.vertices[i + 1],
-            (float)displayMesh.vertices[i + 2]
+          var ptVector = new Vector3(
+            displayMesh.vertices[i],
+            displayMesh.vertices[i + 1],
+            displayMesh.vertices[i + 2]
           //1
           );
 
           foreach (var matr in matrix)
           {
-            ptVector = System.Numerics.Vector3.Transform(ptVector, matr);
+            ptVector = TransformPt(ptVector, matr); //Vector3.Dot(ptVector, matr);
           }
           vertices.AddRange([ptVector.X, ptVector.Y, ptVector.Z]);
         }
