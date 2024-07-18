@@ -1,4 +1,5 @@
-﻿using Autofac;
+﻿using System.Reflection;
+using Autofac;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Speckle.Autofac.DependencyInjection;
@@ -16,6 +17,7 @@ public static class ContainerRegistration
     builder.AddSingleton<CancellationManager>();
     builder.AddScoped<ReceiveOperation>();
     builder.AddSingleton<AccountService>();
+    builder.ScanAssemblyOfType<SendHelper>();
 
     //TODO: Logger will likely be removed from Core, we'll plan to figure out the config later...
     var serilogLogger = SpeckleLog.Logger;

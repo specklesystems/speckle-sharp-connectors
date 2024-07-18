@@ -7,6 +7,7 @@
     <DefineConstants>$(DefineConstants);REVIT2022</DefineConstants>
     <CefSharpAnyCpuSupport>true</CefSharpAnyCpuSupport>
     <Prefer32bit>false</Prefer32bit>
+    <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
 
   <Import Project="..\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems" Label="Shared" />
@@ -35,7 +36,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CefSharp.Wpf" NoWarn="NU1903, NU1902" VersionOverride="65.0.1"/>
+    <PackageReference Include="CefSharp.Wpf" NoWarn="NU1903, NU1902" VersionOverride="65.0.1" />
     <PackageReference Include="Revit.Async" />
   </ItemGroup>
 </Project>

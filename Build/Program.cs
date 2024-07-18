@@ -14,6 +14,7 @@ const string ZIP = "zip";
 const string VERSION = "version";
 const string RESTORE_TOOLS = "restore-tools";
 const string BUILD_SERVER_VERSION = "build-server-version";
+const string CLEAN_LOCKS = "clean-locks";
 
 //need to pass arguments
 /*var arguments = new List<string>();
@@ -23,6 +24,20 @@ if (args.Length > 1)
   args = new[] { arguments.First() };
   //arguments = arguments.Skip(1).ToList();
 }*/
+
+Target(
+  CLEAN_LOCKS,
+  () =>
+  {
+    foreach (var f in Glob.Files(".", "**/*.lock.json"))
+    {
+      Console.WriteLine("Found and will delete: " + f);
+      File.Delete(f);
+    }
+    Console.WriteLine("Running restore now.");
+    Run("dotnet", "restore");
+  }
+);
 
 Target(
   CLEAN,

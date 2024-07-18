@@ -75,11 +75,15 @@ public sealed class BrowserBridge : IBridge
   /// </summary>
   /// <param name="jsonSerializerSettings">The settings to use for JSON serialization and deserialization.</param>
   /// <param name="loggerFactory">The factory to create a logger for <see cref="BrowserBridge"/>.</param>
-  public BrowserBridge(JsonSerializerSettings jsonSerializerSettings, ILoggerFactory loggerFactory)
+  public BrowserBridge(
+    JsonSerializerSettings jsonSerializerSettings,
+    ILogger<BrowserBridge> logger,
+    ILogger<TopLevelExceptionHandler> topLogger
+  )
   {
     _serializerOptions = jsonSerializerSettings;
-    _logger = loggerFactory.CreateLogger<BrowserBridge>();
-    _topLevelExceptionHandler = new TopLevelExceptionHandler(loggerFactory, this); //TODO: Probably we could inject this with a Lazy somewhere
+    _logger = logger;
+    _topLevelExceptionHandler = new TopLevelExceptionHandler(topLogger, this); //TODO: Probably we could inject this with a Lazy somewhere
     // Capture the main thread's SynchronizationContext
     _mainThreadContext = SynchronizationContext.Current;
   }

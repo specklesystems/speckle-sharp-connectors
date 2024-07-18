@@ -233,9 +233,8 @@ public class SpeckleContainerBuilder
   {
     var container = ContainerBuilder.Build();
 
-    // POC: we could create the factory on construction of the container and then inject that and store it
-    var logger = container.Resolve<ILoggerFactory>().CreateLogger<SpeckleContainerBuilder>();
-
+    //POC: we could create the factory on construction of the container and then inject that and store it?
+    var logger = container.Resolve<ILogger<SpeckleContainerBuilder>>();
     // POC: we could probably expand on this
     List<string> assemblies = AppDomain.CurrentDomain.GetAssemblies().Select(x => x.FullName).ToList();
     logger.LogInformation("Loaded assemblies: {@Assemblies}", assemblies);

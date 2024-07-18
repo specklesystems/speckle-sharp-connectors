@@ -5,6 +5,7 @@
     <UseWpf>true</UseWpf>
     <UseWindowsForms>true</UseWindowsForms>
     <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
+    <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
   
   <ItemGroup>
@@ -13,8 +14,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="RhinoCommon" IncludeAssets="compile;build" VersionOverride="7.13.21348.13001"  />
-    <PackageReference Include="RhinoWindows" IncludeAssets="compile;build" VersionOverride="7.13.21348.13001"  />
+    <PackageReference Include="RhinoCommon" IncludeAssets="compile;build" VersionOverride="7.13.21348.13001" />
+    <PackageReference Include="RhinoWindows" IncludeAssets="compile;build" VersionOverride="7.13.21348.13001" />
     <PackageReference Include="System.Resources.Extensions" />
   </ItemGroup>
 
