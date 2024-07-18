@@ -164,10 +164,12 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     // Stage 3: Group
     if (groupProxies is not null)
     {
-      foreach (GroupProxy groupProxy in groupProxies)
+      foreach (GroupProxy groupProxy in groupProxies.OrderBy(g => g.objects.Count))
       {
         var appIds = groupProxy.objects.SelectMany(oldObjId => applicationIdMap[oldObjId]).Select(id => new Guid(id));
-        RhinoDoc.ActiveDoc.Groups.Add(appIds);
+        var index = RhinoDoc.ActiveDoc.Groups.Add(appIds);
+        var addedGroup = RhinoDoc.ActiveDoc.Groups.FindIndex(index);
+        addedGroup.Name = groupProxy.name;
       }
     }
 
