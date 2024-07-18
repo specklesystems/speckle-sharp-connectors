@@ -52,22 +52,23 @@ public class NonNativeFeaturesUtils : INonNativeFeaturesUtils
           // Also, keep char limit for dataset name under 128: https://pro.arcgis.com/en/pro-app/latest/help/data/geodatabases/manage-saphana/enterprise-geodatabase-limits.htm
 
           string speckleType = trackerItem.Base.speckle_type.Split(".")[^1];
-          speckleType = speckleType.Substring(0, Math.Max(10, speckleType.Length));
+          //speckleType = speckleType.Substring(0, Math.Min(10, speckleType.Length - 1));
+          speckleType = speckleType.Length > 10 ? speckleType.Substring(0, 9) : speckleType;
           string? parentId = context.Parent?.Current.id;
 
           CRSoffsetRotation activeSR = _contextStack.Current.Document.ActiveCRSoffsetRotation;
           string XOffset = Convert.ToString(activeSR.LonOffset).Replace(".", "_");
-          XOffset = XOffset.Length > 15 ? XOffset.Substring(0, 15) : XOffset;
+          XOffset = XOffset.Length > 15 ? XOffset.Substring(0, 14) : XOffset;
 
           string YOffset = Convert.ToString(activeSR.LatOffset).Replace(".", "_");
-          YOffset = YOffset.Length > 15 ? YOffset.Substring(0, 15) : YOffset;
+          YOffset = YOffset.Length > 15 ? YOffset.Substring(0, 14) : YOffset;
 
           string TrueNorth = Convert.ToString(activeSR.TrueNorthRadians).Replace(".", "_");
-          TrueNorth = TrueNorth.Length > 10 ? TrueNorth.Substring(0, 10) : TrueNorth;
+          TrueNorth = TrueNorth.Length > 10 ? TrueNorth.Substring(0, 9) : TrueNorth;
 
           // text: 36 symbols, speckleTYPE: 10, sr: 10, offsets: 40, id: 32 = 128
           string uniqueKey =
-            $"speckle_{speckleType}_SR_{activeSR.SpatialReference.Name.Substring(0, Math.Max(15, activeSR.SpatialReference.Name.Length))}_X_{XOffset}_Y_{YOffset}_North_{TrueNorth}_speckleID_{parentId}";
+            $"speckle_{speckleType}_SR_{activeSR.SpatialReference.Name.Substring(0, Math.Min(15, activeSR.SpatialReference.Name.Length - 1))}_X_{XOffset}_Y_{YOffset}_North_{TrueNorth}_speckleID_{parentId}";
 
           if (!geometryGroups.TryGetValue(uniqueKey, out _))
           {

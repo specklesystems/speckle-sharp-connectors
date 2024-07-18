@@ -1,6 +1,8 @@
 using System.Diagnostics.Contracts;
 using ArcGIS.Core.Geometry;
+using ArcGIS.Desktop.Internal.Mapping.CommonControls.Transformations;
 using ArcGIS.Desktop.Mapping;
+using Objects.Geometry;
 using Objects.GIS;
 using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.Utils.Builders;
@@ -11,6 +13,7 @@ using Speckle.Converters.Common;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
 using Speckle.Core.Models.Collections;
+using Speckle.Core.Models.Extensions;
 using Speckle.Core.Models.GraphTraversal;
 using Speckle.Core.Models.Instances;
 using Speckle.DoubleNumerics;
@@ -18,10 +21,92 @@ using RasterLayer = Objects.GIS.RasterLayer;
 
 namespace Speckle.Connectors.ArcGIS.Operations.Receive;
 
-public record LocalToGlobalMap(Base AtomicObject, List<Matrix4x4> Matrix);
+public record LocalToGlobalMap(Base AtomicObject, TraversalContext tc, List<Matrix4x4> Matrix);
 
 public class LocalToGlobal
 {
+  public static Base TransformObjects(Base atomicObject, TraversalContext ctx, List<Matrix4x4> matrixx)
+  {
+    List<System.Numerics.Matrix4x4> matrix = new();
+
+    foreach (var m in matrixx)
+    {
+      matrix.Add(
+        new(
+          (float)m.M11,
+          (float)m.M12,
+          (float)m.M13,
+          (float)m.M14,
+          (float)m.M21,
+          (float)m.M22,
+          (float)m.M23,
+          (float)m.M24,
+          (float)m.M31,
+          (float)m.M32,
+          (float)m.M33,
+          (float)m.M34,
+          (float)m.M41,
+          (float)m.M42,
+          (float)m.M43,
+          (float)m.M44
+        )
+      );
+    }
+
+    if (matrix.Count == 0)
+    {
+      return atomicObject;
+    }
+
+    Base newObject = atomicObject.ShallowCopy();
+    List<Mesh> newDisplayValue = new();
+
+    var displayValue = newObject.TryGetDisplayValue();
+    if (displayValue is null)
+    {
+      throw new SpeckleException("Blocks contains no display value");
+    }
+
+    foreach (Base displayVal in displayValue)
+    {
+      if (displayVal is Mesh displayMesh)
+      {
+        List<double> vertices = new();
+        for (int i = 0; i < displayMesh.vertices.Count; i++)
+        {
+          if (i % 3 != 0)
+          {
+            continue;
+          }
+          var ptVector = new System.Numerics.Vector3(
+            (float)displayMesh.vertices[i],
+            (float)displayMesh.vertices[i + 1],
+            (float)displayMesh.vertices[i + 2]
+          //1
+          );
+
+          foreach (var matr in matrix)
+          {
+            ptVector = System.Numerics.Vector3.Transform(ptVector, matr);
+          }
+          vertices.AddRange([ptVector.X, ptVector.Y, ptVector.Z]);
+        }
+        Mesh newMesh = new();
+        newMesh.vertices = vertices;
+        newMesh.faces = new List<int>(displayMesh.faces);
+        newMesh.colors = new List<int>(displayMesh.colors);
+        newDisplayValue.Add(newMesh);
+      }
+      else
+      {
+        throw new SpeckleException($"Blocks containing {atomicObject.speckle_type} are not supported");
+      }
+    }
+
+    newObject["displayValue"] = newDisplayValue;
+    return newObject;
+  }
+
   public List<LocalToGlobalMap> LocalToGlobalMaps { get; } = new();
 
   private static string[] GetLayerPath(TraversalContext context)
@@ -40,8 +125,8 @@ public class LocalToGlobal
       ?.Cast<InstanceDefinitionProxy>()
       .ToList();
 
-    var instanceComponents = new List<(string[] layerPath, InstanceProxy obj)>();
-    var atomicObjects = new List<(string[] layerPath, Base obj)>();
+    var instanceComponents = new List<(TraversalContext layerPath, InstanceProxy obj)>();
+    var atomicObjects = new List<(TraversalContext layerPath, Base obj)>();
 
     // Split up the instances from the non-instances
     foreach (TraversalContext tc in objectsToConvert)
@@ -49,18 +134,18 @@ public class LocalToGlobal
       var path = GetLayerPath(tc);
       if (tc.Current is InstanceProxy instanceComponent)
       {
-        instanceComponents.Add((path, instanceComponent));
+        instanceComponents.Add((tc, instanceComponent));
       }
       else
       {
-        atomicObjects.Add((path, tc.Current));
+        atomicObjects.Add((tc, tc.Current));
       }
     }
 
-    var objectsAtAbsolute = new List<(string[] layerPath, Base obj)>();
-    var objectsAtRelative = new List<(string[] layerPath, Base obj)>();
+    var objectsAtAbsolute = new List<(TraversalContext layerPath, Base obj)>();
+    var objectsAtRelative = new List<(TraversalContext layerPath, Base obj)>();
 
-    foreach ((string[] layerPath, Base obj) in atomicObjects)
+    foreach ((TraversalContext layerPath, Base obj) in atomicObjects)
     {
       if (obj.applicationId is null)
       {
@@ -79,9 +164,9 @@ public class LocalToGlobal
       }
     }
 
-    foreach ((string[] layerPath, Base obj) in objectsAtAbsolute)
+    foreach ((TraversalContext tc, Base obj) in objectsAtAbsolute)
     {
-      LocalToGlobalMaps.Add(new LocalToGlobalMap(obj, new List<Matrix4x4>()));
+      LocalToGlobalMaps.Add(new LocalToGlobalMap(obj, tc, new List<Matrix4x4>()));
     }
 
     if (instanceDefinitionProxies is null)
@@ -103,16 +188,16 @@ public class LocalToGlobal
         return;
       }
       var instances = instanceComponents.Where(ic => ic.obj.definitionId == definitionProxy.applicationId);
-      foreach ((string[] layerPathOfInstance, InstanceProxy instance) in instances)
+      foreach ((TraversalContext tc, InstanceProxy instance) in instances)
       {
         matrices.Add(instance.transform);
         UnpackMatrix(instance, matrices);
-        LocalToGlobalMaps.Add(new LocalToGlobalMap(objectToUnpack, matrices));
+        LocalToGlobalMaps.Add(new LocalToGlobalMap(objectToUnpack, tc, matrices));
         matrices = new List<Matrix4x4>();
       }
     }
 
-    foreach ((string[] layerPath, Base objectAtRelative) in objectsAtRelative)
+    foreach ((TraversalContext layerPath, Base objectAtRelative) in objectsAtRelative)
     {
       UnpackMatrix(objectAtRelative, new List<Matrix4x4>());
     }
@@ -157,14 +242,15 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     // Prompt the UI conversion started. Progress bar will swoosh.
     onOperationProgressed?.Invoke("Converting", null);
 
-    var objectsToConvert = _traverseFunction
+    var objectsToConvertTc = _traverseFunction
       .Traverse(rootObject)
       .Where(ctx => ctx.Current is not Collection || IsGISType(ctx.Current))
       .Where(ctx => HasGISParent(ctx) is false)
       .ToList();
 
     var localToGlobal = new LocalToGlobal();
-    var localToGlobalMap = localToGlobal.UnpackRelativeAtomicObjects(rootObject, objectsToConvert);
+    var localToGlobalMap = localToGlobal.UnpackRelativeAtomicObjects(rootObject, objectsToConvertTc);
+    var objectsToConvert = localToGlobalMap.Select(x => (x.AtomicObject, x.tc, x.Matrix)).ToList();
 
     int allCount = objectsToConvert.Count;
     int count = 0;
@@ -173,7 +259,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     // 1. convert everything
     List<ReceiveConversionResult> results = new(objectsToConvert.Count);
     List<string> bakedObjectIds = new();
-    foreach (TraversalContext ctx in objectsToConvert)
+    foreach ((Base atomicObject, TraversalContext ctx, List<Matrix4x4> matrix) in objectsToConvert)
     {
       string[] path = GetLayerPath(ctx);
       Base obj = ctx.Current;
@@ -189,6 +275,8 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
         }
         else
         {
+          obj = LocalToGlobal.TransformObjects(atomicObject, ctx, matrix);
+
           string nestedLayerPath = $"{string.Join("\\", path)}\\{obj.speckle_type.Split(".")[^1]}";
           Geometry converted = (Geometry)_converter.Convert(obj);
           conversionTracker[ctx] = new ObjectConversionTracker(obj, nestedLayerPath, converted);
