@@ -93,7 +93,7 @@ public sealed class AutocadSendBinding : ISendBinding
   private void OnChangeChangedObjectIds(DBObject dBObject)
   {
     ChangedObjectIds.Add(dBObject.Handle.Value.ToString());
-    _idleManager.SubscribeToIdle(RunExpirationChecks);
+    _idleManager.SubscribeToIdle(nameof(AutocadSendBinding), RunExpirationChecks);
   }
 
   private void RunExpirationChecks()

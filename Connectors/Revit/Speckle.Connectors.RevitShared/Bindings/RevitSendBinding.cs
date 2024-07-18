@@ -157,7 +157,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     }
 
     // TODO: CHECK IF ANY OF THE ABOVE ELEMENTS NEED TO TRIGGER A FILTER REFRESH
-    _idleManager.SubscribeToIdle(RunExpirationChecks);
+    _idleManager.SubscribeToIdle(nameof(RevitSendBinding), RunExpirationChecks);
   }
 
   private void RunExpirationChecks()

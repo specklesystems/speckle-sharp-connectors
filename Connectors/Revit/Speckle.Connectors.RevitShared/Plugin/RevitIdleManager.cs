@@ -18,16 +18,14 @@ public sealed class RevitIdleManager(RevitContext revitContext, IIdleCallManager
   /// <param name="action"> Action to call whenever Revit becomes Idle.</param>
   /// some events in host app are trigerred many times, we might get 10x per object
   /// Making this more like a deferred action, so we don't update the UI many times
-  public void SubscribeToIdle(Action action)
+  public void SubscribeToIdle(string id, Action action)
   {
-    if (idleCallManager.TrySubscribeToIdle(action))
+    if (idleCallManager.TrySubscribeToIdle(id, action))
     {
       _uiApplication.Idling += RevitAppOnIdle;
     }
   }
 
-  private void RevitAppOnIdle(object? sender, IdlingEventArgs e)
-  {
+  private void RevitAppOnIdle(object? sender, IdlingEventArgs e) =>
     idleCallManager.AppOnIdle(() => _uiApplication.Idling -= RevitAppOnIdle);
-  }
 }

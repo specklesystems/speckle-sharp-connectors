@@ -30,10 +30,11 @@ public class RhinoSelectionBinding : ISelectionBinding
     RhinoDoc.DeselectAllObjects += OnSelectionChange;
   }
 
-  void OnSelectionChange(object o, EventArgs eventArgs)
-  {
-    _idleManager.SubscribeToIdle(() => _topLevelExceptionHandler.CatchUnhandled(UpdateSelection));
-  }
+  void OnSelectionChange(object o, EventArgs eventArgs) =>
+    _idleManager.SubscribeToIdle(
+      nameof(RhinoSelectionBinding),
+      () => _topLevelExceptionHandler.CatchUnhandled(UpdateSelection)
+    );
 
   private void UpdateSelection()
   {
