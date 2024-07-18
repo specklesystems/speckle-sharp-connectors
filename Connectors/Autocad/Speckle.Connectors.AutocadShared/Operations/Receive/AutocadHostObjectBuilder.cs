@@ -68,9 +68,11 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       ?.Cast<InstanceDefinitionProxy>()
       .ToList();
 
-    List<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents = new();
-    // POC: these definitions are not captured by traversal, so we need to re-add them here
-    // POC: claire doesn't like this - it's confusing to have block definitions in the same instanceComponents list as block instances since they don't have layers
+    // POC: get group proxies
+    var groupProxies = (rootObject["groupProxies"] as List<object>)?.Cast<GroupProxy>().ToList();
+
+    var instanceComponents = new List<(string[] path, IInstanceComponent obj)>();
+    // POC: these are not captured by traversal, so we need to re-add them here
     if (instanceDefinitionProxies != null && instanceDefinitionProxies.Count > 0)
     {
       var transformed = instanceDefinitionProxies.Select(proxy => (new Collection[] { }, proxy as IInstanceComponent));
@@ -81,15 +83,14 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
 
     foreach (TraversalContext tc in objectGraph)
     {
-      Layer layerCollection = _autocadLayerManager.GetLayerPath(tc, baseLayerPrefix);
-
+      var layerName = _autocadLayerManager.GetLayerPath(tc, baseLayerPrefix);
       if (tc.Current is IInstanceComponent instanceComponent)
       {
-        instanceComponents.Add((new Collection[] { layerCollection }, instanceComponent));
+        instanceComponents.Add((new string[] { layerName }, instanceComponent));
       }
       else
       {
-        atomicObjects.Add((layerCollection, tc.Current));
+        atomicObjects.Add((layerName, tc.Current));
       }
     }
 
@@ -138,6 +139,48 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     results.RemoveAll(result => result.ResultId != null && consumedObjectIds.Contains(result.ResultId));
     results.AddRange(instanceConversionResults);
 
+    // Stage 3: Create group
+    // using var transactionContext = TransactionContext.StartTransaction(Application.DocumentManager.MdiActiveDocument);
+
+
+    if (groupProxies != null)
+    {
+      using var groupCreationTransaction =
+        Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
+      var groupDictionary = (DBDictionary)
+        groupCreationTransaction.GetObject(
+          Application.DocumentManager.CurrentDocument.Database.GroupDictionaryId,
+          OpenMode.ForWrite
+        );
+
+      foreach (var gp in groupProxies.OrderBy(group => group.objects.Count))
+      {
+        try
+        {
+          var entities = gp.objects.SelectMany(oldObjId => applicationIdMap[oldObjId]);
+          var ids = new ObjectIdCollection();
+
+          foreach (var entity in entities)
+          {
+            ids.Add(entity.ObjectId);
+          }
+
+          var newGroup = new Group(gp.name, true); // NOTE: this constructor sets both the description (as it says) but also the name at the same time
+          newGroup.Append(ids);
+
+          groupDictionary.UpgradeOpen();
+          groupDictionary.SetAt(gp.name, newGroup);
+
+          groupCreationTransaction.AddNewlyCreatedDBObject(newGroup, true);
+        }
+        catch (Exception e) when (!e.IsFatal())
+        {
+          results.Add(new ReceiveConversionResult(Status.ERROR, gp, null, null, e));
+        }
+      }
+      groupCreationTransaction.Commit();
+    }
+
     return new(bakedObjectIds, results);
   }
 
@@ -151,7 +194,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
   {
     using TransactionContext transactionContext = TransactionContext.StartTransaction(
       Application.DocumentManager.MdiActiveDocument
-    );
+    ); // POC: is this used/needed?
 
     _autocadLayerManager.CreateLayerForReceive(layerCollection);
 
