@@ -38,7 +38,6 @@ public class AutocadLayerManager
 
     // get layer color
     int layerColorInt = layerCollection is IHasColor coloredLayer ? coloredLayer.color : -1; // default is white
-
     var systemColor = System.Drawing.Color.FromArgb(layerColorInt);
     Autodesk.AutoCAD.Colors.Color layerColor = Autodesk.AutoCAD.Colors.Color.FromRgb(
       systemColor.R,
@@ -156,22 +155,31 @@ public class AutocadLayerManager
   }
 
   /// <summary>
-  /// Gets a valid layer name for a given context.
+  /// Gets a valid collection representing a layer for a given context.
   /// </summary>
   /// <param name="context"></param>
   /// <param name="baseLayerPrefix"></param>
   /// <param name="color"> Returns the color if found on a collection-based path, or null</param>
   /// <returns></returns>
-  public string GetLayerPath(TraversalContext context, string baseLayerPrefix, out Collection? lastCollection)
+  public Layer GetLayerPath(TraversalContext context, string baseLayerPrefix)
   {
     Collection[] collectionBasedPath = context.GetAscendantOfType<Collection>().Reverse().ToArray();
-    lastCollection = collectionBasedPath.Length != 0 ? collectionBasedPath.Last() : null;
+    int lastColor = -1;
+    foreach (Collection collection in collectionBasedPath)
+    {
+      if (collection is IHasColor coloredCollection)
+      {
+        lastColor = coloredCollection.color;
+      }
+    }
+
     string[] path =
       collectionBasedPath.Length != 0
         ? collectionBasedPath.Select(c => c.name).ToArray()
-        : context.GetPropertyPath().ToArray();
+        : context.GetPropertyPath().Reverse().ToArray();
 
-    var name = baseLayerPrefix + string.Join("-", path);
-    return _autocadContext.RemoveInvalidChars(name);
+    string name = _autocadContext.RemoveInvalidChars(baseLayerPrefix + string.Join("-", path));
+
+    return new Layer(name, lastColor);
   }
 }

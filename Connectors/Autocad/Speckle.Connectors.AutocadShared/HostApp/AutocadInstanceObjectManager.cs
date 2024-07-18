@@ -134,7 +134,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
   }
 
   public BakeResult BakeInstances(
-    List<(Collection layerCollection, IInstanceComponent obj)> instanceComponents,
+    List<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
     Dictionary<string, List<Entity>> applicationIdMap,
     string baseLayerName,
     Action<string, double?>? onOperationProgressed
@@ -153,7 +153,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
     var consumedObjectIds = new List<string>();
     var count = 0;
 
-    foreach (var (layerCollection, instanceOrDefinition) in sortedInstanceComponents)
+    foreach (var (collectionPath, instanceOrDefinition) in sortedInstanceComponents)
     {
       try
       {
@@ -200,11 +200,13 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
           var modelSpaceBlockTableRecord = Application.DocumentManager.CurrentDocument.Database.GetModelSpace(
             OpenMode.ForWrite
           );
-          _autocadLayerManager.CreateLayerForReceive(layerCollection);
+
+          // POC: collectionPath for instances should be an array of size 1, because we are flattening collections on traversal
+          _autocadLayerManager.CreateLayerForReceive(collectionPath[0]);
           var blockRef = new BlockReference(insertionPoint, definitionId)
           {
             BlockTransform = matrix3d,
-            Layer = layerCollection.name,
+            Layer = collectionPath[0].name,
           };
 
           modelSpaceBlockTableRecord.AppendEntity(blockRef);

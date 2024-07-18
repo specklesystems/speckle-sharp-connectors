@@ -14,7 +14,7 @@ public interface IInstanceBaker<TAppIdMapValueType>
   /// <param name="onOperationProgressed"></param>
   /// <returns></returns>
   BakeResult BakeInstances(
-    List<(Collection layerCollection, IInstanceComponent obj)> instanceComponents,
+    List<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
     Dictionary<string, TAppIdMapValueType> applicationIdMap,
     string baseLayerName,
     Action<string, double?>? onOperationProgressed

@@ -68,26 +68,24 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       ?.Cast<InstanceDefinitionProxy>()
       .ToList();
 
-    List<(Collection layerCollection, IInstanceComponent obj)> instanceComponents = new();
+    List<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents = new();
     // POC: these definitions are not captured by traversal, so we need to re-add them here
     // POC: claire doesn't like this - it's confusing to have block definitions in the same instanceComponents list as block instances since they don't have layers
     if (instanceDefinitionProxies != null && instanceDefinitionProxies.Count > 0)
     {
-      var transformed = instanceDefinitionProxies.Select(proxy => (new Collection(), proxy as IInstanceComponent));
+      var transformed = instanceDefinitionProxies.Select(proxy => (new Collection[] { }, proxy as IInstanceComponent));
       instanceComponents.AddRange(transformed);
     }
 
-    var atomicObjects = new List<(Collection collection, Base obj)>();
+    var atomicObjects = new List<(Layer layer, Base obj)>();
 
     foreach (TraversalContext tc in objectGraph)
     {
-      string layerName = _autocadLayerManager.GetLayerPath(tc, baseLayerPrefix, out Collection? lastLayerCollection);
-      Collection layerCollection = lastLayerCollection ?? new();
-      layerCollection.name = layerName;
+      Layer layerCollection = _autocadLayerManager.GetLayerPath(tc, baseLayerPrefix);
 
       if (tc.Current is IInstanceComponent instanceComponent)
       {
-        instanceComponents.Add((layerCollection, instanceComponent));
+        instanceComponents.Add((new Collection[] { layerCollection }, instanceComponent));
       }
       else
       {
@@ -149,7 +147,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     _instanceObjectsManager.PurgeInstances(baseLayerPrefix);
   }
 
-  private IEnumerable<Entity> ConvertObject(Base obj, Collection layerCollection)
+  private IEnumerable<Entity> ConvertObject(Base obj, Layer layerCollection)
   {
     using TransactionContext transactionContext = TransactionContext.StartTransaction(
       Application.DocumentManager.MdiActiveDocument
