@@ -10,13 +10,15 @@ public class AutocadIdleManager(IIdleCallManager idleCallManager) : IAutocadIdle
   /// Subscribe deferred action to AutocadIdle event to run it whenever Autocad become idle.
   /// </summary>
   /// <param name="action"> Action to call whenever Autocad become Idle.</param>
-  public void SubscribeToIdle(string id, Action action)
-  {
-    if (idleCallManager.TrySubscribeToIdle(id, action))
-    {
-      Application.Idle += RhinoAppOnIdle;
-    }
-  }
+  public void SubscribeToIdle(string id, Action action) =>
+    idleCallManager.SubscribeToIdle(
+      id,
+      action,
+      () =>
+      {
+        Application.Idle += RhinoAppOnIdle;
+      }
+    );
 
   private void RhinoAppOnIdle(object sender, EventArgs e) =>
     idleCallManager.AppOnIdle(() => Application.Idle -= RhinoAppOnIdle);

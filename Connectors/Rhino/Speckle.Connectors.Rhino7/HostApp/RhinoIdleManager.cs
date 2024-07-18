@@ -14,13 +14,15 @@ public class RhinoIdleManager(IIdleCallManager idleCallManager) : IRhinoIdleMana
   /// Subscribe deferred action to RhinoIdle event to run it whenever Rhino become idle.
   /// </summary>
   /// <param name="action"> Action to call whenever Rhino become Idle.</param>
-  public void SubscribeToIdle(string id, Action action)
-  {
-    if (idleCallManager.TrySubscribeToIdle(id, action))
-    {
-      RhinoApp.Idle += RhinoAppOnIdle;
-    }
-  }
+  public void SubscribeToIdle(string id, Action action) =>
+    idleCallManager.SubscribeToIdle(
+      id,
+      action,
+      () =>
+      {
+        RhinoApp.Idle += RhinoAppOnIdle;
+      }
+    );
 
   private void RhinoAppOnIdle(object sender, EventArgs e) =>
     idleCallManager.AppOnIdle(() => RhinoApp.Idle -= RhinoAppOnIdle);
