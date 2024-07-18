@@ -2,11 +2,12 @@
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
+    <Configurations>Debug;Release;Local</Configurations>
 
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common.DependencyInjection\Speckle.Converters.Common.DependencyInjection.csproj" PrivateAssets="All"/>
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common.DependencyInjection\Speckle.Converters.Common.DependencyInjection.csproj" PrivateAssets="All" />
     <ProjectReference Include="..\Speckle.Converters.Rhino7\Speckle.Converters.Rhino7.csproj" />
   </ItemGroup>
 </Project>

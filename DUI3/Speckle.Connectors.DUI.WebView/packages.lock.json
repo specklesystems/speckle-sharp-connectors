@@ -423,7 +423,7 @@
           "Microsoft.Extensions.Logging.Abstractions": "[7.0.0, )",
           "Speckle.Autofac": "[1.0.0, )",
           "Speckle.Connectors.Utils": "[1.0.0, )",
-          "Speckle.Core": "[3.1.0-dev.68, )",
+          "Speckle.Core": "[1.0.0, )",
           "System.Threading.Tasks.Dataflow": "[6.0.0, )"
         }
       },
@@ -859,7 +859,7 @@
           "Microsoft.Extensions.Logging.Abstractions": "[7.0.0, )",
           "Speckle.Autofac": "[1.0.0, )",
           "Speckle.Connectors.Utils": "[1.0.0, )",
-          "Speckle.Core": "[3.1.0-dev.68, )",
+          "Speckle.Core": "[1.0.0, )",
           "System.Threading.Tasks.Dataflow": "[6.0.0, )"
         }
       },
