@@ -159,7 +159,6 @@ public class AutocadLayerManager
   /// </summary>
   /// <param name="context"></param>
   /// <param name="baseLayerPrefix"></param>
-  /// <param name="color"> Returns the color if found on a collection-based path, or null</param>
   /// <returns></returns>
   public Layer GetLayerPath(TraversalContext context, string baseLayerPrefix)
   {

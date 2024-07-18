@@ -1,6 +1,5 @@
 using Rhino;
 using Rhino.DocObjects;
-using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.Rhino7.HostApp;
 using Speckle.Connectors.Utils.Builders;
@@ -63,6 +62,9 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     _rhinoGroupManager.UnpackGroups(rhinoObjects);
     rootObjectCollection["groupProxies"] = _rhinoGroupManager.GroupProxies.Values;
 
+    // POC: Handle render materials
+    AddRenderMaterialsToRootCollection(rootObjectCollection);
+
     // POC: Handle blocks.
     List<SendConversionResult> results = new(atomicObjects.Count);
     foreach (RhinoObject rhinoObject in atomicObjects)
@@ -113,5 +115,24 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
 
     // 5. profit
     return new(rootObjectCollection, results);
+  }
+
+  private void AddRenderMaterialsToRootCollection(Collection root)
+  {
+    List<Base> convertedMaterials = new();
+    foreach (Material rhinoMaterial in _contextStack.Current.Document.Materials)
+    {
+      var applicationId = rhinoMaterial.Id.ToString();
+      Base? converted = _rootToSpeckleConverter.Convert(rhinoMaterial);
+      if (converted is null)
+      {
+        // TODO: report
+        continue;
+      }
+
+      converted.applicationId = applicationId;
+    }
+
+    root["renderMaterials"] = convertedMaterials;
   }
 }
