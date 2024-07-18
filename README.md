@@ -16,10 +16,12 @@ Use the `Local.sln` to include the Core and Objects projects from the SDK repo. 
 
 Using the `Local.sln` will modify all your package locks.  Don't check these in!  Revert or use the regular solution to revert once your changes are made.
 
+This uses a new Configuration for the solutions and projects which means that `Local` is now a build directory alongside `Debug` and `Release`
+
 ## Other Build commands
 
 ### Clean Locks
 
 Run this to delete package.lock.json files when restores go run.
 
-![image](/Images/clean-locks.png)
+![image](/Images/clean-locks.png) 
