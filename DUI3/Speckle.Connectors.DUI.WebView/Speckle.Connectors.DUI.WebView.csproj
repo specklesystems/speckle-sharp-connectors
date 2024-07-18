@@ -4,6 +4,7 @@
     <TargetFrameworks>net48;net6.0-windows</TargetFrameworks>
     <UseWpf>true</UseWpf>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,6 +12,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj"/>
+    <ProjectReference Include="..\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
   </ItemGroup>
 </Project>

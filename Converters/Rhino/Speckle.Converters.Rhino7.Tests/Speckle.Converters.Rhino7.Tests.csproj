@@ -4,12 +4,13 @@
     <TargetFramework>net8.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="altcover"  />
-    <PackageReference Include="FluentAssertions"  />
+    <PackageReference Include="altcover" />
+    <PackageReference Include="FluentAssertions" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="Moq"  />
+    <PackageReference Include="Moq" />
     <PackageReference Include="NUnit" />
     <PackageReference Include="NUnit.Analyzers" />
     <PackageReference Include="NUnit3TestAdapter" />

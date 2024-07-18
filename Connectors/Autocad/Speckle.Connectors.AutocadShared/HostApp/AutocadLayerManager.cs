@@ -28,30 +28,41 @@ public class AutocadLayerManager
   /// This ensures we're creating the new objects we've just received rather than overlaying them.
   /// </summary>
   /// <param name="layerName">Name to search layer for purge and create.</param>
-  public void CreateLayerForReceive(string layerName)
+  public void CreateLayerForReceive(Collection layerCollection)
   {
+    string layerName = layerCollection.name;
     if (!_uniqueLayerNames.Add(layerName))
     {
       return;
     }
+
+    // get layer color
+    int layerColorInt = layerCollection is IHasColor coloredLayer ? coloredLayer.color : -1; // default is white
+    var systemColor = System.Drawing.Color.FromArgb(layerColorInt);
+    Autodesk.AutoCAD.Colors.Color layerColor = Autodesk.AutoCAD.Colors.Color.FromRgb(
+      systemColor.R,
+      systemColor.G,
+      systemColor.B
+    );
 
     Doc.LockDocument();
     using Transaction transaction = Doc.TransactionManager.StartTransaction();
 
     LayerTable? layerTable =
       transaction.TransactionManager.GetObject(Doc.Database.LayerTableId, OpenMode.ForRead) as LayerTable;
-    LayerTableRecord layerTableRecord = new() { Name = layerName };
+    LayerTableRecord layerTableRecord = new() { Name = layerName, Color = layerColor };
 
     bool hasLayer = layerTable != null && layerTable.Has(layerName);
     if (hasLayer)
     {
-      TypedValue[] tvs = { new((int)DxfCode.LayerName, layerName) };
+      TypedValue[] tvs = [new((int)DxfCode.LayerName, layerName)];
       SelectionFilter selectionFilter = new(tvs);
       SelectionSet selectionResult = Doc.Editor.SelectAll(selectionFilter).Value;
       if (selectionResult == null)
       {
         return;
       }
+
       foreach (SelectedObject selectedObject in selectionResult)
       {
         transaction.GetObject(selectedObject.ObjectId, OpenMode.ForWrite).Erase();
@@ -79,7 +90,7 @@ public class AutocadLayerManager
       if (layer.Name.Contains(prefix))
       {
         // Delete objects from this layer
-        TypedValue[] tvs = { new((int)DxfCode.LayerName, layerName) };
+        TypedValue[] tvs = [new((int)DxfCode.LayerName, layerName)];
         SelectionFilter selectionFilter = new(tvs);
         SelectionSet selectionResult = Doc.Editor.SelectAll(selectionFilter).Value;
         if (selectionResult == null)
@@ -144,17 +155,31 @@ public class AutocadLayerManager
   }
 
   /// <summary>
-  /// Gets a valid layer name for a given context.
+  /// Gets a valid collection representing a layer for a given context.
   /// </summary>
   /// <param name="context"></param>
   /// <param name="baseLayerPrefix"></param>
+  /// <param name="color"> Returns the color if found on a collection-based path, or null</param>
   /// <returns></returns>
-  public string GetLayerPath(TraversalContext context, string baseLayerPrefix)
+  public Layer GetLayerPath(TraversalContext context, string baseLayerPrefix)
   {
-    string[] collectionBasedPath = context.GetAscendantOfType<Collection>().Select(c => c.name).Reverse().ToArray();
-    string[] path = collectionBasedPath.Length != 0 ? collectionBasedPath : context.GetPropertyPath().ToArray();
+    Collection[] collectionBasedPath = context.GetAscendantOfType<Collection>().Reverse().ToArray();
+    int lastColor = -1;
+    foreach (Collection collection in collectionBasedPath)
+    {
+      if (collection is IHasColor coloredCollection)
+      {
+        lastColor = coloredCollection.color;
+      }
+    }
 
-    var name = baseLayerPrefix + string.Join("-", path);
-    return _autocadContext.RemoveInvalidChars(name);
+    string[] path =
+      collectionBasedPath.Length != 0
+        ? collectionBasedPath.Select(c => c.name).ToArray()
+        : context.GetPropertyPath().Reverse().ToArray();
+
+    string name = _autocadContext.RemoveInvalidChars(baseLayerPrefix + string.Join("-", path));
+
+    return new Layer(name, lastColor);
   }
 }

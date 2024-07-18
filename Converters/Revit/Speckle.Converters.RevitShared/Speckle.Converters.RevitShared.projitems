@@ -55,6 +55,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\GridlineToHostTopLevelConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\MeshToHostTopLevelConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\ModelCurveToSpeckleTopLevelConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\PointToHostTopLevelConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\BeamConversionToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\BoundarySegmentConversionToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\BraceToSpeckleConverter.cs" />

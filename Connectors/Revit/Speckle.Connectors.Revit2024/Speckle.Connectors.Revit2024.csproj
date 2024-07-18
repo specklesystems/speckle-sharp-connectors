@@ -5,6 +5,7 @@
     <UseWpf>true</UseWpf>
     <RevitVersion>2024</RevitVersion>
     <DefineConstants>$(DefineConstants);REVIT2024</DefineConstants>
+    <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
 
   <Import Project="..\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems" Label="Shared" />

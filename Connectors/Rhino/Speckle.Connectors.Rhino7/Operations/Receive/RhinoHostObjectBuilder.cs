@@ -93,28 +93,29 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     var conversionResults = new List<ReceiveConversionResult>();
     var bakedObjectIds = new List<string>();
 
-    var instanceComponents = new List<(string[] layerPath, IInstanceComponent obj)>();
+    var instanceComponents = new List<(Collection[] collectionPath, IInstanceComponent obj)>();
 
     // POC: these are not captured by traversal, so we need to re-add them here
     if (instanceDefinitionProxies != null && instanceDefinitionProxies.Count > 0)
     {
-      var transformed = instanceDefinitionProxies.Select(proxy => (Array.Empty<string>(), proxy as IInstanceComponent));
+      var transformed = instanceDefinitionProxies.Select(proxy => (new Collection[] { }, proxy as IInstanceComponent));
       instanceComponents.AddRange(transformed);
     }
 
-    var atomicObjects = new List<(string[] layerPath, Base obj)>();
+    var atomicObjects = new List<(Collection[] collectionPath, Base obj)>();
 
     // Split up the instances from the non-instances
     foreach (TraversalContext tc in objectsGraph)
     {
-      var path = _layerManager.GetLayerPath(tc);
+      Collection[] collectionPath = _layerManager.GetLayerPath(tc);
+
       if (tc.Current is IInstanceComponent instanceComponent)
       {
-        instanceComponents.Add((path, instanceComponent));
+        instanceComponents.Add((collectionPath, instanceComponent));
       }
       else
       {
-        atomicObjects.Add((path, tc.Current));
+        atomicObjects.Add((collectionPath, tc.Current));
       }
     }
 
@@ -163,10 +164,12 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     // Stage 3: Group
     if (groupProxies is not null)
     {
-      foreach (GroupProxy groupProxy in groupProxies)
+      foreach (GroupProxy groupProxy in groupProxies.OrderBy(g => g.objects.Count))
       {
         var appIds = groupProxy.objects.SelectMany(oldObjId => applicationIdMap[oldObjId]).Select(id => new Guid(id));
-        RhinoDoc.ActiveDoc.Groups.Add(appIds);
+        var index = RhinoDoc.ActiveDoc.Groups.Add(appIds);
+        var addedGroup = RhinoDoc.ActiveDoc.Groups.FindIndex(index);
+        addedGroup.Name = groupProxy.name;
       }
     }
 
