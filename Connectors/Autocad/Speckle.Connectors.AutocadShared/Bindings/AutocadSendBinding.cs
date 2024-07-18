@@ -24,7 +24,7 @@ public sealed class AutocadSendBinding : ISendBinding
   public IBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly AutocadIdleManager _idleManager;
+  private readonly IAutocadIdleManager _idleManager;
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
@@ -39,7 +39,7 @@ public sealed class AutocadSendBinding : ISendBinding
 
   public AutocadSendBinding(
     DocumentModelStore store,
-    AutocadIdleManager idleManager,
+    IAutocadIdleManager idleManager,
     IBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     CancellationManager cancellationManager,
