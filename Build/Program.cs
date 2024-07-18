@@ -37,6 +37,8 @@ Target(
       Console.WriteLine("Found and will delete: " + f);
       File.Delete(f);
     }
+    Console.WriteLine("Running restore now.");
+    Run("dotnet", "restore");
   }
 );
 
