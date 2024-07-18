@@ -121,7 +121,6 @@ public struct CRSoffsetRotation
   /// <summary>
   /// Initializes a new instance of <see cref="CRSoffsetRotation"/>.
   /// </summary>
-  /// <param name="spatialReference">SpatialReference to apply offsets and rotation to.</param>
   /// <param name="map">Map to read metadata from.</param>
   public CRSoffsetRotation(Map map)
   {
