@@ -168,7 +168,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
         var appIds = groupProxy.objects.SelectMany(oldObjId => applicationIdMap[oldObjId]).Select(id => new Guid(id));
         var index = RhinoDoc.ActiveDoc.Groups.Add(appIds);
         var addedGroup = RhinoDoc.ActiveDoc.Groups.FindIndex(index);
-        addedGroup.Name = addedGroup.Name;
+        addedGroup.Name = groupProxy.name;
       }
     }
 
