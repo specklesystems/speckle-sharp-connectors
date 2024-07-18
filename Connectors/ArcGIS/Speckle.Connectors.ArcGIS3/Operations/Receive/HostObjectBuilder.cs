@@ -48,7 +48,7 @@ public class LocalToGlobal
     var displayValue = newObject.TryGetDisplayValue();
     if (displayValue is null)
     {
-      throw new SpeckleException("Blocks contains no display value");
+      throw new SpeckleException($"{newObject.speckle_type} blocks contains no display value");
     }
 
     foreach (Base displayVal in displayValue)
