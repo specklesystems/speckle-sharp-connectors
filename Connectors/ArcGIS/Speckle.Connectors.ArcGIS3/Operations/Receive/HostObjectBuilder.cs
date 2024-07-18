@@ -100,7 +100,6 @@ public class LocalToGlobal
       );
       if (definitionProxy is null)
       {
-        LocalToGlobalMaps.Add(new LocalToGlobalMap(objectToUnpack, matrices));
         return;
       }
       var instances = instanceComponents.Where(ic => ic.obj.definitionId == definitionProxy.applicationId);
@@ -108,6 +107,7 @@ public class LocalToGlobal
       {
         matrices.Add(instance.transform);
         UnpackMatrix(instance, matrices);
+        LocalToGlobalMaps.Add(new LocalToGlobalMap(objectToUnpack, matrices));
         matrices = new List<Matrix4x4>();
       }
     }
@@ -117,7 +117,7 @@ public class LocalToGlobal
       UnpackMatrix(objectAtRelative, new List<Matrix4x4>());
     }
 
-    return LocalToGlobalMaps;
+    return LocalToGlobalMaps.Where(ltgm => ltgm.AtomicObject is not InstanceProxy).ToList();
   }
 }
 
