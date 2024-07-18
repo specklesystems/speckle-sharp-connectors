@@ -74,7 +74,6 @@ public sealed class BrowserBridge : IBridge
   /// Initializes a new instance of the <see cref="BrowserBridge"/> class.
   /// </summary>
   /// <param name="jsonSerializerSettings">The settings to use for JSON serialization and deserialization.</param>
-  /// <param name="loggerFactory">The factory to create a logger for <see cref="BrowserBridge"/>.</param>
   public BrowserBridge(
     JsonSerializerSettings jsonSerializerSettings,
     ILogger<BrowserBridge> logger,
