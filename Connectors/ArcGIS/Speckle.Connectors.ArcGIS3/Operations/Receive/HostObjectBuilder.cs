@@ -147,6 +147,7 @@ public class LocalToGlobal
         objectsAtAbsolute.Add((layerPath, obj)); // to bake
       }
     }
+    // objectsAtRelative.AddRange(instanceComponents.Select(x => (x.layerPath, (Base)(x.obj))).ToList());
 
     foreach ((TraversalContext tc, Base obj) in objectsAtAbsolute)
     {
@@ -158,7 +159,7 @@ public class LocalToGlobal
       return LocalToGlobalMaps;
     }
 
-    void UnpackMatrix(Base objectToUnpack, List<Matrix4x4> matrices)
+    void UnpackMatrix(Base objectToUnpack, TraversalContext layerPath, List<Matrix4x4> matrices)
     {
       if (objectToUnpack.applicationId is null)
       {
@@ -175,15 +176,16 @@ public class LocalToGlobal
       foreach ((TraversalContext tc, InstanceProxy instance) in instances)
       {
         matrices.Add(instance.transform);
-        UnpackMatrix(instance, matrices);
+        UnpackMatrix(instance, tc, matrices);
         LocalToGlobalMaps.Add(new LocalToGlobalMap(objectToUnpack, tc, matrices));
         matrices = new List<Matrix4x4>();
       }
+      LocalToGlobalMaps.Add(new LocalToGlobalMap(objectToUnpack, layerPath, matrices));
     }
 
     foreach ((TraversalContext layerPath, Base objectAtRelative) in objectsAtRelative)
     {
-      UnpackMatrix(objectAtRelative, new List<Matrix4x4>());
+      UnpackMatrix(objectAtRelative, layerPath, new List<Matrix4x4>());
     }
 
     return LocalToGlobalMaps.Where(ltgm => ltgm.AtomicObject is not InstanceProxy).ToList();
