@@ -85,7 +85,7 @@ public sealed class AutocadSendBinding : ISendBinding
     doc.Database.ObjectModified += (_, e) => OnObjectChanged(e.DBObject);
   }
 
-  void OnObjectChanged(DBObject dbObject)
+  private void OnObjectChanged(DBObject dbObject)
   {
     _topLevelExceptionHandler.CatchUnhandled(() => OnChangeChangedObjectIds(dbObject));
   }
