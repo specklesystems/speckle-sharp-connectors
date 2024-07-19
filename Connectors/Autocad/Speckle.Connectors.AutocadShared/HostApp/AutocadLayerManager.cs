@@ -27,7 +27,6 @@ public class AutocadLayerManager
   /// Will create a layer with the provided name, or, if it finds an existing one, will "purge" all objects from it.
   /// This ensures we're creating the new objects we've just received rather than overlaying them.
   /// </summary>
-  /// <param name="layerName">Name to search layer for purge and create.</param>
   public void CreateLayerForReceive(Collection layerCollection)
   {
     string layerName = layerCollection.name;
@@ -159,7 +158,6 @@ public class AutocadLayerManager
   /// </summary>
   /// <param name="context"></param>
   /// <param name="baseLayerPrefix"></param>
-  /// <param name="color"> Returns the color if found on a collection-based path, or null</param>
   /// <returns></returns>
   public Layer GetLayerPath(TraversalContext context, string baseLayerPrefix)
   {
