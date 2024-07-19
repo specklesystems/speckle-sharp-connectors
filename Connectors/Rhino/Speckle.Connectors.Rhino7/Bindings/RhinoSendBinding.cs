@@ -90,7 +90,7 @@ public sealed class RhinoSendBinding : ISendBinding
         }
 
         ChangedObjectIds.Add(e.ObjectId.ToString());
-        _idleManager.SubscribeToIdle(RunExpirationChecks);
+        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
       });
 
     RhinoDoc.DeleteRhinoObject += (_, e) =>
@@ -103,7 +103,7 @@ public sealed class RhinoSendBinding : ISendBinding
         }
 
         ChangedObjectIds.Add(e.ObjectId.ToString());
-        _idleManager.SubscribeToIdle(RunExpirationChecks);
+        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
       });
 
     RhinoDoc.ReplaceRhinoObject += (_, e) =>
@@ -117,25 +117,11 @@ public sealed class RhinoSendBinding : ISendBinding
 
         ChangedObjectIds.Add(e.NewRhinoObject.Id.ToString());
         ChangedObjectIds.Add(e.OldRhinoObject.Id.ToString());
-        _idleManager.SubscribeToIdle(RunExpirationChecks);
+        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
       });
   }
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
-
-  public List<CardSetting> GetSendSettings()
-  {
-    return new List<CardSetting>
-    {
-      new()
-      {
-        Id = "includeAttributes",
-        Title = "Include Attributes",
-        Value = true,
-        Type = "boolean"
-      },
-    };
-  }
 
   public async Task Send(string modelCardId)
   {

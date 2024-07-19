@@ -20,6 +20,7 @@ public static class ContainerRegistration
     speckleContainerBuilder.AddTransient<IBridge, BrowserBridge>(); // POC: Each binding should have it's own bridge instance
     speckleContainerBuilder.AddSingleton<ITopLevelExceptionHandler, TopLevelExceptionHandler>();
     speckleContainerBuilder.AddSingleton(GetJsonSerializerSettings());
+    speckleContainerBuilder.ScanAssemblyOfType<IdleCallManager>();
   }
 
   private static JsonSerializerSettings GetJsonSerializerSettings()
