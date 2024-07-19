@@ -39,23 +39,25 @@ public class IdleCallManager(ITopLevelExceptionHandler topLevelExceptionHandler)
   }
 
   public void AppOnIdle(Action removeEvent) =>
-    topLevelExceptionHandler.CatchUnhandled(() =>
+    topLevelExceptionHandler.CatchUnhandled(() => AppOnIdleInternal(removeEvent));
+
+  public void AppOnIdleInternal(Action removeEvent)
+  {
+    foreach (KeyValuePair<string, Action> kvp in Calls)
     {
-      foreach (KeyValuePair<string, Action> kvp in Calls)
+      kvp.Value.Invoke();
+    }
+    Calls.Clear();
+    if (IdleSubscriptionCalled)
+    {
+      lock (_lock)
       {
-        kvp.Value.Invoke();
-      }
-      Calls.Clear();
-      if (IdleSubscriptionCalled)
-      {
-        lock (_lock)
+        if (IdleSubscriptionCalled)
         {
-          if (IdleSubscriptionCalled)
-          {
-            removeEvent.Invoke();
-            IdleSubscriptionCalled = false;
-          }
+          removeEvent.Invoke();
+          IdleSubscriptionCalled = false;
         }
       }
-    });
+    }
+  }
 }

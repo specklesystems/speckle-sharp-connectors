@@ -33,4 +33,31 @@ public class IdleCallManagerTests : MoqTest
     sut.Calls.Should().ContainKey("id");
     sut.IdleSubscriptionCalled.Should().BeTrue();
   }
+
+  [Test]
+  public void AppOnIdleTest()
+  {
+    var handler = Create<ITopLevelExceptionHandler>();
+    var sut = new IdleCallManager(handler.Object);
+    var removeEvent = Create<Action>();
+    handler.Setup(x => x.CatchUnhandled(It.IsAny<Action>())).Returns(new Result());
+    sut.AppOnIdle(removeEvent.Object);
+  }
+
+  [Test]
+  public void AppOnIdleInternalTest()
+  {
+    var handler = Create<ITopLevelExceptionHandler>();
+    var sut = new IdleCallManager(handler.Object);
+    var removeEvent = Create<Action>();
+    removeEvent.Setup(x => x.Invoke());
+
+    sut.SubscribeInternal("Test", new Action(() => { }), new Action(() => { }));
+    sut.IdleSubscriptionCalled.Should().BeTrue();
+    sut.Calls.Count.Should().Be(1);
+
+    sut.AppOnIdleInternal(removeEvent.Object);
+    sut.Calls.Count.Should().Be(0);
+    sut.IdleSubscriptionCalled.Should().BeFalse();
+  }
 }
