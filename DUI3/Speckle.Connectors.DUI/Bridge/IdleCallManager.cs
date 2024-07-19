@@ -4,47 +4,56 @@ using Speckle.InterfaceGenerator;
 
 namespace Speckle.Connectors.DUI.Bridge;
 
+public interface IIdleCallManager
+{
+  void SubscribeToIdle(string id, Action action, Action addEvent);
+  void AppOnIdle(Action removeEvent);
+}
+
 //should be registered as singleton
-[GenerateAutoInterface]
 [SuppressMessage("ReSharper", "InconsistentlySynchronizedField")]
 public class IdleCallManager(ITopLevelExceptionHandler topLevelExceptionHandler) : IIdleCallManager
 {
-  private readonly ConcurrentDictionary<string, Action> _calls = new();
-  private bool _idleSubscriptionCalled;
+  public ConcurrentDictionary<string, Action> Calls { get; } = new();
+
+  private readonly object _lock = new();
+  public bool IdleSubscriptionCalled { get; private set; }
 
   public void SubscribeToIdle(string id, Action action, Action addEvent) =>
-    topLevelExceptionHandler.CatchUnhandled(() =>
+    topLevelExceptionHandler.CatchUnhandled(() => SubscribeInternal(id, action, addEvent));
+
+  public void SubscribeInternal(string id, Action action, Action addEvent)
+  {
+    Calls.TryAdd(id, action);
+    if (!IdleSubscriptionCalled)
     {
-      _calls.TryAdd(id, action);
-      if (!_idleSubscriptionCalled)
+      lock (_lock)
       {
-        lock (_calls)
+        if (!IdleSubscriptionCalled)
         {
-          if (!_idleSubscriptionCalled)
-          {
-            addEvent.Invoke();
-            _idleSubscriptionCalled = true;
-          }
+          addEvent.Invoke();
+          IdleSubscriptionCalled = true;
         }
       }
-    });
+    }
+  }
 
   public void AppOnIdle(Action removeEvent) =>
     topLevelExceptionHandler.CatchUnhandled(() =>
     {
-      foreach (KeyValuePair<string, Action> kvp in _calls)
+      foreach (KeyValuePair<string, Action> kvp in Calls)
       {
         kvp.Value.Invoke();
       }
-      _calls.Clear();
-      if (_idleSubscriptionCalled)
+      Calls.Clear();
+      if (IdleSubscriptionCalled)
       {
-        lock (_calls)
+        lock (_lock)
         {
-          if (_idleSubscriptionCalled)
+          if (IdleSubscriptionCalled)
           {
             removeEvent.Invoke();
-            _idleSubscriptionCalled = false;
+            IdleSubscriptionCalled = false;
           }
         }
       }
