@@ -32,13 +32,33 @@ public sealed class TopLevelExceptionHandler(ILogger<TopLevelExceptionHandler> l
   /// <param name="function">The function to invoke and provide error handling for</param>
   /// <exception cref="Exception"><see cref="ExceptionHelpers.IsFatal"/> will be rethrown, these should be allowed to bubble up to the host app</exception>
   /// <seealso cref="ExceptionHelpers.IsFatal"/>
-  public void CatchUnhandled(Action function)
+  public Result CatchUnhandled(Action function)
   {
-    CatchUnhandled(() =>
+    try
     {
-      function.Invoke();
-      return (object?)null;
-    });
+      try
+      {
+        function.Invoke();
+        return new();
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
+
+        SetGlobalNotification(
+          ToastNotificationType.DANGER,
+          "Unhandled Exception Occured",
+          ex.ToFormattedString(),
+          false
+        );
+        return new(ex);
+      }
+    }
+    catch (Exception ex)
+    {
+      logger.LogCritical(ex, UNHANDLED_LOGGER_TEMPLATE);
+      throw;
+    }
   }
 
   /// <inheritdoc cref="CatchUnhandled(Action)"/>
