@@ -7,6 +7,7 @@ using Speckle.Connectors.Utils.Instances;
 using Speckle.Core.Kits;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
+using Speckle.Core.Models.Collections;
 using Speckle.Core.Models.Instances;
 using Speckle.DoubleNumerics;
 
@@ -125,7 +126,7 @@ public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInst
   /// <param name="applicationIdMap">A dict mapping { original application id -> [resulting application ids post conversion] }</param>
   /// <param name="onOperationProgressed"></param>
   public BakeResult BakeInstances(
-    List<(string[] layerPath, IInstanceComponent obj)> instanceComponents,
+    List<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
     Dictionary<string, List<string>> applicationIdMap,
     string baseLayerName,
     Action<string, double?>? onOperationProgressed
@@ -144,7 +145,7 @@ public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInst
     var conversionResults = new List<ReceiveConversionResult>();
     var createdObjectIds = new List<string>();
     var consumedObjectIds = new List<string>();
-    foreach (var (path, instanceOrDefinition) in sortedInstanceComponents)
+    foreach (var (layerCollection, instanceOrDefinition) in sortedInstanceComponents)
     {
       onOperationProgressed?.Invoke("Converting blocks", (double)++count / sortedInstanceComponents.Count);
       try
@@ -200,7 +201,7 @@ public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInst
         )
         {
           var transform = MatrixToTransform(instanceProxy.transform, instanceProxy.units);
-          var layerIndex = _layerManager.GetAndCreateLayerFromPath(path, baseLayerName);
+          var layerIndex = _layerManager.GetAndCreateLayerFromPath(layerCollection, baseLayerName);
           var id = doc.Objects.AddInstanceObject(index, transform, new ObjectAttributes() { LayerIndex = layerIndex });
           if (instanceProxy.applicationId != null)
           {
