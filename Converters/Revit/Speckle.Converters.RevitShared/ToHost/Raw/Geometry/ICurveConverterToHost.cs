@@ -114,7 +114,7 @@ public class ICurveConverterToHost : ITypedConverter<ICurve, DB.CurveArray>
     // Revit does not like single curve loop edges, so we split them in two.
     var start = nativeCurve.GetEndParameter(0);
     var end = nativeCurve.GetEndParameter(1);
-    var mid = start + ((end - start) / 2);
+    var mid = start + (end - start) / 2;
 
     var a = nativeCurve.Clone();
     a.MakeBound(start, mid);

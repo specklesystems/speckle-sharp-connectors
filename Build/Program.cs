@@ -1,6 +1,4 @@
 using System.IO.Compression;
-using System.Net;
-using System.Runtime.InteropServices;
 using Build;
 using GlobExpressions;
 using static Bullseye.Targets;
@@ -219,25 +217,31 @@ Target(
     if (File.Exists(nugetCli))
     {
       Console.WriteLine($"Updating nuget: {nugetCli}");
-      await RunAsync(nugetCli, "update -self");
+      await RunAsync(nugetCli, "update -self").ConfigureAwait(false);
     }
     else
     {
       Console.WriteLine($"Downloading nuget: {nugetCli}");
       using var client = new HttpClient();
-      await using var s = await client.GetStreamAsync("https://dist.nuget.org/win-x86-commandline/latest/nuget.exe");
-      await using var fs = new FileStream(nugetCli, FileMode.OpenOrCreate);
-      await s.CopyToAsync(fs);
+      Uri url = new("https://dist.nuget.org/win-x86-commandline/latest/nuget.exe");
+      
+      var s = await client.GetStreamAsync(url).ConfigureAwait(false);
+      await using var sAsyncDisposable = s.ConfigureAwait(false);
+      
+      var fs = new FileStream(nugetCli, FileMode.OpenOrCreate);
+      await using var fsAsyncDisposable = fs.ConfigureAwait(false);
+      
+      await s.CopyToAsync(fs).ConfigureAwait(false);
     }
 
     var nugets = Glob.Files(output, "*.nupkg").ToList();
-    if (!nugets.Any())
+    if (nugets.Count == 0)
     {
       Console.WriteLine($"No nugets found in: {output}");
     }
     foreach (var nuget in nugets)
     {
-      await RunAsync(nugetCli, $"add {Path.Combine(output, nuget)} -source {localFeed}");
+      await RunAsync(nugetCli, $"add {Path.Combine(output, nuget)} -source {localFeed}").ConfigureAwait(false);;
     }
     Console.WriteLine($"Adding local source: {localFeed}");
     await RunAsync(
@@ -251,7 +255,7 @@ Target(
         }
         return true;
       }
-    );
+    ).ConfigureAwait(false);;
   }
 );
 

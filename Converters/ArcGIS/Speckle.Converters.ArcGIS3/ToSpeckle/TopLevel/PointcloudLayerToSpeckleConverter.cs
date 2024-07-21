@@ -73,9 +73,7 @@ public class PointCloudToSpeckleConverter
 
   public SGIS.VectorLayer Convert(LasDatasetLayer target)
   {
-    SGIS.VectorLayer speckleLayer = new();
-    speckleLayer.nativeGeomType = target.MapLayerType.ToString();
-    speckleLayer.geomType = GISLayerGeometryType.POINTCLOUD;
+    SGIS.VectorLayer speckleLayer = new() { nativeGeomType = target.MapLayerType.ToString(), geomType = GISLayerGeometryType.POINTCLOUD };
 
     // prepare data for pointcloud
     List<SOG.Point> specklePts = new();

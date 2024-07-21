@@ -11,7 +11,7 @@ public class ParameterValueSetter(ScalingServiceToHost scalingService)
   {
     if (
       speckleElement["parameters"] is not Base speckleParameters
-      || speckleParameters.GetDynamicMemberNames().Count() == 0
+      || !speckleParameters.GetDynamicMemberNames().Any()
     )
     {
       return;
@@ -38,16 +38,16 @@ public class ParameterValueSetter(ScalingServiceToHost scalingService)
     // NOTE: we are using the ParametersMap here and not Parameters, as it's a much smaller list of stuff and
     // Parameters most likely contains extra (garbage) stuff that we don't need to set anyways
     // so it's a much faster conversion. If we find that's not the case, we might need to change it in the future
-    IEnumerable<DB.Parameter>? revitParameters = null;
+    IList<DB.Parameter>? revitParameters;
     if (exclusions == null)
     {
-      revitParameters = revitElement.ParametersMap.Cast<DB.Parameter>().Where(x => x != null && !x.IsReadOnly);
+      revitParameters = revitElement.ParametersMap.Cast<DB.Parameter>().Where(x => x != null && !x.IsReadOnly).ToArray();
     }
     else
     {
       revitParameters = revitElement
         .ParametersMap.Cast<DB.Parameter>()
-        .Where(x => x != null && !x.IsReadOnly && !exclusions.Contains(GetParamInternalName(x)));
+        .Where(x => x != null && !x.IsReadOnly && !exclusions.Contains(GetParamInternalName(x))).ToArray();
     }
 
     // Here we are creating two  dictionaries for faster lookup
@@ -72,7 +72,7 @@ public class ParameterValueSetter(ScalingServiceToHost scalingService)
         continue;
       }
 
-      var rp = revitParameterById.ContainsKey(spk.Key) ? revitParameterById[spk.Key] : revitParameterByName[spk.Key];
+      var rp = revitParameterById.TryGetValue(spk.Key, out DB.Parameter? value) ? value : revitParameterByName[spk.Key];
 
       TrySetParam(rp, sp.value, sp.units, sp.applicationUnit);
     }
@@ -120,11 +120,11 @@ public class ParameterValueSetter(ScalingServiceToHost scalingService)
       case DB.StorageType.Integer:
         if (value is string s)
         {
-          if (s.ToLower() == "no")
+          if (s.Equals("no", StringComparison.CurrentCultureIgnoreCase))
           {
             value = 0;
           }
-          else if (s.ToLower() == "yes")
+          else if (s.Equals("yes", StringComparison.CurrentCultureIgnoreCase))
           {
             value = 1;
           }

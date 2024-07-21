@@ -212,6 +212,7 @@ dotnet_diagnostic.ide0058.severity = none # Remove unnecessary expression value:
 dotnet_diagnostic.ide0010.severity = none # Add missing cases to switch statement: Too verbose
 dotnet_diagnostic.ide0200.severity = none # Remove unnecessary lambda expression: may be performance reasons not to
 dotnet_diagnostic.ide0058.severity = none # Remove unnecessary expression value: Subjective
+dotnet_diagnostic.ide0305.severity = none # Use collection expression for fluent
 dotnet_diagnostic.ide0001.severity = suggestion # Name can be simplified: Non enforceable in build
 dotnet_diagnostic.ide0046.severity = suggestion # Use conditional expression for return: Subjective
 dotnet_diagnostic.ide0045.severity = suggestion # Use conditional expression for assignment: Subjective
@@ -234,8 +235,10 @@ dotnet_diagnostic.ide0028.severity = suggestion # Use collection initializers: S
 dotnet_diagnostic.ide0072.severity = suggestion # Populate switch statement: Subjective
 dotnet_diagnostic.ide0074.severity = suggestion # Use compound assignment: Subjective
 dotnet_diagnostic.ide0300.severity = suggestion # collection can be simplied
-dotnet_diagnostic.ide0290.severity = suggestion # primary constructors
+dotnet_diagnostic.ide0290.severity = suggestion # primary constructors: subjective, and readonly properties are not a thing
 dotnet_diagnostic.ide0290.severity = suggestion # Use primary constructor: Subjective
+dotnet_diagnostic.ide0037.severity = suggestion # Use inferred member names
+dotnet_diagnostic.ide0301.severity = suggestion # Use collection expression for empty: Subjective, intent
 
 # Maintainability rules
 dotnet_diagnostic.ca1501.severity = warning # Avoid excessive inheritance

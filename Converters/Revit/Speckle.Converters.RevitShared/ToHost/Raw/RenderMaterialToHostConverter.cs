@@ -19,8 +19,11 @@ public class RenderMaterialToHostConverter : ITypedConverter<RenderMaterial, DB.
   {
     string matName = RemoveProhibitedCharacters(target.name);
 
+
+    using FilteredElementCollector collector = new(_contextStack.Current.Document);
+    
     // Try and find an existing material
-    var existing = new FilteredElementCollector(_contextStack.Current.Document)
+    var existing = collector
       .OfClass(typeof(DB.Material))
       .Cast<DB.Material>()
       .FirstOrDefault(m => string.Equals(m.Name, matName, StringComparison.CurrentCultureIgnoreCase));
