@@ -66,8 +66,8 @@ internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding, ID
 
   public void Dispose()
   {
-    #if REVIT2022
+#if REVIT2022
     _selectionTimer.Dispose();
-    #endif
+#endif
   }
 }

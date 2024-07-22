@@ -47,7 +47,7 @@ public sealed class PointToHostTopLevelConverter
     {
       throw new SpeckleConversionException("Unable to define Revit geometry");
     }
-    
+
     CurveLoop curveLoop = CurveLoop.Create(profile);
     Solid sphere = GeometryCreationUtilities.CreateRevolvedGeometry(frame, [curveLoop], 0, 2 * Math.PI, options);
 
