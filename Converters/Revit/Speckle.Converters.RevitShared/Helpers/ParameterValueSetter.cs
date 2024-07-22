@@ -9,10 +9,7 @@ public class ParameterValueSetter(ScalingServiceToHost scalingService)
 {
   public void SetInstanceParameters(DB.Element revitElement, Base speckleElement, List<string>? exclusions = null)
   {
-    if (
-      speckleElement["parameters"] is not Base speckleParameters
-      || !speckleParameters.GetDynamicMemberNames().Any()
-    )
+    if (speckleElement["parameters"] is not Base speckleParameters || !speckleParameters.GetDynamicMemberNames().Any())
     {
       return;
     }
@@ -41,13 +38,17 @@ public class ParameterValueSetter(ScalingServiceToHost scalingService)
     IList<DB.Parameter>? revitParameters;
     if (exclusions == null)
     {
-      revitParameters = revitElement.ParametersMap.Cast<DB.Parameter>().Where(x => x != null && !x.IsReadOnly).ToArray();
+      revitParameters = revitElement
+        .ParametersMap.Cast<DB.Parameter>()
+        .Where(x => x != null && !x.IsReadOnly)
+        .ToArray();
     }
     else
     {
       revitParameters = revitElement
         .ParametersMap.Cast<DB.Parameter>()
-        .Where(x => x != null && !x.IsReadOnly && !exclusions.Contains(GetParamInternalName(x))).ToArray();
+        .Where(x => x != null && !x.IsReadOnly && !exclusions.Contains(GetParamInternalName(x)))
+        .ToArray();
     }
 
     // Here we are creating two  dictionaries for faster lookup

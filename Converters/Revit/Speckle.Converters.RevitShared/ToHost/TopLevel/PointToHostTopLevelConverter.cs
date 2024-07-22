@@ -7,7 +7,7 @@ using Speckle.Converters.RevitShared.ToSpeckle;
 namespace Speckle.Converters.RevitShared.ToHost.TopLevel;
 
 [NameAndRankValue(nameof(SOG.Point), 0)]
-internal class PointToHostTopLevelConverter
+public class PointToHostTopLevelConverter
   : BaseTopLevelConverterToHost<SOG.Point, DB.Solid>,
     ITypedConverter<SOG.Point, DB.Solid>
 {

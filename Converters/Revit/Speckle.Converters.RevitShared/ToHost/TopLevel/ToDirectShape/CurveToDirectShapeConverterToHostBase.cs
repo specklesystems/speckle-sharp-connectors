@@ -13,7 +13,7 @@ public abstract class CurveToDirectShapeConverterToHostBase<TCurve>
   private readonly IRevitConversionContextStack _contextStack;
   private readonly ITypedConverter<ICurve, DB.CurveArray> _curveConverter;
 
-  public CurveToDirectShapeConverterToHostBase(
+  protected CurveToDirectShapeConverterToHostBase(
     IRevitConversionContextStack contextStack,
     ITypedConverter<ICurve, DB.CurveArray> curveConverter
   )
