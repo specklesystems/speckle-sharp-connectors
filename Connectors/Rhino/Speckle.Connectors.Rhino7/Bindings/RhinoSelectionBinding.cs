@@ -24,7 +24,7 @@ public class RhinoSelectionBinding : ISelectionBinding
     RhinoDoc.DeselectAllObjects += OnSelectionChange;
   }
 
-  void OnSelectionChange(object o, EventArgs eventArgs) =>
+  private void OnSelectionChange(object o, EventArgs eventArgs) =>
     _idleManager.SubscribeToIdle(nameof(RhinoSelectionBinding), UpdateSelection);
 
   private void UpdateSelection()

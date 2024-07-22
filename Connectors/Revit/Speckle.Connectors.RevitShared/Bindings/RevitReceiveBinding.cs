@@ -12,7 +12,7 @@ using Speckle.Core.Transports;
 
 namespace Speckle.Connectors.Revit.Bindings;
 
-internal class RevitReceiveBinding : IReceiveBinding
+internal sealed class RevitReceiveBinding : IReceiveBinding
 {
   public string Name => "receiveBinding";
   public IBridge Parent { get; }
