@@ -72,7 +72,7 @@ public struct CRSoffsetRotation
   {
     if (TrueNorthRadians < -2 * Math.PI || TrueNorthRadians > 2 * Math.PI)
     {
-      TrueNorthRadians = TrueNorthRadians % (2 * Math.PI);
+      TrueNorthRadians %= 2 * Math.PI;
     }
   }
 
