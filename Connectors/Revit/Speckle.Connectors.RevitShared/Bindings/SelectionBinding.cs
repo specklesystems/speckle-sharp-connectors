@@ -10,8 +10,6 @@ namespace Speckle.Connectors.Revit.Bindings;
 // POC: we need a base a RevitBaseBinding
 internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding, IDisposable
 {
-  private readonly IRevitIdleManager _revitIdleManager;
-  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 #if REVIT2022
   private readonly System.Timers.Timer _selectionTimer;
 #endif
@@ -19,17 +17,15 @@ internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding, ID
   public SelectionBinding(
     RevitContext revitContext,
     DocumentModelStore store,
-    IRevitIdleManager idleManager,
+    IRevitIdleManager revitIdleManager,
     IBridge bridge,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
     : base("selectionBinding", store, bridge, revitContext)
   {
-    _revitIdleManager = idleManager;
-    _topLevelExceptionHandler = topLevelExceptionHandler;
 #if !REVIT2022
     RevitContext.UIApplication.NotNull().SelectionChanged += (_, _) =>
-      topLevelExceptionHandler.CatchUnhandled(() => _revitIdleManager.SubscribeToIdle(OnSelectionChanged));
+      revitIdleManager.SubscribeToIdle(nameof(SelectionBinding), OnSelectionChanged);
 #else
     // NOTE: getting the selection data should be a fast function all, even for '000s of elements - and having a timer hitting it every 1s is ok.
     _selectionTimer = new System.Timers.Timer(1000);
