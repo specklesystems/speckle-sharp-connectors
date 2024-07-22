@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using Autodesk.AutoCAD.DatabaseServices;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
@@ -59,8 +60,6 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     List<ReceiveConversionResult> results = new();
     List<string> bakedObjectIds = new();
 
-    // return new(bakedObjectIds, results);
-
     var objectGraph = _traversalFunction.Traverse(rootObject).Where(obj => obj.Current is not Collection);
 
     // POC: these are not captured by traversal, so we need to re-add them here
@@ -68,10 +67,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       ?.Cast<InstanceDefinitionProxy>()
       .ToList();
 
-    // POC: get group proxies
-    var groupProxies = (rootObject["groupProxies"] as List<object>)?.Cast<GroupProxy>().ToList();
-
-    var instanceComponents = new List<(string[] path, IInstanceComponent obj)>();
+    var instanceComponents = new List<(Collection[] path, IInstanceComponent obj)>();
     // POC: these are not captured by traversal, so we need to re-add them here
     if (instanceDefinitionProxies != null && instanceDefinitionProxies.Count > 0)
     {
@@ -79,18 +75,24 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       instanceComponents.AddRange(transformed);
     }
 
+    // POC: get group proxies
+    var groupProxies = (rootObject["groupProxies"] as List<object>)?.Cast<GroupProxy>().ToList();
+
     var atomicObjects = new List<(Layer layer, Base obj)>();
 
     foreach (TraversalContext tc in objectGraph)
     {
-      var layerName = _autocadLayerManager.GetLayerPath(tc, baseLayerPrefix);
-      if (tc.Current is IInstanceComponent instanceComponent)
+      var layer = _autocadLayerManager.GetLayerPath(tc, baseLayerPrefix);
+      switch (tc.Current)
       {
-        instanceComponents.Add((new string[] { layerName }, instanceComponent));
-      }
-      else
-      {
-        atomicObjects.Add((layerName, tc.Current));
+        case IInstanceComponent instanceComponent:
+          instanceComponents.Add(([new() { name = layer.name }], instanceComponent));
+          break;
+        case GroupProxy:
+          continue;
+        default:
+          atomicObjects.Add((layer, tc.Current));
+          break;
       }
     }
 

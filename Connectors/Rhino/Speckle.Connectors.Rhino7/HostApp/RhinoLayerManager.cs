@@ -29,9 +29,6 @@ public class RhinoLayerManager
   /// <summary>
   /// <para>For receive: Use this method to construct layers in the host app when receiving.</para>.
   /// </summary>
-  /// <param name="path"></param>
-  /// <param name="baseLayerName"></param>
-  /// <returns></returns>
   public int GetAndCreateLayerFromPath(Collection[] collectionPath, string baseLayerName)
   {
     var layerPath = collectionPath.Select(o => string.IsNullOrWhiteSpace(o.name) ? "unnamed" : o.name);
