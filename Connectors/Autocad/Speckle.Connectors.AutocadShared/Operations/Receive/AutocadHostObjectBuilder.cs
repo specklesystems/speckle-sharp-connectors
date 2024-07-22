@@ -73,7 +73,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     // POC: claire doesn't like this - it's confusing to have block definitions in the same instanceComponents list as block instances since they don't have layers
     if (instanceDefinitionProxies != null && instanceDefinitionProxies.Count > 0)
     {
-      var transformed = instanceDefinitionProxies.Select(proxy => (new Collection[] { }, proxy as IInstanceComponent));
+      var transformed = instanceDefinitionProxies.Select(proxy => (Array.Empty<Collection>(), proxy as IInstanceComponent));
       instanceComponents.AddRange(transformed);
     }
 
@@ -85,7 +85,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
 
       if (tc.Current is IInstanceComponent instanceComponent)
       {
-        instanceComponents.Add((new Collection[] { layerCollection }, instanceComponent));
+        instanceComponents.Add(([layerCollection], instanceComponent));
       }
       else
       {

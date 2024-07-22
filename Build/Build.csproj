@@ -6,9 +6,6 @@
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
-  <PropertyGroup>
-    <NoWarn>$(NoWarn);CA1506;</NoWarn>
-  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Bullseye" />
     <PackageReference Include="Glob" />
