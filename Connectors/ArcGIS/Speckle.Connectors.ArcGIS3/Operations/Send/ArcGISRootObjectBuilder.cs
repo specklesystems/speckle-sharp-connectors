@@ -77,7 +77,11 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
           }
         }
 
-        if (_sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference value))
+        // don't use cache for group layers
+        if (
+          mapMember is not GroupLayer
+          && _sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference value)
+        )
         {
           converted = value;
           cacheHitCount++;
