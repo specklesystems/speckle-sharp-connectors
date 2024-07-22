@@ -15,6 +15,6 @@ public static class AssemblyExtensions
 
     // otherwise use assembly version
     // POC: missing version?
-    return assembly.GetName()?.Version?.ToString() ?? "Missing Version";
+    return assembly.GetName().Version?.ToString() ?? "Missing Version";
   }
 }

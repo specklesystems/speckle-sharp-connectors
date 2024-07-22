@@ -6,7 +6,9 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Serilog.Extensions.Logging" />
-    <PackageReference Include="Autofac" PrivateAssets="All" />
+    <PackageReference Include="Autofac" PrivateAssets="All"/>
+    <PackageReference Include="OpenTelemetry" />
+    <PackageReference Include="OpenTelemetry.Exporter.Console" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Speckle.Autofac\Speckle.Autofac.csproj" />

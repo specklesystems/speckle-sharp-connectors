@@ -1,4 +1,5 @@
 using Speckle.Connectors.Utils.Builders;
+using Speckle.Connectors.Utils.Telemetry;
 using Speckle.Core.Api;
 using Speckle.Core.Credentials;
 using Speckle.Core.Logging;
@@ -30,6 +31,7 @@ public sealed class ReceiveOperation
     Action<string, double?>? onOperationProgressed = null
   )
   {
+    using var activity = ActivityFactory.Create("ReceiveOperation");
     // 2 - Check account exist
     Account account = _accountService.GetAccountWithServerUrlFallback(receiveInfo.AccountId, receiveInfo.ServerUrl);
 

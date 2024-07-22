@@ -1,5 +1,6 @@
 ﻿using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
+using Speckle.Connectors.Utils.Telemetry;
 using Speckle.Core.Models;
 
 namespace Speckle.Connectors.Utils.Operations;
@@ -28,6 +29,7 @@ public sealed class SendOperation<T>
     CancellationToken ct = default
   )
   {
+    using var activity = ActivityFactory.Create("SendOperation");
     var buildResult = await _syncToThread
       .RunOnThread(() => _rootObjectBuilder.Build(objects, sendInfo, onOperationProgressed, ct))
       .ConfigureAwait(false);

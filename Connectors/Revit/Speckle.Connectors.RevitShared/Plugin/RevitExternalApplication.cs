@@ -4,6 +4,7 @@ using Autodesk.Revit.UI;
 using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Utils;
+using Speckle.Connectors.Utils.Telemetry;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
@@ -12,6 +13,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
   private IRevitPlugin? _revitPlugin;
 
   private SpeckleContainer? _container;
+  private IDisposable? _openTelemetry;
 
   // POC: this is getting hard coded - need a way of injecting it
   //      I am beginning to think the shared project is not the way
@@ -66,7 +68,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
         .AddSingleton(_revitSettings) // apply revit settings into DI
         .AddSingleton(application) // inject UIControlledApplication application
         .Build();
-
+      _openTelemetry = OpenTelemetryBuilder.Initialize(_revitSettings.RevitButtonText + " " + GetVersionAsString());
       // resolve root object
       _revitPlugin = _container.Resolve<IRevitPlugin>();
       _revitPlugin.Initialise();
@@ -88,6 +90,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
       // possibly with injected pieces or with some abstract methods?
       // need to look for commonality
       _revitPlugin?.Shutdown();
+      _openTelemetry?.Dispose();
     }
     catch (Exception e) when (!e.IsFatal())
     {
