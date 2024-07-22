@@ -96,7 +96,7 @@ csharp_style_pattern_matching_over_as_with_null_check = true:suggestion
 csharp_style_inlined_variable_declaration = true:suggestion
 csharp_style_throw_expression = true:suggestion
 csharp_style_conditional_delegate_call = true:suggestion
-csharp_style_namespace_declarations = file_scoped:silent
+csharp_style_namespace_declarations = file_scoped
 
 # Newline settings
 csharp_new_line_before_open_brace = all
@@ -134,7 +134,7 @@ csharp_preserve_single_line_blocks = true
 # Non-private fields are PascalCase
 dotnet_naming_rule.non_private_readonly_fields_should_be_pascal_case.severity = warning
 dotnet_naming_rule.non_private_readonly_fields_should_be_pascal_case.symbols = non_private_readonly_fields
-dotnet_naming_rule.non_private_readonly_fields_should_be_pascal_case.style = pascal_case_style
+dotnet_naming_rule.non_private_readonly_fields_should_be_pascal_case.style = non_private_readonly_field_style
 
 dotnet_naming_symbols.non_private_readonly_fields.applicable_kinds = field
 dotnet_naming_symbols.non_private_readonly_fields.applicable_accessibilities = public, protected, internal, protected_internal, private_protected
@@ -186,7 +186,7 @@ dotnet_naming_style.camel_case_style.capitalization = camel_case
 # Local functions are PascalCase
 dotnet_naming_rule.local_functions_should_be_pascal_case.severity = warning
 dotnet_naming_rule.local_functions_should_be_pascal_case.symbols = local_functions
-dotnet_naming_rule.local_functions_should_be_pascal_case.style = pascal_case_style
+dotnet_naming_rule.local_functions_should_be_pascal_case.style = local_function_style
 
 dotnet_naming_symbols.local_functions.applicable_kinds = local_function
 
@@ -212,6 +212,7 @@ dotnet_diagnostic.ide0058.severity = none # Remove unnecessary expression value:
 dotnet_diagnostic.ide0010.severity = none # Add missing cases to switch statement: Too verbose
 dotnet_diagnostic.ide0200.severity = none # Remove unnecessary lambda expression: may be performance reasons not to
 dotnet_diagnostic.ide0058.severity = none # Remove unnecessary expression value: Subjective
+dotnet_diagnostic.ide0305.severity = none # Use collection expression for fluent: Can obfuscate intent
 dotnet_diagnostic.ide0001.severity = suggestion # Name can be simplified: Non enforceable in build
 dotnet_diagnostic.ide0046.severity = suggestion # Use conditional expression for return: Subjective
 dotnet_diagnostic.ide0045.severity = suggestion # Use conditional expression for assignment: Subjective
@@ -233,9 +234,11 @@ dotnet_diagnostic.ide0042.severity = suggestion # Deconstruct variable declarati
 dotnet_diagnostic.ide0028.severity = suggestion # Use collection initializers: Subjective
 dotnet_diagnostic.ide0072.severity = suggestion # Populate switch statement: Subjective
 dotnet_diagnostic.ide0074.severity = suggestion # Use compound assignment: Subjective
-dotnet_diagnostic.ide0300.severity = suggestion # collection can be simplied
-dotnet_diagnostic.ide0005.severity = error # usings
-dotnet_diagnostic.ide0290.severity = suggestion # primary constructors
+dotnet_diagnostic.ide0300.severity = suggestion # Use collection expression for array: Subjective, maybe aspirational
+dotnet_diagnostic.ide0290.severity = suggestion # primary constructors: subjective, and readonly properties are not a thing
+dotnet_diagnostic.ide0290.severity = suggestion # Use primary constructor: Subjective
+dotnet_diagnostic.ide0037.severity = suggestion # Use inferred member names: Sometimes its nice to be explicit
+dotnet_diagnostic.ide0301.severity = suggestion # Use collection expression for empty: Subjective, intent
 
 # Maintainability rules
 dotnet_diagnostic.ca1501.severity = warning # Avoid excessive inheritance
@@ -305,17 +308,8 @@ dotnet_diagnostic.NUnit2036.severity = warning # Consider using Assert.That(coll
 dotnet_diagnostic.NUnit2037.severity = warning # Consider using Assert.That(collection, Does.Contain(instance)) instead of Assert.Contains(instance, collection)
 dotnet_diagnostic.NUnit2038.severity = warning # Consider using Assert.That(actual, Is.InstanceOf(expected)) instead of Assert.IsInstanceOf(expected, actual)
 dotnet_diagnostic.NUnit2039.severity = warning # Consider using Assert.That(actual, Is.Not.InstanceOf(expected)) instead of Assert.IsNotInstanceOf(expected, actual)
-csharp_prefer_simple_using_statement = true:suggestion
-csharp_prefer_braces = true:silent
-csharp_style_prefer_method_group_conversion = true:silent
-csharp_style_prefer_top_level_statements = true:silent
-csharp_style_prefer_primary_constructors = true:suggestion
-csharp_indent_labels = one_less_than_current
-csharp_style_expression_bodied_lambdas = true:silent
 
 [*.{appxmanifest,asax,ascx,aspx,axaml,build,c,c++,cc,cginc,compute,cp,cpp,cs,cshtml,cu,cuh,cxx,dtd,fs,fsi,fsscript,fsx,fx,fxh,h,hh,hlsl,hlsli,hlslinc,hpp,hxx,inc,inl,ino,ipp,ixx,master,ml,mli,mpp,mq4,mq5,mqh,nuspec,paml,razor,resw,resx,shader,skin,tpp,usf,ush,vb,xaml,xamlx,xoml,xsd}]
 indent_style = space
 indent_size = 2
 tab_width = 2
-dotnet_style_operator_placement_when_wrapping = beginning_of_line
-end_of_line = crlf
