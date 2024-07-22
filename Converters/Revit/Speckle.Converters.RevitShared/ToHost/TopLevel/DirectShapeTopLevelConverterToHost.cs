@@ -58,7 +58,7 @@ public sealed class DirectShapeTopLevelConverterToHost(
 
     var cat = contextStack.Current.Document.Settings.Categories.get_Item(bic);
 
-    var revitDs = DB.DirectShape.CreateElement(contextStack.Current.Document, cat.Id);
+    using var revitDs = DB.DirectShape.CreateElement(contextStack.Current.Document, cat.Id);
     if (target.applicationId != null)
     {
       revitDs.ApplicationId = target.applicationId;

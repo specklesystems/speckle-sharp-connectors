@@ -16,6 +16,6 @@ public class EllipseToSpeckleConverterTests : MoqTest
     var planeConverter = Create<ITypedConverter<RG.Plane, SOG.Plane>>();
     var boxConverter = Create<ITypedConverter<RG.Box, SOG.Box>>();
 
-    var x = new EllipseToSpeckleConverter(planeConverter.Object, boxConverter.Object, conversionContextStack.Object);
+    _ = new EllipseToSpeckleConverter(planeConverter.Object, boxConverter.Object, conversionContextStack.Object);
   }
 }

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
@@ -7,7 +8,7 @@ using Speckle.Converters.RevitShared.ToSpeckle;
 namespace Speckle.Converters.RevitShared.ToHost.TopLevel;
 
 [NameAndRankValue(nameof(SOG.Point), 0)]
-internal class PointToHostTopLevelConverter
+public sealed class PointToHostTopLevelConverter
   : BaseTopLevelConverterToHost<SOG.Point, DB.Solid>,
     ITypedConverter<SOG.Point, DB.Solid>
 {
@@ -23,6 +24,7 @@ internal class PointToHostTopLevelConverter
     _pointConverter = pointConverter;
   }
 
+  [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Disposal transfter")]
   public override DB.Solid Convert(SOG.Point target)
   {
     List<Curve> profile = new();
@@ -37,19 +39,19 @@ internal class PointToHostTopLevelConverter
     profile.Add(Line.CreateBound(profilePlus, profileMinus));
     profile.Add(Arc.Create(profileMinus, profilePlus, center.Add(new XYZ(radius, 0, 0))));
 
-    CurveLoop curveLoop = CurveLoop.Create(profile);
-    SolidOptions options = new(ElementId.InvalidElementId, ElementId.InvalidElementId);
+    using SolidOptions options = new(ElementId.InvalidElementId, ElementId.InvalidElementId);
 
-    Frame frame = new(center, XYZ.BasisX, XYZ.BasisZ.Multiply(-1), XYZ.BasisY);
+    using Frame frame = new(center, XYZ.BasisX, XYZ.BasisZ.Multiply(-1), XYZ.BasisY);
 
     if (!Frame.CanDefineRevitGeometry(frame))
     {
       throw new SpeckleConversionException("Unable to define Revit geometry");
     }
 
+    CurveLoop curveLoop = CurveLoop.Create(profile);
     Solid sphere = GeometryCreationUtilities.CreateRevolvedGeometry(frame, [curveLoop], 0, 2 * Math.PI, options);
 
-    DirectShape ds = DirectShape.CreateElement(
+    using DirectShape ds = DirectShape.CreateElement(
       _contextStack.Current.Document,
       new ElementId(BuiltInCategory.OST_GenericModel)
     );

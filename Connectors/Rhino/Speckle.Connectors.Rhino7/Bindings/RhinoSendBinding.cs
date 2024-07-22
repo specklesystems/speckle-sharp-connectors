@@ -8,7 +8,6 @@ using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
-using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Rhino7.HostApp;
 using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Caching;
