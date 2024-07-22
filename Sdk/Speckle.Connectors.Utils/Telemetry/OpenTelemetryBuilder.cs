@@ -6,7 +6,7 @@ namespace Speckle.Connectors.Utils.Telemetry;
 
 public class OpenTelemetryBuilder(IDisposable? traceProvider) : IDisposable
 {
-  internal class MyProcessor : BaseProcessor<Activity>
+  private class MyProcessor : BaseProcessor<Activity>
   {
     public override void OnStart(Activity activity)
     {
@@ -26,30 +26,23 @@ public class OpenTelemetryBuilder(IDisposable? traceProvider) : IDisposable
 
   public static IDisposable Initialize(string application)
   {
-    var tracerProvider = Sdk.CreateTracerProviderBuilder()
-      .AddSource(application)
-      .AddProcessor(new MyProcessor()) // This must be added before ConsoleExporter
-      //.AddConsoleExporter()
-      .Build();
+    var tracer = Sdk.CreateTracerProviderBuilder().AddSource(application);
+    // .AddProcessor(new MyProcessor()) // This must be added before ConsoleExporter
+    tracer.AddConsoleExporter();
+
     ActivityFactory.Initialize(application);
 
-    return new OpenTelemetryBuilder(tracerProvider);
+    return new OpenTelemetryBuilder(tracer.Build());
   }
 
-  public void Dispose()
-  {
-    traceProvider?.Dispose();
-  }
+  public void Dispose() => traceProvider?.Dispose();
 }
 
 public static class ActivityFactory
 {
   private static ActivitySource? _activitySource;
 
-  public static void Initialize(string application)
-  {
-    _activitySource = new ActivitySource(application, "1.0.0");
-  }
+  public static void Initialize(string application) => _activitySource = new ActivitySource(application, "1.0.0");
 
   public static Activity? Create(string name)
   {

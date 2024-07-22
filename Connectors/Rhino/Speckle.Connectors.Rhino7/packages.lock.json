@@ -517,6 +517,7 @@
         "type": "Project",
         "dependencies": {
           "OpenTelemetry": "[1.5.1, )",
+          "OpenTelemetry.Exporter.Console": "[1.5.1, )",
           "Serilog.Extensions.Logging": "[7.0.0, )",
           "Speckle.Autofac": "[1.0.0, )",
           "Speckle.Core": "[3.1.0-dev.75, )"
@@ -573,6 +574,17 @@
         "dependencies": {
           "Microsoft.Extensions.Logging.Configuration": "3.1.0",
           "OpenTelemetry.Api.ProviderBuilderExtensions": "1.5.1"
+        }
+      },
+      "OpenTelemetry.Exporter.Console": {
+        "type": "CentralTransitive",
+        "requested": "[1.5.1, )",
+        "resolved": "1.5.1",
+        "contentHash": "l9ULCfv7Ye6At3djIbufbG0fkIZHCNaPbnRyQXDi1xUAlKo0HFfPe2WtQ2kUeExlqR8FiMVnLLR//wCxGl7SSg==",
+        "dependencies": {
+          "OpenTelemetry": "1.5.1",
+          "System.Text.Encodings.Web": "4.7.2",
+          "System.Text.Json": "4.7.2"
         }
       },
       "Serilog.Extensions.Logging": {
