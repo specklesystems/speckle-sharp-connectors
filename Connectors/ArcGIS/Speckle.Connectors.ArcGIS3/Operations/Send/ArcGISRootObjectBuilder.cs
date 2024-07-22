@@ -61,8 +61,9 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
 
       try
       {
+        int groupCount = nestedGroups.Count; // bake here, because count will change in the loop
         // if the layer is not a part of the group, reset groups
-        for (int i = 0; i < nestedGroups.Count; i++)
+        for (int i = 0; i < groupCount; i++)
         {
           if (nestedGroups.Count > 0 && !nestedGroups[0].Item1.Layers.Select(x => x.URI).Contains(applicationId))
           {
