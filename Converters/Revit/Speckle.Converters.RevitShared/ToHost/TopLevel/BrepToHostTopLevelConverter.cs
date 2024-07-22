@@ -216,7 +216,6 @@ public sealed class BrepTopLevelConverterToHost
 
   private (DB.Curve, DB.Curve) SplitCurveInTwoHalves(DB.Curve nativeCurve)
   {
-    var curveArray = new DB.CurveArray();
     // Revit does not like single curve loop edges, so we split them in two.
     var start = nativeCurve.GetEndParameter(0);
     var end = nativeCurve.GetEndParameter(1);
@@ -224,10 +223,8 @@ public sealed class BrepTopLevelConverterToHost
 
     var a = nativeCurve.Clone();
     a.MakeBound(start, mid);
-    curveArray.Append(a);
     var b = nativeCurve.Clone();
     b.MakeBound(mid, end);
-    curveArray.Append(b);
 
     return (a, b);
   }

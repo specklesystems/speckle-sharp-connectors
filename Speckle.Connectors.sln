@@ -12,6 +12,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{85A13E
 		Directory.Packages.props = Directory.Packages.props
 		global.json = global.json
 		README.md = README.md
+		CodeMetricsConfig.txt = CodeMetricsConfig.txt
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DUI3", "DUI3", "{FD4D6594-D81E-456F-8F2E-35B09E04A755}"

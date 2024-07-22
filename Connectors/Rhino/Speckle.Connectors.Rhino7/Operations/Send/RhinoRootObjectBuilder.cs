@@ -1,6 +1,5 @@
 using Rhino;
 using Rhino.DocObjects;
-using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.Rhino7.HostApp;
 using Speckle.Connectors.Utils.Builders;

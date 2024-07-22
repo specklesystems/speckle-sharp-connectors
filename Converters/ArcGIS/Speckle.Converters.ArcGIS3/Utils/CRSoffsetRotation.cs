@@ -141,9 +141,9 @@ public struct CRSoffsetRotation
 
     if (
       textData != null
-      && textData.ToLower().Contains("_specklexoffset=")
-      && textData.ToLower().Contains("_speckleyoffset=")
-      && textData.ToLower().Contains("_specklenorth=")
+      && textData.Contains("_specklexoffset=", StringComparison.CurrentCultureIgnoreCase)
+      && textData.Contains("_speckleyoffset=", StringComparison.CurrentCultureIgnoreCase)
+      && textData.Contains("_specklenorth=", StringComparison.CurrentCultureIgnoreCase)
     )
     {
       string? latElement = textData.ToLower().Split("_speckleyoffset=")[^1].Split("_")[0];
