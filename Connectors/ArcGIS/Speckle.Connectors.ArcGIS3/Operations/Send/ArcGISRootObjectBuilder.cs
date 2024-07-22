@@ -119,10 +119,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
           converted.applicationId = applicationId;
         }
 
-        if (
-          nestedGroups.Count == 0
-          || (nestedGroups.Count == 1 && nestedGroups[0].Item2.applicationId == applicationId)
-        )
+        if (nestedGroups.Count == 0 || nestedGroups.Count == 1 && nestedGroups[0].Item2.applicationId == applicationId)
         {
           // add to host if no groups, or current root group
           collectionHost.elements.Add(converted);
