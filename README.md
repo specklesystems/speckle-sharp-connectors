@@ -12,17 +12,11 @@ Use [CSharpier](https://github.com/belav/csharpier) to format.  There are a few 
 
 ## Local development with SDK changes
 
-First build the SDK repo to create nugets:
-![image](/Images/pack.png)
+Use the `Local.sln` to include the Core and Objects projects from the SDK repo.  This setup assumes the two Git repos are side by side.
 
-Then build the connectors repo to create a local nuget feed with a custom command:
-![image](/Images/add-local-sdk.png)
+Using the `Local.sln` will modify all your package locks.  Don't check these in!  Revert or use the regular solution to revert once your changes are made.
 
-Then change your local connectors `Directory.Packages.props`
-
-![image](/Images/update-local.png)
-
-A restore from your IDE will modify package locks and use the new feed for a new version instead of using nuget because the version shouldn't exist yet
+This uses a new Configuration for the solutions and projects which means that `Local` is now a build directory alongside `Debug` and `Release`
 
 ## Other Build commands
 
@@ -30,4 +24,4 @@ A restore from your IDE will modify package locks and use the new feed for a new
 
 Run this to delete package.lock.json files when restores go run.
 
-![image](/Images/clean-locks.png)
+![image](/Images/clean-locks.png) 

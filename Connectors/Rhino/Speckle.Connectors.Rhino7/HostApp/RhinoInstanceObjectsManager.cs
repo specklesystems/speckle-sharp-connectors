@@ -7,6 +7,7 @@ using Speckle.Connectors.Utils.Instances;
 using Speckle.Core.Kits;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
+using Speckle.Core.Models.Collections;
 using Speckle.Core.Models.Instances;
 using Speckle.DoubleNumerics;
 
@@ -53,10 +54,10 @@ public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInst
       new()
       {
         applicationId = instanceId,
-        DefinitionId = instance.InstanceDefinition.Id.ToString(),
-        Transform = XFormToMatrix(instance.InstanceXform),
-        MaxDepth = depth,
-        Units = currentDoc.ModelUnitSystem.ToSpeckleString()
+        definitionId = instance.InstanceDefinition.Id.ToString(),
+        transform = XFormToMatrix(instance.InstanceXform),
+        maxDepth = depth,
+        units = currentDoc.ModelUnitSystem.ToSpeckleString()
       };
     _instanceObjectsManager.AddInstanceProxy(instanceId, instanceProxy);
 
@@ -77,9 +78,9 @@ public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInst
     // We ensure that all previous instance proxies that have the same definition are at this max depth. I kind of have a feeling this can be done more elegantly, but YOLO
     foreach (var instanceProxyWithSameDefinition in instanceProxiesWithSameDefinition)
     {
-      if (instanceProxyWithSameDefinition.MaxDepth < depth)
+      if (instanceProxyWithSameDefinition.maxDepth < depth)
       {
-        instanceProxyWithSameDefinition.MaxDepth = depth;
+        instanceProxyWithSameDefinition.maxDepth = depth;
       }
     }
 
@@ -87,7 +88,7 @@ public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInst
 
     if (_instanceObjectsManager.TryGetInstanceDefinitionProxy(instanceDefinitionId, out InstanceDefinitionProxy value))
     {
-      int depthDifference = depth - value.MaxDepth;
+      int depthDifference = depth - value.maxDepth;
       if (depthDifference > 0)
       {
         // all MaxDepth of children definitions and its instances should be increased with difference of depth
@@ -99,9 +100,9 @@ public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInst
     var definition = new InstanceDefinitionProxy
     {
       applicationId = instanceDefinitionId,
-      Objects = new List<string>(),
-      MaxDepth = depth,
-      Name = instance.InstanceDefinition.Name,
+      objects = new List<string>(),
+      maxDepth = depth,
+      name = instance.InstanceDefinition.Name,
       ["description"] = instance.InstanceDefinition.Description
     };
 
@@ -109,7 +110,7 @@ public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInst
 
     foreach (var obj in instance.InstanceDefinition.GetObjects())
     {
-      definition.Objects.Add(obj.Id.ToString());
+      definition.objects.Add(obj.Id.ToString());
       if (obj is InstanceObject localInstance)
       {
         UnpackInstance(localInstance, depth + 1);
@@ -125,7 +126,7 @@ public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInst
   /// <param name="applicationIdMap">A dict mapping { original application id -> [resulting application ids post conversion] }</param>
   /// <param name="onOperationProgressed"></param>
   public BakeResult BakeInstances(
-    List<(string[] layerPath, IInstanceComponent obj)> instanceComponents,
+    List<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
     Dictionary<string, List<string>> applicationIdMap,
     string baseLayerName,
     Action<string, double?>? onOperationProgressed
@@ -135,7 +136,7 @@ public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInst
     var doc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
 
     var sortedInstanceComponents = instanceComponents
-      .OrderByDescending(x => x.obj.MaxDepth) // Sort by max depth, so we start baking from the deepest element first
+      .OrderByDescending(x => x.obj.maxDepth) // Sort by max depth, so we start baking from the deepest element first
       .ThenBy(x => x.obj is InstanceDefinitionProxy ? 0 : 1) // Ensure we bake the deepest definition first, then any instances that depend on it
       .ToList();
     var definitionIdAndApplicationIdMap = new Dictionary<string, int>();
@@ -144,7 +145,7 @@ public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInst
     var conversionResults = new List<ReceiveConversionResult>();
     var createdObjectIds = new List<string>();
     var consumedObjectIds = new List<string>();
-    foreach (var (path, instanceOrDefinition) in sortedInstanceComponents)
+    foreach (var (layerCollection, instanceOrDefinition) in sortedInstanceComponents)
     {
       onOperationProgressed?.Invoke("Converting blocks", (double)++count / sortedInstanceComponents.Count);
       try
@@ -152,7 +153,7 @@ public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInst
         if (instanceOrDefinition is InstanceDefinitionProxy definitionProxy)
         {
           var currentApplicationObjectsIds = definitionProxy
-            .Objects.Select(x => applicationIdMap.TryGetValue(x, out List<string> value) ? value : null)
+            .objects.Select(x => applicationIdMap.TryGetValue(x, out List<string> value) ? value : null)
             .Where(x => x is not null)
             .SelectMany(id => id)
             .ToList();
@@ -168,7 +169,7 @@ public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInst
           }
 
           // POC: Currently we're relying on the definition name for identification if it's coming from speckle and from which model; could we do something else?
-          var defName = $"{definitionProxy.Name}-({definitionProxy.applicationId})-{baseLayerName}";
+          var defName = $"{definitionProxy.name}-({definitionProxy.applicationId})-{baseLayerName}";
           var defIndex = doc.InstanceDefinitions.Add(
             defName,
             "No description", // POC: perhaps bring it along from source? We'd need to look at ACAD first
@@ -196,11 +197,11 @@ public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInst
 
         if (
           instanceOrDefinition is InstanceProxy instanceProxy
-          && definitionIdAndApplicationIdMap.TryGetValue(instanceProxy.DefinitionId, out int index)
+          && definitionIdAndApplicationIdMap.TryGetValue(instanceProxy.definitionId, out int index)
         )
         {
-          var transform = MatrixToTransform(instanceProxy.Transform, instanceProxy.Units);
-          var layerIndex = _layerManager.GetAndCreateLayerFromPath(path, baseLayerName);
+          var transform = MatrixToTransform(instanceProxy.transform, instanceProxy.units);
+          var layerIndex = _layerManager.GetAndCreateLayerFromPath(layerCollection, baseLayerName);
           var id = doc.Objects.AddInstanceObject(index, transform, new ObjectAttributes() { LayerIndex = layerIndex });
           if (instanceProxy.applicationId != null)
           {

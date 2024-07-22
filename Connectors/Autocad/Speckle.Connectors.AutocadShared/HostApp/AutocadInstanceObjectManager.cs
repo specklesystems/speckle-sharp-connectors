@@ -7,6 +7,7 @@ using Speckle.Connectors.Utils.Instances;
 using Speckle.Core.Kits;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
+using Speckle.Core.Models.Collections;
 using Speckle.Core.Models.Instances;
 using Speckle.DoubleNumerics;
 
@@ -55,10 +56,10 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
       new()
       {
         applicationId = instanceIdString,
-        DefinitionId = definitionId.ToString(),
-        MaxDepth = depth,
-        Transform = GetMatrix(instance.BlockTransform.ToArray()),
-        Units = Application.DocumentManager.CurrentDocument.Database.Insunits.ToSpeckleString()
+        definitionId = definitionId.ToString(),
+        maxDepth = depth,
+        transform = GetMatrix(instance.BlockTransform.ToArray()),
+        units = Application.DocumentManager.CurrentDocument.Database.Insunits.ToSpeckleString()
       };
     _instanceObjectsManager.AddInstanceProxy(instanceIdString, instanceProxy);
 
@@ -82,9 +83,9 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
     // We ensure that all previous instance proxies that have the same definition are at this max depth. I kind of have a feeling this can be done more elegantly, but YOLO
     foreach (var instanceProxyWithSameDefinition in instanceProxiesWithSameDefinition)
     {
-      if (instanceProxyWithSameDefinition.MaxDepth < depth)
+      if (instanceProxyWithSameDefinition.maxDepth < depth)
       {
-        instanceProxyWithSameDefinition.MaxDepth = depth;
+        instanceProxyWithSameDefinition.maxDepth = depth;
       }
     }
 
@@ -94,7 +95,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
       _instanceObjectsManager.TryGetInstanceDefinitionProxy(definitionId.ToString(), out InstanceDefinitionProxy value)
     )
     {
-      int depthDifference = depth - value.MaxDepth;
+      int depthDifference = depth - value.maxDepth;
       if (depthDifference > 0)
       {
         // all MaxDepth of children definitions and its instances should be increased with difference of depth
@@ -108,9 +109,9 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
     var definitionProxy = new InstanceDefinitionProxy()
     {
       applicationId = definitionId.ToString(),
-      Objects = new(),
-      MaxDepth = depth,
-      Name = definition.Name,
+      objects = new(),
+      maxDepth = depth,
+      name = definition.Name,
       ["comments"] = definition.Comments,
       ["units"] = definition.Units // ? not sure needed?
     };
@@ -120,7 +121,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
     {
       var obj = transaction.GetObject(id, OpenMode.ForRead);
       var handleIdString = obj.Handle.Value.ToString();
-      definitionProxy.Objects.Add(handleIdString);
+      definitionProxy.objects.Add(handleIdString);
 
       if (obj is BlockReference blockReference && !blockReference.IsDynamicBlock)
       {
@@ -133,14 +134,14 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
   }
 
   public BakeResult BakeInstances(
-    List<(string[] layerPath, IInstanceComponent obj)> instanceComponents,
+    List<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
     Dictionary<string, List<Entity>> applicationIdMap,
     string baseLayerName,
     Action<string, double?>? onOperationProgressed
   )
   {
     var sortedInstanceComponents = instanceComponents
-      .OrderByDescending(x => x.obj.MaxDepth) // Sort by max depth, so we start baking from the deepest element first
+      .OrderByDescending(x => x.obj.maxDepth) // Sort by max depth, so we start baking from the deepest element first
       .ThenBy(x => x.obj is InstanceDefinitionProxy ? 0 : 1) // Ensure we bake the deepest definition first, then any instances that depend on it
       .ToList();
 
@@ -152,7 +153,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
     var consumedObjectIds = new List<string>();
     var count = 0;
 
-    foreach (var (path, instanceOrDefinition) in sortedInstanceComponents)
+    foreach (var (collectionPath, instanceOrDefinition) in sortedInstanceComponents)
     {
       try
       {
@@ -161,7 +162,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
         {
           // TODO: create definition (block table record)
           var constituentEntities = definitionProxy
-            .Objects.Select(id => applicationIdMap.TryGetValue(id, out List<Entity> value) ? value : null)
+            .objects.Select(id => applicationIdMap.TryGetValue(id, out List<Entity> value) ? value : null)
             .Where(x => x is not null)
             .SelectMany(ent => ent)
             .ToList();
@@ -169,7 +170,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
           var record = new BlockTableRecord();
           var objectIds = new ObjectIdCollection();
           // We're expecting to have Name prop always for definitions. If there is an edge case, ask to Dim or Ogu
-          record.Name = $"{definitionProxy.Name}-({definitionProxy.applicationId})-{baseLayerName}";
+          record.Name = $"{definitionProxy.name}-({definitionProxy.applicationId})-{baseLayerName}";
 
           foreach (var entity in constituentEntities)
           {
@@ -190,20 +191,22 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
         }
         else if (
           instanceOrDefinition is InstanceProxy instanceProxy
-          && definitionIdAndApplicationIdMap.TryGetValue(instanceProxy.DefinitionId, out ObjectId definitionId)
+          && definitionIdAndApplicationIdMap.TryGetValue(instanceProxy.definitionId, out ObjectId definitionId)
         )
         {
-          var matrix3d = GetMatrix3d(instanceProxy.Transform, instanceProxy.Units);
+          var matrix3d = GetMatrix3d(instanceProxy.transform, instanceProxy.units);
           var insertionPoint = Point3d.Origin.TransformBy(matrix3d);
 
           var modelSpaceBlockTableRecord = Application.DocumentManager.CurrentDocument.Database.GetModelSpace(
             OpenMode.ForWrite
           );
-          _autocadLayerManager.CreateLayerForReceive(path[0]);
+
+          // POC: collectionPath for instances should be an array of size 1, because we are flattening collections on traversal
+          _autocadLayerManager.CreateLayerForReceive(collectionPath[0]);
           var blockRef = new BlockReference(insertionPoint, definitionId)
           {
             BlockTransform = matrix3d,
-            Layer = path[0],
+            Layer = collectionPath[0].name,
           };
 
           modelSpaceBlockTableRecord.AppendEntity(blockRef);

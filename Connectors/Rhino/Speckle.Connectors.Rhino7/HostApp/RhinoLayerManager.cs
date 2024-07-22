@@ -1,8 +1,9 @@
 using System.Diagnostics.Contracts;
 using Rhino;
-using Speckle.Core.Models;
+using Speckle.Core.Models.Collections;
 using Speckle.Core.Models.GraphTraversal;
 using Layer = Rhino.DocObjects.Layer;
+using SpeckleLayer = Speckle.Core.Models.Collections.Layer;
 
 namespace Speckle.Connectors.Rhino7.HostApp;
 
@@ -28,24 +29,24 @@ public class RhinoLayerManager
   /// <summary>
   /// <para>For receive: Use this method to construct layers in the host app when receiving.</para>.
   /// </summary>
-  /// <param name="path"></param>
   /// <param name="baseLayerName"></param>
   /// <returns></returns>
-  public int GetAndCreateLayerFromPath(string[] path, string baseLayerName)
+  public int GetAndCreateLayerFromPath(Collection[] collectionPath, string baseLayerName)
   {
-    var fullLayerName = string.Join(Layer.PathSeparator, path);
-    if (_hostLayerCache.TryGetValue(fullLayerName, out int existingLayerIndex))
+    var layerPath = collectionPath.Select(o => string.IsNullOrWhiteSpace(o.name) ? "unnamed" : o.name);
+    var layerFullName = string.Join(Layer.PathSeparator, layerPath);
+
+    if (_hostLayerCache.TryGetValue(layerFullName, out int existingLayerIndex))
     {
       return existingLayerIndex;
     }
 
     var currentLayerName = baseLayerName;
     var currentDocument = RhinoDoc.ActiveDoc; // POC: too much effort right now to wrap around the interfaced layers
-
     var previousLayer = currentDocument.Layers.FindName(currentLayerName);
-    foreach (var layerName in path)
+    foreach (Collection collection in collectionPath)
     {
-      currentLayerName = baseLayerName + Layer.PathSeparator + layerName;
+      currentLayerName = baseLayerName + Layer.PathSeparator + collection.name;
       currentLayerName = currentLayerName.Replace("{", "").Replace("}", ""); // Rhino specific cleanup for gh (see RemoveInvalidRhinoChars)
       if (_hostLayerCache.TryGetValue(currentLayerName, out int value))
       {
@@ -53,8 +54,17 @@ public class RhinoLayerManager
         continue;
       }
 
-      var cleanNewLayerName = layerName.Replace("{", "").Replace("}", "");
-      var newLayer = new Layer { Name = cleanNewLayerName, ParentLayerId = previousLayer.Id };
+      var cleanNewLayerName = collection.name.Replace("{", "").Replace("}", "");
+      Color layerColor = collection is IHasColor coloredCollection
+        ? Color.FromArgb(coloredCollection.color)
+        : Color.Black;
+      var newLayer = new Layer
+      {
+        Name = cleanNewLayerName,
+        ParentLayerId = previousLayer.Id,
+        Color = layerColor
+      };
+
       var index = currentDocument.Layers.Add(newLayer);
       _hostLayerCache.Add(currentLayerName, index);
       previousLayer = currentDocument.Layers.FindIndex(index); // note we need to get the correct id out, hence why we're double calling this
@@ -83,6 +93,7 @@ public class RhinoLayerManager
     foreach (var layerName in names)
     {
       var existingLayerIndex = RhinoDoc.ActiveDoc.Layers.FindByFullPath(path, -1);
+      var rhLayer = RhinoDoc.ActiveDoc.Layers[existingLayerIndex];
       Collection? childCollection = null;
       if (_layerCollectionCache.TryGetValue(existingLayerIndex, out Collection? collection))
       {
@@ -90,10 +101,11 @@ public class RhinoLayerManager
       }
       else
       {
-        childCollection = new Collection(layerName, "layer")
+        childCollection = new SpeckleLayer(layerName, rhLayer.Color.ToArgb())
         {
           applicationId = RhinoDoc.ActiveDoc.Layers[existingLayerIndex].Id.ToString()
         };
+
         previousCollection.elements.Add(childCollection);
         _layerCollectionCache[existingLayerIndex] = childCollection;
       }
@@ -104,6 +116,7 @@ public class RhinoLayerManager
       {
         path += Layer.PathSeparator + names[index + 1];
       }
+
       index++;
     }
 
@@ -111,12 +124,21 @@ public class RhinoLayerManager
     return previousCollection;
   }
 
+  /// <summary>
+  /// Gets the full path of the layer, concatenated with Rhino's Layer.PathSeparator
+  /// </summary>
+  /// <param name="context"></param>
+  /// <returns></returns>
   [Pure]
-  public string[] GetLayerPath(TraversalContext context)
+  public Collection[] GetLayerPath(TraversalContext context)
   {
-    string[] collectionBasedPath = context.GetAscendantOfType<Collection>().Select(c => c.name).ToArray();
-    string[] reverseOrderPath =
-      collectionBasedPath.Length != 0 ? collectionBasedPath : context.GetPropertyPath().ToArray();
-    return reverseOrderPath.Reverse().ToArray();
+    Collection[] collectionBasedPath = context.GetAscendantOfType<Collection>().Reverse().ToArray();
+
+    Collection[] collectionPath =
+      collectionBasedPath.Length != 0
+        ? collectionBasedPath
+        : context.GetPropertyPath().Reverse().Select(o => new Collection() { name = o }).ToArray();
+
+    return collectionPath;
   }
 }

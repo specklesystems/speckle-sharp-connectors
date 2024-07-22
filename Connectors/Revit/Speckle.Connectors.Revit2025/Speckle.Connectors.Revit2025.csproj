@@ -9,6 +9,7 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
 
   <Import Project="..\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems" Label="Shared" />
@@ -26,6 +27,5 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" IncludeAssets="compile" />
     <PackageReference Include="Revit.Async" />
-    <PackageReference Include="Speckle.Core" />
   </ItemGroup>
 </Project>

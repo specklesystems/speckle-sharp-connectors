@@ -2,14 +2,16 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Speckle.Objects" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Speckle.Autofac\Speckle.Autofac.csproj" />
   </ItemGroup>
-
+  <ItemGroup Condition="'$(Configuration)' == 'Local'"> 
+    <ProjectReference Include="..\..\..\speckle-sharp-sdk\src\Speckle.Objects\Speckle.Objects.csproj" />
+  </ItemGroup> 
+  <ItemGroup Condition="'$(Configuration)' != 'Local'"> 
+    <PackageReference Include="Speckle.Objects" />
+  </ItemGroup> 
 </Project>
