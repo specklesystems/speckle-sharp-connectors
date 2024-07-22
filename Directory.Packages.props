@@ -3,7 +3,7 @@
     <PackageVersion Include="altcover" Version="8.8.74" />
     <PackageVersion Include="Autofac" Version="5.2.0" />
     <PackageVersion Include="OpenTelemetry" Version="1.5.1" />
-    <PackageVersion Include="OpenTelemetry.Exporter.Console " Version="1.5.1" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.5.1" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.0" />
     <PackageVersion Include="Serilog.Extensions.Logging" Version="7.0.0" />
     <PackageVersion Include="FluentAssertions" Version="6.12.0" />

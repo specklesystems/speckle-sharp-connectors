@@ -1,5 +1,11 @@
 ﻿using System.Diagnostics;
+using System.Linq.Expressions;
+using System.Reflection;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using OpenTelemetry;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Trace;
 
 namespace Speckle.Connectors.Utils.Telemetry;
@@ -26,13 +32,53 @@ public class OpenTelemetryBuilder(IDisposable? traceProvider) : IDisposable
 
   public static IDisposable Initialize(string application)
   {
-    var tracer = Sdk.CreateTracerProviderBuilder().AddSource(application);
+    TracerProviderBuilder tracer = Sdk.CreateTracerProviderBuilder().AddSource(application);
     // .AddProcessor(new MyProcessor()) // This must be added before ConsoleExporter
-    tracer.AddConsoleExporter();
-
+    // tracer.AddConsoleExporter();
+    DoExtras(tracer);
     ActivityFactory.Initialize(application);
 
     return new OpenTelemetryBuilder(tracer.Build());
+  }
+
+  public static void Register(object obj)
+  {
+    var diAssembly = AppDomain
+      .CurrentDomain.GetAssemblies()
+      .First(x => x.FullName.Contains("Microsoft.Extensions.DependencyInjection.Abstractions"));
+    var serviceCollectionType = diAssembly.DefinedTypes.First(x => x.Name == "IServiceCollection");
+    var serviceCollectionExtensionsType = diAssembly.ExportedTypes.First(x =>
+      x.Name == "ServiceCollectionServiceExtensions"
+    );
+    var methods = serviceCollectionExtensionsType
+      .GetMethods(BindingFlags.Static | BindingFlags.Public)
+      .First(x =>
+        x.Name == "AddSingleton"
+        && x.GetParameters()
+          .Select(y => y.ParameterType)
+          .SequenceEqual([serviceCollectionType, typeof(Type), typeof(Type)])
+      );
+    methods.Invoke(
+      null,
+      new object[] { obj, typeof(IOptionsFactory<OtlpExporterOptions>), typeof(CustomOptionsFactory) }
+    );
+    Console.WriteLine("here ");
+  }
+
+  public static void DoExtras(TracerProviderBuilder tracer)
+  {
+    var diAssembly = AppDomain
+      .CurrentDomain.GetAssemblies()
+      .First(x => x.FullName.Contains("Microsoft.Extensions.DependencyInjection.Abstractions"));
+    var serviceCollectionType = diAssembly.DefinedTypes.First(x => x.Name == "IServiceCollection");
+
+    var actionType = typeof(Action<>).MakeGenericType(serviceCollectionType);
+    var @delegate = Delegate.CreateDelegate(actionType, null, typeof(OpenTelemetryBuilder).GetMethod("Register"));
+
+    typeof(OpenTelemetryDependencyInjectionTracerProviderBuilderExtensions)
+      .GetMethods()
+      .First(x => x.Name == "ConfigureServices")
+      .Invoke(null, [tracer, @delegate]);
   }
 
   public void Dispose() => traceProvider?.Dispose();
@@ -48,5 +94,13 @@ public static class ActivityFactory
   {
     var activity = _activitySource.NotNull().StartActivity(name);
     return activity;
+  }
+}
+
+public class CustomOptionsFactory : IOptionsFactory<OtlpExporterOptions>
+{
+  public OtlpExporterOptions Create(string name)
+  {
+    return new OtlpExporterOptions();
   }
 }
