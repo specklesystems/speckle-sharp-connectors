@@ -19,6 +19,7 @@ public static class ContainerRegistration
     speckleContainerBuilder.AddSingleton<ITopLevelExceptionHandler, TopLevelExceptionHandler>();
     speckleContainerBuilder.AddSingleton(GetJsonSerializerSettings());
     speckleContainerBuilder.ScanAssemblyOfType<IdleCallManager>();
+    speckleContainerBuilder.ScanAssemblyOfType<IServerTransportFactory>();
   }
 
   private static JsonSerializerSettings GetJsonSerializerSettings()
