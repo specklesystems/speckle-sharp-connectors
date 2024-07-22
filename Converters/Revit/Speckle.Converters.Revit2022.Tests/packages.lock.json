@@ -76,11 +76,11 @@
         "resolved": "0.9.5",
         "contentHash": "oU/L7pN1R7q8KkbrpQ3WJnHirPHqn+9DEA7asOcUiggV5dzVg1A/VYs7GOSusD24njxXh03tE3a2oTLOjt3cVg=="
       },
-      "Speckle.Revit2024.Fakes": {
+      "Speckle.Revit2022.Fakes": {
         "type": "Direct",
-        "requested": "[0.3.0, )",
+        "requested": "[0.3.0, 1.0.0)",
         "resolved": "0.3.0",
-        "contentHash": "gBwoXQDphcbfexbNojI+9Isht8M3citP9j3cMMsnDJPlj7l1rXHzFmzZ7sn0OzuKzmcG92sGvyR1RvsGUtfqYw==",
+        "contentHash": "aAy+bmuXn7oFyUyuvwe8Aw0SfuQoX23jTDI1v6ZrTDSVvRxsmJLBZVYcT9V0CuGiP3JwqM5gmy9CkVBfSm+DcA==",
         "dependencies": {
           "System.Drawing.Common": "8.0.6"
         }
