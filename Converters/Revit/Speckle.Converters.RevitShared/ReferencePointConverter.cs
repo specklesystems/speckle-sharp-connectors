@@ -33,7 +33,7 @@ public class ReferencePointConverter : IReferencePointConverter
   public DB.XYZ ConvertToExternalCoordindates(DB.XYZ p, bool isPoint)
   {
     var rpt = GetDocReferencePointTransform(_contextStack.Current.Document);
-    return (isPoint) ? rpt.Inverse.OfPoint(p) : rpt.Inverse.OfVector(p);
+    return isPoint ? rpt.Inverse.OfPoint(p) : rpt.Inverse.OfVector(p);
   }
 
   /// <summary>
@@ -44,7 +44,7 @@ public class ReferencePointConverter : IReferencePointConverter
   public XYZ ToInternalCoordinates(XYZ p, bool isPoint)
   {
     var rpt = GetDocReferencePointTransform(_contextStack.Current.Document);
-    return (isPoint) ? rpt.OfPoint(p) : rpt.OfVector(p);
+    return isPoint ? rpt.OfPoint(p) : rpt.OfVector(p);
   }
 
   // POC: this might be better in some RevitDocumentService
@@ -80,7 +80,7 @@ public class ReferencePointConverter : IReferencePointConverter
       .Cast<DB.BasePoint>()
       .ToList();
 
-    var projectPoint = points.FirstOrDefault(o => o.IsShared == false).NotNull();
+    var projectPoint = points.FirstOrDefault(o => !o.IsShared).NotNull();
     var surveyPoint = points.FirstOrDefault(o => o.IsShared).NotNull();
 
     // POC: it's not clear what support is needed for this

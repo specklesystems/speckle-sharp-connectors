@@ -52,22 +52,22 @@ public class NonNativeFeaturesUtils : INonNativeFeaturesUtils
           // Also, keep char limit for dataset name under 128: https://pro.arcgis.com/en/pro-app/latest/help/data/geodatabases/manage-saphana/enterprise-geodatabase-limits.htm
 
           string speckleType = trackerItem.Base.speckle_type.Split(".")[^1];
-          speckleType = speckleType.Substring(0, Math.Max(10, speckleType.Length));
+          speckleType = speckleType[..Math.Max(10, speckleType.Length)];
           string? parentId = context.Parent?.Current.id;
 
           CRSoffsetRotation activeSR = _contextStack.Current.Document.ActiveCRSoffsetRotation;
-          string XOffset = Convert.ToString(activeSR.LonOffset).Replace(".", "_");
-          XOffset = XOffset.Length > 15 ? XOffset.Substring(0, 15) : XOffset;
+          string xOffset = Convert.ToString(activeSR.LonOffset).Replace(".", "_");
+          xOffset = xOffset.Length > 15 ? xOffset[..15] : xOffset;
 
-          string YOffset = Convert.ToString(activeSR.LatOffset).Replace(".", "_");
-          YOffset = YOffset.Length > 15 ? YOffset.Substring(0, 15) : YOffset;
+          string yOffset = Convert.ToString(activeSR.LatOffset).Replace(".", "_");
+          yOffset = yOffset.Length > 15 ? yOffset[..15] : yOffset;
 
-          string TrueNorth = Convert.ToString(activeSR.TrueNorthRadians).Replace(".", "_");
-          TrueNorth = TrueNorth.Length > 10 ? TrueNorth.Substring(0, 10) : TrueNorth;
+          string trueNorth = Convert.ToString(activeSR.TrueNorthRadians).Replace(".", "_");
+          trueNorth = trueNorth.Length > 10 ? trueNorth[..10] : trueNorth;
 
           // text: 36 symbols, speckleTYPE: 10, sr: 10, offsets: 40, id: 32 = 128
           string uniqueKey =
-            $"speckle_{speckleType}_SR_{activeSR.SpatialReference.Name.Substring(0, Math.Max(15, activeSR.SpatialReference.Name.Length))}_X_{XOffset}_Y_{YOffset}_North_{TrueNorth}_speckleID_{parentId}";
+            $"speckle_{speckleType}_SR_{activeSR.SpatialReference.Name[..Math.Max(15, activeSR.SpatialReference.Name.Length)]}_X_{xOffset}_Y_{yOffset}_North_{trueNorth}_speckleID_{parentId}";
 
           if (!geometryGroups.TryGetValue(uniqueKey, out _))
           {

@@ -47,7 +47,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\IRevitPlugin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitCommand.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitExternalApplication.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Plugin\IRevitIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitWebViewPlugin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitCefPlugin.cs" />

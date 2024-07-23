@@ -78,7 +78,7 @@ public class InstanceObjectsManager<THostObjectType, TAppIdMapValueType>
       .ToList();
 
     // Break the loop if no instance proxy found under definition.
-    if (!definitionInstanceProxies.Any())
+    if (definitionInstanceProxies.Count == 0)
     {
       return;
     }

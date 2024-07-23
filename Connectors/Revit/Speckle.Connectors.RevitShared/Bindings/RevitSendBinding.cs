@@ -29,7 +29,6 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly CancellationManager _cancellationManager;
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
   private readonly ISendConversionCache _sendConversionCache;
-  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   public RevitSendBinding(
     IRevitIdleManager idleManager,
@@ -49,15 +48,14 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _unitOfWorkFactory = unitOfWorkFactory;
     _revitSettings = revitSettings;
     _sendConversionCache = sendConversionCache;
-    _topLevelExceptionHandler = topLevelExceptionHandler;
 
     Commands = new SendBindingUICommands(bridge);
     // TODO expiry events
     // TODO filters need refresh events
     revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
-      _topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
+      topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
 
-    Store.DocumentChanged += (_, _) => _topLevelExceptionHandler.CatchUnhandled(OnDocumentChanged);
+    Store.DocumentChanged += (_, _) => topLevelExceptionHandler.CatchUnhandled(OnDocumentChanged);
   }
 
   public List<ISendFilter> GetSendFilters()
@@ -157,7 +155,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     }
 
     // TODO: CHECK IF ANY OF THE ABOVE ELEMENTS NEED TO TRIGGER A FILTER REFRESH
-    _idleManager.SubscribeToIdle(RunExpirationChecks);
+    _idleManager.SubscribeToIdle(nameof(RevitSendBinding), RunExpirationChecks);
   }
 
   private void RunExpirationChecks()

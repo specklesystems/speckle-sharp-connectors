@@ -10,4 +10,4 @@ public static class SelectionBindingEvents
   public const string SET_SELECTION = "setSelection";
 }
 
-public record SelectionInfo(List<string> SelectedObjectIds, string Summary);
+public record SelectionInfo(IReadOnlyCollection<string> SelectedObjectIds, string Summary);

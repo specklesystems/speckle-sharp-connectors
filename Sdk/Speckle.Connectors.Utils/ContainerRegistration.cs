@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using Autofac;
+﻿using Autofac;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Speckle.Autofac.DependencyInjection;

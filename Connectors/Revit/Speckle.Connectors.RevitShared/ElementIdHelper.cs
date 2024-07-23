@@ -7,8 +7,11 @@ public static class ElementIdHelper
 {
   public static ElementId Parse(string idStr)
   {
-    if (int.TryParse(idStr, out var result))
-      return new ElementId(result);
-    throw new SpeckleConversionException($"Cannot parse ElementId: {idStr}");
+    if (!int.TryParse(idStr, out var result))
+    {
+      throw new SpeckleConversionException($"Cannot parse ElementId: {idStr}");
+    }
+
+    return new ElementId(result);
   }
 }

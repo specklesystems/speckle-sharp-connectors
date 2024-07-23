@@ -4,7 +4,6 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Rhino7.HostApp;
-using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;

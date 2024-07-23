@@ -16,13 +16,13 @@ namespace Speckle.Connectors.Utils.Operations;
 public sealed class RootObjectSender : IRootObjectSender
 {
   // POC: Revisit this factory pattern, I think we could solve this higher up by injecting a scoped factory for `SendOperation` in the SendBinding
-  private readonly ServerTransport.Factory _transportFactory;
+  private readonly IServerTransportFactory _transportFactory;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly AccountService _accountService;
   private readonly ISendHelper _sendHelper;
 
   public RootObjectSender(
-    ServerTransport.Factory transportFactory,
+    IServerTransportFactory transportFactory,
     ISendConversionCache sendConversionCache,
     AccountService accountService,
     ISendHelper sendHelper
@@ -47,7 +47,7 @@ public sealed class RootObjectSender : IRootObjectSender
 
     Account account = _accountService.GetAccountWithServerUrlFallback(sendInfo.AccountId, sendInfo.ServerUrl);
 
-    ITransport transport = _transportFactory(account, sendInfo.ProjectId, 60, null);
+    using var transport = _transportFactory.Create(account, sendInfo.ProjectId, 60, null);
     var sendResult = await _sendHelper.Send(commitObject, transport, true, null, ct).ConfigureAwait(false);
 
     _sendConversionCache.StoreSendResult(sendInfo.ProjectId, sendResult.convertedReferences);

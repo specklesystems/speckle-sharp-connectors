@@ -260,7 +260,7 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
         // 2. change to NewType if it's String (and the old one is not)
         if (
           newFieldType != FieldType.Blob && existingFieldType == FieldType.Blob
-          || (newFieldType == FieldType.String && existingFieldType != FieldType.String)
+          || newFieldType == FieldType.String && existingFieldType != FieldType.String
         )
         {
           fieldsAndFunctions[index] = (
