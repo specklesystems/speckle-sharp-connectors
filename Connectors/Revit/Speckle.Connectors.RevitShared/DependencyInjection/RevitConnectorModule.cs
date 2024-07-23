@@ -16,6 +16,7 @@ using Speckle.Connectors.Utils.Operations;
 using Speckle.Core.Models.GraphTraversal;
 #if REVIT2025
 using Speckle.Connectors.DUI.WebView;
+using Speckle.Connectors.DUI.Bridge;
 #else
 using CefSharp;
 #endif
@@ -32,7 +33,12 @@ public class RevitConnectorModule : ISpeckleModule
     builder.AddDUI();
     RegisterUiDependencies(builder);
 
+#if REVIT2025
+    builder.AddSingletonInstance<ISyncToThread, SyncToCurrentThread>();
+#else
     builder.AddSingletonInstance<ISyncToThread, RevitContextAccessor>();
+#endif
+
     // register
     builder.AddSingleton<DocumentModelStore, RevitDocumentStore>();
 
@@ -60,8 +66,8 @@ public class RevitConnectorModule : ISpeckleModule
 
     // receive operation and dependencies
     builder.AddScoped<IHostObjectBuilder, RevitHostObjectBuilder>();
-    builder.AddScoped<ITransactionManager, TransactionManager>();
     builder.AddSingleton(DefaultTraversal.CreateTraversalFunc());
+    builder.ScanAssemblyOfType<TransactionManager>();
   }
 
   public void RegisterUiDependencies(SpeckleContainerBuilder builder)

@@ -213,7 +213,8 @@ public class SpeckleContainerBuilder
       .RegisterAssemblyTypes(assembly)
       .Where(t => t.IsClass)
       .As(GetInterfacesWithNameName)
-      .InstancePerDependency();
+      .InstancePerDependency()
+      .PreserveExistingDefaults();
     return this;
   }
 

@@ -8,7 +8,6 @@ using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
-using Speckle.Core.Transports;
 
 namespace Speckle.Connectors.Revit.Bindings;
 
@@ -43,7 +42,6 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
 
   public async Task Receive(string modelCardId)
   {
-    using var unitOfWork = _unitOfWorkFactory.Resolve<ReceiveOperation>();
     try
     {
       // Get receiver card
@@ -57,6 +55,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
       CancellationTokenSource cts = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
       // Receive host objects
+      using var unitOfWork = _unitOfWorkFactory.Resolve<ReceiveOperation>();
       HostObjectBuilderResult conversionResults = await unitOfWork
         .Service.Execute(
           modelCard.GetReceiveInfo(_revitSettings.HostSlug.NotNull()),
@@ -73,15 +72,16 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
         conversionResults.ConversionResults
       );
     }
-    catch (TransportException e)
-    {
-      Commands.SetModelError(modelCardId, e);
-    }
     // Catch here specific exceptions if they related to model card.
     catch (OperationCanceledException)
     {
       // SWALLOW -> UI handles it immediately, so we do not need to handle anything
       return;
+    }
+    catch (Exception e) //everything else, stop the operation and bubble up
+    {
+      Commands.SetModelError(modelCardId, e);
+      throw;
     }
   }
 }
