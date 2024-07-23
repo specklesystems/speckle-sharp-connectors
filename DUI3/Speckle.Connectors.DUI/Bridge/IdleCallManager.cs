@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
-using Speckle.InterfaceGenerator;
 
 namespace Speckle.Connectors.DUI.Bridge;
 

@@ -4,6 +4,11 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <Configurations>Debug;Release;Local</Configurations>
+    <!-- Ingored warnings, some aspirational but too noisy for now, some by design.  -->
+    <NoWarn>
+      CA2007;
+      $(NoWarn)
+    </NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="altcover" />
