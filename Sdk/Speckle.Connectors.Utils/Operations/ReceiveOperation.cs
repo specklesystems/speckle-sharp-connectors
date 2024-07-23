@@ -50,14 +50,17 @@ public sealed class ReceiveOperation
 
     // 4 - Convert objects
     var res = await _syncToThread
-      .RunOnThread(() => _hostObjectBuilder.Build(
-        commitObject,
-        receiveInfo.ProjectName,
-        receiveInfo.ModelName,
-        onOperationProgressed,
-        cancellationToken
-      ))
-        .ConfigureAwait(false);
+      .RunOnThread(
+        () =>
+          _hostObjectBuilder.Build(
+            commitObject,
+            receiveInfo.ProjectName,
+            receiveInfo.ModelName,
+            onOperationProgressed,
+            cancellationToken
+          )
+      )
+      .ConfigureAwait(false);
 
     await apiClient
       .Version.Received(new(version.id, receiveInfo.ProjectId, receiveInfo.SourceApplication), cancellationToken)
