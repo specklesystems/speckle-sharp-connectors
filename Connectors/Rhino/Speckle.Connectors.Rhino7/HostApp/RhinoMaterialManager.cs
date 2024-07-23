@@ -28,9 +28,9 @@ public class RhinoMaterialManager
   public SpeckleRenderMaterial CreateSpeckleRenderMaterial(Material material)
   {
     string materialId = material.Id.ToString();
-    if (_renderMaterialCache.ContainsKey(materialId))
+    if (_renderMaterialCache.TryGetValue(materialId, out SpeckleRenderMaterial existingMaterial))
     {
-      return _renderMaterialCache[materialId];
+      return existingMaterial;
     }
 
     // get physically based render material
