@@ -7,6 +7,7 @@ namespace Speckle.Connectors.DUI.Bridge;
 /// Result Pattern struct
 /// </summary>
 /// <typeparam name="T"></typeparam>
+[ExcludeFromCodeCoverage]
 public readonly struct Result<T>
 {
   //Don't add new members to this struct, it is perfect.
@@ -36,6 +37,7 @@ public readonly struct Result<T>
   }
 }
 
+[ExcludeFromCodeCoverage]
 public readonly struct Result
 {
   //Don't add new members to this struct, it is perfect.

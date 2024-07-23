@@ -64,6 +64,21 @@ public class TopLevelExceptionHandlerTests : MoqTest
   }
 
   [Test]
+  public void CatchUnhandledFunc_Exception_Fatal()
+  {
+    var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
+    var bridge = Create<IBridge>();
+    var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
+
+#pragma warning disable CA2201
+    var exception = Assert.Throws<AppDomainUnloadedException>(
+      () => sut.CatchUnhandled(new Func<string>(() => throw new AppDomainUnloadedException()))
+    );
+#pragma warning restore CA2201
+    exception.Should().BeAssignableTo<AppDomainUnloadedException>();
+  }
+
+  [Test]
   public async Task CatchUnhandledFuncAsync_Happy()
   {
     var val = 2;
@@ -91,5 +106,20 @@ public class TopLevelExceptionHandlerTests : MoqTest
     returnVal.Value.Should().BeNull();
     returnVal.Exception.Should().BeAssignableTo<InvalidOperationException>();
     returnVal.IsSuccess.Should().BeFalse();
+  }
+
+  [Test]
+  public void CatchUnhandledFuncAsync_Exception_Fatal()
+  {
+    var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
+    var bridge = Create<IBridge>();
+    var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
+
+#pragma warning disable CA2201
+    var exception = Assert.ThrowsAsync<AppDomainUnloadedException>(
+      async () => await sut.CatchUnhandled(new Func<Task<string>>(() => throw new AppDomainUnloadedException()))
+    );
+#pragma warning restore CA2201
+    exception.Should().BeAssignableTo<AppDomainUnloadedException>();
   }
 }

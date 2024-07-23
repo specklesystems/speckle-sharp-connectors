@@ -28,6 +28,7 @@ public class IdleCallManagerTests : MoqTest
     var addEvent = Create<Action>();
     addEvent.Setup(x => x.Invoke());
 
+    sut.IdleSubscriptionCalled.Should().BeFalse();
     sut.SubscribeInternal("id", action.Object, addEvent.Object);
     sut.Calls.Count.Should().Be(1);
     sut.Calls.Should().ContainKey("id");
@@ -52,7 +53,7 @@ public class IdleCallManagerTests : MoqTest
     var removeEvent = Create<Action>();
     removeEvent.Setup(x => x.Invoke());
 
-    sut.SubscribeInternal("Test", new Action(() => { }), new Action(() => { }));
+    sut.SubscribeInternal("Test", () => { }, () => { });
     sut.IdleSubscriptionCalled.Should().BeTrue();
     sut.Calls.Count.Should().Be(1);
 
