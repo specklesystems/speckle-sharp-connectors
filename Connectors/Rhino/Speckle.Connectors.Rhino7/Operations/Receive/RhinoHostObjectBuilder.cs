@@ -152,8 +152,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
         int layerIndex = _layerManager.GetAndCreateLayerFromPath(path, baseLayerName);
         // TODO: need to add render materials to layers
         int materialIndex = obj["renderMaterialId"] is string renderMaterialId
-          ? materialsIdMap.ContainsKey(renderMaterialId)
-            ? materialsIdMap[renderMaterialId]
+          ? materialsIdMap.TryGetValue(renderMaterialId, out materialIndex)
+            ? materialIndex
             : 0
           : 0;
         var result = _converter.Convert(obj);

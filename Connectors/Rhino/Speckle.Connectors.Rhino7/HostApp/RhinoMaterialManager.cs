@@ -69,7 +69,7 @@ public class RhinoMaterialManager
   /// <returns>True if yes, False if no Speckle Render material has been created from the input material</returns>
   public bool Contains(Material material)
   {
-    return _renderMaterialCache.ContainsKey(material.Id.ToString());
+    return _renderMaterialCache.TryGetValue(material.Id.ToString(), out SpeckleRenderMaterial _);
   }
 
   public BakeResult BakeMaterials(
