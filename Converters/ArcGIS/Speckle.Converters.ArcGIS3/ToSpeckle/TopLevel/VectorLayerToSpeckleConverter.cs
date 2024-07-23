@@ -1,7 +1,10 @@
+using System.Drawing;
+using ArcGIS.Core.CIM;
 using ArcGIS.Core.Data;
 using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Mapping;
 using Objects.GIS;
+using Objects.Other;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
@@ -59,8 +62,8 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
     speckleLayer.attributes = allLayerAttributes;
 
     // get a simple geometry type
-    string spekleGeometryType = GISLayerGeometryType.LayerGeometryTypeToSpeckle(target.ShapeType);
-    speckleLayer.geomType = spekleGeometryType;
+    string speckleGeometryType = GISLayerGeometryType.LayerGeometryTypeToSpeckle(target.ShapeType);
+    speckleLayer.geomType = speckleGeometryType;
 
     // search the rows
     // RowCursor is IDisposable but is not being correctly picked up by IDE warnings.
@@ -74,6 +77,12 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
         using (Row row = rowCursor.Current)
         {
           GisFeature element = _gisFeatureConverter.Convert(row);
+
+          // get color from renderer, write to contextStack, assign to the feature
+          int color = GetColorFromRenderer(target, row);
+          var newMaterial = new RenderMaterial() { diffuse = color, applicationId = System.Convert.ToString(color) };
+          _contextStack.Current.Document.RenderMaterials[newMaterial.applicationId] = newMaterial;
+          element["renderMaterialId"] = newMaterial.applicationId;
 
           // replace element "attributes", to remove those non-visible on Layer level
           Base elementAttributes = new();
@@ -91,5 +100,16 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
     }
 
     return speckleLayer;
+  }
+
+  private int GetColorFromRenderer(FeatureLayer fLayer, Row row)
+  {
+    int color = Color.FromArgb(255, 255, 255, 255).ToArgb();
+
+    var renderer = fLayer.GetRenderer(); // e.g. CIMSimpleRenderer
+    var simpleRenderer = renderer as CIMSimpleRenderer;
+    var simpleSymbolColor = simpleRenderer?.Symbol.Symbol.GetColor();
+
+    return simpleSymbolColor != null ? simpleSymbolColor.CIMColorToInt() : color;
   }
 }

@@ -100,6 +100,11 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
       onOperationProgressed?.Invoke("Converting", (double)++count / objects.Count);
     }
 
+    // add materials
+    rootObjectCollection["renderMaterials"] = _contextStack
+      .Current.Document.RenderMaterials.Keys.Select(x => _contextStack.Current.Document.RenderMaterials[x])
+      .ToList();
+
     // POC: Log would be nice, or can be removed.
     Debug.WriteLine(
       $"Cache hit count {cacheHitCount} out of {objects.Count} ({(double)cacheHitCount / objects.Count})"
