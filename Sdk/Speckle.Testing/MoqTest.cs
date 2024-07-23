@@ -15,6 +15,6 @@ public abstract class MoqTest
 
   protected MockRepository Repository { get; private set; } = new(MockBehavior.Strict);
 
-  protected Mock<T> Create<T>()
-    where T : class => Repository.Create<T>();
+  protected Mock<T> Create<T>(MockBehavior behavior = MockBehavior.Strict)
+    where T : class => Repository.Create<T>(behavior);
 }
