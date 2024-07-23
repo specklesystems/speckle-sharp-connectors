@@ -44,6 +44,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder
 
     using var transactionGroup = _transactionManager.StartTransactionGroup(projectName);
     var conversionResults = BakeObjects(objectsToConvert);
+    transactionGroup.Commit();
     return conversionResults;
   }
 
@@ -62,6 +63,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder
         {
           bakedObjectIds.Add(element.Id.ToString());
         }
+        transaction.Commit();
       }
       catch (Exception ex) when (!ex.IsFatal())
       {

@@ -1,63 +1,42 @@
+using System.Diagnostics.CodeAnalysis;
 using Autodesk.Revit.DB;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.InterfaceGenerator;
 
 namespace Speckle.Connectors.Revit.Operations.Receive;
 
+public interface IRevitTransaction : IDisposable
+{
+  TransactionStatus Commit();
+}
+
 /// <summary>
 /// Is responsible for all functionality regarding subtransactions, transactions, and transaction groups.
 /// This includes starting, pausing, committing, and rolling back transactions
 /// </summary>
 [GenerateAutoInterface]
+[SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope")]
 public sealed class TransactionManager : ITransactionManager
 {
-  private sealed class GroupDisposible : IDisposable
+  private sealed class GroupDisposable(TransactionGroup transactionGroup) : IRevitTransaction
   {
-    private readonly TransactionGroup _transactionGroup;
+    public TransactionStatus Commit() => transactionGroup.Assimilate();
 
-    public GroupDisposible(TransactionGroup transactionGroup)
-    {
-      _transactionGroup = transactionGroup;
-      _transactionGroup.Start();
-    }
-
-    public void Dispose()
-    {
-      _transactionGroup.Assimilate();
-      _transactionGroup.Dispose();
-    }
+    public void Dispose() => transactionGroup.Dispose();
   }
 
-  private sealed class TransactionDisposible : IDisposable
+  private sealed class TransactionDisposable(Transaction transaction) : IRevitTransaction
   {
-    private readonly Transaction _transaction;
+    public TransactionStatus Commit() => transaction.Commit();
 
-    public TransactionDisposible(Transaction transaction)
-    {
-      _transaction = transaction;
-    }
-
-    public void Dispose()
-    {
-      _transaction.Commit();
-      _transaction.Dispose();
-    }
+    public void Dispose() => transaction.Dispose();
   }
 
-  private sealed class SubTransactionDisposible : IDisposable
+  private sealed class SubTransactionDisposable(SubTransaction transaction) : IRevitTransaction
   {
-    private readonly SubTransaction _transaction;
+    public TransactionStatus Commit() => transaction.Commit();
 
-    public SubTransactionDisposible(SubTransaction transaction)
-    {
-      _transaction = transaction;
-    }
-
-    public void Dispose()
-    {
-      _transaction.Commit();
-      _transaction.Dispose();
-    }
+    public void Dispose() => transaction.Dispose();
   }
 
   private readonly IRevitConversionContextStack _contextStack;
@@ -68,28 +47,30 @@ public sealed class TransactionManager : ITransactionManager
     _contextStack = contextStack;
   }
 
-  public IDisposable StartTransactionGroup(string projectName)
+  public IRevitTransaction StartTransactionGroup(string projectName)
   {
-    return new GroupDisposible(new TransactionGroup(_contextStack.Current.Document, $"Received data from {projectName}"));
+    var group = new TransactionGroup(_contextStack.Current.Document, $"Received data from {projectName}");
+    group.Start();
+    return new GroupDisposable(group);
   }
 
-  public IDisposable StartTransaction()
+  public IRevitTransaction StartTransaction()
   {
-      var transaction = new Transaction(Document, "Speckle Transaction");
-      var failOpts = transaction.GetFailureHandlingOptions();
-      // POC: make sure to implement and add the failure preprocessor
-      // https://spockle.atlassian.net/browse/DUI3-461
-      //failOpts.SetFailuresPreprocessor(_errorPreprocessingService);
-      failOpts.SetClearAfterRollback(true);
-      transaction.SetFailureHandlingOptions(failOpts);
-      transaction.Start();
-      return new TransactionDisposible(transaction);
+    var transaction = new Transaction(Document, "Speckle Transaction");
+    var failOpts = transaction.GetFailureHandlingOptions();
+    // POC: make sure to implement and add the failure preprocessor
+    // https://spockle.atlassian.net/browse/DUI3-461
+    //failOpts.SetFailuresPreprocessor(_errorPreprocessingService);
+    failOpts.SetClearAfterRollback(true);
+    transaction.SetFailureHandlingOptions(failOpts);
+    transaction.Start();
+    return new TransactionDisposable(transaction);
   }
 
-  public IDisposable StartSubtransaction()
+  public IRevitTransaction StartSubtransaction()
   {
-      var subTransaction = new SubTransaction(Document);
-      subTransaction.Start();
-      return new SubTransactionDisposible(subTransaction);
+    var subTransaction = new SubTransaction(Document);
+    subTransaction.Start();
+    return new SubTransactionDisposable(subTransaction);
   }
 }
