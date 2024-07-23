@@ -11,16 +11,19 @@ public sealed class ReceiveOperation
   private readonly IHostObjectBuilder _hostObjectBuilder;
   private readonly ISyncToThread _syncToThread;
   private readonly AccountService _accountService;
+  private readonly IServerTransportFactory _serverTransportFactory;
 
   public ReceiveOperation(
     IHostObjectBuilder hostObjectBuilder,
     ISyncToThread syncToThread,
-    AccountService accountService
+    AccountService accountService,
+    IServerTransportFactory serverTransportFactory
   )
   {
     _hostObjectBuilder = hostObjectBuilder;
     _syncToThread = syncToThread;
     _accountService = accountService;
+    _serverTransportFactory = serverTransportFactory;
   }
 
   public async Task<HostObjectBuilderResult> Execute(
@@ -38,7 +41,7 @@ public sealed class ReceiveOperation
       .Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ModelId, receiveInfo.ProjectId, cancellationToken)
       .ConfigureAwait(false);
 
-    using ServerTransport transport = new(account, receiveInfo.ProjectId);
+    using var transport = _serverTransportFactory.Create(account, receiveInfo.ProjectId);
     Base commitObject = await Speckle
       .Core.Api.Operations.Receive(version.referencedObject, transport, cancellationToken: cancellationToken)
       .ConfigureAwait(false);
@@ -47,17 +50,14 @@ public sealed class ReceiveOperation
 
     // 4 - Convert objects
     var res = await _syncToThread
-      .RunOnThread(() =>
-      {
-        return _hostObjectBuilder.Build(
-          commitObject,
-          receiveInfo.ProjectName,
-          receiveInfo.ModelName,
-          onOperationProgressed,
-          cancellationToken
-        );
-      })
-      .ConfigureAwait(false);
+      .RunOnThread(() => _hostObjectBuilder.Build(
+        commitObject,
+        receiveInfo.ProjectName,
+        receiveInfo.ModelName,
+        onOperationProgressed,
+        cancellationToken
+      ))
+        .ConfigureAwait(false);
 
     await apiClient
       .Version.Received(new(version.id, receiveInfo.ProjectId, receiveInfo.SourceApplication), cancellationToken)
