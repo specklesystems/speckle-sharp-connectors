@@ -24,7 +24,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   private readonly RhinoGroupManager _rhinoGroupManager;
   private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
   private readonly RhinoLayerManager _layerManager;
-  private readonly RhinoRenderMaterialManager _materialManager;
+  private readonly RhinoMaterialManager _materialManager;
 
   public RhinoRootObjectBuilder(
     ISendConversionCache sendConversionCache,
@@ -33,7 +33,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     RhinoInstanceObjectsManager instanceObjectsManager,
     RhinoGroupManager rhinoGroupManager,
     IRootToSpeckleConverter rootToSpeckleConverter,
-    RhinoRenderMaterialManager materialManager
+    RhinoMaterialManager materialManager
   )
   {
     _sendConversionCache = sendConversionCache;
@@ -73,6 +73,10 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       cancellationToken.ThrowIfCancellationRequested();
 
       // handle render material
+      // TODO: need to add render material to layers
+      // POC: need to check object changed event captures material changes for object invalidation
+      // POC: we are adding the renderMaterialId to every atomic object, even if their material inheritence is set to ByLayer or ByParent
+      // POC: this means this material inheritence will not be preserved on receive
       Rhino.DocObjects.Material material = _contextStack.Current.Document.Materials[
         rhinoObject.Attributes.MaterialIndex
       ];
@@ -127,7 +131,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       // Thread.Sleep(550);
     }
 
-    // POC: Handle render materials
+    // POC: Add render materials to root collection
     rootObjectCollection["renderMaterials"] = renderMaterials;
 
     // 5. profit
