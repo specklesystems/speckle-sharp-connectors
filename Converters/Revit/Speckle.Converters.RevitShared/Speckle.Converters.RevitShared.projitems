@@ -37,6 +37,14 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\PlaneConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\PointConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\PolylineConverterToHost.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\ToDirectShape\ArcToDirectShapeConverterToHost.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\ToDirectShape\CircleToDirectShapeConverterToHost.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\ToDirectShape\CurveToDirectShapeConverterToHost.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\ToDirectShape\CurveToDirectShapeConverterToHostBase.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\ToDirectShape\EllipseToDirectShapeConverterToHost.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\ToDirectShape\LineToDirectShapeConverterToHost.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\ToDirectShape\PolycurveConverterToHost.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\ToDirectShape\PolylineConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\VectorConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\RenderMaterialToHostConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\SurfaceConverterToHost.cs" />
@@ -47,6 +55,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\GridlineToHostTopLevelConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\MeshToHostTopLevelConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\ModelCurveToSpeckleTopLevelConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\PointToHostTopLevelConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\BeamConversionToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\BoundarySegmentConversionToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\BraceToSpeckleConverter.cs" />

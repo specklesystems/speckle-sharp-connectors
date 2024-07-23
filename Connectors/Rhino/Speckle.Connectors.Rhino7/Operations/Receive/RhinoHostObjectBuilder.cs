@@ -104,7 +104,9 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     var instanceComponents = new List<(Collection[] collectionPath, IInstanceComponent obj)>();
     if (instanceDefinitionProxies != null && instanceDefinitionProxies.Count > 0)
     {
-      var transformed = instanceDefinitionProxies.Select(proxy => (new Collection[] { }, proxy as IInstanceComponent));
+      var transformed = instanceDefinitionProxies.Select(proxy =>
+        (Array.Empty<Collection>(), proxy as IInstanceComponent)
+      );
       instanceComponents.AddRange(transformed);
     }
 

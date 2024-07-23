@@ -27,7 +27,6 @@ public class AutocadLayerManager
   /// Will create a layer with the provided name, or, if it finds an existing one, will "purge" all objects from it.
   /// This ensures we're creating the new objects we've just received rather than overlaying them.
   /// </summary>
-  /// <param name="layerName">Name to search layer for purge and create.</param>
   public void CreateLayerForReceive(Collection layerCollection)
   {
     string layerName = layerCollection.name;
