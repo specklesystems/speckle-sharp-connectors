@@ -59,7 +59,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
 
     var returnVal = sut.CatchUnhandled((Func<string>)(() => throw new InvalidOperationException()));
     returnVal.Value.Should().BeNull();
-    returnVal.Exception.Should().BeAssignableTo<InvalidOperationException>();
+    returnVal.Exception.Should().BeOfType<InvalidOperationException>();
     returnVal.IsSuccess.Should().BeFalse();
   }
 
@@ -71,11 +71,11 @@ public class TopLevelExceptionHandlerTests : MoqTest
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
 #pragma warning disable CA2201
-    var exception = Assert.Throws<AppDomainUnloadedException>(
+    var exception = Assert.Throws<AggregateException>(
       () => sut.CatchUnhandled(new Func<string>(() => throw new AppDomainUnloadedException()))
     );
 #pragma warning restore CA2201
-    exception.Should().BeAssignableTo<AppDomainUnloadedException>();
+    exception.InnerExceptions.Single().Should().BeOfType<AppDomainUnloadedException>();
   }
 
   [Test]
@@ -104,7 +104,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
 
     var returnVal = await sut.CatchUnhandled(new Func<Task<string>>(() => throw new InvalidOperationException()));
     returnVal.Value.Should().BeNull();
-    returnVal.Exception.Should().BeAssignableTo<InvalidOperationException>();
+    returnVal.Exception.Should().BeOfType<InvalidOperationException>();
     returnVal.IsSuccess.Should().BeFalse();
   }
 
@@ -120,6 +120,6 @@ public class TopLevelExceptionHandlerTests : MoqTest
       async () => await sut.CatchUnhandled(new Func<Task<string>>(() => throw new AppDomainUnloadedException()))
     );
 #pragma warning restore CA2201
-    exception.Should().BeAssignableTo<AppDomainUnloadedException>();
+    exception.Should().BeOfType<AppDomainUnloadedException>();
   }
 }
