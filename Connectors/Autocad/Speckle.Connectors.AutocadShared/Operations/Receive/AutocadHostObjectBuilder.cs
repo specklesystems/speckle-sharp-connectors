@@ -71,7 +71,9 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     // POC: these are not captured by traversal, so we need to re-add them here
     if (instanceDefinitionProxies != null && instanceDefinitionProxies.Count > 0)
     {
-      var transformed = instanceDefinitionProxies.Select(proxy => (new Collection[] { }, proxy as IInstanceComponent));
+      var transformed = instanceDefinitionProxies.Select(proxy =>
+        (Array.Empty<Collection>(), proxy as IInstanceComponent)
+      );
       instanceComponents.AddRange(transformed);
     }
 
