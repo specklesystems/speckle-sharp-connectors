@@ -13,7 +13,7 @@ public abstract class CurveToDirectShapeConverterToHostBase<TCurve>
   private readonly IRevitConversionContextStack _contextStack;
   private readonly ITypedConverter<ICurve, DB.CurveArray> _curveConverter;
 
-  public CurveToDirectShapeConverterToHostBase(
+  protected CurveToDirectShapeConverterToHostBase(
     IRevitConversionContextStack contextStack,
     ITypedConverter<ICurve, DB.CurveArray> curveConverter
   )
@@ -33,7 +33,7 @@ public abstract class CurveToDirectShapeConverterToHostBase<TCurve>
       DB.BuiltInCategory.OST_GenericModel
     );
 
-    var revitDs = DB.DirectShape.CreateElement(_contextStack.Current.Document, genericModelCategory.Id);
+    using var revitDs = DB.DirectShape.CreateElement(_contextStack.Current.Document, genericModelCategory.Id);
     if (target is Base speckleObject && speckleObject.applicationId != null)
     {
       revitDs.ApplicationId = speckleObject.applicationId;

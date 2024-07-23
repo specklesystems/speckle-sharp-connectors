@@ -14,7 +14,7 @@ namespace Speckle.Connectors.Revit.Operations.Receive;
 /// Potentially consolidate all application specific IHostObjectBuilders
 /// https://spockle.atlassian.net/browse/DUI3-465
 /// </summary>
-internal class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
+internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 {
   private readonly IRootToHostConverter _converter;
   private readonly IRevitConversionContextStack _contextStack;
