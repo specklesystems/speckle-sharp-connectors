@@ -2,7 +2,6 @@ using Autodesk.Revit.DB;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Converters.Common;
-using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
 using Speckle.Core.Models.Collections;
@@ -14,22 +13,19 @@ namespace Speckle.Connectors.Revit.Operations.Receive;
 /// Potentially consolidate all application specific IHostObjectBuilders
 /// https://spockle.atlassian.net/browse/DUI3-465
 /// </summary>
-internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
+internal sealed class RevitHostObjectBuilder : IHostObjectBuilder
 {
   private readonly IRootToHostConverter _converter;
-  private readonly IRevitConversionContextStack _contextStack;
   private readonly GraphTraversal _traverseFunction;
   private readonly ITransactionManager _transactionManager;
 
   public RevitHostObjectBuilder(
     IRootToHostConverter converter,
-    IRevitConversionContextStack contextStack,
     GraphTraversal traverseFunction,
     ITransactionManager transactionManager
   )
   {
     _converter = converter;
-    _contextStack = contextStack;
     _traverseFunction = traverseFunction;
     _transactionManager = transactionManager;
   }
@@ -46,15 +42,8 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       .TraverseWithProgress(rootObject, onOperationProgressed, cancellationToken)
       .Where(obj => obj.Current is not Collection);
 
-    using TransactionGroup transactionGroup = new(_contextStack.Current.Document, $"Received data from {projectName}");
-    transactionGroup.Start();
-    _transactionManager.StartTransaction();
-
+    using var transactionGroup = _transactionManager.StartTransactionGroup(projectName);
     var conversionResults = BakeObjects(objectsToConvert);
-
-    _transactionManager.CommitTransaction();
-    transactionGroup.Assimilate();
-
     return conversionResults;
   }
 
@@ -68,7 +57,11 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     {
       try
       {
-        var result = _converter.Convert(tc.Current);
+        using var transaction = _transactionManager.StartTransaction();
+        if (_converter.Convert(tc.Current) is Element element)
+        {
+          bakedObjectIds.Add(element.Id.ToString());
+        }
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
@@ -77,10 +70,5 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     }
 
     return new(bakedObjectIds, conversionResults);
-  }
-
-  public void Dispose()
-  {
-    _transactionManager?.Dispose();
   }
 }

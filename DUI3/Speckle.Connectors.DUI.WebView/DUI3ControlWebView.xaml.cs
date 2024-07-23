@@ -33,7 +33,7 @@ public sealed partial class DUI3ControlWebView : UserControl
     Browser.Dispatcher.Invoke(() => Browser.ExecuteScriptAsync(script), DispatcherPriority.Background);
   }
 
-  private void OnInitialized(object? sender, CoreWebView2InitializationCompletedEventArgs e)
+  private void OnInitialized(object? _, CoreWebView2InitializationCompletedEventArgs e)
   {
     if (!e.IsSuccess)
     {
