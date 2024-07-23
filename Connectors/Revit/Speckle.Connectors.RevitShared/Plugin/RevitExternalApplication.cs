@@ -58,6 +58,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
     try
     {
       // POC: not sure what this is doing...  could be messing up our Aliasing????
+      AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<RevitExternalApplication>;
       var containerBuilder = SpeckleContainerBuilder.CreateInstance();
       // init DI
       _container = containerBuilder
