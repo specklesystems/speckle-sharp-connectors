@@ -20,7 +20,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
   private readonly RevitSettings _revitSettings;
 
   // POC: move to somewhere central?
-  public static readonly DockablePaneId DoackablePanelId = new(new Guid("{f7b5da7c-366c-4b13-8455-b56f433f461e}"));
+  public static readonly DockablePaneId DockablePanelId = new(new Guid("{f7b5da7c-366c-4b13-8455-b56f433f461e}"));
 
   public RevitExternalApplication()
   {
@@ -58,7 +58,6 @@ internal sealed class RevitExternalApplication : IExternalApplication
     try
     {
       // POC: not sure what this is doing...  could be messing up our Aliasing????
-      AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<RevitExternalApplication>;
       var containerBuilder = SpeckleContainerBuilder.CreateInstance();
       // init DI
       _container = containerBuilder
