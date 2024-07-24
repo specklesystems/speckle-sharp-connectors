@@ -16,19 +16,22 @@ namespace Speckle.Connectors.Autocad.Operations.Send;
 public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
 {
   private readonly IRootToSpeckleConverter _converter;
-  private readonly string[] _documentPathSeparator = { "\\" };
+  private readonly string[] _documentPathSeparator = ["\\"];
   private readonly ISendConversionCache _sendConversionCache;
   private readonly AutocadInstanceObjectManager _instanceObjectsManager;
+  private readonly AutocadGroupUnpacker _groupUnpacker;
 
   public AutocadRootObjectBuilder(
     IRootToSpeckleConverter converter,
     ISendConversionCache sendConversionCache,
-    AutocadInstanceObjectManager instanceObjectManager
+    AutocadInstanceObjectManager instanceObjectManager,
+    AutocadGroupUnpacker groupUnpacker
   )
   {
     _converter = converter;
     _sendConversionCache = sendConversionCache;
     _instanceObjectsManager = instanceObjectManager;
+    _groupUnpacker = groupUnpacker;
   }
 
   public RootObjectBuilderResult Build(
@@ -45,12 +48,15 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
           .DocumentManager.CurrentDocument.Name // POC: https://spockle.atlassian.net/browse/CNX-9319
           .Split(_documentPathSeparator, StringSplitOptions.None)
           .Reverse()
-          .First(),
-        collectionType = "root"
+          .First()
       };
 
+    // TODO: better handling for document and transactions!!
+    Document doc = Application.DocumentManager.CurrentDocument;
+    using Transaction tr = doc.Database.TransactionManager.StartTransaction();
+
     // Cached dictionary to create Collection for autocad entity layers. We first look if collection exists. If so use it otherwise create new one for that layer.
-    Dictionary<string, Collection> collectionCache = new();
+    Dictionary<string, Layer> collectionCache = new();
     int count = 0;
 
     var (atomicObjects, instanceProxies, instanceDefinitionProxies) = _instanceObjectsManager.UnpackSelection(objects);
@@ -82,16 +88,30 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
         }
 
         // Create and add a collection for each layer if not done so already.
-        if ((dbObject as Entity)?.Layer is string layer)
+        if (dbObject is Entity entity)
         {
-          if (!collectionCache.TryGetValue(layer, out Collection? collection))
+          string layerName = entity.Layer;
+
+          if (!collectionCache.TryGetValue(layerName, out Layer speckleLayer))
           {
-            collection = new Collection() { name = layer, collectionType = "layer" };
-            collectionCache[layer] = collection;
-            modelWithLayers.elements.Add(collectionCache[layer]);
+            if (tr.GetObject(entity.LayerId, OpenMode.ForRead) is LayerTableRecord autocadLayer)
+            {
+              speckleLayer = new Layer(layerName, autocadLayer.Color.ColorValue.ToArgb());
+              collectionCache[layerName] = speckleLayer;
+              modelWithLayers.elements.Add(collectionCache[layerName]);
+            }
+            else
+            {
+              speckleLayer = new Layer("Unknown layer", System.Drawing.Color.Black.ToArgb());
+            }
           }
 
-          collection.elements.Add(converted);
+          speckleLayer.elements.Add(converted);
+        }
+        else
+        {
+          // Dims note: do we really need this if else clause here? imho not, as we'd fail in the upper stage of conversion?
+          // TODO: error
         }
 
         results.Add(new(Status.SUCCESS, applicationId, dbObject.GetType().ToString(), converted));
@@ -110,6 +130,8 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
       $"Cache hit count {cacheHitCount} out of {objects.Count} ({(double)cacheHitCount / objects.Count})"
     );
 
+    var groupProxies = _groupUnpacker.UnpackGroups(atomicObjects);
+    modelWithLayers["groupProxies"] = groupProxies;
     return new(modelWithLayers, results);
   }
 }

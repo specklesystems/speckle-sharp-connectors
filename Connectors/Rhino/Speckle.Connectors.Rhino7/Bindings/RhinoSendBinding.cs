@@ -1,6 +1,7 @@
 using Rhino;
 using Rhino.Commands;
 using Rhino.DocObjects;
+using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
@@ -8,13 +9,11 @@ using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
-using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Rhino7.HostApp;
 using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
-using Speckle.Core.Transports;
 
 namespace Speckle.Connectors.Rhino7.Bindings;
 
@@ -90,7 +89,7 @@ public sealed class RhinoSendBinding : ISendBinding
         }
 
         ChangedObjectIds.Add(e.ObjectId.ToString());
-        _idleManager.SubscribeToIdle(RunExpirationChecks);
+        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
       });
 
     RhinoDoc.DeleteRhinoObject += (_, e) =>
@@ -103,7 +102,7 @@ public sealed class RhinoSendBinding : ISendBinding
         }
 
         ChangedObjectIds.Add(e.ObjectId.ToString());
-        _idleManager.SubscribeToIdle(RunExpirationChecks);
+        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
       });
 
     RhinoDoc.ReplaceRhinoObject += (_, e) =>
@@ -117,25 +116,11 @@ public sealed class RhinoSendBinding : ISendBinding
 
         ChangedObjectIds.Add(e.NewRhinoObject.Id.ToString());
         ChangedObjectIds.Add(e.OldRhinoObject.Id.ToString());
-        _idleManager.SubscribeToIdle(RunExpirationChecks);
+        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
       });
   }
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
-
-  public List<CardSetting> GetSendSettings()
-  {
-    return new List<CardSetting>
-    {
-      new()
-      {
-        Id = "includeAttributes",
-        Title = "Include Attributes",
-        Value = true,
-        Type = "boolean"
-      },
-    };
-  }
 
   public async Task Send(string modelCardId)
   {
@@ -176,18 +161,15 @@ public sealed class RhinoSendBinding : ISendBinding
 
       Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
     }
-    // Catch here specific exceptions if they related to model card.
-    catch (SpeckleSendFilterException e)
-    {
-      Commands.SetModelError(modelCardId, e);
-    }
-    catch (TransportException e)
+    catch (Exception e) when (!e.IsFatal()) // UX reasons - we will report operation exceptions as model card error.
     {
       Commands.SetModelError(modelCardId, e);
     }
     catch (OperationCanceledException)
     {
-      // SWALLOW -> UI handles it immediately, so we do not need to handle anything
+      // SWALLOW -> UI handles it immediately, so we do not need to handle anything for now!
+      // Idea for later -> when cancel called, create promise from UI to solve it later with this catch block.
+      // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
       return;
     }
   }

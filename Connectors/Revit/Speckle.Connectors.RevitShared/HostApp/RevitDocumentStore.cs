@@ -75,11 +75,14 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     }
 
     IsDocumentInit = true;
-    _idleManager.SubscribeToIdle(() =>
-    {
-      ReadFromFile();
-      OnDocumentChanged();
-    });
+    _idleManager.SubscribeToIdle(
+      nameof(RevitDocumentStore),
+      () =>
+      {
+        ReadFromFile();
+        OnDocumentChanged();
+      }
+    );
   }
 
   public override void WriteToFile()

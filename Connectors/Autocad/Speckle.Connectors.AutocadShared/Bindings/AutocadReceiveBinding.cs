@@ -1,13 +1,12 @@
+using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
-using Speckle.Core.Transports;
 
 namespace Speckle.Connectors.Autocad.Bindings;
 
@@ -73,13 +72,14 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
 
       Commands.SetModelReceiveResult(modelCardId, operationResults.BakedObjectIds, operationResults.ConversionResults);
     }
-    // Catch here specific exceptions if they related to model card.
     catch (OperationCanceledException)
     {
-      // SWALLOW -> UI handles it immediately, so we do not need to handle anything
+      // SWALLOW -> UI handles it immediately, so we do not need to handle anything for now!
+      // Idea for later -> when cancel called, create promise from UI to solve it later with this catch block.
+      // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
       return;
     }
-    catch (TransportException e)
+    catch (Exception e) when (!e.IsFatal()) // UX reasons - we will report operation exceptions as model card error.
     {
       Commands.SetModelError(modelCardId, e);
     }

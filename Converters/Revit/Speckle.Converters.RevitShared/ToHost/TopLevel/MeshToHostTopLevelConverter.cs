@@ -29,7 +29,7 @@ public class MeshToHostTopLevelConverter
     TessellatedShapeBuilderTarget target = TessellatedShapeBuilderTarget.Mesh;
     TessellatedShapeBuilderFallback fallback = TessellatedShapeBuilderFallback.Salvage;
 
-    var tsb = new TessellatedShapeBuilder()
+    using var tsb = new TessellatedShapeBuilder()
     {
       Fallback = fallback,
       Target = target,

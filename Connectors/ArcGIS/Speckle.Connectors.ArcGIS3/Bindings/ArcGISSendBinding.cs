@@ -4,6 +4,7 @@ using ArcGIS.Desktop.Editing.Events;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using ArcGIS.Desktop.Mapping.Events;
+using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.ArcGIS.Filters;
 using Speckle.Connectors.DUI.Bindings;
@@ -17,7 +18,6 @@ using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
-using Speckle.Core.Transports;
 
 namespace Speckle.Connectors.ArcGIS.Bindings;
 
@@ -222,13 +222,36 @@ public sealed class ArcGISSendBinding : ISendBinding
     RunExpirationChecks(true);
   }
 
+  private void AddChangedNestedObjectIds(GroupLayer group)
+  {
+    ChangedObjectIds.Add(group.URI);
+    foreach (var member in group.Layers)
+    {
+      if (member is GroupLayer subGroup)
+      {
+        AddChangedNestedObjectIds(subGroup);
+      }
+      else
+      {
+        ChangedObjectIds.Add(member.URI);
+      }
+    }
+  }
+
   private void GetIdsForMapPropertyChangedEvent(MapPropertyChangedEventArgs args)
   {
     foreach (Map map in args.Maps)
     {
       foreach (MapMember member in map.Layers)
       {
-        ChangedObjectIds.Add(member.URI);
+        if (member is GroupLayer group)
+        {
+          AddChangedNestedObjectIds(group);
+        }
+        else
+        {
+          ChangedObjectIds.Add(member.URI);
+        }
       }
     }
     RunExpirationChecks(false);
@@ -356,19 +379,16 @@ public sealed class ArcGISSendBinding : ISendBinding
 
       Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
     }
-    // Catch here specific exceptions if they related to model card.
-    catch (SpeckleSendFilterException e)
-    {
-      Commands.SetModelError(modelCardId, e);
-    }
-    catch (TransportException e)
-    {
-      Commands.SetModelError(modelCardId, e);
-    }
     catch (OperationCanceledException)
     {
-      // SWALLOW -> UI handles it immediately, so we do not need to handle anything
+      // SWALLOW -> UI handles it immediately, so we do not need to handle anything for now!
+      // Idea for later -> when cancel called, create promise from UI to solve it later with this catch block.
+      // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
       return;
+    }
+    catch (Exception e) when (!e.IsFatal()) // UX reasons - we will report operation exceptions as model card error.
+    {
+      Commands.SetModelError(modelCardId, e);
     }
   }
 

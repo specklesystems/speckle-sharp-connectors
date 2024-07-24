@@ -1,5 +1,7 @@
 using System.Diagnostics.Contracts;
+using ArcGIS.Core.CIM;
 using ArcGIS.Core.Geometry;
+using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Internal.Mapping.CommonControls.Transformations;
 using ArcGIS.Desktop.Mapping;
 using Objects.Geometry;
@@ -405,7 +407,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     string shortName = nestedLayerName.Split("\\")[^1];
     string nestedLayerPath = string.Join("\\", nestedLayerName.Split("\\").SkipLast(1));
 
-    GroupLayer groupLayer = CreateNestedGroupLayer(nestedLayerPath, createdLayerGroups);
+    GroupLayer groupLayer = QueuedTask.Run(() => CreateNestedGroupLayer(nestedLayerPath, createdLayerGroups)).Result;
 
     // Most of the Speckle-written datasets will be containing geometry and added as Layers
     // although, some datasets might be just tables (e.g. native GIS Tables, in the future maybe Revit schedules etc.
@@ -413,13 +415,46 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     // expensive, than assuming by default that it's a layer with geometry (which in most cases it's expected to be)
     try
     {
-      var layer = LayerFactory.Instance.CreateLayer(uri, groupLayer, layerName: shortName);
-      layer.SetExpanded(true);
+      MapMember layer = QueuedTask
+        .Run(() =>
+        {
+          var layer = LayerFactory.Instance.CreateLayer(uri, groupLayer, layerName: shortName);
+          if (layer == null)
+          {
+            throw new SpeckleException($"Layer '{shortName}' was not created");
+          }
+
+          // if Scene
+          // https://community.esri.com/t5/arcgis-pro-sdk-questions/sdk-equivalent-to-changing-layer-s-elevation/td-p/1346139
+          if (_contextStack.Current.Document.Map.IsScene)
+          {
+            var groundSurfaceLayer = _contextStack.Current.Document.Map.GetGroundElevationSurfaceLayer();
+            var layerElevationSurface = new CIMLayerElevationSurface
+            {
+              ElevationSurfaceLayerURI = groundSurfaceLayer.URI,
+            };
+
+            // for Feature Layers
+            if (layer.GetDefinition() is CIMFeatureLayer cimLyr)
+            {
+              cimLyr.LayerElevation = layerElevationSurface;
+              layer.SetDefinition(cimLyr);
+            }
+          }
+
+          layer.SetExpanded(true);
+          return layer;
+        })
+        .Result;
+
       return layer;
     }
     catch (ArgumentException)
     {
-      var table = StandaloneTableFactory.Instance.CreateStandaloneTable(uri, groupLayer, tableName: shortName);
+      StandaloneTable table = QueuedTask
+        .Run(() => StandaloneTableFactory.Instance.CreateStandaloneTable(uri, groupLayer, tableName: shortName))
+        .Result;
+
       return table;
     }
   }

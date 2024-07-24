@@ -1,10 +1,8 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
-using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
-using Speckle.Connectors.Utils.Instances;
 using Speckle.Converters.Common;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
@@ -61,8 +59,6 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     List<ReceiveConversionResult> results = new();
     List<string> bakedObjectIds = new();
 
-    // return new(bakedObjectIds, results);
-
     var objectGraph = _traversalFunction.Traverse(rootObject).Where(obj => obj.Current is not Collection);
 
     // POC: these are not captured by traversal, so we need to re-add them here
@@ -70,38 +66,46 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       ?.Cast<InstanceDefinitionProxy>()
       .ToList();
 
-    var instanceComponents = new List<(string[] path, IInstanceComponent obj)>();
+    var instanceComponents = new List<(Collection[] path, IInstanceComponent obj)>();
     // POC: these are not captured by traversal, so we need to re-add them here
     if (instanceDefinitionProxies != null && instanceDefinitionProxies.Count > 0)
     {
-      var transformed = instanceDefinitionProxies.Select(proxy => (Array.Empty<string>(), proxy as IInstanceComponent));
+      var transformed = instanceDefinitionProxies.Select(proxy =>
+        (Array.Empty<Collection>(), proxy as IInstanceComponent)
+      );
       instanceComponents.AddRange(transformed);
     }
 
-    var atomicObjects = new List<(string layerName, Base obj)>();
+    // POC: get group proxies
+    var groupProxies = (rootObject["groupProxies"] as List<object>)?.Cast<GroupProxy>().ToList();
+
+    var atomicObjects = new List<(Layer layer, Base obj)>();
 
     foreach (TraversalContext tc in objectGraph)
     {
-      var layerName = _autocadLayerManager.GetLayerPath(tc, baseLayerPrefix);
-      if (tc.Current is IInstanceComponent instanceComponent)
+      var layer = _autocadLayerManager.GetLayerPath(tc, baseLayerPrefix);
+      switch (tc.Current)
       {
-        instanceComponents.Add((new string[] { layerName }, instanceComponent));
-      }
-      else
-      {
-        atomicObjects.Add((layerName, tc.Current));
+        case IInstanceComponent instanceComponent:
+          instanceComponents.Add(([new() { name = layer.name }], instanceComponent));
+          break;
+        case GroupProxy:
+          continue;
+        default:
+          atomicObjects.Add((layer, tc.Current));
+          break;
       }
     }
 
     // Stage 1: Convert atomic objects
     Dictionary<string, List<Entity>> applicationIdMap = new();
     var count = 0;
-    foreach (var (layerName, atomicObject) in atomicObjects)
+    foreach (var (layerCollection, atomicObject) in atomicObjects)
     {
       onOperationProgressed?.Invoke("Converting objects", (double)++count / atomicObjects.Count);
       try
       {
-        var convertedObjects = ConvertObject(atomicObject, layerName).ToList();
+        var convertedObjects = ConvertObject(atomicObject, layerCollection).ToList();
 
         if (atomicObject.applicationId != null)
         {
@@ -138,6 +142,48 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     results.RemoveAll(result => result.ResultId != null && consumedObjectIds.Contains(result.ResultId));
     results.AddRange(instanceConversionResults);
 
+    // Stage 3: Create group
+    // using var transactionContext = TransactionContext.StartTransaction(Application.DocumentManager.MdiActiveDocument);
+
+
+    if (groupProxies != null)
+    {
+      using var groupCreationTransaction =
+        Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
+      var groupDictionary = (DBDictionary)
+        groupCreationTransaction.GetObject(
+          Application.DocumentManager.CurrentDocument.Database.GroupDictionaryId,
+          OpenMode.ForWrite
+        );
+
+      foreach (var gp in groupProxies.OrderBy(group => group.objects.Count))
+      {
+        try
+        {
+          var entities = gp.objects.SelectMany(oldObjId => applicationIdMap[oldObjId]);
+          var ids = new ObjectIdCollection();
+
+          foreach (var entity in entities)
+          {
+            ids.Add(entity.ObjectId);
+          }
+
+          var newGroup = new Group(gp.name, true); // NOTE: this constructor sets both the description (as it says) but also the name at the same time
+          newGroup.Append(ids);
+
+          groupDictionary.UpgradeOpen();
+          groupDictionary.SetAt(gp.name, newGroup);
+
+          groupCreationTransaction.AddNewlyCreatedDBObject(newGroup, true);
+        }
+        catch (Exception e) when (!e.IsFatal())
+        {
+          results.Add(new ReceiveConversionResult(Status.ERROR, gp, null, null, e));
+        }
+      }
+      groupCreationTransaction.Commit();
+    }
+
     return new(bakedObjectIds, results);
   }
 
@@ -147,13 +193,13 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     _instanceObjectsManager.PurgeInstances(baseLayerPrefix);
   }
 
-  private IEnumerable<Entity> ConvertObject(Base obj, string layerName)
+  private IEnumerable<Entity> ConvertObject(Base obj, Layer layerCollection)
   {
     using TransactionContext transactionContext = TransactionContext.StartTransaction(
       Application.DocumentManager.MdiActiveDocument
-    );
+    ); // POC: is this used/needed?
 
-    _autocadLayerManager.CreateLayerForReceive(layerName);
+    _autocadLayerManager.CreateLayerForReceive(layerCollection);
 
     object converted;
     using (var tr = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction())
@@ -172,7 +218,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
         continue;
       }
 
-      conversionResult.AppendToDb(layerName);
+      conversionResult.AppendToDb(layerCollection.name);
       yield return conversionResult;
     }
   }

@@ -101,7 +101,7 @@ public class SpeckleContainerBuilder
   public IReadOnlyList<Type> SpeckleTypes => _types.Value;
   public ContainerBuilder ContainerBuilder { get; }
 
-  private class ModuleAdapter : Module
+  private sealed class ModuleAdapter : Module
   {
     private readonly ISpeckleModule _speckleModule;
 
