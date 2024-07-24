@@ -3,7 +3,7 @@
     <TargetFramework>net48</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
     <UseWpf>true</UseWpf>
-    <AutoCADVersion>2024</AutoCADVersion>
+    <Civil3DVersion>2024</Civil3DVersion>
     <DefineConstants>$(DefineConstants);CIVIL3D2024;CIVIL3D;</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
