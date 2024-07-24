@@ -65,6 +65,7 @@ public static class SharedRegistration
       IInstanceObjectsManager<AutocadRootObject, List<Entity>>,
       InstanceObjectsManager<AutocadRootObject, List<Entity>>
     >();
+    builder.AddScoped<AutocadGroupUnpacker>();
     builder.AddScoped<AutocadInstanceObjectManager>();
   }
 
