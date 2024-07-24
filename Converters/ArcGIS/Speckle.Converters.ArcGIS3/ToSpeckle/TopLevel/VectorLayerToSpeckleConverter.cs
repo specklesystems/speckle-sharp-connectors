@@ -165,7 +165,7 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
       foreach (var rBreak in graduatedRenderer.Breaks)
       {
         // keep looping until the last matching condition
-        if (System.Convert.ToDouble(row[usedFieldName]) < rBreak.UpperBound)
+        if (System.Convert.ToDouble(row[usedFieldName]) <= rBreak.UpperBound)
         {
           breakColor = rBreak.Symbol.Symbol.GetColor();
         }
