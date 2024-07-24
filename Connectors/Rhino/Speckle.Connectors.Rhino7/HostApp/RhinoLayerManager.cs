@@ -77,10 +77,12 @@ public class RhinoLayerManager
   /// <param name="layer">The layer you want the equivalent collection for.</param>
   /// <param name="rootObjectCollection">The root object that will be sent to Speckle, and will host all collections.</param>
   /// <returns></returns>
-  public Collection GetHostObjectCollection(Layer layer, Collection rootObjectCollection)
+  public Collection GetHostObjectCollection(Layer layer, Collection rootObjectCollection, out bool alreadyCached)
   {
+    alreadyCached = false;
     if (_layerCollectionCache.TryGetValue(layer.Index, out Collection value))
     {
+      alreadyCached = true;
       return value;
     }
 

@@ -69,13 +69,18 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     // POC: Handle blocks.
     List<SendConversionResult> results = new(atomicObjects.Count);
     Dictionary<string, List<string>> renderMaterialToObjectIdMap = new();
+
     foreach (RhinoObject rhinoObject in atomicObjects)
     {
       cancellationToken.ThrowIfCancellationRequested();
 
       // handle layer
       Rhino.DocObjects.Layer layer = _contextStack.Current.Document.Layers[rhinoObject.Attributes.LayerIndex];
-      Collection collectionHost = _layerManager.GetHostObjectCollection(layer, rootObjectCollection);
+      Collection collectionHost = _layerManager.GetHostObjectCollection(
+        layer,
+        rootObjectCollection,
+        out bool layerAlreadyProcessed
+      );
 
       // handle render materials
       // POC: we are only adding the object to the render material map if its material source is set to from object.
@@ -109,10 +114,12 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         }
       }
 
-      if (layer.RenderMaterial is Rhino.Render.RenderMaterial layerMaterial)
+      if (!layerAlreadyProcessed && layer.RenderMaterial is Rhino.Render.RenderMaterial layerMaterial)
       {
         _materialManager.CreateSpeckleRenderMaterial(layerMaterial);
 
+        // POC: we need to check to see that this layer was not already processed by a previous object
+        // POC: would be cleaner if we converted layers separately
         if (renderMaterialToObjectIdMap.TryGetValue(layerMaterial.Id.ToString(), out List<string> objectList))
         {
           objectList.Add(rhinoObject.Id.ToString());
