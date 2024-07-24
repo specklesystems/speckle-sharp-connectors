@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Core.Common;
 using Speckle.Core.Models;
 
 namespace Speckle.Converters.RevitShared.Helpers;
