@@ -111,19 +111,19 @@
       },
       "Microsoft.Data.Sqlite": {
         "type": "Transitive",
-        "resolved": "8.0.6",
-        "contentHash": "YVzVtU1IoGsTiMAe0BNV9ssKyrUm6lBQJP6w2N4W29YrBYYtyCmTFmrNGjxaJtJXVqttu0sYkPxmStj/OnMFdg==",
+        "resolved": "7.0.7",
+        "contentHash": "tiNmV1oPy+Z2R7Wd0bPB/FxCr8B+/5q11OpDMG751GA/YuOL7MZrBFfzv5oFRlFe08K6sjrnbrauzzGIeNrzLQ==",
         "dependencies": {
-          "Microsoft.Data.Sqlite.Core": "8.0.6",
-          "SQLitePCLRaw.bundle_e_sqlite3": "2.1.6"
+          "Microsoft.Data.Sqlite.Core": "7.0.7",
+          "SQLitePCLRaw.bundle_e_sqlite3": "2.1.4"
         }
       },
       "Microsoft.Data.Sqlite.Core": {
         "type": "Transitive",
-        "resolved": "8.0.6",
-        "contentHash": "umhZ0ZF2RI81rGFTnYmCxI+Euj4Aqe/6Y4+8CxN9OVJNGDNIqB5laJ3wxQTU8zXCcm2k9F7FL+/6RVoOT4z1Fw==",
+        "resolved": "7.0.7",
+        "contentHash": "21FRzcJhaTrlv7kTrqr/ltFcSQM2TyuTTPhUcjO8H73od7Bb3QraNW90c7lUucNI/245XPkKZG4fp7/7OsKCSg==",
         "dependencies": {
-          "SQLitePCLRaw.core": "2.1.6"
+          "SQLitePCLRaw.core": "2.1.4"
         }
       },
       "Microsoft.Extensions.DependencyInjection.Abstractions": {
@@ -187,6 +187,20 @@
           "Polly": "7.1.0"
         }
       },
+      "Sentry": {
+        "type": "Transitive",
+        "resolved": "3.33.0",
+        "contentHash": "8vbD2o6IR2wrRrkSiRbnodWGWUOqIlwYtzpjvPNOb5raJdOf+zxMwfS8f6nx9bmrTTfDj7KrCB8C/5OuicAc8A=="
+      },
+      "Sentry.Serilog": {
+        "type": "Transitive",
+        "resolved": "3.33.0",
+        "contentHash": "V8BU7QGWg2qLYfNPqtuTBhC1opysny5l+Ifp6J6PhOeAxU0FssR7nYfbJVetrnLIoh2rd3DlJ6hHYYQosQYcUQ==",
+        "dependencies": {
+          "Sentry": "3.33.0",
+          "Serilog": "2.10.0"
+        }
+      },
       "Serilog": {
         "type": "Transitive",
         "resolved": "2.12.0",
@@ -244,8 +258,8 @@
       },
       "Serilog.Sinks.Seq": {
         "type": "Transitive",
-        "resolved": "5.2.3",
-        "contentHash": "oQzJkLwpoWm1Jn26D6Rx7s55diIx4+YHMAZhtuFstF/v/FivzNzz8K7h9sOHLTSFYuVOx01inlyCpekGeBALNg==",
+        "resolved": "5.2.2",
+        "contentHash": "1Csmo5ua7NKUe0yXUx+zsRefjAniPWcXFhUXxXG8pwo0iMiw2gjn9SOkgYnnxbgWqmlGv236w0N/dHc2v5XwMg==",
         "dependencies": {
           "Serilog": "2.12.0",
           "Serilog.Formatting.Compact": "1.1.0",
@@ -273,32 +287,32 @@
       },
       "SQLitePCLRaw.bundle_e_sqlite3": {
         "type": "Transitive",
-        "resolved": "2.1.6",
-        "contentHash": "BmAf6XWt4TqtowmiWe4/5rRot6GerAeklmOPfviOvwLoF5WwgxcJHAxZtySuyW9r9w+HLILnm8VfJFLCUJYW8A==",
+        "resolved": "2.1.4",
+        "contentHash": "EWI1olKDjFEBMJu0+3wuxwziIAdWDVMYLhuZ3Qs84rrz+DHwD00RzWPZCa+bLnHCf3oJwuFZIRsHT5p236QXww==",
         "dependencies": {
-          "SQLitePCLRaw.lib.e_sqlite3": "2.1.6",
-          "SQLitePCLRaw.provider.e_sqlite3": "2.1.6"
+          "SQLitePCLRaw.lib.e_sqlite3": "2.1.4",
+          "SQLitePCLRaw.provider.e_sqlite3": "2.1.4"
         }
       },
       "SQLitePCLRaw.core": {
         "type": "Transitive",
-        "resolved": "2.1.6",
-        "contentHash": "wO6v9GeMx9CUngAet8hbO7xdm+M42p1XeJq47ogyRoYSvNSp0NGLI+MgC0bhrMk9C17MTVFlLiN6ylyExLCc5w==",
+        "resolved": "2.1.4",
+        "contentHash": "inBjvSHo9UDKneGNzfUfDjK08JzlcIhn1+SP5Y3m6cgXpCxXKCJDy6Mka7LpgSV+UZmKSnC8rTwB0SQ0xKu5pA==",
         "dependencies": {
           "System.Memory": "4.5.3"
         }
       },
       "SQLitePCLRaw.lib.e_sqlite3": {
         "type": "Transitive",
-        "resolved": "2.1.6",
-        "contentHash": "2ObJJLkIUIxRpOUlZNGuD4rICpBnrBR5anjyfUFQep4hMOIeqW+XGQYzrNmHSVz5xSWZ3klSbh7sFR6UyDj68Q=="
+        "resolved": "2.1.4",
+        "contentHash": "2C9Q9eX7CPLveJA0rIhf9RXAvu+7nWZu1A2MdG6SD/NOu26TakGgL1nsbc0JAspGijFOo3HoN79xrx8a368fBg=="
       },
       "SQLitePCLRaw.provider.e_sqlite3": {
         "type": "Transitive",
-        "resolved": "2.1.6",
-        "contentHash": "PQ2Oq3yepLY4P7ll145P3xtx2bX8xF4PzaKPRpw9jZlKvfe4LE/saAV82inND9usn1XRpmxXk7Lal3MTI+6CNg==",
+        "resolved": "2.1.4",
+        "contentHash": "CSlb5dUp1FMIkez9Iv5EXzpeq7rHryVNqwJMWnpq87j9zWZexaEMdisDktMsnnrzKM6ahNrsTkjqNodTBPBxtQ==",
         "dependencies": {
-          "SQLitePCLRaw.core": "2.1.6"
+          "SQLitePCLRaw.core": "2.1.4"
         }
       },
       "System.Buffers": {
@@ -336,11 +350,6 @@
         "resolved": "4.5.0",
         "contentHash": "Xg4G4Indi4dqP1iuAiMSwpiWS54ZghzR644OtsRCm/m/lBMG8dUBhLVN7hLm8NNrNTR+iGbshCPTwrvxZPlm4g=="
       },
-      "System.Text.Json": {
-        "type": "Transitive",
-        "resolved": "4.7.2",
-        "contentHash": "TcMd95wcrubm9nHvJEQs70rC0H/8omiSGGpU4FQ/ZA1URIqD4pjmFJh2Mfv1yH1eHgJDWTi2hMDXwTET+zOOyg=="
-      },
       "speckle.autofac": {
         "type": "Project",
         "dependencies": {
@@ -363,33 +372,34 @@
       "Speckle.Core": {
         "type": "CentralTransitive",
         "requested": "[3.1.0-dev.78, )",
-        "resolved": "3.1.0-otel.1",
-        "contentHash": "gc+w0wTvYNkO/ctYBV83eXAPYj0d/A/REDCigtXun+Yw8YTTVcwadcZ7EduHlXBURa/y6Da87CsL62BxHA15kw==",
+        "resolved": "3.1.0-dev.78",
+        "contentHash": "+HC9oDE64vpiMtUPerBog30XJvJhvEYrMQI0dxQFDs1gvFdnTUrO2ksxW7mFjsnDOUBLbvn0vuOYe2PRGfqLwQ==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.CSharp": "4.7.0",
-          "Microsoft.Data.Sqlite": "8.0.6",
+          "Microsoft.Data.Sqlite": "7.0.7",
           "Polly": "7.2.3",
           "Polly.Contrib.WaitAndRetry": "1.1.1",
           "Polly.Extensions.Http": "3.0.0",
+          "Sentry": "3.33.0",
+          "Sentry.Serilog": "3.33.0",
           "Serilog": "2.12.0",
           "Serilog.Enrichers.ClientInfo": "1.3.0",
           "Serilog.Exceptions": "8.4.0",
           "Serilog.Sinks.Console": "4.1.0",
-          "Serilog.Sinks.Seq": "5.2.3",
+          "Serilog.Sinks.Seq": "5.2.2",
           "SerilogTimings": "3.0.1",
           "Speckle.DoubleNumerics": "4.0.1",
-          "Speckle.Newtonsoft.Json": "13.0.2",
-          "System.Text.Json": "4.7.2"
+          "Speckle.Newtonsoft.Json": "13.0.2"
         }
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
         "requested": "[3.1.0-dev.78, )",
-        "resolved": "3.1.0-otel.1",
-        "contentHash": "UX84I4uBaJZegJKBg3K0/aILvxRfWlxlSMIZ7MhSg11kfESk25+lC3DbNBvkcMpdzUQ3/OtkFZsar4OI4Y7Ofg==",
+        "resolved": "3.1.0-dev.78",
+        "contentHash": "D8NAyqghnk3PXoTfwKd0JcMoBbin1gN4dQ9Ko6tfgP6As5VKdKoCv/qtlNww9EcvHzHEQ3B0wwJhrdOtpKxkgQ==",
         "dependencies": {
-          "Speckle.Core": "3.1.0-otel.1"
+          "Speckle.Core": "3.1.0-dev.78"
         }
       }
     }
