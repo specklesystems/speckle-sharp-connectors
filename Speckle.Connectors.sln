@@ -141,6 +141,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.DUI.Test
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Converters.Revit2022.Tests", "Converters\Revit\Speckle.Converters.Revit2022.Tests\Speckle.Converters.Revit2022.Tests.csproj", "{D8069A23-AD2E-4C9E-8574-7E8C45296A46}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DllConflictManagement", "Connectors\DllConflictManagement\DllConflictManagement.csproj", "{D4E36D06-7667-477A-9161-9691310438DF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -303,6 +305,10 @@ Global
 		{D8069A23-AD2E-4C9E-8574-7E8C45296A46}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D8069A23-AD2E-4C9E-8574-7E8C45296A46}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D8069A23-AD2E-4C9E-8574-7E8C45296A46}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D4E36D06-7667-477A-9161-9691310438DF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D4E36D06-7667-477A-9161-9691310438DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D4E36D06-7667-477A-9161-9691310438DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D4E36D06-7667-477A-9161-9691310438DF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -365,6 +371,7 @@ Global
 		{0AF38BA3-65A0-481B-8CBB-B82E406E1575} = {D92751C8-1039-4005-90B2-913E55E0B8BD}
 		{EB83A3A3-F9B6-4281-8EBF-F7289FB5D885} = {FD4D6594-D81E-456F-8F2E-35B09E04A755}
 		{D8069A23-AD2E-4C9E-8574-7E8C45296A46} = {0AF38BA3-65A0-481B-8CBB-B82E406E1575}
+		{D4E36D06-7667-477A-9161-9691310438DF} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}

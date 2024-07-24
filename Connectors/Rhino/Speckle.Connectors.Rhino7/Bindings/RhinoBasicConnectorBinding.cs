@@ -1,7 +1,6 @@
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
-using Sentry.Reflection;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
