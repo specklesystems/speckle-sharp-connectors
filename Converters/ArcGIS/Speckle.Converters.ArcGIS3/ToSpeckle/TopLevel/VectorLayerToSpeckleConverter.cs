@@ -162,7 +162,9 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
         ?? fields.FirstOrDefault(y => y.Alias == graduatedRenderer.Field);
       var usedFieldName = usedField?.Name;
 
-      foreach (var rBreak in graduatedRenderer.Breaks)
+      var reversedBreaks = new List<CIMClassBreak>(graduatedRenderer.Breaks);
+      reversedBreaks.Reverse();
+      foreach (var rBreak in reversedBreaks)
       {
         // keep looping until the last matching condition
         if (System.Convert.ToDouble(row[usedFieldName]) <= rBreak.UpperBound)
