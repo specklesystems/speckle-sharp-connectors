@@ -1,10 +1,9 @@
 name: .NET Build
 
 on:
-  pull_request: # Run build on every pull request that is not to main/dev
+  pull_request: # Run build on every pull request that is not to main
     branches-ignore:
       - main
-      - dev
   workflow_call:
     secrets:
       codecov_token:
