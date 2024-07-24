@@ -2,7 +2,6 @@ using System.Diagnostics.Contracts;
 using ArcGIS.Core.CIM;
 using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
-using ArcGIS.Desktop.Internal.Mapping.CommonControls.Transformations;
 using ArcGIS.Desktop.Mapping;
 using Objects.Geometry;
 using Objects.GIS;
@@ -23,7 +22,7 @@ using RasterLayer = Objects.GIS.RasterLayer;
 
 namespace Speckle.Connectors.ArcGIS.Operations.Receive;
 
-public record LocalToGlobalMap(Base AtomicObject, TraversalContext tc, List<Matrix4x4> Matrix);
+public record LocalToGlobalMap(Base AtomicObject, TraversalContext Tc, List<Matrix4x4> Matrix);
 
 public class LocalToGlobal
 {
@@ -241,7 +240,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
 
     var localToGlobal = new LocalToGlobal();
     var localToGlobalMap = localToGlobal.UnpackRelativeAtomicObjects(rootObject, objectsToConvertTc);
-    var objectsToConvert = localToGlobalMap.Select(x => (x.AtomicObject, x.tc, x.Matrix)).ToList();
+    var objectsToConvert = localToGlobalMap.Select(x => (x.AtomicObject, tc: x.Tc, x.Matrix)).ToList();
 
     int allCount = objectsToConvert.Count;
     int count = 0;
