@@ -131,7 +131,7 @@ Target(
   Glob.Files(".", "**/*.Tests.csproj"),
   file =>
   {
-    Run("dotnet", $"test {file} -c Release --no-build --no-restore --verbosity=normal");
+    Run("dotnet", $"test {file} -c Release --no-build --no-restore --verbosity=minimal");
   }
 );
 
@@ -144,7 +144,7 @@ Target(
     Run("dotnet", $"restore {file} --locked-mode");
     Run(
       "dotnet",
-      $"test {file} -c Release --no-restore --verbosity=normal  /p:AltCover=true /p:AltCoverAttributeFilter=ExcludeFromCodeCoverage"
+      $"test {file} -c Release --no-restore --verbosity=minimal  /p:AltCover=true /p:AltCoverAttributeFilter=ExcludeFromCodeCoverage /p:AltCoverVerbosity=Warning"
     );
   }
 );
