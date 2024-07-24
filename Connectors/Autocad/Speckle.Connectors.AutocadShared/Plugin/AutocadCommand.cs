@@ -4,7 +4,6 @@ using Autodesk.AutoCAD.Runtime;
 using Autodesk.AutoCAD.Windows;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Autocad.HostApp;
-using Speckle.Connectors.Autocad.Interfaces;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Core.Kits;
 
@@ -14,7 +13,6 @@ public class AutocadCommand
 {
   private static PaletteSet? PaletteSet { get; set; }
   private static readonly Guid s_id = new("3223E594-1B09-4E54-B3DD-8EA0BECE7BA5");
-  private IAutocadPlugin? _autocadPlugin;
 
   public SpeckleContainer? Container { get; private set; }
 
@@ -46,10 +44,6 @@ public class AutocadCommand
       .LoadAutofacModules(Assembly.GetExecutingAssembly(), autocadSettings.Modules)
       .AddSingleton(autocadSettings)
       .Build();
-
-    // Resolve root plugin object and initialise.
-    _autocadPlugin = Container.Resolve<IAutocadPlugin>();
-    _autocadPlugin.Initialise();
 
     var panelWebView = Container.Resolve<DUI3ControlWebView>();
 
