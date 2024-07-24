@@ -37,7 +37,7 @@ public class LocalToGlobal
     return new Vector3(x, y, z);
   }
 
-  public static Base TransformObjects(Base atomicObject, TraversalContext ctx, List<Matrix4x4> matrix)
+  public static Base TransformObjects(Base atomicObject, List<Matrix4x4> matrix)
   {
     if (matrix.Count == 0)
     {
@@ -77,10 +77,13 @@ public class LocalToGlobal
           }
           vertices.AddRange([ptVector.X, ptVector.Y, ptVector.Z]);
         }
-        Mesh newMesh = new();
-        newMesh.vertices = vertices;
-        newMesh.faces = new List<int>(displayMesh.faces);
-        newMesh.colors = new List<int>(displayMesh.colors);
+        Mesh newMesh =
+          new()
+          {
+            vertices = vertices,
+            faces = new List<int>(displayMesh.faces),
+            colors = new List<int>(displayMesh.colors)
+          };
         newDisplayValue.Add(newMesh);
       }
       else
@@ -263,7 +266,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
         }
         else
         {
-          obj = LocalToGlobal.TransformObjects(atomicObject, ctx, matrix);
+          obj = LocalToGlobal.TransformObjects(atomicObject, matrix);
 
           string nestedLayerPath = $"{string.Join("\\", path)}\\{obj.speckle_type.Split(".")[^1]}";
           Geometry converted = (Geometry)_converter.Convert(obj);
