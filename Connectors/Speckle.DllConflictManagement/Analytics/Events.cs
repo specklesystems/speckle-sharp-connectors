@@ -3,7 +3,7 @@
 /// <summary>
 /// Default Mixpanel events
 /// </summary>
-public enum Events
+public enum MixpanelEvents
 {
   /// <summary>
   /// Event triggered when data is sent to a Speckle Server

@@ -57,7 +57,11 @@ public sealed class AnalyticsWithoutDependencies : IAnalyticsWithoutDependencies
   /// <param name="eventName">Name of the even</param>
   /// <param name="customProperties">Additional parameters to pass in to event</param>
   /// <param name="isAction">True if it's an action performed by a logged user</param>
-  public void TrackEvent(Events eventName, Dictionary<string, object?>? customProperties = null, bool isAction = true)
+  public void TrackEvent(
+    MixpanelEvents eventName,
+    Dictionary<string, object?>? customProperties = null,
+    bool isAction = true
+  )
   {
     Task.Run(async () => await TrackEventAsync(eventName, customProperties, isAction).ConfigureAwait(false));
   }
@@ -74,7 +78,7 @@ public sealed class AnalyticsWithoutDependencies : IAnalyticsWithoutDependencies
     Justification = "Catching all exceptions to avoid an unobserved exception that could crash the host app"
   )]
   private async Task TrackEventAsync(
-    Events eventName,
+    MixpanelEvents eventName,
     Dictionary<string, object?>? customProperties = null,
     bool isAction = true
   )
@@ -139,7 +143,7 @@ public sealed class AnalyticsWithoutDependencies : IAnalyticsWithoutDependencies
 
   public void TrackEvent(object sender, ActionEventArgs args)
   {
-    _ = Enum.TryParse(args.EventName, out Analytics.Events eventName);
+    _ = Enum.TryParse(args.EventName, out Analytics.MixpanelEvents eventName);
     TrackEvent(eventName, args.EventProperties);
   }
 

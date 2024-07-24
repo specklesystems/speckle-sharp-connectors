@@ -59,9 +59,10 @@ internal sealed class RevitExternalApplication : IExternalApplication
     // POC: not sure what this is doing...  could be messing up our Aliasing????
     AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<RevitExternalApplication>;
     var conflictBuilder = SpeckleContainerBuilder.CreateInstance();
-    conflictBuilder.AddDllConflicts("Revit", GetVersionAsString());
+    conflictBuilder.AddDllConflicts<RevitDllConflictUserNotifier>("Revit", GetVersionAsString());
     var conflictContainer = conflictBuilder.Build();
     var manager = conflictContainer.Resolve<IDllConflictManager>();
+    var conflictNotifier = conflictContainer.Resolve<IDllConflictUserNotifier>();
     try
     {
       manager.DetectConflictsWithAssembliesInCurrentDomain(typeof(RevitExternalApplication).Assembly);

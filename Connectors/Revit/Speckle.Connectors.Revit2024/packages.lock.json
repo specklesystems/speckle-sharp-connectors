@@ -487,6 +487,14 @@
           "Speckle.Converters.Revit2024": "[1.0.0, )"
         }
       },
+      "speckle.dllconflictmanagement": {
+        "type": "Project",
+        "dependencies": {
+          "Speckle.Autofac": "[1.0.0, )",
+          "Speckle.Connectors.Utils": "[1.0.0, )",
+          "Speckle.Newtonsoft.Json": "[13.0.2, )"
+        }
+      },
       "Microsoft.Extensions.Logging.Abstractions": {
         "type": "CentralTransitive",
         "requested": "[7.0.0, )",

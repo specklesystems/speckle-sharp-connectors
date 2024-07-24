@@ -1,5 +1,6 @@
 ﻿using Speckle.Autofac.DependencyInjection;
 using Speckle.DllConflictManagement.Analytics;
+using Speckle.DllConflictManagement.ConflictManagementOptions;
 using Speckle.DllConflictManagement.EventEmitter;
 using Speckle.DllConflictManagement.Serialization;
 
@@ -14,15 +15,21 @@ public static class ContainerRegistration
   )
     where T : class, IDllConflictUserNotifier
   {
+    builder.AddTransient<IDllConflictUserNotifier, T>();
     builder.AddTransient<ISpeckleNewtonsoftSerializer, SpeckleNewtonsoftSerializer>();
     builder.AddTransient<IDllConflictEventEmitter, DllConflictEventEmitter>();
-    builder.AddTransient<IDllConflictUserNotifier, T>();
+    builder.AddTransient<IDllConflictManager, DllConflictManager>();
+
     builder.AddTransient<IAnalyticsWithoutDependencies>(sp => new AnalyticsWithoutDependencies(
       sp.Resolve<IDllConflictEventEmitter>(),
       sp.Resolve<ISpeckleNewtonsoftSerializer>(),
       hostApplication,
       hostApplicationVersion
     ));
-    builder.AddTransient<IDllConflictManager, DllConflictManager>();
+    builder.AddTransient<IDllConflictManagmentOptionsLoader>(sp => new DllConflictManagmentOptionsLoader(
+      sp.Resolve<ISpeckleNewtonsoftSerializer>(),
+      hostApplication,
+      hostApplicationVersion
+    ));
   }
 }

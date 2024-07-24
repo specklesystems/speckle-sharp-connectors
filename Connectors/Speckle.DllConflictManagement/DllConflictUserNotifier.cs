@@ -8,10 +8,10 @@ namespace Speckle.DllConflictManagement;
 [GenerateAutoInterface]
 public abstract class DllConflictUserNotifier : IDllConflictUserNotifier
 {
-  private readonly DllConflictManager _dllConflictManager;
-  private readonly DllConflictEventEmitter _eventEmitter;
+  private readonly IDllConflictManager _dllConflictManager;
+  private readonly IDllConflictEventEmitter _eventEmitter;
 
-  protected DllConflictUserNotifier(DllConflictManager dllConflictManager, DllConflictEventEmitter eventEmitter)
+  protected DllConflictUserNotifier(IDllConflictManager dllConflictManager, IDllConflictEventEmitter eventEmitter)
   {
     _dllConflictManager = dllConflictManager;
     _eventEmitter = eventEmitter;
@@ -62,7 +62,7 @@ public abstract class DllConflictUserNotifier : IDllConflictUserNotifier
       eventParameters["allDetectedConflicts"] = _dllConflictManager.AllConflictInfoAsDtos.ToList();
     }
 
-    _eventEmitter.EmitAction(new ActionEventArgs(nameof(Events.DUIAction), eventParameters));
+    _eventEmitter.EmitAction(new ActionEventArgs(nameof(MixpanelEvents.DUIAction), eventParameters));
 
     ShowDialog("Conflict Report 🔥", "Speckle failed to load due to a dependency mismatch error.", sb.ToString());
   }
@@ -111,7 +111,7 @@ public abstract class DllConflictUserNotifier : IDllConflictUserNotifier
 
     _eventEmitter.EmitAction(
       new ActionEventArgs(
-        nameof(Events.DUIAction),
+        nameof(MixpanelEvents.DUIAction),
         new()
         {
           { "name", "DllConflictsDetected" },
@@ -135,7 +135,10 @@ public abstract class DllConflictUserNotifier : IDllConflictUserNotifier
     if (doNotWarnAgain)
     {
       _eventEmitter.EmitAction(
-        new ActionEventArgs(nameof(Events.DUIAction), new() { { "name", "Do not warn about dll conflicts checked" } })
+        new ActionEventArgs(
+          nameof(MixpanelEvents.DUIAction),
+          new() { { "name", "Do not warn about dll conflicts checked" } }
+        )
       );
       _dllConflictManager.SupressFutureAssemblyConflictWarnings(conflictInfoNotIgnored);
     }

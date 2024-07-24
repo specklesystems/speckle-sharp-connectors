@@ -41,7 +41,7 @@ public sealed class DllConflictManager : IDllConflictManager
 
     _eventEmitter.EmitAction(
       new ActionEventArgs(
-        nameof(Events.DUIAction),
+        nameof(MixpanelEvents.DUIAction),
         new()
         {
           { "name", "DllConflictsDetected" },
