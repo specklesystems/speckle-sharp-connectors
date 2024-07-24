@@ -28,6 +28,18 @@ public class PointToSpeckleConverter : ITypedConverter<MapPoint, SOG.Point>
         );
       }
 
+      if (
+        Double.IsNaN(reprojectedPt.X)
+        || Double.IsInfinity(reprojectedPt.X)
+        || Double.IsNaN(reprojectedPt.Y)
+        || Double.IsInfinity(reprojectedPt.Y)
+      )
+      {
+        throw new SpeckleConversionException(
+          $"Conversion to Spatial Reference {_contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference.Name} failed: coordinates undefined"
+        );
+      }
+
       // convert to Speckle Pt
       SOG.Point reprojectedSpecklePt =
         new(
