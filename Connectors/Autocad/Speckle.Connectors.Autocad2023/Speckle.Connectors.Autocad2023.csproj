@@ -1,11 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <RootNamespace>Speckle.Connectors.Autocad</RootNamespace>
     <TargetFramework>net48</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
     <UseWpf>true</UseWpf>
-    <StartAction>Program</StartAction>
-    <StartProgram>$(ProgramW6432)\Autodesk\AutoCAD 2023\acad.exe</StartProgram>
+    <AutoCADVersion>2023</AutoCADVersion>
     <DefineConstants>$(DefineConstants);AUTOCAD2023;AUTOCAD</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
@@ -19,7 +17,6 @@
     <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Speckle.AutoCAD.API" VersionOverride="2023.0.0" />
   </ItemGroup>
   <Import Project="..\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems" Label="Shared" />

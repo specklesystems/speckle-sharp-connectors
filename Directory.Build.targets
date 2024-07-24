@@ -13,4 +13,15 @@
     <Copy DestinationFolder="$(AppData)\Autodesk\REVIT\Addins\$(RevitVersion)\Speckle.Connectors.Revit$(RevitVersion)\%(RecursiveDir)" SourceFiles="@(RevitDLLs)" />
     <Copy DestinationFolder="$(AppData)\Autodesk\REVIT\Addins\$(RevitVersion)\" SourceFiles="@(SourceManifest)" />
   </Target>
+  <Target AfterTargets="Build"  Name="AfterBuildAutoCAD" Condition="'$(AutoCADVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
+    <ItemGroup>
+      <AutoCADDLLs Include="$(TargetDir)\**\*.*" />
+    </ItemGroup>
+    <Message Text="AutoCADVersion $(AutoCADVersion)" Importance="high"/>
+    <Copy DestinationFolder="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.AutoCAD$(AutoCADVersion)\" SourceFiles="@(AutoCADDLLs)" />
+  </Target>
+  <PropertyGroup Condition="'$(AutoCADVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
+    <StartAction>Program</StartAction>
+    <StartProgram>$(ProgramW6432)\Autodesk\AutoCAD $(AutoCADVersion)\acad.exe</StartProgram>
+  </PropertyGroup>
 </Project>
