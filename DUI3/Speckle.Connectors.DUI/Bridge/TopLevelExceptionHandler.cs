@@ -18,12 +18,23 @@ namespace Speckle.Connectors.DUI.Bridge;
 /// They will be rethrown to allow the host app to run its handlers<br/>
 /// Depending on the host app, this may trigger windows event logging, and recovery snapshots before ultimately terminating the process<br/>
 /// Attempting to swallow them may lead to data corruption, deadlocking, or things worse than a managed host app crash.
+/// This class is not designed to be injected, instead its part of the <see cref="BrowserBridge"/>
+/// If you need to use a <see cref="TopLevelExceptionHandler"/> outside of a <see cref="IBinding"/>, then you should inject <see cref="TopLevelExceptionHandlerBinding"/>
 /// </remarks>
 [GenerateAutoInterface]
-public sealed class TopLevelExceptionHandler(ILogger<TopLevelExceptionHandler> logger, IBridge bridge)
-  : ITopLevelExceptionHandler
+public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
 {
+  private readonly ILogger<TopLevelExceptionHandler> _logger;
+  public IBridge Parent { get; }
+  public string Name => nameof(TopLevelExceptionHandler);
+
   private const string UNHANDLED_LOGGER_TEMPLATE = "An unhandled Exception occured";
+
+  internal TopLevelExceptionHandler(ILogger<TopLevelExceptionHandler> logger, IBridge bridge)
+  {
+    _logger = logger;
+    Parent = bridge;
+  }
 
   /// <summary>
   /// Invokes the given function <paramref name="function"/> within a <see langword="try"/>/<see langword="catch"/> block,
@@ -43,7 +54,7 @@ public sealed class TopLevelExceptionHandler(ILogger<TopLevelExceptionHandler> l
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
+        _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
 
         SetGlobalNotification(
           ToastNotificationType.DANGER,
@@ -56,7 +67,7 @@ public sealed class TopLevelExceptionHandler(ILogger<TopLevelExceptionHandler> l
     }
     catch (Exception ex)
     {
-      logger.LogCritical(ex, UNHANDLED_LOGGER_TEMPLATE);
+      _logger.LogCritical(ex, UNHANDLED_LOGGER_TEMPLATE);
       throw;
     }
   }
@@ -78,8 +89,7 @@ public sealed class TopLevelExceptionHandler(ILogger<TopLevelExceptionHandler> l
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
-
+        _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
         SetGlobalNotification(
           ToastNotificationType.DANGER,
           "Unhandled Exception Occured",
@@ -91,13 +101,13 @@ public sealed class TopLevelExceptionHandler(ILogger<TopLevelExceptionHandler> l
     }
     catch (Exception ex)
     {
-      logger.LogCritical(ex, UNHANDLED_LOGGER_TEMPLATE);
+      _logger.LogCritical(ex, UNHANDLED_LOGGER_TEMPLATE);
       throw;
     }
   }
 
   private void SetGlobalNotification(ToastNotificationType type, string title, string message, bool autoClose) =>
-    bridge.Send(
+    Parent.Send(
       BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, //TODO: We could move these constants into a DUI3 constants static class
       new
       {

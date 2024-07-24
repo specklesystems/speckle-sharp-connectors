@@ -1,4 +1,4 @@
-using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.Utils;
 using Speckle.Newtonsoft.Json;
@@ -14,7 +14,7 @@ public class AutocadDocumentStore : DocumentModelStore
   public AutocadDocumentStore(
     JsonSerializerSettings jsonSerializerSettings,
     AutocadDocumentManager autocadDocumentManager,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    TopLevelExceptionHandlerBinding binding
   )
     : base(jsonSerializerSettings, true)
   {
@@ -30,6 +30,7 @@ public class AutocadDocumentStore : DocumentModelStore
       // This is valid when user opens acad file directly double clicking
       OnDocChangeInternal(Application.DocumentManager.MdiActiveDocument);
     }
+    var topLevelExceptionHandler = binding.Parent.TopLevelExceptionHandler;
 
     Application.DocumentManager.DocumentActivated += (_, e) =>
       topLevelExceptionHandler.CatchUnhandled(() => OnDocChangeInternal(e.Document));

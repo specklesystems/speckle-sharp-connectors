@@ -18,10 +18,9 @@ internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding, ID
     RevitContext revitContext,
     DocumentModelStore store,
     IRevitIdleManager revitIdleManager,
-    IBridge bridge,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    IBridge parent
   )
-    : base("selectionBinding", store, bridge, revitContext)
+    : base("selectionBinding", store, parent, revitContext)
   {
 #if !REVIT2022
     RevitContext.UIApplication.NotNull().SelectionChanged += (_, _) =>
@@ -29,7 +28,7 @@ internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding, ID
 #else
     // NOTE: getting the selection data should be a fast function all, even for '000s of elements - and having a timer hitting it every 1s is ok.
     _selectionTimer = new System.Timers.Timer(1000);
-    _selectionTimer.Elapsed += (_, _) => topLevelExceptionHandler.CatchUnhandled(OnSelectionChanged);
+    _selectionTimer.Elapsed += (_, _) => parent.TopLevelExceptionHandler.CatchUnhandled(OnSelectionChanged);
     _selectionTimer.Start();
 #endif
   }

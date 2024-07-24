@@ -6,24 +6,27 @@ using Speckle.Connectors.DUI.Bridge;
 
 namespace Speckle.Connectors.DUI.WebView;
 
-public sealed partial class DUI3ControlWebView : UserControl
+public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExecutor
 {
   private readonly IEnumerable<Lazy<IBinding>> _bindings;
-  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
-  public DUI3ControlWebView(IEnumerable<Lazy<IBinding>> bindings, ITopLevelExceptionHandler topLevelExceptionHandler)
+  public DUI3ControlWebView(
+    IEnumerable<Lazy<IBinding>> bindings,
+    Lazy<ITopLevelExceptionHandler> topLevelExceptionHandler
+  )
   {
     _bindings = bindings;
-    _topLevelExceptionHandler = topLevelExceptionHandler;
     InitializeComponent();
 
     Browser.CoreWebView2InitializationCompleted += (sender, args) =>
-      _topLevelExceptionHandler.CatchUnhandled(() => OnInitialized(sender, args));
+      topLevelExceptionHandler.Value.Parent.TopLevelExceptionHandler.CatchUnhandled(() => OnInitialized(sender, args));
   }
 
-  private void ShowDevToolsMethod() => Browser.CoreWebView2.OpenDevToolsWindow();
+  public bool IsBrowserInitialized => Browser.IsInitialized;
 
-  private void ExecuteScriptAsyncMethod(string script)
+  public object BrowserElement => Browser;
+
+  public void ExecuteScriptAsyncMethod(string script)
   {
     if (!Browser.IsInitialized)
     {
@@ -50,7 +53,9 @@ public sealed partial class DUI3ControlWebView : UserControl
 
   private void SetupBinding(IBinding binding)
   {
-    binding.Parent.AssociateWithBinding(binding, ExecuteScriptAsyncMethod, Browser, ShowDevToolsMethod);
+    binding.Parent.AssociateWithBinding(binding);
     Browser.CoreWebView2.AddHostObjectToScript(binding.Name, binding.Parent);
   }
+
+  public void ShowDevTools() => Browser.CoreWebView2.OpenDevToolsWindow();
 }

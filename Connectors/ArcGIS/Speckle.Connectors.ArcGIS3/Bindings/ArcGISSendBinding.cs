@@ -47,8 +47,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     IEnumerable<ISendFilter> sendFilters,
     IUnitOfWorkFactory unitOfWorkFactory,
     CancellationManager cancellationManager,
-    ISendConversionCache sendConversionCache,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    ISendConversionCache sendConversionCache
   )
   {
     _store = store;
@@ -56,7 +55,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     _sendFilters = sendFilters.ToList();
     _cancellationManager = cancellationManager;
     _sendConversionCache = sendConversionCache;
-    _topLevelExceptionHandler = topLevelExceptionHandler;
+    _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
     SubscribeToArcGISEvents();

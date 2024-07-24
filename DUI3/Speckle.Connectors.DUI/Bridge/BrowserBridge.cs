@@ -28,26 +28,19 @@ public sealed class BrowserBridge : IBridge
   private readonly JsonSerializerSettings _serializerOptions;
   private readonly ConcurrentDictionary<string, string?> _resultsStore = new();
   private readonly SynchronizationContext _mainThreadContext;
-  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  public ITopLevelExceptionHandler TopLevelExceptionHandler { get; }
+
+  private readonly IBrowserScriptExecutor _browserScriptExecutor;
 
   private IReadOnlyDictionary<string, MethodInfo> _bindingMethodCache = new Dictionary<string, MethodInfo>();
 
   private ActionBlock<RunMethodArgs>? _actionBlock;
-  private Action<string>? _scriptMethod;
-
   private IBinding? _binding;
   private Type? _bindingType;
 
   private readonly ILogger _logger;
 
-  /// <summary>
-  /// Action that opens up the developer tools of the respective browser we're using. While webview2 allows for "right click, inspect", cefsharp does not - hence the need for this.
-  /// </summary>
-  public Action? ShowDevToolsAction { get; set; }
-
-  public string FrontendBoundName { get; private set; } = "Unknown";
-
-  public object? Browser { get; private set; }
+  public string FrontendBoundName { get; private set; } = "sendBinding";
 
   public IBinding? Binding
   {
@@ -79,31 +72,25 @@ public sealed class BrowserBridge : IBridge
   public BrowserBridge(
     JsonSerializerSettings jsonSerializerSettings,
     ILogger<BrowserBridge> logger,
-    ILogger<TopLevelExceptionHandler> topLogger
+    ILogger<TopLevelExceptionHandler> topLogger,
+    IBrowserScriptExecutor browserScriptExecutor
   )
   {
     _serializerOptions = jsonSerializerSettings;
     _logger = logger;
-    _topLevelExceptionHandler = new TopLevelExceptionHandler(topLogger, this); //TODO: Probably we could inject this with a Lazy somewhere
+    TopLevelExceptionHandler = new TopLevelExceptionHandler(topLogger, this);
     // Capture the main thread's SynchronizationContext
     _mainThreadContext = SynchronizationContext.Current;
+    _browserScriptExecutor = browserScriptExecutor;
   }
 
-  public void AssociateWithBinding(
-    IBinding binding,
-    Action<string> scriptMethod,
-    object browser,
-    Action showDevToolsAction
-  )
+  public void AssociateWithBinding(IBinding binding)
   {
     // set via binding property to ensure explosion if already bound
     Binding = binding;
     FrontendBoundName = binding.Name;
-    Browser = browser;
-    _scriptMethod = scriptMethod;
 
     _bindingType = binding.GetType();
-    ShowDevToolsAction = showDevToolsAction;
 
     // Note: we need to filter out getter and setter methods here because they are not really nicely
     // supported across browsers, hence the !method.IsSpecialName.
@@ -130,7 +117,7 @@ public sealed class BrowserBridge : IBridge
 
   private async Task OnActionBlock(RunMethodArgs args)
   {
-    Result<object?> result = await _topLevelExceptionHandler
+    Result<object?> result = await TopLevelExceptionHandler
       .CatchUnhandled(async () => await ExecuteMethod(args.MethodName, args.MethodArgs).ConfigureAwait(false))
       .ConfigureAwait(false);
 
@@ -160,7 +147,7 @@ public sealed class BrowserBridge : IBridge
   /// <param name="args"></param>
   public void RunMethod(string methodName, string requestId, string args)
   {
-    _topLevelExceptionHandler.CatchUnhandled(Post);
+    TopLevelExceptionHandler.CatchUnhandled(Post);
     return;
 
     void Post()
@@ -203,15 +190,21 @@ public sealed class BrowserBridge : IBridge
   /// </summary>
   /// <param name="methodName"></param>
   /// <param name="args"></param>
+  /// <exception cref="InvalidOperationException">The <see cref="BrowserBridge"/> was not initialized with an <see cref="IBinding"/> (see <see cref="AssociateWithBinding"/>)</exception>
   /// <exception cref="ArgumentException">The <paramref name="methodName"/> was not found or the given <paramref name="args"/> were not valid for the method call</exception>
   /// <exception cref="TargetInvocationException">The invoked method throws an exception</exception>
   /// <returns>The Json</returns>
   private async Task<object?> ExecuteMethod(string methodName, string args)
   {
+    if (_binding is null)
+    {
+      throw new InvalidOperationException("Bridge was not initialized with a binding");
+    }
+
     if (!_bindingMethodCache.TryGetValue(methodName, out MethodInfo method))
     {
       throw new ArgumentException(
-        $"Cannot find method {methodName} in bindings class {_bindingType?.AssemblyQualifiedName}.",
+        $"Cannot find method {methodName} in bindings class {_bindingType.NotNull().AssemblyQualifiedName}.",
         nameof(methodName)
       );
     }
@@ -282,11 +275,12 @@ public sealed class BrowserBridge : IBridge
   /// </summary>
   /// <param name="requestId"></param>
   /// <param name="serializedData"></param>
+  /// <exception cref="InvalidOperationException"><inheritdoc cref="IBrowserScriptExecutor.ExecuteScriptAsyncMethod"/></exception>
   private void NotifyUIMethodCallResultReady(string requestId, string? serializedData = null)
   {
     _resultsStore[requestId] = serializedData;
     string script = $"{FrontendBoundName}.responseReady('{requestId}')";
-    _scriptMethod.NotNull().Invoke(script);
+    _browserScriptExecutor.ExecuteScriptAsyncMethod(script);
   }
 
   /// <summary>
@@ -296,11 +290,11 @@ public sealed class BrowserBridge : IBridge
   /// <returns></returns>
   public string? GetCallResult(string requestId)
   {
-    bool isFound = _resultsStore.TryRemove(requestId, out string? res);
-    if (!isFound)
-    {
-      throw new ArgumentException($"No result for the given request id was found: {requestId}", nameof(requestId));
-    }
+    _ = _resultsStore.TryRemove(requestId, out string? res);
+    // if (!isFound)
+    // {
+    //   throw new ArgumentException($"No result for the given request id was found: {requestId}", nameof(requestId));
+    // }
     return res;
   }
 
@@ -310,7 +304,7 @@ public sealed class BrowserBridge : IBridge
   /// </summary>
   public void ShowDevTools()
   {
-    ShowDevToolsAction?.Invoke();
+    _browserScriptExecutor.ShowDevTools();
   }
 
   [SuppressMessage("Design", "CA1054:URI-like parameters should not be strings", Justification = "Url run as process")]
@@ -321,28 +315,18 @@ public sealed class BrowserBridge : IBridge
 
   public void Send(string eventName)
   {
-    if (_binding is null)
-    {
-      throw new InvalidOperationException("Bridge was not Initialized");
-    }
-
     var script = $"{FrontendBoundName}.emit('{eventName}')";
 
-    _scriptMethod.NotNull().Invoke(script);
+    _browserScriptExecutor.ExecuteScriptAsyncMethod(script);
   }
 
   public void Send<T>(string eventName, T data)
     where T : class
   {
-    if (_binding is null)
-    {
-      throw new InvalidOperationException("Bridge was not associated with a binding");
-    }
-
     string payload = JsonConvert.SerializeObject(data, _serializerOptions);
     string requestId = $"{Guid.NewGuid()}_{eventName}";
     _resultsStore[requestId] = payload;
     var script = $"{FrontendBoundName}.emitResponseReady('{eventName}', '{requestId}')";
-    _scriptMethod.NotNull().Invoke(script);
+    _browserScriptExecutor.ExecuteScriptAsyncMethod(script);
   }
 }
