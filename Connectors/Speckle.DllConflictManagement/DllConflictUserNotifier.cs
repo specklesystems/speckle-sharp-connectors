@@ -1,10 +1,12 @@
 using System.Text;
 using Speckle.DllConflictManagement.Analytics;
 using Speckle.DllConflictManagement.EventEmitter;
+using Speckle.InterfaceGenerator;
 
 namespace Speckle.DllConflictManagement;
 
-public abstract class DllConflictUserNotifier
+[GenerateAutoInterface]
+public abstract class DllConflictUserNotifier : IDllConflictUserNotifier
 {
   private readonly DllConflictManager _dllConflictManager;
   private readonly DllConflictEventEmitter _eventEmitter;

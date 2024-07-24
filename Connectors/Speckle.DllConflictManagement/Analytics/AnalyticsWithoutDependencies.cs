@@ -6,6 +6,7 @@ using System.Text;
 using System.Web;
 using Speckle.DllConflictManagement.EventEmitter;
 using Speckle.DllConflictManagement.Serialization;
+using Speckle.InterfaceGenerator;
 
 namespace Speckle.DllConflictManagement.Analytics;
 
@@ -13,18 +14,19 @@ namespace Speckle.DllConflictManagement.Analytics;
 ///  A version of the Analytics class in Core that doesn't have any dependencies. This class will load and subscribe
 ///  to the eventEmitter's Action event, but will hopefully get unsubscribed and replaced by the full version in Core
 /// </summary>
-public sealed class AnalyticsWithoutDependencies
+[GenerateAutoInterface]
+public sealed class AnalyticsWithoutDependencies : IAnalyticsWithoutDependencies
 {
   private const string MIXPANEL_TOKEN = "acd87c5a50b56df91a795e999812a3a4";
   private const string MIXPANEL_SERVER = "https://analytics.speckle.systems";
-  private readonly ISerializer _serializer;
+  private readonly ISpeckleNewtonsoftSerializer _serializer;
   private readonly string _hostApplication;
   private readonly string _hostApplicationVersion;
-  private readonly DllConflictEventEmitter _eventEmitter;
+  private readonly IDllConflictEventEmitter _eventEmitter;
 
   public AnalyticsWithoutDependencies(
-    DllConflictEventEmitter eventEmitter,
-    ISerializer serializer,
+    IDllConflictEventEmitter eventEmitter,
+    ISpeckleNewtonsoftSerializer serializer,
     string hostApplication,
     string hostApplicationVersion
   )

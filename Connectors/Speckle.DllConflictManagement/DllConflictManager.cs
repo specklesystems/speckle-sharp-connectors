@@ -1,32 +1,27 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using Speckle.Connectors.Utils;
 using Speckle.DllConflictManagement.Analytics;
 using Speckle.DllConflictManagement.ConflictManagementOptions;
 using Speckle.DllConflictManagement.EventEmitter;
+using Speckle.InterfaceGenerator;
 
 namespace Speckle.DllConflictManagement;
 
-public sealed class DllConflictManager
+[GenerateAutoInterface]
+public sealed class DllConflictManager : IDllConflictManager
 {
   private readonly Dictionary<string, AssemblyConflictInfo> _assemblyConflicts = new();
-  private readonly DllConflictManagmentOptionsLoader _optionsLoader;
-  private readonly DllConflictEventEmitter _eventEmitter;
-  private readonly string[] _assemblyPathFragmentsToIgnore;
-  private readonly string[] _exactAssemblyPathsToIgnore;
+  private readonly IDllConflictManagmentOptionsLoader _optionsLoader;
+  private readonly IDllConflictEventEmitter _eventEmitter;
 
   public ICollection<AssemblyConflictInfo> AllConflictInfo => _assemblyConflicts.Values;
   public ICollection<AssemblyConflictInfoDto> AllConflictInfoAsDtos => _assemblyConflicts.Values.ToDtos().ToList();
 
-  public DllConflictManager(
-    DllConflictManagmentOptionsLoader optionsLoader,
-    DllConflictEventEmitter eventEmitter,
-    string[]? assemblyPathFragmentsToIgnore = null,
-    string[]? exactAssemblyPathsToIgnore = null
-  )
+  public DllConflictManager(IDllConflictManagmentOptionsLoader optionsLoader, IDllConflictEventEmitter eventEmitter)
   {
     _optionsLoader = optionsLoader;
     _eventEmitter = eventEmitter;
-    _assemblyPathFragmentsToIgnore = assemblyPathFragmentsToIgnore ?? Array.Empty<string>();
-    _exactAssemblyPathsToIgnore = exactAssemblyPathsToIgnore ?? Array.Empty<string>();
   }
 
   /// <summary>
@@ -60,7 +55,9 @@ public sealed class DllConflictManager
   private void LoadAssemblyAndDependencies(
     Assembly assembly,
     Dictionary<string, Assembly> loadedAssemblies,
-    HashSet<string> visitedAssemblies
+    HashSet<string> visitedAssemblies,
+    string[]? assemblyPathFragmentsToIgnore = null,
+    string[]? exactAssemblyPathsToIgnore = null
   )
   {
     if (visitedAssemblies.Contains(assembly.GetName().Name))
@@ -78,7 +75,11 @@ public sealed class DllConflictManager
 
       if (loadedAssemblies.TryGetValue(assemblyName.Name, out Assembly? loadedAssembly))
       {
-        bool shouldSkip = ShouldSkipCheckingConflictBecauseOfAssemblyLocation(loadedAssembly);
+        bool shouldSkip = ShouldSkipCheckingConflictBecauseOfAssemblyLocation(
+          assemblyPathFragmentsToIgnore,
+          exactAssemblyPathsToIgnore,
+          loadedAssembly
+        );
         if (!shouldSkip && !MajorAndMinorVersionsEqual(loadedAssembly.GetName().Version, assemblyName.Version))
         {
           _assemblyConflicts[assemblyName.Name] = new(assemblyName, loadedAssembly);
@@ -101,9 +102,13 @@ public sealed class DllConflictManager
     }
   }
 
-  private bool ShouldSkipCheckingConflictBecauseOfAssemblyLocation(Assembly loadedAssembly)
+  private bool ShouldSkipCheckingConflictBecauseOfAssemblyLocation(
+    string[]? assemblyPathFragmentsToIgnore,
+    string[]? exactAssemblyPathsToIgnore,
+    Assembly loadedAssembly
+  )
   {
-    foreach (var exactPath in _exactAssemblyPathsToIgnore)
+    foreach (var exactPath in exactAssemblyPathsToIgnore.Empty())
     {
       if (Path.GetDirectoryName(loadedAssembly.Location) == exactPath)
       {
@@ -111,7 +116,7 @@ public sealed class DllConflictManager
       }
     }
 
-    foreach (var pathFragment in _assemblyPathFragmentsToIgnore)
+    foreach (var pathFragment in assemblyPathFragmentsToIgnore.Empty())
     {
       if (loadedAssembly.Location.Contains(pathFragment))
       {
@@ -146,8 +151,8 @@ public sealed class DllConflictManager
   {
     if (
       TryParseTypeNameFromMissingMethodExceptionMessage(ex.Message, out var typeName)
-      && TryGetTypeFromName(typeName!, out var type)
-      && _assemblyConflicts.TryGetValue(type!.Assembly.GetName().Name, out var assemblyConflictInfo)
+      && TryGetTypeFromName(typeName, out var type)
+      && _assemblyConflicts.TryGetValue(type.Assembly.GetName().Name, out var assemblyConflictInfo)
     )
     {
       return assemblyConflictInfo;
@@ -155,7 +160,10 @@ public sealed class DllConflictManager
     return null;
   }
 
-  private static bool TryParseTypeNameFromMissingMethodExceptionMessage(string message, out string? typeName)
+  private static bool TryParseTypeNameFromMissingMethodExceptionMessage(
+    string message,
+    [NotNullWhen(true)] out string? typeName
+  )
   {
     typeName = null;
 
@@ -181,7 +189,7 @@ public sealed class DllConflictManager
     return true;
   }
 
-  private static bool TryGetTypeFromName(string typeName, out Type? type)
+  private static bool TryGetTypeFromName(string typeName, [NotNullWhen(true)] out Type? type)
   {
     type = null;
     foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies().Reverse())
@@ -232,8 +240,8 @@ public sealed class DllConflictManager
     }
 
     var options = _optionsLoader.LoadOptions();
-    return _assemblyConflicts.Values.Where(
-      info => !options.DllsToIgnore.Contains(info.SpeckleDependencyAssemblyName.Name)
+    return _assemblyConflicts.Values.Where(info =>
+      !options.DllsToIgnore.Contains(info.SpeckleDependencyAssemblyName.Name)
     );
   }
 

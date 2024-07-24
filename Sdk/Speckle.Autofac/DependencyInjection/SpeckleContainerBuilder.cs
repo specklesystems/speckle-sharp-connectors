@@ -202,6 +202,13 @@ public class SpeckleContainerBuilder
     return this;
   }
 
+  public SpeckleContainerBuilder AddTransient<T>(Func<ISpeckleContainerContext, T> action)
+    where T : notnull
+  {
+    ContainerBuilder.Register<T>(c => action(new SpeckleContainerContext(c))).InstancePerDependency();
+    return this;
+  }
+
   /// <summary>
   /// Scans the assembly.
   /// Scan matches classes with interfaces that match Iclass and registers them as Transient with the interface.

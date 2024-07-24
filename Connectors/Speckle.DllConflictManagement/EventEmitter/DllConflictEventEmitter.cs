@@ -1,3 +1,5 @@
+using Speckle.InterfaceGenerator;
+
 namespace Speckle.DllConflictManagement.EventEmitter;
 
 /// <summary>
@@ -7,7 +9,8 @@ namespace Speckle.DllConflictManagement.EventEmitter;
 /// the dll conflict detection process, but not properly log them until we verify that using our logger isn't going
 /// to crash our plugin
 /// </summary>
-public class DllConflictEventEmitter
+[GenerateAutoInterface]
+public class DllConflictEventEmitter : IDllConflictEventEmitter
 {
   public event EventHandler<LoggingEventArgs>? OnError;
   public event EventHandler<LoggingEventArgs>? OnInfo;

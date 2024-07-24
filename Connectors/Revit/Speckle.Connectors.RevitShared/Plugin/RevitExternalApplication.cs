@@ -4,6 +4,7 @@ using Autodesk.Revit.UI;
 using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Utils;
+using Speckle.DllConflictManagement;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
@@ -55,10 +56,33 @@ internal sealed class RevitExternalApplication : IExternalApplication
 
   public Result OnStartup(UIControlledApplication application)
   {
+    // POC: not sure what this is doing...  could be messing up our Aliasing????
+    AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<RevitExternalApplication>;
+    var conflictBuilder = SpeckleContainerBuilder.CreateInstance();
+    conflictBuilder.AddDllConflicts("Revit", GetVersionAsString());
+    var conflictContainer = conflictBuilder.Build();
+    var manager = conflictContainer.Resolve<IDllConflictManager>();
     try
     {
-      // POC: not sure what this is doing...  could be messing up our Aliasing????
-      AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<RevitExternalApplication>;
+      manager.DetectConflictsWithAssembliesInCurrentDomain(typeof(RevitExternalApplication).Assembly);
+    }
+    catch (TypeLoadException ex)
+    {
+      conflictNotifier.NotifyUserOfTypeLoadException(ex);
+      return Result.Failed;
+    }
+    catch (MemberAccessException ex)
+    {
+      conflictNotifier.NotifyUserOfMissingMethodException(ex);
+      return Result.Failed;
+    }
+    catch (Exception e) when (!e.IsFatal())
+    {
+      // POC: feedback?
+      return Result.Failed;
+    }
+    try
+    {
       var containerBuilder = SpeckleContainerBuilder.CreateInstance();
       // init DI
       _container = containerBuilder

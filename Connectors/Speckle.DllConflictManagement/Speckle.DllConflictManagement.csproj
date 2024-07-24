@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <Configurations>Debug;Release;Local</Configurations>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Speckle.Newtonsoft.Json"  />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Sdk\Speckle.Autofac\Speckle.Autofac.csproj" />
+    <ProjectReference Include="..\..\Sdk\Speckle.Connectors.Utils\Speckle.Connectors.Utils.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Sdk\Speckle.Autofac\Speckle.Autofac.csproj" />
+  </ItemGroup>
+</Project>

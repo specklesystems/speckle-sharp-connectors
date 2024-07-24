@@ -141,7 +141,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.DUI.Test
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Converters.Revit2022.Tests", "Converters\Revit\Speckle.Converters.Revit2022.Tests\Speckle.Converters.Revit2022.Tests.csproj", "{D8069A23-AD2E-4C9E-8574-7E8C45296A46}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DllConflictManagement", "Connectors\DllConflictManagement\DllConflictManagement.csproj", "{D4E36D06-7667-477A-9161-9691310438DF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.DllConflictManagement", "Connectors\Speckle.DllConflictManagement\Speckle.DllConflictManagement.csproj", "{D4E36D06-7667-477A-9161-9691310438DF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

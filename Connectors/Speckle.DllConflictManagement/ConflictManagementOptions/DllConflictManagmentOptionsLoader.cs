@@ -1,17 +1,24 @@
+using Speckle.Connectors.Utils;
 using Speckle.DllConflictManagement.Serialization;
+using Speckle.InterfaceGenerator;
 
 namespace Speckle.DllConflictManagement.ConflictManagementOptions;
 
-public sealed class DllConflictManagmentOptionsLoader
+[GenerateAutoInterface]
+public sealed class DllConflictManagmentOptionsLoader : IDllConflictManagmentOptionsLoader
 {
-  private readonly ISerializer _serializer;
+  private readonly ISpeckleNewtonsoftSerializer _serializer;
   private readonly string _filePath;
   private readonly string _fileName;
 
-  public DllConflictManagmentOptionsLoader(ISerializer serializer, string hostAppName, string hostAppVersion)
+  public DllConflictManagmentOptionsLoader(
+    ISpeckleNewtonsoftSerializer serializer,
+    string hostAppName,
+    string hostAppVersion
+  )
   {
     _serializer = serializer;
-    _filePath = Path.Combine(GetAppDataFolder(), "Speckle", "DllConflictManagement");
+    _filePath = Path.Combine(GetAppDataFolder(), "Speckle", "Speckle.DllConflictManagement");
     _fileName = $"DllConflictManagmentOptions-{hostAppName}{hostAppVersion}.json";
   }
 
@@ -28,7 +35,7 @@ public sealed class DllConflictManagmentOptionsLoader
     }
 
     string jsonString = File.ReadAllText(FullPath);
-    return _serializer.Deserialize<DllConflictManagmentOptions>(jsonString)!;
+    return _serializer.Deserialize<DllConflictManagmentOptions>(jsonString).NotNull();
   }
 
   public void SaveOptions(DllConflictManagmentOptions options)

@@ -1,8 +1,10 @@
+using Speckle.InterfaceGenerator;
 using Speckle.Newtonsoft.Json;
 
 namespace Speckle.DllConflictManagement.Serialization;
 
-public class SpeckleNewtonsoftSerializer : ISerializer
+[GenerateAutoInterface]
+public class SpeckleNewtonsoftSerializer : ISpeckleNewtonsoftSerializer
 {
   public string Serialize<T>(T obj) => JsonConvert.SerializeObject(obj);
 
