@@ -10,6 +10,7 @@ using Speckle.Core.Models;
 using Speckle.Core.Models.Collections;
 using Speckle.Core.Models.GraphTraversal;
 using Speckle.Core.Models.Instances;
+using SpeckleRenderMaterial = Objects.Other.RenderMaterial;
 
 namespace Speckle.Connectors.Rhino7.Operations.Receive;
 
@@ -21,16 +22,17 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private readonly IRootToHostConverter _converter;
   private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
   private readonly GraphTraversal _traverseFunction;
-
   private readonly RhinoInstanceObjectsManager _instanceObjectsManager;
   private readonly RhinoLayerManager _layerManager;
+  private readonly RhinoMaterialManager _materialManager;
 
   public RhinoHostObjectBuilder(
     IRootToHostConverter converter,
     IConversionContextStack<RhinoDoc, UnitSystem> contextStack,
     GraphTraversal traverseFunction,
     RhinoLayerManager layerManager,
-    RhinoInstanceObjectsManager instanceObjectsManager
+    RhinoInstanceObjectsManager instanceObjectsManager,
+    RhinoMaterialManager materialManager
   )
   {
     _converter = converter;
@@ -38,6 +40,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _traverseFunction = traverseFunction;
     _layerManager = layerManager;
     _instanceObjectsManager = instanceObjectsManager;
+    _materialManager = materialManager;
   }
 
   public HostObjectBuilderResult Build(
@@ -61,10 +64,15 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
     var groupProxies = (rootObject["groupProxies"] as List<object>)?.Cast<GroupProxy>().ToList();
 
+    List<SpeckleRenderMaterial>? renderMaterials = (rootObject["renderMaterials"] as List<object>)
+      ?.Cast<SpeckleRenderMaterial>()
+      .ToList();
+
     var conversionResults = BakeObjects(
       objectsToConvert,
       instanceDefinitionProxies,
       groupProxies,
+      renderMaterials,
       baseLayerName,
       onOperationProgressed
     );
@@ -78,24 +86,22 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     IEnumerable<TraversalContext> objectsGraph,
     List<InstanceDefinitionProxy>? instanceDefinitionProxies,
     List<GroupProxy>? groupProxies,
+    List<SpeckleRenderMaterial>? renderMaterials,
     string baseLayerName,
     Action<string, double?>? onOperationProgressed
   )
   {
     RhinoDoc doc = _contextStack.Current.Document;
-    var rootLayerIndex = _contextStack.Current.Document.Layers.Find(Guid.Empty, baseLayerName, RhinoMath.UnsetIntIndex);
 
+    // Remove all previously received layers and render materials from the document
+    int rootLayerIndex = _contextStack.Current.Document.Layers.Find(Guid.Empty, baseLayerName, RhinoMath.UnsetIntIndex);
     PreReceiveDeepClean(baseLayerName, rootLayerIndex);
-    _layerManager.CreateBaseLayer(baseLayerName);
 
+    _layerManager.CreateBaseLayer(baseLayerName);
     using var noDraw = new DisableRedrawScope(doc.Views);
 
-    var conversionResults = new List<ReceiveConversionResult>();
-    var bakedObjectIds = new List<string>();
-
-    var instanceComponents = new List<(Collection[] collectionPath, IInstanceComponent obj)>();
-
     // POC: these are not captured by traversal, so we need to re-add them here
+    var instanceComponents = new List<(Collection[] collectionPath, IInstanceComponent obj)>();
     if (instanceDefinitionProxies != null && instanceDefinitionProxies.Count > 0)
     {
       var transformed = instanceDefinitionProxies.Select(proxy =>
@@ -104,7 +110,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       instanceComponents.AddRange(transformed);
     }
 
-    var atomicObjects = new List<(Collection[] collectionPath, Base obj)>();
+    List<(Collection[] collectionPath, Base obj)> atomicObjects = new();
 
     // Split up the instances from the non-instances
     foreach (TraversalContext tc in objectsGraph)
@@ -121,8 +127,23 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       }
     }
 
+    List<ReceiveConversionResult> conversionResults = new();
+
+    // Stage 0: Convert render materials
+    Dictionary<string, int> materialsIdMap = new();
+    if (renderMaterials != null && renderMaterials.Count > 0)
+    {
+      (materialsIdMap, List<ReceiveConversionResult> materialsConversionResults) = _materialManager.BakeMaterials(
+        renderMaterials,
+        baseLayerName,
+        onOperationProgressed
+      );
+      conversionResults.AddRange(materialsConversionResults); // add instance conversion results to our list
+    }
+
     // Stage 1: Convert atomic objects
     // Note: this can become encapsulated later in an "atomic object baker" of sorts, if needed.
+    var bakedObjectIds = new List<string>();
     var applicationIdMap = new Dictionary<string, List<string>>(); // used in converting blocks in stage 2. keeps track of original app id => resulting new app ids post baking
     var count = 0;
     foreach (var (path, obj) in atomicObjects)
@@ -130,9 +151,15 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       onOperationProgressed?.Invoke("Converting objects", (double)++count / atomicObjects.Count);
       try
       {
-        var layerIndex = _layerManager.GetAndCreateLayerFromPath(path, baseLayerName);
+        int layerIndex = _layerManager.GetAndCreateLayerFromPath(path, baseLayerName);
+        // TODO: need to add render materials to layers
+        int materialIndex = obj["renderMaterialId"] is string renderMaterialId
+          ? materialsIdMap.TryGetValue(renderMaterialId, out materialIndex)
+            ? materialIndex
+            : 0
+          : 0;
         var result = _converter.Convert(obj);
-        var conversionIds = HandleConversionResult(result, obj, layerIndex).ToList();
+        var conversionIds = HandleConversionResult(result, obj, layerIndex, materialIndex).ToList();
         foreach (var r in conversionIds)
         {
           conversionResults.Add(new(Status.SUCCESS, obj, r, result.GetType().ToString()));
@@ -182,6 +209,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private void PreReceiveDeepClean(string baseLayerName, int rootLayerIndex)
   {
     _instanceObjectsManager.PurgeInstances(baseLayerName);
+    _materialManager.PurgeMaterials(baseLayerName);
 
     var doc = _contextStack.Current.Document;
     // Cleans up any previously received objects
@@ -204,7 +232,12 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     }
   }
 
-  private IReadOnlyList<string> HandleConversionResult(object conversionResult, Base originalObject, int layerIndex)
+  private IReadOnlyList<string> HandleConversionResult(
+    object conversionResult,
+    Base originalObject,
+    int layerIndex,
+    int materialIndex
+  )
   {
     var doc = _contextStack.Current.Document;
     List<string> newObjectIds = new();
@@ -212,13 +245,22 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     {
       case IEnumerable<GeometryBase> list:
       {
-        Group group = BakeObjectsAsGroup(originalObject.id, list, layerIndex);
+        Group group = BakeObjectsAsGroup(originalObject.id, list, layerIndex, materialIndex);
         newObjectIds.Add(group.Id.ToString());
         break;
       }
       case GeometryBase newObject:
       {
-        var newObjectGuid = doc.Objects.Add(newObject, new ObjectAttributes { LayerIndex = layerIndex });
+        Guid newObjectGuid = doc.Objects.Add(
+          newObject,
+          new ObjectAttributes
+          {
+            LayerIndex = layerIndex,
+            MaterialIndex = materialIndex,
+            MaterialSource =
+              materialIndex == 0 ? ObjectMaterialSource.MaterialFromLayer : ObjectMaterialSource.MaterialFromObject
+          }
+        );
         newObjectIds.Add(newObjectGuid.ToString());
         break;
       }
@@ -231,10 +273,21 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     return newObjectIds;
   }
 
-  private Group BakeObjectsAsGroup(string groupName, IEnumerable<GeometryBase> list, int layerIndex)
+  private Group BakeObjectsAsGroup(string groupName, IEnumerable<GeometryBase> list, int layerIndex, int materialIndex)
   {
     var doc = _contextStack.Current.Document;
-    var objectIds = list.Select(obj => doc.Objects.Add(obj, new ObjectAttributes { LayerIndex = layerIndex }));
+    var objectIds = list.Select(obj =>
+      doc.Objects.Add(
+        obj,
+        new ObjectAttributes
+        {
+          LayerIndex = layerIndex,
+          MaterialIndex = materialIndex,
+          MaterialSource =
+            materialIndex == 0 ? ObjectMaterialSource.MaterialFromLayer : ObjectMaterialSource.MaterialFromObject
+        }
+      )
+    );
     var groupIndex = _contextStack.Current.Document.Groups.Add(groupName, objectIds);
     var group = _contextStack.Current.Document.Groups.FindIndex(groupIndex);
     return group;
