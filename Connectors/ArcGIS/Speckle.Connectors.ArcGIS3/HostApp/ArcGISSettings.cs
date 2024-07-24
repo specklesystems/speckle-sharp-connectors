@@ -1,5 +1,5 @@
 using System.IO;
-using Speckle.Connectors.Utils;
+using Speckle.Core.Common;
 using Speckle.Core.Kits;
 
 namespace Speckle.Connectors.ArcGIS.HostApp;
