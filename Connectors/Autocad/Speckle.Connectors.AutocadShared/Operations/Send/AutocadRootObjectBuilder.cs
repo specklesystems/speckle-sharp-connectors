@@ -19,16 +19,19 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
   private readonly string[] _documentPathSeparator = ["\\"];
   private readonly ISendConversionCache _sendConversionCache;
   private readonly AutocadInstanceObjectManager _instanceObjectsManager;
+  private readonly AutocadGroupUnpacker _groupUnpacker;
 
   public AutocadRootObjectBuilder(
     IRootToSpeckleConverter converter,
     ISendConversionCache sendConversionCache,
-    AutocadInstanceObjectManager instanceObjectManager
+    AutocadInstanceObjectManager instanceObjectManager,
+    AutocadGroupUnpacker groupUnpacker
   )
   {
     _converter = converter;
     _sendConversionCache = sendConversionCache;
     _instanceObjectsManager = instanceObjectManager;
+    _groupUnpacker = groupUnpacker;
   }
 
   public RootObjectBuilderResult Build(
@@ -89,7 +92,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
         {
           string layerName = entity.Layer;
 
-          if (!collectionCache.TryGetValue(layerName, out Layer? speckleLayer))
+          if (!collectionCache.TryGetValue(layerName, out Layer speckleLayer))
           {
             if (tr.GetObject(entity.LayerId, OpenMode.ForRead) is LayerTableRecord autocadLayer)
             {
@@ -99,7 +102,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
             }
             else
             {
-              // TODO: error
+              speckleLayer = new Layer("Unknown layer", System.Drawing.Color.Black.ToArgb());
             }
           }
 
@@ -107,6 +110,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
         }
         else
         {
+          // Dims note: do we really need this if else clause here? imho not, as we'd fail in the upper stage of conversion?
           // TODO: error
         }
 
@@ -126,6 +130,8 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
       $"Cache hit count {cacheHitCount} out of {objects.Count} ({(double)cacheHitCount / objects.Count})"
     );
 
+    var groupProxies = _groupUnpacker.UnpackGroups(atomicObjects);
+    modelWithLayers["groupProxies"] = groupProxies;
     return new(modelWithLayers, results);
   }
 }

@@ -11,16 +11,19 @@ public sealed class ReceiveOperation
   private readonly IHostObjectBuilder _hostObjectBuilder;
   private readonly ISyncToThread _syncToThread;
   private readonly AccountService _accountService;
+  private readonly IServerTransportFactory _serverTransportFactory;
 
   public ReceiveOperation(
     IHostObjectBuilder hostObjectBuilder,
     ISyncToThread syncToThread,
-    AccountService accountService
+    AccountService accountService,
+    IServerTransportFactory serverTransportFactory
   )
   {
     _hostObjectBuilder = hostObjectBuilder;
     _syncToThread = syncToThread;
     _accountService = accountService;
+    _serverTransportFactory = serverTransportFactory;
   }
 
   public async Task<HostObjectBuilderResult> Execute(
@@ -38,7 +41,7 @@ public sealed class ReceiveOperation
       .Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ModelId, receiveInfo.ProjectId, cancellationToken)
       .ConfigureAwait(false);
 
-    using ServerTransport transport = new(account, receiveInfo.ProjectId);
+    using var transport = _serverTransportFactory.Create(account, receiveInfo.ProjectId);
     Base commitObject = await Speckle
       .Core.Api.Operations.Receive(version.referencedObject, transport, cancellationToken: cancellationToken)
       .ConfigureAwait(false);
