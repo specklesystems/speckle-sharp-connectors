@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
     <ProjectReference Include="..\..\..\Sdk\Speckle.Autofac\Speckle.Autofac.csproj" />
     <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Utils\Speckle.Connectors.Utils.csproj" />
+    <ProjectReference Include="..\..\Speckle.DllConflictManagement\Speckle.DllConflictManagement.csproj" />
   </ItemGroup>
 
   <ItemGroup>

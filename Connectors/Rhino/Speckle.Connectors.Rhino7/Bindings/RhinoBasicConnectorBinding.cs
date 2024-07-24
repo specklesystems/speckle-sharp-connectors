@@ -1,7 +1,6 @@
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
-using Sentry.Reflection;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
@@ -34,8 +33,7 @@ public class RhinoBasicConnectorBinding : IBasicConnectorBinding
     };
   }
 
-  public string GetConnectorVersion() =>
-    typeof(RhinoBasicConnectorBinding).Assembly.GetNameAndVersion().Version ?? "No version";
+  public string GetConnectorVersion() => typeof(RhinoBasicConnectorBinding).Assembly.GetName().Version.ToString();
 
   public string GetSourceApplicationName() => _settings.HostAppInfo.Slug;
 

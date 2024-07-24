@@ -46,6 +46,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\DUI3ControlWebViewDockable.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\IRevitPlugin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitCommand.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitDllConflictUserNotifier.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitExternalApplication.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitWebViewPlugin.cs" />
