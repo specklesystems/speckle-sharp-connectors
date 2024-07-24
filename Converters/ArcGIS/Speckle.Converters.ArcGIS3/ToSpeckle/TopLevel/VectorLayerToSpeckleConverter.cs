@@ -79,7 +79,7 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
           GisFeature element = _gisFeatureConverter.Convert(row);
 
           // get color from renderer, write to contextStack, assign to the feature
-          int color = GetColorFromRenderer(target, row);
+          int color = GetFeatureColor(target, target.GetFieldDescriptions(), row);
           var newMaterial = new RenderMaterial() { diffuse = color, applicationId = System.Convert.ToString(color) };
           _contextStack.Current.Document.RenderMaterials[newMaterial.applicationId] = newMaterial;
           element["renderMaterialId"] = newMaterial.applicationId;
@@ -102,14 +102,78 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
     return speckleLayer;
   }
 
-  private int GetColorFromRenderer(FeatureLayer fLayer, Row row)
+  private int GetFeatureColor(FeatureLayer fLayer, List<FieldDescription> fields, Row row)
   {
     int color = Color.FromArgb(255, 255, 255, 255).ToArgb();
-
     var renderer = fLayer.GetRenderer(); // e.g. CIMSimpleRenderer
-    var simpleRenderer = renderer as CIMSimpleRenderer;
-    var simpleSymbolColor = simpleRenderer?.Symbol.Symbol.GetColor();
 
-    return simpleSymbolColor != null ? simpleSymbolColor.CIMColorToInt() : color;
+    // get color depending on renderer type
+    if (renderer is CIMSimpleRenderer simpleRenderer)
+    {
+      var simpleSymbolColor = simpleRenderer.Symbol.Symbol.GetColor();
+      return simpleSymbolColor != null ? simpleSymbolColor.CIMColorToInt() : color;
+    }
+
+    if (renderer is CIMUniqueValueRenderer uniqueRenderer)
+    {
+      CIMColor? groupColor = uniqueRenderer.DefaultSymbol.Symbol.GetColor();
+      // normally it would be 1 group
+      foreach (var group in uniqueRenderer.Groups)
+      {
+        var headings = group.Heading.Split(",");
+        // headings will use the Field Alias, not field Name.
+        // get field names assuming Alias is used, if not found - then by Name
+        var usedFields = headings.Select(x =>
+          fields.FirstOrDefault(y => y.Alias == x) ?? fields.FirstOrDefault(y => y.Name == x)
+        );
+        var usedFieldNames = usedFields.Select(x => x?.Name).ToList();
+
+        // keep looping until the last matching condition
+        foreach (var groupClass in group.Classes)
+        {
+          foreach (var value in groupClass.Values)
+          {
+            // all field values have to match the row values
+            for (int i = 0; i < usedFieldNames.Count; i++)
+            {
+              if (value.FieldValues[i].Replace("<Null>", "") != System.Convert.ToString(row[usedFieldNames[i]]))
+              {
+                break;
+              }
+              // if the loop covered all matching properties
+              if (i == usedFieldNames.Count - 1)
+              {
+                groupColor = groupClass.Symbol.Symbol.GetColor();
+              }
+            }
+          }
+        }
+      }
+      return groupColor != null ? groupColor.CIMColorToInt() : color;
+    }
+
+    if (renderer is CIMClassBreaksRenderer graduatedRenderer)
+    {
+      CIMColor? breakColor = graduatedRenderer.DefaultSymbol.Symbol.GetColor();
+
+      // get field name assuming Name is used, if not - Alias
+      var usedField =
+        fields.FirstOrDefault(y => y.Name == graduatedRenderer.Field)
+        ?? fields.FirstOrDefault(y => y.Alias == graduatedRenderer.Field);
+      var usedFieldName = usedField?.Name;
+
+      foreach (var rBreak in graduatedRenderer.Breaks)
+      {
+        // keep looping until the last matching condition
+        if (System.Convert.ToDouble(row[usedFieldName]) < rBreak.UpperBound)
+        {
+          breakColor = rBreak.Symbol.Symbol.GetColor();
+        }
+      }
+      return breakColor != null ? breakColor.CIMColorToInt() : color;
+    }
+
+    // TODO: partial success case - show warning that the renderer {renderer.GetType().Name} is not applied. e.g. CIMProportionalRenderer
+    return color;
   }
 }
