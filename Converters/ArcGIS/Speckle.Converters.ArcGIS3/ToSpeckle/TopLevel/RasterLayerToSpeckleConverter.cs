@@ -1,6 +1,8 @@
+using System.Drawing;
 using ArcGIS.Core.Data.Raster;
 using ArcGIS.Core.Geometry;
 using Objects.GIS;
+using Objects.Other;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Core.Models;
@@ -48,6 +50,13 @@ public class RasterLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
 
     // write details about the Raster
     RasterElement element = _gisRasterConverter.Convert(target.GetRaster());
+
+    // add white material, later to be used for z-value/priority display
+    int color = Color.FromArgb(255, 255, 255, 255).ToArgb();
+    var newMaterial = new RenderMaterial() { diffuse = color, applicationId = System.Convert.ToString(color) };
+    _contextStack.Current.Document.RenderMaterials[newMaterial.applicationId] = newMaterial;
+    element["renderMaterialId"] = newMaterial.applicationId;
+
     speckleLayer.elements.Add(element);
 
     return speckleLayer;
