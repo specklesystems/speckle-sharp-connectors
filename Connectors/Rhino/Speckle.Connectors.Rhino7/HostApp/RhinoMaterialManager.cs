@@ -15,24 +15,11 @@ namespace Speckle.Connectors.Rhino7.HostApp;
 /// </summary>
 public class RhinoMaterialManager
 {
-  /// <summary>
-  /// A dictionary of (material index, material guid)
-  /// </summary>
-  private readonly Dictionary<string, SpeckleRenderMaterial> _renderMaterialCache = new();
+  public Dictionary<string, SpeckleRenderMaterial> SpeckleRenderMaterials { get; } = [];
 
-  /// <summary>
-  /// Creates a Speckle Render Material from the provided Rhino material
-  /// </summary>
-  /// <param name="material"></param>
-  /// <returns>The existing Speckle Render Material if this material has been previously created, or the newly created Speckle Render Material</returns>
-  public SpeckleRenderMaterial CreateSpeckleRenderMaterial(Material material)
+  // converts a rhino material to a rhino render material
+  private RenderMaterial ConvertMaterialToRenderMaterial(Material material)
   {
-    string materialId = material.Id.ToString();
-    if (_renderMaterialCache.TryGetValue(materialId, out SpeckleRenderMaterial existingMaterial))
-    {
-      return existingMaterial;
-    }
-
     // get physically based render material
     Material pbMaterial = material;
     if (!material.IsPhysicallyBased)
@@ -42,34 +29,60 @@ public class RhinoMaterialManager
       pbMaterial.ToPhysicallyBased();
     }
 
-    using RenderMaterial rm = RenderMaterial.FromMaterial(pbMaterial, null);
-    Rhino.DocObjects.PhysicallyBasedMaterial pbRenderMaterial = rm.ConvertToPhysicallyBased(
+    return RenderMaterial.FromMaterial(pbMaterial, null);
+  }
+
+  private SpeckleRenderMaterial ConvertRenderMaterialToSpeckle(RenderMaterial renderMaterial, string id)
+  {
+    Rhino.DocObjects.PhysicallyBasedMaterial pbRenderMaterial = renderMaterial.ConvertToPhysicallyBased(
       RenderTexture.TextureGeneration.Allow
     );
 
-    string renderMaterialName = material.Name ?? "default"; // default rhino material has no name
+    string renderMaterialName = renderMaterial.Name ?? "default"; // default rhino material has no name
     System.Drawing.Color diffuse = pbRenderMaterial.BaseColor.AsSystemColor();
     System.Drawing.Color emissive = pbRenderMaterial.Emission.AsSystemColor();
-    double opacity = pbRenderMaterial.Opacity;
 
     SpeckleRenderMaterial speckleRenderMaterial =
       new(pbRenderMaterial.Opacity, pbRenderMaterial.Metallic, pbRenderMaterial.Roughness, diffuse, emissive)
       {
         name = renderMaterialName,
-        applicationId = materialId
+        applicationId = id
       };
 
     return speckleRenderMaterial;
   }
 
   /// <summary>
-  /// Determines if a Speckle Render Material has already been created from the input Rhino material
+  /// Creates a Speckle Render Material from the provided Rhino material, if not already existing in <see cref="SpeckleRenderMaterials"/>
   /// </summary>
   /// <param name="material"></param>
-  /// <returns>True if yes, False if no Speckle Render material has been created from the input material</returns>
-  public bool Contains(Material material)
+  public void CreateSpeckleRenderMaterial(Material material)
   {
-    return _renderMaterialCache.TryGetValue(material.Id.ToString(), out SpeckleRenderMaterial _);
+    string materialId = material.Id.ToString();
+    if (SpeckleRenderMaterials.TryGetValue(materialId, out SpeckleRenderMaterial _))
+    {
+      return;
+    }
+
+    using RenderMaterial renderMaterial = ConvertMaterialToRenderMaterial(material);
+    SpeckleRenderMaterial speckleRenderMaterial = ConvertRenderMaterialToSpeckle(renderMaterial, materialId);
+    SpeckleRenderMaterials.Add(materialId, speckleRenderMaterial);
+  }
+
+  /// <summary>
+  /// Creates a Speckle Render Material from the provided Rhino render material, if not already existing in <see cref="SpeckleRenderMaterials"/>
+  /// </summary>
+  /// <param name="renderMaterial"></param>
+  public void CreateSpeckleRenderMaterial(RenderMaterial renderMaterial)
+  {
+    string materialId = renderMaterial.Id.ToString();
+    if (SpeckleRenderMaterials.TryGetValue(materialId, out SpeckleRenderMaterial _))
+    {
+      return;
+    }
+
+    SpeckleRenderMaterial speckleRenderMaterial = ConvertRenderMaterialToSpeckle(renderMaterial, materialId);
+    SpeckleRenderMaterials.Add(materialId, speckleRenderMaterial);
   }
 
   public BakeResult BakeMaterials(

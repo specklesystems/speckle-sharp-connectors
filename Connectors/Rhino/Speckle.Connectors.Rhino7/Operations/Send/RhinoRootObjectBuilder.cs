@@ -67,28 +67,60 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
 
     // POC: Handle blocks.
     List<SendConversionResult> results = new(atomicObjects.Count);
-    List<Objects.Other.RenderMaterial> renderMaterials = new();
+    Dictionary<string, List<string>> renderMaterialToObjectIdMap = new();
     foreach (RhinoObject rhinoObject in atomicObjects)
     {
       cancellationToken.ThrowIfCancellationRequested();
 
-      // handle render material
-      // TODO: need to add render material to layers
-      // POC: need to check object changed event captures material changes for object invalidation
-      // POC: we are adding the renderMaterialId to every atomic object, even if their material inheritence is set to ByLayer or ByParent
-      // POC: this means this material inheritence will not be preserved on receive
-      Rhino.DocObjects.Material material = _contextStack.Current.Document.Materials[
-        rhinoObject.Attributes.MaterialIndex
-      ];
-      if (!_materialManager.Contains(material))
-      {
-        Objects.Other.RenderMaterial speckleRenderMaterial = _materialManager.CreateSpeckleRenderMaterial(material);
-        renderMaterials.Add(speckleRenderMaterial);
-      }
-
       // handle layer
       Rhino.DocObjects.Layer layer = _contextStack.Current.Document.Layers[rhinoObject.Attributes.LayerIndex];
       Collection collectionHost = _layerManager.GetHostObjectCollection(layer, rootObjectCollection);
+
+      // handle render materials
+      // POC: we are only adding the object to the render material map if its material source is set to from object.
+      // POC: this means that most versions will not contain the default material, unless we decide to explicitly send it.
+      if (rhinoObject.Attributes.MaterialSource == ObjectMaterialSource.MaterialFromObject)
+      {
+        string? renderMaterialId = null;
+        if (rhinoObject.GetRenderMaterial(true) is Rhino.Render.RenderMaterial objRenderMaterial)
+        {
+          _materialManager.CreateSpeckleRenderMaterial(objRenderMaterial);
+          renderMaterialId = objRenderMaterial.Id.ToString();
+        }
+        else if (rhinoObject.GetMaterial(true) is Rhino.DocObjects.Material objMaterial)
+        {
+          _materialManager.CreateSpeckleRenderMaterial(objMaterial);
+          renderMaterialId = objMaterial.Id.ToString();
+        }
+        else
+        {
+          continue;
+          // TODO: report error, couldn't retrieve object render material or material
+        }
+
+        if (renderMaterialToObjectIdMap.TryGetValue(renderMaterialId, out List<string> objectList))
+        {
+          objectList.Add(rhinoObject.Id.ToString());
+        }
+        else
+        {
+          renderMaterialToObjectIdMap[renderMaterialId] = [rhinoObject.Id.ToString()];
+        }
+      }
+
+      if (layer.RenderMaterial is Rhino.Render.RenderMaterial layerMaterial)
+      {
+        _materialManager.CreateSpeckleRenderMaterial(layerMaterial);
+
+        if (renderMaterialToObjectIdMap.TryGetValue(layerMaterial.Id.ToString(), out List<string> objectList))
+        {
+          objectList.Add(rhinoObject.Id.ToString());
+        }
+        else
+        {
+          renderMaterialToObjectIdMap[layerMaterial.Id.ToString()] = [rhinoObject.Id.ToString()];
+        }
+      }
 
       string applicationId = rhinoObject.Id.ToString();
 
@@ -110,7 +142,6 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         {
           converted = _rootToSpeckleConverter.Convert(rhinoObject);
           converted.applicationId = applicationId;
-          converted["renderMaterialId"] = material.Id.ToString();
           ;
         }
 
@@ -131,29 +162,19 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       // Thread.Sleep(550);
     }
 
-    // POC: Add render materials to root collection
-    rootObjectCollection["renderMaterials"] = renderMaterials;
+    // POC: Create render material proxies and add to root collection
+    List<RenderMaterialProxy> renderMaterialProxies = new();
+    foreach (string matId in _materialManager.SpeckleRenderMaterials.Keys)
+    {
+      if (renderMaterialToObjectIdMap.TryGetValue(matId, out List<string> objIds))
+      {
+        renderMaterialProxies.Add(new(_materialManager.SpeckleRenderMaterials[matId], objIds));
+      }
+    }
+
+    rootObjectCollection["renderMaterialProxies"] = renderMaterialProxies;
 
     // 5. profit
     return new(rootObjectCollection, results);
-  }
-
-  private void AddRenderMaterialsToRootCollection(Collection root)
-  {
-    List<Base> convertedMaterials = new();
-    foreach (Material rhinoMaterial in _contextStack.Current.Document.Materials)
-    {
-      string applicationId = rhinoMaterial.Id.ToString();
-      Base? converted = _rootToSpeckleConverter.Convert(rhinoMaterial);
-      if (converted is null)
-      {
-        // TODO: report
-        continue;
-      }
-
-      converted.applicationId = applicationId;
-    }
-
-    root["renderMaterials"] = convertedMaterials;
   }
 }
