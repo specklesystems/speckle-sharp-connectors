@@ -10,6 +10,7 @@ using Speckle.Converters.Common;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
 using Speckle.Core.Models.Collections;
+using RenderMaterialProxy = Objects.Other.RenderMaterialProxy;
 
 namespace Speckle.Connectors.Rhino7.Operations.Send;
 
