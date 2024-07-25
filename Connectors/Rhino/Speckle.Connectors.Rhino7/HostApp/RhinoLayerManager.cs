@@ -29,13 +29,15 @@ public class RhinoLayerManager
   /// <summary>
   /// <para>For receive: Use this method to construct layers in the host app when receiving.</para>.
   /// </summary>
-  public int GetAndCreateLayerFromPath(Collection[] collectionPath, string baseLayerName)
+  public int GetAndCreateLayerFromPath(Collection[] collectionPath, string baseLayerName, out bool isNewLayer)
   {
+    isNewLayer = true;
     var layerPath = collectionPath.Select(o => string.IsNullOrWhiteSpace(o.name) ? "unnamed" : o.name);
     var layerFullName = string.Join(Layer.PathSeparator, layerPath);
 
     if (_hostLayerCache.TryGetValue(layerFullName, out int existingLayerIndex))
     {
+      isNewLayer = false;
       return existingLayerIndex;
     }
 

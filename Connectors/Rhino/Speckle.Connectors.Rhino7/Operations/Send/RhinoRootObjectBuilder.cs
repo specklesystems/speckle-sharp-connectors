@@ -122,11 +122,11 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         // POC: would be cleaner if we converted layers separately
         if (renderMaterialToObjectIdMap.TryGetValue(layerMaterial.Id.ToString(), out List<string> objectList))
         {
-          objectList.Add(rhinoObject.Id.ToString());
+          objectList.Add(layer.Id.ToString());
         }
         else
         {
-          renderMaterialToObjectIdMap[layerMaterial.Id.ToString()] = [rhinoObject.Id.ToString()];
+          renderMaterialToObjectIdMap[layerMaterial.Id.ToString()] = [layer.Id.ToString()];
         }
       }
 

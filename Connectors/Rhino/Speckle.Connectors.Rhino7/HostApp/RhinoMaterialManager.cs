@@ -104,7 +104,9 @@ public class RhinoMaterialManager
       try
       {
         // POC: Currently we're relying on the render material name for identification if it's coming from speckle and from which model; could we do something else?
-        string matName = $"{speckleRenderMaterial.name}-({speckleRenderMaterial.applicationId})-{baseLayerName}";
+        // POC: we should assume render materials all have application ids?
+        string materialId = speckleRenderMaterial.applicationId ?? speckleRenderMaterial.id;
+        string matName = $"{speckleRenderMaterial.name}-({materialId})-{baseLayerName}";
         Color diffuse = Color.FromArgb(speckleRenderMaterial.diffuse);
         Color emissive = Color.FromArgb(speckleRenderMaterial.emissive);
         double transparency = 1 - speckleRenderMaterial.opacity;
@@ -126,10 +128,7 @@ public class RhinoMaterialManager
           throw new ConversionException("Failed to add a material to the document.");
         }
 
-        if (speckleRenderMaterial.applicationId != null)
-        {
-          materialIdAndIndexMap[speckleRenderMaterial.applicationId] = matIndex;
-        }
+        materialIdAndIndexMap[materialId] = matIndex;
 
         conversionResults.Add(new(Status.SUCCESS, speckleRenderMaterial, matName, "Material"));
       }
