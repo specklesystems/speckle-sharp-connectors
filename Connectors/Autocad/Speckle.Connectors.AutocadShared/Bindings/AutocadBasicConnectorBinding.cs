@@ -6,7 +6,7 @@ using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.Utils;
+using Speckle.Core.Common;
 using Speckle.Core.Credentials;
 using Speckle.Core.Logging;
 
