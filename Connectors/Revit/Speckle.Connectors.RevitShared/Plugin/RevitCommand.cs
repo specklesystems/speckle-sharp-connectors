@@ -9,7 +9,7 @@ internal sealed class SpeckleRevitCommand : IExternalCommand
 {
   public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
   {
-    DockablePane panel = commandData.Application.GetDockablePane(RevitExternalApplication.DoackablePanelId);
+    DockablePane panel = commandData.Application.GetDockablePane(RevitExternalApplication.DockablePanelId);
     panel.Show();
 
     return Result.Succeeded;

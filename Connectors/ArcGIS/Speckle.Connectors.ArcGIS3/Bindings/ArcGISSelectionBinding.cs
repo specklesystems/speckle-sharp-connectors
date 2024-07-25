@@ -25,6 +25,22 @@ public class ArcGISSelectionBinding : ISelectionBinding
     Parent.Send(SelectionBindingEvents.SET_SELECTION, selInfo);
   }
 
+  private void GetLayersFromGroup(GroupLayer group, List<MapMember> nestedLayers)
+  {
+    nestedLayers.Add(group);
+    foreach (MapMember member in group.Layers)
+    {
+      if (member is GroupLayer subGroup)
+      {
+        GetLayersFromGroup(subGroup, nestedLayers);
+      }
+      else
+      {
+        nestedLayers.Add(member);
+      }
+    }
+  }
+
   public SelectionInfo GetSelection()
   {
     MapView mapView = MapView.Active;
@@ -32,13 +48,26 @@ public class ArcGISSelectionBinding : ISelectionBinding
     selectedMembers.AddRange(mapView.GetSelectedLayers());
     selectedMembers.AddRange(mapView.GetSelectedStandaloneTables());
 
-    List<string> objectTypes = selectedMembers
+    List<MapMember> allNestedMembers = new();
+    foreach (MapMember member in selectedMembers)
+    {
+      if (member is GroupLayer group)
+      {
+        GetLayersFromGroup(group, allNestedMembers);
+      }
+      else
+      {
+        allNestedMembers.Add(member);
+      }
+    }
+
+    List<string> objectTypes = allNestedMembers
       .Select(o => o.GetType().ToString().Split(".").Last())
       .Distinct()
       .ToList();
     return new SelectionInfo(
-      selectedMembers.Select(x => x.URI).ToList(),
-      $"{selectedMembers.Count} layers ({string.Join(", ", objectTypes)})"
+      allNestedMembers.Select(x => x.URI).ToList(),
+      $"{allNestedMembers.Count} layers ({string.Join(", ", objectTypes)})"
     );
   }
 }

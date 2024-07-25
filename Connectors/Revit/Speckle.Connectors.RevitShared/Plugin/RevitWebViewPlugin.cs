@@ -108,7 +108,7 @@ internal sealed class RevitWebViewPlugin : IRevitPlugin
     // Registering dockable pane should happen before UiApplication is initialized with RevitTask.
     // Otherwise pane cannot be registered for double-click file open.
     _uIControlledApplication.RegisterDockablePane(
-      RevitExternalApplication.DoackablePanelId,
+      RevitExternalApplication.DockablePanelId,
       _revitSettings.RevitPanelName,
       _webViewPanel
     );

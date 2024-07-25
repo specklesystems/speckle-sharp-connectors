@@ -14,10 +14,10 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
-using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
+using Speckle.Core.Common;
 
 namespace Speckle.Connectors.ArcGIS.Bindings;
 
@@ -222,13 +222,36 @@ public sealed class ArcGISSendBinding : ISendBinding
     RunExpirationChecks(true);
   }
 
+  private void AddChangedNestedObjectIds(GroupLayer group)
+  {
+    ChangedObjectIds.Add(group.URI);
+    foreach (var member in group.Layers)
+    {
+      if (member is GroupLayer subGroup)
+      {
+        AddChangedNestedObjectIds(subGroup);
+      }
+      else
+      {
+        ChangedObjectIds.Add(member.URI);
+      }
+    }
+  }
+
   private void GetIdsForMapPropertyChangedEvent(MapPropertyChangedEventArgs args)
   {
     foreach (Map map in args.Maps)
     {
       foreach (MapMember member in map.Layers)
       {
-        ChangedObjectIds.Add(member.URI);
+        if (member is GroupLayer group)
+        {
+          AddChangedNestedObjectIds(group);
+        }
+        else
+        {
+          ChangedObjectIds.Add(member.URI);
+        }
       }
     }
     RunExpirationChecks(false);
