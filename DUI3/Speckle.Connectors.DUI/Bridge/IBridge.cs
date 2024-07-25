@@ -37,11 +37,13 @@ public interface IBridge
   public void RunOnMainThread(Action action);
 
   /// <param name="eventName"></param>
+  /// <exception cref="InvalidOperationException">Bridge was not initialized with a binding</exception>
   public void Send(string eventName);
 
   /// <inheritdoc cref="Send(string)"/>
   /// <param name="data">data to store</param>
   /// <typeparam name="T"></typeparam>
+  /// <exception cref="InvalidOperationException">Bridge was not initialized with a binding</exception>
   public void Send<T>(string eventName, T data)
     where T : class;
 

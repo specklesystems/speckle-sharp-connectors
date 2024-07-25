@@ -315,6 +315,11 @@ public sealed class BrowserBridge : IBridge
 
   public void Send(string eventName)
   {
+    if (_binding is null)
+    {
+      throw new InvalidOperationException("Bridge was not initialized with a binding");
+    }
+
     var script = $"{FrontendBoundName}.emit('{eventName}')";
 
     _browserScriptExecutor.ExecuteScriptAsyncMethod(script);
@@ -323,6 +328,11 @@ public sealed class BrowserBridge : IBridge
   public void Send<T>(string eventName, T data)
     where T : class
   {
+    if (_binding is null)
+    {
+      throw new InvalidOperationException("Bridge was not initialized with a binding");
+    }
+
     string payload = JsonConvert.SerializeObject(data, _serializerOptions);
     string requestId = $"{Guid.NewGuid()}_{eventName}";
     _resultsStore[requestId] = payload;

@@ -31,7 +31,6 @@ public class RhinoSelectionBinding : ISelectionBinding
   {
     SelectionInfo selInfo = GetSelection();
     Parent.Send(SELECTION_EVENT, selInfo);
-    throw new ArgumentException("This is a test");
   }
 
   public SelectionInfo GetSelection()
