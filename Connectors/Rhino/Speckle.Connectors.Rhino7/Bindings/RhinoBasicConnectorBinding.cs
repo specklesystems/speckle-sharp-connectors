@@ -41,8 +41,14 @@ public class RhinoBasicConnectorBinding : IBasicConnectorBinding
 
   public string GetSourceApplicationVersion() => "7";
 
-  public DocumentInfo GetDocumentInfo() =>
-    new(RhinoDoc.ActiveDoc.Path, RhinoDoc.ActiveDoc.Name, RhinoDoc.ActiveDoc.RuntimeSerialNumber.ToString());
+  public DocumentInfo? GetDocumentInfo()
+  {
+    if (RhinoDoc.ActiveDoc is null)
+    {
+      return null;
+    }
+    return new(RhinoDoc.ActiveDoc.Path, RhinoDoc.ActiveDoc.Name, RhinoDoc.ActiveDoc.RuntimeSerialNumber.ToString());
+  }
 
   public DocumentModelStore GetDocumentState() => _store;
 

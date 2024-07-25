@@ -1,17 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
-    <TargetExt>.rhp</TargetExt>
-    <UseWpf>true</UseWpf>
-    <UseWindowsForms>true</UseWindowsForms>
-    <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
     <Configurations>Debug;Release;Local</Configurations>
+    <RhinoVersion>7</RhinoVersion>
   </PropertyGroup>
-  
-  <ItemGroup>
-    <EmbeddedResource Include="EmbeddedResources\**\*" />
-    <EmbeddedResource Include="Resources\**\*.ico" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="RhinoCommon" IncludeAssets="compile;build" VersionOverride="7.13.21348.13001" />
