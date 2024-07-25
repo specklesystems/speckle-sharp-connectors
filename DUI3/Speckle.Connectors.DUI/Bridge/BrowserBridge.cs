@@ -40,7 +40,7 @@ public sealed class BrowserBridge : IBridge
 
   private readonly ILogger _logger;
 
-  public string FrontendBoundName { get; private set; } = "sendBinding";
+  public string FrontendBoundName { get; private set; } = "Unknown";
 
   public IBinding? Binding
   {
