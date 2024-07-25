@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
-using Speckle.Connectors.DUI.Bindings;
 
 namespace Speckle.Connectors.DUI.Bridge;
 
@@ -21,10 +20,7 @@ public class IdleCallManager : IIdleCallManager
 
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
-  public IdleCallManager(TopLevelExceptionHandlerBinding binding)
-    : this(binding.Parent.TopLevelExceptionHandler) { }
-
-  internal IdleCallManager(ITopLevelExceptionHandler topLevelExceptionHandler)
+  public IdleCallManager(ITopLevelExceptionHandler topLevelExceptionHandler)
   {
     _topLevelExceptionHandler = topLevelExceptionHandler;
   }

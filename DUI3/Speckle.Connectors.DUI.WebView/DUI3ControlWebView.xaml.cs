@@ -12,14 +12,14 @@ public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExec
 
   public DUI3ControlWebView(
     IEnumerable<Lazy<IBinding>> bindings,
-    Lazy<TopLevelExceptionHandlerBinding> topLevelExceptionHandler
+    Lazy<ITopLevelExceptionHandler> topLevelExceptionHandler
   )
   {
     _bindings = bindings;
     InitializeComponent();
 
     Browser.CoreWebView2InitializationCompleted += (sender, args) =>
-      topLevelExceptionHandler.Value.Parent.TopLevelExceptionHandler.CatchUnhandled(() => OnInitialized(sender, args));
+      topLevelExceptionHandler.Value.CatchUnhandled(() => OnInitialized(sender, args));
   }
 
   public bool IsBrowserInitialized => Browser.IsInitialized;

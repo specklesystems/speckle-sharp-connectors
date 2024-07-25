@@ -179,7 +179,7 @@ public sealed class BrowserBridge : IBridge
       _ =>
       {
         // Execute the action on the main thread
-        action.Invoke();
+        TopLevelExceptionHandler.CatchUnhandled(action);
       },
       null
     );

@@ -53,6 +53,9 @@ public class RhinoConnectorModule : ISpeckleModule
     builder.AddSingleton<IBinding, AccountBinding>();
 
     builder.ContainerBuilder.RegisterType<TopLevelExceptionHandlerBinding>().As<IBinding>().AsSelf().SingleInstance();
+    builder.AddSingleton<ITopLevelExceptionHandler>(c =>
+      c.Resolve<TopLevelExceptionHandlerBinding>().Parent.TopLevelExceptionHandler
+    );
 
     builder
       .ContainerBuilder.RegisterType<RhinoBasicConnectorBinding>()

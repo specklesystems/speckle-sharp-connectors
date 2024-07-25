@@ -33,6 +33,9 @@ public interface IBridge
   /// Run actions on main thread.
   /// Some applications might need to run some operations on main thread as deferred actions.
   /// </summary>
+  /// <remarks>
+  /// Exceptions will be caught by <see cref="TopLevelExceptionHandler"/>
+  /// </remarks>
   /// <param name="action"> Action to run on main thread.</param>
   public void RunOnMainThread(Action action);
 

@@ -18,8 +18,6 @@ namespace Speckle.Connectors.DUI.Bridge;
 /// They will be rethrown to allow the host app to run its handlers<br/>
 /// Depending on the host app, this may trigger windows event logging, and recovery snapshots before ultimately terminating the process<br/>
 /// Attempting to swallow them may lead to data corruption, deadlocking, or things worse than a managed host app crash.
-/// This class is not designed to be injected, instead its part of the <see cref="BrowserBridge"/>
-/// If you need to use a <see cref="TopLevelExceptionHandler"/> outside of a <see cref="IBinding"/>, then you should inject <see cref="TopLevelExceptionHandlerBinding"/>
 /// </remarks>
 [GenerateAutoInterface]
 public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler

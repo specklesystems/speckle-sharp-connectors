@@ -4,7 +4,7 @@ using Autodesk.Revit.DB.ExtensibleStorage;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
 using Revit.Async;
-using Speckle.Connectors.DUI.Bindings;
+using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.Utils;
@@ -31,7 +31,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     JsonSerializerSettings serializerSettings,
     DocumentModelStorageSchema documentModelStorageSchema,
     IdStorageSchema idStorageSchema,
-    TopLevelExceptionHandlerBinding binding
+    ITopLevelExceptionHandler topLevelExceptionHandler
   )
     : base(serializerSettings, true)
   {
@@ -39,7 +39,6 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     _revitContext = revitContext;
     _documentModelStorageSchema = documentModelStorageSchema;
     _idStorageSchema = idStorageSchema;
-    var topLevelExceptionHandler = binding.Parent.TopLevelExceptionHandler;
 
     UIApplication uiApplication = _revitContext.UIApplication.NotNull();
 

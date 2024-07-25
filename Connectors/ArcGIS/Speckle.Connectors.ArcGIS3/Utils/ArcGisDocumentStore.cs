@@ -3,7 +3,7 @@ using ArcGIS.Desktop.Core.Events;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using ArcGIS.Desktop.Mapping.Events;
-using Speckle.Connectors.DUI.Bindings;
+using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.Utils;
 using Speckle.Newtonsoft.Json;
@@ -12,10 +12,12 @@ namespace Speckle.Connectors.ArcGIS.Utils;
 
 public class ArcGISDocumentStore : DocumentModelStore
 {
-  public ArcGISDocumentStore(JsonSerializerSettings serializerOption, TopLevelExceptionHandlerBinding binding)
+  public ArcGISDocumentStore(
+    JsonSerializerSettings serializerOption,
+    ITopLevelExceptionHandler topLevelExceptionHandler
+  )
     : base(serializerOption, true)
   {
-    var topLevelExceptionHandler = binding.Parent.TopLevelExceptionHandler;
     ActiveMapViewChangedEvent.Subscribe(a => topLevelExceptionHandler.CatchUnhandled(() => OnMapViewChanged(a)), true);
     ProjectSavingEvent.Subscribe(
       _ =>
