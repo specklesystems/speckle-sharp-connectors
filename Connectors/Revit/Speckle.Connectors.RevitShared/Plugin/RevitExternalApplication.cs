@@ -3,7 +3,7 @@ using System.Reflection;
 using Autodesk.Revit.UI;
 using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
-using Speckle.Connectors.Utils;
+using Speckle.Core.Common;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
