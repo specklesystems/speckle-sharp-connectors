@@ -9,11 +9,11 @@ using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.RevitShared;
-using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Core.Common;
 
 namespace Speckle.Connectors.Revit.Bindings;
 

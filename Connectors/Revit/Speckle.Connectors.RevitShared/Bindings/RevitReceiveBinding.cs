@@ -5,10 +5,10 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Revit.Plugin;
-using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
+using Speckle.Core.Common;
 
 namespace Speckle.Connectors.Revit.Bindings;
 
