@@ -10,7 +10,6 @@ using Speckle.Connectors.ArcGis.Operations.Send;
 using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
-using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
@@ -47,7 +46,7 @@ public class ArcGISConnectorModule : ISpeckleModule
     builder
       .ContainerBuilder.RegisterType<TopLevelExceptionHandlerBinding>()
       .As<IBinding>()
-      .As<ITopLevelExceptionHandler>()
+      .As<TopLevelExceptionHandlerBinding>()
       .SingleInstance();
 
     builder

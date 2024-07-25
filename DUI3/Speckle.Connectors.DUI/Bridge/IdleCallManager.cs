@@ -55,9 +55,11 @@ public class IdleCallManager : IIdleCallManager
   {
     foreach (KeyValuePair<string, Action> kvp in Calls)
     {
-      kvp.Value.Invoke();
+      _topLevelExceptionHandler.CatchUnhandled(() => kvp.Value.Invoke());
     }
+
     Calls.Clear();
+
     if (IdleSubscriptionCalled)
     {
       lock (_lock)

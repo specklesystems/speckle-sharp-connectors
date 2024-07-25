@@ -12,7 +12,7 @@ public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExec
 
   public DUI3ControlWebView(
     IEnumerable<Lazy<IBinding>> bindings,
-    Lazy<ITopLevelExceptionHandler> topLevelExceptionHandler
+    Lazy<TopLevelExceptionHandlerBinding> topLevelExceptionHandler
   )
   {
     _bindings = bindings;

@@ -50,10 +50,13 @@ public class IdleCallManagerTests : MoqTest
   {
     var handler = Create<ITopLevelExceptionHandler>();
     var sut = new IdleCallManager(handler.Object);
+    Action expectedAction = () => { };
+    handler.Setup(x => x.CatchUnhandled(expectedAction)).Returns(new Result());
+
     var removeEvent = Create<Action>();
     removeEvent.Setup(x => x.Invoke());
 
-    sut.SubscribeInternal("Test", () => { }, () => { });
+    sut.SubscribeInternal("Test", expectedAction, () => { });
     sut.IdleSubscriptionCalled.Should().BeTrue();
     sut.Calls.Count.Should().Be(1);
 
