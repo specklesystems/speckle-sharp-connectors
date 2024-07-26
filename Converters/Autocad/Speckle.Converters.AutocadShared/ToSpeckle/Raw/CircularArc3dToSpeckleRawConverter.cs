@@ -1,4 +1,4 @@
-﻿using Speckle.Converters.Common;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
@@ -25,8 +25,9 @@ public class CircularArc3dToSpeckleConverter : ITypedConverter<AG.CircularArc3d,
     SOG.Plane plane = _planeConverter.Convert(target.GetPlane());
     SOG.Point start = _pointConverter.Convert(target.StartPoint);
     SOG.Point end = _pointConverter.Convert(target.EndPoint);
-    SOG.Point mid = _pointConverter.Convert(target.EvaluatePoint(0.5)); // POC: testing, unsure
-    SOP.Interval domain = new(target.GetInterval().LowerBound, target.GetInterval().UpperBound);
+    double domainUpper = target.GetInterval().UpperBound;
+    double domainLower = target.GetInterval().LowerBound;
+    SOG.Point mid = _pointConverter.Convert(target.EvaluatePoint(domainUpper - domainLower / 2.0)); // POC: testing, unsure
 
     SOG.Arc arc =
       new(
@@ -41,7 +42,7 @@ public class CircularArc3dToSpeckleConverter : ITypedConverter<AG.CircularArc3d,
         startPoint = start,
         endPoint = end,
         midPoint = mid,
-        domain = domain,
+        domain = new(domainLower, domainUpper),
         length = target.GetLength(0, 1, 0.000)
       };
 
