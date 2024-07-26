@@ -1,5 +1,4 @@
 using System.Diagnostics.Contracts;
-using System.Drawing;
 using ArcGIS.Core.CIM;
 using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
@@ -149,7 +148,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       }
       else if (bakedMapMembers.TryGetValue(trackerItem.DatasetId, out MapMember? value))
       {
-        AddColorCategory(value, trackerItem);
+        // AddColorCategory(value, trackerItem);
         // add layer and layer URI to tracker
         trackerItem.AddConvertedMapMember(value);
         trackerItem.AddLayerURI(value.URI);
@@ -161,7 +160,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       {
         // add layer to Map
         MapMember mapMember = AddDatasetsToMap(trackerItem, createdLayerGroups);
-        AddColorCategory(mapMember, trackerItem);
+        // AddColorCategory(mapMember, trackerItem);
 
         // add layer and layer URI to tracker
         trackerItem.AddConvertedMapMember(mapMember);
@@ -328,9 +327,9 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     fLayer.SetRenderer(uvr);
   }
 
+  /*
   private void AdColorCategory(MapMember mapMember, ObjectConversionTracker trackerItem)
   {
-    /*
     // get color
     int color = Color.FromArgb(255, 255, 255, 255).ToArgb();
     if (trackerItem.Base["renderMaterialId"] is string materialId)
@@ -366,8 +365,8 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
         Visible = true,
         Values = listUniqueValuescalifornia.ToArray()
       };
-    */
   }
+  */
 
   private GroupLayer CreateNestedGroupLayer(string nestedLayerPath, Dictionary<string, GroupLayer> createdLayerGroups)
   {
