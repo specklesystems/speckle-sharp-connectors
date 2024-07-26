@@ -50,18 +50,22 @@ public class IdleCallManagerTests : MoqTest
   {
     var handler = Create<ITopLevelExceptionHandler>();
     var sut = new IdleCallManager(handler.Object);
-    Action expectedAction = () => { };
-    handler.Setup(x => x.CatchUnhandled(expectedAction)).Returns(new Result());
+    var expectedAction = Create<Action>();
+    expectedAction.Setup(x => x.Invoke());
+
+    handler.Setup(m => m.CatchUnhandled(It.IsAny<Action>())).Callback<Action>(a => a.Invoke()).Returns(new Result());
 
     var removeEvent = Create<Action>();
     removeEvent.Setup(x => x.Invoke());
 
-    sut.SubscribeInternal("Test", expectedAction, () => { });
+    sut.SubscribeInternal("Test", expectedAction.Object, () => { });
     sut.IdleSubscriptionCalled.Should().BeTrue();
     sut.Calls.Count.Should().Be(1);
 
     sut.AppOnIdleInternal(removeEvent.Object);
     sut.Calls.Count.Should().Be(0);
     sut.IdleSubscriptionCalled.Should().BeFalse();
+    expectedAction.Verify(a => a(), Times.Once);
+    removeEvent.Verify(a => a(), Times.Once);
   }
 }

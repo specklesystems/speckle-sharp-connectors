@@ -35,7 +35,7 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
   }
 
   /// <summary>
-  /// Invokes the given function <paramref name="function"/> within a <see langword="try"/>/<see langword="catch"/> block,
+  /// Invokes the given <paramref name="function"/> within a <see langword="try"/>/<see langword="catch"/> block,
   /// and provides exception handling for unexpected exceptions that have not been handled.<br/>
   /// </summary>
   /// <param name="function">The function to invoke and provide error handling for</param>
