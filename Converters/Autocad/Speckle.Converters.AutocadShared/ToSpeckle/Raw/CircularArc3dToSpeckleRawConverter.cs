@@ -27,7 +27,7 @@ public class CircularArc3dToSpeckleConverter : ITypedConverter<AG.CircularArc3d,
     SOG.Point end = _pointConverter.Convert(target.EndPoint);
     double domainUpper = target.GetInterval().UpperBound;
     double domainLower = target.GetInterval().LowerBound;
-    SOG.Point mid = _pointConverter.Convert(target.EvaluatePoint(domainUpper - domainLower / 2.0)); // POC: testing, unsure
+    SOG.Point mid = _pointConverter.Convert(target.EvaluatePoint(domainUpper - domainLower / 2.0));
 
     SOG.Arc arc =
       new(
