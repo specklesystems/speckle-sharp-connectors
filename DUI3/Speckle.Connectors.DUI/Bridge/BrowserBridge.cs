@@ -287,14 +287,15 @@ public sealed class BrowserBridge : IBridge
   /// Called by the ui to get back the serialized result of the method. See comments above for why.
   /// </summary>
   /// <param name="requestId"></param>
+  /// <exception cref="ArgumentException">No result for the given <paramref name="requestId"/> was found</exception>
   /// <returns></returns>
   public string? GetCallResult(string requestId)
   {
-    _ = _resultsStore.TryRemove(requestId, out string? res);
-    // if (!isFound)
-    // {
-    //   throw new ArgumentException($"No result for the given request id was found: {requestId}", nameof(requestId));
-    // }
+    bool isFound = _resultsStore.TryRemove(requestId, out string? res);
+    if (!isFound)
+    {
+      throw new ArgumentException($"No result for the given request id was found: {requestId}", nameof(requestId));
+    }
     return res;
   }
 
