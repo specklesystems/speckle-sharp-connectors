@@ -201,13 +201,20 @@ public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInst
         )
         {
           var transform = MatrixToTransform(instanceProxy.transform, instanceProxy.units);
-          var layerIndex = _layerManager.GetAndCreateLayerFromPath(layerCollection, baseLayerName);
-          var id = doc.Objects.AddInstanceObject(index, transform, new ObjectAttributes() { LayerIndex = layerIndex });
-          if (instanceProxy.applicationId != null)
+
+          // POC: having layer creation during instance bake means no render materials!!
+          int layerIndex = _layerManager.GetAndCreateLayerFromPath(layerCollection, baseLayerName, out bool _);
+
+          string instanceProxyId = instanceProxy.applicationId ?? instanceProxy.id;
+
+          Guid id = doc.Objects.AddInstanceObject(index, transform, new ObjectAttributes() { LayerIndex = layerIndex });
+          if (id == Guid.Empty)
           {
-            applicationIdMap[instanceProxy.applicationId] = new List<string>() { id.ToString() };
+            conversionResults.Add(new(Status.ERROR, instanceProxy, instanceProxyId, "Instance (Block)"));
+            continue;
           }
 
+          applicationIdMap[instanceProxyId] = new List<string>() { id.ToString() };
           createdObjectIds.Add(id.ToString());
           conversionResults.Add(new(Status.SUCCESS, instanceProxy, id.ToString(), "Instance (Block)"));
         }

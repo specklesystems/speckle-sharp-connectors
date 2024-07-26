@@ -3,7 +3,7 @@ using System.Reflection;
 using Autodesk.Revit.UI;
 using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
-using Speckle.Connectors.Utils;
+using Speckle.Core.Common;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
@@ -20,7 +20,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
   private readonly RevitSettings _revitSettings;
 
   // POC: move to somewhere central?
-  public static readonly DockablePaneId DoackablePanelId = new(new Guid("{f7b5da7c-366c-4b13-8455-b56f433f461e}"));
+  public static readonly DockablePaneId DockablePanelId = new(new Guid("{f7b5da7c-366c-4b13-8455-b56f433f461e}"));
 
   public RevitExternalApplication()
   {

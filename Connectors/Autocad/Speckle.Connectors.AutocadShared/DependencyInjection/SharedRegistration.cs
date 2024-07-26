@@ -4,10 +4,8 @@ using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Autocad.Bindings;
 using Speckle.Connectors.Autocad.Filters;
 using Speckle.Connectors.Autocad.HostApp;
-using Speckle.Connectors.Autocad.Interfaces;
 using Speckle.Connectors.Autocad.Operations.Receive;
 using Speckle.Connectors.Autocad.Operations.Send;
-using Speckle.Connectors.Autocad.Plugin;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Models;
@@ -32,7 +30,6 @@ public static class SharedRegistration
     builder.AddDUIView();
 
     // Register other connector specific types
-    builder.AddSingleton<IAutocadPlugin, AutocadPlugin>();
     builder.AddTransient<TransactionContext>();
     builder.AddSingleton(new AutocadDocumentManager()); // TODO: Dependent to TransactionContext, can be moved to AutocadContext
     builder.AddSingleton<DocumentModelStore, AutocadDocumentStore>();
