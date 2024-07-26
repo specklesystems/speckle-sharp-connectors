@@ -1,4 +1,6 @@
+using Objects.Other;
 using Rhino;
+using Rhino.DocObjects;
 using Rhino.Render;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Core.Kits;
@@ -15,24 +17,9 @@ namespace Speckle.Connectors.Rhino7.HostApp;
 /// </summary>
 public class RhinoMaterialManager
 {
-  /// <summary>
-  /// A dictionary of (material index, material guid)
-  /// </summary>
-  private readonly Dictionary<string, SpeckleRenderMaterial> _renderMaterialCache = new();
-
-  /// <summary>
-  /// Creates a Speckle Render Material from the provided Rhino material
-  /// </summary>
-  /// <param name="material"></param>
-  /// <returns>The existing Speckle Render Material if this material has been previously created, or the newly created Speckle Render Material</returns>
-  public SpeckleRenderMaterial CreateSpeckleRenderMaterial(Material material)
+  // converts a rhino material to a rhino render material
+  private RenderMaterial ConvertMaterialToRenderMaterial(Material material)
   {
-    string materialId = material.Id.ToString();
-    if (_renderMaterialCache.TryGetValue(materialId, out SpeckleRenderMaterial existingMaterial))
-    {
-      return existingMaterial;
-    }
-
     // get physically based render material
     Material pbMaterial = material;
     if (!material.IsPhysicallyBased)
@@ -42,34 +29,26 @@ public class RhinoMaterialManager
       pbMaterial.ToPhysicallyBased();
     }
 
-    using RenderMaterial rm = RenderMaterial.FromMaterial(pbMaterial, null);
-    Rhino.DocObjects.PhysicallyBasedMaterial pbRenderMaterial = rm.ConvertToPhysicallyBased(
+    return RenderMaterial.FromMaterial(pbMaterial, null);
+  }
+
+  private SpeckleRenderMaterial ConvertRenderMaterialToSpeckle(RenderMaterial renderMaterial)
+  {
+    Rhino.DocObjects.PhysicallyBasedMaterial pbRenderMaterial = renderMaterial.ConvertToPhysicallyBased(
       RenderTexture.TextureGeneration.Allow
     );
 
-    string renderMaterialName = material.Name ?? "default"; // default rhino material has no name
-    System.Drawing.Color diffuse = pbRenderMaterial.BaseColor.AsSystemColor();
-    System.Drawing.Color emissive = pbRenderMaterial.Emission.AsSystemColor();
-    double opacity = pbRenderMaterial.Opacity;
-
+    string renderMaterialName = renderMaterial.Name ?? "default"; // default rhino material has no name
+    Color diffuse = pbRenderMaterial.BaseColor.AsSystemColor();
+    Color emissive = pbRenderMaterial.Emission.AsSystemColor();
     SpeckleRenderMaterial speckleRenderMaterial =
       new(pbRenderMaterial.Opacity, pbRenderMaterial.Metallic, pbRenderMaterial.Roughness, diffuse, emissive)
       {
         name = renderMaterialName,
-        applicationId = materialId
+        applicationId = renderMaterial.Id.ToString()
       };
 
     return speckleRenderMaterial;
-  }
-
-  /// <summary>
-  /// Determines if a Speckle Render Material has already been created from the input Rhino material
-  /// </summary>
-  /// <param name="material"></param>
-  /// <returns>True if yes, False if no Speckle Render material has been created from the input material</returns>
-  public bool Contains(Material material)
-  {
-    return _renderMaterialCache.TryGetValue(material.Id.ToString(), out SpeckleRenderMaterial _);
   }
 
   public BakeResult BakeMaterials(
@@ -91,7 +70,9 @@ public class RhinoMaterialManager
       try
       {
         // POC: Currently we're relying on the render material name for identification if it's coming from speckle and from which model; could we do something else?
-        string matName = $"{speckleRenderMaterial.name}-({speckleRenderMaterial.applicationId})-{baseLayerName}";
+        // POC: we should assume render materials all have application ids?
+        string materialId = speckleRenderMaterial.applicationId ?? speckleRenderMaterial.id;
+        string matName = $"{speckleRenderMaterial.name}-({materialId})-{baseLayerName}";
         Color diffuse = Color.FromArgb(speckleRenderMaterial.diffuse);
         Color emissive = Color.FromArgb(speckleRenderMaterial.emissive);
         double transparency = 1 - speckleRenderMaterial.opacity;
@@ -113,10 +94,7 @@ public class RhinoMaterialManager
           throw new ConversionException("Failed to add a material to the document.");
         }
 
-        if (speckleRenderMaterial.applicationId != null)
-        {
-          materialIdAndIndexMap[speckleRenderMaterial.applicationId] = matIndex;
-        }
+        materialIdAndIndexMap[materialId] = matIndex;
 
         conversionResults.Add(new(Status.SUCCESS, speckleRenderMaterial, matName, "Material"));
       }
@@ -143,5 +121,84 @@ public class RhinoMaterialManager
         currentDoc.Materials.Delete(material);
       }
     }
+  }
+
+  public List<RenderMaterialProxy> UnpackRenderMaterial(List<RhinoObject> atomicObjects)
+  {
+    Dictionary<string, RenderMaterialProxy> renderMaterialProxies = new();
+    Dictionary<string, Layer> usedLayerMap = new();
+
+    // Stage 1: unpack materials from objects, and collect their uniqe layers in the process
+    foreach (RhinoObject rhinoObject in atomicObjects)
+    {
+      var layer = RhinoDoc.ActiveDoc.Layers[rhinoObject.Attributes.LayerIndex];
+      usedLayerMap[layer.Id.ToString()] = layer;
+
+      if (rhinoObject.Attributes.MaterialSource != ObjectMaterialSource.MaterialFromObject)
+      {
+        continue; // TODO: will not catch layer materials
+      }
+
+      var rhinoRenderMaterial = rhinoObject.GetRenderMaterial(true);
+      var rhinoMaterial = rhinoObject.GetMaterial(true);
+      var rhinoMaterialId = rhinoRenderMaterial?.Id.ToString() ?? rhinoMaterial?.Id.ToString();
+
+      if (rhinoMaterialId == null)
+      {
+        continue;
+      }
+
+      if (renderMaterialProxies.TryGetValue(rhinoMaterialId, out RenderMaterialProxy value))
+      {
+        value.objects.Add(rhinoObject.Id.ToString());
+      }
+      else
+      {
+        // TY Rhino api for being a bit confused about materials 💖
+        SpeckleRenderMaterial? myMaterial = null;
+        if (rhinoRenderMaterial is not null)
+        {
+          myMaterial = ConvertRenderMaterialToSpeckle(rhinoRenderMaterial);
+        }
+        else if (rhinoMaterial is not null)
+        {
+          myMaterial = ConvertRenderMaterialToSpeckle(ConvertMaterialToRenderMaterial(rhinoMaterial));
+        }
+
+        if (myMaterial is not null)
+        {
+          renderMaterialProxies[rhinoMaterialId] = new RenderMaterialProxy()
+          {
+            value = myMaterial,
+            objects = [rhinoObject.Id.ToString()]
+          };
+        }
+      }
+    }
+
+    // Stage 2: make sure we collect layer materials as well
+    foreach (var layer in usedLayerMap.Values)
+    {
+      var material = layer.RenderMaterial;
+      if (material is null)
+      {
+        continue;
+      }
+
+      if (renderMaterialProxies.TryGetValue(material.Id.ToString(), out RenderMaterialProxy value))
+      {
+        value.objects.Add(layer.Id.ToString());
+      }
+      else
+      {
+        renderMaterialProxies[material.Id.ToString()] = new RenderMaterialProxy()
+        {
+          value = ConvertRenderMaterialToSpeckle(material),
+          objects = [layer.Id.ToString()]
+        };
+      }
+    }
+
+    return renderMaterialProxies.Values.ToList();
   }
 }
