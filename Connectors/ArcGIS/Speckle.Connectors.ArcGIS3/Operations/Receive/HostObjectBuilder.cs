@@ -105,7 +105,19 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
 
           string nestedLayerPath = $"{string.Join("\\", path)}\\{obj.speckle_type.Split(".")[^1]}";
           Geometry converted = (Geometry)_converter.Convert(obj);
-          conversionTracker[new TraversalContext(obj)] = new ObjectConversionTracker(obj, nestedLayerPath, converted);
+          if (objectToConvert.Matrix.Count != 0)
+          {
+            // If it is transformed, we do not want to override 'conversionTracker' dict. Otherwise, we loose objects on bake.
+            conversionTracker[new TraversalContext(obj)] = new ObjectConversionTracker(obj, nestedLayerPath, converted);
+          }
+          else
+          {
+            conversionTracker[objectToConvert.TraversalContext] = new ObjectConversionTracker(
+              obj,
+              nestedLayerPath,
+              converted
+            );
+          }
         }
       }
       catch (Exception ex) when (!ex.IsFatal()) // DO NOT CATCH SPECIFIC STUFF, conversion errors should be recoverable
