@@ -1,7 +1,9 @@
 using System.Diagnostics;
+using System.Drawing;
 using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Mapping;
 using Objects.GIS;
+using Objects.Other;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Conversion;
@@ -11,6 +13,7 @@ using Speckle.Converters.Common;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
 using Speckle.Core.Models.Collections;
+using RasterLayer = Objects.GIS.RasterLayer;
 
 namespace Speckle.Connectors.ArcGis.Operations.Send;
 
@@ -146,9 +149,16 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     }
 
     // add materials
-    rootObjectCollection["renderMaterials"] = _contextStack
-      .Current.Document.RenderMaterials.Keys.Select(x => _contextStack.Current.Document.RenderMaterials[x])
-      .ToList();
+    // add white material for Rasters (should not affect meshes colored by vertices), later to be used for z-value/priority display
+    int color = Color.FromArgb(255, 255, 255, 255).ToArgb();
+    var newMaterial = new RenderMaterial() { diffuse = color, applicationId = System.Convert.ToString(color) };
+    var newMaterialProxy = new RenderMaterialProxy(
+      newMaterial,
+      rootObjectCollection.elements.Where(x => x is RasterLayer).Select(y => y.applicationId).ToList() as List<string>
+    );
+    _contextStack.Current.Document.RenderMaterialProxies.Insert(0, newMaterialProxy);
+
+    rootObjectCollection["renderMaterialProxies"] = _contextStack.Current.Document.RenderMaterialProxies;
 
     // POC: Log would be nice, or can be removed.
     Debug.WriteLine(

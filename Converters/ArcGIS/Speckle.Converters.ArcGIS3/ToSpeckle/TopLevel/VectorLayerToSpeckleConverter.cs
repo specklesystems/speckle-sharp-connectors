@@ -69,6 +69,7 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
     // RowCursor is IDisposable but is not being correctly picked up by IDE warnings.
     // This means we need to be carefully adding using statements based on the API documentation coming from each method/class
 
+    int count = 1;
     using (RowCursor rowCursor = target.Search())
     {
       while (rowCursor.MoveNext())
@@ -77,12 +78,30 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
         using (Row row = rowCursor.Current)
         {
           GisFeature element = _gisFeatureConverter.Convert(row);
+          element.applicationId = $"{target.URI}_{count}";
 
           // get color from renderer, write to contextStack, assign to the feature
           int color = GetFeatureColor(target, target.GetFieldDescriptions(), row);
-          var newMaterial = new RenderMaterial() { diffuse = color, applicationId = System.Convert.ToString(color) };
-          _contextStack.Current.Document.RenderMaterials[newMaterial.applicationId] = newMaterial;
-          element["renderMaterialId"] = newMaterial.applicationId;
+
+          bool materialExists = false;
+          foreach (var materialProxy in _contextStack.Current.Document.RenderMaterialProxies)
+          {
+            if (materialProxy.value.diffuse == color)
+            {
+              materialProxy.objects.Add(element.applicationId);
+              materialExists = true;
+              break;
+            }
+          }
+
+          if (materialExists is false)
+          {
+            var newMaterialProxy = new RenderMaterialProxy(
+              new RenderMaterial() { diffuse = color, applicationId = System.Convert.ToString(color) },
+              new List<string>() { element.applicationId }
+            );
+            _contextStack.Current.Document.RenderMaterialProxies.Add(newMaterialProxy);
+          }
 
           // replace element "attributes", to remove those non-visible on Layer level
           Base elementAttributes = new();
@@ -96,6 +115,8 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
           element.attributes = elementAttributes;
           speckleLayer.elements.Add(element);
         }
+
+        count += 1;
       }
     }
 

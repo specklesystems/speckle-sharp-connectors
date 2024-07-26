@@ -1,4 +1,5 @@
 using System.Diagnostics.Contracts;
+using System.Drawing;
 using ArcGIS.Core.CIM;
 using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
@@ -62,15 +63,9 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       .ToList();
 
     // get all materials
-    if (rootObject?["renderMaterials"] is List<RenderMaterial> materialsList)
+    if (rootObject?["renderMaterialProxies"] is List<RenderMaterialProxy> materialsProxiesList)
     {
-      foreach (var material in materialsList)
-      {
-        if (material["applicationId"] is string appId)
-        {
-          _contextStack.Current.Document.RenderMaterials[appId] = material;
-        }
-      }
+      _contextStack.Current.Document.RenderMaterialProxies = materialsProxiesList;
     }
 
     int allCount = objectsToConvert.Count;
@@ -148,19 +143,18 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       }
       else if (bakedMapMembers.TryGetValue(trackerItem.DatasetId, out MapMember? value))
       {
-        // AddColorCategory(value, trackerItem);
         // add layer and layer URI to tracker
         trackerItem.AddConvertedMapMember(value);
         trackerItem.AddLayerURI(value.URI);
         conversionTracker[item.Key] = trackerItem; // not necessary atm, but needed if we use conversionTracker further
         // only add a report item
         AddResultsFromTracker(trackerItem, results);
+        AddColorCategory(trackerItem);
       }
       else
       {
         // add layer to Map
         MapMember mapMember = AddDatasetsToMap(trackerItem, createdLayerGroups);
-        // AddColorCategory(mapMember, trackerItem);
 
         // add layer and layer URI to tracker
         trackerItem.AddConvertedMapMember(mapMember);
@@ -175,6 +169,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
 
         // add report item
         AddResultsFromTracker(trackerItem, results);
+        AddColorCategory(trackerItem);
       }
 
       onOperationProgressed?.Invoke("Adding to Map", (double)++bakeCount / conversionTracker.Count);
@@ -281,7 +276,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
           layer.SetExpanded(true);
           if (layer is FeatureLayer fLayer)
           {
-            SetLayerRenderer(fLayer);
+            SetLayerRenderer(fLayer, null);
           }
 
           return layer;
@@ -300,10 +295,24 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     }
   }
 
-  private void SetLayerRenderer(FeatureLayer fLayer)
+  private void SetLayerRenderer(FeatureLayer fLayer, CIMUniqueValueClass? newUniqueValueClass)
   {
-    //Create a list of the above two CIMUniqueValueClasses
-    List<CIMUniqueValueClass> listUniqueValueClasses = new() { }; //alabamaUniqueValueClass, californiaUniqueValueClass };
+    List<CIMUniqueValueClass> listUniqueValueClasses = new() { };
+
+    var existingRenderer = fLayer.GetRenderer();
+    if (existingRenderer is CIMUniqueValueRenderer uniqueRenderer)
+    {
+      if (uniqueRenderer.Groups[0].Classes != null)
+      {
+        listUniqueValueClasses.AddRange(uniqueRenderer.Groups[0].Classes.ToList());
+      }
+    }
+
+    // Add new CIMUniqueValueClass
+    if (newUniqueValueClass != null)
+    {
+      listUniqueValueClasses.Add(newUniqueValueClass);
+    }
 
     //Create a list of CIMUniqueValueGroup
     CIMUniqueValueGroup uvg = new() { Classes = listUniqueValueClasses.ToArray(), };
@@ -327,46 +336,41 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     fLayer.SetRenderer(uvr);
   }
 
-  /*
-  private void AdColorCategory(MapMember mapMember, ObjectConversionTracker trackerItem)
+  private void AddColorCategory(ObjectConversionTracker trackerItem)
   {
     // get color
-    int color = Color.FromArgb(255, 255, 255, 255).ToArgb();
-    if (trackerItem.Base["renderMaterialId"] is string materialId)
+    Color color = Color.FromArgb(255, 255, 255, 255);
+    foreach (var materialProxy in _contextStack.Current.Document.RenderMaterialProxies)
     {
-      color = _contextStack.Current.Document.RenderMaterials[materialId].diffuse;
+      if (materialProxy.objects.Contains(trackerItem.Base.id))
+      {
+        color = Color.FromArgb(materialProxy.value.diffuse);
+        break;
+      }
     }
 
     // First create a "CIMUniqueValueClass" for the cities in Alabama.
-    List<CIMUniqueValue> listUniqueValuesAlabama =
-      new() { new CIMUniqueValue { FieldValues = new string[] { "Alabama" } } };
+    List<CIMUniqueValue> listUniqueValues =
+      new() { new CIMUniqueValue { FieldValues = new string[] { trackerItem.Base.id } } };
 
-    CIMUniqueValueClass alabamaUniqueValueClass =
+    CIMUniqueValueClass newUniqueValueClass =
       new()
       {
         Editable = true,
-        Label = "Alabama",
+        Label = trackerItem.Base.id,
         Patch = PatchShape.Default,
-        Symbol = SymbolFactory.Instance.ConstructPointSymbol(ColorFactory.Instance.RedRGB).MakeSymbolReference(),
+        Symbol = SymbolFactory
+          .Instance.ConstructPointSymbol(ColorFactory.Instance.CreateColor(color))
+          .MakeSymbolReference(),
         Visible = true,
-        Values = listUniqueValuesAlabama.ToArray()
+        Values = listUniqueValues.ToArray()
       };
 
-    // Create a "CIMUniqueValueClass" for the cities in California.
-    List<CIMUniqueValue> listUniqueValuescalifornia = new() { new() { FieldValues = new string[] { "California" } } };
-
-    CIMUniqueValueClass californiaUniqueValueClass =
-      new()
-      {
-        Editable = true,
-        Label = "California",
-        Patch = PatchShape.Default,
-        Symbol = SymbolFactory.Instance.ConstructPointSymbol(ColorFactory.Instance.BlueRGB).MakeSymbolReference(),
-        Visible = true,
-        Values = listUniqueValuescalifornia.ToArray()
-      };
+    if (trackerItem.HostAppMapMember is FeatureLayer fLayer)
+    {
+      SetLayerRenderer(fLayer, newUniqueValueClass);
+    }
   }
-  */
 
   private GroupLayer CreateNestedGroupLayer(string nestedLayerPath, Dictionary<string, GroupLayer> createdLayerGroups)
   {

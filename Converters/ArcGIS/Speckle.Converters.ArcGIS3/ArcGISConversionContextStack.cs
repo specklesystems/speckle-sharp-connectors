@@ -16,7 +16,7 @@ public class ArcGISDocument
   public Map Map { get; }
   public Uri SpeckleDatabasePath { get; }
   public CRSoffsetRotation ActiveCRSoffsetRotation { get; set; }
-  public Dictionary<string, RenderMaterial> RenderMaterials { get; set; }
+  public List<RenderMaterialProxy> RenderMaterialProxies { get; set; }
 
   public ArcGISDocument()
   {
@@ -26,7 +26,7 @@ public class ArcGISDocument
     // CRS of either: incoming commit to be applied to all received objects, or CRS to convert all objects to, before sending
     // created per Send/Receive operation, will be the same for all objects in the operation
     ActiveCRSoffsetRotation = new CRSoffsetRotation(MapView.Active.Map);
-    RenderMaterials = new();
+    RenderMaterialProxies = new();
   }
 
   private const string FGDB_NAME = "Speckle.gdb";
