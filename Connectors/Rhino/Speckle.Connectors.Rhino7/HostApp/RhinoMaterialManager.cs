@@ -13,7 +13,7 @@ using SpeckleRenderMaterial = Objects.Other.RenderMaterial;
 namespace Speckle.Connectors.Rhino7.HostApp;
 
 /// <summary>
-/// Utility class managing layer creation and/or extraction from rhino. Expects to be a scoped dependency per send or receive operation.
+/// Utility class managing material creation and/or extraction from rhino. Expects to be a scoped dependency per send or receive operation.
 /// </summary>
 public class RhinoMaterialManager
 {

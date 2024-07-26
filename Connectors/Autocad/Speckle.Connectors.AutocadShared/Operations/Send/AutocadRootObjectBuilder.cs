@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Autodesk.AutoCAD.DatabaseServices;
+using Objects.Other;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
@@ -20,17 +21,20 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
   private readonly ISendConversionCache _sendConversionCache;
   private readonly AutocadInstanceObjectManager _instanceObjectsManager;
   private readonly AutocadGroupUnpacker _groupUnpacker;
+  private readonly AutocadMaterialManager _materialManager;
 
   public AutocadRootObjectBuilder(
     IRootToSpeckleConverter converter,
     ISendConversionCache sendConversionCache,
     AutocadInstanceObjectManager instanceObjectManager,
+    AutocadMaterialManager materialManager,
     AutocadGroupUnpacker groupUnpacker
   )
   {
     _converter = converter;
     _sendConversionCache = sendConversionCache;
     _instanceObjectsManager = instanceObjectManager;
+    _materialManager = materialManager;
     _groupUnpacker = groupUnpacker;
   }
 
@@ -56,6 +60,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     using Transaction tr = doc.Database.TransactionManager.StartTransaction();
 
     // Cached dictionary to create Collection for autocad entity layers. We first look if collection exists. If so use it otherwise create new one for that layer.
+    Dictionary<string, LayerTableRecord> layerCache = new();
     Dictionary<string, Layer> collectionCache = new();
     int count = 0;
 
@@ -96,8 +101,12 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
           {
             if (tr.GetObject(entity.LayerId, OpenMode.ForRead) is LayerTableRecord autocadLayer)
             {
-              speckleLayer = new Layer(layerName, autocadLayer.Color.ColorValue.ToArgb());
+              speckleLayer = new Layer(layerName, autocadLayer.Color.ColorValue.ToArgb())
+              {
+                applicationId = autocadLayer.Id.ToString()
+              };
               collectionCache[layerName] = speckleLayer;
+              layerCache[layerName] = autocadLayer;
               modelWithLayers.elements.Add(collectionCache[layerName]);
             }
             else
@@ -130,8 +139,10 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
       $"Cache hit count {cacheHitCount} out of {objects.Count} ({(double)cacheHitCount / objects.Count})"
     );
 
-    var groupProxies = _groupUnpacker.UnpackGroups(atomicObjects);
+    List<GroupProxy> groupProxies = _groupUnpacker.UnpackGroups(atomicObjects);
+    List<RenderMaterialProxy> materialProxies = _materialManager.UnpackRenderMaterial(atomicObjects, layerCache);
     modelWithLayers["groupProxies"] = groupProxies;
+    modelWithLayers["renderMaterialProxies"] = materialProxies;
     return new(modelWithLayers, results);
   }
 }
