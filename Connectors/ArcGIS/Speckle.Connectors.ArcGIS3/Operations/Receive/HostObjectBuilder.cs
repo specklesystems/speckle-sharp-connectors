@@ -3,211 +3,29 @@ using ArcGIS.Core.CIM;
 using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
-using Objects.Geometry;
 using Objects.GIS;
 using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
+using Speckle.Connectors.Utils.Instances;
 using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
 using Speckle.Core.Models.Collections;
-using Speckle.Core.Models.Extensions;
 using Speckle.Core.Models.GraphTraversal;
 using Speckle.Core.Models.Instances;
-using Speckle.DoubleNumerics;
 using RasterLayer = Objects.GIS.RasterLayer;
 
 namespace Speckle.Connectors.ArcGIS.Operations.Receive;
-
-public record LocalToGlobalMap(Base AtomicObject, TraversalContext Tc, List<Matrix4x4> Matrix);
-
-public class LocalToGlobal
-{
-  private static Vector3 TransformPt(Vector3 vector, Matrix4x4 matrix)
-  {
-    var divisor = matrix.M41 + matrix.M42 + matrix.M43 + matrix.M44;
-    var x = (vector.X * matrix.M11 + vector.Y * matrix.M12 + vector.Z * matrix.M13 + matrix.M14) / divisor;
-    var y = (vector.X * matrix.M21 + vector.Y * matrix.M22 + vector.Z * matrix.M23 + matrix.M24) / divisor;
-    var z = (vector.X * matrix.M31 + vector.Y * matrix.M32 + vector.Z * matrix.M33 + matrix.M34) / divisor;
-
-    return new Vector3(x, y, z);
-  }
-
-  public static Base TransformObjects(Base atomicObject, List<Matrix4x4> matrix)
-  {
-    if (matrix.Count == 0)
-    {
-      return atomicObject;
-    }
-
-    Base newObject = atomicObject.ShallowCopy();
-    List<Mesh> newDisplayValue = new();
-
-    var displayValue = newObject.TryGetDisplayValue();
-    if (displayValue is null)
-    {
-      throw new SpeckleException($"{newObject.speckle_type} blocks contains no display value");
-    }
-
-    foreach (Base displayVal in displayValue)
-    {
-      if (displayVal is Mesh displayMesh)
-      {
-        List<double> vertices = new();
-        for (int i = 0; i < displayMesh.vertices.Count; i++)
-        {
-          if (i % 3 != 0)
-          {
-            continue;
-          }
-          var ptVector = new Vector3(
-            displayMesh.vertices[i],
-            displayMesh.vertices[i + 1],
-            displayMesh.vertices[i + 2]
-          //1
-          );
-
-          foreach (var matr in matrix)
-          {
-            ptVector = TransformPt(ptVector, matr); //Vector3.Dot(ptVector, matr);
-          }
-          vertices.AddRange([ptVector.X, ptVector.Y, ptVector.Z]);
-        }
-        Mesh newMesh =
-          new()
-          {
-            vertices = vertices,
-            faces = new List<int>(displayMesh.faces),
-            colors = new List<int>(displayMesh.colors)
-          };
-        newDisplayValue.Add(newMesh);
-      }
-      else
-      {
-        throw new SpeckleException($"Blocks containing {atomicObject.speckle_type} are not supported");
-      }
-    }
-
-    newObject["displayValue"] = newDisplayValue;
-    return newObject;
-  }
-
-  public List<LocalToGlobalMap> LocalToGlobalMaps { get; } = new();
-
-  private static string[] GetLayerPath(TraversalContext context)
-  {
-    string[] collectionBasedPath = context.GetAscendantOfType<Collection>().Select(c => c.name).ToArray();
-    string[] reverseOrderPath =
-      collectionBasedPath.Length != 0 ? collectionBasedPath : context.GetPropertyPath().ToArray();
-
-    var originalPath = reverseOrderPath.Reverse().ToArray();
-    return originalPath.Where(x => !string.IsNullOrEmpty(x)).ToArray();
-  }
-
-  public List<LocalToGlobalMap> UnpackRelativeAtomicObjects(Base rootObject, List<TraversalContext> objectsToConvert)
-  {
-    var instanceDefinitionProxies = (rootObject["instanceDefinitionProxies"] as List<object>)
-      ?.Cast<InstanceDefinitionProxy>()
-      .ToList();
-
-    var instanceComponents = new List<(TraversalContext layerPath, InstanceProxy obj)>();
-    var atomicObjects = new List<(TraversalContext layerPath, Base obj)>();
-
-    // 1. Split up the instances from the non-instances
-    foreach (TraversalContext tc in objectsToConvert)
-    {
-      var path = GetLayerPath(tc);
-      if (tc.Current is InstanceProxy instanceComponent)
-      {
-        instanceComponents.Add((tc, instanceComponent));
-      }
-      else
-      {
-        atomicObjects.Add((tc, tc.Current));
-      }
-    }
-
-    var objectsAtAbsolute = new List<(TraversalContext layerPath, Base obj)>();
-    var objectsAtRelative = new List<(TraversalContext layerPath, Base obj)>();
-
-    // 2. Split atomic objects that in absolute or relative coordinates.
-    foreach ((TraversalContext layerPath, Base obj) in atomicObjects)
-    {
-      if (obj.applicationId is null)
-      {
-        continue;
-      }
-      if (
-        instanceDefinitionProxies is not null
-        && instanceDefinitionProxies.Any(idp => idp.objects.Contains(obj.applicationId))
-      )
-      {
-        objectsAtRelative.Add((layerPath, obj)); // to use in Instances only
-      }
-      else
-      {
-        objectsAtAbsolute.Add((layerPath, obj)); // to bake
-      }
-    }
-
-    // 3. Add atomic objects that on absolute coordinates that doesn't need a transformation.
-    foreach ((TraversalContext tc, Base obj) in objectsAtAbsolute)
-    {
-      LocalToGlobalMaps.Add(new LocalToGlobalMap(obj, tc, new List<Matrix4x4>()));
-    }
-
-    // 4. Return if no logic around instancing.
-    if (instanceDefinitionProxies is null)
-    {
-      return LocalToGlobalMaps;
-    }
-
-    // 5. Unpack matrix function that mutates some inner collections. Do better later!
-    void UnpackMatrix(
-      Base objectAtRelative,
-      Base searchForDefinition,
-      TraversalContext layerPath,
-      List<Matrix4x4> matrices
-    )
-    {
-      if (searchForDefinition.applicationId is null)
-      {
-        return;
-      }
-      InstanceDefinitionProxy? definitionProxy = instanceDefinitionProxies.Find(idp =>
-        idp.objects.Contains(searchForDefinition.applicationId)
-      );
-      if (definitionProxy is null)
-      {
-        LocalToGlobalMaps.Add(new LocalToGlobalMap(objectAtRelative, layerPath, matrices));
-        return;
-      }
-      var instances = instanceComponents.Where(ic => ic.obj.definitionId == definitionProxy.applicationId);
-      foreach ((TraversalContext tc, InstanceProxy instance) in instances)
-      {
-        List<Matrix4x4> mid = new(matrices);
-        mid.Add(instance.transform);
-        UnpackMatrix(objectAtRelative, instance, tc, mid);
-      }
-    }
-
-    // 6. Iterate each object that in relative coordinates.
-    foreach ((TraversalContext layerPath, Base objectAtRelative) in objectsAtRelative)
-    {
-      UnpackMatrix(objectAtRelative, objectAtRelative, layerPath, new List<Matrix4x4>());
-    }
-
-    return LocalToGlobalMaps.Where(ltgm => ltgm.AtomicObject is not InstanceProxy).ToList();
-  }
-}
 
 public class ArcGISHostObjectBuilder : IHostObjectBuilder
 {
   private readonly IRootToHostConverter _converter;
   private readonly INonNativeFeaturesUtils _nonGisFeaturesUtils;
+  private readonly ILocalToGlobalUnpacker _localToGlobalUnpacker;
+  private readonly ILocalToGlobalConverterUtils _localToGlobalConverterUtils;
 
   // POC: figure out the correct scope to only initialize on Receive
   private readonly IConversionContextStack<ArcGISDocument, Unit> _contextStack;
@@ -217,12 +35,16 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     IRootToHostConverter converter,
     IConversionContextStack<ArcGISDocument, Unit> contextStack,
     INonNativeFeaturesUtils nonGisFeaturesUtils,
+    ILocalToGlobalUnpacker localToGlobalUnpacker,
+    ILocalToGlobalConverterUtils localToGlobalConverterUtils,
     GraphTraversal traverseFunction
   )
   {
     _converter = converter;
     _contextStack = contextStack;
     _nonGisFeaturesUtils = nonGisFeaturesUtils;
+    _localToGlobalUnpacker = localToGlobalUnpacker;
+    _localToGlobalConverterUtils = localToGlobalConverterUtils;
     _traverseFunction = traverseFunction;
   }
 
@@ -246,9 +68,11 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       .Where(ctx => HasGISParent(ctx) is false)
       .ToList();
 
-    var localToGlobal = new LocalToGlobal();
-    var localToGlobalMap = localToGlobal.UnpackRelativeAtomicObjects(rootObject, objectsToConvertTc);
-    var objectsToConvert = localToGlobalMap.Select(x => (x.AtomicObject, tc: x.Tc, x.Matrix)).ToList();
+    var instanceDefinitionProxies = (rootObject["instanceDefinitionProxies"] as List<object>)
+      ?.Cast<InstanceDefinitionProxy>()
+      .ToList();
+
+    var objectsToConvert = _localToGlobalUnpacker.Unpack(instanceDefinitionProxies, objectsToConvertTc);
 
     int allCount = objectsToConvert.Count;
     int count = 0;
@@ -257,10 +81,10 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     // 1. convert everything
     List<ReceiveConversionResult> results = new(objectsToConvert.Count);
     List<string> bakedObjectIds = new();
-    foreach ((Base atomicObject, TraversalContext ctx, List<Matrix4x4> matrix) in objectsToConvert)
+    foreach (LocalToGlobalMap objectToConvert in objectsToConvert)
     {
-      string[] path = GetLayerPath(ctx);
-      Base obj = ctx.Current;
+      string[] path = GetLayerPath(objectToConvert.TraversalContext);
+      Base obj = objectToConvert.AtomicObject;
 
       cancellationToken.ThrowIfCancellationRequested();
       try
@@ -269,15 +93,19 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
         {
           string nestedLayerPath = $"{string.Join("\\", path)}";
           string datasetId = (string)_converter.Convert(obj);
-          conversionTracker[ctx] = new ObjectConversionTracker(obj, nestedLayerPath, datasetId);
+          conversionTracker[objectToConvert.TraversalContext] = new ObjectConversionTracker(
+            obj,
+            nestedLayerPath,
+            datasetId
+          );
         }
         else
         {
-          obj = LocalToGlobal.TransformObjects(atomicObject, matrix);
+          obj = _localToGlobalConverterUtils.TransformObjects(objectToConvert.AtomicObject, objectToConvert.Matrix);
 
           string nestedLayerPath = $"{string.Join("\\", path)}\\{obj.speckle_type.Split(".")[^1]}";
           Geometry converted = (Geometry)_converter.Convert(obj);
-          conversionTracker[ctx] = new ObjectConversionTracker(obj, nestedLayerPath, converted);
+          conversionTracker[new TraversalContext(obj)] = new ObjectConversionTracker(obj, nestedLayerPath, converted);
         }
       }
       catch (Exception ex) when (!ex.IsFatal()) // DO NOT CATCH SPECIFIC STUFF, conversion errors should be recoverable
