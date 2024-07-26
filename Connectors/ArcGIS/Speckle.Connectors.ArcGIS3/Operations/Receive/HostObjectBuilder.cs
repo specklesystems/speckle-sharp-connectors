@@ -116,7 +116,7 @@ public class LocalToGlobal
     var instanceComponents = new List<(TraversalContext layerPath, InstanceProxy obj)>();
     var atomicObjects = new List<(TraversalContext layerPath, Base obj)>();
 
-    // Split up the instances from the non-instances
+    // 1. Split up the instances from the non-instances
     foreach (TraversalContext tc in objectsToConvert)
     {
       var path = GetLayerPath(tc);
@@ -133,6 +133,7 @@ public class LocalToGlobal
     var objectsAtAbsolute = new List<(TraversalContext layerPath, Base obj)>();
     var objectsAtRelative = new List<(TraversalContext layerPath, Base obj)>();
 
+    // 2. Split atomic objects that in absolute or relative coordinates.
     foreach ((TraversalContext layerPath, Base obj) in atomicObjects)
     {
       if (obj.applicationId is null)
@@ -151,45 +152,52 @@ public class LocalToGlobal
         objectsAtAbsolute.Add((layerPath, obj)); // to bake
       }
     }
-    // objectsAtRelative.AddRange(instanceComponents.Select(x => (x.layerPath, (Base)(x.obj))).ToList());
 
+    // 3. Add atomic objects that on absolute coordinates that doesn't need a transformation.
     foreach ((TraversalContext tc, Base obj) in objectsAtAbsolute)
     {
       LocalToGlobalMaps.Add(new LocalToGlobalMap(obj, tc, new List<Matrix4x4>()));
     }
 
+    // 4. Return if no logic around instancing.
     if (instanceDefinitionProxies is null)
     {
       return LocalToGlobalMaps;
     }
 
-    void UnpackMatrix(Base objectToUnpack, TraversalContext layerPath, List<Matrix4x4> matrices)
+    // 5. Unpack matrix function that mutates some inner collections. Do better later!
+    void UnpackMatrix(
+      Base objectAtRelative,
+      Base searchForDefinition,
+      TraversalContext layerPath,
+      List<Matrix4x4> matrices
+    )
     {
-      if (objectToUnpack.applicationId is null)
+      if (searchForDefinition.applicationId is null)
       {
         return;
       }
       InstanceDefinitionProxy? definitionProxy = instanceDefinitionProxies.Find(idp =>
-        idp.objects.Contains(objectToUnpack.applicationId)
+        idp.objects.Contains(searchForDefinition.applicationId)
       );
       if (definitionProxy is null)
       {
+        LocalToGlobalMaps.Add(new LocalToGlobalMap(objectAtRelative, layerPath, matrices));
         return;
       }
       var instances = instanceComponents.Where(ic => ic.obj.definitionId == definitionProxy.applicationId);
       foreach ((TraversalContext tc, InstanceProxy instance) in instances)
       {
-        matrices.Add(instance.transform);
-        UnpackMatrix(instance, tc, matrices);
-        LocalToGlobalMaps.Add(new LocalToGlobalMap(objectToUnpack, tc, matrices));
-        matrices = new List<Matrix4x4>();
+        List<Matrix4x4> mid = new(matrices);
+        mid.Add(instance.transform);
+        UnpackMatrix(objectAtRelative, instance, tc, mid);
       }
-      LocalToGlobalMaps.Add(new LocalToGlobalMap(objectToUnpack, layerPath, matrices));
     }
 
+    // 6. Iterate each object that in relative coordinates.
     foreach ((TraversalContext layerPath, Base objectAtRelative) in objectsAtRelative)
     {
-      UnpackMatrix(objectAtRelative, layerPath, new List<Matrix4x4>());
+      UnpackMatrix(objectAtRelative, objectAtRelative, layerPath, new List<Matrix4x4>());
     }
 
     return LocalToGlobalMaps.Where(ltgm => ltgm.AtomicObject is not InstanceProxy).ToList();
