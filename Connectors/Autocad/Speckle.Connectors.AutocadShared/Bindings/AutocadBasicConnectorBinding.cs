@@ -116,46 +116,43 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
   {
     var doc = Application.DocumentManager.MdiActiveDocument;
 
-    Parent.RunOnMainThread(
-      () =>
-        Parent.TopLevelExceptionHandler.CatchUnhandled(() =>
+    Parent.RunOnMainThread(() =>
+    {
+      try
+      {
+        doc.Editor.SetImpliedSelection(Array.Empty<ObjectId>()); // Deselects
+        doc.Editor.SetImpliedSelection(objectIds); // Selects
+        doc.Editor.UpdateScreen();
+
+        Extents3d selectedExtents = new();
+
+        var tr = doc.TransactionManager.StartTransaction();
+        foreach (ObjectId objectId in objectIds)
         {
-          try
+          var entity = (Entity)tr.GetObject(objectId, OpenMode.ForRead);
+          if (entity != null)
           {
-            doc.Editor.SetImpliedSelection(Array.Empty<ObjectId>()); // Deselects
-            doc.Editor.SetImpliedSelection(objectIds); // Selects
-            doc.Editor.UpdateScreen();
-
-            Extents3d selectedExtents = new();
-
-            var tr = doc.TransactionManager.StartTransaction();
-            foreach (ObjectId objectId in objectIds)
-            {
-              var entity = (Entity)tr.GetObject(objectId, OpenMode.ForRead);
-              if (entity != null)
-              {
-                selectedExtents.AddExtents(entity.GeometricExtents);
-              }
-            }
-
-            doc.Editor.Zoom(selectedExtents);
-            tr.Commit();
-            Autodesk.AutoCAD.Internal.Utils.FlushGraphics();
+            selectedExtents.AddExtents(entity.GeometricExtents);
           }
-          catch (Exception ex) when (!ex.IsFatal())
-          {
-            if (modelCardId != null)
-            {
-              Commands.SetModelError(modelCardId, new OperationCanceledException("Failed to highlight objects."));
-            }
-            else
-            {
-              // This will happen, in some cases, where we highlight individual objects. Should be caught by the top level handler and not
-              // crash the host app.
-              throw;
-            }
-          }
-        })
-    );
+        }
+
+        doc.Editor.Zoom(selectedExtents);
+        tr.Commit();
+        Autodesk.AutoCAD.Internal.Utils.FlushGraphics();
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        if (modelCardId != null)
+        {
+          Commands.SetModelError(modelCardId, new OperationCanceledException("Failed to highlight objects."));
+        }
+        else
+        {
+          // This will happen, in some cases, where we highlight individual objects. Should be caught by the top level handler and not
+          // crash the host app.
+          throw;
+        }
+      }
+    });
   }
 }
