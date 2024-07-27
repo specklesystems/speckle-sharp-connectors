@@ -414,6 +414,7 @@
       "speckle.autofac": {
         "type": "Project",
         "dependencies": {
+          "Autofac": "[5.2.0, )",
           "Microsoft.Extensions.Logging.Abstractions": "[7.0.0, )"
         }
       },
@@ -433,6 +434,15 @@
           "Serilog.Extensions.Logging": "[7.0.0, )",
           "Speckle.Autofac": "[1.0.0, )",
           "Speckle.Core": "[3.1.0-dev.79, )"
+        }
+      },
+      "Autofac": {
+        "type": "CentralTransitive",
+        "requested": "[5.2.0, )",
+        "resolved": "5.2.0",
+        "contentHash": "V8dBH0dsv75uDzl7Sw+HkhKDPUw2eXnlMjcSVMH+tLo2s67MpTKGyDj1pDcpR+IF2u4YRs0s3/x7R88YJzIWvg==",
+        "dependencies": {
+          "Microsoft.Bcl.AsyncInterfaces": "1.1.0"
         }
       },
       "Microsoft.Extensions.Logging.Abstractions": {
@@ -850,6 +860,7 @@
       "speckle.autofac": {
         "type": "Project",
         "dependencies": {
+          "Autofac": "[5.2.0, )",
           "Microsoft.Extensions.Logging.Abstractions": "[7.0.0, )"
         }
       },
@@ -870,6 +881,12 @@
           "Speckle.Autofac": "[1.0.0, )",
           "Speckle.Core": "[3.1.0-dev.79, )"
         }
+      },
+      "Autofac": {
+        "type": "CentralTransitive",
+        "requested": "[5.2.0, )",
+        "resolved": "5.2.0",
+        "contentHash": "V8dBH0dsv75uDzl7Sw+HkhKDPUw2eXnlMjcSVMH+tLo2s67MpTKGyDj1pDcpR+IF2u4YRs0s3/x7R88YJzIWvg=="
       },
       "Microsoft.Extensions.Logging.Abstractions": {
         "type": "CentralTransitive",

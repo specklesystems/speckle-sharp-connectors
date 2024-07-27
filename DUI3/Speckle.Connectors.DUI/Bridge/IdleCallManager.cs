@@ -11,15 +11,22 @@ public interface IIdleCallManager
 
 //should be registered as singleton
 [SuppressMessage("ReSharper", "InconsistentlySynchronizedField")]
-public class IdleCallManager(ITopLevelExceptionHandler topLevelExceptionHandler) : IIdleCallManager
+public class IdleCallManager : IIdleCallManager
 {
   public ConcurrentDictionary<string, Action> Calls { get; } = new();
 
   private readonly object _lock = new();
   public bool IdleSubscriptionCalled { get; private set; }
 
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+
+  public IdleCallManager(ITopLevelExceptionHandler topLevelExceptionHandler)
+  {
+    _topLevelExceptionHandler = topLevelExceptionHandler;
+  }
+
   public void SubscribeToIdle(string id, Action action, Action addEvent) =>
-    topLevelExceptionHandler.CatchUnhandled(() => SubscribeInternal(id, action, addEvent));
+    _topLevelExceptionHandler.CatchUnhandled(() => SubscribeInternal(id, action, addEvent));
 
   public void SubscribeInternal(string id, Action action, Action addEvent)
   {
@@ -38,15 +45,17 @@ public class IdleCallManager(ITopLevelExceptionHandler topLevelExceptionHandler)
   }
 
   public void AppOnIdle(Action removeEvent) =>
-    topLevelExceptionHandler.CatchUnhandled(() => AppOnIdleInternal(removeEvent));
+    _topLevelExceptionHandler.CatchUnhandled(() => AppOnIdleInternal(removeEvent));
 
   public void AppOnIdleInternal(Action removeEvent)
   {
     foreach (KeyValuePair<string, Action> kvp in Calls)
     {
-      kvp.Value.Invoke();
+      _topLevelExceptionHandler.CatchUnhandled(() => kvp.Value.Invoke());
     }
+
     Calls.Clear();
+
     if (IdleSubscriptionCalled)
     {
       lock (_lock)

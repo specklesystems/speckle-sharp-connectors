@@ -1,3 +1,4 @@
+using Autofac;
 using Rhino.Commands;
 using Rhino.DocObjects;
 using Rhino.PlugIns;
@@ -50,8 +51,18 @@ public class RhinoConnectorModule : ISpeckleModule
     builder.AddSingleton<IBinding, TestBinding>();
     builder.AddSingleton<IBinding, ConfigBinding>("connectorName", "Rhino"); // POC: Easier like this for now, should be cleaned up later
     builder.AddSingleton<IBinding, AccountBinding>();
-    builder.AddSingleton<IBinding, RhinoBasicConnectorBinding>();
-    builder.AddSingleton<IBasicConnectorBinding, RhinoBasicConnectorBinding>();
+
+    builder.ContainerBuilder.RegisterType<TopLevelExceptionHandlerBinding>().As<IBinding>().AsSelf().SingleInstance();
+    builder.AddSingleton<ITopLevelExceptionHandler>(c =>
+      c.Resolve<TopLevelExceptionHandlerBinding>().Parent.TopLevelExceptionHandler
+    );
+
+    builder
+      .ContainerBuilder.RegisterType<RhinoBasicConnectorBinding>()
+      .As<IBinding>()
+      .As<IBasicConnectorBinding>()
+      .SingleInstance();
+
     builder.AddSingleton<IBinding, RhinoSelectionBinding>();
     builder.AddSingleton<IBinding, RhinoSendBinding>();
     builder.AddSingleton<IBinding, RhinoReceiveBinding>();

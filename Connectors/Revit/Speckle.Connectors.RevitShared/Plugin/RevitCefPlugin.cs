@@ -118,12 +118,7 @@ internal sealed class RevitCefPlugin : IRevitPlugin
     foreach (IBinding binding in _bindings.Select(x => x.Value))
     {
       Debug.WriteLine(binding.Name);
-      binding.Parent.AssociateWithBinding(
-        binding,
-        _cefSharpPanel.ExecuteScriptAsync,
-        _cefSharpPanel,
-        _cefSharpPanel.ShowDevTools
-      );
+      binding.Parent.AssociateWithBinding(binding);
     }
 
     _cefSharpPanel.Browser.IsBrowserInitializedChanged += (sender, e) =>
