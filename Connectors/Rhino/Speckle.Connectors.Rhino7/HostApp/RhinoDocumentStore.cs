@@ -7,7 +7,6 @@ namespace Speckle.Connectors.Rhino7.HostApp;
 
 public class RhinoDocumentStore : DocumentModelStore
 {
-  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private const string SPECKLE_KEY = "Speckle_DUI3";
   public override bool IsDocumentInit { get; set; } = true; // Note: because of rhino implementation details regarding expiry checking of sender cards.
 
@@ -17,7 +16,6 @@ public class RhinoDocumentStore : DocumentModelStore
   )
     : base(jsonSerializerSettings, true)
   {
-    _topLevelExceptionHandler = topLevelExceptionHandler;
     RhinoDoc.BeginOpenDocument += (_, _) => topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
     RhinoDoc.EndOpenDocument += (_, e) =>
       topLevelExceptionHandler.CatchUnhandled(() =>
