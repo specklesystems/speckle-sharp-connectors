@@ -14,10 +14,10 @@ internal abstract class RevitBaseBinding : IBinding
   protected readonly DocumentModelStore Store;
   protected readonly RevitContext RevitContext;
 
-  protected RevitBaseBinding(string name, DocumentModelStore store, IBridge bridge, RevitContext revitContext)
+  protected RevitBaseBinding(string name, DocumentModelStore store, IBridge parent, RevitContext revitContext)
   {
     Name = name;
-    Parent = bridge;
+    Parent = parent;
     Store = store;
     RevitContext = revitContext;
   }
