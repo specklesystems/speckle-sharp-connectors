@@ -116,7 +116,6 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
   {
     var doc = Application.DocumentManager.MdiActiveDocument;
 
-    // TODO: wrap in top level exception handler once the PR is in
     Parent.RunOnMainThread(
       () =>
         Parent.TopLevelExceptionHandler.CatchUnhandled(() =>
