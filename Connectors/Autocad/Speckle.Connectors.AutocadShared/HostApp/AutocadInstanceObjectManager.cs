@@ -187,7 +187,6 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
 
           foreach (var entity in constituentEntities)
           {
-            // record.AppendEntity(entity);
             objectIds.Add(entity.ObjectId);
           }
 
