@@ -136,7 +136,7 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.Brep>
       {
         var t = new SOG.BrepTrim(
           speckleParent,
-          trim.Edge.EdgeIndex,
+          trim.Edge?.EdgeIndex ?? -1,
           trim.Face.FaceIndex,
           trim.Loop.LoopIndex,
           trim.TrimCurveIndex,

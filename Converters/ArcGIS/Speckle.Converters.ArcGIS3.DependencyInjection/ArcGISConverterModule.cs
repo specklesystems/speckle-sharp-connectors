@@ -20,6 +20,7 @@ public class ArcGISConverterModule : ISpeckleModule
     // most things should be InstancePerLifetimeScope so we get one per operation
     builder.AddScoped<IFeatureClassUtils, FeatureClassUtils>();
     builder.AddScoped<IArcGISFieldUtils, ArcGISFieldUtils>();
+    builder.AddScoped<ILocalToGlobalConverterUtils, LocalToGlobalConverterUtils>();
     builder.AddScoped<ICharacterCleaner, CharacterCleaner>();
     builder.AddScoped<INonNativeFeaturesUtils, NonNativeFeaturesUtils>();
     builder.AddScoped<ArcGISDocument>();

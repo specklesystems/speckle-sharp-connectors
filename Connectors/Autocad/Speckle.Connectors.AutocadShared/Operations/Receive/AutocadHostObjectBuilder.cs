@@ -145,7 +145,6 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     // Stage 3: Create group
     // using var transactionContext = TransactionContext.StartTransaction(Application.DocumentManager.MdiActiveDocument);
 
-
     if (groupProxies != null)
     {
       using var groupCreationTransaction =

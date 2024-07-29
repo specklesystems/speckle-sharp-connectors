@@ -9,6 +9,7 @@ using Objects.Other;
 using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
+using Speckle.Connectors.Utils.Instances;
 using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
@@ -16,6 +17,7 @@ using Speckle.Core.Logging;
 using Speckle.Core.Models;
 using Speckle.Core.Models.Collections;
 using Speckle.Core.Models.GraphTraversal;
+using Speckle.Core.Models.Instances;
 using RasterLayer = Objects.GIS.RasterLayer;
 
 namespace Speckle.Connectors.ArcGIS.Operations.Receive;
@@ -24,6 +26,8 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
 {
   private readonly IRootToHostConverter _converter;
   private readonly INonNativeFeaturesUtils _nonGisFeaturesUtils;
+  private readonly ILocalToGlobalUnpacker _localToGlobalUnpacker;
+  private readonly ILocalToGlobalConverterUtils _localToGlobalConverterUtils;
 
   // POC: figure out the correct scope to only initialize on Receive
   private readonly IConversionContextStack<ArcGISDocument, Unit> _contextStack;
@@ -33,12 +37,16 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     IRootToHostConverter converter,
     IConversionContextStack<ArcGISDocument, Unit> contextStack,
     INonNativeFeaturesUtils nonGisFeaturesUtils,
+    ILocalToGlobalUnpacker localToGlobalUnpacker,
+    ILocalToGlobalConverterUtils localToGlobalConverterUtils,
     GraphTraversal traverseFunction
   )
   {
     _converter = converter;
     _contextStack = contextStack;
     _nonGisFeaturesUtils = nonGisFeaturesUtils;
+    _localToGlobalUnpacker = localToGlobalUnpacker;
+    _localToGlobalConverterUtils = localToGlobalConverterUtils;
     _traverseFunction = traverseFunction;
   }
 
@@ -56,7 +64,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     // Prompt the UI conversion started. Progress bar will swoosh.
     onOperationProgressed?.Invoke("Converting", null);
 
-    var objectsToConvert = _traverseFunction
+    var objectsToConvertTc = _traverseFunction
       .Traverse(rootObject)
       .Where(ctx => ctx.Current is not Collection || IsGISType(ctx.Current))
       .Where(ctx => HasGISParent(ctx) is false)
@@ -71,6 +79,11 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     {
       _contextStack.Current.Document.RenderMaterialProxies = renderMaterials;
     }
+    var instanceDefinitionProxies = (rootObject["instanceDefinitionProxies"] as List<object>)
+      ?.Cast<InstanceDefinitionProxy>()
+      .ToList();
+
+    var objectsToConvert = _localToGlobalUnpacker.Unpack(instanceDefinitionProxies, objectsToConvertTc);
 
     int allCount = objectsToConvert.Count;
     int count = 0;
@@ -79,10 +92,10 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     // 1. convert everything
     List<ReceiveConversionResult> results = new(objectsToConvert.Count);
     List<string> bakedObjectIds = new();
-    foreach (TraversalContext ctx in objectsToConvert)
+    foreach (LocalToGlobalMap objectToConvert in objectsToConvert)
     {
-      string[] path = GetLayerPath(ctx);
-      Base obj = ctx.Current;
+      string[] path = GetLayerPath(objectToConvert.TraversalContext);
+      Base obj = objectToConvert.AtomicObject;
 
       cancellationToken.ThrowIfCancellationRequested();
       try
@@ -91,13 +104,24 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
         {
           string nestedLayerPath = $"{string.Join("\\", path)}";
           string datasetId = (string)_converter.Convert(obj);
-          conversionTracker[ctx] = new ObjectConversionTracker(obj, nestedLayerPath, datasetId);
+          conversionTracker[objectToConvert.TraversalContext] = new ObjectConversionTracker(
+            obj,
+            nestedLayerPath,
+            datasetId
+          );
         }
         else
         {
+          obj = _localToGlobalConverterUtils.TransformObjects(objectToConvert.AtomicObject, objectToConvert.Matrix);
+
           string nestedLayerPath = $"{string.Join("\\", path)}\\{obj.speckle_type.Split(".")[^1]}";
           Geometry converted = (Geometry)_converter.Convert(obj);
-          conversionTracker[ctx] = new ObjectConversionTracker(obj, nestedLayerPath, converted);
+
+          conversionTracker[objectToConvert.TraversalContext] = new ObjectConversionTracker(
+            obj,
+            nestedLayerPath,
+            converted
+          );
         }
       }
       catch (Exception ex) when (!ex.IsFatal()) // DO NOT CATCH SPECIFIC STUFF, conversion errors should be recoverable

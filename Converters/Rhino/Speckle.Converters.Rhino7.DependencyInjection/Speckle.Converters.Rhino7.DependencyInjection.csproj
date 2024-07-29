@@ -3,7 +3,6 @@
     <TargetFramework>net48</TargetFramework>
     <CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
     <Configurations>Debug;Release;Local</Configurations>
-
   </PropertyGroup>
 
   <ItemGroup>
