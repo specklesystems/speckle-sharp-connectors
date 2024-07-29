@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
@@ -205,6 +206,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     return new(bakedObjectIds, conversionResults);
   }
 
+  [SuppressMessage("Performance", "CA1864:Prefer the \'IDictionary.TryAdd(TKey, TValue)\' method")]
   private Dictionary<string, int> BakeRenderMaterials(
     List<RenderMaterialProxy> materialProxies,
     string baseLayerName,

@@ -81,7 +81,7 @@ public class RhinoLayerManager
   /// <returns></returns>
   public Collection GetHostObjectCollection(Layer layer, Collection rootObjectCollection)
   {
-    if (_layerCollectionCache.TryGetValue(layer.Index, out Collection value))
+    if (_layerCollectionCache.TryGetValue(layer.Index, out Collection? value))
     {
       return value;
     }

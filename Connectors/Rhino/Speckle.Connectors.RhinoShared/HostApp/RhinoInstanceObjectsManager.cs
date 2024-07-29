@@ -4,6 +4,7 @@ using Rhino.Geometry;
 using Speckle.Connectors.Rhino.Extensions;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Instances;
+using Speckle.Core.Common;
 using Speckle.Core.Kits;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
@@ -153,9 +154,9 @@ public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInst
         if (instanceOrDefinition is InstanceDefinitionProxy definitionProxy)
         {
           var currentApplicationObjectsIds = definitionProxy
-            .objects.Select(x => applicationIdMap.TryGetValue(x, out List<string> value) ? value : null)
+            .objects.Select(x => applicationIdMap.TryGetValue(x, out List<string>? value) ? value : null)
             .Where(x => x is not null)
-            .SelectMany(id => id)
+            .SelectMany(id => id.NotNull())
             .ToList();
 
           var definitionGeometryList = new List<GeometryBase>();

@@ -408,7 +408,7 @@
       },
       "RhinoCommon": {
         "type": "CentralTransitive",
-        "requested": "[7.13.21348.13001, )",
+        "requested": "[8.9.24194.18121, )",
         "resolved": "7.13.21348.13001",
         "contentHash": "JQdaNw61ddBqIe08E9O4N/grwrN1hjDHcYW7tWylwCZyFR7SepoCD4NS+6LN6+oSQhNbhLi9Bf+hQOFYFdRAEA=="
       },

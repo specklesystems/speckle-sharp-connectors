@@ -149,7 +149,7 @@ public class RhinoMaterialManager
         continue;
       }
 
-      if (renderMaterialProxies.TryGetValue(rhinoMaterialId, out RenderMaterialProxy value))
+      if (renderMaterialProxies.TryGetValue(rhinoMaterialId, out RenderMaterialProxy? value))
       {
         value.objects.Add(rhinoObject.Id.ToString());
       }
@@ -186,7 +186,7 @@ public class RhinoMaterialManager
         continue;
       }
 
-      if (renderMaterialProxies.TryGetValue(material.Id.ToString(), out RenderMaterialProxy value))
+      if (renderMaterialProxies.TryGetValue(material.Id.ToString(), out RenderMaterialProxy? value))
       {
         value.objects.Add(layer.Id.ToString());
       }

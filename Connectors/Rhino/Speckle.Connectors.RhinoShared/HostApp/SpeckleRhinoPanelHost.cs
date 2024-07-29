@@ -21,7 +21,7 @@ public class SpeckleRhinoPanelHost : RhinoWindows.Controls.WpfElementHost
     Panels.Closed += PanelsOnClosed;
   }
 
-  private void PanelsOnClosed(object sender, PanelEventArgs e)
+  private void PanelsOnClosed(object? sender, PanelEventArgs e)
   {
     if (e.PanelId == typeof(SpeckleRhinoPanelHost).GUID)
     {

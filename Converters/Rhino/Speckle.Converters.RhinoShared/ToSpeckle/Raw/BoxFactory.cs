@@ -1,11 +1,13 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Speckle.InterfaceGenerator;
+using BoundingBox = Rhino.Geometry.BoundingBox;
+using Box = Rhino.Geometry.Box;
 
-namespace Speckle.Converters.Rhino7.ToSpeckle.Raw;
+namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
 
 [GenerateAutoInterface]
 [ExcludeFromCodeCoverage]
 public class BoxFactory : IBoxFactory
 {
-  public RG.Box Create(RG.BoundingBox bb) => new(bb);
+  public Box Create(BoundingBox bb) => new(bb);
 }

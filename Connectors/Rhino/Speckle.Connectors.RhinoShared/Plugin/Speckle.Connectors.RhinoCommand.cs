@@ -1,9 +1,11 @@
+using System.IO;
+using System.Reflection;
 using Rhino;
 using Rhino.Commands;
 using Rhino.Input.Custom;
 using Rhino.UI;
 using Speckle.Connectors.Rhino.HostApp;
-using Speckle.Connectors.Rhino.Properties;
+// using Speckle.Connectorss.Rhino.Properties;
 
 namespace Speckle.Connectors.Rhino.Plugin;
 
@@ -14,13 +16,38 @@ public class SpeckleConnectorsRhinoCommand : Command
     // Rhino only creates one instance of each command class defined in a
     // plug-in, so it is safe to store a reference in a static property.
     Instance = this;
+    string iconPath = Path.Combine(GetAssemblyDirectory(), "Resources", "speckle32.ico");
     Panels.RegisterPanel(
       SpeckleConnectorsRhinoPlugin.Instance,
       typeof(SpeckleRhinoPanelHost),
       "Speckle (New UI)",
-      Resources.speckle32,
+      new Icon(iconPath),
       PanelType.System
     );
+  }
+
+  // Method to get the directory of the currently executing assembly
+  private string GetAssemblyDirectory()
+  {
+    var assembly = Assembly.GetExecutingAssembly();
+    if (assembly == null)
+    {
+      throw new InvalidOperationException("Unable to get executing assembly.");
+    }
+
+    string codeBase = assembly.Location; // Use Location instead of CodeBase
+    if (string.IsNullOrEmpty(codeBase))
+    {
+      throw new InvalidOperationException("Assembly location is null or empty.");
+    }
+
+    string? path = Path.GetDirectoryName(codeBase);
+    if (path == null)
+    {
+      throw new InvalidOperationException("Unable to determine directory from assembly location.");
+    }
+
+    return path;
   }
 
   ///<summary>The only instance of this command.</summary>

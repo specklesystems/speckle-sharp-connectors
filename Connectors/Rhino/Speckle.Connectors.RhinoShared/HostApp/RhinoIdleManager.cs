@@ -24,6 +24,6 @@ public class RhinoIdleManager(IIdleCallManager idleCallManager) : IRhinoIdleMana
       }
     );
 
-  private void RhinoAppOnIdle(object sender, EventArgs e) =>
+  private void RhinoAppOnIdle(object? sender, EventArgs e) =>
     idleCallManager.AppOnIdle(() => RhinoApp.Idle -= RhinoAppOnIdle);
 }

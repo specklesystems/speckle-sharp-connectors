@@ -28,7 +28,7 @@ public class RhinoGroupManager // POC: later make it more clean with RhinoGroupU
       var groups = groupList.Select(gi => RhinoDoc.ActiveDoc.Groups.FindIndex(gi));
       foreach (Group group in groups)
       {
-        if (GroupProxies.TryGetValue(group.Id.ToString(), out GroupProxy groupProxy))
+        if (GroupProxies.TryGetValue(group.Id.ToString(), out GroupProxy? groupProxy))
         {
           groupProxy.objects.Add(rhinoObject.Id.ToString());
         }

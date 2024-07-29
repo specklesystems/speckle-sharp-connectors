@@ -9,7 +9,7 @@ public class RhinoSettings
   {
     HostAppInfo = hostAppInfo;
     HostAppVersion = hostAppVersion;
-    Modules = new[] { new DirectoryInfo(typeof(RhinoSettings).Assembly.Location).Parent.FullName };
+    Modules = new[] { new DirectoryInfo(typeof(RhinoSettings).Assembly.Location).Parent?.FullName }!;
   }
 
   public HostApplication HostAppInfo { get; private set; }
