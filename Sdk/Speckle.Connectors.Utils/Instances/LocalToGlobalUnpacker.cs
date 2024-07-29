@@ -106,7 +106,13 @@ public class LocalToGlobalUnpacker : ILocalToGlobalUnpacker
     );
     if (definitionProxy is null)
     {
-      localToGlobalMaps.Add(new LocalToGlobalMap(objectAtRelative.tc, objectAtRelative.obj, matrices));
+      localToGlobalMaps.Add(
+        new LocalToGlobalMap(
+          new TraversalContext(objectAtRelative.obj, objectAtRelative.tc.PropName, objectAtRelative.tc.Parent),
+          objectAtRelative.obj,
+          matrices
+        )
+      );
       return;
     }
     var instances = instanceProxies.Where(ic => ic.instanceProxy.definitionId == definitionProxy.applicationId);
