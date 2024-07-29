@@ -15,9 +15,9 @@ public class AutocadSelectionBinding : ISelectionBinding
 
   public IBridge Parent { get; }
 
-  public AutocadSelectionBinding(IBridge parent, ITopLevelExceptionHandler topLevelExceptionHandler)
+  public AutocadSelectionBinding(IBridge parent)
   {
-    _topLevelExceptionHandler = topLevelExceptionHandler;
+    _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
     Parent = parent;
 
     // POC: Use here Context for doc. In converters it's OK but we are still lacking to use context into bindings.

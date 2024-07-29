@@ -1,8 +1,10 @@
 using Autodesk.Revit.DB;
+using Autofac;
 using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
+using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.Revit.Bindings;
 using Speckle.Connectors.Revit.HostApp;
@@ -46,12 +48,21 @@ public class RevitConnectorModule : ISpeckleModule
     builder.AddSingleton<IBinding, TestBinding>();
     builder.AddSingleton<IBinding, ConfigBinding>("connectorName", "Revit"); // POC: Easier like this for now, should be cleaned up later
     builder.AddSingleton<IBinding, AccountBinding>();
-    builder.AddSingleton<IBinding, BasicConnectorBindingRevit>();
-    builder.AddSingleton<IBasicConnectorBinding, BasicConnectorBindingRevit>();
     builder.AddSingleton<IBinding, SelectionBinding>();
     builder.AddSingleton<IBinding, RevitSendBinding>();
     builder.AddSingleton<IBinding, RevitReceiveBinding>();
     builder.AddSingleton<IRevitIdleManager, RevitIdleManager>();
+
+    builder.ContainerBuilder.RegisterType<TopLevelExceptionHandlerBinding>().As<IBinding>().AsSelf().SingleInstance();
+    builder.AddSingleton<ITopLevelExceptionHandler>(c =>
+      c.Resolve<TopLevelExceptionHandlerBinding>().Parent.TopLevelExceptionHandler
+    );
+
+    builder
+      .ContainerBuilder.RegisterType<BasicConnectorBindingRevit>()
+      .As<IBinding>()
+      .As<IBasicConnectorBinding>()
+      .SingleInstance();
 
     // send operation and dependencies
     builder.AddScoped<SendOperation<ElementId>>();
@@ -77,6 +88,7 @@ public class RevitConnectorModule : ISpeckleModule
     //different versons for different versions of CEF
     builder.AddSingleton(new BindingOptions() { CamelCaseJavascriptNames = false });
     builder.AddSingleton<CefSharpPanel>();
+    builder.AddSingleton<IBrowserScriptExecutor>(c => c.Resolve<CefSharpPanel>());
     builder.AddSingleton<IRevitPlugin, RevitCefPlugin>();
 #else
     // POC: different versons for different versions of CEF
@@ -86,6 +98,7 @@ public class RevitConnectorModule : ISpeckleModule
     panel.Browser.JavascriptObjectRepository.NameConverter = null;
 
     builder.AddSingleton(panel);
+    builder.AddSingleton<IBrowserScriptExecutor>(c => c.Resolve<CefSharpPanel>());
     builder.AddSingleton<IRevitPlugin, RevitCefPlugin>();
 #endif
   }

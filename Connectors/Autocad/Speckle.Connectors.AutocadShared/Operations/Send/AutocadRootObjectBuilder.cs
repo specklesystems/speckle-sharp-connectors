@@ -64,8 +64,6 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     int count = 0;
 
     var (atomicObjects, instanceProxies, instanceDefinitionProxies) = _instanceObjectsManager.UnpackSelection(objects);
-    // POC: until we formalise a bit more the root object
-    modelWithLayers["instanceDefinitionProxies"] = instanceDefinitionProxies;
 
     List<SendConversionResult> results = new();
     var cacheHitCount = 0;
@@ -120,7 +118,6 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
         results.Add(new(Status.ERROR, applicationId, entity.GetType().ToString(), null, ex));
         // POC: add logging
       }
-
       onOperationProgressed?.Invoke("Converting", (double)++count / atomicObjects.Count);
     }
 
@@ -130,9 +127,22 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     );
 
     List<GroupProxy> groupProxies = _groupUnpacker.UnpackGroups(atomicObjects);
-    List<RenderMaterialProxy> materialProxies = _materialManager.UnpackRenderMaterial(atomicObjects, layers);
     modelWithLayers["groupProxies"] = groupProxies;
+
+    List<RenderMaterialProxy> materialProxies = _materialManager.UnpackRenderMaterial(atomicObjects, layers);
+    var conversionFailedAppIds = results
+      .FindAll(result => result.Status == Status.ERROR)
+      .Select(result => result.SourceId);
     modelWithLayers["renderMaterialProxies"] = materialProxies;
+
+    // Cleans up objects that failed to convert from definition proxies.
+    // see https://linear.app/speckle/issue/CNX-115/viewer-handle-gracefully-instances-with-elements-that-failed-to
+    foreach (var definitionProxy in instanceDefinitionProxies)
+    {
+      definitionProxy.objects.RemoveAll(id => conversionFailedAppIds.Contains(id));
+    }
+    modelWithLayers["instanceDefinitionProxies"] = instanceDefinitionProxies;
+
     return new(modelWithLayers, results);
   }
 }

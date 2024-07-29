@@ -1,4 +1,5 @@
 using Autodesk.AutoCAD.DatabaseServices;
+using Autofac;
 using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Autocad.Bindings;
@@ -8,6 +9,7 @@ using Speckle.Connectors.Autocad.Operations.Receive;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
+using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
@@ -41,9 +43,18 @@ public static class SharedRegistration
     // Register bindings
     builder.AddSingleton<IBinding, TestBinding>();
     builder.AddSingleton<IBinding, AccountBinding>();
-    builder.AddSingleton<IBinding, AutocadBasicConnectorBinding>();
-    builder.AddSingleton<IBasicConnectorBinding, AutocadBasicConnectorBinding>();
     builder.AddSingleton<IBinding, AutocadSelectionBinding>();
+    builder
+      .ContainerBuilder.RegisterType<AutocadBasicConnectorBinding>()
+      .As<IBinding>()
+      .As<IBasicConnectorBinding>()
+      .SingleInstance();
+
+    //Top Level ExceptionHandler
+    builder.ContainerBuilder.RegisterType<TopLevelExceptionHandlerBinding>().As<IBinding>().AsSelf().SingleInstance();
+    builder.AddSingleton<ITopLevelExceptionHandler>(c =>
+      c.Resolve<TopLevelExceptionHandlerBinding>().Parent.TopLevelExceptionHandler
+    );
   }
 
   public static void LoadSend(SpeckleContainerBuilder builder)

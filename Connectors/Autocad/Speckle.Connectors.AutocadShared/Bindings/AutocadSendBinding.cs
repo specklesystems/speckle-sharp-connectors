@@ -45,8 +45,7 @@ public sealed class AutocadSendBinding : ISendBinding
     CancellationManager cancellationManager,
     AutocadSettings autocadSettings,
     IUnitOfWorkFactory unitOfWorkFactory,
-    ISendConversionCache sendConversionCache,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    ISendConversionCache sendConversionCache
   )
   {
     _store = store;
@@ -56,12 +55,12 @@ public sealed class AutocadSendBinding : ISendBinding
     _cancellationManager = cancellationManager;
     _sendFilters = sendFilters.ToList();
     _sendConversionCache = sendConversionCache;
-    _topLevelExceptionHandler = topLevelExceptionHandler;
+    _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
 
     Application.DocumentManager.DocumentActivated += (_, args) =>
-      topLevelExceptionHandler.CatchUnhandled(() => SubscribeToObjectChanges(args.Document));
+      _topLevelExceptionHandler.CatchUnhandled(() => SubscribeToObjectChanges(args.Document));
 
     if (Application.DocumentManager.CurrentDocument != null)
     {
