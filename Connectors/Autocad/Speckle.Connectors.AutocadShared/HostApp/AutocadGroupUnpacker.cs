@@ -15,9 +15,9 @@ public class AutocadGroupUnpacker
 
     using var transaction = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
 
-    foreach (var (dbObject, applicationId) in autocadObjects)
+    foreach (var (entity, applicationId) in autocadObjects)
     {
-      var persistentReactorIds = dbObject.GetPersistentReactorIds();
+      var persistentReactorIds = entity.GetPersistentReactorIds();
       foreach (ObjectId oReactorId in persistentReactorIds)
       {
         var obj = transaction.GetObject(oReactorId, OpenMode.ForRead);

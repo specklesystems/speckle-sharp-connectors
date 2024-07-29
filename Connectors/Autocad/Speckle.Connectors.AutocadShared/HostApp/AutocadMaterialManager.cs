@@ -12,9 +12,10 @@ namespace Speckle.Connectors.Autocad.HostApp;
 /// </summary>
 public class AutocadMaterialManager
 {
-  //POC: hack in place to create unique render mateiral app ids since we are faking them from color + transparency
+  //POC: hack in place to create unique render material app ids since we are faking them from color + transparency
+  // Do NOT try to access transparency.Alpha without checking if the transparency IsByAlpha (will throw if not)
   private string GetMaterialId(AutocadColor color, Transparency transparency) =>
-    $"{color.ColorIndex}-{Convert.ToDouble(transparency.Alpha)}";
+    transparency.IsByAlpha ? $"{color.ColorIndex}-{Convert.ToDouble(transparency.Alpha)}" : $"{color.ColorIndex}";
 
   // converts an autocad color to a render material
   // more info on autocad colors: https://gohtx.com/acadcolors.php
@@ -30,31 +31,35 @@ public class AutocadMaterialManager
         ? autocadColor.BookName
         : autocadColor.ColorNameForDisplay;
 
+    // do NOT access transparency.Alpha without checking IsByAlpha first, will throw
+    double opacity = transparency.IsByAlpha ? Convert.ToDouble(transparency.Alpha) / 255.0 : 1;
+
     return new SpeckleRenderMaterial()
     {
       diffuse = autocadColor.ColorValue.ToArgb(),
-      opacity = Convert.ToDouble(transparency.Alpha) / 255.0,
+      opacity = opacity,
       name = renderMaterialName,
       applicationId = GetMaterialId(autocadColor, transparency)
     };
   }
 
   public List<RenderMaterialProxy> UnpackRenderMaterial(
-    List<AutocadRootObject> atomicObjects,
-    Dictionary<string, LayerTableRecord> layerCache
+    List<AutocadRootObject> rootObjects,
+    List<LayerTableRecord> layers
   )
   {
     Dictionary<string, RenderMaterialProxy> renderMaterialProxies = new();
 
     // Stage 1: unpack materials from objects
-    foreach (AutocadRootObject autocadRootObject in atomicObjects)
+    foreach (AutocadRootObject rootObj in rootObjects)
     {
-      if (autocadRootObject.Root is Entity entity && entity.EntityColor.IsByColor)
+      Entity entity = rootObj.Root;
+      if (entity.EntityColor.IsByColor || entity.EntityColor.IsByAci)
       {
-        string colorId = entity.Color.ColorIndex.ToString();
-        if (renderMaterialProxies.TryGetValue(colorId, out RenderMaterialProxy value))
+        string materialId = GetMaterialId(entity.Color, entity.Transparency);
+        if (renderMaterialProxies.TryGetValue(materialId, out RenderMaterialProxy value))
         {
-          value.objects.Add(autocadRootObject.ApplicationId);
+          value.objects.Add(rootObj.ApplicationId);
         }
         else
         {
@@ -63,17 +68,17 @@ public class AutocadMaterialManager
             entity.Transparency
           );
 
-          renderMaterialProxies[colorId] = new RenderMaterialProxy()
+          renderMaterialProxies[materialId] = new RenderMaterialProxy()
           {
             value = objMaterial,
-            objects = [autocadRootObject.ApplicationId]
+            objects = [rootObj.ApplicationId]
           };
         }
       }
     }
 
     // Stage 2: make sure we collect layer materials as well
-    foreach (LayerTableRecord layer in layerCache.Values)
+    foreach (LayerTableRecord layer in layers)
     {
       string materialId = GetMaterialId(layer.Color, layer.Transparency);
 

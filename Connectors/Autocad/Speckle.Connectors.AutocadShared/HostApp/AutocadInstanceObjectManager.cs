@@ -119,7 +119,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
     // Go through each definition object
     foreach (ObjectId id in definition)
     {
-      var obj = transaction.GetObject(id, OpenMode.ForRead);
+      DBObject obj = transaction.GetObject(id, OpenMode.ForRead);
       var handleIdString = obj.Handle.Value.ToString();
       definitionProxy.objects.Add(handleIdString);
 
@@ -127,7 +127,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
       {
         UnpackInstance(blockReference, depth + 1, transaction);
       }
-      _instanceObjectsManager.AddAtomicObject(handleIdString, new(obj, handleIdString));
+      _instanceObjectsManager.AddAtomicObject(handleIdString, new((Entity)obj, handleIdString));
     }
 
     _instanceObjectsManager.AddDefinitionProxy(definitionId.ToString(), definitionProxy);
