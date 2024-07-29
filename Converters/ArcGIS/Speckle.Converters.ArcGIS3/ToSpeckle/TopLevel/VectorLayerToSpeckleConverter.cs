@@ -80,28 +80,8 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
           GisFeature element = _gisFeatureConverter.Convert(row);
           element.applicationId = $"{target.URI}_{count}";
 
-          // get color from renderer, write to contextStack, assign to the feature
-          int color = GetFeatureColor(target, target.GetFieldDescriptions(), row);
-
-          bool materialExists = false;
-          foreach (var materialProxy in _contextStack.Current.Document.RenderMaterialProxies)
-          {
-            if (materialProxy.value.diffuse == color)
-            {
-              materialProxy.objects.Add(element.applicationId);
-              materialExists = true;
-              break;
-            }
-          }
-
-          if (materialExists is false)
-          {
-            var newMaterialProxy = new RenderMaterialProxy(
-              new RenderMaterial() { diffuse = color, applicationId = System.Convert.ToString(color) },
-              new List<string>() { element.applicationId }
-            );
-            _contextStack.Current.Document.RenderMaterialProxies.Add(newMaterialProxy);
-          }
+          // get and record feature color
+          RecordFeatureColor(target, row, element);
 
           // replace element "attributes", to remove those non-visible on Layer level
           Base elementAttributes = new();
@@ -121,6 +101,37 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
     }
 
     return speckleLayer;
+  }
+
+  private void RecordFeatureColor(FeatureLayer target, Row row, GisFeature element)
+  {
+    if (element.applicationId == null)
+    {
+      throw new SpeckleConversionException($"applicationId is not assigned to Feature in layer '{target.Name}'");
+    }
+
+    // get color from renderer, write to contextStack, assign to the feature
+    int color = GetFeatureColor(target, target.GetFieldDescriptions(), row);
+
+    bool materialExists = false;
+    foreach (var materialProxy in _contextStack.Current.Document.RenderMaterialProxies)
+    {
+      if (materialProxy.value.diffuse == color)
+      {
+        materialProxy.objects.Add(element.applicationId);
+        materialExists = true;
+        break;
+      }
+    }
+
+    if (materialExists is false)
+    {
+      var newMaterialProxy = new RenderMaterialProxy(
+        new RenderMaterial() { diffuse = color, applicationId = System.Convert.ToString(color) },
+        new List<string>() { element.applicationId }
+      );
+      _contextStack.Current.Document.RenderMaterialProxies.Add(newMaterialProxy);
+    }
   }
 
   private int GetFeatureColor(FeatureLayer fLayer, List<FieldDescription> fields, Row row)

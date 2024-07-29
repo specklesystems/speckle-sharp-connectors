@@ -47,6 +47,12 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     // TODO: add a warning if Geographic CRS is set
     // "Data has been sent in the units 'degrees'. It is advisable to set the project CRS to Projected type (e.g. EPSG:32631) to be able to receive geometry correctly in CAD/BIM software"
 
+    // add materials with plain white as first
+    int color = Color.FromArgb(255, 255, 255, 255).ToArgb();
+    var newMaterial = new RenderMaterial() { diffuse = color, applicationId = System.Convert.ToString(color) };
+    var newMaterialProxy = new RenderMaterialProxy(newMaterial, new List<string>());
+    _contextStack.Current.Document.RenderMaterialProxies.Insert(0, newMaterialProxy);
+
     int count = 0;
 
     Collection rootObjectCollection = new(); //TODO: Collections
@@ -148,16 +154,17 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
       onOperationProgressed?.Invoke("Converting", (double)++count / objects.Count);
     }
 
-    // add materials
-    // add white material for Rasters (should not affect meshes colored by vertices), later to be used for z-value/priority display
-    int color = Color.FromArgb(255, 255, 255, 255).ToArgb();
-    var newMaterial = new RenderMaterial() { diffuse = color, applicationId = System.Convert.ToString(color) };
-    var newMaterialProxy = new RenderMaterialProxy(
-      newMaterial,
-      rootObjectCollection.elements.Where(x => x is RasterLayer).Select(y => y.applicationId).ToList() as List<string>
-    );
-    _contextStack.Current.Document.RenderMaterialProxies.Insert(0, newMaterialProxy);
-
+    // add white material to Raster elements (should not affect meshes colored by vertices), will only be used for z-value/priority display
+    _contextStack
+      .Current.Document.RenderMaterialProxies[0]
+      .objects.AddRange(
+        rootObjectCollection
+          .elements.Where(x => x is RasterLayer && ((RasterLayer)x).elements[0].applicationId != null)
+          .Select(y =>
+            ((RasterLayer)y).elements[0].applicationId ?? throw new SpeckleException("Application ID not assigned")
+          )
+          .ToList()
+      );
     rootObjectCollection["renderMaterialProxies"] = _contextStack.Current.Document.RenderMaterialProxies;
 
     // POC: Log would be nice, or can be removed.
