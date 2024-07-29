@@ -1,6 +1,5 @@
 ﻿using Objects;
 using Speckle.Converters.Common;
-using Speckle.Core.Logging;
 using Speckle.Core.Models;
 using Speckle.Core.Models.Extensions;
 using Speckle.DoubleNumerics;
@@ -40,7 +39,7 @@ public class LocalToGlobalConverterUtils : ILocalToGlobalConverterUtils
       {
         return TransformObjWithDisplayValues(newObject, matrix);
       }
-      throw new SpeckleException(
+      throw new SpeckleConversionException(
         $"Display Values of types '{listVals.ToList().FindAll(x => x is not SOG.Mesh).Select(y => y.speckle_type).Distinct().ToList()}' for {newObject.speckle_type} are not supported for local to global coordinate transformation"
       );
     }
@@ -79,7 +78,7 @@ public class LocalToGlobalConverterUtils : ILocalToGlobalConverterUtils
         $"Transformation of {newObject.speckle_type} from local to global coordinates failed"
       );
     }
-    throw new SpeckleException(
+    throw new SpeckleConversionException(
       $"{newObject.speckle_type} is not supported for local to global coordinate transformation"
     );
   }
@@ -92,7 +91,7 @@ public class LocalToGlobalConverterUtils : ILocalToGlobalConverterUtils
     var displayValue = newObject.TryGetDisplayValue();
     if (displayValue is null) // will not happen due to the check in "TransformObjects"
     {
-      throw new SpeckleException($"{newObject.speckle_type} blocks contains no display value");
+      throw new SpeckleConversionException($"{newObject.speckle_type} blocks contains no display value");
     }
 
     foreach (Base displayVal in displayValue)
@@ -104,7 +103,7 @@ public class LocalToGlobalConverterUtils : ILocalToGlobalConverterUtils
       }
       else // will not happen due to the check in "TransformObjects"
       {
-        throw new SpeckleException($"Blocks containing {baseObj.speckle_type} are not supported");
+        throw new SpeckleConversionException($"Blocks containing {baseObj.speckle_type} are not supported");
       }
     }
 
