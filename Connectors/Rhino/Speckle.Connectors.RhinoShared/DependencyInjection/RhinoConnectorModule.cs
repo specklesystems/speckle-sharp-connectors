@@ -31,8 +31,8 @@ public class RhinoConnectorModule : ISpeckleModule
   public void Load(SpeckleContainerBuilder builder)
   {
     // Register instances initialised by Rhino
-    builder.AddSingleton<PlugIn>(SpeckleConnectorsRhino7Plugin.Instance);
-    builder.AddSingleton<Command>(SpeckleConnectorsRhino7Command.Instance);
+    builder.AddSingleton<PlugIn>(SpeckleConnectorsRhinoPlugin.Instance);
+    builder.AddSingleton<Command>(SpeckleConnectorsRhinoCommand.Instance);
 
     builder.AddAutofac();
     builder.AddConnectorUtils();

@@ -14,10 +14,10 @@ public class SpeckleRhinoPanelHost : RhinoWindows.Controls.WpfElementHost
   private readonly DUI3ControlWebView? _webView;
 
   public SpeckleRhinoPanelHost(uint docSn)
-    : base(SpeckleConnectorsRhino7Plugin.Instance.Container?.Resolve<DUI3ControlWebView>(), null)
+    : base(SpeckleConnectorsRhinoPlugin.Instance.Container?.Resolve<DUI3ControlWebView>(), null)
   {
     _docSn = docSn;
-    _webView = SpeckleConnectorsRhino7Plugin.Instance.Container?.Resolve<DUI3ControlWebView>();
+    _webView = SpeckleConnectorsRhinoPlugin.Instance.Container?.Resolve<DUI3ControlWebView>();
     Panels.Closed += PanelsOnClosed;
   }
 

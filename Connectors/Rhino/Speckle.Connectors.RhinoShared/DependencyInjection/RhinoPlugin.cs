@@ -18,7 +18,7 @@ public class RhinoPlugin : IRhinoPlugin
   public void Initialise() =>
     _idleManager.SubscribeToIdle(
       nameof(RhinoPlugin),
-      () => RhinoApp.RunScript(SpeckleConnectorsRhino7Command.Instance.EnglishName, false)
+      () => RhinoApp.RunScript(SpeckleConnectorsRhinoCommand.Instance.EnglishName, false)
     );
 
   public void Shutdown() { }

@@ -17,21 +17,21 @@ namespace Speckle.Connectors.Rhino.Plugin;
 /// attributes in AssemblyInfo.cs (you might need to click "Project" ->
 /// "Show All Files" to see it in the "Solution Explorer" window).</para>
 ///</summary>
-public class SpeckleConnectorsRhino7Plugin : PlugIn
+public class SpeckleConnectorsRhinoPlugin : PlugIn
 {
   private IRhinoPlugin? _rhinoPlugin;
 
   protected override string LocalPlugInName => "Speckle (New UI)";
   public SpeckleContainer? Container { get; private set; }
 
-  public SpeckleConnectorsRhino7Plugin()
+  public SpeckleConnectorsRhinoPlugin()
   {
     Instance = this;
   }
 
   ///<summary>Gets the only instance of the Speckle_Connectors_Rhino7Plugin plug-in.</summary>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-  public static SpeckleConnectorsRhino7Plugin Instance { get; private set; }
+  public static SpeckleConnectorsRhinoPlugin Instance { get; private set; }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
   // You can override methods here to change the plug-in behavior on
@@ -42,7 +42,7 @@ public class SpeckleConnectorsRhino7Plugin : PlugIn
   {
     try
     {
-      AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<SpeckleConnectorsRhino7Plugin>;
+      AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<SpeckleConnectorsRhinoPlugin>;
 
       var builder = SpeckleContainerBuilder.CreateInstance();
 

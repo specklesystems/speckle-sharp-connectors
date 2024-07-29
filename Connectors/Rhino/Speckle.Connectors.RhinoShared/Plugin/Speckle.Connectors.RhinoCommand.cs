@@ -7,15 +7,15 @@ using Speckle.Connectors.Rhino.Properties;
 
 namespace Speckle.Connectors.Rhino.Plugin;
 
-public class SpeckleConnectorsRhino7Command : Command
+public class SpeckleConnectorsRhinoCommand : Command
 {
-  public SpeckleConnectorsRhino7Command()
+  public SpeckleConnectorsRhinoCommand()
   {
     // Rhino only creates one instance of each command class defined in a
     // plug-in, so it is safe to store a reference in a static property.
     Instance = this;
     Panels.RegisterPanel(
-      SpeckleConnectorsRhino7Plugin.Instance,
+      SpeckleConnectorsRhinoPlugin.Instance,
       typeof(SpeckleRhinoPanelHost),
       "Speckle (New UI)",
       Resources.speckle32,
@@ -25,7 +25,7 @@ public class SpeckleConnectorsRhino7Command : Command
 
   ///<summary>The only instance of this command.</summary>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-  public static SpeckleConnectorsRhino7Command Instance { get; private set; }
+  public static SpeckleConnectorsRhinoCommand Instance { get; private set; }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
   ///<returns>The command name as it appears on the Rhino command line.</returns>
