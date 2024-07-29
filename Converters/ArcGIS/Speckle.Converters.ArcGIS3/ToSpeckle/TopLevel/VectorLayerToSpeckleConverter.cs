@@ -114,9 +114,15 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
     int color = GetFeatureColor(target, target.GetFieldDescriptions(), row);
 
     bool materialExists = false;
+    double priority = _contextStack.Current.Document.LayersInOperationIndices[target];
+
     foreach (var materialProxy in _contextStack.Current.Document.RenderMaterialProxies)
     {
-      if (materialProxy.value.diffuse == color)
+      if (
+        materialProxy.value.diffuse == color
+        && materialProxy.value["displayPriority"] is double existingPriority
+        && existingPriority == priority
+      )
       {
         materialProxy.objects.Add(element.applicationId);
         materialExists = true;
@@ -126,10 +132,10 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
 
     if (materialExists is false)
     {
-      var newMaterialProxy = new RenderMaterialProxy(
-        new RenderMaterial() { diffuse = color, applicationId = System.Convert.ToString(color) },
-        new List<string>() { element.applicationId }
-      );
+      var material = new RenderMaterial() { diffuse = color, applicationId = $"{color}_{priority}" };
+      material["displayPriority"] = priority;
+
+      var newMaterialProxy = new RenderMaterialProxy(material, new List<string>() { element.applicationId });
       _contextStack.Current.Document.RenderMaterialProxies.Add(newMaterialProxy);
     }
   }

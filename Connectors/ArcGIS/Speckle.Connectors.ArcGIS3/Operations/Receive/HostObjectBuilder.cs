@@ -355,7 +355,6 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       }
     }
 
-    // TODO: replicate depending on geometry type
     if (trackerItem.HostAppMapMember is FeatureLayer fLyr)
     {
       CIMSymbolReference symbol = CreateSymbol(fLyr, color);

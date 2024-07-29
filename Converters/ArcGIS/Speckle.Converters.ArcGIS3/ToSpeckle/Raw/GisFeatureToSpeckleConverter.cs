@@ -29,7 +29,7 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<Row, SGIS.GisFeature
         }
         catch (SpeckleConversionException)
         {
-          break;
+          break; // displayValue not generated for polygons with voids - ignore
         }
       }
       else if (shp is SGIS.GisMultipatchGeometry multipatch)
