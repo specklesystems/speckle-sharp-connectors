@@ -41,7 +41,9 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
 
     foreach (var obj in objects)
     {
-      if (obj.Root is BlockReference blockReference && !blockReference.IsDynamicBlock) // note: isDynamicBlock always returns false?
+      // Note: isDynamicBlock always returns false for a selection of doc objects. Instances of dynamic blocks are represented in the document as blocks that have
+      // a definition reference to the anonymous block table record.
+      if (obj.Root is BlockReference blockReference && !blockReference.IsDynamicBlock)
       {
         UnpackInstance(blockReference, 0, transaction);
       }
@@ -53,6 +55,11 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
   private void UnpackInstance(BlockReference instance, int depth, Transaction transaction)
   {
     var instanceIdString = instance.Handle.Value.ToString();
+    // If this instance has a reference to an anonymous block, it means it's spawned from a dynamic block. Anonymous blocks are
+    // used to represent specific "instances" of dynamic ones.
+    // We do not want to send the full dynamic block definition, but its current "instance", as such here we're making sure we
+    // take up the anon block table reference definition (if it exists). If it's not an instance of a dynamic block, we're
+    // using the normal def reference.
     var hasAnonymousBlockTableRecordDefinition = instance.AnonymousBlockTableRecord != ObjectId.Null;
     var definitionId = hasAnonymousBlockTableRecordDefinition
       ? instance.AnonymousBlockTableRecord
