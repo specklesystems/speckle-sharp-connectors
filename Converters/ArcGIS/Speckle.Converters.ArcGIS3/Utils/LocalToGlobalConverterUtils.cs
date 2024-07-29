@@ -1,4 +1,6 @@
-﻿using Speckle.Core.Logging;
+﻿using Objects;
+using Speckle.Converters.Common;
+using Speckle.Core.Logging;
 using Speckle.Core.Models;
 using Speckle.Core.Models.Extensions;
 using Speckle.DoubleNumerics;
@@ -42,22 +44,40 @@ public class LocalToGlobalConverterUtils : ILocalToGlobalConverterUtils
         $"Display Values of types '{listVals.ToList().FindAll(x => x is not SOG.Mesh).Select(y => y.speckle_type).Distinct().ToList()}' for {newObject.speckle_type} are not supported for local to global coordinate transformation"
       );
     }
-    // TODO: here or preferably in converters elegantly!
-    // else if (newObject is SOG.Polyline polyline)
-    // {
-    //
-    // }
-    // else if (newObject is SOG.Line line)
-    // {
-    //
-    // }
-    // else if (newObject is SOG.Point point)
-    // {
-    //
-    // }
-    if (newObject is SOG.Mesh mesh)
+
+    if (newObject is SOG.Point point1)
     {
-      return TransformMesh(mesh, matrix);
+      Base baseObj = Core.Api.Operations.Deserialize(Core.Api.Operations.Serialize(point1));
+      if (baseObj is SOG.Point point)
+      {
+        return TransformPoint(point, matrix);
+      }
+      throw new SpeckleConversionException(
+        $"Transformation of {newObject.speckle_type} from local to global coordinates failed"
+      );
+    }
+
+    if (newObject is ICurve icurve1)
+    {
+      Base baseObj = Core.Api.Operations.Deserialize(Core.Api.Operations.Serialize((Base)icurve1));
+      if (baseObj is ICurve icurve)
+      {
+        return TransformICurve((Base)icurve, matrix);
+      }
+      throw new SpeckleConversionException(
+        $"Transformation of {newObject.speckle_type} from local to global coordinates failed"
+      );
+    }
+    if (newObject is SOG.Mesh mesh1)
+    {
+      Base baseObj = Core.Api.Operations.Deserialize(Core.Api.Operations.Serialize(mesh1));
+      if (baseObj is SOG.Mesh mesh)
+      {
+        return TransformMesh(mesh, matrix);
+      }
+      throw new SpeckleConversionException(
+        $"Transformation of {newObject.speckle_type} from local to global coordinates failed"
+      );
     }
     throw new SpeckleException(
       $"{newObject.speckle_type} is not supported for local to global coordinate transformation"
@@ -92,6 +112,97 @@ public class LocalToGlobalConverterUtils : ILocalToGlobalConverterUtils
     return newObject;
   }
 
+  private SOG.Point TransformPoint(SOG.Point point, List<Matrix4x4> matrix)
+  {
+    // all geometry transforms will be done through this function
+    var ptVector = new Vector3(point.x, point.y, point.z);
+
+    foreach (var matr in matrix)
+    {
+      ptVector = TransformPt(ptVector, matr);
+    }
+
+    // only modify coordinates to not lose any extra properties
+    point.x = ptVector.X;
+    point.y = ptVector.Y;
+    point.z = ptVector.Z;
+    return point;
+  }
+
+  private Base TransformICurve(Base newObject, List<Matrix4x4> matrix)
+  {
+    if (newObject is SOG.Line line)
+    {
+      var startPt = TransformPoint(line.start, matrix);
+      var endPt = TransformPoint(line.end, matrix);
+      line.start = startPt;
+      line.end = endPt;
+      return line;
+    }
+    if (newObject is SOG.Polyline polyline)
+    {
+      return TransformPolyline(polyline, matrix);
+    }
+    if (newObject is SOG.Curve curve)
+    {
+      return TransformPolyline(curve.displayValue, matrix);
+    }
+    if (newObject is SOG.Arc arc)
+    {
+      var newOrigin = TransformPoint(arc.plane.origin, matrix);
+      var startPt = TransformPoint(arc.startPoint, matrix);
+      var midPt = TransformPoint(arc.midPoint, matrix);
+      var endPt = TransformPoint(arc.endPoint, matrix);
+      arc.plane.origin = newOrigin;
+      arc.startPoint = startPt;
+      arc.midPoint = midPt;
+      arc.endPoint = endPt;
+      return arc;
+    }
+    if (newObject is SOG.Circle circle)
+    {
+      var newOrigin = TransformPoint(circle.plane.origin, matrix);
+      circle.plane.origin = newOrigin;
+      return circle;
+    }
+    if (newObject is SOG.Ellipse ellipse)
+    {
+      var newOrigin = TransformPoint(ellipse.plane.origin, matrix);
+      ellipse.plane.origin = newOrigin;
+      return ellipse;
+    }
+    if (newObject is SOG.Polycurve polycurve)
+    {
+      List<ICurve> newSegments = new();
+      foreach (var segment in polycurve.segments)
+      {
+        // need to hack again, otherwise parent Polycurve will be getting transformed
+        Base newSegment = Core.Api.Operations.Deserialize(Core.Api.Operations.Serialize((Base)segment));
+        newSegments.Add((ICurve)TransformICurve(newSegment, matrix));
+      }
+
+      polycurve.segments = newSegments;
+      return polycurve;
+    }
+
+    throw new SpeckleConversionException(
+      $"Transformation of {newObject.speckle_type} from local to global coordinates failed"
+    );
+  }
+
+  private SOG.Polyline TransformPolyline(SOG.Polyline polyline, List<Matrix4x4> matrix)
+  {
+    List<double> newCoords = new();
+    foreach (var pt in polyline.GetPoints())
+    {
+      var newPt = TransformPoint(pt, matrix);
+      newCoords.AddRange([newPt.x, newPt.y, newPt.z]);
+    }
+
+    polyline.value = newCoords;
+    return polyline;
+  }
+
   private SOG.Mesh TransformMesh(SOG.Mesh displayMesh, List<Matrix4x4> matrix)
   {
     List<List<double>> oldVertices = new();
@@ -108,13 +219,8 @@ public class LocalToGlobalConverterUtils : ILocalToGlobalConverterUtils
     List<double> newVertices = new();
     foreach (List<double> vertex in oldVertices)
     {
-      var ptVector = new Vector3(vertex[0], vertex[1], vertex[2]);
-
-      foreach (var matr in matrix)
-      {
-        ptVector = TransformPt(ptVector, matr);
-      }
-      newVertices.AddRange([ptVector.X, ptVector.Y, ptVector.Z]);
+      SOG.Point newPt = TransformPoint(new SOG.Point(vertex[0], vertex[1], vertex[2]), matrix);
+      newVertices.AddRange([newPt.x, newPt.y, newPt.z]);
     }
 
     SOG.Mesh newMesh =
