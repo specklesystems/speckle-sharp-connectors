@@ -42,41 +42,56 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     CancellationToken cancellationToken
   )
   {
-    var objectsToConvert = _traverseFunction
-      .TraverseWithProgress(rootObject, onOperationProgressed, cancellationToken)
-      .Where(obj => obj.Current is not Collection);
+    using (var activity = SpeckleActivityFactory.Create("Build"))
+    {
+      IEnumerable<TraversalContext> objectsToConvert;
 
-    using TransactionGroup transactionGroup = new(_contextStack.Current.Document, $"Received data from {projectName}");
-    transactionGroup.Start();
-    _transactionManager.StartTransaction();
+      using (var traverse = SpeckleActivityFactory.Create("Traverse"))
+      {
+        objectsToConvert = _traverseFunction
+          .TraverseWithProgress(rootObject, onOperationProgressed, cancellationToken)
+          .Where(obj => obj.Current is not Collection);
+      }
 
-    var conversionResults = BakeObjects(objectsToConvert);
+      using TransactionGroup transactionGroup =
+        new(_contextStack.Current.Document, $"Received data from {projectName}");
+      transactionGroup.Start();
+      _transactionManager.StartTransaction();
 
-    _transactionManager.CommitTransaction();
-    transactionGroup.Assimilate();
+      var conversionResults = BakeObjects(objectsToConvert);
+      using (var commit = SpeckleActivityFactory.Create("Commit"))
+      {
+        _transactionManager.CommitTransaction();
+        transactionGroup.Assimilate();
+      }
 
-    return conversionResults;
+      return conversionResults;
+    }
   }
 
   // POC: Potentially refactor out into an IObjectBaker.
   private HostObjectBuilderResult BakeObjects(IEnumerable<TraversalContext> objectsGraph)
   {
-    var conversionResults = new List<ReceiveConversionResult>();
-    var bakedObjectIds = new List<string>();
-
-    foreach (TraversalContext tc in objectsGraph)
+    using (var bakeObjects = SpeckleActivityFactory.Create("BakeObjects"))
     {
-      try
-      {
-        var result = _converter.Convert(tc.Current);
-      }
-      catch (Exception ex) when (!ex.IsFatal())
-      {
-        conversionResults.Add(new(Status.ERROR, tc.Current, null, null, ex));
-      }
-    }
+      var conversionResults = new List<ReceiveConversionResult>();
+      var bakedObjectIds = new List<string>();
 
-    return new(bakedObjectIds, conversionResults);
+      foreach (TraversalContext tc in objectsGraph)
+      {
+        try
+        {
+          using var activity = SpeckleActivityFactory.Create("BakeObject");
+          var result = _converter.Convert(tc.Current);
+        }
+        catch (Exception ex) when (!ex.IsFatal())
+        {
+          conversionResults.Add(new(Status.ERROR, tc.Current, null, null, ex));
+        }
+      }
+
+      return new(bakedObjectIds, conversionResults);
+    }
   }
 
   public void Dispose()

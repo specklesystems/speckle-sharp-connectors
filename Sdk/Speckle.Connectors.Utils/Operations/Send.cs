@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
-using Serilog.Context;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
 using Speckle.Core.Serialisation;
@@ -89,8 +88,8 @@ public class SendHelper(ILogger<SendHelper> logger) : ISendHelper
     var transportContext = transports.ToDictionary(t => t.TransportName, t => t.TransportContext);
 
     // make sure all logs in the operation have the proper context
-    using (LogContext.PushProperty("transportContext", transportContext))
-    using (LogContext.PushProperty("correlationId", Guid.NewGuid().ToString()))
+    /*using (LogContext.PushProperty("transportContext", transportContext))
+    using (LogContext.PushProperty("correlationId", Guid.NewGuid().ToString()))*/
     {
       var sendTimer = Stopwatch.StartNew();
       logger.LogInformation("Starting send operation");
@@ -131,7 +130,7 @@ public class SendHelper(ILogger<SendHelper> logger) : ISendHelper
       }
 
       sendTimer.Stop();
-      using (
+     /* using (
         LogContext.PushProperty(
           "transportElapsedBreakdown",
           transports.ToDictionary(t => t.TransportName, t => t.Elapsed)
@@ -143,7 +142,7 @@ public class SendHelper(ILogger<SendHelper> logger) : ISendHelper
           "the elapsed summary doesn't need to add up to the total elapsed... Threading magic..."
         )
       )
-      using (LogContext.PushProperty("serializerElapsed", serializerV2.Elapsed.ToString()))
+      using (LogContext.PushProperty("serializerElapsed", serializerV2.Elapsed.ToString()))*/
       {
         logger.LogInformation(
           "Finished sending {objectCount} objects after {elapsed}, result {objectId}",

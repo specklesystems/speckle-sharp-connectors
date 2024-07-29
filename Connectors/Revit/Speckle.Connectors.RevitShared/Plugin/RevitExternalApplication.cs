@@ -4,6 +4,7 @@ using Autodesk.Revit.UI;
 using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Core.Common;
+using Speckle.Core.Logging;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
@@ -67,11 +68,13 @@ internal sealed class RevitExternalApplication : IExternalApplication
         .AddSingleton(application) // inject UIControlledApplication application
         .Build();
 
+      OpenTelemetryBuilder.Initialize($"Revit {GetVersionAsString()}");
+      SpeckleActivityFactory.Initialize($"Revit {GetVersionAsString()}");
       // resolve root object
       _revitPlugin = _container.Resolve<IRevitPlugin>();
       _revitPlugin.Initialise();
     }
-    catch (Exception e) when (!e.IsFatal())
+    catch (Exception e) when (!ExceptionExtensions.IsFatal(e))
     {
       // POC: feedback?
       return Result.Failed;
@@ -89,7 +92,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
       // need to look for commonality
       _revitPlugin?.Shutdown();
     }
-    catch (Exception e) when (!e.IsFatal())
+    catch (Exception e) when (!ExceptionExtensions.IsFatal(e))
     {
       // POC: feedback?
       return Result.Failed;
