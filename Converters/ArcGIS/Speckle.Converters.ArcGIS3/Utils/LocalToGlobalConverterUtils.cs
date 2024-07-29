@@ -28,6 +28,8 @@ public class LocalToGlobalConverterUtils : ILocalToGlobalConverterUtils
       return atomicObject;
     }
 
+    // This is a temp hack. We would add transformations to conversions later instead try to copy objects like this.
+    // Jedd also has opinions on this.
     Base newObject = Core.Api.Operations.Deserialize(Core.Api.Operations.Serialize(atomicObject));
 
     if (newObject is SOG.Brep brep)
