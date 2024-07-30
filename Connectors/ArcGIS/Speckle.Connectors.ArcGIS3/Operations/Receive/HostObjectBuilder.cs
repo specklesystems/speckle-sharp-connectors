@@ -127,7 +127,12 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     // Create main group layer
     Dictionary<string, GroupLayer> createdLayerGroups = new();
     Map map = _contextStack.Current.Document.Map;
-    GroupLayer groupLayer = LayerFactory.Instance.CreateGroupLayer(map, 0, $"{projectName}: {modelName}");
+    GroupLayer groupLayer = QueuedTask
+      .Run(() =>
+      {
+        return LayerFactory.Instance.CreateGroupLayer(map, 0, $"{projectName}: {modelName}");
+      })
+      .Result;
     createdLayerGroups["Basic Speckle Group"] = groupLayer; // key doesn't really matter here
 
     // 3. add layer and tables to the Table Of Content
@@ -241,25 +246,28 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     Dictionary<string, GroupLayer> createdLayerGroups
   )
   {
-    // get layer details
-    string? datasetId = trackerItem.DatasetId; // should not be null here
-    Uri uri = new($"{_contextStack.Current.Document.SpeckleDatabasePath.AbsolutePath.Replace('/', '\\')}\\{datasetId}");
-    string nestedLayerName = trackerItem.NestedLayerName;
+    return QueuedTask
+      .Run(() =>
+      {
+        // get layer details
+        string? datasetId = trackerItem.DatasetId; // should not be null here
+        Uri uri =
+          new($"{_contextStack.Current.Document.SpeckleDatabasePath.AbsolutePath.Replace('/', '\\')}\\{datasetId}");
+        string nestedLayerName = trackerItem.NestedLayerName;
 
-    // add group for the current layer
-    string shortName = nestedLayerName.Split("\\")[^1];
-    string nestedLayerPath = string.Join("\\", nestedLayerName.Split("\\").SkipLast(1));
+        // add group for the current layer
+        string shortName = nestedLayerName.Split("\\")[^1];
+        string nestedLayerPath = string.Join("\\", nestedLayerName.Split("\\").SkipLast(1));
 
-    GroupLayer groupLayer = QueuedTask.Run(() => CreateNestedGroupLayer(nestedLayerPath, createdLayerGroups)).Result;
+        GroupLayer groupLayer = QueuedTask
+          .Run(() => CreateNestedGroupLayer(nestedLayerPath, createdLayerGroups))
+          .Result;
 
-    // Most of the Speckle-written datasets will be containing geometry and added as Layers
-    // although, some datasets might be just tables (e.g. native GIS Tables, in the future maybe Revit schedules etc.
-    // We can create a connection to the dataset in advance and determine its type, but this will be more
-    // expensive, than assuming by default that it's a layer with geometry (which in most cases it's expected to be)
-    try
-    {
-      MapMember layer = QueuedTask
-        .Run(() =>
+        // Most of the Speckle-written datasets will be containing geometry and added as Layers
+        // although, some datasets might be just tables (e.g. native GIS Tables, in the future maybe Revit schedules etc.
+        // We can create a connection to the dataset in advance and determine its type, but this will be more
+        // expensive, than assuming by default that it's a layer with geometry (which in most cases it's expected to be)
+        try
         {
           var layer = LayerFactory.Instance.CreateLayer(uri, groupLayer, layerName: shortName);
           if (layer == null)
@@ -286,20 +294,19 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
           }
 
           layer.SetExpanded(true);
-          return layer;
-        })
-        .Result;
-
-      return layer;
-    }
-    catch (ArgumentException)
-    {
-      StandaloneTable table = QueuedTask
-        .Run(() => StandaloneTableFactory.Instance.CreateStandaloneTable(uri, groupLayer, tableName: shortName))
-        .Result;
-
-      return table;
-    }
+          return (MapMember)layer;
+        }
+        catch (ArgumentException)
+        {
+          StandaloneTable table = StandaloneTableFactory.Instance.CreateStandaloneTable(
+            uri,
+            groupLayer,
+            tableName: shortName
+          );
+          return table;
+        }
+      })
+      .Result;
   }
 
   private GroupLayer CreateNestedGroupLayer(string nestedLayerPath, Dictionary<string, GroupLayer> createdLayerGroups)
