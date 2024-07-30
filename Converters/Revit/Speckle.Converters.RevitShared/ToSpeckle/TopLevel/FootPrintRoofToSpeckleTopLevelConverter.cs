@@ -18,7 +18,6 @@ public class FootPrintRoofToSpeckleTopLevelConverter
   private readonly ITypedConverter<DB.ModelCurveArrArray, SOG.Polycurve[]> _modelCurveArrArrayConverter;
   private readonly ParameterValueExtractor _parameterValueExtractor;
   private readonly DisplayValueExtractor _displayValueExtractor;
-  private readonly HostedElementConversionToSpeckle _hostedElementConverter;
   private readonly ParameterObjectAssigner _parameterObjectAssigner;
 
   public FootPrintRoofToSpeckleTopLevelConverter(
@@ -26,7 +25,6 @@ public class FootPrintRoofToSpeckleTopLevelConverter
     ITypedConverter<ModelCurveArrArray, Polycurve[]> modelCurveArrArrayConverter,
     ParameterValueExtractor parameterValueExtractor,
     DisplayValueExtractor displayValueExtractor,
-    HostedElementConversionToSpeckle hostedElementConverter,
     ParameterObjectAssigner parameterObjectAssigner
   )
   {
@@ -34,7 +32,6 @@ public class FootPrintRoofToSpeckleTopLevelConverter
     _modelCurveArrArrayConverter = modelCurveArrArrayConverter;
     _parameterValueExtractor = parameterValueExtractor;
     _displayValueExtractor = displayValueExtractor;
-    _hostedElementConverter = hostedElementConverter;
     _parameterObjectAssigner = parameterObjectAssigner;
   }
 
