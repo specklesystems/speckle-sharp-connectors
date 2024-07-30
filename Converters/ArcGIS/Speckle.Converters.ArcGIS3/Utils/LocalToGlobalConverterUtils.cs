@@ -31,182 +31,82 @@ public class LocalToGlobalConverterUtils : ILocalToGlobalConverterUtils
 
     // This is a temp hack. We would add transformations to conversions later instead try to copy objects like this.
     // Jedd also has opinions on this.
-    Base newObject = Core.Api.Operations.Deserialize(Core.Api.Operations.Serialize(atomicObject));
+    // Base newObject = Core.Api.Operations.Deserialize(Core.Api.Operations.Serialize(atomicObject));
 
-    if (newObject.TryGetDisplayValue() is IReadOnlyList<Base> listVals)
+    List<Objects.Other.Transform> transforms = new() { };
+    transforms.AddRange(matrix.Select(x => new Objects.Other.Transform(x, "none")).ToList());
+
+    if (atomicObject is ITransformable c && atomicObject is not SOG.Brep)
     {
-      if (listVals.ToList().FindAll(x => x is not SOG.Mesh).Count == 0)
+      foreach (var transform in transforms)
       {
-        return TransformObjWithDisplayValues(newObject, matrix);
+        c.TransformTo(transform, out ITransformable newObj);
+        c = newObj;
+      }
+
+      atomicObject = (Base)c;
+      foreach (var prop in atomicObject.GetMembers(DynamicBaseMemberType.Dynamic))
+      {
+        atomicObject[prop.Key] = prop.Value;
+      }
+
+      return atomicObject;
+    }
+
+    if (atomicObject.TryGetDisplayValue() is IReadOnlyList<Base> listVals)
+    {
+      if (listVals.ToList().FindAll(x => x is not ITransformable).Count == 0)
+      {
+        return TransformObjWithDisplayValues(atomicObject, transforms);
       }
       throw new SpeckleConversionException(
-        $"Display Values of types '{listVals.ToList().FindAll(x => x is not SOG.Mesh).Select(y => y.speckle_type).Distinct().ToList()}' for {newObject.speckle_type} are not supported for local to global coordinate transformation"
+        $"Display Values of types '{listVals.ToList().FindAll(x => x is not ITransformable).Select(y => y.speckle_type).Distinct().ToList()}' for {atomicObject.speckle_type} are not supported for local to global coordinate transformation"
       );
     }
-
-    if (newObject is SOG.Point point)
-    {
-      return TransformPoint(point, matrix);
-    }
-
-    if (newObject is ICurve icurve)
-    {
-      return TransformICurve((Base)icurve, matrix);
-    }
-    if (newObject is SOG.Mesh mesh)
-    {
-      return TransformMesh(mesh, matrix);
-    }
     throw new SpeckleConversionException(
-      $"{newObject.speckle_type} is not supported for local to global coordinate transformation"
+      $"{atomicObject.speckle_type} is not supported for local to global coordinate transformation"
     );
   }
 
-  private Base TransformObjWithDisplayValues(Base newObject, List<Matrix4x4> matrix)
+  private Base TransformObjWithDisplayValues(Base atomicObject, List<Objects.Other.Transform> transforms)
   {
-    List<SOG.Mesh> newDisplayValue = new();
+    // for all objects that are not transformable, but contain displayValue
+    List<Base> newDisplayValues = new();
 
-    var displayValue = newObject.TryGetDisplayValue();
+    var displayValue = atomicObject.TryGetDisplayValue();
     if (displayValue is null) // will not happen due to the check in "TransformObjects"
     {
-      throw new SpeckleConversionException($"{newObject.speckle_type} blocks contains no display value");
+      throw new SpeckleConversionException($"{atomicObject.speckle_type} blocks contains no display value");
     }
 
     foreach (Base displayVal in displayValue)
     {
-      if (displayVal is SOG.Mesh displayMesh)
+      if (displayVal is ITransformable c)
       {
-        var newMesh = TransformMesh(displayMesh, matrix);
-        newDisplayValue.Add(newMesh);
+        foreach (var transform in transforms)
+        {
+          c.TransformTo(transform, out ITransformable newObj);
+          c = newObj;
+        }
+        newDisplayValues.Add((Base)c);
       }
       else // will not happen due to the check in "TransformObjects"
       {
-        throw new SpeckleConversionException($"Blocks containing {newObject.speckle_type} are not supported");
+        throw new SpeckleConversionException(
+          $"Blocks containing {displayVal.speckle_type} as displayValue are not supported"
+        );
       }
     }
-
-    newObject["displayValue"] = newDisplayValue;
+    // copy the original object and assign new displayValue - hacky
+    Base newObject = Core.Api.Operations.Deserialize(Core.Api.Operations.Serialize(atomicObject));
+    if (newObject is SOG.Brep)
+    {
+      newObject["displayValue"] = newDisplayValues.Select(x => (SOG.Mesh)x).ToList();
+    }
+    else
+    {
+      newObject["displayValue"] = newDisplayValues;
+    }
     return newObject;
-  }
-
-  private SOG.Point TransformPoint(SOG.Point point, List<Matrix4x4> matrix)
-  {
-    // all geometry transforms will be done through this function
-    var ptVector = new Vector3(point.x, point.y, point.z);
-
-    foreach (var matr in matrix)
-    {
-      ptVector = TransformPt(ptVector, matr);
-    }
-
-    // only modify coordinates to not lose any extra properties
-    point.x = ptVector.X;
-    point.y = ptVector.Y;
-    point.z = ptVector.Z;
-    return point;
-  }
-
-  private Base TransformICurve(Base newObject, List<Matrix4x4> matrix)
-  {
-    if (newObject is SOG.Line line)
-    {
-      var startPt = TransformPoint(line.start, matrix);
-      var endPt = TransformPoint(line.end, matrix);
-      line.start = startPt;
-      line.end = endPt;
-      return line;
-    }
-    if (newObject is SOG.Polyline polyline)
-    {
-      return TransformPolyline(polyline, matrix);
-    }
-    if (newObject is SOG.Curve curve)
-    {
-      return TransformPolyline(curve.displayValue, matrix);
-    }
-    if (newObject is SOG.Arc arc)
-    {
-      var newOrigin = TransformPoint(arc.plane.origin, matrix);
-      var startPt = TransformPoint(arc.startPoint, matrix);
-      var midPt = TransformPoint(arc.midPoint, matrix);
-      var endPt = TransformPoint(arc.endPoint, matrix);
-      arc.plane.origin = newOrigin;
-      arc.startPoint = startPt;
-      arc.midPoint = midPt;
-      arc.endPoint = endPt;
-      return arc;
-    }
-    if (newObject is SOG.Circle circle)
-    {
-      var newOrigin = TransformPoint(circle.plane.origin, matrix);
-      circle.plane.origin = newOrigin;
-      return circle;
-    }
-    if (newObject is SOG.Ellipse ellipse)
-    {
-      var newOrigin = TransformPoint(ellipse.plane.origin, matrix);
-      ellipse.plane.origin = newOrigin;
-      return ellipse;
-    }
-    if (newObject is SOG.Polycurve polycurve)
-    {
-      List<ICurve> newSegments = new();
-      foreach (var segment in polycurve.segments)
-      {
-        // need to hack again, otherwise parent Polycurve will be getting transformed
-        Base newSegment = Core.Api.Operations.Deserialize(Core.Api.Operations.Serialize((Base)segment));
-        newSegments.Add((ICurve)TransformICurve(newSegment, matrix));
-      }
-
-      polycurve.segments = newSegments;
-      return polycurve;
-    }
-
-    throw new SpeckleConversionException(
-      $"Transformation of {newObject.speckle_type} from local to global coordinates failed"
-    );
-  }
-
-  private SOG.Polyline TransformPolyline(SOG.Polyline polyline, List<Matrix4x4> matrix)
-  {
-    List<double> newCoords = new();
-    foreach (var pt in polyline.GetPoints())
-    {
-      var newPt = TransformPoint(pt, matrix);
-      newCoords.AddRange([newPt.x, newPt.y, newPt.z]);
-    }
-
-    polyline.value = newCoords;
-    return polyline;
-  }
-
-  private SOG.Mesh TransformMesh(SOG.Mesh displayMesh, List<Matrix4x4> matrix)
-  {
-    List<List<double>> oldVertices = new();
-    for (int i = 0; i < displayMesh.vertices.Count; i += 3)
-    {
-      List<double> group = new();
-      for (int j = 0; j < 3 && i + j < displayMesh.vertices.Count; j++)
-      {
-        group.Add(displayMesh.vertices[i + j]);
-      }
-      oldVertices.Add(group);
-    }
-
-    List<double> newVertices = new();
-    foreach (List<double> vertex in oldVertices)
-    {
-      SOG.Point newPt = TransformPoint(new SOG.Point(vertex[0], vertex[1], vertex[2]), matrix);
-      newVertices.AddRange([newPt.x, newPt.y, newPt.z]);
-    }
-
-    SOG.Mesh newMesh =
-      new()
-      {
-        vertices = newVertices,
-        faces = new List<int>(displayMesh.faces),
-        colors = new List<int>(displayMesh.colors)
-      };
-    return newMesh;
   }
 }
