@@ -3,16 +3,10 @@
   <PropertyGroup>
     <TargetFrameworks>net7.0-windows;net48</TargetFrameworks>
     <TargetExt>.rhp</TargetExt>
-    <AssemblyName>Speckle.Connectors.Rhino8</AssemblyName>
     <UseWpf>true</UseWpf>
     <UseWindowsForms>true</UseWindowsForms>
     <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
     <Configurations>Debug;Release;Local</Configurations>
-    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-    <OutputType>Library</OutputType>
-    <PlatformTarget>x64</PlatformTarget>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
 
   <ItemGroup>
