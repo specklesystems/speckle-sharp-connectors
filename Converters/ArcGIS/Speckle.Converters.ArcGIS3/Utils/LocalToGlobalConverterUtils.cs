@@ -44,48 +44,26 @@ public class LocalToGlobalConverterUtils : ILocalToGlobalConverterUtils
       );
     }
 
-    if (newObject is SOG.Point point1)
+    if (newObject is SOG.Point point)
     {
-      Base baseObj = Core.Api.Operations.Deserialize(Core.Api.Operations.Serialize(point1));
-      if (baseObj is SOG.Point point)
-      {
-        return TransformPoint(point, matrix);
-      }
-      throw new SpeckleConversionException(
-        $"Transformation of {newObject.speckle_type} from local to global coordinates failed"
-      );
+      return TransformPoint(point, matrix);
     }
 
-    if (newObject is ICurve icurve1)
+    if (newObject is ICurve icurve)
     {
-      Base baseObj = Core.Api.Operations.Deserialize(Core.Api.Operations.Serialize((Base)icurve1));
-      if (baseObj is ICurve icurve)
-      {
-        return TransformICurve((Base)icurve, matrix);
-      }
-      throw new SpeckleConversionException(
-        $"Transformation of {newObject.speckle_type} from local to global coordinates failed"
-      );
+      return TransformICurve((Base)icurve, matrix);
     }
-    if (newObject is SOG.Mesh mesh1)
+    if (newObject is SOG.Mesh mesh)
     {
-      Base baseObj = Core.Api.Operations.Deserialize(Core.Api.Operations.Serialize(mesh1));
-      if (baseObj is SOG.Mesh mesh)
-      {
-        return TransformMesh(mesh, matrix);
-      }
-      throw new SpeckleConversionException(
-        $"Transformation of {newObject.speckle_type} from local to global coordinates failed"
-      );
+      return TransformMesh(mesh, matrix);
     }
     throw new SpeckleConversionException(
       $"{newObject.speckle_type} is not supported for local to global coordinate transformation"
     );
   }
 
-  private Base TransformObjWithDisplayValues(Base baseObj, List<Matrix4x4> matrix)
+  private Base TransformObjWithDisplayValues(Base newObject, List<Matrix4x4> matrix)
   {
-    Base newObject = Core.Api.Operations.Deserialize(Core.Api.Operations.Serialize(baseObj));
     List<SOG.Mesh> newDisplayValue = new();
 
     var displayValue = newObject.TryGetDisplayValue();
@@ -103,7 +81,7 @@ public class LocalToGlobalConverterUtils : ILocalToGlobalConverterUtils
       }
       else // will not happen due to the check in "TransformObjects"
       {
-        throw new SpeckleConversionException($"Blocks containing {baseObj.speckle_type} are not supported");
+        throw new SpeckleConversionException($"Blocks containing {newObject.speckle_type} are not supported");
       }
     }
 
