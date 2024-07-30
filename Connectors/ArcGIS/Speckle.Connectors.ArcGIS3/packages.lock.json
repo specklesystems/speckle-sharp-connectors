@@ -371,6 +371,7 @@
       "speckle.autofac": {
         "type": "Project",
         "dependencies": {
+          "Autofac": "[5.2.0, )",
           "Microsoft.Extensions.Logging.Abstractions": "[7.0.0, )"
         }
       },
@@ -409,7 +410,6 @@
       "speckle.converters.arcgis3.dependencyinjection": {
         "type": "Project",
         "dependencies": {
-          "Autofac": "[5.2.0, )",
           "Speckle.Converters.ArcGIS3": "[1.0.0, )",
           "Speckle.Converters.Common.DependencyInjection": "[1.0.0, )"
         }

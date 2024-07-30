@@ -423,6 +423,7 @@
       "speckle.autofac": {
         "type": "Project",
         "dependencies": {
+          "Autofac": "[5.2.0, )",
           "Microsoft.Extensions.Logging.Abstractions": "[7.0.0, )"
         }
       },

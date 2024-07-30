@@ -10,9 +10,10 @@ public class ArcGISSelectionBinding : ISelectionBinding
   public string Name => "selectionBinding";
   public IBridge Parent { get; }
 
-  public ArcGISSelectionBinding(IBridge parent, ITopLevelExceptionHandler topLevelHandler)
+  public ArcGISSelectionBinding(IBridge parent)
   {
     Parent = parent;
+    var topLevelHandler = parent.TopLevelExceptionHandler;
 
     // example: https://github.com/Esri/arcgis-pro-sdk-community-samples/blob/master/Map-Authoring/QueryBuilderControl/DefinitionQueryDockPaneViewModel.cs
     // MapViewEventArgs args = new(MapView.Active);
