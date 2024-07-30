@@ -13,6 +13,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
   private IRevitPlugin? _revitPlugin;
 
   private SpeckleContainer? _container;
+  private IDisposable? _disposableLogger;
 
   // POC: this is getting hard coded - need a way of injecting it
   //      I am beginning to think the shared project is not the way
@@ -62,19 +63,18 @@ internal sealed class RevitExternalApplication : IExternalApplication
       AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<RevitExternalApplication>;
       var containerBuilder = SpeckleContainerBuilder.CreateInstance();
       // init DI
+      _disposableLogger = Setup.Initialize($"Revit {GetVersionAsString()}", GetVersionAsString());
       _container = containerBuilder
         .LoadAutofacModules(Assembly.GetExecutingAssembly(), _revitSettings.ModuleFolders.NotNull())
         .AddSingleton(_revitSettings) // apply revit settings into DI
         .AddSingleton(application) // inject UIControlledApplication application
         .Build();
 
-      OpenTelemetryBuilder.Initialize($"Revit {GetVersionAsString()}");
-      SpeckleActivityFactory.Initialize($"Revit {GetVersionAsString()}");
       // resolve root object
       _revitPlugin = _container.Resolve<IRevitPlugin>();
       _revitPlugin.Initialise();
     }
-    catch (Exception e) when (!ExceptionExtensions.IsFatal(e))
+    catch (Exception e) when (!e.IsFatal())
     {
       // POC: feedback?
       return Result.Failed;
@@ -91,8 +91,9 @@ internal sealed class RevitExternalApplication : IExternalApplication
       // possibly with injected pieces or with some abstract methods?
       // need to look for commonality
       _revitPlugin?.Shutdown();
+      _disposableLogger?.Dispose();
     }
-    catch (Exception e) when (!ExceptionExtensions.IsFatal(e))
+    catch (Exception e) when (!e.IsFatal())
     {
       // POC: feedback?
       return Result.Failed;

@@ -7,6 +7,7 @@ using Speckle.Core.Logging;
 using Speckle.Core.Models;
 using Speckle.Core.Models.Collections;
 using Speckle.Core.Models.GraphTraversal;
+using Speckle.Logging;
 
 namespace Speckle.Connectors.Revit.Operations.Receive;
 
@@ -42,11 +43,11 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     CancellationToken cancellationToken
   )
   {
-    using (var activity = SpeckleActivityFactory.Create("Build"))
+    using (var activity = SpeckleActivityFactory.Start("Build"))
     {
       IEnumerable<TraversalContext> objectsToConvert;
 
-      using (var traverse = SpeckleActivityFactory.Create("Traverse"))
+      using (var traverse = SpeckleActivityFactory.Start("Traverse"))
       {
         objectsToConvert = _traverseFunction
           .TraverseWithProgress(rootObject, onOperationProgressed, cancellationToken)
@@ -59,7 +60,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       _transactionManager.StartTransaction();
 
       var conversionResults = BakeObjects(objectsToConvert);
-      using (var commit = SpeckleActivityFactory.Create("Commit"))
+      using (var commit = SpeckleActivityFactory.Start("Commit"))
       {
         _transactionManager.CommitTransaction();
         transactionGroup.Assimilate();
@@ -72,7 +73,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   // POC: Potentially refactor out into an IObjectBaker.
   private HostObjectBuilderResult BakeObjects(IEnumerable<TraversalContext> objectsGraph)
   {
-    using (var bakeObjects = SpeckleActivityFactory.Create("BakeObjects"))
+    using (var bakeObjects = SpeckleActivityFactory.Start("BakeObjects"))
     {
       var conversionResults = new List<ReceiveConversionResult>();
       var bakedObjectIds = new List<string>();
@@ -81,7 +82,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       {
         try
         {
-          using var activity = SpeckleActivityFactory.Create("BakeObject");
+          using var activity = SpeckleActivityFactory.Start("BakeObject");
           var result = _converter.Convert(tc.Current);
         }
         catch (Exception ex) when (!ex.IsFatal())

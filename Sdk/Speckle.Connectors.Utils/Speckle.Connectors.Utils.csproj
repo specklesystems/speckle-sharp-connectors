@@ -9,7 +9,6 @@
     <PackageReference Include="Autofac" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\speckle-sharp-sdk\src\Speckle.OpenTelemetry\Speckle.OpenTelemetry.csproj" />
     <ProjectReference Include="..\Speckle.Autofac\Speckle.Autofac.csproj" />
   </ItemGroup>
     <ItemGroup Condition="'$(Configuration)' == 'Local'"> 

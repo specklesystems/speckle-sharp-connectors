@@ -9,8 +9,8 @@
     <PackageVersion Include="Glob" Version="1.1.9" />
     <PackageVersion Include="Moq" Version="4.20.70" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="2.2.0" />
-    <PackageVersion Include="Microsoft.Extensions.Logging" Version="2.2.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="3.1.0" />
     <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.1823.32" />
     <PackageVersion Include="NUnit" Version="4.1.0" />
     <PackageVersion Include="NUnit.Analyzers" Version="4.2.0" />

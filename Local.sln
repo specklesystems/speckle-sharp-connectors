@@ -142,8 +142,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Objects", "..\speck
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Logging", "..\speckle-sharp-sdk\src\Speckle.Logging\Speckle.Logging.csproj", "{72842FA7-FF72-4AF0-99B0-EDBE6F4C29F9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.OpenTelemetry", "..\speckle-sharp-sdk\src\Speckle.OpenTelemetry\Speckle.OpenTelemetry.csproj", "{C6969609-ACFB-4C8B-AFAD-201B58BB40FF}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Local|Any CPU = Local|Any CPU
@@ -227,8 +225,6 @@ Global
 		{259A84F0-2D1E-49DE-9137-93BE6858A52C}.Local|Any CPU.Build.0 = Local|Any CPU
 		{72842FA7-FF72-4AF0-99B0-EDBE6F4C29F9}.Local|Any CPU.ActiveCfg = Debug|Any CPU
 		{72842FA7-FF72-4AF0-99B0-EDBE6F4C29F9}.Local|Any CPU.Build.0 = Debug|Any CPU
-		{C6969609-ACFB-4C8B-AFAD-201B58BB40FF}.Local|Any CPU.ActiveCfg = Debug|Any CPU
-		{C6969609-ACFB-4C8B-AFAD-201B58BB40FF}.Local|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
