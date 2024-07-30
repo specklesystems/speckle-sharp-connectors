@@ -28,6 +28,6 @@
     <PackageVersion Include="System.Threading.Tasks.Dataflow" Version="6.0.0" />
     <GlobalPackageReference Include="PolySharp" Version="1.14.1" />
     <GlobalPackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
-    <GlobalPackageReference Include="Speckle.InterfaceGenerator" Version="0.9.5" />
+    <GlobalPackageReference Include="Speckle.InterfaceGenerator" Version="0.9.6" />
   </ItemGroup>
 </Project>
