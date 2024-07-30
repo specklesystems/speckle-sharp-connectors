@@ -5,7 +5,6 @@ using Objects.BuiltElements.Revit.RevitRoof;
 using Objects.Geometry;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Core.Common;
 
@@ -81,9 +80,11 @@ public class FootPrintRoofToSpeckleTopLevelConverter
     // conversion pipeline behavior. Would probably require adding interfaces into objects kit
     _parameterObjectAssigner.AssignParametersToBase(target, speckleFootprintRoof);
     speckleFootprintRoof.displayValue = _displayValueExtractor.GetDisplayValue(target);
-    speckleFootprintRoof.elements = _hostedElementConverter
-      .ConvertHostedElements(target.GetHostedElementIds())
-      .ToList();
+
+    // POC: removing hosted elements from parents
+    // speckleFootprintRoof.elements = _hostedElementConverter
+    //   .ConvertHostedElements(target.GetHostedElementIds())
+    //   .ToList();
 
     return speckleFootprintRoof;
   }

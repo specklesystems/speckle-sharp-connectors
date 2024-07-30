@@ -62,9 +62,11 @@ public class ExtrusionRoofToSpeckleTopLevelConverter
 
     _parameterObjectAssigner.AssignParametersToBase(target, speckleExtrusionRoof);
     speckleExtrusionRoof.displayValue = _displayValueExtractor.GetDisplayValue(target);
-    speckleExtrusionRoof.elements = _hostedElementConverter
-      .ConvertHostedElements(target.GetHostedElementIds())
-      .ToList();
+
+    // POC: removing hosted elements from roof
+    // speckleExtrusionRoof.elements = _hostedElementConverter
+    //   .ConvertHostedElements(target.GetHostedElementIds())
+    //   .ToList();
 
     return speckleExtrusionRoof;
   }
