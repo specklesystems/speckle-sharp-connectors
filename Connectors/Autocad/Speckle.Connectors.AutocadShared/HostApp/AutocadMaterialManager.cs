@@ -43,6 +43,22 @@ public class AutocadMaterialManager
     };
   }
 
+  public (AutocadColor, Transparency?) ConvertRenderMaterialToColorAndTransparency(RenderMaterial material)
+  {
+    System.Drawing.Color systemColor = System.Drawing.Color.FromArgb(material.diffuse);
+    AutocadColor color = AutocadColor.FromColor(systemColor);
+
+    // only create transparency if render material is not opaque
+    Transparency? transparency = null;
+    if (material.opacity != 1)
+    {
+      var alpha = (byte)(material.opacity * 255d);
+      transparency = new Transparency(alpha);
+    }
+
+    return (color, transparency);
+  }
+
   public List<RenderMaterialProxy> UnpackRenderMaterial(
     List<AutocadRootObject> rootObjects,
     List<LayerTableRecord> layers

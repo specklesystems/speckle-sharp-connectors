@@ -1,4 +1,6 @@
+using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
+using Objects.Other;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Utils.Builders;
@@ -9,6 +11,7 @@ using Speckle.Core.Models;
 using Speckle.Core.Models.Collections;
 using Speckle.Core.Models.GraphTraversal;
 using Speckle.Core.Models.Instances;
+using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 
 namespace Speckle.Connectors.Autocad.Operations.Receive;
 
@@ -20,21 +23,22 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
   private readonly AutocadLayerManager _autocadLayerManager;
   private readonly IRootToHostConverter _converter;
   private readonly GraphTraversal _traversalFunction;
-
-  // private readonly HashSet<string> _uniqueLayerNames = new();
   private readonly AutocadInstanceObjectManager _instanceObjectsManager;
+  private readonly AutocadMaterialManager _materialManager;
 
   public AutocadHostObjectBuilder(
     IRootToHostConverter converter,
     GraphTraversal traversalFunction,
     AutocadLayerManager autocadLayerManager,
-    AutocadInstanceObjectManager instanceObjectsManager
+    AutocadInstanceObjectManager instanceObjectsManager,
+    AutocadMaterialManager materialManager
   )
   {
     _converter = converter;
     _traversalFunction = traversalFunction;
     _autocadLayerManager = autocadLayerManager;
     _instanceObjectsManager = instanceObjectsManager;
+    _materialManager = materialManager;
   }
 
   public HostObjectBuilderResult Build(
@@ -97,23 +101,40 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       }
     }
 
+    // Stage 0: Render Materials
+    List<RenderMaterialProxy>? renderMaterials = (rootObject["renderMaterialProxies"] as List<object>)
+      ?.Cast<RenderMaterialProxy>()
+      .ToList();
+    Dictionary<string, (AutocadColor, Transparency?)> objectMaterialsIdMap = new();
+    if (renderMaterials != null)
+    {
+      objectMaterialsIdMap = ParseRenderMaterials(renderMaterials, onOperationProgressed);
+    }
+
     // Stage 1: Convert atomic objects
     Dictionary<string, List<Entity>> applicationIdMap = new();
     var count = 0;
     foreach (var (layerCollection, atomicObject) in atomicObjects)
     {
+      string objectId = atomicObject.applicationId ?? atomicObject.id;
+
       onOperationProgressed?.Invoke("Converting objects", (double)++count / atomicObjects.Count);
       try
       {
-        var convertedObjects = ConvertObject(atomicObject, layerCollection).ToList();
-
-        if (atomicObject.applicationId != null)
+        List<Entity> convertedObject = new();
+        if (objectMaterialsIdMap.TryGetValue(objectId, out (AutocadColor, Transparency?) displayStyle))
         {
-          applicationIdMap[atomicObject.applicationId] = convertedObjects;
+          convertedObject = ConvertObject(atomicObject, layerCollection, displayStyle).ToList();
+        }
+        else
+        {
+          convertedObject = ConvertObject(atomicObject, layerCollection).ToList();
         }
 
+        applicationIdMap[objectId] = convertedObject;
+
         results.AddRange(
-          convertedObjects.Select(e => new ReceiveConversionResult(
+          convertedObject.Select(e => new ReceiveConversionResult(
             Status.SUCCESS,
             atomicObject,
             e.Handle.Value.ToString(),
@@ -121,7 +142,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
           ))
         );
 
-        bakedObjectIds.AddRange(convertedObjects.Select(e => e.Handle.Value.ToString()));
+        bakedObjectIds.AddRange(convertedObject.Select(e => e.Handle.Value.ToString()));
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
@@ -192,7 +213,38 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     _instanceObjectsManager.PurgeInstances(baseLayerPrefix);
   }
 
-  private IEnumerable<Entity> ConvertObject(Base obj, Layer layerCollection)
+  private Dictionary<string, (AutocadColor, Transparency?)> ParseRenderMaterials(
+    List<RenderMaterialProxy> materialProxies,
+    Action<string, double?>? onOperationProgressed
+  )
+  {
+    // keeps track of the object id to material index
+    var count = 0;
+    Dictionary<string, (AutocadColor, Transparency?)> objectMaterialsIdMap = new();
+    foreach (RenderMaterialProxy materialProxy in materialProxies)
+    {
+      onOperationProgressed?.Invoke("Converting render materials", (double)++count / materialProxies.Count);
+      foreach (string objectId in materialProxy.objects)
+      {
+        (AutocadColor, Transparency?) convertedMaterial = _materialManager.ConvertRenderMaterialToColorAndTransparency(
+          materialProxy.value
+        );
+
+        if (!objectMaterialsIdMap.TryGetValue(objectId, out (AutocadColor, Transparency?) _))
+        {
+          objectMaterialsIdMap.Add(objectId, convertedMaterial);
+        }
+      }
+    }
+
+    return objectMaterialsIdMap;
+  }
+
+  private IEnumerable<Entity> ConvertObject(
+    Base obj,
+    Layer layerCollection,
+    (AutocadColor, Transparency?)? displayStyle = null
+  )
   {
     using TransactionContext transactionContext = TransactionContext.StartTransaction(
       Application.DocumentManager.MdiActiveDocument
@@ -215,6 +267,17 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       {
         // POC: This needed to be double checked why we check null and continue
         continue;
+      }
+
+      // set display style if any
+      // POC: if these are displayvalue meshes, we will need to check for their ids somehow
+      if (displayStyle is not null)
+      {
+        conversionResult.Color = displayStyle.Value.Item1;
+        if (displayStyle.Value.Item2 is Transparency transparency)
+        {
+          conversionResult.Transparency = transparency;
+        }
       }
 
       conversionResult.AppendToDb(layerCollection.name);
