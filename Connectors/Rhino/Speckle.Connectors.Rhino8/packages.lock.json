@@ -475,6 +475,19 @@
           "Speckle.Converters.Common": "[1.0.0, )"
         }
       },
+      "speckle.converters.rhino8": {
+        "type": "Project",
+        "dependencies": {
+          "RhinoCommon": "[8.9.24194.18121, )",
+          "Speckle.Converters.Common": "[1.0.0, )"
+        }
+      },
+      "speckle.converters.rhino8.dependencyinjection": {
+        "type": "Project",
+        "dependencies": {
+          "Speckle.Converters.Rhino8": "[1.0.0, )"
+        }
+      },
       "Autofac": {
         "type": "CentralTransitive",
         "requested": "[5.2.0, )",
@@ -980,6 +993,19 @@
         "dependencies": {
           "Speckle.Autofac": "[1.0.0, )",
           "Speckle.Converters.Common": "[1.0.0, )"
+        }
+      },
+      "speckle.converters.rhino8": {
+        "type": "Project",
+        "dependencies": {
+          "RhinoCommon": "[8.9.24194.18121, )",
+          "Speckle.Converters.Common": "[1.0.0, )"
+        }
+      },
+      "speckle.converters.rhino8.dependencyinjection": {
+        "type": "Project",
+        "dependencies": {
+          "Speckle.Converters.Rhino8": "[1.0.0, )"
         }
       },
       "Autofac": {
