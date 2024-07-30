@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Autodesk.Revit.DB;
 using Speckle.Connectors.DUI.Exceptions;
+using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Conversion;
@@ -21,16 +22,19 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
   private readonly Dictionary<string, Collection> _collectionCache;
   private readonly Collection _rootObject;
   private readonly ISendConversionCache _sendConversionCache;
+  private readonly SendSelectionUnpacker _sendSelectionUnpacker;
 
   public RevitRootObjectBuilder(
     IRootToSpeckleConverter converter,
     IRevitConversionContextStack contextStack,
-    ISendConversionCache sendConversionCache
+    ISendConversionCache sendConversionCache,
+    SendSelectionUnpacker sendSelectionUnpacker
   )
   {
     _converter = converter;
     _contextStack = contextStack;
     _sendConversionCache = sendConversionCache;
+    _sendSelectionUnpacker = sendSelectionUnpacker;
     // Note, this class is instantiated per unit of work (aka per send operation), so we can safely initialize what we need in here.
     _collectionCache = new Dictionary<string, Collection>();
     _rootObject = new Collection()
@@ -55,6 +59,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
 
     var revitElements = new List<Element>();
 
+    // Convert ids to actual revit elements
     foreach (var id in objects)
     {
       var el = _contextStack.Current.Document.GetElement(id);
@@ -69,11 +74,15 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
       throw new SpeckleSendFilterException("No objects were found. Please update your send filter!");
     }
 
+    // Unpack groups (& other complex data structures)
+    var atomicObjects = _sendSelectionUnpacker.UnpackSelection(revitElements);
+
     var countProgress = 0; // because for(int i = 0; ...) loops are so last year
     var cacheHitCount = 0;
     List<SendConversionResult> results = new(revitElements.Count);
     var path = new string[2];
-    foreach (Element revitElement in revitElements)
+
+    foreach (Element revitElement in atomicObjects)
     {
       ct.ThrowIfCancellationRequested();
 
