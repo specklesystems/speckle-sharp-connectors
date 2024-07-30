@@ -92,7 +92,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
         if (IsGISType(obj))
         {
           string nestedLayerPath = $"{string.Join("\\", path)}";
-          string datasetId = (string)_converter.Convert(obj);
+          string datasetId = QueuedTask.Run(() => (string)_converter.Convert(obj)).Result;
           conversionTracker[objectToConvert.TraversalContext] = new ObjectConversionTracker(
             obj,
             nestedLayerPath,
@@ -104,7 +104,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
           obj = _localToGlobalConverterUtils.TransformObjects(objectToConvert.AtomicObject, objectToConvert.Matrix);
 
           string nestedLayerPath = $"{string.Join("\\", path)}\\{obj.speckle_type.Split(".")[^1]}";
-          Geometry converted = (Geometry)_converter.Convert(obj);
+          Geometry converted = QueuedTask.Run(() => (Geometry)_converter.Convert(obj)).Result;
 
           conversionTracker[objectToConvert.TraversalContext] = new ObjectConversionTracker(
             obj,
