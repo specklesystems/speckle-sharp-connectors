@@ -3,10 +3,24 @@ using Speckle.Converters.RevitShared.Helpers;
 
 namespace Speckle.Connectors.Revit.HostApp;
 
+/// <summary>
+/// Class that unpacks a given set of selection elements into atomic objects.
+/// POC: it's a fast solution to a lot of complex problems we don't want to answer now, but should in the near future.
+/// What this does:
+/// <list type="bullet">
+/// <item>
+///   <term>Groups: </term>
+///   <description>explodes them into sub constituent objects, recursively.</description>
+/// </item>
+/// <item>
+///   <term>Curtain walls: </term>
+///   <description>If parent wall is part of selection, does not select individual elements out. Otherwise, selects individual elements (Panels, Mullions) as atomic objects.</description>
+/// </item>
+/// </list>
+/// </summary>
 public class SendSelectionUnpacker
 {
   private readonly IRevitConversionContextStack _contextStack;
-  private readonly List<Element> _elements = new();
 
   public SendSelectionUnpacker(IRevitConversionContextStack contextStack)
   {
@@ -15,29 +29,43 @@ public class SendSelectionUnpacker
 
   public IEnumerable<Element> UnpackSelection(IEnumerable<Element> selectionElements)
   {
-    foreach (var element in selectionElements)
-    {
-      if (element is Group g)
-      {
-        UnpackGroup(g);
-        continue;
-      }
-      _elements.Add(element);
-    }
-    return _elements;
+    // Note: steps kept separate on purpose.
+    // Step 1: unpack groups
+    var atomicObjects = UnpackGroups(selectionElements);
+
+    // Step 2: pack curtain wall elements, once we know the full extent of our flattened item list.
+    // The behaviour we're looking for:
+    // If parent wall is part of selection, does not select individual elements out. Otherwise, selects individual elements (Panels, Mullions) as atomic objects.
+    return PackCurtainWallElements(atomicObjects);
   }
 
-  private void UnpackGroup(Group group)
+  // This needs some yield refactoring
+  private List<Element> UnpackGroups(IEnumerable<Element> elements)
   {
-    var groupElements = group.GetMemberIds().Select(_contextStack.Current.Document.GetElement);
-    foreach (var element in groupElements)
+    var unpackedElements = new List<Element>();
+
+    foreach (var element in elements)
     {
       if (element is Group g)
       {
-        UnpackGroup(g);
-        continue;
+        var groupElements = g.GetMemberIds().Select(_contextStack.Current.Document.GetElement);
+        unpackedElements.AddRange(UnpackGroups(groupElements));
       }
-      _elements.Add(element);
+      else
+      {
+        unpackedElements.Add(element);
+      }
     }
+
+    return unpackedElements;
+  }
+
+  private List<Element> PackCurtainWallElements(List<Element> elements)
+  {
+    var ids = elements.Select(el => el.Id).ToArray();
+    elements.RemoveAll(element =>
+      ((element is Mullion m && ids.Contains(m.Host.Id)) || (element is Panel p && ids.Contains(p.Host.Id)))
+    );
+    return elements;
   }
 }
