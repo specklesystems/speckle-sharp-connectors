@@ -7,6 +7,10 @@
     <UseWindowsForms>true</UseWindowsForms>
     <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
     <Configurations>Debug;Release;Local</Configurations>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
 
   <ItemGroup>
