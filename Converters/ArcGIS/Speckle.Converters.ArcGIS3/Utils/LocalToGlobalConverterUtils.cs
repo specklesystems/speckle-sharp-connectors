@@ -1,7 +1,6 @@
 ﻿using Objects;
 using Speckle.Converters.Common;
 using Speckle.Core.Models;
-using Speckle.Core.Models.Extensions;
 using Speckle.DoubleNumerics;
 using Speckle.InterfaceGenerator;
 
@@ -29,14 +28,10 @@ public class LocalToGlobalConverterUtils : ILocalToGlobalConverterUtils
       return atomicObject;
     }
 
-    // This is a temp hack. We would add transformations to conversions later instead try to copy objects like this.
-    // Jedd also has opinions on this.
-    // Base newObject = Core.Api.Operations.Deserialize(Core.Api.Operations.Serialize(atomicObject));
-
     List<Objects.Other.Transform> transforms = new() { };
     transforms.AddRange(matrix.Select(x => new Objects.Other.Transform(x, "none")).ToList());
 
-    if (atomicObject is ITransformable c && atomicObject is not SOG.Brep)
+    if (atomicObject is ITransformable c)
     {
       foreach (var transform in transforms)
       {
@@ -53,60 +48,8 @@ public class LocalToGlobalConverterUtils : ILocalToGlobalConverterUtils
       return atomicObject;
     }
 
-    if (atomicObject.TryGetDisplayValue() is IReadOnlyList<Base> listVals)
-    {
-      if (listVals.ToList().FindAll(x => x is not ITransformable).Count == 0)
-      {
-        return TransformObjWithDisplayValues(atomicObject, transforms);
-      }
-      throw new SpeckleConversionException(
-        $"Display Values of types '{listVals.ToList().FindAll(x => x is not ITransformable).Select(y => y.speckle_type).Distinct().ToList()}' for {atomicObject.speckle_type} are not supported for local to global coordinate transformation"
-      );
-    }
     throw new SpeckleConversionException(
       $"{atomicObject.speckle_type} is not supported for local to global coordinate transformation"
     );
-  }
-
-  private Base TransformObjWithDisplayValues(Base atomicObject, List<Objects.Other.Transform> transforms)
-  {
-    // for all objects that are not transformable, but contain displayValue
-    List<Base> newDisplayValues = new();
-
-    var displayValue = atomicObject.TryGetDisplayValue();
-    if (displayValue is null) // will not happen due to the check in "TransformObjects"
-    {
-      throw new SpeckleConversionException($"{atomicObject.speckle_type} blocks contains no display value");
-    }
-
-    foreach (Base displayVal in displayValue)
-    {
-      if (displayVal is ITransformable c)
-      {
-        foreach (var transform in transforms)
-        {
-          c.TransformTo(transform, out ITransformable newObj);
-          c = newObj;
-        }
-        newDisplayValues.Add((Base)c);
-      }
-      else // will not happen due to the check in "TransformObjects"
-      {
-        throw new SpeckleConversionException(
-          $"Blocks containing {displayVal.speckle_type} as displayValue are not supported"
-        );
-      }
-    }
-    // copy the original object and assign new displayValue - hacky
-    Base newObject = Core.Api.Operations.Deserialize(Core.Api.Operations.Serialize(atomicObject));
-    if (newObject is SOG.Brep)
-    {
-      newObject["displayValue"] = newDisplayValues.Select(x => (SOG.Mesh)x).ToList();
-    }
-    else
-    {
-      newObject["displayValue"] = newDisplayValues;
-    }
-    return newObject;
   }
 }
