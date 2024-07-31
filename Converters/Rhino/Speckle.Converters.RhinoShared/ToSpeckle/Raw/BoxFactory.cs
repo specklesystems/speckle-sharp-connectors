@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Speckle.InterfaceGenerator;
 
-namespace Speckle.Converters.Rhino7.ToSpeckle.Raw;
+namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
 
 [GenerateAutoInterface]
 [ExcludeFromCodeCoverage]
