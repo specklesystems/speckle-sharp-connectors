@@ -29,14 +29,13 @@ public sealed class RhinoSendBinding : ISendBinding
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
   private readonly RhinoSettings _rhinoSettings;
+  private readonly ISendConversionCache _sendConversionCache;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id.
   /// </summary>
   private HashSet<string> ChangedObjectIds { get; set; } = new();
-
-  private readonly ISendConversionCache _sendConversionCache;
-  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   public RhinoSendBinding(
     DocumentModelStore store,
@@ -46,8 +45,7 @@ public sealed class RhinoSendBinding : ISendBinding
     IUnitOfWorkFactory unitOfWorkFactory,
     RhinoSettings rhinoSettings,
     CancellationManager cancellationManager,
-    ISendConversionCache sendConversionCache,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    ISendConversionCache sendConversionCache
   )
   {
     _store = store;
@@ -57,7 +55,7 @@ public sealed class RhinoSendBinding : ISendBinding
     _rhinoSettings = rhinoSettings;
     _cancellationManager = cancellationManager;
     _sendConversionCache = sendConversionCache;
-    _topLevelExceptionHandler = topLevelExceptionHandler;
+    _topLevelExceptionHandler = parent.TopLevelExceptionHandler.Parent.TopLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent); // POC: Commands are tightly coupled with their bindings, at least for now, saves us injecting a factory.
     SubscribeToRhinoEvents();

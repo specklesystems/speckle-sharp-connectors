@@ -34,8 +34,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
     };
   }
 
-  public string GetConnectorVersion() =>
-    typeof(AutocadBasicConnectorBinding).Assembly.GetVersion();
+  public string GetConnectorVersion() => typeof(AutocadBasicConnectorBinding).Assembly.GetVersion();
 
   public string GetSourceApplicationName() => _settings.HostAppInfo.Slug;
 

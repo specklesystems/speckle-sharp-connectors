@@ -20,15 +20,18 @@ namespace Speckle.Connectors.Autocad.HostApp;
 public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>, IInstanceBaker<List<Entity>>
 {
   private readonly AutocadLayerManager _autocadLayerManager;
+  private readonly AutocadContext _autocadContext;
 
   private readonly IInstanceObjectsManager<AutocadRootObject, List<Entity>> _instanceObjectsManager;
 
   public AutocadInstanceObjectManager(
     AutocadLayerManager autocadLayerManager,
+    AutocadContext autocadContext,
     IInstanceObjectsManager<AutocadRootObject, List<Entity>> instanceObjectsManager
   )
   {
     _autocadLayerManager = autocadLayerManager;
+    _autocadContext = autocadContext;
     _instanceObjectsManager = instanceObjectsManager;
   }
 
@@ -38,6 +41,8 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
 
     foreach (var obj in objects)
     {
+      // Note: isDynamicBlock always returns false for a selection of doc objects. Instances of dynamic blocks are represented in the document as blocks that have
+      // a definition reference to the anonymous block table record.
       if (obj.Root is BlockReference blockReference && !blockReference.IsDynamicBlock)
       {
         UnpackInstance(blockReference, 0, transaction);
@@ -50,7 +55,15 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
   private void UnpackInstance(BlockReference instance, int depth, Transaction transaction)
   {
     var instanceIdString = instance.Handle.Value.ToString();
-    var definitionId = instance.BlockTableRecord;
+    // If this instance has a reference to an anonymous block, it means it's spawned from a dynamic block. Anonymous blocks are
+    // used to represent specific "instances" of dynamic ones.
+    // We do not want to send the full dynamic block definition, but its current "instance", as such here we're making sure we
+    // take up the anon block table reference definition (if it exists). If it's not an instance of a dynamic block, we're
+    // using the normal def reference.
+    var hasAnonymousBlockTableRecordDefinition = instance.AnonymousBlockTableRecord != ObjectId.Null;
+    var definitionId = hasAnonymousBlockTableRecordDefinition
+      ? instance.AnonymousBlockTableRecord
+      : instance.BlockTableRecord;
 
     InstanceProxy instanceProxy =
       new()
@@ -105,13 +118,12 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
     }
 
     var definition = (BlockTableRecord)transaction.GetObject(definitionId, OpenMode.ForRead);
-    // definition.Origin
     var definitionProxy = new InstanceDefinitionProxy()
     {
       applicationId = definitionId.ToString(),
       objects = new(),
       maxDepth = depth,
-      name = definition.Name,
+      name = hasAnonymousBlockTableRecordDefinition ? "Dynamic instance " + definitionId : definition.Name,
       ["comments"] = definition.Comments,
       ["units"] = definition.Units // ? not sure needed?
     };
@@ -120,6 +132,12 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
     foreach (ObjectId id in definition)
     {
       var obj = transaction.GetObject(id, OpenMode.ForRead);
+      // In the case of dynamic blocks, this prevents sending objects that are not visibile in its current state.
+      if (obj is Entity { Visible: false })
+      {
+        continue;
+      }
+
       var handleIdString = obj.Handle.Value.ToString();
       definitionProxy.objects.Add(handleIdString);
 
@@ -170,11 +188,12 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
           var record = new BlockTableRecord();
           var objectIds = new ObjectIdCollection();
           // We're expecting to have Name prop always for definitions. If there is an edge case, ask to Dim or Ogu
-          record.Name = $"{definitionProxy.name}-({definitionProxy.applicationId})-{baseLayerName}";
+          record.Name = _autocadContext.RemoveInvalidChars(
+            $"{definitionProxy.name}-({definitionProxy.applicationId})-{baseLayerName}"
+          );
 
           foreach (var entity in constituentEntities)
           {
-            // record.AppendEntity(entity);
             objectIds.Add(entity.ObjectId);
           }
 
@@ -239,6 +258,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
   /// <param name="namePrefix"></param>
   public void PurgeInstances(string namePrefix)
   {
+    namePrefix = _autocadContext.RemoveInvalidChars(namePrefix);
     using var transaction = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
     var instanceDefinitionsToDelete = new Dictionary<string, BlockTableRecord>();
 

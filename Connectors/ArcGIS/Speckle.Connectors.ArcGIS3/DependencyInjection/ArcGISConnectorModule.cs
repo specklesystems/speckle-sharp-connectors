@@ -1,4 +1,5 @@
 using ArcGIS.Desktop.Mapping;
+using Autofac;
 using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.ArcGIS.Bindings;
@@ -9,12 +10,14 @@ using Speckle.Connectors.ArcGis.Operations.Send;
 using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
+using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
+using Speckle.Connectors.Utils.Instances;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Core.Models.GraphTraversal;
 
@@ -37,13 +40,22 @@ public class ArcGISConnectorModule : ISpeckleModule
     builder.AddSingletonInstance<ISyncToThread, SyncToQueuedTask>();
 
     builder.AddSingleton<DocumentModelStore, ArcGISDocumentStore>();
-
     // Register bindings
     builder.AddSingleton<IBinding, TestBinding>();
     builder.AddSingleton<IBinding, ConfigBinding>("connectorName", "ArcGIS"); // POC: Easier like this for now, should be cleaned up later
     builder.AddSingleton<IBinding, AccountBinding>();
-    builder.AddSingleton<IBinding, BasicConnectorBinding>();
-    builder.AddSingleton<IBasicConnectorBinding, BasicConnectorBinding>();
+
+    builder.ContainerBuilder.RegisterType<TopLevelExceptionHandlerBinding>().As<IBinding>().AsSelf().SingleInstance();
+    builder.AddSingleton<ITopLevelExceptionHandler>(c =>
+      c.Resolve<TopLevelExceptionHandlerBinding>().Parent.TopLevelExceptionHandler
+    );
+
+    builder
+      .ContainerBuilder.RegisterType<BasicConnectorBinding>()
+      .As<IBinding>()
+      .As<IBasicConnectorBinding>()
+      .SingleInstance();
+
     builder.AddSingleton<IBinding, ArcGISSelectionBinding>();
     builder.AddSingleton<IBinding, ArcGISSendBinding>();
     builder.AddSingleton<IBinding, ArcGISReceiveBinding>();
@@ -56,6 +68,8 @@ public class ArcGISConnectorModule : ISpeckleModule
     builder.AddScoped<SendOperation<MapMember>>();
     builder.AddScoped<ArcGISRootObjectBuilder>();
     builder.AddScoped<IRootObjectBuilder<MapMember>, ArcGISRootObjectBuilder>();
+
+    builder.AddScoped<ILocalToGlobalUnpacker, LocalToGlobalUnpacker>();
 
     // register send conversion cache
     builder.AddSingleton<ISendConversionCache, SendConversionCache>();

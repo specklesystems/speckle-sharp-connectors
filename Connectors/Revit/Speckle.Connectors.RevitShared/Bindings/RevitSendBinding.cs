@@ -38,8 +38,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     IBridge bridge,
     IUnitOfWorkFactory unitOfWorkFactory,
     RevitSettings revitSettings,
-    ISendConversionCache sendConversionCache,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    ISendConversionCache sendConversionCache
   )
     : base("sendBinding", store, bridge, revitContext)
   {
@@ -48,6 +47,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _unitOfWorkFactory = unitOfWorkFactory;
     _revitSettings = revitSettings;
     _sendConversionCache = sendConversionCache;
+    var topLevelExceptionHandler = Parent.TopLevelExceptionHandler;
 
     Commands = new SendBindingUICommands(bridge);
     // TODO expiry events

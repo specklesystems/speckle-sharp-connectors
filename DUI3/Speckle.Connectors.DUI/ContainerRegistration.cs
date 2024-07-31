@@ -17,7 +17,6 @@ public static class ContainerRegistration
     speckleContainerBuilder.AddSingletonInstance<ISyncToThread, SyncToUIThread>();
     speckleContainerBuilder.AddSingleton<IRootObjectSender, RootObjectSender>();
     speckleContainerBuilder.AddTransient<IBridge, BrowserBridge>(); // POC: Each binding should have it's own bridge instance
-    speckleContainerBuilder.AddSingleton<ITopLevelExceptionHandler, TopLevelExceptionHandler>();
     speckleContainerBuilder.AddSingleton(GetJsonSerializerSettings());
     speckleContainerBuilder.ScanAssemblyOfType<IdleCallManager>();
     speckleContainerBuilder.ScanAssemblyOfType<IServerTransportFactory>();

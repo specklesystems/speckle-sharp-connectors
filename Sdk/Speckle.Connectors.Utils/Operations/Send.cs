@@ -130,19 +130,19 @@ public class SendHelper(ILogger<SendHelper> logger) : ISendHelper
       }
 
       sendTimer.Stop();
-     /* using (
-        LogContext.PushProperty(
-          "transportElapsedBreakdown",
-          transports.ToDictionary(t => t.TransportName, t => t.Elapsed)
-        )
-      )
-      using (
-        LogContext.PushProperty(
-          "note",
-          "the elapsed summary doesn't need to add up to the total elapsed... Threading magic..."
-        )
-      )
-      using (LogContext.PushProperty("serializerElapsed", serializerV2.Elapsed.ToString()))*/
+      /* using (
+         LogContext.PushProperty(
+           "transportElapsedBreakdown",
+           transports.ToDictionary(t => t.TransportName, t => t.Elapsed)
+         )
+       )
+       using (
+         LogContext.PushProperty(
+           "note",
+           "the elapsed summary doesn't need to add up to the total elapsed... Threading magic..."
+         )
+       )
+       using (LogContext.PushProperty("serializerElapsed", serializerV2.Elapsed.ToString()))*/
       {
         logger.LogInformation(
           "Finished sending {objectCount} objects after {elapsed}, result {objectId}",

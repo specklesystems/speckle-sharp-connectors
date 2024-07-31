@@ -8,7 +8,8 @@ public static class AssemblyExtensions
   {
     try
     {
-      var informationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "No version";
+      var informationalVersion =
+        assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "No version";
       if (!string.IsNullOrEmpty(informationalVersion))
       {
         return informationalVersion;

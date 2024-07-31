@@ -158,6 +158,13 @@ public class SpeckleContainerBuilder
     return this;
   }
 
+  public SpeckleContainerBuilder AddSingleton<T>(Func<ISpeckleContainerContext, T> action)
+    where T : notnull
+  {
+    ContainerBuilder.Register<T>(c => action(new SpeckleContainerContext(c))).SingleInstance();
+    return this;
+  }
+
   public SpeckleContainerBuilder AddSingleton<TInterface, T>(string param, string value)
     where T : class, TInterface
     where TInterface : notnull

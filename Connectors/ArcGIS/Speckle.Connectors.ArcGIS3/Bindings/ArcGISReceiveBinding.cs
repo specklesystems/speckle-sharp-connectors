@@ -1,4 +1,3 @@
-
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;

@@ -34,8 +34,7 @@ public class RhinoBasicConnectorBinding : IBasicConnectorBinding
     };
   }
 
-  public string GetConnectorVersion() =>
-    typeof(RhinoBasicConnectorBinding).Assembly.GetVersion();
+  public string GetConnectorVersion() => typeof(RhinoBasicConnectorBinding).Assembly.GetVersion();
 
   public string GetSourceApplicationName() => _settings.HostAppInfo.Slug;
 
