@@ -75,20 +75,38 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     }
 
     // Unpack groups (& other complex data structures)
-    var atomicObjects = _sendSelectionUnpacker.UnpackSelection(revitElements);
+    var atomicObjects = _sendSelectionUnpacker.UnpackSelection(revitElements).ToList();
 
     var countProgress = 0; // because for(int i = 0; ...) loops are so last year
     var cacheHitCount = 0;
     List<SendConversionResult> results = new(revitElements.Count);
-    var path = new string[2];
 
     foreach (Element revitElement in atomicObjects)
     {
       ct.ThrowIfCancellationRequested();
 
-      var cat = revitElement.Category.Name;
-      path[0] = doc.GetElement(revitElement.LevelId) is not Level level ? "No level" : level.Name;
-      path[1] = cat;
+      var path = new List<string>();
+      // Add level to path
+      path.Add(doc.GetElement(revitElement.LevelId) is not Level level ? "No level" : level.Name);
+      // Add category to path
+      var cat = revitElement.Category?.Name ?? "No category";
+      path.Add(cat);
+
+      // Add optional type to path
+      var typeId = revitElement.GetTypeId();
+      if (typeId != ElementId.InvalidElementId)
+      {
+        var type = doc.GetElement(typeId);
+        if (type != null)
+        {
+          path.Add(type.Name);
+        }
+      }
+      else
+      {
+        path.Add("No type");
+      }
+
       var collection = GetAndCreateObjectHostCollection(path);
 
       var applicationId = revitElement.Id.ToString();
@@ -115,12 +133,12 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
         // POC: add logging
       }
 
-      onOperationProgressed?.Invoke("Converting", (double)++countProgress / revitElements.Count);
+      onOperationProgressed?.Invoke("Converting", (double)++countProgress / atomicObjects.Count);
     }
 
     // POC: Log would be nice, or can be removed.
     Debug.WriteLine(
-      $"Cache hit count {cacheHitCount} out of {objects.Count} ({(double)cacheHitCount / objects.Count})"
+      $"Cache hit count {cacheHitCount} out of {atomicObjects.Count} ({(double)cacheHitCount / atomicObjects.Count})"
     );
 
     return new(_rootObject, results);
@@ -132,7 +150,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
   /// </summary>
   /// <param name="path"></param>
   /// <returns></returns>
-  private Collection GetAndCreateObjectHostCollection(string[] path)
+  private Collection GetAndCreateObjectHostCollection(List<string> path)
   {
     string fullPathName = string.Concat(path);
     if (_collectionCache.TryGetValue(fullPathName, out Collection? value))
