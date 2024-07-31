@@ -48,9 +48,9 @@
       },
       "Speckle.Core": {
         "type": "Direct",
-        "requested": "[3.1.0-dev.79, )",
-        "resolved": "3.1.0-dev.79",
-        "contentHash": "VhP3O6S0+/GqukaIh4raFEVVYEp8WvX9Zoe/Av13TRNsBHh2QmeBQ/Cgm42Cb6DrGCMz00hdQcKZUtnr8Uj1xg==",
+        "requested": "[3.1.0-dev.87, )",
+        "resolved": "3.1.0-dev.87",
+        "contentHash": "gqGgd5XhlsdYidyWQBzARkGQk/5ewii4Qzb1XygYXr4txDxSs0ndi/XwNIpK4IFQB/wb9/uf3Nt7A08imBes2A==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.CSharp": "4.7.0",
@@ -58,8 +58,6 @@
           "Polly": "7.2.3",
           "Polly.Contrib.WaitAndRetry": "1.1.1",
           "Polly.Extensions.Http": "3.0.0",
-          "Sentry": "3.33.0",
-          "Sentry.Serilog": "3.33.0",
           "Serilog": "2.12.0",
           "Serilog.Enrichers.ClientInfo": "1.3.0",
           "Serilog.Exceptions": "8.4.0",
@@ -67,7 +65,8 @@
           "Serilog.Sinks.Seq": "5.2.2",
           "SerilogTimings": "3.0.1",
           "Speckle.DoubleNumerics": "4.0.1",
-          "Speckle.Newtonsoft.Json": "13.0.2"
+          "Speckle.Newtonsoft.Json": "13.0.2",
+          "System.Text.Json": "5.0.2"
         }
       },
       "Speckle.InterfaceGenerator": {
@@ -278,24 +277,6 @@
           "Polly": "7.1.0"
         }
       },
-      "Sentry": {
-        "type": "Transitive",
-        "resolved": "3.33.0",
-        "contentHash": "8vbD2o6IR2wrRrkSiRbnodWGWUOqIlwYtzpjvPNOb5raJdOf+zxMwfS8f6nx9bmrTTfDj7KrCB8C/5OuicAc8A==",
-        "dependencies": {
-          "System.Reflection.Metadata": "5.0.0",
-          "System.Text.Json": "5.0.2"
-        }
-      },
-      "Sentry.Serilog": {
-        "type": "Transitive",
-        "resolved": "3.33.0",
-        "contentHash": "V8BU7QGWg2qLYfNPqtuTBhC1opysny5l+Ifp6J6PhOeAxU0FssR7nYfbJVetrnLIoh2rd3DlJ6hHYYQosQYcUQ==",
-        "dependencies": {
-          "Sentry": "3.33.0",
-          "Serilog": "2.7.1"
-        }
-      },
       "Serilog": {
         "type": "Transitive",
         "resolved": "2.12.0",
@@ -415,14 +396,6 @@
         "resolved": "4.5.1",
         "contentHash": "Rw7ijyl1qqRS0YQD/WycNst8hUUMgrMH4FCn1nNm27M4VxchZ1js3fVjQaANHO5f3sN4isvP4a+Met9Y4YomAg=="
       },
-      "System.Collections.Immutable": {
-        "type": "Transitive",
-        "resolved": "5.0.0",
-        "contentHash": "FXkLXiK0sVVewcso0imKQoOxjoPAj42R8HtjjbSjVPAzwDfzoyoznWxgA3c38LDbN9SJux1xXoXYAhz98j7r2g==",
-        "dependencies": {
-          "System.Memory": "4.5.4"
-        }
-      },
       "System.ComponentModel.Annotations": {
         "type": "Transitive",
         "resolved": "5.0.0",
@@ -459,14 +432,6 @@
         "dependencies": {
           "System.Runtime.InteropServices.WindowsRuntime": "4.3.0",
           "System.Threading.Tasks.Extensions": "4.5.4"
-        }
-      },
-      "System.Reflection.Metadata": {
-        "type": "Transitive",
-        "resolved": "5.0.0",
-        "contentHash": "5NecZgXktdGg34rh1OenY1rFNDCI8xSjFr+Z4OU4cU06AQHUdRnIIEeWENu3Wl4YowbzkymAIMvi3WyK9U53pQ==",
-        "dependencies": {
-          "System.Collections.Immutable": "5.0.0"
         }
       },
       "System.Reflection.TypeExtensions": {

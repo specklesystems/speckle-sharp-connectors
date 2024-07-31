@@ -207,20 +207,6 @@
           "Polly": "7.1.0"
         }
       },
-      "Sentry": {
-        "type": "Transitive",
-        "resolved": "3.33.0",
-        "contentHash": "8vbD2o6IR2wrRrkSiRbnodWGWUOqIlwYtzpjvPNOb5raJdOf+zxMwfS8f6nx9bmrTTfDj7KrCB8C/5OuicAc8A=="
-      },
-      "Sentry.Serilog": {
-        "type": "Transitive",
-        "resolved": "3.33.0",
-        "contentHash": "V8BU7QGWg2qLYfNPqtuTBhC1opysny5l+Ifp6J6PhOeAxU0FssR7nYfbJVetrnLIoh2rd3DlJ6hHYYQosQYcUQ==",
-        "dependencies": {
-          "Sentry": "3.33.0",
-          "Serilog": "2.10.0"
-        }
-      },
       "Serilog": {
         "type": "Transitive",
         "resolved": "2.12.0",
@@ -360,6 +346,11 @@
         "resolved": "4.5.0",
         "contentHash": "Xg4G4Indi4dqP1iuAiMSwpiWS54ZghzR644OtsRCm/m/lBMG8dUBhLVN7hLm8NNrNTR+iGbshCPTwrvxZPlm4g=="
       },
+      "System.Text.Json": {
+        "type": "Transitive",
+        "resolved": "5.0.2",
+        "contentHash": "I47dVIGiV6SfAyppphxqupertT/5oZkYLDCX6vC3HpOI4ZLjyoKAreUoem2ie6G0RbRuFrlqz/PcTQjfb2DOfQ=="
+      },
       "speckle.autofac": {
         "type": "Project",
         "dependencies": {
@@ -373,7 +364,7 @@
           "Microsoft.Extensions.Logging.Abstractions": "[7.0.0, )",
           "Speckle.Autofac": "[1.0.0, )",
           "Speckle.Connectors.Utils": "[1.0.0, )",
-          "Speckle.Core": "[3.1.0-dev.79, )",
+          "Speckle.Core": "[3.1.0-dev.87, )",
           "System.Threading.Tasks.Dataflow": "[6.0.0, )"
         }
       },
@@ -389,14 +380,14 @@
         "dependencies": {
           "Serilog.Extensions.Logging": "[7.0.0, )",
           "Speckle.Autofac": "[1.0.0, )",
-          "Speckle.Core": "[3.1.0-dev.79, )"
+          "Speckle.Core": "[3.1.0-dev.87, )"
         }
       },
       "speckle.converters.common": {
         "type": "Project",
         "dependencies": {
           "Speckle.Autofac": "[1.0.0, )",
-          "Speckle.Objects": "[3.1.0-dev.79, )"
+          "Speckle.Objects": "[3.1.0-dev.87, )"
         }
       },
       "speckle.converters.common.dependencyinjection": {
@@ -445,9 +436,9 @@
       },
       "Speckle.Core": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.79, )",
-        "resolved": "3.1.0-dev.79",
-        "contentHash": "VhP3O6S0+/GqukaIh4raFEVVYEp8WvX9Zoe/Av13TRNsBHh2QmeBQ/Cgm42Cb6DrGCMz00hdQcKZUtnr8Uj1xg==",
+        "requested": "[3.1.0-dev.87, )",
+        "resolved": "3.1.0-dev.87",
+        "contentHash": "gqGgd5XhlsdYidyWQBzARkGQk/5ewii4Qzb1XygYXr4txDxSs0ndi/XwNIpK4IFQB/wb9/uf3Nt7A08imBes2A==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.CSharp": "4.7.0",
@@ -455,8 +446,6 @@
           "Polly": "7.2.3",
           "Polly.Contrib.WaitAndRetry": "1.1.1",
           "Polly.Extensions.Http": "3.0.0",
-          "Sentry": "3.33.0",
-          "Sentry.Serilog": "3.33.0",
           "Serilog": "2.12.0",
           "Serilog.Enrichers.ClientInfo": "1.3.0",
           "Serilog.Exceptions": "8.4.0",
@@ -464,16 +453,17 @@
           "Serilog.Sinks.Seq": "5.2.2",
           "SerilogTimings": "3.0.1",
           "Speckle.DoubleNumerics": "4.0.1",
-          "Speckle.Newtonsoft.Json": "13.0.2"
+          "Speckle.Newtonsoft.Json": "13.0.2",
+          "System.Text.Json": "5.0.2"
         }
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.79, )",
-        "resolved": "3.1.0-dev.79",
-        "contentHash": "tUiZn8Voi3q+ZHmPCGxSdik/Y1TQHKbexKzBShusCI7VsUzGXG40bxvIzmL/wnzJ5OQgZxSt146C8HbIdffJWg==",
+        "requested": "[3.1.0-dev.87, )",
+        "resolved": "3.1.0-dev.87",
+        "contentHash": "TPitvKDl15hwNYkMDJhbAvLFOx0G2UK+F/gZUkiX4Ljk3Y4lzTpQ6aHrzjQsCg3VzqVzlaT5/x8ob5lPBSfXhQ==",
         "dependencies": {
-          "Speckle.Core": "3.1.0-dev.79"
+          "Speckle.Core": "3.1.0-dev.87"
         }
       },
       "Speckle.Revit.API": {
