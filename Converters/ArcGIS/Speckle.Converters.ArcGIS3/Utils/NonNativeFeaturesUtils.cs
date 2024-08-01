@@ -2,7 +2,6 @@ using System.Diagnostics;
 using ArcGIS.Core.Data;
 using ArcGIS.Core.Data.DDL;
 using ArcGIS.Core.Data.Exceptions;
-using ArcGIS.Desktop.Framework.Threading.Tasks;
 using Speckle.Converters.Common;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
@@ -133,76 +132,72 @@ public class NonNativeFeaturesUtils : INonNativeFeaturesUtils
     List<(Base baseObj, ACG.Geometry convertedGeom)> listOfGeometryTuples
   )
   {
-    QueuedTask.Run(() =>
+    FileGeodatabaseConnectionPath fileGeodatabaseConnectionPath =
+      new(_contextStack.Current.Document.SpeckleDatabasePath);
+    Geodatabase geodatabase = new(fileGeodatabaseConnectionPath);
+    SchemaBuilder schemaBuilder = new(geodatabase);
+
+    // get Spatial Reference from the Active CRS for Receive
+    ACG.SpatialReference spatialRef = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference;
+
+    // create Fields
+    List<(FieldDescription, Func<Base, object?>)> fieldsAndFunctions = _fieldUtils.CreateFieldsFromListOfBase(
+      listOfGeometryTuples.Select(x => x.baseObj).ToList()
+    );
+
+    // delete FeatureClass if already exists
+    try
     {
-      FileGeodatabaseConnectionPath fileGeodatabaseConnectionPath =
-        new(_contextStack.Current.Document.SpeckleDatabasePath);
-      Geodatabase geodatabase = new(fileGeodatabaseConnectionPath);
-      SchemaBuilder schemaBuilder = new(geodatabase);
-
-      // get Spatial Reference from the Active CRS for Receive
-      ACG.SpatialReference spatialRef = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference;
-
-      // create Fields
-      List<(FieldDescription, Func<Base, object?>)> fieldsAndFunctions = _fieldUtils.CreateFieldsFromListOfBase(
-        listOfGeometryTuples.Select(x => x.baseObj).ToList()
-      );
-
-      // delete FeatureClass if already exists
+      FeatureClassDefinition fClassDefinition = geodatabase.GetDefinition<FeatureClassDefinition>(featureClassName);
+      FeatureClassDescription existingDescription = new(fClassDefinition);
+      schemaBuilder.Delete(existingDescription);
+      schemaBuilder.Build();
+    }
+    catch (Exception ex) when (!ex.IsFatal()) //(GeodatabaseTableException)
+    {
+      // "The table was not found."
+      // delete Table if already exists
       try
       {
-        FeatureClassDefinition fClassDefinition = geodatabase.GetDefinition<FeatureClassDefinition>(featureClassName);
-        FeatureClassDescription existingDescription = new(fClassDefinition);
+        TableDefinition fClassDefinition = geodatabase.GetDefinition<TableDefinition>(featureClassName);
+        TableDescription existingDescription = new(fClassDefinition);
         schemaBuilder.Delete(existingDescription);
         schemaBuilder.Build();
       }
-      catch (Exception ex) when (!ex.IsFatal()) //(GeodatabaseTableException)
+      catch (Exception ex2) when (!ex2.IsFatal()) //(GeodatabaseTableException)
       {
-        // "The table was not found."
-        // delete Table if already exists
-        try
-        {
-          TableDefinition fClassDefinition = geodatabase.GetDefinition<TableDefinition>(featureClassName);
-          TableDescription existingDescription = new(fClassDefinition);
-          schemaBuilder.Delete(existingDescription);
-          schemaBuilder.Build();
-        }
-        catch (Exception ex2) when (!ex2.IsFatal()) //(GeodatabaseTableException)
-        {
-          // "The table was not found.", do nothing
-        }
+        // "The table was not found.", do nothing
       }
+    }
 
-      // Create FeatureClass
-      try
-      {
-        // POC: make sure class has a valid crs
-        ACG.GeometryType geomType = listOfGeometryTuples[0].convertedGeom.GeometryType;
-        ShapeDescription shpDescription = new(geomType, spatialRef) { HasZ = true };
-        FeatureClassDescription featureClassDescription =
-          new(featureClassName, fieldsAndFunctions.Select(x => x.Item1), shpDescription);
-        FeatureClassToken featureClassToken = schemaBuilder.Create(featureClassDescription);
-      }
-      catch (ArgumentException ex)
-      {
-        // if name has invalid characters/combinations
-        // or 'The table contains multiple fields with the same name.:
-        throw new ArgumentException($"{ex.Message}: {featureClassName}", ex);
-      }
+    // Create FeatureClass
+    try
+    {
+      // POC: make sure class has a valid crs
+      ACG.GeometryType geomType = listOfGeometryTuples[0].convertedGeom.GeometryType;
+      ShapeDescription shpDescription = new(geomType, spatialRef) { HasZ = true };
+      FeatureClassDescription featureClassDescription =
+        new(featureClassName, fieldsAndFunctions.Select(x => x.Item1), shpDescription);
+      FeatureClassToken featureClassToken = schemaBuilder.Create(featureClassDescription);
+    }
+    catch (ArgumentException ex)
+    {
+      // if name has invalid characters/combinations
+      // or 'The table contains multiple fields with the same name.:
+      throw new ArgumentException($"{ex.Message}: {featureClassName}", ex);
+    }
+    bool buildStatus = schemaBuilder.Build();
+    if (!buildStatus)
+    {
+      // POC: log somewhere the error in building the feature class
+      IReadOnlyList<string> errors = schemaBuilder.ErrorMessages;
+    }
 
-      bool buildStatus = schemaBuilder.Build();
-      if (!buildStatus)
-      {
-        // POC: log somewhere the error in building the feature class
-        IReadOnlyList<string> errors = schemaBuilder.ErrorMessages;
-      }
-
-      FeatureClass newFeatureClass = geodatabase.OpenDataset<FeatureClass>(featureClassName);
-      // Add features to the FeatureClass
-      geodatabase.ApplyEdits(() =>
-      {
-        _featureClassUtils.AddNonGISFeaturesToFeatureClass(newFeatureClass, listOfGeometryTuples, fieldsAndFunctions);
-      });
+    FeatureClass newFeatureClass = geodatabase.OpenDataset<FeatureClass>(featureClassName);
+    // Add features to the FeatureClass
+    geodatabase.ApplyEdits(() =>
+    {
+      _featureClassUtils.AddNonGISFeaturesToFeatureClass(newFeatureClass, listOfGeometryTuples, fieldsAndFunctions);
     });
   }
 }
