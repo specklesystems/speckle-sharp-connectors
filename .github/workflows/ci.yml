@@ -24,7 +24,7 @@ jobs:
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
 
       - name: ⚒️ Run build
-        run: ./build.ps1
+        run: ./build.ps1 test
         
       - name: Upload coverage reports to Codecov with GitHub Action
         uses: codecov/codecov-action@v4
