@@ -28,8 +28,7 @@ public class LocalToGlobalConverterUtils : ILocalToGlobalConverterUtils
       return atomicObject;
     }
 
-    List<Objects.Other.Transform> transforms = new() { };
-    transforms.AddRange(matrix.Select(x => new Objects.Other.Transform(x, "none")).ToList());
+    List<Objects.Other.Transform> transforms = matrix.Select(x => new Objects.Other.Transform(x, "none")).ToList();
 
     if (atomicObject is ITransformable c)
     {
@@ -39,7 +38,13 @@ public class LocalToGlobalConverterUtils : ILocalToGlobalConverterUtils
         c = newObj;
       }
 
+      if (c is not Base)
+      {
+        throw new SpeckleConversionException("");
+      }
+
       atomicObject = (Base)c;
+
       foreach (var prop in atomicObject.GetMembers(DynamicBaseMemberType.Dynamic))
       {
         atomicObject[prop.Key] = prop.Value;
