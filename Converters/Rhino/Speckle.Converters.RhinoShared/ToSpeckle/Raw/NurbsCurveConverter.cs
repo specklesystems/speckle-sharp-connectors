@@ -2,7 +2,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
-namespace Speckle.Converters.Rhino7.ToSpeckle.Raw;
+namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
 
 public class NurbsCurveConverter : ITypedConverter<RG.NurbsCurve, SOG.Curve>
 {
