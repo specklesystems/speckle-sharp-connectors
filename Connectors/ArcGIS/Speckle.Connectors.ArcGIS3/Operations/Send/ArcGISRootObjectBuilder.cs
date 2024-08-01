@@ -34,7 +34,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     _rootToSpeckleConverter = rootToSpeckleConverter;
   }
 
-  public RootObjectBuilderResult Build(
+  public Task<RootObjectBuilderResult> Build(
     IReadOnlyList<MapMember> objects,
     SendInfo sendInfo,
     Action<string, double?>? onOperationProgressed = null,
@@ -150,6 +150,6 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
       $"Cache hit count {cacheHitCount} out of {objects.Count} ({(double)cacheHitCount / objects.Count})"
     );
 
-    return new(rootObjectCollection, results);
+    return Task.FromResult(new RootObjectBuilderResult(rootObjectCollection, results));
   }
 }
