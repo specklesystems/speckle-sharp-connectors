@@ -8,15 +8,9 @@ using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace Speckle.Connectors.Utils;
 
-#pragma warning disable CA1063
-public class SpeckleLoggerFactory : ILoggerFactory
-#pragma warning restore CA1063
+public sealed class SpeckleLoggerFactory : ILoggerFactory
 {
-#pragma warning disable CA1816
-#pragma warning disable CA1063
   public void Dispose() { }
-#pragma warning restore CA1063
-#pragma warning restore CA1816
 
   public ILogger CreateLogger(string categoryName) => new SpeckleLogger(SpeckleLog.Create(categoryName));
 
