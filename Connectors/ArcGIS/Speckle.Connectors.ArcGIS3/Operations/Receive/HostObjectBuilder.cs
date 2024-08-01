@@ -122,7 +122,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
 
     // 2. convert Database entries with non-GIS geometry datasets
     onOperationProgressed?.Invoke("Writing to Database", null);
-    _nonGisFeaturesUtils.WriteGeometriesToDatasets(conversionTracker);
+    _nonGisFeaturesUtils.WriteGeometriesToDatasets(conversionTracker, onOperationProgressed);
 
     // Create main group layer
     Dictionary<string, GroupLayer> createdLayerGroups = new();

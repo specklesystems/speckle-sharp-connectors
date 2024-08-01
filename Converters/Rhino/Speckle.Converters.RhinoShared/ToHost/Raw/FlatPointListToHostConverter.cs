@@ -2,7 +2,7 @@
 using Speckle.Converters.Common.Objects;
 using Speckle.Core.Logging;
 
-namespace Speckle.Converters.Rhino7.ToHost.Raw;
+namespace Speckle.Converters.Rhino.ToHost.Raw;
 
 /// <summary>
 /// Converts a flat list of raw double values to a Point3dList.

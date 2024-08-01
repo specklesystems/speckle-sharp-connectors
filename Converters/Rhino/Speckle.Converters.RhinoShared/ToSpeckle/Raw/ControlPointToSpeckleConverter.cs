@@ -3,7 +3,7 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Core.Models;
 
-namespace Speckle.Converters.Rhino7.ToSpeckle.Raw;
+namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
 
 public class ControlPointToSpeckleConverter : ITypedConverter<RG.ControlPoint, SOG.ControlPoint>
 {
