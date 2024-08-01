@@ -8,17 +8,11 @@ public sealed class SendOperation<T>
 {
   private readonly IRootObjectBuilder<T> _rootObjectBuilder;
   private readonly IRootObjectSender _baseObjectSender;
-  private readonly ISyncToThread _syncToThread;
 
-  public SendOperation(
-    IRootObjectBuilder<T> rootObjectBuilder,
-    IRootObjectSender baseObjectSender,
-    ISyncToThread syncToThread
-  )
+  public SendOperation(IRootObjectBuilder<T> rootObjectBuilder, IRootObjectSender baseObjectSender)
   {
     _rootObjectBuilder = rootObjectBuilder;
     _baseObjectSender = baseObjectSender;
-    _syncToThread = syncToThread;
   }
 
   public async Task<SendOperationResult> Execute(
@@ -28,8 +22,8 @@ public sealed class SendOperation<T>
     CancellationToken ct = default
   )
   {
-    var buildResult = await _syncToThread
-      .RunOnThread(() => _rootObjectBuilder.Build(objects, sendInfo, onOperationProgressed, ct))
+    var buildResult = await _rootObjectBuilder
+      .Build(objects, sendInfo, onOperationProgressed, ct)
       .ConfigureAwait(false);
 
     // POC: Jonathon asks on behalf of willow twin - let's explore how this can work

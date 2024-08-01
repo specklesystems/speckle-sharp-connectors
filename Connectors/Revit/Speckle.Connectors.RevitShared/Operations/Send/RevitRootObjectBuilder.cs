@@ -21,16 +21,19 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
   private readonly Dictionary<string, Collection> _collectionCache;
   private readonly Collection _rootObject;
   private readonly ISendConversionCache _sendConversionCache;
+  private readonly ISyncToThread _syncToThread;
 
   public RevitRootObjectBuilder(
     IRootToSpeckleConverter converter,
     IRevitConversionContextStack contextStack,
-    ISendConversionCache sendConversionCache
+    ISendConversionCache sendConversionCache,
+    ISyncToThread syncToThread
   )
   {
     _converter = converter;
     _contextStack = contextStack;
     _sendConversionCache = sendConversionCache;
+    _syncToThread = syncToThread;
     // Note, this class is instantiated per unit of work (aka per send operation), so we can safely initialize what we need in here.
     _collectionCache = new Dictionary<string, Collection>();
     _rootObject = new Collection()
@@ -39,83 +42,84 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     };
   }
 
-  public RootObjectBuilderResult Build(
+  public Task<RootObjectBuilderResult> Build(
     IReadOnlyList<ElementId> objects,
     SendInfo sendInfo,
     Action<string, double?>? onOperationProgressed = null,
     CancellationToken ct = default
-  )
-  {
-    var doc = _contextStack.Current.Document;
-
-    if (doc.IsFamilyDocument)
+  ) =>
+    _syncToThread.RunOnThread(() =>
     {
-      throw new SpeckleException("Family Environment documents are not supported.");
-    }
+      var doc = _contextStack.Current.Document;
 
-    var revitElements = new List<Element>();
-
-    foreach (var id in objects)
-    {
-      var el = _contextStack.Current.Document.GetElement(id);
-      if (el != null)
+      if (doc.IsFamilyDocument)
       {
-        revitElements.Add(el);
+        throw new SpeckleException("Family Environment documents are not supported.");
       }
-    }
 
-    if (revitElements.Count == 0)
-    {
-      throw new SpeckleSendFilterException("No objects were found. Please update your send filter!");
-    }
+      var revitElements = new List<Element>();
 
-    var countProgress = 0; // because for(int i = 0; ...) loops are so last year
-    var cacheHitCount = 0;
-    List<SendConversionResult> results = new(revitElements.Count);
-    var path = new string[2];
-    foreach (Element revitElement in revitElements)
-    {
-      ct.ThrowIfCancellationRequested();
-
-      var cat = revitElement.Category.Name;
-      path[0] = doc.GetElement(revitElement.LevelId) is not Level level ? "No level" : level.Name;
-      path[1] = cat;
-      var collection = GetAndCreateObjectHostCollection(path);
-
-      var applicationId = revitElement.Id.ToString();
-      try
+      foreach (var id in objects)
       {
-        Base converted;
-        if (_sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference value))
+        var el = _contextStack.Current.Document.GetElement(id);
+        if (el != null)
         {
-          converted = value;
-          cacheHitCount++;
+          revitElements.Add(el);
         }
-        else
-        {
-          converted = _converter.Convert(revitElement);
-          converted.applicationId = applicationId;
-        }
-
-        collection.elements.Add(converted);
-        results.Add(new(Status.SUCCESS, applicationId, revitElement.GetType().Name, converted));
       }
-      catch (Exception ex) when (!ex.IsFatal())
+
+      if (revitElements.Count == 0)
       {
-        results.Add(new(Status.ERROR, applicationId, revitElement.GetType().Name, null, ex));
-        // POC: add logging
+        throw new SpeckleSendFilterException("No objects were found. Please update your send filter!");
       }
 
-      onOperationProgressed?.Invoke("Converting", (double)++countProgress / revitElements.Count);
-    }
+      var countProgress = 0; // because for(int i = 0; ...) loops are so last year
+      var cacheHitCount = 0;
+      List<SendConversionResult> results = new(revitElements.Count);
+      var path = new string[2];
+      foreach (Element revitElement in revitElements)
+      {
+        ct.ThrowIfCancellationRequested();
 
-    // POC: Log would be nice, or can be removed.
-    Debug.WriteLine(
-      $"Cache hit count {cacheHitCount} out of {objects.Count} ({(double)cacheHitCount / objects.Count})"
-    );
+        var cat = revitElement.Category.Name;
+        path[0] = doc.GetElement(revitElement.LevelId) is not Level level ? "No level" : level.Name;
+        path[1] = cat;
+        var collection = GetAndCreateObjectHostCollection(path);
 
-    return new(_rootObject, results);
-  }
+        var applicationId = revitElement.Id.ToString();
+        try
+        {
+          Base converted;
+          if (_sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference value))
+          {
+            converted = value;
+            cacheHitCount++;
+          }
+          else
+          {
+            converted = _converter.Convert(revitElement);
+            converted.applicationId = applicationId;
+          }
+
+          collection.elements.Add(converted);
+          results.Add(new(Status.SUCCESS, applicationId, revitElement.GetType().Name, converted));
+        }
+        catch (Exception ex) when (!ex.IsFatal())
+        {
+          results.Add(new(Status.ERROR, applicationId, revitElement.GetType().Name, null, ex));
+          // POC: add logging
+        }
+
+        onOperationProgressed?.Invoke("Converting", (double)++countProgress / revitElements.Count);
+      }
+
+      // POC: Log would be nice, or can be removed.
+      Debug.WriteLine(
+        $"Cache hit count {cacheHitCount} out of {objects.Count} ({(double)cacheHitCount / objects.Count})"
+      );
+
+      return new RootObjectBuilderResult(_rootObject, results);
+    });
 
   /// <summary>
   /// Creates and nests collections based on the provided path within the root collection provided. This will not return a new collection each time is called, but an existing one if one is found.
