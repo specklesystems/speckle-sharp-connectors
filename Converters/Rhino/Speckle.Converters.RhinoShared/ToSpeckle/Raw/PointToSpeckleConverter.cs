@@ -2,7 +2,7 @@ using Rhino;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
-namespace Speckle.Converters.Rhino7.ToSpeckle.Raw;
+namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
 
 public class PointToSpeckleConverter : ITypedConverter<RG.Point3d, SOG.Point>, ITypedConverter<RG.Point, SOG.Point>
 {

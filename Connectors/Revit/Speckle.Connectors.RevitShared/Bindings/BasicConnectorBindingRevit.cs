@@ -6,7 +6,7 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.RevitShared;
-using Speckle.Connectors.Utils.Reflection;
+using Speckle.Connectors.Utils.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Core.Common;
 using Speckle.Core.Logging;

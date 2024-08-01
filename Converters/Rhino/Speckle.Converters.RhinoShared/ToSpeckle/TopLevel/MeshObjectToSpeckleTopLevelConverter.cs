@@ -2,7 +2,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
-namespace Speckle.Converters.Rhino7.ToSpeckle.TopLevel;
+namespace Speckle.Converters.Rhino.ToSpeckle.TopLevel;
 
 [NameAndRankValue(nameof(MeshObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class MeshObjectToSpeckleTopLevelConverter : RhinoObjectToSpeckleTopLevelConverter<MeshObject, RG.Mesh, SOG.Mesh>

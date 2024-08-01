@@ -4,7 +4,7 @@ using Speckle.Converters.Common.Objects;
 using Speckle.Core.Kits;
 using Speckle.Core.Models;
 
-namespace Speckle.Converters.Rhino7.ToHost.TopLevel;
+namespace Speckle.Converters.Rhino.ToHost.TopLevel;
 
 [NameAndRankValue(nameof(DisplayableObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class FallbackToHostTopLevelConverter
