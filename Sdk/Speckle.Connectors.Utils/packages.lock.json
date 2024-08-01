@@ -356,7 +356,10 @@
         }
       },
       "speckle.autofac": {
-        "type": "Project"
+        "type": "Project",
+        "dependencies": {
+          "Autofac": "[5.2.0, )"
+        }
       },
       "Microsoft.Extensions.Logging.Abstractions": {
         "type": "CentralTransitive",

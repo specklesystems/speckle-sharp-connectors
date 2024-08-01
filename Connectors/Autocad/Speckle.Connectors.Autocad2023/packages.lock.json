@@ -302,7 +302,10 @@
         "contentHash": "okurQJO6NRE/apDIP23ajJ0hpiNmJ+f0BwOlB/cSqTLQlw5upkf+5+96+iG2Jw40G1fCVCyPz/FhIABUjMR+RQ=="
       },
       "speckle.autofac": {
-        "type": "Project"
+        "type": "Project",
+        "dependencies": {
+          "Autofac": "[5.2.0, )"
+        }
       },
       "speckle.connectors.dui": {
         "type": "Project",
