@@ -1,11 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
-    <TargetExt>.rhp</TargetExt>
-    <UseWpf>true</UseWpf>
-    <UseWindowsForms>true</UseWindowsForms>
-    <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
     <Configurations>Debug;Release;Local</Configurations>
+    <RhinoVersion>7</RhinoVersion>
   </PropertyGroup>
 
   <ItemGroup>
