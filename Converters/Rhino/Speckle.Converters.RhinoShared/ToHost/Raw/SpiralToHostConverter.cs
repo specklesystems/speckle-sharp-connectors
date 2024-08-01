@@ -1,6 +1,6 @@
 ﻿using Speckle.Converters.Common.Objects;
 
-namespace Speckle.Converters.Rhino.ToHost.Raw;
+namespace Speckle.Converters.Rhino7.ToHost.Raw;
 
 public class SpiralToHostConverter : ITypedConverter<SOG.Spiral, RG.PolylineCurve>
 {

@@ -2,7 +2,7 @@
 using Rhino;
 using Speckle.Converters.Common;
 
-namespace Speckle.Converters.Rhino;
+namespace Speckle.Converters.Rhino7;
 
 // POC: CNX-9268 Suppressed naming warning for now, but we should evaluate if we should follow this or disable it.
 [SuppressMessage(

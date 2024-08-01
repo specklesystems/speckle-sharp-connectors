@@ -1,6 +1,6 @@
 ﻿using Speckle.Converters.Common.Objects;
 
-namespace Speckle.Converters.Rhino.ToHost.Raw;
+namespace Speckle.Converters.Rhino7.ToHost.Raw;
 
 /// <summary>
 /// This class is responsible for converting a <see cref="SOG.Circle"/> into <see cref="RG.Circle"/> and <see cref="RG.ArcCurve"/> objects.

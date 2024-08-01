@@ -2,7 +2,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
-namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
+namespace Speckle.Converters.Rhino7.ToSpeckle.Raw;
 
 public class RawPointCloudToSpeckle : ITypedConverter<RG.PointCloud, SOG.Pointcloud>
 {

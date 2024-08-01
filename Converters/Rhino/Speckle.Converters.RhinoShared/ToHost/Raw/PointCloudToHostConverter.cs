@@ -2,7 +2,7 @@
 using Rhino.Collections;
 using Speckle.Converters.Common.Objects;
 
-namespace Speckle.Converters.Rhino.ToHost.Raw;
+namespace Speckle.Converters.Rhino7.ToHost.Raw;
 
 public class PointCloudToHostConverter : ITypedConverter<SOG.Pointcloud, RG.PointCloud>
 {

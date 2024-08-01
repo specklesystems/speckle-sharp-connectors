@@ -1,6 +1,6 @@
 ﻿using Speckle.Converters.Common.Objects;
 
-namespace Speckle.Converters.Rhino.ToHost.Raw;
+namespace Speckle.Converters.Rhino7.ToHost.Raw;
 
 public class LineToHostConverter : ITypedConverter<SOG.Line, RG.LineCurve>, ITypedConverter<SOG.Line, RG.Line>
 {

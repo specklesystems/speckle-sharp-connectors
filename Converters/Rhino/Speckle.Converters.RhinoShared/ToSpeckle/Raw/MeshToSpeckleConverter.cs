@@ -2,7 +2,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
-namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
+namespace Speckle.Converters.Rhino7.ToSpeckle.Raw;
 
 [NameAndRankValue(nameof(RG.Mesh), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>

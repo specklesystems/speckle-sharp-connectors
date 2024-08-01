@@ -1,11 +1,10 @@
 ﻿using Speckle.Converters.Common.Objects;
 using Speckle.Core.Models;
-using RhinoObject = Rhino.DocObjects.RhinoObject;
 
-namespace Speckle.Converters.Rhino.ToSpeckle.TopLevel;
+namespace Speckle.Converters.Rhino7.ToSpeckle.TopLevel;
 
 public abstract class RhinoObjectToSpeckleTopLevelConverter<TTopLevelIn, TInRaw, TOutRaw> : IToSpeckleTopLevelConverter
-  where TTopLevelIn : RhinoObject
+  where TTopLevelIn : Rhino.DocObjects.RhinoObject
   where TInRaw : RG.GeometryBase
   where TOutRaw : Base
 {

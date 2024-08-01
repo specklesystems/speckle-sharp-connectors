@@ -3,7 +3,7 @@ using Rhino;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
-namespace Speckle.Converters.Rhino.ToHost.Raw;
+namespace Speckle.Converters.Rhino7.ToHost.Raw;
 
 public class BrepToHostConverter : ITypedConverter<SOG.Brep, RG.Brep>
 {

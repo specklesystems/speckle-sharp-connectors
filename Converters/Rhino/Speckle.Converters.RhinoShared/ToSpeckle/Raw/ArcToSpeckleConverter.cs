@@ -2,7 +2,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
-namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
+namespace Speckle.Converters.Rhino7.ToSpeckle.Raw;
 
 public class ArcToSpeckleConverter : ITypedConverter<RG.Arc, SOG.Arc>
 {
@@ -10,7 +10,6 @@ public class ArcToSpeckleConverter : ITypedConverter<RG.Arc, SOG.Arc>
   private readonly ITypedConverter<RG.Plane, SOG.Plane> _planeConverter;
   private readonly ITypedConverter<RG.Box, SOG.Box> _boxConverter;
   private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
-
   private readonly IBoxFactory _boxFactory;
 
   public ArcToSpeckleConverter(

@@ -5,7 +5,7 @@ using Speckle.Converters.Common.Objects;
 using Speckle.Core.Kits;
 using Speckle.Core.Logging;
 
-namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
+namespace Speckle.Converters.Rhino7.ToSpeckle.Raw;
 
 public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.Brep>
 {

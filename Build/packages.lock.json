@@ -38,9 +38,9 @@
       },
       "Speckle.InterfaceGenerator": {
         "type": "Direct",
-        "requested": "[0.9.6, )",
-        "resolved": "0.9.6",
-        "contentHash": "HKH7tYrYYlCK1ct483hgxERAdVdMtl7gUKW9ijWXxA1UsYR4Z+TrRHYmzZ9qmpu1NnTycSrp005NYM78GDKV1w=="
+        "requested": "[0.9.5, )",
+        "resolved": "0.9.5",
+        "contentHash": "oU/L7pN1R7q8KkbrpQ3WJnHirPHqn+9DEA7asOcUiggV5dzVg1A/VYs7GOSusD24njxXh03tE3a2oTLOjt3cVg=="
       },
       "Microsoft.Build.Tasks.Git": {
         "type": "Transitive",

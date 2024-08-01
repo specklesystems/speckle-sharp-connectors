@@ -4,7 +4,7 @@ using NUnit.Framework;
 using Rhino;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.Rhino.ToSpeckle.Raw;
+using Speckle.Converters.Rhino7.ToSpeckle.Raw;
 using Speckle.Testing;
 
 namespace Speckle.Converters.Rhino7.Tests;

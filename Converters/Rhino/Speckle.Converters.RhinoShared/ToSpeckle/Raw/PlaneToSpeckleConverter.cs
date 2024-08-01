@@ -2,7 +2,7 @@ using Rhino;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
-namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
+namespace Speckle.Converters.Rhino7.ToSpeckle.Raw;
 
 public class PlaneToSpeckleConverter : ITypedConverter<RG.Plane, SOG.Plane>
 {

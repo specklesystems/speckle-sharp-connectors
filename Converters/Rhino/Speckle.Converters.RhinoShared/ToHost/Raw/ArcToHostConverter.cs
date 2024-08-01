@@ -1,6 +1,6 @@
 ﻿using Speckle.Converters.Common.Objects;
 
-namespace Speckle.Converters.Rhino.ToHost.Raw;
+namespace Speckle.Converters.Rhino7.ToHost.Raw;
 
 /// <summary>
 /// Converts a SpeckleArcRaw object to a Rhino.Geometry.Arc object or Rhino.Geometry.ArcCurve object.
