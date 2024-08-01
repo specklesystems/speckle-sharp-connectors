@@ -37,28 +37,28 @@ public class SpeckleLogger : ILogger
     EventId eventId,
     TState state,
     Exception? exception,
-    Func<TState, Exception, string> formatter
+    Func<TState, Exception?, string> formatter
   )
   {
     switch (logLevel)
     {
       case LogLevel.Critical:
-        _logger.Fatal(exception!, formatter(state, exception!));
+        _logger.Write(SpeckleLogLevel.Fatal, exception, formatter(state, exception));
         break;
       case LogLevel.Trace:
-        _logger.Debug(exception!, formatter(state, exception!));
+        _logger.Write(SpeckleLogLevel.Verbose, exception, formatter(state, exception));
         break;
       case LogLevel.Debug:
-        _logger.Debug(exception!, formatter(state, exception!));
+        _logger.Write(SpeckleLogLevel.Debug, exception, formatter(state, exception));
         break;
       case LogLevel.Information:
-        _logger.Information(exception!, formatter(state, exception!));
+        _logger.Write(SpeckleLogLevel.Information, exception, formatter(state, exception));
         break;
       case LogLevel.Warning:
-        _logger.Warning(exception!, formatter(state, exception!));
+        _logger.Write(SpeckleLogLevel.Warning, exception, formatter(state, exception));
         break;
       case LogLevel.Error:
-        _logger.Error(exception!, formatter(state, exception!));
+        _logger.Write(SpeckleLogLevel.Error, exception, formatter(state, exception));
         break;
       case LogLevel.None:
       default:
