@@ -10,7 +10,7 @@
     <PackageReference Include="RhinoWindows" IncludeAssets="compile;build" VersionOverride="7.13.21348.13001" />
     <PackageReference Include="System.Resources.Extensions" />
   </ItemGroup>
-
+ 
   <ItemGroup>
     <ProjectReference Include="..\..\..\Converters\Rhino\Speckle.Converters.Rhino7.DependencyInjection\Speckle.Converters.Rhino7.DependencyInjection.csproj" />
     <ProjectReference Include="..\..\..\Sdk\Speckle.Autofac\Speckle.Autofac.csproj" />
@@ -20,19 +20,10 @@
     <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Compile Update="Properties\Resources.Designer.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Resources.resx</DependentUpon>
-    </Compile>
-  </ItemGroup>
+  <Import Project="..\Speckle.Connectors.RhinoShared\Speckle.Connectors.RhinoShared.projitems" Label="Shared" />
 
   <ItemGroup>
-    <EmbeddedResource Update="Properties\Resources.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
+    <Compile Remove="C:\Users\KORAL\Documents\Git\Speckle\speckle-sharp-connectors\Connectors\Rhino\Speckle.Connectors.RhinoShared\Properties\Resources.Designer.cs" />
   </ItemGroup>
 
 </Project>

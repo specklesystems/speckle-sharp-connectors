@@ -1,6 +1,6 @@
 ﻿using Speckle.Converters.Common.Objects;
 
-namespace Speckle.Converters.Rhino7.ToSpeckle.Raw;
+namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
 
 public class IntervalToSpeckleConverter : ITypedConverter<RG.Interval, SOP.Interval>
 {

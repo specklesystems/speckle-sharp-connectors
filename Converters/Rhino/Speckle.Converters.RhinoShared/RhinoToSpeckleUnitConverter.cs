@@ -2,7 +2,7 @@
 using Speckle.Converters.Common;
 using Speckle.Core.Kits;
 
-namespace Speckle.Converters.Rhino7;
+namespace Speckle.Converters.Rhino;
 
 public class RhinoToSpeckleUnitConverter : IHostToSpeckleUnitConverter<UnitSystem>
 {
