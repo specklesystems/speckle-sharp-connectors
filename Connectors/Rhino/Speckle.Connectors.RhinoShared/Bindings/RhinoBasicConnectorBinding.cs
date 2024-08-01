@@ -7,6 +7,7 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Rhino.Extensions;
 using Speckle.Connectors.Rhino.HostApp;
+using Speckle.Connectors.Utils.Common;
 using Speckle.Core.Common;
 
 namespace Speckle.Connectors.Rhino.Bindings;
