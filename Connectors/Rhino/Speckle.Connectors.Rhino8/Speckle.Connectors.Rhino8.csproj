@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net7.0-windows;net48</TargetFrameworks>
+    <TargetFramework>net48</TargetFramework>
     <TargetExt>.rhp</TargetExt>
     <UseWpf>true</UseWpf>
     <UseWindowsForms>true</UseWindowsForms>
@@ -16,7 +16,6 @@
   <ItemGroup>
     <PackageReference Include="RhinoCommon" NoWarn="NU1701" IncludeAssets="compile; build" PrivateAssets="all" />
     <PackageReference Include="RhinoWindows" NoWarn="NU1701" IncludeAssets="compile; build" PrivateAssets="all" />
-    <PackageReference Include="System.Resources.Extensions" />
   </ItemGroup>
 
   <ItemGroup>
