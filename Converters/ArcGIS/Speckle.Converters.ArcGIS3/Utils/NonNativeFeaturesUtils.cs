@@ -29,9 +29,13 @@ public class NonNativeFeaturesUtils : INonNativeFeaturesUtils
 
   public void WriteGeometriesToDatasets(
     // Dictionary<TraversalContext, (string nestedParentPath, ACG.Geometry geom)> conversionTracker
-    Dictionary<TraversalContext, ObjectConversionTracker> conversionTracker
+    Dictionary<TraversalContext, ObjectConversionTracker> conversionTracker,
+    Action<string, double?>? onOperationProgressed
   )
   {
+    int allCount = conversionTracker.Count;
+    int count = 0;
+
     // 1. Sort features into groups by path and geom type
     Dictionary<string, List<(Base baseObj, ACG.Geometry convertedGeom)>> geometryGroups = new();
     foreach (var item in conversionTracker)
@@ -124,6 +128,9 @@ public class NonNativeFeaturesUtils : INonNativeFeaturesUtils
           }
         }
       }
+
+      count += listOfGeometryTuples.Count;
+      onOperationProgressed?.Invoke("Writing to Database", (double)count / allCount);
     }
   }
 
