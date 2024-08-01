@@ -122,18 +122,15 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
 
     // 2. convert Database entries with non-GIS geometry datasets
     onOperationProgressed?.Invoke("Writing to Database", null);
-    _nonGisFeaturesUtils.WriteGeometriesToDatasets(conversionTracker, onOperationProgressed);
-
-    // Create main group layer
-    Dictionary<string, GroupLayer> createdLayerGroups = new();
-    Map map = _contextStack.Current.Document.Map;
-    GroupLayer groupLayer = QueuedTask
+    QueuedTask
       .Run(() =>
       {
-        return LayerFactory.Instance.CreateGroupLayer(map, 0, $"{projectName}: {modelName}");
+        _nonGisFeaturesUtils.WriteGeometriesToDatasets(conversionTracker, onOperationProgressed);
       })
-      .Result;
-    createdLayerGroups["Basic Speckle Group"] = groupLayer; // key doesn't really matter here
+      .Wait(cancellationToken);
+
+    // Create placeholder for Group Layers
+    Dictionary<string, GroupLayer> createdLayerGroups = new();
 
     // 3. add layer and tables to the Table Of Content
     int bakeCount = 0;
@@ -174,7 +171,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       else
       {
         // add layer to Map
-        MapMember mapMember = AddDatasetsToMap(trackerItem, createdLayerGroups);
+        MapMember mapMember = AddDatasetsToMap(trackerItem, createdLayerGroups, projectName, modelName);
 
         // add layer and layer URI to tracker
         trackerItem.AddConvertedMapMember(mapMember);
@@ -243,7 +240,9 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
 
   private MapMember AddDatasetsToMap(
     ObjectConversionTracker trackerItem,
-    Dictionary<string, GroupLayer> createdLayerGroups
+    Dictionary<string, GroupLayer> createdLayerGroups,
+    string projectName,
+    string modelName
   )
   {
     return QueuedTask
@@ -258,6 +257,19 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
         // add group for the current layer
         string shortName = nestedLayerName.Split("\\")[^1];
         string nestedLayerPath = string.Join("\\", nestedLayerName.Split("\\").SkipLast(1));
+
+        // if no general group layer found
+        if (createdLayerGroups.Count == 0)
+        {
+          Map map = _contextStack.Current.Document.Map;
+          GroupLayer mainGroupLayer = QueuedTask
+            .Run(() =>
+            {
+              return LayerFactory.Instance.CreateGroupLayer(map, 0, $"{projectName}: {modelName}");
+            })
+            .Result;
+          createdLayerGroups["Basic Speckle Group"] = mainGroupLayer; // key doesn't really matter here
+        }
 
         GroupLayer groupLayer = QueuedTask
           .Run(() => CreateNestedGroupLayer(nestedLayerPath, createdLayerGroups))
