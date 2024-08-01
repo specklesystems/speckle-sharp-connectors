@@ -1,13 +1,13 @@
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
-using Sentry.Reflection;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Rhino.Extensions;
 using Speckle.Connectors.Rhino.HostApp;
+using Speckle.Connectors.Utils.Common;
 using Speckle.Core.Common;
 
 namespace Speckle.Connectors.Rhino.Bindings;
@@ -34,15 +34,20 @@ public class RhinoBasicConnectorBinding : IBasicConnectorBinding
     };
   }
 
-  public string GetConnectorVersion() =>
-    typeof(RhinoBasicConnectorBinding).Assembly.GetNameAndVersion().Version ?? "No version";
+  public string GetConnectorVersion() => typeof(RhinoBasicConnectorBinding).Assembly.GetVersion();
 
   public string GetSourceApplicationName() => _settings.HostAppInfo.Slug;
 
   public string GetSourceApplicationVersion() => "7";
 
-  public DocumentInfo GetDocumentInfo() =>
-    new(RhinoDoc.ActiveDoc.Path, RhinoDoc.ActiveDoc.Name, RhinoDoc.ActiveDoc.RuntimeSerialNumber.ToString());
+  public DocumentInfo? GetDocumentInfo()
+  {
+    if (RhinoDoc.ActiveDoc is null)
+    {
+      return null;
+    }
+    return new(RhinoDoc.ActiveDoc.Path, RhinoDoc.ActiveDoc.Name, RhinoDoc.ActiveDoc.RuntimeSerialNumber.ToString());
+  }
 
   public DocumentModelStore GetDocumentState() => _store;
 
