@@ -10,7 +10,7 @@
     <PackageVersion Include="Moq" Version="4.20.70" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.0" />
-    <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.1823.32" />
+    <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.1938.49" />
     <PackageVersion Include="NUnit" Version="4.1.0" />
     <PackageVersion Include="NUnit.Analyzers" Version="4.2.0" />
     <PackageVersion Include="NUnit3TestAdapter" version="4.5.0" />
