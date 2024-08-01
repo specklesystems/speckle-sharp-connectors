@@ -7,7 +7,7 @@ on:
 
 jobs: 
   test:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,7 +24,7 @@ jobs:
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
 
       - name: ⚒️ Run build
-        run: ./build.sh
+        run: ./build.ps1
         
       - name: Upload coverage reports to Codecov with GitHub Action
         uses: codecov/codecov-action@v4
