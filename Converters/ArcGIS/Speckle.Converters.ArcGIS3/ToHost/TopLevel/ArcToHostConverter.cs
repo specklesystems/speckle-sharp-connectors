@@ -25,7 +25,7 @@ public class ArcToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG.
   {
     if (target.startPoint.z != target.midPoint.z || target.startPoint.z != target.endPoint.z)
     {
-      throw new ArgumentException("Only Arc in XY plane are supported");
+      throw new ArgumentException("Only Arcs in XY plane are supported");
     }
     ACG.MapPoint fromPt = _pointConverter.Convert(target.startPoint);
     ACG.MapPoint toPt = _pointConverter.Convert(target.endPoint);
