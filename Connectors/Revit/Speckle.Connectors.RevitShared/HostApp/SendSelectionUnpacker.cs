@@ -64,7 +64,7 @@ public class SendSelectionUnpacker
   {
     var ids = elements.Select(el => el.Id).ToArray();
     elements.RemoveAll(element =>
-      ((element is Mullion m && ids.Contains(m.Host.Id)) || (element is Panel p && ids.Contains(p.Host.Id)))
+      (element is Mullion m && ids.Contains(m.Host.Id)) || (element is Panel p && ids.Contains(p.Host.Id))
     );
     return elements;
   }
