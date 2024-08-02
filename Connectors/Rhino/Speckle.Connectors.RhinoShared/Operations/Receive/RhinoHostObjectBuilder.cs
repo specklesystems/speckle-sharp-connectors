@@ -62,8 +62,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       var baseLayerName = $"Project {projectName}: Model {modelName}";
 
       var objectsToConvert = _traverseFunction
-      .Traverse(rootObject)
-      //.TraverseWithProgress(rootObject, onOperationProgressed, cancellationToken)
+        .Traverse(rootObject)
+        //.TraverseWithProgress(rootObject, onOperationProgressed, cancellationToken)
         .Where(obj => obj.Current is not Collection);
 
       var instanceDefinitionProxies = (rootObject["instanceDefinitionProxies"] as List<object>)
