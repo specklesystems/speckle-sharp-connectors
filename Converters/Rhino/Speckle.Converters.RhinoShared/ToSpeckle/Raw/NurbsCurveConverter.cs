@@ -46,7 +46,7 @@ public class NurbsCurveConverter : ITypedConverter<RG.NurbsCurve, SOG.Curve>
     {
       if (!polylineCurve.TryGetPolyline(out Polyline poly))
       {
-        // POC: report error
+        // POC: report CONVERTED WITH WARNING
       }
 
       if (target.IsClosed)
@@ -58,7 +58,7 @@ public class NurbsCurveConverter : ITypedConverter<RG.NurbsCurve, SOG.Curve>
     }
     else
     {
-      // POC: report error
+      // POC: report CONVERTED WITH WARNING
     }
 
     // increase knot multiplicity to (# control points + degree + 1)
