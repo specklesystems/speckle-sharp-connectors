@@ -39,15 +39,6 @@
         "resolved": "0.9.6",
         "contentHash": "HKH7tYrYYlCK1ct483hgxERAdVdMtl7gUKW9ijWXxA1UsYR4Z+TrRHYmzZ9qmpu1NnTycSrp005NYM78GDKV1w=="
       },
-      "System.Resources.Extensions": {
-        "type": "Direct",
-        "requested": "[7.0.0, )",
-        "resolved": "7.0.0",
-        "contentHash": "65ufm9ABXvxRkQ//hMcUDrQXbGWkC7z0WWZAvHlQ6Qv+JmrIwHH1lmX8aXlNlXpIrT9KxDpuZPqJTVqqwzMD8Q==",
-        "dependencies": {
-          "System.Memory": "4.5.5"
-        }
-      },
       "GraphQL.Client": {
         "type": "Transitive",
         "resolved": "6.0.0",
@@ -347,7 +338,7 @@
       "speckle.connectors.dui.webview": {
         "type": "Project",
         "dependencies": {
-          "Microsoft.Web.WebView2": "[1.0.1823.32, )",
+          "Microsoft.Web.WebView2": "[1.0.1938.49, )",
           "Speckle.Connectors.DUI": "[1.0.0, )"
         }
       },
@@ -407,9 +398,9 @@
       },
       "Microsoft.Web.WebView2": {
         "type": "CentralTransitive",
-        "requested": "[1.0.1823.32, )",
-        "resolved": "1.0.1823.32",
-        "contentHash": "ppRcWBUNggFIqyJp7PfgS4Oe8/7yli/mHcTNDOaqo3ZzJWnv9AOr0WE9ceEP5SPs1M7CQ3QvdGMR7KNz0v09EA=="
+        "requested": "[1.0.1938.49, )",
+        "resolved": "1.0.1938.49",
+        "contentHash": "z8KnFnaTYzhA/ZnyRX0qGfS1NU5ZBJeClAH64F0fVDvdDJTvME7xl6zTJ0Jlfe1BtL3C0NH9xTy64shg2baKdw=="
       },
       "Serilog.Extensions.Logging": {
         "type": "CentralTransitive",
