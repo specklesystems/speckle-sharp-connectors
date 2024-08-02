@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using Objects;
+﻿using Objects;
 using Speckle.Converters.Common;
 using Speckle.Core.Models;
 using Speckle.DoubleNumerics;
