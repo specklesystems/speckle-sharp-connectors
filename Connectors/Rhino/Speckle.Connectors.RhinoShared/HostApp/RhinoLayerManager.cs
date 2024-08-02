@@ -46,7 +46,7 @@ public class RhinoLayerManager
     var previousLayer = currentDocument.Layers.FindName(currentLayerName);
     foreach (Collection collection in collectionPath)
     {
-      currentLayerName = baseLayerName + Layer.PathSeparator + collection.name;
+      currentLayerName += Layer.PathSeparator + collection.name;
       currentLayerName = currentLayerName.Replace("{", "").Replace("}", ""); // Rhino specific cleanup for gh (see RemoveInvalidRhinoChars)
       if (_hostLayerCache.TryGetValue(currentLayerName, out int value))
       {
@@ -58,6 +58,7 @@ public class RhinoLayerManager
       Color layerColor = collection is IHasColor coloredCollection
         ? Color.FromArgb(coloredCollection.color)
         : Color.Black;
+
       var newLayer = new Layer
       {
         Name = cleanNewLayerName,
@@ -69,6 +70,7 @@ public class RhinoLayerManager
       _hostLayerCache.Add(currentLayerName, index);
       previousLayer = currentDocument.Layers.FindIndex(index); // note we need to get the correct id out, hence why we're double calling this
     }
+
     return previousLayer.Index;
   }
 

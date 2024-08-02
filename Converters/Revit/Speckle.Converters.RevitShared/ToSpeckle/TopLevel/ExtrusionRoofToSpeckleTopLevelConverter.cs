@@ -1,7 +1,6 @@
 using Objects.BuiltElements.Revit.RevitRoof;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Helpers;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
@@ -15,7 +14,6 @@ public class ExtrusionRoofToSpeckleTopLevelConverter
   private readonly ITypedConverter<DB.XYZ, SOG.Point> _pointConverter;
   private readonly ParameterValueExtractor _parameterValueExtractor;
   private readonly DisplayValueExtractor _displayValueExtractor;
-  private readonly HostedElementConversionToSpeckle _hostedElementConverter;
   private readonly ParameterObjectAssigner _parameterObjectAssigner;
 
   public ExtrusionRoofToSpeckleTopLevelConverter(
@@ -24,7 +22,6 @@ public class ExtrusionRoofToSpeckleTopLevelConverter
     ITypedConverter<DB.XYZ, SOG.Point> pointConverter,
     ParameterValueExtractor parameterValueExtractor,
     DisplayValueExtractor displayValueExtractor,
-    HostedElementConversionToSpeckle hostedElementConverter,
     ParameterObjectAssigner parameterObjectAssigner
   )
   {
@@ -33,7 +30,6 @@ public class ExtrusionRoofToSpeckleTopLevelConverter
     _pointConverter = pointConverter;
     _parameterValueExtractor = parameterValueExtractor;
     _displayValueExtractor = displayValueExtractor;
-    _hostedElementConverter = hostedElementConverter;
     _parameterObjectAssigner = parameterObjectAssigner;
   }
 
@@ -62,9 +58,11 @@ public class ExtrusionRoofToSpeckleTopLevelConverter
 
     _parameterObjectAssigner.AssignParametersToBase(target, speckleExtrusionRoof);
     speckleExtrusionRoof.displayValue = _displayValueExtractor.GetDisplayValue(target);
-    speckleExtrusionRoof.elements = _hostedElementConverter
-      .ConvertHostedElements(target.GetHostedElementIds())
-      .ToList();
+
+    // POC: removing hosted elements from roof
+    // speckleExtrusionRoof.elements = _hostedElementConverter
+    //   .ConvertHostedElements(target.GetHostedElementIds())
+    //   .ToList();
 
     return speckleExtrusionRoof;
   }

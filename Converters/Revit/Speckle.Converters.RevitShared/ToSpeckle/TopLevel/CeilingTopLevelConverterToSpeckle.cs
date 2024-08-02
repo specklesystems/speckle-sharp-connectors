@@ -17,8 +17,6 @@ internal sealed class CeilingTopLevelConverterToSpeckle : BaseTopLevelConverterT
   private readonly ParameterObjectAssigner _parameterObjectAssigner;
   private readonly DisplayValueExtractor _displayValueExtractor;
 
-  //private readonly HostedElementConversionToSpeckle _hostedElementConverter;
-
   public CeilingTopLevelConverterToSpeckle(
     ITypedConverter<CurveArrArray, List<Polycurve>> curveArrArrayConverter,
     ITypedConverter<DB.Level, RevitLevel> levelConverter,

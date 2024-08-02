@@ -41,15 +41,13 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   public Task<HostObjectBuilderResult> Build(
     Base rootObject,
     string projectName,
-    string _,
+    string modelName,
     Action<string, double?>? onOperationProgressed,
     CancellationToken cancellationToken
   ) =>
     _syncToThread.RunOnThread(() =>
     {
-      var objectsToConvert = _traverseFunction
-        .TraverseWithProgress(rootObject, onOperationProgressed, cancellationToken)
-        .Where(obj => obj.Current is not Collection);
+      var objectsToConvert = _traverseFunction.Traverse(rootObject).Where(obj => obj.Current is not Collection);
 
       using TransactionGroup transactionGroup =
         new(_contextStack.Current.Document, $"Received data from {projectName}");
