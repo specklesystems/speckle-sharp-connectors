@@ -2,7 +2,8 @@ using Rhino;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.DependencyInjection;
-using Speckle.Converters.Rhino7.ToSpeckle.Raw;
+using Speckle.Converters.Rhino;
+using Speckle.Converters.Rhino.ToSpeckle.Raw;
 
 namespace Speckle.Converters.Rhino7.DependencyInjection;
 

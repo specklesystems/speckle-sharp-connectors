@@ -2,7 +2,7 @@
 using Speckle.Converters.Common.Objects;
 using Speckle.Core.Models;
 
-namespace Speckle.Converters.Rhino7.ToSpeckle.Raw;
+namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
 
 // POC: CNX-9278 This converter decides which specific curve conversion to use. IIndex may be a better choice.
 public class CurveToSpeckleConverter : ITypedConverter<RG.Curve, ICurve>, ITypedConverter<RG.Curve, Base>

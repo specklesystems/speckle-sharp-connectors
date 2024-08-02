@@ -3,7 +3,7 @@ using Speckle.Converters.Common.Objects;
 using Speckle.Core.Common;
 using Speckle.Core.Kits;
 
-namespace Speckle.Converters.Rhino7.ToHost.Raw;
+namespace Speckle.Converters.Rhino.ToHost.Raw;
 
 public class PolyCurveToHostConverter : ITypedConverter<SOG.Polycurve, RG.PolyCurve>
 {

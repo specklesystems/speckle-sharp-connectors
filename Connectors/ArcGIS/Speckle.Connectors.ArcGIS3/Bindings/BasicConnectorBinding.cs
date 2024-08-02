@@ -1,4 +1,3 @@
-using System.Reflection;
 using ArcGIS.Core.Data;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
@@ -8,7 +7,7 @@ using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.Utils.Reflection;
+using Speckle.Connectors.Utils.Common;
 using Speckle.Core.Common;
 
 namespace Speckle.Connectors.ArcGIS.Bindings;
@@ -40,7 +39,7 @@ public class BasicConnectorBinding : IBasicConnectorBinding
 
   public string GetSourceApplicationVersion() => _settings.HostAppInfo.GetVersion(_settings.HostAppVersion);
 
-  public string GetConnectorVersion() => Assembly.GetAssembly(GetType()).NotNull().GetVersion();
+  public string GetConnectorVersion() => typeof(BasicConnectorBinding).Assembly.GetVersion();
 
   public DocumentInfo? GetDocumentInfo()
   {
@@ -184,6 +183,10 @@ public class BasicConnectorBinding : IBasicConnectorBinding
         if (member is not GroupLayer) // group layer selection clears other layers selection
         {
           layers.Add(layer);
+        }
+        else
+        {
+          QueuedTask.Run(() => layer.SetExpanded(true));
         }
       }
       else if (member is StandaloneTable table)
