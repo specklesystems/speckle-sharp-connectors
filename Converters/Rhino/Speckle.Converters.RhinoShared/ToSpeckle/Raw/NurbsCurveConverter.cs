@@ -1,4 +1,5 @@
-﻿using Rhino;
+using Rhino;
+using Rhino.Geometry;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
@@ -36,23 +37,38 @@ public class NurbsCurveConverter : ITypedConverter<RG.NurbsCurve, SOG.Curve>
   /// </remarks>
   public SOG.Curve Convert(RG.NurbsCurve target)
   {
-    target.ToPolyline(0, 1, 0, 0, 0, 0.1, 0, 0, true).TryGetPolyline(out var poly);
-    if (target.IsClosed)
+    // tolerance
+    double tolerance = _contextStack.Current.Document.ModelAbsoluteTolerance;
+
+    // Get display value
+    SOG.Polyline displayPoly = new();
+    if (target.ToPolyline(0, 1, 0, 0, 0, tolerance, 0, 0, true) is PolylineCurve polylineCurve)
     {
-      poly.Add(poly[0]);
+      if (!polylineCurve.TryGetPolyline(out Polyline poly))
+      {
+        // POC: report CONVERTED WITH WARNING
+      }
+
+      if (target.IsClosed)
+      {
+        poly.Add(poly[0]);
+      }
+
+      displayPoly = _polylineConverter.Convert(poly);
     }
-
-    SOG.Polyline displayValue = _polylineConverter.Convert(poly);
-
-    var nurbsCurve = target.ToNurbsCurve();
+    else
+    {
+      // POC: report CONVERTED WITH WARNING
+    }
 
     // increase knot multiplicity to (# control points + degree + 1)
     // add extra knots at start & end  because Rhino's knot multiplicity standard is (# control points + degree - 1)
+    var nurbsCurve = target.ToNurbsCurve();
     var knots = nurbsCurve.Knots.ToList();
     knots.Insert(0, knots[0]);
     knots.Insert(knots.Count - 1, knots[^1]);
 
-    var myCurve = new SOG.Curve(displayValue, _contextStack.Current.SpeckleUnits)
+    var myCurve = new SOG.Curve(displayPoly, _contextStack.Current.SpeckleUnits)
     {
       weights = nurbsCurve.Points.Select(ctp => ctp.Weight).ToList(),
       points = nurbsCurve.Points.SelectMany(ctp => new[] { ctp.Location.X, ctp.Location.Y, ctp.Location.Z }).ToList(),
