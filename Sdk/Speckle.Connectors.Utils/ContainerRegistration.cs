@@ -2,7 +2,6 @@ using Autofac;
 using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Utils.Cancellation;
-using Speckle.Connectors.Utils.Common;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Logging;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
