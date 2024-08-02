@@ -144,7 +144,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
       }
       else
       {
-        childCollection = new Collection(pathItem, "layer");
+        childCollection = new Collection(pathItem);
         previousCollection.elements.Add(childCollection);
         _collectionCache[flatPathName] = childCollection;
       }
