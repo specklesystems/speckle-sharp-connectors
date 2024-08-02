@@ -125,6 +125,11 @@
         "resolved": "4.0.1",
         "contentHash": "MzEQ1Im0zTja+tEsdRIk/WlPiKqb22NmTOJcR1ZKm/mz46pezyyID3/wRz6vJUELMpSLnG7LhsxBL+nxbr7V0w=="
       },
+      "Speckle.Logging": {
+        "type": "Transitive",
+        "resolved": "3.1.0-dev.88",
+        "contentHash": "kD8Xuqbv5lmNQGuv+gx+OnzFt51twc2aIWHEmaG+HBwojR4PZ9IqsaCcMSu4wv/Q1p+Xq5MZldVDkO368JSJRw=="
+      },
       "Speckle.Newtonsoft.Json": {
         "type": "Transitive",
         "resolved": "13.0.2",
@@ -285,12 +290,6 @@
           "Speckle.Newtonsoft.Json": "13.0.2",
           "System.Text.Json": "5.0.2"
         }
-      },
-      "Speckle.Logging": {
-        "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.88, )",
-        "resolved": "3.1.0-dev.88",
-        "contentHash": "kD8Xuqbv5lmNQGuv+gx+OnzFt51twc2aIWHEmaG+HBwojR4PZ9IqsaCcMSu4wv/Q1p+Xq5MZldVDkO368JSJRw=="
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
