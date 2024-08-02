@@ -125,11 +125,12 @@ public class RhinoLayerManager
   }
 
   /// <summary>
-  /// Gets the full path of the layer, concatenated with Rhino's Layer.PathSeparator
+  /// Gets the full path of the layer, concatenated with Rhino's Layer.
   /// </summary>
   /// <param name="context"></param>
   /// <returns></returns>
   [Pure]
+  //POC test me!
   public Collection[] GetLayerPath(TraversalContext context)
   {
     Collection[] collectionBasedPath = context.GetAscendantOfType<Collection>().Reverse().ToArray();
@@ -137,7 +138,11 @@ public class RhinoLayerManager
     Collection[] collectionPath =
       collectionBasedPath.Length != 0
         ? collectionBasedPath
-        : context.GetPropertyPath().Reverse().Select(o => new Collection() { name = o }).ToArray();
+        : context
+          .GetPropertyPath()
+          .Reverse()
+          .Select(o => new Collection() { applicationId = Guid.NewGuid().ToString(), name = o })
+          .ToArray();
 
     return collectionPath;
   }
