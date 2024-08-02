@@ -79,40 +79,40 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
         throw new SpeckleSendFilterException("No objects were found. Please update your send filter!");
       }
 
-    // Unpack groups (& other complex data structures)
-    var atomicObjects = _sendSelectionUnpacker.UnpackSelection(revitElements).ToList();
+      // Unpack groups (& other complex data structures)
+      var atomicObjects = _sendSelectionUnpacker.UnpackSelection(revitElements).ToList();
 
-    var countProgress = 0; // because for(int i = 0; ...) loops are so last year
-    var cacheHitCount = 0;
-    List<SendConversionResult> results = new(revitElements.Count);
+      var countProgress = 0; // because for(int i = 0; ...) loops are so last year
+      var cacheHitCount = 0;
+      List<SendConversionResult> results = new(revitElements.Count);
 
-    foreach (Element revitElement in atomicObjects)
-    {
-      ct.ThrowIfCancellationRequested();
-
-      var path = new List<string>();
-      // Add level to path
-      path.Add(doc.GetElement(revitElement.LevelId) is not Level level ? "No level" : level.Name);
-      // Add category to path
-      var cat = revitElement.Category?.Name ?? "No category";
-      path.Add(cat);
-
-      // Add optional type to path
-      var typeId = revitElement.GetTypeId();
-      if (typeId != ElementId.InvalidElementId)
+      foreach (Element revitElement in atomicObjects)
       {
-        var type = doc.GetElement(typeId);
-        if (type != null)
+        ct.ThrowIfCancellationRequested();
+
+        var path = new List<string>();
+        // Add level to path
+        path.Add(doc.GetElement(revitElement.LevelId) is not Level level ? "No level" : level.Name);
+        // Add category to path
+        var cat = revitElement.Category?.Name ?? "No category";
+        path.Add(cat);
+
+        // Add optional type to path
+        var typeId = revitElement.GetTypeId();
+        if (typeId != ElementId.InvalidElementId)
         {
-          path.Add(type.Name);
+          var type = doc.GetElement(typeId);
+          if (type != null)
+          {
+            path.Add(type.Name);
+          }
         }
-      }
-      else
-      {
-        path.Add("No type");
-      }
+        else
+        {
+          path.Add("No type");
+        }
 
-      var collection = GetAndCreateObjectHostCollection(path);
+        var collection = GetAndCreateObjectHostCollection(path);
 
         var applicationId = revitElement.Id.ToString();
         try
