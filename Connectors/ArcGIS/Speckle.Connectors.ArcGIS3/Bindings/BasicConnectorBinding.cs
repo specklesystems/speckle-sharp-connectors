@@ -184,6 +184,10 @@ public class BasicConnectorBinding : IBasicConnectorBinding
         {
           layers.Add(layer);
         }
+        else
+        {
+          QueuedTask.Run(() => layer.SetExpanded(true));
+        }
       }
       else if (member is StandaloneTable table)
       {
