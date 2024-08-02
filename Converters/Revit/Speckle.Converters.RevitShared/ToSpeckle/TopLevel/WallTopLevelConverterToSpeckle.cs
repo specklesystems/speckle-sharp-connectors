@@ -2,7 +2,6 @@ using Objects;
 using Objects.BuiltElements.Revit;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Core.Models;
 using Speckle.Core.Models.Extensions;
@@ -87,18 +86,21 @@ public class WallTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.
       out double? height
     );
     speckleWall.height = height ?? 0;
+
     _ = _parameterValueExtractor.TryGetValueAsDouble(
       target,
       DB.BuiltInParameter.WALL_BASE_OFFSET,
       out double? baseOffset
     );
     speckleWall.baseOffset = baseOffset ?? 0;
+
     _ = _parameterValueExtractor.TryGetValueAsDouble(
       target,
       DB.BuiltInParameter.WALL_TOP_OFFSET,
       out double? topOffset
     );
     speckleWall.topOffset = topOffset ?? 0;
+
     speckleWall.structural =
       _parameterValueExtractor.GetValueAsBool(target, DB.BuiltInParameter.WALL_STRUCTURAL_SIGNIFICANT) ?? false;
     speckleWall.flipped = target.Flipped;
@@ -107,6 +109,7 @@ public class WallTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.
   private List<Base> GetChildElements(DB.Wall target)
   {
     List<Base> wallChildren = new();
+
     if (target.CurtainGrid is DB.CurtainGrid grid)
     {
       wallChildren.AddRange(ConvertElements(grid.GetMullionIds()));
@@ -116,7 +119,8 @@ public class WallTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.
     {
       wallChildren.AddRange(ConvertElements(target.GetStackedWallMemberIds()));
     }
-    wallChildren.AddRange(ConvertElements(target.GetHostedElementIds()));
+    // POC: removing hosted elements from parents
+    // wallChildren.AddRange(ConvertElements(target.GetHostedElementIds()));
     return wallChildren;
   }
 
