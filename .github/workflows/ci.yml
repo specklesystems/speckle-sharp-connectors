@@ -5,7 +5,30 @@ on:
     branches-ignore:
       - main
 
-jobs: 
+jobs:   
+  build:
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.set-version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.2xx # Align with global.json (including roll forward rules)
+      
+      - name: Cache Nuget     
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+
+      - name: ⚒️ Run build
+        run: ./build.ps1 test
   test:
     runs-on: ubuntu-latest
     steps:
