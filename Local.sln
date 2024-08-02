@@ -140,6 +140,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Core", "..\speckle-
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Objects", "..\speckle-sharp-sdk\src\Speckle.Objects\Speckle.Objects.csproj", "{259A84F0-2D1E-49DE-9137-93BE6858A52C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Logging", "..\speckle-sharp-sdk\src\Speckle.Logging\Speckle.Logging.csproj", "{6279DBDA-95D0-437F-AC1B-6FD4AD1E7813}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Local|Any CPU = Local|Any CPU
@@ -221,6 +223,8 @@ Global
 		{633B7099-4D96-40C2-AC25-7660A81E0FA2}.Local|Any CPU.Build.0 = Local|Any CPU
 		{259A84F0-2D1E-49DE-9137-93BE6858A52C}.Local|Any CPU.ActiveCfg = Local|Any CPU
 		{259A84F0-2D1E-49DE-9137-93BE6858A52C}.Local|Any CPU.Build.0 = Local|Any CPU
+		{6279DBDA-95D0-437F-AC1B-6FD4AD1E7813}.Local|Any CPU.ActiveCfg = Debug|Any CPU
+		{6279DBDA-95D0-437F-AC1B-6FD4AD1E7813}.Local|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
