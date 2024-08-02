@@ -42,9 +42,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     CancellationToken cancellationToken
   )
   {
-    var objectsToConvert = _traverseFunction
-      .TraverseWithProgress(rootObject, onOperationProgressed, cancellationToken)
-      .Where(obj => obj.Current is not Collection);
+    var objectsToConvert = _traverseFunction.Traverse(rootObject).Where(obj => obj.Current is not Collection);
 
     using TransactionGroup transactionGroup = new(_contextStack.Current.Document, $"Received data from {projectName}");
     transactionGroup.Start();
