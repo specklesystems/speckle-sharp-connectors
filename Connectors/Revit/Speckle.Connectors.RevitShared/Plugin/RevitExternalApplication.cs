@@ -4,6 +4,7 @@ using Autodesk.Revit.UI;
 using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Core.Common;
+using Speckle.Core.Kits;
 using Speckle.Core.Logging;
 
 namespace Speckle.Connectors.Revit.Plugin;
@@ -35,7 +36,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
       "Speckle New UI",
       "Revit",
       [Path.GetDirectoryName(typeof(RevitExternalApplication).Assembly.Location).NotNull()],
-      "Revit Connector",
+      HostApplications.Revit.Slug,
       GetVersionAsString() //POC: app version?
     );
   }
@@ -63,7 +64,15 @@ internal sealed class RevitExternalApplication : IExternalApplication
       AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<RevitExternalApplication>;
       var containerBuilder = SpeckleContainerBuilder.CreateInstance();
       // init DI
-      _disposableLogger = Setup.Initialize($"Revit {GetVersionAsString()}", GetVersionAsString());
+      _disposableLogger = Setup.Initialize(
+        new(
+          $"Revit {GetVersionAsString()}",
+          GetVersionAsString(),
+          HostApplications.Revit.Slug,
+          new(Console: true, File: false, Otel: true, Seq: false),
+          new(Console: false, Otel: true, Seq: false)
+        )
+      );
       _container = containerBuilder
         .LoadAutofacModules(Assembly.GetExecutingAssembly(), _revitSettings.ModuleFolders.NotNull())
         .AddSingleton(_revitSettings) // apply revit settings into DI
