@@ -320,7 +320,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
           SetLayerRenderer(fLayer, null);
         }
 
-        return layer;
+        return (MapMember)layer;
       }
       catch (ArgumentException)
       {
@@ -331,6 +331,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
         );
         return table;
       }
+    });
   }
 
   private void SetLayerRenderer(FeatureLayer fLayer, CIMUniqueValueClass? newUniqueValueClass)
