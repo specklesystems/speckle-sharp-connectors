@@ -9,19 +9,16 @@ namespace Speckle.Connectors.Utils.Operations;
 public sealed class ReceiveOperation
 {
   private readonly IHostObjectBuilder _hostObjectBuilder;
-  private readonly ISyncToThread _syncToThread;
   private readonly AccountService _accountService;
   private readonly IServerTransportFactory _serverTransportFactory;
 
   public ReceiveOperation(
     IHostObjectBuilder hostObjectBuilder,
-    ISyncToThread syncToThread,
     AccountService accountService,
     IServerTransportFactory serverTransportFactory
   )
   {
     _hostObjectBuilder = hostObjectBuilder;
-    _syncToThread = syncToThread;
     _accountService = accountService;
     _serverTransportFactory = serverTransportFactory;
   }
@@ -49,17 +46,8 @@ public sealed class ReceiveOperation
     cancellationToken.ThrowIfCancellationRequested();
 
     // 4 - Convert objects
-    var res = await _syncToThread
-      .RunOnThread(() =>
-      {
-        return _hostObjectBuilder.Build(
-          commitObject,
-          receiveInfo.ProjectName,
-          receiveInfo.ModelName,
-          onOperationProgressed,
-          cancellationToken
-        );
-      })
+    var res = await _hostObjectBuilder
+      .Build(commitObject, receiveInfo.ProjectName, receiveInfo.ModelName, onOperationProgressed, cancellationToken)
       .ConfigureAwait(false);
 
     await apiClient

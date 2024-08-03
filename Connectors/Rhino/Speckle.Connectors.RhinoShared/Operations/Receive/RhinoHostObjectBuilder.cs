@@ -5,6 +5,7 @@ using Rhino.Geometry;
 using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
+using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
@@ -26,6 +27,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private readonly RhinoInstanceObjectsManager _instanceObjectsManager;
   private readonly RhinoLayerManager _layerManager;
   private readonly RhinoMaterialManager _materialManager;
+  private readonly ISyncToThread _syncToThread;
 
   public RhinoHostObjectBuilder(
     IRootToHostConverter converter,
@@ -33,7 +35,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     GraphTraversal traverseFunction,
     RhinoLayerManager layerManager,
     RhinoInstanceObjectsManager instanceObjectsManager,
-    RhinoMaterialManager materialManager
+    RhinoMaterialManager materialManager,
+    ISyncToThread syncToThread
   )
   {
     _converter = converter;
@@ -42,9 +45,10 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _layerManager = layerManager;
     _instanceObjectsManager = instanceObjectsManager;
     _materialManager = materialManager;
+    _syncToThread = syncToThread;
   }
 
-  public HostObjectBuilderResult Build(
+  public Task<HostObjectBuilderResult> Build(
     Base rootObject,
     string projectName,
     string modelName,
@@ -52,36 +56,39 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     CancellationToken cancellationToken
   )
   {
-    // POC: This is where the top level base-layer name is set. Could be abstracted or injected in the context?
-    var baseLayerName = $"Project {projectName}: Model {modelName}";
+    return _syncToThread.RunOnThread(() =>
+    {
+      // POC: This is where the top level base-layer name is set. Could be abstracted or injected in the context?
+      var baseLayerName = $"Project {projectName}: Model {modelName}";
 
-    var objectsToConvert = _traverseFunction
-      .Traverse(rootObject)
-      //.TraverseWithProgress(rootObject, onOperationProgressed, cancellationToken)
-      .Where(obj => obj.Current is not Collection);
+      var objectsToConvert = _traverseFunction
+        .Traverse(rootObject)
+        //.TraverseWithProgress(rootObject, onOperationProgressed, cancellationToken)
+        .Where(obj => obj.Current is not Collection);
 
-    var instanceDefinitionProxies = (rootObject["instanceDefinitionProxies"] as List<object>)
-      ?.Cast<InstanceDefinitionProxy>()
-      .ToList();
+      var instanceDefinitionProxies = (rootObject["instanceDefinitionProxies"] as List<object>)
+        ?.Cast<InstanceDefinitionProxy>()
+        .ToList();
 
-    var groupProxies = (rootObject["groupProxies"] as List<object>)?.Cast<GroupProxy>().ToList();
+      var groupProxies = (rootObject["groupProxies"] as List<object>)?.Cast<GroupProxy>().ToList();
 
-    List<RenderMaterialProxy>? renderMaterials = (rootObject["renderMaterialProxies"] as List<object>)
-      ?.Cast<RenderMaterialProxy>()
-      .ToList();
+      List<RenderMaterialProxy>? renderMaterials = (rootObject["renderMaterialProxies"] as List<object>)
+        ?.Cast<RenderMaterialProxy>()
+        .ToList();
 
-    var conversionResults = BakeObjects(
-      objectsToConvert,
-      instanceDefinitionProxies,
-      groupProxies,
-      renderMaterials,
-      baseLayerName,
-      onOperationProgressed
-    );
+      var conversionResults = BakeObjects(
+        objectsToConvert,
+        instanceDefinitionProxies,
+        groupProxies,
+        renderMaterials,
+        baseLayerName,
+        onOperationProgressed
+      );
 
-    _contextStack.Current.Document.Views.Redraw();
+      _contextStack.Current.Document.Views.Redraw();
 
-    return conversionResults;
+      return conversionResults;
+    });
   }
 
   private HostObjectBuilderResult BakeObjects(

@@ -1,6 +1,7 @@
 using Autodesk.Revit.DB;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
+using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Core.Logging;
@@ -20,41 +21,46 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   private readonly IRevitConversionContextStack _contextStack;
   private readonly GraphTraversal _traverseFunction;
   private readonly ITransactionManager _transactionManager;
+  private readonly ISyncToThread _syncToThread;
 
   public RevitHostObjectBuilder(
     IRootToHostConverter converter,
     IRevitConversionContextStack contextStack,
     GraphTraversal traverseFunction,
-    ITransactionManager transactionManager
+    ITransactionManager transactionManager,
+    ISyncToThread syncToThread
   )
   {
     _converter = converter;
     _contextStack = contextStack;
     _traverseFunction = traverseFunction;
     _transactionManager = transactionManager;
+    _syncToThread = syncToThread;
   }
 
-  public HostObjectBuilderResult Build(
+  public Task<HostObjectBuilderResult> Build(
     Base rootObject,
     string projectName,
     string modelName,
     Action<string, double?>? onOperationProgressed,
     CancellationToken cancellationToken
-  )
-  {
-    var objectsToConvert = _traverseFunction.Traverse(rootObject).Where(obj => obj.Current is not Collection);
+  ) =>
+    _syncToThread.RunOnThread(() =>
+    {
+      var objectsToConvert = _traverseFunction.Traverse(rootObject).Where(obj => obj.Current is not Collection);
 
-    using TransactionGroup transactionGroup = new(_contextStack.Current.Document, $"Received data from {projectName}");
-    transactionGroup.Start();
-    _transactionManager.StartTransaction();
+      using TransactionGroup transactionGroup =
+        new(_contextStack.Current.Document, $"Received data from {projectName}");
+      transactionGroup.Start();
+      _transactionManager.StartTransaction();
 
-    var conversionResults = BakeObjects(objectsToConvert);
+      var conversionResults = BakeObjects(objectsToConvert);
 
-    _transactionManager.CommitTransaction();
-    transactionGroup.Assimilate();
+      _transactionManager.CommitTransaction();
+      transactionGroup.Assimilate();
 
-    return conversionResults;
-  }
+      return conversionResults;
+    });
 
   // POC: Potentially refactor out into an IObjectBaker.
   private HostObjectBuilderResult BakeObjects(IEnumerable<TraversalContext> objectsGraph)
