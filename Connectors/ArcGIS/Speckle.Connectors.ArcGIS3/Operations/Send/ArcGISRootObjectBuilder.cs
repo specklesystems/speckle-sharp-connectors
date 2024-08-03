@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Drawing;
 using ArcGIS.Core.Geometry;
+using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Objects.GIS;
 using Objects.Other;
@@ -37,7 +38,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     _rootToSpeckleConverter = rootToSpeckleConverter;
   }
 
-  public RootObjectBuilderResult Build(
+  public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<MapMember> objects,
     SendInfo sendInfo,
     Action<string, double?>? onOperationProgressed = null,
@@ -108,7 +109,9 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
           }
           else
           {
-            converted = _rootToSpeckleConverter.Convert(mapMember);
+            converted = await QueuedTask
+              .Run(() => (Collection)_rootToSpeckleConverter.Convert(mapMember))
+              .ConfigureAwait(false);
 
             // get units & Active CRS (for writing geometry coords)
             converted["units"] = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString;
@@ -179,6 +182,6 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
       $"Cache hit count {cacheHitCount} out of {objects.Count} ({(double)cacheHitCount / objects.Count})"
     );
 
-    return new(rootObjectCollection, results);
+    return new RootObjectBuilderResult(rootObjectCollection, results);
   }
 }

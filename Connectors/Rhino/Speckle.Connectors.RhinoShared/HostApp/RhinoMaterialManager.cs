@@ -39,15 +39,27 @@ public class RhinoMaterialManager
       RenderTexture.TextureGeneration.Allow
     );
 
+    // get opacity
+    // POC: pbr will return opacity = 0 for these because they are not pbr materials, they are transparent materials with IOR. Currently hardcoding 0.2 value in lieu of proper type support in rhino.
+    double opacity = (renderMaterial.SmellsLikeGem || renderMaterial.SmellsLikeGlass) ? 0.2 : pbRenderMaterial.Opacity;
+
     string renderMaterialName = renderMaterial.Name ?? "default"; // default rhino material has no name
     Color diffuse = pbRenderMaterial.BaseColor.AsSystemColor();
-    Color emissive = pbRenderMaterial.Emission.AsSystemColor();
+    Color emissive = renderMaterial.TypeName.Equals("Emission")
+      ? pbRenderMaterial.Material.EmissionColor
+      : pbRenderMaterial.Emission.AsSystemColor(); // pbRenderMaterial.emission gives wrong color for emission materials, and material.emissioncolor gives the wrong value for most others *shrug*
+
     SpeckleRenderMaterial speckleRenderMaterial =
-      new(pbRenderMaterial.Opacity, pbRenderMaterial.Metallic, pbRenderMaterial.Roughness, diffuse, emissive)
+      new(opacity, pbRenderMaterial.Metallic, pbRenderMaterial.Roughness, diffuse, emissive)
       {
         name = renderMaterialName,
         applicationId = renderMaterial.Id.ToString()
       };
+
+    // add additional dynamic props for rhino material receive
+    speckleRenderMaterial["typeName"] = renderMaterial.TypeName;
+    speckleRenderMaterial["ior"] = pbRenderMaterial.Material.IndexOfRefraction;
+    speckleRenderMaterial["shine"] = pbRenderMaterial.Material.Shine;
 
     return speckleRenderMaterial;
   }
@@ -86,6 +98,16 @@ public class RhinoMaterialManager
             EmissionColor = emissive,
             Transparency = transparency
           };
+
+        // try to get additional properties
+        if (speckleRenderMaterial["ior"] is double ior)
+        {
+          rhinoMaterial.IndexOfRefraction = ior;
+        }
+        if (speckleRenderMaterial["shine"] is double shine)
+        {
+          rhinoMaterial.Shine = shine;
+        }
 
         int matIndex = doc.Materials.Add(rhinoMaterial);
 
@@ -163,7 +185,8 @@ public class RhinoMaterialManager
         }
         else if (rhinoMaterial is not null)
         {
-          myMaterial = ConvertRenderMaterialToSpeckle(ConvertMaterialToRenderMaterial(rhinoMaterial));
+          RenderMaterial convertedRender = ConvertMaterialToRenderMaterial(rhinoMaterial);
+          myMaterial = ConvertRenderMaterialToSpeckle(convertedRender);
         }
 
         if (myMaterial is not null)

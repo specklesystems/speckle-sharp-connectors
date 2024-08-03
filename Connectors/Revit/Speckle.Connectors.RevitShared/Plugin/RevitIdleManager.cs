@@ -30,4 +30,13 @@ public sealed class RevitIdleManager(RevitContext revitContext, IIdleCallManager
 
   private void RevitAppOnIdle(object? sender, IdlingEventArgs e) =>
     idleCallManager.AppOnIdle(() => _uiApplication.Idling -= RevitAppOnIdle);
+
+  public void RunAsync(Action action)
+  {
+#if REVIT2025
+    global::Revit.Async.RevitTask.RunAsync(action);
+#else
+    action();
+#endif
+  }
 }
