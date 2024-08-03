@@ -145,7 +145,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
       {
         UnpackInstance(blockReference, depth + 1, transaction);
       }
-      _instanceObjectsManager.AddAtomicObject(handleIdString, new(obj, handleIdString));
+      _instanceObjectsManager.AddAtomicObject(handleIdString, new((Entity)obj, handleIdString));
     }
 
     _instanceObjectsManager.AddDefinitionProxy(definitionId.ToString(), definitionProxy);

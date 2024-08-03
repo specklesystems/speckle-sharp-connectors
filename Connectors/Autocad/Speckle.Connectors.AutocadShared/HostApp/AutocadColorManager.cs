@@ -1,3 +1,4 @@
+using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Core.Models.Proxies;
@@ -80,5 +81,14 @@ public class AutocadColorManager
     }
 
     return colorProxies.Values.ToList();
+  }
+
+  public AutocadColor ConvertColorProxyToColor(ColorProxy colorProxy)
+  {
+    AutocadColor color = colorProxy["autocadColorIndex"] is short index
+      ? AutocadColor.FromColorIndex(ColorMethod.ByAci, index)
+      : AutocadColor.FromColor(System.Drawing.Color.FromArgb(colorProxy.value));
+
+    return color;
   }
 }
