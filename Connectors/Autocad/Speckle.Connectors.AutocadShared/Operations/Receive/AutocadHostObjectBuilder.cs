@@ -25,13 +25,15 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
 
   // private readonly HashSet<string> _uniqueLayerNames = new();
   private readonly AutocadInstanceObjectManager _instanceObjectsManager;
+  private readonly AutocadContext _autocadContext;
 
   public AutocadHostObjectBuilder(
     IRootToHostConverter converter,
     GraphTraversal traversalFunction,
     AutocadLayerManager autocadLayerManager,
     AutocadInstanceObjectManager instanceObjectsManager,
-    ISyncToThread syncToThread
+    ISyncToThread syncToThread,
+    AutocadContext autocadContext
   )
   {
     _converter = converter;
@@ -39,6 +41,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     _autocadLayerManager = autocadLayerManager;
     _instanceObjectsManager = instanceObjectsManager;
     _syncToThread = syncToThread;
+    _autocadContext = autocadContext;
   }
 
   public Task<HostObjectBuilderResult> Build(
@@ -57,8 +60,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       // Layer filter for received commit with project and model name
       _autocadLayerManager.CreateLayerFilter(projectName, modelName);
 
-      //TODO: make the layerManager handle \/ ?
-      string baseLayerPrefix = $"SPK-{projectName}-{modelName}-";
+      string baseLayerPrefix = _autocadContext.RemoveInvalidChars($"SPK-{projectName}-{modelName}-");
 
       PreReceiveDeepClean(baseLayerPrefix);
 

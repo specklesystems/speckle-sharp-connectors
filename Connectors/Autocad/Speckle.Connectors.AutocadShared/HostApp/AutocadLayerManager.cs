@@ -29,7 +29,7 @@ public class AutocadLayerManager
   /// </summary>
   public void CreateLayerForReceive(Collection layerCollection)
   {
-    string layerName = layerCollection.name;
+    string layerName = _autocadContext.RemoveInvalidChars(layerCollection.name);
     if (!_uniqueLayerNames.Add(layerName))
     {
       return;
@@ -94,7 +94,7 @@ public class AutocadLayerManager
         SelectionSet selectionResult = Doc.Editor.SelectAll(selectionFilter).Value;
         if (selectionResult == null)
         {
-          return;
+          continue;
         }
         foreach (SelectedObject selectedObject in selectionResult)
         {
