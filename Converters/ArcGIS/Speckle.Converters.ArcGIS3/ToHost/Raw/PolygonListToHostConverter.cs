@@ -1,3 +1,4 @@
+using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
@@ -21,13 +22,37 @@ public class PolygonListToHostConverter : ITypedConverter<List<SGIS.PolygonGeome
     List<ACG.Polygon> polyList = new();
     foreach (SGIS.PolygonGeometry poly in target)
     {
-      ACG.Polyline boundary = _polylineConverter.Convert(poly.boundary);
-      ACG.PolygonBuilderEx polyOuterRing = new(boundary);
+      ACG.Polyline? boundary = _polylineConverter.Convert(poly.boundary);
 
+      // enforce clockwise outer ring orientation: https://pro.arcgis.com/en/pro-app/latest/sdk/api-reference/topic72904.html
+      if (!boundary.IsClockwisePolygon())
+      {
+        boundary = ACG.GeometryEngine.Instance.ReverseOrientation(boundary) as ACG.Polyline;
+      }
+
+      if (boundary is null)
+      {
+        throw new SpeckleConversionException("Hatch conversion of boundary curve failed");
+      }
+
+      ACG.PolygonBuilderEx polyOuterRing = new(boundary.Parts.SelectMany(x => x), ACG.AttributeFlags.HasZ);
+
+      // adding inner loops: https://github.com/esri/arcgis-pro-sdk/wiki/ProSnippets-Geometry#build-a-donut-polygon
       foreach (SOG.Polyline loop in poly.voids)
       {
-        // adding inner loops: https://github.com/esri/arcgis-pro-sdk/wiki/ProSnippets-Geometry#build-a-donut-polygon
-        ACG.Polyline loopNative = _polylineConverter.Convert(loop);
+        ACG.Polyline? loopNative = _polylineConverter.Convert(loop);
+
+        // enforce clockwise outer ring orientation
+        if (loopNative.IsClockwisePolygon())
+        {
+          loopNative = ACG.GeometryEngine.Instance.ReverseOrientation(loopNative) as ACG.Polyline;
+        }
+
+        if (loopNative is null)
+        {
+          throw new SpeckleConversionException("Hatch conversion of inner loop failed");
+        }
+
         polyOuterRing.AddPart(loopNative.Copy3DCoordinatesToList());
       }
       ACG.Polygon polygon = polyOuterRing.ToGeometry();
