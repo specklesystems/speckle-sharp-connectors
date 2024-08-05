@@ -8,7 +8,7 @@ namespace Speckle.Connectors.Rhino.HostApp;
 /// </summary>
 public class RhinoColorManager
 {
-  public Dictionary<string, Color> ObjectColorsIdMap { get; }
+  public Dictionary<string, Color> ObjectColorsIdMap { get; } = new();
 
   public List<ColorProxy> UnpackColors(List<RhinoObject> atomicObjects, List<Layer> layers)
   {
@@ -27,13 +27,16 @@ public class RhinoColorManager
 
       // assumes color names are unique
       string colorId = atts.ObjectColor.Name;
+      string objectId = rhinoObj.Id.ToString();
       if (colorProxies.TryGetValue(colorId, out ColorProxy value))
       {
-        value.objects.Add(rhinoObj.Id.ToString());
+        value.objects.Add(objectId);
       }
       else
       {
-        colorProxies[colorId] = new(atts.ObjectColor.ToArgb(), colorId, colorId);
+        ColorProxy newColor = new(atts.ObjectColor.ToArgb(), colorId, colorId);
+        newColor.objects.Add(objectId);
+        colorProxies[colorId] = newColor;
       }
     }
 
@@ -42,13 +45,16 @@ public class RhinoColorManager
     {
       // assumes color names are unique
       string colorId = layer.Color.Name;
+      string layerId = layer.Id.ToString();
       if (colorProxies.TryGetValue(colorId, out ColorProxy value))
       {
-        value.objects.Add(layer.Id.ToString());
+        value.objects.Add(layerId);
       }
       else
       {
-        colorProxies[colorId] = new(layer.Color.ToArgb(), colorId, colorId);
+        ColorProxy newColor = new(layer.Color.ToArgb(), colorId, colorId);
+        newColor.objects.Add(layerId);
+        colorProxies[colorId] = newColor;
       }
     }
 

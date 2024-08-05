@@ -16,7 +16,7 @@ public class AutocadColorManager
   // POC: Will be addressed to move it into AutocadContext!
   private Document Doc => Application.DocumentManager.MdiActiveDocument;
 
-  public Dictionary<string, AutocadColor> ObjectColorsIdMap { get; }
+  public Dictionary<string, AutocadColor> ObjectColorsIdMap { get; } = new();
 
   public AutocadColorManager(AutocadContext autocadContext)
   {
@@ -28,11 +28,11 @@ public class AutocadColorManager
     int argb = color.ColorValue.ToArgb();
     string name = color.ColorNameForDisplay;
 
-    ColorProxy colorProxy = new(argb, id, name);
+    ColorProxy colorProxy = new(argb, id, name) { objects = new() };
 
     if (color.IsByAci)
     {
-      colorProxy["autocadColorIndex"] = color.ColorIndex;
+      colorProxy["autocadColorIndex"] = (int)color.ColorIndex;
     }
 
     return colorProxy;
@@ -62,7 +62,9 @@ public class AutocadColorManager
       }
       else
       {
-        colorProxies[colorId] = ConvertColorToColorProxy(entity.Color, colorId);
+        ColorProxy newColor = ConvertColorToColorProxy(entity.Color, colorId);
+        newColor.objects.Add(rootObj.ApplicationId);
+        colorProxies[colorId] = newColor;
       }
     }
 
@@ -71,14 +73,17 @@ public class AutocadColorManager
     {
       // assumes color names are unique
       string colorId = layer.Color.ColorNameForDisplay;
+      string layerId = layer.Handle.ToString();
 
       if (colorProxies.TryGetValue(colorId, out ColorProxy value))
       {
-        value.objects.Add(layer.Id.ToString());
+        value.objects.Add(layerId);
       }
       else
       {
-        colorProxies[colorId] = ConvertColorToColorProxy(layer.Color, colorId);
+        ColorProxy newColor = ConvertColorToColorProxy(layer.Color, colorId);
+        newColor.objects.Add(layerId);
+        colorProxies[colorId] = newColor;
       }
     }
 
@@ -87,8 +92,8 @@ public class AutocadColorManager
 
   public AutocadColor ConvertColorProxyToColor(ColorProxy colorProxy)
   {
-    AutocadColor color = colorProxy["autocadColorIndex"] is short index
-      ? AutocadColor.FromColorIndex(ColorMethod.ByAci, index)
+    AutocadColor color = colorProxy["autocadColorIndex"] is long index
+      ? AutocadColor.FromColorIndex(ColorMethod.ByAci, (short)index)
       : AutocadColor.FromColor(System.Drawing.Color.FromArgb(colorProxy.value));
 
     return color;
