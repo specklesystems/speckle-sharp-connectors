@@ -101,13 +101,13 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
             {
               if (tr.GetObject(entity.LayerId, OpenMode.ForRead) is LayerTableRecord autocadLayer)
               {
-                speckleLayer = new Layer(layerName, autocadLayer.Color.ColorValue.ToArgb());
+                speckleLayer = new Layer(layerName);
                 collectionCache[layerName] = speckleLayer;
                 modelWithLayers.elements.Add(collectionCache[layerName]);
               }
               else
               {
-                speckleLayer = new Layer("Unknown layer", System.Drawing.Color.Black.ToArgb());
+                speckleLayer = new Layer("Unknown layer");
               }
             }
 

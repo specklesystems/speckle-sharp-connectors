@@ -12,6 +12,7 @@ using Speckle.Core.Models;
 using Speckle.Core.Models.Collections;
 using Speckle.Core.Models.GraphTraversal;
 using Speckle.Core.Models.Instances;
+using Speckle.Core.Models.Proxies;
 using RenderMaterialProxy = Objects.Other.RenderMaterialProxy;
 
 namespace Speckle.Connectors.Rhino.Operations.Receive;

@@ -55,15 +55,12 @@ public class RhinoLayerManager
       }
 
       var cleanNewLayerName = collection.name.Replace("{", "").Replace("}", "");
-      Color layerColor = collection is IHasColor coloredCollection
-        ? Color.FromArgb(coloredCollection.color)
-        : Color.Black;
 
       var newLayer = new Layer
       {
         Name = cleanNewLayerName,
         ParentLayerId = previousLayer.Id,
-        Color = layerColor
+        Color = Color.Black
       };
 
       var index = currentDocument.Layers.Add(newLayer);
@@ -95,7 +92,6 @@ public class RhinoLayerManager
     foreach (var layerName in names)
     {
       var existingLayerIndex = RhinoDoc.ActiveDoc.Layers.FindByFullPath(path, -1);
-      var rhLayer = RhinoDoc.ActiveDoc.Layers[existingLayerIndex];
       Collection? childCollection = null;
       if (_layerCollectionCache.TryGetValue(existingLayerIndex, out Collection? collection))
       {
@@ -103,7 +99,7 @@ public class RhinoLayerManager
       }
       else
       {
-        childCollection = new SpeckleLayer(layerName, rhLayer.Color.ToArgb())
+        childCollection = new SpeckleLayer(layerName)
         {
           applicationId = RhinoDoc.ActiveDoc.Layers[existingLayerIndex].Id.ToString()
         };

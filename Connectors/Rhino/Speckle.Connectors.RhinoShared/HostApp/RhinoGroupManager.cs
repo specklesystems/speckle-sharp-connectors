@@ -1,6 +1,6 @@
 ﻿using Rhino;
 using Rhino.DocObjects;
-using Speckle.Core.Models.Instances;
+using Speckle.Core.Models.Proxies;
 
 namespace Speckle.Connectors.Rhino.HostApp;
 

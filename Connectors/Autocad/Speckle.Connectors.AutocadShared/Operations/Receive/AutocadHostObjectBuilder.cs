@@ -10,6 +10,7 @@ using Speckle.Core.Models;
 using Speckle.Core.Models.Collections;
 using Speckle.Core.Models.GraphTraversal;
 using Speckle.Core.Models.Instances;
+using Speckle.Core.Models.Proxies;
 
 namespace Speckle.Connectors.Autocad.Operations.Receive;
 

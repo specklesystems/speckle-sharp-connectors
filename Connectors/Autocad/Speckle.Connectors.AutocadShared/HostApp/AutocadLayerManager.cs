@@ -36,8 +36,7 @@ public class AutocadLayerManager
     }
 
     // get layer color
-    int layerColorInt = layerCollection is IHasColor coloredLayer ? coloredLayer.color : -1; // default is white
-    var systemColor = System.Drawing.Color.FromArgb(layerColorInt);
+    var systemColor = System.Drawing.Color.White;
     Autodesk.AutoCAD.Colors.Color layerColor = Autodesk.AutoCAD.Colors.Color.FromRgb(
       systemColor.R,
       systemColor.G,
@@ -162,15 +161,7 @@ public class AutocadLayerManager
   public Layer GetLayerPath(TraversalContext context, string baseLayerPrefix)
   {
     Collection[] collectionBasedPath = context.GetAscendantOfType<Collection>().Reverse().ToArray();
-    int lastColor = -1;
-    foreach (Collection collection in collectionBasedPath)
-    {
-      if (collection is IHasColor coloredCollection)
-      {
-        lastColor = coloredCollection.color;
-      }
-    }
-
+    
     string[] path =
       collectionBasedPath.Length != 0
         ? collectionBasedPath.Select(c => c.name).ToArray()
@@ -178,6 +169,6 @@ public class AutocadLayerManager
 
     string name = _autocadContext.RemoveInvalidChars(baseLayerPrefix + string.Join("-", path));
 
-    return new Layer(name, lastColor);
+    return new Layer(name);
   }
 }
