@@ -52,7 +52,7 @@ public class RhinoColorManager
       }
       else
       {
-        ColorProxy newColor = new(layer.Color.ToArgb(), colorId, colorId);
+        ColorProxy newColor = new(layer.Color.ToArgb(), colorId, colorId) { objects = new() };
         newColor.objects.Add(layerId);
         colorProxies[colorId] = newColor;
       }
