@@ -5,6 +5,7 @@ using Rhino.Geometry;
 using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
+using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
@@ -28,6 +29,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private readonly RhinoLayerManager _layerManager;
   private readonly RhinoMaterialManager _materialManager;
   private readonly RhinoColorManager _colorManager;
+  private readonly ISyncToThread _syncToThread;
 
   public RhinoHostObjectBuilder(
     IRootToHostConverter converter,
@@ -37,6 +39,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     RhinoInstanceObjectsManager instanceObjectsManager,
     RhinoMaterialManager materialManager,
     RhinoColorManager colorManager
+    ISyncToThread syncToThread
   )
   {
     _converter = converter;
@@ -46,9 +49,10 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _instanceObjectsManager = instanceObjectsManager;
     _materialManager = materialManager;
     _colorManager = colorManager;
+    _syncToThread = syncToThread;
   }
 
-  public HostObjectBuilderResult Build(
+  public Task<HostObjectBuilderResult> Build(
     Base rootObject,
     string projectName,
     string modelName,
@@ -56,22 +60,25 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     CancellationToken cancellationToken
   )
   {
-    // POC: This is where the top level base-layer name is set. Could be abstracted or injected in the context?
-    var baseLayerName = $"Project {projectName}: Model {modelName}";
+    return _syncToThread.RunOnThread(() =>
+    {
+      // POC: This is where the top level base-layer name is set. Could be abstracted or injected in the context?
+      var baseLayerName = $"Project {projectName}: Model {modelName}";
 
-    var objectsToConvert = _traverseFunction
-      .TraverseWithProgress(rootObject, onOperationProgressed, cancellationToken)
-      .Where(obj => obj.Current is not Collection);
+      var objectsToConvert = _traverseFunction
+        .Traverse(rootObject)
+        //.TraverseWithProgress(rootObject, onOperationProgressed, cancellationToken)
+        .Where(obj => obj.Current is not Collection);
 
-    var instanceDefinitionProxies = (rootObject["instanceDefinitionProxies"] as List<object>)
-      ?.Cast<InstanceDefinitionProxy>()
-      .ToList();
+      var instanceDefinitionProxies = (rootObject["instanceDefinitionProxies"] as List<object>)
+        ?.Cast<InstanceDefinitionProxy>()
+        .ToList();
 
-    var groupProxies = (rootObject["groupProxies"] as List<object>)?.Cast<GroupProxy>().ToList();
+      var groupProxies = (rootObject["groupProxies"] as List<object>)?.Cast<GroupProxy>().ToList();
 
-    List<RenderMaterialProxy>? renderMaterials = (rootObject["renderMaterialProxies"] as List<object>)
-      ?.Cast<RenderMaterialProxy>()
-      .ToList();
+      List<RenderMaterialProxy>? renderMaterials = (rootObject["renderMaterialProxies"] as List<object>)
+        ?.Cast<RenderMaterialProxy>()
+        .ToList();
 
     List<ColorProxy>? colors = (rootObject["colorProxies"] as List<object>)?.Cast<ColorProxy>().ToList();
     if (colors != null)
@@ -88,9 +95,10 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       onOperationProgressed
     );
 
-    _contextStack.Current.Document.Views.Redraw();
+      _contextStack.Current.Document.Views.Redraw();
 
-    return conversionResults;
+      return conversionResults;
+    });
   }
 
   private HostObjectBuilderResult BakeObjects(

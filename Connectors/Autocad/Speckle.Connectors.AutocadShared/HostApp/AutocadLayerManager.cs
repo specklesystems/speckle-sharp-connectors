@@ -109,7 +109,7 @@ public class AutocadLayerManager
         SelectionSet selectionResult = Doc.Editor.SelectAll(selectionFilter).Value;
         if (selectionResult == null)
         {
-          return;
+          continue;
         }
         foreach (SelectedObject selectedObject in selectionResult)
         {

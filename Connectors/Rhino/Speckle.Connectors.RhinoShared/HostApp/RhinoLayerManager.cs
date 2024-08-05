@@ -46,7 +46,7 @@ public class RhinoLayerManager
     Layer previousLayer = currentDocument.Layers.FindName(currentLayerName);
     foreach (Collection collection in collectionPath)
     {
-      currentLayerName = baseLayerName + Layer.PathSeparator + collection.name;
+      currentLayerName += Layer.PathSeparator + collection.name;
       currentLayerName = currentLayerName.Replace("{", "").Replace("}", ""); // Rhino specific cleanup for gh (see RemoveInvalidRhinoChars)
       if (_hostLayerCache.TryGetValue(currentLayerName, out int value))
       {
@@ -61,6 +61,7 @@ public class RhinoLayerManager
       _hostLayerCache.Add(currentLayerName, index);
       previousLayer = currentDocument.Layers.FindIndex(index); // note we need to get the correct id out, hence why we're double calling this
     }
+
     return previousLayer.Index;
   }
 
