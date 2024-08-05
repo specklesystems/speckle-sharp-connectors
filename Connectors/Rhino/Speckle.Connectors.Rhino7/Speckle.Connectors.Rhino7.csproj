@@ -20,9 +20,4 @@
   </ItemGroup>
 
   <Import Project="..\Speckle.Connectors.RhinoShared\Speckle.Connectors.RhinoShared.projitems" Label="Shared" />
-
-  <ItemGroup>
-    <Compile Remove="C:\Users\KORAL\Documents\Git\Speckle\speckle-sharp-connectors\Connectors\Rhino\Speckle.Connectors.RhinoShared\Properties\Resources.Designer.cs" />
-  </ItemGroup>
-
 </Project>
