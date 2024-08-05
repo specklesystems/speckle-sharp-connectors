@@ -21,6 +21,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
   private readonly ISendConversionCache _sendConversionCache;
   private readonly AutocadInstanceObjectManager _instanceObjectsManager;
   private readonly AutocadColorManager _colorManager;
+  private readonly AutocadLayerManager _layerManager;
   private readonly AutocadGroupUnpacker _groupUnpacker;
   private readonly ISyncToThread _syncToThread;
 
@@ -29,6 +30,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     ISendConversionCache sendConversionCache,
     AutocadInstanceObjectManager instanceObjectManager,
     AutocadColorManager colorManager,
+    AutocadLayerManager layerManager,
     AutocadGroupUnpacker groupUnpacker,
     ISyncToThread syncToThread
   )
@@ -37,6 +39,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     _sendConversionCache = sendConversionCache;
     _instanceObjectsManager = instanceObjectManager;
     _colorManager = colorManager;
+    _layerManager = layerManager;
     _groupUnpacker = groupUnpacker;
     _syncToThread = syncToThread;
   }
@@ -65,7 +68,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
       using Transaction tr = doc.Database.TransactionManager.StartTransaction();
 
       // Cached dictionary to create Collection for autocad entity layers. We first look if collection exists. If so use it otherwise create new one for that layer.
-      Dictionary<string, Layer> collectionCache = new();
+      List<LayerTableRecord> layers = new();
       int count = 0;
 
       var (atomicObjects, instanceProxies, instanceDefinitionProxies) = _instanceObjectsManager.UnpackSelection(
@@ -73,7 +76,6 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
       );
 
       List<SendConversionResult> results = new();
-      List<LayerTableRecord> layers = new();
       var cacheHitCount = 0;
 
       foreach (var (entity, applicationId) in atomicObjects)
@@ -98,25 +100,14 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
           }
 
           // Create and add a collection for each layer if not done so already.
-
-          string layerName = entity.Layer;
-
-          if (!collectionCache.TryGetValue(layerName, out Layer speckleLayer))
+          Layer layer = _layerManager.GetOrCreateSpeckleLayer(entity, tr, out LayerTableRecord? autocadLayer);
+          if (autocadLayer is not null)
           {
-            if (tr.GetObject(entity.LayerId, OpenMode.ForRead) is LayerTableRecord autocadLayer)
-            {
-              speckleLayer = new Layer(layerName) { applicationId = autocadLayer.Handle.ToString() };
-              collectionCache[layerName] = speckleLayer;
-              layers.Add(autocadLayer);
-              modelWithLayers.elements.Add(collectionCache[layerName]);
-            }
-            else
-            {
-              speckleLayer = new Layer("Unknown layer");
-            }
+            layers.Add(autocadLayer);
           }
 
-          speckleLayer.elements.Add(converted);
+          modelWithLayers.elements.Add(layer);
+          layer.elements.Add(converted);
 
           results.Add(new(Status.SUCCESS, applicationId, entity.GetType().ToString(), converted));
         }

@@ -14,6 +14,7 @@ public class AutocadLayerManager
 {
   private readonly AutocadContext _autocadContext;
   private readonly string _layerFilterName = "Speckle";
+  public Dictionary<string, Layer> CollectionCache { get; }
 
   // POC: Will be addressed to move it into AutocadContext!
   private Document Doc => Application.DocumentManager.MdiActiveDocument;
@@ -22,6 +23,30 @@ public class AutocadLayerManager
   public AutocadLayerManager(AutocadContext autocadContext)
   {
     _autocadContext = autocadContext;
+  }
+
+  public Layer GetOrCreateSpeckleLayer(Entity entity, Transaction tr, out LayerTableRecord? layer)
+  {
+    string layerName = entity.Layer;
+    layer = null;
+    if (CollectionCache.TryGetValue(layerName, out Layer speckleLayer))
+    {
+      return speckleLayer;
+    }
+    else
+    {
+      if (tr.GetObject(entity.LayerId, OpenMode.ForRead) is LayerTableRecord autocadLayer)
+      {
+        speckleLayer = new Layer(layerName) { applicationId = autocadLayer.Handle.ToString() };
+        CollectionCache[layerName] = speckleLayer;
+        layer = autocadLayer;
+      }
+      else
+      {
+        // POC: this shouldn't happen, but we should probably throw
+      }
+    }
+    return speckleLayer;
   }
 
   /// <summary>

@@ -30,6 +30,8 @@ public class AutocadColorManager
 
     ColorProxy colorProxy = new(argb, id, name) { objects = new() };
 
+    // INFO: this index is an Autocad internal index for set rgb values
+    // https://gohtx.com/acadcolors.php
     if (color.IsByAci)
     {
       colorProxy["autocadColorIndex"] = (int)color.ColorIndex;
