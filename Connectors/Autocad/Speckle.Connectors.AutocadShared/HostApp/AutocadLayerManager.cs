@@ -14,7 +14,7 @@ public class AutocadLayerManager
 {
   private readonly AutocadContext _autocadContext;
   private readonly string _layerFilterName = "Speckle";
-  public Dictionary<string, Layer> CollectionCache { get; }
+  public Dictionary<string, Layer> CollectionCache { get; } = new();
 
   // POC: Will be addressed to move it into AutocadContext!
   private Document Doc => Application.DocumentManager.MdiActiveDocument;
