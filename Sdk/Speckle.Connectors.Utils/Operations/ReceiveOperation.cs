@@ -37,7 +37,7 @@ public sealed class ReceiveOperation
     // 2 - Check account exist
     Account account = _accountService.GetAccountWithServerUrlFallback(receiveInfo.AccountId, receiveInfo.ServerUrl);
     using Client apiClient = new(account);
-    using (var receive = SpeckleActivityFactory.Start("Receive from server"))
+    using (var _ = SpeckleActivityFactory.Start("Receive from server"))
     {
       // 3 - Get commit object from server
       version = await apiClient
@@ -45,7 +45,7 @@ public sealed class ReceiveOperation
         .ConfigureAwait(false);
     }
 
-    using (var receive = SpeckleActivityFactory.Start("Receive to transport"))
+    using (var _ = SpeckleActivityFactory.Start("Receive to transport"))
     {
       using var transport = _serverTransportFactory.Create(account, receiveInfo.ProjectId);
       commitObject = await Speckle
@@ -56,9 +56,12 @@ public sealed class ReceiveOperation
     }
 
     // 4 - Convert objects
-    var res = await _hostObjectBuilder
-      .Build(commitObject, receiveInfo.ProjectName, receiveInfo.ModelName, onOperationProgressed, cancellationToken)
-      .ConfigureAwait(false);
+    using (var _ = SpeckleActivityFactory.Start("Convert"))
+    {
+      res = await _hostObjectBuilder
+        .Build(commitObject, receiveInfo.ProjectName, receiveInfo.ModelName, onOperationProgressed, cancellationToken)
+        .ConfigureAwait(false);
+    }
 
     await apiClient
       .Version.Received(new(version.id, receiveInfo.ProjectId, receiveInfo.SourceApplication), cancellationToken)

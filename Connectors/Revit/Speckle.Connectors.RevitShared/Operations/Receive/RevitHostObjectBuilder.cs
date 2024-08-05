@@ -48,7 +48,12 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   ) =>
     _syncToThread.RunOnThread(() =>
     {
-      var objectsToConvert = _traverseFunction.Traverse(rootObject).Where(obj => obj.Current is not Collection);
+      using var activity = SpeckleActivityFactory.Start("Build");
+      IEnumerable<TraversalContext> objectsToConvert;
+      using (var _ = SpeckleActivityFactory.Start("Traverse"))
+      {
+        objectsToConvert = _traverseFunction.Traverse(rootObject).Where(obj => obj.Current is not Collection);
+      }
 
       using TransactionGroup transactionGroup =
         new(_contextStack.Current.Document, $"Received data from {projectName}");
@@ -57,16 +62,18 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 
       var conversionResults = BakeObjects(objectsToConvert);
 
-      _transactionManager.CommitTransaction();
-      transactionGroup.Assimilate();
-
+      using (var _ = SpeckleActivityFactory.Start("Commit"))
+      {
+        _transactionManager.CommitTransaction();
+        transactionGroup.Assimilate();
+      }
       return conversionResults;
     });
 
   // POC: Potentially refactor out into an IObjectBaker.
   private HostObjectBuilderResult BakeObjects(IEnumerable<TraversalContext> objectsGraph)
   {
-    using (var bakeObjects = SpeckleActivityFactory.Start("BakeObjects"))
+    using (var _ = SpeckleActivityFactory.Start("BakeObjects"))
     {
       var conversionResults = new List<ReceiveConversionResult>();
       var bakedObjectIds = new List<string>();
