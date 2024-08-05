@@ -4,7 +4,6 @@ using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.ArcGIS.Bindings;
 using Speckle.Connectors.ArcGIS.Filters;
-using Speckle.Connectors.ArcGIS.HostApp;
 using Speckle.Connectors.ArcGIS.Operations.Receive;
 using Speckle.Connectors.ArcGis.Operations.Send;
 using Speckle.Connectors.ArcGIS.Utils;
@@ -37,7 +36,7 @@ public class ArcGISConnectorModule : ISpeckleModule
 
     // POC: Overwriting the SyncToMainThread to SyncToCurrentThread for ArcGIS only!
     // On SendOperation, once we called QueuedTask, it expect to run everything on same thread.
-    builder.AddSingletonInstance<ISyncToThread, SyncToQueuedTask>();
+    // builder.AddSingletonInstance<ISyncToThread, SyncToQueuedTask>();
 
     builder.AddSingleton<DocumentModelStore, ArcGISDocumentStore>();
     // Register bindings

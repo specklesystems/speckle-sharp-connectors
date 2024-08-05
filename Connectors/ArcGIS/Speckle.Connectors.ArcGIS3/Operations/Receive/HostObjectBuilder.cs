@@ -48,7 +48,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     _traverseFunction = traverseFunction;
   }
 
-  public HostObjectBuilderResult Build(
+  public async Task<HostObjectBuilderResult> Build(
     Base rootObject,
     string projectName,
     string modelName,
@@ -92,7 +92,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
         if (IsGISType(obj))
         {
           string nestedLayerPath = $"{string.Join("\\", path)}";
-          string datasetId = (string)_converter.Convert(obj);
+          string datasetId = await QueuedTask.Run(() => (string)_converter.Convert(obj)).ConfigureAwait(false);
           conversionTracker[objectToConvert.TraversalContext] = new ObjectConversionTracker(
             obj,
             nestedLayerPath,
@@ -104,7 +104,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
           obj = _localToGlobalConverterUtils.TransformObjects(objectToConvert.AtomicObject, objectToConvert.Matrix);
 
           string nestedLayerPath = $"{string.Join("\\", path)}\\{obj.speckle_type.Split(".")[^1]}";
-          Geometry converted = (Geometry)_converter.Convert(obj);
+          Geometry converted = await QueuedTask.Run(() => (Geometry)_converter.Convert(obj)).ConfigureAwait(false);
 
           conversionTracker[objectToConvert.TraversalContext] = new ObjectConversionTracker(
             obj,
@@ -122,13 +122,15 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
 
     // 2. convert Database entries with non-GIS geometry datasets
     onOperationProgressed?.Invoke("Writing to Database", null);
-    _nonGisFeaturesUtils.WriteGeometriesToDatasets(conversionTracker, onOperationProgressed);
+    await QueuedTask
+      .Run(() =>
+      {
+        _nonGisFeaturesUtils.WriteGeometriesToDatasets(conversionTracker, onOperationProgressed);
+      })
+      .ConfigureAwait(false);
 
-    // Create main group layer
+    // Create placeholder for Group Layers
     Dictionary<string, GroupLayer> createdLayerGroups = new();
-    Map map = _contextStack.Current.Document.Map;
-    GroupLayer groupLayer = LayerFactory.Instance.CreateGroupLayer(map, 0, $"{projectName}: {modelName}");
-    createdLayerGroups["Basic Speckle Group"] = groupLayer; // key doesn't really matter here
 
     // 3. add layer and tables to the Table Of Content
     int bakeCount = 0;
@@ -169,7 +171,8 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       else
       {
         // add layer to Map
-        MapMember mapMember = AddDatasetsToMap(trackerItem, createdLayerGroups);
+        MapMember mapMember = await AddDatasetsToMap(trackerItem, createdLayerGroups, projectName, modelName)
+          .ConfigureAwait(false);
 
         // add layer and layer URI to tracker
         trackerItem.AddConvertedMapMember(mapMember);
@@ -236,70 +239,78 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     }
   }
 
-  private MapMember AddDatasetsToMap(
+  private Task<MapMember> AddDatasetsToMap(
     ObjectConversionTracker trackerItem,
-    Dictionary<string, GroupLayer> createdLayerGroups
+    Dictionary<string, GroupLayer> createdLayerGroups,
+    string projectName,
+    string modelName
   )
   {
-    // get layer details
-    string? datasetId = trackerItem.DatasetId; // should not be null here
-    Uri uri = new($"{_contextStack.Current.Document.SpeckleDatabasePath.AbsolutePath.Replace('/', '\\')}\\{datasetId}");
-    string nestedLayerName = trackerItem.NestedLayerName;
-
-    // add group for the current layer
-    string shortName = nestedLayerName.Split("\\")[^1];
-    string nestedLayerPath = string.Join("\\", nestedLayerName.Split("\\").SkipLast(1));
-
-    GroupLayer groupLayer = QueuedTask.Run(() => CreateNestedGroupLayer(nestedLayerPath, createdLayerGroups)).Result;
-
-    // Most of the Speckle-written datasets will be containing geometry and added as Layers
-    // although, some datasets might be just tables (e.g. native GIS Tables, in the future maybe Revit schedules etc.
-    // We can create a connection to the dataset in advance and determine its type, but this will be more
-    // expensive, than assuming by default that it's a layer with geometry (which in most cases it's expected to be)
-    try
+    return QueuedTask.Run(() =>
     {
-      MapMember layer = QueuedTask
-        .Run(() =>
+      // get layer details
+      string? datasetId = trackerItem.DatasetId; // should not be null here
+      Uri uri =
+        new($"{_contextStack.Current.Document.SpeckleDatabasePath.AbsolutePath.Replace('/', '\\')}\\{datasetId}");
+      string nestedLayerName = trackerItem.NestedLayerName;
+
+      // add group for the current layer
+      string shortName = nestedLayerName.Split("\\")[^1];
+      string nestedLayerPath = string.Join("\\", nestedLayerName.Split("\\").SkipLast(1));
+
+      // if no general group layer found
+      if (createdLayerGroups.Count == 0)
+      {
+        Map map = _contextStack.Current.Document.Map;
+        GroupLayer mainGroupLayer = LayerFactory.Instance.CreateGroupLayer(map, 0, $"{projectName}: {modelName}");
+        createdLayerGroups["Basic Speckle Group"] = mainGroupLayer; // key doesn't really matter here
+      }
+
+      var groupLayer = CreateNestedGroupLayer(nestedLayerPath, createdLayerGroups);
+
+      // Most of the Speckle-written datasets will be containing geometry and added as Layers
+      // although, some datasets might be just tables (e.g. native GIS Tables, in the future maybe Revit schedules etc.
+      // We can create a connection to the dataset in advance and determine its type, but this will be more
+      // expensive, than assuming by default that it's a layer with geometry (which in most cases it's expected to be)
+      try
+      {
+        var layer = LayerFactory.Instance.CreateLayer(uri, groupLayer, layerName: shortName);
+        if (layer == null)
         {
-          var layer = LayerFactory.Instance.CreateLayer(uri, groupLayer, layerName: shortName);
-          if (layer == null)
+          throw new SpeckleException($"Layer '{shortName}' was not created");
+        }
+
+        // if Scene
+        // https://community.esri.com/t5/arcgis-pro-sdk-questions/sdk-equivalent-to-changing-layer-s-elevation/td-p/1346139
+        if (_contextStack.Current.Document.Map.IsScene)
+        {
+          var groundSurfaceLayer = _contextStack.Current.Document.Map.GetGroundElevationSurfaceLayer();
+          var layerElevationSurface = new CIMLayerElevationSurface
           {
-            throw new SpeckleException($"Layer '{shortName}' was not created");
-          }
+            ElevationSurfaceLayerURI = groundSurfaceLayer.URI,
+          };
 
-          // if Scene
-          // https://community.esri.com/t5/arcgis-pro-sdk-questions/sdk-equivalent-to-changing-layer-s-elevation/td-p/1346139
-          if (_contextStack.Current.Document.Map.IsScene)
+          // for Feature Layers
+          if (layer.GetDefinition() is CIMFeatureLayer cimLyr)
           {
-            var groundSurfaceLayer = _contextStack.Current.Document.Map.GetGroundElevationSurfaceLayer();
-            var layerElevationSurface = new CIMLayerElevationSurface
-            {
-              ElevationSurfaceLayerURI = groundSurfaceLayer.URI,
-            };
-
-            // for Feature Layers
-            if (layer.GetDefinition() is CIMFeatureLayer cimLyr)
-            {
-              cimLyr.LayerElevation = layerElevationSurface;
-              layer.SetDefinition(cimLyr);
-            }
+            cimLyr.LayerElevation = layerElevationSurface;
+            layer.SetDefinition(cimLyr);
           }
+        }
 
-          layer.SetExpanded(true);
-          return layer;
-        })
-        .Result;
-
-      return layer;
-    }
-    catch (ArgumentException)
-    {
-      StandaloneTable table = QueuedTask
-        .Run(() => StandaloneTableFactory.Instance.CreateStandaloneTable(uri, groupLayer, tableName: shortName))
-        .Result;
-
-      return table;
-    }
+        layer.SetExpanded(true);
+        return (MapMember)layer;
+      }
+      catch (ArgumentException)
+      {
+        StandaloneTable table = StandaloneTableFactory.Instance.CreateStandaloneTable(
+          uri,
+          groupLayer,
+          tableName: shortName
+        );
+        return table;
+      }
+    });
   }
 
   private GroupLayer CreateNestedGroupLayer(string nestedLayerPath, Dictionary<string, GroupLayer> createdLayerGroups)

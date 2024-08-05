@@ -140,7 +140,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Core", "..\speckle-
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Objects", "..\speckle-sharp-sdk\src\Speckle.Objects\Speckle.Objects.csproj", "{259A84F0-2D1E-49DE-9137-93BE6858A52C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Logging", "..\speckle-sharp-sdk\src\Speckle.Logging\Speckle.Logging.csproj", "{72842FA7-FF72-4AF0-99B0-EDBE6F4C29F9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Logging", "..\speckle-sharp-sdk\src\Speckle.Logging\Speckle.Logging.csproj", "{6279DBDA-95D0-437F-AC1B-6FD4AD1E7813}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -223,8 +223,8 @@ Global
 		{633B7099-4D96-40C2-AC25-7660A81E0FA2}.Local|Any CPU.Build.0 = Local|Any CPU
 		{259A84F0-2D1E-49DE-9137-93BE6858A52C}.Local|Any CPU.ActiveCfg = Local|Any CPU
 		{259A84F0-2D1E-49DE-9137-93BE6858A52C}.Local|Any CPU.Build.0 = Local|Any CPU
-		{72842FA7-FF72-4AF0-99B0-EDBE6F4C29F9}.Local|Any CPU.ActiveCfg = Debug|Any CPU
-		{72842FA7-FF72-4AF0-99B0-EDBE6F4C29F9}.Local|Any CPU.Build.0 = Debug|Any CPU
+		{6279DBDA-95D0-437F-AC1B-6FD4AD1E7813}.Local|Any CPU.ActiveCfg = Debug|Any CPU
+		{6279DBDA-95D0-437F-AC1B-6FD4AD1E7813}.Local|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -293,6 +293,7 @@ Global
 		Connectors\Revit\Speckle.Connectors.RevitShared.Cef\Speckle.Connectors.RevitShared.Cef.projitems*{01f98733-7352-47ad-a594-537d979de3de}*SharedItemsImports = 5
 		Connectors\Revit\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems*{01f98733-7352-47ad-a594-537d979de3de}*SharedItemsImports = 5
 		Converters\Revit\Speckle.Converters.RevitShared\Speckle.Converters.RevitShared.projitems*{19424b55-058c-4e9c-b86f-700aef9eaec3}*SharedItemsImports = 5
+		Connectors\Rhino\Speckle.Connectors.RhinoShared\Speckle.Connectors.RhinoShared.projitems*{1e2644a9-6b31-4350-8772-ceaad6ee0b21}*SharedItemsImports = 5
 		Converters\Revit\Speckle.Converters.RevitShared.DependencyInjection\Speckle.Converters.RevitShared.DependencyInjection.projitems*{20751904-0dfc-4126-bf2a-834b53841010}*SharedItemsImports = 5
 		Converters\Autocad\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.projitems*{25172c49-7aa4-4739-bb07-69785094c379}*SharedItemsImports = 5
 		Converters\Civil3d\Speckle.Converters.Civil3dShared\Speckle.Converters.Civil3dShared.projitems*{25172c49-7aa4-4739-bb07-69785094c379}*SharedItemsImports = 5

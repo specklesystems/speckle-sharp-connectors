@@ -88,12 +88,14 @@ public sealed class ArcGISSendBinding : ISendBinding
       true
     );
 
+    /*
     LayersAddedEvent.Subscribe(a => _topLevelExceptionHandler.CatchUnhandled(() => GetIdsForLayersAddedEvent(a)), true);
 
     StandaloneTablesAddedEvent.Subscribe(
       a => _topLevelExceptionHandler.CatchUnhandled(() => GetIdsForStandaloneTablesAddedEvent(a)),
       true
     );
+    */
   }
 
   private void SubscribeToMapMembersDataSourceChange()
@@ -360,6 +362,19 @@ public sealed class ArcGISSendBinding : ISendBinding
             throw new SpeckleSendFilterException(
               "No objects were found to convert. Please update your publish filter!"
             );
+          }
+
+          // subscribe to the selected layer events
+          foreach (MapMember mapMember in mapMembers)
+          {
+            if (mapMember is FeatureLayer featureLayer)
+            {
+              SubscribeToFeatureLayerDataSourceChange(featureLayer);
+            }
+            else if (mapMember is StandaloneTable table)
+            {
+              SubscribeToTableDataSourceChange(table);
+            }
           }
 
           var result = await unitOfWork
