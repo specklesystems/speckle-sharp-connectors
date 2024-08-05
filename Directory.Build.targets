@@ -59,6 +59,7 @@
     <StartProgram>$(ProgramFiles)\Rhino $(RhinoVersion)\System\Rhino.exe</StartProgram>
   </PropertyGroup>
   <PropertyGroup Condition="'$(RhinoVersion)' != ''">
+    <TargetExt>.rhp</TargetExt>
     <UseWpf>true</UseWpf>
     <UseWindowsForms>true</UseWindowsForms>
     <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>

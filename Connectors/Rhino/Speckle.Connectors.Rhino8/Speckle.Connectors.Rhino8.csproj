@@ -2,11 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
-    <TargetExt>.rhp</TargetExt>
-    <UseWpf>true</UseWpf>
-    <UseWindowsForms>true</UseWindowsForms>
-    <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
     <Configurations>Debug;Release;Local</Configurations>
+    <RhinoVersion>8</RhinoVersion>
   </PropertyGroup>
 
   <ItemGroup>
