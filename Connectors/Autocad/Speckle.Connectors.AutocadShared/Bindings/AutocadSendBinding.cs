@@ -21,6 +21,7 @@ public sealed class AutocadSendBinding : ISendBinding
 {
   public string Name => "sendBinding";
   public SendBindingUICommands Commands { get; }
+  public OperationProgressManager OperationProgressManager { get; }
   public IBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
@@ -58,6 +59,7 @@ public sealed class AutocadSendBinding : ISendBinding
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
+    OperationProgressManager = new OperationProgressManager(parent);
 
     Application.DocumentManager.DocumentActivated += (_, args) =>
       _topLevelExceptionHandler.CatchUnhandled(() => SubscribeToObjectChanges(args.Document));
@@ -161,7 +163,11 @@ public sealed class AutocadSendBinding : ISendBinding
           autocadObjects,
           modelCard.GetSendInfo(_autocadSettings.HostAppInfo.Name),
           (status, progress) =>
-            Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts),
+            OperationProgressManager.SetModelProgress(
+              modelCardId,
+              new ModelCardProgress(modelCardId, status, progress),
+              cts
+            ),
           cts.Token
         )
         .ConfigureAwait(false);
