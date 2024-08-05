@@ -38,7 +38,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     RhinoGroupManager rhinoGroupManager,
     IRootToSpeckleConverter rootToSpeckleConverter,
     RhinoMaterialManager materialManager,
-    RhinoColorManager colorManager
+    RhinoColorManager colorManager,
     ISyncToThread syncToThread
   )
   {
@@ -124,11 +124,11 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         // NOTE: useful for testing ui states, pls keep for now so we can easily uncomment
         // Thread.Sleep(550);
       }
-      
+
       // set render materials and colors
       rootObjectCollection["renderMaterialProxies"] = _materialManager.UnpackRenderMaterial(atomicObjects);
-    List<ColorProxy> colorProxies = _colorManager.UnpackColors(atomicObjects, versionLayers.ToList());
-    rootObjectCollection["colorProxies"] = colorProxies;
+      List<ColorProxy> colorProxies = _colorManager.UnpackColors(atomicObjects, versionLayers.ToList());
+      rootObjectCollection["colorProxies"] = colorProxies;
 
       // 5. profit
       return new RootObjectBuilderResult(rootObjectCollection, results);

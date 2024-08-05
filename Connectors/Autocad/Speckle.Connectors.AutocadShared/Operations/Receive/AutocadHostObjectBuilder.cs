@@ -34,7 +34,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     GraphTraversal traversalFunction,
     AutocadLayerManager autocadLayerManager,
     AutocadInstanceObjectManager instanceObjectsManager,
-    AutocadColorManager colorManager
+    AutocadColorManager colorManager,
     ISyncToThread syncToThread,
     AutocadContext autocadContext
   )
@@ -89,11 +89,11 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       }
 
       // POC: get colors
-    List<ColorProxy>? colors = (rootObject["colorProxies"] as List<object>)?.Cast<ColorProxy>().ToList();
-    if (colors != null)
-    {
-      _colorManager.ParseColors(colors, onOperationProgressed);
-    }
+      List<ColorProxy>? colors = (rootObject["colorProxies"] as List<object>)?.Cast<ColorProxy>().ToList();
+      if (colors != null)
+      {
+        _colorManager.ParseColors(colors, onOperationProgressed);
+      }
 
       // POC: get group proxies
       var groupProxies = (rootObject["groupProxies"] as List<object>)?.Cast<GroupProxy>().ToList();
@@ -102,8 +102,8 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
 
       foreach (TraversalContext tc in objectGraph)
       {
-       // create new speckle layer from layer path
-      Collection[] layerPath = _autocadLayerManager.GetLayerPath(tc);
+        // create new speckle layer from layer path
+        Collection[] layerPath = _autocadLayerManager.GetLayerPath(tc);
         switch (tc.Current)
         {
           case IInstanceComponent instanceComponent:
@@ -128,9 +128,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
         {
           List<Entity> convertedObjects = ConvertObject(atomicObject, layerPath, baseLayerPrefix).ToList();
 
-
-            applicationIdMap[objectId] = convertedObjects;
-          
+          applicationIdMap[objectId] = convertedObjects;
 
           results.AddRange(
             convertedObjects.Select(e => new ReceiveConversionResult(

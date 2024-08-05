@@ -51,30 +51,32 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     return _syncToThread.RunOnThread(() =>
     {
       Collection modelWithLayers =
-      new()
-      {
-        name = Application
-          .DocumentManager.CurrentDocument.Name // POC: https://spockle.atlassian.net/browse/CNX-9319
-          .Split(_documentPathSeparator, StringSplitOptions.None)
-          .Reverse()
-          .First()
-      };
+        new()
+        {
+          name = Application
+            .DocumentManager.CurrentDocument.Name // POC: https://spockle.atlassian.net/browse/CNX-9319
+            .Split(_documentPathSeparator, StringSplitOptions.None)
+            .Reverse()
+            .First()
+        };
 
-    // TODO: better handling for document and transactions!!
-    Document doc = Application.DocumentManager.CurrentDocument;
-    using Transaction tr = doc.Database.TransactionManager.StartTransaction();
+      // TODO: better handling for document and transactions!!
+      Document doc = Application.DocumentManager.CurrentDocument;
+      using Transaction tr = doc.Database.TransactionManager.StartTransaction();
 
-    // Cached dictionary to create Collection for autocad entity layers. We first look if collection exists. If so use it otherwise create new one for that layer.
-    Dictionary<string, Layer> collectionCache = new();
-    int count = 0;
+      // Cached dictionary to create Collection for autocad entity layers. We first look if collection exists. If so use it otherwise create new one for that layer.
+      Dictionary<string, Layer> collectionCache = new();
+      int count = 0;
 
-    var (atomicObjects, instanceProxies, instanceDefinitionProxies) = _instanceObjectsManager.UnpackSelection(objects);
+      var (atomicObjects, instanceProxies, instanceDefinitionProxies) = _instanceObjectsManager.UnpackSelection(
+        objects
+      );
 
-    List<SendConversionResult> results = new();
-    List<LayerTableRecord> layers = new();
-    var cacheHitCount = 0;
+      List<SendConversionResult> results = new();
+      List<LayerTableRecord> layers = new();
+      var cacheHitCount = 0;
 
-    foreach (var (entity, applicationId) in atomicObjects)
+      foreach (var (entity, applicationId) in atomicObjects)
       {
         ct.ThrowIfCancellationRequested();
         try
@@ -97,32 +99,30 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
 
           // Create and add a collection for each layer if not done so already.
 
-            string layerName = entity.Layer;
+          string layerName = entity.Layer;
 
-            if (!collectionCache.TryGetValue(layerName, out Layer speckleLayer))
+          if (!collectionCache.TryGetValue(layerName, out Layer speckleLayer))
+          {
+            if (tr.GetObject(entity.LayerId, OpenMode.ForRead) is LayerTableRecord autocadLayer)
             {
-              if (tr.GetObject(entity.LayerId, OpenMode.ForRead) is LayerTableRecord autocadLayer)
-              {
-                speckleLayer = new Layer(layerName);
-            collectionCache[layerName] = speckleLayer;
-            layers.Add(autocadLayer);
-            modelWithLayers.elements.Add(collectionCache[layerName]);
-              }
-              else
-              {
-                speckleLayer = new Layer("Unknown layer");
-              }
+              speckleLayer = new Layer(layerName);
+              collectionCache[layerName] = speckleLayer;
+              layers.Add(autocadLayer);
+              modelWithLayers.elements.Add(collectionCache[layerName]);
             }
+            else
+            {
+              speckleLayer = new Layer("Unknown layer");
+            }
+          }
 
-            speckleLayer.elements.Add(converted);
-
-
+          speckleLayer.elements.Add(converted);
 
           results.Add(new(Status.SUCCESS, applicationId, entity.GetType().ToString(), converted));
         }
         catch (Exception ex) when (!ex.IsFatal())
         {
-          results.Add(new(Status.ERROR, applicationId, dbObject.GetType().ToString(), null, ex));
+          results.Add(new(Status.ERROR, applicationId, entity.GetType().ToString(), null, ex));
           // POC: add logging
         }
         onOperationProgressed?.Invoke("Converting", (double)++count / atomicObjects.Count);
@@ -147,12 +147,12 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
       modelWithLayers["instanceDefinitionProxies"] = instanceDefinitionProxies;
 
       // set groups
-    var groupProxies = _groupUnpacker.UnpackGroups(atomicObjects);
-    modelWithLayers["groupProxies"] = groupProxies;
-    
-    // set colors
-    List<ColorProxy> colorProxies = _colorManager.UnpackColors(atomicObjects, layers);
-    modelWithLayers["colorProxies"] = colorProxies;
+      var groupProxies = _groupUnpacker.UnpackGroups(atomicObjects);
+      modelWithLayers["groupProxies"] = groupProxies;
+
+      // set colors
+      List<ColorProxy> colorProxies = _colorManager.UnpackColors(atomicObjects, layers);
+      modelWithLayers["colorProxies"] = colorProxies;
 
       return new RootObjectBuilderResult(modelWithLayers, results);
     });

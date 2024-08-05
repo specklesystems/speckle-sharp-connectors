@@ -38,7 +38,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     RhinoLayerManager layerManager,
     RhinoInstanceObjectsManager instanceObjectsManager,
     RhinoMaterialManager materialManager,
-    RhinoColorManager colorManager
+    RhinoColorManager colorManager,
     ISyncToThread syncToThread
   )
   {
@@ -80,20 +80,20 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
         ?.Cast<RenderMaterialProxy>()
         .ToList();
 
-    List<ColorProxy>? colors = (rootObject["colorProxies"] as List<object>)?.Cast<ColorProxy>().ToList();
-    if (colors != null)
-    {
-      _colorManager.ParseColors(colors, onOperationProgressed);
-    }
+      List<ColorProxy>? colors = (rootObject["colorProxies"] as List<object>)?.Cast<ColorProxy>().ToList();
+      if (colors != null)
+      {
+        _colorManager.ParseColors(colors, onOperationProgressed);
+      }
 
-    var conversionResults = BakeObjects(
-      objectsToConvert,
-      instanceDefinitionProxies,
-      groupProxies,
-      renderMaterials,
-      baseLayerName,
-      onOperationProgressed
-    );
+      var conversionResults = BakeObjects(
+        objectsToConvert,
+        instanceDefinitionProxies,
+        groupProxies,
+        renderMaterials,
+        baseLayerName,
+        onOperationProgressed
+      );
 
       _contextStack.Current.Document.Views.Redraw();
 
