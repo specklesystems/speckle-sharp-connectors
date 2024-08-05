@@ -161,7 +161,7 @@ public class AutocadLayerManager
   public Layer GetLayerPath(TraversalContext context, string baseLayerPrefix)
   {
     Collection[] collectionBasedPath = context.GetAscendantOfType<Collection>().Reverse().ToArray();
-    
+
     string[] path =
       collectionBasedPath.Length != 0
         ? collectionBasedPath.Select(c => c.name).ToArray()
