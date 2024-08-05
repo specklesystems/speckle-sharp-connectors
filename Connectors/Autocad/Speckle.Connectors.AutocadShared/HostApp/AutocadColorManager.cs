@@ -1,6 +1,7 @@
 using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
 using Speckle.Connectors.Autocad.Operations.Send;
+using Speckle.Core.Models.Collections;
 using Speckle.Core.Models.Proxies;
 using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 
@@ -15,6 +16,8 @@ public class AutocadColorManager
 
   // POC: Will be addressed to move it into AutocadContext!
   private Document Doc => Application.DocumentManager.MdiActiveDocument;
+
+  public Dictionary<string, AutocadColor> ObjectColorIdMap { get; }
 
   public AutocadColorManager(AutocadContext autocadContext)
   {
@@ -88,6 +91,44 @@ public class AutocadColorManager
     AutocadColor color = colorProxy["autocadColorIndex"] is short index
       ? AutocadColor.FromColorIndex(ColorMethod.ByAci, index)
       : AutocadColor.FromColor(System.Drawing.Color.FromArgb(colorProxy.value));
+
+    return color;
+  }
+
+  /// <summary>
+  /// Parse Color Proxies and stores in ObjectColorIdMap the relationship between object ids and colors
+  /// </summary>
+  /// <param name="colorProxies"></param>
+  /// <param name="onOperationProgressed"></param>
+  public void ParseColors(List<ColorProxy> colorProxies, Action<string, double?>? onOperationProgressed)
+  {
+    var count = 0;
+    foreach (ColorProxy colorProxy in colorProxies)
+    {
+      onOperationProgressed?.Invoke("Converting colors", (double)++count / colorProxies.Count);
+      foreach (string objectId in colorProxy.objects)
+      {
+        AutocadColor convertedColor = ConvertColorProxyToColor(colorProxy);
+
+        if (!ObjectColorIdMap.TryGetValue(objectId, out AutocadColor _))
+        {
+          ObjectColorIdMap.Add(objectId, convertedColor);
+        }
+      }
+    }
+  }
+
+  public AutocadColor? GetColorByLayerPath(Collection[] layerPath)
+  {
+    AutocadColor? color = null;
+    for (int j = layerPath.Length - 1; j >= 0; j--)
+    {
+      string id = layerPath[j].applicationId ?? layerPath[j].id;
+      if (ObjectColorIdMap.TryGetValue(id, out color))
+      {
+        break;
+      }
+    }
 
     return color;
   }

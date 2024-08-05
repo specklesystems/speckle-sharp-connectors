@@ -3,6 +3,7 @@ using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.LayerManager;
 using Speckle.Core.Models.Collections;
 using Speckle.Core.Models.GraphTraversal;
+using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 
 namespace Speckle.Connectors.Autocad.HostApp;
 
@@ -27,29 +28,41 @@ public class AutocadLayerManager
   /// Will create a layer with the provided name, or, if it finds an existing one, will "purge" all objects from it.
   /// This ensures we're creating the new objects we've just received rather than overlaying them.
   /// </summary>
-  public void CreateLayerForReceive(Collection layerCollection)
+  /// <returns>The name of the existing or created layer</returns>
+  public string CreateLayerForReceive(
+    Collection[] layerPath,
+    string baseLayerPrefix,
+    Dictionary<string, AutocadColor> objectColorIdMap
+  )
   {
-    string layerName = layerCollection.name;
+    string[] namePath = layerPath.Select(c => c.name).ToArray();
+    string layerName = _autocadContext.RemoveInvalidChars(baseLayerPrefix + string.Join("-", namePath));
     if (!_uniqueLayerNames.Add(layerName))
     {
-      return;
+      return layerName;
     }
 
-    // get layer color
-    int layerColorInt = layerCollection is IHasColor coloredLayer ? coloredLayer.color : -1; // default is white
-    var systemColor = System.Drawing.Color.FromArgb(layerColorInt);
-    Autodesk.AutoCAD.Colors.Color layerColor = Autodesk.AutoCAD.Colors.Color.FromRgb(
-      systemColor.R,
-      systemColor.G,
-      systemColor.B
-    );
+    // get the color if any, of the leaf collection with a color
+    AutocadColor? layerColor = null;
+    for (int j = layerPath.Length - 1; j >= 0; j--)
+    {
+      string layerId = layerPath[j].applicationId ?? layerPath[j].id;
+      if (objectColorIdMap.TryGetValue(layerId, out layerColor))
+      {
+        break;
+      }
+    }
 
     Doc.LockDocument();
     using Transaction transaction = Doc.TransactionManager.StartTransaction();
 
     LayerTable? layerTable =
       transaction.TransactionManager.GetObject(Doc.Database.LayerTableId, OpenMode.ForRead) as LayerTable;
-    LayerTableRecord layerTableRecord = new() { Name = layerName, Color = layerColor };
+    LayerTableRecord layerTableRecord = new() { Name = layerName };
+    if (layerColor is not null)
+    {
+      layerTableRecord.Color = layerColor;
+    }
 
     bool hasLayer = layerTable != null && layerTable.Has(layerName);
     if (hasLayer)
@@ -59,7 +72,7 @@ public class AutocadLayerManager
       SelectionSet selectionResult = Doc.Editor.SelectAll(selectionFilter).Value;
       if (selectionResult == null)
       {
-        return;
+        return layerName;
       }
 
       foreach (SelectedObject selectedObject in selectionResult)
@@ -67,13 +80,15 @@ public class AutocadLayerManager
         transaction.GetObject(selectedObject.ObjectId, OpenMode.ForWrite).Erase();
       }
 
-      return;
+      return layerName;
     }
 
     layerTable?.UpgradeOpen();
     layerTable?.Add(layerTableRecord);
     transaction.AddNewlyCreatedDBObject(layerTableRecord, true);
     transaction.Commit();
+
+    return layerName;
   }
 
   public void DeleteAllLayersByPrefix(string prefix)
@@ -157,27 +172,17 @@ public class AutocadLayerManager
   /// Gets a valid collection representing a layer for a given context.
   /// </summary>
   /// <param name="context"></param>
-  /// <param name="baseLayerPrefix"></param>
-  /// <returns></returns>
-  public Layer GetLayerPath(TraversalContext context, string baseLayerPrefix)
+  /// <returns>A new Speckle Layer object</returns>
+  public Collection[] GetLayerPath(TraversalContext context)
   {
     Collection[] collectionBasedPath = context.GetAscendantOfType<Collection>().Reverse().ToArray();
-    int lastColor = -1;
-    foreach (Collection collection in collectionBasedPath)
+
+    if (collectionBasedPath.Length == 0)
     {
-      if (collection is IHasColor coloredCollection)
-      {
-        lastColor = coloredCollection.color;
-      }
+      string[] path = context.GetPropertyPath().Reverse().ToArray();
+      collectionBasedPath = [new Collection(string.Join("-", path))];
     }
 
-    string[] path =
-      collectionBasedPath.Length != 0
-        ? collectionBasedPath.Select(c => c.name).ToArray()
-        : context.GetPropertyPath().Reverse().ToArray();
-
-    string name = _autocadContext.RemoveInvalidChars(baseLayerPrefix + string.Join("-", path));
-
-    return new Layer(name, lastColor);
+    return collectionBasedPath;
   }
 }

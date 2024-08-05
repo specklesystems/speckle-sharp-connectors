@@ -20,17 +20,20 @@ namespace Speckle.Connectors.Autocad.HostApp;
 public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>, IInstanceBaker<List<Entity>>
 {
   private readonly AutocadLayerManager _autocadLayerManager;
+  private readonly AutocadColorManager _autocadColorManager;
   private readonly AutocadContext _autocadContext;
 
   private readonly IInstanceObjectsManager<AutocadRootObject, List<Entity>> _instanceObjectsManager;
 
   public AutocadInstanceObjectManager(
     AutocadLayerManager autocadLayerManager,
+    AutocadColorManager autocadColorManager,
     AutocadContext autocadContext,
     IInstanceObjectsManager<AutocadRootObject, List<Entity>> instanceObjectsManager
   )
   {
     _autocadLayerManager = autocadLayerManager;
+    _autocadColorManager = autocadColorManager;
     _autocadContext = autocadContext;
     _instanceObjectsManager = instanceObjectsManager;
   }
@@ -221,11 +224,16 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
           );
 
           // POC: collectionPath for instances should be an array of size 1, because we are flattening collections on traversal
-          _autocadLayerManager.CreateLayerForReceive(collectionPath[0]);
+          string layerName = _autocadLayerManager.CreateLayerForReceive(
+            collectionPath,
+            baseLayerName,
+            _autocadColorManager.ObjectColorIdMap
+          );
+
           var blockRef = new BlockReference(insertionPoint, definitionId)
           {
             BlockTransform = matrix3d,
-            Layer = collectionPath[0].name,
+            Layer = layerName,
           };
 
           modelSpaceBlockTableRecord.AppendEntity(blockRef);
@@ -247,6 +255,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
         conversionResults.Add(new(Status.ERROR, instanceOrDefinition as Base ?? new Base(), null, null, ex));
       }
     }
+
     transaction.Commit();
     return new(createdObjectIds, consumedObjectIds, conversionResults);
   }
