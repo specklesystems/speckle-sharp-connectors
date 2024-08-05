@@ -42,19 +42,19 @@ public class AutocadColorManager
   {
     Dictionary<string, ColorProxy> colorProxies = new();
 
-    // Stage 1: unpack materials from objects
+    // Stage 1: unpack colors from objects
     foreach (AutocadRootObject rootObj in rootObjects)
     {
       Entity entity = rootObj.Root;
 
       // skip any objects that inherit their colors
-      if (!entity.Color.IsByAci || !entity.Color.IsByColor)
+      if (!entity.Color.IsByAci && !entity.Color.IsByColor)
       {
         continue;
       }
 
       // assumes color names are unique
-      string colorId = entity.Color.ColorName;
+      string colorId = entity.Color.ColorNameForDisplay;
 
       if (colorProxies.TryGetValue(colorId, out ColorProxy value))
       {
@@ -70,7 +70,7 @@ public class AutocadColorManager
     foreach (LayerTableRecord layer in layers)
     {
       // assumes color names are unique
-      string colorId = layer.Color.ColorName;
+      string colorId = layer.Color.ColorNameForDisplay;
 
       if (colorProxies.TryGetValue(colorId, out ColorProxy value))
       {
