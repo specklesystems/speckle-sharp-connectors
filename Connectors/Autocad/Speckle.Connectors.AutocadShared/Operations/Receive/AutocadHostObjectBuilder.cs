@@ -212,7 +212,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     string layerName = _autocadLayerManager.CreateLayerForReceive(
       layerPath,
       baseLayerNamePrefix,
-      _colorManager.ObjectColorIdMap
+      _colorManager.ObjectColorsIdMap
     );
 
     object converted;
@@ -226,7 +226,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
 
     // get color if any
     string objId = obj.applicationId ?? obj.id;
-    AutocadColor? objColor = _colorManager.ObjectColorIdMap.TryGetValue(objId, out AutocadColor? value) ? value : null;
+    AutocadColor? objColor = _colorManager.ObjectColorsIdMap.TryGetValue(objId, out AutocadColor? value) ? value : null;
 
     foreach (Entity? conversionResult in flattened)
     {

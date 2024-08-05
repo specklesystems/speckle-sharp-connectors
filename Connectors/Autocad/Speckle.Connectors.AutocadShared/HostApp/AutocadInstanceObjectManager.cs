@@ -227,7 +227,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
           string layerName = _autocadLayerManager.CreateLayerForReceive(
             collectionPath,
             baseLayerName,
-            _autocadColorManager.ObjectColorIdMap
+            _autocadColorManager.ObjectColorsIdMap
           );
 
           var blockRef = new BlockReference(insertionPoint, definitionId)

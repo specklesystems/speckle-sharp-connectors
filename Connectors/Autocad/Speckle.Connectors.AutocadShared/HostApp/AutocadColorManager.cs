@@ -1,7 +1,6 @@
 using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
 using Speckle.Connectors.Autocad.Operations.Send;
-using Speckle.Core.Models.Collections;
 using Speckle.Core.Models.Proxies;
 using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 
@@ -17,7 +16,7 @@ public class AutocadColorManager
   // POC: Will be addressed to move it into AutocadContext!
   private Document Doc => Application.DocumentManager.MdiActiveDocument;
 
-  public Dictionary<string, AutocadColor> ObjectColorIdMap { get; }
+  public Dictionary<string, AutocadColor> ObjectColorsIdMap { get; }
 
   public AutocadColorManager(AutocadContext autocadContext)
   {
@@ -110,26 +109,11 @@ public class AutocadColorManager
       {
         AutocadColor convertedColor = ConvertColorProxyToColor(colorProxy);
 
-        if (!ObjectColorIdMap.TryGetValue(objectId, out AutocadColor _))
+        if (!ObjectColorsIdMap.TryGetValue(objectId, out AutocadColor _))
         {
-          ObjectColorIdMap.Add(objectId, convertedColor);
+          ObjectColorsIdMap.Add(objectId, convertedColor);
         }
       }
     }
-  }
-
-  public AutocadColor? GetColorByLayerPath(Collection[] layerPath)
-  {
-    AutocadColor? color = null;
-    for (int j = layerPath.Length - 1; j >= 0; j--)
-    {
-      string id = layerPath[j].applicationId ?? layerPath[j].id;
-      if (ObjectColorIdMap.TryGetValue(id, out color))
-      {
-        break;
-      }
-    }
-
-    return color;
   }
 }

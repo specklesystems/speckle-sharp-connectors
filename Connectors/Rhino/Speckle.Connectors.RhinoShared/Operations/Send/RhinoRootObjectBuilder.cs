@@ -10,6 +10,7 @@ using Speckle.Converters.Common;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
 using Speckle.Core.Models.Collections;
+using Speckle.Core.Models.Proxies;
 using Layer = Rhino.DocObjects.Layer;
 
 namespace Speckle.Connectors.Rhino.Operations.Send;
@@ -26,6 +27,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
   private readonly RhinoLayerManager _layerManager;
   private readonly RhinoMaterialManager _materialManager;
+  private readonly RhinoColorManager _colorManager;
 
   public RhinoRootObjectBuilder(
     ISendConversionCache sendConversionCache,
@@ -34,7 +36,8 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     RhinoInstanceObjectsManager instanceObjectsManager,
     RhinoGroupManager rhinoGroupManager,
     IRootToSpeckleConverter rootToSpeckleConverter,
-    RhinoMaterialManager materialManager
+    RhinoMaterialManager materialManager,
+    RhinoColorManager colorManager
   )
   {
     _sendConversionCache = sendConversionCache;
@@ -44,6 +47,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     _rhinoGroupManager = rhinoGroupManager;
     _rootToSpeckleConverter = rootToSpeckleConverter;
     _materialManager = materialManager;
+    _colorManager = colorManager;
   }
 
   public RootObjectBuilderResult Build(
@@ -69,12 +73,15 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     // POC: Handle blocks.
     List<SendConversionResult> results = new(atomicObjects.Count);
 
+    HashSet<Layer> versionLayers = new();
     foreach (RhinoObject rhinoObject in atomicObjects)
     {
       cancellationToken.ThrowIfCancellationRequested();
 
       // handle layer
       Layer layer = _contextStack.Current.Document.Layers[rhinoObject.Attributes.LayerIndex];
+      versionLayers.Add(layer);
+
       Collection collectionHost = _layerManager.GetHostObjectCollection(layer, rootObjectCollection);
       string applicationId = rhinoObject.Id.ToString();
 
@@ -116,6 +123,10 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     }
 
     rootObjectCollection["renderMaterialProxies"] = _materialManager.UnpackRenderMaterial(atomicObjects);
+
+    // set colors
+    List<ColorProxy> colorProxies = _colorManager.UnpackColors(atomicObjects, versionLayers.ToList());
+    rootObjectCollection["colorProxies"] = colorProxies;
 
     // 5. profit
     return new(rootObjectCollection, results);
