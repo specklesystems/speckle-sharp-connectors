@@ -1,4 +1,4 @@
-﻿using Rhino;
+using Rhino;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
@@ -35,9 +35,15 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
       throw new SpeckleConversionException("Cannot convert a mesh with 0 vertices/faces");
     }
 
-    var vertexCoordinates = target.Vertices.ToPoint3dArray().SelectMany(pt => new[] { pt.X, pt.Y, pt.Z }).ToList();
-    var faces = new List<int>();
+    List<double> vertexCoordinates = new(target.Vertices.Count * 3);
+    foreach (var v in target.Vertices)
+    {
+      vertexCoordinates.Add(v.X);
+      vertexCoordinates.Add(v.Y);
+      vertexCoordinates.Add(v.Z);
+    }
 
+    List<int> faces = new();
     foreach (RG.MeshNgon polygon in target.GetNgonAndFacesEnumerable())
     {
       var vertIndices = polygon.BoundaryVertexIndexList();
@@ -46,16 +52,21 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
       faces.AddRange(vertIndices.Select(vertIndex => (int)vertIndex));
     }
 
-    var textureCoordinates = new List<double>(target.TextureCoordinates.Count * 2);
+    List<double> textureCoordinates = new(target.TextureCoordinates.Count * 2);
     foreach (var textureCoord in target.TextureCoordinates)
     {
       textureCoordinates.Add(textureCoord.X);
       textureCoordinates.Add(textureCoord.Y);
     }
 
-    var colors = target.VertexColors.Select(cl => cl.ToArgb()).ToList();
-    var volume = target.IsClosed ? target.Volume() : 0;
-    var bbox = _boxConverter.Convert(new RG.Box(target.GetBoundingBox(false)));
+    List<int> colors = new(target.VertexColors.Count);
+    foreach (var c in target.VertexColors)
+    {
+      colors.Add(c.ToArgb());
+    }
+
+    double volume = target.IsClosed ? target.Volume() : 0;
+    SOG.Box bbox = _boxConverter.Convert(new RG.Box(target.GetBoundingBox(false)));
 
     return new SOG.Mesh(vertexCoordinates, faces, colors, textureCoordinates, _contextStack.Current.SpeckleUnits)
     {
