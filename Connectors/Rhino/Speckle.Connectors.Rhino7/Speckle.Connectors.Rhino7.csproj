@@ -2,6 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <Configurations>Debug;Release;Local</Configurations>
+    <DefineConstants>$(DefineConstants);RHINO7</DefineConstants>
     <RhinoVersion>7</RhinoVersion>
   </PropertyGroup>
 

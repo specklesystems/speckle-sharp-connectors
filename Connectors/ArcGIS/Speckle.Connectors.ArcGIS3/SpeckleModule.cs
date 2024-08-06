@@ -1,8 +1,8 @@
 using System.Reflection;
 using ArcGIS.Desktop.Framework;
-using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.ArcGIS.HostApp;
+using Speckle.Core.Common;
 using Speckle.Core.Kits;
 using Module = ArcGIS.Desktop.Framework.Contracts.Module;
 
@@ -14,6 +14,7 @@ namespace Speckle.Connectors.ArcGIS;
 internal sealed class SpeckleModule : Module
 {
   private static SpeckleModule? s_this;
+  private readonly Speckle.Connectors.Utils.Connector _connector;
 
   /// <summary>
   /// Retrieve the singleton instance to this module here
@@ -21,21 +22,21 @@ internal sealed class SpeckleModule : Module
   public static SpeckleModule Current =>
     s_this ??= (SpeckleModule)FrameworkApplication.FindModule("ConnectorArcGIS_Module");
 
-  public SpeckleContainer Container { get; }
+  public SpeckleContainer Container => _connector.NotNull().Container;
 
   public SpeckleModule()
   {
-    AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<SpeckleModule>;
-
-    var builder = SpeckleContainerBuilder.CreateInstance();
-
     // Register Settings
     var arcgisSettings = new ArcGISSettings(HostApplications.ArcGIS, HostAppVersion.v3);
-
-    Container = builder
+    var builder = SpeckleContainerBuilder
+      .CreateInstance()
       .LoadAutofacModules(Assembly.GetExecutingAssembly(), arcgisSettings.Modules)
-      .AddSingleton(arcgisSettings)
-      .Build();
+      .AddSingleton(arcgisSettings);
+
+    _connector = Speckle.Connectors.Utils.Connector.Start<SpeckleModule>(
+      builder,
+      new(HostApplications.ArcGIS, "v3") //HostAppVersion.v3
+    );
   }
 
   /// <summary>
@@ -45,6 +46,7 @@ internal sealed class SpeckleModule : Module
   protected override bool CanUnload()
   {
     //TODO - add your business logic
+    _connector.Dispose();
     //return false to ~cancel~ Application close
     return true;
   }

@@ -4,6 +4,7 @@ using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Rhino.DependencyInjection;
 using Speckle.Connectors.Rhino.HostApp;
+using Speckle.Core.Common;
 using Speckle.Core.Kits;
 using Speckle.Core.Models.Extensions;
 
@@ -21,8 +22,10 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
 {
   private IRhinoPlugin? _rhinoPlugin;
 
+  private Speckle.Connectors.Utils.Connector? _connector;
+
   protected override string LocalPlugInName => "Speckle (New UI)";
-  public SpeckleContainer? Container { get; private set; }
+  public SpeckleContainer Container => _connector.NotNull().Container;
 
   public SpeckleConnectorsRhinoPlugin()
   {
@@ -42,20 +45,19 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
   {
     try
     {
-      AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<SpeckleConnectorsRhinoPlugin>;
-
-      var builder = SpeckleContainerBuilder.CreateInstance();
-
       // Register Settings
-      var rhinoSettings = new RhinoSettings(HostApplications.Rhino, HostAppVersion.v7);
+      var rhinoSettings = new RhinoSettings(HostApplications.Rhino, GetVersion());
 
       // POC: We must load the Rhino connector module manually because we only search for DLL files when calling `LoadAutofacModules`,
       // but the Rhino connector has `.rhp` as it's extension.
-      Container = builder
+      var builder = SpeckleContainerBuilder
+        .CreateInstance()
         .LoadAutofacModules(Assembly.GetExecutingAssembly(), rhinoSettings.Modules)
-        .AddSingleton(rhinoSettings)
-        .Build();
-
+        .AddSingleton(rhinoSettings);
+      _connector = Speckle.Connectors.Utils.Connector.Start<SpeckleConnectorsRhinoPlugin>(
+        builder,
+        new(HostApplications.Rhino, GetVersionAsString()) //HostAppVersion.v7
+      );
       // Resolve root plugin object and initialise.
       _rhinoPlugin = Container.Resolve<IRhinoPlugin>();
       _rhinoPlugin.Initialise();
@@ -72,6 +74,29 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
   protected override void OnShutdown()
   {
     _rhinoPlugin?.Shutdown();
+    _connector?.Dispose();
     base.OnShutdown();
+  }
+
+  private static HostAppVersion GetVersion()
+  {
+#if RHINO7
+    return HostAppVersion.v7;
+#elif RHINO8
+    return HostAppVersion.v8;
+#else
+    throw new NotImplementedException();
+#endif
+  }
+
+  private static string GetVersionAsString()
+  {
+#if RHINO7
+    return "7";
+#elif RHINO8
+    return "8";
+#else
+    throw new NotImplementedException();
+#endif
   }
 }

@@ -4,6 +4,7 @@ using Autodesk.Revit.UI;
 using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Core.Common;
+using Speckle.Core.Kits;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
@@ -11,7 +12,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
 {
   private IRevitPlugin? _revitPlugin;
 
-  private SpeckleContainer? _container;
+  private Speckle.Connectors.Utils.Connector? _connector;
 
   // POC: this is getting hard coded - need a way of injecting it
   //      I am beginning to think the shared project is not the way
@@ -57,18 +58,19 @@ internal sealed class RevitExternalApplication : IExternalApplication
   {
     try
     {
-      // POC: not sure what this is doing...  could be messing up our Aliasing????
-      AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<RevitExternalApplication>;
-      var containerBuilder = SpeckleContainerBuilder.CreateInstance();
       // init DI
-      _container = containerBuilder
+      var builder = SpeckleContainerBuilder
+        .CreateInstance()
         .LoadAutofacModules(Assembly.GetExecutingAssembly(), _revitSettings.ModuleFolders.NotNull())
         .AddSingleton(_revitSettings) // apply revit settings into DI
-        .AddSingleton(application) // inject UIControlledApplication application
-        .Build();
+        .AddSingleton(application); // inject UIControlledApplication application
 
+      _connector = Speckle.Connectors.Utils.Connector.Start<RevitExternalApplication>(
+        builder,
+        new(HostApplications.Revit, GetVersionAsString())
+      );
       // resolve root object
-      _revitPlugin = _container.Resolve<IRevitPlugin>();
+      _revitPlugin = _connector.Container.Resolve<IRevitPlugin>();
       _revitPlugin.Initialise();
     }
     catch (Exception e) when (!e.IsFatal())
@@ -88,6 +90,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
       // possibly with injected pieces or with some abstract methods?
       // need to look for commonality
       _revitPlugin?.Shutdown();
+      _connector?.Dispose();
     }
     catch (Exception e) when (!e.IsFatal())
     {
