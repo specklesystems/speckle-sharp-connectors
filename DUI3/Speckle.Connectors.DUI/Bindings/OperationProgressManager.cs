@@ -13,6 +13,7 @@ public class OperationProgressManager
   private const string SET_MODEL_PROGRESS_UI_COMMAND_NAME = "setModelProgress";
   private static readonly ConcurrentDictionary<string, (DateTime lastCallTime, string status)> s_lastProgressValues =
     new();
+  private const int THROTTLE_INTERVAL_MS = 50;
 
   private IBridge Bridge { get; }
 
@@ -39,7 +40,7 @@ public class OperationProgressManager
 
     var elapsedMs = (DateTime.Now - t.Item1).Milliseconds;
 
-    if (elapsedMs < 50 && t.Item2 == progress.Status) // '50' can be parametrised
+    if (elapsedMs < THROTTLE_INTERVAL_MS && t.Item2 == progress.Status)
     {
       return;
     }
