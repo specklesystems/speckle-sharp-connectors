@@ -53,6 +53,12 @@ public class AutocadMaterialManager
     {
       Entity entity = rootObj.Root;
 
+      // skip inherited materials
+      if (entity.Material == "ByLayer")
+      {
+        continue;
+      }
+
       if (transaction.GetObject(entity.MaterialId, OpenMode.ForRead) is Material material)
       {
         string materialId = material.Handle.ToString();
