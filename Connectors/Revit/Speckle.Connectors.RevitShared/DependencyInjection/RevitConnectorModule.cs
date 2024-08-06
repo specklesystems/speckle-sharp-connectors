@@ -74,6 +74,9 @@ public class RevitConnectorModule : ISpeckleModule
     builder.AddScoped<IHostObjectBuilder, RevitHostObjectBuilder>();
     builder.AddScoped<ITransactionManager, TransactionManager>();
     builder.AddSingleton(DefaultTraversal.CreateTraversalFunc());
+
+    // operation progress manager
+    builder.AddSingleton<IOperationProgressManager, OperationProgressManager>();
   }
 
   public void RegisterUiDependencies(SpeckleContainerBuilder builder)

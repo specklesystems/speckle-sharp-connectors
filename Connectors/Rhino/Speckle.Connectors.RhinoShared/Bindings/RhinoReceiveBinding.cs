@@ -20,20 +20,23 @@ public class RhinoReceiveBinding : IReceiveBinding
   private readonly DocumentModelStore _store;
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
   private readonly RhinoSettings _rhinoSettings;
-  public ReceiveBindingUICommands Commands { get; }
+  private readonly IOperationProgressManager _operationProgressManager;
+  private ReceiveBindingUICommands Commands { get; }
 
   public RhinoReceiveBinding(
     DocumentModelStore store,
     CancellationManager cancellationManager,
     IBridge parent,
     IUnitOfWorkFactory unitOfWorkFactory,
-    RhinoSettings rhinoSettings
+    RhinoSettings rhinoSettings,
+    IOperationProgressManager operationProgressManager
   )
   {
     Parent = parent;
     _store = store;
     _unitOfWorkFactory = unitOfWorkFactory;
     _rhinoSettings = rhinoSettings;
+    _operationProgressManager = operationProgressManager;
     _cancellationManager = cancellationManager;
     Commands = new ReceiveBindingUICommands(parent);
   }
@@ -61,7 +64,12 @@ public class RhinoReceiveBinding : IReceiveBinding
           modelCard.GetReceiveInfo(_rhinoSettings.HostAppInfo.Name),
           cts.Token,
           (status, progress) =>
-            Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts)
+            _operationProgressManager.SetModelProgress(
+              Parent,
+              modelCardId,
+              new ModelCardProgress(modelCardId, status, progress),
+              cts
+            )
         )
         .ConfigureAwait(false);
 
