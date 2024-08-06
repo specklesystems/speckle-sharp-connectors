@@ -60,10 +60,10 @@ public class AutocadSelectionBinding : ISelectionBinding
     List<string> objectTypes = new();
     if (doc != null)
     {
+      using var tr = doc.TransactionManager.StartTransaction();
       PromptSelectionResult selection = doc.Editor.SelectImplied();
       if (selection.Status == PromptStatus.OK)
       {
-        using var tr = doc.TransactionManager.StartTransaction();
         foreach (SelectedObject obj in selection.Value)
         {
           var dbObject = tr.GetObject(obj.ObjectId, OpenMode.ForRead);

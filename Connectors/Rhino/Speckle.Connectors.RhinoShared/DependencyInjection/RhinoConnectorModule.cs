@@ -91,5 +91,8 @@ public class RhinoConnectorModule : ISpeckleModule
     builder.AddScoped<RhinoLayerManager>();
     builder.AddScoped<RhinoMaterialManager>();
     builder.AddScoped<RhinoColorManager>();
+
+    // operation progress manager
+    builder.AddSingleton<IOperationProgressManager, OperationProgressManager>();
   }
 }
