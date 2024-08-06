@@ -33,6 +33,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoInstanceObjectsManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoLayerManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoColorManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoMaterialManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoSettings.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SpeckleRhinoPanelHost.cs" />

@@ -28,6 +28,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private readonly RhinoInstanceObjectsManager _instanceObjectsManager;
   private readonly RhinoLayerManager _layerManager;
   private readonly RhinoMaterialManager _materialManager;
+  private readonly RhinoColorManager _colorManager;
   private readonly ISyncToThread _syncToThread;
 
   public RhinoHostObjectBuilder(
@@ -37,6 +38,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     RhinoLayerManager layerManager,
     RhinoInstanceObjectsManager instanceObjectsManager,
     RhinoMaterialManager materialManager,
+    RhinoColorManager colorManager,
     ISyncToThread syncToThread
   )
   {
@@ -46,6 +48,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _layerManager = layerManager;
     _instanceObjectsManager = instanceObjectsManager;
     _materialManager = materialManager;
+    _colorManager = colorManager;
     _syncToThread = syncToThread;
   }
 
@@ -76,6 +79,12 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       List<RenderMaterialProxy>? renderMaterials = (rootObject["renderMaterialProxies"] as List<object>)
         ?.Cast<RenderMaterialProxy>()
         .ToList();
+
+      List<ColorProxy>? colors = (rootObject["colorProxies"] as List<object>)?.Cast<ColorProxy>().ToList();
+      if (colors != null)
+      {
+        _colorManager.ParseColors(colors, onOperationProgressed);
+      }
 
       var conversionResults = BakeObjects(
         objectsToConvert,
@@ -171,12 +180,18 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
           {
             doc.Layers[layerIndex].RenderMaterialIndex = lIndex;
           }
+
+          if (_colorManager.ObjectColorsIdMap.TryGetValue(collectionId, out Color layerColor))
+          {
+            doc.Layers[layerIndex].Color = layerColor;
+          }
         }
 
         var result = _converter.Convert(obj);
         string objectId = obj.applicationId ?? obj.id; // POC: assuming objects have app ids for this to work?
         int objMaterialIndex = objectMaterialsIdMap.TryGetValue(objectId, out int oIndex) ? oIndex : 0;
-        var conversionIds = HandleConversionResult(result, obj, layerIndex, objMaterialIndex).ToList();
+        Color? objColor = _colorManager.ObjectColorsIdMap.TryGetValue(objectId, out Color color) ? color : null;
+        var conversionIds = HandleConversionResult(result, obj, layerIndex, objMaterialIndex, objColor).ToList();
         foreach (var r in conversionIds)
         {
           conversionResults.Add(new(Status.SUCCESS, obj, r, result.GetType().ToString()));
@@ -335,7 +350,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     object conversionResult,
     Base originalObject,
     int layerIndex,
-    int materialIndex = 0
+    int? materialIndex = null,
+    Color? color = null
   )
   {
     var doc = _contextStack.Current.Document;
@@ -344,16 +360,23 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     {
       case IEnumerable<GeometryBase> list:
       {
-        Group group = BakeObjectsAsGroup(originalObject.id, list, layerIndex, materialIndex);
+        Group group = BakeObjectsAsGroup(originalObject.id, list, layerIndex, materialIndex, color);
         newObjectIds.Add(group.Id.ToString());
         break;
       }
       case GeometryBase newObject:
       {
-        ObjectAttributes atts = new() { LayerIndex = layerIndex, MaterialIndex = materialIndex };
-        if (materialIndex != 0)
+        ObjectAttributes atts = new() { LayerIndex = layerIndex };
+        if (materialIndex is int index)
         {
+          atts.MaterialIndex = index;
           atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+        }
+
+        if (color is Color objColor)
+        {
+          atts.ObjectColor = objColor;
+          atts.ColorSource = ObjectColorSource.ColorFromObject;
         }
 
         Guid newObjectGuid = doc.Objects.Add(newObject, atts);
@@ -373,23 +396,31 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     string groupName,
     IEnumerable<GeometryBase> list,
     int layerIndex,
-    int materialIndex = 0
+    int? materialIndex = null,
+    Color? color = null
   )
   {
     var doc = _contextStack.Current.Document;
     List<Guid> objectIds = new();
     foreach (GeometryBase obj in list)
     {
-      ObjectAttributes atts = new() { LayerIndex = layerIndex, MaterialIndex = materialIndex };
-      if (materialIndex != 0)
+      ObjectAttributes atts = new() { LayerIndex = layerIndex };
+      if (materialIndex is int index)
       {
+        atts.MaterialIndex = index;
         atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+      }
+
+      if (color is Color objColor)
+      {
+        atts.ObjectColor = objColor;
+        atts.ColorSource = ObjectColorSource.ColorFromObject;
       }
 
       objectIds.Add(doc.Objects.Add(obj, atts));
     }
 
-    var groupIndex = _contextStack.Current.Document.Groups.Add(groupName, objectIds);
+    int groupIndex = _contextStack.Current.Document.Groups.Add(groupName, objectIds);
     var group = _contextStack.Current.Document.Groups.FindIndex(groupIndex);
     return group;
   }

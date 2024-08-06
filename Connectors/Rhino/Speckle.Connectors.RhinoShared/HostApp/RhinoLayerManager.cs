@@ -43,7 +43,7 @@ public class RhinoLayerManager
 
     var currentLayerName = baseLayerName;
     var currentDocument = RhinoDoc.ActiveDoc; // POC: too much effort right now to wrap around the interfaced layers
-    var previousLayer = currentDocument.Layers.FindName(currentLayerName);
+    Layer previousLayer = currentDocument.Layers.FindName(currentLayerName);
     foreach (Collection collection in collectionPath)
     {
       currentLayerName += Layer.PathSeparator + collection.name;
@@ -55,15 +55,9 @@ public class RhinoLayerManager
       }
 
       var cleanNewLayerName = collection.name.Replace("{", "").Replace("}", "");
+      Layer newLayer = new() { Name = cleanNewLayerName, ParentLayerId = previousLayer.Id };
 
-      var newLayer = new Layer
-      {
-        Name = cleanNewLayerName,
-        ParentLayerId = previousLayer.Id,
-        Color = Color.Black
-      };
-
-      var index = currentDocument.Layers.Add(newLayer);
+      int index = currentDocument.Layers.Add(newLayer);
       _hostLayerCache.Add(currentLayerName, index);
       previousLayer = currentDocument.Layers.FindIndex(index); // note we need to get the correct id out, hence why we're double calling this
     }

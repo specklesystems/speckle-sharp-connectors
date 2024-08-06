@@ -10,6 +10,7 @@ using Speckle.Core.Logging;
 using Speckle.Core.Models;
 using Speckle.Core.Models.Collections;
 using Speckle.Core.Models.Instances;
+using Speckle.Core.Models.Proxies;
 
 namespace Speckle.Connectors.Autocad.Operations.Send;
 
@@ -19,6 +20,8 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
   private readonly string[] _documentPathSeparator = ["\\"];
   private readonly ISendConversionCache _sendConversionCache;
   private readonly AutocadInstanceObjectManager _instanceObjectsManager;
+  private readonly AutocadColorManager _colorManager;
+  private readonly AutocadLayerManager _layerManager;
   private readonly AutocadGroupUnpacker _groupUnpacker;
   private readonly ISyncToThread _syncToThread;
 
@@ -26,6 +29,8 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     IRootToSpeckleConverter converter,
     ISendConversionCache sendConversionCache,
     AutocadInstanceObjectManager instanceObjectManager,
+    AutocadColorManager colorManager,
+    AutocadLayerManager layerManager,
     AutocadGroupUnpacker groupUnpacker,
     ISyncToThread syncToThread
   )
@@ -33,6 +38,8 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     _converter = converter;
     _sendConversionCache = sendConversionCache;
     _instanceObjectsManager = instanceObjectManager;
+    _colorManager = colorManager;
+    _layerManager = layerManager;
     _groupUnpacker = groupUnpacker;
     _syncToThread = syncToThread;
   }
@@ -61,7 +68,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
       using Transaction tr = doc.Database.TransactionManager.StartTransaction();
 
       // Cached dictionary to create Collection for autocad entity layers. We first look if collection exists. If so use it otherwise create new one for that layer.
-      Dictionary<string, Layer> collectionCache = new();
+      List<LayerTableRecord> layers = new();
       int count = 0;
 
       var (atomicObjects, instanceProxies, instanceDefinitionProxies) = _instanceObjectsManager.UnpackSelection(
@@ -71,13 +78,13 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
       List<SendConversionResult> results = new();
       var cacheHitCount = 0;
 
-      foreach (var (dbObject, applicationId) in atomicObjects)
+      foreach (var (entity, applicationId) in atomicObjects)
       {
         ct.ThrowIfCancellationRequested();
         try
         {
           Base converted;
-          if (dbObject is BlockReference && instanceProxies.TryGetValue(applicationId, out InstanceProxy instanceProxy))
+          if (entity is BlockReference && instanceProxies.TryGetValue(applicationId, out InstanceProxy instanceProxy))
           {
             converted = instanceProxy;
           }
@@ -88,42 +95,25 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
           }
           else
           {
-            converted = _converter.Convert(dbObject);
+            converted = _converter.Convert(entity);
             converted.applicationId = applicationId;
           }
 
           // Create and add a collection for each layer if not done so already.
-          if (dbObject is Entity entity)
+          Layer layer = _layerManager.GetOrCreateSpeckleLayer(entity, tr, out LayerTableRecord? autocadLayer);
+          if (autocadLayer is not null)
           {
-            string layerName = entity.Layer;
-
-            if (!collectionCache.TryGetValue(layerName, out Layer speckleLayer))
-            {
-              if (tr.GetObject(entity.LayerId, OpenMode.ForRead) is LayerTableRecord autocadLayer)
-              {
-                speckleLayer = new Layer(layerName);
-                collectionCache[layerName] = speckleLayer;
-                modelWithLayers.elements.Add(collectionCache[layerName]);
-              }
-              else
-              {
-                speckleLayer = new Layer("Unknown layer");
-              }
-            }
-
-            speckleLayer.elements.Add(converted);
-          }
-          else
-          {
-            // Dims note: do we really need this if else clause here? imho not, as we'd fail in the upper stage of conversion?
-            // TODO: error
+            layers.Add(autocadLayer);
           }
 
-          results.Add(new(Status.SUCCESS, applicationId, dbObject.GetType().ToString(), converted));
+          modelWithLayers.elements.Add(layer);
+          layer.elements.Add(converted);
+
+          results.Add(new(Status.SUCCESS, applicationId, entity.GetType().ToString(), converted));
         }
         catch (Exception ex) when (!ex.IsFatal())
         {
-          results.Add(new(Status.ERROR, applicationId, dbObject.GetType().ToString(), null, ex));
+          results.Add(new(Status.ERROR, applicationId, entity.GetType().ToString(), null, ex));
           // POC: add logging
         }
         onOperationProgressed?.Invoke("Converting", (double)++count / atomicObjects.Count);
@@ -147,8 +137,14 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
       // Set definition proxies
       modelWithLayers["instanceDefinitionProxies"] = instanceDefinitionProxies;
 
+      // set groups
       var groupProxies = _groupUnpacker.UnpackGroups(atomicObjects);
       modelWithLayers["groupProxies"] = groupProxies;
+
+      // set colors
+      List<ColorProxy> colorProxies = _colorManager.UnpackColors(atomicObjects, layers);
+      modelWithLayers["colorProxies"] = colorProxies;
+
       return new RootObjectBuilderResult(modelWithLayers, results);
     });
   }

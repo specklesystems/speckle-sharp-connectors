@@ -121,8 +121,8 @@
       },
       "Speckle.Logging": {
         "type": "Transitive",
-        "resolved": "3.1.0-dev.88",
-        "contentHash": "kD8Xuqbv5lmNQGuv+gx+OnzFt51twc2aIWHEmaG+HBwojR4PZ9IqsaCcMSu4wv/Q1p+Xq5MZldVDkO368JSJRw=="
+        "resolved": "3.1.0-dev.89",
+        "contentHash": "sRiVATMGe8N0LwFRlqxBpRwmI7ZXVKGobSUUCLzzBqIe5UKFJRGi4Jz/6ukF6Tl2li6vrU0qt0CBPOx5nX1jrA=="
       },
       "Speckle.Newtonsoft.Json": {
         "type": "Transitive",
@@ -249,7 +249,7 @@
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[3.1.0, )",
           "Speckle.Autofac": "[1.0.0, )",
-          "Speckle.Objects": "[3.1.0-dev.88, )"
+          "Speckle.Objects": "[3.1.0-dev.89, )"
         }
       },
       "speckle.converters.common.dependencyinjection": {
@@ -284,9 +284,9 @@
       },
       "Speckle.Core": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.88, )",
-        "resolved": "3.1.0-dev.88",
-        "contentHash": "1yBzO/JEG9aEGeXwpx1vMZgknmma0QI1cVQ+uwoHc7oyYcAk1bePCa/C6ntyszzV+Y3fpeBZY4HGNALYICgVjg==",
+        "requested": "[3.1.0-dev.89, )",
+        "resolved": "3.1.0-dev.89",
+        "contentHash": "p3KMI7g2D6+nRAFtSQ3zDB6sB7329qyOvn+WCvy1n7YK35atM4ssR9WL4SVgKss/IQifxgDZVVldE3/o31TRTQ==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.CSharp": "4.7.0",
@@ -295,18 +295,18 @@
           "Polly.Contrib.WaitAndRetry": "1.1.1",
           "Polly.Extensions.Http": "3.0.0",
           "Speckle.DoubleNumerics": "4.0.1",
-          "Speckle.Logging": "3.1.0-dev.88",
+          "Speckle.Logging": "3.1.0-dev.89",
           "Speckle.Newtonsoft.Json": "13.0.2",
           "System.Text.Json": "5.0.2"
         }
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.88, )",
-        "resolved": "3.1.0-dev.88",
-        "contentHash": "hzqeIYzvSa3VusEWic8FaVsaEMwHcwnbj2p0JDz2ZTAlf3SpFdxVtA4onIq0l7YyROBIFFn78eIIpm1cCucUIw==",
+        "requested": "[3.1.0-dev.89, )",
+        "resolved": "3.1.0-dev.89",
+        "contentHash": "DA035BwkIG5sdg2Z6SEsi9jo5zuP6UxBFzBW8QtY5hf54be34lzxl/9p3HGkpALUyBMrgaAZvZZnS/INEQRpGw==",
         "dependencies": {
-          "Speckle.Core": "3.1.0-dev.88"
+          "Speckle.Core": "3.1.0-dev.89"
         }
       },
       "Speckle.Revit.API": {

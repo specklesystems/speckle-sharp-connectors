@@ -11,6 +11,7 @@ using Speckle.Core.Models.Collections;
 using Speckle.Core.Models.GraphTraversal;
 using Speckle.Core.Models.Instances;
 using Speckle.Core.Models.Proxies;
+using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 
 namespace Speckle.Connectors.Autocad.Operations.Receive;
 
@@ -24,7 +25,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
   private readonly GraphTraversal _traversalFunction;
   private readonly ISyncToThread _syncToThread;
 
-  // private readonly HashSet<string> _uniqueLayerNames = new();
+  private readonly AutocadColorManager _colorManager;
   private readonly AutocadInstanceObjectManager _instanceObjectsManager;
   private readonly AutocadContext _autocadContext;
 
@@ -33,6 +34,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     GraphTraversal traversalFunction,
     AutocadLayerManager autocadLayerManager,
     AutocadInstanceObjectManager instanceObjectsManager,
+    AutocadColorManager colorManager,
     ISyncToThread syncToThread,
     AutocadContext autocadContext
   )
@@ -41,6 +43,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     _traversalFunction = traversalFunction;
     _autocadLayerManager = autocadLayerManager;
     _instanceObjectsManager = instanceObjectsManager;
+    _colorManager = colorManager;
     _syncToThread = syncToThread;
     _autocadContext = autocadContext;
   }
@@ -85,23 +88,31 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
         instanceComponents.AddRange(transformed);
       }
 
+      // POC: get colors
+      List<ColorProxy>? colors = (rootObject["colorProxies"] as List<object>)?.Cast<ColorProxy>().ToList();
+      if (colors != null)
+      {
+        _colorManager.ParseColors(colors, onOperationProgressed);
+      }
+
       // POC: get group proxies
       var groupProxies = (rootObject["groupProxies"] as List<object>)?.Cast<GroupProxy>().ToList();
 
-      var atomicObjects = new List<(Layer layer, Base obj)>();
+      var atomicObjects = new List<(Collection[] layerPath, Base obj)>();
 
       foreach (TraversalContext tc in objectGraph)
       {
-        var layer = _autocadLayerManager.GetLayerPath(tc, baseLayerPrefix);
+        // create new speckle layer from layer path
+        Collection[] layerPath = _autocadLayerManager.GetLayerPath(tc);
         switch (tc.Current)
         {
           case IInstanceComponent instanceComponent:
-            instanceComponents.Add(([new() { name = layer.name }], instanceComponent));
+            instanceComponents.Add((layerPath, instanceComponent));
             break;
           case GroupProxy:
             continue;
           default:
-            atomicObjects.Add((layer, tc.Current));
+            atomicObjects.Add((layerPath, tc.Current));
             break;
         }
       }
@@ -109,17 +120,15 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       // Stage 1: Convert atomic objects
       Dictionary<string, List<Entity>> applicationIdMap = new();
       var count = 0;
-      foreach (var (layerCollection, atomicObject) in atomicObjects)
+      foreach (var (layerPath, atomicObject) in atomicObjects)
       {
+        string objectId = atomicObject.applicationId ?? atomicObject.id;
         onOperationProgressed?.Invoke("Converting objects", (double)++count / atomicObjects.Count);
         try
         {
-          var convertedObjects = ConvertObject(atomicObject, layerCollection).ToList();
+          List<Entity> convertedObjects = ConvertObject(atomicObject, layerPath, baseLayerPrefix).ToList();
 
-          if (atomicObject.applicationId != null)
-          {
-            applicationIdMap[atomicObject.applicationId] = convertedObjects;
-          }
+          applicationIdMap[objectId] = convertedObjects;
 
           results.AddRange(
             convertedObjects.Select(e => new ReceiveConversionResult(
@@ -203,13 +212,17 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     _instanceObjectsManager.PurgeInstances(baseLayerPrefix);
   }
 
-  private IEnumerable<Entity> ConvertObject(Base obj, Layer layerCollection)
+  private IEnumerable<Entity> ConvertObject(Base obj, Collection[] layerPath, string baseLayerNamePrefix)
   {
     using TransactionContext transactionContext = TransactionContext.StartTransaction(
       Application.DocumentManager.MdiActiveDocument
     ); // POC: is this used/needed?
 
-    _autocadLayerManager.CreateLayerForReceive(layerCollection);
+    string layerName = _autocadLayerManager.CreateLayerForReceive(
+      layerPath,
+      baseLayerNamePrefix,
+      _colorManager.ObjectColorsIdMap
+    );
 
     object converted;
     using (var tr = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction())
@@ -220,6 +233,10 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
 
     IEnumerable<Entity?> flattened = Utilities.FlattenToHostConversionResult(converted).Cast<Entity>();
 
+    // get color if any
+    string objId = obj.applicationId ?? obj.id;
+    AutocadColor? objColor = _colorManager.ObjectColorsIdMap.TryGetValue(objId, out AutocadColor? value) ? value : null;
+
     foreach (Entity? conversionResult in flattened)
     {
       if (conversionResult == null)
@@ -228,7 +245,14 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
         continue;
       }
 
-      conversionResult.AppendToDb(layerCollection.name);
+      // set color if any
+      // POC: if these are displayvalue meshes, we will need to check for their ids somehow
+      if (objColor is not null)
+      {
+        conversionResult.Color = objColor;
+      }
+
+      conversionResult.AppendToDb(layerName);
       yield return conversionResult;
     }
   }

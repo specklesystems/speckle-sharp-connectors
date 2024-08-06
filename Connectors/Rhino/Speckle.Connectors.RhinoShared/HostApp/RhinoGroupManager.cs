@@ -1,4 +1,4 @@
-﻿using Rhino;
+using Rhino;
 using Rhino.DocObjects;
 using Speckle.Core.Models.Proxies;
 
