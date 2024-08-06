@@ -67,15 +67,20 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.Brep>
     // }
 
     // Vertices, uv curves, 3d curves and surfaces
-    var vertices = target.Vertices.Select(vertex => _pointConverter.Convert(vertex.Location)).ToList();
-    var curves3d = target.Curves3D.Select(curve3d => _curveConverter.Convert(curve3d)).ToList();
-    var surfaces = target.Surfaces.Select(srf => _surfaceConverter.Convert(srf.ToNurbsSurface())).ToList();
+    List<SOG.Point> vertices = new(target.Vertices.Count);
+    vertices.AddRange(target.Vertices.Select(v => _pointConverter.Convert(v.Location)));
 
-    List<ICurve> curves2d;
+    List<ICurve> curves3d = new(target.Curves3D.Count);
+    curves3d.AddRange(target.Curves3D.Select(curve3d => _curveConverter.Convert(curve3d)));
+
+    List<SOG.Surface> surfaces = new(target.Curves3D.Count);
+    surfaces.AddRange(target.Surfaces.Select(srf => _surfaceConverter.Convert(srf.ToNurbsSurface())));
+
+    List<ICurve> curves2d = new(target.Curves2D.Count);
     using (_contextStack.Push(Units.None))
     {
       // Curves2D are unitless, so we convert them within a new pushed context with None units.
-      curves2d = target.Curves2D.Select(curve2d => _curveConverter.Convert(curve2d)).ToList();
+      curves2d.AddRange(target.Curves2D.Select(curve2d => _curveConverter.Convert(curve2d)));
     }
 
     var speckleBrep = new SOG.Brep
