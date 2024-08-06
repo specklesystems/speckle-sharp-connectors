@@ -72,5 +72,8 @@ public class ArcGISConnectorModule : ISpeckleModule
 
     // register send conversion cache
     builder.AddSingleton<ISendConversionCache, SendConversionCache>();
+
+    // operation progress manager
+    builder.AddSingleton<IOperationProgressManager, OperationProgressManager>();
   }
 }

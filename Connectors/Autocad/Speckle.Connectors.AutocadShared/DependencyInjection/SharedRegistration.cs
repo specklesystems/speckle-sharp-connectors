@@ -40,6 +40,9 @@ public static class SharedRegistration
     builder.AddScoped<AutocadColorManager>();
     builder.AddSingleton<IAutocadIdleManager, AutocadIdleManager>();
 
+    // operation progress manager
+    builder.AddSingleton<IOperationProgressManager, OperationProgressManager>();
+
     // Register bindings
     builder.AddSingleton<IBinding, TestBinding>();
     builder.AddSingleton<IBinding, AccountBinding>();
