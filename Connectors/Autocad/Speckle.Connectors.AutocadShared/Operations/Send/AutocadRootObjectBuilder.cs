@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Autodesk.AutoCAD.DatabaseServices;
+using Objects.Other;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
@@ -20,6 +21,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
   private readonly string[] _documentPathSeparator = ["\\"];
   private readonly ISendConversionCache _sendConversionCache;
   private readonly AutocadInstanceObjectManager _instanceObjectsManager;
+  private readonly AutocadMaterialManager _materialManager;
   private readonly AutocadColorManager _colorManager;
   private readonly AutocadLayerManager _layerManager;
   private readonly AutocadGroupUnpacker _groupUnpacker;
@@ -29,6 +31,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     IRootToSpeckleConverter converter,
     ISendConversionCache sendConversionCache,
     AutocadInstanceObjectManager instanceObjectManager,
+    AutocadMaterialManager materialManager,
     AutocadColorManager colorManager,
     AutocadLayerManager layerManager,
     AutocadGroupUnpacker groupUnpacker,
@@ -38,6 +41,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     _converter = converter;
     _sendConversionCache = sendConversionCache;
     _instanceObjectsManager = instanceObjectManager;
+    _materialManager = materialManager;
     _colorManager = colorManager;
     _layerManager = layerManager;
     _groupUnpacker = groupUnpacker;
@@ -139,6 +143,10 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
       // set groups
       var groupProxies = _groupUnpacker.UnpackGroups(atomicObjects);
       modelWithLayers["groupProxies"] = groupProxies;
+
+      // set materials
+      List<RenderMaterialProxy> materialProxies = _materialManager.UnpackMaterials(atomicObjects, layers);
+      modelWithLayers["renderMaterialProxies"] = materialProxies;
 
       // set colors
       List<ColorProxy> colorProxies = _colorManager.UnpackColors(atomicObjects, layers);

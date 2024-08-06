@@ -38,6 +38,7 @@ public static class SharedRegistration
     builder.AddSingleton<AutocadContext>();
     builder.AddScoped<AutocadLayerManager>();
     builder.AddScoped<AutocadColorManager>();
+    builder.AddScoped<AutocadMaterialManager>();
     builder.AddSingleton<IAutocadIdleManager, AutocadIdleManager>();
 
     // Register bindings
