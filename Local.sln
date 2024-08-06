@@ -136,11 +136,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Converters.Revit202
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2022", "2022", "{0AF38BA3-65A0-481B-8CBB-B82E406E1575}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Core", "..\speckle-sharp-sdk\src\Speckle.Core\Speckle.Core.csproj", "{633B7099-4D96-40C2-AC25-7660A81E0FA2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Sdk", "..\speckle-sharp-sdk\src\Speckle.Sdk\Speckle.Sdk.csproj", "{633B7099-4D96-40C2-AC25-7660A81E0FA2}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Objects", "..\speckle-sharp-sdk\src\Speckle.Objects\Speckle.Objects.csproj", "{259A84F0-2D1E-49DE-9137-93BE6858A52C}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Logging", "..\speckle-sharp-sdk\src\Speckle.Logging\Speckle.Logging.csproj", "{6279DBDA-95D0-437F-AC1B-6FD4AD1E7813}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Sdk.Logging", "..\speckle-sharp-sdk\src\Speckle.Sdk.Logging\Speckle.Sdk.Logging.csproj", "{6279DBDA-95D0-437F-AC1B-6FD4AD1E7813}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
