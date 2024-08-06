@@ -1,4 +1,4 @@
-﻿using Rhino;
+using Rhino;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
@@ -8,19 +8,16 @@ public class PolylineToSpeckleConverter
   : ITypedConverter<RG.Polyline, SOG.Polyline>,
     ITypedConverter<RG.PolylineCurve, SOG.Polyline>
 {
-  private readonly ITypedConverter<RG.Point3d, SOG.Point> _pointConverter;
   private readonly ITypedConverter<RG.Box, SOG.Box> _boxConverter;
   private readonly ITypedConverter<RG.Interval, SOP.Interval> _intervalConverter;
   private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
 
   public PolylineToSpeckleConverter(
-    ITypedConverter<RG.Point3d, SOG.Point> pointConverter,
     ITypedConverter<RG.Box, SOG.Box> boxConverter,
     IConversionContextStack<RhinoDoc, UnitSystem> contextStack,
     ITypedConverter<RG.Interval, SOP.Interval> intervalConverter
   )
   {
-    _pointConverter = pointConverter;
     _boxConverter = boxConverter;
     _contextStack = contextStack;
     _intervalConverter = intervalConverter;
@@ -35,17 +32,18 @@ public class PolylineToSpeckleConverter
   public SOG.Polyline Convert(RG.Polyline target)
   {
     var box = _boxConverter.Convert(new RG.Box(target.BoundingBox));
-    var points = target.Select(pt => _pointConverter.Convert(pt)).ToList();
 
-    if (target.IsClosed)
+    var count = target.IsClosed ? target.Count - 1 : target.Count;
+    List<double> points = new(count * 3);
+    for (int i = 0; i < count; i++)
     {
-      points.RemoveAt(points.Count - 1);
+      RG.Point3d pt = target[i];
+      points.Add(pt.X);
+      points.Add(pt.Y);
+      points.Add(pt.Z);
     }
 
-    return new SOG.Polyline(
-      points.SelectMany(pt => new[] { pt.x, pt.y, pt.z }).ToList(),
-      _contextStack.Current.SpeckleUnits
-    )
+    return new SOG.Polyline(points, _contextStack.Current.SpeckleUnits)
     {
       bbox = box,
       length = target.Length,
