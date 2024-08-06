@@ -34,7 +34,7 @@ public class RhinoColorManager
       }
       else
       {
-        ColorProxy newColor = new(atts.ObjectColor.ToArgb(), colorId, colorId);
+        ColorProxy newColor = new(atts.ObjectColor.ToArgb(), colorId, colorId) { objects = new() };
         newColor.objects.Add(objectId);
         colorProxies[colorId] = newColor;
       }
