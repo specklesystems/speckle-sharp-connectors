@@ -37,6 +37,8 @@ public sealed class RhinoSendBinding : ISendBinding
   /// </summary>
   private HashSet<string> ChangedObjectIds { get; set; } = new();
 
+  private OperationProgressManager OperationProgressManager { get; }
+
   public RhinoSendBinding(
     DocumentModelStore store,
     IRhinoIdleManager idleManager,
@@ -58,6 +60,7 @@ public sealed class RhinoSendBinding : ISendBinding
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler.Parent.TopLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent); // POC: Commands are tightly coupled with their bindings, at least for now, saves us injecting a factory.
+    OperationProgressManager = new OperationProgressManager(parent);
     SubscribeToRhinoEvents();
   }
 
@@ -152,7 +155,11 @@ public sealed class RhinoSendBinding : ISendBinding
           rhinoObjects,
           modelCard.GetSendInfo(_rhinoSettings.HostAppInfo.Name),
           (status, progress) =>
-            Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts),
+            OperationProgressManager.SetModelProgress(
+              modelCardId,
+              new ModelCardProgress(modelCardId, status, progress),
+              cts
+            ),
           cts.Token
         )
         .ConfigureAwait(false);

@@ -30,6 +30,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
   private readonly ISendConversionCache _sendConversionCache;
 
+  private OperationProgressManager OperationProgressManager { get; }
+
   public RevitSendBinding(
     IRevitIdleManager idleManager,
     RevitContext revitContext,
@@ -50,6 +52,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     var topLevelExceptionHandler = Parent.TopLevelExceptionHandler;
 
     Commands = new SendBindingUICommands(bridge);
+    OperationProgressManager = new OperationProgressManager(bridge);
     // TODO expiry events
     // TODO filters need refresh events
     _idleManager.RunAsync(() =>
@@ -108,7 +111,11 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
           revitObjects,
           modelCard.GetSendInfo(_revitSettings.HostSlug.NotNull()),
           (status, progress) =>
-            Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts),
+            OperationProgressManager.SetModelProgress(
+              modelCardId,
+              new ModelCardProgress(modelCardId, status, progress),
+              cts
+            ),
           cts.Token
         )
         .ConfigureAwait(false);

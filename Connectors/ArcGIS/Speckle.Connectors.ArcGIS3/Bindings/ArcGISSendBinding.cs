@@ -25,6 +25,7 @@ public sealed class ArcGISSendBinding : ISendBinding
 {
   public string Name => "sendBinding";
   public SendBindingUICommands Commands { get; }
+  private OperationProgressManager OperationProgressManager { get; }
   public IBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
@@ -58,6 +59,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
+    OperationProgressManager = new OperationProgressManager(parent);
     SubscribeToArcGISEvents();
   }
 
@@ -382,7 +384,11 @@ public sealed class ArcGISSendBinding : ISendBinding
               mapMembers,
               modelCard.GetSendInfo("ArcGIS"), // POC: get host app name from settings? same for GetReceiveInfo
               (status, progress) =>
-                Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts),
+                OperationProgressManager.SetModelProgress(
+                  modelCardId,
+                  new ModelCardProgress(modelCardId, status, progress),
+                  cts
+                ),
               cts.Token
             )
             .ConfigureAwait(false);

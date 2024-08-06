@@ -21,7 +21,9 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
   private readonly CancellationManager _cancellationManager;
   private readonly DocumentModelStore _store;
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
-  public ReceiveBindingUICommands Commands { get; }
+  private ReceiveBindingUICommands Commands { get; }
+
+  private OperationProgressManager OperationProgressManager { get; }
 
   public RevitReceiveBinding(
     DocumentModelStore store,
@@ -37,6 +39,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
     _revitSettings = revitSettings;
     _cancellationManager = cancellationManager;
     Commands = new ReceiveBindingUICommands(parent);
+    OperationProgressManager = new OperationProgressManager(parent);
   }
 
   public void CancelReceive(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
@@ -62,7 +65,11 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
           modelCard.GetReceiveInfo(_revitSettings.HostSlug.NotNull()),
           cts.Token,
           (status, progress) =>
-            Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts)
+            OperationProgressManager.SetModelProgress(
+              modelCardId,
+              new ModelCardProgress(modelCardId, status, progress),
+              cts
+            )
         )
         .ConfigureAwait(false);
 

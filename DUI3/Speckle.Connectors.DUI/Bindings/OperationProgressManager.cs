@@ -1,20 +1,17 @@
-﻿// using System.Collections.Concurrent;
-// using System.Diagnostics;
+﻿using System.Collections.Concurrent;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
 /// <summary>
-/// Debouncing to progress update for UI.
+/// Debouncing progress for every %1 update for UI.
+/// This class requires a specific bridge in its binding, so registering it will create random bridge which we don't want to.
 /// </summary>
 public class OperationProgressManager
 {
   private const string SET_MODEL_PROGRESS_UI_COMMAND_NAME = "setModelProgress";
-  private static readonly Dictionary<string, DateTime> s_lastUpdateTimes = new();
-
-  // private static readonly Dictionary<string, Timer> s_timers = new();
-  private const int THROTTLE_INTERVAL_MS = 200;
+  private static readonly ConcurrentDictionary<string, ModelCardProgress> s_lastProgressValues = new();
 
   private IBridge Bridge { get; }
 
@@ -30,65 +27,22 @@ public class OperationProgressManager
       return;
     }
 
-    var now = DateTime.UtcNow;
-    if (!s_lastUpdateTimes.TryGetValue(modelCardId, out var lastUpdateTime))
+    var progressValue = progress;
+    if (!s_lastProgressValues.TryGetValue(modelCardId, out ModelCardProgress lastProgressValue))
     {
-      lastUpdateTime = DateTime.MinValue;
+      // Dummy initialization
+      lastProgressValue = new ModelCardProgress(modelCardId, "Init", null);
     }
 
-    var timeSinceLastUpdate = (now - lastUpdateTime).TotalMilliseconds;
+    var progressValueDiff = progressValue.Progress - lastProgressValue.Progress;
 
-    if (timeSinceLastUpdate >= THROTTLE_INTERVAL_MS)
+    if (progressValue.Progress == 1 || progressValueDiff >= 0.01 || progressValue.Status != lastProgressValue.Status)
     {
-      // Send immediately if interval has passed
       SendProgress(modelCardId, progress);
-      s_lastUpdateTimes[modelCardId] = now;
-    }
-    else
-    {
-      // // Schedule a send after the remaining interval time
-      // var remainingTime = THROTTLE_INTERVAL_MS - (int)timeSinceLastUpdate;
-      // if (s_timers.TryGetValue(modelCardId, out var existingTimer))
-      // {
-      //   existingTimer.Change(remainingTime, Timeout.Infinite);
-      // }
-      // else
-      // {
-      //   var timer = new Timer(
-      //     _ =>
-      //     {
-      //       FinalizeProgress(modelCardId, progress, cts);
-      //       s_lastUpdateTimes[modelCardId] = DateTime.UtcNow;
-      //       s_timers.TryRemove(modelCardId, out Timer _);
-      //     },
-      //     null,
-      //     (long)remainingTime,
-      //     Timeout.Infinite
-      //   );
-      //
-      //   s_timers[modelCardId] = timer;
-      // }
+      s_lastProgressValues[modelCardId] = progress;
     }
   }
 
-  private void SendProgress(string modelCardId, ModelCardProgress progress)
-  {
+  private void SendProgress(string modelCardId, ModelCardProgress progress) =>
     Bridge.Send(SET_MODEL_PROGRESS_UI_COMMAND_NAME, new { modelCardId, progress });
-  }
-
-  // public void FinalizeProgress(string modelCardId, ModelCardProgress progress, CancellationTokenSource cts)
-  // {
-  //   if (cts.IsCancellationRequested)
-  //   {
-  //     return;
-  //   }
-  //
-  //   // Cancel any existing timer and send the final progress update
-  //   if (s_timers.TryRemove(modelCardId, out var timer))
-  //   {
-  //     timer.Dispose();
-  //   }
-  //
-  //   SendProgress(modelCardId, progress);
-  // }
 }

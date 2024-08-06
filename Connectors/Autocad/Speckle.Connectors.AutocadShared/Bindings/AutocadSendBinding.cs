@@ -21,7 +21,7 @@ public sealed class AutocadSendBinding : ISendBinding
 {
   public string Name => "sendBinding";
   public SendBindingUICommands Commands { get; }
-  public OperationProgressManager OperationProgressManager { get; }
+  private OperationProgressManager OperationProgressManager { get; }
   public IBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
