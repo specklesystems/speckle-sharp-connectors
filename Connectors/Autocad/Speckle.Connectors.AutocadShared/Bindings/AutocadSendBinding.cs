@@ -31,6 +31,7 @@ public sealed class AutocadSendBinding : ISendBinding
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
   private readonly AutocadSettings _autocadSettings;
   private readonly ISendConversionCache _sendConversionCache;
+  private readonly IOperationProgressManager _operationProgressManager;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   /// <summary>
@@ -46,7 +47,8 @@ public sealed class AutocadSendBinding : ISendBinding
     CancellationManager cancellationManager,
     AutocadSettings autocadSettings,
     IUnitOfWorkFactory unitOfWorkFactory,
-    ISendConversionCache sendConversionCache
+    ISendConversionCache sendConversionCache,
+    IOperationProgressManager operationProgressManager
   )
   {
     _store = store;
@@ -56,10 +58,10 @@ public sealed class AutocadSendBinding : ISendBinding
     _cancellationManager = cancellationManager;
     _sendFilters = sendFilters.ToList();
     _sendConversionCache = sendConversionCache;
+    _operationProgressManager = operationProgressManager;
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
-    OperationProgressManager = new OperationProgressManager(parent);
 
     Application.DocumentManager.DocumentActivated += (_, args) =>
       _topLevelExceptionHandler.CatchUnhandled(() => SubscribeToObjectChanges(args.Document));
@@ -163,7 +165,8 @@ public sealed class AutocadSendBinding : ISendBinding
           autocadObjects,
           modelCard.GetSendInfo(_autocadSettings.HostAppInfo.Name),
           (status, progress) =>
-            OperationProgressManager.SetModelProgress(
+            _operationProgressManager.SetModelProgress(
+              Parent,
               modelCardId,
               new ModelCardProgress(modelCardId, status, progress),
               cts

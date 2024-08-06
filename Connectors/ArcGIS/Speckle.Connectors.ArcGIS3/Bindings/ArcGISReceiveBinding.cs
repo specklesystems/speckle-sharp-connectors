@@ -15,7 +15,7 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
   private readonly CancellationManager _cancellationManager;
   private readonly DocumentModelStore _store;
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
-  private OperationProgressManager OperationProgressManager { get; }
+  private readonly IOperationProgressManager _operationProgressManager;
 
   private ReceiveBindingUICommands Commands { get; }
   public IBridge Parent { get; }
@@ -24,15 +24,16 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
     DocumentModelStore store,
     IBridge parent,
     CancellationManager cancellationManager,
-    IUnitOfWorkFactory unitOfWorkFactory
+    IUnitOfWorkFactory unitOfWorkFactory,
+    IOperationProgressManager operationProgressManager
   )
   {
     _store = store;
     _cancellationManager = cancellationManager;
     Parent = parent;
     Commands = new ReceiveBindingUICommands(parent);
-    OperationProgressManager = new OperationProgressManager(parent);
     _unitOfWorkFactory = unitOfWorkFactory;
+    _operationProgressManager = operationProgressManager;
   }
 
   public async Task Receive(string modelCardId)
@@ -57,7 +58,8 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
           modelCard.GetReceiveInfo("ArcGIS"), // POC: get host app name from settings? same for GetSendInfo
           cts.Token,
           (status, progress) =>
-            OperationProgressManager.SetModelProgress(
+            _operationProgressManager.SetModelProgress(
+              Parent,
               modelCardId,
               new ModelCardProgress(modelCardId, status, progress),
               cts

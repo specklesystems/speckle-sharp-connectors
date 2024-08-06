@@ -19,25 +19,26 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
   private readonly CancellationManager _cancellationManager;
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
   private readonly AutocadSettings _autocadSettings;
+  private readonly IOperationProgressManager _operationProgressManager;
 
   private ReceiveBindingUICommands Commands { get; }
-  private OperationProgressManager OperationProgressManager { get; }
 
   public AutocadReceiveBinding(
     DocumentModelStore store,
     IBridge parent,
     CancellationManager cancellationManager,
     IUnitOfWorkFactory unitOfWorkFactory,
-    AutocadSettings autocadSettings
+    AutocadSettings autocadSettings,
+    IOperationProgressManager operationProgressManager
   )
   {
     _store = store;
     _cancellationManager = cancellationManager;
     _unitOfWorkFactory = unitOfWorkFactory;
     _autocadSettings = autocadSettings;
+    _operationProgressManager = operationProgressManager;
     Parent = parent;
     Commands = new ReceiveBindingUICommands(parent);
-    OperationProgressManager = new OperationProgressManager(parent);
   }
 
   public void CancelReceive(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
@@ -68,7 +69,8 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
           modelCard.GetReceiveInfo(_autocadSettings.HostAppInfo.Name),
           cts.Token,
           (status, progress) =>
-            OperationProgressManager.SetModelProgress(
+            _operationProgressManager.SetModelProgress(
+              Parent,
               modelCardId,
               new ModelCardProgress(modelCardId, status, progress),
               cts

@@ -18,28 +18,29 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
   public IBridge Parent { get; }
 
   private readonly RevitSettings _revitSettings;
+  private readonly IOperationProgressManager _operationProgressManager;
   private readonly CancellationManager _cancellationManager;
   private readonly DocumentModelStore _store;
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
   private ReceiveBindingUICommands Commands { get; }
-
-  private OperationProgressManager OperationProgressManager { get; }
 
   public RevitReceiveBinding(
     DocumentModelStore store,
     CancellationManager cancellationManager,
     IBridge parent,
     IUnitOfWorkFactory unitOfWorkFactory,
-    RevitSettings revitSettings
+    RevitSettings revitSettings,
+    IOperationProgressManager operationProgressManager
   )
   {
     Parent = parent;
     _store = store;
     _unitOfWorkFactory = unitOfWorkFactory;
     _revitSettings = revitSettings;
+    _operationProgressManager = operationProgressManager;
     _cancellationManager = cancellationManager;
+
     Commands = new ReceiveBindingUICommands(parent);
-    OperationProgressManager = new OperationProgressManager(parent);
   }
 
   public void CancelReceive(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
@@ -65,7 +66,8 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
           modelCard.GetReceiveInfo(_revitSettings.HostSlug.NotNull()),
           cts.Token,
           (status, progress) =>
-            OperationProgressManager.SetModelProgress(
+            _operationProgressManager.SetModelProgress(
+              Parent,
               modelCardId,
               new ModelCardProgress(modelCardId, status, progress),
               cts

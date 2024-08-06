@@ -30,14 +30,13 @@ public sealed class RhinoSendBinding : ISendBinding
   private readonly CancellationManager _cancellationManager;
   private readonly RhinoSettings _rhinoSettings;
   private readonly ISendConversionCache _sendConversionCache;
+  private readonly IOperationProgressManager _operationProgressManager;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id.
   /// </summary>
   private HashSet<string> ChangedObjectIds { get; set; } = new();
-
-  private OperationProgressManager OperationProgressManager { get; }
 
   public RhinoSendBinding(
     DocumentModelStore store,
@@ -47,7 +46,8 @@ public sealed class RhinoSendBinding : ISendBinding
     IUnitOfWorkFactory unitOfWorkFactory,
     RhinoSettings rhinoSettings,
     CancellationManager cancellationManager,
-    ISendConversionCache sendConversionCache
+    ISendConversionCache sendConversionCache,
+    IOperationProgressManager operationProgressManager
   )
   {
     _store = store;
@@ -57,10 +57,10 @@ public sealed class RhinoSendBinding : ISendBinding
     _rhinoSettings = rhinoSettings;
     _cancellationManager = cancellationManager;
     _sendConversionCache = sendConversionCache;
+    _operationProgressManager = operationProgressManager;
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler.Parent.TopLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent); // POC: Commands are tightly coupled with their bindings, at least for now, saves us injecting a factory.
-    OperationProgressManager = new OperationProgressManager(parent);
     SubscribeToRhinoEvents();
   }
 
@@ -155,7 +155,8 @@ public sealed class RhinoSendBinding : ISendBinding
           rhinoObjects,
           modelCard.GetSendInfo(_rhinoSettings.HostAppInfo.Name),
           (status, progress) =>
-            OperationProgressManager.SetModelProgress(
+            _operationProgressManager.SetModelProgress(
+              Parent,
               modelCardId,
               new ModelCardProgress(modelCardId, status, progress),
               cts

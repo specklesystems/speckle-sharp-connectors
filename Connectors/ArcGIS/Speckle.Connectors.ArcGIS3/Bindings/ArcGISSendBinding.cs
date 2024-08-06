@@ -25,7 +25,6 @@ public sealed class ArcGISSendBinding : ISendBinding
 {
   public string Name => "sendBinding";
   public SendBindingUICommands Commands { get; }
-  private OperationProgressManager OperationProgressManager { get; }
   public IBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
@@ -33,6 +32,7 @@ public sealed class ArcGISSendBinding : ISendBinding
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
   private readonly ISendConversionCache _sendConversionCache;
+  private readonly IOperationProgressManager _operationProgressManager;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   /// <summary>
@@ -48,7 +48,8 @@ public sealed class ArcGISSendBinding : ISendBinding
     IEnumerable<ISendFilter> sendFilters,
     IUnitOfWorkFactory unitOfWorkFactory,
     CancellationManager cancellationManager,
-    ISendConversionCache sendConversionCache
+    ISendConversionCache sendConversionCache,
+    IOperationProgressManager operationProgressManager
   )
   {
     _store = store;
@@ -56,10 +57,11 @@ public sealed class ArcGISSendBinding : ISendBinding
     _sendFilters = sendFilters.ToList();
     _cancellationManager = cancellationManager;
     _sendConversionCache = sendConversionCache;
+    _operationProgressManager = operationProgressManager;
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
+
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
-    OperationProgressManager = new OperationProgressManager(parent);
     SubscribeToArcGISEvents();
   }
 
@@ -384,7 +386,8 @@ public sealed class ArcGISSendBinding : ISendBinding
               mapMembers,
               modelCard.GetSendInfo("ArcGIS"), // POC: get host app name from settings? same for GetReceiveInfo
               (status, progress) =>
-                OperationProgressManager.SetModelProgress(
+                _operationProgressManager.SetModelProgress(
+                  Parent,
                   modelCardId,
                   new ModelCardProgress(modelCardId, status, progress),
                   cts
