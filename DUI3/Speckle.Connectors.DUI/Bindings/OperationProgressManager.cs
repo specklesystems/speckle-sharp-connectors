@@ -11,7 +11,7 @@ namespace Speckle.Connectors.DUI.Bindings;
 public class OperationProgressManager
 {
   private const string SET_MODEL_PROGRESS_UI_COMMAND_NAME = "setModelProgress";
-  private static readonly ConcurrentDictionary<string, ModelCardProgress> s_lastProgressValues = new();
+  private static readonly ConcurrentDictionary<string, DateTime> s_lastProgressValues = new();
 
   private IBridge Bridge { get; }
 
@@ -27,20 +27,23 @@ public class OperationProgressManager
       return;
     }
 
-    var progressValue = progress;
-    if (!s_lastProgressValues.TryGetValue(modelCardId, out ModelCardProgress lastProgressValue))
+    if (!s_lastProgressValues.TryGetValue(modelCardId, out DateTime lastCallTime))
     {
-      // Dummy initialization
-      lastProgressValue = new ModelCardProgress(modelCardId, "Init", null);
-    }
-
-    var progressValueDiff = progressValue.Progress - lastProgressValue.Progress;
-
-    if (progressValue.Progress == 1 || progressValueDiff >= 0.01 || progressValue.Status != lastProgressValue.Status)
-    {
+      lastCallTime = DateTime.Now;
+      s_lastProgressValues[modelCardId] = lastCallTime;
+      // Since it's the first time we get a call for this model card, we should send it out
       SendProgress(modelCardId, progress);
-      s_lastProgressValues[modelCardId] = progress;
+      return;
     }
+
+    var elapsedMs = (DateTime.Now - lastCallTime).Milliseconds;
+
+    if (elapsedMs < 200) //  can be parametrised
+    {
+      return;
+    }
+    SendProgress(modelCardId, progress);
+    s_lastProgressValues[modelCardId] = DateTime.Now;
   }
 
   private void SendProgress(string modelCardId, ModelCardProgress progress) =>
