@@ -9,6 +9,7 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Utils.Common;
 using Speckle.Core.Common;
+using Speckle.Core.Kits;
 
 namespace Speckle.Connectors.ArcGIS.Bindings;
 
@@ -37,7 +38,7 @@ public class BasicConnectorBinding : IBasicConnectorBinding
 
   public string GetSourceApplicationName() => _settings.HostAppInfo.Slug;
 
-  public string GetSourceApplicationVersion() => _settings.HostAppInfo.GetVersion(_settings.HostAppVersion);
+  public string GetSourceApplicationVersion() => HostApplications.GetVersion(_settings.HostAppVersion);
 
   public string GetConnectorVersion() => typeof(BasicConnectorBinding).Assembly.GetVersion();
 

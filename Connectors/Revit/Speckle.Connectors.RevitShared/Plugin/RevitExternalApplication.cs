@@ -6,6 +6,7 @@ using Speckle.Autofac.DependencyInjection;
 using Speckle.Core.Common;
 using Speckle.Core.Kits;
 using Speckle.Core.Logging;
+using Speckle.Logging;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
@@ -41,21 +42,22 @@ internal sealed class RevitExternalApplication : IExternalApplication
     );
   }
 
-  private string GetVersionAsString()
+  private string GetVersionAsString() => HostApplications.GetVersion(GetVersion());
+
+  private HostAppVersion GetVersion()
   {
 #if REVIT2022
-    return "2022";
+    return HostAppVersion.v2022;
 #elif REVIT2023
-    return "2023";
+    return HostAppVersion.v2023;
 #elif REVIT2024
-    return "2024";
+    return HostAppVersion.v2024;
 #elif REVIT2025
-    return "2025";
+    return HostAppVersion.v2025;
 #else
     throw new NotImplementedException();
 #endif
   }
-
   public Result OnStartup(UIControlledApplication application)
   {
     try
@@ -66,10 +68,10 @@ internal sealed class RevitExternalApplication : IExternalApplication
       // init DI
       _disposableLogger = Setup.Initialize(
         new(
-          $"Revit {GetVersionAsString()}",
-          GetVersionAsString(),
-          HostApplications.Revit.Slug,
+          HostApplications.Revit, 
+          GetVersion(),
           new(
+            MinimumLevel: SpeckleLogLevel.Information,
             Console: true,
             File: new(Path: "SpeckleCoreLog.txt"),
             Otel: new(
