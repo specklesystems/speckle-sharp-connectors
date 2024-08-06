@@ -50,7 +50,7 @@ public class RevitConnectorModule : ISpeckleModule
     builder.AddSingleton<IBinding, AccountBinding>();
     builder.AddSingleton<IBinding, SelectionBinding>();
     builder.AddSingleton<IBinding, RevitSendBinding>();
-    builder.AddSingleton<IBinding, RevitReceiveBinding>(); // TODO: comment out? or leave, but remove all non-basic geometry conversions
+    // builder.AddSingleton<IBinding, RevitReceiveBinding>(); // TODO: Have it back once we comfortable enough!
     builder.AddSingleton<IRevitIdleManager, RevitIdleManager>();
 
     builder.ContainerBuilder.RegisterType<TopLevelExceptionHandlerBinding>().As<IBinding>().AsSelf().SingleInstance();
