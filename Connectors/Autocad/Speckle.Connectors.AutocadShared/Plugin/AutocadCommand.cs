@@ -49,7 +49,7 @@ public class AutocadCommand
 
     FocusPalette();
   }
-  
+
   private HostApplication GetApp()
   {
 #if CIVIL3D2024
@@ -62,7 +62,7 @@ public class AutocadCommand
     throw new NotImplementedException();
 #endif
   }
-  
+
   private HostAppVersion GetVersion()
   {
 #if CIVIL3D2024
