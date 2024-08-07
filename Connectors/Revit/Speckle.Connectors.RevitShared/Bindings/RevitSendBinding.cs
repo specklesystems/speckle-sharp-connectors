@@ -1,8 +1,10 @@
 using Autodesk.Revit.DB;
+using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Exceptions;
+using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
@@ -30,6 +32,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
+  private readonly ILogger<RevitSendBinding> _logger;
 
   public RevitSendBinding(
     IRevitIdleManager idleManager,
@@ -40,7 +43,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     IUnitOfWorkFactory unitOfWorkFactory,
     RevitSettings revitSettings,
     ISendConversionCache sendConversionCache,
-    IOperationProgressManager operationProgressManager
+    IOperationProgressManager operationProgressManager,
+    ILogger<RevitSendBinding> logger
   )
     : base("sendBinding", store, bridge, revitContext)
   {
@@ -50,6 +54,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _revitSettings = revitSettings;
     _sendConversionCache = sendConversionCache;
     _operationProgressManager = operationProgressManager;
+    _logger = logger;
     var topLevelExceptionHandler = Parent.TopLevelExceptionHandler;
 
     Commands = new SendBindingUICommands(bridge);
@@ -123,16 +128,17 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
       Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
     }
-    catch (Exception e) when (!e.IsFatal()) // UX reasons - we will report operation exceptions as model card error.
-    {
-      Commands.SetModelError(modelCardId, e);
-    }
     catch (OperationCanceledException)
     {
       // SWALLOW -> UI handles it immediately, so we do not need to handle anything for now!
       // Idea for later -> when cancel called, create promise from UI to solve it later with this catch block.
       // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
       return;
+    }
+    catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error.
+    {
+      _logger.LogModelCardHandledError(ex);
+      Commands.SetModelError(modelCardId, ex);
     }
   }
 

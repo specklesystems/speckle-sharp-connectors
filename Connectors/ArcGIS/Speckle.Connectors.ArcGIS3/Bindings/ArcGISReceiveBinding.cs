@@ -81,8 +81,9 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
       // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
       return;
     }
-    catch (Exception e) when (!e.IsFatal()) // UX reasons - we will report operation exceptions as model card error.
+    catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error.
     {
+      _logger.LogSwallowedBindingError(ex);
       Commands.SetModelError(modelCardId, e);
     }
   }

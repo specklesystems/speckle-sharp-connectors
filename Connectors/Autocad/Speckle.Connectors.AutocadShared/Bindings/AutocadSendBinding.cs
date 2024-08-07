@@ -1,4 +1,5 @@
 using Autodesk.AutoCAD.DatabaseServices;
+using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
@@ -6,6 +7,7 @@ using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Exceptions;
+using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
@@ -32,6 +34,7 @@ public sealed class AutocadSendBinding : ISendBinding
   private readonly AutocadSettings _autocadSettings;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
+  private readonly ILogger<AutocadSendBinding> _logger;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   /// <summary>
@@ -48,7 +51,8 @@ public sealed class AutocadSendBinding : ISendBinding
     AutocadSettings autocadSettings,
     IUnitOfWorkFactory unitOfWorkFactory,
     ISendConversionCache sendConversionCache,
-    IOperationProgressManager operationProgressManager
+    IOperationProgressManager operationProgressManager,
+    ILogger<AutocadSendBinding> logger
   )
   {
     _store = store;
@@ -59,6 +63,7 @@ public sealed class AutocadSendBinding : ISendBinding
     _sendFilters = sendFilters.ToList();
     _sendConversionCache = sendConversionCache;
     _operationProgressManager = operationProgressManager;
+    _logger = logger;
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
@@ -184,9 +189,10 @@ public sealed class AutocadSendBinding : ISendBinding
       // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
       return;
     }
-    catch (Exception e) when (!e.IsFatal()) // UX reasons - we will report operation exceptions as model card error.
+    catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error.
     {
-      Commands.SetModelError(modelCardId, e);
+      _logger.LogModelCardHandledError(ex);
+      Commands.SetModelError(modelCardId, ex);
     }
     finally
     {
