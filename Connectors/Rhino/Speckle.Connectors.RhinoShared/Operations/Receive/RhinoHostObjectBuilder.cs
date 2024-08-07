@@ -118,7 +118,6 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   {
     List<(Collection[] collectionPath, Base obj)> atomicObjects = new();
     RhinoDoc doc = _contextStack.Current.Document;
-    using var noDraw = new DisableRedrawScope(doc.Views);
     List<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents = new();
     using (var _ = SpeckleActivityFactory.Start("BakeObjects"))
     {
