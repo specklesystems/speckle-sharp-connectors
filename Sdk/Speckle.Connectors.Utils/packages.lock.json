@@ -343,6 +343,12 @@
           "Autofac": "[5.2.0, )"
         }
       },
+      "speckle.objects": {
+        "type": "Project",
+        "dependencies": {
+          "Speckle.Sdk": "[1.0.0, )"
+        }
+      },
       "speckle.sdk": {
         "type": "Project",
         "dependencies": {

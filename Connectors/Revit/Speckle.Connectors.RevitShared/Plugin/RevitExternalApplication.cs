@@ -66,7 +66,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
       // POC: not sure what this is doing...  could be messing up our Aliasing????
       AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<RevitExternalApplication>;
       // init DI
-      _disposableLogger = Setup.Initialize(Config.Create(HostApplications.Revit, GetVersion()));
+      _disposableLogger = Connector.Initialize(HostApplications.Revit, GetVersion());
       _container = SpeckleContainerBuilder
         .CreateInstance()
         .LoadAutofacModules(Assembly.GetExecutingAssembly(), _revitSettings.ModuleFolders.NotNull())

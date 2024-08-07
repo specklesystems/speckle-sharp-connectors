@@ -46,7 +46,7 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
     try
     {
       AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<SpeckleConnectorsRhinoPlugin>;
-      _disposableLogger = Setup.Initialize(Config.Create(HostApplications.Rhino, GetVersion()));
+      _disposableLogger = Connector.Initialize(HostApplications.Rhino, GetVersion());
 
       // Register Settings
       var rhinoSettings = new RhinoSettings(HostApplications.Rhino, GetVersion());
