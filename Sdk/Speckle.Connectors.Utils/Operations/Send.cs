@@ -1,12 +1,11 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using Microsoft.Extensions.Logging;
-using Serilog.Context;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
 using Speckle.Core.Serialisation;
 using Speckle.Core.Transports;
 using Speckle.InterfaceGenerator;
+using Speckle.Logging;
 using Speckle.Newtonsoft.Json.Linq;
 
 namespace Speckle.Connectors.Utils.Operations;
@@ -85,16 +84,14 @@ public class SendHelper(ILogger<SendHelper> logger) : ISendHelper
     {
       throw new ArgumentException("Expected at least on transport to be specified", nameof(transports));
     }
-
     var transportContext = transports.ToDictionary(t => t.TransportName, t => t.TransportContext);
 
+    using var activity = SpeckleActivityFactory.Start("Send");
+    activity?.SetTag("transportContext", transportContext);
     // make sure all logs in the operation have the proper context
-    using (LogContext.PushProperty("transportContext", transportContext))
-    using (LogContext.PushProperty("correlationId", Guid.NewGuid().ToString()))
+    /*using (LogContext.PushProperty("transportContext", transportContext))
+    using (LogContext.PushProperty("correlationId", Guid.NewGuid().ToString()))*/
     {
-      var sendTimer = Stopwatch.StartNew();
-      logger.LogInformation("Starting send operation");
-
       var internalProgressAction = GetInternalProgressAction(onProgressAction);
 
       BaseObjectSerializerV2 serializerV2 =
@@ -114,7 +111,7 @@ public class SendHelper(ILogger<SendHelper> logger) : ISendHelper
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        logger.LogInformation(ex, "Send operation failed after {elapsed} seconds", sendTimer.Elapsed.TotalSeconds);
+        logger.LogInformation(ex, "Send operation failed");
         if (ex is OperationCanceledException or SpeckleException)
         {
           throw;
@@ -129,30 +126,7 @@ public class SendHelper(ILogger<SendHelper> logger) : ISendHelper
           t.EndWrite();
         }
       }
-
-      sendTimer.Stop();
-      using (
-        LogContext.PushProperty(
-          "transportElapsedBreakdown",
-          transports.ToDictionary(t => t.TransportName, t => t.Elapsed)
-        )
-      )
-      using (
-        LogContext.PushProperty(
-          "note",
-          "the elapsed summary doesn't need to add up to the total elapsed... Threading magic..."
-        )
-      )
-      using (LogContext.PushProperty("serializerElapsed", serializerV2.Elapsed.ToString()))
-      {
-        logger.LogInformation(
-          "Finished sending {objectCount} objects after {elapsed}, result {objectId}",
-          transports.Max(t => t.SavedObjectCount),
-          sendTimer.Elapsed.TotalSeconds,
-          serializerReturnValue.rootObjId
-        );
-        return serializerReturnValue;
-      }
+      return serializerReturnValue;
     }
   }
 

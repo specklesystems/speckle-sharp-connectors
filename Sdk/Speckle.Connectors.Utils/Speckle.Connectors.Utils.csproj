@@ -5,7 +5,7 @@
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Serilog.Extensions.Logging" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
     <PackageReference Include="Autofac" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
