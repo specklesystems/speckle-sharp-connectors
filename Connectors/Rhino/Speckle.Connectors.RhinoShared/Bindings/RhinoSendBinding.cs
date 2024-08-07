@@ -35,7 +35,10 @@ public sealed class RhinoSendBinding : ISendBinding
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   /// <summary>
-  /// Used internally to aggregate the changed objects' id.
+  /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
+  /// [CNX-202: Unhandled Exception Occurred when receiving in Rhino](https://linear.app/speckle/issue/CNX-202/unhandled-exception-occurred-when-receiving-in-rhino)
+  /// As to why a concurrent dictionary, it's because it's the cheapest/easiest way to do so.
+  /// https://stackoverflow.com/questions/18922985/concurrent-hashsett-in-net-framework
   /// </summary>
   private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
 
@@ -188,11 +191,6 @@ public sealed class RhinoSendBinding : ISendBinding
   /// </summary>
   private void RunExpirationChecks()
   {
-    // if (_cancellationManager.NumberOfOperations != 0)
-    // {
-    //   return;
-    // }
-
     var senders = _store.GetSenders();
     string[] objectIdsList = ChangedObjectIds.Keys.ToArray(); // NOTE: could not copy to array happens here
     List<string> expiredSenderIds = new();
