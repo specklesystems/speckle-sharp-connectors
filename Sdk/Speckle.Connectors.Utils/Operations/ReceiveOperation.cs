@@ -37,10 +37,23 @@ public sealed class ReceiveOperation
     var version = await apiClient
       .Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ModelId, receiveInfo.ProjectId, cancellationToken)
       .ConfigureAwait(false);
+    int totalCount = 1;
 
     using var transport = _serverTransportFactory.Create(account, receiveInfo.ProjectId);
+
     Base commitObject = await Speckle
-      .Core.Api.Operations.Receive(version.referencedObject, transport, cancellationToken: cancellationToken)
+      .Core.Api.Operations.Receive(
+        version.referencedObject,
+        transport,
+        onProgressAction: dict =>
+        {
+          // NOTE: this looks weird for the user, as when deserialization kicks in, the progress bar will go down, and then start progressing again.
+          // This is something we're happy to live with until we refactor the whole receive pipeline.
+          onOperationProgressed?.Invoke($"Downloading and deserializing", dict.Values.Average() / totalCount);
+        },
+        onTotalChildrenCountKnown: c => totalCount = c,
+        cancellationToken: cancellationToken
+      )
       .ConfigureAwait(false);
 
     cancellationToken.ThrowIfCancellationRequested();
