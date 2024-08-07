@@ -4,6 +4,9 @@ using Autodesk.Revit.UI;
 using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Core.Common;
+using Speckle.Core.Kits;
+using Speckle.Core.Logging;
+using Speckle.Logging;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
@@ -12,6 +15,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
   private IRevitPlugin? _revitPlugin;
 
   private SpeckleContainer? _container;
+  private IDisposable? _disposableLogger;
 
   // POC: this is getting hard coded - need a way of injecting it
   //      I am beginning to think the shared project is not the way
@@ -33,21 +37,23 @@ internal sealed class RevitExternalApplication : IExternalApplication
       "Speckle New UI",
       "Revit",
       [Path.GetDirectoryName(typeof(RevitExternalApplication).Assembly.Location).NotNull()],
-      "Revit Connector",
+      HostApplications.Revit.Slug,
       GetVersionAsString() //POC: app version?
     );
   }
 
-  private string GetVersionAsString()
+  private string GetVersionAsString() => HostApplications.GetVersion(GetVersion());
+
+  private HostAppVersion GetVersion()
   {
 #if REVIT2022
-    return "2022";
+    return HostAppVersion.v2022;
 #elif REVIT2023
-    return "2023";
+    return HostAppVersion.v2023;
 #elif REVIT2024
-    return "2024";
+    return HostAppVersion.v2024;
 #elif REVIT2025
-    return "2025";
+    return HostAppVersion.v2025;
 #else
     throw new NotImplementedException();
 #endif
@@ -61,6 +67,28 @@ internal sealed class RevitExternalApplication : IExternalApplication
       AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<RevitExternalApplication>;
       var containerBuilder = SpeckleContainerBuilder.CreateInstance();
       // init DI
+      _disposableLogger = Setup.Initialize(
+        new(
+          HostApplications.Revit,
+          GetVersion(),
+          new(
+            MinimumLevel: SpeckleLogLevel.Information,
+            Console: true,
+            File: new(Path: "SpeckleCoreLog.txt"),
+            Otel: new(
+              Endpoint: "https://seq.speckle.systems/ingest/otlp/v1/logs",
+              Headers: new() { { "X-Seq-ApiKey", "agZqxG4jQELxQQXh0iZQ" } }
+            )
+          ),
+          new(
+            Console: false,
+            Otel: new(
+              Endpoint: "https://seq.speckle.systems/ingest/otlp/v1/traces",
+              Headers: new() { { "X-Seq-ApiKey", "agZqxG4jQELxQQXh0iZQ" } }
+            )
+          )
+        )
+      );
       _container = containerBuilder
         .LoadAutofacModules(Assembly.GetExecutingAssembly(), _revitSettings.ModuleFolders.NotNull())
         .AddSingleton(_revitSettings) // apply revit settings into DI
@@ -88,6 +116,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
       // possibly with injected pieces or with some abstract methods?
       // need to look for commonality
       _revitPlugin?.Shutdown();
+      _disposableLogger?.Dispose();
     }
     catch (Exception e) when (!e.IsFatal())
     {

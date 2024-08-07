@@ -1,5 +1,4 @@
 using Autodesk.AutoCAD.DatabaseServices;
-using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
@@ -14,6 +13,7 @@ using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Core.Common;
+using Speckle.Core.Logging;
 
 namespace Speckle.Connectors.Autocad.Bindings;
 

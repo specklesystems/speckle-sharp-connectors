@@ -86,7 +86,6 @@ public class RhinoLayerManager
     foreach (var layerName in names)
     {
       var existingLayerIndex = RhinoDoc.ActiveDoc.Layers.FindByFullPath(path, -1);
-      var rhLayer = RhinoDoc.ActiveDoc.Layers[existingLayerIndex];
       Collection? childCollection = null;
       if (_layerCollectionCache.TryGetValue(existingLayerIndex, out Collection? collection))
       {
