@@ -3,6 +3,7 @@
     <TargetFramework>net48</TargetFramework>
     <Configurations>Debug;Release;Local</Configurations>
     <RhinoVersion>7</RhinoVersion>
+    <DefineConstants>$(DefineConstants);RHINO7</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>

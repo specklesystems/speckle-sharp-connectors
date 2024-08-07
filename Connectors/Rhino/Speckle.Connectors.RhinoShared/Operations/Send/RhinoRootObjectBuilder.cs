@@ -5,12 +5,14 @@ using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Conversion;
+using Speckle.Connectors.Utils.Instances;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
 using Speckle.Core.Logging;
 using Speckle.Core.Models;
 using Speckle.Core.Models.Collections;
 using Speckle.Core.Models.Proxies;
+using Speckle.Logging;
 using Layer = Rhino.DocObjects.Layer;
 
 namespace Speckle.Connectors.Rhino.Operations.Send;
@@ -61,13 +63,17 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   ) =>
     _syncToThread.RunOnThread(() =>
     {
+      using var activity = SpeckleActivityFactory.Start("Build");
       Collection rootObjectCollection = new() { name = _contextStack.Current.Document.Name ?? "Unnamed document" };
       int count = 0;
 
-      var (atomicObjects, instanceProxies, instanceDefinitionProxies) = _instanceObjectsManager.UnpackSelection(
-        rhinoObjects
-      );
+      UnpackResult<RhinoObject> unpackResults;
+      using (var _ = SpeckleActivityFactory.Start("UnpackSelection"))
+      {
+        unpackResults = _instanceObjectsManager.UnpackSelection(rhinoObjects);
+      }
 
+      var (atomicObjects, instanceProxies, instanceDefinitionProxies) = unpackResults;
       // POC: we should formalise this, sooner or later - or somehow fix it a bit more
       rootObjectCollection["instanceDefinitionProxies"] = instanceDefinitionProxies; // this won't work re traversal on receive
 
@@ -78,57 +84,64 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       List<SendConversionResult> results = new(atomicObjects.Count);
 
       HashSet<Layer> versionLayers = new();
-      foreach (RhinoObject rhinoObject in atomicObjects)
+      using (var _ = SpeckleActivityFactory.Start("Convert all"))
       {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        // handle layer
-        Layer layer = _contextStack.Current.Document.Layers[rhinoObject.Attributes.LayerIndex];
-        versionLayers.Add(layer);
-        Collection collectionHost = _layerManager.GetHostObjectCollection(layer, rootObjectCollection);
-        string applicationId = rhinoObject.Id.ToString();
-
-        try
+        foreach (RhinoObject rhinoObject in atomicObjects)
         {
-          // get from cache or convert:
-          // What we actually do here is check if the object has been previously converted AND has not changed.
-          // If that's the case, we insert in the host collection just its object reference which has been saved from the prior conversion.
-          Base converted;
-          if (rhinoObject is InstanceObject)
+          using var _2 = SpeckleActivityFactory.Start("Convert");
+          cancellationToken.ThrowIfCancellationRequested();
+
+          // handle layer
+          Layer layer = _contextStack.Current.Document.Layers[rhinoObject.Attributes.LayerIndex];
+          versionLayers.Add(layer);
+          Collection collectionHost = _layerManager.GetHostObjectCollection(layer, rootObjectCollection);
+          string applicationId = rhinoObject.Id.ToString();
+
+          try
           {
-            converted = instanceProxies[applicationId];
+            // get from cache or convert:
+            // What we actually do here is check if the object has been previously converted AND has not changed.
+            // If that's the case, we insert in the host collection just its object reference which has been saved from the prior conversion.
+            Base converted;
+            if (rhinoObject is InstanceObject)
+            {
+              converted = instanceProxies[applicationId];
+            }
+            else if (_sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference value))
+            {
+              converted = value;
+            }
+            else
+            {
+              converted = _rootToSpeckleConverter.Convert(rhinoObject);
+              converted.applicationId = applicationId;
+            }
+
+            // add to host
+            collectionHost.elements.Add(converted);
+
+            results.Add(new(Status.SUCCESS, applicationId, rhinoObject.ObjectType.ToString(), converted));
           }
-          else if (_sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference value))
+          catch (Exception ex) when (!ex.IsFatal())
           {
-            converted = value;
-          }
-          else
-          {
-            converted = _rootToSpeckleConverter.Convert(rhinoObject);
-            converted.applicationId = applicationId;
+            results.Add(new(Status.ERROR, applicationId, rhinoObject.ObjectType.ToString(), null, ex));
           }
 
-          // add to host
-          collectionHost.elements.Add(converted);
+          ++count;
+          onOperationProgressed?.Invoke("Converting", (double)count / atomicObjects.Count);
 
-          results.Add(new(Status.SUCCESS, applicationId, rhinoObject.ObjectType.ToString(), converted));
+          // NOTE: useful for testing ui states, pls keep for now so we can easily uncomment
+          // Thread.Sleep(550);
         }
-        catch (Exception ex) when (!ex.IsFatal())
-        {
-          results.Add(new(Status.ERROR, applicationId, rhinoObject.ObjectType.ToString(), null, ex));
-        }
-
-        ++count;
-        onOperationProgressed?.Invoke("Converting", (double)count / atomicObjects.Count);
-
-        // NOTE: useful for testing ui states, pls keep for now so we can easily uncomment
-        // Thread.Sleep(550);
       }
 
-      // set render materials and colors
-      rootObjectCollection["renderMaterialProxies"] = _materialManager.UnpackRenderMaterial(atomicObjects);
-      List<ColorProxy> colorProxies = _colorManager.UnpackColors(atomicObjects, versionLayers.ToList());
-      rootObjectCollection["colorProxies"] = colorProxies;
+      using (var _ = SpeckleActivityFactory.Start("UnpackRenderMaterials"))
+      {
+        // set render materials and colors
+        rootObjectCollection["renderMaterialProxies"] = _materialManager.UnpackRenderMaterial(atomicObjects);
+        List<ColorProxy> colorProxies = _colorManager.UnpackColors(atomicObjects, versionLayers.ToList());
+        rootObjectCollection["colorProxies"] = colorProxies;
+      }
 
       // 5. profit
       return new RootObjectBuilderResult(rootObjectCollection, results);
