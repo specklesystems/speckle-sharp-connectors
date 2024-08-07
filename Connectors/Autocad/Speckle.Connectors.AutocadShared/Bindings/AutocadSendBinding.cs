@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Autodesk.AutoCAD.DatabaseServices;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Autocad.HostApp;
@@ -35,9 +36,12 @@ public sealed class AutocadSendBinding : ISendBinding
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   /// <summary>
-  /// Used internally to aggregate the changed objects' id.
+  /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
+  /// [CNX-202: Unhandled Exception Occurred when receiving in Rhino](https://linear.app/speckle/issue/CNX-202/unhandled-exception-occurred-when-receiving-in-rhino)
+  /// As to why a concurrent dictionary, it's because it's the cheapest/easiest way to do so.
+  /// https://stackoverflow.com/questions/18922985/concurrent-hashsett-in-net-framework
   /// </summary>
-  private HashSet<string> ChangedObjectIds { get; set; } = new();
+  private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
 
   public AutocadSendBinding(
     DocumentModelStore store,
@@ -95,14 +99,14 @@ public sealed class AutocadSendBinding : ISendBinding
 
   private void OnChangeChangedObjectIds(DBObject dBObject)
   {
-    ChangedObjectIds.Add(dBObject.Handle.Value.ToString());
+    ChangedObjectIds[dBObject.Handle.Value.ToString()] = 1;
     _idleManager.SubscribeToIdle(nameof(AutocadSendBinding), RunExpirationChecks);
   }
 
   private void RunExpirationChecks()
   {
     var senders = _store.GetSenders();
-    string[] objectIdsList = ChangedObjectIds.ToArray();
+    string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
     List<string> expiredSenderIds = new();
 
     _sendConversionCache.EvictObjects(objectIdsList);
@@ -118,7 +122,7 @@ public sealed class AutocadSendBinding : ISendBinding
     }
 
     Commands.SetModelsExpired(expiredSenderIds);
-    ChangedObjectIds = new HashSet<string>();
+    ChangedObjectIds = new();
   }
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
