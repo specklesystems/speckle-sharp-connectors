@@ -3,6 +3,7 @@ using System.Reflection;
 using Autodesk.Revit.UI;
 using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
+using Speckle.Connectors.Utils;
 using Speckle.Core.Common;
 using Speckle.Core.Kits;
 using Speckle.Core.Logging;
@@ -65,31 +66,10 @@ internal sealed class RevitExternalApplication : IExternalApplication
     {
       // POC: not sure what this is doing...  could be messing up our Aliasing????
       AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<RevitExternalApplication>;
-      var containerBuilder = SpeckleContainerBuilder.CreateInstance();
       // init DI
-      _disposableLogger = Setup.Initialize(
-        new(
-          HostApplications.Revit,
-          GetVersion(),
-          new(
-            MinimumLevel: SpeckleLogLevel.Information,
-            Console: true,
-            File: new(Path: "SpeckleCoreLog.txt"),
-            Otel: new(
-              Endpoint: "https://seq.speckle.systems/ingest/otlp/v1/logs",
-              Headers: new() { { "X-Seq-ApiKey", "agZqxG4jQELxQQXh0iZQ" } }
-            )
-          ),
-          new(
-            Console: false,
-            Otel: new(
-              Endpoint: "https://seq.speckle.systems/ingest/otlp/v1/traces",
-              Headers: new() { { "X-Seq-ApiKey", "agZqxG4jQELxQQXh0iZQ" } }
-            )
-          )
-        )
-      );
-      _container = containerBuilder
+      _disposableLogger = Setup.Initialize(Config.Create(HostApplications.Revit, GetVersion()));
+      _container = SpeckleContainerBuilder
+        .CreateInstance()
         .LoadAutofacModules(Assembly.GetExecutingAssembly(), _revitSettings.ModuleFolders.NotNull())
         .AddSingleton(_revitSettings) // apply revit settings into DI
         .AddSingleton(application) // inject UIControlledApplication application
