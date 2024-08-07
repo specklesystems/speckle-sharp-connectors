@@ -1,6 +1,5 @@
 ﻿using System.Reflection;
 using Autofac;
-using Microsoft.Extensions.Logging;
 using Speckle.Autofac.Files;
 using Module = Autofac.Module;
 
@@ -64,7 +63,9 @@ public class SpeckleContainerBuilder
       return assembly;
     }
     // POC: catch only certain exceptions
-    catch (Exception ex) when (!ex.IsFatal())
+#pragma warning disable CA1031
+    catch (Exception)
+#pragma warning restore CA1031
     {
       return null;
     }
@@ -239,13 +240,6 @@ public class SpeckleContainerBuilder
   public SpeckleContainer Build()
   {
     var container = ContainerBuilder.Build();
-
-    //POC: we could create the factory on construction of the container and then inject that and store it?
-    var logger = container.Resolve<ILogger<SpeckleContainerBuilder>>();
-    // POC: we could probably expand on this
-    List<string> assemblies = AppDomain.CurrentDomain.GetAssemblies().Select(x => x.FullName).ToList();
-    logger.LogInformation("Loaded assemblies: {@Assemblies}", assemblies);
-
     return new SpeckleContainer(container);
   }
 }

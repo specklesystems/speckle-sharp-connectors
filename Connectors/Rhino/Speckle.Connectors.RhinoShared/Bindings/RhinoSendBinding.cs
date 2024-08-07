@@ -1,7 +1,7 @@
+using System.Collections.Concurrent;
 using Rhino;
 using Rhino.Commands;
 using Rhino.DocObjects;
-using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
@@ -14,6 +14,7 @@ using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Core.Common;
+using Speckle.Core.Logging;
 
 namespace Speckle.Connectors.Rhino.Bindings;
 
@@ -30,12 +31,16 @@ public sealed class RhinoSendBinding : ISendBinding
   private readonly CancellationManager _cancellationManager;
   private readonly RhinoSettings _rhinoSettings;
   private readonly ISendConversionCache _sendConversionCache;
+  private readonly IOperationProgressManager _operationProgressManager;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   /// <summary>
-  /// Used internally to aggregate the changed objects' id.
+  /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
+  /// [CNX-202: Unhandled Exception Occurred when receiving in Rhino](https://linear.app/speckle/issue/CNX-202/unhandled-exception-occurred-when-receiving-in-rhino)
+  /// As to why a concurrent dictionary, it's because it's the cheapest/easiest way to do so.
+  /// https://stackoverflow.com/questions/18922985/concurrent-hashsett-in-net-framework
   /// </summary>
-  private HashSet<string> ChangedObjectIds { get; set; } = new();
+  private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
 
   public RhinoSendBinding(
     DocumentModelStore store,
@@ -45,7 +50,8 @@ public sealed class RhinoSendBinding : ISendBinding
     IUnitOfWorkFactory unitOfWorkFactory,
     RhinoSettings rhinoSettings,
     CancellationManager cancellationManager,
-    ISendConversionCache sendConversionCache
+    ISendConversionCache sendConversionCache,
+    IOperationProgressManager operationProgressManager
   )
   {
     _store = store;
@@ -55,6 +61,7 @@ public sealed class RhinoSendBinding : ISendBinding
     _rhinoSettings = rhinoSettings;
     _cancellationManager = cancellationManager;
     _sendConversionCache = sendConversionCache;
+    _operationProgressManager = operationProgressManager;
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler.Parent.TopLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent); // POC: Commands are tightly coupled with their bindings, at least for now, saves us injecting a factory.
@@ -73,7 +80,7 @@ public sealed class RhinoSendBinding : ISendBinding
       if (e.CommandEnglishName == "BlockEdit")
       {
         var selectedObject = RhinoDoc.ActiveDoc.Objects.GetSelectedObjects(false, false).First();
-        ChangedObjectIds.Add(selectedObject.Id.ToString());
+        ChangedObjectIds[selectedObject.Id.ToString()] = 1;
       }
     };
 
@@ -86,7 +93,7 @@ public sealed class RhinoSendBinding : ISendBinding
           return;
         }
 
-        ChangedObjectIds.Add(e.ObjectId.ToString());
+        ChangedObjectIds[e.ObjectId.ToString()] = 1;
         _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
       });
 
@@ -99,7 +106,7 @@ public sealed class RhinoSendBinding : ISendBinding
           return;
         }
 
-        ChangedObjectIds.Add(e.ObjectId.ToString());
+        ChangedObjectIds[e.ObjectId.ToString()] = 1;
         _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
       });
 
@@ -112,8 +119,8 @@ public sealed class RhinoSendBinding : ISendBinding
           return;
         }
 
-        ChangedObjectIds.Add(e.NewRhinoObject.Id.ToString());
-        ChangedObjectIds.Add(e.OldRhinoObject.Id.ToString());
+        ChangedObjectIds[e.NewRhinoObject.Id.ToString()] = 1;
+        ChangedObjectIds[e.OldRhinoObject.Id.ToString()] = 1;
         _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
       });
   }
@@ -152,7 +159,12 @@ public sealed class RhinoSendBinding : ISendBinding
           rhinoObjects,
           modelCard.GetSendInfo(_rhinoSettings.HostAppInfo.Name),
           (status, progress) =>
-            Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts),
+            _operationProgressManager.SetModelProgress(
+              Parent,
+              modelCardId,
+              new ModelCardProgress(modelCardId, status, progress),
+              cts
+            ),
           cts.Token
         )
         .ConfigureAwait(false);
@@ -180,7 +192,7 @@ public sealed class RhinoSendBinding : ISendBinding
   private void RunExpirationChecks()
   {
     var senders = _store.GetSenders();
-    string[] objectIdsList = ChangedObjectIds.ToArray();
+    string[] objectIdsList = ChangedObjectIds.Keys.ToArray(); // NOTE: could not copy to array happens here
     List<string> expiredSenderIds = new();
 
     _sendConversionCache.EvictObjects(objectIdsList);
@@ -196,6 +208,6 @@ public sealed class RhinoSendBinding : ISendBinding
     }
 
     Commands.SetModelsExpired(expiredSenderIds);
-    ChangedObjectIds = new HashSet<string>();
+    ChangedObjectIds = new();
   }
 }

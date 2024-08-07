@@ -13,6 +13,7 @@ using Speckle.Core.Models.Collections;
 using Speckle.Core.Models.GraphTraversal;
 using Speckle.Core.Models.Instances;
 using Speckle.Core.Models.Proxies;
+using Speckle.Logging;
 using RenderMaterialProxy = Objects.Other.RenderMaterialProxy;
 
 namespace Speckle.Connectors.Rhino.Operations.Receive;
@@ -62,13 +63,18 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   {
     return _syncToThread.RunOnThread(() =>
     {
+      using var activity = SpeckleActivityFactory.Start("Build");
       // POC: This is where the top level base-layer name is set. Could be abstracted or injected in the context?
       var baseLayerName = $"Project {projectName}: Model {modelName}";
 
-      var objectsToConvert = _traverseFunction
-        .Traverse(rootObject)
-        //.TraverseWithProgress(rootObject, onOperationProgressed, cancellationToken)
-        .Where(obj => obj.Current is not Collection);
+      IEnumerable<TraversalContext> objectsToConvert;
+      using (var _ = SpeckleActivityFactory.Start("Traverse"))
+      {
+        objectsToConvert = _traverseFunction
+          .Traverse(rootObject)
+          //.TraverseWithProgress(rootObject, onOperationProgressed, cancellationToken)
+          .Where(obj => obj.Current is not Collection);
+      }
 
       var instanceDefinitionProxies = (rootObject["instanceDefinitionProxies"] as List<object>)
         ?.Cast<InstanceDefinitionProxy>()
@@ -110,39 +116,43 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     Action<string, double?>? onOperationProgressed
   )
   {
-    RhinoDoc doc = _contextStack.Current.Document;
-
-    // Remove all previously received layers and render materials from the document
-    int rootLayerIndex = _contextStack.Current.Document.Layers.Find(Guid.Empty, baseLayerName, RhinoMath.UnsetIntIndex);
-    PreReceiveDeepClean(baseLayerName, rootLayerIndex);
-
-    _layerManager.CreateBaseLayer(baseLayerName);
-    using var noDraw = new DisableRedrawScope(doc.Views);
-
-    // POC: these are not captured by traversal, so we need to re-add them here
-    List<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents = new();
-    if (instanceDefinitionProxies != null && instanceDefinitionProxies.Count > 0)
-    {
-      var transformed = instanceDefinitionProxies.Select(proxy =>
-        (Array.Empty<Collection>(), proxy as IInstanceComponent)
-      );
-      instanceComponents.AddRange(transformed);
-    }
-
     List<(Collection[] collectionPath, Base obj)> atomicObjects = new();
-
-    // Split up the instances from the non-instances
-    foreach (TraversalContext tc in objectsGraph)
+    RhinoDoc doc = _contextStack.Current.Document;
+    List<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents = new();
+    using (var _ = SpeckleActivityFactory.Start("BakeObjects"))
     {
-      Collection[] collectionPath = _layerManager.GetLayerPath(tc);
+      // Remove all previously received layers and render materials from the document
+      int rootLayerIndex = _contextStack.Current.Document.Layers.Find(
+        Guid.Empty,
+        baseLayerName,
+        RhinoMath.UnsetIntIndex
+      );
+      PreReceiveDeepClean(baseLayerName, rootLayerIndex);
 
-      if (tc.Current is IInstanceComponent instanceComponent)
+      _layerManager.CreateBaseLayer(baseLayerName);
+
+      // POC: these are not captured by traversal, so we need to re-add them here
+      if (instanceDefinitionProxies != null && instanceDefinitionProxies.Count > 0)
       {
-        instanceComponents.Add((collectionPath, instanceComponent));
+        var transformed = instanceDefinitionProxies.Select(proxy =>
+          (Array.Empty<Collection>(), proxy as IInstanceComponent)
+        );
+        instanceComponents.AddRange(transformed);
       }
-      else
+
+      // Split up the instances from the non-instances
+      foreach (TraversalContext tc in objectsGraph)
       {
-        atomicObjects.Add((collectionPath, tc.Current));
+        Collection[] collectionPath = _layerManager.GetLayerPath(tc);
+
+        if (tc.Current is IInstanceComponent instanceComponent)
+        {
+          instanceComponents.Add((collectionPath, instanceComponent));
+        }
+        else
+        {
+          atomicObjects.Add((collectionPath, tc.Current));
+        }
       }
     }
 
@@ -238,6 +248,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     List<ReceiveConversionResult> conversionResults
   )
   {
+    using var _ = SpeckleActivityFactory.Start("BakeRenderMaterials");
     // keeps track of the material id to created index in the materials table
     Dictionary<string, int> materialsIdMap = new();
 

@@ -4,6 +4,7 @@ using Speckle.Core.Api.GraphQL.Inputs;
 using Speckle.Core.Credentials;
 using Speckle.Core.Models;
 using Speckle.Core.Transports;
+using Speckle.InterfaceGenerator;
 
 namespace Speckle.Connectors.Utils.Operations;
 
@@ -13,6 +14,7 @@ namespace Speckle.Connectors.Utils.Operations;
 /// </summary>
 /// POC: we have a generic RootObjectSender but we're not using it everywhere. It also appears to need some specialisation or at least
 /// a way to get the application name, so RevitContext is being used in the revit version but we could probably inject that as a IHostAppContext maybe?
+[GenerateAutoInterface]
 public sealed class RootObjectSender : IRootObjectSender
 {
   // POC: Revisit this factory pattern, I think we could solve this higher up by injecting a scoped factory for `SendOperation` in the SendBinding
@@ -34,6 +36,11 @@ public sealed class RootObjectSender : IRootObjectSender
     _sendHelper = sendHelper;
   }
 
+  /// <summary>
+  /// Contract for the send operation that handles an assembled <see cref="Base"/> object.
+  /// In production, this will send to a server.
+  /// In testing, this could send to a sqlite db or just save to a dictionary.
+  /// </summary>
   public async Task<(string rootObjId, Dictionary<string, ObjectReference> convertedReferences)> Send(
     Base commitObject,
     SendInfo sendInfo,

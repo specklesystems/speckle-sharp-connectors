@@ -42,6 +42,9 @@ public static class SharedRegistration
     builder.AddScoped<AutocadMaterialManager>();
     builder.AddSingleton<IAutocadIdleManager, AutocadIdleManager>();
 
+    // operation progress manager
+    builder.AddSingleton<IOperationProgressManager, OperationProgressManager>();
+
     // Register bindings
     builder.AddSingleton<IBinding, TestBinding>();
     builder.AddSingleton<IBinding, AccountBinding>();

@@ -48,11 +48,7 @@
     <RemoveDir Directories="$(AppData)\McNeel\Rhinoceros\$(RhinoVersion).0\Plug-ins\Speckle.Connectors.Rhino$(RhinoVersion) (8dd5f30b-a13d-4a24-abdc-3e05c8c87144)" />
   </Target>
   <Target AfterTargets="Build"  Name="AfterBuildRhino" Condition="'$(RhinoVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
-    <ItemGroup>
-      <RhinoDLLs Include="$(TargetDir)\**\*.*" />
-    </ItemGroup>
     <Message Text="RhinoVersion $(RhinoVersion)" Importance="high"/>
-    <Copy DestinationFolder="$(AppData)\McNeel\Rhinoceros\$(RhinoVersion).0\Plug-ins\Speckle.Connectors.Rhino$(RhinoVersion) (8dd5f30b-a13d-4a24-abdc-3e05c8c87144)\%(RecursiveDir)" SourceFiles="@(RhinoDLLs)" />
   </Target>
   <PropertyGroup Condition="'$(RhinoVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
     <TargetExt>.rhp</TargetExt>

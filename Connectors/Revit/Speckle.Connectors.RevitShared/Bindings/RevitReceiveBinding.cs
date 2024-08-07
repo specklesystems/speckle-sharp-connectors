@@ -1,4 +1,3 @@
-using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
@@ -9,6 +8,7 @@ using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Core.Common;
+using Speckle.Core.Logging;
 
 namespace Speckle.Connectors.Revit.Bindings;
 
@@ -18,24 +18,28 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
   public IBridge Parent { get; }
 
   private readonly RevitSettings _revitSettings;
+  private readonly IOperationProgressManager _operationProgressManager;
   private readonly CancellationManager _cancellationManager;
   private readonly DocumentModelStore _store;
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
-  public ReceiveBindingUICommands Commands { get; }
+  private ReceiveBindingUICommands Commands { get; }
 
   public RevitReceiveBinding(
     DocumentModelStore store,
     CancellationManager cancellationManager,
     IBridge parent,
     IUnitOfWorkFactory unitOfWorkFactory,
-    RevitSettings revitSettings
+    RevitSettings revitSettings,
+    IOperationProgressManager operationProgressManager
   )
   {
     Parent = parent;
     _store = store;
     _unitOfWorkFactory = unitOfWorkFactory;
     _revitSettings = revitSettings;
+    _operationProgressManager = operationProgressManager;
     _cancellationManager = cancellationManager;
+
     Commands = new ReceiveBindingUICommands(parent);
   }
 
@@ -62,7 +66,12 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
           modelCard.GetReceiveInfo(_revitSettings.HostSlug.NotNull()),
           cts.Token,
           (status, progress) =>
-            Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts)
+            _operationProgressManager.SetModelProgress(
+              Parent,
+              modelCardId,
+              new ModelCardProgress(modelCardId, status, progress),
+              cts
+            )
         )
         .ConfigureAwait(false);
 
@@ -73,16 +82,15 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
         conversionResults.ConversionResults
       );
     }
-    catch (Exception e) when (!e.IsFatal()) // UX reasons - we will report operation exceptions as model card error.
-    {
-      Commands.SetModelError(modelCardId, e);
-    }
     catch (OperationCanceledException)
     {
       // SWALLOW -> UI handles it immediately, so we do not need to handle anything for now!
       // Idea for later -> when cancel called, create promise from UI to solve it later with this catch block.
       // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
-      return;
+    }
+    catch (Exception e) when (!e.IsFatal()) // UX reasons - we will report operation exceptions as model card error.
+    {
+      Commands.SetModelError(modelCardId, e);
     }
   }
 }

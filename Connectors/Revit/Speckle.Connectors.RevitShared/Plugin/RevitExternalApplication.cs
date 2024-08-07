@@ -3,7 +3,10 @@ using System.Reflection;
 using Autodesk.Revit.UI;
 using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
+using Speckle.Connectors.Utils;
 using Speckle.Core.Common;
+using Speckle.Core.Kits;
+using Speckle.Core.Logging;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
@@ -12,6 +15,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
   private IRevitPlugin? _revitPlugin;
 
   private SpeckleContainer? _container;
+  private IDisposable? _disposableLogger;
 
   // POC: this is getting hard coded - need a way of injecting it
   //      I am beginning to think the shared project is not the way
@@ -33,21 +37,23 @@ internal sealed class RevitExternalApplication : IExternalApplication
       "Speckle New UI",
       "Revit",
       [Path.GetDirectoryName(typeof(RevitExternalApplication).Assembly.Location).NotNull()],
-      "Revit Connector",
+      HostApplications.Revit.Slug,
       GetVersionAsString() //POC: app version?
     );
   }
 
-  private string GetVersionAsString()
+  private string GetVersionAsString() => HostApplications.GetVersion(GetVersion());
+
+  private HostAppVersion GetVersion()
   {
 #if REVIT2022
-    return "2022";
+    return HostAppVersion.v2022;
 #elif REVIT2023
-    return "2023";
+    return HostAppVersion.v2023;
 #elif REVIT2024
-    return "2024";
+    return HostAppVersion.v2024;
 #elif REVIT2025
-    return "2025";
+    return HostAppVersion.v2025;
 #else
     throw new NotImplementedException();
 #endif
@@ -59,9 +65,10 @@ internal sealed class RevitExternalApplication : IExternalApplication
     {
       // POC: not sure what this is doing...  could be messing up our Aliasing????
       AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<RevitExternalApplication>;
-      var containerBuilder = SpeckleContainerBuilder.CreateInstance();
       // init DI
-      _container = containerBuilder
+      _disposableLogger = Setup.Initialize(Config.Create(HostApplications.Revit, GetVersion()));
+      _container = SpeckleContainerBuilder
+        .CreateInstance()
         .LoadAutofacModules(Assembly.GetExecutingAssembly(), _revitSettings.ModuleFolders.NotNull())
         .AddSingleton(_revitSettings) // apply revit settings into DI
         .AddSingleton(application) // inject UIControlledApplication application
@@ -88,6 +95,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
       // possibly with injected pieces or with some abstract methods?
       // need to look for commonality
       _revitPlugin?.Shutdown();
+      _disposableLogger?.Dispose();
     }
     catch (Exception e) when (!e.IsFatal())
     {
