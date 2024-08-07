@@ -1,5 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using Speckle.Core.Common;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.DUI.Bridge;
 

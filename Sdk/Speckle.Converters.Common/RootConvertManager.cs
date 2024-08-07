@@ -1,6 +1,6 @@
 ﻿using Speckle.Autofac.DependencyInjection;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Models;
+using Speckle.Sdk.Models;
 using Speckle.InterfaceGenerator;
 
 namespace Speckle.Converters.Common;

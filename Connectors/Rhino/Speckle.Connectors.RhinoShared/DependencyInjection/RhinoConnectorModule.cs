@@ -22,7 +22,7 @@ using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Instances;
 using Speckle.Connectors.Utils.Operations;
-using Speckle.Core.Models.GraphTraversal;
+using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.Rhino.DependencyInjection;
 

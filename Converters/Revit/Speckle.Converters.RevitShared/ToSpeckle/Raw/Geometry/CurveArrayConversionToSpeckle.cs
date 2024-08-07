@@ -1,6 +1,6 @@
 using Autodesk.Revit.DB;
-using Objects;
-using Objects.Geometry;
+using Speckle.Objects;
+using Speckle.Objects.Geometry;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;

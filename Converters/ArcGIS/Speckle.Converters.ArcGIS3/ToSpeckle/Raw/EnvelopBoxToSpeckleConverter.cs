@@ -1,5 +1,5 @@
 using ArcGIS.Core.Geometry;
-using Objects.Primitive;
+using Speckle.Objects.Primitive;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 

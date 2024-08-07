@@ -3,10 +3,10 @@ using System.Reflection;
 using Autodesk.Revit.UI;
 using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
-using Speckle.Connectors.Utils;
-using Speckle.Core.Common;
-using Speckle.Core.Kits;
-using Speckle.Core.Logging;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Logging;
+using Speckle.Sdk;
+using Speckle.Sdk.Host;
 
 namespace Speckle.Connectors.Revit.Plugin;
 

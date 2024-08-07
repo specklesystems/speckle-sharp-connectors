@@ -4,11 +4,11 @@ using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Core.Logging;
-using Speckle.Core.Models;
-using Speckle.Core.Models.Collections;
-using Speckle.Core.Models.GraphTraversal;
-using Speckle.Logging;
+using Speckle.Sdk.Logging;
+using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.GraphTraversal;
+using Speckle.Sdk;
 
 namespace Speckle.Connectors.Revit.Operations.Receive;
 

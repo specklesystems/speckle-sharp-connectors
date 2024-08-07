@@ -1,4 +1,4 @@
-using Objects.GIS;
+using Speckle.Objects.GIS;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 

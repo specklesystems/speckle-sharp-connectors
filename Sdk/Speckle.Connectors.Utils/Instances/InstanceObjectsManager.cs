@@ -1,4 +1,4 @@
-﻿using Speckle.Core.Models.Instances;
+﻿using Speckle.Sdk.Models.Instances;
 using Speckle.InterfaceGenerator;
 
 namespace Speckle.Connectors.Utils.Instances;

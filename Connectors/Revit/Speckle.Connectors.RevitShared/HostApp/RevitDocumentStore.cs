@@ -8,9 +8,9 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Core.Common;
-using Speckle.Core.Logging;
+using Speckle.Sdk.Common;
 using Speckle.Newtonsoft.Json;
+using Speckle.Sdk;
 
 namespace Speckle.Connectors.Revit.HostApp;
 

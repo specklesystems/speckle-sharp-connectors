@@ -1,13 +1,12 @@
-﻿using System.Reflection;
+using System.Reflection;
 using Rhino.PlugIns;
 using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Rhino.DependencyInjection;
 using Speckle.Connectors.Rhino.HostApp;
-using Speckle.Connectors.Utils;
-using Speckle.Core.Kits;
-using Speckle.Core.Logging;
-using Speckle.Core.Models.Extensions;
+using Speckle.Sdk;
+using Speckle.Sdk.Host;
+using Speckle.Sdk.Models.Extensions;
 
 namespace Speckle.Connectors.Rhino.Plugin;
 

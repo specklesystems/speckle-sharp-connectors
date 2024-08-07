@@ -1,6 +1,6 @@
-﻿using Objects;
+﻿using Speckle.Objects;
 using Speckle.Converters.Common;
-using Speckle.Core.Models;
+using Speckle.Sdk.Models;
 using Speckle.DoubleNumerics;
 using Speckle.InterfaceGenerator;
 

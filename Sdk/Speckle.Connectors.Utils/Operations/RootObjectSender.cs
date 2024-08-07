@@ -1,10 +1,9 @@
 using Speckle.Connectors.Utils.Caching;
-using Speckle.Core.Api;
-using Speckle.Core.Api.GraphQL.Inputs;
-using Speckle.Core.Credentials;
-using Speckle.Core.Models;
-using Speckle.Core.Transports;
-using Speckle.InterfaceGenerator;
+using Speckle.Sdk.Api;
+using Speckle.Sdk.Api.GraphQL.Inputs;
+using Speckle.Sdk.Credentials;
+using Speckle.Sdk.Models;
+using Speckle.Sdk.Transports;
 
 namespace Speckle.Connectors.Utils.Operations;
 

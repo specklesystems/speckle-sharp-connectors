@@ -1,5 +1,5 @@
-﻿using Speckle.Core.Models;
-using Speckle.Core.Models.GraphTraversal;
+﻿using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.DoubleNumerics;
 
 namespace Speckle.Connectors.Utils.Instances;

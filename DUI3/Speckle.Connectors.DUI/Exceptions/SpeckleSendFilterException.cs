@@ -1,4 +1,4 @@
-﻿using Speckle.Core.Logging;
+﻿using Speckle.Sdk;
 
 namespace Speckle.Connectors.DUI.Exceptions;
 

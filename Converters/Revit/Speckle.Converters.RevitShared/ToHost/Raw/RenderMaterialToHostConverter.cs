@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 using Autodesk.Revit.DB;
-using Objects.Other;
+using Speckle.Objects.Other;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 

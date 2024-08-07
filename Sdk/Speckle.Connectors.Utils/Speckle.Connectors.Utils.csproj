@@ -12,7 +12,7 @@
     <ProjectReference Include="..\Speckle.Autofac\Speckle.Autofac.csproj" />
   </ItemGroup>
     <ItemGroup Condition="'$(Configuration)' == 'Local'"> 
-    <ProjectReference Include="..\..\..\speckle-sharp-sdk\src\Speckle.Core\Speckle.Core.csproj" />
+    <ProjectReference Include="..\..\..\speckle-sharp-sdk\src\Speckle.Sdk\Speckle.Sdk.csproj" />
   </ItemGroup> 
   <ItemGroup Condition="'$(Configuration)' != 'Local'"> 
     <PackageReference Include="Speckle.Core" />

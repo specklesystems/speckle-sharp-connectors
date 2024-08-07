@@ -5,7 +5,7 @@ using Autodesk.AutoCAD.Windows;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.DUI.WebView;
-using Speckle.Core.Kits;
+using Speckle.Sdk.Host;
 
 namespace Speckle.Connectors.Autocad.Plugin;
 

@@ -136,11 +136,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Converters.Revit202
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2022", "2022", "{0AF38BA3-65A0-481B-8CBB-B82E406E1575}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Core", "..\speckle-sharp-sdk\src\Speckle.Core\Speckle.Core.csproj", "{633B7099-4D96-40C2-AC25-7660A81E0FA2}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Objects", "..\speckle-sharp-sdk\src\Speckle.Objects\Speckle.Objects.csproj", "{259A84F0-2D1E-49DE-9137-93BE6858A52C}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Logging", "..\speckle-sharp-sdk\src\Speckle.Logging\Speckle.Logging.csproj", "{6279DBDA-95D0-437F-AC1B-6FD4AD1E7813}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Sdk", "..\speckle-sharp-sdk\src\Speckle.Sdk\Speckle.Sdk.csproj", "{347CECE7-99DC-49A6-A508-7DE9907B887B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Sdk.Logging", "..\speckle-sharp-sdk\src\Speckle.Sdk.Logging\Speckle.Sdk.Logging.csproj", "{B8CE5087-707E-469C-AADE-FFC0E9C26B59}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -219,12 +219,12 @@ Global
 		{19424B55-058C-4E9C-B86F-700AEF9EAEC3}.Local|Any CPU.ActiveCfg = Local|Any CPU
 		{881D71A3-D276-4108-98C6-0FFD32129B9C}.Local|Any CPU.ActiveCfg = Local|Any CPU
 		{881D71A3-D276-4108-98C6-0FFD32129B9C}.Local|Any CPU.Build.0 = Local|Any CPU
-		{633B7099-4D96-40C2-AC25-7660A81E0FA2}.Local|Any CPU.ActiveCfg = Local|Any CPU
-		{633B7099-4D96-40C2-AC25-7660A81E0FA2}.Local|Any CPU.Build.0 = Local|Any CPU
 		{259A84F0-2D1E-49DE-9137-93BE6858A52C}.Local|Any CPU.ActiveCfg = Local|Any CPU
 		{259A84F0-2D1E-49DE-9137-93BE6858A52C}.Local|Any CPU.Build.0 = Local|Any CPU
-		{6279DBDA-95D0-437F-AC1B-6FD4AD1E7813}.Local|Any CPU.ActiveCfg = Debug|Any CPU
-		{6279DBDA-95D0-437F-AC1B-6FD4AD1E7813}.Local|Any CPU.Build.0 = Debug|Any CPU
+		{347CECE7-99DC-49A6-A508-7DE9907B887B}.Local|Any CPU.ActiveCfg = Local|Any CPU
+		{347CECE7-99DC-49A6-A508-7DE9907B887B}.Local|Any CPU.Build.0 = Local|Any CPU
+		{B8CE5087-707E-469C-AADE-FFC0E9C26B59}.Local|Any CPU.ActiveCfg = Debug|Any CPU
+		{B8CE5087-707E-469C-AADE-FFC0E9C26B59}.Local|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

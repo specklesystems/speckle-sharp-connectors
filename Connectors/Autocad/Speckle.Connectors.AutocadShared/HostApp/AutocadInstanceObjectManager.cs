@@ -4,12 +4,12 @@ using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Instances;
-using Speckle.Core.Kits;
-using Speckle.Core.Logging;
-using Speckle.Core.Models;
-using Speckle.Core.Models.Collections;
-using Speckle.Core.Models.Instances;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.Instances;
 using Speckle.DoubleNumerics;
+using Speckle.Sdk;
 
 namespace Speckle.Connectors.Autocad.HostApp;
 
