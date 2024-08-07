@@ -110,7 +110,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       Dictionary<string, Material> objectMaterialsIdMap = new();
       if (renderMaterials != null)
       {
-        _materialManager.ParseRenderMaterials(renderMaterials, onOperationProgressed);
+        _materialManager.ParseAndBakeRenderMaterials(renderMaterials, baseLayerPrefix, onOperationProgressed);
       }
 
       // POC: get group proxies
@@ -193,6 +193,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
   {
     _autocadLayerManager.DeleteAllLayersByPrefix(baseLayerPrefix);
     _instanceObjectsManager.PurgeInstances(baseLayerPrefix);
+    _materialManager.PurgeMaterials(baseLayerPrefix);
   }
 
   private IEnumerable<Entity> ConvertObject(Base obj, Collection[] layerPath, string baseLayerNamePrefix)
@@ -216,9 +217,12 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
 
     IEnumerable<Entity?> flattened = Utilities.FlattenToHostConversionResult(converted).Cast<Entity>();
 
-    // get color if any
+    // get color and material if any
     string objId = obj.applicationId ?? obj.id;
-    AutocadColor? objColor = _colorManager.ObjectColorsIdMap.TryGetValue(objId, out AutocadColor? value) ? value : null;
+    AutocadColor? objColor = _colorManager.ObjectColorsIdMap.TryGetValue(objId, out AutocadColor? color) ? color : null;
+    ObjectId objMaterial = _materialManager.ObjectMaterialsIdMap.TryGetValue(objId, out ObjectId matId)
+      ? matId
+      : ObjectId.Null;
 
     foreach (Entity? conversionResult in flattened)
     {
@@ -228,22 +232,16 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
         continue;
       }
 
-      // set color if any, or render material if none
+      // set color and render material
       // POC: if these are displayvalue meshes, we will need to check for their ids somehow
       if (objColor is not null)
       {
         conversionResult.Color = objColor;
       }
-      else
+
+      if (objMaterial != ObjectId.Null)
       {
-        if (_materialManager.ObjectMaterialsIdMap.TryGetValue(objId, out (AutocadColor, Transparency?) display))
-        {
-          conversionResult.Color = display.Item1;
-          if (display.Item2 is Transparency transparency)
-          {
-            conversionResult.Transparency = transparency;
-          }
-        }
+        conversionResult.MaterialId = objMaterial;
       }
 
       conversionResult.AppendToDb(layerName);

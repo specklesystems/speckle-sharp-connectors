@@ -1,9 +1,13 @@
 using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
+using Autodesk.AutoCAD.GraphicsInterface;
 using Objects.Other;
 using Speckle.Connectors.Autocad.Operations.Send;
+using Speckle.Connectors.Utils.Conversion;
+using Speckle.Core.Logging;
 using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 using Material = Autodesk.AutoCAD.DatabaseServices.Material;
+using RenderMaterial = Objects.Other.RenderMaterial;
 
 namespace Speckle.Connectors.Autocad.HostApp;
 
@@ -17,7 +21,7 @@ public class AutocadMaterialManager
   // POC: Will be addressed to move it into AutocadContext!
   private Document Doc => Application.DocumentManager.MdiActiveDocument;
 
-  public Dictionary<string, (AutocadColor, Transparency?)> ObjectMaterialsIdMap { get; } = new();
+  public Dictionary<string, ObjectId> ObjectMaterialsIdMap { get; } = new();
 
   public AutocadMaterialManager(AutocadContext autocadContext)
   {
@@ -32,16 +36,17 @@ public class AutocadMaterialManager
       diffuseColor.Green,
       diffuseColor.Blue
     );
+
     string name = material.Name;
     double opacity = material.Opacity.Percentage;
 
     RenderMaterial renderMaterial = new(opacity: opacity, diffuse: diffuse) { name = name, applicationId = id };
+
     // Add additional properties
     renderMaterial["ior"] = material.Refraction.Index;
     renderMaterial["reflectivity"] = material.Reflectivity;
 
-    RenderMaterialProxy materialProxy = new(renderMaterial, new());
-    return materialProxy;
+    return new(renderMaterial, new());
   }
 
   public List<RenderMaterialProxy> UnpackMaterials(List<AutocadRootObject> rootObjects, List<LayerTableRecord> layers)
@@ -55,7 +60,7 @@ public class AutocadMaterialManager
       Entity entity = rootObj.Root;
 
       // skip inherited materials
-      if (entity.Material == "ByLayer")
+      if (entity.Material == "ByLayer" || entity.Material == "ByBlock")
       {
         continue;
       }
@@ -121,27 +126,137 @@ public class AutocadMaterialManager
     return (color, transparency);
   }
 
-  public void ParseRenderMaterials(
+  private (ObjectId, ReceiveConversionResult) BakeMaterial(
+    RenderMaterial renderMaterial,
+    string baseLayerPrefix,
+    DBDictionary materialDict
+  )
+  {
+    using var transaction = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
+    ObjectId materialId = ObjectId.Null;
+
+    try
+    {
+      // POC: Currently we're relying on the render material name for identification if it's coming from speckle and from which model; could we do something else?
+      // POC: we should assume render materials all have application ids?
+      string renderMaterialId = renderMaterial.applicationId ?? renderMaterial.id;
+      string matName = $"{renderMaterial.name}-({renderMaterialId})-{baseLayerPrefix}";
+      MaterialMap map = new();
+      MaterialOpacityComponent opacity = new(renderMaterial.opacity, map);
+      var systemDiffuse = System.Drawing.Color.FromArgb(renderMaterial.diffuse);
+      EntityColor entityDiffuseColor = new(systemDiffuse.R, systemDiffuse.G, systemDiffuse.B);
+      MaterialColor diffuseColor = new(Method.Inherit, 1, entityDiffuseColor);
+      MaterialDiffuseComponent diffuse = new(diffuseColor, map);
+
+      Material mat =
+        new()
+        {
+          Name = matName,
+          Opacity = opacity,
+          Diffuse = diffuse
+        };
+
+      if (renderMaterial["reflectivity"] is double reflectivity)
+      {
+        mat.Reflectivity = reflectivity;
+      }
+
+      if (renderMaterial["ior"] is double ior)
+      {
+        mat.Refraction = new(ior, map);
+      }
+
+      // POC: assumes all materials with this prefix has already been purged from doc
+      materialId = materialDict.SetAt(matName, mat);
+      return (materialId, new(Status.SUCCESS, renderMaterial, matName, "Material"));
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      return (materialId, new(Status.ERROR, renderMaterial, null, null, ex));
+    }
+  }
+
+  /// <summary>
+  /// Removes all materials with a name starting with <paramref name="namePrefix"/> from the active document
+  /// </summary>
+  /// <param name="namePrefix"></param>
+  public void PurgeMaterials(string namePrefix)
+  {
+    using var transaction = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
+    if (transaction.GetObject(Doc.Database.MaterialDictionaryId, OpenMode.ForWrite) is DBDictionary materialDict)
+    {
+      foreach (var entry in materialDict)
+      {
+        if (entry.Key.Contains(namePrefix)) { }
+      }
+    }
+  }
+
+  public List<ReceiveConversionResult> ParseAndBakeRenderMaterials(
     List<RenderMaterialProxy> materialProxies,
+    string baseLayerPrefix,
     Action<string, double?>? onOperationProgressed
   )
   {
-    // keeps track of the object id to material index
-    var count = 0;
-    foreach (RenderMaterialProxy materialProxy in materialProxies)
+    List<ReceiveConversionResult> results = new();
+    Dictionary<string, string> objectRenderMaterialsIdMap = new();
+    using var transaction = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
+    if (transaction.GetObject(Doc.Database.MaterialDictionaryId, OpenMode.ForWrite) is DBDictionary materialDict)
     {
-      onOperationProgressed?.Invoke("Converting render materials", (double)++count / materialProxies.Count);
-      foreach (string objectId in materialProxy.objects)
+      var count = 0;
+      foreach (RenderMaterialProxy materialProxy in materialProxies)
       {
-        (AutocadColor, Transparency?) convertedMaterial = ConvertRenderMaterialToColorAndTransparency(
-          materialProxy.value
-        );
+        onOperationProgressed?.Invoke("Converting render materials", (double)++count / materialProxies.Count);
 
-        if (!ObjectMaterialsIdMap.ContainsKey(objectId))
+        // bake render material
+        RenderMaterial renderMaterial = materialProxy.value;
+        string renderMaterialId = renderMaterial.applicationId ?? renderMaterial.id;
+        ObjectId materialId = ObjectId.Null;
+        if (!ObjectMaterialsIdMap.TryGetValue(renderMaterialId, out materialId))
         {
-          ObjectMaterialsIdMap.Add(objectId, convertedMaterial);
+          (materialId, ReceiveConversionResult result) = BakeMaterial(renderMaterial, baseLayerPrefix, materialDict);
+          results.Add(result);
+        }
+        else
+        {
+          // POC: this shouldn't happen, but will if there are render materials with the same applicationID
+          results.Add(
+            new(
+              Status.ERROR,
+              renderMaterial,
+              exception: new ArgumentException("Another render material of the same id has already been created.")
+            )
+          );
+        }
+
+        if (materialId == ObjectId.Null)
+        {
+          results.Add(
+            new(
+              Status.ERROR,
+              renderMaterial,
+              exception: new InvalidOperationException("Render material failed to be added to document.")
+            )
+          );
+
+          continue;
+        }
+
+        // parse render material object ids
+        foreach (string objectId in materialProxy.objects)
+        {
+          if (!ObjectMaterialsIdMap.ContainsKey(objectId))
+          {
+            ObjectMaterialsIdMap.Add(objectId, materialId);
+          }
         }
       }
     }
+    else
+    {
+      // POC: we should report failed conversion here if material dict is not accessible, but it is not linked to a Base source
+    }
+
+    return results;
   }
 }
