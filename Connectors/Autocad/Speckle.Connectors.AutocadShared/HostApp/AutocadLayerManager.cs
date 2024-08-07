@@ -57,7 +57,8 @@ public class AutocadLayerManager
   public string CreateLayerForReceive(
     Collection[] layerPath,
     string baseLayerPrefix,
-    Dictionary<string, AutocadColor> objectColorIdMap
+    Dictionary<string, AutocadColor> objectColorsIdMap,
+    Dictionary<string, ObjectId> objectMaterialsIdMap
   )
   {
     string[] namePath = layerPath.Select(c => c.name).ToArray();
@@ -67,14 +68,30 @@ public class AutocadLayerManager
       return layerName;
     }
 
-    // get the color if any, of the leaf collection with a color
+    // get the color and material if any, of the leaf collection with a color
     AutocadColor? layerColor = null;
-    for (int j = layerPath.Length - 1; j >= 0; j--)
+    ObjectId layerMaterial = ObjectId.Null;
+    if (objectColorsIdMap.Count > 0 || objectMaterialsIdMap.Count > 0)
     {
-      string layerId = layerPath[j].applicationId ?? layerPath[j].id;
-      if (objectColorIdMap.TryGetValue(layerId, out layerColor))
+      bool foundColor = false;
+      bool foundMaterial = false;
+      for (int j = layerPath.Length - 1; j >= 0; j--)
       {
-        break;
+        string layerId = layerPath[j].applicationId ?? layerPath[j].id;
+        if (foundColor && foundMaterial)
+        {
+          break;
+        }
+
+        if (!foundColor)
+        {
+          foundColor = objectColorsIdMap.TryGetValue(layerId, out layerColor);
+        }
+
+        if (!foundMaterial)
+        {
+          foundMaterial = objectMaterialsIdMap.TryGetValue(layerId, out layerMaterial);
+        }
       }
     }
 
@@ -84,9 +101,15 @@ public class AutocadLayerManager
     LayerTable? layerTable =
       transaction.TransactionManager.GetObject(Doc.Database.LayerTableId, OpenMode.ForRead) as LayerTable;
     LayerTableRecord layerTableRecord = new() { Name = layerName };
+
     if (layerColor is not null)
     {
       layerTableRecord.Color = layerColor;
+    }
+
+    if (layerMaterial != ObjectId.Null)
+    {
+      layerTableRecord.MaterialId = layerMaterial;
     }
 
     bool hasLayer = layerTable != null && layerTable.Has(layerName);

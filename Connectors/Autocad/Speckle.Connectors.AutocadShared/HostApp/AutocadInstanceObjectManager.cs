@@ -21,6 +21,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
 {
   private readonly AutocadLayerManager _autocadLayerManager;
   private readonly AutocadColorManager _autocadColorManager;
+  private readonly AutocadMaterialManager _autocadMaterialManager;
   private readonly AutocadContext _autocadContext;
 
   private readonly IInstanceObjectsManager<AutocadRootObject, List<Entity>> _instanceObjectsManager;
@@ -28,12 +29,14 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
   public AutocadInstanceObjectManager(
     AutocadLayerManager autocadLayerManager,
     AutocadColorManager autocadColorManager,
+    AutocadMaterialManager autocadMaterialManager,
     AutocadContext autocadContext,
     IInstanceObjectsManager<AutocadRootObject, List<Entity>> instanceObjectsManager
   )
   {
     _autocadLayerManager = autocadLayerManager;
     _autocadColorManager = autocadColorManager;
+    _autocadMaterialManager = autocadMaterialManager;
     _autocadContext = autocadContext;
     _instanceObjectsManager = instanceObjectsManager;
   }
@@ -227,7 +230,8 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
           string layerName = _autocadLayerManager.CreateLayerForReceive(
             collectionPath,
             baseLayerName,
-            _autocadColorManager.ObjectColorsIdMap
+            _autocadColorManager.ObjectColorsIdMap,
+            _autocadMaterialManager.ObjectMaterialsIdMap
           );
 
           var blockRef = new BlockReference(insertionPoint, definitionId)

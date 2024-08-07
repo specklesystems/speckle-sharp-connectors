@@ -1,4 +1,3 @@
-using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
 using Objects.Other;
 using Speckle.Connectors.Autocad.HostApp;
@@ -14,7 +13,6 @@ using Speckle.Core.Models.GraphTraversal;
 using Speckle.Core.Models.Instances;
 using Speckle.Core.Models.Proxies;
 using AutocadColor = Autodesk.AutoCAD.Colors.Color;
-using Material = Autodesk.AutoCAD.DatabaseServices.Material;
 
 namespace Speckle.Connectors.Autocad.Operations.Receive;
 
@@ -107,10 +105,15 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       List<RenderMaterialProxy>? renderMaterials = (rootObject["renderMaterialProxies"] as List<object>)
         ?.Cast<RenderMaterialProxy>()
         .ToList();
-      Dictionary<string, Material> objectMaterialsIdMap = new();
       if (renderMaterials != null)
       {
-        _materialManager.ParseAndBakeRenderMaterials(renderMaterials, baseLayerPrefix, onOperationProgressed);
+        List<ReceiveConversionResult> materialResults = _materialManager.ParseAndBakeRenderMaterials(
+          renderMaterials,
+          baseLayerPrefix,
+          onOperationProgressed
+        );
+
+        results.AddRange(materialResults);
       }
 
       // POC: get group proxies
@@ -198,54 +201,54 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
 
   private IEnumerable<Entity> ConvertObject(Base obj, Collection[] layerPath, string baseLayerNamePrefix)
   {
-    using TransactionContext transactionContext = TransactionContext.StartTransaction(
-      Application.DocumentManager.MdiActiveDocument
-    ); // POC: is this used/needed?
-
     string layerName = _autocadLayerManager.CreateLayerForReceive(
       layerPath,
       baseLayerNamePrefix,
-      _colorManager.ObjectColorsIdMap
+      _colorManager.ObjectColorsIdMap,
+      _materialManager.ObjectMaterialsIdMap
     );
 
     object converted;
     using (var tr = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction())
     {
       converted = _converter.Convert(obj);
+
+      IEnumerable<Entity?> flattened = Utilities.FlattenToHostConversionResult(converted).Cast<Entity>();
+
+      // get color and material if any
+      string objId = obj.applicationId ?? obj.id;
+      AutocadColor? objColor = _colorManager.ObjectColorsIdMap.TryGetValue(objId, out AutocadColor? color)
+        ? color
+        : null;
+      ObjectId objMaterial = _materialManager.ObjectMaterialsIdMap.TryGetValue(objId, out ObjectId matId)
+        ? matId
+        : ObjectId.Null;
+
+      foreach (Entity? conversionResult in flattened)
+      {
+        if (conversionResult == null)
+        {
+          // POC: This needed to be double checked why we check null and continue
+          continue;
+        }
+
+        // set color and material
+        // POC: if these are displayvalue meshes, we will need to check for their ids somehow
+        if (objColor is not null)
+        {
+          conversionResult.Color = objColor;
+        }
+
+        if (objMaterial != ObjectId.Null)
+        {
+          conversionResult.MaterialId = objMaterial;
+        }
+
+        conversionResult.AppendToDb(layerName);
+        yield return conversionResult;
+      }
+
       tr.Commit();
-    }
-
-    IEnumerable<Entity?> flattened = Utilities.FlattenToHostConversionResult(converted).Cast<Entity>();
-
-    // get color and material if any
-    string objId = obj.applicationId ?? obj.id;
-    AutocadColor? objColor = _colorManager.ObjectColorsIdMap.TryGetValue(objId, out AutocadColor? color) ? color : null;
-    ObjectId objMaterial = _materialManager.ObjectMaterialsIdMap.TryGetValue(objId, out ObjectId matId)
-      ? matId
-      : ObjectId.Null;
-
-    foreach (Entity? conversionResult in flattened)
-    {
-      if (conversionResult == null)
-      {
-        // POC: This needed to be double checked why we check null and continue
-        continue;
-      }
-
-      // set color and render material
-      // POC: if these are displayvalue meshes, we will need to check for their ids somehow
-      if (objColor is not null)
-      {
-        conversionResult.Color = objColor;
-      }
-
-      if (objMaterial != ObjectId.Null)
-      {
-        conversionResult.MaterialId = objMaterial;
-      }
-
-      conversionResult.AppendToDb(layerName);
-      yield return conversionResult;
     }
   }
 }

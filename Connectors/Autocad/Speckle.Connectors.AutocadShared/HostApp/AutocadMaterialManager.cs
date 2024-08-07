@@ -5,7 +5,6 @@ using Objects.Other;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Core.Logging;
-using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 using Material = Autodesk.AutoCAD.DatabaseServices.Material;
 using RenderMaterial = Objects.Other.RenderMaterial;
 
@@ -46,7 +45,7 @@ public class AutocadMaterialManager
     renderMaterial["ior"] = material.Refraction.Index;
     renderMaterial["reflectivity"] = material.Reflectivity;
 
-    return new(renderMaterial, new());
+    return new(renderMaterial, new()) { applicationId = id };
   }
 
   public List<RenderMaterialProxy> UnpackMaterials(List<AutocadRootObject> rootObjects, List<LayerTableRecord> layers)
@@ -101,38 +100,17 @@ public class AutocadMaterialManager
       }
     }
 
+    transaction.Commit();
     return materialProxies.Values.ToList();
-  }
-
-  /// <summary>
-  /// Convert a Speckle render material to a color and transparency.
-  /// </summary>
-  /// <param name="material"></param>
-  /// <returns></returns>
-  /// <remarks>POC: we are not converting to a native material due to complexity in additional properties like Map and Scale.</remarks>
-  public (AutocadColor, Transparency?) ConvertRenderMaterialToColorAndTransparency(RenderMaterial material)
-  {
-    System.Drawing.Color systemColor = System.Drawing.Color.FromArgb(material.diffuse);
-    AutocadColor color = AutocadColor.FromColor(systemColor);
-
-    // only create transparency if render material is not opaque
-    Transparency? transparency = null;
-    if (material.opacity != 1)
-    {
-      var alpha = (byte)(material.opacity * 255d);
-      transparency = new Transparency(alpha);
-    }
-
-    return (color, transparency);
   }
 
   private (ObjectId, ReceiveConversionResult) BakeMaterial(
     RenderMaterial renderMaterial,
     string baseLayerPrefix,
-    DBDictionary materialDict
+    DBDictionary materialDict,
+    Transaction tr
   )
   {
-    using var transaction = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
     ObjectId materialId = ObjectId.Null;
 
     try
@@ -145,7 +123,7 @@ public class AutocadMaterialManager
       MaterialOpacityComponent opacity = new(renderMaterial.opacity, map);
       var systemDiffuse = System.Drawing.Color.FromArgb(renderMaterial.diffuse);
       EntityColor entityDiffuseColor = new(systemDiffuse.R, systemDiffuse.G, systemDiffuse.B);
-      MaterialColor diffuseColor = new(Method.Inherit, 1, entityDiffuseColor);
+      MaterialColor diffuseColor = new(Method.Override, 1, entityDiffuseColor);
       MaterialDiffuseComponent diffuse = new(diffuseColor, map);
 
       Material mat =
@@ -168,6 +146,8 @@ public class AutocadMaterialManager
 
       // POC: assumes all materials with this prefix has already been purged from doc
       materialId = materialDict.SetAt(matName, mat);
+      tr.AddNewlyCreatedDBObject(mat, true);
+
       return (materialId, new(Status.SUCCESS, renderMaterial, matName, "Material"));
     }
     catch (Exception ex) when (!ex.IsFatal())
@@ -187,9 +167,13 @@ public class AutocadMaterialManager
     {
       foreach (var entry in materialDict)
       {
-        if (entry.Key.Contains(namePrefix)) { }
+        if (entry.Key.Contains(namePrefix))
+        {
+          materialDict.Remove(entry.Value);
+        }
       }
     }
+    transaction.Commit();
   }
 
   public List<ReceiveConversionResult> ParseAndBakeRenderMaterials(
@@ -214,7 +198,13 @@ public class AutocadMaterialManager
         ObjectId materialId = ObjectId.Null;
         if (!ObjectMaterialsIdMap.TryGetValue(renderMaterialId, out materialId))
         {
-          (materialId, ReceiveConversionResult result) = BakeMaterial(renderMaterial, baseLayerPrefix, materialDict);
+          (materialId, ReceiveConversionResult result) = BakeMaterial(
+            renderMaterial,
+            baseLayerPrefix,
+            materialDict,
+            transaction
+          );
+
           results.Add(result);
         }
         else
@@ -257,6 +247,7 @@ public class AutocadMaterialManager
       // POC: we should report failed conversion here if material dict is not accessible, but it is not linked to a Base source
     }
 
+    transaction.Commit();
     return results;
   }
 }
