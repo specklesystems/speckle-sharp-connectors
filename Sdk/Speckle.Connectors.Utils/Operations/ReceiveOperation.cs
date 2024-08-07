@@ -37,10 +37,22 @@ public sealed class ReceiveOperation
     var version = await apiClient
       .Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ModelId, receiveInfo.ProjectId, cancellationToken)
       .ConfigureAwait(false);
+    int totalCount = 1;
 
     using var transport = _serverTransportFactory.Create(account, receiveInfo.ProjectId);
+
     Base commitObject = await Speckle
-      .Core.Api.Operations.Receive(version.referencedObject, transport, cancellationToken: cancellationToken)
+      .Core.Api.Operations.Receive(
+        version.referencedObject,
+        transport,
+        onProgressAction: dict =>
+          onOperationProgressed?.Invoke(
+            $"Downloading - {string.Join(" ", dict.Keys)}",
+            dict.Values.Average() / totalCount
+          ),
+        onTotalChildrenCountKnown: c => totalCount = c,
+        cancellationToken: cancellationToken
+      )
       .ConfigureAwait(false);
 
     cancellationToken.ThrowIfCancellationRequested();
