@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
@@ -21,11 +22,6 @@ namespace Speckle.Connectors.Revit.Bindings;
 
 internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 {
-  // POC:does it need injecting?
-
-  // POC: does it need injecting?
-  private HashSet<string> ChangedObjectIds { get; set; } = new();
-
   private readonly RevitSettings _revitSettings;
   private readonly IRevitIdleManager _idleManager;
   private readonly CancellationManager _cancellationManager;
@@ -33,6 +29,14 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<RevitSendBinding> _logger;
+
+  /// <summary>
+  /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
+  /// [CNX-202: Unhandled Exception Occurred when receiving in Rhino](https://linear.app/speckle/issue/CNX-202/unhandled-exception-occurred-when-receiving-in-rhino)
+  /// As to why a concurrent dictionary, it's because it's the cheapest/easiest way to do so.
+  /// https://stackoverflow.com/questions/18922985/concurrent-hashsett-in-net-framework
+  /// </summary>
+  private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
 
   public RevitSendBinding(
     IRevitIdleManager idleManager,
@@ -133,7 +137,10 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       // SWALLOW -> UI handles it immediately, so we do not need to handle anything for now!
       // Idea for later -> when cancel called, create promise from UI to solve it later with this catch block.
       // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
-      return;
+    }
+    catch (Exception e) when (!e.IsFatal()) // UX reasons - we will report operation exceptions as model card error.
+    {
+      Commands.SetModelError(modelCardId, e);
     }
     catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error.
     {
@@ -155,17 +162,17 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     foreach (ElementId elementId in addedElementIds)
     {
-      ChangedObjectIds.Add(elementId.ToString());
+      ChangedObjectIds[elementId.ToString()] = 1;
     }
 
     foreach (ElementId elementId in deletedElementIds)
     {
-      ChangedObjectIds.Add(elementId.ToString());
+      ChangedObjectIds[elementId.ToString()] = 1;
     }
 
     foreach (ElementId elementId in modifiedElementIds)
     {
-      ChangedObjectIds.Add(elementId.ToString());
+      ChangedObjectIds[elementId.ToString()] = 1;
     }
 
     // TODO: CHECK IF ANY OF THE ABOVE ELEMENTS NEED TO TRIGGER A FILTER REFRESH
@@ -175,7 +182,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private void RunExpirationChecks()
   {
     var senders = Store.GetSenders();
-    string[] objectIdsList = ChangedObjectIds.ToArray();
+    string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
     List<string> expiredSenderIds = new();
 
     _sendConversionCache.EvictObjects(objectIdsList);
@@ -191,7 +198,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     }
 
     Commands.SetModelsExpired(expiredSenderIds);
-    ChangedObjectIds = new HashSet<string>();
+    ChangedObjectIds = new();
   }
 
   // POC: Will be re-addressed later with better UX with host apps that are friendly on async doc operations.
