@@ -4,6 +4,7 @@ using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Rhino.DependencyInjection;
 using Speckle.Connectors.Rhino.HostApp;
+using Speckle.Connectors.Utils;
 using Speckle.Sdk;
 using Speckle.Sdk.Host;
 using Speckle.Sdk.Models.Extensions;

@@ -1,4 +1,5 @@
 using Speckle.Connectors.Utils.Caching;
+using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Credentials;

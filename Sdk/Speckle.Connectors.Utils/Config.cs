@@ -1,6 +1,6 @@
-﻿using Speckle.Core.Kits;
-using Speckle.Core.Logging;
-using Speckle.Logging;
+﻿using Speckle.Sdk;
+using Speckle.Sdk.Host;
+using Speckle.Sdk.Logging;
 
 namespace Speckle.Connectors.Utils;
 

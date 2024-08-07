@@ -1,5 +1,6 @@
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
+using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.Utils.Operations;
