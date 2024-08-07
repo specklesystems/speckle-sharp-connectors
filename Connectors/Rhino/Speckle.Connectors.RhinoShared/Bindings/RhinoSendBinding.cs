@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Rhino;
 using Rhino.Commands;
 using Rhino.DocObjects;
@@ -36,7 +37,7 @@ public sealed class RhinoSendBinding : ISendBinding
   /// <summary>
   /// Used internally to aggregate the changed objects' id.
   /// </summary>
-  private HashSet<string> ChangedObjectIds { get; set; } = new();
+  private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
 
   public RhinoSendBinding(
     DocumentModelStore store,
@@ -76,7 +77,7 @@ public sealed class RhinoSendBinding : ISendBinding
       if (e.CommandEnglishName == "BlockEdit")
       {
         var selectedObject = RhinoDoc.ActiveDoc.Objects.GetSelectedObjects(false, false).First();
-        ChangedObjectIds.Add(selectedObject.Id.ToString());
+        ChangedObjectIds[selectedObject.Id.ToString()] = 1;
       }
     };
 
@@ -89,7 +90,7 @@ public sealed class RhinoSendBinding : ISendBinding
           return;
         }
 
-        ChangedObjectIds.Add(e.ObjectId.ToString());
+        ChangedObjectIds[e.ObjectId.ToString()] = 1;
         _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
       });
 
@@ -102,7 +103,7 @@ public sealed class RhinoSendBinding : ISendBinding
           return;
         }
 
-        ChangedObjectIds.Add(e.ObjectId.ToString());
+        ChangedObjectIds[e.ObjectId.ToString()] = 1;
         _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
       });
 
@@ -115,8 +116,8 @@ public sealed class RhinoSendBinding : ISendBinding
           return;
         }
 
-        ChangedObjectIds.Add(e.NewRhinoObject.Id.ToString());
-        ChangedObjectIds.Add(e.OldRhinoObject.Id.ToString());
+        ChangedObjectIds[e.NewRhinoObject.Id.ToString()] = 1;
+        ChangedObjectIds[e.OldRhinoObject.Id.ToString()] = 1;
         _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
       });
   }
@@ -187,8 +188,13 @@ public sealed class RhinoSendBinding : ISendBinding
   /// </summary>
   private void RunExpirationChecks()
   {
+    // if (_cancellationManager.NumberOfOperations != 0)
+    // {
+    //   return;
+    // }
+
     var senders = _store.GetSenders();
-    string[] objectIdsList = ChangedObjectIds.ToArray(); // NOTE: could not copy to array happens here
+    string[] objectIdsList = ChangedObjectIds.Keys.ToArray(); // NOTE: could not copy to array happens here
     List<string> expiredSenderIds = new();
 
     _sendConversionCache.EvictObjects(objectIdsList);
@@ -204,6 +210,6 @@ public sealed class RhinoSendBinding : ISendBinding
     }
 
     Commands.SetModelsExpired(expiredSenderIds);
-    ChangedObjectIds = new HashSet<string>();
+    ChangedObjectIds = new();
   }
 }
