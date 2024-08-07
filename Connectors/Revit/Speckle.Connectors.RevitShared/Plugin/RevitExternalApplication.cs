@@ -58,6 +58,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
     throw new NotImplementedException();
 #endif
   }
+
   public Result OnStartup(UIControlledApplication application)
   {
     try
@@ -68,7 +69,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
       // init DI
       _disposableLogger = Setup.Initialize(
         new(
-          HostApplications.Revit, 
+          HostApplications.Revit,
           GetVersion(),
           new(
             MinimumLevel: SpeckleLogLevel.Information,
