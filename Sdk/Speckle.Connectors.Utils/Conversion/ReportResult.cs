@@ -2,10 +2,12 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.Utils.Conversion;
 
-public class Report : Base
-{
-  public required IEnumerable<ConversionResult> ConversionResults { get; set; }
-}
+// Removing this for now, this was to faciliate us sending conversion results inside the commit object
+// We may want this back in future, but need to spark a discussion first
+// public sealed class Report : Base
+// {
+//   public required IEnumerable<ConversionResult> ConversionResults { get; set; }
+// }
 
 public enum Status
 {
@@ -16,7 +18,7 @@ public enum Status
   ERROR = 4
 }
 
-public class SendConversionResult : ConversionResult
+public sealed class SendConversionResult : ConversionResult
 {
   public SendConversionResult(
     Status status,
@@ -67,7 +69,7 @@ public class ReceiveConversionResult : ConversionResult
 /// this one and provided clean constructors for each case.
 /// POC: Inherits from Base so we can attach the conversion report to the root commit object. Can be revisited later (it's not a problem to not inherit from base).
 /// </summary>
-public abstract class ConversionResult : Base
+public abstract class ConversionResult
 {
   public Status Status { get; init; }
 
@@ -105,7 +107,7 @@ public abstract class ConversionResult : Base
 /// <summary>
 /// Wraps around exceptions to make them nicely serializable for the ui.
 /// </summary>
-public class ErrorWrapper : Base
+public sealed class ErrorWrapper : Base
 {
   public required string Message { get; set; }
   public required string StackTrace { get; set; }
