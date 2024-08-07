@@ -199,7 +199,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
         var result = _converter.Convert(obj);
         string objectId = obj.applicationId ?? obj.id; // POC: assuming objects have app ids for this to work?
-        int objMaterialIndex = objectMaterialsIdMap.TryGetValue(objectId, out int oIndex) ? oIndex : 0;
+        int? objMaterialIndex = objectMaterialsIdMap.TryGetValue(objectId, out int oIndex) ? oIndex : null;
         Color? objColor = _colorManager.ObjectColorsIdMap.TryGetValue(objectId, out Color color) ? color : null;
         var conversionIds = HandleConversionResult(result, obj, layerIndex, objMaterialIndex, objColor).ToList();
         foreach (var r in conversionIds)
