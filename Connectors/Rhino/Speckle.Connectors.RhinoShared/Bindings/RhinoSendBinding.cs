@@ -188,7 +188,7 @@ public sealed class RhinoSendBinding : ISendBinding
   private void RunExpirationChecks()
   {
     var senders = _store.GetSenders();
-    string[] objectIdsList = ChangedObjectIds.ToArray();
+    string[] objectIdsList = ChangedObjectIds.ToArray(); // NOTE: could not copy to array happens here
     List<string> expiredSenderIds = new();
 
     _sendConversionCache.EvictObjects(objectIdsList);
