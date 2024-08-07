@@ -46,10 +46,11 @@ public sealed class ReceiveOperation
         version.referencedObject,
         transport,
         onProgressAction: dict =>
-          onOperationProgressed?.Invoke(
-            $"Downloading - {string.Join(" ", dict.Keys)}",
-            dict.Values.Average() / totalCount
-          ),
+        {
+          // NOTE: this looks weird for the user, as when deserialization kicks in, the progress bar will go down, and then start progressing again.
+          // This is something we're happy to live with until we refactor the whole receive pipeline.
+          onOperationProgressed?.Invoke($"Downloading and deserializing", dict.Values.Average() / totalCount);
+        },
         onTotalChildrenCountKnown: c => totalCount = c,
         cancellationToken: cancellationToken
       )
