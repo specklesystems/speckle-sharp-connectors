@@ -1,6 +1,6 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Speckle.Connectors.Autocad.Operations.Send;
-using Speckle.Core.Models.Instances;
+using Speckle.Core.Models.Proxies;
 
 namespace Speckle.Connectors.Autocad.HostApp;
 

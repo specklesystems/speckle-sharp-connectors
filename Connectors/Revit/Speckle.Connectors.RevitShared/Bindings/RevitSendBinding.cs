@@ -1,5 +1,4 @@
 using Autodesk.Revit.DB;
-using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
@@ -14,6 +13,7 @@ using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Core.Common;
+using Speckle.Core.Logging;
 
 namespace Speckle.Connectors.Revit.Bindings;
 
@@ -29,6 +29,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly CancellationManager _cancellationManager;
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
   private readonly ISendConversionCache _sendConversionCache;
+  private readonly IOperationProgressManager _operationProgressManager;
 
   public RevitSendBinding(
     IRevitIdleManager idleManager,
@@ -38,7 +39,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     IBridge bridge,
     IUnitOfWorkFactory unitOfWorkFactory,
     RevitSettings revitSettings,
-    ISendConversionCache sendConversionCache
+    ISendConversionCache sendConversionCache,
+    IOperationProgressManager operationProgressManager
   )
     : base("sendBinding", store, bridge, revitContext)
   {
@@ -47,6 +49,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _unitOfWorkFactory = unitOfWorkFactory;
     _revitSettings = revitSettings;
     _sendConversionCache = sendConversionCache;
+    _operationProgressManager = operationProgressManager;
     var topLevelExceptionHandler = Parent.TopLevelExceptionHandler;
 
     Commands = new SendBindingUICommands(bridge);
@@ -108,7 +111,12 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
           revitObjects,
           modelCard.GetSendInfo(_revitSettings.HostSlug.NotNull()),
           (status, progress) =>
-            Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts),
+            _operationProgressManager.SetModelProgress(
+              Parent,
+              modelCardId,
+              new ModelCardProgress(modelCardId, status, progress),
+              cts
+            ),
           cts.Token
         )
         .ConfigureAwait(false);

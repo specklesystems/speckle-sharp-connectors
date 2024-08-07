@@ -1,5 +1,4 @@
 using Autodesk.AutoCAD.DatabaseServices;
-using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
@@ -14,6 +13,7 @@ using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Core.Common;
+using Speckle.Core.Logging;
 
 namespace Speckle.Connectors.Autocad.Bindings;
 
@@ -21,6 +21,7 @@ public sealed class AutocadSendBinding : ISendBinding
 {
   public string Name => "sendBinding";
   public SendBindingUICommands Commands { get; }
+  private OperationProgressManager OperationProgressManager { get; }
   public IBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
@@ -30,6 +31,7 @@ public sealed class AutocadSendBinding : ISendBinding
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
   private readonly AutocadSettings _autocadSettings;
   private readonly ISendConversionCache _sendConversionCache;
+  private readonly IOperationProgressManager _operationProgressManager;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   /// <summary>
@@ -45,7 +47,8 @@ public sealed class AutocadSendBinding : ISendBinding
     CancellationManager cancellationManager,
     AutocadSettings autocadSettings,
     IUnitOfWorkFactory unitOfWorkFactory,
-    ISendConversionCache sendConversionCache
+    ISendConversionCache sendConversionCache,
+    IOperationProgressManager operationProgressManager
   )
   {
     _store = store;
@@ -55,6 +58,7 @@ public sealed class AutocadSendBinding : ISendBinding
     _cancellationManager = cancellationManager;
     _sendFilters = sendFilters.ToList();
     _sendConversionCache = sendConversionCache;
+    _operationProgressManager = operationProgressManager;
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
@@ -161,7 +165,12 @@ public sealed class AutocadSendBinding : ISendBinding
           autocadObjects,
           modelCard.GetSendInfo(_autocadSettings.HostAppInfo.Name),
           (status, progress) =>
-            Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts),
+            _operationProgressManager.SetModelProgress(
+              Parent,
+              modelCardId,
+              new ModelCardProgress(modelCardId, status, progress),
+              cts
+            ),
           cts.Token
         )
         .ConfigureAwait(false);

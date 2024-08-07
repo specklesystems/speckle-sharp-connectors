@@ -37,7 +37,11 @@ public static class SharedRegistration
     builder.AddSingleton<DocumentModelStore, AutocadDocumentStore>();
     builder.AddSingleton<AutocadContext>();
     builder.AddScoped<AutocadLayerManager>();
+    builder.AddScoped<AutocadColorManager>();
     builder.AddSingleton<IAutocadIdleManager, AutocadIdleManager>();
+
+    // operation progress manager
+    builder.AddSingleton<IOperationProgressManager, OperationProgressManager>();
 
     // Register bindings
     builder.AddSingleton<IBinding, TestBinding>();

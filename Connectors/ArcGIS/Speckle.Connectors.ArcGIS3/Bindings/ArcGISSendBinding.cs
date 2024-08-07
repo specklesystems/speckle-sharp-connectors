@@ -4,7 +4,6 @@ using ArcGIS.Desktop.Editing.Events;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using ArcGIS.Desktop.Mapping.Events;
-using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.ArcGIS.Filters;
 using Speckle.Connectors.DUI.Bindings;
@@ -18,6 +17,7 @@ using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Core.Common;
+using Speckle.Core.Logging;
 
 namespace Speckle.Connectors.ArcGIS.Bindings;
 
@@ -32,6 +32,7 @@ public sealed class ArcGISSendBinding : ISendBinding
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
   private readonly ISendConversionCache _sendConversionCache;
+  private readonly IOperationProgressManager _operationProgressManager;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   /// <summary>
@@ -47,7 +48,8 @@ public sealed class ArcGISSendBinding : ISendBinding
     IEnumerable<ISendFilter> sendFilters,
     IUnitOfWorkFactory unitOfWorkFactory,
     CancellationManager cancellationManager,
-    ISendConversionCache sendConversionCache
+    ISendConversionCache sendConversionCache,
+    IOperationProgressManager operationProgressManager
   )
   {
     _store = store;
@@ -55,7 +57,9 @@ public sealed class ArcGISSendBinding : ISendBinding
     _sendFilters = sendFilters.ToList();
     _cancellationManager = cancellationManager;
     _sendConversionCache = sendConversionCache;
+    _operationProgressManager = operationProgressManager;
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
+
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
     SubscribeToArcGISEvents();
@@ -382,7 +386,12 @@ public sealed class ArcGISSendBinding : ISendBinding
               mapMembers,
               modelCard.GetSendInfo("ArcGIS"), // POC: get host app name from settings? same for GetReceiveInfo
               (status, progress) =>
-                Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts),
+                _operationProgressManager.SetModelProgress(
+                  Parent,
+                  modelCardId,
+                  new ModelCardProgress(modelCardId, status, progress),
+                  cts
+                ),
               cts.Token
             )
             .ConfigureAwait(false);
