@@ -7,7 +7,6 @@ using Speckle.Connectors.Utils;
 using Speckle.Core.Common;
 using Speckle.Core.Kits;
 using Speckle.Core.Logging;
-using Speckle.Logging;
 
 namespace Speckle.Connectors.Revit.Plugin;
 

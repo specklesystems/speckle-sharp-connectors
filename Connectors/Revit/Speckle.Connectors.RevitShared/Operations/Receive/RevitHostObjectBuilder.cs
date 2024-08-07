@@ -73,26 +73,24 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   // POC: Potentially refactor out into an IObjectBaker.
   private HostObjectBuilderResult BakeObjects(IEnumerable<TraversalContext> objectsGraph)
   {
-    using (var _ = SpeckleActivityFactory.Start("BakeObjects"))
+    using var _ = SpeckleActivityFactory.Start("BakeObjects");
+    var conversionResults = new List<ReceiveConversionResult>();
+    var bakedObjectIds = new List<string>();
+
+    foreach (TraversalContext tc in objectsGraph)
     {
-      var conversionResults = new List<ReceiveConversionResult>();
-      var bakedObjectIds = new List<string>();
-
-      foreach (TraversalContext tc in objectsGraph)
+      try
       {
-        try
-        {
-          using var activity = SpeckleActivityFactory.Start("BakeObject");
-          var result = _converter.Convert(tc.Current);
-        }
-        catch (Exception ex) when (!ex.IsFatal())
-        {
-          conversionResults.Add(new(Status.ERROR, tc.Current, null, null, ex));
-        }
+        using var activity = SpeckleActivityFactory.Start("BakeObject");
+        var result = _converter.Convert(tc.Current);
       }
-
-      return new(bakedObjectIds, conversionResults);
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        conversionResults.Add(new(Status.ERROR, tc.Current, null, null, ex));
+      }
     }
+
+    return new(bakedObjectIds, conversionResults);
   }
 
   public void Dispose()
