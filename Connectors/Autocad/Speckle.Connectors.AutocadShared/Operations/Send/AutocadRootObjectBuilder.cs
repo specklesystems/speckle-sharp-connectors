@@ -104,11 +104,10 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
           if (autocadLayer is not null)
           {
             layers.Add(autocadLayer);
+            modelWithLayers.elements.Add(layer);
           }
 
-          modelWithLayers.elements.Add(layer);
           layer.elements.Add(converted);
-
           results.Add(new(Status.SUCCESS, applicationId, entity.GetType().ToString(), converted));
         }
         catch (Exception ex) when (!ex.IsFatal())
