@@ -1,10 +1,10 @@
 using System.Collections;
 using ArcGIS.Core.Data;
 using ArcGIS.Core.Data.Exceptions;
-using Speckle.Objects.GIS;
-using Speckle.Sdk.Models;
 using Speckle.InterfaceGenerator;
+using Speckle.Objects.GIS;
 using Speckle.Sdk;
+using Speckle.Sdk.Models;
 using FieldDescription = ArcGIS.Core.Data.DDL.FieldDescription;
 
 namespace Speckle.Converters.ArcGIS3.Utils;

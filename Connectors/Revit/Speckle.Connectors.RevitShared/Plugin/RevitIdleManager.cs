@@ -2,8 +2,8 @@ using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Sdk.Common;
 using Speckle.InterfaceGenerator;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.Plugin;
 

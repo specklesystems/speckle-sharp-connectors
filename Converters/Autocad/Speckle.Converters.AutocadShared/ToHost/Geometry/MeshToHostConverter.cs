@@ -1,6 +1,6 @@
-using Speckle.Objects.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Objects.Utils;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 

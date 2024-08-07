@@ -1,11 +1,11 @@
 ﻿using FluentAssertions;
 using NUnit.Framework;
-using Speckle.Objects;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Raw;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Objects;
 using Speckle.Testing;
 
 namespace Speckle.Converters.Revit2023.Tests;

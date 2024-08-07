@@ -1,7 +1,7 @@
 using System.Runtime.Serialization;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Sdk.Transports;
 using Speckle.Newtonsoft.Json;
+using Speckle.Sdk.Transports;
 
 namespace Speckle.Connectors.DUI.Bindings;
 

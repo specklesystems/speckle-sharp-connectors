@@ -1,9 +1,9 @@
 using Autodesk.Revit.DB;
-using Speckle.Objects.Other;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.ToSpeckle;
 using Speckle.DoubleNumerics;
+using Speckle.Objects.Other;
 
 namespace Speckle.Converters.RevitShared.ToHost.TopLevel;
 

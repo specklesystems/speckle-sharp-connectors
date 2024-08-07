@@ -1,8 +1,8 @@
 using ArcGIS.Core.Data.Raster;
 using ArcGIS.Core.Geometry;
-using Speckle.Objects.GIS;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Objects.GIS;
 using Speckle.Sdk.Models;
 using RasterLayer = ArcGIS.Desktop.Mapping.RasterLayer;
 

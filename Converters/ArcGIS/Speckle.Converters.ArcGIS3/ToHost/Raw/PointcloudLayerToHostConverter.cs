@@ -1,6 +1,6 @@
 using ArcGIS.Desktop.Mapping;
-using Speckle.Objects.GIS;
 using Speckle.Converters.Common.Objects;
+using Speckle.Objects.GIS;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.Raw;

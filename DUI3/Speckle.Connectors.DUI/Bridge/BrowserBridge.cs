@@ -6,9 +6,9 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks.Dataflow;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Bindings;
+using Speckle.Newtonsoft.Json;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models.Extensions;
-using Speckle.Newtonsoft.Json;
 
 namespace Speckle.Connectors.DUI.Bridge;
 

@@ -1,8 +1,8 @@
-using Speckle.Objects.Other;
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Render;
 using Speckle.Connectors.Utils.Conversion;
+using Speckle.Objects.Other;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using BakeResult = Speckle.Connectors.Utils.RenderMaterials.BakeResult;

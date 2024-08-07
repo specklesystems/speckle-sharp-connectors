@@ -4,12 +4,12 @@ using Rhino.Geometry;
 using Speckle.Connectors.Rhino.Extensions;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Instances;
+using Speckle.DoubleNumerics;
+using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
-using Speckle.DoubleNumerics;
-using Speckle.Sdk;
 
 namespace Speckle.Connectors.Rhino.HostApp;
 

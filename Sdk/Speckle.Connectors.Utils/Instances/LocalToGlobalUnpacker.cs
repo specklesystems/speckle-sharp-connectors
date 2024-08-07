@@ -1,8 +1,8 @@
-﻿using Speckle.Sdk.Models;
+﻿using Speckle.DoubleNumerics;
+using Speckle.InterfaceGenerator;
+using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
-using Speckle.DoubleNumerics;
-using Speckle.InterfaceGenerator;
 
 namespace Speckle.Connectors.Utils.Instances;
 

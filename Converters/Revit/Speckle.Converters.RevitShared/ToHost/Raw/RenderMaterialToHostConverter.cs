@@ -1,8 +1,8 @@
 using System.Text.RegularExpressions;
 using Autodesk.Revit.DB;
-using Speckle.Objects.Other;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Objects.Other;
 
 namespace Speckle.Converters.RevitShared.ToHost.Raw;
 

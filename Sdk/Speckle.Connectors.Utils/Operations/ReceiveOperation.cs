@@ -1,9 +1,9 @@
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Credentials;
+using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Transports;
-using Speckle.Sdk.Logging;
 
 namespace Speckle.Connectors.Utils.Operations;
 

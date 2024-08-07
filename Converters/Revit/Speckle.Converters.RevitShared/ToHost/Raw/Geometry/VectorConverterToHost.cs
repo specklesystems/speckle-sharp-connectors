@@ -1,7 +1,7 @@
 using Autodesk.Revit.DB;
-using Speckle.Objects.Geometry;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Objects.Geometry;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 

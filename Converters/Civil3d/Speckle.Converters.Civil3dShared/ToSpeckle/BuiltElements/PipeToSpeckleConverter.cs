@@ -1,7 +1,7 @@
-using Speckle.Objects;
-using Speckle.Objects.Other;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Objects;
+using Speckle.Objects.Other;
 using Speckle.Sdk.Models;
 using AECPropDB = Autodesk.Aec.PropertyData.DatabaseServices;
 
