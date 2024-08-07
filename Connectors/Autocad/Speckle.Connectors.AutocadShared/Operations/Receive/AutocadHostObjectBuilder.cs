@@ -1,4 +1,6 @@
+using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
+using Objects.Other;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Utils.Builders;
@@ -12,6 +14,7 @@ using Speckle.Core.Models.GraphTraversal;
 using Speckle.Core.Models.Instances;
 using Speckle.Core.Models.Proxies;
 using AutocadColor = Autodesk.AutoCAD.Colors.Color;
+using Material = Autodesk.AutoCAD.DatabaseServices.Material;
 
 namespace Speckle.Connectors.Autocad.Operations.Receive;
 
@@ -24,7 +27,8 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
   private readonly IRootToHostConverter _converter;
   private readonly GraphTraversal _traversalFunction;
   private readonly ISyncToThread _syncToThread;
-
+  private readonly AutocadGroupManager _groupManager;
+  private readonly AutocadMaterialManager _materialManager;
   private readonly AutocadColorManager _colorManager;
   private readonly AutocadInstanceObjectManager _instanceObjectsManager;
   private readonly AutocadContext _autocadContext;
@@ -33,7 +37,9 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     IRootToHostConverter converter,
     GraphTraversal traversalFunction,
     AutocadLayerManager autocadLayerManager,
+    AutocadGroupManager groupManager,
     AutocadInstanceObjectManager instanceObjectsManager,
+    AutocadMaterialManager materialManager,
     AutocadColorManager colorManager,
     ISyncToThread syncToThread,
     AutocadContext autocadContext
@@ -42,7 +48,9 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     _converter = converter;
     _traversalFunction = traversalFunction;
     _autocadLayerManager = autocadLayerManager;
+    _groupManager = groupManager;
     _instanceObjectsManager = instanceObjectsManager;
+    _materialManager = materialManager;
     _colorManager = colorManager;
     _syncToThread = syncToThread;
     _autocadContext = autocadContext;
@@ -93,6 +101,16 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       if (colors != null)
       {
         _colorManager.ParseColors(colors, onOperationProgressed);
+      }
+
+      // POC: get render materials
+      List<RenderMaterialProxy>? renderMaterials = (rootObject["renderMaterialProxies"] as List<object>)
+        ?.Cast<RenderMaterialProxy>()
+        .ToList();
+      Dictionary<string, Material> objectMaterialsIdMap = new();
+      if (renderMaterials != null)
+      {
+        _materialManager.ParseRenderMaterials(renderMaterials, onOperationProgressed);
       }
 
       // POC: get group proxies
@@ -161,45 +179,10 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       results.AddRange(instanceConversionResults);
 
       // Stage 3: Create group
-      // using var transactionContext = TransactionContext.StartTransaction(Application.DocumentManager.MdiActiveDocument);
-
       if (groupProxies != null)
       {
-        using var groupCreationTransaction =
-          Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
-        var groupDictionary = (DBDictionary)
-          groupCreationTransaction.GetObject(
-            Application.DocumentManager.CurrentDocument.Database.GroupDictionaryId,
-            OpenMode.ForWrite
-          );
-
-        foreach (var gp in groupProxies.OrderBy(group => group.objects.Count))
-        {
-          try
-          {
-            var entities = gp.objects.SelectMany(oldObjId => applicationIdMap[oldObjId]);
-            var ids = new ObjectIdCollection();
-
-            foreach (var entity in entities)
-            {
-              ids.Add(entity.ObjectId);
-            }
-
-            var newGroup = new Group(gp.name, true); // NOTE: this constructor sets both the description (as it says) but also the name at the same time
-            newGroup.Append(ids);
-
-            groupDictionary.UpgradeOpen();
-            groupDictionary.SetAt(gp.name, newGroup);
-
-            groupCreationTransaction.AddNewlyCreatedDBObject(newGroup, true);
-          }
-          catch (Exception e) when (!e.IsFatal())
-          {
-            results.Add(new ReceiveConversionResult(Status.ERROR, gp, null, null, e));
-          }
-        }
-
-        groupCreationTransaction.Commit();
+        List<ReceiveConversionResult> groupResults = _groupManager.ParseGroups(groupProxies, applicationIdMap);
+        results.AddRange(groupResults);
       }
 
       return new HostObjectBuilderResult(bakedObjectIds, results);
@@ -245,11 +228,22 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
         continue;
       }
 
-      // set color if any
+      // set color if any, or render material if none
       // POC: if these are displayvalue meshes, we will need to check for their ids somehow
       if (objColor is not null)
       {
         conversionResult.Color = objColor;
+      }
+      else
+      {
+        if (_materialManager.ObjectMaterialsIdMap.TryGetValue(objId, out (AutocadColor, Transparency?) display))
+        {
+          conversionResult.Color = display.Item1;
+          if (display.Item2 is Transparency transparency)
+          {
+            conversionResult.Transparency = transparency;
+          }
+        }
       }
 
       conversionResult.AppendToDb(layerName);

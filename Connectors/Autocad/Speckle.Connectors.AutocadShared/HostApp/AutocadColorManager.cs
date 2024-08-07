@@ -116,7 +116,7 @@ public class AutocadColorManager
       {
         AutocadColor convertedColor = ConvertColorProxyToColor(colorProxy);
 
-        if (!ObjectColorsIdMap.TryGetValue(objectId, out AutocadColor _))
+        if (!ObjectColorsIdMap.ContainsKey(objectId))
         {
           ObjectColorsIdMap.Add(objectId, convertedColor);
         }

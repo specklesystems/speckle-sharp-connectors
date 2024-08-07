@@ -18,7 +18,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\Civil3dConnectorModule.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Filters\AutocadSelectionFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadMaterialManager.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadGroupUnpacker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadGroupManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadInstanceObjectManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadContext.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadDocumentManager.cs" />

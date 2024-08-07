@@ -24,7 +24,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
   private readonly AutocadMaterialManager _materialManager;
   private readonly AutocadColorManager _colorManager;
   private readonly AutocadLayerManager _layerManager;
-  private readonly AutocadGroupUnpacker _groupUnpacker;
+  private readonly AutocadGroupManager _groupManager;
   private readonly ISyncToThread _syncToThread;
 
   public AutocadRootObjectBuilder(
@@ -34,7 +34,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     AutocadMaterialManager materialManager,
     AutocadColorManager colorManager,
     AutocadLayerManager layerManager,
-    AutocadGroupUnpacker groupUnpacker,
+    AutocadGroupManager groupManager,
     ISyncToThread syncToThread
   )
   {
@@ -44,7 +44,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     _materialManager = materialManager;
     _colorManager = colorManager;
     _layerManager = layerManager;
-    _groupUnpacker = groupUnpacker;
+    _groupManager = groupManager;
     _syncToThread = syncToThread;
   }
 
@@ -141,7 +141,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
       modelWithLayers["instanceDefinitionProxies"] = instanceDefinitionProxies;
 
       // set groups
-      var groupProxies = _groupUnpacker.UnpackGroups(atomicObjects);
+      List<GroupProxy> groupProxies = _groupManager.UnpackGroups(atomicObjects);
       modelWithLayers["groupProxies"] = groupProxies;
 
       // set materials

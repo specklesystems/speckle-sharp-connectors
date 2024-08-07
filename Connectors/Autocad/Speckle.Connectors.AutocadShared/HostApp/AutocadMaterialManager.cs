@@ -2,6 +2,7 @@ using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
 using Objects.Other;
 using Speckle.Connectors.Autocad.Operations.Send;
+using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 using Material = Autodesk.AutoCAD.DatabaseServices.Material;
 
 namespace Speckle.Connectors.Autocad.HostApp;
@@ -16,7 +17,7 @@ public class AutocadMaterialManager
   // POC: Will be addressed to move it into AutocadContext!
   private Document Doc => Application.DocumentManager.MdiActiveDocument;
 
-  public Dictionary<string, Material> ObjectMaterialsIdMap { get; } = new();
+  public Dictionary<string, (AutocadColor, Transparency?)> ObjectMaterialsIdMap { get; } = new();
 
   public AutocadMaterialManager(AutocadContext autocadContext)
   {
@@ -81,19 +82,66 @@ public class AutocadMaterialManager
       if (transaction.GetObject(layer.MaterialId, OpenMode.ForRead) is Material material)
       {
         string materialId = material.Handle.ToString();
+        string layerId = layer.Handle.ToString();
         if (materialProxies.TryGetValue(materialId, out RenderMaterialProxy value))
         {
-          value.objects.Add(layer.Handle.ToString());
+          value.objects.Add(layerId);
         }
         else
         {
           RenderMaterialProxy materialProxy = ConvertMaterialToRenderMaterialProxy(material, materialId);
-          materialProxy.objects.Add(layer.Handle.ToString());
+          materialProxy.objects.Add(layerId);
           materialProxies[materialId] = materialProxy;
         }
       }
     }
 
     return materialProxies.Values.ToList();
+  }
+
+  /// <summary>
+  /// Convert a Speckle render material to a color and transparency.
+  /// </summary>
+  /// <param name="material"></param>
+  /// <returns></returns>
+  /// <remarks>POC: we are not converting to a native material due to complexity in additional properties like Map and Scale.</remarks>
+  public (AutocadColor, Transparency?) ConvertRenderMaterialToColorAndTransparency(RenderMaterial material)
+  {
+    System.Drawing.Color systemColor = System.Drawing.Color.FromArgb(material.diffuse);
+    AutocadColor color = AutocadColor.FromColor(systemColor);
+
+    // only create transparency if render material is not opaque
+    Transparency? transparency = null;
+    if (material.opacity != 1)
+    {
+      var alpha = (byte)(material.opacity * 255d);
+      transparency = new Transparency(alpha);
+    }
+
+    return (color, transparency);
+  }
+
+  public void ParseRenderMaterials(
+    List<RenderMaterialProxy> materialProxies,
+    Action<string, double?>? onOperationProgressed
+  )
+  {
+    // keeps track of the object id to material index
+    var count = 0;
+    foreach (RenderMaterialProxy materialProxy in materialProxies)
+    {
+      onOperationProgressed?.Invoke("Converting render materials", (double)++count / materialProxies.Count);
+      foreach (string objectId in materialProxy.objects)
+      {
+        (AutocadColor, Transparency?) convertedMaterial = ConvertRenderMaterialToColorAndTransparency(
+          materialProxy.value
+        );
+
+        if (!ObjectMaterialsIdMap.ContainsKey(objectId))
+        {
+          ObjectMaterialsIdMap.Add(objectId, convertedMaterial);
+        }
+      }
+    }
   }
 }
