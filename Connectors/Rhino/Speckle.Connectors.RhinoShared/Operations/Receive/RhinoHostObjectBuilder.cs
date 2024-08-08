@@ -160,16 +160,16 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
     // Stage 0: Render Materials
     Dictionary<string, int> objectMaterialsIdMap = new();
-      if (materialProxies != null)
-      {
-        using var _ = SpeckleActivityFactory.Start("Render Materials");
-        objectMaterialsIdMap = BakeRenderMaterials(
-          materialProxies,
-          baseLayerName,
-          onOperationProgressed,
-          conversionResults
-        );
-      }
+    if (materialProxies != null)
+    {
+      using var _ = SpeckleActivityFactory.Start("Render Materials");
+      objectMaterialsIdMap = BakeRenderMaterials(
+        materialProxies,
+        baseLayerName,
+        onOperationProgressed,
+        conversionResults
+      );
+    }
 
     // Stage 1: Convert atomic objects
     // Note: this can become encapsulated later in an "atomic object baker" of sorts, if needed.
