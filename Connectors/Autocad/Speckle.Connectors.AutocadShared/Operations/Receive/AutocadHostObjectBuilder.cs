@@ -202,17 +202,11 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
 
   private IEnumerable<Entity> ConvertObject(Base obj, Collection[] layerPath, string baseLayerNamePrefix)
   {
-    string layerName = _autocadLayerManager.CreateLayerForReceive(
-      layerPath,
-      baseLayerNamePrefix,
-      _colorManager.ObjectColorsIdMap,
-      _materialManager.ObjectMaterialsIdMap
-    );
+    string layerName = _autocadLayerManager.CreateLayerForReceive(layerPath, baseLayerNamePrefix);
 
-    object converted;
     using (var tr = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction())
     {
-      converted = _converter.Convert(obj);
+      var converted = _converter.Convert(obj);
 
       IEnumerable<Entity?> flattened = Utilities.FlattenToHostConversionResult(converted).Cast<Entity>();
 
