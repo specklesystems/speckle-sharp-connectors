@@ -62,12 +62,7 @@ public class AutocadLayerManager
   /// This ensures we're creating the new objects we've just received rather than overlaying them.
   /// </summary>
   /// <returns>The name of the existing or created layer</returns>
-  public string CreateLayerForReceive(
-    Collection[] layerPath,
-    string baseLayerPrefix
-  // Dictionary<string, AutocadColor> objectColorsIdMap,
-  // Dictionary<string, ObjectId> objectMaterialsIdMap
-  )
+  public string CreateLayerForReceive(Collection[] layerPath, string baseLayerPrefix)
   {
     string[] namePath = layerPath.Select(c => c.name).ToArray();
     string layerName = _autocadContext.RemoveInvalidChars(baseLayerPrefix + string.Join("-", namePath));

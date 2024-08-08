@@ -74,14 +74,14 @@ public class RhinoMaterialManager
   /// <summary>
   /// A map keeping track of ids, <b>either layer id or object id</b>, and their material index. It's generated from the material proxy list as we bake materials; <see cref="BakeMaterials"/> must be called in advance for this to be populated with the correct data.
   /// </summary>
-  public Dictionary<string, int> ObectIdAndMaterialIndexMap { get; } = new();
+  public Dictionary<string, int> ObjectIdAndMaterialIndexMap { get; } = new();
 
-  public void BakeMaterials(List<RenderMaterialProxy> speckleRenderMaterials, string baseLayerName)
+  public void BakeMaterials(List<RenderMaterialProxy> speckleRenderMaterialProxies, string baseLayerName)
   {
     var doc = _contextStack.Current.Document; // POC: too much right now to interface around
     List<ReceiveConversionResult> conversionResults = new(); // TODO: return this guy
 
-    foreach (var proxy in speckleRenderMaterials)
+    foreach (var proxy in speckleRenderMaterialProxies)
     {
       var speckleRenderMaterial = proxy.value;
 
@@ -124,7 +124,7 @@ public class RhinoMaterialManager
         // Create the object <> material index map
         foreach (var objectId in proxy.objects)
         {
-          ObectIdAndMaterialIndexMap[objectId] = matIndex;
+          ObjectIdAndMaterialIndexMap[objectId] = matIndex;
         }
 
         conversionResults.Add(new(Status.SUCCESS, speckleRenderMaterial, matName, "Material"));

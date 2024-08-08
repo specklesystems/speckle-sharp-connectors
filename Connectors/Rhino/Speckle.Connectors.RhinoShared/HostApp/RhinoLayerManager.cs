@@ -67,7 +67,7 @@ public class RhinoLayerManager
 
       // set material
       if (
-        _materialManager.ObectIdAndMaterialIndexMap.TryGetValue(
+        _materialManager.ObjectIdAndMaterialIndexMap.TryGetValue(
           collection.applicationId ?? collection.id,
           out int mIndex
         )

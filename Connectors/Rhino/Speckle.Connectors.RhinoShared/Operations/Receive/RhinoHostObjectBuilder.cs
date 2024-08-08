@@ -174,7 +174,9 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
           var objectId = obj.applicationId ?? obj.id; // POC: assuming objects have app ids for this to work?
 
           // 3: colors and materials
-          var matIndex = _materialManager.ObectIdAndMaterialIndexMap.TryGetValue(objectId, out int mIndex) ? mIndex : 0;
+          var matIndex = _materialManager.ObjectIdAndMaterialIndexMap.TryGetValue(objectId, out int mIndex)
+            ? mIndex
+            : 0;
           Color? objColor = _colorManager.ObjectColorsIdMap.TryGetValue(objectId, out Color color) ? color : null;
 
           // 4: actually bake
