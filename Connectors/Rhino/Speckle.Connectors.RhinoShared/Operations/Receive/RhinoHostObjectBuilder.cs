@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
@@ -119,16 +118,10 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     List<(Collection[] collectionPath, Base obj)> atomicObjects = new();
     RhinoDoc doc = _contextStack.Current.Document;
     List<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents = new();
+
     using (var _ = SpeckleActivityFactory.Start("BakeObjects"))
     {
-      // Remove all previously received layers and render materials from the document
-      int rootLayerIndex = _contextStack.Current.Document.Layers.Find(
-        Guid.Empty,
-        baseLayerName,
-        RhinoMath.UnsetIntIndex
-      );
-      PreReceiveDeepClean(baseLayerName, rootLayerIndex);
-
+      PreReceiveDeepClean(baseLayerName);
       _layerManager.CreateBaseLayer(baseLayerName);
 
       // POC: these are not captured by traversal, so we need to re-add them here
@@ -158,16 +151,20 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
     List<ReceiveConversionResult> conversionResults = new();
 
-    // Stage 0: Render Materials
-    Dictionary<string, int> objectMaterialsIdMap = new();
+    // Dictionary<string, int> objectMaterialsIdMap = new();
+    // if (materialProxies != null)
+    // {
+    //   objectMaterialsIdMap = BakeRenderMaterials(
+    //     materialProxies,
+    //     baseLayerName,
+    //     onOperationProgressed,
+    //     conversionResults
+    //   );
+    // }
+
     if (materialProxies != null)
     {
-      objectMaterialsIdMap = BakeRenderMaterials(
-        materialProxies,
-        baseLayerName,
-        onOperationProgressed,
-        conversionResults
-      );
+      _materialManager.BakeMaterials(materialProxies, baseLayerName);
     }
 
     // Stage 1: Convert atomic objects
@@ -182,27 +179,29 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
         onOperationProgressed?.Invoke("Converting objects", (double)++count / atomicObjects.Count);
         try
         {
-          // POC: it's messy creating layers while in the obj loop, need to set layer material here
-          int layerIndex = _layerManager.GetAndCreateLayerFromPath(path, baseLayerName, out bool isNewLayer);
-          if (isNewLayer)
-          {
-            string collectionId = path[^1].applicationId ?? path[^1].id;
-            if (objectMaterialsIdMap.TryGetValue(collectionId, out int lIndex))
-            {
-              doc.Layers[layerIndex].RenderMaterialIndex = lIndex;
-            }
-
-            if (_colorManager.ObjectColorsIdMap.TryGetValue(collectionId, out Color layerColor))
-            {
-              doc.Layers[layerIndex].Color = layerColor;
-            }
-          }
+          int layerIndex = _layerManager.GetAndCreateLayerFromPath(path, baseLayerName, out bool _);
+          // if (isNewLayer)
+          // {
+          //   string collectionId = path[^1].applicationId ?? path[^1].id;
+          //   if (objectMaterialsIdMap.TryGetValue(collectionId, out int lIndex))
+          //   {
+          //     doc.Layers[layerIndex].RenderMaterialIndex = lIndex;
+          //   }
+          //
+          //   if (_colorManager.ObjectColorsIdMap.TryGetValue(collectionId, out Color layerColor))
+          //   {
+          //     doc.Layers[layerIndex].Color = layerColor;
+          //   }
+          // }
 
           var result = _converter.Convert(obj);
           var objectId = obj.applicationId ?? obj.id; // POC: assuming objects have app ids for this to work?
-          var objMaterialIndex = objectMaterialsIdMap.TryGetValue(objectId, out int oIndex) ? oIndex : 0;
+
+          var matIndex = _materialManager.ObectIdAndMaterialIndexMap.TryGetValue(objectId, out int mIndex) ? mIndex : 0;
           Color? objColor = _colorManager.ObjectColorsIdMap.TryGetValue(objectId, out Color color) ? color : null;
-          var conversionIds = HandleConversionResult(result, obj, layerIndex, objMaterialIndex, objColor).ToList();
+
+          var conversionIds = HandleConversionResult(result, obj, layerIndex, matIndex, objColor).ToList();
+
           foreach (var r in conversionIds)
           {
             conversionResults.Add(new(Status.SUCCESS, obj, r, result.GetType().ToString()));
@@ -224,7 +223,6 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = BakeInstances(
         instanceComponents,
         applicationIdMap,
-        objectMaterialsIdMap,
         baseLayerName,
         onOperationProgressed
       );
@@ -248,45 +246,45 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     return new(bakedObjectIds, conversionResults);
   }
 
-  [SuppressMessage("Performance", "CA1864:Prefer the \'IDictionary.TryAdd(TKey, TValue)\' method")]
-  private Dictionary<string, int> BakeRenderMaterials(
-    List<RenderMaterialProxy> materialProxies,
-    string baseLayerName,
-    Action<string, double?>? onOperationProgressed,
-    List<ReceiveConversionResult> conversionResults
-  )
-  {
-    using var _ = SpeckleActivityFactory.Start("BakeRenderMaterials");
-    // keeps track of the material id to created index in the materials table
-    Dictionary<string, int> materialsIdMap = new();
-
-    (materialsIdMap, List<ReceiveConversionResult> materialsConversionResults) = _materialManager.BakeMaterials(
-      materialProxies.Select(o => o.value).ToList(),
-      baseLayerName,
-      onOperationProgressed
-    );
-
-    conversionResults.AddRange(materialsConversionResults); // add render material conversion results to our list
-
-    // keeps track of the object id to material index
-    Dictionary<string, int> objectMaterialsIdMap = new();
-    foreach (RenderMaterialProxy materialProxy in materialProxies)
-    {
-      string materialId = materialProxy.value.applicationId ?? materialProxy.value.id;
-      foreach (string objectId in materialProxy.objects)
-      {
-        if (materialsIdMap.TryGetValue(materialId, out int materialIndex))
-        {
-          if (!objectMaterialsIdMap.ContainsKey(objectId))
-          {
-            objectMaterialsIdMap.Add(objectId, materialIndex);
-          }
-        }
-      }
-    }
-
-    return objectMaterialsIdMap;
-  }
+  // [SuppressMessage("Performance", "CA1864:Prefer the \'IDictionary.TryAdd(TKey, TValue)\' method")]
+  // private Dictionary<string, int> BakeRenderMaterials(
+  //   List<RenderMaterialProxy> materialProxies,
+  //   string baseLayerName,
+  //   Action<string, double?>? onOperationProgressed,
+  //   List<ReceiveConversionResult> conversionResults
+  // )
+  // {
+  //   using var _ = SpeckleActivityFactory.Start("BakeRenderMaterials");
+  //   // keeps track of the material id to created index in the materials table
+  //   Dictionary<string, int> materialsIdMap = new();
+  //
+  //   (materialsIdMap, List<ReceiveConversionResult> materialsConversionResults) = _materialManager.BakeMaterials(
+  //     materialProxies.Select(o => o.value).ToList(),
+  //     baseLayerName,
+  //     onOperationProgressed
+  //   );
+  //
+  //   conversionResults.AddRange(materialsConversionResults); // add render material conversion results to our list
+  //
+  //   // keeps track of the object id to material index
+  //   Dictionary<string, int> objectMaterialsIdMap = new();
+  //   foreach (RenderMaterialProxy materialProxy in materialProxies)
+  //   {
+  //     string materialId = materialProxy.value.applicationId ?? materialProxy.value.id;
+  //     foreach (string objectId in materialProxy.objects)
+  //     {
+  //       if (materialsIdMap.TryGetValue(materialId, out int materialIndex))
+  //       {
+  //         if (!objectMaterialsIdMap.ContainsKey(objectId))
+  //         {
+  //           objectMaterialsIdMap.Add(objectId, materialIndex);
+  //         }
+  //       }
+  //     }
+  //   }
+  //
+  //   return objectMaterialsIdMap;
+  // }
 
   private (
     List<string> createdInstanceIds,
@@ -295,7 +293,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   ) BakeInstances(
     List<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
     Dictionary<string, List<string>> applicationIdMap,
-    Dictionary<string, int> materialIdMap,
+    // Dictionary<string, int> materialIdMap,
     string baseLayerName,
     Action<string, double?>? onOperationProgressed
   )
@@ -308,23 +306,23 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     );
 
     // add materials to created instances
-    foreach (IInstanceComponent instanceComponent in instanceComponents.Select(o => o.obj).ToList())
-    {
-      if (instanceComponent is InstanceProxy instanceProxy)
-      {
-        string instanceProxyId = instanceProxy.applicationId ?? instanceProxy.id;
-        if (createdInstanceIds.Contains(instanceProxyId))
-        {
-          int instanceMaterialIndex = materialIdMap.TryGetValue(instanceProxyId, out int iIndex) ? iIndex : 0;
-          if (instanceMaterialIndex != 0)
-          {
-            RhinoObject createdInstance = RhinoDoc.ActiveDoc.Objects.FindId(new Guid(instanceProxyId));
-            createdInstance.Attributes.MaterialIndex = instanceMaterialIndex;
-            createdInstance.Attributes.MaterialSource = ObjectMaterialSource.MaterialFromObject;
-          }
-        }
-      }
-    }
+    // foreach (IInstanceComponent instanceComponent in instanceComponents.Select(o => o.obj).ToList())
+    // {
+    //   if (instanceComponent is InstanceProxy instanceProxy)
+    //   {
+    //     string instanceProxyId = instanceProxy.applicationId ?? instanceProxy.id;
+    //     if (createdInstanceIds.Contains(instanceProxyId))
+    //     {
+    //       int instanceMaterialIndex = materialIdMap.TryGetValue(instanceProxyId, out int iIndex) ? iIndex : 0;
+    //       if (instanceMaterialIndex != 0)
+    //       {
+    //         RhinoObject createdInstance = RhinoDoc.ActiveDoc.Objects.FindId(new Guid(instanceProxyId));
+    //         createdInstance.Attributes.MaterialIndex = instanceMaterialIndex;
+    //         createdInstance.Attributes.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+    //       }
+    //     }
+    //   }
+    // }
     return (createdInstanceIds, consumedObjectIds, instanceConversionResults);
   }
 
@@ -339,8 +337,11 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     }
   }
 
-  private void PreReceiveDeepClean(string baseLayerName, int rootLayerIndex)
+  private void PreReceiveDeepClean(string baseLayerName)
   {
+    // Remove all previously received layers and render materials from the document
+    int rootLayerIndex = _contextStack.Current.Document.Layers.Find(Guid.Empty, baseLayerName, RhinoMath.UnsetIntIndex);
+
     _instanceObjectsManager.PurgeInstances(baseLayerName);
     _materialManager.PurgeMaterials(baseLayerName);
 
