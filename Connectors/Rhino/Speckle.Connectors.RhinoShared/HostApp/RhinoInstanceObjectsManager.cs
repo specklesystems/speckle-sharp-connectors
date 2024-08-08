@@ -21,14 +21,20 @@ namespace Speckle.Connectors.Rhino.HostApp;
 public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInstanceBaker<List<string>>
 {
   private readonly RhinoLayerManager _layerManager;
+  private readonly RhinoColorManager _colorManager;
+  private readonly RhinoMaterialManager _materialManager;
   private readonly IInstanceObjectsManager<RhinoObject, List<string>> _instanceObjectsManager;
 
   public RhinoInstanceObjectsManager(
     RhinoLayerManager layerManager,
+    RhinoColorManager colorManager,
+    RhinoMaterialManager materialManager,
     IInstanceObjectsManager<RhinoObject, List<string>> instanceObjectsManager
   )
   {
     _layerManager = layerManager;
+    _colorManager = colorManager;
+    _materialManager = materialManager;
     _instanceObjectsManager = instanceObjectsManager;
   }
 
@@ -204,7 +210,20 @@ public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInst
           var transform = MatrixToTransform(instanceProxy.transform, instanceProxy.units);
 
           // POC: having layer creation during instance bake means no render materials!!
-          int layerIndex = _layerManager.GetAndCreateLayerFromPath(layerCollection, baseLayerName, out bool _);
+          int layerIndex = _layerManager.GetAndCreateLayerFromPath(layerCollection, baseLayerName, out bool isNewLayer);
+          if (isNewLayer)
+          {
+            string collectionId = layerCollection[^1].applicationId ?? layerCollection[^1].id;
+            if (_materialManager.ObjectMaterialsIdMap.TryGetValue(collectionId, out int lIndex))
+            {
+              doc.Layers[layerIndex].RenderMaterialIndex = lIndex;
+            }
+
+            if (_colorManager.ObjectColorsIdMap.TryGetValue(collectionId, out Color layerColor))
+            {
+              doc.Layers[layerIndex].Color = layerColor;
+            }
+          }
 
           string instanceProxyId = instanceProxy.applicationId ?? instanceProxy.id;
 

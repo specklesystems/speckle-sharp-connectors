@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
@@ -159,15 +158,14 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     List<ReceiveConversionResult> conversionResults = new();
 
     // Stage 0: Render Materials
-    Dictionary<string, int> objectMaterialsIdMap = new();
     if (materialProxies != null)
     {
-      objectMaterialsIdMap = BakeRenderMaterials(
+      List<ReceiveConversionResult> materialConversionResults = _materialManager.BakeRenderMaterials(
         materialProxies,
         baseLayerName,
-        onOperationProgressed,
-        conversionResults
+        onOperationProgressed
       );
+      conversionResults.AddRange(materialConversionResults);
     }
 
     // Stage 1: Convert atomic objects
@@ -186,7 +184,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
         if (isNewLayer)
         {
           string collectionId = path[^1].applicationId ?? path[^1].id;
-          if (objectMaterialsIdMap.TryGetValue(collectionId, out int lIndex))
+          if (_materialManager.ObjectMaterialsIdMap.TryGetValue(collectionId, out int lIndex))
           {
             doc.Layers[layerIndex].RenderMaterialIndex = lIndex;
           }
@@ -199,7 +197,9 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
         var result = _converter.Convert(obj);
         string objectId = obj.applicationId ?? obj.id; // POC: assuming objects have app ids for this to work?
-        int objMaterialIndex = objectMaterialsIdMap.TryGetValue(objectId, out int oIndex) ? oIndex : 0;
+        int? objMaterialIndex = _materialManager.ObjectMaterialsIdMap.TryGetValue(objectId, out int oIndex)
+          ? oIndex
+          : null;
         Color? objColor = _colorManager.ObjectColorsIdMap.TryGetValue(objectId, out Color color) ? color : null;
         var conversionIds = HandleConversionResult(result, obj, layerIndex, objMaterialIndex, objColor).ToList();
         foreach (var r in conversionIds)
@@ -220,7 +220,6 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = BakeInstances(
       instanceComponents,
       applicationIdMap,
-      objectMaterialsIdMap,
       baseLayerName,
       onOperationProgressed
     );
@@ -240,46 +239,6 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     return new(bakedObjectIds, conversionResults);
   }
 
-  [SuppressMessage("Performance", "CA1864:Prefer the \'IDictionary.TryAdd(TKey, TValue)\' method")]
-  private Dictionary<string, int> BakeRenderMaterials(
-    List<RenderMaterialProxy> materialProxies,
-    string baseLayerName,
-    Action<string, double?>? onOperationProgressed,
-    List<ReceiveConversionResult> conversionResults
-  )
-  {
-    using var _ = SpeckleActivityFactory.Start("BakeRenderMaterials");
-    // keeps track of the material id to created index in the materials table
-    Dictionary<string, int> materialsIdMap = new();
-
-    (materialsIdMap, List<ReceiveConversionResult> materialsConversionResults) = _materialManager.BakeMaterials(
-      materialProxies.Select(o => o.value).ToList(),
-      baseLayerName,
-      onOperationProgressed
-    );
-
-    conversionResults.AddRange(materialsConversionResults); // add render material conversion results to our list
-
-    // keeps track of the object id to material index
-    Dictionary<string, int> objectMaterialsIdMap = new();
-    foreach (RenderMaterialProxy materialProxy in materialProxies)
-    {
-      string materialId = materialProxy.value.applicationId ?? materialProxy.value.id;
-      foreach (string objectId in materialProxy.objects)
-      {
-        if (materialsIdMap.TryGetValue(materialId, out int materialIndex))
-        {
-          if (!objectMaterialsIdMap.ContainsKey(objectId))
-          {
-            objectMaterialsIdMap.Add(objectId, materialIndex);
-          }
-        }
-      }
-    }
-
-    return objectMaterialsIdMap;
-  }
-
   private (
     List<string> createdInstanceIds,
     List<string> consumedObjectIds,
@@ -287,7 +246,6 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   ) BakeInstances(
     List<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
     Dictionary<string, List<string>> applicationIdMap,
-    Dictionary<string, int> materialIdMap,
     string baseLayerName,
     Action<string, double?>? onOperationProgressed
   )
@@ -299,7 +257,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       onOperationProgressed
     );
 
-    // add materials to created instances
+    // add colors and materials to created instances
     foreach (IInstanceComponent instanceComponent in instanceComponents.Select(o => o.obj).ToList())
     {
       if (instanceComponent is InstanceProxy instanceProxy)
@@ -307,12 +265,27 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
         string instanceProxyId = instanceProxy.applicationId ?? instanceProxy.id;
         if (createdInstanceIds.Contains(instanceProxyId))
         {
-          int instanceMaterialIndex = materialIdMap.TryGetValue(instanceProxyId, out int iIndex) ? iIndex : 0;
-          if (instanceMaterialIndex != 0)
+          int? instanceMaterialIndex = _materialManager.ObjectMaterialsIdMap.TryGetValue(
+            instanceProxyId,
+            out int iMaterialIndex
+          )
+            ? iMaterialIndex
+            : null;
+          if (instanceMaterialIndex is int matIndex)
           {
             RhinoObject createdInstance = RhinoDoc.ActiveDoc.Objects.FindId(new Guid(instanceProxyId));
-            createdInstance.Attributes.MaterialIndex = instanceMaterialIndex;
+            createdInstance.Attributes.MaterialIndex = matIndex;
             createdInstance.Attributes.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+          }
+
+          Color? instanceColor = _colorManager.ObjectColorsIdMap.TryGetValue(instanceProxyId, out Color iColor)
+            ? iColor
+            : null;
+          if (instanceColor is Color color)
+          {
+            RhinoObject createdInstance = RhinoDoc.ActiveDoc.Objects.FindId(new Guid(instanceProxyId));
+            createdInstance.Attributes.ObjectColor = color;
+            createdInstance.Attributes.ColorSource = ObjectColorSource.ColorFromObject;
           }
         }
       }

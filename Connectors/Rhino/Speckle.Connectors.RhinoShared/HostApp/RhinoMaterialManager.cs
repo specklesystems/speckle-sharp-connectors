@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Objects.Other;
 using Rhino;
 using Rhino.DocObjects;
@@ -5,7 +6,7 @@ using Rhino.Render;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Core.Kits;
 using Speckle.Core.Logging;
-using BakeResult = Speckle.Connectors.Utils.RenderMaterials.BakeResult;
+using Speckle.Logging;
 using Material = Rhino.DocObjects.Material;
 using PhysicallyBasedMaterial = Rhino.DocObjects.PhysicallyBasedMaterial;
 using RenderMaterial = Rhino.Render.RenderMaterial;
@@ -18,6 +19,58 @@ namespace Speckle.Connectors.Rhino.HostApp;
 /// </summary>
 public class RhinoMaterialManager
 {
+  /// <summary>
+  /// Keeps track of the object id to render material index
+  /// </summary>
+  public Dictionary<string, int> ObjectMaterialsIdMap { get; } = new();
+
+  [SuppressMessage("Performance", "CA1864:Prefer the \'IDictionary.TryAdd(TKey, TValue)\' method")]
+  public List<ReceiveConversionResult> BakeRenderMaterials(
+    List<RenderMaterialProxy> materialProxies,
+    string baseLayerName,
+    Action<string, double?>? onOperationProgressed
+  )
+  {
+    List<ReceiveConversionResult> conversionResults = new();
+    using var _ = SpeckleActivityFactory.Start("BakeRenderMaterials");
+
+    var doc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
+
+    // keeps track of the material id to created index in the materials table
+    Dictionary<string, int> materialsIdMap = new();
+    int count = 0;
+    foreach (RenderMaterialProxy materialProxy in materialProxies)
+    {
+      onOperationProgressed?.Invoke("Converting render materials", (double)++count / materialProxies.Count);
+      string materialId = materialProxy.value.applicationId ?? materialProxy.value.id;
+
+      // bake the render material
+      ReceiveConversionResult result = BakeRenderMaterial(
+        materialProxy.value,
+        materialId,
+        materialsIdMap,
+        baseLayerName,
+        doc
+      );
+
+      conversionResults.Add(result);
+
+      // process render material proxy object ids
+      foreach (string objectId in materialProxy.objects)
+      {
+        if (materialsIdMap.TryGetValue(materialId, out int materialIndex))
+        {
+          if (!ObjectMaterialsIdMap.ContainsKey(objectId))
+          {
+            ObjectMaterialsIdMap.Add(objectId, materialIndex);
+          }
+        }
+      }
+    }
+
+    return conversionResults;
+  }
+
   // converts a rhino material to a rhino render material
   private RenderMaterial ConvertMaterialToRenderMaterial(Material material)
   {
@@ -64,70 +117,75 @@ public class RhinoMaterialManager
     return speckleRenderMaterial;
   }
 
-  public BakeResult BakeMaterials(
-    List<SpeckleRenderMaterial> speckleRenderMaterials,
+  private ReceiveConversionResult BakeRenderMaterial(
+    SpeckleRenderMaterial speckleRenderMaterial,
+    string materialId,
+    Dictionary<string, int> materialsIdMap,
     string baseLayerName,
-    Action<string, double?>? onOperationProgressed
+    RhinoDoc doc
   )
   {
-    var doc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
-
-    // Keeps track of the incoming SpeckleRenderMaterial application Id and the index of the corresponding Rhino Material in the doc material table
-    Dictionary<string, int> materialIdAndIndexMap = new();
-
-    int count = 0;
-    List<ReceiveConversionResult> conversionResults = new();
-    foreach (SpeckleRenderMaterial speckleRenderMaterial in speckleRenderMaterials)
+    // We shouldn't be processing render materials with the same id, report error if duplicate ids are found
+    if (materialsIdMap.ContainsKey(materialId))
     {
-      onOperationProgressed?.Invoke("Converting render materials", (double)++count / speckleRenderMaterials.Count);
-      try
-      {
-        // POC: Currently we're relying on the render material name for identification if it's coming from speckle and from which model; could we do something else?
-        // POC: we should assume render materials all have application ids?
-        string materialId = speckleRenderMaterial.applicationId ?? speckleRenderMaterial.id;
-        string matName = $"{speckleRenderMaterial.name}-({materialId})-{baseLayerName}";
-        Color diffuse = Color.FromArgb(speckleRenderMaterial.diffuse);
-        Color emissive = Color.FromArgb(speckleRenderMaterial.emissive);
-        double transparency = 1 - speckleRenderMaterial.opacity;
-
-        Material rhinoMaterial =
-          new()
-          {
-            Name = matName,
-            DiffuseColor = diffuse,
-            EmissionColor = emissive,
-            Transparency = transparency
-          };
-
-        // try to get additional properties
-        if (speckleRenderMaterial["ior"] is double ior)
-        {
-          rhinoMaterial.IndexOfRefraction = ior;
-        }
-        if (speckleRenderMaterial["shine"] is double shine)
-        {
-          rhinoMaterial.Shine = shine;
-        }
-
-        int matIndex = doc.Materials.Add(rhinoMaterial);
-
-        // POC: check on matIndex -1, means we haven't created anything - this is most likely an recoverable error at this stage
-        if (matIndex == -1)
-        {
-          throw new ConversionException("Failed to add a material to the document.");
-        }
-
-        materialIdAndIndexMap[materialId] = matIndex;
-
-        conversionResults.Add(new(Status.SUCCESS, speckleRenderMaterial, matName, "Material"));
-      }
-      catch (Exception ex) when (!ex.IsFatal())
-      {
-        conversionResults.Add(new(Status.ERROR, speckleRenderMaterial, null, null, ex));
-      }
+      return new(
+        Status.ERROR,
+        speckleRenderMaterial,
+        null,
+        null,
+        new ConversionException($"Already converted a render material with the same id: {materialId}")
+      );
     }
 
-    return new(materialIdAndIndexMap, conversionResults);
+    try
+    {
+      // POC: Currently we're relying on the render material name for identification if it's coming from speckle and from which model; could we do something else?
+      // POC: we should assume render materials all have application ids?
+      string matName = $"{speckleRenderMaterial.name}-({materialId})-{baseLayerName}";
+      Color diffuse = Color.FromArgb(speckleRenderMaterial.diffuse);
+      Color emissive = Color.FromArgb(speckleRenderMaterial.emissive);
+      double transparency = 1 - speckleRenderMaterial.opacity;
+
+      Material rhinoMaterial =
+        new()
+        {
+          Name = matName,
+          DiffuseColor = diffuse,
+          EmissionColor = emissive,
+          Transparency = transparency
+        };
+
+      // try to get additional properties
+      if (speckleRenderMaterial["ior"] is double ior)
+      {
+        rhinoMaterial.IndexOfRefraction = ior;
+      }
+      if (speckleRenderMaterial["shine"] is double shine)
+      {
+        rhinoMaterial.Shine = shine;
+      }
+
+      int matIndex = doc.Materials.Add(rhinoMaterial);
+
+      // POC: check on matIndex -1, means we haven't created anything - this is most likely an recoverable error at this stage
+      if (matIndex == -1)
+      {
+        return new(
+          Status.ERROR,
+          speckleRenderMaterial,
+          null,
+          null,
+          new ConversionException("Failed to add a material to the document.")
+        );
+      }
+
+      materialsIdMap[materialId] = matIndex;
+      return new(Status.SUCCESS, speckleRenderMaterial, matName, "Material");
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      return new(Status.ERROR, speckleRenderMaterial, null, null, ex);
+    }
   }
 
   /// <summary>
