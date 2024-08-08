@@ -28,7 +28,7 @@ public class RhinoColorManager
       // assumes color names are unique
       string colorId = atts.ObjectColor.Name;
       string objectId = rhinoObj.Id.ToString();
-      if (colorProxies.TryGetValue(colorId, out ColorProxy value))
+      if (colorProxies.TryGetValue(colorId, out ColorProxy? value))
       {
         value.objects.Add(objectId);
       }
@@ -46,7 +46,7 @@ public class RhinoColorManager
       // assumes color names are unique
       string colorId = layer.Color.Name;
       string layerId = layer.Id.ToString();
-      if (colorProxies.TryGetValue(colorId, out ColorProxy value))
+      if (colorProxies.TryGetValue(colorId, out ColorProxy? value))
       {
         value.objects.Add(layerId);
       }

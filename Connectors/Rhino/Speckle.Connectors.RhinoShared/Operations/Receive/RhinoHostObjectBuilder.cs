@@ -160,15 +160,16 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
     // Stage 0: Render Materials
     Dictionary<string, int> objectMaterialsIdMap = new();
-    if (materialProxies != null)
-    {
-      objectMaterialsIdMap = BakeRenderMaterials(
-        materialProxies,
-        baseLayerName,
-        onOperationProgressed,
-        conversionResults
-      );
-    }
+      if (materialProxies != null)
+      {
+        using var _ = SpeckleActivityFactory.Start("Render Materials");
+        objectMaterialsIdMap = BakeRenderMaterials(
+          materialProxies,
+          baseLayerName,
+          onOperationProgressed,
+          conversionResults
+        );
+      }
 
     // Stage 1: Convert atomic objects
     // Note: this can become encapsulated later in an "atomic object baker" of sorts, if needed.
@@ -256,7 +257,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     List<ReceiveConversionResult> conversionResults
   )
   {
-    using var _ = SpeckleActivityFactory.Start("BakeRenderMaterials");
+    using var _ = SpeckleActivityFactory.Start();
     // keeps track of the material id to created index in the materials table
     Dictionary<string, int> materialsIdMap = new();
 
@@ -300,6 +301,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     Action<string, double?>? onOperationProgressed
   )
   {
+    using var _ = SpeckleActivityFactory.Start();
     var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = _instanceObjectsManager.BakeInstances(
       instanceComponents,
       applicationIdMap,
@@ -330,6 +332,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
   private void BakeGroups(List<GroupProxy> groupProxies, Dictionary<string, List<string>> applicationIdMap)
   {
+    using var _ = SpeckleActivityFactory.Start();
     foreach (GroupProxy groupProxy in groupProxies.OrderBy(g => g.objects.Count))
     {
       var appIds = groupProxy.objects.SelectMany(oldObjId => applicationIdMap[oldObjId]).Select(id => new Guid(id));
