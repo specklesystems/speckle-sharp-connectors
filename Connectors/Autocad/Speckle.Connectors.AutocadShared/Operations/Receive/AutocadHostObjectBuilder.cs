@@ -105,6 +105,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       List<RenderMaterialProxy>? renderMaterials = (rootObject["renderMaterialProxies"] as List<object>)
         ?.Cast<RenderMaterialProxy>()
         .ToList();
+
       if (renderMaterials != null)
       {
         List<ReceiveConversionResult> materialResults = _materialManager.ParseAndBakeRenderMaterials(

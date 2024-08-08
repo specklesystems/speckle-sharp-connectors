@@ -71,6 +71,9 @@ public class RhinoMaterialManager
     return speckleRenderMaterial;
   }
 
+  /// <summary>
+  /// A map keeping track of ids, <b>either layer id or object id</b>, and their material index. It's generated from the material proxy list as we bake materials; <see cref="BakeMaterials"/> must be called in advance for this to be populated with the correct data.
+  /// </summary>
   public Dictionary<string, int> ObectIdAndMaterialIndexMap { get; } = new();
 
   public void BakeMaterials(List<RenderMaterialProxy> speckleRenderMaterials, string baseLayerName)

@@ -193,67 +193,68 @@ public class AutocadMaterialManager
   {
     List<ReceiveConversionResult> results = new();
     Dictionary<string, string> objectRenderMaterialsIdMap = new();
+
     using var transaction = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
-    if (transaction.GetObject(Doc.Database.MaterialDictionaryId, OpenMode.ForWrite) is DBDictionary materialDict)
-    {
-      var count = 0;
-      foreach (RenderMaterialProxy materialProxy in materialProxies)
-      {
-        onOperationProgressed?.Invoke("Converting render materials", (double)++count / materialProxies.Count);
+    var materialDict = transaction.GetObject(Doc.Database.MaterialDictionaryId, OpenMode.ForWrite) as DBDictionary;
 
-        // bake render material
-        RenderMaterial renderMaterial = materialProxy.value;
-        string renderMaterialId = renderMaterial.applicationId ?? renderMaterial.id;
-        ObjectId materialId = ObjectId.Null;
-        if (!ObjectMaterialsIdMap.TryGetValue(renderMaterialId, out materialId))
-        {
-          (materialId, ReceiveConversionResult result) = BakeMaterial(
-            renderMaterial,
-            baseLayerPrefix,
-            materialDict,
-            transaction
-          );
-
-          results.Add(result);
-        }
-        else
-        {
-          // POC: this shouldn't happen, but will if there are render materials with the same applicationID
-          results.Add(
-            new(
-              Status.ERROR,
-              renderMaterial,
-              exception: new ArgumentException("Another render material of the same id has already been created.")
-            )
-          );
-        }
-
-        if (materialId == ObjectId.Null)
-        {
-          results.Add(
-            new(
-              Status.ERROR,
-              renderMaterial,
-              exception: new InvalidOperationException("Render material failed to be added to document.")
-            )
-          );
-
-          continue;
-        }
-
-        // parse render material object ids
-        foreach (string objectId in materialProxy.objects)
-        {
-          if (!ObjectMaterialsIdMap.ContainsKey(objectId))
-          {
-            ObjectMaterialsIdMap.Add(objectId, materialId);
-          }
-        }
-      }
-    }
-    else
+    if (materialDict == null)
     {
       // POC: we should report failed conversion here if material dict is not accessible, but it is not linked to a Base source
+      transaction.Commit();
+      return results;
+    }
+
+    var count = 0;
+    foreach (RenderMaterialProxy materialProxy in materialProxies)
+    {
+      onOperationProgressed?.Invoke("Converting render materials", (double)++count / materialProxies.Count);
+
+      // bake render material
+      RenderMaterial renderMaterial = materialProxy.value;
+      string renderMaterialId = renderMaterial.applicationId ?? renderMaterial.id;
+      ObjectId materialId = ObjectId.Null;
+
+      if (!ObjectMaterialsIdMap.TryGetValue(renderMaterialId, out materialId))
+      {
+        (materialId, ReceiveConversionResult result) = BakeMaterial(
+          renderMaterial,
+          baseLayerPrefix,
+          materialDict,
+          transaction
+        );
+
+        results.Add(result);
+      }
+      else
+      {
+        // POC: this shouldn't happen, but will if there are render materials with the same applicationID
+        results.Add(
+          new(
+            Status.ERROR,
+            renderMaterial,
+            exception: new ArgumentException("Another render material of the same id has already been created.")
+          )
+        );
+      }
+
+      if (materialId == ObjectId.Null)
+      {
+        results.Add(
+          new(
+            Status.ERROR,
+            renderMaterial,
+            exception: new InvalidOperationException("Render material failed to be added to document.")
+          )
+        );
+
+        continue;
+      }
+
+      // parse render material object ids
+      foreach (string objectId in materialProxy.objects)
+      {
+        ObjectMaterialsIdMap[objectId] = materialId;
+      }
     }
 
     transaction.Commit();
