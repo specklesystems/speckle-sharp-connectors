@@ -148,7 +148,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
       var handleIdString = obj.Handle.Value.ToString();
       definitionProxy.objects.Add(handleIdString);
 
-      if (obj is BlockReference blockReference && !blockReference.IsDynamicBlock)
+      if (obj is BlockReference blockReference)
       {
         UnpackInstance(blockReference, depth + 1, transaction);
       }
