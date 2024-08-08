@@ -10,6 +10,7 @@ using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
+using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 
 namespace Speckle.Connectors.Autocad.HostApp;
 
@@ -21,6 +22,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
 {
   private readonly AutocadLayerManager _autocadLayerManager;
   private readonly AutocadColorManager _autocadColorManager;
+  private readonly AutocadMaterialManager _autocadMaterialManager;
   private readonly AutocadContext _autocadContext;
 
   private readonly IInstanceObjectsManager<AutocadRootObject, List<Entity>> _instanceObjectsManager;
@@ -28,12 +30,14 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
   public AutocadInstanceObjectManager(
     AutocadLayerManager autocadLayerManager,
     AutocadColorManager autocadColorManager,
+    AutocadMaterialManager autocadMaterialManager,
     AutocadContext autocadContext,
     IInstanceObjectsManager<AutocadRootObject, List<Entity>> instanceObjectsManager
   )
   {
     _autocadLayerManager = autocadLayerManager;
     _autocadColorManager = autocadColorManager;
+    _autocadMaterialManager = autocadMaterialManager;
     _autocadContext = autocadContext;
     _instanceObjectsManager = instanceObjectsManager;
   }
@@ -148,6 +152,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
       {
         UnpackInstance(blockReference, depth + 1, transaction);
       }
+
       _instanceObjectsManager.AddAtomicObject(handleIdString, new((Entity)obj, handleIdString));
     }
 
@@ -224,24 +229,38 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
           );
 
           // POC: collectionPath for instances should be an array of size 1, because we are flattening collections on traversal
-          string layerName = _autocadLayerManager.CreateLayerForReceive(
-            collectionPath,
-            baseLayerName,
-            _autocadColorManager.ObjectColorsIdMap
-          );
+          string layerName = _autocadLayerManager.CreateLayerForReceive(collectionPath, baseLayerName);
 
-          var blockRef = new BlockReference(insertionPoint, definitionId)
+          // get color and material if any
+          string instanceId = instanceProxy.applicationId ?? instanceProxy.id;
+          AutocadColor? objColor = _autocadColorManager.ObjectColorsIdMap.TryGetValue(
+            instanceId,
+            out AutocadColor? color
+          )
+            ? color
+            : null;
+          ObjectId objMaterial = _autocadMaterialManager.ObjectMaterialsIdMap.TryGetValue(
+            instanceId,
+            out ObjectId matId
+          )
+            ? matId
+            : ObjectId.Null;
+
+          BlockReference blockRef = new(insertionPoint, definitionId) { BlockTransform = matrix3d, Layer = layerName, };
+
+          if (objColor is not null)
           {
-            BlockTransform = matrix3d,
-            Layer = layerName,
-          };
+            blockRef.Color = objColor;
+          }
+
+          if (objMaterial != ObjectId.Null)
+          {
+            blockRef.MaterialId = objMaterial;
+          }
 
           modelSpaceBlockTableRecord.AppendEntity(blockRef);
 
-          if (instanceProxy.applicationId != null)
-          {
-            applicationIdMap[instanceProxy.applicationId] = new List<Entity> { blockRef };
-          }
+          applicationIdMap[instanceId] = new List<Entity> { blockRef };
 
           transaction.AddNewlyCreatedDBObject(blockRef, true);
           conversionResults.Add(

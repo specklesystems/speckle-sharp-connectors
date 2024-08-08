@@ -2,10 +2,10 @@ using Rhino;
 using Rhino.DocObjects;
 using Rhino.Render;
 using Speckle.Connectors.Utils.Conversion;
+using Speckle.Converters.Common;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
-using BakeResult = Speckle.Connectors.Utils.RenderMaterials.BakeResult;
 using Material = Rhino.DocObjects.Material;
 using PhysicallyBasedMaterial = Rhino.DocObjects.PhysicallyBasedMaterial;
 using RenderMaterial = Rhino.Render.RenderMaterial;
@@ -18,6 +18,13 @@ namespace Speckle.Connectors.Rhino.HostApp;
 /// </summary>
 public class RhinoMaterialManager
 {
+  private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
+
+  public RhinoMaterialManager(IConversionContextStack<RhinoDoc, UnitSystem> contextStack)
+  {
+    _contextStack = contextStack;
+  }
+
   // converts a rhino material to a rhino render material
   private RenderMaterial ConvertMaterialToRenderMaterial(Material material)
   {
@@ -64,26 +71,23 @@ public class RhinoMaterialManager
     return speckleRenderMaterial;
   }
 
-  public BakeResult BakeMaterials(
-    List<SpeckleRenderMaterial> speckleRenderMaterials,
-    string baseLayerName,
-    Action<string, double?>? onOperationProgressed
-  )
+  /// <summary>
+  /// A map keeping track of ids, <b>either layer id or object id</b>, and their material index. It's generated from the material proxy list as we bake materials; <see cref="BakeMaterials"/> must be called in advance for this to be populated with the correct data.
+  /// </summary>
+  public Dictionary<string, int> ObjectIdAndMaterialIndexMap { get; } = new();
+
+  public void BakeMaterials(List<RenderMaterialProxy> speckleRenderMaterialProxies, string baseLayerName)
   {
-    var doc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
+    var doc = _contextStack.Current.Document; // POC: too much right now to interface around
+    List<ReceiveConversionResult> conversionResults = new(); // TODO: return this guy
 
-    // Keeps track of the incoming SpeckleRenderMaterial application Id and the index of the corresponding Rhino Material in the doc material table
-    Dictionary<string, int> materialIdAndIndexMap = new();
-
-    int count = 0;
-    List<ReceiveConversionResult> conversionResults = new();
-    foreach (SpeckleRenderMaterial speckleRenderMaterial in speckleRenderMaterials)
+    foreach (var proxy in speckleRenderMaterialProxies)
     {
-      onOperationProgressed?.Invoke("Converting render materials", (double)++count / speckleRenderMaterials.Count);
+      var speckleRenderMaterial = proxy.value;
+
       try
       {
         // POC: Currently we're relying on the render material name for identification if it's coming from speckle and from which model; could we do something else?
-        // POC: we should assume render materials all have application ids?
         string materialId = speckleRenderMaterial.applicationId ?? speckleRenderMaterial.id;
         string matName = $"{speckleRenderMaterial.name}-({materialId})-{baseLayerName}";
         Color diffuse = Color.FromArgb(speckleRenderMaterial.diffuse);
@@ -117,7 +121,11 @@ public class RhinoMaterialManager
           throw new ConversionException("Failed to add a material to the document.");
         }
 
-        materialIdAndIndexMap[materialId] = matIndex;
+        // Create the object <> material index map
+        foreach (var objectId in proxy.objects)
+        {
+          ObjectIdAndMaterialIndexMap[objectId] = matIndex;
+        }
 
         conversionResults.Add(new(Status.SUCCESS, speckleRenderMaterial, matName, "Material"));
       }
@@ -126,8 +134,6 @@ public class RhinoMaterialManager
         conversionResults.Add(new(Status.ERROR, speckleRenderMaterial, null, null, ex));
       }
     }
-
-    return new(materialIdAndIndexMap, conversionResults);
   }
 
   /// <summary>
