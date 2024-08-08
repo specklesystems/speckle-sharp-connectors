@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Rhino;
 using Rhino.Commands;
 using Rhino.DocObjects;
@@ -34,9 +35,12 @@ public sealed class RhinoSendBinding : ISendBinding
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   /// <summary>
-  /// Used internally to aggregate the changed objects' id.
+  /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
+  /// [CNX-202: Unhandled Exception Occurred when receiving in Rhino](https://linear.app/speckle/issue/CNX-202/unhandled-exception-occurred-when-receiving-in-rhino)
+  /// As to why a concurrent dictionary, it's because it's the cheapest/easiest way to do so.
+  /// https://stackoverflow.com/questions/18922985/concurrent-hashsett-in-net-framework
   /// </summary>
-  private HashSet<string> ChangedObjectIds { get; set; } = new();
+  private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
 
   public RhinoSendBinding(
     DocumentModelStore store,
@@ -76,7 +80,7 @@ public sealed class RhinoSendBinding : ISendBinding
       if (e.CommandEnglishName == "BlockEdit")
       {
         var selectedObject = RhinoDoc.ActiveDoc.Objects.GetSelectedObjects(false, false).First();
-        ChangedObjectIds.Add(selectedObject.Id.ToString());
+        ChangedObjectIds[selectedObject.Id.ToString()] = 1;
       }
     };
 
@@ -89,7 +93,7 @@ public sealed class RhinoSendBinding : ISendBinding
           return;
         }
 
-        ChangedObjectIds.Add(e.ObjectId.ToString());
+        ChangedObjectIds[e.ObjectId.ToString()] = 1;
         _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
       });
 
@@ -102,7 +106,7 @@ public sealed class RhinoSendBinding : ISendBinding
           return;
         }
 
-        ChangedObjectIds.Add(e.ObjectId.ToString());
+        ChangedObjectIds[e.ObjectId.ToString()] = 1;
         _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
       });
 
@@ -115,8 +119,8 @@ public sealed class RhinoSendBinding : ISendBinding
           return;
         }
 
-        ChangedObjectIds.Add(e.NewRhinoObject.Id.ToString());
-        ChangedObjectIds.Add(e.OldRhinoObject.Id.ToString());
+        ChangedObjectIds[e.NewRhinoObject.Id.ToString()] = 1;
+        ChangedObjectIds[e.OldRhinoObject.Id.ToString()] = 1;
         _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
       });
   }
@@ -188,7 +192,7 @@ public sealed class RhinoSendBinding : ISendBinding
   private void RunExpirationChecks()
   {
     var senders = _store.GetSenders();
-    string[] objectIdsList = ChangedObjectIds.ToArray(); // NOTE: could not copy to array happens here
+    string[] objectIdsList = ChangedObjectIds.Keys.ToArray(); // NOTE: could not copy to array happens here
     List<string> expiredSenderIds = new();
 
     _sendConversionCache.EvictObjects(objectIdsList);
@@ -204,6 +208,6 @@ public sealed class RhinoSendBinding : ISendBinding
     }
 
     Commands.SetModelsExpired(expiredSenderIds);
-    ChangedObjectIds = new HashSet<string>();
+    ChangedObjectIds = new();
   }
 }
