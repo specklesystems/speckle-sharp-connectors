@@ -16,7 +16,7 @@
     <ProjectReference Include="..\..\..\speckle-sharp-sdk\src\Speckle.Objects\Speckle.Objects.csproj" />
   </ItemGroup> 
   <ItemGroup Condition="'$(Configuration)' != 'Local'"> 
-    <PackageReference Include="Speckle.Core" />
+    <PackageReference Include="Speckle.Sdk" />
     <PackageReference Include="Speckle.Objects" />
   </ItemGroup> 
 </Project>
