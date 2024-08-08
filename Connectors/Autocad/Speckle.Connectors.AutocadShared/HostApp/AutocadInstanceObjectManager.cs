@@ -10,6 +10,7 @@ using Speckle.Core.Models;
 using Speckle.Core.Models.Collections;
 using Speckle.Core.Models.Instances;
 using Speckle.DoubleNumerics;
+using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 
 namespace Speckle.Connectors.Autocad.HostApp;
 
@@ -151,6 +152,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
       {
         UnpackInstance(blockReference, depth + 1, transaction);
       }
+
       _instanceObjectsManager.AddAtomicObject(handleIdString, new((Entity)obj, handleIdString));
     }
 
@@ -234,18 +236,36 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
             _autocadMaterialManager.ObjectMaterialsIdMap
           );
 
-          var blockRef = new BlockReference(insertionPoint, definitionId)
+          // get color and material if any
+          string instanceId = instanceProxy.applicationId ?? instanceProxy.id;
+          AutocadColor? objColor = _autocadColorManager.ObjectColorsIdMap.TryGetValue(
+            instanceId,
+            out AutocadColor? color
+          )
+            ? color
+            : null;
+          ObjectId objMaterial = _autocadMaterialManager.ObjectMaterialsIdMap.TryGetValue(
+            instanceId,
+            out ObjectId matId
+          )
+            ? matId
+            : ObjectId.Null;
+
+          BlockReference blockRef = new(insertionPoint, definitionId) { BlockTransform = matrix3d, Layer = layerName, };
+
+          if (objColor is not null)
           {
-            BlockTransform = matrix3d,
-            Layer = layerName,
-          };
+            blockRef.Color = objColor;
+          }
+
+          if (objMaterial != ObjectId.Null)
+          {
+            blockRef.MaterialId = objMaterial;
+          }
 
           modelSpaceBlockTableRecord.AppendEntity(blockRef);
 
-          if (instanceProxy.applicationId != null)
-          {
-            applicationIdMap[instanceProxy.applicationId] = new List<Entity> { blockRef };
-          }
+          applicationIdMap[instanceId] = new List<Entity> { blockRef };
 
           transaction.AddNewlyCreatedDBObject(blockRef, true);
           conversionResults.Add(

@@ -78,10 +78,6 @@ public class AutocadLayerManager
       for (int j = layerPath.Length - 1; j >= 0; j--)
       {
         string layerId = layerPath[j].applicationId ?? layerPath[j].id;
-        if (foundColor && foundMaterial)
-        {
-          break;
-        }
 
         if (!foundColor)
         {
@@ -91,6 +87,11 @@ public class AutocadLayerManager
         if (!foundMaterial)
         {
           foundMaterial = objectMaterialsIdMap.TryGetValue(layerId, out layerMaterial);
+        }
+
+        if (foundColor && foundMaterial)
+        {
+          break;
         }
       }
     }
