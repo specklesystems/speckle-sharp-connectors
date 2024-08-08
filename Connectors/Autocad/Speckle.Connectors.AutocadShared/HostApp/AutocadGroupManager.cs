@@ -7,7 +7,7 @@ using Speckle.Core.Models.Proxies;
 namespace Speckle.Connectors.Autocad.HostApp;
 
 /// <summary>
-/// This resource expects to be injected "fresh" in each send/receive operation (scoped lifetime).
+/// This resource expects to be injected "fresh" in each send/receive operation (scoped lifetime). Extracts group information from a set of objects into proxies in send operations; also creates groups from a set of proxies in receive operations.
 /// </summary>
 public class AutocadGroupManager
 {
@@ -52,7 +52,13 @@ public class AutocadGroupManager
     return groupProxies.Values.ToList();
   }
 
-  public List<ReceiveConversionResult> ParseGroups(
+  /// <summary>
+  /// Creates groups in the host app from a set of group proxies. Can be called after the bake operation of all atomic objects (including instances) is complete.
+  /// </summary>
+  /// <param name="groupProxies"></param>
+  /// <param name="applicationIdMap"></param>
+  /// <returns></returns>
+  public List<ReceiveConversionResult> CreateGroups(
     IEnumerable<GroupProxy> groupProxies,
     Dictionary<string, List<Entity>> applicationIdMap
   )

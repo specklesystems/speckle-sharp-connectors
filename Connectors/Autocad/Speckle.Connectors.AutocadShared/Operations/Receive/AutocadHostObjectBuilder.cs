@@ -184,7 +184,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       // Stage 3: Create group
       if (groupProxies != null)
       {
-        List<ReceiveConversionResult> groupResults = _groupManager.ParseGroups(groupProxies, applicationIdMap);
+        List<ReceiveConversionResult> groupResults = _groupManager.CreateGroups(groupProxies, applicationIdMap);
         results.AddRange(groupResults);
       }
 
