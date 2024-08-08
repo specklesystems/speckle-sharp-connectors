@@ -233,9 +233,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     foreach (GroupProxy groupProxy in groupProxies.OrderBy(g => g.objects.Count))
     {
       var appIds = groupProxy.objects.SelectMany(oldObjId => applicationIdMap[oldObjId]).Select(id => new Guid(id));
-      var index = RhinoDoc.ActiveDoc.Groups.Add(appIds);
-      var addedGroup = RhinoDoc.ActiveDoc.Groups.FindIndex(index);
-      addedGroup.Name = groupProxy.name;
+      var groupName = groupProxy.name ?? "No Name Group";
+      RhinoDoc.ActiveDoc.Groups.Add(groupName, appIds);
     }
   }
 
