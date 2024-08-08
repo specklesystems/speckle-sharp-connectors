@@ -1,12 +1,12 @@
 using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.GraphicsInterface;
-using Objects.Other;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Utils.Conversion;
-using Speckle.Core.Logging;
+using Speckle.Objects.Other;
+using Speckle.Sdk;
 using Material = Autodesk.AutoCAD.DatabaseServices.Material;
-using RenderMaterial = Objects.Other.RenderMaterial;
+using RenderMaterial = Speckle.Objects.Other.RenderMaterial;
 
 namespace Speckle.Connectors.Autocad.HostApp;
 
