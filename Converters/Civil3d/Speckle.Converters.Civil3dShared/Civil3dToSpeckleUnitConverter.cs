@@ -1,6 +1,6 @@
 using Speckle.Converters.Common;
-using Speckle.Core.Kits;
-using Speckle.Core.Logging; // POC: boy do I think this is the wrong place for SpeckleException!
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.Civil3d;
 

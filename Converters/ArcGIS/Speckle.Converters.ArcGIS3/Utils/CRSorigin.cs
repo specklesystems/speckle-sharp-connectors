@@ -1,6 +1,6 @@
 using ArcGIS.Core.Geometry;
-using Objects.BuiltElements.Revit;
-using Speckle.Core.Models;
+using Speckle.Objects.BuiltElements.Revit;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.Utils;
 

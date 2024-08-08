@@ -1,9 +1,9 @@
 using Speckle.Connectors.Utils.Builders;
-using Speckle.Core.Api;
-using Speckle.Core.Credentials;
-using Speckle.Core.Models;
-using Speckle.Core.Transports;
-using Speckle.Logging;
+using Speckle.Sdk.Api;
+using Speckle.Sdk.Credentials;
+using Speckle.Sdk.Logging;
+using Speckle.Sdk.Models;
+using Speckle.Sdk.Transports;
 
 namespace Speckle.Connectors.Utils.Operations;
 
@@ -31,7 +31,7 @@ public sealed class ReceiveOperation
   )
   {
     using var execute = SpeckleActivityFactory.Start();
-    Speckle.Core.Api.GraphQL.Models.Version? version;
+    Speckle.Sdk.Api.GraphQL.Models.Version? version;
     Base? commitObject;
     HostObjectBuilderResult? res;
     // 2 - Check account exist
@@ -51,7 +51,7 @@ public sealed class ReceiveOperation
     using (var _ = SpeckleActivityFactory.Start("Receive objects"))
     {
       commitObject = await Speckle
-        .Core.Api.Operations.Receive(
+        .Sdk.Api.Operations.Receive(
           version.referencedObject,
           transport,
           onProgressAction: dict =>

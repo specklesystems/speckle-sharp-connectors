@@ -1,6 +1,6 @@
-﻿using Objects;
-using Objects.Geometry;
-using Speckle.Core.Models;
+﻿using Speckle.Objects;
+using Speckle.Objects.Geometry;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Common;
 

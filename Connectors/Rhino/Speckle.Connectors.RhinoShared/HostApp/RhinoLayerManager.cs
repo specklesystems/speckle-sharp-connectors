@@ -1,9 +1,9 @@
 using System.Diagnostics.Contracts;
 using Rhino;
-using Speckle.Core.Models.Collections;
-using Speckle.Core.Models.GraphTraversal;
+using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.GraphTraversal;
 using Layer = Rhino.DocObjects.Layer;
-using SpeckleLayer = Speckle.Core.Models.Collections.Layer;
+using SpeckleLayer = Speckle.Sdk.Models.Collections.Layer;
 
 namespace Speckle.Connectors.Rhino.HostApp;
 

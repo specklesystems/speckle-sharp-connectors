@@ -1,3 +1,3 @@
 global using AAEC = Autodesk.Aec;
 global using CDB = Autodesk.Civil.DatabaseServices;
-global using SOBE = Objects.BuiltElements;
+global using SOBE = Speckle.Objects.BuiltElements;
