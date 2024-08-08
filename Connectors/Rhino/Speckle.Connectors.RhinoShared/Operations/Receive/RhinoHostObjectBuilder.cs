@@ -69,10 +69,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       IEnumerable<TraversalContext> objectsToConvert;
       using (var _ = SpeckleActivityFactory.Start("Traverse"))
       {
-        objectsToConvert = _traverseFunction
-          .Traverse(rootObject)
-          //.TraverseWithProgress(rootObject, onOperationProgressed, cancellationToken)
-          .Where(obj => obj.Current is not Collection);
+        objectsToConvert = _traverseFunction.Traverse(rootObject).Where(obj => obj.Current is not Collection);
       }
 
       var instanceDefinitionProxies = (rootObject["instanceDefinitionProxies"] as List<object>)
@@ -149,28 +146,18 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       }
     }
 
+    // Stage 0: Bake materials, as they are used later down the line by layers and objects
     List<ReceiveConversionResult> conversionResults = new();
-
-    // Dictionary<string, int> objectMaterialsIdMap = new();
-    // if (materialProxies != null)
-    // {
-    //   objectMaterialsIdMap = BakeRenderMaterials(
-    //     materialProxies,
-    //     baseLayerName,
-    //     onOperationProgressed,
-    //     conversionResults
-    //   );
-    // }
-
     if (materialProxies != null)
     {
       _materialManager.BakeMaterials(materialProxies, baseLayerName);
     }
 
     // Stage 1: Convert atomic objects
-    // Note: this can become encapsulated later in an "atomic object baker" of sorts, if needed.
     List<string> bakedObjectIds = new();
-    Dictionary<string, List<string>> applicationIdMap = new(); // used in converting blocks in stage 2. keeps track of original app id => resulting new app ids post baking
+    // This map is used in converting blocks in stage 2. keeps track of original app id => resulting new app ids post baking
+    Dictionary<string, List<string>> applicationIdMap = new();
+
     int count = 0;
     using (var _ = SpeckleActivityFactory.Start("Converting objects"))
     {
@@ -179,35 +166,28 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
         onOperationProgressed?.Invoke("Converting objects", (double)++count / atomicObjects.Count);
         try
         {
+          // Convert and bake an object:
+          // 1: create layer
           int layerIndex = _layerManager.GetAndCreateLayerFromPath(path, baseLayerName, out bool _);
-          // if (isNewLayer)
-          // {
-          //   string collectionId = path[^1].applicationId ?? path[^1].id;
-          //   if (objectMaterialsIdMap.TryGetValue(collectionId, out int lIndex))
-          //   {
-          //     doc.Layers[layerIndex].RenderMaterialIndex = lIndex;
-          //   }
-          //
-          //   if (_colorManager.ObjectColorsIdMap.TryGetValue(collectionId, out Color layerColor))
-          //   {
-          //     doc.Layers[layerIndex].Color = layerColor;
-          //   }
-          // }
 
+          // 2: convert
           var result = _converter.Convert(obj);
+
           var objectId = obj.applicationId ?? obj.id; // POC: assuming objects have app ids for this to work?
 
+          // 3: colors and materials
           var matIndex = _materialManager.ObectIdAndMaterialIndexMap.TryGetValue(objectId, out int mIndex) ? mIndex : 0;
           Color? objColor = _colorManager.ObjectColorsIdMap.TryGetValue(objectId, out Color color) ? color : null;
 
+          // 4: actually bake
           var conversionIds = HandleConversionResult(result, obj, layerIndex, matIndex, objColor).ToList();
-
           foreach (var r in conversionIds)
           {
             conversionResults.Add(new(Status.SUCCESS, obj, r, result.GetType().ToString()));
             bakedObjectIds.Add(r);
           }
 
+          // 5: populate app id map
           applicationIdMap[objectId] = conversionIds;
         }
         catch (Exception ex) when (!ex.IsFatal())
@@ -220,7 +200,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     // Stage 2: Convert instances
     using (var _ = SpeckleActivityFactory.Start("Converting instances"))
     {
-      var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = BakeInstances(
+      var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = _instanceObjectsManager.BakeInstances(
         instanceComponents,
         applicationIdMap,
         baseLayerName,
@@ -244,86 +224,6 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
     // Stage 4: Return
     return new(bakedObjectIds, conversionResults);
-  }
-
-  // [SuppressMessage("Performance", "CA1864:Prefer the \'IDictionary.TryAdd(TKey, TValue)\' method")]
-  // private Dictionary<string, int> BakeRenderMaterials(
-  //   List<RenderMaterialProxy> materialProxies,
-  //   string baseLayerName,
-  //   Action<string, double?>? onOperationProgressed,
-  //   List<ReceiveConversionResult> conversionResults
-  // )
-  // {
-  //   using var _ = SpeckleActivityFactory.Start("BakeRenderMaterials");
-  //   // keeps track of the material id to created index in the materials table
-  //   Dictionary<string, int> materialsIdMap = new();
-  //
-  //   (materialsIdMap, List<ReceiveConversionResult> materialsConversionResults) = _materialManager.BakeMaterials(
-  //     materialProxies.Select(o => o.value).ToList(),
-  //     baseLayerName,
-  //     onOperationProgressed
-  //   );
-  //
-  //   conversionResults.AddRange(materialsConversionResults); // add render material conversion results to our list
-  //
-  //   // keeps track of the object id to material index
-  //   Dictionary<string, int> objectMaterialsIdMap = new();
-  //   foreach (RenderMaterialProxy materialProxy in materialProxies)
-  //   {
-  //     string materialId = materialProxy.value.applicationId ?? materialProxy.value.id;
-  //     foreach (string objectId in materialProxy.objects)
-  //     {
-  //       if (materialsIdMap.TryGetValue(materialId, out int materialIndex))
-  //       {
-  //         if (!objectMaterialsIdMap.ContainsKey(objectId))
-  //         {
-  //           objectMaterialsIdMap.Add(objectId, materialIndex);
-  //         }
-  //       }
-  //     }
-  //   }
-  //
-  //   return objectMaterialsIdMap;
-  // }
-
-  private (
-    List<string> createdInstanceIds,
-    List<string> consumedObjectIds,
-    List<ReceiveConversionResult> instanceConversionResults
-  ) BakeInstances(
-    List<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
-    Dictionary<string, List<string>> applicationIdMap,
-    // Dictionary<string, int> materialIdMap,
-    string baseLayerName,
-    Action<string, double?>? onOperationProgressed
-  )
-  {
-    var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = _instanceObjectsManager.BakeInstances(
-      instanceComponents,
-      applicationIdMap,
-      baseLayerName,
-      onOperationProgressed
-    );
-
-    // add materials to created instances
-    // foreach (IInstanceComponent instanceComponent in instanceComponents.Select(o => o.obj).ToList())
-    // {
-    //   if (instanceComponent is InstanceProxy instanceProxy)
-    //   {
-    //     string instanceProxyId = instanceProxy.applicationId ?? instanceProxy.id;
-    //     if (createdInstanceIds.Contains(instanceProxyId))
-    //     {
-    //       int instanceMaterialIndex = materialIdMap.TryGetValue(instanceProxyId, out int iIndex) ? iIndex : 0;
-    //       if (instanceMaterialIndex != 0)
-    //       {
-    //         RhinoObject createdInstance = RhinoDoc.ActiveDoc.Objects.FindId(new Guid(instanceProxyId));
-    //         createdInstance.Attributes.MaterialIndex = instanceMaterialIndex;
-    //         createdInstance.Attributes.MaterialSource = ObjectMaterialSource.MaterialFromObject;
-    //       }
-    //     }
-    //   }
-    // }
-    return (createdInstanceIds, consumedObjectIds, instanceConversionResults);
   }
 
   private void BakeGroups(List<GroupProxy> groupProxies, Dictionary<string, List<string>> applicationIdMap)
