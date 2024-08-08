@@ -5,12 +5,12 @@ using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Instances;
 using Speckle.DoubleNumerics;
-using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
+using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 
 namespace Speckle.Connectors.Autocad.HostApp;
 
