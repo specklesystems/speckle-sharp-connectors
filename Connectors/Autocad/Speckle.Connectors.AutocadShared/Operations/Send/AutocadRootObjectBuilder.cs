@@ -71,8 +71,8 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
       Document doc = Application.DocumentManager.CurrentDocument;
       using Transaction tr = doc.Database.TransactionManager.StartTransaction();
 
-      // Cached dictionary to create Collection for autocad entity layers. We first look if collection exists. If so use it otherwise create new one for that layer.
-      List<LayerTableRecord> layers = new();
+      // Keeps track of autocad layers used, so we can pass them on later to the material and color unpacker.
+      List<LayerTableRecord> usedAcadLayers = new();
       int count = 0;
 
       var (atomicObjects, instanceProxies, instanceDefinitionProxies) = _instanceObjectsManager.UnpackSelection(
@@ -107,7 +107,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
           Layer layer = _layerManager.GetOrCreateSpeckleLayer(entity, tr, out LayerTableRecord? autocadLayer);
           if (autocadLayer is not null)
           {
-            layers.Add(autocadLayer);
+            usedAcadLayers.Add(autocadLayer);
             modelWithLayers.elements.Add(layer);
           }
 
@@ -145,11 +145,11 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
       modelWithLayers["groupProxies"] = groupProxies;
 
       // set materials
-      List<RenderMaterialProxy> materialProxies = _materialManager.UnpackMaterials(atomicObjects, layers);
+      List<RenderMaterialProxy> materialProxies = _materialManager.UnpackMaterials(atomicObjects, usedAcadLayers);
       modelWithLayers["renderMaterialProxies"] = materialProxies;
 
       // set colors
-      List<ColorProxy> colorProxies = _colorManager.UnpackColors(atomicObjects, layers);
+      List<ColorProxy> colorProxies = _colorManager.UnpackColors(atomicObjects, usedAcadLayers);
       modelWithLayers["colorProxies"] = colorProxies;
 
       return new RootObjectBuilderResult(modelWithLayers, results);

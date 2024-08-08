@@ -48,13 +48,22 @@ public class AutocadMaterialManager
     return new(renderMaterial, new()) { applicationId = id };
   }
 
-  public List<RenderMaterialProxy> UnpackMaterials(List<AutocadRootObject> rootObjects, List<LayerTableRecord> layers)
+  /// <summary>
+  /// Iterates through a given set of autocad objects and collects their materials. Note: expects objects to be "atomic", and extracted out of their instances already.
+  /// </summary>
+  /// <param name="unpackedAutocadObjects"></param>
+  /// <param name="layers"></param>
+  /// <returns></returns>
+  public List<RenderMaterialProxy> UnpackMaterials(
+    List<AutocadRootObject> unpackedAutocadObjects,
+    List<LayerTableRecord> layers
+  )
   {
     Dictionary<string, RenderMaterialProxy> materialProxies = new();
     using var transaction = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
 
     // Stage 1: unpack materials from objects
-    foreach (AutocadRootObject rootObj in rootObjects)
+    foreach (AutocadRootObject rootObj in unpackedAutocadObjects)
     {
       Entity entity = rootObj.Root;
 

@@ -11,17 +11,10 @@ namespace Speckle.Connectors.Autocad.HostApp;
 /// </summary>
 public class AutocadColorManager
 {
-  private readonly AutocadContext _autocadContext;
-
   // POC: Will be addressed to move it into AutocadContext!
   private Document Doc => Application.DocumentManager.MdiActiveDocument;
 
   public Dictionary<string, AutocadColor> ObjectColorsIdMap { get; } = new();
-
-  public AutocadColorManager(AutocadContext autocadContext)
-  {
-    _autocadContext = autocadContext;
-  }
 
   private ColorProxy ConvertColorToColorProxy(AutocadColor color, string id)
   {
@@ -40,12 +33,21 @@ public class AutocadColorManager
     return colorProxy;
   }
 
-  public List<ColorProxy> UnpackColors(List<AutocadRootObject> rootObjects, List<LayerTableRecord> layers)
+  /// <summary>
+  /// Iterates through a given set of autocad objects and collects their colors. Note: expects objects to be "atomic", and extracted out of their instances already.
+  /// </summary>
+  /// <param name="unpackedAutocadRootObjects"></param>
+  /// <param name="layers"></param>
+  /// <returns></returns>
+  public List<ColorProxy> UnpackColors(
+    List<AutocadRootObject> unpackedAutocadRootObjects,
+    List<LayerTableRecord> layers
+  )
   {
     Dictionary<string, ColorProxy> colorProxies = new();
 
     // Stage 1: unpack colors from objects
-    foreach (AutocadRootObject rootObj in rootObjects)
+    foreach (AutocadRootObject rootObj in unpackedAutocadRootObjects)
     {
       Entity entity = rootObj.Root;
 
