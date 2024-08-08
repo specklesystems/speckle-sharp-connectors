@@ -8,6 +8,7 @@ namespace Speckle.Connectors.Rhino.HostApp;
 
 /// <summary>
 /// Unpacks the group lists for each object and sub-objects.
+/// POC: Split me into group unpacker and group baker classes please!
 /// It should be in scoped lifetime.
 /// </summary>
 public class RhinoGroupManager // POC: later make it more clean with RhinoGroupUnpacker Packer??? + see same POC comments in instance managers
