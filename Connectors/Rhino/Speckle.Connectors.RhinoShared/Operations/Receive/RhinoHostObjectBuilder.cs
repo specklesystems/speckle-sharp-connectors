@@ -143,6 +143,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     onOperationProgressed?.Invoke("Converting materials and colors", null);
     if (materialProxies != null)
     {
+      using var _ = SpeckleActivityFactory.Start("Render Materials");
       _materialManager.BakeMaterials(materialProxies, baseLayerName);
     }
 
@@ -228,6 +229,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
   private void BakeGroups(List<GroupProxy> groupProxies, Dictionary<string, List<string>> applicationIdMap)
   {
+    using var _ = SpeckleActivityFactory.Start();
     foreach (GroupProxy groupProxy in groupProxies.OrderBy(g => g.objects.Count))
     {
       var appIds = groupProxy.objects.SelectMany(oldObjId => applicationIdMap[oldObjId]).Select(id => new Guid(id));
