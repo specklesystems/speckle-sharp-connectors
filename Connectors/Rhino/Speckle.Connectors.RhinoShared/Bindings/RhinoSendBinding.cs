@@ -110,6 +110,23 @@ public sealed class RhinoSendBinding : ISendBinding
         _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
       });
 
+    RhinoDoc.ModifyObjectAttributes += (_, e) =>
+      _topLevelExceptionHandler.CatchUnhandled(() =>
+      {
+        // NOTE: This does not work if rhino starts and opens a blank doc;
+        if (!_store.IsDocumentInit)
+        {
+          return;
+        }
+
+        // NOTE: not sure yet we want to track every attribute changes yet. TBD
+        if (e.OldAttributes.LayerIndex != e.NewAttributes.LayerIndex)
+        {
+          ChangedObjectIds[e.RhinoObject.Id.ToString()] = 1;
+          _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        }
+      });
+
     RhinoDoc.ReplaceRhinoObject += (_, e) =>
       _topLevelExceptionHandler.CatchUnhandled(() =>
       {
