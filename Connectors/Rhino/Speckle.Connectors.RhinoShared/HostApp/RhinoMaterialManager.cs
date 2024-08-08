@@ -1,15 +1,15 @@
-using Objects.Other;
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Render;
 using Speckle.Connectors.Utils.Conversion;
-using Speckle.Core.Kits;
-using Speckle.Core.Logging;
+using Speckle.Objects.Other;
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
 using BakeResult = Speckle.Connectors.Utils.RenderMaterials.BakeResult;
 using Material = Rhino.DocObjects.Material;
 using PhysicallyBasedMaterial = Rhino.DocObjects.PhysicallyBasedMaterial;
 using RenderMaterial = Rhino.Render.RenderMaterial;
-using SpeckleRenderMaterial = Objects.Other.RenderMaterial;
+using SpeckleRenderMaterial = Speckle.Objects.Other.RenderMaterial;
 
 namespace Speckle.Connectors.Rhino.HostApp;
 

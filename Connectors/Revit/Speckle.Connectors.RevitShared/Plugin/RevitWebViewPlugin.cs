@@ -8,7 +8,7 @@ using Autodesk.Revit.UI;
 using Revit.Async;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Core.Logging;
+using Speckle.Sdk;
 
 namespace Speckle.Connectors.Revit.Plugin;
 

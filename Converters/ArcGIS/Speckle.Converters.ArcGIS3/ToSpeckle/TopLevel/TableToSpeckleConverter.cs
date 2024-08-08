@@ -1,9 +1,9 @@
 using ArcGIS.Core.Data;
 using ArcGIS.Desktop.Mapping;
-using Objects.GIS;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Models;
+using Speckle.Objects.GIS;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToSpeckle.TopLevel;
 

@@ -13,12 +13,13 @@ using Speckle.Connectors.Utils.Instances;
 using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
-using Speckle.Core.Logging;
-using Speckle.Core.Models;
-using Speckle.Core.Models.Collections;
-using Speckle.Core.Models.GraphTraversal;
-using Speckle.Core.Models.Instances;
-using RasterLayer = Objects.GIS.RasterLayer;
+using Speckle.Objects.GIS;
+using Speckle.Sdk;
+using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.GraphTraversal;
+using Speckle.Sdk.Models.Instances;
+using RasterLayer = Speckle.Objects.GIS.RasterLayer;
 
 namespace Speckle.Connectors.ArcGIS.Operations.Receive;
 

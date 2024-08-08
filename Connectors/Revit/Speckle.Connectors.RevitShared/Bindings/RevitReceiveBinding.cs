@@ -7,8 +7,8 @@ using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
-using Speckle.Core.Common;
-using Speckle.Core.Logging;
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.Bindings;
 
@@ -82,16 +82,15 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
         conversionResults.ConversionResults
       );
     }
-    catch (Exception e) when (!e.IsFatal()) // UX reasons - we will report operation exceptions as model card error.
-    {
-      Commands.SetModelError(modelCardId, e);
-    }
     catch (OperationCanceledException)
     {
       // SWALLOW -> UI handles it immediately, so we do not need to handle anything for now!
       // Idea for later -> when cancel called, create promise from UI to solve it later with this catch block.
       // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
-      return;
+    }
+    catch (Exception e) when (!e.IsFatal()) // UX reasons - we will report operation exceptions as model card error.
+    {
+      Commands.SetModelError(modelCardId, e);
     }
   }
 }

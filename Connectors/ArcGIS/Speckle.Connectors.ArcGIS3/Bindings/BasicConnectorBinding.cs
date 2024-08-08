@@ -8,8 +8,8 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Utils.Common;
-using Speckle.Core.Common;
-using Speckle.Core.Kits;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Host;
 
 namespace Speckle.Connectors.ArcGIS.Bindings;
 

@@ -1,12 +1,12 @@
 using Autodesk.Revit.DB;
-using Objects;
-using Objects.BuiltElements.Revit;
-using Objects.BuiltElements.Revit.RevitRoof;
-using Objects.Geometry;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Core.Common;
+using Speckle.Objects;
+using Speckle.Objects.BuiltElements.Revit;
+using Speckle.Objects.BuiltElements.Revit.RevitRoof;
+using Speckle.Objects.Geometry;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 

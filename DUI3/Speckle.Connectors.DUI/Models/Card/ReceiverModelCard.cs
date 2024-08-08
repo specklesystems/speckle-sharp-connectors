@@ -1,5 +1,5 @@
 using Speckle.Connectors.Utils.Operations;
-using Speckle.Core.Common;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.DUI.Models.Card;
 

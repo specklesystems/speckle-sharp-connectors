@@ -1,5 +1,5 @@
 using ArcGIS.Desktop.Mapping;
-using Speckle.Core.Models;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.Utils;
 

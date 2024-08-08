@@ -1,5 +1,5 @@
 ﻿using Speckle.Converters.Common.Objects;
-using Speckle.Core.Models;
+using Speckle.Sdk.Models;
 using RhinoObject = Rhino.DocObjects.RhinoObject;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.TopLevel;

@@ -1,7 +1,7 @@
 using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
 using Speckle.Connectors.Autocad.Operations.Send;
-using Speckle.Core.Models.Proxies;
+using Speckle.Sdk.Models.Proxies;
 using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 
 namespace Speckle.Connectors.Autocad.HostApp;

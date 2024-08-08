@@ -4,9 +4,9 @@ using Autodesk.Revit.UI;
 using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Utils;
-using Speckle.Core.Common;
-using Speckle.Core.Kits;
-using Speckle.Core.Logging;
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Host;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
@@ -66,7 +66,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
       // POC: not sure what this is doing...  could be messing up our Aliasing????
       AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<RevitExternalApplication>;
       // init DI
-      _disposableLogger = Setup.Initialize(Config.Create(HostApplications.Revit, GetVersion()));
+      _disposableLogger = Connector.Initialize(HostApplications.Revit, GetVersion());
       _container = SpeckleContainerBuilder
         .CreateInstance()
         .LoadAutofacModules(Assembly.GetExecutingAssembly(), _revitSettings.ModuleFolders.NotNull())

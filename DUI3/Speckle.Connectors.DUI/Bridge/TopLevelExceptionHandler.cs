@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Bindings;
-using Speckle.Core.Logging;
-using Speckle.Core.Models.Extensions;
 using Speckle.InterfaceGenerator;
+using Speckle.Sdk;
+using Speckle.Sdk.Models.Extensions;
 
 namespace Speckle.Connectors.DUI.Bridge;
 

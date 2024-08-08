@@ -8,8 +8,8 @@ using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.Utils.Common;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Core.Common;
-using Speckle.Core.Logging;
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.DUI.Bindings;
 

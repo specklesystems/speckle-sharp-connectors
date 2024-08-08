@@ -1,6 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Core.Common;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 

@@ -25,15 +25,15 @@ public sealed class ScalingServiceToHost
 
   public ForgeTypeId? UnitsToNative(string units)
   {
-    var u = Core.Kits.Units.GetUnitsFromString(units);
+    var u = Sdk.Common.Units.GetUnitsFromString(units);
 
     return u switch
     {
-      Core.Kits.Units.Millimeters => UnitTypeId.Millimeters,
-      Core.Kits.Units.Centimeters => UnitTypeId.Centimeters,
-      Core.Kits.Units.Meters => UnitTypeId.Meters,
-      Core.Kits.Units.Inches => UnitTypeId.Inches,
-      Core.Kits.Units.Feet => UnitTypeId.Feet,
+      Sdk.Common.Units.Millimeters => UnitTypeId.Millimeters,
+      Sdk.Common.Units.Centimeters => UnitTypeId.Centimeters,
+      Sdk.Common.Units.Meters => UnitTypeId.Meters,
+      Sdk.Common.Units.Inches => UnitTypeId.Inches,
+      Sdk.Common.Units.Feet => UnitTypeId.Feet,
       _ => null,
     };
   }

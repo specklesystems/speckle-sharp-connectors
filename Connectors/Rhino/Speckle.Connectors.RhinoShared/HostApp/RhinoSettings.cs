@@ -1,5 +1,5 @@
 ﻿using System.IO;
-using Speckle.Core.Kits;
+using Speckle.Sdk.Host;
 
 namespace Speckle.Connectors.Rhino.HostApp;
 
