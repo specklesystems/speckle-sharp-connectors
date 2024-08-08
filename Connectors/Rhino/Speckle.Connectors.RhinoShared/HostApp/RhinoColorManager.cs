@@ -65,13 +65,10 @@ public class RhinoColorManager
   /// Parse Color Proxies and stores in ObjectColorsIdMap the relationship between object ids and colors
   /// </summary>
   /// <param name="colorProxies"></param>
-  /// <param name="onOperationProgressed"></param>
-  public void ParseColors(List<ColorProxy> colorProxies, Action<string, double?>? onOperationProgressed)
+  public void ParseColors(List<ColorProxy> colorProxies)
   {
-    var count = 0;
     foreach (ColorProxy colorProxy in colorProxies)
     {
-      onOperationProgressed?.Invoke("Converting colors", (double)++count / colorProxies.Count);
       foreach (string objectId in colorProxy.objects)
       {
         Color convertedColor = Color.FromArgb(colorProxy.value);
