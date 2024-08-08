@@ -107,8 +107,8 @@ public abstract class ConversionResult
 /// <summary>
 /// Wraps around exceptions to make them nicely serializable for the ui.
 /// </summary>
-public sealed class ErrorWrapper : Base
+public class ErrorWrapper
 {
   public required string Message { get; set; }
   public required string StackTrace { get; set; }
-};
+}
