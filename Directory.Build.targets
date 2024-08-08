@@ -24,8 +24,10 @@
     <Message Text="AutoCADVersion $(AutoCADVersion)" Importance="high"/>
     <Copy DestinationFolder="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Autocad$(AutoCADVersion)\%(RecursiveDir)" SourceFiles="@(AutoCADDLLs)" />
   </Target>
-  <PropertyGroup Condition="'$(AutoCADVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
+  <PropertyGroup Condition="'$(AutoCADVersion)' != ''">
     <UseWpf>true</UseWpf>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(AutoCADVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
     <StartAction>Program</StartAction>
     <StartProgram>$(ProgramW6432)\Autodesk\AutoCAD $(AutoCADVersion)\acad.exe</StartProgram>
   </PropertyGroup>
@@ -40,8 +42,10 @@
     <Message Text="Civil3DVersion $(Civil3DVersion)" Importance="high"/>
     <Copy DestinationFolder="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Civil3d$(Civil3DVersion)\%(RecursiveDir)" SourceFiles="@(Civil3DDLLs)" />
   </Target>
-  <PropertyGroup Condition="'$(Civil3DVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
+  <PropertyGroup Condition="'$(Civil3DVersion)' != ''">
     <UseWpf>true</UseWpf>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Civil3DVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
     <StartAction>Program</StartAction>
     <StartProgram>$(ProgramW6432)\Autodesk\AutoCAD $(Civil3DVersion)\acad.exe</StartProgram>
   </PropertyGroup>
