@@ -2,16 +2,16 @@ using System.Diagnostics;
 using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
-using Objects.GIS;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.Common;
-using Speckle.Core.Logging;
-using Speckle.Core.Models;
-using Speckle.Core.Models.Collections;
+using Speckle.Objects.GIS;
+using Speckle.Sdk;
+using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.ArcGis.Operations.Send;
 

@@ -1,13 +1,17 @@
-﻿using Speckle.Core.Kits;
-using Speckle.Core.Logging;
-using Speckle.Logging;
+using Speckle.Objects.Geometry;
+using Speckle.Sdk;
+using Speckle.Sdk.Host;
+using Speckle.Sdk.Logging;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.Utils;
 
-public static class Config
+public static class Connector
 {
-  public static SpeckleConfiguration Create(HostApplication application, HostAppVersion version) =>
-    new(
+  public static IDisposable? Initialize(HostApplication application, HostAppVersion version)
+  {
+    TypeLoader.Initialize(typeof(Base).Assembly, typeof(Point).Assembly);
+    var config = new SpeckleConfiguration(
       application,
       version,
       new(
@@ -27,4 +31,6 @@ public static class Config
         )
       )
     );
+    return Setup.Initialize(config);
+  }
 }

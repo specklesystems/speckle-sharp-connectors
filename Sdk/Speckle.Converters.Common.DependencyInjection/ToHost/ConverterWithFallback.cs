@@ -1,7 +1,7 @@
 using System.Collections;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Models;
-using Speckle.Core.Models.Extensions;
+using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Extensions;
 
 namespace Speckle.Converters.Common.DependencyInjection.ToHost;
 
@@ -31,7 +31,7 @@ public sealed class ConverterWithFallback : IRootToHostConverter
   /// <remarks>
   /// The conversion is done in the following order of preference:
   /// 1. Direct conversion using the <see cref="ConverterWithoutFallback"/>.
-  /// 2. Fallback to display value using the <see cref="Speckle.Core.Models.Extensions.BaseExtensions.TryGetDisplayValue{T}"/> method, if a direct conversion is not possible.
+  /// 2. Fallback to display value using the <see cref="Speckle.Sdk.Models.Extensions.BaseExtensions.TryGetDisplayValue{T}"/> method, if a direct conversion is not possible.
   ///
   /// If the direct conversion is not available and there is no displayValue, a <see cref="System.NotSupportedException"/> is thrown.
   /// </remarks>

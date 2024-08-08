@@ -11,7 +11,7 @@ using Revit.Async;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Core.Logging;
+using Speckle.Sdk;
 
 namespace Speckle.Connectors.Revit.Plugin;
 

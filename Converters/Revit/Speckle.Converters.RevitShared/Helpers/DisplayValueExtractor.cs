@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Common;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.Helpers;
 

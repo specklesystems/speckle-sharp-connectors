@@ -1,7 +1,7 @@
-using Objects;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Core.Models;
+using Speckle.Objects;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.ToHost.TopLevel;
 

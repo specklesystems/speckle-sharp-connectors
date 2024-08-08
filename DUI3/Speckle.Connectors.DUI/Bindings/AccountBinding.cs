@@ -1,5 +1,5 @@
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Core.Credentials;
+using Speckle.Sdk.Credentials;
 
 namespace Speckle.Connectors.DUI.Bindings;
 

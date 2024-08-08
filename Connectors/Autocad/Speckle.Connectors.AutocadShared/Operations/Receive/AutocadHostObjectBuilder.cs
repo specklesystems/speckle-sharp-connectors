@@ -6,12 +6,12 @@ using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
-using Speckle.Core.Logging;
-using Speckle.Core.Models;
-using Speckle.Core.Models.Collections;
-using Speckle.Core.Models.GraphTraversal;
-using Speckle.Core.Models.Instances;
-using Speckle.Core.Models.Proxies;
+using Speckle.Sdk;
+using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.GraphTraversal;
+using Speckle.Sdk.Models.Instances;
+using Speckle.Sdk.Models.Proxies;
 using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 
 namespace Speckle.Connectors.Autocad.Operations.Receive;

@@ -13,8 +13,8 @@ using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
-using Speckle.Core.Common;
-using Speckle.Core.Logging;
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Rhino.Bindings;
 

@@ -1,6 +1,6 @@
 ﻿using Rhino;
 using Speckle.Converters.Common;
-using Speckle.Core.Kits;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.Rhino;
 

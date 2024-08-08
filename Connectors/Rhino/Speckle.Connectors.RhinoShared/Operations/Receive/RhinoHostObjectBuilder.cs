@@ -7,14 +7,14 @@ using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
-using Speckle.Core.Logging;
-using Speckle.Core.Models;
-using Speckle.Core.Models.Collections;
-using Speckle.Core.Models.GraphTraversal;
-using Speckle.Core.Models.Instances;
-using Speckle.Core.Models.Proxies;
-using Speckle.Logging;
-using RenderMaterialProxy = Objects.Other.RenderMaterialProxy;
+using Speckle.Sdk;
+using Speckle.Sdk.Logging;
+using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.GraphTraversal;
+using Speckle.Sdk.Models.Instances;
+using Speckle.Sdk.Models.Proxies;
+using RenderMaterialProxy = Speckle.Objects.Other.RenderMaterialProxy;
 
 namespace Speckle.Connectors.Rhino.Operations.Receive;
 
@@ -175,65 +175,71 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     List<string> bakedObjectIds = new();
     Dictionary<string, List<string>> applicationIdMap = new(); // used in converting blocks in stage 2. keeps track of original app id => resulting new app ids post baking
     int count = 0;
-
-    foreach (var (path, obj) in atomicObjects)
+    using (var _ = SpeckleActivityFactory.Start("Converting objects"))
     {
-      onOperationProgressed?.Invoke("Converting objects", (double)++count / atomicObjects.Count);
-      try
+      foreach (var (path, obj) in atomicObjects)
       {
-        // POC: it's messy creating layers while in the obj loop, need to set layer material here
-        int layerIndex = _layerManager.GetAndCreateLayerFromPath(path, baseLayerName, out bool isNewLayer);
-        if (isNewLayer)
+        onOperationProgressed?.Invoke("Converting objects", (double)++count / atomicObjects.Count);
+        try
         {
-          string collectionId = path[^1].applicationId ?? path[^1].id;
-          if (objectMaterialsIdMap.TryGetValue(collectionId, out int lIndex))
+          // POC: it's messy creating layers while in the obj loop, need to set layer material here
+          int layerIndex = _layerManager.GetAndCreateLayerFromPath(path, baseLayerName, out bool isNewLayer);
+          if (isNewLayer)
           {
-            doc.Layers[layerIndex].RenderMaterialIndex = lIndex;
+            string collectionId = path[^1].applicationId ?? path[^1].id;
+            if (objectMaterialsIdMap.TryGetValue(collectionId, out int lIndex))
+            {
+              doc.Layers[layerIndex].RenderMaterialIndex = lIndex;
+            }
+
+            if (_colorManager.ObjectColorsIdMap.TryGetValue(collectionId, out Color layerColor))
+            {
+              doc.Layers[layerIndex].Color = layerColor;
+            }
           }
 
-          if (_colorManager.ObjectColorsIdMap.TryGetValue(collectionId, out Color layerColor))
+          var result = _converter.Convert(obj);
+          string objectId = obj.applicationId ?? obj.id; // POC: assuming objects have app ids for this to work?
+          int objMaterialIndex = objectMaterialsIdMap.TryGetValue(objectId, out int oIndex) ? oIndex : 0;
+          Color? objColor = _colorManager.ObjectColorsIdMap.TryGetValue(objectId, out Color color) ? color : null;
+          var conversionIds = HandleConversionResult(result, obj, layerIndex, objMaterialIndex, objColor).ToList();
+          foreach (var r in conversionIds)
           {
-            doc.Layers[layerIndex].Color = layerColor;
+            conversionResults.Add(new(Status.SUCCESS, obj, r, result.GetType().ToString()));
+            bakedObjectIds.Add(r);
           }
         }
-
-        var result = _converter.Convert(obj);
-        string objectId = obj.applicationId ?? obj.id; // POC: assuming objects have app ids for this to work?
-        int? objMaterialIndex = objectMaterialsIdMap.TryGetValue(objectId, out int oIndex) ? oIndex : null;
-        Color? objColor = _colorManager.ObjectColorsIdMap.TryGetValue(objectId, out Color color) ? color : null;
-        var conversionIds = HandleConversionResult(result, obj, layerIndex, objMaterialIndex, objColor).ToList();
-        foreach (var r in conversionIds)
+        catch (Exception ex) when (!ex.IsFatal())
         {
-          conversionResults.Add(new(Status.SUCCESS, obj, r, result.GetType().ToString()));
-          bakedObjectIds.Add(r);
+          conversionResults.Add(new(Status.ERROR, obj, null, null, ex));
         }
-
-        applicationIdMap[objectId] = conversionIds;
-      }
-      catch (Exception ex) when (!ex.IsFatal())
-      {
-        conversionResults.Add(new(Status.ERROR, obj, null, null, ex));
       }
     }
 
     // Stage 2: Convert instances
-    var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = BakeInstances(
-      instanceComponents,
-      applicationIdMap,
-      objectMaterialsIdMap,
-      baseLayerName,
-      onOperationProgressed
-    );
+    using (var _ = SpeckleActivityFactory.Start("Converting instances"))
+    {
+      var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = BakeInstances(
+        instanceComponents,
+        applicationIdMap,
+        objectMaterialsIdMap,
+        baseLayerName,
+        onOperationProgressed
+      );
 
-    bakedObjectIds.RemoveAll(id => consumedObjectIds.Contains(id)); // remove all objects that have been "consumed"
-    bakedObjectIds.AddRange(createdInstanceIds); // add instance ids
-    conversionResults.RemoveAll(result => result.ResultId != null && consumedObjectIds.Contains(result.ResultId)); // remove all conversion results for atomic objects that have been consumed (POC: not that cool, but prevents problems on object highlighting)
-    conversionResults.AddRange(instanceConversionResults); // add instance conversion results to our list
+      bakedObjectIds.RemoveAll(id => consumedObjectIds.Contains(id)); // remove all objects that have been "consumed"
+      bakedObjectIds.AddRange(createdInstanceIds); // add instance ids
+      conversionResults.RemoveAll(result => result.ResultId != null && consumedObjectIds.Contains(result.ResultId)); // remove all conversion results for atomic objects that have been consumed (POC: not that cool, but prevents problems on object highlighting)
+      conversionResults.AddRange(instanceConversionResults); // add instance conversion results to our list
+    }
 
     // Stage 3: Groups
     if (groupProxies is not null)
     {
-      BakeGroups(groupProxies, applicationIdMap);
+      using (var _ = SpeckleActivityFactory.Start("Converting groups"))
+      {
+        BakeGroups(groupProxies, applicationIdMap);
+      }
     }
 
     // Stage 4: Return

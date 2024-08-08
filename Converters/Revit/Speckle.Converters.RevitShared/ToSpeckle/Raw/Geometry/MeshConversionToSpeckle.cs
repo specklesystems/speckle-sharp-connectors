@@ -1,6 +1,6 @@
-﻿using Objects.Other;
-using Speckle.Converters.Common.Objects;
+﻿using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Objects.Other;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 

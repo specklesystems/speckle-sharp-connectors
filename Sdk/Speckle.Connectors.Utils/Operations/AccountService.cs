@@ -1,4 +1,4 @@
-﻿using Speckle.Core.Credentials;
+﻿using Speckle.Sdk.Credentials;
 
 namespace Speckle.Connectors.Utils.Operations;
 

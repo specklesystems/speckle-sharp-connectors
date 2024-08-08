@@ -15,7 +15,7 @@ using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Operations;
-using Speckle.Core.Models.GraphTraversal;
+using Speckle.Sdk.Models.GraphTraversal;
 #if REVIT2025
 using Speckle.Connectors.DUI.WebView;
 #else

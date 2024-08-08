@@ -1,8 +1,8 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.LayerManager;
-using Speckle.Core.Models.Collections;
-using Speckle.Core.Models.GraphTraversal;
+using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.GraphTraversal;
 using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 
 namespace Speckle.Connectors.Autocad.HostApp;

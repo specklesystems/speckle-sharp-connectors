@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
-using Speckle.Logging;
+using Speckle.Sdk.Logging;
 
 namespace Speckle.Connectors.Utils.Common;
 
