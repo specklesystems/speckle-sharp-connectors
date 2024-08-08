@@ -66,12 +66,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       // POC: This is where the top level base-layer name is set. Could be abstracted or injected in the context?
       var baseLayerName = $"Project {projectName}: Model {modelName}";
 
-      IEnumerable<TraversalContext> objectsToConvert;
-      using (var _ = SpeckleActivityFactory.Start("Traverse"))
-      {
-        objectsToConvert = _traverseFunction.Traverse(rootObject).Where(obj => obj.Current is not Collection);
-      }
-
+      var objectsToConvert = _traverseFunction.Traverse(rootObject).Where(obj => obj.Current is not Collection);
       var instanceDefinitionProxies = (rootObject["instanceDefinitionProxies"] as List<object>)
         ?.Cast<InstanceDefinitionProxy>()
         .ToList();
@@ -83,16 +78,13 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
         .ToList();
 
       List<ColorProxy>? colors = (rootObject["colorProxies"] as List<object>)?.Cast<ColorProxy>().ToList();
-      if (colors != null)
-      {
-        _colorManager.ParseColors(colors, onOperationProgressed);
-      }
 
       var conversionResults = BakeObjects(
         objectsToConvert,
         instanceDefinitionProxies,
         groupProxies,
         renderMaterials,
+        colors,
         baseLayerName,
         onOperationProgressed
       );
@@ -108,6 +100,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     List<InstanceDefinitionProxy>? instanceDefinitionProxies,
     List<GroupProxy>? groupProxies,
     List<RenderMaterialProxy>? materialProxies,
+    List<ColorProxy>? colorProxies,
     string baseLayerName,
     Action<string, double?>? onOperationProgressed
   )
@@ -116,7 +109,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     RhinoDoc doc = _contextStack.Current.Document;
     List<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents = new();
 
-    using (var _ = SpeckleActivityFactory.Start("BakeObjects"))
+    using (var _ = SpeckleActivityFactory.Start("Traversal"))
     {
       PreReceiveDeepClean(baseLayerName);
       _layerManager.CreateBaseLayer(baseLayerName);
@@ -146,17 +139,22 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       }
     }
 
-    // Stage 0: Bake materials, as they are used later down the line by layers and objects
-    List<ReceiveConversionResult> conversionResults = new();
+    // Stage 0: Bake materials and colors, as they are used later down the line by layers and objects
+    onOperationProgressed?.Invoke("Converting materials and colors", null);
     if (materialProxies != null)
     {
       _materialManager.BakeMaterials(materialProxies, baseLayerName);
     }
 
+    if (colorProxies != null)
+    {
+      _colorManager.ParseColors(colorProxies);
+    }
+
     // Stage 1: Convert atomic objects
     List<string> bakedObjectIds = new();
-    // This map is used in converting blocks in stage 2. keeps track of original app id => resulting new app ids post baking
-    Dictionary<string, List<string>> applicationIdMap = new();
+    Dictionary<string, List<string>> applicationIdMap = new(); // This map is used in converting blocks in stage 2. keeps track of original app id => resulting new app ids post baking
+    List<ReceiveConversionResult> conversionResults = new();
 
     int count = 0;
     using (var _ = SpeckleActivityFactory.Start("Converting objects"))
