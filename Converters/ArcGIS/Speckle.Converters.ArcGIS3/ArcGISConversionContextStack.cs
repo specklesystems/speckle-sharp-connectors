@@ -4,9 +4,9 @@ using ArcGIS.Core.Data.DDL;
 using ArcGIS.Desktop.Core;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
-using Objects.Other;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
+using RenderMaterialProxy = Speckle.Objects.Other.RenderMaterialProxy;
 
 namespace Speckle.Converters.ArcGIS3;
 
