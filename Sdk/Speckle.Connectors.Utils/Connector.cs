@@ -1,4 +1,4 @@
-﻿using Speckle.Objects.Structural.GSA.Geometry;
+using Speckle.Objects.Geometry;
 using Speckle.Sdk;
 using Speckle.Sdk.Host;
 using Speckle.Sdk.Logging;
@@ -10,7 +10,7 @@ public static class Connector
 {
   public static IDisposable? Initialize(HostApplication application, HostAppVersion version)
   {
-    TypeLoader.Initialize(typeof(Base).Assembly, typeof(GSAAssembly).Assembly);
+    TypeLoader.Initialize(typeof(Base).Assembly, typeof(Point).Assembly);
     var config = new SpeckleConfiguration(
       application,
       version,
