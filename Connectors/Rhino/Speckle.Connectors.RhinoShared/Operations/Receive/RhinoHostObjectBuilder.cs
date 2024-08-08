@@ -231,10 +231,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
       bakedObjectIds.RemoveAll(id => consumedObjectIds.Contains(id)); // remove all objects that have been "consumed"
       bakedObjectIds.AddRange(createdInstanceIds); // add instance ids
-      conversionResults.RemoveAll(result =>
-        result.ResultId != null &&
-        consumedObjectIds.Contains(result
-          .ResultId)); // remove all conversion results for atomic objects that have been consumed (POC: not that cool, but prevents problems on object highlighting)
+      conversionResults.RemoveAll(result => result.ResultId != null && consumedObjectIds.Contains(result.ResultId)); // remove all conversion results for atomic objects that have been consumed (POC: not that cool, but prevents problems on object highlighting)
       conversionResults.AddRange(instanceConversionResults); // add instance conversion results to our list
     }
 
