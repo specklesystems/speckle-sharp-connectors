@@ -229,12 +229,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
           );
 
           // POC: collectionPath for instances should be an array of size 1, because we are flattening collections on traversal
-          string layerName = _autocadLayerManager.CreateLayerForReceive(
-            collectionPath,
-            baseLayerName,
-            _autocadColorManager.ObjectColorsIdMap,
-            _autocadMaterialManager.ObjectMaterialsIdMap
-          );
+          string layerName = _autocadLayerManager.CreateLayerForReceive(collectionPath, baseLayerName);
 
           // get color and material if any
           string instanceId = instanceProxy.applicationId ?? instanceProxy.id;
