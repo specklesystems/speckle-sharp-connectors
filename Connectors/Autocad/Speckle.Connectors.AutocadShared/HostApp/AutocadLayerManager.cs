@@ -13,6 +13,8 @@ namespace Speckle.Connectors.Autocad.HostApp;
 public class AutocadLayerManager
 {
   private readonly AutocadContext _autocadContext;
+  private readonly AutocadMaterialManager _materialManager;
+  private readonly AutocadColorManager _colorManager;
   private readonly string _layerFilterName = "Speckle";
   public Dictionary<string, Layer> CollectionCache { get; } = new();
 
@@ -20,9 +22,15 @@ public class AutocadLayerManager
   private Document Doc => Application.DocumentManager.MdiActiveDocument;
   private readonly HashSet<string> _uniqueLayerNames = new();
 
-  public AutocadLayerManager(AutocadContext autocadContext)
+  public AutocadLayerManager(
+    AutocadContext autocadContext,
+    AutocadMaterialManager materialManager,
+    AutocadColorManager colorManager
+  )
   {
     _autocadContext = autocadContext;
+    _materialManager = materialManager;
+    _colorManager = colorManager;
   }
 
   public Layer GetOrCreateSpeckleLayer(Entity entity, Transaction tr, out LayerTableRecord? layer)
@@ -54,11 +62,7 @@ public class AutocadLayerManager
   /// This ensures we're creating the new objects we've just received rather than overlaying them.
   /// </summary>
   /// <returns>The name of the existing or created layer</returns>
-  public string CreateLayerForReceive(
-    Collection[] layerPath,
-    string baseLayerPrefix,
-    Dictionary<string, AutocadColor> objectColorIdMap
-  )
+  public string CreateLayerForReceive(Collection[] layerPath, string baseLayerPrefix)
   {
     string[] namePath = layerPath.Select(c => c.name).ToArray();
     string layerName = _autocadContext.RemoveInvalidChars(baseLayerPrefix + string.Join("-", namePath));
@@ -67,14 +71,33 @@ public class AutocadLayerManager
       return layerName;
     }
 
-    // get the color if any, of the leaf collection with a color
+    // get the color and material if any, of the leaf collection with a color
     AutocadColor? layerColor = null;
-    for (int j = layerPath.Length - 1; j >= 0; j--)
+    ObjectId layerMaterial = ObjectId.Null;
+    if (_colorManager.ObjectColorsIdMap.Count > 0 || _materialManager.ObjectMaterialsIdMap.Count > 0)
     {
-      string layerId = layerPath[j].applicationId ?? layerPath[j].id;
-      if (objectColorIdMap.TryGetValue(layerId, out layerColor))
+      bool foundColor = false;
+      bool foundMaterial = false;
+
+      // Goes up the tree to find any potential parent layer that has a material/color
+      for (int j = layerPath.Length - 1; j >= 0; j--)
       {
-        break;
+        string layerId = layerPath[j].applicationId ?? layerPath[j].id;
+
+        if (!foundColor)
+        {
+          foundColor = _colorManager.ObjectColorsIdMap.TryGetValue(layerId, out layerColor);
+        }
+
+        if (!foundMaterial)
+        {
+          foundMaterial = _materialManager.ObjectMaterialsIdMap.TryGetValue(layerId, out layerMaterial);
+        }
+
+        if (foundColor && foundMaterial)
+        {
+          break;
+        }
       }
     }
 
@@ -84,9 +107,15 @@ public class AutocadLayerManager
     LayerTable? layerTable =
       transaction.TransactionManager.GetObject(Doc.Database.LayerTableId, OpenMode.ForRead) as LayerTable;
     LayerTableRecord layerTableRecord = new() { Name = layerName };
+
     if (layerColor is not null)
     {
       layerTableRecord.Color = layerColor;
+    }
+
+    if (layerMaterial != ObjectId.Null)
+    {
+      layerTableRecord.MaterialId = layerMaterial;
     }
 
     bool hasLayer = layerTable != null && layerTable.Has(layerName);
