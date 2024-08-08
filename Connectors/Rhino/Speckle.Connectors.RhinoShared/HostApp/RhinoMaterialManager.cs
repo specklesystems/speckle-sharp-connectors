@@ -145,7 +145,7 @@ public class RhinoMaterialManager
     var currentDoc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
     foreach (Material material in currentDoc.Materials)
     {
-      if (!material.IsDeleted && material.Name.Contains(namePrefix))
+      if (!material.IsDeleted && material.Name != null && material.Name.Contains(namePrefix))
       {
         currentDoc.Materials.Delete(material);
       }

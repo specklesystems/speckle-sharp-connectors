@@ -1,5 +1,6 @@
 using Rhino;
 using Rhino.DocObjects;
+using Rhino.DocObjects.Custom;
 using Rhino.Geometry;
 using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Utils.Builders;
@@ -219,7 +220,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     {
       using (var _ = SpeckleActivityFactory.Start("Converting groups"))
       {
-        BakeGroups(groupProxies, applicationIdMap);
+        BakeGroups(groupProxies, applicationIdMap, baseLayerName);
       }
     }
 
@@ -227,14 +228,18 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     return new(bakedObjectIds, conversionResults);
   }
 
-  private void BakeGroups(List<GroupProxy> groupProxies, Dictionary<string, List<string>> applicationIdMap)
+  private void BakeGroups(
+    List<GroupProxy> groupProxies,
+    Dictionary<string, List<string>> applicationIdMap,
+    string baseLayerName
+  )
   {
     using var _ = SpeckleActivityFactory.Start();
     foreach (GroupProxy groupProxy in groupProxies.OrderBy(g => g.objects.Count))
     {
       var appIds = groupProxy.objects.SelectMany(oldObjId => applicationIdMap[oldObjId]).Select(id => new Guid(id));
-      var groupName = groupProxy.name ?? "No Name Group";
-      RhinoDoc.ActiveDoc.Groups.Add(groupName, appIds);
+      var groupName = (groupProxy.name ?? "No Name Group") + $" ({baseLayerName})";
+      _contextStack.Current.Document.Groups.Add(groupName, appIds);
     }
   }
 
@@ -263,6 +268,16 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
             Console.WriteLine($"Failed to purge layer: {layer}");
           }
         }
+      }
+    }
+
+    // Cleans up any previously received groups
+    for (int i = _contextStack.Current.Document.Groups.Count; i >= 0; i--)
+    {
+      var group = _contextStack.Current.Document.Groups.FindIndex(i);
+      if (group is { Name: not null } && group.Name.Contains(baseLayerName))
+      {
+        _contextStack.Current.Document.Groups.Delete(i);
       }
     }
   }
