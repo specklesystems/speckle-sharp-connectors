@@ -3,8 +3,6 @@ using System.Drawing;
 using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
-using Objects.GIS;
-using Objects.Other;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Conversion;
@@ -12,10 +10,11 @@ using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.Common;
 using Speckle.Objects.GIS;
+using Speckle.Objects.Other;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
-using RasterLayer = Objects.GIS.RasterLayer;
+using RasterLayer = Speckle.Objects.GIS.RasterLayer;
 
 namespace Speckle.Connectors.ArcGis.Operations.Send;
 
