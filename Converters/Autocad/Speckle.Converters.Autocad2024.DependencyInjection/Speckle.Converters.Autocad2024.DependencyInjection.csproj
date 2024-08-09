@@ -14,5 +14,7 @@
     <ItemGroup>
         <PackageReference Include="Autofac" />  
     </ItemGroup>
+  
+    <Import Project="..\Speckle.Converters.AutocadShared.DependencyInjection\Speckle.Converters.AutocadShared.DependencyInjection.projitems" Label="Shared" />
 
 </Project>
