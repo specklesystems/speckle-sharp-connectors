@@ -36,8 +36,10 @@ public static class SharedRegistration
     builder.AddSingleton(new AutocadDocumentManager()); // TODO: Dependent to TransactionContext, can be moved to AutocadContext
     builder.AddSingleton<DocumentModelStore, AutocadDocumentStore>();
     builder.AddSingleton<AutocadContext>();
+    builder.AddScoped<AutocadGroupManager>();
     builder.AddScoped<AutocadLayerManager>();
     builder.AddScoped<AutocadColorManager>();
+    builder.AddScoped<AutocadMaterialManager>();
     builder.AddSingleton<IAutocadIdleManager, AutocadIdleManager>();
 
     // operation progress manager
@@ -80,7 +82,6 @@ public static class SharedRegistration
       IInstanceObjectsManager<AutocadRootObject, List<Entity>>,
       InstanceObjectsManager<AutocadRootObject, List<Entity>>
     >();
-    builder.AddScoped<AutocadGroupUnpacker>();
     builder.AddScoped<AutocadInstanceObjectManager>();
   }
 

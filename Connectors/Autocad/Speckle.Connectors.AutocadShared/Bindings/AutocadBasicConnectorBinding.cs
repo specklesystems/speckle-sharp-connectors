@@ -128,10 +128,18 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
         var tr = doc.TransactionManager.StartTransaction();
         foreach (ObjectId objectId in objectIds)
         {
-          var entity = (Entity)tr.GetObject(objectId, OpenMode.ForRead);
-          if (entity != null)
+          try
           {
-            selectedExtents.AddExtents(entity.GeometricExtents);
+            var entity = (Entity)tr.GetObject(objectId, OpenMode.ForRead);
+            if (entity != null && entity.GeometricExtents != null)
+            {
+              selectedExtents.AddExtents(entity.GeometricExtents);
+            }
+          }
+          catch (Exception e) when (!e.IsFatal())
+          {
+            // Note: we're swallowing exeptions here because of a weird case when receiving blocks, we would have
+            // acad api throw an error on accessing entity.GeometricExtents.
           }
         }
 

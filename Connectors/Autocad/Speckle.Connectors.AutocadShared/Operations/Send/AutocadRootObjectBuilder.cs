@@ -6,6 +6,7 @@ using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
+using Speckle.Objects.Other;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -20,27 +21,30 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
   private readonly string[] _documentPathSeparator = ["\\"];
   private readonly ISendConversionCache _sendConversionCache;
   private readonly AutocadInstanceObjectManager _instanceObjectsManager;
+  private readonly AutocadMaterialManager _materialManager;
   private readonly AutocadColorManager _colorManager;
   private readonly AutocadLayerManager _layerManager;
-  private readonly AutocadGroupUnpacker _groupUnpacker;
+  private readonly AutocadGroupManager _groupManager;
   private readonly ISyncToThread _syncToThread;
 
   public AutocadRootObjectBuilder(
     IRootToSpeckleConverter converter,
     ISendConversionCache sendConversionCache,
     AutocadInstanceObjectManager instanceObjectManager,
+    AutocadMaterialManager materialManager,
     AutocadColorManager colorManager,
     AutocadLayerManager layerManager,
-    AutocadGroupUnpacker groupUnpacker,
+    AutocadGroupManager groupManager,
     ISyncToThread syncToThread
   )
   {
     _converter = converter;
     _sendConversionCache = sendConversionCache;
     _instanceObjectsManager = instanceObjectManager;
+    _materialManager = materialManager;
     _colorManager = colorManager;
     _layerManager = layerManager;
-    _groupUnpacker = groupUnpacker;
+    _groupManager = groupManager;
     _syncToThread = syncToThread;
   }
 
@@ -67,8 +71,8 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
       Document doc = Application.DocumentManager.CurrentDocument;
       using Transaction tr = doc.Database.TransactionManager.StartTransaction();
 
-      // Cached dictionary to create Collection for autocad entity layers. We first look if collection exists. If so use it otherwise create new one for that layer.
-      List<LayerTableRecord> layers = new();
+      // Keeps track of autocad layers used, so we can pass them on later to the material and color unpacker.
+      List<LayerTableRecord> usedAcadLayers = new();
       int count = 0;
 
       var (atomicObjects, instanceProxies, instanceDefinitionProxies) = _instanceObjectsManager.UnpackSelection(
@@ -103,7 +107,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
           Layer layer = _layerManager.GetOrCreateSpeckleLayer(entity, tr, out LayerTableRecord? autocadLayer);
           if (autocadLayer is not null)
           {
-            layers.Add(autocadLayer);
+            usedAcadLayers.Add(autocadLayer);
             modelWithLayers.elements.Add(layer);
           }
 
@@ -137,11 +141,15 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
       modelWithLayers["instanceDefinitionProxies"] = instanceDefinitionProxies;
 
       // set groups
-      var groupProxies = _groupUnpacker.UnpackGroups(atomicObjects);
+      List<GroupProxy> groupProxies = _groupManager.UnpackGroups(atomicObjects);
       modelWithLayers["groupProxies"] = groupProxies;
 
+      // set materials
+      List<RenderMaterialProxy> materialProxies = _materialManager.UnpackMaterials(atomicObjects, usedAcadLayers);
+      modelWithLayers["renderMaterialProxies"] = materialProxies;
+
       // set colors
-      List<ColorProxy> colorProxies = _colorManager.UnpackColors(atomicObjects, layers);
+      List<ColorProxy> colorProxies = _colorManager.UnpackColors(atomicObjects, usedAcadLayers);
       modelWithLayers["colorProxies"] = colorProxies;
 
       return new RootObjectBuilderResult(modelWithLayers, results);

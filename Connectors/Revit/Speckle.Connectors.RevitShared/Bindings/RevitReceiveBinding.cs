@@ -1,6 +1,8 @@
+using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Revit.Plugin;
@@ -19,6 +21,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
 
   private readonly RevitSettings _revitSettings;
   private readonly IOperationProgressManager _operationProgressManager;
+  private readonly ILogger<RevitReceiveBinding> _logger;
   private readonly CancellationManager _cancellationManager;
   private readonly DocumentModelStore _store;
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
@@ -30,7 +33,8 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
     IBridge parent,
     IUnitOfWorkFactory unitOfWorkFactory,
     RevitSettings revitSettings,
-    IOperationProgressManager operationProgressManager
+    IOperationProgressManager operationProgressManager,
+    ILogger<RevitReceiveBinding> logger
   )
   {
     Parent = parent;
@@ -38,6 +42,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
     _unitOfWorkFactory = unitOfWorkFactory;
     _revitSettings = revitSettings;
     _operationProgressManager = operationProgressManager;
+    _logger = logger;
     _cancellationManager = cancellationManager;
 
     Commands = new ReceiveBindingUICommands(parent);
@@ -88,9 +93,10 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
       // Idea for later -> when cancel called, create promise from UI to solve it later with this catch block.
       // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
     }
-    catch (Exception e) when (!e.IsFatal()) // UX reasons - we will report operation exceptions as model card error.
+    catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
-      Commands.SetModelError(modelCardId, e);
+      _logger.LogModelCardHandledError(ex);
+      Commands.SetModelError(modelCardId, ex);
     }
   }
 }
