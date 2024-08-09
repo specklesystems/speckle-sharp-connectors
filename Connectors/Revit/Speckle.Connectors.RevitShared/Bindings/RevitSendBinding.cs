@@ -1,9 +1,11 @@
 using System.Collections.Concurrent;
 using Autodesk.Revit.DB;
+using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Exceptions;
+using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
@@ -26,6 +28,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
+  private readonly ILogger<RevitSendBinding> _logger;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -44,7 +47,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     IUnitOfWorkFactory unitOfWorkFactory,
     RevitSettings revitSettings,
     ISendConversionCache sendConversionCache,
-    IOperationProgressManager operationProgressManager
+    IOperationProgressManager operationProgressManager,
+    ILogger<RevitSendBinding> logger
   )
     : base("sendBinding", store, bridge, revitContext)
   {
@@ -54,6 +58,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _revitSettings = revitSettings;
     _sendConversionCache = sendConversionCache;
     _operationProgressManager = operationProgressManager;
+    _logger = logger;
     var topLevelExceptionHandler = Parent.TopLevelExceptionHandler;
 
     Commands = new SendBindingUICommands(bridge);
@@ -133,9 +138,10 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       // Idea for later -> when cancel called, create promise from UI to solve it later with this catch block.
       // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
     }
-    catch (Exception e) when (!e.IsFatal()) // UX reasons - we will report operation exceptions as model card error.
+    catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
-      Commands.SetModelError(modelCardId, e);
+      _logger.LogModelCardHandledError(ex);
+      Commands.SetModelError(modelCardId, ex);
     }
   }
 
