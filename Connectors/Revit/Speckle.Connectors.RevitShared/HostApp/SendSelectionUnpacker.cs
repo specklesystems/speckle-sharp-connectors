@@ -40,9 +40,10 @@ public class SendSelectionUnpacker
   }
 
   // This needs some yield refactoring
+  // TODO: this is now a generic "unpack elements"
   private List<Element> UnpackGroups(IEnumerable<Element> elements)
   {
-    var unpackedElements = new List<Element>();
+    var unpackedElements = new List<Element>(); // note: could be a hashset/map so we prevent duplicates (?)
 
     foreach (var element in elements)
     {
@@ -50,6 +51,12 @@ public class SendSelectionUnpacker
       {
         var groupElements = g.GetMemberIds().Select(_contextStack.Current.Document.GetElement);
         unpackedElements.AddRange(UnpackGroups(groupElements));
+      }
+      else if (element is FamilyInstance familyInstance)
+      {
+        var familyElements = familyInstance.GetSubComponentIds().Select(_contextStack.Current.Document.GetElement);
+        unpackedElements.AddRange(UnpackGroups(familyElements));
+        unpackedElements.Add(familyInstance);
       }
       else
       {
