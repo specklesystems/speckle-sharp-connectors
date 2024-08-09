@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Geometry;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
