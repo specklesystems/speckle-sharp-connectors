@@ -109,15 +109,12 @@ public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Cur
       length = length,
       domain = domain,
       bbox = _boxConverter.Convert(target.GeometricExtents),
-      units = _contextStack.Current.SpeckleUnits
+      units = _contextStack.Current.SpeckleUnits,
+      displayValue = target.Database is not null ? GetDisplayValue(target) : null!,
     };
 
     // POC: get display value if this is a database-resident spline
     // POC: if this is called by another converter that has created a spline, assumes the display value is set by that converter
-    if (target.Database is not null)
-    {
-      curve.displayValue = GetDisplayValue(target);
-    }
 
     return curve;
   }

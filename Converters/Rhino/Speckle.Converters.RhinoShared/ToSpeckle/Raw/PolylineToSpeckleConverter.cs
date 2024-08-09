@@ -43,8 +43,10 @@ public class PolylineToSpeckleConverter
       points.Add(pt.Z);
     }
 
-    return new SOG.Polyline(points, _contextStack.Current.SpeckleUnits)
+    return new SOG.Polyline
     {
+      value = points,
+      units = _contextStack.Current.SpeckleUnits,
       bbox = box,
       length = target.Length,
       domain = new(0, target.Length),
