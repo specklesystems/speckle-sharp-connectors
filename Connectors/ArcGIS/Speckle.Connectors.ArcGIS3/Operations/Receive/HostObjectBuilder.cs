@@ -1,4 +1,5 @@
 using System.Diagnostics.Contracts;
+using System.Drawing;
 using ArcGIS.Core.CIM;
 using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
@@ -11,6 +12,7 @@ using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Objects.GIS;
+using Speckle.Objects.Other;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -68,6 +70,15 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       .Where(ctx => HasGISParent(ctx) is false)
       .ToList();
 
+    // get all materials
+
+    List<RenderMaterialProxy>? renderMaterials = (rootObject["renderMaterialProxies"] as List<object>)
+      ?.Cast<RenderMaterialProxy>()
+      .ToList();
+    if (renderMaterials != null)
+    {
+      _contextStack.Current.Document.RenderMaterialProxies = renderMaterials;
+    }
     var instanceDefinitionProxies = (rootObject["instanceDefinitionProxies"] as List<object>)
       ?.Cast<InstanceDefinitionProxy>()
       .ToList();
@@ -117,6 +128,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       {
         results.Add(new(Status.ERROR, obj, null, null, ex));
       }
+
       onOperationProgressed?.Invoke("Converting", (double)++count / allCount);
     }
 
@@ -167,6 +179,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
         conversionTracker[item.Key] = trackerItem; // not necessary atm, but needed if we use conversionTracker further
         // only add a report item
         AddResultsFromTracker(trackerItem, results);
+        AddColorCategory(trackerItem);
       }
       else
       {
@@ -187,9 +200,12 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
 
         // add report item
         AddResultsFromTracker(trackerItem, results);
+        AddColorCategory(trackerItem);
       }
+
       onOperationProgressed?.Invoke("Adding to Map", (double)++bakeCount / conversionTracker.Count);
     }
+
     bakedObjectIds.AddRange(createdLayerGroups.Values.Select(x => x.URI));
 
     // TODO: validated a correct set regarding bakedobject ids
@@ -299,6 +315,11 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
         }
 
         layer.SetExpanded(true);
+        if (layer is FeatureLayer fLayer)
+        {
+          SetLayerRenderer(fLayer, null);
+        }
+
         return (MapMember)layer;
       }
       catch (ArgumentException)
@@ -311,6 +332,121 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
         return table;
       }
     });
+  }
+
+  private void SetLayerRenderer(FeatureLayer fLayer, CIMUniqueValueClass? newUniqueValueClass)
+  {
+    QueuedTask.Run(() =>
+    {
+      var color = Color.FromArgb(ColorFactory.Instance.GreyRGB.CIMColorToInt());
+      CIMSymbolReference defaultSymbol = CreateSymbol(fLayer, color);
+
+      // get renderer classes, add existing, create new is needed
+      List<CIMUniqueValueClass> listUniqueValueClasses = new() { };
+
+      var existingRenderer = fLayer.GetRenderer();
+      if (existingRenderer is CIMUniqueValueRenderer uniqueRenderer)
+      {
+        if (uniqueRenderer.Groups[0].Classes != null)
+        {
+          listUniqueValueClasses.AddRange(uniqueRenderer.Groups[0].Classes.ToList());
+        }
+      }
+
+      // Add new CIMUniqueValueClass
+      if (
+        newUniqueValueClass != null
+        && !listUniqueValueClasses.Select(x => x.Label).Contains(newUniqueValueClass.Label)
+      )
+      {
+        listUniqueValueClasses.Add(newUniqueValueClass);
+      }
+
+      //Create a list of CIMUniqueValueGroup
+      CIMUniqueValueGroup uvg = new() { Classes = listUniqueValueClasses.ToArray(), };
+
+      List<CIMUniqueValueGroup> listUniqueValueGroups = new() { uvg };
+
+      //Create the CIMUniqueValueRenderer
+      CIMUniqueValueRenderer uvr =
+        new()
+        {
+          UseDefaultSymbol = true,
+          DefaultLabel = "all other values",
+          DefaultSymbol = defaultSymbol,
+          Groups = listUniqueValueGroups.ToArray(),
+          Fields = new string[] { "Speckle_ID" }
+        };
+
+      //Set the feature layer's renderer.
+      fLayer.SetRenderer(uvr);
+    });
+  }
+
+  private void AddColorCategory(ObjectConversionTracker trackerItem)
+  {
+    // get color
+    Color color = Color.FromArgb(255, 255, 255, 255);
+    foreach (var materialProxy in _contextStack.Current.Document.RenderMaterialProxies)
+    {
+      if (trackerItem.Base.applicationId is string appId && materialProxy.objects.Contains(appId))
+      {
+        color = Color.FromArgb(materialProxy.value.diffuse);
+        break;
+      }
+    }
+
+    if (trackerItem.HostAppMapMember is FeatureLayer fLayer)
+    {
+      CIMSymbolReference symbol = CreateSymbol(fLayer, color);
+
+      // First create a "CIMUniqueValueClass"
+      List<CIMUniqueValue> listUniqueValues =
+        new() { new CIMUniqueValue { FieldValues = new string[] { trackerItem.Base.id } } };
+
+      CIMUniqueValueClass newUniqueValueClass =
+        new()
+        {
+          Editable = true,
+          Label = trackerItem.Base.id,
+          Patch = PatchShape.Default,
+          Symbol = symbol,
+          Visible = true,
+          Values = listUniqueValues.ToArray()
+        };
+      SetLayerRenderer(fLayer, newUniqueValueClass);
+    }
+  }
+
+  public CIMSymbolReference CreateSymbol(FeatureLayer fLyr, Color color)
+  {
+    var symbol = SymbolFactory
+      .Instance.ConstructPointSymbol(ColorFactory.Instance.CreateColor(color))
+      .MakeSymbolReference();
+    var speckleGeometryType = fLyr.ShapeType;
+    if (
+      speckleGeometryType is esriGeometryType.esriGeometryLine
+      || speckleGeometryType is esriGeometryType.esriGeometryPolyline
+    )
+    {
+      symbol = SymbolFactory
+        .Instance.ConstructLineSymbol(ColorFactory.Instance.CreateColor(color))
+        .MakeSymbolReference();
+    }
+    else if (speckleGeometryType is esriGeometryType.esriGeometryPolygon)
+    {
+      symbol = SymbolFactory
+        .Instance.ConstructPolygonSymbol(ColorFactory.Instance.CreateColor(color))
+        .MakeSymbolReference();
+    }
+    else if (speckleGeometryType is esriGeometryType.esriGeometryMultiPatch)
+    {
+      symbol = SymbolFactory
+        .Instance.ConstructPolygonSymbol(ColorFactory.Instance.CreateColor(color))
+        .MakeSymbolReference();
+    }
+
+    return symbol;
   }
 
   private GroupLayer CreateNestedGroupLayer(string nestedLayerPath, Dictionary<string, GroupLayer> createdLayerGroups)

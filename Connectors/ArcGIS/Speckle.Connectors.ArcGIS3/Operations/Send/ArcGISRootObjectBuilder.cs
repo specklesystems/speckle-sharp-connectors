@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Drawing;
 using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
@@ -9,9 +10,11 @@ using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.Common;
 using Speckle.Objects.GIS;
+using Speckle.Objects.Other;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
+using RasterLayer = Speckle.Objects.GIS.RasterLayer;
 
 namespace Speckle.Connectors.ArcGis.Operations.Send;
 
@@ -45,6 +48,14 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     // TODO: add a warning if Geographic CRS is set
     // "Data has been sent in the units 'degrees'. It is advisable to set the project CRS to Projected type (e.g. EPSG:32631) to be able to receive geometry correctly in CAD/BIM software"
 
+    // selected layers might not be in the display order. We need to re-order them to match LayersOrder:
+    int layersCount = objects.Count;
+    List<MapMember> layersToConvertReordered = objects
+      .OrderBy(o => _contextStack.Current.Document.LayersOrder[o])
+      .ToList();
+    objects = layersToConvertReordered;
+    _contextStack.Current.Document.RecalculateLayerPriority(objects.Where(x => x is not GroupLayer).ToList());
+
     int count = 0;
 
     Collection rootObjectCollection = new(); //TODO: Collections
@@ -59,6 +70,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
       var collectionHost = rootObjectCollection;
       var applicationId = mapMember.URI;
       Base converted;
+      int colorWhite = Color.FromArgb(255, 255, 255, 255).ToArgb(); // create plain white color
 
       try
       {
@@ -121,6 +133,21 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
           // other common properties for layers and groups
           converted["name"] = mapMember.Name;
           converted.applicationId = applicationId;
+
+          if (converted is RasterLayer)
+          {
+            // add white material to Raster elements (should not affect meshes colored by vertices), will only be used for z-value/priority display
+            double priority = _contextStack.Current.Document.LayersInOperationIndices[mapMember];
+            var newMaterial = new RenderMaterial() { diffuse = colorWhite, applicationId = $"{colorWhite}_{priority}" };
+            newMaterial["displayPriority"] = priority;
+
+            string elementAppId =
+              ((RasterLayer)converted).elements[0].applicationId
+              ?? throw new SpeckleConversionException($"Application ID not assigned to Raster Element of {converted}");
+
+            var newMaterialProxy = new RenderMaterialProxy(newMaterial, new List<string>() { elementAppId });
+            _contextStack.Current.Document.RenderMaterialProxies.Add(newMaterialProxy);
+          }
         }
 
         if (nestedGroups.Count == 0 || nestedGroups.Count == 1 && nestedGroups[0].Item2.applicationId == applicationId)
@@ -147,6 +174,8 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
 
       onOperationProgressed?.Invoke("Converting", (double)++count / objects.Count);
     }
+
+    rootObjectCollection["renderMaterialProxies"] = _contextStack.Current.Document.RenderMaterialProxies;
 
     // POC: Log would be nice, or can be removed.
     Debug.WriteLine(

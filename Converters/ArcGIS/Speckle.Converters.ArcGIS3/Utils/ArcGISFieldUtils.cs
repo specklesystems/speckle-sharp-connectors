@@ -103,6 +103,7 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
     {
       // get all members by default, but only Dynamic ones from the basic geometry
       Dictionary<string, object?> members = new();
+      members["Speckle_ID"] = baseObj.id; // to use for unique color values
 
       // leave out until we decide which properties to support on Receive
       /*
@@ -119,7 +120,12 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
       foreach (KeyValuePair<string, object?> field in members)
       {
         // POC: TODO check for the forbidden characters/combinations: https://support.esri.com/en-us/knowledge-base/what-characters-should-not-be-used-in-arcgis-for-field--000005588
-        Func<Base, object?> function = x => x[field.Key];
+        string key = field.Key;
+        if (field.Key == "Speckle_ID")
+        {
+          key = "id";
+        }
+        Func<Base, object?> function = x => x[key];
         TraverseAttributes(field, function, fieldsAndFunctions, fieldAdded);
       }
     }

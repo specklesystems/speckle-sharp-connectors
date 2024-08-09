@@ -6,6 +6,7 @@ using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
+using RenderMaterialProxy = Speckle.Objects.Other.RenderMaterialProxy;
 
 namespace Speckle.Converters.ArcGIS3;
 
@@ -15,6 +16,9 @@ public class ArcGISDocument
   public Map Map { get; }
   public Uri SpeckleDatabasePath { get; }
   public CRSoffsetRotation ActiveCRSoffsetRotation { get; set; }
+  public List<RenderMaterialProxy> RenderMaterialProxies { get; set; }
+  public Dictionary<MapMember, double> LayersInOperationIndices { get; set; }
+  public Dictionary<MapMember, int> LayersOrder { get; set; }
 
   public ArcGISDocument()
   {
@@ -24,6 +28,69 @@ public class ArcGISDocument
     // CRS of either: incoming commit to be applied to all received objects, or CRS to convert all objects to, before sending
     // created per Send/Receive operation, will be the same for all objects in the operation
     ActiveCRSoffsetRotation = new CRSoffsetRotation(MapView.Active.Map);
+    RenderMaterialProxies = new();
+    LayersInOperationIndices = new();
+    LayersOrder = GetFlatLayerOrder(MapView.Active.Map);
+  }
+
+  public void RecalculateLayerPriority(List<MapMember> layersToConvert)
+  {
+    int order = 0;
+    if (layersToConvert.Count == 1)
+    {
+      LayersInOperationIndices[layersToConvert[0]] = 1;
+      return;
+    }
+
+    // selected layers might not be in the display order. We need to re-order them to match LayersOrder:
+    double layersCount = Convert.ToDouble(layersToConvert.Count); // convert to double to avoid loss of fraction
+    foreach (var layer in layersToConvert)
+    {
+      LayersInOperationIndices[layer] = Math.Round((layersCount - order) / layersCount, 5);
+      order += 1;
+    }
+  }
+
+  public Dictionary<MapMember, int> GetFlatLayerOrder(Map map)
+  {
+    Dictionary<MapMember, int> layersIndices = new();
+    int count = 0;
+    foreach (var layer in map.Layers)
+    {
+      if (layer is GroupLayer group)
+      {
+        layersIndices[layer] = count;
+        count += 1;
+        count = UnpackGroupLayerOrder(layersIndices, group, count);
+      }
+      else
+      {
+        layersIndices[layer] = count;
+      }
+
+      count += 1;
+    }
+    return layersIndices;
+  }
+
+  private int UnpackGroupLayerOrder(Dictionary<MapMember, int> layersIndices, GroupLayer group, int count)
+  {
+    foreach (var layer in group.Layers)
+    {
+      if (layer is GroupLayer subGroup)
+      {
+        layersIndices[layer] = count;
+        count += 1;
+        count = UnpackGroupLayerOrder(layersIndices, subGroup, count);
+      }
+      else
+      {
+        layersIndices[layer] = count;
+      }
+      count += 1;
+    }
+
+    return count;
   }
 
   private const string FGDB_NAME = "Speckle.gdb";
