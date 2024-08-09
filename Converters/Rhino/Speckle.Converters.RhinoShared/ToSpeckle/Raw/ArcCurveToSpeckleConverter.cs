@@ -1,8 +1,8 @@
-﻿using Objects;
-using Rhino;
+﻿using Rhino;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Models;
+using Speckle.Objects;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
 

@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using System.Reflection;
-using Speckle.Core.Serialisation;
 using Speckle.Newtonsoft.Json;
 using Speckle.Newtonsoft.Json.Linq;
 using Speckle.Newtonsoft.Json.Serialization;
+using Speckle.Sdk.Serialisation;
 
 namespace Speckle.Connectors.DUI.Utils;
 

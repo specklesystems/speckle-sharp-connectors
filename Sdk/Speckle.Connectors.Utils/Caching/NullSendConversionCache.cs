@@ -1,4 +1,4 @@
-using Speckle.Core.Models;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.Utils.Caching;
 

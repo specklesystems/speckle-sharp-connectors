@@ -1,8 +1,8 @@
-using Objects;
-using Objects.Other;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Models;
+using Speckle.Objects;
+using Speckle.Objects.Other;
+using Speckle.Sdk.Models;
 using AECPropDB = Autodesk.Aec.PropertyData.DatabaseServices;
 
 namespace Speckle.Converters.Civil3d.ToSpeckle.BuiltElements;

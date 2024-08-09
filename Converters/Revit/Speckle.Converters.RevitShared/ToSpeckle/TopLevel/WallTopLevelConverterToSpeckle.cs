@@ -1,10 +1,10 @@
-using Objects;
-using Objects.BuiltElements.Revit;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Core.Models;
-using Speckle.Core.Models.Extensions;
+using Speckle.Objects;
+using Speckle.Objects.BuiltElements.Revit;
+using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Extensions;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 

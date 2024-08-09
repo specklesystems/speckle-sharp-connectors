@@ -6,14 +6,14 @@ using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
-using Speckle.Core.Logging;
-using Speckle.Core.Models;
-using Speckle.Core.Models.Collections;
-using Speckle.Core.Models.GraphTraversal;
-using Speckle.Core.Models.Instances;
-using Speckle.Core.Models.Proxies;
-using Speckle.Logging;
-using RenderMaterialProxy = Objects.Other.RenderMaterialProxy;
+using Speckle.Sdk;
+using Speckle.Sdk.Logging;
+using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.GraphTraversal;
+using Speckle.Sdk.Models.Instances;
+using Speckle.Sdk.Models.Proxies;
+using RenderMaterialProxy = Speckle.Objects.Other.RenderMaterialProxy;
 
 namespace Speckle.Connectors.Rhino.Operations.Receive;
 
@@ -29,6 +29,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private readonly RhinoLayerManager _layerManager;
   private readonly RhinoMaterialManager _materialManager;
   private readonly RhinoColorManager _colorManager;
+  private readonly RhinoGroupManager _groupManager;
   private readonly ISyncToThread _syncToThread;
 
   public RhinoHostObjectBuilder(
@@ -39,6 +40,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     RhinoInstanceObjectsManager instanceObjectsManager,
     RhinoMaterialManager materialManager,
     RhinoColorManager colorManager,
+    RhinoGroupManager groupManager,
     ISyncToThread syncToThread
   )
   {
@@ -49,6 +51,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _instanceObjectsManager = instanceObjectsManager;
     _materialManager = materialManager;
     _colorManager = colorManager;
+    _groupManager = groupManager;
     _syncToThread = syncToThread;
   }
 
@@ -66,15 +69,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       // POC: This is where the top level base-layer name is set. Could be abstracted or injected in the context?
       var baseLayerName = $"Project {projectName}: Model {modelName}";
 
-      IEnumerable<TraversalContext> objectsToConvert;
-      using (var _ = SpeckleActivityFactory.Start("Traverse"))
-      {
-        objectsToConvert = _traverseFunction
-          .Traverse(rootObject)
-          //.TraverseWithProgress(rootObject, onOperationProgressed, cancellationToken)
-          .Where(obj => obj.Current is not Collection);
-      }
-
+      var objectsToConvert = _traverseFunction.Traverse(rootObject).Where(obj => obj.Current is not Collection);
       var instanceDefinitionProxies = (rootObject["instanceDefinitionProxies"] as List<object>)
         ?.Cast<InstanceDefinitionProxy>()
         .ToList();
@@ -86,16 +81,13 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
         .ToList();
 
       List<ColorProxy>? colors = (rootObject["colorProxies"] as List<object>)?.Cast<ColorProxy>().ToList();
-      if (colors != null)
-      {
-        _colorManager.ParseColors(colors, onOperationProgressed);
-      }
 
       var conversionResults = BakeObjects(
         objectsToConvert,
         instanceDefinitionProxies,
         groupProxies,
         renderMaterials,
+        colors,
         baseLayerName,
         onOperationProgressed
       );
@@ -111,6 +103,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     List<InstanceDefinitionProxy>? instanceDefinitionProxies,
     List<GroupProxy>? groupProxies,
     List<RenderMaterialProxy>? materialProxies,
+    List<ColorProxy>? colorProxies,
     string baseLayerName,
     Action<string, double?>? onOperationProgressed
   )
@@ -118,16 +111,10 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     List<(Collection[] collectionPath, Base obj)> atomicObjects = new();
     RhinoDoc doc = _contextStack.Current.Document;
     List<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents = new();
-    using (var _ = SpeckleActivityFactory.Start("BakeObjects"))
-    {
-      // Remove all previously received layers and render materials from the document
-      int rootLayerIndex = _contextStack.Current.Document.Layers.Find(
-        Guid.Empty,
-        baseLayerName,
-        RhinoMath.UnsetIntIndex
-      );
-      PreReceiveDeepClean(baseLayerName, rootLayerIndex);
 
+    using (var _ = SpeckleActivityFactory.Start("Traversal"))
+    {
+      PreReceiveDeepClean(baseLayerName);
       _layerManager.CreateBaseLayer(baseLayerName);
 
       // POC: these are not captured by traversal, so we need to re-add them here
@@ -155,157 +142,96 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       }
     }
 
-    List<ReceiveConversionResult> conversionResults = new();
-
-    // Stage 0: Render Materials
+    // Stage 0: Bake materials and colors, as they are used later down the line by layers and objects
+    onOperationProgressed?.Invoke("Converting materials and colors", null);
     if (materialProxies != null)
     {
-      List<ReceiveConversionResult> materialConversionResults = _materialManager.BakeRenderMaterials(
-        materialProxies,
-        baseLayerName,
-        onOperationProgressed
-      );
-      conversionResults.AddRange(materialConversionResults);
+      using var _ = SpeckleActivityFactory.Start("Render Materials");
+      _materialManager.BakeMaterials(materialProxies, baseLayerName);
+    }
+
+    if (colorProxies != null)
+    {
+      _colorManager.ParseColors(colorProxies);
     }
 
     // Stage 1: Convert atomic objects
-    // Note: this can become encapsulated later in an "atomic object baker" of sorts, if needed.
     List<string> bakedObjectIds = new();
-    Dictionary<string, List<string>> applicationIdMap = new(); // used in converting blocks in stage 2. keeps track of original app id => resulting new app ids post baking
+    Dictionary<string, List<string>> applicationIdMap = new(); // This map is used in converting blocks in stage 2. keeps track of original app id => resulting new app ids post baking
+    List<ReceiveConversionResult> conversionResults = new();
+
     int count = 0;
-
-    foreach (var (path, obj) in atomicObjects)
+    using (var _ = SpeckleActivityFactory.Start("Converting objects"))
     {
-      onOperationProgressed?.Invoke("Converting objects", (double)++count / atomicObjects.Count);
-      try
+      foreach (var (path, obj) in atomicObjects)
       {
-        // POC: it's messy creating layers while in the obj loop, need to set layer material here
-        int layerIndex = _layerManager.GetAndCreateLayerFromPath(path, baseLayerName, out bool isNewLayer);
-        if (isNewLayer)
+        onOperationProgressed?.Invoke("Converting objects", (double)++count / atomicObjects.Count);
+        try
         {
-          string collectionId = path[^1].applicationId ?? path[^1].id;
-          if (_materialManager.ObjectMaterialsIdMap.TryGetValue(collectionId, out int lIndex))
+          // Convert and bake an object:
+          // 1: create layer
+          int layerIndex = _layerManager.GetAndCreateLayerFromPath(path, baseLayerName, out bool _);
+
+          // 2: convert
+          var result = _converter.Convert(obj);
+
+          var objectId = obj.applicationId ?? obj.id; // POC: assuming objects have app ids for this to work?
+
+          // 3: colors and materials
+          var matIndex = _materialManager.ObjectIdAndMaterialIndexMap.TryGetValue(objectId, out int mIndex)
+            ? mIndex
+            : 0;
+          Color? objColor = _colorManager.ObjectColorsIdMap.TryGetValue(objectId, out Color color) ? color : null;
+
+          // 4: actually bake
+          var conversionIds = HandleConversionResult(result, obj, layerIndex, matIndex, objColor).ToList();
+          foreach (var r in conversionIds)
           {
-            doc.Layers[layerIndex].RenderMaterialIndex = lIndex;
+            conversionResults.Add(new(Status.SUCCESS, obj, r, result.GetType().ToString()));
+            bakedObjectIds.Add(r);
           }
 
-          if (_colorManager.ObjectColorsIdMap.TryGetValue(collectionId, out Color layerColor))
-          {
-            doc.Layers[layerIndex].Color = layerColor;
-          }
+          // 5: populate app id map
+          applicationIdMap[objectId] = conversionIds;
         }
-
-        var result = _converter.Convert(obj);
-        string objectId = obj.applicationId ?? obj.id; // POC: assuming objects have app ids for this to work?
-        int? objMaterialIndex = _materialManager.ObjectMaterialsIdMap.TryGetValue(objectId, out int oIndex)
-          ? oIndex
-          : null;
-        Color? objColor = _colorManager.ObjectColorsIdMap.TryGetValue(objectId, out Color color) ? color : null;
-        var conversionIds = HandleConversionResult(result, obj, layerIndex, objMaterialIndex, objColor).ToList();
-        foreach (var r in conversionIds)
+        catch (Exception ex) when (!ex.IsFatal())
         {
-          conversionResults.Add(new(Status.SUCCESS, obj, r, result.GetType().ToString()));
-          bakedObjectIds.Add(r);
+          conversionResults.Add(new(Status.ERROR, obj, null, null, ex));
         }
-
-        applicationIdMap[objectId] = conversionIds;
-      }
-      catch (Exception ex) when (!ex.IsFatal())
-      {
-        conversionResults.Add(new(Status.ERROR, obj, null, null, ex));
       }
     }
 
     // Stage 2: Convert instances
-    var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = BakeInstances(
-      instanceComponents,
-      applicationIdMap,
-      baseLayerName,
-      onOperationProgressed
-    );
+    using (var _ = SpeckleActivityFactory.Start("Converting instances"))
+    {
+      var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = _instanceObjectsManager.BakeInstances(
+        instanceComponents,
+        applicationIdMap,
+        baseLayerName,
+        onOperationProgressed
+      );
 
-    bakedObjectIds.RemoveAll(id => consumedObjectIds.Contains(id)); // remove all objects that have been "consumed"
-    bakedObjectIds.AddRange(createdInstanceIds); // add instance ids
-    conversionResults.RemoveAll(result => result.ResultId != null && consumedObjectIds.Contains(result.ResultId)); // remove all conversion results for atomic objects that have been consumed (POC: not that cool, but prevents problems on object highlighting)
-    conversionResults.AddRange(instanceConversionResults); // add instance conversion results to our list
+      bakedObjectIds.RemoveAll(id => consumedObjectIds.Contains(id)); // remove all objects that have been "consumed"
+      bakedObjectIds.AddRange(createdInstanceIds); // add instance ids
+      conversionResults.RemoveAll(result => result.ResultId != null && consumedObjectIds.Contains(result.ResultId)); // remove all conversion results for atomic objects that have been consumed (POC: not that cool, but prevents problems on object highlighting)
+      conversionResults.AddRange(instanceConversionResults); // add instance conversion results to our list
+    }
 
     // Stage 3: Groups
     if (groupProxies is not null)
     {
-      BakeGroups(groupProxies, applicationIdMap);
+      _groupManager.BakeGroups(groupProxies, applicationIdMap, baseLayerName);
     }
 
     // Stage 4: Return
     return new(bakedObjectIds, conversionResults);
   }
 
-  private (
-    List<string> createdInstanceIds,
-    List<string> consumedObjectIds,
-    List<ReceiveConversionResult> instanceConversionResults
-  ) BakeInstances(
-    List<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
-    Dictionary<string, List<string>> applicationIdMap,
-    string baseLayerName,
-    Action<string, double?>? onOperationProgressed
-  )
+  private void PreReceiveDeepClean(string baseLayerName)
   {
-    var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = _instanceObjectsManager.BakeInstances(
-      instanceComponents,
-      applicationIdMap,
-      baseLayerName,
-      onOperationProgressed
-    );
+    // Remove all previously received layers and render materials from the document
+    int rootLayerIndex = _contextStack.Current.Document.Layers.Find(Guid.Empty, baseLayerName, RhinoMath.UnsetIntIndex);
 
-    // add colors and materials to created instances
-    foreach (IInstanceComponent instanceComponent in instanceComponents.Select(o => o.obj).ToList())
-    {
-      if (instanceComponent is InstanceProxy instanceProxy)
-      {
-        string instanceProxyId = instanceProxy.applicationId ?? instanceProxy.id;
-        if (createdInstanceIds.Contains(instanceProxyId))
-        {
-          int? instanceMaterialIndex = _materialManager.ObjectMaterialsIdMap.TryGetValue(
-            instanceProxyId,
-            out int iMaterialIndex
-          )
-            ? iMaterialIndex
-            : null;
-          if (instanceMaterialIndex is int matIndex)
-          {
-            RhinoObject createdInstance = RhinoDoc.ActiveDoc.Objects.FindId(new Guid(instanceProxyId));
-            createdInstance.Attributes.MaterialIndex = matIndex;
-            createdInstance.Attributes.MaterialSource = ObjectMaterialSource.MaterialFromObject;
-          }
-
-          Color? instanceColor = _colorManager.ObjectColorsIdMap.TryGetValue(instanceProxyId, out Color iColor)
-            ? iColor
-            : null;
-          if (instanceColor is Color color)
-          {
-            RhinoObject createdInstance = RhinoDoc.ActiveDoc.Objects.FindId(new Guid(instanceProxyId));
-            createdInstance.Attributes.ObjectColor = color;
-            createdInstance.Attributes.ColorSource = ObjectColorSource.ColorFromObject;
-          }
-        }
-      }
-    }
-    return (createdInstanceIds, consumedObjectIds, instanceConversionResults);
-  }
-
-  private void BakeGroups(List<GroupProxy> groupProxies, Dictionary<string, List<string>> applicationIdMap)
-  {
-    foreach (GroupProxy groupProxy in groupProxies.OrderBy(g => g.objects.Count))
-    {
-      var appIds = groupProxy.objects.SelectMany(oldObjId => applicationIdMap[oldObjId]).Select(id => new Guid(id));
-      var index = RhinoDoc.ActiveDoc.Groups.Add(appIds);
-      var addedGroup = RhinoDoc.ActiveDoc.Groups.FindIndex(index);
-      addedGroup.Name = groupProxy.name;
-    }
-  }
-
-  private void PreReceiveDeepClean(string baseLayerName, int rootLayerIndex)
-  {
     _instanceObjectsManager.PurgeInstances(baseLayerName);
     _materialManager.PurgeMaterials(baseLayerName);
 
@@ -328,6 +254,9 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
         }
       }
     }
+
+    // Cleans up any previously received group
+    _groupManager.PurgeGroups(baseLayerName);
   }
 
   private IReadOnlyList<string> HandleConversionResult(

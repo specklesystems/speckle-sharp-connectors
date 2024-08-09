@@ -1,4 +1,4 @@
-using Speckle.Core.Models.GraphTraversal;
+using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Converters.ArcGIS3.Utils;
 

@@ -1,16 +1,15 @@
-using System.Diagnostics.CodeAnalysis;
-using Objects.Other;
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Render;
 using Speckle.Connectors.Utils.Conversion;
-using Speckle.Core.Kits;
-using Speckle.Core.Logging;
-using Speckle.Logging;
+using Speckle.Converters.Common;
+using Speckle.Objects.Other;
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
 using Material = Rhino.DocObjects.Material;
 using PhysicallyBasedMaterial = Rhino.DocObjects.PhysicallyBasedMaterial;
 using RenderMaterial = Rhino.Render.RenderMaterial;
-using SpeckleRenderMaterial = Objects.Other.RenderMaterial;
+using SpeckleRenderMaterial = Speckle.Objects.Other.RenderMaterial;
 
 namespace Speckle.Connectors.Rhino.HostApp;
 
@@ -19,56 +18,11 @@ namespace Speckle.Connectors.Rhino.HostApp;
 /// </summary>
 public class RhinoMaterialManager
 {
-  /// <summary>
-  /// Keeps track of the object id to render material index
-  /// </summary>
-  public Dictionary<string, int> ObjectMaterialsIdMap { get; } = new();
+  private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
 
-  [SuppressMessage("Performance", "CA1864:Prefer the \'IDictionary.TryAdd(TKey, TValue)\' method")]
-  public List<ReceiveConversionResult> BakeRenderMaterials(
-    List<RenderMaterialProxy> materialProxies,
-    string baseLayerName,
-    Action<string, double?>? onOperationProgressed
-  )
+  public RhinoMaterialManager(IConversionContextStack<RhinoDoc, UnitSystem> contextStack)
   {
-    List<ReceiveConversionResult> conversionResults = new();
-    using var _ = SpeckleActivityFactory.Start("BakeRenderMaterials");
-
-    var doc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
-
-    // keeps track of the material id to created index in the materials table
-    Dictionary<string, int> materialsIdMap = new();
-    int count = 0;
-    foreach (RenderMaterialProxy materialProxy in materialProxies)
-    {
-      onOperationProgressed?.Invoke("Converting render materials", (double)++count / materialProxies.Count);
-      string materialId = materialProxy.value.applicationId ?? materialProxy.value.id;
-
-      // bake the render material
-      ReceiveConversionResult result = BakeRenderMaterial(
-        materialProxy.value,
-        materialId,
-        materialsIdMap,
-        baseLayerName,
-        doc
-      );
-
-      conversionResults.Add(result);
-
-      // process render material proxy object ids
-      foreach (string objectId in materialProxy.objects)
-      {
-        if (materialsIdMap.TryGetValue(materialId, out int materialIndex))
-        {
-          if (!ObjectMaterialsIdMap.ContainsKey(objectId))
-          {
-            ObjectMaterialsIdMap.Add(objectId, materialIndex);
-          }
-        }
-      }
-    }
-
-    return conversionResults;
+    _contextStack = contextStack;
   }
 
   // converts a rhino material to a rhino render material
@@ -117,74 +71,68 @@ public class RhinoMaterialManager
     return speckleRenderMaterial;
   }
 
-  private ReceiveConversionResult BakeRenderMaterial(
-    SpeckleRenderMaterial speckleRenderMaterial,
-    string materialId,
-    Dictionary<string, int> materialsIdMap,
-    string baseLayerName,
-    RhinoDoc doc
-  )
+  /// <summary>
+  /// A map keeping track of ids, <b>either layer id or object id</b>, and their material index. It's generated from the material proxy list as we bake materials; <see cref="BakeMaterials"/> must be called in advance for this to be populated with the correct data.
+  /// </summary>
+  public Dictionary<string, int> ObjectIdAndMaterialIndexMap { get; } = new();
+
+  public void BakeMaterials(List<RenderMaterialProxy> speckleRenderMaterialProxies, string baseLayerName)
   {
-    // We shouldn't be processing render materials with the same id, report error if duplicate ids are found
-    if (materialsIdMap.ContainsKey(materialId))
-    {
-      return new(
-        Status.ERROR,
-        speckleRenderMaterial,
-        null,
-        null,
-        new ConversionException($"Already converted a render material with the same id: {materialId}")
-      );
-    }
+    var doc = _contextStack.Current.Document; // POC: too much right now to interface around
+    List<ReceiveConversionResult> conversionResults = new(); // TODO: return this guy
 
-    try
+    foreach (var proxy in speckleRenderMaterialProxies)
     {
-      // POC: Currently we're relying on the render material name for identification if it's coming from speckle and from which model; could we do something else?
-      // POC: we should assume render materials all have application ids?
-      string matName = $"{speckleRenderMaterial.name}-({materialId})-{baseLayerName}";
-      Color diffuse = Color.FromArgb(speckleRenderMaterial.diffuse);
-      Color emissive = Color.FromArgb(speckleRenderMaterial.emissive);
-      double transparency = 1 - speckleRenderMaterial.opacity;
+      var speckleRenderMaterial = proxy.value;
 
-      Material rhinoMaterial =
-        new()
+      try
+      {
+        // POC: Currently we're relying on the render material name for identification if it's coming from speckle and from which model; could we do something else?
+        string materialId = speckleRenderMaterial.applicationId ?? speckleRenderMaterial.id;
+        string matName = $"{speckleRenderMaterial.name}-({materialId})-{baseLayerName}";
+        Color diffuse = Color.FromArgb(speckleRenderMaterial.diffuse);
+        Color emissive = Color.FromArgb(speckleRenderMaterial.emissive);
+        double transparency = 1 - speckleRenderMaterial.opacity;
+
+        Material rhinoMaterial =
+          new()
+          {
+            Name = matName,
+            DiffuseColor = diffuse,
+            EmissionColor = emissive,
+            Transparency = transparency
+          };
+
+        // try to get additional properties
+        if (speckleRenderMaterial["ior"] is double ior)
         {
-          Name = matName,
-          DiffuseColor = diffuse,
-          EmissionColor = emissive,
-          Transparency = transparency
-        };
+          rhinoMaterial.IndexOfRefraction = ior;
+        }
+        if (speckleRenderMaterial["shine"] is double shine)
+        {
+          rhinoMaterial.Shine = shine;
+        }
 
-      // try to get additional properties
-      if (speckleRenderMaterial["ior"] is double ior)
-      {
-        rhinoMaterial.IndexOfRefraction = ior;
+        int matIndex = doc.Materials.Add(rhinoMaterial);
+
+        // POC: check on matIndex -1, means we haven't created anything - this is most likely an recoverable error at this stage
+        if (matIndex == -1)
+        {
+          throw new ConversionException("Failed to add a material to the document.");
+        }
+
+        // Create the object <> material index map
+        foreach (var objectId in proxy.objects)
+        {
+          ObjectIdAndMaterialIndexMap[objectId] = matIndex;
+        }
+
+        conversionResults.Add(new(Status.SUCCESS, speckleRenderMaterial, matName, "Material"));
       }
-      if (speckleRenderMaterial["shine"] is double shine)
+      catch (Exception ex) when (!ex.IsFatal())
       {
-        rhinoMaterial.Shine = shine;
+        conversionResults.Add(new(Status.ERROR, speckleRenderMaterial, null, null, ex));
       }
-
-      int matIndex = doc.Materials.Add(rhinoMaterial);
-
-      // POC: check on matIndex -1, means we haven't created anything - this is most likely an recoverable error at this stage
-      if (matIndex == -1)
-      {
-        return new(
-          Status.ERROR,
-          speckleRenderMaterial,
-          null,
-          null,
-          new ConversionException("Failed to add a material to the document.")
-        );
-      }
-
-      materialsIdMap[materialId] = matIndex;
-      return new(Status.SUCCESS, speckleRenderMaterial, matName, "Material");
-    }
-    catch (Exception ex) when (!ex.IsFatal())
-    {
-      return new(Status.ERROR, speckleRenderMaterial, null, null, ex);
     }
   }
 
@@ -197,7 +145,7 @@ public class RhinoMaterialManager
     var currentDoc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
     foreach (Material material in currentDoc.Materials)
     {
-      if (!material.IsDeleted && material.Name.Contains(namePrefix))
+      if (!material.IsDeleted && material.Name != null && material.Name.Contains(namePrefix))
       {
         currentDoc.Materials.Delete(material);
       }
