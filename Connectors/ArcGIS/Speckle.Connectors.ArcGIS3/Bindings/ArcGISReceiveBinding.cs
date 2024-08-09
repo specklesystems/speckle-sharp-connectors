@@ -7,7 +7,7 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
-using Speckle.Core.Logging;
+using Speckle.Sdk;
 
 namespace Speckle.Connectors.ArcGIS.Bindings;
 

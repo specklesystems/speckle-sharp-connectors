@@ -1,6 +1,6 @@
 using System.IO;
-using Speckle.Core.Common;
-using Speckle.Core.Kits;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Host;
 
 namespace Speckle.Connectors.ArcGIS.HostApp;
 

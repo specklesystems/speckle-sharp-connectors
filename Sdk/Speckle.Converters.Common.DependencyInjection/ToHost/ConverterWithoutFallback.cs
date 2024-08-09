@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Models;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Common.DependencyInjection.ToHost;
 

@@ -1,5 +1,5 @@
 using Rhino.DocObjects;
-using Speckle.Core.Models.Proxies;
+using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Connectors.Rhino.HostApp;
 
@@ -28,7 +28,7 @@ public class RhinoColorManager
       // assumes color names are unique
       string colorId = atts.ObjectColor.Name;
       string objectId = rhinoObj.Id.ToString();
-      if (colorProxies.TryGetValue(colorId, out ColorProxy value))
+      if (colorProxies.TryGetValue(colorId, out ColorProxy? value))
       {
         value.objects.Add(objectId);
       }
@@ -46,7 +46,7 @@ public class RhinoColorManager
       // assumes color names are unique
       string colorId = layer.Color.Name;
       string layerId = layer.Id.ToString();
-      if (colorProxies.TryGetValue(colorId, out ColorProxy value))
+      if (colorProxies.TryGetValue(colorId, out ColorProxy? value))
       {
         value.objects.Add(layerId);
       }
@@ -65,13 +65,10 @@ public class RhinoColorManager
   /// Parse Color Proxies and stores in ObjectColorsIdMap the relationship between object ids and colors
   /// </summary>
   /// <param name="colorProxies"></param>
-  /// <param name="onOperationProgressed"></param>
-  public void ParseColors(List<ColorProxy> colorProxies, Action<string, double?>? onOperationProgressed)
+  public void ParseColors(List<ColorProxy> colorProxies)
   {
-    var count = 0;
     foreach (ColorProxy colorProxy in colorProxies)
     {
-      onOperationProgressed?.Invoke("Converting colors", (double)++count / colorProxies.Count);
       foreach (string objectId in colorProxy.objects)
       {
         Color convertedColor = Color.FromArgb(colorProxy.value);

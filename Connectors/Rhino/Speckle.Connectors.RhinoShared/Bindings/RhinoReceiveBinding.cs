@@ -9,7 +9,7 @@ using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
-using Speckle.Core.Logging;
+using Speckle.Sdk;
 
 namespace Speckle.Connectors.Rhino.Bindings;
 

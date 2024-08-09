@@ -3,9 +3,9 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Connectors.Utils.Operations;
-using Speckle.Core.Transports;
 using Speckle.Newtonsoft.Json;
 using Speckle.Newtonsoft.Json.Serialization;
+using Speckle.Sdk.Transports;
 
 namespace Speckle.Connectors.DUI;
 

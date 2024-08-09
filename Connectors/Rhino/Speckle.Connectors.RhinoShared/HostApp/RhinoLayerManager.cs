@@ -1,9 +1,9 @@
 using System.Diagnostics.Contracts;
 using Rhino;
-using Speckle.Core.Models.Collections;
-using Speckle.Core.Models.GraphTraversal;
+using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.GraphTraversal;
 using Layer = Rhino.DocObjects.Layer;
-using SpeckleLayer = Speckle.Core.Models.Collections.Layer;
+using SpeckleLayer = Speckle.Sdk.Models.Collections.Layer;
 
 namespace Speckle.Connectors.Rhino.HostApp;
 
@@ -12,8 +12,16 @@ namespace Speckle.Connectors.Rhino.HostApp;
 /// </summary>
 public class RhinoLayerManager
 {
+  private readonly RhinoMaterialManager _materialManager;
+  private readonly RhinoColorManager _colorManager;
   private readonly Dictionary<string, int> _hostLayerCache = new();
   private readonly Dictionary<int, Collection> _layerCollectionCache = new();
+
+  public RhinoLayerManager(RhinoMaterialManager materialManager, RhinoColorManager colorManager)
+  {
+    _materialManager = materialManager;
+    _colorManager = colorManager;
+  }
 
   /// <summary>
   /// Creates the base layer and adds it to the cache.
@@ -56,6 +64,23 @@ public class RhinoLayerManager
 
       var cleanNewLayerName = collection.name.Replace("{", "").Replace("}", "");
       Layer newLayer = new() { Name = cleanNewLayerName, ParentLayerId = previousLayer.Id };
+
+      // set material
+      if (
+        _materialManager.ObjectIdAndMaterialIndexMap.TryGetValue(
+          collection.applicationId ?? collection.id,
+          out int mIndex
+        )
+      )
+      {
+        newLayer.RenderMaterialIndex = mIndex;
+      }
+
+      // set color
+      if (_colorManager.ObjectColorsIdMap.TryGetValue(collection.applicationId ?? collection.id, out Color color))
+      {
+        newLayer.Color = color;
+      }
 
       int index = currentDocument.Layers.Add(newLayer);
       _hostLayerCache.Add(currentLayerName, index);

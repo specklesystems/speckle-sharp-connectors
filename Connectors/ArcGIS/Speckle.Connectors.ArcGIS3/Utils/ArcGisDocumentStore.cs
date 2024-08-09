@@ -5,8 +5,8 @@ using ArcGIS.Desktop.Mapping;
 using ArcGIS.Desktop.Mapping.Events;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
-using Speckle.Core.Common;
 using Speckle.Newtonsoft.Json;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.ArcGIS.Utils;
 

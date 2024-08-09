@@ -1,7 +1,6 @@
-﻿using Objects;
-using Speckle.Converters.Common.Objects;
-using Speckle.Core.Common;
-using Speckle.Core.Kits;
+﻿using Speckle.Converters.Common.Objects;
+using Speckle.Objects;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.Rhino.ToHost.Raw;
 

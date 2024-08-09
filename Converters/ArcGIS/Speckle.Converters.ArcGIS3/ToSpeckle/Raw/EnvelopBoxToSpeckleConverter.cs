@@ -1,7 +1,7 @@
 using ArcGIS.Core.Geometry;
-using Objects.Primitive;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Objects.Primitive;
 
 namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
 

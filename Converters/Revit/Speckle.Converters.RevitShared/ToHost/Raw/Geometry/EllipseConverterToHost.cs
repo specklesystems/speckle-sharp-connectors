@@ -1,6 +1,6 @@
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Services;
-using Speckle.Core.Common;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.ToHost.Raw.Geometry;
 

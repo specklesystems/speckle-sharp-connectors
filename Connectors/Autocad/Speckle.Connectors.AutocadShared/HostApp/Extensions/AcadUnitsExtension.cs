@@ -1,6 +1,6 @@
 using Autodesk.AutoCAD.DatabaseServices;
-using Speckle.Core.Kits;
-using Speckle.Core.Logging;
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Autocad.HostApp.Extensions;
 

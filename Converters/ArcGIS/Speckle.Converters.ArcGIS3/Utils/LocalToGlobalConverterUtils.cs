@@ -1,8 +1,8 @@
-﻿using Objects;
-using Speckle.Converters.Common;
-using Speckle.Core.Models;
+﻿using Speckle.Converters.Common;
 using Speckle.DoubleNumerics;
 using Speckle.InterfaceGenerator;
+using Speckle.Objects;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.Utils;
 
