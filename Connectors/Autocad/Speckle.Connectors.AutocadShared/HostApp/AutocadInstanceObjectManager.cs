@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Geometry;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
@@ -203,6 +204,11 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
           foreach (var entity in constituentEntities)
           {
             objectIds.Add(entity.ObjectId);
+          }
+
+          if (constituentEntities.Count == 0)
+          {
+            throw new ConversionException("No objects found to create instance definition.");
           }
 
           using var blockTable = (BlockTable)
