@@ -336,45 +336,51 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
 
   private void SetLayerRenderer(FeatureLayer fLayer, CIMUniqueValueClass? newUniqueValueClass)
   {
-    var color = Color.FromArgb(ColorFactory.Instance.GreyRGB.CIMColorToInt());
-    CIMSymbolReference defaultSymbol = CreateSymbol(fLayer, color);
-
-    // get renderer classes, add existing, create new is needed
-    List<CIMUniqueValueClass> listUniqueValueClasses = new() { };
-
-    var existingRenderer = fLayer.GetRenderer();
-    if (existingRenderer is CIMUniqueValueRenderer uniqueRenderer)
+    QueuedTask.Run(() =>
     {
-      if (uniqueRenderer.Groups[0].Classes != null)
+      var color = Color.FromArgb(ColorFactory.Instance.GreyRGB.CIMColorToInt());
+      CIMSymbolReference defaultSymbol = CreateSymbol(fLayer, color);
+
+      // get renderer classes, add existing, create new is needed
+      List<CIMUniqueValueClass> listUniqueValueClasses = new() { };
+
+      var existingRenderer = fLayer.GetRenderer();
+      if (existingRenderer is CIMUniqueValueRenderer uniqueRenderer)
       {
-        listUniqueValueClasses.AddRange(uniqueRenderer.Groups[0].Classes.ToList());
+        if (uniqueRenderer.Groups[0].Classes != null)
+        {
+          listUniqueValueClasses.AddRange(uniqueRenderer.Groups[0].Classes.ToList());
+        }
       }
-    }
 
-    // Add new CIMUniqueValueClass
-    if (newUniqueValueClass != null)
-    {
-      listUniqueValueClasses.Add(newUniqueValueClass);
-    }
-
-    //Create a list of CIMUniqueValueGroup
-    CIMUniqueValueGroup uvg = new() { Classes = listUniqueValueClasses.ToArray(), };
-
-    List<CIMUniqueValueGroup> listUniqueValueGroups = new() { uvg };
-
-    //Create the CIMUniqueValueRenderer
-    CIMUniqueValueRenderer uvr =
-      new()
+      // Add new CIMUniqueValueClass
+      if (
+        newUniqueValueClass != null
+        && !listUniqueValueClasses.Select(x => x.Label).Contains(newUniqueValueClass.Label)
+      )
       {
-        UseDefaultSymbol = true,
-        DefaultLabel = "all other values",
-        DefaultSymbol = defaultSymbol,
-        Groups = listUniqueValueGroups.ToArray(),
-        Fields = new string[] { "Speckle_ID" }
-      };
+        listUniqueValueClasses.Add(newUniqueValueClass);
+      }
 
-    //Set the feature layer's renderer.
-    fLayer.SetRenderer(uvr);
+      //Create a list of CIMUniqueValueGroup
+      CIMUniqueValueGroup uvg = new() { Classes = listUniqueValueClasses.ToArray(), };
+
+      List<CIMUniqueValueGroup> listUniqueValueGroups = new() { uvg };
+
+      //Create the CIMUniqueValueRenderer
+      CIMUniqueValueRenderer uvr =
+        new()
+        {
+          UseDefaultSymbol = true,
+          DefaultLabel = "all other values",
+          DefaultSymbol = defaultSymbol,
+          Groups = listUniqueValueGroups.ToArray(),
+          Fields = new string[] { "Speckle_ID" }
+        };
+
+      //Set the feature layer's renderer.
+      fLayer.SetRenderer(uvr);
+    });
   }
 
   private void AddColorCategory(ObjectConversionTracker trackerItem)
@@ -390,11 +396,11 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       }
     }
 
-    if (trackerItem.HostAppMapMember is FeatureLayer fLyr)
+    if (trackerItem.HostAppMapMember is FeatureLayer fLayer)
     {
-      CIMSymbolReference symbol = CreateSymbol(fLyr, color);
+      CIMSymbolReference symbol = CreateSymbol(fLayer, color);
 
-      // First create a "CIMUniqueValueClass" for the cities in Alabama.
+      // First create a "CIMUniqueValueClass"
       List<CIMUniqueValue> listUniqueValues =
         new() { new CIMUniqueValue { FieldValues = new string[] { trackerItem.Base.id } } };
 
@@ -408,11 +414,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
           Visible = true,
           Values = listUniqueValues.ToArray()
         };
-
-      if (trackerItem.HostAppMapMember is FeatureLayer fLayer)
-      {
-        SetLayerRenderer(fLayer, newUniqueValueClass);
-      }
+      SetLayerRenderer(fLayer, newUniqueValueClass);
     }
   }
 
