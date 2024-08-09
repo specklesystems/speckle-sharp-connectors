@@ -52,11 +52,9 @@ public class AutocadCommand
 
   private HostApplication GetApp()
   {
-#if CIVIL3D2024
+#if CIVIL3D
     return HostApplications.Civil3D;
-#elif AUTOCAD2024
-    return HostApplications.AutoCAD;
-#elif AUTOCAD2023
+#elif AUTOCAD
     return HostApplications.AutoCAD;
 #else
     throw new NotImplementedException();
@@ -71,6 +69,8 @@ public class AutocadCommand
     return HostAppVersion.v2024;
 #elif AUTOCAD2023
     return HostAppVersion.v2023;
+#elif AUTOCAD2022
+    return HostAppVersion.v2022;
 #else
     throw new NotImplementedException();
 #endif
