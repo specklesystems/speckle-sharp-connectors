@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Bindings;
-using Speckle.Core.Logging;
+using Speckle.Sdk;
 
 namespace Speckle.Connectors.DUI.Logging;
 

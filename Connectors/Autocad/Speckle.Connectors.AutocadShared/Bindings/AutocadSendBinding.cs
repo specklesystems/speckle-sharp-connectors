@@ -193,7 +193,7 @@ public sealed class AutocadSendBinding : ISendBinding
       // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
       return;
     }
-    catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error.
+    catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
       _logger.LogModelCardHandledError(ex);
       Commands.SetModelError(modelCardId, ex);
