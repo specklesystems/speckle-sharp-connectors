@@ -205,6 +205,11 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
             objectIds.Add(entity.ObjectId);
           }
 
+          if (constituentEntities.Count == 0)
+          {
+            throw new ConversionException("No objects found to create instance definition.");
+          }
+
           using var blockTable = (BlockTable)
             transaction.GetObject(Application.DocumentManager.CurrentDocument.Database.BlockTableId, OpenMode.ForWrite);
           var id = blockTable.Add(record);
