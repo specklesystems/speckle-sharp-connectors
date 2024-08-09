@@ -1,5 +1,4 @@
 using Autodesk.Revit.DB;
-using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Helpers;
 
 namespace Speckle.Connectors.Revit.HostApp;
