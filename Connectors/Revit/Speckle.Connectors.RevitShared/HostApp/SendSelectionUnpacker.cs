@@ -13,6 +13,10 @@ namespace Speckle.Connectors.Revit.HostApp;
 ///   <description>explodes them into sub constituent objects, recursively.</description>
 /// </item>
 /// <item>
+///   <term>Nested families: </term>
+///   <description>explodes them into sub constituent objects, recursively.</description>
+/// </item>
+/// <item>
 ///   <term>Curtain walls: </term>
 ///   <description>If parent wall is part of selection, does not select individual elements out. Otherwise, selects individual elements (Panels, Mullions) as atomic objects.</description>
 /// </item>
@@ -31,7 +35,7 @@ public class SendSelectionUnpacker
   {
     // Note: steps kept separate on purpose.
     // Step 1: unpack groups
-    var atomicObjects = UnpackGroups(selectionElements);
+    var atomicObjects = UnpackElements(selectionElements);
 
     // Step 2: pack curtain wall elements, once we know the full extent of our flattened item list.
     // The behaviour we're looking for:
@@ -40,16 +44,32 @@ public class SendSelectionUnpacker
   }
 
   // This needs some yield refactoring
-  private List<Element> UnpackGroups(IEnumerable<Element> elements)
+  private List<Element> UnpackElements(IEnumerable<Element> elements)
   {
-    var unpackedElements = new List<Element>();
+    var unpackedElements = new List<Element>(); // note: could be a hashset/map so we prevent duplicates (?)
 
     foreach (var element in elements)
     {
       if (element is Group g)
       {
+        // POC: this might screw up generating hosting rel generation here, because nested families in groups get flattened out by GetMemberIds().
+        // in other words, if a group contains nested families, .GetMemberIds() will return all "exploded" families.
         var groupElements = g.GetMemberIds().Select(_contextStack.Current.Document.GetElement);
-        unpackedElements.AddRange(UnpackGroups(groupElements));
+        unpackedElements.AddRange(UnpackElements(groupElements));
+      }
+      else if (element is FamilyInstance familyInstance)
+      {
+        var familyElements = familyInstance
+          .GetSubComponentIds()
+          .Select(_contextStack.Current.Document.GetElement)
+          .ToArray();
+
+        if (familyElements.Length != 0)
+        {
+          unpackedElements.AddRange(UnpackElements(familyElements));
+        }
+
+        unpackedElements.Add(familyInstance);
       }
       else
       {
