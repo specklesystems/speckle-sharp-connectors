@@ -44,7 +44,7 @@ public class ArcGISColorManager
 
   // Adds the element id to the color proxy based on colorId if it exists in ColorProxies,
   // otherwise creates a new Color Proxy with the element id in the objects property
-  private void AddElementIdToColorProxy(string elementAppId, string colorId, int displayPriority)
+  private void AddElementIdToColorProxy(string elementAppId, int colorValue, string colorId, int displayPriority)
   {
     if (ColorProxies.TryGetValue(colorId, out ColorProxy? colorProxy))
     {
@@ -55,6 +55,7 @@ public class ArcGISColorManager
       ColorProxy newProxy =
         new()
         {
+          value = colorValue,
           applicationId = colorId,
           objects = new() { elementAppId },
           name = colorId
@@ -68,8 +69,9 @@ public class ArcGISColorManager
   private void ProcessRasterLayerColors(RasterLayer rasterLayer, int displayPriority)
   {
     string elementAppId = $"{rasterLayer.URI}_0"; // POC: explain why count = 0 here
-    string colorId = GetColorApplicationId(-1, displayPriority); // We are using a default color of -1 for all raster layers
-    AddElementIdToColorProxy(elementAppId, colorId, displayPriority);
+    int argb = -1;
+    string colorId = GetColorApplicationId(argb, displayPriority); // We are using a default color of -1 for all raster layers
+    AddElementIdToColorProxy(elementAppId, argb, colorId, displayPriority);
   }
 
   private void ProcessFeatureLayerColors(FeatureLayer layer, int displayPriority)
@@ -97,7 +99,7 @@ public class ArcGISColorManager
           // get row color
           int argb = GetLayerColorByRendererAndRow(layerRenderer, row, layerFieldDictionary);
           string colorId = GetColorApplicationId(argb, displayPriority);
-          AddElementIdToColorProxy(elementAppId, colorId, displayPriority);
+          AddElementIdToColorProxy(elementAppId, argb, colorId, displayPriority);
         }
 
         count++;
