@@ -130,8 +130,8 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
         {
           try
           {
-            var entity = (Entity)tr.GetObject(objectId, OpenMode.ForRead);
-            if (entity != null && entity.GeometricExtents != null)
+            var entity = (Entity?)tr.GetObject(objectId, OpenMode.ForRead);
+            if (entity?.GeometricExtents != null)
             {
               selectedExtents.AddExtents(entity.GeometricExtents);
             }

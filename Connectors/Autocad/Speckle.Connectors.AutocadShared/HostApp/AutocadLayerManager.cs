@@ -1,6 +1,7 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.LayerManager;
+using Speckle.Converters.Common;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
 using AutocadColor = Autodesk.AutoCAD.Colors.Color;
@@ -37,24 +38,18 @@ public class AutocadLayerManager
   {
     string layerName = entity.Layer;
     layer = null;
-    if (CollectionCache.TryGetValue(layerName, out Layer speckleLayer))
+    if (CollectionCache.TryGetValue(layerName, out Layer? speckleLayer))
     {
       return speckleLayer;
     }
-    else
+    if (tr.GetObject(entity.LayerId, OpenMode.ForRead) is LayerTableRecord autocadLayer)
     {
-      if (tr.GetObject(entity.LayerId, OpenMode.ForRead) is LayerTableRecord autocadLayer)
-      {
-        speckleLayer = new Layer(layerName) { applicationId = autocadLayer.Handle.ToString() };
-        CollectionCache[layerName] = speckleLayer;
-        layer = autocadLayer;
-      }
-      else
-      {
-        // POC: this shouldn't happen, but we should probably throw
-      }
+      speckleLayer = new Layer(layerName) { applicationId = autocadLayer.Handle.ToString() };
+      CollectionCache[layerName] = speckleLayer;
+      layer = autocadLayer;
+      return speckleLayer;
     }
-    return speckleLayer;
+    throw new SpeckleConversionException("Unexpected condition in GetOrCreateSpeckleLayer");
   }
 
   /// <summary>
