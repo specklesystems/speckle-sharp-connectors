@@ -11,6 +11,8 @@ public class NullSendConversionCache : ISendConversionCache
 
   public void EvictObjects(IEnumerable<string> objectIds) { }
 
+  public void ClearCache() { }
+
   public bool TryGetValue(string projectId, string applicationId, out ObjectReference objectReference)
   {
     objectReference = new ObjectReference();
