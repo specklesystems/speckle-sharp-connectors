@@ -2,6 +2,7 @@ using System.Diagnostics;
 using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
+using Speckle.Connectors.ArcGIS.HostApp;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Conversion;
@@ -12,6 +13,7 @@ using Speckle.Objects.GIS;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Connectors.ArcGis.Operations.Send;
 
@@ -22,15 +24,18 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
 {
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;
+  private readonly ArcGISColorManager _colorManager;
   private readonly IConversionContextStack<ArcGISDocument, Unit> _contextStack;
 
   public ArcGISRootObjectBuilder(
     ISendConversionCache sendConversionCache,
+    ArcGISColorManager colorManager,
     IConversionContextStack<ArcGISDocument, Unit> contextStack,
     IRootToSpeckleConverter rootToSpeckleConverter
   )
   {
     _sendConversionCache = sendConversionCache;
+    _colorManager = colorManager;
     _contextStack = contextStack;
     _rootToSpeckleConverter = rootToSpeckleConverter;
   }
@@ -109,11 +114,9 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
             {
               wkt = spatialRef.Wkt,
               name = spatialRef.Name,
-              offset_y = System.Convert.ToSingle(_contextStack.Current.Document.ActiveCRSoffsetRotation.LatOffset),
-              offset_x = System.Convert.ToSingle(_contextStack.Current.Document.ActiveCRSoffsetRotation.LonOffset),
-              rotation = System.Convert.ToSingle(
-                _contextStack.Current.Document.ActiveCRSoffsetRotation.TrueNorthRadians
-              ),
+              offset_y = Convert.ToSingle(_contextStack.Current.Document.ActiveCRSoffsetRotation.LatOffset),
+              offset_x = Convert.ToSingle(_contextStack.Current.Document.ActiveCRSoffsetRotation.LonOffset),
+              rotation = Convert.ToSingle(_contextStack.Current.Document.ActiveCRSoffsetRotation.TrueNorthRadians),
               units_native = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString,
             };
           }
@@ -148,11 +151,73 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
       onOperationProgressed?.Invoke("Converting", (double)++count / objects.Count);
     }
 
+    // POC: Add Color Proxies
+    List<(MapMember, int)> layersWithDisplayPriority = GetLayerDisplayPriority(MapView.Active.Map, objects);
+    List<ColorProxy> colorProxies = _colorManager.UnpackColors(layersWithDisplayPriority);
+    rootObjectCollection["colorProxies"] = colorProxies;
+
     // POC: Log would be nice, or can be removed.
     Debug.WriteLine(
       $"Cache hit count {cacheHitCount} out of {objects.Count} ({(double)cacheHitCount / objects.Count})"
     );
 
     return new RootObjectBuilderResult(rootObjectCollection, results);
+  }
+
+  // Gets the layer display priority for selected layers
+  public List<(MapMember, int)> GetLayerDisplayPriority(Map map, IReadOnlyList<MapMember> mapMembers)
+  {
+    // first get all map layers
+    Dictionary<MapMember, int> layersIndices = new();
+    int count = 0;
+    foreach (var layer in map.Layers)
+    {
+      if (layer is GroupLayer group)
+      {
+        layersIndices[layer] = count;
+        count++;
+        count = UnpackGroupLayerOrder(layersIndices, group, count);
+      }
+      else
+      {
+        layersIndices[layer] = count;
+      }
+
+      count++;
+    }
+
+    // recalculate selected layer priority from all map layers
+    List<(MapMember, int)> selectedLayers = new();
+    foreach (MapMember layer in mapMembers)
+    {
+      if (!layersIndices.TryGetValue(layer, out int priority))
+      {
+        // TODO: report error, should not happen but didn't process this layer in map priority
+      }
+
+      selectedLayers.Add((layer, priority));
+    }
+
+    return selectedLayers;
+  }
+
+  private int UnpackGroupLayerOrder(Dictionary<MapMember, int> layersIndices, GroupLayer group, int count)
+  {
+    foreach (var layer in group.Layers)
+    {
+      if (layer is GroupLayer subGroup)
+      {
+        layersIndices[layer] = count;
+        count++;
+        count = UnpackGroupLayerOrder(layersIndices, subGroup, count);
+      }
+      else
+      {
+        layersIndices[layer] = count;
+      }
+      count++;
+    }
+
+    return count;
   }
 }

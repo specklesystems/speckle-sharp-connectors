@@ -48,6 +48,7 @@ public class RasterLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
 
     // write details about the Raster
     RasterElement element = _gisRasterConverter.Convert(target.GetRaster());
+    element.applicationId = $"{target.URI}_0";
     speckleLayer.elements.Add(element);
 
     return speckleLayer;
