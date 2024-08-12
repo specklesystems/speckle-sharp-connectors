@@ -156,7 +156,19 @@ public class ArcGISColorManager
           // all field values have to match the row values
           for (int i = 0; i < usedFields.Count; i++)
           {
-            if (value.FieldValues[i].Replace("<Null>", "") != Convert.ToString(row[usedFields[i]]))
+            string groupValue = value.FieldValues[i].Replace("<Null>", "");
+            var rowValue = row[usedFields[i]];
+
+            if (row[usedFields[i]] is double rowValueDouble)
+            {
+              rowValue = Math.Round(rowValueDouble, 5);
+              groupValue = string.Concat(
+                groupValue.Split(".")[0],
+                ".",
+                groupValue.Split(".")[^1].AsSpan(0, Math.Min(5, groupValue.Split(".")[^1].Length))
+              );
+            }
+            if (groupValue != Convert.ToString(rowValue))
             {
               groupConditionsMet = false;
               break;
