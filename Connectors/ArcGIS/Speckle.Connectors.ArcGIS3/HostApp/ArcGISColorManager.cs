@@ -113,12 +113,74 @@ public class ArcGISColorManager
     symbolColor = -1;
     if (symbol.GetColor() is CIMColor cimColor)
     {
-      symbolColor = cimColor.CIMColorToInt();
-      return true;
+      switch (cimColor)
+      {
+        case CIMRGBColor rgbColor:
+          symbolColor = rgbColor.CIMColorToInt();
+          return true;
+        case CIMHSVColor hsvColor:
+          symbolColor = RgbFromHsv(hsvColor);
+          return true;
+        case CIMCMYKColor cmykColor:
+          symbolColor = RgbFromCmyk(cmykColor);
+          return true;
+        default:
+          return false;
+      }
     }
     else
     {
       return false;
+    }
+  }
+
+  private int RbgToInt(int a, int r, int g, int b)
+  {
+    return (a << 24) | (r << 16) | (g << 8) | b;
+  }
+
+  private int RgbFromCmyk(CIMCMYKColor cmykColor)
+  {
+    float c = cmykColor.C;
+    float m = cmykColor.M;
+    float y = cmykColor.Y;
+    float k = cmykColor.K;
+
+    int r = Convert.ToInt32(255 * (1 - c) * (1 - k));
+    int g = Convert.ToInt32(255 * (1 - m) * (1 - k));
+    int b = Convert.ToInt32(255 * (1 - y) * (1 - k));
+    return RbgToInt(255, r, g, b);
+  }
+
+  private int RgbFromHsv(CIMHSVColor hsvColor)
+  {
+    float hue = hsvColor.H;
+    float saturation = hsvColor.S;
+    float value = hsvColor.V;
+
+    int hi = Convert.ToInt32(Math.Floor(hue / 60)) % 6;
+    double f = hue / 60 - Math.Floor(hue / 60);
+
+    saturation /= 255;
+    int v = Convert.ToInt32(value);
+    int p = Convert.ToInt32(value * (1 - saturation));
+    int q = Convert.ToInt32(value * (1 - f * saturation));
+    int t = Convert.ToInt32(value * (1 - (1 - f) * saturation));
+
+    switch (hi)
+    {
+      case 0:
+        return RbgToInt(255, v, t, p);
+      case 1:
+        return RbgToInt(255, q, v, p);
+      case 2:
+        return RbgToInt(255, p, v, t);
+      case 3:
+        return RbgToInt(255, p, q, v);
+      case 4:
+        return RbgToInt(255, t, p, v);
+      default:
+        return RbgToInt(255, v, p, q);
     }
   }
 
@@ -157,18 +219,31 @@ public class ArcGISColorManager
           for (int i = 0; i < usedFields.Count; i++)
           {
             string groupValue = value.FieldValues[i].Replace("<Null>", "");
-            var rowValue = row[usedFields[i]];
+            object? rowValue = row[usedFields[i]];
 
-            if (row[usedFields[i]] is double rowValueDouble)
+            // int, doubles are tricky to compare with strings, trimming both to 5 digits
+            if (row[usedFields[i]] is int rowValueInt)
             {
-              rowValue = Math.Round(rowValueDouble, 5);
+              string rowValueString = Convert.ToString(rowValueInt);
+              rowValue = rowValueString.Split(".")[0];
+              groupValue = groupValue.Split(".")[0];
+            }
+            else if (row[usedFields[i]] is double rowValueDouble)
+            {
+              string rowValueString = Convert.ToString(rowValueDouble);
+              rowValue = string.Concat(
+                rowValueString.Split(".")[0],
+                ".",
+                rowValueString.Split(".")[^1].AsSpan(0, Math.Min(5, rowValueString.Split(".")[^1].Length))
+              );
               groupValue = string.Concat(
                 groupValue.Split(".")[0],
                 ".",
                 groupValue.Split(".")[^1].AsSpan(0, Math.Min(5, groupValue.Split(".")[^1].Length))
               );
             }
-            if (groupValue != Convert.ToString(rowValue))
+
+            if (groupValue != (string)rowValue)
             {
               groupConditionsMet = false;
               break;
