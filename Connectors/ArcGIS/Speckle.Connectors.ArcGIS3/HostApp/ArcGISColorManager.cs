@@ -8,6 +8,8 @@ namespace Speckle.Connectors.ArcGIS.HostApp;
 
 public class ArcGISColorManager
 {
+  private Dictionary<string, ColorProxy> ColorProxies { get; set; } = new();
+
   /// <summary>
   /// Iterates through a given set of arcGIS map members (layers containing objects) and collects their colors.
   /// </summary>
@@ -19,46 +21,34 @@ public class ArcGISColorManager
   /// </remarks>
   public List<ColorProxy> UnpackColors(List<(MapMember, int)> mapMembersWithDisplayPriority)
   {
-    Dictionary<string, ColorProxy> colorProxies = new();
-
     foreach ((MapMember mapMember, int priority) in mapMembersWithDisplayPriority)
     {
       switch (mapMember)
       {
         // FeatureLayer colors will be processed per feature object
         case FeatureLayer featureLayer:
-          ProcessFeatureLayerColors(featureLayer, priority, colorProxies);
-
+          ProcessFeatureLayerColors(featureLayer, priority);
           break;
 
         // RasterLayer object colors are converted as mesh vertex colors, but we need to store displayPriority on the raster layer. Default color is used for all rasters.
         case RasterLayer rasterLayer:
-          ProcessRasterLayerColors(rasterLayer, priority, colorProxies);
+          ProcessRasterLayerColors(rasterLayer, priority);
           break;
       }
     }
 
-    return colorProxies.Values.ToList();
+    return ColorProxies.Values.ToList();
   }
 
-  private string GetColorApplicationId(int argb, double order)
-  {
-    return $"{argb}_{order}";
-  }
+  private string GetColorApplicationId(int argb, double order) => $"{argb}_{order}";
 
-  // We are using a default color of -1 for all raster layers
-  private void ProcessRasterLayerColors(
-    RasterLayer rasterLayer,
-    int displayPriority,
-    Dictionary<string, ColorProxy> colorProxies
-  )
+  // Adds the element id to the color proxy based on colorId if it exists in ColorProxies,
+  // otherwise creates a new Color Proxy with the element id in the objects property
+  private void AddElementIdToColorProxy(string elementAppId, string colorId, int displayPriority)
   {
-    string elementApplicationId = $"{rasterLayer.URI}_0"; // POC: explain why count = 0 here
-    string colorId = GetColorApplicationId(-1, displayPriority);
-
-    if (colorProxies.TryGetValue(colorId, out ColorProxy? colorProxy))
+    if (ColorProxies.TryGetValue(colorId, out ColorProxy? colorProxy))
     {
-      colorProxy.objects.Add(elementApplicationId);
+      colorProxy.objects.Add(elementAppId);
     }
     else
     {
@@ -66,21 +56,24 @@ public class ArcGISColorManager
         new()
         {
           applicationId = colorId,
-          objects = new() { elementApplicationId },
+          objects = new() { elementAppId },
           name = colorId
         };
 
       newProxy["displayPriority"] = displayPriority;
-
-      colorProxies.Add(colorId, newProxy);
+      ColorProxies.Add(colorId, newProxy);
     }
   }
 
-  private void ProcessFeatureLayerColors(
-    FeatureLayer layer,
-    int displayPriority,
-    Dictionary<string, ColorProxy> colorProxies
-  )
+  // We are using a default color of -1 for all raster layers
+  private void ProcessRasterLayerColors(RasterLayer rasterLayer, int displayPriority)
+  {
+    string elementAppId = $"{rasterLayer.URI}_0"; // POC: explain why count = 0 here
+    string colorId = GetColorApplicationId(-1, displayPriority);
+    AddElementIdToColorProxy(elementAppId, colorId, displayPriority);
+  }
+
+  private void ProcessFeatureLayerColors(FeatureLayer layer, int displayPriority)
   {
     // first get a list of layer fields
     // field names are unique, but often their alias is used instead by renderer headings
@@ -99,34 +92,16 @@ public class ArcGISColorManager
     {
       while (rowCursor.MoveNext())
       {
-        string elementApplicationId = $"{layer.URI}_{count}";
+        string elementAppId = $"{layer.URI}_{count}";
         using (Row row = rowCursor.Current)
         {
           // get row color
           int argb = GetLayerColorByRendererAndRow(layerRenderer, row, layerFieldDictionary);
           string colorId = GetColorApplicationId(argb, displayPriority);
-
-          if (colorProxies.TryGetValue(colorId, out ColorProxy? colorProxy))
-          {
-            colorProxy.objects.Add(elementApplicationId);
-          }
-          else
-          {
-            ColorProxy newProxy =
-              new()
-              {
-                applicationId = colorId,
-                objects = new() { elementApplicationId },
-                name = colorId
-              };
-
-            newProxy["displayPriority"] = displayPriority;
-
-            colorProxies.Add(colorId, newProxy);
-          }
+          AddElementIdToColorProxy(elementAppId, colorId, displayPriority);
         }
 
-        count += 1;
+        count++;
       }
     }
   }
