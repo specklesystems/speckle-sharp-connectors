@@ -52,7 +52,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
 
     int count = 0;
 
-    Collection rootObjectCollection = new(); //TODO: Collections
+    Collection rootObjectCollection = new() { name = MapView.Active.Map.Name }; //TODO: Collections
 
     List<SendConversionResult> results = new(objects.Count);
     var cacheHitCount = 0;
