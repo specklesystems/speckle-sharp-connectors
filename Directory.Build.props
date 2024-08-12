@@ -35,10 +35,11 @@
   </PropertyGroup>
 
   <PropertyGroup Label="Repo Info">
-    <RepositoryUrl>https://github.com/specklesystems/speckle-sharp</RepositoryUrl>
+    <RepositoryUrl>https://github.com/specklesystems/speckle-sharp-connectors</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <!-- Expose the repository root to all projects -->
     <RepositoryRoot>$(MSBuildThisFileDirectory)</RepositoryRoot>
+    
   </PropertyGroup>
   
   <ItemGroup>
