@@ -5,10 +5,12 @@
     <AutoCADVersion>2025</AutoCADVersion>
     <DefineConstants>$(DefineConstants);AUTOCAD2025;AUTOCAD</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   
   <ItemGroup>
     <PackageReference Include="Speckle.AutoCAD.API" VersionOverride="2025.0.0" />
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App"/>
   </ItemGroup>  
   
   <ItemGroup>   
