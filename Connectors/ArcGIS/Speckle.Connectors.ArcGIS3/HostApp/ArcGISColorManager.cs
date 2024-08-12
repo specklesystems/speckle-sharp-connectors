@@ -65,11 +65,10 @@ public class ArcGISColorManager
     }
   }
 
-  // We are using a default color of -1 for all raster layers
   private void ProcessRasterLayerColors(RasterLayer rasterLayer, int displayPriority)
   {
     string elementAppId = $"{rasterLayer.URI}_0"; // POC: explain why count = 0 here
-    string colorId = GetColorApplicationId(-1, displayPriority);
+    string colorId = GetColorApplicationId(-1, displayPriority); // We are using a default color of -1 for all raster layers
     AddElementIdToColorProxy(elementAppId, colorId, displayPriority);
   }
 
@@ -106,7 +105,7 @@ public class ArcGISColorManager
     }
   }
 
-  // Attempts to retrive the color from a CIMSymbol
+  // Attempts to retrieve the color from a CIMSymbol
   private bool TryGetSymbolColor(CIMSymbol symbol, out int symbolColor)
   {
     symbolColor = -1;
@@ -226,7 +225,6 @@ public class ArcGISColorManager
         {
           // TODO: report partial success on color?
         }
-
         break;
 
       // unique renderers have groups of conditions that may affect the color of a feature
@@ -236,7 +234,6 @@ public class ArcGISColorManager
         {
           // TODO: report partial success on color, could not retrieve group color?
         }
-
         break;
 
       case CIMClassBreaksRenderer graduatedRenderer:
@@ -244,7 +241,6 @@ public class ArcGISColorManager
         {
           // TODO: report partial success on color, could not retrieve group color?
         }
-
         break;
 
       default:
