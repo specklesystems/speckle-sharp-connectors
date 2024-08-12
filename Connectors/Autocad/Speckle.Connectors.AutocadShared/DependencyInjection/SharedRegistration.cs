@@ -1,6 +1,5 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Autofac;
-using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Autocad.Bindings;
 using Speckle.Connectors.Autocad.Filters;
@@ -26,8 +25,7 @@ public static class SharedRegistration
 {
   public static void Load(SpeckleContainerBuilder builder)
   {
-    builder.AddAutofac();
-    builder.AddConnectorUtils();
+    builder.AddConnectors();
     builder.AddDUI();
     builder.AddDUIView();
 

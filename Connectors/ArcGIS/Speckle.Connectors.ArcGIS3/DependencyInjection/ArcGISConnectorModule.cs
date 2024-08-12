@@ -1,6 +1,5 @@
 using ArcGIS.Desktop.Mapping;
 using Autofac;
-using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.ArcGIS.Bindings;
 using Speckle.Connectors.ArcGIS.Filters;
@@ -29,8 +28,7 @@ public class ArcGISConnectorModule : ISpeckleModule
 {
   public void Load(SpeckleContainerBuilder builder)
   {
-    builder.AddAutofac();
-    builder.AddConnectorUtils();
+    builder.AddConnectors();
     builder.AddDUI();
     builder.AddDUIView();
 

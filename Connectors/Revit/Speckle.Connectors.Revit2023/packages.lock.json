@@ -340,12 +340,27 @@
           "Autofac": "[5.2.0, )"
         }
       },
+      "speckle.common": {
+        "type": "Project",
+        "dependencies": {
+          "Autofac": "[5.2.0, )",
+          "Microsoft.Extensions.Logging": "[3.1.0, )",
+          "Speckle.Sdk": "[3.1.0-dev.96, )"
+        }
+      },
+      "speckle.connectors": {
+        "type": "Project",
+        "dependencies": {
+          "Speckle.Common": "[1.0.0, )",
+          "Speckle.Objects": "[3.1.0-dev.96, )",
+          "Speckle.Sdk": "[3.1.0-dev.96, )"
+        }
+      },
       "speckle.connectors.dui": {
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[3.1.0, )",
-          "Speckle.Autofac": "[1.0.0, )",
-          "Speckle.Connectors.Utils": "[1.0.0, )",
+          "Speckle.Connectors": "[1.0.0, )",
           "Speckle.Sdk": "[3.1.0-dev.96, )",
           "System.Threading.Tasks.Dataflow": "[6.0.0, )"
         }
@@ -367,13 +382,6 @@
           "Speckle.Objects": "[3.1.0-dev.96, )"
         }
       },
-      "speckle.converters.common.dependencyinjection": {
-        "type": "Project",
-        "dependencies": {
-          "Speckle.Autofac": "[1.0.0, )",
-          "Speckle.Converters.Common": "[1.0.0, )"
-        }
-      },
       "speckle.converters.revit2023": {
         "type": "Project",
         "dependencies": {
@@ -385,7 +393,6 @@
         "type": "Project",
         "dependencies": {
           "Speckle.Converters.Common": "[1.0.0, )",
-          "Speckle.Converters.Common.DependencyInjection": "[1.0.0, )",
           "Speckle.Converters.Revit2023": "[1.0.0, )"
         }
       },

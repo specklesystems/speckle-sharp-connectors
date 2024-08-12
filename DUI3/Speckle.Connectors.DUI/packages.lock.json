@@ -351,17 +351,18 @@
           "System.Runtime.CompilerServices.Unsafe": "4.5.3"
         }
       },
-      "speckle.autofac": {
+      "speckle.common": {
         "type": "Project",
         "dependencies": {
-          "Autofac": "[5.2.0, )"
+          "Autofac": "[5.2.0, )",
+          "Microsoft.Extensions.Logging": "[3.1.0, )",
+          "Speckle.Sdk": "[3.1.0-dev.96, )"
         }
       },
-      "speckle.connectors.utils": {
+      "speckle.connectors": {
         "type": "Project",
         "dependencies": {
-          "Microsoft.Extensions.Logging": "[3.1.0, )",
-          "Speckle.Autofac": "[1.0.0, )",
+          "Speckle.Common": "[1.0.0, )",
           "Speckle.Objects": "[3.1.0-dev.96, )",
           "Speckle.Sdk": "[3.1.0-dev.96, )"
         }

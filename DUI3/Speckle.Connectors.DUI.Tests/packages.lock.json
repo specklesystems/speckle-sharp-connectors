@@ -326,29 +326,29 @@
         "resolved": "5.0.2",
         "contentHash": "I47dVIGiV6SfAyppphxqupertT/5oZkYLDCX6vC3HpOI4ZLjyoKAreUoem2ie6G0RbRuFrlqz/PcTQjfb2DOfQ=="
       },
-      "speckle.autofac": {
+      "speckle.common": {
         "type": "Project",
         "dependencies": {
-          "Autofac": "[5.2.0, )"
+          "Autofac": "[5.2.0, )",
+          "Microsoft.Extensions.Logging": "[3.1.0, )",
+          "Speckle.Sdk": "[3.1.0-dev.96, )"
+        }
+      },
+      "speckle.connectors": {
+        "type": "Project",
+        "dependencies": {
+          "Speckle.Common": "[1.0.0, )",
+          "Speckle.Objects": "[3.1.0-dev.96, )",
+          "Speckle.Sdk": "[3.1.0-dev.96, )"
         }
       },
       "speckle.connectors.dui": {
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[3.1.0, )",
-          "Speckle.Autofac": "[1.0.0, )",
-          "Speckle.Connectors.Utils": "[1.0.0, )",
+          "Speckle.Connectors": "[1.0.0, )",
           "Speckle.Sdk": "[3.1.0-dev.96, )",
           "System.Threading.Tasks.Dataflow": "[6.0.0, )"
-        }
-      },
-      "speckle.connectors.utils": {
-        "type": "Project",
-        "dependencies": {
-          "Microsoft.Extensions.Logging": "[3.1.0, )",
-          "Speckle.Autofac": "[1.0.0, )",
-          "Speckle.Objects": "[3.1.0-dev.96, )",
-          "Speckle.Sdk": "[3.1.0-dev.96, )"
         }
       },
       "speckle.testing": {

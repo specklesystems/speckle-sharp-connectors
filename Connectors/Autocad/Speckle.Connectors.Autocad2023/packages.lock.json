@@ -306,18 +306,27 @@
         "resolved": "4.5.0",
         "contentHash": "okurQJO6NRE/apDIP23ajJ0hpiNmJ+f0BwOlB/cSqTLQlw5upkf+5+96+iG2Jw40G1fCVCyPz/FhIABUjMR+RQ=="
       },
-      "speckle.autofac": {
+      "speckle.common": {
         "type": "Project",
         "dependencies": {
-          "Autofac": "[5.2.0, )"
+          "Autofac": "[5.2.0, )",
+          "Microsoft.Extensions.Logging": "[3.1.0, )",
+          "Speckle.Sdk": "[3.1.0-dev.96, )"
+        }
+      },
+      "speckle.connectors": {
+        "type": "Project",
+        "dependencies": {
+          "Speckle.Common": "[1.0.0, )",
+          "Speckle.Objects": "[3.1.0-dev.96, )",
+          "Speckle.Sdk": "[3.1.0-dev.96, )"
         }
       },
       "speckle.connectors.dui": {
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[3.1.0, )",
-          "Speckle.Autofac": "[1.0.0, )",
-          "Speckle.Connectors.Utils": "[1.0.0, )",
+          "Speckle.Connectors": "[1.0.0, )",
           "Speckle.Sdk": "[3.1.0-dev.96, )",
           "System.Threading.Tasks.Dataflow": "[6.0.0, )"
         }
@@ -329,43 +338,11 @@
           "Speckle.Connectors.DUI": "[1.0.0, )"
         }
       },
-      "speckle.connectors.utils": {
+      "speckle.converters": {
         "type": "Project",
         "dependencies": {
-          "Microsoft.Extensions.Logging": "[3.1.0, )",
-          "Speckle.Autofac": "[1.0.0, )",
-          "Speckle.Objects": "[3.1.0-dev.96, )",
-          "Speckle.Sdk": "[3.1.0-dev.96, )"
-        }
-      },
-      "speckle.converters.autocad2023": {
-        "type": "Project",
-        "dependencies": {
-          "Speckle.AutoCAD.API": "[2023.0.0, )",
-          "Speckle.Converters.Common": "[1.0.0, )"
-        }
-      },
-      "speckle.converters.autocad2023.dependencyinjection": {
-        "type": "Project",
-        "dependencies": {
-          "Autofac": "[5.2.0, )",
-          "Speckle.Converters.Autocad2023": "[1.0.0, )",
-          "Speckle.Converters.Common.DependencyInjection": "[1.0.0, )"
-        }
-      },
-      "speckle.converters.common": {
-        "type": "Project",
-        "dependencies": {
-          "Microsoft.Extensions.Logging.Abstractions": "[3.1.0, )",
-          "Speckle.Autofac": "[1.0.0, )",
+          "Speckle.Common": "[1.0.0, )",
           "Speckle.Objects": "[3.1.0-dev.96, )"
-        }
-      },
-      "speckle.converters.common.dependencyinjection": {
-        "type": "Project",
-        "dependencies": {
-          "Speckle.Autofac": "[1.0.0, )",
-          "Speckle.Converters.Common": "[1.0.0, )"
         }
       },
       "Autofac": {

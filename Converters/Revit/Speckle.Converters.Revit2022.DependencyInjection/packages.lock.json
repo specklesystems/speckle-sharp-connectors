@@ -252,18 +252,10 @@
           "Speckle.Objects": "[3.1.0-dev.96, )"
         }
       },
-      "speckle.converters.common.dependencyinjection": {
-        "type": "Project",
-        "dependencies": {
-          "Speckle.Autofac": "[1.0.0, )",
-          "Speckle.Converters.Common": "[1.0.0, )"
-        }
-      },
       "speckle.converters.revit2022": {
         "type": "Project",
         "dependencies": {
           "Speckle.Converters.Common": "[1.0.0, )",
-          "Speckle.Converters.Common.DependencyInjection": "[1.0.0, )",
           "Speckle.Revit.API": "[2022.0.2.1, )"
         }
       },

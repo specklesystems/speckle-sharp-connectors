@@ -261,7 +261,6 @@
       "speckle.converters.common.dependencyinjection": {
         "type": "Project",
         "dependencies": {
-          "Speckle.Autofac": "[1.0.0, )",
           "Speckle.Converters.Common": "[1.0.0, )"
         }
       },
