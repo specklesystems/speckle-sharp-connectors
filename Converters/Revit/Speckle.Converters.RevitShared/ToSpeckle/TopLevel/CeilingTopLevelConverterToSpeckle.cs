@@ -61,9 +61,6 @@ internal sealed class CeilingTopLevelConverterToSpeckle : BaseTopLevelConverterT
     _parameterObjectAssigner.AssignParametersToBase(target, speckleCeiling);
     speckleCeiling.displayValue = _displayValueExtractor.GetDisplayValue(target);
 
-    // POC: hosted elements OOS for alpha, but this exists in existing connector
-    //_hostedElementConverter.AssignHostedElements(target, speckleCeiling);
-
     return speckleCeiling;
   }
 }

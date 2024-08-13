@@ -30,8 +30,6 @@ internal sealed class RoofBaseToSpeckleTopLevelTopLevelConverter
 
     _parameterObjectAssigner.AssignParametersToBase(target, revitRoof);
     revitRoof.displayValue = _displayValueExtractor.GetDisplayValue(target);
-    // POC: removing hosted elements from parents
-    // revitRoof.elements = _hostedElementConverter.ConvertHostedElements(target.GetHostedElementIds()).ToList();
 
     return revitRoof;
   }
