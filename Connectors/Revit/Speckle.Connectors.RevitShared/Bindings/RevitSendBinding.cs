@@ -9,6 +9,7 @@ using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
+using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.Utils.Caching;
@@ -76,6 +77,27 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   {
     return new List<ISendFilter> { new RevitSelectionFilter() { IsDefault = true } };
   }
+
+  public List<CardSetting> GetSendSettings() =>
+    new()
+    {
+      new()
+      {
+        Id = "modelOrigin",
+        Title = "Model Origin",
+        Type = "string",
+        Enum = ["Internal Origin", "Project Base", "Survey"],
+        Value = "Internal Origin"
+      },
+      new()
+      {
+        Id = "geometryFidelity",
+        Title = "Geometry Fidelity",
+        Type = "string",
+        Enum = ["Coarse", "Medium", "Fine"],
+        Value = "Coarse"
+      },
+    };
 
   public void CancelSend(string modelCardId)
   {
