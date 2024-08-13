@@ -77,9 +77,6 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
     TryAssignSlopeFromSlopeArrow(target, speckleFloor, slopeParam);
 
     speckleFloor.displayValue = _displayValueExtractor.GetDisplayValue(target);
-    // POC: hosted elements OOS for alpha, but this exists in existing connector
-    //_hostedElementConverter.AssignHostedElements(target, speckleCeiling);
-
     return speckleFloor;
   }
 

@@ -78,11 +78,6 @@ public class FootPrintRoofToSpeckleTopLevelConverter
     _parameterObjectAssigner.AssignParametersToBase(target, speckleFootprintRoof);
     speckleFootprintRoof.displayValue = _displayValueExtractor.GetDisplayValue(target);
 
-    // POC: removing hosted elements from parents
-    // speckleFootprintRoof.elements = _hostedElementConverter
-    //   .ConvertHostedElements(target.GetHostedElementIds())
-    //   .ToList();
-
     return speckleFootprintRoof;
   }
 }
