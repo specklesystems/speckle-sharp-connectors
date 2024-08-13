@@ -66,6 +66,7 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
     // RowCursor is IDisposable but is not being correctly picked up by IDE warnings.
     // This means we need to be carefully adding using statements based on the API documentation coming from each method/class
 
+    int count = 1;
     using (RowCursor rowCursor = target.Search())
     {
       while (rowCursor.MoveNext())
@@ -74,6 +75,7 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
         using (Row row = rowCursor.Current)
         {
           GisFeature element = _gisFeatureConverter.Convert(row);
+          element.applicationId = $"{target.URI}_{count}";
 
           // replace element "attributes", to remove those non-visible on Layer level
           Base elementAttributes = new();
@@ -87,6 +89,7 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
           element.attributes = elementAttributes;
           speckleLayer.elements.Add(element);
         }
+        count += 1;
       }
     }
 

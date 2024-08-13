@@ -4,6 +4,7 @@ using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.ArcGIS.Bindings;
 using Speckle.Connectors.ArcGIS.Filters;
+using Speckle.Connectors.ArcGIS.HostApp;
 using Speckle.Connectors.ArcGIS.Operations.Receive;
 using Speckle.Connectors.ArcGis.Operations.Send;
 using Speckle.Connectors.ArcGIS.Utils;
@@ -67,6 +68,7 @@ public class ArcGISConnectorModule : ISpeckleModule
     builder.AddScoped<SendOperation<MapMember>>();
     builder.AddScoped<ArcGISRootObjectBuilder>();
     builder.AddScoped<IRootObjectBuilder<MapMember>, ArcGISRootObjectBuilder>();
+    builder.AddSingleton<ArcGISColorManager>();
 
     builder.AddScoped<ILocalToGlobalUnpacker, LocalToGlobalUnpacker>();
 

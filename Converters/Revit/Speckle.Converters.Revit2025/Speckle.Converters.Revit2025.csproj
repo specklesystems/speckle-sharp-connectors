@@ -4,6 +4,10 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
     <Configurations>Debug;Release;Local</Configurations>
+    <DefineConstants>
+      $(DefineConstants);REVIT2025;
+      REVIT2022_OR_GREATER;REVIT2023_OR_GREATER;REVIT2024_OR_GREATER;REVIT2025_OR_GREATER
+    </DefineConstants>
   </PropertyGroup>
 
   <Import Project="..\Speckle.Converters.RevitShared\Speckle.Converters.RevitShared.projitems" Label="Shared" />
