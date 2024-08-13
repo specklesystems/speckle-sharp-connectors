@@ -32,7 +32,6 @@ public sealed class AutocadSendBinding : ISendBinding
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
-  private readonly AutocadSettings _autocadSettings;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<AutocadSendBinding> _logger;
@@ -52,7 +51,6 @@ public sealed class AutocadSendBinding : ISendBinding
     IBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     CancellationManager cancellationManager,
-    AutocadSettings autocadSettings,
     IUnitOfWorkFactory unitOfWorkFactory,
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
@@ -62,7 +60,6 @@ public sealed class AutocadSendBinding : ISendBinding
     _store = store;
     _idleManager = idleManager;
     _unitOfWorkFactory = unitOfWorkFactory;
-    _autocadSettings = autocadSettings;
     _cancellationManager = cancellationManager;
     _sendFilters = sendFilters.ToList();
     _sendConversionCache = sendConversionCache;
@@ -177,7 +174,7 @@ public sealed class AutocadSendBinding : ISendBinding
       var sendResult = await uow
         .Service.Execute(
           autocadObjects,
-          modelCard.GetSendInfo(_autocadSettings.HostAppInfo.Name),
+          modelCard.GetSendInfo(Speckle.Connectors.Utils.Connector.Slug),
           (status, progress) =>
             _operationProgressManager.SetModelProgress(
               Parent,
