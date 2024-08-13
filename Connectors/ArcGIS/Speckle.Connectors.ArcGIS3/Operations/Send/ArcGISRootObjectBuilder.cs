@@ -188,14 +188,14 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
 
     // recalculate selected layer priority from all map layers
     List<(MapMember, int)> selectedLayers = new();
-    foreach (MapMember layer in mapMembers)
+    int newCount = 0;
+    foreach (KeyValuePair<MapMember, int> valuePair in layersIndices)
     {
-      if (!layersIndices.TryGetValue(layer, out int priority))
+      if (mapMembers.Contains(valuePair.Key))
       {
-        // TODO: report error, should not happen but didn't process this layer in map priority
+        selectedLayers.Add((valuePair.Key, newCount));
+        newCount++;
       }
-
-      selectedLayers.Add((layer, priority));
     }
 
     return selectedLayers;

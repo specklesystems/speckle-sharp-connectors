@@ -21,6 +21,9 @@ public class ArcGISColorManager
   /// </remarks>
   public List<ColorProxy> UnpackColors(List<(MapMember, int)> mapMembersWithDisplayPriority)
   {
+    // injected as Singleton, so we need to clean existing proxies first
+    ColorProxies = new();
+
     foreach ((MapMember mapMember, int priority) in mapMembersWithDisplayPriority)
     {
       switch (mapMember)
@@ -61,7 +64,7 @@ public class ArcGISColorManager
           name = colorId
         };
 
-      newProxy["displayPriority"] = displayPriority;
+      newProxy["displayOrder"] = displayPriority; // 0 - top layer (top display priority), 1,2,3.. decreasing priority
       ColorProxies.Add(colorId, newProxy);
     }
   }
