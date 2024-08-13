@@ -27,7 +27,7 @@ public class AutocadToSpeckleUnitConverter : IHostToSpeckleUnitConverter<UnitsVa
 
   public string ConvertOrThrow(UnitsValue hostUnit)
   {
-    if (s_unitsMapping.TryGetValue(hostUnit, out string value))
+    if (s_unitsMapping.TryGetValue(hostUnit, out string? value))
     {
       return value;
     }

@@ -8,6 +8,7 @@
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageVersionOverrideEnabled>true</CentralPackageVersionOverrideEnabled>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting> <!-- windows packs for .net core  -->
   </PropertyGroup>
   
   <PropertyGroup Label="Analyers">
