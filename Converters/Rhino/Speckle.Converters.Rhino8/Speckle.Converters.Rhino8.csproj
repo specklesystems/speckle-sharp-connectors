@@ -1,17 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <TargetFramework>net48</TargetFramework>
-        <Configurations>Debug;Release;Local</Configurations>
-    </PropertyGroup>
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <Configurations>Debug;Release;Local</Configurations>
+    <DefineConstants>$(DefineConstants);RHINO8;RHINO7_OR_GREATER;RHIN08_OR_GREATER</DefineConstants>
 
-  <Import Project="..\Speckle.Converters.RhinoShared\Speckle.Converters.RhinoShared.projitems" Label="Shared" />
-  
+  </PropertyGroup>
+
+  <Import Project="..\Speckle.Converters.RhinoShared\Speckle.Converters.RhinoShared.projitems" Label="Shared"/>
+
   <ItemGroup>
-    <PackageReference Include="RhinoCommon" VersionOverride="8.9.24194.18121" IncludeAssets="compile;build" />
+    <PackageReference Include="RhinoCommon" VersionOverride="8.9.24194.18121" IncludeAssets="compile;build"/>
   </ItemGroup>
-    <ItemGroup>
-      <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj"/>
+  </ItemGroup>
 
 </Project>
