@@ -21,19 +21,16 @@ public sealed class RootObjectSender : IRootObjectSender
   private readonly IServerTransportFactory _transportFactory;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly AccountService _accountService;
-  private readonly ISendHelper _sendHelper;
 
   public RootObjectSender(
     IServerTransportFactory transportFactory,
     ISendConversionCache sendConversionCache,
-    AccountService accountService,
-    ISendHelper sendHelper
+    AccountService accountService
   )
   {
     _transportFactory = transportFactory;
     _sendConversionCache = sendConversionCache;
     _accountService = accountService;
-    _sendHelper = sendHelper;
   }
 
   /// <summary>
@@ -41,7 +38,7 @@ public sealed class RootObjectSender : IRootObjectSender
   /// In production, this will send to a server.
   /// In testing, this could send to a sqlite db or just save to a dictionary.
   /// </summary>
-  public async Task<(string rootObjId, Dictionary<string, ObjectReference> convertedReferences)> Send(
+  public async Task<(string rootObjId, IReadOnlyDictionary<string, ObjectReference> convertedReferences)> Send(
     Base commitObject,
     SendInfo sendInfo,
     Action<string, double?>? onOperationProgressed = null,
@@ -55,7 +52,7 @@ public sealed class RootObjectSender : IRootObjectSender
     Account account = _accountService.GetAccountWithServerUrlFallback(sendInfo.AccountId, sendInfo.ServerUrl);
 
     using var transport = _transportFactory.Create(account, sendInfo.ProjectId, 60, null);
-    var sendResult = await _sendHelper.Send(commitObject, transport, true, null, ct).ConfigureAwait(false);
+    var sendResult = await Sdk.Api.Operations.Send(commitObject, transport, true, null, ct).ConfigureAwait(false);
 
     _sendConversionCache.StoreSendResult(sendInfo.ProjectId, sendResult.convertedReferences);
 
