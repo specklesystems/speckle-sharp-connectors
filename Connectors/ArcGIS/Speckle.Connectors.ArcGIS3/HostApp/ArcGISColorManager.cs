@@ -224,29 +224,8 @@ public class ArcGISColorManager
             string groupValue = value.FieldValues[i].Replace("<Null>", "");
             object? rowValue = row[usedFields[i]];
 
-            // int, doubles are tricky to compare with strings, trimming both to 5 digits
-            if (row[usedFields[i]] is int rowValueInt)
-            {
-              string rowValueString = Convert.ToString(rowValueInt);
-              rowValue = rowValueString.Split(".")[0];
-              groupValue = groupValue.Split(".")[0];
-            }
-            else if (row[usedFields[i]] is double rowValueDouble)
-            {
-              string rowValueString = Convert.ToString(rowValueDouble);
-              rowValue = string.Concat(
-                rowValueString.Split(".")[0],
-                ".",
-                rowValueString.Split(".")[^1].AsSpan(0, Math.Min(5, rowValueString.Split(".")[^1].Length))
-              );
-              groupValue = string.Concat(
-                groupValue.Split(".")[0],
-                ".",
-                groupValue.Split(".")[^1].AsSpan(0, Math.Min(5, groupValue.Split(".")[^1].Length))
-              );
-            }
-
-            if (groupValue != (string)rowValue)
+            (string newRowValue, string newGroupValue) = MakeValuesComparable(rowValue, groupValue);
+            if (newGroupValue != newRowValue)
             {
               groupConditionsMet = false;
               break;
@@ -266,6 +245,34 @@ public class ArcGISColorManager
     }
 
     return true;
+  }
+
+  private (string, string) MakeValuesComparable(object? rowValue, string groupValue)
+  {
+    string newGroupValue = groupValue;
+    string newRowValue = Convert.ToString(rowValue) ?? "";
+
+    // int, doubles are tricky to compare with strings, trimming both to 5 digits
+    if (rowValue is int || rowValue is Int16 || rowValue is Int64)
+    {
+      newRowValue = newRowValue.Split(".")[0];
+      newGroupValue = newGroupValue.Split(".")[0];
+    }
+    else if (rowValue is double || rowValue is float)
+    {
+      newRowValue = string.Concat(
+        newRowValue.Split(".")[0],
+        ".",
+        newRowValue.Split(".")[^1].AsSpan(0, Math.Min(5, newRowValue.Split(".")[^1].Length))
+      );
+      newGroupValue = string.Concat(
+        newGroupValue.Split(".")[0],
+        ".",
+        newGroupValue.Split(".")[^1].AsSpan(0, Math.Min(5, newGroupValue.Split(".")[^1].Length))
+      );
+    }
+
+    return (newRowValue, newGroupValue);
   }
 
   private bool TryGetGraduatedRendererColor(

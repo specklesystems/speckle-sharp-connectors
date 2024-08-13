@@ -58,7 +58,10 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     var cacheHitCount = 0;
     List<(GroupLayer, Collection)> nestedGroups = new();
 
-    foreach (MapMember mapMember in objects)
+    // reorder selected layers by Table of Content (TOC) order
+    List<(MapMember, int)> layersWithDisplayPriority = GetLayerDisplayPriority(MapView.Active.Map, objects);
+
+    foreach ((MapMember mapMember, _) in layersWithDisplayPriority)
     {
       ct.ThrowIfCancellationRequested();
       var collectionHost = rootObjectCollection;
@@ -152,7 +155,6 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     }
 
     // POC: Add Color Proxies
-    List<(MapMember, int)> layersWithDisplayPriority = GetLayerDisplayPriority(MapView.Active.Map, objects);
     List<ColorProxy> colorProxies = _colorManager.UnpackColors(layersWithDisplayPriority);
     rootObjectCollection["colorProxies"] = colorProxies;
 
