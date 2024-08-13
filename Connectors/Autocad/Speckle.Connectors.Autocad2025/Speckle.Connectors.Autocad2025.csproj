@@ -6,6 +6,7 @@
     <DefineConstants>$(DefineConstants);AUTOCAD2025;AUTOCAD</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier> <!-- .NET Core uses this to move native dependencies into a root for runtime selection -->
   </PropertyGroup>
   
   <ItemGroup>
