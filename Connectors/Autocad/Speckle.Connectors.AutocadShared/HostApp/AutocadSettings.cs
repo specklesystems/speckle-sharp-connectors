@@ -1,4 +1,5 @@
 using System.IO;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Host;
 
 namespace Speckle.Connectors.Autocad.HostApp;
@@ -9,7 +10,7 @@ public class AutocadSettings
   {
     HostAppInfo = hostAppInfo;
     HostAppVersion = hostAppVersion;
-    Modules = new[] { new DirectoryInfo(typeof(AutocadSettings).Assembly.Location).Parent.FullName };
+    Modules = new[] { new DirectoryInfo(typeof(AutocadSettings).Assembly.Location).Parent.NotNull().FullName };
   }
 
   public HostApplication HostAppInfo { get; private set; }

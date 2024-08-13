@@ -23,6 +23,8 @@ public class SendConversionCache : ISendConversionCache
       .Where(kvp => !objectIds.Contains(kvp.Key.applicationId))
       .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
+  public void ClearCache() => Cache.Clear();
+
   public bool TryGetValue(string projectId, string applicationId, out ObjectReference objectReference) =>
     Cache.TryGetValue((applicationId, projectId), out objectReference);
 }

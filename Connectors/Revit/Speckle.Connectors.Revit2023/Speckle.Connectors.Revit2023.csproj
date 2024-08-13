@@ -1,10 +1,10 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
     <UseWpf>true</UseWpf>    
     <RevitVersion>2023</RevitVersion>
-    <DefineConstants>$(DefineConstants);REVIT2023</DefineConstants>
+    <DefineConstants>$(DefineConstants);REVIT2023;REVIT2022_OR_GREATER;REVIT2023_OR_GREATER</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
 

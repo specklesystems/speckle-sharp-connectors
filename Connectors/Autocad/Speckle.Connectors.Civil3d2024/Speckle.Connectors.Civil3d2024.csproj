@@ -3,7 +3,7 @@
     <TargetFramework>net48</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
     <Civil3DVersion>2024</Civil3DVersion>
-    <DefineConstants>$(DefineConstants);CIVIL3D2024;CIVIL3D;</DefineConstants>
+    <DefineConstants>$(DefineConstants);CIVIL3D;CIVIL3D2024;CIVIL3D2024_OR_GREATER</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
 

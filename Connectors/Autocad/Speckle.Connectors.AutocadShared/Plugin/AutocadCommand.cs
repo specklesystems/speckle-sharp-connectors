@@ -65,6 +65,8 @@ public class AutocadCommand
   {
 #if CIVIL3D2024
     return HostAppVersion.v2024;
+#elif AUTOCAD2025
+    return HostAppVersion.v2025;
 #elif AUTOCAD2024
     return HostAppVersion.v2024;
 #elif AUTOCAD2023

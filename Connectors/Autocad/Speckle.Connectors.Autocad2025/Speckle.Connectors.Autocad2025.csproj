@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <AutoCADVersion>2025</AutoCADVersion>
+    <DefineConstants>$(DefineConstants);AUTOCAD2025;AUTOCAD</DefineConstants>
+    <Configurations>Debug;Release;Local</Configurations>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier> <!-- .NET Core uses this to move native dependencies into a root for runtime selection and usage for non-windows development https://learn.microsoft.com/en-us/dotnet/core/project-sdk/msbuild-props#enablewindowstargeting -->
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="Speckle.AutoCAD.API" VersionOverride="2025.0.0" />
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App"/>
+  </ItemGroup>  
+  
+  <ItemGroup>   
+    <ProjectReference Include="..\..\..\Converters\Autocad\Speckle.Converters.Autocad2025.DependencyInjection\Speckle.Converters.Autocad2025.DependencyInjection.csproj" />
+    <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
+  </ItemGroup>
+  
+  <Import Project="..\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems" Label="Shared" />
+</Project>

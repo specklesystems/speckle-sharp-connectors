@@ -188,9 +188,9 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
         {
           // TODO: create definition (block table record)
           var constituentEntities = definitionProxy
-            .objects.Select(id => applicationIdMap.TryGetValue(id, out List<Entity> value) ? value : null)
+            .objects.Select(id => applicationIdMap.TryGetValue(id, out List<Entity>? value) ? value : null)
             .Where(x => x is not null)
-            .SelectMany(ent => ent)
+            .SelectMany(ent => ent!)
             .ToList();
 
           var record = new BlockTableRecord();

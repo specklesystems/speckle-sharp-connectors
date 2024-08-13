@@ -3,7 +3,7 @@
     <TargetFramework>net48</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
     <AutoCADVersion>2022</AutoCADVersion>
-    <DefineConstants>$(DefineConstants);AUTOCAD2022;AUTOCAD</DefineConstants>
+    <DefineConstants>$(DefineConstants);AUTOCAD;AUTOCAD2022;AUTOCAD2022_OR_GREATER</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
   

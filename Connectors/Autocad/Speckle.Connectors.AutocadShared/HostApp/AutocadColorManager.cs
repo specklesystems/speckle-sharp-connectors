@@ -60,7 +60,7 @@ public class AutocadColorManager
       // assumes color names are unique
       string colorId = entity.Color.ColorNameForDisplay;
 
-      if (colorProxies.TryGetValue(colorId, out ColorProxy value))
+      if (colorProxies.TryGetValue(colorId, out ColorProxy? value))
       {
         value.objects.Add(rootObj.ApplicationId);
       }
@@ -79,7 +79,7 @@ public class AutocadColorManager
       string colorId = layer.Color.ColorNameForDisplay;
       string layerId = layer.Handle.ToString();
 
-      if (colorProxies.TryGetValue(colorId, out ColorProxy value))
+      if (colorProxies.TryGetValue(colorId, out ColorProxy? value))
       {
         value.objects.Add(layerId);
       }
@@ -117,11 +117,14 @@ public class AutocadColorManager
       foreach (string objectId in colorProxy.objects)
       {
         AutocadColor convertedColor = ConvertColorProxyToColor(colorProxy);
-
+#if NET8_0
+        ObjectColorsIdMap.TryAdd(objectId, convertedColor);
+#else
         if (!ObjectColorsIdMap.ContainsKey(objectId))
         {
           ObjectColorsIdMap.Add(objectId, convertedColor);
         }
+#endif
       }
     }
   }
