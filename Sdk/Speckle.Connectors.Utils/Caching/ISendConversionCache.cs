@@ -11,7 +11,7 @@ namespace Speckle.Connectors.Utils.Caching;
 /// </summary>
 public interface ISendConversionCache
 {
-  void StoreSendResult(string projectId, Dictionary<string, ObjectReference> convertedReferences);
+  void StoreSendResult(string projectId, IReadOnlyDictionary<string, ObjectReference> convertedReferences);
 
   /// <summary>
   /// <para>Call this method whenever you need to invalidate a set of objects that have changed in the host app.</para>
@@ -19,5 +19,7 @@ public interface ISendConversionCache
   /// </summary>
   /// <param name="objectIds"></param>
   public void EvictObjects(IEnumerable<string> objectIds);
+
+  public void ClearCache();
   bool TryGetValue(string projectId, string applicationId, out ObjectReference objectReference);
 }
