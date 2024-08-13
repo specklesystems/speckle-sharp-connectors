@@ -146,12 +146,19 @@ public class AutocadLayerManager
     using Transaction transaction = Doc.TransactionManager.StartTransaction();
 
     var layerTable = (LayerTable)transaction.TransactionManager.GetObject(Doc.Database.LayerTableId, OpenMode.ForRead);
+    var activeLayer = (LayerTableRecord)transaction.GetObject(Doc.Database.Clayer, OpenMode.ForRead);
     foreach (var layerId in layerTable)
     {
       var layer = (LayerTableRecord)transaction.GetObject(layerId, OpenMode.ForRead);
       var layerName = layer.Name;
       if (layer.Name.Contains(prefix))
       {
+        if (activeLayer.Name == layerName)
+        {
+          // Layer `0` cannot be deleted or renamed in Autocad, so it is safe to get zero layer id.
+          ObjectId zeroLayerId = layerTable["0"];
+          Doc.Database.Clayer = zeroLayerId;
+        }
         // Delete objects from this layer
         TypedValue[] tvs = [new((int)DxfCode.LayerName, layerName)];
         SelectionFilter selectionFilter = new(tvs);
