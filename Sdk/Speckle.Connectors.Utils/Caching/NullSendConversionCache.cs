@@ -7,7 +7,7 @@ namespace Speckle.Connectors.Utils.Caching;
 /// </summary>
 public class NullSendConversionCache : ISendConversionCache
 {
-  public void StoreSendResult(string projectId, Dictionary<string, ObjectReference> convertedReferences) { }
+  public void StoreSendResult(string projectId, IReadOnlyDictionary<string, ObjectReference> convertedReferences) { }
 
   public void EvictObjects(IEnumerable<string> objectIds) { }
 
