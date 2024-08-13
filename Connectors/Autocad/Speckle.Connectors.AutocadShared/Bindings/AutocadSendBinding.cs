@@ -80,6 +80,11 @@ public sealed class AutocadSendBinding : ISendBinding
       // catches the case when autocad just opens up with a blank new doc
       SubscribeToObjectChanges(Application.DocumentManager.CurrentDocument);
     }
+    // Since ids of the objects generates from same seed, we should clear the cache always whenever doc swapped.
+    _store.DocumentChanged += (_, _) =>
+    {
+      _sendConversionCache.ClearCache();
+    };
   }
 
   private readonly List<string> _docSubsTracker = new();
