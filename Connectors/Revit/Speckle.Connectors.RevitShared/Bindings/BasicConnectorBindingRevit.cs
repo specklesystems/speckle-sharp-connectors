@@ -9,7 +9,6 @@ using Speckle.Connectors.Utils.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
-using Speckle.Sdk.Host;
 
 namespace Speckle.Connectors.DUI.Bindings;
 

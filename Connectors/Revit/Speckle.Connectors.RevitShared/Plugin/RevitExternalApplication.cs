@@ -47,7 +47,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
         .CreateInstance()
         .LoadAutofacModules(
           Assembly.GetExecutingAssembly(),
-          [Path.GetDirectoryName(typeof(RevitExternalApplication).Assembly.Location).NotNull()]
+          [Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location).NotNull()]
         )
         .AddSingleton(application) // inject UIControlledApplication application
         .Build();
