@@ -13,8 +13,8 @@
   </ItemGroup>
   
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Converters\Civil3d\Speckle.Converters.Civil3d2024\Speckle.Converters.Civil3d2024.csproj" />
     <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
-    <ProjectReference Include="..\..\..\Sdk\Speckle.Converters\Speckle.Converters.csproj" />
   </ItemGroup>
   
   <Import Project="..\..\Autocad\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems" Label="Shared" />

@@ -345,6 +345,13 @@
           "Speckle.Objects": "[3.1.0-dev.98, )"
         }
       },
+      "speckle.converters.autocad2023": {
+        "type": "Project",
+        "dependencies": {
+          "Speckle.AutoCAD.API": "[2023.0.0, )",
+          "Speckle.Converters": "[1.0.0, )"
+        }
+      },
       "Autofac": {
         "type": "CentralTransitive",
         "requested": "[5.2.0, )",
