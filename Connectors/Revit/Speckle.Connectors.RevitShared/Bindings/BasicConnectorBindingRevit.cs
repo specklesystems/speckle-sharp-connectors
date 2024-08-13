@@ -4,12 +4,12 @@ using Revit.Async;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.Utils.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Host;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
@@ -23,20 +23,13 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
   private readonly DocumentModelStore _store;
   private readonly RevitContext _revitContext;
-  private readonly RevitSettings _revitSettings;
 
-  public BasicConnectorBindingRevit(
-    DocumentModelStore store,
-    RevitSettings revitSettings,
-    IBridge parent,
-    RevitContext revitContext
-  )
+  public BasicConnectorBindingRevit(DocumentModelStore store, IBridge parent, RevitContext revitContext)
   {
     Name = "baseBinding";
     Parent = parent;
     _store = store;
     _revitContext = revitContext;
-    _revitSettings = revitSettings;
     Commands = new BasicConnectorBindingCommands(parent);
 
     // POC: event binding?
@@ -48,9 +41,9 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
   public string GetConnectorVersion() => Assembly.GetAssembly(GetType()).NotNull().GetVersion();
 
-  public string GetSourceApplicationName() => _revitSettings.HostSlug.ToLower(); // POC: maybe not right place but... // ANOTHER POC: We should align this naming from somewhere in common DUI projects instead old structs. I know there are other POC comments around this
+  public string GetSourceApplicationName() => Speckle.Connectors.Utils.Connector.Slug.ToLower(); // POC: maybe not right place but... // ANOTHER POC: We should align this naming from somewhere in common DUI projects instead old structs. I know there are other POC comments around this
 
-  public string GetSourceApplicationVersion() => _revitSettings.HostAppVersion; // POC: maybe not right place but...
+  public string GetSourceApplicationVersion() => Speckle.Connectors.Utils.Connector.VersionString; // POC: maybe not right place but...
 
   public DocumentInfo? GetDocumentInfo()
   {

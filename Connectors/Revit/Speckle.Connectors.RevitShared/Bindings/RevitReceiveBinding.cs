@@ -5,12 +5,11 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Sdk;
-using Speckle.Sdk.Common;
+using Speckle.Sdk.Host;
 
 namespace Speckle.Connectors.Revit.Bindings;
 
@@ -19,7 +18,6 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
   public string Name => "receiveBinding";
   public IBridge Parent { get; }
 
-  private readonly RevitSettings _revitSettings;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<RevitReceiveBinding> _logger;
   private readonly CancellationManager _cancellationManager;
@@ -32,7 +30,6 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
     CancellationManager cancellationManager,
     IBridge parent,
     IUnitOfWorkFactory unitOfWorkFactory,
-    RevitSettings revitSettings,
     IOperationProgressManager operationProgressManager,
     ILogger<RevitReceiveBinding> logger
   )
@@ -40,7 +37,6 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
     Parent = parent;
     _store = store;
     _unitOfWorkFactory = unitOfWorkFactory;
-    _revitSettings = revitSettings;
     _operationProgressManager = operationProgressManager;
     _logger = logger;
     _cancellationManager = cancellationManager;
@@ -68,7 +64,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
       // Receive host objects
       HostObjectBuilderResult conversionResults = await unitOfWork
         .Service.Execute(
-          modelCard.GetReceiveInfo(_revitSettings.HostSlug.NotNull()),
+          modelCard.GetReceiveInfo(Speckle.Connectors.Utils.Connector.Slug),
           cts.Token,
           (status, progress) =>
             _operationProgressManager.SetModelProgress(
