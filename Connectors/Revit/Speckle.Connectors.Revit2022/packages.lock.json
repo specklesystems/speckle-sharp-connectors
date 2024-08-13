@@ -359,16 +359,18 @@
           "System.Threading.Tasks.Dataflow": "[6.0.0, )"
         }
       },
+      "speckle.converters": {
+        "type": "Project",
+        "dependencies": {
+          "Speckle.Common": "[1.0.0, )",
+          "Speckle.Objects": "[3.1.0-dev.98, )"
+        }
+      },
       "speckle.converters.revit2022": {
         "type": "Project",
         "dependencies": {
+          "Speckle.Converters": "[1.0.0, )",
           "Speckle.Revit.API": "[2022.0.2.1, )"
-        }
-      },
-      "speckle.converters.revit2022.dependencyinjection": {
-        "type": "Project",
-        "dependencies": {
-          "Speckle.Converters.Revit2022": "[1.0.0, )"
         }
       },
       "Autofac": {

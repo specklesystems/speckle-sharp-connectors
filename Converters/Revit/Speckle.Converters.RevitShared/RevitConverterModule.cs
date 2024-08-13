@@ -15,7 +15,7 @@ public class RevitConverterModule : ISpeckleModule
     //register types by default
     builder.ScanAssemblyOfType<SlopeArrowExtractor>();
     // Register single root
-    builder.AddRootCommon<RevitRootToSpeckleConverter>();
+    builder.AddConverters<RevitRootToSpeckleConverter>();
 
     // register all application converters
     builder.AddApplicationConverters<RevitToSpeckleUnitConverter, ForgeTypeId>();

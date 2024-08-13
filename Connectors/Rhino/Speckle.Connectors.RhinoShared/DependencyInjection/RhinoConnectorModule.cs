@@ -2,7 +2,6 @@ using Autofac;
 using Rhino.Commands;
 using Rhino.DocObjects;
 using Rhino.PlugIns;
-using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
@@ -34,8 +33,7 @@ public class RhinoConnectorModule : ISpeckleModule
     builder.AddSingleton<PlugIn>(SpeckleConnectorsRhinoPlugin.Instance);
     builder.AddSingleton<Command>(SpeckleConnectorsRhinoCommand.Instance);
 
-    builder.AddAutofac();
-    builder.AddConnectorUtils();
+    builder.AddConnectors();
     builder.AddDUI();
     builder.AddDUIView();
 

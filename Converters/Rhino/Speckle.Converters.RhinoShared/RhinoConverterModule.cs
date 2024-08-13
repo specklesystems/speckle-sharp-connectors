@@ -5,7 +5,7 @@ using Speckle.Converters.Common.DependencyInjection;
 using Speckle.Converters.Rhino;
 using Speckle.Converters.Rhino.ToSpeckle.Raw;
 
-namespace Speckle.Converters.Rhino7.DependencyInjection;
+namespace Speckle.Converters.Rhino8.DependencyInjection;
 
 public class RhinoConverterModule : ISpeckleModule
 {
@@ -14,7 +14,7 @@ public class RhinoConverterModule : ISpeckleModule
     //register types by default
     builder.ScanAssemblyOfType<BoxFactory>();
     // Register single root
-    builder.AddRootCommon<RootToSpeckleConverter>();
+    builder.AddConverters<RootToSpeckleConverter>();
 
     // register all application converters and context stacks
     builder.AddApplicationConverters<RhinoToSpeckleUnitConverter, UnitSystem>();

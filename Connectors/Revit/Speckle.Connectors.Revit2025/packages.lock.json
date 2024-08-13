@@ -12,12 +12,6 @@
           "Microsoft.SourceLink.Common": "8.0.0"
         }
       },
-      "Microsoft.Web.WebView2": {
-        "type": "Direct",
-        "requested": "[1.0.1938.49, )",
-        "resolved": "1.0.1938.49",
-        "contentHash": "z8KnFnaTYzhA/ZnyRX0qGfS1NU5ZBJeClAH64F0fVDvdDJTvME7xl6zTJ0Jlfe1BtL3C0NH9xTy64shg2baKdw=="
-      },
       "PolySharp": {
         "type": "Direct",
         "requested": "[1.14.1, )",
@@ -260,16 +254,18 @@
           "Speckle.Connectors.DUI": "[1.0.0, )"
         }
       },
+      "speckle.converters": {
+        "type": "Project",
+        "dependencies": {
+          "Speckle.Common": "[1.0.0, )",
+          "Speckle.Objects": "[3.1.0-dev.98, )"
+        }
+      },
       "speckle.converters.revit2025": {
         "type": "Project",
         "dependencies": {
+          "Speckle.Converters": "[1.0.0, )",
           "Speckle.Revit.API": "[2025.0.0, )"
-        }
-      },
-      "speckle.converters.revit2025.dependencyinjection": {
-        "type": "Project",
-        "dependencies": {
-          "Speckle.Converters.Revit2025": "[1.0.0, )"
         }
       },
       "Autofac": {
@@ -295,6 +291,12 @@
         "requested": "[3.1.0, )",
         "resolved": "3.1.0",
         "contentHash": "jjo4YXRx6MIpv6DiRxJjSpl+sPP0+5VW0clMEdLyIAz44PPwrDTFrd5PZckIxIXl1kKZ2KK6IL2nkt0+ug2MQg=="
+      },
+      "Microsoft.Web.WebView2": {
+        "type": "CentralTransitive",
+        "requested": "[1.0.1938.49, )",
+        "resolved": "1.0.1938.49",
+        "contentHash": "z8KnFnaTYzhA/ZnyRX0qGfS1NU5ZBJeClAH64F0fVDvdDJTvME7xl6zTJ0Jlfe1BtL3C0NH9xTy64shg2baKdw=="
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
@@ -337,16 +339,16 @@
       }
     },
     "net8.0-windows7.0/win-x64": {
-      "Microsoft.Web.WebView2": {
-        "type": "Direct",
-        "requested": "[1.0.1938.49, )",
-        "resolved": "1.0.1938.49",
-        "contentHash": "z8KnFnaTYzhA/ZnyRX0qGfS1NU5ZBJeClAH64F0fVDvdDJTvME7xl6zTJ0Jlfe1BtL3C0NH9xTy64shg2baKdw=="
-      },
       "SQLitePCLRaw.lib.e_sqlite3": {
         "type": "Transitive",
         "resolved": "2.1.4",
         "contentHash": "2C9Q9eX7CPLveJA0rIhf9RXAvu+7nWZu1A2MdG6SD/NOu26TakGgL1nsbc0JAspGijFOo3HoN79xrx8a368fBg=="
+      },
+      "Microsoft.Web.WebView2": {
+        "type": "CentralTransitive",
+        "requested": "[1.0.1938.49, )",
+        "resolved": "1.0.1938.49",
+        "contentHash": "z8KnFnaTYzhA/ZnyRX0qGfS1NU5ZBJeClAH64F0fVDvdDJTvME7xl6zTJ0Jlfe1BtL3C0NH9xTy64shg2baKdw=="
       }
     }
   }

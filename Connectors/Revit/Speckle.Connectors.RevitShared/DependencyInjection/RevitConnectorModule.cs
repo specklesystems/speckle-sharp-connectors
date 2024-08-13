@@ -1,6 +1,5 @@
 using Autodesk.Revit.DB;
 using Autofac;
-using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
@@ -29,8 +28,7 @@ public class RevitConnectorModule : ISpeckleModule
 {
   public void Load(SpeckleContainerBuilder builder)
   {
-    builder.AddAutofac();
-    builder.AddConnectorUtils();
+    builder.AddConnectors();
     builder.AddDUI();
     RegisterUiDependencies(builder);
 

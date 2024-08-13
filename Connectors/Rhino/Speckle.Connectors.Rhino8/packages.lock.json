@@ -347,16 +347,18 @@
           "Speckle.Connectors.DUI": "[1.0.0, )"
         }
       },
+      "speckle.converters": {
+        "type": "Project",
+        "dependencies": {
+          "Speckle.Common": "[1.0.0, )",
+          "Speckle.Objects": "[3.1.0-dev.98, )"
+        }
+      },
       "speckle.converters.rhino8": {
         "type": "Project",
         "dependencies": {
-          "RhinoCommon": "[8.9.24194.18121, )"
-        }
-      },
-      "speckle.converters.rhino8.dependencyinjection": {
-        "type": "Project",
-        "dependencies": {
-          "Speckle.Converters.Rhino8": "[1.0.0, )"
+          "RhinoCommon": "[8.9.24194.18121, )",
+          "Speckle.Converters": "[1.0.0, )"
         }
       },
       "Autofac": {
