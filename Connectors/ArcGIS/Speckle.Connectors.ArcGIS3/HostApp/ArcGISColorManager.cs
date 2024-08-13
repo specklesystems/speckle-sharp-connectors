@@ -322,7 +322,7 @@ public class ArcGISColorManager
       case CIMSimpleRenderer simpleRenderer:
         if (!TryGetSymbolColor(simpleRenderer.Symbol.Symbol, out color))
         {
-          // TODO: report partial success on color?
+          // POC: report CONVERTED WITH WARNING when implemented
         }
         break;
 
@@ -331,19 +331,19 @@ public class ArcGISColorManager
       case CIMUniqueValueRenderer uniqueRenderer:
         if (!TryGetUniqueRendererColor(uniqueRenderer, row, fields, out color)) // get default color
         {
-          // TODO: report partial success on color, could not retrieve group color?
+          // POC: report CONVERTED WITH WARNING when implemented
         }
         break;
 
       case CIMClassBreaksRenderer graduatedRenderer:
         if (!TryGetGraduatedRendererColor(graduatedRenderer, row, fields, out color)) // get default color
         {
-          // TODO: report partial success on color, could not retrieve group color?
+          // POC: report CONVERTED WITH WARNING when implemented
         }
         break;
 
       default:
-        // TODO: report color partial conversion error, unsupported renderer e.g. CIMProportionalRenderer
+        // POC: report CONVERTED WITH WARNING when implemented, unsupported renderer e.g. CIMProportionalRenderer
         break;
     }
 
