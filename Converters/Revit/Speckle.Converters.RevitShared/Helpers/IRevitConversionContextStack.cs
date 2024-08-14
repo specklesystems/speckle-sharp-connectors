@@ -1,6 +1,5 @@
 using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
-using Speckle.Objects.Other;
 
 namespace Speckle.Converters.RevitShared.Helpers;
 
@@ -13,5 +12,5 @@ namespace Speckle.Converters.RevitShared.Helpers;
 // and the latter is more for connector
 public interface IRevitConversionContextStack : IConversionContextStack<Document, ForgeTypeId>
 {
-  public Dictionary<string, RenderMaterialProxy> RenderMaterialProxies { get; }
+  public RenderMaterialProxyCacheSingleton RenderMaterialProxyCache { get; }
 }

@@ -13,10 +13,14 @@ namespace Speckle.Converters.RevitShared.Helpers;
 // and the latter is more for connector
 public class RevitConversionContextStack : ConversionContextStack<Document, ForgeTypeId>, IRevitConversionContextStack
 {
+  public RenderMaterialProxyCacheSingleton RenderMaterialProxyCache { get; }
   public const double TOLERANCE = 0.0164042; // 5mm in ft
-  public Dictionary<string, RenderMaterialProxy> RenderMaterialProxies { get; } = new();
 
-  public RevitConversionContextStack(RevitContext context, IHostToSpeckleUnitConverter<ForgeTypeId> unitConverter)
+  public RevitConversionContextStack(
+    RevitContext context,
+    IHostToSpeckleUnitConverter<ForgeTypeId> unitConverter,
+    RenderMaterialProxyCacheSingleton renderMaterialProxyCache
+  )
     : base(
       // POC: we probably should not get here without a valid document
       // so should this perpetuate or do we assume this is valid?
@@ -26,5 +30,53 @@ public class RevitConversionContextStack : ConversionContextStack<Document, Forg
         ?? throw new SpeckleConversionException("Active UI document could not be determined"),
       context.UIApplication.ActiveUIDocument.Document.GetUnits().GetFormatOptions(SpecTypeId.Length).GetUnitTypeId(),
       unitConverter
-    ) { }
+    )
+  {
+    RenderMaterialProxyCache = renderMaterialProxyCache;
+  }
+}
+
+/// <summary>
+/// singleton; should persist across units of work
+/// TODO: description
+/// TODO: move to appropriate location
+/// </summary>
+public class RenderMaterialProxyCacheSingleton
+{
+  /// <summary>
+  /// map(object id, ( map (materialId, proxy) ) )
+  /// a per object map of material proxies. not the best way???
+  /// </summary>
+  public Dictionary<string, Dictionary<string, RenderMaterialProxy>> ObjectRenderMaterialProxiesMap { get; } = new();
+
+  public List<RenderMaterialProxy> GetRenderMaterialProxyListForObjects(List<string> elementIds)
+  {
+    // TODO:
+    // merge all render material proxies by their material id
+    // return that
+    var proxiesToMerge = ObjectRenderMaterialProxiesMap
+      .Where(kvp => elementIds.Contains(kvp.Key))
+      .Select(kvp => kvp.Value); // TODO
+    var tlist = ObjectRenderMaterialProxiesMap.Values.ToList();
+
+    var mergeTarget = new Dictionary<string, RenderMaterialProxy>();
+    foreach (var dictionary in proxiesToMerge)
+    {
+      foreach (var kvp in dictionary)
+      {
+        if (!mergeTarget.TryGetValue(kvp.Key, out RenderMaterialProxy? value))
+        {
+          value = kvp.Value;
+          mergeTarget[kvp.Key] = value;
+          continue;
+        }
+        value.objects.AddRange(kvp.Value.objects);
+      }
+    }
+    foreach (var renderMaterialProxy in mergeTarget.Values)
+    {
+      renderMaterialProxy.objects = renderMaterialProxy.objects.Distinct().ToList();
+    }
+    return mergeTarget.Values.ToList();
+  }
 }

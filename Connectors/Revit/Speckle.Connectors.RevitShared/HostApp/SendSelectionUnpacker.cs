@@ -76,8 +76,9 @@ public class SendSelectionUnpacker
         unpackedElements.Add(element);
       }
     }
-
-    return unpackedElements;
+    // Why filtering for duplicates? Well, well, well... it's related to the comment above on groups: if a group
+    // contains a nested family, GetMemberIds() will return... duplicates of the exploded family components.
+    return unpackedElements.GroupBy(el => el.Id).Select(g => g.First()).ToList(); // no disinctBy in here sadly.
   }
 
   private List<Element> PackCurtainWallElements(List<Element> elements)

@@ -7,11 +7,17 @@ namespace Speckle.Converters.RevitShared.Helpers;
 // POC: needs breaking down https://spockle.atlassian.net/browse/CNX-9354
 public sealed class DisplayValueExtractor
 {
-  private readonly ITypedConverter<Dictionary<DB.ElementId, List<DB.Mesh>>, List<SOG.Mesh>> _meshByMaterialConverter;
+  private readonly ITypedConverter<
+    (Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId),
+    List<SOG.Mesh>
+  > _meshByMaterialConverter;
   private readonly ILogger<DisplayValueExtractor> _logger;
 
   public DisplayValueExtractor(
-    ITypedConverter<Dictionary<DB.ElementId, List<DB.Mesh>>, List<SOG.Mesh>> meshByMaterialConverter,
+    ITypedConverter<
+      (Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId),
+      List<SOG.Mesh>
+    > meshByMaterialConverter,
     ILogger<DisplayValueExtractor> logger
   )
   {
@@ -25,7 +31,7 @@ public sealed class DisplayValueExtractor
 
     var meshesByMaterial = GetMeshesByMaterial(meshes, solids);
 
-    return _meshByMaterialConverter.Convert(meshesByMaterial);
+    return _meshByMaterialConverter.Convert((meshesByMaterial, element.Id));
   }
 
   private static Dictionary<DB.ElementId, List<DB.Mesh>> GetMeshesByMaterial(

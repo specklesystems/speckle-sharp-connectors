@@ -7,6 +7,7 @@ using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
+using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
@@ -18,7 +19,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
 {
   // POC: SendSelection and RevitConversionContextStack should be interfaces, former needs interfaces
   private readonly IRootToSpeckleConverter _converter;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly IRevitConversionContextStack _conversionContextStack;
   private readonly Collection _rootObject;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ISyncToThread _syncToThread;
@@ -27,7 +28,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
 
   public RevitRootObjectBuilder(
     IRootToSpeckleConverter converter,
-    IRevitConversionContextStack contextStack,
+    IRevitConversionContextStack conversionContextStack,
     ISendConversionCache sendConversionCache,
     ISyncToThread syncToThread,
     SendSelectionUnpacker sendSelectionUnpacker,
@@ -35,7 +36,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
   )
   {
     _converter = converter;
-    _contextStack = contextStack;
+    _conversionContextStack = conversionContextStack;
     _sendConversionCache = sendConversionCache;
     _syncToThread = syncToThread;
     _sendSelectionUnpacker = sendSelectionUnpacker;
@@ -43,7 +44,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
 
     _rootObject = new Collection()
     {
-      name = _contextStack.Current.Document.PathName.Split('\\').Last().Split('.').First()
+      name = _conversionContextStack.Current.Document.PathName.Split('\\').Last().Split('.').First()
     };
   }
 
@@ -55,7 +56,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
   ) =>
     _syncToThread.RunOnThread(() =>
     {
-      var doc = _contextStack.Current.Document;
+      var doc = _conversionContextStack.Current.Document;
 
       if (doc.IsFamilyDocument)
       {
@@ -67,7 +68,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
       // Convert ids to actual revit elements
       foreach (var id in objects)
       {
-        var el = _contextStack.Current.Document.GetElement(id);
+        var el = _conversionContextStack.Current.Document.GetElement(id);
         if (el != null)
         {
           revitElements.Add(el);
@@ -85,7 +86,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
       var countProgress = 0; // because for(int i = 0; ...) loops are so last year
       var cacheHitCount = 0;
       List<SendConversionResult> results = new(revitElements.Count);
-
+      List<string> succesfullyConvertedElementIds = new();
       foreach (Element revitElement in atomicObjects)
       {
         ct.ThrowIfCancellationRequested();
@@ -106,17 +107,23 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
 
           var collection = _sendCollectionManager.GetAndCreateObjectHostCollection(revitElement, _rootObject);
           collection.elements.Add(converted);
+          succesfullyConvertedElementIds.Add(revitElement.Id.ToString());
           results.Add(new(Status.SUCCESS, applicationId, revitElement.GetType().Name, converted));
         }
         catch (Exception ex) when (!ex.IsFatal())
         {
           results.Add(new(Status.ERROR, applicationId, revitElement.GetType().Name, null, ex));
-          // POC: add logging
         }
 
         onOperationProgressed?.Invoke("Converting", (double)++countProgress / revitElements.Count);
       }
-      var materialProxies = _contextStack.RenderMaterialProxies.Values.ToList();
+
+      // TODO: Stacked and curtain walls do not work as expected, we'll need to either:
+      // - unpack them, and introduce "subcomponent" proxies later
+      // - process their ids separately to get their subcomponents ids
+      var materialProxies = _conversionContextStack.RenderMaterialProxyCache.GetRenderMaterialProxyListForObjects(
+        succesfullyConvertedElementIds.Distinct().ToList()
+      );
       _rootObject["renderMaterialProxies"] = materialProxies;
 
       // POC: Log would be nice, or can be removed.
