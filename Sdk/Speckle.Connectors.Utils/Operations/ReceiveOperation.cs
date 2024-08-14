@@ -88,13 +88,6 @@ public sealed class ReceiveOperation
                   _progressDisplayManager.CalculatePercentage(args)
                 );
                 break;
-              default:
-                onOperationProgressed?.Invoke(
-                  $"{args.ProgressEvent} ({_progressDisplayManager.CalculateSpeed(args)})",
-                  _progressDisplayManager.CalculatePercentage(args)
-                );
-                Console.WriteLine($"{args.ProgressEvent} {args.Count}, {args.Total}");
-                break;
             }
           },
           onTotalChildrenCountKnown: c => totalCount = c,

@@ -49,8 +49,10 @@ public class ProgressDisplayManager : IProgressDisplayManager
     switch (args.ProgressEvent)
     {
       case ProgressEvent.DownloadBytes:
+      case ProgressEvent.UploadBytes:
         return $"{ToFileSize(countPerSecond)} / sec";
       case ProgressEvent.DeserializeObject:
+      case ProgressEvent.SerializeObject:
         return $"{ThreeNonZeroDigits(countPerSecond)} objects / sec";
       default:
         return string.Empty;
@@ -74,6 +76,10 @@ public class ProgressDisplayManager : IProgressDisplayManager
 
   private static string ThreeNonZeroDigits(double value)
   {
+    if (value < 0)
+    {
+      return "0";
+    }
     if (value >= 100)
     {
       // No digits after the decimal.
