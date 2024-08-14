@@ -19,13 +19,11 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
   // POC: SendSelection and RevitConversionContextStack should be interfaces, former needs interfaces
   private readonly IRootToSpeckleConverter _converter;
   private readonly IRevitConversionContextStack _contextStack;
-  private readonly Dictionary<string, Collection> _collectionCache;
   private readonly Collection _rootObject;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ISyncToThread _syncToThread;
   private readonly SendSelectionUnpacker _sendSelectionUnpacker;
   private readonly SendCollectionManager _sendCollectionManager;
-  private readonly SendMaterialManager _sendMaterialManager;
 
   public RevitRootObjectBuilder(
     IRootToSpeckleConverter converter,
@@ -33,8 +31,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     ISendConversionCache sendConversionCache,
     ISyncToThread syncToThread,
     SendSelectionUnpacker sendSelectionUnpacker,
-    SendCollectionManager sendCollectionManager,
-    SendMaterialManager sendMaterialManager
+    SendCollectionManager sendCollectionManager
   )
   {
     _converter = converter;
@@ -43,10 +40,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     _syncToThread = syncToThread;
     _sendSelectionUnpacker = sendSelectionUnpacker;
     _sendCollectionManager = sendCollectionManager;
-    _sendMaterialManager = sendMaterialManager;
 
-    // Note, this class is instantiated per unit of work (aka per send operation), so we can safely initialize what we need in here.
-    _collectionCache = new Dictionary<string, Collection>();
     _rootObject = new Collection()
     {
       name = _contextStack.Current.Document.PathName.Split('\\').Last().Split('.').First()
@@ -112,8 +106,6 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
 
           var collection = _sendCollectionManager.GetAndCreateObjectHostCollection(revitElement, _rootObject);
           collection.elements.Add(converted);
-          _sendMaterialManager.AddObjectToRenderMaterialMap(converted); // TODO: extract material into proxies here?
-
           results.Add(new(Status.SUCCESS, applicationId, revitElement.GetType().Name, converted));
         }
         catch (Exception ex) when (!ex.IsFatal())
@@ -124,10 +116,8 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
 
         onOperationProgressed?.Invoke("Converting", (double)++countProgress / revitElements.Count);
       }
-
-      var materialProxies = _sendMaterialManager.RenderMaterialProxies.Values.ToList();
-      var nextLevel = _contextStack.RenderMaterialProxies.Values.ToList();
-      _rootObject["renderMaterialProxies"] = nextLevel;
+      var materialProxies = _contextStack.RenderMaterialProxies.Values.ToList();
+      _rootObject["renderMaterialProxies"] = materialProxies;
 
       // POC: Log would be nice, or can be removed.
       Debug.WriteLine(

@@ -39,7 +39,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitDocumentStore.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\RevitConnectorModule.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SendCollectionManager.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)HostApp\SendMaterialManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SendSelectionUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\ITransactionManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\RevitContextAccessor.cs" />
