@@ -17,7 +17,9 @@ public sealed class ReceiveOperation
   public ReceiveOperation(
     IHostObjectBuilder hostObjectBuilder,
     AccountService accountService,
-    IServerTransportFactory serverTransportFactory, IProgressDisplayManager progressDisplayManager)
+    IServerTransportFactory serverTransportFactory,
+    IProgressDisplayManager progressDisplayManager
+  )
   {
     _hostObjectBuilder = hostObjectBuilder;
     _accountService = accountService;
@@ -72,16 +74,25 @@ public sealed class ReceiveOperation
             switch (args.ProgressEvent)
             {
               case ProgressEvent.DownloadBytes:
-                onOperationProgressed?.Invoke($"Downloading ({_progressDisplayManager.CalculateSpeed(args)})", _progressDisplayManager.CalculatePercentage(args));
+                onOperationProgressed?.Invoke(
+                  $"Downloading ({_progressDisplayManager.CalculateSpeed(args)})",
+                  _progressDisplayManager.CalculatePercentage(args)
+                );
                 break;
               case ProgressEvent.DownloadObject:
                 onOperationProgressed?.Invoke("Downloading Root Object...", null);
                 break;
               case ProgressEvent.DeserializeObject:
-                onOperationProgressed?.Invoke($"Deserializing ({_progressDisplayManager.CalculateSpeed(args)})", _progressDisplayManager.CalculatePercentage(args));
+                onOperationProgressed?.Invoke(
+                  $"Deserializing ({_progressDisplayManager.CalculateSpeed(args)})",
+                  _progressDisplayManager.CalculatePercentage(args)
+                );
                 break;
               default:
-                onOperationProgressed?.Invoke($"{args.ProgressEvent} ({_progressDisplayManager.CalculateSpeed(args)})", _progressDisplayManager.CalculatePercentage(args));
+                onOperationProgressed?.Invoke(
+                  $"{args.ProgressEvent} ({_progressDisplayManager.CalculateSpeed(args)})",
+                  _progressDisplayManager.CalculatePercentage(args)
+                );
                 Console.WriteLine($"{args.ProgressEvent} {args.Count}, {args.Total}");
                 break;
             }

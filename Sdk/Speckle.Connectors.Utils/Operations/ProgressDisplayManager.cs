@@ -45,7 +45,7 @@ public class ProgressDisplayManager : IProgressDisplayManager
 
     var countPerSecond = (args.Count.Value - _lastCount) / _stopwatch.Elapsed.TotalSeconds;
     _lastCount = args.Count.Value;
-    
+
     switch (args.ProgressEvent)
     {
       case ProgressEvent.DownloadBytes:
@@ -56,9 +56,8 @@ public class ProgressDisplayManager : IProgressDisplayManager
         return string.Empty;
     }
   }
-  
-  private static readonly string[] s_suffixes = { "bytes", "KB", "MB", "GB",
-    "TB", "PB", "EB", "ZB", "YB"};
+
+  private static readonly string[] s_suffixes = { "bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB" };
 
   private static string ToFileSize(double value)
   {
@@ -66,17 +65,13 @@ public class ProgressDisplayManager : IProgressDisplayManager
     {
       if (value <= (Math.Pow(1024, i + 1)))
       {
-        return ThreeNonZeroDigits(value /
-                                  Math.Pow(1024, i)) +
-               " " + s_suffixes[i];
+        return ThreeNonZeroDigits(value / Math.Pow(1024, i)) + " " + s_suffixes[i];
       }
     }
 
-    return ThreeNonZeroDigits(value /
-                              Math.Pow(1024, s_suffixes.Length - 1)) + 
-           " " + s_suffixes[^1];
+    return ThreeNonZeroDigits(value / Math.Pow(1024, s_suffixes.Length - 1)) + " " + s_suffixes[^1];
   }
-  
+
   private static string ThreeNonZeroDigits(double value)
   {
     if (value >= 100)
