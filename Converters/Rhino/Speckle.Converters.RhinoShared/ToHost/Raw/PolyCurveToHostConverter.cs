@@ -1,4 +1,4 @@
-﻿using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
 using Speckle.Sdk.Common;
 
@@ -27,9 +27,13 @@ public class PolyCurveToHostConverter : ITypedConverter<SOG.Polycurve, RG.PolyCu
 
     foreach (var segment in target.segments)
     {
-      var childCurve = CurveConverter.NotNull().Convert(segment);
-      bool success = result.AppendSegment(childCurve);
-      if (!success)
+      RG.Curve childCurve = CurveConverter.NotNull().Convert(segment);
+      if (!childCurve.IsValid)
+      {
+        throw new ConversionException($"Failed to convert segment {segment}");
+      }
+
+      if (!result.AppendSegment(childCurve))
       {
         throw new ConversionException($"Failed to append segment {segment}");
       }

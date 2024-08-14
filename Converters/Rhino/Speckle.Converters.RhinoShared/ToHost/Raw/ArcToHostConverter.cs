@@ -1,4 +1,4 @@
-﻿using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converters.Rhino.ToHost.Raw;
 
@@ -28,12 +28,10 @@ public class ArcToHostConverter : ITypedConverter<SOG.Arc, RG.Arc>, ITypedConver
   /// <remarks><br/>⚠️ This method does not preserve the original curve domain</remarks>
   public RG.Arc Convert(SOG.Arc target)
   {
-    var rhinoArc = new RG.Arc(
-      _pointConverter.Convert(target.startPoint),
-      _pointConverter.Convert(target.midPoint),
-      _pointConverter.Convert(target.endPoint)
-    );
-    return rhinoArc;
+    RG.Point3d startPoint = _pointConverter.Convert(target.startPoint);
+    RG.Point3d midPoint = _pointConverter.Convert(target.midPoint);
+    RG.Point3d endPoint = _pointConverter.Convert(target.endPoint);
+    return new(startPoint, midPoint, endPoint);
   }
 
   // POC: CNX-9271 Potential code-smell by directly implementing the interface. We should discuss this further but
