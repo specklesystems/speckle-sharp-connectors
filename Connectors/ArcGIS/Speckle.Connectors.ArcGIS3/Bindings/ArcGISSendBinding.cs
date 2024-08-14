@@ -325,20 +325,7 @@ public sealed class ArcGISSendBinding : ISendBinding
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
 
-  // POC: delete this
-  public List<CardSetting> GetSendSettings()
-  {
-    return new List<CardSetting>
-    {
-      new()
-      {
-        Id = "includeAttributes",
-        Title = "Include Attributes",
-        Value = true,
-        Type = "boolean"
-      },
-    };
-  }
+  public List<CardSetting> GetSendSettings => [];
 
   [SuppressMessage(
     "Maintainability",

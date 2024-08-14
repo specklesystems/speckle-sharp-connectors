@@ -12,6 +12,7 @@ using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
+using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
@@ -133,6 +134,8 @@ public sealed class AutocadSendBinding : ISendBinding
   }
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
+
+  public List<CardSetting> GetSendSettings => [];
 
   public Task Send(string modelCardId)
   {
