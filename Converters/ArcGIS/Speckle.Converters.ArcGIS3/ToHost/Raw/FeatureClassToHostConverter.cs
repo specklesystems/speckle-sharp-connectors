@@ -4,6 +4,7 @@ using ArcGIS.Core.Data.Exceptions;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Objects;
 using Speckle.Objects.GIS;
 using Speckle.Sdk.Models;
 using FieldDescription = ArcGIS.Core.Data.DDL.FieldDescription;
@@ -13,18 +14,21 @@ namespace Speckle.Converters.ArcGIS3.ToHost.Raw;
 public class FeatureClassToHostConverter : ITypedConverter<VectorLayer, FeatureClass>
 {
   private readonly ITypedConverter<IReadOnlyList<Base>, ACG.Geometry> _gisGeometryConverter;
+  private readonly ITypedConverter<IGisFeature, (ACG.Geometry, Dictionary<string, object?>)> _gisFeatureConverter;
   private readonly IFeatureClassUtils _featureClassUtils;
   private readonly IArcGISFieldUtils _fieldsUtils;
   private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;
 
   public FeatureClassToHostConverter(
     ITypedConverter<IReadOnlyList<Base>, ACG.Geometry> gisGeometryConverter,
+    ITypedConverter<IGisFeature, (ACG.Geometry, Dictionary<string, object?>)> gisFeatureConverter,
     IFeatureClassUtils featureClassUtils,
     IArcGISFieldUtils fieldsUtils,
     IConversionContextStack<ArcGISDocument, ACG.Unit> contextStack
   )
   {
     _gisGeometryConverter = gisGeometryConverter;
+    _gisFeatureConverter = gisFeatureConverter;
     _featureClassUtils = featureClassUtils;
     _fieldsUtils = fieldsUtils;
     _contextStack = contextStack;
@@ -90,15 +94,9 @@ public class FeatureClassToHostConverter : ITypedConverter<VectorLayer, FeatureC
     // ATM, GIS commit CRS is stored per layer, but should be moved to the Root level too, and created once per Receive
     ACG.SpatialReference spatialRef = ACG.SpatialReferenceBuilder.CreateSpatialReference(wktString);
 
-    double trueNorthRadians = System.Convert.ToDouble(
-      (target.crs == null || target.crs?.rotation == null) ? 0 : target.crs.rotation
-    );
-    double latOffset = System.Convert.ToDouble(
-      (target.crs == null || target.crs?.offset_y == null) ? 0 : target.crs.offset_y
-    );
-    double lonOffset = System.Convert.ToDouble(
-      (target.crs == null || target.crs?.offset_x == null) ? 0 : target.crs.offset_x
-    );
+    double trueNorthRadians = System.Convert.ToDouble((target.crs?.rotation == null) ? 0 : target.crs.rotation);
+    double latOffset = System.Convert.ToDouble((target.crs?.offset_y == null) ? 0 : target.crs.offset_y);
+    double lonOffset = System.Convert.ToDouble((target.crs?.offset_x == null) ? 0 : target.crs.offset_x);
     _contextStack.Current.Document.ActiveCRSoffsetRotation = new CRSoffsetRotation(
       spatialRef,
       latOffset,
@@ -149,13 +147,34 @@ public class FeatureClassToHostConverter : ITypedConverter<VectorLayer, FeatureC
     try
     {
       FeatureClass newFeatureClass = geodatabase.OpenDataset<FeatureClass>(featureClassName);
-      // backwards compatibility:
-      List<GisFeature> gisFeatures = RecoverOutdatedGisFeatures(target);
-      // Add features to the FeatureClass
-      geodatabase.ApplyEdits(() =>
+
+      // process IGisFeature
+      List<IGisFeature> gisFeatures = target.elements.Where(o => o is IGisFeature).Cast<IGisFeature>().ToList();
+      if (gisFeatures.Count > 0)
       {
-        _featureClassUtils.AddFeaturesToFeatureClass(newFeatureClass, gisFeatures, fields, _gisGeometryConverter);
-      });
+        geodatabase.ApplyEdits(() =>
+        {
+          foreach (IGisFeature feat in gisFeatures)
+          {
+            using (RowBuffer rowBuffer = newFeatureClass.CreateRowBuffer())
+            {
+              (ACG.Geometry nativeShape, Dictionary<string, object?> attributes) = _gisFeatureConverter.Convert(feat);
+              rowBuffer[newFeatureClass.GetDefinition().GetShapeField()] = nativeShape;
+              RowBuffer assignedRowBuffer = _fieldsUtils.AssignFieldValuesToRow(rowBuffer, fields, attributes); // assign atts
+              newFeatureClass.CreateRow(assignedRowBuffer).Dispose();
+            }
+          }
+        });
+      }
+      else // backwards compatibility:
+      {
+        List<GisFeature> oldGisFeatures = RecoverOutdatedGisFeatures(target);
+        // Add features to the FeatureClass
+        geodatabase.ApplyEdits(() =>
+        {
+          _featureClassUtils.AddFeaturesToFeatureClass(newFeatureClass, oldGisFeatures, fields, _gisGeometryConverter);
+        });
+      }
 
       return newFeatureClass;
     }
