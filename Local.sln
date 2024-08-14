@@ -180,6 +180,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Autocad2
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Autocad2022", "Converters\Autocad\Speckle.Converters.Autocad2022\Speckle.Converters.Autocad2022.csproj", "{62F50A22-8BBF-497A-B599-F858DFF1D31C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Tests", "Sdk\Speckle.Connectors.Tests\Speckle.Connectors.Tests.csproj", "{1A2B994C-A36D-4827-8237-0817F56B37E1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Local|Any CPU = Local|Any CPU
@@ -281,6 +283,8 @@ Global
 		{960A9ED3-8377-4FBB-B781-77A4ECCCBB89}.Local|Any CPU.Build.0 = Local|Any CPU
 		{62F50A22-8BBF-497A-B599-F858DFF1D31C}.Local|Any CPU.ActiveCfg = Local|Any CPU
 		{62F50A22-8BBF-497A-B599-F858DFF1D31C}.Local|Any CPU.Build.0 = Local|Any CPU
+		{1A2B994C-A36D-4827-8237-0817F56B37E1}.Local|Any CPU.ActiveCfg = Debug|Any CPU
+		{1A2B994C-A36D-4827-8237-0817F56B37E1}.Local|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -360,6 +364,7 @@ Global
 		{EAAD080D-49AF-49BF-B8BD-A18CEB210734} = {B9CE43B9-31C9-4F02-A92C-658681AD75C6}
 		{960A9ED3-8377-4FBB-B781-77A4ECCCBB89} = {B9CE43B9-31C9-4F02-A92C-658681AD75C6}
 		{62F50A22-8BBF-497A-B599-F858DFF1D31C} = {B9CE43B9-31C9-4F02-A92C-658681AD75C6}
+		{1A2B994C-A36D-4827-8237-0817F56B37E1} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}

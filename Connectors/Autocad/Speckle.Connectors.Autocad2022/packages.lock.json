@@ -368,6 +368,30 @@
           "Speckle.Converters.Common": "[1.0.0, )"
         }
       },
+      "speckle.objects": {
+        "type": "Project",
+        "dependencies": {
+          "Speckle.Sdk": "[1.0.0, )"
+        }
+      },
+      "speckle.sdk": {
+        "type": "Project",
+        "dependencies": {
+          "GraphQL.Client": "[6.0.0, )",
+          "Microsoft.CSharp": "[4.7.0, )",
+          "Microsoft.Data.Sqlite": "[7.0.7, )",
+          "Polly": "[7.2.3, )",
+          "Polly.Contrib.WaitAndRetry": "[1.1.1, )",
+          "Polly.Extensions.Http": "[3.0.0, )",
+          "Speckle.DoubleNumerics": "[4.0.1, )",
+          "Speckle.Newtonsoft.Json": "[13.0.2, )",
+          "Speckle.Sdk.Logging": "[1.0.0, )",
+          "System.Text.Json": "[5.0.2, )"
+        }
+      },
+      "speckle.sdk.logging": {
+        "type": "Project"
+      },
       "Autofac": {
         "type": "CentralTransitive",
         "requested": "[5.2.0, )",

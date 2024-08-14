@@ -52,7 +52,18 @@ public sealed class RootObjectSender : IRootObjectSender
     Account account = _accountService.GetAccountWithServerUrlFallback(sendInfo.AccountId, sendInfo.ServerUrl);
 
     using var transport = _transportFactory.Create(account, sendInfo.ProjectId, 60, null);
-    var sendResult = await Sdk.Api.Operations.Send(commitObject, transport, true, null, ct).ConfigureAwait(false);
+    var sendResult = await Sdk
+      .Api.Operations.Send(
+        commitObject,
+        transport,
+        true,
+        d =>
+        {
+          Console.WriteLine(d);
+        },
+        ct
+      )
+      .ConfigureAwait(false);
 
     _sendConversionCache.StoreSendResult(sendInfo.ProjectId, sendResult.convertedReferences);
 

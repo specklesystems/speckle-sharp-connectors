@@ -12,16 +12,17 @@ public sealed class ReceiveOperation
   private readonly IHostObjectBuilder _hostObjectBuilder;
   private readonly AccountService _accountService;
   private readonly IServerTransportFactory _serverTransportFactory;
+  private readonly IProgressDisplayManager _progressDisplayManager;
 
   public ReceiveOperation(
     IHostObjectBuilder hostObjectBuilder,
     AccountService accountService,
-    IServerTransportFactory serverTransportFactory
-  )
+    IServerTransportFactory serverTransportFactory, IProgressDisplayManager progressDisplayManager)
   {
     _hostObjectBuilder = hostObjectBuilder;
     _accountService = accountService;
     _serverTransportFactory = serverTransportFactory;
+    _progressDisplayManager = progressDisplayManager;
   }
 
   public async Task<HostObjectBuilderResult> Execute(
@@ -50,15 +51,41 @@ public sealed class ReceiveOperation
     using var transport = _serverTransportFactory.Create(account, receiveInfo.ProjectId);
     using (var _ = SpeckleActivityFactory.Start("Receive objects"))
     {
+      _progressDisplayManager.Begin();
       commitObject = await Speckle
         .Sdk.Api.Operations.Receive(
           version.referencedObject,
           transport,
           onProgressAction: dict =>
           {
+            if (!_progressDisplayManager.ShouldUpdate())
+            {
+              return;
+            }
             // NOTE: this looks weird for the user, as when deserialization kicks in, the progress bar will go down, and then start progressing again.
             // This is something we're happy to live with until we refactor the whole receive pipeline.
-            onOperationProgressed?.Invoke($"Downloading and deserializing", dict.Values.Average() / totalCount);
+            var args = dict.FirstOrDefault();
+            if (args is null)
+            {
+              return;
+            }
+            switch (args.ProgressEvent)
+            {
+              case ProgressEvent.DownloadBytes:
+                onOperationProgressed?.Invoke($"Downloading ({_progressDisplayManager.CalculateSpeed(args)})", _progressDisplayManager.CalculatePercentage(args));
+                break;
+              case ProgressEvent.DownloadObject:
+                onOperationProgressed?.Invoke("Downloading Object...", null);
+                break;
+              case ProgressEvent.DeserializeObject:
+                Console.WriteLine(args.Count + " " + args.Total);
+                onOperationProgressed?.Invoke($"Deserializing ({_progressDisplayManager.CalculateSpeed(args)})", _progressDisplayManager.CalculatePercentage(args));
+                break;
+              default:
+                onOperationProgressed?.Invoke($"{args.ProgressEvent} ({_progressDisplayManager.CalculateSpeed(args)})", _progressDisplayManager.CalculatePercentage(args));
+                Console.WriteLine($"{args.ProgressEvent} {args.Count}, {args.Total}");
+                break;
+            }
           },
           onTotalChildrenCountKnown: c => totalCount = c,
           cancellationToken: cancellationToken
