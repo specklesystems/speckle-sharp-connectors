@@ -31,12 +31,7 @@ public class CircleToHostConverter : IToHostTopLevelConverter, ITypedConverter<S
     AG.Point3d origin = _pointConverter.Convert(target.plane.origin);
     double f = Units.GetConversionFactor(target.units, _contextStack.Current.SpeckleUnits);
 
-    if (target.radius is null)
-    {
-      throw new ArgumentNullException(nameof(target), "Cannot convert circle without radius value.");
-    }
-
-    var radius = f * (double)target.radius;
+    var radius = f * target.radius;
     return new(origin, normal, radius);
   }
 }

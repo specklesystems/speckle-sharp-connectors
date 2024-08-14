@@ -1,5 +1,6 @@
 ﻿using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -19,7 +20,7 @@ public class BoundarySegmentConversionToSpeckle : ITypedConverter<IList<DB.Bound
       throw new ArgumentException("Input Boundary segment list must at least have 1 segment");
     }
 
-    var poly = new SOG.Polycurve();
+    List<ICurve> segments = new(target.Count);
     foreach (var segment in target)
     {
       DB.Curve revitCurve = segment.GetCurve();
@@ -28,9 +29,10 @@ public class BoundarySegmentConversionToSpeckle : ITypedConverter<IList<DB.Bound
       // POC: We used to attach the `elementID` of every curve in a PolyCurve as a dynamic property.
       // We've removed this as it seemed unnecessary.
 
-      poly.segments.Add(curve);
+      segments.Add(curve);
     }
 
+    var poly = new SOG.Polycurve { segments = segments, units = Units.Meters }; //TODO: is the units here correct?
     return poly;
   }
 }

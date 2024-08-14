@@ -49,7 +49,7 @@ public class PolylineToSpeckleConverter
       units = _contextStack.Current.SpeckleUnits,
       bbox = box,
       length = target.Length,
-      domain = new(0, target.Length),
+      domain = new() { start = 0, end = target.Length },
       closed = target.IsClosed
     };
   }

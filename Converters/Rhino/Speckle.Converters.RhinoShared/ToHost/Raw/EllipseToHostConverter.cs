@@ -28,12 +28,7 @@ public class EllipseToHostConverter
   /// <remarks><br/>⚠️ This conversion does not preserve the curve domain. If you need it preserved you must request a conversion to <see cref="RG.NurbsCurve"/> conversion instead</remarks>
   public RG.Ellipse Convert(SOG.Ellipse target)
   {
-    if (!target.firstRadius.HasValue || !target.secondRadius.HasValue)
-    {
-      throw new InvalidOperationException($"Ellipses cannot have null radii");
-    }
-
-    return new RG.Ellipse(_planeConverter.Convert(target.plane), target.firstRadius.Value, target.secondRadius.Value);
+    return new RG.Ellipse(_planeConverter.Convert(target.plane), target.firstRadius, target.secondRadius);
   }
 
   /// <summary>

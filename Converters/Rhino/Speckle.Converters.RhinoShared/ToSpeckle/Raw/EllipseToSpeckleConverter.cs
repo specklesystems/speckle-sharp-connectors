@@ -32,14 +32,13 @@ public class EllipseToSpeckleConverter : ITypedConverter<RG.Ellipse, SOG.Ellipse
   public SOG.Ellipse Convert(RG.Ellipse target)
   {
     var nurbsCurve = target.ToNurbsCurve();
-    return new(
-      _planeConverter.Convert(target.Plane),
-      target.Radius1,
-      target.Radius2,
-      _contextStack.Current.SpeckleUnits
-    )
+    return new()
     {
-      domain = new SOP.Interval(0, 1),
+      plane = _planeConverter.Convert(target.Plane),
+      firstRadius = target.Radius1,
+      secondRadius = target.Radius2,
+      units = _contextStack.Current.SpeckleUnits,
+      domain = SOP.Interval.UnitInterval,
       length = nurbsCurve.GetLength(),
       area = Math.PI * target.Radius1 * target.Radius2,
       bbox = _boxConverter.Convert(new RG.Box(nurbsCurve.GetBoundingBox(true)))

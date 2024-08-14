@@ -33,7 +33,7 @@ public class LineToSpeckleConverter : ITypedConverter<RG.Line, SOG.Line>, ITyped
     new(_pointConverter.Convert(target.From), _pointConverter.Convert(target.To), _contextStack.Current.SpeckleUnits)
     {
       length = target.Length,
-      domain = new SOP.Interval(0, target.Length),
+      domain = new SOP.Interval { start = 0, end = target.Length },
       bbox = _boxConverter.Convert(new RG.Box(target.BoundingBox))
     };
 

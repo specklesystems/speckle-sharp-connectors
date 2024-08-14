@@ -48,7 +48,7 @@ public class NurbsSplineToSpeckleConverter : ITypedConverter<DB.NurbSpline, SOG.
       rational = target.isRational,
       closed = _conversionHelper.IsCurveClosed(target),
       units = units,
-      domain = new Interval(target.GetEndParameter(0), target.GetEndParameter(1)),
+      domain = new Interval { start = target.GetEndParameter(0), end = target.GetEndParameter(1) },
       length = _scalingService.ScaleLength(target.Length),
       displayValue = new SOG.Polyline { value = coords, units = units }
     };

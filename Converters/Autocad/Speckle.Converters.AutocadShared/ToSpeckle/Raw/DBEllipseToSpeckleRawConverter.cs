@@ -29,12 +29,16 @@ public class DBEllipseToSpeckleRawConverter : ITypedConverter<ADB.Ellipse, SOG.E
     SOG.Box bbox = _boxConverter.Convert(target.GeometricExtents);
 
     // the start and end param corresponds to start and end angle in radians
-    SOP.Interval trim = new(target.StartAngle, target.EndAngle);
+    SOP.Interval trim = new() { start = target.StartAngle, end = target.EndAngle };
 
     SOG.Ellipse ellipse =
-      new(plane, target.MajorRadius, target.MinorRadius, _contextStack.Current.SpeckleUnits)
+      new()
       {
-        domain = new(0, Math.PI * 2),
+        plane = plane,
+        firstRadius = target.MajorRadius,
+        secondRadius = target.MinorRadius,
+        units = _contextStack.Current.SpeckleUnits,
+        domain = new SOP.Interval { start = 0, end = Math.PI * 2 },
         trimDomain = trim,
         length = target.GetDistanceAtParameter(target.EndParam),
         bbox = bbox
