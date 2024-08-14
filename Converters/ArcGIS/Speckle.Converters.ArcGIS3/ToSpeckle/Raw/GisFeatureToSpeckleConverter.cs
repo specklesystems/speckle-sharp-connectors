@@ -127,7 +127,7 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<Row, IGisFeature>
     // return GisFeatures that don't have geometry
     if (!hasGeometry)
     {
-      return new SGIS.GisNonGeometricFeature(attributes);
+      return new SGIS.GisNonGeometricFeature() { attributes = attributes };
     }
 
     var shape = (ACG.Geometry)target[geometryField];
@@ -135,25 +135,39 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<Row, IGisFeature>
     {
       case ACG.MapPoint point:
         Point specklePoint = _pointConverter.Convert(point);
-        return new SGIS.GisPointFeature(new() { specklePoint }, attributes);
+        return new SGIS.GisPointFeature()
+        {
+          geometry = new() { specklePoint },
+          attributes = attributes
+        };
 
       case ACG.Multipoint multipoint:
         List<Point> specklePoints = _multiPointConverter.Convert(multipoint).ToList();
-        return new SGIS.GisPointFeature(specklePoints, attributes);
+        return new SGIS.GisPointFeature() { geometry = specklePoints, attributes = attributes };
 
       case ACG.Polyline polyline:
         List<Polyline> polylines = _polylineConverter.Convert(polyline).ToList();
-        return new SGIS.GisPolylineFeature(polylines, attributes);
+        return new SGIS.GisPolylineFeature() { geometry = polylines, attributes = attributes };
 
       case ACG.Polygon polygon:
         List<PolygonGeometry> polygons = _polygonConverter.Convert(polygon).ToList();
         List<Mesh> meshes = GetPolygonDisplayMeshes(polygons);
-        return new SGIS.GisPolygonFeature(polygons, meshes, attributes);
+        return new SGIS.GisPolygonFeature()
+        {
+          geometry = polygons,
+          displayValue = meshes,
+          attributes = attributes
+        };
 
       case ACG.Multipatch multipatch:
         List<Base> geometry = _multipatchConverter.Convert(multipatch).ToList();
         List<Mesh> display = GetDisplayMeshes(geometry);
-        return new SGIS.GisMultipatchFeature(geometry, display, attributes);
+        return new SGIS.GisMultipatchFeature()
+        {
+          geometry = geometry,
+          displayValue = display,
+          attributes = attributes
+        };
 
       default:
         throw new NotSupportedException($"No geometry conversion found for {shape.GetType().Name}");
