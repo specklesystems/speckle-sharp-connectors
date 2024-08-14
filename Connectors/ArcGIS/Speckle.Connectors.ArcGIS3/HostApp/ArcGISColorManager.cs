@@ -69,6 +69,11 @@ public class ArcGISColorManager
     }
   }
 
+  /// <summary>
+  /// Create a new CIMUniqueValueClass for UniqueRenderer per each object ID
+  /// </summary>
+  /// <param name="tc"></param>
+  /// <param name="speckleGeometryType"></param>
   private CIMUniqueValueClass CreateColorCategory(TraversalContext tc, esriGeometryType speckleGeometryType)
   {
     Base baseObj = tc.Current;
@@ -105,6 +110,11 @@ public class ArcGISColorManager
     return newUniqueValueClass;
   }
 
+  /// <summary>
+  /// Create a Symbol from GeometryType and Color
+  /// </summary>
+  /// <param name="speckleGeometryType"></param>
+  /// <param name="color"></param>
   private CIMSymbolReference CreateSymbol(esriGeometryType speckleGeometryType, Color color)
   {
     var symbol = SymbolFactory
@@ -130,6 +140,11 @@ public class ArcGISColorManager
     return symbol;
   }
 
+  /// <summary>
+  /// Add CIMUniqueValueClass to Layer Renderer (if exists); apply Renderer to Layer (again)
+  /// </summary>
+  /// <param name="tc"></param>
+  /// <param name="trackerItem"></param>
   public async Task SetOrEditLayerRenderer(TraversalContext tc, ObjectConversionTracker trackerItem)
   {
     if (trackerItem.HostAppMapMember is not FeatureLayer fLayer)
@@ -212,6 +227,11 @@ public class ArcGISColorManager
     AddElementIdToColorProxy(elementAppId, argb, colorId, displayPriority);
   }
 
+  /// <summary>
+  /// Record colors from every feature of the layer into ColorProxies
+  /// </summary>
+  /// <param name="layer"></param>
+  /// <param name="displayPriority"></param>
   private void ProcessFeatureLayerColors(FeatureLayer layer, int displayPriority)
   {
     // first get a list of layer fields
@@ -382,6 +402,11 @@ public class ArcGISColorManager
     return true;
   }
 
+  /// <summary>
+  /// Make comparable the Label string of a UniqueValueRenderer (groupValue), and a Feature Attribute value (rowValue)
+  /// </summary>
+  /// <param name="rowValue"></param>
+  /// <param name="groupValue"></param>
   private (string, string) MakeValuesComparable(object? rowValue, string groupValue)
   {
     string newGroupValue = groupValue;
