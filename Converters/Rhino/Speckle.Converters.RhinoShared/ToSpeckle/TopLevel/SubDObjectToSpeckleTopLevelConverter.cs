@@ -1,12 +1,12 @@
-﻿using Speckle.Converters.Common;
-using Rhino.DocObjects;
+﻿using Rhino.DocObjects;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.TopLevel;
 
 [NameAndRankValue(nameof(SubDObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class SubDObjectToSpeckleTopLevelConverter: IToSpeckleTopLevelConverter
+public class SubDObjectToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
 {
   private readonly ITypedConverter<RG.Brep, SOG.Brep> _brepConverter;
 
