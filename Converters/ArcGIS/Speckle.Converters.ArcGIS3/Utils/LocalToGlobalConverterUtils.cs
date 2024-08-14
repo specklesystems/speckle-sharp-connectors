@@ -45,7 +45,9 @@ public class LocalToGlobalConverterUtils : ILocalToGlobalConverterUtils
         );
       }
 
+      string id = atomicObject.id;
       atomicObject = (Base)c;
+      atomicObject.id = id;
 
       // .TransformTo only transfers typed properties, we need to add back the dynamic ones:
       foreach (var prop in atomicObject.GetMembers(DynamicBaseMemberType.Dynamic))
