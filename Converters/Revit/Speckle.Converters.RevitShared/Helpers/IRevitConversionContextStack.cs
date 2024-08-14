@@ -1,5 +1,6 @@
 using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
+using Speckle.Objects.Other;
 
 namespace Speckle.Converters.RevitShared.Helpers;
 
@@ -10,4 +11,7 @@ namespace Speckle.Converters.RevitShared.Helpers;
 )]
 // POC: so this should *probably* be Document and NOT UI.UIDocument, the former is Conversion centric
 // and the latter is more for connector
-public interface IRevitConversionContextStack : IConversionContextStack<Document, ForgeTypeId> { }
+public interface IRevitConversionContextStack : IConversionContextStack<Document, ForgeTypeId>
+{
+  public Dictionary<string, RenderMaterialProxy> RenderMaterialProxies { get; }
+}

@@ -25,6 +25,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
   private readonly ISyncToThread _syncToThread;
   private readonly SendSelectionUnpacker _sendSelectionUnpacker;
   private readonly SendCollectionManager _sendCollectionManager;
+  private readonly SendMaterialManager _sendMaterialManager;
 
   public RevitRootObjectBuilder(
     IRootToSpeckleConverter converter,
@@ -32,7 +33,8 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     ISendConversionCache sendConversionCache,
     ISyncToThread syncToThread,
     SendSelectionUnpacker sendSelectionUnpacker,
-    SendCollectionManager sendCollectionManager
+    SendCollectionManager sendCollectionManager,
+    SendMaterialManager sendMaterialManager
   )
   {
     _converter = converter;
@@ -41,6 +43,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     _syncToThread = syncToThread;
     _sendSelectionUnpacker = sendSelectionUnpacker;
     _sendCollectionManager = sendCollectionManager;
+    _sendMaterialManager = sendMaterialManager;
 
     // Note, this class is instantiated per unit of work (aka per send operation), so we can safely initialize what we need in here.
     _collectionCache = new Dictionary<string, Collection>();
@@ -109,7 +112,8 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
 
           var collection = _sendCollectionManager.GetAndCreateObjectHostCollection(revitElement, _rootObject);
           collection.elements.Add(converted);
-          // TODO: extract material into proxies here?
+          _sendMaterialManager.AddObjectToRenderMaterialMap(converted); // TODO: extract material into proxies here?
+
           results.Add(new(Status.SUCCESS, applicationId, revitElement.GetType().Name, converted));
         }
         catch (Exception ex) when (!ex.IsFatal())
@@ -120,6 +124,10 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
 
         onOperationProgressed?.Invoke("Converting", (double)++countProgress / revitElements.Count);
       }
+
+      var materialProxies = _sendMaterialManager.RenderMaterialProxies.Values.ToList();
+      var nextLevel = _contextStack.RenderMaterialProxies.Values.ToList();
+      _rootObject["renderMaterialProxies"] = nextLevel;
 
       // POC: Log would be nice, or can be removed.
       Debug.WriteLine(

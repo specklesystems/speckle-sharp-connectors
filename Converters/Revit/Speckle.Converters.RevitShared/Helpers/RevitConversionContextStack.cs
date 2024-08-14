@@ -1,5 +1,6 @@
 using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
+using Speckle.Objects.Other;
 
 namespace Speckle.Converters.RevitShared.Helpers;
 
@@ -13,6 +14,7 @@ namespace Speckle.Converters.RevitShared.Helpers;
 public class RevitConversionContextStack : ConversionContextStack<Document, ForgeTypeId>, IRevitConversionContextStack
 {
   public const double TOLERANCE = 0.0164042; // 5mm in ft
+  public Dictionary<string, RenderMaterialProxy> RenderMaterialProxies { get; } = new();
 
   public RevitConversionContextStack(RevitContext context, IHostToSpeckleUnitConverter<ForgeTypeId> unitConverter)
     : base(

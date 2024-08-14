@@ -38,11 +38,12 @@ public class MeshByMaterialDictionaryToSpeckle
   public List<SOG.Mesh> Convert(Dictionary<DB.ElementId, List<DB.Mesh>> target)
   {
     var result = new List<SOG.Mesh>(target.Keys.Count);
+    var materialProxyMap = _contextStack.RenderMaterialProxies;
 
-    foreach (var meshData in target)
+    foreach (var keyValuePair in target)
     {
-      DB.ElementId materialId = meshData.Key;
-      List<DB.Mesh> meshes = meshData.Value;
+      DB.ElementId materialId = keyValuePair.Key;
+      List<DB.Mesh> meshes = keyValuePair.Value;
 
       // We compute the final size of the arrays to prevent unnecessary resizing.
       (int verticesSize, int facesSize) = GetVertexAndFaceListSize(meshes);
@@ -51,13 +52,25 @@ public class MeshByMaterialDictionaryToSpeckle
       var speckleMesh = new SOG.Mesh(
         new List<double>(verticesSize),
         new List<int>(facesSize),
-        units: _contextStack.Current.SpeckleUnits
+        units: _contextStack.Current.SpeckleUnits,
+        applicationId: Guid.NewGuid().ToString() // NOTE: as we are composing meshes out of multiple ones for the same material, we need to generate our own application id. c'est la vie.
       );
 
       var doc = _contextStack.Current.Document;
       if (doc.GetElement(materialId) is DB.Material material)
       {
-        speckleMesh["renderMaterial"] = _materialConverter.Convert(material);
+        var speckleMaterial = _materialConverter.Convert(material); // TODO: get out
+        if (!materialProxyMap.TryGetValue(materialId.ToString()!, out RenderMaterialProxy? renderMaterialProxy))
+        {
+          renderMaterialProxy = new RenderMaterialProxy()
+          {
+            value = speckleMaterial,
+            applicationId = materialId.ToString()!,
+            objects = []
+          };
+          materialProxyMap[materialId.ToString()!] = renderMaterialProxy;
+        }
+        renderMaterialProxy.objects.Add(speckleMesh.applicationId!);
       }
 
       // Append the revit mesh data to the speckle mesh
