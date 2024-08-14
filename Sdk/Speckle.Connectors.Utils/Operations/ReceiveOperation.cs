@@ -75,10 +75,9 @@ public sealed class ReceiveOperation
                 onOperationProgressed?.Invoke($"Downloading ({_progressDisplayManager.CalculateSpeed(args)})", _progressDisplayManager.CalculatePercentage(args));
                 break;
               case ProgressEvent.DownloadObject:
-                onOperationProgressed?.Invoke("Downloading Object...", null);
+                onOperationProgressed?.Invoke("Downloading Root Object...", null);
                 break;
               case ProgressEvent.DeserializeObject:
-                Console.WriteLine(args.Count + " " + args.Total);
                 onOperationProgressed?.Invoke($"Deserializing ({_progressDisplayManager.CalculateSpeed(args)})", _progressDisplayManager.CalculatePercentage(args));
                 break;
               default:
