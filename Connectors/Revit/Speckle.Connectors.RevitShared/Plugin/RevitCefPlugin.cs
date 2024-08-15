@@ -67,7 +67,7 @@ internal sealed class RevitCefPlugin : IRevitPlugin
       // this happens when both the dui2 and the dui3 connectors are installed. Can be safely ignored.
     }
 
-    RibbonPanel specklePanel = application.CreateRibbonPanel(Connector.TabTitle, Connector.TabTitle);
+    RibbonPanel specklePanel = application.CreateRibbonPanel(Connector.TabName, Connector.TabTitle);
     var dui3Button = (PushButton)
       specklePanel.AddItem(
         new PushButtonData(
