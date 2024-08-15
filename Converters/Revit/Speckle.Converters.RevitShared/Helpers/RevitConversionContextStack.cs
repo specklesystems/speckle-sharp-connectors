@@ -49,15 +49,18 @@ public class RenderMaterialProxyCacheSingleton
   /// </summary>
   public Dictionary<string, Dictionary<string, RenderMaterialProxy>> ObjectRenderMaterialProxiesMap { get; } = new();
 
+  /// <summary>
+  /// Returns the material proxy list for the given objects.
+  /// </summary>
+  /// <param name="elementIds"></param>
+  /// <returns></returns>
   public List<RenderMaterialProxy> GetRenderMaterialProxyListForObjects(List<string> elementIds)
   {
-    // TODO:
     // merge all render material proxies by their material id
     // return that
     var proxiesToMerge = ObjectRenderMaterialProxiesMap
       .Where(kvp => elementIds.Contains(kvp.Key))
-      .Select(kvp => kvp.Value); // TODO
-    var tlist = ObjectRenderMaterialProxiesMap.Values.ToList();
+      .Select(kvp => kvp.Value);
 
     var mergeTarget = new Dictionary<string, RenderMaterialProxy>();
     foreach (var dictionary in proxiesToMerge)
