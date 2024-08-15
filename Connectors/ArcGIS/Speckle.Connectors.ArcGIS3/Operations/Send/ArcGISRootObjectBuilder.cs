@@ -211,17 +211,12 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
         case GroupLayer subGroup:
           layersIndices[layer] = count;
           count++;
-          count = UnpackGroupLayerOrder(layersIndices, subGroup, count);
+          count = UnpackLayersOrder(layersIndices, subGroup.Layers, count);
           break;
-        case BuildingLayer subBuildLayer:
+        case ILayerContainerInternal subLayerContainerInternal:
           layersIndices[layer] = count;
           count++;
-          count = UnpackBuildingLayerOrder(layersIndices, subBuildLayer, count);
-          break;
-        case BuildingDisciplineLayer subBuildDiscLayer:
-          layersIndices[layer] = count;
-          count++;
-          count = UnpackBuildingDisciplineLayerOrder(layersIndices, subBuildDiscLayer, count);
+          count = UnpackLayersOrder(layersIndices, subLayerContainerInternal.InternalLayers, count);
           break;
         default:
           layersIndices[layer] = count;
@@ -231,29 +226,5 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     }
 
     return count;
-  }
-
-  private int UnpackGroupLayerOrder(Dictionary<MapMember, int> layersIndices, GroupLayer group, int count)
-  {
-    var layers = group.Layers;
-    return UnpackLayersOrder(layersIndices, layers, count);
-  }
-
-  private int UnpackBuildingLayerOrder(Dictionary<MapMember, int> layersIndices, BuildingLayer buildLayer, int count)
-  {
-    var containerLayer = buildLayer as ILayerContainerInternal;
-    var internalLayers = containerLayer.InternalLayers;
-    return UnpackLayersOrder(layersIndices, internalLayers, count);
-  }
-
-  private int UnpackBuildingDisciplineLayerOrder(
-    Dictionary<MapMember, int> layersIndices,
-    BuildingDisciplineLayer buildDisciplineLayer,
-    int count
-  )
-  {
-    var containerLayer = buildDisciplineLayer as ILayerContainerInternal;
-    var internalLayers = containerLayer.InternalLayers;
-    return UnpackLayersOrder(layersIndices, internalLayers, count);
   }
 }
