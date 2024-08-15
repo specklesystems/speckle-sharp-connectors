@@ -69,9 +69,9 @@ public class StandaloneTableToSpeckleConverter
           }
 
           element.attributes = elementAttributes;
-
           speckleLayer.elements.Add((Base)element);
         }
+        count++;
       }
     }
 
