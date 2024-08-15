@@ -188,6 +188,12 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
       count++;
     }
 
+    // iterate through tables
+    foreach (var layer in map.StandaloneTables)
+    {
+      layersIndices[layer] = count + 100; // random number, will be recalculated below
+    }
+
     // recalculate selected layer priority from all map layers
     List<(MapMember, int)> selectedLayers = new();
     int newCount = 0;

@@ -2,6 +2,7 @@ using ArcGIS.Core.Data;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Objects;
 using Speckle.Objects.GIS;
 using Speckle.Sdk.Models;
 
@@ -12,9 +13,9 @@ public class StandaloneTableToSpeckleConverter
   : IToSpeckleTopLevelConverter,
     ITypedConverter<StandaloneTable, VectorLayer>
 {
-  private readonly ITypedConverter<Row, GisFeature> _gisFeatureConverter;
+  private readonly ITypedConverter<(Row, string), IGisFeature> _gisFeatureConverter;
 
-  public StandaloneTableToSpeckleConverter(ITypedConverter<Row, GisFeature> gisFeatureConverter)
+  public StandaloneTableToSpeckleConverter(ITypedConverter<(Row, string), IGisFeature> gisFeatureConverter)
   {
     _gisFeatureConverter = gisFeatureConverter;
   }
@@ -45,6 +46,7 @@ public class StandaloneTableToSpeckleConverter
     speckleLayer.attributes = attributes;
     string spekleGeometryType = "None";
 
+    int count = 1;
     using (RowCursor rowCursor = displayTable.Search())
     {
       while (rowCursor.MoveNext())
@@ -52,7 +54,8 @@ public class StandaloneTableToSpeckleConverter
         // Same IDisposable issue appears to happen on Row class too. Docs say it should always be disposed of manually by the caller.
         using (Row row = rowCursor.Current)
         {
-          GisFeature element = _gisFeatureConverter.Convert(row);
+          string appId = $"{target.URI}_{count}";
+          IGisFeature element = _gisFeatureConverter.Convert((row, appId));
 
           // create new element attributes from the existing attributes, based on the vector layer visible fields
           // POC: this should be refactored to store the feature layer properties in the context stack, so this logic can be done in the gisFeatureConverter
@@ -66,9 +69,9 @@ public class StandaloneTableToSpeckleConverter
           }
 
           element.attributes = elementAttributes;
-
-          speckleLayer.elements.Add(element);
+          speckleLayer.elements.Add((Base)element);
         }
+        count++;
       }
     }
 

@@ -1,6 +1,6 @@
 using ArcGIS.Core.Data;
 using Speckle.InterfaceGenerator;
-using Speckle.Objects.GIS;
+using Speckle.Objects;
 using Speckle.Sdk.Models;
 using FieldDescription = ArcGIS.Core.Data.DDL.FieldDescription;
 
@@ -16,9 +16,9 @@ public class FeatureClassUtils : IFeatureClassUtils
     _fieldsUtils = fieldsUtils;
   }
 
-  public void AddFeaturesToTable(Table newFeatureClass, List<GisFeature> gisFeatures, List<FieldDescription> fields)
+  public void AddFeaturesToTable(Table newFeatureClass, List<IGisFeature> gisFeatures, List<FieldDescription> fields)
   {
-    foreach (GisFeature feat in gisFeatures)
+    foreach (IGisFeature feat in gisFeatures)
     {
       using (RowBuffer rowBuffer = newFeatureClass.CreateRowBuffer())
       {
