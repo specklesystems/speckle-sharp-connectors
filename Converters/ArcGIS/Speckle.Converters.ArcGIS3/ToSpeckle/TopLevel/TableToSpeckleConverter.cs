@@ -30,9 +30,9 @@ public class StandaloneTableToSpeckleConverter
 
     // get feature class fields
     var attributes = new Base();
-    var dispayTable = target as IDisplayTable;
+    var displayTable = target as IDisplayTable;
     HashSet<string> visibleFields = new();
-    foreach (FieldDescription field in dispayTable.GetFieldDescriptions())
+    foreach (FieldDescription field in displayTable.GetFieldDescriptions())
     {
       if (field.IsVisible)
       {
@@ -45,7 +45,7 @@ public class StandaloneTableToSpeckleConverter
     speckleLayer.attributes = attributes;
     string spekleGeometryType = "None";
 
-    using (RowCursor rowCursor = dispayTable.Search())
+    using (RowCursor rowCursor = displayTable.Search())
     {
       while (rowCursor.MoveNext())
       {
@@ -54,7 +54,8 @@ public class StandaloneTableToSpeckleConverter
         {
           GisFeature element = _gisFeatureConverter.Convert(row);
 
-          // replace "attributes", to remove non-visible layer attributes
+          // create new element attributes from the existing attributes, based on the vector layer visible fields
+          // POC: this should be refactored to store the feature layer properties in the context stack, so this logic can be done in the gisFeatureConverter
           Base elementAttributes = new();
           foreach (string elementAtt in element.attributes.GetDynamicPropertyKeys())
           {

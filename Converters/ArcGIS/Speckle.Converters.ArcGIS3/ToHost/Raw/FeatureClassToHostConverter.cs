@@ -43,35 +43,6 @@ public class FeatureClassToHostConverter : ITypedConverter<VectorLayer, FeatureC
       {
         gisFeatures.Add(feature);
       }
-      else
-      {
-        if (
-          baseElement["geometry"] is List<object> originalGeometries
-          && baseElement["attributes"] is Base originalAttrs
-          && (baseElement["displayValue"] is List<object> || baseElement["displayValue"] == null)
-        )
-        {
-          var originalDisplayVal = baseElement["displayValue"];
-          List<Base> geometry = originalGeometries.Select(x => (Base)x).ToList();
-          Base attributes = originalAttrs;
-          List<Base>? displayValue =
-            originalDisplayVal == null
-              ? new List<Base>()
-              : ((List<object>)originalDisplayVal).Select(x => (Base)x).ToList();
-          GisFeature newfeature =
-            new()
-            {
-              geometry = geometry,
-              attributes = attributes,
-              displayValue = displayValue
-            };
-          gisFeatures.Add(newfeature);
-        }
-        else
-        {
-          gisFeatures.Add((GisFeature)baseElement);
-        }
-      }
     }
     return gisFeatures;
   }
@@ -166,10 +137,9 @@ public class FeatureClassToHostConverter : ITypedConverter<VectorLayer, FeatureC
           }
         });
       }
-      else // backwards compatibility:
+      else // V2 compatibility with QGIS (still using GisFeature class)
       {
-        List<GisFeature> oldGisFeatures = RecoverOutdatedGisFeatures(target);
-        // Add features to the FeatureClass
+        List<GisFeature> oldGisFeatures = target.elements.Where(o => o is GisFeature).Cast<GisFeature>().ToList();
         geodatabase.ApplyEdits(() =>
         {
           _featureClassUtils.AddFeaturesToFeatureClass(newFeatureClass, oldGisFeatures, fields, _gisGeometryConverter);

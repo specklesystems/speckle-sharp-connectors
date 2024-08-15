@@ -40,36 +40,26 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
     List<Mesh> displayVal = new();
     foreach (SGIS.PolygonGeometry polygon in polygons)
     {
-      try
+      // POC: check for voids, we cannot generate display value correctly if any of the polygons have voids
+      if (polygon.voids.Count > 0)
       {
-        if (polygon.voids.Count == 0)
-        {
-          // ensure counter-clockwise orientation for up-facing mesh faces
-          bool isClockwise = polygon.boundary.IsClockwisePolygon();
-          List<SOG.Point> boundaryPts = polygon.boundary.GetPoints();
-          if (isClockwise)
-          {
-            boundaryPts.Reverse();
-          }
-
-          // generate Mesh
-          int ptCount = boundaryPts.Count;
-          List<int> faces = new() { ptCount };
-          faces.AddRange(Enumerable.Range(0, ptCount).ToList());
-
-          SOG.Mesh mesh = new(boundaryPts.SelectMany(x => new List<double> { x.x, x.y, x.z }).ToList(), faces);
-          displayVal.Add(mesh);
-        }
-        else
-        {
-          throw new SpeckleConversionException("Cannot generate display value for polygons with voids");
-        }
+        return new();
       }
-      catch (SpeckleConversionException)
+
+      // ensure counter-clockwise orientation for up-facing mesh faces
+      bool isClockwise = polygon.boundary.IsClockwisePolygon();
+      List<SOG.Point> boundaryPts = polygon.boundary.GetPoints();
+      if (isClockwise)
       {
-        break;
+        boundaryPts.Reverse();
       }
+
+      // generate Mesh
+      List<int> faces = Enumerable.Range(0, boundaryPts.Count).ToList();
+      SOG.Mesh mesh = new(boundaryPts.SelectMany(x => new List<double> { x.x, x.y, x.z }).ToList(), faces);
+      displayVal.Add(mesh);
     }
+
     return displayVal;
   }
 
