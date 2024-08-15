@@ -126,10 +126,7 @@ Target(
   }
 );
 
-Target(
-  CHECK_SOLUTIONS,
-  Solutions.CompareConnectorsToLocal
-);
+Target(CHECK_SOLUTIONS, Solutions.CompareConnectorsToLocal);
 
 Target(
   TEST,

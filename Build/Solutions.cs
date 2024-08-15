@@ -4,12 +4,13 @@ namespace Build;
 
 public static class Solutions
 {
-  private static bool ValidProjects(KeyValuePair<string, ProjectInSolution> projectInSolution) => projectInSolution.Value.ProjectType == SolutionProjectType.KnownToBeMSBuildFormat;
+  private static bool ValidProjects(KeyValuePair<string, ProjectInSolution> projectInSolution) =>
+    projectInSolution.Value.ProjectType == SolutionProjectType.KnownToBeMSBuildFormat;
 
   public static void CompareConnectorsToLocal()
   {
-    var localSln = SolutionFile.Parse(Path.Combine( Environment.CurrentDirectory, "Local.sln"));
-    var connectorsSln = SolutionFile.Parse(Path.Combine( Environment.CurrentDirectory, "Speckle.Connectors.sln"));
+    var localSln = SolutionFile.Parse(Path.Combine(Environment.CurrentDirectory, "Local.sln"));
+    var connectorsSln = SolutionFile.Parse(Path.Combine(Environment.CurrentDirectory, "Speckle.Connectors.sln"));
     var localProjects = localSln.ProjectsByGuid.Where(ValidProjects).ToDictionary();
 
     foreach ((string? _, ProjectInSolution? value) in connectorsSln.ProjectsByGuid.Where(ValidProjects))
@@ -22,7 +23,12 @@ public static class Solutions
 
       if (value.ProjectName != localProject.ProjectName)
       {
-        throw new InvalidOperationException("Projects with different names have same Guid in solution: " + value.ProjectName + " and " + localProject.ProjectName);
+        throw new InvalidOperationException(
+          "Projects with different names have same Guid in solution: "
+            + value.ProjectName
+            + " and "
+            + localProject.ProjectName
+        );
       }
       localProjects.Remove(localProjects.Single(x => x.Value.ProjectName == value.ProjectName).Key);
     }
@@ -42,7 +48,9 @@ public static class Solutions
     CheckAndRemoveKnown("Speckle.Sdk.Logging");
     if (localProjects.Count != 0)
     {
-      throw new InvalidOperationException("Could not find in CONNECTOR solution: " + localProjects.First().Value.ProjectName);
+      throw new InvalidOperationException(
+        "Could not find in CONNECTOR solution: " + localProjects.First().Value.ProjectName
+      );
     }
   }
 }
