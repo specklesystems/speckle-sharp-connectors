@@ -1,11 +1,13 @@
 using System.Drawing;
+using System.IO;
 using System.Reflection;
 using Autodesk.AutoCAD.Runtime;
 using Autodesk.AutoCAD.Windows;
 using Speckle.Autofac.DependencyInjection;
-using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Connectors.Utils;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Host;
 
 namespace Speckle.Connectors.Autocad.Plugin;
 
@@ -34,12 +36,13 @@ public class AutocadCommand
 
     var builder = SpeckleContainerBuilder.CreateInstance();
 
-    AutocadSettings autocadSettings = new(AppUtils.App, AppUtils.Version);
     // init DI
     _disposableLogger = Connector.Initialize(AppUtils.App, AppUtils.Version);
     Container = builder
-      .LoadAutofacModules(Assembly.GetExecutingAssembly(), autocadSettings.Modules)
-      .AddSingleton(autocadSettings)
+      .LoadAutofacModules(
+        Assembly.GetExecutingAssembly(),
+        [Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location).NotNull()]
+      )
       .Build();
 
     var panelWebView = Container.Resolve<DUI3ControlWebView>();
