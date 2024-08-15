@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.Commands;
@@ -146,11 +145,6 @@ public sealed class RhinoSendBinding : ISendBinding
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
 
-  [SuppressMessage(
-    "Design",
-    "CA1024:Use properties where appropriate",
-    Justification = "Bridge does not support properties"
-  )]
   public List<CardSetting> GetSendSettings() => [];
 
   public async Task Send(string modelCardId)
