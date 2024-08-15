@@ -1,9 +1,5 @@
-using ArcGIS.Core.Data;
-using ArcGIS.Core.Internal.CIM;
-using ArcGIS.Desktop.Internal.Mapping;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Objects;
 using Speckle.Objects.GIS;
 using Speckle.Sdk.Models;
 

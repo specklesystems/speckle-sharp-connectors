@@ -1,7 +1,6 @@
 using ArcGIS.Core.Data;
 using Speckle.InterfaceGenerator;
 using Speckle.Objects;
-using Speckle.Objects.GIS;
 using Speckle.Sdk.Models;
 using FieldDescription = ArcGIS.Core.Data.DDL.FieldDescription;
 
