@@ -1,5 +1,6 @@
 using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
+using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Sdk.Models.Proxies;
 using AutocadColor = Autodesk.AutoCAD.Colors.Color;
@@ -77,11 +78,7 @@ public class AutocadColorManager
     {
       // assumes color names are unique
       string colorId = layer.Color.ColorNameForDisplay;
-
-      // Layers and geometries can have same application ids.....
-      // We should prevent it for sketchup converter. Because when it happens "objects_to_bake" definition
-      // is changing on the way if it happens.
-      string layerId = $"layer_{layer.Handle}";
+      string layerId = layer.GetSpeckleApplicationId(); // Do not use handle directly, see note in the 'GetSpeckleApplicationId' method
 
       if (colorProxies.TryGetValue(colorId, out ColorProxy? value))
       {

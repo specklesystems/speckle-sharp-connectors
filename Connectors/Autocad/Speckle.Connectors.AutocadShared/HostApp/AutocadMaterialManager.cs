@@ -1,6 +1,7 @@
 using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.GraphicsInterface;
+using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Objects.Other;
@@ -95,7 +96,7 @@ public class AutocadMaterialManager
       if (transaction.GetObject(layer.MaterialId, OpenMode.ForRead) is Material material)
       {
         string materialId = material.Handle.ToString();
-        string layerId = layer.Handle.ToString();
+        string layerId = layer.GetSpeckleApplicationId(); // Do not use handle directly, see note in the 'GetSpeckleApplicationId' method
         if (materialProxies.TryGetValue(materialId, out RenderMaterialProxy? value))
         {
           value.objects.Add(layerId);
