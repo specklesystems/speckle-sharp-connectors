@@ -135,7 +135,7 @@ public sealed class AutocadSendBinding : ISendBinding
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
 
-  public List<CardSetting> GetSendSettings => [];
+  public List<CardSetting> GetSendSettings() => [];
 
   public Task Send(string modelCardId)
   {
