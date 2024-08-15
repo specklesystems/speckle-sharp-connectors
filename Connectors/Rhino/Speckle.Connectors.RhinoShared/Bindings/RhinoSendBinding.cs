@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.Commands;
@@ -76,11 +77,6 @@ public sealed class RhinoSendBinding : ISendBinding
 
   private void SubscribeToRhinoEvents()
   {
-    RhinoDoc.LayerTableEvent += (_, _) =>
-    {
-      Commands.RefreshSendFilters();
-    };
-
     Command.BeginCommand += (_, e) =>
     {
       if (e.CommandEnglishName == "BlockEdit")
@@ -150,7 +146,12 @@ public sealed class RhinoSendBinding : ISendBinding
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
 
-  public List<CardSetting> GetSendSettings => [];
+  [SuppressMessage(
+    "Design",
+    "CA1024:Use properties where appropriate",
+    Justification = "Bridge does not support properties"
+  )]
+  public List<CardSetting> GetSendSettings() => [];
 
   public async Task Send(string modelCardId)
   {
