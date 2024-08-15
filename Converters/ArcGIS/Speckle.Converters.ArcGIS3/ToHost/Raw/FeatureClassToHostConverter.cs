@@ -14,20 +14,23 @@ namespace Speckle.Converters.ArcGIS3.ToHost.Raw;
 public class FeatureClassToHostConverter : ITypedConverter<VectorLayer, FeatureClass>
 {
   private readonly ITypedConverter<IReadOnlyList<Base>, ACG.Geometry> _gisGeometryConverter;
-  private readonly ITypedConverter<IGisFeature, (ACG.Geometry, Dictionary<string, object?>)> _gisFeatureConverter;
+  private readonly ITypedConverter<IGisFeature, (ACG.Geometry, Dictionary<string, object?>)> _iGisFeatureConverter;
+  private readonly ITypedConverter<GisFeature, (ACG.Geometry, Dictionary<string, object?>)> _gisFeatureConverter;
   private readonly IFeatureClassUtils _featureClassUtils;
   private readonly IArcGISFieldUtils _fieldsUtils;
   private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;
 
   public FeatureClassToHostConverter(
     ITypedConverter<IReadOnlyList<Base>, ACG.Geometry> gisGeometryConverter,
-    ITypedConverter<IGisFeature, (ACG.Geometry, Dictionary<string, object?>)> gisFeatureConverter,
+    ITypedConverter<IGisFeature, (ACG.Geometry, Dictionary<string, object?>)> iGisFeatureConverter,
+    ITypedConverter<GisFeature, (ACG.Geometry, Dictionary<string, object?>)> gisFeatureConverter,
     IFeatureClassUtils featureClassUtils,
     IArcGISFieldUtils fieldsUtils,
     IConversionContextStack<ArcGISDocument, ACG.Unit> contextStack
   )
   {
     _gisGeometryConverter = gisGeometryConverter;
+    _iGisFeatureConverter = iGisFeatureConverter;
     _gisFeatureConverter = gisFeatureConverter;
     _featureClassUtils = featureClassUtils;
     _fieldsUtils = fieldsUtils;
@@ -119,32 +122,43 @@ public class FeatureClassToHostConverter : ITypedConverter<VectorLayer, FeatureC
     {
       FeatureClass newFeatureClass = geodatabase.OpenDataset<FeatureClass>(featureClassName);
 
-      // process IGisFeature
+      // convert all elements in this feature class
+      List<(ACG.Geometry, Dictionary<string, object?>)> featureClassElements = new();
+
       List<IGisFeature> gisFeatures = target.elements.Where(o => o is IGisFeature).Cast<IGisFeature>().ToList();
       if (gisFeatures.Count > 0)
       {
-        geodatabase.ApplyEdits(() =>
-        {
-          foreach (IGisFeature feat in gisFeatures)
-          {
-            using (RowBuffer rowBuffer = newFeatureClass.CreateRowBuffer())
-            {
-              (ACG.Geometry nativeShape, Dictionary<string, object?> attributes) = _gisFeatureConverter.Convert(feat);
-              rowBuffer[newFeatureClass.GetDefinition().GetShapeField()] = nativeShape;
-              RowBuffer assignedRowBuffer = _fieldsUtils.AssignFieldValuesToRow(rowBuffer, fields, attributes); // assign atts
-              newFeatureClass.CreateRow(assignedRowBuffer).Dispose();
-            }
-          }
-        });
+        featureClassElements = gisFeatures.Select(o => _iGisFeatureConverter.Convert(o)).ToList();
       }
       else // V2 compatibility with QGIS (still using GisFeature class)
       {
         List<GisFeature> oldGisFeatures = target.elements.Where(o => o is GisFeature).Cast<GisFeature>().ToList();
-        geodatabase.ApplyEdits(() =>
-        {
-          _featureClassUtils.AddFeaturesToFeatureClass(newFeatureClass, oldGisFeatures, fields, _gisGeometryConverter);
-        });
+        featureClassElements = oldGisFeatures.Select(o => _gisFeatureConverter.Convert(o)).ToList();
       }
+
+      // process features into rows
+      if (featureClassElements.Count == 0)
+      {
+        // POC: REPORT CONVERTED WITH ERROR HERE
+        return newFeatureClass;
+      }
+
+      geodatabase.ApplyEdits(() =>
+      {
+        foreach ((ACG.Geometry, Dictionary<string, object?>) featureClassElement in featureClassElements)
+        {
+          using (RowBuffer rowBuffer = newFeatureClass.CreateRowBuffer())
+          {
+            rowBuffer[newFeatureClass.GetDefinition().GetShapeField()] = featureClassElement.Item1;
+            RowBuffer assignedRowBuffer = _fieldsUtils.AssignFieldValuesToRow(
+              rowBuffer,
+              fields,
+              featureClassElement.Item2
+            ); // assign atts
+            newFeatureClass.CreateRow(assignedRowBuffer).Dispose();
+          }
+        }
+      });
 
       return newFeatureClass;
     }
