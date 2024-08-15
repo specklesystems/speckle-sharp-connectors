@@ -4,6 +4,7 @@ using ArcGIS.Core.Data.Exceptions;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Objects;
 using Speckle.Objects.GIS;
 using Speckle.Sdk.Models;
 using FieldDescription = ArcGIS.Core.Data.DDL.FieldDescription;
@@ -14,19 +15,15 @@ public class TableLayerToHostConverter : ITypedConverter<VectorLayer, Table>
 {
   private readonly IFeatureClassUtils _featureClassUtils;
   private readonly IArcGISFieldUtils _fieldsUtils;
-  private readonly ITypedConverter<List<Base>, List<(ACG.Geometry?, Dictionary<string, object?>)>> _gisFeatureConverter;
   private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;
 
   public TableLayerToHostConverter(
     IFeatureClassUtils featureClassUtils,
-    ITypedConverter<List<Base>, List<(ACG.Geometry?, Dictionary<string, object?>)>> gisFeatureConverter,
     IConversionContextStack<ArcGISDocument, ACG.Unit> contextStack,
     IArcGISFieldUtils fieldsUtils
   )
   {
     _featureClassUtils = featureClassUtils;
-    _gisFeatureConverter = gisFeatureConverter;
-    _gisFeatureConverter = gisFeatureConverter;
     _contextStack = contextStack;
     _fieldsUtils = fieldsUtils;
   }
@@ -80,10 +77,21 @@ public class TableLayerToHostConverter : ITypedConverter<VectorLayer, Table>
     {
       Table newFeatureClass = geodatabase.OpenDataset<Table>(featureClassName);
 
-      // convert all elements in this table class
-      List<(ACG.Geometry?, Dictionary<string, object?>)> featureClassElements = _gisFeatureConverter.Convert(
-        target.elements
-      );
+      // handle and convert element types
+      List<Dictionary<string, object?>> featureClassElements = new();
+
+      List<IGisFeature> gisFeatures = target.elements.Where(o => o is IGisFeature).Cast<IGisFeature>().ToList();
+      if (gisFeatures.Count > 0)
+      {
+        featureClassElements = gisFeatures.Select(o => o.attributes.GetMembers(DynamicBaseMemberType.Dynamic)).ToList();
+      }
+      else // V2 compatibility with QGIS (still using GisFeature class)
+      {
+        List<GisFeature> oldGisFeatures = target.elements.Where(o => o is GisFeature).Cast<GisFeature>().ToList();
+        featureClassElements = oldGisFeatures
+          .Select(o => o.attributes.GetMembers(DynamicBaseMemberType.Dynamic))
+          .ToList();
+      }
 
       // process features into rows
       if (featureClassElements.Count == 0)
@@ -94,15 +102,11 @@ public class TableLayerToHostConverter : ITypedConverter<VectorLayer, Table>
 
       geodatabase.ApplyEdits(() =>
       {
-        foreach ((ACG.Geometry?, Dictionary<string, object?>) featureClassElement in featureClassElements)
+        foreach (Dictionary<string, object?> featureClassElement in featureClassElements)
         {
           using (RowBuffer rowBuffer = newFeatureClass.CreateRowBuffer())
           {
-            RowBuffer assignedRowBuffer = _fieldsUtils.AssignFieldValuesToRow(
-              rowBuffer,
-              fields,
-              featureClassElement.Item2
-            ); // assign atts
+            RowBuffer assignedRowBuffer = _fieldsUtils.AssignFieldValuesToRow(rowBuffer, fields, featureClassElement); // assign atts
             newFeatureClass.CreateRow(assignedRowBuffer).Dispose();
           }
         }

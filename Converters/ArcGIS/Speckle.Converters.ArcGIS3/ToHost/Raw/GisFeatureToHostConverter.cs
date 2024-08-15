@@ -4,7 +4,7 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.Raw;
 
-public class GisFeatureToHostConverter : ITypedConverter<GisFeature, (ACG.Geometry?, Dictionary<string, object?>)>
+public class GisFeatureToHostConverter : ITypedConverter<GisFeature, (ACG.Geometry, Dictionary<string, object?>)>
 {
   private readonly ITypedConverter<IReadOnlyList<Base>, ACG.Geometry> _geometryConverter;
 
@@ -13,7 +13,7 @@ public class GisFeatureToHostConverter : ITypedConverter<GisFeature, (ACG.Geomet
     _geometryConverter = geometryConverter;
   }
 
-  public (ACG.Geometry?, Dictionary<string, object?>) Convert(GisFeature target)
+  public (ACG.Geometry, Dictionary<string, object?>) Convert(GisFeature target)
   {
     Dictionary<string, object?> attributes = target.attributes.GetMembers(DynamicBaseMemberType.Dynamic);
 
@@ -24,7 +24,7 @@ public class GisFeatureToHostConverter : ITypedConverter<GisFeature, (ACG.Geomet
     }
     else
     {
-      return (null, attributes);
+      throw new ArgumentException("GisFeature had null or empty geometry");
     }
   }
 }

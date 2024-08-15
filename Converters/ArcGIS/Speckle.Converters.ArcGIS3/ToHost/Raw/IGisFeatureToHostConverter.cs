@@ -5,7 +5,7 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.Raw;
 
-public class IGisFeatureToHostConverter : ITypedConverter<IGisFeature, (ACG.Geometry?, Dictionary<string, object?>)>
+public class IGisFeatureToHostConverter : ITypedConverter<IGisFeature, (ACG.Geometry, Dictionary<string, object?>)>
 {
   private readonly ITypedConverter<List<SOG.Point>, ACG.Multipoint> _multipointConverter;
   private readonly ITypedConverter<List<SOG.Polyline>, ACG.Polyline> _polylineConverter;
@@ -28,7 +28,7 @@ public class IGisFeatureToHostConverter : ITypedConverter<IGisFeature, (ACG.Geom
     _multipatchConverter = multipatchConverter;
   }
 
-  public (ACG.Geometry?, Dictionary<string, object?>) Convert(IGisFeature target)
+  public (ACG.Geometry, Dictionary<string, object?>) Convert(IGisFeature target)
   {
     // get attributes
     Dictionary<string, object?> attributes = target.attributes.GetMembers(DynamicBaseMemberType.Dynamic);
@@ -36,7 +36,7 @@ public class IGisFeatureToHostConverter : ITypedConverter<IGisFeature, (ACG.Geom
     switch (target)
     {
       case GisNonGeometricFeature:
-        return (null, attributes);
+        throw new ArgumentException("IGisFeature had null or empty geometry");
 
       case GisPointFeature pointFeature:
         ACG.Multipoint multipoint = _multipointConverter.Convert(pointFeature.geometry);
