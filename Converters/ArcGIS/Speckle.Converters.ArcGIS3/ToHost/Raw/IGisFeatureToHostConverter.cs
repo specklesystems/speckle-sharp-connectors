@@ -1,4 +1,3 @@
-using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
 using Speckle.Objects.GIS;
@@ -6,22 +5,20 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.Raw;
 
-public class IGisFeatureToHostConverter : ITypedConverter<IGisFeature, (ACG.Geometry, Dictionary<string, object?>)>
+public class IGisFeatureToHostConverter : ITypedConverter<IGisFeature, (ACG.Geometry?, Dictionary<string, object?>)>
 {
   private readonly ITypedConverter<List<SOG.Point>, ACG.Multipoint> _multipointConverter;
   private readonly ITypedConverter<List<SOG.Polyline>, ACG.Polyline> _polylineConverter;
   private readonly ITypedConverter<List<SGIS.PolygonGeometry>, ACG.Polygon> _polygonConverter;
   private readonly ITypedConverter<List<SGIS.PolygonGeometry3d>, ACG.Multipatch> _polygon3dConverter;
   private readonly ITypedConverter<List<SGIS.GisMultipatchGeometry>, ACG.Multipatch> _multipatchConverter;
-  private readonly ITypedConverter<Base, Dictionary<string, object?>> _attributeConverter;
 
   public IGisFeatureToHostConverter(
     ITypedConverter<List<SOG.Point>, ACG.Multipoint> multipointConverter,
     ITypedConverter<List<SOG.Polyline>, ACG.Polyline> polylineConverter,
     ITypedConverter<List<SGIS.PolygonGeometry>, ACG.Polygon> polygonConverter,
     ITypedConverter<List<SGIS.PolygonGeometry3d>, ACG.Multipatch> polygon3dConverter,
-    ITypedConverter<List<SGIS.GisMultipatchGeometry>, ACG.Multipatch> multipatchConverter,
-    ITypedConverter<Base, Dictionary<string, object?>> attributeConverter
+    ITypedConverter<List<SGIS.GisMultipatchGeometry>, ACG.Multipatch> multipatchConverter
   )
   {
     _multipointConverter = multipointConverter;
@@ -29,18 +26,17 @@ public class IGisFeatureToHostConverter : ITypedConverter<IGisFeature, (ACG.Geom
     _polygonConverter = polygonConverter;
     _polygon3dConverter = polygon3dConverter;
     _multipatchConverter = multipatchConverter;
-    _attributeConverter = attributeConverter;
   }
 
-  public (ACG.Geometry, Dictionary<string, object?>) Convert(IGisFeature target)
+  public (ACG.Geometry?, Dictionary<string, object?>) Convert(IGisFeature target)
   {
     // get attributes
-    Dictionary<string, object?> attributes = _attributeConverter.Convert(target.attributes);
+    Dictionary<string, object?> attributes = target.attributes.GetMembers(DynamicBaseMemberType.Dynamic);
 
     switch (target)
     {
       case GisNonGeometricFeature:
-        throw new SpeckleConversionException("Cannot create nongeometric feature");
+        return (null, attributes);
 
       case GisPointFeature pointFeature:
         ACG.Multipoint multipoint = _multipointConverter.Convert(pointFeature.geometry);

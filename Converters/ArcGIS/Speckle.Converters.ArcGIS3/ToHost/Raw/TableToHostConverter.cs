@@ -4,8 +4,8 @@ using ArcGIS.Core.Data.Exceptions;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Objects;
 using Speckle.Objects.GIS;
+using Speckle.Sdk.Models;
 using FieldDescription = ArcGIS.Core.Data.DDL.FieldDescription;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.Raw;
@@ -14,15 +14,19 @@ public class TableLayerToHostConverter : ITypedConverter<VectorLayer, Table>
 {
   private readonly IFeatureClassUtils _featureClassUtils;
   private readonly IArcGISFieldUtils _fieldsUtils;
+  private readonly ITypedConverter<List<Base>, List<(ACG.Geometry?, Dictionary<string, object?>)>> _gisFeatureConverter;
   private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;
 
   public TableLayerToHostConverter(
     IFeatureClassUtils featureClassUtils,
+    ITypedConverter<List<Base>, List<(ACG.Geometry?, Dictionary<string, object?>)>> gisFeatureConverter,
     IConversionContextStack<ArcGISDocument, ACG.Unit> contextStack,
     IArcGISFieldUtils fieldsUtils
   )
   {
     _featureClassUtils = featureClassUtils;
+    _gisFeatureConverter = gisFeatureConverter;
+    _gisFeatureConverter = gisFeatureConverter;
     _contextStack = contextStack;
     _fieldsUtils = fieldsUtils;
   }
@@ -75,12 +79,33 @@ public class TableLayerToHostConverter : ITypedConverter<VectorLayer, Table>
     try
     {
       Table newFeatureClass = geodatabase.OpenDataset<Table>(featureClassName);
-      // Add features to the FeatureClass
-      // process IGisFeature
-      List<IGisFeature> gisFeatures = target.elements.Where(o => o is IGisFeature).Cast<IGisFeature>().ToList();
+
+      // convert all elements in this table class
+      List<(ACG.Geometry?, Dictionary<string, object?>)> featureClassElements = _gisFeatureConverter.Convert(
+        target.elements
+      );
+
+      // process features into rows
+      if (featureClassElements.Count == 0)
+      {
+        // POC: REPORT CONVERTED WITH ERROR HERE
+        return newFeatureClass;
+      }
+
       geodatabase.ApplyEdits(() =>
       {
-        _featureClassUtils.AddFeaturesToTable(newFeatureClass, gisFeatures, fields);
+        foreach ((ACG.Geometry?, Dictionary<string, object?>) featureClassElement in featureClassElements)
+        {
+          using (RowBuffer rowBuffer = newFeatureClass.CreateRowBuffer())
+          {
+            RowBuffer assignedRowBuffer = _fieldsUtils.AssignFieldValuesToRow(
+              rowBuffer,
+              fields,
+              featureClassElement.Item2
+            ); // assign atts
+            newFeatureClass.CreateRow(assignedRowBuffer).Dispose();
+          }
+        }
       });
 
       return newFeatureClass;

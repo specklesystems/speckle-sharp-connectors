@@ -4,7 +4,6 @@ using ArcGIS.Core.Data.Exceptions;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Objects;
 using Speckle.Objects.GIS;
 using Speckle.Sdk.Models;
 using FieldDescription = ArcGIS.Core.Data.DDL.FieldDescription;
@@ -14,23 +13,20 @@ namespace Speckle.Converters.ArcGIS3.ToHost.Raw;
 public class FeatureClassToHostConverter : ITypedConverter<VectorLayer, FeatureClass>
 {
   private readonly ITypedConverter<IReadOnlyList<Base>, ACG.Geometry> _gisGeometryConverter;
-  private readonly ITypedConverter<IGisFeature, (ACG.Geometry, Dictionary<string, object?>)> _iGisFeatureConverter;
-  private readonly ITypedConverter<GisFeature, (ACG.Geometry, Dictionary<string, object?>)> _gisFeatureConverter;
+  private readonly ITypedConverter<List<Base>, List<(ACG.Geometry?, Dictionary<string, object?>)>> _gisFeatureConverter;
   private readonly IFeatureClassUtils _featureClassUtils;
   private readonly IArcGISFieldUtils _fieldsUtils;
   private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;
 
   public FeatureClassToHostConverter(
     ITypedConverter<IReadOnlyList<Base>, ACG.Geometry> gisGeometryConverter,
-    ITypedConverter<IGisFeature, (ACG.Geometry, Dictionary<string, object?>)> iGisFeatureConverter,
-    ITypedConverter<GisFeature, (ACG.Geometry, Dictionary<string, object?>)> gisFeatureConverter,
+    ITypedConverter<List<Base>, List<(ACG.Geometry?, Dictionary<string, object?>)>> gisFeatureConverter,
     IFeatureClassUtils featureClassUtils,
     IArcGISFieldUtils fieldsUtils,
     IConversionContextStack<ArcGISDocument, ACG.Unit> contextStack
   )
   {
     _gisGeometryConverter = gisGeometryConverter;
-    _iGisFeatureConverter = iGisFeatureConverter;
     _gisFeatureConverter = gisFeatureConverter;
     _featureClassUtils = featureClassUtils;
     _fieldsUtils = fieldsUtils;
@@ -123,18 +119,9 @@ public class FeatureClassToHostConverter : ITypedConverter<VectorLayer, FeatureC
       FeatureClass newFeatureClass = geodatabase.OpenDataset<FeatureClass>(featureClassName);
 
       // convert all elements in this feature class
-      List<(ACG.Geometry, Dictionary<string, object?>)> featureClassElements = new();
-
-      List<IGisFeature> gisFeatures = target.elements.Where(o => o is IGisFeature).Cast<IGisFeature>().ToList();
-      if (gisFeatures.Count > 0)
-      {
-        featureClassElements = gisFeatures.Select(o => _iGisFeatureConverter.Convert(o)).ToList();
-      }
-      else // V2 compatibility with QGIS (still using GisFeature class)
-      {
-        List<GisFeature> oldGisFeatures = target.elements.Where(o => o is GisFeature).Cast<GisFeature>().ToList();
-        featureClassElements = oldGisFeatures.Select(o => _gisFeatureConverter.Convert(o)).ToList();
-      }
+      List<(ACG.Geometry?, Dictionary<string, object?>)> featureClassElements = _gisFeatureConverter.Convert(
+        target.elements
+      );
 
       // process features into rows
       if (featureClassElements.Count == 0)
@@ -145,11 +132,16 @@ public class FeatureClassToHostConverter : ITypedConverter<VectorLayer, FeatureC
 
       geodatabase.ApplyEdits(() =>
       {
-        foreach ((ACG.Geometry, Dictionary<string, object?>) featureClassElement in featureClassElements)
+        foreach ((ACG.Geometry?, Dictionary<string, object?>) featureClassElement in featureClassElements)
         {
           using (RowBuffer rowBuffer = newFeatureClass.CreateRowBuffer())
           {
-            rowBuffer[newFeatureClass.GetDefinition().GetShapeField()] = featureClassElement.Item1;
+            if (featureClassElement.Item1 is not ACG.Geometry shape)
+            {
+              throw new SpeckleConversionException("Feature Class element had no converted geometry");
+            }
+
+            rowBuffer[newFeatureClass.GetDefinition().GetShapeField()] = shape;
             RowBuffer assignedRowBuffer = _fieldsUtils.AssignFieldValuesToRow(
               rowBuffer,
               fields,

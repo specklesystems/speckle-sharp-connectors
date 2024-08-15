@@ -22,15 +22,12 @@ public class FeatureClassUtils : IFeatureClassUtils
     {
       using (RowBuffer rowBuffer = newFeatureClass.CreateRowBuffer())
       {
-        newFeatureClass
-          .CreateRow(
-            _fieldsUtils.AssignFieldValuesToRow(
-              rowBuffer,
-              fields,
-              feat.attributes.GetMembers(DynamicBaseMemberType.Dynamic)
-            )
-          )
-          .Dispose();
+        RowBuffer assignedRowBuffer = _fieldsUtils.AssignFieldValuesToRow(
+          rowBuffer,
+          fields,
+          feat.attributes.GetMembers(DynamicBaseMemberType.Dynamic)
+        );
+        newFeatureClass.CreateRow(assignedRowBuffer).Dispose();
       }
     }
   }
