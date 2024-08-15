@@ -158,7 +158,7 @@ public sealed class AutocadSendBinding : ISendBinding
 
       using var uow = _unitOfWorkFactory.Resolve<SendOperation<AutocadRootObject>>();
 
-      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId).Token;
+      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
       // Disable document activation (document creation and document switch)
       // Not disabling results in DUI model card being out of sync with the active document

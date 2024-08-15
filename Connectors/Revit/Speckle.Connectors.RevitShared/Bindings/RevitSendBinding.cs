@@ -117,7 +117,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         throw new InvalidOperationException("No publish model card was found.");
       }
 
-      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId).Token;
+      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
       using IUnitOfWork<SendOperation<ElementId>> sendOperation = _unitOfWorkFactory.Resolve<
         SendOperation<ElementId>

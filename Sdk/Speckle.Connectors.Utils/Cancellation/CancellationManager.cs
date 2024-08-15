@@ -48,7 +48,7 @@ public class CancellationManager
   /// </summary>
   /// <param name="id"> Id to register token.</param>
   /// <returns> Initialized cancellation token source.</returns>
-  public CancellationTokenSource InitCancellationTokenSource(string id)
+  public CancellationToken InitCancellationTokenSource(string id)
   {
     if (IsExist(id))
     {
@@ -57,7 +57,7 @@ public class CancellationManager
 
     var cts = new CancellationTokenSource();
     _operationsInProgress[id] = cts;
-    return cts;
+    return cts.Token;
   }
 
   /// <summary>

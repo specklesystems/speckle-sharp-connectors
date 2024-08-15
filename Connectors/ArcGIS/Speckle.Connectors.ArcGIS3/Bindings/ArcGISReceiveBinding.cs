@@ -52,7 +52,7 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
         throw new InvalidOperationException("No download model card was found.");
       }
 
-      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId).Token;
+      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
       using IUnitOfWork<ReceiveOperation> unitOfWork = _unitOfWorkFactory.Resolve<ReceiveOperation>();
 

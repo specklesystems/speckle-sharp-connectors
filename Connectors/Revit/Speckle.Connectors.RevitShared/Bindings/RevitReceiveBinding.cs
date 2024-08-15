@@ -62,7 +62,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
         throw new InvalidOperationException("No download model card was found.");
       }
 
-      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId).Token;
+      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
       // Receive host objects
       HostObjectBuilderResult conversionResults = await unitOfWork

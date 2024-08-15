@@ -60,7 +60,7 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
         throw new InvalidOperationException("No download model card was found.");
       }
 
-      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId).Token;
+      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
       // Disable document activation (document creation and document switch)
       // Not disabling results in DUI model card being out of sync with the active document
