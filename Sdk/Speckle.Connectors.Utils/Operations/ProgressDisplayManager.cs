@@ -1,27 +1,25 @@
-﻿using System.Diagnostics;
-using Speckle.InterfaceGenerator;
+﻿using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Transports;
 
 namespace Speckle.Connectors.Utils.Operations;
 
 [GenerateAutoInterface]
-public class ProgressDisplayManager : IProgressDisplayManager
+public class ProgressDisplayManager(IStopwatchManager stopwatch) : IProgressDisplayManager
 {
-  private readonly Stopwatch _stopwatch = new();
-  private double _lastCount;
-
   private long _lastMs;
   private const int UPDATE_INTERVAL = 200;
 
-  public void Begin() => _stopwatch.Start();
+  public void Begin() => stopwatch.Start();
+
+  public double LastCount { get; set; }
 
   public bool ShouldUpdate()
   {
-    if (_stopwatch.ElapsedMilliseconds < _lastMs + UPDATE_INTERVAL)
+    if (stopwatch.ElapsedMilliseconds < _lastMs + UPDATE_INTERVAL)
     {
       return false;
     }
-    _lastMs = _stopwatch.ElapsedMilliseconds;
+    _lastMs = stopwatch.ElapsedMilliseconds;
     return true;
   }
 
@@ -43,8 +41,8 @@ public class ProgressDisplayManager : IProgressDisplayManager
       return string.Empty;
     }
 
-    var countPerSecond = (args.Count.Value - _lastCount) / _stopwatch.Elapsed.TotalSeconds;
-    _lastCount = args.Count.Value;
+    var countPerSecond = (args.Count.Value - LastCount) / stopwatch.ElapsedSeconds;
+    LastCount = args.Count.Value;
 
     switch (args.ProgressEvent)
     {
@@ -59,10 +57,14 @@ public class ProgressDisplayManager : IProgressDisplayManager
     }
   }
 
-  private static readonly string[] s_suffixes = { "bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB" };
+  private static readonly string[] s_suffixes = ["bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
 
   private static string ToFileSize(double value)
   {
+    if (value < 0 || double.IsPositiveInfinity(value))
+    {
+      return ThreeNonZeroDigits(value) + " " + s_suffixes[0];
+    }
     for (int i = 0; i < s_suffixes.Length; i++)
     {
       if (value <= (Math.Pow(1024, i + 1)))
@@ -76,7 +78,7 @@ public class ProgressDisplayManager : IProgressDisplayManager
 
   private static string ThreeNonZeroDigits(double value)
   {
-    if (value < 0)
+    if (value < 0 || double.IsPositiveInfinity(value))
     {
       return "0";
     }
