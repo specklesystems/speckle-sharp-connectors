@@ -44,7 +44,10 @@ public class AutocadLayerManager
     }
     if (tr.GetObject(entity.LayerId, OpenMode.ForRead) is LayerTableRecord autocadLayer)
     {
-      speckleLayer = new Layer(layerName) { applicationId = autocadLayer.Handle.ToString() };
+      // Layers and geometries can have same application ids.....
+      // We should prevent it for sketchup converter. Because when it happens "objects_to_bake" definition
+      // is changing on the way if it happens.
+      speckleLayer = new Layer(layerName) { applicationId = $"layer_{autocadLayer.Handle}" };
       CollectionCache[layerName] = speckleLayer;
       layer = autocadLayer;
       return speckleLayer;

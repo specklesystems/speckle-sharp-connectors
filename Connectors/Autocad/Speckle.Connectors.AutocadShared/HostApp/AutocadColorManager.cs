@@ -77,7 +77,11 @@ public class AutocadColorManager
     {
       // assumes color names are unique
       string colorId = layer.Color.ColorNameForDisplay;
-      string layerId = layer.Handle.ToString();
+
+      // Layers and geometries can have same application ids.....
+      // We should prevent it for sketchup converter. Because when it happens "objects_to_bake" definition
+      // is changing on the way if it happens.
+      string layerId = $"layer_{layer.Handle}";
 
       if (colorProxies.TryGetValue(colorId, out ColorProxy? value))
       {
