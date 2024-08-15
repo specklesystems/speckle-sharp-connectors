@@ -218,8 +218,8 @@
       },
       "Speckle.Sdk.Logging": {
         "type": "Transitive",
-        "resolved": "3.1.0-dev.102",
-        "contentHash": "tChyfCjZ7tiXJEI4kW/bKVCSF8lJyV2SepTuOiRe2mU/VdrQfZZNQDOfjgSi1WdVIlHO789RfKXiOvCeYVAdbw=="
+        "resolved": "3.1.0-dev.103",
+        "contentHash": "/kUPgZLvEqdwskTQz29ToyNltXIzzhRFoFIQ+0pN8j/8snyFHPJLCxVVSphi0qplLd/bE0Cy2qV16EOIWN1y4w=="
       },
       "SQLitePCLRaw.bundle_e_sqlite3": {
         "type": "Transitive",
@@ -308,7 +308,7 @@
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[3.1.0, )",
           "Speckle.Autofac": "[1.0.0, )",
-          "Speckle.Objects": "[3.1.0-dev.102, )"
+          "Speckle.Objects": "[3.1.0-dev.103, )"
         }
       },
       "speckle.testing": {
@@ -332,18 +332,18 @@
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.102, )",
-        "resolved": "3.1.0-dev.102",
-        "contentHash": "geV52P2R+Vox0Y2qvZyqzNQhpQZL2xnCeDxr7Uu6kTcWZH34LjxDk5uhEiOa+yZqZjv9iYiBPeckwcFU19cEQA==",
+        "requested": "[3.1.0-dev.103, )",
+        "resolved": "3.1.0-dev.103",
+        "contentHash": "80V6tzPzX9N6fsE8o6tQnYOyC6r7chJzd4+IVRaYeu0fy26jPEhjEgVNT9dcI2qHwxhCATSdlGNb0jts3W0kiw==",
         "dependencies": {
-          "Speckle.Sdk": "3.1.0-dev.102"
+          "Speckle.Sdk": "3.1.0-dev.103"
         }
       },
       "Speckle.Sdk": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.102, )",
-        "resolved": "3.1.0-dev.102",
-        "contentHash": "pEvbGu4Ibm57xCqAJMV0hipAHf52eunGiMoAbLjLtQ+A3G08t8/R8DnnLnCtz5cec0xYPsTDfWG8/lBFMdlm8w==",
+        "requested": "[3.1.0-dev.103, )",
+        "resolved": "3.1.0-dev.103",
+        "contentHash": "buncj26CFoxPI7gX+U+tpVpWNnxReMLhaFxhEa0sXvtlkxFOZw2GjNs+OnFEZjBF6C3pTvNFpdMDjw9VHicyCQ==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.CSharp": "4.7.0",
@@ -353,7 +353,7 @@
           "Polly.Extensions.Http": "3.0.0",
           "Speckle.DoubleNumerics": "4.0.1",
           "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Logging": "3.1.0-dev.102",
+          "Speckle.Sdk.Logging": "3.1.0-dev.103",
           "System.Text.Json": "5.0.2"
         }
       }
