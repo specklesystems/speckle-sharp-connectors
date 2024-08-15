@@ -137,29 +137,28 @@ public class FeatureClassToHostConverter : ITypedConverter<VectorLayer, FeatureC
       }
 
       // process features into rows
-      if (featureClassElements.Count > 0)
-      {
-        geodatabase.ApplyEdits(() =>
-        {
-          foreach ((ACG.Geometry, Dictionary<string, object?>) featureClassElement in featureClassElements)
-          {
-            using (RowBuffer rowBuffer = newFeatureClass.CreateRowBuffer())
-            {
-              rowBuffer[newFeatureClass.GetDefinition().GetShapeField()] = featureClassElement.Item1;
-              RowBuffer assignedRowBuffer = _fieldsUtils.AssignFieldValuesToRow(
-                rowBuffer,
-                fields,
-                featureClassElement.Item2
-              ); // assign atts
-              newFeatureClass.CreateRow(assignedRowBuffer).Dispose();
-            }
-          }
-        });
-      }
-      else
+      if (featureClassElements.Count == 0)
       {
         // POC: REPORT CONVERTED WITH ERROR HERE
+        return newFeatureClass;
       }
+
+      geodatabase.ApplyEdits(() =>
+      {
+        foreach ((ACG.Geometry, Dictionary<string, object?>) featureClassElement in featureClassElements)
+        {
+          using (RowBuffer rowBuffer = newFeatureClass.CreateRowBuffer())
+          {
+            rowBuffer[newFeatureClass.GetDefinition().GetShapeField()] = featureClassElement.Item1;
+            RowBuffer assignedRowBuffer = _fieldsUtils.AssignFieldValuesToRow(
+              rowBuffer,
+              fields,
+              featureClassElement.Item2
+            ); // assign atts
+            newFeatureClass.CreateRow(assignedRowBuffer).Dispose();
+          }
+        }
+      });
 
       return newFeatureClass;
     }
