@@ -4,6 +4,7 @@ using ArcGIS.Desktop.Mapping;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Objects;
 using Speckle.Objects.GIS;
 using Speckle.Sdk.Models;
 
@@ -12,11 +13,11 @@ namespace Speckle.Converters.ArcGIS3.ToSpeckle.TopLevel;
 [NameAndRankValue(nameof(FeatureLayer), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConverter<FeatureLayer, VectorLayer>
 {
-  private readonly ITypedConverter<Row, GisFeature> _gisFeatureConverter;
+  private readonly ITypedConverter<(Row, string), IGisFeature> _gisFeatureConverter;
   private readonly IConversionContextStack<ArcGISDocument, Unit> _contextStack;
 
   public VectorLayerToSpeckleConverter(
-    ITypedConverter<Row, GisFeature> gisFeatureConverter,
+    ITypedConverter<(Row, string), IGisFeature> gisFeatureConverter,
     IConversionContextStack<ArcGISDocument, Unit> contextStack
   )
   {
@@ -36,9 +37,8 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
     // get feature class fields
     var allLayerAttributes = new Base();
     var dispayTable = target as IDisplayTable;
-    IReadOnlyList<FieldDescription> allFieldDescriptions = dispayTable.GetFieldDescriptions();
-    List<FieldDescription> addedFieldDescriptions = new();
-    foreach (FieldDescription field in allFieldDescriptions)
+    Dictionary<string, FieldDescription> visibleFieldDescriptions = new();
+    foreach (FieldDescription field in dispayTable.GetFieldDescriptions())
     {
       if (field.IsVisible)
       {
@@ -52,7 +52,7 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
         {
           continue;
         }
-        addedFieldDescriptions.Add(field);
+        visibleFieldDescriptions.TryAdd(field.Name, field);
         allLayerAttributes[name] = GISAttributeFieldType.FieldTypeToSpeckle(field.Type);
       }
     }
@@ -74,22 +74,23 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
         // Same IDisposable issue appears to happen on Row class too. Docs say it should always be disposed of manually by the caller.
         using (Row row = rowCursor.Current)
         {
-          GisFeature element = _gisFeatureConverter.Convert(row);
-          element.applicationId = $"{target.URI}_{count}";
+          string appId = $"{target.URI}_{count}";
+          IGisFeature element = _gisFeatureConverter.Convert((row, appId));
 
-          // replace element "attributes", to remove those non-visible on Layer level
+          // create new element attributes from the existing attributes, based on the vector layer visible fields
           Base elementAttributes = new();
-          foreach (FieldDescription field in addedFieldDescriptions)
+          foreach (string elementAtt in element.attributes.GetDynamicPropertyKeys())
           {
-            if (field.IsVisible)
+            if (visibleFieldDescriptions.ContainsKey(elementAtt))
             {
-              elementAttributes[field.Name] = element.attributes[field.Name];
+              elementAttributes[elementAtt] = element.attributes[elementAtt];
             }
           }
+
           element.attributes = elementAttributes;
-          speckleLayer.elements.Add(element);
+          speckleLayer.elements.Add((Base)element);
         }
-        count += 1;
+        count++;
       }
     }
 

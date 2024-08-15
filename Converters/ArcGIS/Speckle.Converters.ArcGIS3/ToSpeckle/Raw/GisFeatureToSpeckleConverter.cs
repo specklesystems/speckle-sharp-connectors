@@ -9,7 +9,7 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
 
-public class GisFeatureToSpeckleConverter : ITypedConverter<Row, IGisFeature>
+public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisFeature>
 {
   private readonly ITypedConverter<ACG.MapPoint, SOG.Point> _pointConverter;
   private readonly ITypedConverter<ACG.Multipoint, IReadOnlyList<SOG.Point>> _multiPointConverter;
@@ -107,14 +107,17 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<Row, IGisFeature>
     return displayValue;
   }
 
-  public IGisFeature Convert(Row target)
+  public IGisFeature Convert((Row, string) target)
   {
+    Row row = target.Item1;
+    string appId = target.Item2;
+
     // get attributes
-    Base attributes = _attributeConverter.Convert(target);
+    Base attributes = _attributeConverter.Convert(row);
 
     bool hasGeometry = false;
     string geometryField = "Shape";
-    foreach (Field field in target.GetFields())
+    foreach (Field field in row.GetFields())
     {
       // POC: check for all possible reserved Shape names
       if (field.FieldType == FieldType.Geometry) // ignore the field with geometry itself
@@ -127,10 +130,10 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<Row, IGisFeature>
     // return GisFeatures that don't have geometry
     if (!hasGeometry)
     {
-      return new SGIS.GisNonGeometricFeature() { attributes = attributes };
+      return new SGIS.GisNonGeometricFeature() { attributes = attributes, applicationId = appId };
     }
 
-    var shape = (ACG.Geometry)target[geometryField];
+    var shape = (ACG.Geometry)row[geometryField];
     switch (shape)
     {
       case ACG.MapPoint point:
@@ -143,11 +146,21 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<Row, IGisFeature>
 
       case ACG.Multipoint multipoint:
         List<Point> specklePoints = _multiPointConverter.Convert(multipoint).ToList();
-        return new SGIS.GisPointFeature() { geometry = specklePoints, attributes = attributes };
+        return new SGIS.GisPointFeature()
+        {
+          geometry = specklePoints,
+          attributes = attributes,
+          applicationId = appId
+        };
 
       case ACG.Polyline polyline:
         List<Polyline> polylines = _polylineConverter.Convert(polyline).ToList();
-        return new SGIS.GisPolylineFeature() { geometry = polylines, attributes = attributes };
+        return new SGIS.GisPolylineFeature()
+        {
+          geometry = polylines,
+          attributes = attributes,
+          applicationId = appId
+        };
 
       case ACG.Polygon polygon:
         List<PolygonGeometry> polygons = _polygonConverter.Convert(polygon).ToList();
@@ -156,7 +169,8 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<Row, IGisFeature>
         {
           geometry = polygons,
           displayValue = meshes,
-          attributes = attributes
+          attributes = attributes,
+          applicationId = appId
         };
 
       case ACG.Multipatch multipatch:
@@ -166,7 +180,8 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<Row, IGisFeature>
         {
           geometry = geometry,
           displayValue = display,
-          attributes = attributes
+          attributes = attributes,
+          applicationId = appId
         };
 
       default:
