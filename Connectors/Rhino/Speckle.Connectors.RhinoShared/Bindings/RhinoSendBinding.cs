@@ -76,11 +76,6 @@ public sealed class RhinoSendBinding : ISendBinding
 
   private void SubscribeToRhinoEvents()
   {
-    RhinoDoc.LayerTableEvent += (_, _) =>
-    {
-      Commands.RefreshSendFilters();
-    };
-
     Command.BeginCommand += (_, e) =>
     {
       if (e.CommandEnglishName == "BlockEdit")
@@ -150,7 +145,7 @@ public sealed class RhinoSendBinding : ISendBinding
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
 
-  public List<CardSetting> GetSendSettings => [];
+  public List<CardSetting> GetSendSettings() => [];
 
   public async Task Send(string modelCardId)
   {
