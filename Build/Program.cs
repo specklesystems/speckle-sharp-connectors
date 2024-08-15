@@ -130,7 +130,7 @@ Target(CHECK_SOLUTIONS, Solutions.CompareConnectorsToLocal);
 
 Target(
   TEST,
-  DependsOn(BUILD),
+  DependsOn(BUILD, CHECK_SOLUTIONS),
   Glob.Files(".", "**/*.Tests.csproj"),
   file =>
   {
@@ -196,6 +196,6 @@ Target(
   }
 );
 
-Target("default", DependsOn(CHECK_SOLUTIONS, FORMAT, ZIP), () => Console.WriteLine("Done!"));
+Target("default", DependsOn(FORMAT, ZIP), () => Console.WriteLine("Done!"));
 
 await RunTargetsAndExitAsync(args).ConfigureAwait(true);
