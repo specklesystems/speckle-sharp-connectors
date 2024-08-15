@@ -134,9 +134,10 @@ public class RhinoBasicConnectorBinding : IBasicConnectorBinding
       {
         continue;
       }
-      var allRhinoObjects = RhinoDoc.ActiveDoc.Objects.GetObjectList(ObjectType.AnyObject);
-      var subRhinoObjects = allRhinoObjects.Where(o => o.GetGroupList().Contains(groupIndex));
-      rhinoObjectsToSelect.AddRange(subRhinoObjects);
+      var sbr = RhinoDoc.ActiveDoc.Objects.Where(o =>
+        o.GetGroupList() != null && o.GetGroupList().Contains(groupIndex)
+      );
+      rhinoObjectsToSelect.AddRange(sbr);
     }
     RhinoDoc.ActiveDoc.Objects.Select(rhinoObjectsToSelect.Select(o => o.Id));
 
