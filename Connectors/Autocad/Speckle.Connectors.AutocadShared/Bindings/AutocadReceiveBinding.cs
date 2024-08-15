@@ -60,8 +60,7 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
         throw new InvalidOperationException("No download model card was found.");
       }
 
-      // Init cancellation token source -> Manager also cancel it if exist before
-      CancellationTokenSource cts = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId).Token;
 
       // Disable document activation (document creation and document switch)
       // Not disabling results in DUI model card being out of sync with the active document
@@ -72,13 +71,13 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
       var operationResults = await unitOfWork
         .Service.Execute(
           modelCard.GetReceiveInfo(_autocadSettings.HostAppInfo.Name),
-          cts.Token,
+          cancellationToken,
           (status, progress) =>
             _operationProgressManager.SetModelProgress(
               Parent,
               modelCardId,
               new ModelCardProgress(modelCardId, status, progress),
-              cts
+              cancellationToken
             )
         )
         .ConfigureAwait(false);

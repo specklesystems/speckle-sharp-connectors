@@ -344,8 +344,7 @@ public sealed class ArcGISSendBinding : ISendBinding
         throw new InvalidOperationException("No publish model card was found.");
       }
 
-      // Init cancellation token source -> Manager also cancel it if exist before
-      CancellationTokenSource cts = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId).Token;
 
       var sendResult = await QueuedTask
         .Run(async () =>
@@ -387,9 +386,9 @@ public sealed class ArcGISSendBinding : ISendBinding
                   Parent,
                   modelCardId,
                   new ModelCardProgress(modelCardId, status, progress),
-                  cts
+                  cancellationToken
                 ),
-              cts.Token
+              cancellationToken
             )
             .ConfigureAwait(false);
 

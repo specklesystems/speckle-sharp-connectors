@@ -163,8 +163,7 @@ public sealed class RhinoSendBinding : ISendBinding
         throw new InvalidOperationException("No publish model card was found.");
       }
 
-      //  Init cancellation token source -> Manager also cancel it if exist before
-      CancellationTokenSource cts = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId).Token;
 
       List<RhinoObject> rhinoObjects = modelCard
         .SendFilter.NotNull()
@@ -188,9 +187,9 @@ public sealed class RhinoSendBinding : ISendBinding
               Parent,
               modelCardId,
               new ModelCardProgress(modelCardId, status, progress),
-              cts
+              cancellationToken
             ),
-          cts.Token
+          cancellationToken
         )
         .ConfigureAwait(false);
 

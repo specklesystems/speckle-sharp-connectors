@@ -158,8 +158,7 @@ public sealed class AutocadSendBinding : ISendBinding
 
       using var uow = _unitOfWorkFactory.Resolve<SendOperation<AutocadRootObject>>();
 
-      // Init cancellation token source -> Manager also cancel it if exist before
-      CancellationTokenSource cts = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId).Token;
 
       // Disable document activation (document creation and document switch)
       // Not disabling results in DUI model card being out of sync with the active document
@@ -186,9 +185,9 @@ public sealed class AutocadSendBinding : ISendBinding
               Parent,
               modelCardId,
               new ModelCardProgress(modelCardId, status, progress),
-              cts
+              cancellationToken
             ),
-          cts.Token
+          cancellationToken
         )
         .ConfigureAwait(false);
 

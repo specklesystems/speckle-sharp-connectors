@@ -43,7 +43,8 @@ public class CancellationManager
   }
 
   /// <summary>
-  /// Initialize a token source for cancellable operation.
+  /// Initialize a token source for cancellable operation,
+  /// if one with the given <paramref name="id"/> already exists, it will be canceled first before creating the new one.
   /// </summary>
   /// <param name="id"> Id to register token.</param>
   /// <returns> Initialized cancellation token source.</returns>
