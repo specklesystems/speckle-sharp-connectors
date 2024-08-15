@@ -1,6 +1,5 @@
 using ArcGIS.Core.Data;
 using Speckle.Converters.ArcGIS3.Utils;
-using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
 using Speckle.Objects.Geometry;
