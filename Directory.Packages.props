@@ -7,6 +7,7 @@
     <PackageVersion Include="Esri.ArcGISPro.Extensions30" Version="3.2.0.49743" />
     <PackageVersion Include="FluentAssertions" Version="6.12.0" />
     <PackageVersion Include="Glob" Version="1.1.9" />
+    <PackageVersion Include="Microsoft.Build" Version="17.10.4" />
     <PackageVersion Include="Moq" Version="4.20.70" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.0" />
@@ -18,8 +19,8 @@
     <PackageVersion Include="Revit.Async" Version="2.1.1" />
     <PackageVersion Include="RhinoCommon" Version="8.9.24194.18121" />
     <PackageVersion Include="RhinoWindows" Version="8.9.24194.18121" />
-    <PackageVersion Include="Speckle.Objects" Version="3.1.0-dev.102" />
-    <PackageVersion Include="Speckle.Sdk" Version="3.1.0-dev.102" />
+    <PackageVersion Include="Speckle.Objects" Version="3.1.0-dev.103" />
+    <PackageVersion Include="Speckle.Sdk" Version="3.1.0-dev.103" />
     <PackageVersion Include="Speckle.AutoCAD.API" Version="2023.0.0" />
     <PackageVersion Include="Speckle.Civil3D.API" Version="2024.0.0" />
     <PackageVersion Include="Speckle.Revit.API" Version="2023.0.0" />
