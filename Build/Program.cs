@@ -15,6 +15,7 @@ const string VERSION = "version";
 const string RESTORE_TOOLS = "restore-tools";
 const string BUILD_SERVER_VERSION = "build-server-version";
 const string CLEAN_LOCKS = "clean-locks";
+const string CHECK_SOLUTIONS = "check-solutions";
 
 //need to pass arguments
 /*var arguments = new List<string>();
@@ -126,6 +127,11 @@ Target(
 );
 
 Target(
+  CHECK_SOLUTIONS,
+  Solutions.CompareConnectorsToLocal
+);
+
+Target(
   TEST,
   DependsOn(BUILD),
   Glob.Files(".", "**/*.Tests.csproj"),
@@ -193,6 +199,6 @@ Target(
   }
 );
 
-Target("default", DependsOn(FORMAT, ZIP), () => Console.WriteLine("Done!"));
+Target("default", DependsOn(CHECK_SOLUTIONS, FORMAT, ZIP), () => Console.WriteLine("Done!"));
 
 await RunTargetsAndExitAsync(args).ConfigureAwait(true);
