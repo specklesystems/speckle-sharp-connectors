@@ -120,7 +120,7 @@ public class AutocadRibbon
       ShowText = true,
       ToolTip = tooltip,
       HelpSource = new System.Uri("https://speckle.guide/user/autocadcivil.html"),
-      Size = RibbonItemSize.Standard
+      Size = RibbonItemSize.Large
     };
 
     if (TryLoadPngImgSource(imageName + "16.png", out ImageSource? imageSource))
