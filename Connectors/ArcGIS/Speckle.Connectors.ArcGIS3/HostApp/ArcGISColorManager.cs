@@ -87,7 +87,6 @@ public class ArcGISColorManager
       if (parent.applicationId is string appId && ObjectColorsIdMap.TryGetValue(appId, out Color objColor))
       {
         color = objColor;
-        // POC: should we get the color of the closest parent and break, or walk up to the highest possible?
         break;
       }
     }
