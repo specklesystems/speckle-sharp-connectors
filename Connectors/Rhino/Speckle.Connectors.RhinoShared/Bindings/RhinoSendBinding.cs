@@ -76,11 +76,6 @@ public sealed class RhinoSendBinding : ISendBinding
 
   private void SubscribeToRhinoEvents()
   {
-    RhinoDoc.LayerTableEvent += (_, _) =>
-    {
-      Commands.RefreshSendFilters();
-    };
-
     Command.BeginCommand += (_, e) =>
     {
       if (e.CommandEnglishName == "BlockEdit")

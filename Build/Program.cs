@@ -36,7 +36,7 @@ Target(
       File.Delete(f);
     }
     Console.WriteLine("Running restore now.");
-    Run("dotnet", "restore .\\Speckle.Connectors.sln");
+    Run("dotnet", "restore .\\Speckle.Connectors.sln --no-cache");
   }
 );
 
