@@ -5,6 +5,11 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.Raw;
 
+/// <summary>
+/// Converter for <see cref="IGisFeature"/> with geometry.
+/// </summary>
+/// <exception cref="ArgumentException"> Thrown when IGisFeature is <see cref="GisNonGeometricFeature"/> because it has no geometry, or when Multipatch geometry contained invalid types.</exception>
+/// <exception cref="NotSupportedException">Thrown for unsupported <see cref="IGisFeature"/> classes.</exception>
 public class IGisFeatureToHostConverter : ITypedConverter<IGisFeature, (ACG.Geometry, Dictionary<string, object?>)>
 {
   private readonly ITypedConverter<List<SOG.Point>, ACG.Multipoint> _multipointConverter;

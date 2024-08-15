@@ -4,6 +4,10 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.Raw;
 
+/// <summary>
+/// Converter for <see cref="GisFeature"/> (which is sent by QGIS V2) with geometry.
+/// </summary>
+/// <exception cref="ArgumentException"> Thrown when GisFeature has null or empty geometry</exception>
 public class GisFeatureToHostConverter : ITypedConverter<GisFeature, (ACG.Geometry, Dictionary<string, object?>)>
 {
   private readonly ITypedConverter<IReadOnlyList<Base>, ACG.Geometry> _geometryConverter;
