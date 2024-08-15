@@ -20,6 +20,7 @@ public class AttributesToSpeckleConverter : ITypedConverter<Row, Base>
       }
       else
       {
+        // TODO: currently we are setting raster, blob, and xml fields to null with this logic. Why are these sent as null and not skipped over?
         attributes[field.Name] = FieldValueToSpeckle(target, field);
       }
     }
@@ -27,6 +28,7 @@ public class AttributesToSpeckleConverter : ITypedConverter<Row, Base>
     return attributes;
   }
 
+  // TODO: often skipping over geometry, raster, blob, and xml fields. This happens in vector layer conversion as well. Why are we returning null here? We should encapsulate this in a field converter util.
   private object? FieldValueToSpeckle(Row row, Field field)
   {
     switch (field.FieldType)

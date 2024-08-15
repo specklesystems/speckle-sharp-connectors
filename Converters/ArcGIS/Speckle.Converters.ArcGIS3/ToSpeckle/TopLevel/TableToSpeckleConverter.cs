@@ -31,11 +31,12 @@ public class StandaloneTableToSpeckleConverter
     // get feature class fields
     var attributes = new Base();
     var dispayTable = target as IDisplayTable;
-    var fieldDescriptions = dispayTable.GetFieldDescriptions();
-    foreach (var field in fieldDescriptions)
+    HashSet<string> visibleFields = new();
+    foreach (FieldDescription field in dispayTable.GetFieldDescriptions())
     {
       if (field.IsVisible)
       {
+        visibleFields.Add(field.Name);
         string name = field.Name;
         attributes[name] = (int)field.Type;
       }
@@ -55,10 +56,14 @@ public class StandaloneTableToSpeckleConverter
 
           // replace "attributes", to remove non-visible layer attributes
           Base elementAttributes = new();
-          foreach (FieldDescription field in fieldDescriptions)
+          foreach (string elementAtt in element.attributes.GetDynamicPropertyKeys())
           {
-            elementAttributes[field.Name] = element.attributes[field.Name];
+            if (visibleFields.Contains(elementAtt))
+            {
+              elementAttributes[elementAtt] = element.attributes[elementAtt];
+            }
           }
+
           element.attributes = elementAttributes;
 
           speckleLayer.elements.Add(element);

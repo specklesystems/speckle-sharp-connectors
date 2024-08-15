@@ -37,7 +37,7 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
     // get feature class fields
     var allLayerAttributes = new Base();
     var dispayTable = target as IDisplayTable;
-    Dictionary<string, FieldDescription> visibleFieldDescriptions = new();
+    HashSet<string> visibleFieldDescriptions = new();
     foreach (FieldDescription field in dispayTable.GetFieldDescriptions())
     {
       if (field.IsVisible)
@@ -52,7 +52,8 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
         {
           continue;
         }
-        visibleFieldDescriptions.TryAdd(field.Name, field);
+
+        visibleFieldDescriptions.Add(field.Name);
         allLayerAttributes[name] = GISAttributeFieldType.FieldTypeToSpeckle(field.Type);
       }
     }
@@ -81,7 +82,7 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
           Base elementAttributes = new();
           foreach (string elementAtt in element.attributes.GetDynamicPropertyKeys())
           {
-            if (visibleFieldDescriptions.ContainsKey(elementAtt))
+            if (visibleFieldDescriptions.Contains(elementAtt))
             {
               elementAttributes[elementAtt] = element.attributes[elementAtt];
             }
