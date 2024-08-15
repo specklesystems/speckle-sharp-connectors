@@ -4,6 +4,7 @@ using ArcGIS.Core.Data.Exceptions;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Objects;
 using Speckle.Objects.GIS;
 using FieldDescription = ArcGIS.Core.Data.DDL.FieldDescription;
 
@@ -75,7 +76,8 @@ public class TableLayerToHostConverter : ITypedConverter<VectorLayer, Table>
     {
       Table newFeatureClass = geodatabase.OpenDataset<Table>(featureClassName);
       // Add features to the FeatureClass
-      List<GisFeature> gisFeatures = target.elements.Select(x => (GisFeature)x).ToList();
+      // process IGisFeature
+      List<IGisFeature> gisFeatures = target.elements.Where(o => o is IGisFeature).Cast<IGisFeature>().ToList();
       geodatabase.ApplyEdits(() =>
       {
         _featureClassUtils.AddFeaturesToTable(newFeatureClass, gisFeatures, fields);
