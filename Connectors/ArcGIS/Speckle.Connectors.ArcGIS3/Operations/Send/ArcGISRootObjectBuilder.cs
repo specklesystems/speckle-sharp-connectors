@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
+using ArcGIS.Desktop.Internal.Mapping;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Connectors.ArcGIS.HostApp;
 using Speckle.Connectors.Utils.Builders;
@@ -14,6 +15,7 @@ using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Proxies;
+using ArcLayer = ArcGIS.Desktop.Mapping.Layer;
 
 namespace Speckle.Connectors.ArcGis.Operations.Send;
 
@@ -172,21 +174,8 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     // first get all map layers
     Dictionary<MapMember, int> layersIndices = new();
     int count = 0;
-    foreach (var layer in map.Layers)
-    {
-      if (layer is GroupLayer group)
-      {
-        layersIndices[layer] = count;
-        count++;
-        count = UnpackGroupLayerOrder(layersIndices, group, count);
-      }
-      else
-      {
-        layersIndices[layer] = count;
-      }
-
-      count++;
-    }
+    var layers = map.Layers;
+    count = UnpackLayersOrder(layersIndices, layers, count);
 
     // iterate through tables
     foreach (var layer in map.StandaloneTables)
@@ -209,23 +198,62 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     return selectedLayers;
   }
 
-  private int UnpackGroupLayerOrder(Dictionary<MapMember, int> layersIndices, GroupLayer group, int count)
+  private int UnpackLayersOrder(
+    Dictionary<MapMember, int> layersIndices,
+    IEnumerable<ArcLayer> layersToUnpack,
+    int count
+  )
   {
-    foreach (var layer in group.Layers)
+    foreach (var layer in layersToUnpack)
     {
-      if (layer is GroupLayer subGroup)
+      switch (layer)
       {
-        layersIndices[layer] = count;
-        count++;
-        count = UnpackGroupLayerOrder(layersIndices, subGroup, count);
+        case GroupLayer subGroup:
+          layersIndices[layer] = count;
+          count++;
+          count = UnpackGroupLayerOrder(layersIndices, subGroup, count);
+          break;
+        case BuildingLayer subBuildLayer:
+          layersIndices[layer] = count;
+          count++;
+          count = UnpackBuildingLayerOrder(layersIndices, subBuildLayer, count);
+          break;
+        case BuildingDisciplineLayer subBuildDiscLayer:
+          layersIndices[layer] = count;
+          count++;
+          count = UnpackBuildingDisciplineLayerOrder(layersIndices, subBuildDiscLayer, count);
+          break;
+        default:
+          layersIndices[layer] = count;
+          count++;
+          break;
       }
-      else
-      {
-        layersIndices[layer] = count;
-      }
-      count++;
     }
 
     return count;
+  }
+
+  private int UnpackGroupLayerOrder(Dictionary<MapMember, int> layersIndices, GroupLayer group, int count)
+  {
+    var layers = group.Layers;
+    return UnpackLayersOrder(layersIndices, layers, count);
+  }
+
+  private int UnpackBuildingLayerOrder(Dictionary<MapMember, int> layersIndices, BuildingLayer buildLayer, int count)
+  {
+    var containerLayer = buildLayer as ILayerContainerInternal;
+    var internalLayers = containerLayer.InternalLayers;
+    return UnpackLayersOrder(layersIndices, internalLayers, count);
+  }
+
+  private int UnpackBuildingDisciplineLayerOrder(
+    Dictionary<MapMember, int> layersIndices,
+    BuildingDisciplineLayer buildDisciplineLayer,
+    int count
+  )
+  {
+    var containerLayer = buildDisciplineLayer as ILayerContainerInternal;
+    var internalLayers = containerLayer.InternalLayers;
+    return UnpackLayersOrder(layersIndices, internalLayers, count);
   }
 }

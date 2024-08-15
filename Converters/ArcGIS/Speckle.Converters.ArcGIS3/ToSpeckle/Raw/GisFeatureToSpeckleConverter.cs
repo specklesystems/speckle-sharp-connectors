@@ -2,8 +2,6 @@ using ArcGIS.Core.Data;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
-using Speckle.Objects.Geometry;
-using Speckle.Objects.GIS;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
@@ -13,7 +11,7 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
   private readonly ITypedConverter<ACG.MapPoint, SOG.Point> _pointConverter;
   private readonly ITypedConverter<ACG.Multipoint, IReadOnlyList<SOG.Point>> _multiPointConverter;
   private readonly ITypedConverter<ACG.Polyline, IReadOnlyList<SOG.Polyline>> _polylineConverter;
-  private readonly ITypedConverter<ACG.Polygon, IReadOnlyList<PolygonGeometry>> _polygonConverter;
+  private readonly ITypedConverter<ACG.Polygon, IReadOnlyList<SGIS.PolygonGeometry>> _polygonConverter;
   private readonly ITypedConverter<ACG.Multipatch, IReadOnlyList<Base>> _multipatchConverter;
   private readonly ITypedConverter<Row, Base> _attributeConverter;
 
@@ -21,7 +19,7 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
     ITypedConverter<ACG.MapPoint, SOG.Point> pointConverter,
     ITypedConverter<ACG.Multipoint, IReadOnlyList<SOG.Point>> multiPointConverter,
     ITypedConverter<ACG.Polyline, IReadOnlyList<SOG.Polyline>> polylineConverter,
-    ITypedConverter<ACG.Polygon, IReadOnlyList<PolygonGeometry>> polygonConverter,
+    ITypedConverter<ACG.Polygon, IReadOnlyList<SGIS.PolygonGeometry>> polygonConverter,
     ITypedConverter<ACG.Multipatch, IReadOnlyList<Base>> multipatchConverter,
     ITypedConverter<Row, Base> attributeConverter
   )
@@ -34,9 +32,9 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
     _attributeConverter = attributeConverter;
   }
 
-  private List<Mesh> GetPolygonDisplayMeshes(List<SGIS.PolygonGeometry> polygons)
+  private List<SOG.Mesh> GetPolygonDisplayMeshes(List<SGIS.PolygonGeometry> polygons)
   {
-    List<Mesh> displayVal = new();
+    List<SOG.Mesh> displayVal = new();
     foreach (SGIS.PolygonGeometry polygon in polygons)
     {
       // POC: check for voids, we cannot generate display value correctly if any of the polygons have voids
@@ -54,7 +52,8 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
       }
 
       // generate Mesh
-      List<int> faces = Enumerable.Range(0, boundaryPts.Count).ToList();
+      List<int> faces = new() { boundaryPts.Count };
+      faces.AddRange(Enumerable.Range(0, boundaryPts.Count).ToList());
       SOG.Mesh mesh = new(boundaryPts.SelectMany(x => new List<double> { x.x, x.y, x.z }).ToList(), faces);
       displayVal.Add(mesh);
     }
@@ -62,10 +61,10 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
     return displayVal;
   }
 
-  private List<Mesh> GetMultipatchDisplayMeshes(List<SGIS.GisMultipatchGeometry> multipatch)
+  private List<SOG.Mesh> GetMultipatchDisplayMeshes(List<SGIS.GisMultipatchGeometry> multipatch)
   {
-    List<Mesh> displayVal = new();
-    foreach (GisMultipatchGeometry geo in multipatch)
+    List<SOG.Mesh> displayVal = new();
+    foreach (SGIS.GisMultipatchGeometry geo in multipatch)
     {
       SOG.Mesh displayMesh = new(geo.vertices, geo.faces);
       displayVal.Add(displayMesh);
@@ -74,18 +73,18 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
     return displayVal;
   }
 
-  private List<Mesh> GetDisplayMeshes(List<Base> geometry)
+  private List<SOG.Mesh> GetDisplayMeshes(List<Base> geometry)
   {
-    List<Mesh> displayValue = new();
+    List<SOG.Mesh> displayValue = new();
     List<SGIS.PolygonGeometry> polygons = new();
     List<SGIS.GisMultipatchGeometry> multipatches = new();
     foreach (Base geo in geometry)
     {
-      if (geo is GisMultipatchGeometry multipatch)
+      if (geo is SGIS.GisMultipatchGeometry multipatch)
       {
         multipatches.Add(multipatch);
       }
-      else if (geo is PolygonGeometry polygon)
+      else if (geo is SGIS.PolygonGeometry polygon)
       {
         polygons.Add(polygon);
       }
@@ -126,7 +125,7 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
     switch (shape)
     {
       case ACG.MapPoint point:
-        Point specklePoint = _pointConverter.Convert(point);
+        SOG.Point specklePoint = _pointConverter.Convert(point);
         return new SGIS.GisPointFeature()
         {
           geometry = new() { specklePoint },
@@ -134,7 +133,7 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
         };
 
       case ACG.Multipoint multipoint:
-        List<Point> specklePoints = _multiPointConverter.Convert(multipoint).ToList();
+        List<SOG.Point> specklePoints = _multiPointConverter.Convert(multipoint).ToList();
         return new SGIS.GisPointFeature()
         {
           geometry = specklePoints,
@@ -143,7 +142,7 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
         };
 
       case ACG.Polyline polyline:
-        List<Polyline> polylines = _polylineConverter.Convert(polyline).ToList();
+        List<SOG.Polyline> polylines = _polylineConverter.Convert(polyline).ToList();
         return new SGIS.GisPolylineFeature()
         {
           geometry = polylines,
@@ -152,8 +151,8 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
         };
 
       case ACG.Polygon polygon:
-        List<PolygonGeometry> polygons = _polygonConverter.Convert(polygon).ToList();
-        List<Mesh> meshes = GetPolygonDisplayMeshes(polygons);
+        List<SGIS.PolygonGeometry> polygons = _polygonConverter.Convert(polygon).ToList();
+        List<SOG.Mesh> meshes = GetPolygonDisplayMeshes(polygons);
         return new SGIS.GisPolygonFeature()
         {
           geometry = polygons,
@@ -164,7 +163,7 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
 
       case ACG.Multipatch multipatch:
         List<Base> geometry = _multipatchConverter.Convert(multipatch).ToList();
-        List<Mesh> display = GetDisplayMeshes(geometry);
+        List<SOG.Mesh> display = GetDisplayMeshes(geometry);
         return new SGIS.GisMultipatchFeature()
         {
           geometry = geometry,
