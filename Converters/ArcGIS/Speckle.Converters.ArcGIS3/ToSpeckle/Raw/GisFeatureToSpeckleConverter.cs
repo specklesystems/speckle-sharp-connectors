@@ -52,7 +52,8 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
       }
 
       // generate Mesh
-      List<int> faces = Enumerable.Range(0, boundaryPts.Count).ToList();
+      List<int> faces = new() { boundaryPts.Count };
+      faces.AddRange(Enumerable.Range(0, boundaryPts.Count).ToList());
       SOG.Mesh mesh = new(boundaryPts.SelectMany(x => new List<double> { x.x, x.y, x.z }).ToList(), faces);
       displayVal.Add(mesh);
     }
