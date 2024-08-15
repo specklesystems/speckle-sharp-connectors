@@ -29,6 +29,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private readonly RhinoLayerManager _layerManager;
   private readonly RhinoMaterialManager _materialManager;
   private readonly RhinoColorManager _colorManager;
+  private readonly RhinoGroupManager _groupManager;
   private readonly ISyncToThread _syncToThread;
 
   public RhinoHostObjectBuilder(
@@ -39,6 +40,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     RhinoInstanceObjectsManager instanceObjectsManager,
     RhinoMaterialManager materialManager,
     RhinoColorManager colorManager,
+    RhinoGroupManager groupManager,
     ISyncToThread syncToThread
   )
   {
@@ -49,6 +51,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _instanceObjectsManager = instanceObjectsManager;
     _materialManager = materialManager;
     _colorManager = colorManager;
+    _groupManager = groupManager;
     _syncToThread = syncToThread;
   }
 
@@ -175,9 +178,9 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
           var objectId = obj.applicationId ?? obj.id; // POC: assuming objects have app ids for this to work?
 
           // 3: colors and materials
-          var matIndex = _materialManager.ObjectIdAndMaterialIndexMap.TryGetValue(objectId, out int mIndex)
+          int? matIndex = _materialManager.ObjectIdAndMaterialIndexMap.TryGetValue(objectId, out int mIndex)
             ? mIndex
-            : 0;
+            : null;
           Color? objColor = _colorManager.ObjectColorsIdMap.TryGetValue(objectId, out Color color) ? color : null;
 
           // 4: actually bake
@@ -217,26 +220,11 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     // Stage 3: Groups
     if (groupProxies is not null)
     {
-      using (var _ = SpeckleActivityFactory.Start("Converting groups"))
-      {
-        BakeGroups(groupProxies, applicationIdMap);
-      }
+      _groupManager.BakeGroups(groupProxies, applicationIdMap, baseLayerName);
     }
 
     // Stage 4: Return
     return new(bakedObjectIds, conversionResults);
-  }
-
-  private void BakeGroups(List<GroupProxy> groupProxies, Dictionary<string, List<string>> applicationIdMap)
-  {
-    using var _ = SpeckleActivityFactory.Start();
-    foreach (GroupProxy groupProxy in groupProxies.OrderBy(g => g.objects.Count))
-    {
-      var appIds = groupProxy.objects.SelectMany(oldObjId => applicationIdMap[oldObjId]).Select(id => new Guid(id));
-      var index = RhinoDoc.ActiveDoc.Groups.Add(appIds);
-      var addedGroup = RhinoDoc.ActiveDoc.Groups.FindIndex(index);
-      addedGroup.Name = groupProxy.name;
-    }
   }
 
   private void PreReceiveDeepClean(string baseLayerName)
@@ -266,6 +254,9 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
         }
       }
     }
+
+    // Cleans up any previously received group
+    _groupManager.PurgeGroups(baseLayerName);
   }
 
   private IReadOnlyList<string> HandleConversionResult(

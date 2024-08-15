@@ -1,7 +1,9 @@
+using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Utils.Cancellation;
@@ -20,6 +22,7 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
   private readonly AutocadSettings _autocadSettings;
   private readonly IOperationProgressManager _operationProgressManager;
+  private readonly ILogger<AutocadReceiveBinding> _logger;
 
   private ReceiveBindingUICommands Commands { get; }
 
@@ -29,7 +32,8 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
     CancellationManager cancellationManager,
     IUnitOfWorkFactory unitOfWorkFactory,
     AutocadSettings autocadSettings,
-    IOperationProgressManager operationProgressManager
+    IOperationProgressManager operationProgressManager,
+    ILogger<AutocadReceiveBinding> logger
   )
   {
     _store = store;
@@ -37,6 +41,7 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
     _unitOfWorkFactory = unitOfWorkFactory;
     _autocadSettings = autocadSettings;
     _operationProgressManager = operationProgressManager;
+    _logger = logger;
     Parent = parent;
     Commands = new ReceiveBindingUICommands(parent);
   }
@@ -87,13 +92,14 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
       // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
       return;
     }
-    catch (Exception e) when (!e.IsFatal()) // UX reasons - we will report operation exceptions as model card error.
+    catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
-      Commands.SetModelError(modelCardId, e);
+      _logger.LogModelCardHandledError(ex);
+      Commands.SetModelError(modelCardId, ex);
     }
     finally
     {
-      // renable document activation
+      // reenable document activation
       Application.DocumentManager.DocumentActivationEnabled = true;
     }
   }

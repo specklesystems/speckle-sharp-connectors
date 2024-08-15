@@ -1,3 +1,4 @@
+using System.Reflection;
 using Autofac;
 using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
@@ -15,7 +16,7 @@ public static class ContainerRegistration
     builder.AddSingleton<CancellationManager>();
     builder.AddScoped<ReceiveOperation>();
     builder.AddSingleton<AccountService>();
-    builder.ScanAssemblyOfType<SendHelper>();
+    builder.ScanAssembly(Assembly.GetExecutingAssembly());
 
     builder.AddSingleton<ILoggerFactory>(new SpeckleLoggerFactory());
     builder.ContainerBuilder.RegisterGeneric(typeof(Logger<>)).As(typeof(ILogger<>)).SingleInstance();

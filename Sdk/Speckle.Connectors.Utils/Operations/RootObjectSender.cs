@@ -21,19 +21,19 @@ public sealed class RootObjectSender : IRootObjectSender
   private readonly IServerTransportFactory _transportFactory;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly AccountService _accountService;
-  private readonly ISendHelper _sendHelper;
+  private readonly IProgressDisplayManager _progressDisplayManager;
 
   public RootObjectSender(
     IServerTransportFactory transportFactory,
     ISendConversionCache sendConversionCache,
     AccountService accountService,
-    ISendHelper sendHelper
+    IProgressDisplayManager progressDisplayManager
   )
   {
     _transportFactory = transportFactory;
     _sendConversionCache = sendConversionCache;
     _accountService = accountService;
-    _sendHelper = sendHelper;
+    _progressDisplayManager = progressDisplayManager;
   }
 
   /// <summary>
@@ -41,7 +41,7 @@ public sealed class RootObjectSender : IRootObjectSender
   /// In production, this will send to a server.
   /// In testing, this could send to a sqlite db or just save to a dictionary.
   /// </summary>
-  public async Task<(string rootObjId, Dictionary<string, ObjectReference> convertedReferences)> Send(
+  public async Task<(string rootObjId, IReadOnlyDictionary<string, ObjectReference> convertedReferences)> Send(
     Base commitObject,
     SendInfo sendInfo,
     Action<string, double?>? onOperationProgressed = null,
@@ -55,7 +55,50 @@ public sealed class RootObjectSender : IRootObjectSender
     Account account = _accountService.GetAccountWithServerUrlFallback(sendInfo.AccountId, sendInfo.ServerUrl);
 
     using var transport = _transportFactory.Create(account, sendInfo.ProjectId, 60, null);
-    var sendResult = await _sendHelper.Send(commitObject, transport, true, null, ct).ConfigureAwait(false);
+
+    _progressDisplayManager.Begin();
+    var sendResult = await Sdk
+      .Api.Operations.Send(
+        commitObject,
+        transport,
+        true,
+        onProgressAction: dict =>
+        {
+          if (!_progressDisplayManager.ShouldUpdate())
+          {
+            return;
+          }
+
+          // NOTE: this looks weird for the user, as when deserialization kicks in, the progress bar will go down, and then start progressing again.
+          // This is something we're happy to live with until we refactor the whole receive pipeline.
+          var args = dict.FirstOrDefault();
+          if (args is null)
+          {
+            return;
+          }
+
+          switch (args.ProgressEvent)
+          {
+            case ProgressEvent.UploadBytes:
+              onOperationProgressed?.Invoke(
+                $"Uploading ({_progressDisplayManager.CalculateSpeed(args)})",
+                _progressDisplayManager.CalculatePercentage(args)
+              );
+              break;
+            case ProgressEvent.UploadObject:
+              onOperationProgressed?.Invoke("Uploading Root Object...", null);
+              break;
+            case ProgressEvent.SerializeObject:
+              onOperationProgressed?.Invoke(
+                $"Serializing ({_progressDisplayManager.CalculateSpeed(args)})",
+                _progressDisplayManager.CalculatePercentage(args)
+              );
+              break;
+          }
+        },
+        ct
+      )
+      .ConfigureAwait(false);
 
     _sendConversionCache.StoreSendResult(sendInfo.ProjectId, sendResult.convertedReferences);
 

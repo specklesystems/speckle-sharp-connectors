@@ -1,9 +1,9 @@
-<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <Configurations>Debug;Release;Local</Configurations>
     <RhinoVersion>7</RhinoVersion>
-    <DefineConstants>$(DefineConstants);RHINO7</DefineConstants>
+    <DefineConstants>$(DefineConstants);RHINO7;RHINO7_OR_GREATER</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>

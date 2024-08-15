@@ -148,7 +148,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
       var handleIdString = obj.Handle.Value.ToString();
       definitionProxy.objects.Add(handleIdString);
 
-      if (obj is BlockReference blockReference && !blockReference.IsDynamicBlock)
+      if (obj is BlockReference blockReference)
       {
         UnpackInstance(blockReference, depth + 1, transaction);
       }
@@ -188,9 +188,9 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
         {
           // TODO: create definition (block table record)
           var constituentEntities = definitionProxy
-            .objects.Select(id => applicationIdMap.TryGetValue(id, out List<Entity> value) ? value : null)
+            .objects.Select(id => applicationIdMap.TryGetValue(id, out List<Entity>? value) ? value : null)
             .Where(x => x is not null)
-            .SelectMany(ent => ent)
+            .SelectMany(ent => ent!)
             .ToList();
 
           var record = new BlockTableRecord();
@@ -203,6 +203,11 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
           foreach (var entity in constituentEntities)
           {
             objectIds.Add(entity.ObjectId);
+          }
+
+          if (constituentEntities.Count == 0)
+          {
+            throw new ConversionException("No objects found to create instance definition.");
           }
 
           using var blockTable = (BlockTable)

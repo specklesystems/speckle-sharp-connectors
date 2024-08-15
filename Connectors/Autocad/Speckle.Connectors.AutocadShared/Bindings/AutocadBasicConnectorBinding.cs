@@ -120,7 +120,17 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
       try
       {
         doc.Editor.SetImpliedSelection(Array.Empty<ObjectId>()); // Deselects
-        doc.Editor.SetImpliedSelection(objectIds); // Selects
+        try
+        {
+          doc.Editor.SetImpliedSelection(objectIds);
+        }
+        catch (Exception e) when (!e.IsFatal())
+        {
+          // SWALLOW REASON:
+          // If the objects under the blocks, it won't be able to select them.
+          // If we try, API will throw the invalid input error, because we request something from API that Autocad doesn't
+          // handle it on its current canvas. Block elements only selectable when in its scope.
+        }
         doc.Editor.UpdateScreen();
 
         Extents3d selectedExtents = new();
@@ -128,10 +138,18 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
         var tr = doc.TransactionManager.StartTransaction();
         foreach (ObjectId objectId in objectIds)
         {
-          var entity = (Entity)tr.GetObject(objectId, OpenMode.ForRead);
-          if (entity != null)
+          try
           {
-            selectedExtents.AddExtents(entity.GeometricExtents);
+            var entity = (Entity?)tr.GetObject(objectId, OpenMode.ForRead);
+            if (entity?.GeometricExtents != null)
+            {
+              selectedExtents.AddExtents(entity.GeometricExtents);
+            }
+          }
+          catch (Exception e) when (!e.IsFatal())
+          {
+            // Note: we're swallowing exeptions here because of a weird case when receiving blocks, we would have
+            // acad api throw an error on accessing entity.GeometricExtents.
           }
         }
 

@@ -1,6 +1,7 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.LayerManager;
+using Speckle.Converters.Common;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
 using AutocadColor = Autodesk.AutoCAD.Colors.Color;
@@ -37,24 +38,18 @@ public class AutocadLayerManager
   {
     string layerName = entity.Layer;
     layer = null;
-    if (CollectionCache.TryGetValue(layerName, out Layer speckleLayer))
+    if (CollectionCache.TryGetValue(layerName, out Layer? speckleLayer))
     {
       return speckleLayer;
     }
-    else
+    if (tr.GetObject(entity.LayerId, OpenMode.ForRead) is LayerTableRecord autocadLayer)
     {
-      if (tr.GetObject(entity.LayerId, OpenMode.ForRead) is LayerTableRecord autocadLayer)
-      {
-        speckleLayer = new Layer(layerName) { applicationId = autocadLayer.Handle.ToString() };
-        CollectionCache[layerName] = speckleLayer;
-        layer = autocadLayer;
-      }
-      else
-      {
-        // POC: this shouldn't happen, but we should probably throw
-      }
+      speckleLayer = new Layer(layerName) { applicationId = autocadLayer.Handle.ToString() };
+      CollectionCache[layerName] = speckleLayer;
+      layer = autocadLayer;
+      return speckleLayer;
     }
-    return speckleLayer;
+    throw new SpeckleConversionException("Unexpected condition in GetOrCreateSpeckleLayer");
   }
 
   /// <summary>
@@ -151,12 +146,19 @@ public class AutocadLayerManager
     using Transaction transaction = Doc.TransactionManager.StartTransaction();
 
     var layerTable = (LayerTable)transaction.TransactionManager.GetObject(Doc.Database.LayerTableId, OpenMode.ForRead);
+    var activeLayer = (LayerTableRecord)transaction.GetObject(Doc.Database.Clayer, OpenMode.ForRead);
     foreach (var layerId in layerTable)
     {
       var layer = (LayerTableRecord)transaction.GetObject(layerId, OpenMode.ForRead);
       var layerName = layer.Name;
       if (layer.Name.Contains(prefix))
       {
+        if (activeLayer.Name == layerName)
+        {
+          // Layer `0` cannot be deleted or renamed in Autocad, so it is safe to get zero layer id.
+          ObjectId zeroLayerId = layerTable["0"];
+          Doc.Database.Clayer = zeroLayerId;
+        }
         // Delete objects from this layer
         TypedValue[] tvs = [new((int)DxfCode.LayerName, layerName)];
         SelectionFilter selectionFilter = new(tvs);

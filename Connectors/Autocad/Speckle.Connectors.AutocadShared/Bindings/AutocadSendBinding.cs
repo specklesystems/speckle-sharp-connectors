@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Autodesk.AutoCAD.DatabaseServices;
+using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
@@ -7,9 +8,11 @@ using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Exceptions;
+using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
+using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
@@ -33,6 +36,7 @@ public sealed class AutocadSendBinding : ISendBinding
   private readonly AutocadSettings _autocadSettings;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
+  private readonly ILogger<AutocadSendBinding> _logger;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   /// <summary>
@@ -52,7 +56,8 @@ public sealed class AutocadSendBinding : ISendBinding
     AutocadSettings autocadSettings,
     IUnitOfWorkFactory unitOfWorkFactory,
     ISendConversionCache sendConversionCache,
-    IOperationProgressManager operationProgressManager
+    IOperationProgressManager operationProgressManager,
+    ILogger<AutocadSendBinding> logger
   )
   {
     _store = store;
@@ -63,6 +68,7 @@ public sealed class AutocadSendBinding : ISendBinding
     _sendFilters = sendFilters.ToList();
     _sendConversionCache = sendConversionCache;
     _operationProgressManager = operationProgressManager;
+    _logger = logger;
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
@@ -75,6 +81,11 @@ public sealed class AutocadSendBinding : ISendBinding
       // catches the case when autocad just opens up with a blank new doc
       SubscribeToObjectChanges(Application.DocumentManager.CurrentDocument);
     }
+    // Since ids of the objects generates from same seed, we should clear the cache always whenever doc swapped.
+    _store.DocumentChanged += (_, _) =>
+    {
+      _sendConversionCache.ClearCache();
+    };
   }
 
   private readonly List<string> _docSubsTracker = new();
@@ -126,6 +137,8 @@ public sealed class AutocadSendBinding : ISendBinding
   }
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
+
+  public List<CardSetting> GetSendSettings() => [];
 
   public Task Send(string modelCardId)
   {
@@ -188,9 +201,10 @@ public sealed class AutocadSendBinding : ISendBinding
       // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
       return;
     }
-    catch (Exception e) when (!e.IsFatal()) // UX reasons - we will report operation exceptions as model card error.
+    catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
-      Commands.SetModelError(modelCardId, e);
+      _logger.LogModelCardHandledError(ex);
+      Commands.SetModelError(modelCardId, ex);
     }
     finally
     {

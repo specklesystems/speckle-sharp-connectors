@@ -88,7 +88,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
         try
         {
           Base converted;
-          if (entity is BlockReference && instanceProxies.TryGetValue(applicationId, out InstanceProxy instanceProxy))
+          if (entity is BlockReference && instanceProxies.TryGetValue(applicationId, out InstanceProxy? instanceProxy))
           {
             converted = instanceProxy;
           }

@@ -76,7 +76,7 @@ public class AutocadMaterialManager
       if (transaction.GetObject(entity.MaterialId, OpenMode.ForRead) is Material material)
       {
         string materialId = material.Handle.ToString();
-        if (materialProxies.TryGetValue(materialId, out RenderMaterialProxy value))
+        if (materialProxies.TryGetValue(materialId, out RenderMaterialProxy? value))
         {
           value.objects.Add(rootObj.ApplicationId);
         }
@@ -96,7 +96,7 @@ public class AutocadMaterialManager
       {
         string materialId = material.Handle.ToString();
         string layerId = layer.Handle.ToString();
-        if (materialProxies.TryGetValue(materialId, out RenderMaterialProxy value))
+        if (materialProxies.TryGetValue(materialId, out RenderMaterialProxy? value))
         {
           value.objects.Add(layerId);
         }

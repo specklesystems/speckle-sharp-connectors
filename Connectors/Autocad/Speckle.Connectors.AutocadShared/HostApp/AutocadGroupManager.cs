@@ -33,7 +33,7 @@ public class AutocadGroupManager
           continue;
         }
         var groupAppId = group.Handle.ToString();
-        if (groupProxies.TryGetValue(groupAppId, out GroupProxy groupProxy))
+        if (groupProxies.TryGetValue(groupAppId, out GroupProxy? groupProxy))
         {
           groupProxy.objects.Add(applicationId);
         }
