@@ -1,6 +1,4 @@
 using ArcGIS.Core.Data;
-using Speckle.Converters.Common;
-using Speckle.Converters.Common.Objects;
 using Speckle.InterfaceGenerator;
 using Speckle.Objects.GIS;
 using Speckle.Sdk.Models;
@@ -24,42 +22,6 @@ public class FeatureClassUtils : IFeatureClassUtils
     {
       using (RowBuffer rowBuffer = newFeatureClass.CreateRowBuffer())
       {
-        newFeatureClass
-          .CreateRow(
-            _fieldsUtils.AssignFieldValuesToRow(
-              rowBuffer,
-              fields,
-              feat.attributes.GetMembers(DynamicBaseMemberType.Dynamic)
-            )
-          )
-          .Dispose();
-      }
-    }
-  }
-
-  public void AddFeaturesToFeatureClass(
-    FeatureClass newFeatureClass,
-    List<GisFeature> gisFeatures,
-    List<FieldDescription> fields,
-    ITypedConverter<IReadOnlyList<Base>, ACG.Geometry> gisGeometryConverter
-  )
-  {
-    foreach (GisFeature feat in gisFeatures)
-    {
-      using (RowBuffer rowBuffer = newFeatureClass.CreateRowBuffer())
-      {
-        if (feat.geometry != null)
-        {
-          List<Base> geometryToConvert = feat.geometry;
-          ACG.Geometry nativeShape = gisGeometryConverter.Convert(geometryToConvert);
-          rowBuffer[newFeatureClass.GetDefinition().GetShapeField()] = nativeShape;
-        }
-        else
-        {
-          throw new SpeckleConversionException("No geomerty to write");
-        }
-
-        // get attributes
         newFeatureClass
           .CreateRow(
             _fieldsUtils.AssignFieldValuesToRow(
