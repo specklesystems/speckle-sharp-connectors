@@ -9,6 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Bullseye" />
     <PackageReference Include="Glob" />
+    <PackageReference Include="Microsoft.Build" />
     <PackageReference Include="SimpleExec" />
   </ItemGroup>
 </Project>
