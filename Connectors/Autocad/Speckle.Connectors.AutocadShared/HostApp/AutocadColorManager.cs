@@ -1,5 +1,6 @@
 using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
+using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Sdk.Models.Proxies;
 using AutocadColor = Autodesk.AutoCAD.Colors.Color;
@@ -77,7 +78,7 @@ public class AutocadColorManager
     {
       // assumes color names are unique
       string colorId = layer.Color.ColorNameForDisplay;
-      string layerId = layer.Handle.ToString();
+      string layerId = layer.GetSpeckleApplicationId(); // Do not use handle directly, see note in the 'GetSpeckleApplicationId' method
 
       if (colorProxies.TryGetValue(colorId, out ColorProxy? value))
       {
