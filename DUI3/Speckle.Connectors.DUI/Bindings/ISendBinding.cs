@@ -1,10 +1,13 @@
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
+using Speckle.Connectors.DUI.Settings;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
 public interface ISendBinding : IBinding
 {
   public List<ISendFilter> GetSendFilters();
+
+  public List<CardSetting> GetSendSettings();
 
   /// <summary>
   /// Instructs the host app to start sending this model.
