@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
-using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Logging;
@@ -20,7 +19,6 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
   private readonly DocumentModelStore _store;
   private readonly CancellationManager _cancellationManager;
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
-  private readonly AutocadSettings _autocadSettings;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<AutocadReceiveBinding> _logger;
 
@@ -31,7 +29,6 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
     IBridge parent,
     CancellationManager cancellationManager,
     IUnitOfWorkFactory unitOfWorkFactory,
-    AutocadSettings autocadSettings,
     IOperationProgressManager operationProgressManager,
     ILogger<AutocadReceiveBinding> logger
   )
@@ -39,7 +36,6 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
     _store = store;
     _cancellationManager = cancellationManager;
     _unitOfWorkFactory = unitOfWorkFactory;
-    _autocadSettings = autocadSettings;
     _operationProgressManager = operationProgressManager;
     _logger = logger;
     Parent = parent;
@@ -70,7 +66,7 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
       // Receive host objects
       var operationResults = await unitOfWork
         .Service.Execute(
-          modelCard.GetReceiveInfo(_autocadSettings.HostAppInfo.Name),
+          modelCard.GetReceiveInfo(Speckle.Connectors.Utils.Connector.Slug),
           cancellationToken,
           (status, progress) =>
             _operationProgressManager.SetModelProgress(

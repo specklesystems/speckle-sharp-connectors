@@ -3,6 +3,7 @@ using ArcGIS.Core.CIM;
 using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
+using Speckle.Connectors.ArcGIS.HostApp;
 using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
@@ -16,6 +17,7 @@ using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
+using Speckle.Sdk.Models.Proxies;
 using RasterLayer = Speckle.Objects.GIS.RasterLayer;
 
 namespace Speckle.Connectors.ArcGIS.Operations.Receive;
@@ -30,6 +32,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
   // POC: figure out the correct scope to only initialize on Receive
   private readonly IConversionContextStack<ArcGISDocument, Unit> _contextStack;
   private readonly GraphTraversal _traverseFunction;
+  private readonly ArcGISColorManager _colorManager;
 
   public ArcGISHostObjectBuilder(
     IRootToHostConverter converter,
@@ -37,7 +40,8 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     INonNativeFeaturesUtils nonGisFeaturesUtils,
     ILocalToGlobalUnpacker localToGlobalUnpacker,
     ILocalToGlobalConverterUtils localToGlobalConverterUtils,
-    GraphTraversal traverseFunction
+    GraphTraversal traverseFunction,
+    ArcGISColorManager colorManager
   )
   {
     _converter = converter;
@@ -46,6 +50,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     _localToGlobalUnpacker = localToGlobalUnpacker;
     _localToGlobalConverterUtils = localToGlobalConverterUtils;
     _traverseFunction = traverseFunction;
+    _colorManager = colorManager;
   }
 
   public async Task<HostObjectBuilderResult> Build(
@@ -61,6 +66,13 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
 
     // Prompt the UI conversion started. Progress bar will swoosh.
     onOperationProgressed?.Invoke("Converting", null);
+
+    // get colors
+    List<ColorProxy>? colors = (rootObject["colorProxies"] as List<object>)?.Cast<ColorProxy>().ToList();
+    if (colors != null)
+    {
+      _colorManager.ParseColors(colors, onOperationProgressed);
+    }
 
     var objectsToConvertTc = _traverseFunction
       .Traverse(rootObject)
@@ -161,16 +173,20 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       }
       else if (bakedMapMembers.TryGetValue(trackerItem.DatasetId, out MapMember? value))
       {
+        // if the layer already created, just add more features to report, and more color categories
         // add layer and layer URI to tracker
         trackerItem.AddConvertedMapMember(value);
         trackerItem.AddLayerURI(value.URI);
         conversionTracker[item.Key] = trackerItem; // not necessary atm, but needed if we use conversionTracker further
         // only add a report item
         AddResultsFromTracker(trackerItem, results);
+
+        // add color category
+        await _colorManager.SetOrEditLayerRenderer(item.Key, trackerItem).ConfigureAwait(false);
       }
       else
       {
-        // add layer to Map
+        // no layer yet, create and add layer to Map
         MapMember mapMember = await AddDatasetsToMap(trackerItem, createdLayerGroups, projectName, modelName)
           .ConfigureAwait(false);
 
@@ -187,6 +203,9 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
 
         // add report item
         AddResultsFromTracker(trackerItem, results);
+
+        // add color category
+        await _colorManager.SetOrEditLayerRenderer(item.Key, trackerItem).ConfigureAwait(false);
       }
       onOperationProgressed?.Invoke("Adding to Map", (double)++bakeCount / conversionTracker.Count);
     }

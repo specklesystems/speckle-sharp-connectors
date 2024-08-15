@@ -7,6 +7,7 @@ using Autodesk.Revit.ApplicationServices;
 using Autodesk.Revit.UI;
 using Revit.Async;
 using Speckle.Connectors.DUI.WebView;
+using Speckle.Connectors.Utils;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 
@@ -15,7 +16,6 @@ namespace Speckle.Connectors.Revit.Plugin;
 internal sealed class RevitWebViewPlugin : IRevitPlugin
 {
   private readonly UIControlledApplication _uIControlledApplication;
-  private readonly RevitSettings _revitSettings;
   private readonly RevitContext _revitContext;
   private readonly DUI3ControlWebViewDockable _webViewPanel;
 
@@ -26,13 +26,11 @@ internal sealed class RevitWebViewPlugin : IRevitPlugin
   )]
   public RevitWebViewPlugin(
     UIControlledApplication uIControlledApplication,
-    RevitSettings revitSettings,
     RevitContext revitContext,
     DUI3ControlWebViewDockable webViewPanel
   )
   {
     _uIControlledApplication = uIControlledApplication;
-    _revitSettings = revitSettings;
     _revitContext = revitContext;
     _webViewPanel = webViewPanel;
   }
@@ -57,7 +55,7 @@ internal sealed class RevitWebViewPlugin : IRevitPlugin
     // POC: some top-level handling and feedback here
     try
     {
-      application.CreateRibbonTab(_revitSettings.RevitTabName);
+      application.CreateRibbonTab(Connector.TabName);
     }
     catch (ArgumentException)
     {
@@ -65,28 +63,25 @@ internal sealed class RevitWebViewPlugin : IRevitPlugin
       // this happens when both the dui2 and the dui3 connectors are installed. Can be safely ignored.
     }
 
-    RibbonPanel specklePanel = application.CreateRibbonPanel(_revitSettings.RevitTabName, _revitSettings.RevitTabTitle);
+    RibbonPanel specklePanel = application.CreateRibbonPanel(Connector.TabName, Connector.TabTitle);
     var dui3Button = (PushButton)
       specklePanel.AddItem(
         new PushButtonData(
-          _revitSettings.RevitButtonName,
-          _revitSettings.RevitButtonText,
+          Connector.Name,
+          Connector.TabTitle,
           typeof(RevitExternalApplication).Assembly.Location,
           typeof(SpeckleRevitCommand).FullName
         )
       );
 
     string path = typeof(RevitWebViewPlugin).Assembly.Location;
-    dui3Button.Image = LoadPngImgSource(
-      $"Speckle.Connectors.Revit{_revitSettings.RevitVersionName}.Assets.logo16.png",
-      path
-    );
+    dui3Button.Image = LoadPngImgSource($"Speckle.Connectors.Revit{Connector.VersionString}.Assets.logo16.png", path);
     dui3Button.LargeImage = LoadPngImgSource(
-      $"Speckle.Connectors.Revit{_revitSettings.RevitVersionName}.Assets.logo32.png",
+      $"Speckle.Connectors.Revit{Connector.VersionString}.Assets.logo32.png",
       path
     );
     dui3Button.ToolTipImage = LoadPngImgSource(
-      $"Speckle.Connectors.Revit{_revitSettings.RevitVersionName}.Assets.logo32.png",
+      $"Speckle.Connectors.Revit{Connector.VersionString}.Assets.logo32.png",
       path
     );
     dui3Button.ToolTip = "Speckle Connector for Revit New UI";
@@ -109,7 +104,7 @@ internal sealed class RevitWebViewPlugin : IRevitPlugin
     // Otherwise pane cannot be registered for double-click file open.
     _uIControlledApplication.RegisterDockablePane(
       RevitExternalApplication.DockablePanelId,
-      _revitSettings.RevitPanelName,
+      Connector.TabTitle,
       _webViewPanel
     );
   }
