@@ -15,6 +15,7 @@ const string VERSION = "version";
 const string RESTORE_TOOLS = "restore-tools";
 const string BUILD_SERVER_VERSION = "build-server-version";
 const string CLEAN_LOCKS = "clean-locks";
+const string CHECK_SOLUTIONS = "check-solutions";
 
 //need to pass arguments
 /*var arguments = new List<string>();
@@ -35,7 +36,7 @@ Target(
       File.Delete(f);
     }
     Console.WriteLine("Running restore now.");
-    Run("dotnet", "restore .\\Speckle.Connectors.sln");
+    Run("dotnet", "restore .\\Speckle.Connectors.sln --no-cache");
   }
 );
 
@@ -125,9 +126,11 @@ Target(
   }
 );
 
+Target(CHECK_SOLUTIONS, Solutions.CompareConnectorsToLocal);
+
 Target(
   TEST,
-  DependsOn(BUILD),
+  DependsOn(BUILD, CHECK_SOLUTIONS),
   Glob.Files(".", "**/*.Tests.csproj"),
   file =>
   {

@@ -32,7 +32,6 @@ public sealed class RhinoSendBinding : ISendBinding
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
-  private readonly RhinoSettings _rhinoSettings;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<RhinoSendBinding> _logger;
@@ -52,7 +51,6 @@ public sealed class RhinoSendBinding : ISendBinding
     IBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     IUnitOfWorkFactory unitOfWorkFactory,
-    RhinoSettings rhinoSettings,
     CancellationManager cancellationManager,
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
@@ -63,7 +61,6 @@ public sealed class RhinoSendBinding : ISendBinding
     _idleManager = idleManager;
     _unitOfWorkFactory = unitOfWorkFactory;
     _sendFilters = sendFilters.ToList();
-    _rhinoSettings = rhinoSettings;
     _cancellationManager = cancellationManager;
     _sendConversionCache = sendConversionCache;
     _operationProgressManager = operationProgressManager;
@@ -76,11 +73,6 @@ public sealed class RhinoSendBinding : ISendBinding
 
   private void SubscribeToRhinoEvents()
   {
-    RhinoDoc.LayerTableEvent += (_, _) =>
-    {
-      Commands.RefreshSendFilters();
-    };
-
     Command.BeginCommand += (_, e) =>
     {
       if (e.CommandEnglishName == "BlockEdit")
@@ -150,7 +142,7 @@ public sealed class RhinoSendBinding : ISendBinding
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
 
-  public List<CardSetting> GetSendSettings => [];
+  public List<CardSetting> GetSendSettings() => [];
 
   public async Task Send(string modelCardId)
   {
@@ -182,7 +174,7 @@ public sealed class RhinoSendBinding : ISendBinding
       var sendResult = await unitOfWork
         .Service.Execute(
           rhinoObjects,
-          modelCard.GetSendInfo(_rhinoSettings.HostAppInfo.Name),
+          modelCard.GetSendInfo(Speckle.Connectors.Utils.Connector.Slug),
           (status, progress) =>
             _operationProgressManager.SetModelProgress(
               Parent,

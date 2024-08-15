@@ -17,34 +17,10 @@ internal sealed class RevitExternalApplication : IExternalApplication
   private SpeckleContainer? _container;
   private IDisposable? _disposableLogger;
 
-  // POC: this is getting hard coded - need a way of injecting it
-  //      I am beginning to think the shared project is not the way
-  //      and an assembly which is invoked with some specialisation is the right way to go
-  //      maybe subclassing, or some hook to inject som configuration
-  private readonly RevitSettings _revitSettings;
-
   // POC: move to somewhere central?
   public static readonly DockablePaneId DockablePanelId = new(new Guid("{f7b5da7c-366c-4b13-8455-b56f433f461e}"));
 
-  public RevitExternalApplication()
-  {
-    // POC: load from JSON file?
-    _revitSettings = new RevitSettings(
-      "Speckle New UI",
-      "Speckle",
-      "Speckle New UI",
-      GetVersionAsString(),
-      "Speckle New UI",
-      "Revit",
-      [Path.GetDirectoryName(typeof(RevitExternalApplication).Assembly.Location).NotNull()],
-      HostApplications.Revit.Slug,
-      GetVersionAsString() //POC: app version?
-    );
-  }
-
-  private string GetVersionAsString() => HostApplications.GetVersion(GetVersion());
-
-  private HostAppVersion GetVersion()
+  private static HostAppVersion GetVersion()
   {
 #if REVIT2022
     return HostAppVersion.v2022;
@@ -69,8 +45,10 @@ internal sealed class RevitExternalApplication : IExternalApplication
       _disposableLogger = Connector.Initialize(HostApplications.Revit, GetVersion());
       _container = SpeckleContainerBuilder
         .CreateInstance()
-        .LoadAutofacModules(Assembly.GetExecutingAssembly(), _revitSettings.ModuleFolders.NotNull())
-        .AddSingleton(_revitSettings) // apply revit settings into DI
+        .LoadAutofacModules(
+          Assembly.GetExecutingAssembly(),
+          [Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location).NotNull()]
+        )
         .AddSingleton(application) // inject UIControlledApplication application
         .Build();
 
