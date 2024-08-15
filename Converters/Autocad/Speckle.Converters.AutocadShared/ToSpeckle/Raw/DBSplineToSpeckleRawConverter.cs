@@ -33,7 +33,7 @@ public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Cur
     // POC: HACK: check for incorrectly closed periodic curves (this seems like acad bug, has resulted from receiving rhino curves)
     bool periodicClosed = false;
     double length = 0;
-    SOP.Interval? domain = null;
+    SOP.Interval domain = SOP.Interval.UnitInterval;
     if (target.GetGeCurve() is NurbCurve3d nurbs)
     {
       length = nurbs.GetLength(nurbs.StartParameter, nurbs.EndParameter, 0.001);
@@ -107,7 +107,7 @@ public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Cur
       rational = target.IsRational,
       closed = periodicClosed || target.Closed,
       length = length,
-      domain = domain ?? null!, //TODO: what should we do here?
+      domain = domain,
       bbox = _boxConverter.Convert(target.GeometricExtents),
       units = _contextStack.Current.SpeckleUnits,
       displayValue = target.Database is not null ? GetDisplayValue(target) : null!,

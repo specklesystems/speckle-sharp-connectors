@@ -44,7 +44,7 @@ public class NurbsSplineToSpeckleConverter : ITypedConverter<DB.NurbSpline, SOG.
       points = points,
       knots = target.Knots.Cast<double>().ToList(),
       degree = target.Degree,
-      periodic = false, // = target.Period,
+      periodic = false,
       rational = target.isRational,
       closed = _conversionHelper.IsCurveClosed(target),
       units = units,
