@@ -20,6 +20,7 @@ public class GisFeatureToHostConverter : ITypedConverter<GisFeature, (ACG.Geomet
   public (ACG.Geometry, Dictionary<string, object?>) Convert(GisFeature target)
   {
     Dictionary<string, object?> attributes = target.attributes.GetMembers(DynamicBaseMemberType.Dynamic);
+    attributes["Speckle_ID"] = target.id;
 
     if (target.geometry is List<Base> geometry)
     {

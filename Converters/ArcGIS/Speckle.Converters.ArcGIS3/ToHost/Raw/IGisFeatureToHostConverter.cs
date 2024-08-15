@@ -37,6 +37,7 @@ public class IGisFeatureToHostConverter : ITypedConverter<IGisFeature, (ACG.Geom
   {
     // get attributes
     Dictionary<string, object?> attributes = target.attributes.GetMembers(DynamicBaseMemberType.Dynamic);
+    attributes["Speckle_ID"] = ((Base)target).id;
 
     switch (target)
     {
