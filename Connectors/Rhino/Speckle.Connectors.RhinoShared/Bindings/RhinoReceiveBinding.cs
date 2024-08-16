@@ -56,20 +56,19 @@ public class RhinoReceiveBinding : IReceiveBinding
         throw new InvalidOperationException("No download model card was found.");
       }
 
-      // Init cancellation token source -> Manager also cancel it if exist before
-      CancellationTokenSource cts = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
       // Receive host objects
       HostObjectBuilderResult conversionResults = await unitOfWork
         .Service.Execute(
           modelCard.GetReceiveInfo(Speckle.Connectors.Utils.Connector.Slug),
-          cts.Token,
+          cancellationToken,
           (status, progress) =>
             _operationProgressManager.SetModelProgress(
               Parent,
               modelCardId,
               new ModelCardProgress(modelCardId, status, progress),
-              cts
+              cancellationToken
             )
         )
         .ConfigureAwait(false);
