@@ -40,26 +40,22 @@ public class NurbsCurveConverter : ITypedConverter<RG.NurbsCurve, SOG.Curve>
     // tolerance
     double tolerance = _contextStack.Current.Document.ModelAbsoluteTolerance;
 
-    // Get display value
-    SOG.Polyline displayPoly;
-    if (target.ToPolyline(0, 1, 0, 0, 0, tolerance, 0, 0, true) is PolylineCurve polylineCurve)
+    if (target.ToPolyline(0, 1, 0, 0, 0, tolerance, 0, 0, true) is not PolylineCurve polylineCurve)
     {
-      if (!polylineCurve.TryGetPolyline(out Polyline poly))
-      {
-        // POC: report CONVERTED WITH WARNING
-      }
-
-      if (target.IsClosed)
-      {
-        poly.Add(poly[0]);
-      }
-
-      displayPoly = _polylineConverter.Convert(poly);
+      throw new SpeckleConversionException($"Failed to extract PolylineCurve from {target}");
     }
-    else
+
+    if (!polylineCurve.TryGetPolyline(out Polyline? poly))
     {
-      throw new SpeckleConversionException($"Failed to extract polyline from {target}");
+      throw new SpeckleConversionException($"Failed to extract Polyline from {target}");
     }
+
+    if (target.IsClosed)
+    {
+      poly.Add(poly[0]);
+    }
+
+    SOG.Polyline displayPoly = _polylineConverter.Convert(poly);
 
     // increase knot multiplicity to (# control points + degree + 1)
     // add extra knots at start & end  because Rhino's knot multiplicity standard is (# control points + degree - 1)
