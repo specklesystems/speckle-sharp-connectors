@@ -52,6 +52,5 @@
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitWebViewPlugin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitCefPlugin.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitSettings.cs" />
   </ItemGroup>
 </Project>

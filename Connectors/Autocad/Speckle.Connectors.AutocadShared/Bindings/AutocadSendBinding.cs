@@ -33,7 +33,6 @@ public sealed class AutocadSendBinding : ISendBinding
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
-  private readonly AutocadSettings _autocadSettings;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<AutocadSendBinding> _logger;
@@ -53,7 +52,6 @@ public sealed class AutocadSendBinding : ISendBinding
     IBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     CancellationManager cancellationManager,
-    AutocadSettings autocadSettings,
     IUnitOfWorkFactory unitOfWorkFactory,
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
@@ -63,7 +61,6 @@ public sealed class AutocadSendBinding : ISendBinding
     _store = store;
     _idleManager = idleManager;
     _unitOfWorkFactory = unitOfWorkFactory;
-    _autocadSettings = autocadSettings;
     _cancellationManager = cancellationManager;
     _sendFilters = sendFilters.ToList();
     _sendConversionCache = sendConversionCache;
@@ -158,8 +155,7 @@ public sealed class AutocadSendBinding : ISendBinding
 
       using var uow = _unitOfWorkFactory.Resolve<SendOperation<AutocadRootObject>>();
 
-      // Init cancellation token source -> Manager also cancel it if exist before
-      CancellationTokenSource cts = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
       // Disable document activation (document creation and document switch)
       // Not disabling results in DUI model card being out of sync with the active document
@@ -180,15 +176,15 @@ public sealed class AutocadSendBinding : ISendBinding
       var sendResult = await uow
         .Service.Execute(
           autocadObjects,
-          modelCard.GetSendInfo(_autocadSettings.HostAppInfo.Name),
+          modelCard.GetSendInfo(Speckle.Connectors.Utils.Connector.Slug),
           (status, progress) =>
             _operationProgressManager.SetModelProgress(
               Parent,
               modelCardId,
               new ModelCardProgress(modelCardId, status, progress),
-              cts
+              cancellationToken
             ),
-          cts.Token
+          cancellationToken
         )
         .ConfigureAwait(false);
 

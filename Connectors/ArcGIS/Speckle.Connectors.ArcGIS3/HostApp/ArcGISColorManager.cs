@@ -1,7 +1,12 @@
+using System.Drawing;
 using ArcGIS.Core.CIM;
 using ArcGIS.Core.Data;
+using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Converters.ArcGIS3.Utils;
+using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Connectors.ArcGIS.HostApp;
@@ -9,6 +14,7 @@ namespace Speckle.Connectors.ArcGIS.HostApp;
 public class ArcGISColorManager
 {
   private Dictionary<string, ColorProxy> ColorProxies { get; set; } = new();
+  public Dictionary<string, Color> ObjectColorsIdMap { get; set; } = new();
 
   /// <summary>
   /// Iterates through a given set of arcGIS map members (layers containing objects) and collects their colors.
@@ -41,6 +47,168 @@ public class ArcGISColorManager
     }
 
     return ColorProxies.Values.ToList();
+  }
+
+  /// <summary>
+  /// Parse Color Proxies and stores in ObjectColorsIdMap the relationship between object ids and colors
+  /// </summary>
+  /// <param name="colorProxies"></param>
+  /// <param name="onOperationProgressed"></param>
+  public void ParseColors(List<ColorProxy> colorProxies, Action<string, double?>? onOperationProgressed)
+  {
+    // injected as Singleton, so we need to clean existing proxies first
+    ObjectColorsIdMap = new();
+    var count = 0;
+    foreach (ColorProxy colorProxy in colorProxies)
+    {
+      onOperationProgressed?.Invoke("Converting colors", (double)++count / colorProxies.Count);
+      foreach (string objectId in colorProxy.objects)
+      {
+        Color convertedColor = Color.FromArgb(colorProxy.value);
+        ObjectColorsIdMap.TryAdd(objectId, convertedColor);
+      }
+    }
+  }
+
+  /// <summary>
+  /// Create a new CIMUniqueValueClass for UniqueRenderer per each object ID
+  /// </summary>
+  /// <param name="tc"></param>
+  /// <param name="speckleGeometryType"></param>
+  private CIMUniqueValueClass CreateColorCategory(TraversalContext tc, esriGeometryType speckleGeometryType)
+  {
+    Base baseObj = tc.Current;
+
+    // declare default white color
+    Color color = Color.FromArgb(255, 255, 255, 255);
+
+    // get color moving upwards from the object
+    foreach (var parent in tc.GetAscendants())
+    {
+      if (parent.applicationId is string appId && ObjectColorsIdMap.TryGetValue(appId, out Color objColor))
+      {
+        color = objColor;
+        break;
+      }
+    }
+
+    CIMSymbolReference symbol = CreateSymbol(speckleGeometryType, color);
+
+    // First create a "CIMUniqueValueClass"
+    List<CIMUniqueValue> listUniqueValues = new() { new CIMUniqueValue { FieldValues = new string[] { baseObj.id } } };
+
+    CIMUniqueValueClass newUniqueValueClass =
+      new()
+      {
+        Editable = true,
+        Label = baseObj.id,
+        Patch = PatchShape.Default,
+        Symbol = symbol,
+        Visible = true,
+        Values = listUniqueValues.ToArray()
+      };
+    return newUniqueValueClass;
+  }
+
+  /// <summary>
+  /// Create a Symbol from GeometryType and Color
+  /// </summary>
+  /// <param name="speckleGeometryType"></param>
+  /// <param name="color"></param>
+  private CIMSymbolReference CreateSymbol(esriGeometryType speckleGeometryType, Color color)
+  {
+    var symbol = SymbolFactory
+      .Instance.ConstructPointSymbol(ColorFactory.Instance.CreateColor(color))
+      .MakeSymbolReference();
+
+    switch (speckleGeometryType)
+    {
+      case esriGeometryType.esriGeometryLine:
+      case esriGeometryType.esriGeometryPolyline:
+        symbol = SymbolFactory
+          .Instance.ConstructLineSymbol(ColorFactory.Instance.CreateColor(color))
+          .MakeSymbolReference();
+        break;
+      case esriGeometryType.esriGeometryPolygon:
+      case esriGeometryType.esriGeometryMultiPatch:
+        symbol = SymbolFactory
+          .Instance.ConstructPolygonSymbol(ColorFactory.Instance.CreateColor(color))
+          .MakeSymbolReference();
+        break;
+    }
+
+    return symbol;
+  }
+
+  /// <summary>
+  /// Add CIMUniqueValueClass to Layer Renderer (if exists); apply Renderer to Layer (again)
+  /// </summary>
+  /// <param name="tc"></param>
+  /// <param name="trackerItem"></param>
+  public async Task SetOrEditLayerRenderer(TraversalContext tc, ObjectConversionTracker trackerItem)
+  {
+    if (trackerItem.HostAppMapMember is not FeatureLayer fLayer)
+    {
+      // do nothing with non-feature layers
+      return;
+    }
+
+    // declare default grey color, create default symbol for the given layer geometry type
+    var color = Color.FromArgb(ColorFactory.Instance.GreyRGB.CIMColorToInt());
+    CIMSymbolReference defaultSymbol = CreateSymbol(fLayer.ShapeType, color);
+
+    // get existing renderer classes
+    List<CIMUniqueValueClass> listUniqueValueClasses = new() { };
+    var existingRenderer = QueuedTask.Run(() => fLayer.GetRenderer()).Result;
+    // should be always UniqueRenderer, it's the only type we are creating atm
+    if (existingRenderer is CIMUniqueValueRenderer uniqueRenderer)
+    {
+      if (uniqueRenderer.Groups[0].Classes != null)
+      {
+        listUniqueValueClasses.AddRange(uniqueRenderer.Groups[0].Classes.ToList());
+      }
+    }
+
+    // Add new CIMUniqueValueClass (or multiple, if it's a Collection with elements, e.g. VectorLayer)
+    List<TraversalContext> traversalContexts = new();
+    if (tc.Current is Collection collection)
+    {
+      foreach (var element in collection.elements)
+      {
+        TraversalContext newTc = new(element, "elements", tc);
+        traversalContexts.Add(newTc);
+      }
+    }
+    else
+    {
+      traversalContexts.Add(tc);
+    }
+
+    foreach (var tContext in traversalContexts)
+    {
+      CIMUniqueValueClass newUniqueValueClass = CreateColorCategory(tContext, fLayer.ShapeType);
+      if (!listUniqueValueClasses.Select(x => x.Label).Contains(newUniqueValueClass.Label))
+      {
+        listUniqueValueClasses.Add(newUniqueValueClass);
+      }
+    }
+
+    // Create a list of CIMUniqueValueGroup
+    CIMUniqueValueGroup uvg = new() { Classes = listUniqueValueClasses.ToArray(), };
+    List<CIMUniqueValueGroup> listUniqueValueGroups = new() { uvg };
+    // Create the CIMUniqueValueRenderer
+    CIMUniqueValueRenderer uvr =
+      new()
+      {
+        UseDefaultSymbol = true,
+        DefaultLabel = "all other values",
+        DefaultSymbol = defaultSymbol,
+        Groups = listUniqueValueGroups.ToArray(),
+        Fields = new string[] { "Speckle_ID" }
+      };
+
+    // Set the feature layer's renderer.
+    await QueuedTask.Run(() => fLayer.SetRenderer(uvr)).ConfigureAwait(false);
   }
 
   private string GetColorApplicationId(int argb, double order) => $"{argb}_{order}";
@@ -77,6 +245,11 @@ public class ArcGISColorManager
     AddElementIdToColorProxy(elementAppId, argb, colorId, displayPriority);
   }
 
+  /// <summary>
+  /// Record colors from every feature of the layer into ColorProxies
+  /// </summary>
+  /// <param name="layer"></param>
+  /// <param name="displayPriority"></param>
   private void ProcessFeatureLayerColors(FeatureLayer layer, int displayPriority)
   {
     // first get a list of layer fields
@@ -157,34 +330,69 @@ public class ArcGISColorManager
 
   private int RgbFromHsv(CIMHSVColor hsvColor)
   {
+    // Translates HSV color to RGB color
+    // H: 0.0 - 360.0, S: 0.0 - 100.0, V: 0.0 - 100.0
+    // R, G, B: 0.0 - 1.0
+
     float hue = hsvColor.H;
     float saturation = hsvColor.S;
     float value = hsvColor.V;
 
-    int hi = Convert.ToInt32(Math.Floor(hue / 60)) % 6;
-    double f = hue / 60 - Math.Floor(hue / 60);
+    float c = (value / 100) * (saturation / 100);
+    float x = c * (1 - Math.Abs(((hue / 60) % 2) - 1));
+    float m = (value / 100) - c;
 
-    saturation /= 255;
-    int v = Convert.ToInt32(value);
-    int p = Convert.ToInt32(value * (1 - saturation));
-    int q = Convert.ToInt32(value * (1 - f * saturation));
-    int t = Convert.ToInt32(value * (1 - (1 - f) * saturation));
+    float r = 0;
+    float g = 0;
+    float b = 0;
 
-    switch (hi)
+    if (hue >= 0 && hue < 60)
     {
-      case 0:
-        return RbgToInt(255, v, t, p);
-      case 1:
-        return RbgToInt(255, q, v, p);
-      case 2:
-        return RbgToInt(255, p, v, t);
-      case 3:
-        return RbgToInt(255, p, q, v);
-      case 4:
-        return RbgToInt(255, t, p, v);
-      default:
-        return RbgToInt(255, v, p, q);
+      r = c;
+      g = x;
+      b = 0;
     }
+    else if (hue >= 60 && hue < 120)
+    {
+      r = x;
+      g = c;
+      b = 0;
+    }
+    else if (hue >= 120 && hue < 180)
+    {
+      r = 0;
+      g = c;
+      b = x;
+    }
+    else if (hue >= 180 && hue < 240)
+    {
+      r = 0;
+      g = x;
+      b = c;
+    }
+    else if (hue >= 240 && hue < 300)
+    {
+      r = x;
+      g = 0;
+      b = c;
+    }
+    else if (hue >= 300 && hue < 360)
+    {
+      r = c;
+      g = 0;
+      b = x;
+    }
+
+    r += m;
+    g += m;
+    b += m;
+
+    // convert rgb 0.0-1.0 float to int
+    int red = (int)Math.Round(r * 255);
+    int green = (int)Math.Round(g * 255);
+    int blue = (int)Math.Round(b * 255);
+
+    return RbgToInt(255, red, green, blue);
   }
 
   private bool TryGetUniqueRendererColor(
@@ -247,13 +455,18 @@ public class ArcGISColorManager
     return true;
   }
 
+  /// <summary>
+  /// Make comparable the Label string of a UniqueValueRenderer (groupValue), and a Feature Attribute value (rowValue)
+  /// </summary>
+  /// <param name="rowValue"></param>
+  /// <param name="groupValue"></param>
   private (string, string) MakeValuesComparable(object? rowValue, string groupValue)
   {
     string newGroupValue = groupValue;
     string newRowValue = Convert.ToString(rowValue) ?? "";
 
     // int, doubles are tricky to compare with strings, trimming both to 5 digits
-    if (rowValue is int || rowValue is Int16 || rowValue is Int64)
+    if (rowValue is int or short or long)
     {
       newRowValue = newRowValue.Split(".")[0];
       newGroupValue = newGroupValue.Split(".")[0];

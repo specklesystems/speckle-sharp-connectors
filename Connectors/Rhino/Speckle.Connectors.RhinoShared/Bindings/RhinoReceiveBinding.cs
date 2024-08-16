@@ -5,7 +5,6 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
@@ -21,7 +20,6 @@ public class RhinoReceiveBinding : IReceiveBinding
   private readonly CancellationManager _cancellationManager;
   private readonly DocumentModelStore _store;
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
-  private readonly RhinoSettings _rhinoSettings;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<RhinoReceiveBinding> _logger;
   private ReceiveBindingUICommands Commands { get; }
@@ -31,7 +29,6 @@ public class RhinoReceiveBinding : IReceiveBinding
     CancellationManager cancellationManager,
     IBridge parent,
     IUnitOfWorkFactory unitOfWorkFactory,
-    RhinoSettings rhinoSettings,
     IOperationProgressManager operationProgressManager,
     ILogger<RhinoReceiveBinding> logger
   )
@@ -39,7 +36,6 @@ public class RhinoReceiveBinding : IReceiveBinding
     Parent = parent;
     _store = store;
     _unitOfWorkFactory = unitOfWorkFactory;
-    _rhinoSettings = rhinoSettings;
     _operationProgressManager = operationProgressManager;
     _logger = logger;
     _cancellationManager = cancellationManager;
@@ -60,20 +56,19 @@ public class RhinoReceiveBinding : IReceiveBinding
         throw new InvalidOperationException("No download model card was found.");
       }
 
-      // Init cancellation token source -> Manager also cancel it if exist before
-      CancellationTokenSource cts = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
       // Receive host objects
       HostObjectBuilderResult conversionResults = await unitOfWork
         .Service.Execute(
-          modelCard.GetReceiveInfo(_rhinoSettings.HostAppInfo.Name),
-          cts.Token,
+          modelCard.GetReceiveInfo(Speckle.Connectors.Utils.Connector.Slug),
+          cancellationToken,
           (status, progress) =>
             _operationProgressManager.SetModelProgress(
               Parent,
               modelCardId,
               new ModelCardProgress(modelCardId, status, progress),
-              cts
+              cancellationToken
             )
         )
         .ConfigureAwait(false);

@@ -10,6 +10,7 @@ using CefSharp;
 using Revit.Async;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.Utils;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 
@@ -18,7 +19,6 @@ namespace Speckle.Connectors.Revit.Plugin;
 internal sealed class RevitCefPlugin : IRevitPlugin
 {
   private readonly UIControlledApplication _uIControlledApplication;
-  private readonly RevitSettings _revitSettings;
   private readonly IEnumerable<Lazy<IBinding>> _bindings; // should be lazy to ensure the bindings are not created too early
   private readonly BindingOptions _bindingOptions;
   private readonly RevitContext _revitContext;
@@ -26,7 +26,6 @@ internal sealed class RevitCefPlugin : IRevitPlugin
 
   public RevitCefPlugin(
     UIControlledApplication uIControlledApplication,
-    RevitSettings revitSettings,
     IEnumerable<Lazy<IBinding>> bindings,
     BindingOptions bindingOptions,
     RevitContext revitContext,
@@ -34,7 +33,6 @@ internal sealed class RevitCefPlugin : IRevitPlugin
   )
   {
     _uIControlledApplication = uIControlledApplication;
-    _revitSettings = revitSettings;
     _bindings = bindings;
     _bindingOptions = bindingOptions;
     _revitContext = revitContext;
@@ -61,7 +59,7 @@ internal sealed class RevitCefPlugin : IRevitPlugin
     // POC: some top-level handling and feedback here
     try
     {
-      application.CreateRibbonTab(_revitSettings.RevitTabName);
+      application.CreateRibbonTab(Connector.TabName);
     }
     catch (ArgumentException)
     {
@@ -69,28 +67,25 @@ internal sealed class RevitCefPlugin : IRevitPlugin
       // this happens when both the dui2 and the dui3 connectors are installed. Can be safely ignored.
     }
 
-    RibbonPanel specklePanel = application.CreateRibbonPanel(_revitSettings.RevitTabName, _revitSettings.RevitTabTitle);
+    RibbonPanel specklePanel = application.CreateRibbonPanel(Connector.TabName, Connector.TabTitle);
     var dui3Button = (PushButton)
       specklePanel.AddItem(
         new PushButtonData(
-          _revitSettings.RevitButtonName,
-          _revitSettings.RevitButtonText,
+          Connector.Name,
+          Connector.TabTitle,
           typeof(RevitExternalApplication).Assembly.Location,
           typeof(SpeckleRevitCommand).FullName
         )
       );
 
     string path = typeof(RevitCefPlugin).Assembly.Location;
-    dui3Button.Image = LoadPngImgSource(
-      $"Speckle.Connectors.Revit{_revitSettings.RevitVersionName}.Assets.logo16.png",
-      path
-    );
+    dui3Button.Image = LoadPngImgSource($"Speckle.Connectors.Revit{Connector.VersionString}.Assets.logo16.png", path);
     dui3Button.LargeImage = LoadPngImgSource(
-      $"Speckle.Connectors.Revit{_revitSettings.RevitVersionName}.Assets.logo32.png",
+      $"Speckle.Connectors.Revit{Connector.VersionString}.Assets.logo32.png",
       path
     );
     dui3Button.ToolTipImage = LoadPngImgSource(
-      $"Speckle.Connectors.Revit{_revitSettings.RevitVersionName}.Assets.logo32.png",
+      $"Speckle.Connectors.Revit{Connector.VersionString}.Assets.logo32.png",
       path
     );
     dui3Button.ToolTip = "Speckle Connector for Revit New UI";
@@ -153,7 +148,7 @@ internal sealed class RevitCefPlugin : IRevitPlugin
     // Otherwise pane cannot be registered for double-click file open.
     _uIControlledApplication.RegisterDockablePane(
       RevitExternalApplication.DockablePanelId,
-      _revitSettings.RevitPanelName,
+      Connector.Name,
       _cefSharpPanel
     );
   }

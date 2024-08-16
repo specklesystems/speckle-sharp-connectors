@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
-using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Logging;
@@ -20,7 +19,6 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
   private readonly DocumentModelStore _store;
   private readonly CancellationManager _cancellationManager;
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
-  private readonly AutocadSettings _autocadSettings;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<AutocadReceiveBinding> _logger;
 
@@ -31,7 +29,6 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
     IBridge parent,
     CancellationManager cancellationManager,
     IUnitOfWorkFactory unitOfWorkFactory,
-    AutocadSettings autocadSettings,
     IOperationProgressManager operationProgressManager,
     ILogger<AutocadReceiveBinding> logger
   )
@@ -39,7 +36,6 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
     _store = store;
     _cancellationManager = cancellationManager;
     _unitOfWorkFactory = unitOfWorkFactory;
-    _autocadSettings = autocadSettings;
     _operationProgressManager = operationProgressManager;
     _logger = logger;
     Parent = parent;
@@ -60,8 +56,7 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
         throw new InvalidOperationException("No download model card was found.");
       }
 
-      // Init cancellation token source -> Manager also cancel it if exist before
-      CancellationTokenSource cts = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
       // Disable document activation (document creation and document switch)
       // Not disabling results in DUI model card being out of sync with the active document
@@ -71,14 +66,14 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
       // Receive host objects
       var operationResults = await unitOfWork
         .Service.Execute(
-          modelCard.GetReceiveInfo(_autocadSettings.HostAppInfo.Name),
-          cts.Token,
+          modelCard.GetReceiveInfo(Speckle.Connectors.Utils.Connector.Slug),
+          cancellationToken,
           (status, progress) =>
             _operationProgressManager.SetModelProgress(
               Parent,
               modelCardId,
               new ModelCardProgress(modelCardId, status, progress),
-              cts
+              cancellationToken
             )
         )
         .ConfigureAwait(false);

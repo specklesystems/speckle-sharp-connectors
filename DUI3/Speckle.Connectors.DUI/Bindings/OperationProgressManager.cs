@@ -21,10 +21,10 @@ public class OperationProgressManager : IOperationProgressManager
     IBridge bridge,
     string modelCardId,
     ModelCardProgress progress,
-    CancellationTokenSource cts
+    CancellationToken cancellationToken
   )
   {
-    if (cts.IsCancellationRequested)
+    if (cancellationToken.IsCancellationRequested)
     {
       return;
     }

@@ -23,7 +23,6 @@ namespace Speckle.Connectors.Revit.Bindings;
 
 internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 {
-  private readonly RevitSettings _revitSettings;
   private readonly IRevitIdleManager _idleManager;
   private readonly CancellationManager _cancellationManager;
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
@@ -46,7 +45,6 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     CancellationManager cancellationManager,
     IBridge bridge,
     IUnitOfWorkFactory unitOfWorkFactory,
-    RevitSettings revitSettings,
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
     ILogger<RevitSendBinding> logger
@@ -56,7 +54,6 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _idleManager = idleManager;
     _cancellationManager = cancellationManager;
     _unitOfWorkFactory = unitOfWorkFactory;
-    _revitSettings = revitSettings;
     _sendConversionCache = sendConversionCache;
     _operationProgressManager = operationProgressManager;
     _logger = logger;
@@ -117,9 +114,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         throw new InvalidOperationException("No publish model card was found.");
       }
 
-      // POC: probably the CTS SHOULD be injected as InstancePerLifetimeScope and then
-      // it can be injected where needed instead of passing it around like a bomb :D
-      CancellationTokenSource cts = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
       using IUnitOfWork<SendOperation<ElementId>> sendOperation = _unitOfWorkFactory.Resolve<
         SendOperation<ElementId>
@@ -140,15 +135,15 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       var sendResult = await sendOperation
         .Service.Execute(
           revitObjects,
-          modelCard.GetSendInfo(_revitSettings.HostSlug.NotNull()),
+          modelCard.GetSendInfo(Speckle.Connectors.Utils.Connector.Slug),
           (status, progress) =>
             _operationProgressManager.SetModelProgress(
               Parent,
               modelCardId,
               new ModelCardProgress(modelCardId, status, progress),
-              cts
+              cancellationToken
             ),
-          cts.Token
+          cancellationToken
         )
         .ConfigureAwait(false);
 

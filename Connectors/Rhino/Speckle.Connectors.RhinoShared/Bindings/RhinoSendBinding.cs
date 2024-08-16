@@ -32,7 +32,6 @@ public sealed class RhinoSendBinding : ISendBinding
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
-  private readonly RhinoSettings _rhinoSettings;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<RhinoSendBinding> _logger;
@@ -52,7 +51,6 @@ public sealed class RhinoSendBinding : ISendBinding
     IBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     IUnitOfWorkFactory unitOfWorkFactory,
-    RhinoSettings rhinoSettings,
     CancellationManager cancellationManager,
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
@@ -63,7 +61,6 @@ public sealed class RhinoSendBinding : ISendBinding
     _idleManager = idleManager;
     _unitOfWorkFactory = unitOfWorkFactory;
     _sendFilters = sendFilters.ToList();
-    _rhinoSettings = rhinoSettings;
     _cancellationManager = cancellationManager;
     _sendConversionCache = sendConversionCache;
     _operationProgressManager = operationProgressManager;
@@ -158,8 +155,7 @@ public sealed class RhinoSendBinding : ISendBinding
         throw new InvalidOperationException("No publish model card was found.");
       }
 
-      //  Init cancellation token source -> Manager also cancel it if exist before
-      CancellationTokenSource cts = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
       List<RhinoObject> rhinoObjects = modelCard
         .SendFilter.NotNull()
@@ -177,15 +173,15 @@ public sealed class RhinoSendBinding : ISendBinding
       var sendResult = await unitOfWork
         .Service.Execute(
           rhinoObjects,
-          modelCard.GetSendInfo(_rhinoSettings.HostAppInfo.Name),
+          modelCard.GetSendInfo(Speckle.Connectors.Utils.Connector.Slug),
           (status, progress) =>
             _operationProgressManager.SetModelProgress(
               Parent,
               modelCardId,
               new ModelCardProgress(modelCardId, status, progress),
-              cts
+              cancellationToken
             ),
-          cts.Token
+          cancellationToken
         )
         .ConfigureAwait(false);
 
