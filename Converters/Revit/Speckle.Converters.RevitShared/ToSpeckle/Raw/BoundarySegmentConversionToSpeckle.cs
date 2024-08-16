@@ -1,16 +1,21 @@
 ﻿using Speckle.Converters.Common.Objects;
+using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Objects;
-using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 public class BoundarySegmentConversionToSpeckle : ITypedConverter<IList<DB.BoundarySegment>, SOG.Polycurve>
 {
   private readonly ITypedConverter<DB.Curve, ICurve> _curveConverter;
+  private readonly IRevitConversionContextStack _contextStack;
 
-  public BoundarySegmentConversionToSpeckle(ITypedConverter<DB.Curve, ICurve> curveConverter)
+  public BoundarySegmentConversionToSpeckle(
+    ITypedConverter<DB.Curve, ICurve> curveConverter,
+    IRevitConversionContextStack contextStack
+  )
   {
     _curveConverter = curveConverter;
+    _contextStack = contextStack;
   }
 
   public SOG.Polycurve Convert(IList<DB.BoundarySegment> target)
@@ -32,7 +37,7 @@ public class BoundarySegmentConversionToSpeckle : ITypedConverter<IList<DB.Bound
       segments.Add(curve);
     }
 
-    var poly = new SOG.Polycurve { segments = segments, units = Units.Meters }; //TODO: is the units here correct?
+    var poly = new SOG.Polycurve { segments = segments, units = _contextStack.Current.SpeckleUnits };
     return poly;
   }
 }
