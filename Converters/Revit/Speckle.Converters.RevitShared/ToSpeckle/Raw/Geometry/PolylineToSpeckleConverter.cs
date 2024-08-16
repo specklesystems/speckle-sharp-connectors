@@ -20,6 +20,6 @@ public class PolylineToSpeckleConverter : ITypedConverter<DB.PolyLine, SOG.Polyl
   public SOG.Polyline Convert(DB.PolyLine target)
   {
     var coords = target.GetCoordinates().SelectMany(coord => _xyzToPointConverter.Convert(coord).ToList()).ToList();
-    return new SOG.Polyline(coords, _contextStack.Current.SpeckleUnits);
+    return new SOG.Polyline { value = coords, units = _contextStack.Current.SpeckleUnits };
   }
 }

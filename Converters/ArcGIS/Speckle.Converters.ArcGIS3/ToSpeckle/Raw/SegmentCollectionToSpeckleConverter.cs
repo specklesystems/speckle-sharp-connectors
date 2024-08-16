@@ -84,7 +84,11 @@ public class SegmentCollectionToSpeckleConverter : ITypedConverter<ACG.ReadOnlyS
       }
     }
     SOG.Polyline polyline =
-      new(points.SelectMany(pt => new[] { pt.x, pt.y, pt.z }).ToList(), _contextStack.Current.SpeckleUnits) { };
+      new()
+      {
+        value = points.SelectMany(pt => new[] { pt.x, pt.y, pt.z }).ToList(),
+        units = _contextStack.Current.SpeckleUnits
+      };
 
     return polyline;
   }

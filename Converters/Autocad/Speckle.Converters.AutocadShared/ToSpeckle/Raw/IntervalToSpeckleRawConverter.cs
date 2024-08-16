@@ -7,5 +7,5 @@ public class IntervalToSpeckleConverter : ITypedConverter<AG.Interval, SOP.Inter
 {
   public Base Convert(object target) => Convert((AG.Interval)target);
 
-  public SOP.Interval Convert(AG.Interval target) => new(target.LowerBound, target.UpperBound);
+  public SOP.Interval Convert(AG.Interval target) => new() { start = target.LowerBound, end = target.UpperBound };
 }

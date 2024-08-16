@@ -44,9 +44,9 @@ public class ArcToSpeckleConverterTests : MoqTest
     targetArc.Setup(x => x.BoundingBox()).Returns(boundbox.Object);
     factory.Setup(x => x.Create(boundbox.Object)).Returns(targetBox.Object);
 
-    mockPlaneConverter.Setup(pc => pc.Convert(targetPlane.Object)).Returns(new SOG.Plane());
-    mockPointConverter.Setup(pc => pc.Convert(It.IsAny<RG.Point3d>())).Returns(new SOG.Point());
-    mockBoxConverter.Setup(bc => bc.Convert(targetBox.Object)).Returns(new SOG.Box());
+    mockPlaneConverter.Setup(pc => pc.Convert(targetPlane.Object)).Returns((SOG.Plane)null!);
+    mockPointConverter.Setup(pc => pc.Convert(It.IsAny<RG.Point3d>())).Returns((SOG.Point)null!);
+    mockBoxConverter.Setup(bc => bc.Convert(targetBox.Object)).Returns((SOG.Box)null!);
 
     var converter = new ArcToSpeckleConverter(
       mockPointConverter.Object,

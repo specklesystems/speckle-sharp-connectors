@@ -52,7 +52,7 @@ public class CircularArc3dToSpeckleConverter : ITypedConverter<AG.CircularArc3d,
         startPoint = start,
         endPoint = end,
         midPoint = mid,
-        domain = new(startParam, endParam),
+        domain = new SOP.Interval { start = startParam, end = endParam },
         length = target.GetLength(0, 1, 0.000)
       };
 

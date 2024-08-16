@@ -13,11 +13,6 @@ public class IntervalToHostConverter : ITypedConverter<SOP.Interval, RG.Interval
   /// <remarks>⚠️ This conversion does NOT perform scaling.</remarks>
   public RG.Interval Convert(SOP.Interval target)
   {
-    if (!target.start.HasValue || !target.end.HasValue) // POC: CNX-9272 Interval start and end being nullable makes no sense.
-    {
-      throw new ArgumentException("Interval start/end cannot be null");
-    }
-
-    return new RG.Interval(target.start.Value, target.end.Value);
+    return new RG.Interval(target.start, target.end);
   }
 }
