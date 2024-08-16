@@ -27,6 +27,13 @@ public class PlaneToSpeckleConverter : ITypedConverter<DB.Plane, SOG.Plane>
     var xdir = _xyzToVectorConverter.Convert(target.XVec);
     var ydir = _xyzToVectorConverter.Convert(target.YVec);
 
-    return new SOG.Plane(origin, normal, xdir, ydir, _contextStack.Current.SpeckleUnits);
+    return new SOG.Plane
+    {
+      origin = origin,
+      normal = normal,
+      xdir = xdir,
+      ydir = ydir,
+      units = _contextStack.Current.SpeckleUnits
+    };
   }
 }

@@ -31,7 +31,7 @@ public class DBLineToSpeckleRawConverter : ITypedConverter<ADB.Line, SOG.Line>
     )
     {
       length = target.Length,
-      domain = new SOP.Interval(0, target.Length),
+      domain = new SOP.Interval { start = 0, end = target.Length },
       bbox = _boxConverter.Convert(target.GeometricExtents)
     };
 }

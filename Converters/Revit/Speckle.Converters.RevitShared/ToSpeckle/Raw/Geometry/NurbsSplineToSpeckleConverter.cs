@@ -38,19 +38,19 @@ public class NurbsSplineToSpeckleConverter : ITypedConverter<DB.NurbSpline, SOG.
 
     var coords = target.Tessellate().SelectMany(xyz => _xyzToPointConverter.Convert(xyz).ToList()).ToList();
 
-    return new SOG.Curve()
+    return new SOG.Curve
     {
       weights = target.Weights.Cast<double>().ToList(),
       points = points,
       knots = target.Knots.Cast<double>().ToList(),
       degree = target.Degree,
-      //speckleCurve.periodic = revitCurve.Period; // POC: already commented out, remove?
+      periodic = false,
       rational = target.isRational,
       closed = _conversionHelper.IsCurveClosed(target),
       units = units,
-      domain = new Interval(target.GetEndParameter(0), target.GetEndParameter(1)),
+      domain = new Interval { start = target.GetEndParameter(0), end = target.GetEndParameter(1) },
       length = _scalingService.ScaleLength(target.Length),
-      displayValue = new SOG.Polyline(coords, units)
+      displayValue = new SOG.Polyline { value = coords, units = units }
     };
   }
 }

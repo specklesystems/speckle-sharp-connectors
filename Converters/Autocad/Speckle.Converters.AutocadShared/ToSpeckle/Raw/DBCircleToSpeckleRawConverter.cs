@@ -28,7 +28,14 @@ public class DBCircleToSpeckleRawConverter : ITypedConverter<ADB.Circle, SOG.Cir
     SOG.Plane plane = _planeConverter.Convert(target.GetPlane());
     SOG.Box bbox = _boxConverter.Convert(target.GeometricExtents);
     SOG.Circle circle =
-      new(plane, target.Radius, _contextStack.Current.SpeckleUnits) { length = target.Circumference, bbox = bbox };
+      new()
+      {
+        plane = plane,
+        radius = target.Radius,
+        units = _contextStack.Current.SpeckleUnits,
+        length = target.Circumference,
+        bbox = bbox
+      };
 
     return circle;
   }

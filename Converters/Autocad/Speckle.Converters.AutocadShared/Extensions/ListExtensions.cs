@@ -7,10 +7,10 @@ public static class ListExtensions
     // throw if list is malformed
     if (pointList.Count % 3 != 0)
     {
-      throw new System.ArgumentException("Point list of xyz values is malformed.");
+      throw new ArgumentException("Point list of xyz values is malformed", nameof(pointList));
     }
 
-    return new(pointList, speckleUnits);
+    return new() { value = pointList, units = speckleUnits };
   }
 
   public static List<AG.Point2d> ConvertToPoint2d(this List<double> pointList, double conversionFactor = 1)
@@ -18,7 +18,7 @@ public static class ListExtensions
     // throw if list is malformed
     if (pointList.Count % 2 != 0)
     {
-      throw new System.ArgumentException("Point list of xy values is malformed.");
+      throw new ArgumentException("Point list of xy values is malformed", nameof(pointList));
     }
 
     List<AG.Point2d> points2d = new(pointList.Count / 2);
@@ -35,7 +35,7 @@ public static class ListExtensions
     // throw if list is malformed
     if (pointList.Count % 3 != 0)
     {
-      throw new System.ArgumentException("Point list of xyz values is malformed.");
+      throw new ArgumentException("Point list of xyz values is malformed", nameof(pointList));
     }
 
     List<AG.Point3d> points3d = new(pointList.Count / 3);

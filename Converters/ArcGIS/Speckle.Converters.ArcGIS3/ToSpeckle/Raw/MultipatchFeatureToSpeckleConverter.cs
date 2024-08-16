@@ -81,7 +81,7 @@ public class MultipatchFeatureToSpeckleConverter : ITypedConverter<ACG.Multipatc
         polygonGeom = new() { voids = new List<SOG.Polyline>() };
         List<double> pointCoords = allPoints[idx].SelectMany(x => new List<double>() { x.x, x.y, x.z }).ToList();
 
-        SOG.Polyline polyline = new(pointCoords, _contextStack.Current.SpeckleUnits) { };
+        SOG.Polyline polyline = new() { value = pointCoords, units = _contextStack.Current.SpeckleUnits };
         polygonGeom.boundary = polyline;
 
         // if it's already the last part, add to list
@@ -93,7 +93,7 @@ public class MultipatchFeatureToSpeckleConverter : ITypedConverter<ACG.Multipatc
       else if (patchType == ACG.PatchType.Ring)
       {
         List<double> pointCoords = allPoints[idx].SelectMany(x => new List<double>() { x.x, x.y, x.z }).ToList();
-        SOG.Polyline polyline = new(pointCoords, _contextStack.Current.SpeckleUnits) { };
+        SOG.Polyline polyline = new() { value = pointCoords, units = _contextStack.Current.SpeckleUnits };
 
         // every outer ring is oriented clockwise
         bool isClockwise = polyline.IsClockwisePolygon();
