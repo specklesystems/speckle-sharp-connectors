@@ -2,6 +2,7 @@ using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
+using Speckle.Sdk.Models.Instances;
 using Speckle.Sdk.Models.Proxies;
 using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 
@@ -17,10 +18,11 @@ public class AutocadColorManager
 
   public Dictionary<string, AutocadColor> ObjectColorsIdMap { get; } = new();
 
-  private ColorProxy ConvertColorToColorProxy(AutocadColor color, string id)
+  private ColorProxy ConvertColorToColorProxy(AutocadColor color)
   {
     int argb = color.ColorValue.ToArgb();
     string name = color.ColorNameForDisplay;
+    string id = color.GetSpeckleApplicationId();
 
     ColorProxy colorProxy = new(argb, id, name) { objects = new() };
 
@@ -40,59 +42,73 @@ public class AutocadColorManager
   /// <param name="unpackedAutocadRootObjects"></param>
   /// <param name="layers"></param>
   /// <returns></returns>
+  /// <remarks>
+  /// Due to complications in color inheritance for blocks, we are simplifying the behavior to **always setting the color** (treating it as ColorMethod.ByColor) for definition objects to guarantee they look correct in the viewer and when receiving.
+  /// </remarks>
   public List<ColorProxy> UnpackColors(
     List<AutocadRootObject> unpackedAutocadRootObjects,
-    List<LayerTableRecord> layers
+    List<LayerTableRecord> layers,
+    List<InstanceDefinitionProxy> definitions
   )
   {
     Dictionary<string, ColorProxy> colorProxies = new();
 
     // Stage 1: unpack colors from objects
+    Dictionary<string, AutocadColor> objectInheritedColorDict = new(); // keeps track of color ids for all atomic objects that inherited their color
     foreach (AutocadRootObject rootObj in unpackedAutocadRootObjects)
     {
       Entity entity = rootObj.Root;
+      string objectId = rootObj.ApplicationId;
 
-      // skip any objects that inherit their colors
+      // skip any objects that inherit their colors for now
       if (!entity.Color.IsByAci && !entity.Color.IsByColor)
       {
+        if (!objectInheritedColorDict.ContainsKey(objectId))
+        {
+          objectInheritedColorDict.Add(objectId, entity.Color);
+        }
         continue;
       }
 
-      // assumes color names are unique
-      string colorId = entity.Color.ColorNameForDisplay;
-
-      if (colorProxies.TryGetValue(colorId, out ColorProxy? value))
-      {
-        value.objects.Add(rootObj.ApplicationId);
-      }
-      else
-      {
-        ColorProxy newColor = ConvertColorToColorProxy(entity.Color, colorId);
-        newColor.objects.Add(rootObj.ApplicationId);
-        colorProxies[colorId] = newColor;
-      }
+      AddObjectIdToColorProxy(objectId, colorProxies, entity.Color);
     }
 
     // Stage 2: make sure we collect layer colors as well
     foreach (LayerTableRecord layer in layers)
     {
       // assumes color names are unique
-      string colorId = layer.Color.ColorNameForDisplay;
-      string layerId = layer.GetSpeckleApplicationId(); // Do not use handle directly, see note in the 'GetSpeckleApplicationId' method
+      string layerId = layer.GetSpeckleApplicationId();
+      AddObjectIdToColorProxy(layerId, colorProxies, layer.Color);
+    }
 
-      if (colorProxies.TryGetValue(colorId, out ColorProxy? value))
+    // Stage 3: retrieve definition object colors for any objects that inherited their color
+    foreach (InstanceDefinitionProxy definition in definitions)
+    {
+      foreach (string objectId in definition.objects)
       {
-        value.objects.Add(layerId);
-      }
-      else
-      {
-        ColorProxy newColor = ConvertColorToColorProxy(layer.Color, colorId);
-        newColor.objects.Add(layerId);
-        colorProxies[colorId] = newColor;
+        if (objectInheritedColorDict.TryGetValue(objectId, out AutocadColor? color))
+        {
+          AddObjectIdToColorProxy(objectId, colorProxies, color);
+        }
       }
     }
 
     return colorProxies.Values.ToList();
+  }
+
+  private void AddObjectIdToColorProxy(string objectId, Dictionary<string, ColorProxy> proxies, AutocadColor color)
+  {
+    string colorId = color.GetSpeckleApplicationId();
+    if (proxies.TryGetValue(colorId, out ColorProxy? proxy))
+    {
+      proxy.objects.Add(objectId);
+    }
+    else
+    {
+      ColorProxy newColor = ConvertColorToColorProxy(color);
+      newColor.objects.Add(objectId);
+      proxies[colorId] = newColor;
+    }
   }
 
   public AutocadColor ConvertColorProxyToColor(ColorProxy colorProxy)

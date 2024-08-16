@@ -1,4 +1,5 @@
 using Autodesk.AutoCAD.DatabaseServices;
+using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Sdk;
@@ -32,7 +33,7 @@ public class AutocadGroupManager
         {
           continue;
         }
-        var groupAppId = group.Handle.ToString();
+        var groupAppId = group.GetSpeckleApplicationId();
         if (groupProxies.TryGetValue(groupAppId, out GroupProxy? groupProxy))
         {
           groupProxy.objects.Add(applicationId);

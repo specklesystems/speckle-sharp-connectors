@@ -26,12 +26,11 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadColorManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadLayerManager.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Extensions\AcadUnitsExtension.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Extensions\DatabaseExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Extensions\DocumentExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Extensions\EditorExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Extensions\EntityExtensions.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Extensions\LayerTableRecordExtensions.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Extensions\SpeckleApplicationIdExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\TransactionContext.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\AutocadHostObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\AutocadRootObject.cs" />
