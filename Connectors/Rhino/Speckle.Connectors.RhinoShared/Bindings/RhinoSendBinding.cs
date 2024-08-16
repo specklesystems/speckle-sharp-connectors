@@ -142,12 +142,7 @@ public sealed class RhinoSendBinding : ISendBinding
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
 
-#pragma warning disable CA1024
-  public List<CardSetting> GetSendSettings()
-#pragma warning restore CA1024
-  {
-    return new();
-  }
+  public List<CardSetting> GetSendSettings() => [];
 
   public async Task Send(string modelCardId)
   {
