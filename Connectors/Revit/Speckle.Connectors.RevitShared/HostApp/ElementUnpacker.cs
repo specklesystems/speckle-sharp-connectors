@@ -22,16 +22,16 @@ namespace Speckle.Connectors.Revit.HostApp;
 /// </item>
 /// </list>
 /// </summary>
-public class SendSelectionUnpacker
+public class ElementUnpacker
 {
   private readonly IRevitConversionContextStack _contextStack;
 
-  public SendSelectionUnpacker(IRevitConversionContextStack contextStack)
+  public ElementUnpacker(IRevitConversionContextStack contextStack)
   {
     _contextStack = contextStack;
   }
 
-  public IEnumerable<Element> UnpackSelection(IEnumerable<Element> selectionElements)
+  public IEnumerable<Element> UnpackSelectionForConversion(IEnumerable<Element> selectionElements)
   {
     // Note: steps kept separate on purpose.
     // Step 1: unpack groups
@@ -43,20 +43,20 @@ public class SendSelectionUnpacker
     return PackCurtainWallElements(atomicObjects);
   }
 
-  // This needs some yield refactoring
   private List<Element> UnpackElements(IEnumerable<Element> elements)
   {
     var unpackedElements = new List<Element>(); // note: could be a hashset/map so we prevent duplicates (?)
 
     foreach (var element in elements)
     {
+      // UNPACK: Groups
       if (element is Group g)
       {
         // POC: this might screw up generating hosting rel generation here, because nested families in groups get flattened out by GetMemberIds().
-        // in other words, if a group contains nested families, .GetMemberIds() will return all "exploded" families.
         var groupElements = g.GetMemberIds().Select(_contextStack.Current.Document.GetElement);
         unpackedElements.AddRange(UnpackElements(groupElements));
       }
+      // UNPACK: Family instances (as they potentially have nested families inside)
       else if (element is FamilyInstance familyInstance)
       {
         var familyElements = familyInstance
@@ -88,5 +88,42 @@ public class SendSelectionUnpacker
       (element is Mullion m && ids.Contains(m.Host.Id)) || (element is Panel p && ids.Contains(p.Host.Id))
     );
     return elements;
+  }
+
+  public List<string> GetElementsAndSubelementIdsFromAtomicObjects(List<Element> elements)
+  {
+    var ids = new HashSet<string>();
+    foreach (var element in elements)
+    {
+      switch (element)
+      {
+        case Wall wall:
+          if (wall.CurtainGrid is { } grid)
+          {
+            foreach (var mullionId in grid.GetMullionIds())
+            {
+              ids.Add(mullionId.ToString());
+            }
+            foreach (var panelId in grid.GetPanelIds())
+            {
+              ids.Add(panelId.ToString());
+            }
+          }
+          else if (wall.IsStackedWall)
+          {
+            foreach (var stackedWallId in wall.GetStackedWallMemberIds())
+            {
+              ids.Add(stackedWallId.ToString());
+            }
+          }
+          break;
+        default:
+          break;
+      }
+
+      ids.Add(element.Id.ToString());
+    }
+
+    return ids.ToList();
   }
 }

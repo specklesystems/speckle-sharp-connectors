@@ -22,7 +22,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
   private readonly Collection _rootObject;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ISyncToThread _syncToThread;
-  private readonly SendSelectionUnpacker _sendSelectionUnpacker;
+  private readonly ElementUnpacker _elementUnpacker;
   private readonly SendCollectionManager _sendCollectionManager;
 
   public RevitRootObjectBuilder(
@@ -30,7 +30,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     IRevitConversionContextStack conversionContextStack,
     ISendConversionCache sendConversionCache,
     ISyncToThread syncToThread,
-    SendSelectionUnpacker sendSelectionUnpacker,
+    ElementUnpacker elementUnpacker,
     SendCollectionManager sendCollectionManager
   )
   {
@@ -38,7 +38,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     _conversionContextStack = conversionContextStack;
     _sendConversionCache = sendConversionCache;
     _syncToThread = syncToThread;
-    _sendSelectionUnpacker = sendSelectionUnpacker;
+    _elementUnpacker = elementUnpacker;
     _sendCollectionManager = sendCollectionManager;
 
     _rootObject = new Collection()
@@ -80,12 +80,13 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
       }
 
       // Unpack groups (& other complex data structures)
-      var atomicObjects = _sendSelectionUnpacker.UnpackSelection(revitElements).ToList();
+      var atomicObjects = _elementUnpacker.UnpackSelectionForConversion(revitElements).ToList();
 
-      var countProgress = 0; // because for(int i = 0; ...) loops are so last year
+      var countProgress = 0;
       var cacheHitCount = 0;
       List<SendConversionResult> results = new(revitElements.Count);
-      List<string> succesfullyConvertedElementIds = new();
+      List<string> succesfullyConvertedElementIds = new(); // TODO: should be part of the context stack, imho
+
       foreach (Element revitElement in atomicObjects)
       {
         ct.ThrowIfCancellationRequested();
@@ -119,10 +120,9 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
 
       // TODO: Stacked and curtain walls do not work as expected, we'll need to either:
       // - unpack them, and introduce "subcomponent" proxies later
-      // - process their ids separately to get their subcomponents ids
-      var materialProxies = _conversionContextStack.RenderMaterialProxyCache.GetRenderMaterialProxyListForObjects(
-        succesfullyConvertedElementIds.Distinct().ToList()
-      );
+      // - process their ids separately to get their subcomponents
+      var ids = _elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(atomicObjects);
+      var materialProxies = _conversionContextStack.RenderMaterialProxyCache.GetRenderMaterialProxyListForObjects(ids);
       _rootObject["renderMaterialProxies"] = materialProxies;
 
       // POC: Log would be nice, or can be removed.

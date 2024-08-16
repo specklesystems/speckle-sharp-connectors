@@ -13,7 +13,16 @@ namespace Speckle.Converters.RevitShared.Helpers;
 // and the latter is more for connector
 public class RevitConversionContextStack : ConversionContextStack<Document, ForgeTypeId>, IRevitConversionContextStack
 {
+  /// <summary>
+  /// Persistent cache (across conversions) for all generated render material proxies. Note this cache stores a list of render material proxies per element id.
+  /// </summary>
   public RenderMaterialProxyCacheSingleton RenderMaterialProxyCache { get; }
+
+  /// <summary>
+  /// Keeps track of all converted elements and any resulting subelement ids. For example, if sending a curtain wall, this will contain the original wall id, as well as the ids of all the mullions/panels. Stacked wall component ids will also be stored in here.
+  /// </summary>
+  public List<ElementId> ConvertedElementsAndSubelementIds { get; } = new();
+
   public const double TOLERANCE = 0.0164042; // 5mm in ft
 
   public RevitConversionContextStack(

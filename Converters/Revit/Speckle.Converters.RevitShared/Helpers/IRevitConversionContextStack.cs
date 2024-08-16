@@ -13,4 +13,5 @@ namespace Speckle.Converters.RevitShared.Helpers;
 public interface IRevitConversionContextStack : IConversionContextStack<Document, ForgeTypeId>
 {
   public RenderMaterialProxyCacheSingleton RenderMaterialProxyCache { get; }
+  public List<ElementId> ConvertedElementsAndSubelementIds { get; }
 }

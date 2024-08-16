@@ -104,7 +104,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\RevitCategoryInfo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\RevitContext.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\RevitConversionContextStack.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)\Helpers\ToSpeckleConvertedObjectsCache.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)\Helpers\SendSelection.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\RevitToSpeckleUnitConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)RevitRootToSpeckleConverter.cs" />
