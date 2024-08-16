@@ -113,7 +113,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
           results.Add(new(Status.ERROR, applicationId, revitElement.GetType().Name, null, ex));
         }
 
-        onOperationProgressed?.Invoke("Converting", (double)++countProgress / revitElements.Count);
+        onOperationProgressed?.Invoke("Converting", (double)++countProgress / atomicObjects.Count);
       }
 
       var idsAndSubElementIds = _elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(atomicObjects);
