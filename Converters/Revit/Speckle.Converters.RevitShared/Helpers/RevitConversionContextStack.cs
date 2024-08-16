@@ -18,11 +18,6 @@ public class RevitConversionContextStack : ConversionContextStack<Document, Forg
   /// </summary>
   public RenderMaterialProxyCacheSingleton RenderMaterialProxyCache { get; }
 
-  /// <summary>
-  /// Keeps track of all converted elements and any resulting subelement ids. For example, if sending a curtain wall, this will contain the original wall id, as well as the ids of all the mullions/panels. Stacked wall component ids will also be stored in here.
-  /// </summary>
-  public List<ElementId> ConvertedElementsAndSubelementIds { get; } = new();
-
   public const double TOLERANCE = 0.0164042; // 5mm in ft
 
   public RevitConversionContextStack(
@@ -46,9 +41,10 @@ public class RevitConversionContextStack : ConversionContextStack<Document, Forg
 }
 
 /// <summary>
-/// singleton; should persist across units of work
-/// TODO: description
-/// TODO: move to appropriate location
+/// <para>Persistent cache (across conversions) for all generated render material proxies. This cache stores a list of render material proxies per element id, and provides a method to get out the merged render material proxy list from a set of object ids for setting on the root commit object post conversion phase.</para>
+/// <para>
+/// Why is this needed? Because two reasons: send caching bypasses converter and revit conversions typically generate multiple display values per element. Ask dim for more and he might start crying.
+/// </para>
 /// </summary>
 public class RenderMaterialProxyCacheSingleton
 {
@@ -59,14 +55,12 @@ public class RenderMaterialProxyCacheSingleton
   public Dictionary<string, Dictionary<string, RenderMaterialProxy>> ObjectRenderMaterialProxiesMap { get; } = new();
 
   /// <summary>
-  /// Returns the material proxy list for the given objects.
+  /// Returns the merged material proxy list for the given object ids. Use this to get post conversion a correct list of material proxies for setting on the root commit object.
   /// </summary>
   /// <param name="elementIds"></param>
   /// <returns></returns>
   public List<RenderMaterialProxy> GetRenderMaterialProxyListForObjects(List<string> elementIds)
   {
-    // merge all render material proxies by their material id
-    // return that
     var proxiesToMerge = ObjectRenderMaterialProxiesMap
       .Where(kvp => elementIds.Contains(kvp.Key))
       .Select(kvp => kvp.Value);

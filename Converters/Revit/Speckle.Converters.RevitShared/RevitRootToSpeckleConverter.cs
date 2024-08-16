@@ -46,9 +46,6 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
       // POC: is this the right place?
       result.applicationId = element.UniqueId;
       _parameterValueExtractor.RemoveUniqueId(element.UniqueId);
-
-      // Add all converted element ids to the context stack. The assumption here is that everything will pass through the converter, like mullions and panels do in the Wall converter.
-      _contextStack.ConvertedElementsAndSubelementIds.Add(element.Id);
     }
 
     return result;

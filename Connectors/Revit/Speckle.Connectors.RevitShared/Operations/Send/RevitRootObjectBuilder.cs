@@ -85,7 +85,6 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
       var countProgress = 0;
       var cacheHitCount = 0;
       List<SendConversionResult> results = new(revitElements.Count);
-      List<string> succesfullyConvertedElementIds = new(); // TODO: should be part of the context stack, imho
 
       foreach (Element revitElement in atomicObjects)
       {
@@ -107,7 +106,6 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
 
           var collection = _sendCollectionManager.GetAndCreateObjectHostCollection(revitElement, _rootObject);
           collection.elements.Add(converted);
-          succesfullyConvertedElementIds.Add(revitElement.Id.ToString());
           results.Add(new(Status.SUCCESS, applicationId, revitElement.GetType().Name, converted));
         }
         catch (Exception ex) when (!ex.IsFatal())
@@ -118,14 +116,12 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
         onOperationProgressed?.Invoke("Converting", (double)++countProgress / revitElements.Count);
       }
 
-      // TODO: Stacked and curtain walls do not work as expected, we'll need to either:
-      // - unpack them, and introduce "subcomponent" proxies later
-      // - process their ids separately to get their subcomponents
-      var ids = _elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(atomicObjects);
-      var materialProxies = _conversionContextStack.RenderMaterialProxyCache.GetRenderMaterialProxyListForObjects(ids);
+      var idsAndSubElementIds = _elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(atomicObjects);
+      var materialProxies = _conversionContextStack.RenderMaterialProxyCache.GetRenderMaterialProxyListForObjects(
+        idsAndSubElementIds
+      );
       _rootObject["renderMaterialProxies"] = materialProxies;
 
-      // POC: Log would be nice, or can be removed.
       Debug.WriteLine(
         $"Cache hit count {cacheHitCount} out of {objects.Count} ({(double)cacheHitCount / objects.Count})"
       );

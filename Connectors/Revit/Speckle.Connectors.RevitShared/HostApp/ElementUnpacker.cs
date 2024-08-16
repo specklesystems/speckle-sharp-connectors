@@ -5,22 +5,6 @@ namespace Speckle.Connectors.Revit.HostApp;
 
 /// <summary>
 /// Class that unpacks a given set of selection elements into atomic objects.
-/// POC: it's a fast solution to a lot of complex problems we don't want to answer now, but should in the near future.
-/// What this does:
-/// <list type="bullet">
-/// <item>
-///   <term>Groups: </term>
-///   <description>explodes them into sub constituent objects, recursively.</description>
-/// </item>
-/// <item>
-///   <term>Nested families: </term>
-///   <description>explodes them into sub constituent objects, recursively.</description>
-/// </item>
-/// <item>
-///   <term>Curtain walls: </term>
-///   <description>If parent wall is part of selection, does not select individual elements out. Otherwise, selects individual elements (Panels, Mullions) as atomic objects.</description>
-/// </item>
-/// </list>
 /// </summary>
 public class ElementUnpacker
 {
@@ -31,6 +15,12 @@ public class ElementUnpacker
     _contextStack = contextStack;
   }
 
+  /// <summary>
+  /// Unpacks a random set of revit objects into atomic objects. It currently unpacks groups recurisvely, nested families into atomic family instances.
+  /// This method will also "pack" curtain walls if necessary (ie, if mullions or panels are selected without their parent curtain wall, they are sent independently; if the parent curtain wall is selected, they will be removed out as the curtain wall will include all its children).
+  /// </summary>
+  /// <param name="selectionElements"></param>
+  /// <returns></returns>
   public IEnumerable<Element> UnpackSelectionForConversion(IEnumerable<Element> selectionElements)
   {
     // Note: steps kept separate on purpose.
@@ -90,6 +80,12 @@ public class ElementUnpacker
     return elements;
   }
 
+  /// <summary>
+  /// Given a set of atomic elements, it will return a list of all their ids as well as their subelements. This currently handles <b>curtain walls</b> and <b>stacked walls</b>.
+  /// This might not be an exhaustive list of valid objects with "subelements" in revit, and will need revisiting.
+  /// </summary>
+  /// <param name="elements"></param>
+  /// <returns></returns>
   public List<string> GetElementsAndSubelementIdsFromAtomicObjects(List<Element> elements)
   {
     var ids = new HashSet<string>();
