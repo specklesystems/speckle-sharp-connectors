@@ -4,7 +4,9 @@ using ArcGIS.Core.Data.Exceptions;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Objects;
 using Speckle.Objects.GIS;
+using Speckle.Sdk.Models;
 using FieldDescription = ArcGIS.Core.Data.DDL.FieldDescription;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.Raw;
@@ -74,11 +76,40 @@ public class TableLayerToHostConverter : ITypedConverter<VectorLayer, Table>
     try
     {
       Table newFeatureClass = geodatabase.OpenDataset<Table>(featureClassName);
-      // Add features to the FeatureClass
-      List<GisFeature> gisFeatures = target.elements.Select(x => (GisFeature)x).ToList();
+
+      // handle and convert element types
+      List<Dictionary<string, object?>> featureClassElements = new();
+
+      List<IGisFeature> gisFeatures = target.elements.Where(o => o is IGisFeature).Cast<IGisFeature>().ToList();
+      if (gisFeatures.Count > 0)
+      {
+        featureClassElements = gisFeatures.Select(o => o.attributes.GetMembers(DynamicBaseMemberType.Dynamic)).ToList();
+      }
+      else // V2 compatibility with QGIS (still using GisFeature class)
+      {
+        List<GisFeature> oldGisFeatures = target.elements.Where(o => o is GisFeature).Cast<GisFeature>().ToList();
+        featureClassElements = oldGisFeatures
+          .Select(o => o.attributes.GetMembers(DynamicBaseMemberType.Dynamic))
+          .ToList();
+      }
+
+      // process features into rows
+      if (featureClassElements.Count == 0)
+      {
+        // POC: REPORT CONVERTED WITH ERROR HERE
+        return newFeatureClass;
+      }
+
       geodatabase.ApplyEdits(() =>
       {
-        _featureClassUtils.AddFeaturesToTable(newFeatureClass, gisFeatures, fields);
+        foreach (Dictionary<string, object?> featureClassElement in featureClassElements)
+        {
+          using (RowBuffer rowBuffer = newFeatureClass.CreateRowBuffer())
+          {
+            RowBuffer assignedRowBuffer = _fieldsUtils.AssignFieldValuesToRow(rowBuffer, fields, featureClassElement); // assign atts
+            newFeatureClass.CreateRow(assignedRowBuffer).Dispose();
+          }
+        }
       });
 
       return newFeatureClass;

@@ -64,22 +64,6 @@ public static class GISAttributeFieldType
     return (FieldType)(int)(long)fieldType;
   }
 
-  public static object? FieldValueToSpeckle(Row row, Field field)
-  {
-    if (
-      field.FieldType == FieldType.DateOnly
-      || field.FieldType == FieldType.TimeOnly
-      || field.FieldType == FieldType.TimestampOffset
-    )
-    {
-      return row[field.Name]?.ToString();
-    }
-    else
-    {
-      return row[field.Name];
-    }
-  }
-
   public static object? SpeckleValueToNativeFieldType(FieldType fieldType, object? value)
   {
     // Geometry: ignored

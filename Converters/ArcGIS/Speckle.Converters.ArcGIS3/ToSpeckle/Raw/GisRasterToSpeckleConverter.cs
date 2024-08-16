@@ -8,15 +8,10 @@ namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
 
 public class GisRasterToSpeckleConverter : ITypedConverter<Raster, RasterElement>
 {
-  private readonly ITypedConverter<ACG.Geometry, IReadOnlyList<Base>> _geometryConverter;
   private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;
 
-  public GisRasterToSpeckleConverter(
-    ITypedConverter<ArcGIS.Core.Geometry.Geometry, IReadOnlyList<Base>> geometryConverter,
-    IConversionContextStack<ArcGISDocument, ACG.Unit> contextStack
-  )
+  public GisRasterToSpeckleConverter(IConversionContextStack<ArcGISDocument, ACG.Unit> contextStack)
   {
-    _geometryConverter = geometryConverter;
     _contextStack = contextStack;
   }
 

@@ -5,6 +5,7 @@ using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Proxies;
 
@@ -168,12 +169,30 @@ public class ArcGISColorManager
       }
     }
 
-    // Add new CIMUniqueValueClass
-    CIMUniqueValueClass newUniqueValueClass = CreateColorCategory(tc, fLayer.ShapeType);
-    if (!listUniqueValueClasses.Select(x => x.Label).Contains(newUniqueValueClass.Label))
+    // Add new CIMUniqueValueClass (or multiple, if it's a Collection with elements, e.g. VectorLayer)
+    List<TraversalContext> traversalContexts = new();
+    if (tc.Current is Collection collection)
     {
-      listUniqueValueClasses.Add(newUniqueValueClass);
+      foreach (var element in collection.elements)
+      {
+        TraversalContext newTc = new(element, "elements", tc);
+        traversalContexts.Add(newTc);
+      }
     }
+    else
+    {
+      traversalContexts.Add(tc);
+    }
+
+    foreach (var tContext in traversalContexts)
+    {
+      CIMUniqueValueClass newUniqueValueClass = CreateColorCategory(tContext, fLayer.ShapeType);
+      if (!listUniqueValueClasses.Select(x => x.Label).Contains(newUniqueValueClass.Label))
+      {
+        listUniqueValueClasses.Add(newUniqueValueClass);
+      }
+    }
+
     // Create a list of CIMUniqueValueGroup
     CIMUniqueValueGroup uvg = new() { Classes = listUniqueValueClasses.ToArray(), };
     List<CIMUniqueValueGroup> listUniqueValueGroups = new() { uvg };
