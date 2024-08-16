@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
+using ArcGIS.Desktop.Internal.Mapping;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Connectors.ArcGIS.HostApp;
 using Speckle.Connectors.Utils.Builders;
@@ -14,6 +15,7 @@ using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Proxies;
+using ArcLayer = ArcGIS.Desktop.Mapping.Layer;
 
 namespace Speckle.Connectors.ArcGis.Operations.Send;
 
@@ -172,20 +174,13 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     // first get all map layers
     Dictionary<MapMember, int> layersIndices = new();
     int count = 0;
-    foreach (var layer in map.Layers)
-    {
-      if (layer is GroupLayer group)
-      {
-        layersIndices[layer] = count;
-        count++;
-        count = UnpackGroupLayerOrder(layersIndices, group, count);
-      }
-      else
-      {
-        layersIndices[layer] = count;
-      }
+    var layers = map.Layers;
+    count = UnpackLayersOrder(layersIndices, layers, count);
 
-      count++;
+    // iterate through tables
+    foreach (var layer in map.StandaloneTables)
+    {
+      layersIndices[layer] = count + 100; // random number, will be recalculated below
     }
 
     // recalculate selected layer priority from all map layers
@@ -203,21 +198,31 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     return selectedLayers;
   }
 
-  private int UnpackGroupLayerOrder(Dictionary<MapMember, int> layersIndices, GroupLayer group, int count)
+  private int UnpackLayersOrder(
+    Dictionary<MapMember, int> layersIndices,
+    IEnumerable<ArcLayer> layersToUnpack,
+    int count
+  )
   {
-    foreach (var layer in group.Layers)
+    foreach (var layer in layersToUnpack)
     {
-      if (layer is GroupLayer subGroup)
+      switch (layer)
       {
-        layersIndices[layer] = count;
-        count++;
-        count = UnpackGroupLayerOrder(layersIndices, subGroup, count);
+        case GroupLayer subGroup:
+          layersIndices[layer] = count;
+          count++;
+          count = UnpackLayersOrder(layersIndices, subGroup.Layers, count);
+          break;
+        case ILayerContainerInternal subLayerContainerInternal:
+          layersIndices[layer] = count;
+          count++;
+          count = UnpackLayersOrder(layersIndices, subLayerContainerInternal.InternalLayers, count);
+          break;
+        default:
+          layersIndices[layer] = count;
+          count++;
+          break;
       }
-      else
-      {
-        layersIndices[layer] = count;
-      }
-      count++;
     }
 
     return count;

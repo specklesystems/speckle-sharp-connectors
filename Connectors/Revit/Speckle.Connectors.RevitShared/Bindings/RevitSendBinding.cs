@@ -114,9 +114,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         throw new InvalidOperationException("No publish model card was found.");
       }
 
-      // POC: probably the CTS SHOULD be injected as InstancePerLifetimeScope and then
-      // it can be injected where needed instead of passing it around like a bomb :D
-      CancellationTokenSource cts = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
       using IUnitOfWork<SendOperation<ElementId>> sendOperation = _unitOfWorkFactory.Resolve<
         SendOperation<ElementId>
@@ -143,9 +141,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
               Parent,
               modelCardId,
               new ModelCardProgress(modelCardId, status, progress),
-              cts
+              cancellationToken
             ),
-          cts.Token
+          cancellationToken
         )
         .ConfigureAwait(false);
 

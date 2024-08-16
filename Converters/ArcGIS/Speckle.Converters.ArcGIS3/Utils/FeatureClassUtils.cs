@@ -1,8 +1,6 @@
 using ArcGIS.Core.Data;
-using Speckle.Converters.Common;
-using Speckle.Converters.Common.Objects;
 using Speckle.InterfaceGenerator;
-using Speckle.Objects.GIS;
+using Speckle.Objects;
 using Speckle.Sdk.Models;
 using FieldDescription = ArcGIS.Core.Data.DDL.FieldDescription;
 
@@ -18,57 +16,18 @@ public class FeatureClassUtils : IFeatureClassUtils
     _fieldsUtils = fieldsUtils;
   }
 
-  public void AddFeaturesToTable(Table newFeatureClass, List<GisFeature> gisFeatures, List<FieldDescription> fields)
+  public void AddFeaturesToTable(Table newFeatureClass, List<IGisFeature> gisFeatures, List<FieldDescription> fields)
   {
-    foreach (GisFeature feat in gisFeatures)
+    foreach (IGisFeature feat in gisFeatures)
     {
       using (RowBuffer rowBuffer = newFeatureClass.CreateRowBuffer())
       {
-        newFeatureClass
-          .CreateRow(
-            _fieldsUtils.AssignFieldValuesToRow(
-              rowBuffer,
-              fields,
-              feat.attributes.GetMembers(DynamicBaseMemberType.Dynamic)
-            )
-          )
-          .Dispose();
-      }
-    }
-  }
-
-  public void AddFeaturesToFeatureClass(
-    FeatureClass newFeatureClass,
-    List<GisFeature> gisFeatures,
-    List<FieldDescription> fields,
-    ITypedConverter<IReadOnlyList<Base>, ACG.Geometry> gisGeometryConverter
-  )
-  {
-    foreach (GisFeature feat in gisFeatures)
-    {
-      using (RowBuffer rowBuffer = newFeatureClass.CreateRowBuffer())
-      {
-        if (feat.geometry != null)
-        {
-          List<Base> geometryToConvert = feat.geometry;
-          ACG.Geometry nativeShape = gisGeometryConverter.Convert(geometryToConvert);
-          rowBuffer[newFeatureClass.GetDefinition().GetShapeField()] = nativeShape;
-        }
-        else
-        {
-          throw new SpeckleConversionException("No geomerty to write");
-        }
-
-        // get attributes
-        newFeatureClass
-          .CreateRow(
-            _fieldsUtils.AssignFieldValuesToRow(
-              rowBuffer,
-              fields,
-              feat.attributes.GetMembers(DynamicBaseMemberType.Dynamic)
-            )
-          )
-          .Dispose();
+        RowBuffer assignedRowBuffer = _fieldsUtils.AssignFieldValuesToRow(
+          rowBuffer,
+          fields,
+          feat.attributes.GetMembers(DynamicBaseMemberType.Dynamic)
+        );
+        newFeatureClass.CreateRow(assignedRowBuffer).Dispose();
       }
     }
   }

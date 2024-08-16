@@ -5,6 +5,7 @@ using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Proxies;
 
@@ -168,12 +169,30 @@ public class ArcGISColorManager
       }
     }
 
-    // Add new CIMUniqueValueClass
-    CIMUniqueValueClass newUniqueValueClass = CreateColorCategory(tc, fLayer.ShapeType);
-    if (!listUniqueValueClasses.Select(x => x.Label).Contains(newUniqueValueClass.Label))
+    // Add new CIMUniqueValueClass (or multiple, if it's a Collection with elements, e.g. VectorLayer)
+    List<TraversalContext> traversalContexts = new();
+    if (tc.Current is Collection collection)
     {
-      listUniqueValueClasses.Add(newUniqueValueClass);
+      foreach (var element in collection.elements)
+      {
+        TraversalContext newTc = new(element, "elements", tc);
+        traversalContexts.Add(newTc);
+      }
     }
+    else
+    {
+      traversalContexts.Add(tc);
+    }
+
+    foreach (var tContext in traversalContexts)
+    {
+      CIMUniqueValueClass newUniqueValueClass = CreateColorCategory(tContext, fLayer.ShapeType);
+      if (!listUniqueValueClasses.Select(x => x.Label).Contains(newUniqueValueClass.Label))
+      {
+        listUniqueValueClasses.Add(newUniqueValueClass);
+      }
+    }
+
     // Create a list of CIMUniqueValueGroup
     CIMUniqueValueGroup uvg = new() { Classes = listUniqueValueClasses.ToArray(), };
     List<CIMUniqueValueGroup> listUniqueValueGroups = new() { uvg };
@@ -311,34 +330,69 @@ public class ArcGISColorManager
 
   private int RgbFromHsv(CIMHSVColor hsvColor)
   {
+    // Translates HSV color to RGB color
+    // H: 0.0 - 360.0, S: 0.0 - 100.0, V: 0.0 - 100.0
+    // R, G, B: 0.0 - 1.0
+
     float hue = hsvColor.H;
     float saturation = hsvColor.S;
     float value = hsvColor.V;
 
-    int hi = Convert.ToInt32(Math.Floor(hue / 60)) % 6;
-    double f = hue / 60 - Math.Floor(hue / 60);
+    float c = (value / 100) * (saturation / 100);
+    float x = c * (1 - Math.Abs(((hue / 60) % 2) - 1));
+    float m = (value / 100) - c;
 
-    saturation /= 255;
-    int v = Convert.ToInt32(value);
-    int p = Convert.ToInt32(value * (1 - saturation));
-    int q = Convert.ToInt32(value * (1 - f * saturation));
-    int t = Convert.ToInt32(value * (1 - (1 - f) * saturation));
+    float r = 0;
+    float g = 0;
+    float b = 0;
 
-    switch (hi)
+    if (hue >= 0 && hue < 60)
     {
-      case 0:
-        return RbgToInt(255, v, t, p);
-      case 1:
-        return RbgToInt(255, q, v, p);
-      case 2:
-        return RbgToInt(255, p, v, t);
-      case 3:
-        return RbgToInt(255, p, q, v);
-      case 4:
-        return RbgToInt(255, t, p, v);
-      default:
-        return RbgToInt(255, v, p, q);
+      r = c;
+      g = x;
+      b = 0;
     }
+    else if (hue >= 60 && hue < 120)
+    {
+      r = x;
+      g = c;
+      b = 0;
+    }
+    else if (hue >= 120 && hue < 180)
+    {
+      r = 0;
+      g = c;
+      b = x;
+    }
+    else if (hue >= 180 && hue < 240)
+    {
+      r = 0;
+      g = x;
+      b = c;
+    }
+    else if (hue >= 240 && hue < 300)
+    {
+      r = x;
+      g = 0;
+      b = c;
+    }
+    else if (hue >= 300 && hue < 360)
+    {
+      r = c;
+      g = 0;
+      b = x;
+    }
+
+    r += m;
+    g += m;
+    b += m;
+
+    // convert rgb 0.0-1.0 float to int
+    int red = (int)Math.Round(r * 255);
+    int green = (int)Math.Round(g * 255);
+    int blue = (int)Math.Round(b * 255);
+
+    return RbgToInt(255, red, green, blue);
   }
 
   private bool TryGetUniqueRendererColor(
@@ -412,7 +466,7 @@ public class ArcGISColorManager
     string newRowValue = Convert.ToString(rowValue) ?? "";
 
     // int, doubles are tricky to compare with strings, trimming both to 5 digits
-    if (rowValue is int || rowValue is Int16 || rowValue is Int64)
+    if (rowValue is int or short or long)
     {
       newRowValue = newRowValue.Split(".")[0];
       newGroupValue = newGroupValue.Split(".")[0];
