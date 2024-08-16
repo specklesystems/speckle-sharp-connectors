@@ -5,6 +5,9 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
 
+/// <summary>
+/// Converts Multipatch objects into a list containing some combination of GisMultipatchGeometry or PolygonGeometry3d objects
+/// </summary>
 public class MultipatchFeatureToSpeckleConverter : ITypedConverter<ACG.Multipatch, IReadOnlyList<Base>>
 {
   private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;

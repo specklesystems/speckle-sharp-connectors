@@ -91,6 +91,14 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
         }
       }
     }
+
+    // every feature needs Speckle_ID to be colored (before we implement native GIS renderers on Receive)
+    if (!fieldAdded.Contains("Speckle_ID"))
+    {
+      FieldDescription fieldDescriptionId =
+        new(_characterCleaner.CleanCharacters("Speckle_ID"), FieldType.String) { AliasName = "Speckle_ID" };
+      fields.Add(fieldDescriptionId);
+    }
     return fields;
   }
 
