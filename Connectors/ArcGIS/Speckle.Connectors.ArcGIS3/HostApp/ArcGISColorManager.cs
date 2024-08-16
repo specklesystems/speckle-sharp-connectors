@@ -330,34 +330,109 @@ public class ArcGISColorManager
 
   private int RgbFromHsv(CIMHSVColor hsvColor)
   {
+    // Translates HSV color to RGB color
+    // H: 0.0 - 360.0, S: 0.0 - 100.0, V: 0.0 - 100.0
+    // R, G, B: 0.0 - 1.0
+
     float hue = hsvColor.H;
     float saturation = hsvColor.S;
     float value = hsvColor.V;
 
-    int hi = Convert.ToInt32(Math.Floor(hue / 60)) % 6;
-    double f = hue / 60 - Math.Floor(hue / 60);
+    float c = (value / 100) * (saturation / 100);
+    float x = c * (1 - Math.Abs(((hue / 60) % 2) - 1));
+    float m = (value / 100) - c;
 
-    saturation /= 255;
-    int v = Convert.ToInt32(value);
-    int p = Convert.ToInt32(value * (1 - saturation));
-    int q = Convert.ToInt32(value * (1 - f * saturation));
-    int t = Convert.ToInt32(value * (1 - (1 - f) * saturation));
+    float r = 0;
+    float g = 0;
+    float b = 0;
 
-    switch (hi)
+    if (hue >= 0 && hue < 60)
     {
-      case 0:
-        return RbgToInt(255, v, t, p);
-      case 1:
-        return RbgToInt(255, q, v, p);
-      case 2:
-        return RbgToInt(255, p, v, t);
-      case 3:
-        return RbgToInt(255, p, q, v);
-      case 4:
-        return RbgToInt(255, t, p, v);
-      default:
-        return RbgToInt(255, v, p, q);
+      r = c;
+      g = x;
+      b = 0;
     }
+    else if (hue >= 60 && hue < 120)
+    {
+      r = x;
+      g = c;
+      b = 0;
+    }
+    else if (hue >= 120 && hue < 180)
+    {
+      r = 0;
+      g = c;
+      b = x;
+    }
+    else if (hue >= 180 && hue < 240)
+    {
+      r = 0;
+      g = x;
+      b = c;
+    }
+    else if (hue >= 240 && hue < 300)
+    {
+      r = x;
+      g = 0;
+      b = c;
+    }
+    else if (hue >= 300 && hue < 360)
+    {
+      r = c;
+      g = 0;
+      b = x;
+    }
+
+    r += m;
+    g += m;
+    b += m;
+
+    // convert rgb 0.0-1.0 float to int
+    int red = (int)Math.Round(r * 255);
+    int green = (int)Math.Round(g * 255);
+    int blue = (int)Math.Round(b * 255);
+
+    return RbgToInt(255, red, green, blue);
+  }
+
+  /// <summary>
+  /// Converts HSV color values to RGB
+  /// </summary>
+  /// <param name="h">0 - 360</param>
+  /// <param name="s">0 - 100</param>
+  /// <param name="v">0 - 100</param>
+  /// <param name="r">0 - 255</param>
+  /// <param name="g">0 - 255</param>
+  /// <param name="b">0 - 255</param>
+  private int HSVToRGB(int h, int s, int v, out int r, out int g, out int b)
+  {
+    var rgb = new int[3];
+
+    var baseColor = (h + 60) % 360 / 120;
+    var shift = (h + 60) % 360 - (120 * baseColor + 60);
+    var secondaryColor = (baseColor + (shift >= 0 ? 1 : -1) + 3) % 3;
+
+    //Setting Hue
+    rgb[baseColor] = 255;
+    rgb[secondaryColor] = (int)((Math.Abs(shift) / 60.0f) * 255.0f);
+
+    //Setting Saturation
+    for (var i = 0; i < 3; i++)
+    {
+      rgb[i] += (int)((255 - rgb[i]) * ((100 - s) / 100.0f));
+    }
+
+    //Setting Value
+    for (var i = 0; i < 3; i++)
+    {
+      rgb[i] -= (int)(rgb[i] * (100 - v) / 100.0f);
+    }
+
+    r = rgb[0];
+    g = rgb[1];
+    b = rgb[2];
+
+    return RbgToInt(255, r, g, b);
   }
 
   private bool TryGetUniqueRendererColor(
@@ -431,7 +506,7 @@ public class ArcGISColorManager
     string newRowValue = Convert.ToString(rowValue) ?? "";
 
     // int, doubles are tricky to compare with strings, trimming both to 5 digits
-    if (rowValue is int || rowValue is Int16 || rowValue is Int64)
+    if (rowValue is int or short or long)
     {
       newRowValue = newRowValue.Split(".")[0];
       newGroupValue = newGroupValue.Split(".")[0];
