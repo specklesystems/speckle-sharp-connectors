@@ -4,6 +4,7 @@ using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Instances;
+using Speckle.Converters.Common;
 using Speckle.DoubleNumerics;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
@@ -23,6 +24,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
   private readonly AutocadLayerManager _autocadLayerManager;
   private readonly AutocadColorManager _autocadColorManager;
   private readonly AutocadMaterialManager _autocadMaterialManager;
+  private readonly IHostToSpeckleUnitConverter<UnitsValue> _unitsConverter;
   private readonly AutocadContext _autocadContext;
 
   private readonly IInstanceObjectsManager<AutocadRootObject, List<Entity>> _instanceObjectsManager;
@@ -31,6 +33,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
     AutocadLayerManager autocadLayerManager,
     AutocadColorManager autocadColorManager,
     AutocadMaterialManager autocadMaterialManager,
+    IHostToSpeckleUnitConverter<UnitsValue> unitsConverter,
     AutocadContext autocadContext,
     IInstanceObjectsManager<AutocadRootObject, List<Entity>> instanceObjectsManager
   )
@@ -38,6 +41,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
     _autocadLayerManager = autocadLayerManager;
     _autocadColorManager = autocadColorManager;
     _autocadMaterialManager = autocadMaterialManager;
+    _unitsConverter = unitsConverter;
     _autocadContext = autocadContext;
     _instanceObjectsManager = instanceObjectsManager;
   }
@@ -79,7 +83,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
         definitionId = definitionId.ToString(),
         maxDepth = depth,
         transform = GetMatrix(instance.BlockTransform.ToArray()),
-        units = Application.DocumentManager.CurrentDocument.Database.Insunits.ToSpeckleString()
+        units = _unitsConverter.ConvertOrThrow(Application.DocumentManager.CurrentDocument.Database.Insunits)
       };
     _instanceObjectsManager.AddInstanceProxy(instanceIdString, instanceProxy);
 
@@ -131,8 +135,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
       objects = new(),
       maxDepth = depth,
       name = hasAnonymousBlockTableRecordDefinition ? "Dynamic instance " + definitionId : definition.Name,
-      ["comments"] = definition.Comments,
-      ["units"] = definition.Units // ? not sure needed?
+      ["comments"] = definition.Comments
     };
 
     // Go through each definition object
@@ -368,7 +371,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
   {
     var sf = Units.GetConversionFactor(
       units,
-      Application.DocumentManager.CurrentDocument.Database.Insunits.ToSpeckleString()
+      _unitsConverter.ConvertOrThrow(Application.DocumentManager.CurrentDocument.Database.Insunits)
     );
 
     var scaledTransform = new[]
