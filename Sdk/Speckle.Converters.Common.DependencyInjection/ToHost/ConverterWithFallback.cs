@@ -54,7 +54,7 @@ public sealed class ConverterWithFallback : IRootToHostConverter
       {
         throw new NotSupportedException($"No display value found for {type}");
       }
-      return FallbackToDisplayValue(displayValue); // 1-many mapping
+      return FallbackToDisplayValue(displayValue); // 1 - many mapping
     }
 
     throw new NotSupportedException($"No conversion found for {type}");
