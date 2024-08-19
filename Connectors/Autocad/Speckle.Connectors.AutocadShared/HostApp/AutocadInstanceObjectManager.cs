@@ -67,18 +67,11 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
   {
     string instanceId = instance.GetSpeckleApplicationId();
 
-    /// <summary>
-    /// Retrieves the definition ObjectId of an instance, depending on dynamic block properties
-    /// </summary>
-    /// <param name="instance"></param>
-    /// <returns></returns>
-    /// <remarks>
-    /// If this instance has a reference to an anonymous block, it means it's spawned from a dynamic block. Anonymous blocks are
-    /// used to represent specific "instances" of dynamic ones.
-    /// We do not want to send the full dynamic block definition, but its current "instance", as such here we're making sure we
-    /// take up the anon block table reference definition (if it exists). If it's not an instance of a dynamic block, we're
-    /// using the normal def reference.
-    /// </remarks>
+    // If this instance has a reference to an anonymous block, it means it's spawned from a dynamic block. Anonymous blocks are
+    // used to represent specific "instances" of dynamic ones.
+    // We do not want to send the full dynamic block definition, but its current "instance", as such here we're making sure we
+    // take up the anon block table reference definition (if it exists). If it's not an instance of a dynamic block, we're
+    // using the normal def reference.
     ObjectId definitionId = !instance.AnonymousBlockTableRecord.IsNull
       ? instance.AnonymousBlockTableRecord
       : instance.BlockTableRecord;
