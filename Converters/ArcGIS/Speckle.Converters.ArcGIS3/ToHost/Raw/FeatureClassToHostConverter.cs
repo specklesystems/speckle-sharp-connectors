@@ -1,30 +1,34 @@
 using ArcGIS.Core.Data;
 using ArcGIS.Core.Data.DDL;
 using ArcGIS.Core.Data.Exceptions;
-using Objects.GIS;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Models;
+using Speckle.Objects;
+using Speckle.Objects.GIS;
+using Speckle.Sdk.Models;
 using FieldDescription = ArcGIS.Core.Data.DDL.FieldDescription;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.Raw;
 
 public class FeatureClassToHostConverter : ITypedConverter<VectorLayer, FeatureClass>
 {
-  private readonly ITypedConverter<IReadOnlyList<Base>, ACG.Geometry> _gisGeometryConverter;
+  private readonly ITypedConverter<IGisFeature, (ACG.Geometry, Dictionary<string, object?>)> _iGisFeatureConverter;
+  private readonly ITypedConverter<GisFeature, (ACG.Geometry, Dictionary<string, object?>)> _gisFeatureConverter;
   private readonly IFeatureClassUtils _featureClassUtils;
   private readonly IArcGISFieldUtils _fieldsUtils;
   private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;
 
   public FeatureClassToHostConverter(
-    ITypedConverter<IReadOnlyList<Base>, ACG.Geometry> gisGeometryConverter,
+    ITypedConverter<IGisFeature, (ACG.Geometry, Dictionary<string, object?>)> iGisFeatureConverter,
+    ITypedConverter<GisFeature, (ACG.Geometry, Dictionary<string, object?>)> gisFeatureConverter,
     IFeatureClassUtils featureClassUtils,
     IArcGISFieldUtils fieldsUtils,
     IConversionContextStack<ArcGISDocument, ACG.Unit> contextStack
   )
   {
-    _gisGeometryConverter = gisGeometryConverter;
+    _iGisFeatureConverter = iGisFeatureConverter;
+    _gisFeatureConverter = gisFeatureConverter;
     _featureClassUtils = featureClassUtils;
     _fieldsUtils = fieldsUtils;
     _contextStack = contextStack;
@@ -38,35 +42,6 @@ public class FeatureClassToHostConverter : ITypedConverter<VectorLayer, FeatureC
       if (baseElement is GisFeature feature)
       {
         gisFeatures.Add(feature);
-      }
-      else
-      {
-        if (
-          baseElement["geometry"] is List<object> originalGeometries
-          && baseElement["attributes"] is Base originalAttrs
-          && (baseElement["displayValue"] is List<object> || baseElement["displayValue"] == null)
-        )
-        {
-          var originalDisplayVal = baseElement["displayValue"];
-          List<Base> geometry = originalGeometries.Select(x => (Base)x).ToList();
-          Base attributes = originalAttrs;
-          List<Base>? displayValue =
-            originalDisplayVal == null
-              ? new List<Base>()
-              : ((List<object>)originalDisplayVal).Select(x => (Base)x).ToList();
-          GisFeature newfeature =
-            new()
-            {
-              geometry = geometry,
-              attributes = attributes,
-              displayValue = displayValue
-            };
-          gisFeatures.Add(newfeature);
-        }
-        else
-        {
-          gisFeatures.Add((GisFeature)baseElement);
-        }
       }
     }
     return gisFeatures;
@@ -90,15 +65,9 @@ public class FeatureClassToHostConverter : ITypedConverter<VectorLayer, FeatureC
     // ATM, GIS commit CRS is stored per layer, but should be moved to the Root level too, and created once per Receive
     ACG.SpatialReference spatialRef = ACG.SpatialReferenceBuilder.CreateSpatialReference(wktString);
 
-    double trueNorthRadians = System.Convert.ToDouble(
-      (target.crs == null || target.crs?.rotation == null) ? 0 : target.crs.rotation
-    );
-    double latOffset = System.Convert.ToDouble(
-      (target.crs == null || target.crs?.offset_y == null) ? 0 : target.crs.offset_y
-    );
-    double lonOffset = System.Convert.ToDouble(
-      (target.crs == null || target.crs?.offset_x == null) ? 0 : target.crs.offset_x
-    );
+    double trueNorthRadians = System.Convert.ToDouble((target.crs?.rotation == null) ? 0 : target.crs.rotation);
+    double latOffset = System.Convert.ToDouble((target.crs?.offset_y == null) ? 0 : target.crs.offset_y);
+    double lonOffset = System.Convert.ToDouble((target.crs?.offset_x == null) ? 0 : target.crs.offset_x);
     _contextStack.Current.Document.ActiveCRSoffsetRotation = new CRSoffsetRotation(
       spatialRef,
       latOffset,
@@ -149,12 +118,48 @@ public class FeatureClassToHostConverter : ITypedConverter<VectorLayer, FeatureC
     try
     {
       FeatureClass newFeatureClass = geodatabase.OpenDataset<FeatureClass>(featureClassName);
-      // backwards compatibility:
-      List<GisFeature> gisFeatures = RecoverOutdatedGisFeatures(target);
-      // Add features to the FeatureClass
+
+      // handle and convert element types
+      List<(ACG.Geometry, Dictionary<string, object?>)> featureClassElements = new();
+
+      List<IGisFeature> gisFeatures = target.elements.Where(o => o is IGisFeature).Cast<IGisFeature>().ToList();
+      if (gisFeatures.Count > 0)
+      {
+        featureClassElements = gisFeatures.Select(o => _iGisFeatureConverter.Convert(o)).ToList();
+      }
+      else // V2 compatibility with QGIS (still using GisFeature class)
+      {
+        List<GisFeature> oldGisFeatures = target.elements.Where(o => o is GisFeature).Cast<GisFeature>().ToList();
+        featureClassElements = oldGisFeatures.Select(o => _gisFeatureConverter.Convert(o)).ToList();
+      }
+
+      // process features into rows
+      if (featureClassElements.Count == 0)
+      {
+        // POC: REPORT CONVERTED WITH ERROR HERE
+        return newFeatureClass;
+      }
+
       geodatabase.ApplyEdits(() =>
       {
-        _featureClassUtils.AddFeaturesToFeatureClass(newFeatureClass, gisFeatures, fields, _gisGeometryConverter);
+        foreach ((ACG.Geometry?, Dictionary<string, object?>) featureClassElement in featureClassElements)
+        {
+          using (RowBuffer rowBuffer = newFeatureClass.CreateRowBuffer())
+          {
+            if (featureClassElement.Item1 is not ACG.Geometry shape)
+            {
+              throw new SpeckleConversionException("Feature Class element had no converted geometry");
+            }
+
+            rowBuffer[newFeatureClass.GetDefinition().GetShapeField()] = shape;
+            RowBuffer assignedRowBuffer = _fieldsUtils.AssignFieldValuesToRow(
+              rowBuffer,
+              fields,
+              featureClassElement.Item2
+            ); // assign atts
+            newFeatureClass.CreateRow(assignedRowBuffer).Dispose();
+          }
+        }
       });
 
       return newFeatureClass;

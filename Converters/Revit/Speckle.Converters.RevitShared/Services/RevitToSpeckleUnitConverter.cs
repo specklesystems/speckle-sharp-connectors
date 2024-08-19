@@ -1,6 +1,6 @@
 using Speckle.Converters.Common;
-using Speckle.Core.Kits;
-using Speckle.Core.Logging;
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.Services;
 

@@ -1,11 +1,14 @@
-﻿using System.Reflection;
+using System.IO;
+using System.Reflection;
 using Rhino.PlugIns;
 using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Rhino.DependencyInjection;
-using Speckle.Connectors.Rhino.HostApp;
-using Speckle.Core.Kits;
-using Speckle.Core.Models.Extensions;
+using Speckle.Connectors.Utils;
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Host;
+using Speckle.Sdk.Models.Extensions;
 
 namespace Speckle.Connectors.Rhino.Plugin;
 
@@ -20,6 +23,7 @@ namespace Speckle.Connectors.Rhino.Plugin;
 public class SpeckleConnectorsRhinoPlugin : PlugIn
 {
   private IRhinoPlugin? _rhinoPlugin;
+  private IDisposable? _disposableLogger;
 
   protected override string LocalPlugInName => "Speckle (New UI)";
   public SpeckleContainer? Container { get; private set; }
@@ -43,17 +47,16 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
     try
     {
       AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<SpeckleConnectorsRhinoPlugin>;
-
-      var builder = SpeckleContainerBuilder.CreateInstance();
-
-      // Register Settings
-      var rhinoSettings = new RhinoSettings(HostApplications.Rhino, HostAppVersion.v7);
+      _disposableLogger = Connector.Initialize(HostApplications.Rhino, GetVersion());
 
       // POC: We must load the Rhino connector module manually because we only search for DLL files when calling `LoadAutofacModules`,
       // but the Rhino connector has `.rhp` as it's extension.
-      Container = builder
-        .LoadAutofacModules(Assembly.GetExecutingAssembly(), rhinoSettings.Modules)
-        .AddSingleton(rhinoSettings)
+      Container = SpeckleContainerBuilder
+        .CreateInstance()
+        .LoadAutofacModules(
+          Assembly.GetExecutingAssembly(),
+          [Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location).NotNull()]
+        )
         .Build();
 
       // Resolve root plugin object and initialise.
@@ -69,9 +72,21 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
     }
   }
 
+  private HostAppVersion GetVersion()
+  {
+#if RHINO7
+    return HostAppVersion.v7;
+#elif RHINO8
+    return HostAppVersion.v8;
+#else
+    throw new NotImplementedException();
+#endif
+  }
+
   protected override void OnShutdown()
   {
     _rhinoPlugin?.Shutdown();
+    _disposableLogger?.Dispose();
     base.OnShutdown();
   }
 }

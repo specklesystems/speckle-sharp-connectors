@@ -2,7 +2,7 @@ using Autodesk.AutoCAD.Geometry;
 using Speckle.Converters.Autocad.Extensions;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Models;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 
@@ -33,7 +33,7 @@ public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Cur
     // POC: HACK: check for incorrectly closed periodic curves (this seems like acad bug, has resulted from receiving rhino curves)
     bool periodicClosed = false;
     double length = 0;
-    SOP.Interval domain = new();
+    SOP.Interval domain = SOP.Interval.UnitInterval;
     if (target.GetGeCurve() is NurbCurve3d nurbs)
     {
       length = nurbs.GetLength(nurbs.StartParameter, nurbs.EndParameter, 0.001);
@@ -109,15 +109,12 @@ public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Cur
       length = length,
       domain = domain,
       bbox = _boxConverter.Convert(target.GeometricExtents),
-      units = _contextStack.Current.SpeckleUnits
+      units = _contextStack.Current.SpeckleUnits,
+      displayValue = target.Database is not null ? GetDisplayValue(target) : null!,
     };
 
     // POC: get display value if this is a database-resident spline
     // POC: if this is called by another converter that has created a spline, assumes the display value is set by that converter
-    if (target.Database is not null)
-    {
-      curve.displayValue = GetDisplayValue(target);
-    }
 
     return curve;
   }

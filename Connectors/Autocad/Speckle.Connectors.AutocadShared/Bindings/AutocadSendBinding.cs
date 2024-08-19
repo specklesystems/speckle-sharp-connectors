@@ -1,5 +1,6 @@
+using System.Collections.Concurrent;
 using Autodesk.AutoCAD.DatabaseServices;
-using Speckle.Autofac;
+using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
@@ -7,13 +8,16 @@ using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Exceptions;
+using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
+using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
-using Speckle.Core.Common;
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Autocad.Bindings;
 
@@ -21,6 +25,7 @@ public sealed class AutocadSendBinding : ISendBinding
 {
   public string Name => "sendBinding";
   public SendBindingUICommands Commands { get; }
+  private OperationProgressManager OperationProgressManager { get; }
   public IBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
@@ -28,14 +33,18 @@ public sealed class AutocadSendBinding : ISendBinding
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
-  private readonly AutocadSettings _autocadSettings;
   private readonly ISendConversionCache _sendConversionCache;
+  private readonly IOperationProgressManager _operationProgressManager;
+  private readonly ILogger<AutocadSendBinding> _logger;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   /// <summary>
-  /// Used internally to aggregate the changed objects' id.
+  /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
+  /// [CNX-202: Unhandled Exception Occurred when receiving in Rhino](https://linear.app/speckle/issue/CNX-202/unhandled-exception-occurred-when-receiving-in-rhino)
+  /// As to why a concurrent dictionary, it's because it's the cheapest/easiest way to do so.
+  /// https://stackoverflow.com/questions/18922985/concurrent-hashsett-in-net-framework
   /// </summary>
-  private HashSet<string> ChangedObjectIds { get; set; } = new();
+  private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
 
   public AutocadSendBinding(
     DocumentModelStore store,
@@ -43,18 +52,20 @@ public sealed class AutocadSendBinding : ISendBinding
     IBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     CancellationManager cancellationManager,
-    AutocadSettings autocadSettings,
     IUnitOfWorkFactory unitOfWorkFactory,
-    ISendConversionCache sendConversionCache
+    ISendConversionCache sendConversionCache,
+    IOperationProgressManager operationProgressManager,
+    ILogger<AutocadSendBinding> logger
   )
   {
     _store = store;
     _idleManager = idleManager;
     _unitOfWorkFactory = unitOfWorkFactory;
-    _autocadSettings = autocadSettings;
     _cancellationManager = cancellationManager;
     _sendFilters = sendFilters.ToList();
     _sendConversionCache = sendConversionCache;
+    _operationProgressManager = operationProgressManager;
+    _logger = logger;
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
@@ -67,6 +78,11 @@ public sealed class AutocadSendBinding : ISendBinding
       // catches the case when autocad just opens up with a blank new doc
       SubscribeToObjectChanges(Application.DocumentManager.CurrentDocument);
     }
+    // Since ids of the objects generates from same seed, we should clear the cache always whenever doc swapped.
+    _store.DocumentChanged += (_, _) =>
+    {
+      _sendConversionCache.ClearCache();
+    };
   }
 
   private readonly List<string> _docSubsTracker = new();
@@ -91,14 +107,14 @@ public sealed class AutocadSendBinding : ISendBinding
 
   private void OnChangeChangedObjectIds(DBObject dBObject)
   {
-    ChangedObjectIds.Add(dBObject.Handle.Value.ToString());
+    ChangedObjectIds[dBObject.Handle.Value.ToString()] = 1;
     _idleManager.SubscribeToIdle(nameof(AutocadSendBinding), RunExpirationChecks);
   }
 
   private void RunExpirationChecks()
   {
     var senders = _store.GetSenders();
-    string[] objectIdsList = ChangedObjectIds.ToArray();
+    string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
     List<string> expiredSenderIds = new();
 
     _sendConversionCache.EvictObjects(objectIdsList);
@@ -114,10 +130,12 @@ public sealed class AutocadSendBinding : ISendBinding
     }
 
     Commands.SetModelsExpired(expiredSenderIds);
-    ChangedObjectIds = new HashSet<string>();
+    ChangedObjectIds = new();
   }
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
+
+  public List<CardSetting> GetSendSettings() => [];
 
   public Task Send(string modelCardId)
   {
@@ -137,8 +155,7 @@ public sealed class AutocadSendBinding : ISendBinding
 
       using var uow = _unitOfWorkFactory.Resolve<SendOperation<AutocadRootObject>>();
 
-      // Init cancellation token source -> Manager also cancel it if exist before
-      CancellationTokenSource cts = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
       // Disable document activation (document creation and document switch)
       // Not disabling results in DUI model card being out of sync with the active document
@@ -159,10 +176,15 @@ public sealed class AutocadSendBinding : ISendBinding
       var sendResult = await uow
         .Service.Execute(
           autocadObjects,
-          modelCard.GetSendInfo(_autocadSettings.HostAppInfo.Name),
+          modelCard.GetSendInfo(Speckle.Connectors.Utils.Connector.Slug),
           (status, progress) =>
-            Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts),
-          cts.Token
+            _operationProgressManager.SetModelProgress(
+              Parent,
+              modelCardId,
+              new ModelCardProgress(modelCardId, status, progress),
+              cancellationToken
+            ),
+          cancellationToken
         )
         .ConfigureAwait(false);
 
@@ -175,9 +197,10 @@ public sealed class AutocadSendBinding : ISendBinding
       // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
       return;
     }
-    catch (Exception e) when (!e.IsFatal()) // UX reasons - we will report operation exceptions as model card error.
+    catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
-      Commands.SetModelError(modelCardId, e);
+      _logger.LogModelCardHandledError(ex);
+      Commands.SetModelError(modelCardId, ex);
     }
     finally
     {

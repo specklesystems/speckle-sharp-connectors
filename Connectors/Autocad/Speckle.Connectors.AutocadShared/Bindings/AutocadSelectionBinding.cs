@@ -46,13 +46,20 @@ public class AutocadSelectionBinding : ISelectionBinding
     }
   }
 
+  // NOTE: Autocad 2022 caused problems, so we need to refactor things a bit in here to always store
+  // selection info locally (and get it updated by the event, which we can control to run on the main thread).
+  // Ui requests to GetSelection() should just return this local copy that is kept up to date by the event handler.
+  private SelectionInfo _selectionInfo;
+
   private void OnSelectionChanged()
   {
-    SelectionInfo selInfo = GetSelection();
-    Parent.Send(SELECTION_EVENT, selInfo);
+    _selectionInfo = GetSelectionInternal();
+    Parent.Send(SELECTION_EVENT, _selectionInfo);
   }
 
-  public SelectionInfo GetSelection()
+  public SelectionInfo GetSelection() => _selectionInfo;
+
+  private SelectionInfo GetSelectionInternal()
   {
     // POC: Will be addressed to move it into AutocadContext! https://spockle.atlassian.net/browse/CNX-9319
     Document? doc = Application.DocumentManager.MdiActiveDocument;
@@ -60,10 +67,10 @@ public class AutocadSelectionBinding : ISelectionBinding
     List<string> objectTypes = new();
     if (doc != null)
     {
+      using var tr = doc.TransactionManager.StartTransaction();
       PromptSelectionResult selection = doc.Editor.SelectImplied();
       if (selection.Status == PromptStatus.OK)
       {
-        using var tr = doc.TransactionManager.StartTransaction();
         foreach (SelectedObject obj in selection.Value)
         {
           var dbObject = tr.GetObject(obj.ObjectId, OpenMode.ForRead);

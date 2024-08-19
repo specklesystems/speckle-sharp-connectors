@@ -22,7 +22,7 @@ using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Instances;
 using Speckle.Connectors.Utils.Operations;
-using Speckle.Core.Models.GraphTraversal;
+using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.Rhino.DependencyInjection;
 
@@ -90,5 +90,9 @@ public class RhinoConnectorModule : ISpeckleModule
     builder.AddScoped<RhinoGroupManager>();
     builder.AddScoped<RhinoLayerManager>();
     builder.AddScoped<RhinoMaterialManager>();
+    builder.AddScoped<RhinoColorManager>();
+
+    // operation progress manager
+    builder.AddSingleton<IOperationProgressManager, OperationProgressManager>();
   }
 }

@@ -1,5 +1,5 @@
-﻿using Objects.Other;
-using Speckle.Converters.Common.Objects;
+﻿using Speckle.Converters.Common.Objects;
+using Speckle.Objects.Other;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 

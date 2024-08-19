@@ -3,7 +3,7 @@ using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Services;
-using Speckle.Core.Common;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.Helpers;
 

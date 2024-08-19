@@ -4,6 +4,7 @@ using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.ArcGIS.Bindings;
 using Speckle.Connectors.ArcGIS.Filters;
+using Speckle.Connectors.ArcGIS.HostApp;
 using Speckle.Connectors.ArcGIS.Operations.Receive;
 using Speckle.Connectors.ArcGis.Operations.Send;
 using Speckle.Connectors.ArcGIS.Utils;
@@ -18,7 +19,7 @@ using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Instances;
 using Speckle.Connectors.Utils.Operations;
-using Speckle.Core.Models.GraphTraversal;
+using Speckle.Sdk.Models.GraphTraversal;
 
 // POC: This is a temp reference to root object senders to tweak CI failing after having generic interfaces into common project.
 // This should go whenever it is aligned.
@@ -67,10 +68,14 @@ public class ArcGISConnectorModule : ISpeckleModule
     builder.AddScoped<SendOperation<MapMember>>();
     builder.AddScoped<ArcGISRootObjectBuilder>();
     builder.AddScoped<IRootObjectBuilder<MapMember>, ArcGISRootObjectBuilder>();
+    builder.AddScoped<ArcGISColorManager>();
 
     builder.AddScoped<ILocalToGlobalUnpacker, LocalToGlobalUnpacker>();
 
     // register send conversion cache
     builder.AddSingleton<ISendConversionCache, SendConversionCache>();
+
+    // operation progress manager
+    builder.AddSingleton<IOperationProgressManager, OperationProgressManager>();
   }
 }

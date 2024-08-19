@@ -1,7 +1,7 @@
-using Objects.BuiltElements.Revit.RevitRoof;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Objects.BuiltElements.Revit.RevitRoof;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -58,11 +58,6 @@ public class ExtrusionRoofToSpeckleTopLevelConverter
 
     _parameterObjectAssigner.AssignParametersToBase(target, speckleExtrusionRoof);
     speckleExtrusionRoof.displayValue = _displayValueExtractor.GetDisplayValue(target);
-
-    // POC: removing hosted elements from roof
-    // speckleExtrusionRoof.elements = _hostedElementConverter
-    //   .ConvertHostedElements(target.GetHostedElementIds())
-    //   .ToList();
 
     return speckleExtrusionRoof;
   }

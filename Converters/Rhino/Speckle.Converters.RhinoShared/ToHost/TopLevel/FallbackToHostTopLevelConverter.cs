@@ -1,8 +1,8 @@
 ﻿using Rhino;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Kits;
-using Speckle.Core.Models;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Rhino.ToHost.TopLevel;
 

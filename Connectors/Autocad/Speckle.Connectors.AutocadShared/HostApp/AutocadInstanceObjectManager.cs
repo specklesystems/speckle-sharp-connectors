@@ -4,12 +4,14 @@ using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Instances;
-using Speckle.Core.Kits;
-using Speckle.Core.Logging;
-using Speckle.Core.Models;
-using Speckle.Core.Models.Collections;
-using Speckle.Core.Models.Instances;
+using Speckle.Converters.Common;
 using Speckle.DoubleNumerics;
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.Instances;
+using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 
 namespace Speckle.Connectors.Autocad.HostApp;
 
@@ -20,17 +22,26 @@ namespace Speckle.Connectors.Autocad.HostApp;
 public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>, IInstanceBaker<List<Entity>>
 {
   private readonly AutocadLayerManager _autocadLayerManager;
+  private readonly AutocadColorManager _autocadColorManager;
+  private readonly AutocadMaterialManager _autocadMaterialManager;
+  private readonly IHostToSpeckleUnitConverter<UnitsValue> _unitsConverter;
   private readonly AutocadContext _autocadContext;
 
   private readonly IInstanceObjectsManager<AutocadRootObject, List<Entity>> _instanceObjectsManager;
 
   public AutocadInstanceObjectManager(
     AutocadLayerManager autocadLayerManager,
+    AutocadColorManager autocadColorManager,
+    AutocadMaterialManager autocadMaterialManager,
+    IHostToSpeckleUnitConverter<UnitsValue> unitsConverter,
     AutocadContext autocadContext,
     IInstanceObjectsManager<AutocadRootObject, List<Entity>> instanceObjectsManager
   )
   {
     _autocadLayerManager = autocadLayerManager;
+    _autocadColorManager = autocadColorManager;
+    _autocadMaterialManager = autocadMaterialManager;
+    _unitsConverter = unitsConverter;
     _autocadContext = autocadContext;
     _instanceObjectsManager = instanceObjectsManager;
   }
@@ -72,7 +83,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
         definitionId = definitionId.ToString(),
         maxDepth = depth,
         transform = GetMatrix(instance.BlockTransform.ToArray()),
-        units = Application.DocumentManager.CurrentDocument.Database.Insunits.ToSpeckleString()
+        units = _unitsConverter.ConvertOrThrow(Application.DocumentManager.CurrentDocument.Database.Insunits)
       };
     _instanceObjectsManager.AddInstanceProxy(instanceIdString, instanceProxy);
 
@@ -124,8 +135,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
       objects = new(),
       maxDepth = depth,
       name = hasAnonymousBlockTableRecordDefinition ? "Dynamic instance " + definitionId : definition.Name,
-      ["comments"] = definition.Comments,
-      ["units"] = definition.Units // ? not sure needed?
+      ["comments"] = definition.Comments
     };
 
     // Go through each definition object
@@ -141,11 +151,12 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
       var handleIdString = obj.Handle.Value.ToString();
       definitionProxy.objects.Add(handleIdString);
 
-      if (obj is BlockReference blockReference && !blockReference.IsDynamicBlock)
+      if (obj is BlockReference blockReference)
       {
         UnpackInstance(blockReference, depth + 1, transaction);
       }
-      _instanceObjectsManager.AddAtomicObject(handleIdString, new(obj, handleIdString));
+
+      _instanceObjectsManager.AddAtomicObject(handleIdString, new((Entity)obj, handleIdString));
     }
 
     _instanceObjectsManager.AddDefinitionProxy(definitionId.ToString(), definitionProxy);
@@ -180,9 +191,9 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
         {
           // TODO: create definition (block table record)
           var constituentEntities = definitionProxy
-            .objects.Select(id => applicationIdMap.TryGetValue(id, out List<Entity> value) ? value : null)
+            .objects.Select(id => applicationIdMap.TryGetValue(id, out List<Entity>? value) ? value : null)
             .Where(x => x is not null)
-            .SelectMany(ent => ent)
+            .SelectMany(ent => ent!)
             .ToList();
 
           var record = new BlockTableRecord();
@@ -195,6 +206,11 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
           foreach (var entity in constituentEntities)
           {
             objectIds.Add(entity.ObjectId);
+          }
+
+          if (constituentEntities.Count == 0)
+          {
+            throw new ConversionException("No objects found to create instance definition.");
           }
 
           using var blockTable = (BlockTable)
@@ -221,19 +237,38 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
           );
 
           // POC: collectionPath for instances should be an array of size 1, because we are flattening collections on traversal
-          _autocadLayerManager.CreateLayerForReceive(collectionPath[0]);
-          var blockRef = new BlockReference(insertionPoint, definitionId)
+          string layerName = _autocadLayerManager.CreateLayerForReceive(collectionPath, baseLayerName);
+
+          // get color and material if any
+          string instanceId = instanceProxy.applicationId ?? instanceProxy.id;
+          AutocadColor? objColor = _autocadColorManager.ObjectColorsIdMap.TryGetValue(
+            instanceId,
+            out AutocadColor? color
+          )
+            ? color
+            : null;
+          ObjectId objMaterial = _autocadMaterialManager.ObjectMaterialsIdMap.TryGetValue(
+            instanceId,
+            out ObjectId matId
+          )
+            ? matId
+            : ObjectId.Null;
+
+          BlockReference blockRef = new(insertionPoint, definitionId) { BlockTransform = matrix3d, Layer = layerName, };
+
+          if (objColor is not null)
           {
-            BlockTransform = matrix3d,
-            Layer = collectionPath[0].name,
-          };
+            blockRef.Color = objColor;
+          }
+
+          if (objMaterial != ObjectId.Null)
+          {
+            blockRef.MaterialId = objMaterial;
+          }
 
           modelSpaceBlockTableRecord.AppendEntity(blockRef);
 
-          if (instanceProxy.applicationId != null)
-          {
-            applicationIdMap[instanceProxy.applicationId] = new List<Entity> { blockRef };
-          }
+          applicationIdMap[instanceId] = new List<Entity> { blockRef };
 
           transaction.AddNewlyCreatedDBObject(blockRef, true);
           conversionResults.Add(
@@ -247,6 +282,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
         conversionResults.Add(new(Status.ERROR, instanceOrDefinition as Base ?? new Base(), null, null, ex));
       }
     }
+
     transaction.Commit();
     return new(createdObjectIds, consumedObjectIds, conversionResults);
   }
@@ -335,7 +371,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
   {
     var sf = Units.GetConversionFactor(
       units,
-      Application.DocumentManager.CurrentDocument.Database.Insunits.ToSpeckleString()
+      _unitsConverter.ConvertOrThrow(Application.DocumentManager.CurrentDocument.Database.Insunits)
     );
 
     var scaledTransform = new[]

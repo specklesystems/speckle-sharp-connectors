@@ -1,9 +1,9 @@
 using ArcGIS.Core.Data.Raster;
 using ArcGIS.Core.Geometry;
-using Objects.GIS;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Models;
+using Speckle.Objects.GIS;
+using Speckle.Sdk.Models;
 using RasterLayer = ArcGIS.Desktop.Mapping.RasterLayer;
 
 namespace Speckle.Converters.ArcGIS3.ToSpeckle.TopLevel;
@@ -48,6 +48,7 @@ public class RasterLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
 
     // write details about the Raster
     RasterElement element = _gisRasterConverter.Convert(target.GetRaster());
+    element.applicationId = $"{target.URI}_0";
     speckleLayer.elements.Add(element);
 
     return speckleLayer;

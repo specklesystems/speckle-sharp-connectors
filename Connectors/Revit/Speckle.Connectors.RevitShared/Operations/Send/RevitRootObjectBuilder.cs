@@ -8,9 +8,9 @@ using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Core.Logging;
-using Speckle.Core.Models;
-using Speckle.Core.Models.Collections;
+using Speckle.Sdk;
+using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.Revit.Operations.Send;
 
@@ -24,13 +24,15 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ISyncToThread _syncToThread;
   private readonly SendSelectionUnpacker _sendSelectionUnpacker;
+  private readonly SendCollectionManager _sendCollectionManager;
 
   public RevitRootObjectBuilder(
     IRootToSpeckleConverter converter,
     IRevitConversionContextStack contextStack,
     ISendConversionCache sendConversionCache,
     ISyncToThread syncToThread,
-    SendSelectionUnpacker sendSelectionUnpacker
+    SendSelectionUnpacker sendSelectionUnpacker,
+    SendCollectionManager sendCollectionManager
   )
   {
     _converter = converter;
@@ -38,6 +40,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     _sendConversionCache = sendConversionCache;
     _syncToThread = syncToThread;
     _sendSelectionUnpacker = sendSelectionUnpacker;
+    _sendCollectionManager = sendCollectionManager;
 
     // Note, this class is instantiated per unit of work (aka per send operation), so we can safely initialize what we need in here.
     _collectionCache = new Dictionary<string, Collection>();
@@ -89,31 +92,6 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
       foreach (Element revitElement in atomicObjects)
       {
         ct.ThrowIfCancellationRequested();
-
-        var path = new List<string>();
-        // Add level to path
-        path.Add(doc.GetElement(revitElement.LevelId) is not Level level ? "No level" : level.Name);
-        // Add category to path
-        var cat = revitElement.Category?.Name ?? "No category";
-        path.Add(cat);
-
-        // Add optional type to path
-        var typeId = revitElement.GetTypeId();
-        if (typeId != ElementId.InvalidElementId)
-        {
-          var type = doc.GetElement(typeId);
-          if (type != null)
-          {
-            path.Add(type.Name);
-          }
-        }
-        else
-        {
-          path.Add("No type");
-        }
-
-        var collection = GetAndCreateObjectHostCollection(path);
-
         var applicationId = revitElement.Id.ToString();
         try
         {
@@ -129,7 +107,9 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
             converted.applicationId = applicationId;
           }
 
+          var collection = _sendCollectionManager.GetAndCreateObjectHostCollection(revitElement, _rootObject);
           collection.elements.Add(converted);
+          // TODO: extract material into proxies here?
           results.Add(new(Status.SUCCESS, applicationId, revitElement.GetType().Name, converted));
         }
         catch (Exception ex) when (!ex.IsFatal())
@@ -148,42 +128,4 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
 
       return new RootObjectBuilderResult(_rootObject, results);
     });
-
-  /// <summary>
-  /// Creates and nests collections based on the provided path within the root collection provided. This will not return a new collection each time is called, but an existing one if one is found.
-  /// For example, you can use this to use (or re-use) a new collection for a path of (level, category) as it's currently implemented.
-  /// </summary>
-  /// <param name="path"></param>
-  /// <returns></returns>
-  private Collection GetAndCreateObjectHostCollection(List<string> path)
-  {
-    string fullPathName = string.Concat(path);
-    if (_collectionCache.TryGetValue(fullPathName, out Collection? value))
-    {
-      return value;
-    }
-
-    string flatPathName = "";
-    Collection previousCollection = _rootObject;
-
-    foreach (var pathItem in path)
-    {
-      flatPathName += pathItem;
-      Collection childCollection;
-      if (_collectionCache.TryGetValue(flatPathName, out Collection? collection))
-      {
-        childCollection = collection;
-      }
-      else
-      {
-        childCollection = new Collection(pathItem, "layer");
-        previousCollection.elements.Add(childCollection);
-        _collectionCache[flatPathName] = childCollection;
-      }
-
-      previousCollection = childCollection;
-    }
-
-    return previousCollection;
-  }
 }

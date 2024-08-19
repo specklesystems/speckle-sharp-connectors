@@ -1,12 +1,13 @@
-using Speckle.Autofac;
+using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
-using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
+using Speckle.Sdk;
 
 namespace Speckle.Connectors.Autocad.Bindings;
 
@@ -18,22 +19,25 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
   private readonly DocumentModelStore _store;
   private readonly CancellationManager _cancellationManager;
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
-  private readonly AutocadSettings _autocadSettings;
+  private readonly IOperationProgressManager _operationProgressManager;
+  private readonly ILogger<AutocadReceiveBinding> _logger;
 
-  public ReceiveBindingUICommands Commands { get; }
+  private ReceiveBindingUICommands Commands { get; }
 
   public AutocadReceiveBinding(
     DocumentModelStore store,
     IBridge parent,
     CancellationManager cancellationManager,
     IUnitOfWorkFactory unitOfWorkFactory,
-    AutocadSettings autocadSettings
+    IOperationProgressManager operationProgressManager,
+    ILogger<AutocadReceiveBinding> logger
   )
   {
     _store = store;
     _cancellationManager = cancellationManager;
     _unitOfWorkFactory = unitOfWorkFactory;
-    _autocadSettings = autocadSettings;
+    _operationProgressManager = operationProgressManager;
+    _logger = logger;
     Parent = parent;
     Commands = new ReceiveBindingUICommands(parent);
   }
@@ -52,8 +56,7 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
         throw new InvalidOperationException("No download model card was found.");
       }
 
-      // Init cancellation token source -> Manager also cancel it if exist before
-      CancellationTokenSource cts = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
       // Disable document activation (document creation and document switch)
       // Not disabling results in DUI model card being out of sync with the active document
@@ -63,10 +66,15 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
       // Receive host objects
       var operationResults = await unitOfWork
         .Service.Execute(
-          modelCard.GetReceiveInfo(_autocadSettings.HostAppInfo.Name),
-          cts.Token,
+          modelCard.GetReceiveInfo(Speckle.Connectors.Utils.Connector.Slug),
+          cancellationToken,
           (status, progress) =>
-            Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts)
+            _operationProgressManager.SetModelProgress(
+              Parent,
+              modelCardId,
+              new ModelCardProgress(modelCardId, status, progress),
+              cancellationToken
+            )
         )
         .ConfigureAwait(false);
 
@@ -79,13 +87,14 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
       // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
       return;
     }
-    catch (Exception e) when (!e.IsFatal()) // UX reasons - we will report operation exceptions as model card error.
+    catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
-      Commands.SetModelError(modelCardId, e);
+      _logger.LogModelCardHandledError(ex);
+      Commands.SetModelError(modelCardId, ex);
     }
     finally
     {
-      // renable document activation
+      // reenable document activation
       Application.DocumentManager.DocumentActivationEnabled = true;
     }
   }

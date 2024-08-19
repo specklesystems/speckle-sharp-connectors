@@ -1,14 +1,13 @@
 using ArcGIS.Core.Data;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
-using Speckle.Connectors.ArcGIS.HostApp;
 using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Utils.Common;
-using Speckle.Core.Common;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.ArcGIS.Bindings;
 
@@ -20,12 +19,10 @@ public class BasicConnectorBinding : IBasicConnectorBinding
 
   public BasicConnectorBindingCommands Commands { get; }
   private readonly DocumentModelStore _store;
-  private readonly ArcGISSettings _settings;
 
-  public BasicConnectorBinding(DocumentModelStore store, ArcGISSettings settings, IBridge parent)
+  public BasicConnectorBinding(DocumentModelStore store, IBridge parent)
   {
     _store = store;
-    _settings = settings;
     Parent = parent;
     Commands = new BasicConnectorBindingCommands(parent);
 
@@ -35,9 +32,9 @@ public class BasicConnectorBinding : IBasicConnectorBinding
     };
   }
 
-  public string GetSourceApplicationName() => _settings.HostAppInfo.Slug;
+  public string GetSourceApplicationName() => Speckle.Connectors.Utils.Connector.Slug;
 
-  public string GetSourceApplicationVersion() => _settings.HostAppInfo.GetVersion(_settings.HostAppVersion);
+  public string GetSourceApplicationVersion() => Speckle.Connectors.Utils.Connector.VersionString;
 
   public string GetConnectorVersion() => typeof(BasicConnectorBinding).Assembly.GetVersion();
 

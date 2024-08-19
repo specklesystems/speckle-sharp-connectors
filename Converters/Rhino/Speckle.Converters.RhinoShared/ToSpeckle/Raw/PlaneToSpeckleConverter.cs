@@ -27,11 +27,12 @@ public class PlaneToSpeckleConverter : ITypedConverter<RG.Plane, SOG.Plane>
   /// <param name="target">The instance of Rhino Plane to convert.</param>
   /// <returns>The converted instance of Speckle Plane.</returns>
   public SOG.Plane Convert(RG.Plane target) =>
-    new(
-      _pointConverter.Convert(target.Origin),
-      _vectorConverter.Convert(target.ZAxis),
-      _vectorConverter.Convert(target.XAxis),
-      _vectorConverter.Convert(target.YAxis),
-      _contextStack.Current.SpeckleUnits
-    );
+    new()
+    {
+      origin = _pointConverter.Convert(target.Origin),
+      normal = _vectorConverter.Convert(target.ZAxis),
+      xdir = _vectorConverter.Convert(target.XAxis),
+      ydir = _vectorConverter.Convert(target.YAxis),
+      units = _contextStack.Current.SpeckleUnits
+    };
 }

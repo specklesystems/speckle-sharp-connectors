@@ -1,9 +1,11 @@
+using System.IO;
 using System.Reflection;
 using ArcGIS.Desktop.Framework;
 using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
-using Speckle.Connectors.ArcGIS.HostApp;
-using Speckle.Core.Kits;
+using Speckle.Connectors.Utils;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Host;
 using Module = ArcGIS.Desktop.Framework.Contracts.Module;
 
 namespace Speckle.Connectors.ArcGIS;
@@ -14,6 +16,7 @@ namespace Speckle.Connectors.ArcGIS;
 internal sealed class SpeckleModule : Module
 {
   private static SpeckleModule? s_this;
+  private readonly IDisposable? _disposableLogger;
 
   /// <summary>
   /// Retrieve the singleton instance to this module here
@@ -28,14 +31,24 @@ internal sealed class SpeckleModule : Module
     AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<SpeckleModule>;
 
     var builder = SpeckleContainerBuilder.CreateInstance();
-
-    // Register Settings
-    var arcgisSettings = new ArcGISSettings(HostApplications.ArcGIS, HostAppVersion.v3);
+    // init DI
+    _disposableLogger = Connector.Initialize(HostApplications.ArcGIS, GetVersion());
 
     Container = builder
-      .LoadAutofacModules(Assembly.GetExecutingAssembly(), arcgisSettings.Modules)
-      .AddSingleton(arcgisSettings)
+      .LoadAutofacModules(
+        Assembly.GetExecutingAssembly(),
+        [Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location).NotNull()]
+      )
       .Build();
+  }
+
+  private HostAppVersion GetVersion()
+  {
+#if ARCGIS3
+    return HostAppVersion.v3;
+#else
+    throw new NotImplementedException();
+#endif
   }
 
   /// <summary>
@@ -46,6 +59,7 @@ internal sealed class SpeckleModule : Module
   {
     //TODO - add your business logic
     //return false to ~cancel~ Application close
+    _disposableLogger?.Dispose();
     return true;
   }
 }

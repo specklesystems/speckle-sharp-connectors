@@ -1,10 +1,10 @@
 using Autodesk.Revit.DB;
-using Objects;
-using Objects.BuiltElements.Revit;
-using Objects.Geometry;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Objects;
+using Speckle.Objects.BuiltElements.Revit;
+using Speckle.Objects.Geometry;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -60,9 +60,6 @@ internal sealed class CeilingTopLevelConverterToSpeckle : BaseTopLevelConverterT
 
     _parameterObjectAssigner.AssignParametersToBase(target, speckleCeiling);
     speckleCeiling.displayValue = _displayValueExtractor.GetDisplayValue(target);
-
-    // POC: hosted elements OOS for alpha, but this exists in existing connector
-    //_hostedElementConverter.AssignHostedElements(target, speckleCeiling);
 
     return speckleCeiling;
   }

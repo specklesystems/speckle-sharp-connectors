@@ -49,7 +49,7 @@ public class ArcToSpeckleConverter : ITypedConverter<RG.Arc, SOG.Arc>
       startPoint = _pointConverter.Convert(target.StartPoint),
       midPoint = _pointConverter.Convert(target.MidPoint),
       endPoint = _pointConverter.Convert(target.EndPoint),
-      domain = new SOP.Interval(0, 1),
+      domain = SOP.Interval.UnitInterval,
       length = target.Length,
       bbox = _boxConverter.Convert(_boxFactory.Create(target.BoundingBox()))
     };

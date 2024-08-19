@@ -1,9 +1,9 @@
 using System.Collections;
-using Objects;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Core.Common;
+using Speckle.Objects;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -33,7 +33,12 @@ public class ModelCurveToHostTopLevelConverter : BaseTopLevelConverterToHost<SOB
       // Curves must be bound in order to be valid model curves
       if (!curve.IsBound)
       {
-        curve.MakeBound(speckleLine.domain.start ?? 0, speckleLine.domain.end ?? Math.PI * 2);
+        if (speckleLine.domain.end - speckleLine.domain.start <= 0)
+        {
+          speckleLine.domain.start = 0;
+          speckleLine.domain.end = Math.PI * 2;
+        }
+        curve.MakeBound(speckleLine.domain.start, speckleLine.domain.end);
       }
 
       if (_contextStack.Current.Document.IsFamilyDocument)

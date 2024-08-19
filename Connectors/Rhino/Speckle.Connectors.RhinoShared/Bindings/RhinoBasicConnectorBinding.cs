@@ -6,9 +6,8 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Rhino.Extensions;
-using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Utils.Common;
-using Speckle.Core.Common;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Rhino.Bindings;
 
@@ -19,12 +18,10 @@ public class RhinoBasicConnectorBinding : IBasicConnectorBinding
   public BasicConnectorBindingCommands Commands { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly RhinoSettings _settings;
 
-  public RhinoBasicConnectorBinding(DocumentModelStore store, RhinoSettings settings, IBridge parent)
+  public RhinoBasicConnectorBinding(DocumentModelStore store, IBridge parent)
   {
     _store = store;
-    _settings = settings;
     Parent = parent;
     Commands = new BasicConnectorBindingCommands(parent);
 
@@ -36,7 +33,7 @@ public class RhinoBasicConnectorBinding : IBasicConnectorBinding
 
   public string GetConnectorVersion() => typeof(RhinoBasicConnectorBinding).Assembly.GetVersion();
 
-  public string GetSourceApplicationName() => _settings.HostAppInfo.Slug;
+  public string GetSourceApplicationName() => Speckle.Connectors.Utils.Connector.Slug;
 
   public string GetSourceApplicationVersion() => "7";
 
@@ -134,9 +131,10 @@ public class RhinoBasicConnectorBinding : IBasicConnectorBinding
       {
         continue;
       }
-      var allRhinoObjects = RhinoDoc.ActiveDoc.Objects.GetObjectList(ObjectType.AnyObject);
-      var subRhinoObjects = allRhinoObjects.Where(o => o.GetGroupList().Contains(groupIndex));
-      rhinoObjectsToSelect.AddRange(subRhinoObjects);
+      var sbr = RhinoDoc.ActiveDoc.Objects.Where(o =>
+        o.GetGroupList() != null && o.GetGroupList().Contains(groupIndex)
+      );
+      rhinoObjectsToSelect.AddRange(sbr);
     }
     RhinoDoc.ActiveDoc.Objects.Select(rhinoObjectsToSelect.Select(o => o.Id));
 

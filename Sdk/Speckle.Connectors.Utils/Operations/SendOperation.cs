@@ -1,6 +1,7 @@
-﻿using Speckle.Connectors.Utils.Builders;
+using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
-using Speckle.Core.Models;
+using Speckle.Sdk.Logging;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.Utils.Operations;
 
@@ -22,12 +23,13 @@ public sealed class SendOperation<T>
     CancellationToken ct = default
   )
   {
+    using var activity = SpeckleActivityFactory.Start("SendOperation");
     var buildResult = await _rootObjectBuilder
       .Build(objects, sendInfo, onOperationProgressed, ct)
       .ConfigureAwait(false);
 
     // POC: Jonathon asks on behalf of willow twin - let's explore how this can work
-    buildResult.RootObject["@report"] = new Report { ConversionResults = buildResult.ConversionResults };
+    // buildResult.RootObject["@report"] = new Report { ConversionResults = buildResult.ConversionResults };
 
     // base object handler is separated, so we can do some testing on non-production databases
     // exact interface may want to be tweaked when we implement this

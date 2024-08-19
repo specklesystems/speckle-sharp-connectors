@@ -1,6 +1,6 @@
-using Objects.BuiltElements.Revit;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Objects.BuiltElements.Revit;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -40,13 +40,9 @@ public class ElementTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<
     //  speckleElement["baseLine"] = line;
     //}
 
-    speckleElement.category = target.Category.Name;
+    speckleElement.category = target.Category != null ? target.Category.Name : "no category";
 
     speckleElement.displayValue = _displayValueExtractor.GetDisplayValue(target);
-
-    //GetHostedElements(speckleElement, target, out notes);
-
-    //var displayValue = GetElementDisplayValue(target);
 
     //if (!displayValue.Any())
     //{

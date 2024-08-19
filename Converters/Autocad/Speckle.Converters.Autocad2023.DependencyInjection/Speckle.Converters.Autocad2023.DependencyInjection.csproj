@@ -14,5 +14,7 @@
       <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common.DependencyInjection\Speckle.Converters.Common.DependencyInjection.csproj" />
       <ProjectReference Include="..\Speckle.Converters.Autocad2023\Speckle.Converters.Autocad2023.csproj" />
     </ItemGroup>
+  
+    <Import Project="..\Speckle.Converters.AutocadShared.DependencyInjection\Speckle.Converters.AutocadShared.DependencyInjection.projitems" Label="Shared" />
 
 </Project>

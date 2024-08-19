@@ -1,6 +1,6 @@
-using Objects.Primitive;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Objects.Primitive;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -37,9 +37,9 @@ public class BoundingBoxXYZToSpeckleConverter : ITypedConverter<DB.BoundingBoxXY
 
     var box = new SOG.Box()
     {
-      xSize = new Interval(min.x, max.x),
-      ySize = new Interval(min.y, max.y),
-      zSize = new Interval(min.z, max.z),
+      xSize = new Interval { start = min.x, end = max.x },
+      ySize = new Interval { start = min.y, end = max.y },
+      zSize = new Interval { start = min.z, end = max.z },
       basePlane = _planeConverter.Convert(plane),
       units = _contextStack.Current.SpeckleUnits
     };

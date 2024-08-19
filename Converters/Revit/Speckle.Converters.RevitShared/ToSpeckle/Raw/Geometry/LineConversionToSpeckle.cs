@@ -1,7 +1,7 @@
-using Objects.Primitive;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Objects.Primitive;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -28,7 +28,7 @@ public class LineConversionToSpeckle : ITypedConverter<DB.Line, SOG.Line>
       units = _contextStack.Current.SpeckleUnits,
       start = _xyzToPointConverter.Convert(target.GetEndPoint(0)),
       end = _xyzToPointConverter.Convert(target.GetEndPoint(1)),
-      domain = new Interval(target.GetEndParameter(0), target.GetEndParameter(1)),
+      domain = new Interval { start = target.GetEndParameter(0), end = target.GetEndParameter(1) },
       length = _scalingService.ScaleLength(target.Length)
     };
 }

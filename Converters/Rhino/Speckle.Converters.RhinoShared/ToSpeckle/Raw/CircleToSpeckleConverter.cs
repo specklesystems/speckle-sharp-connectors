@@ -1,7 +1,7 @@
 ﻿using Rhino;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Models;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
 
@@ -30,10 +30,13 @@ public class CircleToSpeckleConverter : ITypedConverter<RG.Circle, SOG.Circle>
   /// ⚠️ This conversion assumes the domain of a circle is (0,1) as Rhino Circle types do not have a domain. If you want to preserve the domain use ArcCurve conversion instead.
   /// </remarks>
   public SOG.Circle Convert(RG.Circle target) =>
-    new(_planeConverter.Convert(target.Plane), target.Radius, _contextStack.Current.SpeckleUnits)
+    new()
     {
-      domain = new SOP.Interval(0, 1),
+      plane = _planeConverter.Convert(target.Plane),
+      radius = target.Radius,
+      units = _contextStack.Current.SpeckleUnits,
+      domain = SOP.Interval.UnitInterval,
       length = 2 * Math.PI * target.Radius,
-      area = Math.PI * Math.Pow(target.Radius, 2)
+      area = Math.PI * Math.Pow(target.Radius, 2),
     };
 }

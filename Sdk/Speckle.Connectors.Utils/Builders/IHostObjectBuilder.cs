@@ -1,5 +1,5 @@
 ﻿using Speckle.Connectors.Utils.Conversion;
-using Speckle.Core.Models;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.Utils.Builders;
 

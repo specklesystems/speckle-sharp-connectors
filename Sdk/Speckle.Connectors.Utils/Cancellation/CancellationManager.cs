@@ -43,11 +43,12 @@ public class CancellationManager
   }
 
   /// <summary>
-  /// Initialize a token source for cancellable operation.
+  /// Initialize a token source for cancellable operation,
+  /// if one with the given <paramref name="id"/> already exists, it will be canceled first before creating the new one.
   /// </summary>
   /// <param name="id"> Id to register token.</param>
   /// <returns> Initialized cancellation token source.</returns>
-  public CancellationTokenSource InitCancellationTokenSource(string id)
+  public CancellationToken InitCancellationTokenSource(string id)
   {
     if (IsExist(id))
     {
@@ -56,7 +57,7 @@ public class CancellationManager
 
     var cts = new CancellationTokenSource();
     _operationsInProgress[id] = cts;
-    return cts;
+    return cts.Token;
   }
 
   /// <summary>

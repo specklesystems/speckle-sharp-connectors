@@ -1,4 +1,4 @@
-using Speckle.Core.Models;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.Utils.Caching;
 
@@ -9,7 +9,7 @@ public class SendConversionCache : ISendConversionCache
 
   private Dictionary<(string applicationId, string projectId), ObjectReference> Cache { get; set; } = new(); // NOTE: as this dude's accessed from potentially more operations at the same time, it might be safer to bless him as a concurrent dictionary.
 
-  public void StoreSendResult(string projectId, Dictionary<string, ObjectReference> convertedReferences)
+  public void StoreSendResult(string projectId, IReadOnlyDictionary<string, ObjectReference> convertedReferences)
   {
     foreach (var kvp in convertedReferences)
     {
@@ -22,6 +22,8 @@ public class SendConversionCache : ISendConversionCache
     Cache = Cache
       .Where(kvp => !objectIds.Contains(kvp.Key.applicationId))
       .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+
+  public void ClearCache() => Cache.Clear();
 
   public bool TryGetValue(string projectId, string applicationId, out ObjectReference objectReference) =>
     Cache.TryGetValue((applicationId, projectId), out objectReference);

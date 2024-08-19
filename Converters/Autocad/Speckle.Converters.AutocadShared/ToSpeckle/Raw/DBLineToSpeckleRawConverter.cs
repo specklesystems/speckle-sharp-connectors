@@ -1,6 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Models;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 
@@ -31,7 +31,7 @@ public class DBLineToSpeckleRawConverter : ITypedConverter<ADB.Line, SOG.Line>
     )
     {
       length = target.Length,
-      domain = new SOP.Interval(0, target.Length),
+      domain = new SOP.Interval { start = 0, end = target.Length },
       bbox = _boxConverter.Convert(target.GeometricExtents)
     };
 }

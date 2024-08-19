@@ -1,7 +1,7 @@
 using Autodesk.Revit.DB;
-using Objects.BuiltElements.Revit.RevitRoof;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Objects.BuiltElements.Revit.RevitRoof;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -30,8 +30,6 @@ internal sealed class RoofBaseToSpeckleTopLevelTopLevelConverter
 
     _parameterObjectAssigner.AssignParametersToBase(target, revitRoof);
     revitRoof.displayValue = _displayValueExtractor.GetDisplayValue(target);
-    // POC: removing hosted elements from parents
-    // revitRoof.elements = _hostedElementConverter.ConvertHostedElements(target.GetHostedElementIds()).ToList();
 
     return revitRoof;
   }

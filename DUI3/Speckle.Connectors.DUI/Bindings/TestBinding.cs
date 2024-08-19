@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Core.Logging;
+using Speckle.Sdk;
 
 namespace Speckle.Connectors.DUI.Bindings;
 

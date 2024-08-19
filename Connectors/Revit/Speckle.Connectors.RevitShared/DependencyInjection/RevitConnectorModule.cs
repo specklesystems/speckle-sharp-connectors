@@ -15,7 +15,7 @@ using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Operations;
-using Speckle.Core.Models.GraphTraversal;
+using Speckle.Sdk.Models.GraphTraversal;
 #if REVIT2025
 using Speckle.Connectors.DUI.WebView;
 #else
@@ -50,7 +50,7 @@ public class RevitConnectorModule : ISpeckleModule
     builder.AddSingleton<IBinding, AccountBinding>();
     builder.AddSingleton<IBinding, SelectionBinding>();
     builder.AddSingleton<IBinding, RevitSendBinding>();
-    builder.AddSingleton<IBinding, RevitReceiveBinding>(); // TODO: comment out? or leave, but remove all non-basic geometry conversions
+    // builder.AddSingleton<IBinding, RevitReceiveBinding>(); // TODO: Have it back once we comfortable enough!
     builder.AddSingleton<IRevitIdleManager, RevitIdleManager>();
 
     builder.ContainerBuilder.RegisterType<TopLevelExceptionHandlerBinding>().As<IBinding>().AsSelf().SingleInstance();
@@ -67,6 +67,7 @@ public class RevitConnectorModule : ISpeckleModule
     // send operation and dependencies
     builder.AddScoped<SendOperation<ElementId>>();
     builder.AddScoped<SendSelectionUnpacker>();
+    builder.AddScoped<SendCollectionManager>();
     builder.AddScoped<IRootObjectBuilder<ElementId>, RevitRootObjectBuilder>();
     builder.AddSingleton<ISendConversionCache, SendConversionCache>();
 
@@ -74,6 +75,9 @@ public class RevitConnectorModule : ISpeckleModule
     builder.AddScoped<IHostObjectBuilder, RevitHostObjectBuilder>();
     builder.AddScoped<ITransactionManager, TransactionManager>();
     builder.AddSingleton(DefaultTraversal.CreateTraversalFunc());
+
+    // operation progress manager
+    builder.AddSingleton<IOperationProgressManager, OperationProgressManager>();
   }
 
   public void RegisterUiDependencies(SpeckleContainerBuilder builder)

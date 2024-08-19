@@ -6,12 +6,16 @@ namespace Speckle.Connectors.Autocad.HostApp.Extensions;
 
 public static class EditorExtensions
 {
-  public static void Zoom(this Editor editor, Extents3d ext)
+  public static void Zoom(this Editor? editor, Extents3d ext)
   {
+#if NET8_0
+    ArgumentNullException.ThrowIfNull(editor);
+#else
     if (editor == null)
     {
       throw new ArgumentNullException(nameof(editor));
     }
+#endif
 
     using ViewTableRecord view = editor.GetCurrentView();
 

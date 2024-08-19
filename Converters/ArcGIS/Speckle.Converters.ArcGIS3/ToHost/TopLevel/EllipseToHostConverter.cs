@@ -1,7 +1,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Kits;
-using Speckle.Core.Models;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.TopLevel;
 
@@ -24,11 +24,6 @@ public class EllipseToHostConverter : IToHostTopLevelConverter, ITypedConverter<
 
   public ACG.Polyline Convert(SOG.Ellipse target)
   {
-    // dummy check
-    if (target.firstRadius == null || target.secondRadius == null)
-    {
-      throw new ArgumentException("Ellipse is missing the first or second radius");
-    }
     if (
       target.plane.normal.x != 0
       || target.plane.normal.y != 0

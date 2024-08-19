@@ -16,10 +16,10 @@ public class AutocadIdleManager(IIdleCallManager idleCallManager) : IAutocadIdle
       action,
       () =>
       {
-        Application.Idle += RhinoAppOnIdle;
+        Application.Idle += AutocadAppOnIdle;
       }
     );
 
-  private void RhinoAppOnIdle(object sender, EventArgs e) =>
-    idleCallManager.AppOnIdle(() => Application.Idle -= RhinoAppOnIdle);
+  private void AutocadAppOnIdle(object? sender, EventArgs e) =>
+    idleCallManager.AppOnIdle(() => Application.Idle -= AutocadAppOnIdle);
 }

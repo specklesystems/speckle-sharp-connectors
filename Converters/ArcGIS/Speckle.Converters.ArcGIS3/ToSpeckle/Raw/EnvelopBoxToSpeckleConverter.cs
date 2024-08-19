@@ -1,7 +1,7 @@
 using ArcGIS.Core.Geometry;
-using Objects.Primitive;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Objects.Primitive;
 
 namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
 
@@ -38,18 +38,23 @@ public class EnvelopToSpeckleConverter : ITypedConverter<Envelope, SOG.Box>
 
     var units = _contextStack.Current.SpeckleUnits;
 
-    return new(
-      new SOG.Plane(
-        minPtSpeckle,
-        new SOG.Vector(0, 0, 1, units),
-        new SOG.Vector(1, 0, 0, units),
-        new SOG.Vector(0, 1, 0, units),
-        units
-      ),
-      new Interval(minPtSpeckle.x, maxPtSpeckle.x),
-      new Interval(minPtSpeckle.y, maxPtSpeckle.y),
-      new Interval(minPtSpeckle.z, maxPtSpeckle.z),
-      _contextStack.Current.SpeckleUnits
-    );
+    SOG.Plane plane =
+      new()
+      {
+        origin = minPtSpeckle,
+        normal = new SOG.Vector(0, 0, 1, units),
+        xdir = new SOG.Vector(1, 0, 0, units),
+        ydir = new SOG.Vector(0, 1, 0, units),
+        units = units
+      };
+
+    return new SOG.Box()
+    {
+      basePlane = plane,
+      xSize = new Interval { start = minPtSpeckle.x, end = maxPtSpeckle.x },
+      ySize = new Interval { start = minPtSpeckle.y, end = maxPtSpeckle.y },
+      zSize = new Interval { start = minPtSpeckle.z, end = maxPtSpeckle.z },
+      units = _contextStack.Current.SpeckleUnits
+    };
   }
 }

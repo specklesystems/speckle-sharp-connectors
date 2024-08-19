@@ -5,7 +5,7 @@
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <UseWpf>true</UseWpf>
     <RevitVersion>2025</RevitVersion>
-    <DefineConstants>$(DefineConstants);REVIT2025</DefineConstants>
+    <DefineConstants>$(DefineConstants);REVIT2025;REVIT2022_OR_GREATER;REVIT2023_OR_GREATER;REVIT2024_OR_GREATER;REVIT2025_OR_GREATER</DefineConstants>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>

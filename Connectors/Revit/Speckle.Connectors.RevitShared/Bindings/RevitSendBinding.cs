@@ -1,34 +1,42 @@
+using System.Collections.Concurrent;
 using Autodesk.Revit.DB;
-using Speckle.Autofac;
+using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Exceptions;
+using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
+using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Core.Common;
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.Bindings;
 
 internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 {
-  // POC:does it need injecting?
-
-  // POC: does it need injecting?
-  private HashSet<string> ChangedObjectIds { get; set; } = new();
-
-  private readonly RevitSettings _revitSettings;
   private readonly IRevitIdleManager _idleManager;
   private readonly CancellationManager _cancellationManager;
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
   private readonly ISendConversionCache _sendConversionCache;
+  private readonly IOperationProgressManager _operationProgressManager;
+  private readonly ILogger<RevitSendBinding> _logger;
+
+  /// <summary>
+  /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
+  /// [CNX-202: Unhandled Exception Occurred when receiving in Rhino](https://linear.app/speckle/issue/CNX-202/unhandled-exception-occurred-when-receiving-in-rhino)
+  /// As to why a concurrent dictionary, it's because it's the cheapest/easiest way to do so.
+  /// https://stackoverflow.com/questions/18922985/concurrent-hashsett-in-net-framework
+  /// </summary>
+  private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
 
   public RevitSendBinding(
     IRevitIdleManager idleManager,
@@ -37,16 +45,18 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     CancellationManager cancellationManager,
     IBridge bridge,
     IUnitOfWorkFactory unitOfWorkFactory,
-    RevitSettings revitSettings,
-    ISendConversionCache sendConversionCache
+    ISendConversionCache sendConversionCache,
+    IOperationProgressManager operationProgressManager,
+    ILogger<RevitSendBinding> logger
   )
     : base("sendBinding", store, bridge, revitContext)
   {
     _idleManager = idleManager;
     _cancellationManager = cancellationManager;
     _unitOfWorkFactory = unitOfWorkFactory;
-    _revitSettings = revitSettings;
     _sendConversionCache = sendConversionCache;
+    _operationProgressManager = operationProgressManager;
+    _logger = logger;
     var topLevelExceptionHandler = Parent.TopLevelExceptionHandler;
 
     Commands = new SendBindingUICommands(bridge);
@@ -64,6 +74,27 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   {
     return new List<ISendFilter> { new RevitSelectionFilter() { IsDefault = true } };
   }
+
+  public List<CardSetting> GetSendSettings() =>
+    new()
+    {
+      new()
+      {
+        Id = "modelOrigin",
+        Title = "Model Origin",
+        Type = "string",
+        Enum = ["Internal Origin", "Project Base", "Survey"],
+        Value = "Internal Origin"
+      },
+      new()
+      {
+        Id = "geometryFidelity",
+        Title = "Geometry Fidelity",
+        Type = "string",
+        Enum = ["Coarse", "Medium", "Fine"],
+        Value = "Coarse"
+      },
+    };
 
   public void CancelSend(string modelCardId)
   {
@@ -83,9 +114,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         throw new InvalidOperationException("No publish model card was found.");
       }
 
-      // POC: probably the CTS SHOULD be injected as InstancePerLifetimeScope and then
-      // it can be injected where needed instead of passing it around like a bomb :D
-      CancellationTokenSource cts = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
       using IUnitOfWork<SendOperation<ElementId>> sendOperation = _unitOfWorkFactory.Resolve<
         SendOperation<ElementId>
@@ -106,25 +135,30 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       var sendResult = await sendOperation
         .Service.Execute(
           revitObjects,
-          modelCard.GetSendInfo(_revitSettings.HostSlug.NotNull()),
+          modelCard.GetSendInfo(Speckle.Connectors.Utils.Connector.Slug),
           (status, progress) =>
-            Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts),
-          cts.Token
+            _operationProgressManager.SetModelProgress(
+              Parent,
+              modelCardId,
+              new ModelCardProgress(modelCardId, status, progress),
+              cancellationToken
+            ),
+          cancellationToken
         )
         .ConfigureAwait(false);
 
       Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
-    }
-    catch (Exception e) when (!e.IsFatal()) // UX reasons - we will report operation exceptions as model card error.
-    {
-      Commands.SetModelError(modelCardId, e);
     }
     catch (OperationCanceledException)
     {
       // SWALLOW -> UI handles it immediately, so we do not need to handle anything for now!
       // Idea for later -> when cancel called, create promise from UI to solve it later with this catch block.
       // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
-      return;
+    }
+    catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
+    {
+      _logger.LogModelCardHandledError(ex);
+      Commands.SetModelError(modelCardId, ex);
     }
   }
 
@@ -141,17 +175,17 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     foreach (ElementId elementId in addedElementIds)
     {
-      ChangedObjectIds.Add(elementId.ToString());
+      ChangedObjectIds[elementId.ToString()] = 1;
     }
 
     foreach (ElementId elementId in deletedElementIds)
     {
-      ChangedObjectIds.Add(elementId.ToString());
+      ChangedObjectIds[elementId.ToString()] = 1;
     }
 
     foreach (ElementId elementId in modifiedElementIds)
     {
-      ChangedObjectIds.Add(elementId.ToString());
+      ChangedObjectIds[elementId.ToString()] = 1;
     }
 
     // TODO: CHECK IF ANY OF THE ABOVE ELEMENTS NEED TO TRIGGER A FILTER REFRESH
@@ -161,7 +195,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private void RunExpirationChecks()
   {
     var senders = Store.GetSenders();
-    string[] objectIdsList = ChangedObjectIds.ToArray();
+    string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
     List<string> expiredSenderIds = new();
 
     _sendConversionCache.EvictObjects(objectIdsList);
@@ -177,7 +211,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     }
 
     Commands.SetModelsExpired(expiredSenderIds);
-    ChangedObjectIds = new HashSet<string>();
+    ChangedObjectIds = new();
   }
 
   // POC: Will be re-addressed later with better UX with host apps that are friendly on async doc operations.

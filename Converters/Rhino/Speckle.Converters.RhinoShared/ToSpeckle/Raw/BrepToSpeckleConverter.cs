@@ -1,9 +1,9 @@
-﻿using Objects;
-using Rhino;
+﻿using Rhino;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Kits;
-using Speckle.Core.Logging;
+using Speckle.Objects;
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
 
@@ -67,15 +67,20 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.Brep>
     // }
 
     // Vertices, uv curves, 3d curves and surfaces
-    var vertices = target.Vertices.Select(vertex => _pointConverter.Convert(vertex.Location)).ToList();
-    var curves3d = target.Curves3D.Select(curve3d => _curveConverter.Convert(curve3d)).ToList();
-    var surfaces = target.Surfaces.Select(srf => _surfaceConverter.Convert(srf.ToNurbsSurface())).ToList();
+    List<SOG.Point> vertices = new(target.Vertices.Count);
+    vertices.AddRange(target.Vertices.Select(v => _pointConverter.Convert(v.Location)));
 
-    List<ICurve> curves2d;
+    List<ICurve> curves3d = new(target.Curves3D.Count);
+    curves3d.AddRange(target.Curves3D.Select(curve3d => _curveConverter.Convert(curve3d)));
+
+    List<SOG.Surface> surfaces = new(target.Curves3D.Count);
+    surfaces.AddRange(target.Surfaces.Select(srf => _surfaceConverter.Convert(srf.ToNurbsSurface())));
+
+    List<ICurve> curves2d = new(target.Curves2D.Count);
     using (_contextStack.Push(Units.None))
     {
       // Curves2D are unitless, so we convert them within a new pushed context with None units.
-      curves2d = target.Curves2D.Select(curve2d => _curveConverter.Convert(curve2d)).ToList();
+      curves2d.AddRange(target.Curves2D.Select(curve2d => _curveConverter.Convert(curve2d)));
     }
 
     var speckleBrep = new SOG.Brep
@@ -90,79 +95,96 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.Brep>
       volume = target.IsSolid ? target.GetVolume() : 0,
       area = target.GetArea(),
       bbox = _boxConverter.Convert(new RG.Box(target.GetBoundingBox(false))),
-      units = _contextStack.Current.SpeckleUnits
+      units = _contextStack.Current.SpeckleUnits,
+      Edges = new(target.Edges.Count),
+      Loops = new(target.Loops.Count),
+      Trims = new(target.Trims.Count),
+      Faces = new(target.Faces.Count)
     };
 
     // Brep non-geometry types
-    var faces = ConvertBrepFaces(target, speckleBrep);
-    var edges = ConvertBrepEdges(target, speckleBrep);
-    var loops = ConvertBrepLoops(target, speckleBrep);
-    var trims = ConvertBrepTrims(target, speckleBrep);
+    ConvertBrepFaces(target, speckleBrep);
+    ConvertBrepEdges(target, speckleBrep);
+    ConvertBrepLoops(target, speckleBrep);
+    ConvertBrepTrims(target, speckleBrep);
 
-    speckleBrep.Faces = faces;
-    speckleBrep.Edges = edges;
-    speckleBrep.Loops = loops;
-    speckleBrep.Trims = trims;
     return speckleBrep;
   }
 
-  private static List<SOG.BrepFace> ConvertBrepFaces(RG.Brep brep, SOG.Brep speckleParent) =>
-    brep
-      .Faces.Select(f => new SOG.BrepFace(
-        speckleParent,
-        f.SurfaceIndex,
-        f.Loops.Select(l => l.LoopIndex).ToList(),
-        f.OuterLoop.LoopIndex,
-        f.OrientationIsReversed
-      ))
-      .ToList();
-
-  private List<SOG.BrepEdge> ConvertBrepEdges(RG.Brep brep, SOG.Brep speckleParent) =>
-    brep
-      .Edges.Select(edge => new SOG.BrepEdge(
-        speckleParent,
-        edge.EdgeCurveIndex,
-        edge.TrimIndices(),
-        edge.StartVertex.VertexIndex,
-        edge.EndVertex.VertexIndex,
-        edge.ProxyCurveIsReversed,
-        _intervalConverter.Convert(edge.Domain)
-      ))
-      .ToList();
-
-  private List<SOG.BrepTrim> ConvertBrepTrims(RG.Brep brep, SOG.Brep speckleParent) =>
-    brep
-      .Trims.Select(trim =>
-      {
-        var t = new SOG.BrepTrim(
-          speckleParent,
-          trim.Edge?.EdgeIndex ?? -1,
-          trim.Face.FaceIndex,
-          trim.Loop.LoopIndex,
-          trim.TrimCurveIndex,
-          (int)trim.IsoStatus,
-          (SOG.BrepTrimType)trim.TrimType,
-          trim.IsReversed(),
-          trim.StartVertex.VertexIndex,
-          trim.EndVertex.VertexIndex
-        )
+  private static void ConvertBrepFaces(RG.Brep brep, SOG.Brep speckleParent)
+  {
+    foreach (var f in brep.Faces)
+    {
+      speckleParent.Faces.Add(
+        new SOG.BrepFace
         {
-          Domain = _intervalConverter.Convert(trim.Domain)
-        };
+          Brep = speckleParent,
+          SurfaceIndex = f.SurfaceIndex,
+          LoopIndices = f.Loops.Select(l => l.LoopIndex).ToList(),
+          OuterLoopIndex = f.OuterLoop.LoopIndex,
+          OrientationReversed = f.OrientationIsReversed,
+        }
+      );
+    }
+  }
 
-        return t;
-      })
-      .ToList();
+  private void ConvertBrepEdges(RG.Brep brep, SOG.Brep speckleParent)
+  {
+    foreach (var edge in brep.Edges)
+    {
+      speckleParent.Edges.Add(
+        new SOG.BrepEdge
+        {
+          Brep = speckleParent,
+          Curve3dIndex = edge.EdgeCurveIndex,
+          TrimIndices = edge.TrimIndices(),
+          StartIndex = edge.StartVertex.VertexIndex,
+          EndIndex = edge.EndVertex.VertexIndex,
+          ProxyCurveIsReversed = edge.ProxyCurveIsReversed,
+          Domain = _intervalConverter.Convert(edge.Domain),
+        }
+      );
+    }
+  }
 
-  private List<SOG.BrepLoop> ConvertBrepLoops(RG.Brep brep, SOG.Brep speckleParent) =>
-    brep
-      .Loops.Select(loop => new SOG.BrepLoop(
-        speckleParent,
-        loop.Face.FaceIndex,
-        loop.Trims.Select(t => t.TrimIndex).ToList(),
-        (SOG.BrepLoopType)loop.LoopType
-      ))
-      .ToList();
+  private void ConvertBrepTrims(RG.Brep brep, SOG.Brep speckleParent)
+  {
+    foreach (var trim in brep.Trims)
+    {
+      speckleParent.Trims.Add(
+        new SOG.BrepTrim
+        {
+          Brep = speckleParent,
+          EdgeIndex = trim.Edge?.EdgeIndex ?? -1,
+          FaceIndex = trim.Face.FaceIndex,
+          LoopIndex = trim.Loop.LoopIndex,
+          CurveIndex = trim.TrimCurveIndex,
+          IsoStatus = (int)trim.IsoStatus,
+          TrimType = (SOG.BrepTrimType)trim.TrimType,
+          IsReversed = trim.IsReversed(),
+          StartIndex = trim.StartVertex.VertexIndex,
+          EndIndex = trim.EndVertex.VertexIndex,
+          Domain = _intervalConverter.Convert(trim.Domain),
+        }
+      );
+    }
+  }
+
+  private void ConvertBrepLoops(RG.Brep brep, SOG.Brep speckleParent)
+  {
+    foreach (var loop in brep.Loops)
+    {
+      speckleParent.Loops.Add(
+        new SOG.BrepLoop
+        {
+          Brep = speckleParent,
+          FaceIndex = loop.Face.FaceIndex,
+          TrimIndices = loop.Trims.Select(t => t.TrimIndex).ToList(),
+          Type = (SOG.BrepLoopType)loop.LoopType,
+        }
+      );
+    }
+  }
 
   private RG.Mesh? GetBrepDisplayMesh(RG.Brep brep)
   {

@@ -1,11 +1,13 @@
-using Speckle.Autofac;
+using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
+using Speckle.Sdk;
 
 namespace Speckle.Connectors.ArcGIS.Bindings;
 
@@ -15,15 +17,19 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
   private readonly CancellationManager _cancellationManager;
   private readonly DocumentModelStore _store;
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
+  private readonly IOperationProgressManager _operationProgressManager;
+  private readonly ILogger<ArcGISReceiveBinding> _logger;
 
-  public ReceiveBindingUICommands Commands { get; }
+  private ReceiveBindingUICommands Commands { get; }
   public IBridge Parent { get; }
 
   public ArcGISReceiveBinding(
     DocumentModelStore store,
     IBridge parent,
     CancellationManager cancellationManager,
-    IUnitOfWorkFactory unitOfWorkFactory
+    IUnitOfWorkFactory unitOfWorkFactory,
+    IOperationProgressManager operationProgressManager,
+    ILogger<ArcGISReceiveBinding> logger
   )
   {
     _store = store;
@@ -31,6 +37,8 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
     Parent = parent;
     Commands = new ReceiveBindingUICommands(parent);
     _unitOfWorkFactory = unitOfWorkFactory;
+    _operationProgressManager = operationProgressManager;
+    _logger = logger;
   }
 
   public async Task Receive(string modelCardId)
@@ -44,8 +52,7 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
         throw new InvalidOperationException("No download model card was found.");
       }
 
-      // Init cancellation token source -> Manager also cancel it if exist before
-      CancellationTokenSource cts = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
       using IUnitOfWork<ReceiveOperation> unitOfWork = _unitOfWorkFactory.Resolve<ReceiveOperation>();
 
@@ -53,9 +60,14 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
       var receiveOperationResults = await unitOfWork
         .Service.Execute(
           modelCard.GetReceiveInfo("ArcGIS"), // POC: get host app name from settings? same for GetSendInfo
-          cts.Token,
+          cancellationToken,
           (status, progress) =>
-            Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts)
+            _operationProgressManager.SetModelProgress(
+              Parent,
+              modelCardId,
+              new ModelCardProgress(modelCardId, status, progress),
+              cancellationToken
+            )
         )
         .ConfigureAwait(false);
 
@@ -73,9 +85,10 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
       // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
       return;
     }
-    catch (Exception e) when (!e.IsFatal()) // UX reasons - we will report operation exceptions as model card error.
+    catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
-      Commands.SetModelError(modelCardId, e);
+      _logger.LogModelCardHandledError(ex);
+      Commands.SetModelError(modelCardId, ex);
     }
   }
 

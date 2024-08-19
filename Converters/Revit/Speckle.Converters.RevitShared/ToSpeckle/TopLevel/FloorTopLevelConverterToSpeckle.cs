@@ -1,8 +1,8 @@
-using Objects;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.ToSpeckle;
-using Speckle.Core.Models;
+using Speckle.Objects;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Common;
 
@@ -77,9 +77,6 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
     TryAssignSlopeFromSlopeArrow(target, speckleFloor, slopeParam);
 
     speckleFloor.displayValue = _displayValueExtractor.GetDisplayValue(target);
-    // POC: hosted elements OOS for alpha, but this exists in existing connector
-    //_hostedElementConverter.AssignHostedElements(target, speckleCeiling);
-
     return speckleFloor;
   }
 

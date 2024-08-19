@@ -27,15 +27,14 @@ public class BoxToSpeckleConverter : ITypedConverter<RG.Box, SOG.Box>
   /// <param name="target">The Rhino Box object to convert.</param>
   /// <returns>The converted Speckle Box object.</returns>
   public SOG.Box Convert(RG.Box target) =>
-    new(
-      _planeConverter.Convert(target.Plane),
-      _intervalConverter.Convert(target.X),
-      _intervalConverter.Convert(target.Y),
-      _intervalConverter.Convert(target.Z),
-      _contextStack.Current.SpeckleUnits
-    )
+    new()
     {
+      basePlane = _planeConverter.Convert(target.Plane),
+      xSize = _intervalConverter.Convert(target.X),
+      ySize = _intervalConverter.Convert(target.Y),
+      zSize = _intervalConverter.Convert(target.Z),
+      units = _contextStack.Current.SpeckleUnits,
       area = target.Area,
-      volume = target.Volume
+      volume = target.Volume,
     };
 }

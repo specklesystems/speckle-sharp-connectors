@@ -1,6 +1,6 @@
-using Objects.GIS;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Objects.GIS;
 
 namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
 

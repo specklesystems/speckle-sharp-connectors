@@ -1,9 +1,10 @@
 using Speckle.Connectors.Utils.Caching;
-using Speckle.Core.Api;
-using Speckle.Core.Api.GraphQL.Inputs;
-using Speckle.Core.Credentials;
-using Speckle.Core.Models;
-using Speckle.Core.Transports;
+using Speckle.InterfaceGenerator;
+using Speckle.Sdk.Api;
+using Speckle.Sdk.Api.GraphQL.Inputs;
+using Speckle.Sdk.Credentials;
+using Speckle.Sdk.Models;
+using Speckle.Sdk.Transports;
 
 namespace Speckle.Connectors.Utils.Operations;
 
@@ -13,28 +14,34 @@ namespace Speckle.Connectors.Utils.Operations;
 /// </summary>
 /// POC: we have a generic RootObjectSender but we're not using it everywhere. It also appears to need some specialisation or at least
 /// a way to get the application name, so RevitContext is being used in the revit version but we could probably inject that as a IHostAppContext maybe?
+[GenerateAutoInterface]
 public sealed class RootObjectSender : IRootObjectSender
 {
   // POC: Revisit this factory pattern, I think we could solve this higher up by injecting a scoped factory for `SendOperation` in the SendBinding
   private readonly IServerTransportFactory _transportFactory;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly AccountService _accountService;
-  private readonly ISendHelper _sendHelper;
+  private readonly IProgressDisplayManager _progressDisplayManager;
 
   public RootObjectSender(
     IServerTransportFactory transportFactory,
     ISendConversionCache sendConversionCache,
     AccountService accountService,
-    ISendHelper sendHelper
+    IProgressDisplayManager progressDisplayManager
   )
   {
     _transportFactory = transportFactory;
     _sendConversionCache = sendConversionCache;
     _accountService = accountService;
-    _sendHelper = sendHelper;
+    _progressDisplayManager = progressDisplayManager;
   }
 
-  public async Task<(string rootObjId, Dictionary<string, ObjectReference> convertedReferences)> Send(
+  /// <summary>
+  /// Contract for the send operation that handles an assembled <see cref="Base"/> object.
+  /// In production, this will send to a server.
+  /// In testing, this could send to a sqlite db or just save to a dictionary.
+  /// </summary>
+  public async Task<(string rootObjId, IReadOnlyDictionary<string, ObjectReference> convertedReferences)> Send(
     Base commitObject,
     SendInfo sendInfo,
     Action<string, double?>? onOperationProgressed = null,
@@ -48,7 +55,50 @@ public sealed class RootObjectSender : IRootObjectSender
     Account account = _accountService.GetAccountWithServerUrlFallback(sendInfo.AccountId, sendInfo.ServerUrl);
 
     using var transport = _transportFactory.Create(account, sendInfo.ProjectId, 60, null);
-    var sendResult = await _sendHelper.Send(commitObject, transport, true, null, ct).ConfigureAwait(false);
+
+    _progressDisplayManager.Begin();
+    var sendResult = await Sdk
+      .Api.Operations.Send(
+        commitObject,
+        transport,
+        true,
+        onProgressAction: dict =>
+        {
+          if (!_progressDisplayManager.ShouldUpdate())
+          {
+            return;
+          }
+
+          // NOTE: this looks weird for the user, as when deserialization kicks in, the progress bar will go down, and then start progressing again.
+          // This is something we're happy to live with until we refactor the whole receive pipeline.
+          var args = dict.FirstOrDefault();
+          if (args is null)
+          {
+            return;
+          }
+
+          switch (args.ProgressEvent)
+          {
+            case ProgressEvent.UploadBytes:
+              onOperationProgressed?.Invoke(
+                $"Uploading ({_progressDisplayManager.CalculateSpeed(args)})",
+                _progressDisplayManager.CalculatePercentage(args)
+              );
+              break;
+            case ProgressEvent.UploadObject:
+              onOperationProgressed?.Invoke("Uploading Root Object...", null);
+              break;
+            case ProgressEvent.SerializeObject:
+              onOperationProgressed?.Invoke(
+                $"Serializing ({_progressDisplayManager.CalculateSpeed(args)})",
+                _progressDisplayManager.CalculatePercentage(args)
+              );
+              break;
+          }
+        },
+        ct
+      )
+      .ConfigureAwait(false);
 
     _sendConversionCache.StoreSendResult(sendInfo.ProjectId, sendResult.convertedReferences);
 
