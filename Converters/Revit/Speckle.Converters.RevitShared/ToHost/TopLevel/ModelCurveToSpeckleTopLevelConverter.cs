@@ -33,7 +33,12 @@ public class ModelCurveToHostTopLevelConverter : BaseTopLevelConverterToHost<SOB
       // Curves must be bound in order to be valid model curves
       if (!curve.IsBound)
       {
-        curve.MakeBound(speckleLine.domain.start ?? 0, speckleLine.domain.end ?? Math.PI * 2);
+        if (speckleLine.domain.end - speckleLine.domain.start <= 0)
+        {
+          speckleLine.domain.start = 0;
+          speckleLine.domain.end = Math.PI * 2;
+        }
+        curve.MakeBound(speckleLine.domain.start, speckleLine.domain.end);
       }
 
       if (_contextStack.Current.Document.IsFamilyDocument)

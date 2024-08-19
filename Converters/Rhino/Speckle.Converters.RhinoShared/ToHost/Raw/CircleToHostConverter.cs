@@ -42,14 +42,8 @@ public class CircleToHostConverter : ITypedConverter<SOG.Circle, RG.Circle>, ITy
   /// <remarks><br/>⚠️ This conversion does not preserve the curve domain. If you need it preserved you must request a conversion to <see cref="RG.ArcCurve"/> conversion instead</remarks>
   public RG.Circle Convert(SOG.Circle target)
   {
-    if (target.radius == null)
-    {
-      // POC: CNX-9272 Circle radius being nullable makes no sense
-      throw new ArgumentNullException(nameof(target), "Circle radius cannot be null");
-    }
-
     var plane = _planeConverter.Convert(target.plane);
-    var radius = target.radius.Value;
+    var radius = target.radius;
     return new RG.Circle(plane, radius);
   }
 

@@ -33,7 +33,7 @@ public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExec
       throw new InvalidOperationException("Failed to execute script, Webview2 is not initialized yet.");
     }
 
-    Browser.Dispatcher.Invoke(() => Browser.ExecuteScriptAsync(script), DispatcherPriority.Background);
+    Browser.Dispatcher.InvokeAsync(() => Browser.ExecuteScriptAsync(script), DispatcherPriority.Background);
   }
 
   private void OnInitialized(object? sender, CoreWebView2InitializationCompletedEventArgs e)

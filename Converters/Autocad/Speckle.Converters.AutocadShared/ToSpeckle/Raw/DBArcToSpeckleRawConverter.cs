@@ -32,7 +32,7 @@ public class DBArcToSpeckleRawConverter : ITypedConverter<ADB.Arc, SOG.Arc>
     SOG.Point start = _pointConverter.Convert(target.StartPoint);
     SOG.Point end = _pointConverter.Convert(target.EndPoint);
     SOG.Point mid = _pointConverter.Convert(target.GetPointAtDist(target.Length / 2.0));
-    SOP.Interval domain = new(target.StartParam, target.EndParam);
+    SOP.Interval domain = new() { start = target.StartParam, end = target.EndParam };
     SOG.Box bbox = _boxConverter.Convert(target.GeometricExtents);
 
     SOG.Arc arc =

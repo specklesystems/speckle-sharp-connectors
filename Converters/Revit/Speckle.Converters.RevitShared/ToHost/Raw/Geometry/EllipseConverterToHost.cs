@@ -1,6 +1,5 @@
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Services;
-using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.ToHost.Raw.Geometry;
 
@@ -27,8 +26,8 @@ public class EllipseConverterToHost : ITypedConverter<SOG.Ellipse, DB.Curve>
 
     var e = DB.Ellipse.CreateCurve(
       _pointToXyzConverter.Convert(target.plane.origin),
-      _scalingService.ScaleToNative((double)target.firstRadius.NotNull(), target.units),
-      _scalingService.ScaleToNative((double)target.secondRadius.NotNull(), target.units),
+      _scalingService.ScaleToNative(target.firstRadius, target.units),
+      _scalingService.ScaleToNative(target.secondRadius, target.units),
       basePlane.XVec.Normalize(),
       basePlane.YVec.Normalize(),
       0,

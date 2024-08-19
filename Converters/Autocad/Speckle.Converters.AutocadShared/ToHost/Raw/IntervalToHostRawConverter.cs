@@ -8,11 +8,6 @@ public class IntervalToHostRawConverter : ITypedConverter<SOP.Interval, AG.Inter
   public AG.Interval Convert(SOP.Interval target)
   {
     // POC: the tolerance might be in some settings or in some context?
-    if (target.start is null || target.end is null)
-    {
-      throw new ArgumentNullException(nameof(target), "Cannot convert interval without start or end values.");
-    }
-
-    return new((double)target.start, (double)target.end, 0.000);
+    return new(target.start, target.end, 0.000);
   }
 }
