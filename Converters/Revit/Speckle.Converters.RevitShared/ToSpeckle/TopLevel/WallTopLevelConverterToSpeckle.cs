@@ -140,8 +140,7 @@ public class WallTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.
     }
     else
     {
-      // POC: I have no why previously we were setting the display value, and then unsetting it.
-      // Probably curtain walls need a special case/etc.?
+      // Curtain walls have a bunch of subelements (mullions and co) that have their own display values.
       speckleWall.displayValue = new List<SOG.Mesh>();
     }
   }

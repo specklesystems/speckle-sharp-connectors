@@ -43,7 +43,7 @@ public sealed class ConverterWithFallback : IRootToHostConverter
     // Direct conversion if a converter is found
     if (_baseConverter.TryGetConverter(type, out IToHostTopLevelConverter? result))
     {
-      return result.Convert(target);
+      return result.Convert(target); // 1-1 mapping
     }
 
     // Fallback to display value if it exists.
@@ -54,7 +54,7 @@ public sealed class ConverterWithFallback : IRootToHostConverter
       {
         throw new NotSupportedException($"No display value found for {type}");
       }
-      return FallbackToDisplayValue(displayValue);
+      return FallbackToDisplayValue(displayValue); // 1 - many mapping
     }
 
     throw new NotSupportedException($"No conversion found for {type}");
@@ -63,7 +63,15 @@ public sealed class ConverterWithFallback : IRootToHostConverter
   private object FallbackToDisplayValue(IReadOnlyList<Base> displayValue)
   {
     var tempDisplayableObject = new DisplayableObject(displayValue);
+    var conversionResult = _baseConverter.Convert(tempDisplayableObject);
 
-    return _baseConverter.Convert(tempDisplayableObject);
+    // if the host app returns a list of objects as the result of the fallback conversion, we zip them together with the original base display value objects that generated them.
+    if (conversionResult is IEnumerable<object> result)
+    {
+      return result.Zip(displayValue, (a, b) => (a, b));
+    }
+
+    // if not, and the host app "merges" together somehow multiple display values into one entity, we return that.
+    return conversionResult;
   }
 }
