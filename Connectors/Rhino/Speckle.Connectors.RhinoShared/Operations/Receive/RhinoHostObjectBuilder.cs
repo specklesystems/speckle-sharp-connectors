@@ -276,10 +276,10 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
     }
 
-    if (_colorManager.ObjectColorsIdMap.TryGetValue(objectId, out Color color))
+    if (_colorManager.ObjectColorsIdMap.TryGetValue(objectId, out (Color, ObjectColorSource) color))
     {
-      atts.ObjectColor = color;
-      atts.ColorSource = ObjectColorSource.ColorFromObject;
+      atts.ObjectColor = color.Item1;
+      atts.ColorSource = color.Item2;
     }
 
     return _contextStack.Current.Document.Objects.Add(obj, atts);

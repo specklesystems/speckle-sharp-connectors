@@ -1,5 +1,6 @@
 using System.Diagnostics.Contracts;
 using Rhino;
+using Rhino.DocObjects;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
 using Layer = Rhino.DocObjects.Layer;
@@ -77,9 +78,14 @@ public class RhinoLayerManager
       }
 
       // set color
-      if (_colorManager.ObjectColorsIdMap.TryGetValue(collection.applicationId ?? collection.id, out Color color))
+      if (
+        _colorManager.ObjectColorsIdMap.TryGetValue(
+          collection.applicationId ?? collection.id,
+          out (Color, ObjectColorSource) color
+        )
+      )
       {
-        newLayer.Color = color;
+        newLayer.Color = color.Item1;
       }
 
       int index = currentDocument.Layers.Add(newLayer);
