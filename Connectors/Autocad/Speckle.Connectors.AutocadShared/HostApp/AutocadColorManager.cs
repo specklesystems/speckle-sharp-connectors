@@ -86,18 +86,23 @@ public class AutocadColorManager
 
     ColorProxy colorProxy = new(argb, id, name) { objects = new() };
 
-    // INFO: this index is an Autocad internal index for set rgb values
-    // https://gohtx.com/acadcolors.php
+    // add the color source as well for receiving in other apps
+    colorProxy["source"] = color.IsByBlock
+      ? "block"
+      : color.IsByLayer
+        ? "layer"
+        : "object";
+
+    // set additional properties if by aci or by block
+    // ByBlock colors for some reason do not have their color value set to the correct color (white): instead it's a near-black
+    // ByACI is an Autocad internal index for set rgb values, which effects name presentation, see: https://gohtx.com/acadcolors.php
     if (color.IsByAci)
     {
       colorProxy["autocadColorIndex"] = (int)color.ColorIndex;
     }
-
-    // ByBlock colors for some reason do not have their color value set to the correct color (white): instead it's a near-black
-    if (color.IsByBlock)
+    else if (color.IsByBlock)
     {
       colorProxy.value = -1;
-      colorProxy["byBlock"] = true;
     }
 
     return colorProxy;
@@ -186,6 +191,13 @@ public class AutocadColorManager
     foreach (ColorProxy colorProxy in colorProxies)
     {
       onOperationProgressed?.Invoke("Converting colors", (double)++count / colorProxies.Count);
+
+      // skip any colors with source = layer, since object color default source is by layer
+      if (colorProxy["source"] is string source && source == "layer")
+      {
+        continue;
+      }
+
       foreach (string objectId in colorProxy.objects)
       {
         AutocadColor convertedColor = ConvertColorProxyToColor(colorProxy);

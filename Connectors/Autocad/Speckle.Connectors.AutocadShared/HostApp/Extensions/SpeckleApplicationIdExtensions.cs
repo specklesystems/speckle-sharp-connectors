@@ -30,10 +30,11 @@ public static class SpeckleApplicationIdExtensions
   public static string GetSpeckleApplicationId(this Material material) => $"material_{material.Handle.Value}";
 
   /// <summary>
-  /// Retrieves a unique color Speckle object application id.
+  /// Retrieves a unique color Speckle object application id from the rgb value and color source.
   /// </summary>
   /// <remarks> Uses the rgb value since color names are not unique </remarks>
-  public static string GetSpeckleApplicationId(this AutocadColor color) => $"color_{color.ColorValue}";
+  public static string GetSpeckleApplicationId(this AutocadColor color) =>
+    $"color_{color.ColorValue}_{(color.IsByBlock ? "block" : color.IsByLayer ? "layer" : "object")}";
 
   /// <summary>
   /// Retrieves a unique group Speckle object application id.
