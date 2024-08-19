@@ -171,13 +171,15 @@ public class AutocadColorManager
 
   public AutocadColor ConvertColorProxyToColor(ColorProxy colorProxy)
   {
-    AutocadColor color = colorProxy["autocadColorIndex"] is long index
-      ? AutocadColor.FromColorIndex(ColorMethod.ByAci, (short)index)
-      : colorProxy["byBlock"] is bool byBlock && byBlock
-        ? AutocadColor.FromColorIndex(ColorMethod.ByBlock, 0)
-        : AutocadColor.FromColor(System.Drawing.Color.FromArgb(colorProxy.value));
+    // if source = block, return a default ByBlock color
+    if (colorProxy["source"] is string source && source == "block")
+    {
+      return AutocadColor.FromColorIndex(ColorMethod.ByBlock, 0);
+    }
 
-    return color;
+    return colorProxy["autocadColorIndex"] is long index
+      ? AutocadColor.FromColorIndex(ColorMethod.ByAci, (short)index)
+      : AutocadColor.FromColor(System.Drawing.Color.FromArgb(colorProxy.value));
   }
 
   /// <summary>
