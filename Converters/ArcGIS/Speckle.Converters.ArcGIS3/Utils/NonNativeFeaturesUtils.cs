@@ -29,7 +29,7 @@ public class NonNativeFeaturesUtils : INonNativeFeaturesUtils
 
   public void WriteGeometriesToDatasets(
     // Dictionary<TraversalContext, (string nestedParentPath, ACG.Geometry geom)> conversionTracker
-    Dictionary<TraversalContext, List<ObjectConversionTracker>> conversionTracker,
+    Dictionary<TraversalContext, ObjectConversionTracker> conversionTracker,
     Action<string, double?>? onOperationProgressed
   )
   {
@@ -38,75 +38,70 @@ public class NonNativeFeaturesUtils : INonNativeFeaturesUtils
 
     // 1. Sort features into groups by path and geom type
     Dictionary<string, List<(Base baseObj, ACG.Geometry convertedGeom)>> geometryGroups = new();
-    foreach (var conversionTrackers in conversionTracker)
+    foreach (var item in conversionTracker)
     {
-      TraversalContext context = conversionTrackers.Key;
-
-      foreach (var trackerItem in conversionTrackers.Value)
+      try
       {
-        try
+        TraversalContext context = item.Key;
+        var trackerItem = item.Value;
+        ACG.Geometry? geom = trackerItem.HostAppGeom;
+        string? datasetId = trackerItem.DatasetId;
+        if (geom != null && datasetId == null) // only non-native geomerties, not written into a dataset yet
         {
-          ACG.Geometry? geom = trackerItem.HostAppGeom;
-          string? datasetId = trackerItem.DatasetId;
-          if (geom != null && datasetId == null) // only non-native geomerties, not written into a dataset yet
+          // add dictionnary item if doesn't exist yet
+          // Key must be unique per parent and speckleType
+          // Adding Offsets/rotation to Unique key, so the modified CAD geometry doesn't overwrite non-modified one
+          // or, same commit received with different Offsets are saved to separate datasets
+
+          // Also, keep char limit for dataset name under 128: https://pro.arcgis.com/en/pro-app/latest/help/data/geodatabases/manage-saphana/enterprise-geodatabase-limits.htm
+
+          string speckleType = trackerItem.Base.speckle_type.Split(".")[^1];
+          //speckleType = speckleType.Substring(0, Math.Min(10, speckleType.Length - 1));
+          speckleType = speckleType.Length > 10 ? speckleType[..9] : speckleType;
+          string? parentId = context.Parent?.Current.id;
+
+          CRSoffsetRotation activeSR = _contextStack.Current.Document.ActiveCRSoffsetRotation;
+          string xOffset = Convert.ToString(activeSR.LonOffset).Replace(".", "_");
+          xOffset = xOffset.Length > 15 ? xOffset[..14] : xOffset;
+
+          string yOffset = Convert.ToString(activeSR.LatOffset).Replace(".", "_");
+          yOffset = yOffset.Length > 15 ? yOffset[..14] : yOffset;
+
+          string trueNorth = Convert.ToString(activeSR.TrueNorthRadians).Replace(".", "_");
+          trueNorth = trueNorth.Length > 10 ? trueNorth[..9] : trueNorth;
+
+          // text: 36 symbols, speckleTYPE: 10, sr: 10, offsets: 40, id: 32 = 128
+          string uniqueKey =
+            $"speckle_{speckleType}_SR_{activeSR.SpatialReference.Name[..Math.Min(15, activeSR.SpatialReference.Name.Length - 1)]}_X_{xOffset}_Y_{yOffset}_North_{trueNorth}_speckleID_{parentId}";
+
+          if (!geometryGroups.TryGetValue(uniqueKey, out _))
           {
-            // add dictionnary item if doesn't exist yet
-            // Key must be unique per parent and speckleType
-            // Adding Offsets/rotation to Unique key, so the modified CAD geometry doesn't overwrite non-modified one
-            // or, same commit received with different Offsets are saved to separate datasets
-
-            // Also, keep char limit for dataset name under 128: https://pro.arcgis.com/en/pro-app/latest/help/data/geodatabases/manage-saphana/enterprise-geodatabase-limits.htm
-
-            string speckleType = trackerItem.Base.speckle_type.Split(".")[^1];
-            //speckleType = speckleType.Substring(0, Math.Min(10, speckleType.Length - 1));
-            speckleType = speckleType.Length > 10 ? speckleType[..9] : speckleType;
-            string? parentId = context.Parent?.Current.id;
-
-            CRSoffsetRotation activeSR = _contextStack.Current.Document.ActiveCRSoffsetRotation;
-            string xOffset = Convert.ToString(activeSR.LonOffset).Replace(".", "_");
-            xOffset = xOffset.Length > 15 ? xOffset[..14] : xOffset;
-
-            string yOffset = Convert.ToString(activeSR.LatOffset).Replace(".", "_");
-            yOffset = yOffset.Length > 15 ? yOffset[..14] : yOffset;
-
-            string trueNorth = Convert.ToString(activeSR.TrueNorthRadians).Replace(".", "_");
-            trueNorth = trueNorth.Length > 10 ? trueNorth[..9] : trueNorth;
-
-            // text: 36 symbols, speckleTYPE: 10, sr: 10, offsets: 40, id: 32 = 128
-            string uniqueKey =
-              $"speckle_{speckleType}_SR_{activeSR.SpatialReference.Name[..Math.Min(15, activeSR.SpatialReference.Name.Length - 1)]}_X_{xOffset}_Y_{yOffset}_North_{trueNorth}_speckleID_{parentId}";
-
-            if (!geometryGroups.TryGetValue(uniqueKey, out _))
-            {
-              geometryGroups[uniqueKey] = new();
-            }
-
-            geometryGroups[uniqueKey].Add((trackerItem.Base, geom));
-
-            // record changes in conversion tracker
-            trackerItem.AddDatasetId(uniqueKey);
-            trackerItem.AddDatasetRow(geometryGroups[uniqueKey].Count - 1);
-            conversionTracker[context] = [trackerItem];
-          }
-          else if (geom == null && datasetId != null) // GIS layers, already written to a dataset
-          {
-            continue;
-          }
-          else
-          {
-            throw new ArgumentException($"Unexpected geometry and datasetId values: {geom}, {datasetId}");
+            geometryGroups[uniqueKey] = new();
           }
 
-          //var trackerItem = item.Value;
+          geometryGroups[uniqueKey].Add((trackerItem.Base, geom));
+
+          // record changes in conversion tracker
+          trackerItem.AddDatasetId(uniqueKey);
+          trackerItem.AddDatasetRow(geometryGroups[uniqueKey].Count - 1);
+          conversionTracker[item.Key] = trackerItem;
         }
-        catch (Exception ex) when (!ex.IsFatal())
+        else if (geom == null && datasetId != null) // GIS layers, already written to a dataset
         {
-          // POC: report, etc.
-          // var trackerItem = item.Value;
-          trackerItem.AddException(ex);
-          conversionTracker[context] = [trackerItem];
-          Debug.WriteLine($"conversion error happened. {ex.Message}");
+          continue;
         }
+        else
+        {
+          throw new ArgumentException($"Unexpected geometry and datasetId values: {geom}, {datasetId}");
+        }
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        // POC: report, etc.
+        var trackerItem = item.Value;
+        trackerItem.AddException(ex);
+        conversionTracker[item.Key] = trackerItem;
+        Debug.WriteLine($"conversion error happened. {ex.Message}");
       }
     }
 
@@ -125,14 +120,11 @@ public class NonNativeFeaturesUtils : INonNativeFeaturesUtils
         // only record in conversionTracker:
         foreach (var conversionItem in conversionTracker)
         {
-          foreach (var item2 in conversionItem.Value)
+          if (conversionItem.Value.DatasetId == uniqueKey)
           {
-            if (item2.DatasetId == uniqueKey)
-            {
-              var trackerItem = conversionItem.Value;
-              item2.AddException(ex);
-              conversionTracker[conversionItem.Key] = trackerItem;
-            }
+            var trackerItem = conversionItem.Value;
+            trackerItem.AddException(ex);
+            conversionTracker[conversionItem.Key] = trackerItem;
           }
         }
       }
