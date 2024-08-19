@@ -3,6 +3,7 @@ using Autodesk.Revit.UI.Events;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.InterfaceGenerator;
+using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.Plugin;
@@ -24,7 +25,15 @@ public sealed class RevitIdleManager(RevitContext revitContext, IIdleCallManager
       action,
       () =>
       {
-        _uiApplication.Idling += RevitAppOnIdle;
+        try
+        {
+          _uiApplication.Idling += RevitAppOnIdle;
+        }
+        catch (Exception e) when (!e.IsFatal())
+        {
+          // TODO: wrap this guy in the top level exception handler (?)
+          // This happens very rarely, see previous report [CNX-125: Autodesk.Revit.Exceptions.InvalidOperationException: Can not subscribe to an event during execution of that event!](https://linear.app/speckle/issue/CNX-125/autodeskrevitexceptionsinvalidoperationexception-can-not-subscribe-to)
+        }
       }
     );
 

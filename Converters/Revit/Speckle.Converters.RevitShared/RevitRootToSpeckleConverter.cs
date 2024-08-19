@@ -10,14 +10,17 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
 {
   private readonly IConverterResolver<IToSpeckleTopLevelConverter> _toSpeckle;
   private readonly ParameterValueExtractor _parameterValueExtractor;
+  private readonly IRevitConversionContextStack _contextStack;
 
   public RevitRootToSpeckleConverter(
     IConverterResolver<IToSpeckleTopLevelConverter> toSpeckle,
-    ParameterValueExtractor parameterValueExtractor
+    ParameterValueExtractor parameterValueExtractor,
+    IRevitConversionContextStack contextStack
   )
   {
     _toSpeckle = toSpeckle;
     _parameterValueExtractor = parameterValueExtractor;
+    _contextStack = contextStack;
   }
 
   // POC: our assumption here is target is valid for conversion
@@ -37,11 +40,11 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
 
     // POC : where should logic common to most objects go?
     // shouldn't target ALWAYS be DB.Element?
+    // Dim thinks so, FWIW
     if (target is DB.Element element)
     {
       // POC: is this the right place?
       result.applicationId = element.UniqueId;
-
       _parameterValueExtractor.RemoveUniqueId(element.UniqueId);
     }
 
