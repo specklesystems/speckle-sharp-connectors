@@ -26,6 +26,7 @@ public class MeshListToHostConverter : ITypedConverter<List<SOG.Mesh>, ACG.Multi
     }
     ACG.MultipatchBuilderEx multipatchPart =
       new(_contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference);
+
     foreach (SOG.Mesh part in target)
     {
       part.TriangulateMesh();

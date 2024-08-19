@@ -128,7 +128,10 @@ public class AutocadMaterialManager
       // POC: Currently we're relying on the render material name for identification if it's coming from speckle and from which model; could we do something else?
       // POC: we should assume render materials all have application ids?
       string renderMaterialId = renderMaterial.applicationId ?? renderMaterial.id;
-      string matName = $"{renderMaterial.name}-({renderMaterialId})-{baseLayerPrefix}";
+      string matName = _autocadContext.RemoveInvalidChars(
+        $"{renderMaterial.name}-({renderMaterialId})-{baseLayerPrefix}"
+      );
+
       MaterialMap map = new();
       MaterialOpacityComponent opacity = new(renderMaterial.opacity, map);
       var systemDiffuse = System.Drawing.Color.FromArgb(renderMaterial.diffuse);

@@ -13,7 +13,8 @@ public class MaterialConversionToSpeckle : ITypedConverter<DB.Material, RenderMa
     {
       name = target.Name,
       opacity = 1 - target.Transparency / 100d,
-      diffuse = System.Drawing.Color.FromArgb(target.Color.Red, target.Color.Green, target.Color.Blue).ToArgb()
+      diffuse = System.Drawing.Color.FromArgb(target.Color.Red, target.Color.Green, target.Color.Blue).ToArgb(),
+      applicationId = target.Id.ToString()
       //metalness = revitMaterial.Shininess / 128d, //Looks like these are not valid conversions
       //roughness = 1 - (revitMaterial.Smoothness / 100d)
     };

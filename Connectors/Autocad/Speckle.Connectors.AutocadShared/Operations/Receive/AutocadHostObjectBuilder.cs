@@ -203,47 +203,82 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
   private IEnumerable<Entity> ConvertObject(Base obj, Collection[] layerPath, string baseLayerNamePrefix)
   {
     string layerName = _autocadLayerManager.CreateLayerForReceive(layerPath, baseLayerNamePrefix);
+    var convertedEntities = new List<Entity>();
 
-    using (var tr = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction())
+    using var tr = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
+
+    // 1: convert
+    var converted = _converter.Convert(obj);
+
+    // 2: handle result
+    if (converted is Entity entity)
     {
-      var converted = _converter.Convert(obj);
+      var bakedEntity = BakeObject(entity, obj, layerName);
+      convertedEntities.Add(bakedEntity);
+    }
+    else if (converted is IEnumerable<(object, Base)> fallbackConversionResult)
+    {
+      var bakedFallbackEntities = BakeObjectsAsGroup(fallbackConversionResult, obj, layerName, baseLayerNamePrefix);
+      convertedEntities.AddRange(bakedFallbackEntities);
+    }
 
-      IEnumerable<Entity?> flattened = Utilities.FlattenToHostConversionResult(converted).Cast<Entity>();
+    tr.Commit();
+    return convertedEntities;
+  }
 
-      // get color and material if any
-      string objId = obj.applicationId ?? obj.id;
-      AutocadColor? objColor = _colorManager.ObjectColorsIdMap.TryGetValue(objId, out AutocadColor? color)
-        ? color
-        : null;
-      ObjectId objMaterial = _materialManager.ObjectMaterialsIdMap.TryGetValue(objId, out ObjectId matId)
-        ? matId
-        : ObjectId.Null;
+  private Entity BakeObject(Entity entity, Base originalObject, string layerName)
+  {
+    var objId = originalObject.applicationId ?? originalObject.id;
+    if (_colorManager.ObjectColorsIdMap.TryGetValue(objId, out AutocadColor? color))
+    {
+      entity.Color = color;
+    }
 
-      foreach (Entity? conversionResult in flattened)
+    if (_materialManager.ObjectMaterialsIdMap.TryGetValue(objId, out ObjectId matId))
+    {
+      entity.MaterialId = matId;
+    }
+
+    entity.AppendToDb(layerName);
+    return entity;
+  }
+
+  private List<Entity> BakeObjectsAsGroup(
+    IEnumerable<(object, Base)> fallbackConversionResult,
+    Base originatingObject,
+    string layerName,
+    string baseLayerName
+  )
+  {
+    var ids = new ObjectIdCollection();
+    var entities = new List<Entity>();
+    foreach (var (conversionResult, originalBaseObject) in fallbackConversionResult)
+    {
+      if (conversionResult is not Entity entity)
       {
-        if (conversionResult == null)
-        {
-          // POC: This needed to be double checked why we check null and continue
-          continue;
-        }
-
-        // set color and material
-        // POC: if these are displayvalue meshes, we will need to check for their ids somehow
-        if (objColor is not null)
-        {
-          conversionResult.Color = objColor;
-        }
-
-        if (objMaterial != ObjectId.Null)
-        {
-          conversionResult.MaterialId = objMaterial;
-        }
-
-        conversionResult.AppendToDb(layerName);
-        yield return conversionResult;
+        // TODO: throw?
+        continue;
       }
 
-      tr.Commit();
+      BakeObject(entity, originalBaseObject, layerName);
+      ids.Add(entity.ObjectId);
+      entities.Add(entity);
     }
+
+    var tr = Application.DocumentManager.CurrentDocument.Database.TransactionManager.TopTransaction;
+    var groupDictionary = (DBDictionary)
+      tr.GetObject(Application.DocumentManager.CurrentDocument.Database.GroupDictionaryId, OpenMode.ForWrite);
+
+    var groupName = _autocadContext.RemoveInvalidChars(
+      $@"{originatingObject.speckle_type.Split('.').Last()} - {originatingObject.applicationId ?? originatingObject.id}  ({baseLayerName})"
+    );
+
+    var newGroup = new Group(groupName, true);
+    newGroup.Append(ids);
+    groupDictionary.UpgradeOpen();
+    groupDictionary.SetAt(groupName, newGroup);
+    tr.AddNewlyCreatedDBObject(newGroup, true);
+
+    return entities;
   }
 }

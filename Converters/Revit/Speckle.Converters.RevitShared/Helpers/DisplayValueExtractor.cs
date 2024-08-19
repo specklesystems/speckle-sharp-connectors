@@ -7,11 +7,17 @@ namespace Speckle.Converters.RevitShared.Helpers;
 // POC: needs breaking down https://spockle.atlassian.net/browse/CNX-9354
 public sealed class DisplayValueExtractor
 {
-  private readonly ITypedConverter<Dictionary<DB.ElementId, List<DB.Mesh>>, List<SOG.Mesh>> _meshByMaterialConverter;
+  private readonly ITypedConverter<
+    (Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId),
+    List<SOG.Mesh>
+  > _meshByMaterialConverter;
   private readonly ILogger<DisplayValueExtractor> _logger;
 
   public DisplayValueExtractor(
-    ITypedConverter<Dictionary<DB.ElementId, List<DB.Mesh>>, List<SOG.Mesh>> meshByMaterialConverter,
+    ITypedConverter<
+      (Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId),
+      List<SOG.Mesh>
+    > meshByMaterialConverter,
     ILogger<DisplayValueExtractor> logger
   )
   {
@@ -19,31 +25,13 @@ public sealed class DisplayValueExtractor
     _logger = logger;
   }
 
-  public List<SOG.Mesh> GetDisplayValue(
-    DB.Element element,
-    DB.Options? options = null,
-    // POC: should this be part of the context?
-    DB.Transform? transform = null
-  )
+  public List<SOG.Mesh> GetDisplayValue(DB.Element element, DB.Options? options = null)
   {
-    var displayMeshes = new List<SOG.Mesh>();
-
-    // test if the element is a group first
-    if (element is DB.Group g)
-    {
-      foreach (var id in g.GetMemberIds())
-      {
-        var groupMeshes = GetDisplayValue(element.Document.GetElement(id), options);
-        displayMeshes.AddRange(groupMeshes);
-      }
-      return displayMeshes;
-    }
-
-    var (solids, meshes) = GetSolidsAndMeshesFromElement(element, options, transform);
+    var (solids, meshes) = GetSolidsAndMeshesFromElement(element, options);
 
     var meshesByMaterial = GetMeshesByMaterial(meshes, solids);
 
-    return _meshByMaterialConverter.Convert(meshesByMaterial);
+    return _meshByMaterialConverter.Convert((meshesByMaterial, element.Id));
   }
 
   private static Dictionary<DB.ElementId, List<DB.Mesh>> GetMeshesByMaterial(
@@ -82,11 +70,7 @@ public sealed class DisplayValueExtractor
     return meshesByMaterial;
   }
 
-  private (List<DB.Solid>, List<DB.Mesh>) GetSolidsAndMeshesFromElement(
-    DB.Element element,
-    DB.Options? options,
-    DB.Transform? transform = null
-  )
+  private (List<DB.Solid>, List<DB.Mesh>) GetSolidsAndMeshesFromElement(DB.Element element, DB.Options? options)
   {
     //options = ViewSpecificOptions ?? options ?? new Options() { DetailLevel = DetailLevelSetting };
     options ??= new DB.Options { DetailLevel = DB.ViewDetailLevel.Fine };
@@ -109,7 +93,7 @@ public sealed class DisplayValueExtractor
     if (geom != null)
     {
       // retrieves all meshes and solids from a geometry element
-      SortGeometry(element, solids, meshes, geom, transform?.Inverse);
+      SortGeometry(element, solids, meshes, geom);
     }
 
     return (solids, meshes);
@@ -125,26 +109,15 @@ public sealed class DisplayValueExtractor
   ///
   /// This remark also leads me to think that a family instance will not have top-level solids and geom instances.
   /// We are logging cases where this is not true.
+  ///
+  /// Note: this is basically a geometry unpacker for all types of geometry
   /// </summary>
   /// <param name="element"></param>
   /// <param name="solids"></param>
   /// <param name="meshes"></param>
   /// <param name="geom"></param>
-  /// <param name="inverseTransform"></param>
-  private void SortGeometry(
-    DB.Element element,
-    List<DB.Solid> solids,
-    List<DB.Mesh> meshes,
-    DB.GeometryElement geom,
-    DB.Transform? inverseTransform = null
-  )
+  private void SortGeometry(DB.Element element, List<DB.Solid> solids, List<DB.Mesh> meshes, DB.GeometryElement geom)
   {
-    var topLevelSolidsCount = 0;
-    var topLevelMeshesCount = 0;
-    var topLevelGeomElementCount = 0;
-    var topLevelGeomInstanceCount = 0;
-    bool hasSymbolGeometry = false;
-
     foreach (DB.GeometryObject geomObj in geom)
     {
       // POC: switch could possibly become factory and IIndex<,> pattern and move conversions to
@@ -162,12 +135,6 @@ public sealed class DisplayValueExtractor
             continue;
           }
 
-          if (inverseTransform != null)
-          {
-            topLevelSolidsCount++;
-            solid = DB.SolidUtils.CreateTransformed(solid, inverseTransform);
-          }
-
           solids.Add(solid);
           break;
         case DB.Mesh mesh:
@@ -175,51 +142,17 @@ public sealed class DisplayValueExtractor
           {
             continue;
           }
-
-          if (inverseTransform != null)
-          {
-            topLevelMeshesCount++;
-            mesh = mesh.get_Transformed(inverseTransform);
-          }
-
           meshes.Add(mesh);
           break;
         case DB.GeometryInstance instance:
           // element transforms should not be carried down into nested geometryInstances.
           // Nested geomInstances should have their geom retreived with GetInstanceGeom, not GetSymbolGeom
-          if (inverseTransform != null)
-          {
-            topLevelGeomInstanceCount++;
-            SortGeometry(element, solids, meshes, instance.GetSymbolGeometry());
-            if (meshes.Count > 0 || solids.Count > 0)
-            {
-              hasSymbolGeometry = true;
-            }
-          }
-          else
-          {
-            SortGeometry(element, solids, meshes, instance.GetInstanceGeometry());
-          }
+          SortGeometry(element, solids, meshes, instance.GetInstanceGeometry());
           break;
         case DB.GeometryElement geometryElement:
-          if (inverseTransform != null)
-          {
-            topLevelGeomElementCount++;
-          }
           SortGeometry(element, solids, meshes, geometryElement);
           break;
       }
-    }
-
-    if (inverseTransform != null)
-    {
-      LogInstanceMeshRetrievalWarnings(
-        element,
-        topLevelSolidsCount,
-        topLevelMeshesCount,
-        topLevelGeomElementCount,
-        hasSymbolGeometry
-      );
     }
   }
 
