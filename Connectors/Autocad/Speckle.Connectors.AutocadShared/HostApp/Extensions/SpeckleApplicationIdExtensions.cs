@@ -8,7 +8,12 @@ public static class SpeckleApplicationIdExtensions
   /// <summary>
   /// Retrieves the Speckle object application id
   /// </summary>
-  public static string GetSpeckleApplicationId(this Entity entity) => entity.Handle.ToString();
+  public static string GetSpeckleApplicationId(this Entity entity) => entity.Handle.Value.ToString();
+
+  /// <summary>
+  /// Retrieves the Speckle object application id
+  /// </summary>
+  public static string GetSpeckleApplicationId(this DBObject dbObj) => dbObj.Handle.Value.ToString();
 
   /// <summary>
   /// Layers and geometries can have same application ids.....
@@ -16,23 +21,23 @@ public static class SpeckleApplicationIdExtensions
   /// is changing on the way if it happens.
   /// </summary>
   public static string GetSpeckleApplicationId(this LayerTableRecord layerTableRecord) =>
-    $"layer_{layerTableRecord.Handle}";
+    $"layer_{layerTableRecord.Handle.Value}";
 
   /// <summary>
   /// Retrieves a unique material Speckle object application id.
   /// </summary>
   /// <remarks> Unconfirmed, but materials and geometries may have same application ids.</remarks>
-  public static string GetSpeckleApplicationId(this Material material) => $"material_{material.Handle}";
+  public static string GetSpeckleApplicationId(this Material material) => $"material_{material.Handle.Value}";
 
   /// <summary>
   /// Retrieves a unique color Speckle object application id.
   /// </summary>
-  /// <remarks> Assumes color names are unique. </remarks>
-  public static string GetSpeckleApplicationId(this AutocadColor color) => $"color_{color.ColorNameForDisplay}";
+  /// <remarks> Uses the rgb value since color names are not unique </remarks>
+  public static string GetSpeckleApplicationId(this AutocadColor color) => $"color_{color.ColorValue}";
 
   /// <summary>
   /// Retrieves a unique group Speckle object application id.
   /// </summary>
   /// <remarks>Unconfirmed, but groups and geometries may have same application ids.</remarks>
-  public static string GetSpeckleApplicationId(this Group group) => $"group_{group.Handle}";
+  public static string GetSpeckleApplicationId(this Group group) => $"group_{group.Handle.Value}";
 }

@@ -156,12 +156,12 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
             convertedObjects.Select(e => new ReceiveConversionResult(
               Status.SUCCESS,
               atomicObject,
-              e.Handle.Value.ToString(),
+              e.GetSpeckleApplicationId(),
               e.GetType().ToString()
             ))
           );
 
-          bakedObjectIds.AddRange(convertedObjects.Select(e => e.Handle.Value.ToString()));
+          bakedObjectIds.AddRange(convertedObjects.Select(e => e.GetSpeckleApplicationId()));
         }
         catch (Exception ex) when (!ex.IsFatal())
         {

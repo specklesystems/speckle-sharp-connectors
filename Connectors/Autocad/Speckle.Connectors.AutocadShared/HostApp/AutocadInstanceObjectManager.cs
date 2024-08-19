@@ -65,27 +65,34 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
 
   private void UnpackInstance(BlockReference instance, int depth, Transaction transaction)
   {
-    var instanceIdString = instance.Handle.Value.ToString();
-    // If this instance has a reference to an anonymous block, it means it's spawned from a dynamic block. Anonymous blocks are
-    // used to represent specific "instances" of dynamic ones.
-    // We do not want to send the full dynamic block definition, but its current "instance", as such here we're making sure we
-    // take up the anon block table reference definition (if it exists). If it's not an instance of a dynamic block, we're
-    // using the normal def reference.
-    var hasAnonymousBlockTableRecordDefinition = instance.AnonymousBlockTableRecord != ObjectId.Null;
-    var definitionId = hasAnonymousBlockTableRecordDefinition
+    string instanceId = instance.GetSpeckleApplicationId();
+
+    /// <summary>
+    /// Retrieves the definition ObjectId of an instance, depending on dynamic block properties
+    /// </summary>
+    /// <param name="instance"></param>
+    /// <returns></returns>
+    /// <remarks>
+    /// If this instance has a reference to an anonymous block, it means it's spawned from a dynamic block. Anonymous blocks are
+    /// used to represent specific "instances" of dynamic ones.
+    /// We do not want to send the full dynamic block definition, but its current "instance", as such here we're making sure we
+    /// take up the anon block table reference definition (if it exists). If it's not an instance of a dynamic block, we're
+    /// using the normal def reference.
+    /// </remarks>
+    ObjectId definitionId = !instance.AnonymousBlockTableRecord.IsNull
       ? instance.AnonymousBlockTableRecord
       : instance.BlockTableRecord;
 
     InstanceProxy instanceProxy =
       new()
       {
-        applicationId = instanceIdString,
+        applicationId = instanceId,
         definitionId = definitionId.ToString(),
         maxDepth = depth,
         transform = GetMatrix(instance.BlockTransform.ToArray()),
         units = _unitsConverter.ConvertOrThrow(Application.DocumentManager.CurrentDocument.Database.Insunits)
       };
-    _instanceObjectsManager.AddInstanceProxy(instanceIdString, instanceProxy);
+    _instanceObjectsManager.AddInstanceProxy(instanceId, instanceProxy);
 
     // For each block instance that has the same definition, we need to keep track of the "maximum depth" at which is found.
     // This will enable on receive to create them in the correct order (descending by max depth, interleaved definitions and instances).
@@ -113,7 +120,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
       }
     }
 
-    instanceProxiesWithSameDefinition.Add(_instanceObjectsManager.GetInstanceProxy(instanceIdString));
+    instanceProxiesWithSameDefinition.Add(_instanceObjectsManager.GetInstanceProxy(instanceId));
 
     if (
       _instanceObjectsManager.TryGetInstanceDefinitionProxy(definitionId.ToString(), out InstanceDefinitionProxy value)
@@ -134,29 +141,30 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
       applicationId = definitionId.ToString(),
       objects = new(),
       maxDepth = depth,
-      name = hasAnonymousBlockTableRecordDefinition ? "Dynamic instance " + definitionId : definition.Name,
+      name = !instance.AnonymousBlockTableRecord.IsNull ? "Dynamic instance " + definitionId : definition.Name,
       ["comments"] = definition.Comments
     };
 
     // Go through each definition object
     foreach (ObjectId id in definition)
     {
-      var obj = transaction.GetObject(id, OpenMode.ForRead);
+      Entity obj = (Entity)transaction.GetObject(id, OpenMode.ForRead);
+
       // In the case of dynamic blocks, this prevents sending objects that are not visibile in its current state.
-      if (obj is Entity { Visible: false })
+      if (!obj.Visible)
       {
         continue;
       }
 
-      var handleIdString = obj.Handle.Value.ToString();
-      definitionProxy.objects.Add(handleIdString);
+      string appId = obj.GetSpeckleApplicationId();
+      definitionProxy.objects.Add(appId);
 
       if (obj is BlockReference blockReference)
       {
         UnpackInstance(blockReference, depth + 1, transaction);
       }
 
-      _instanceObjectsManager.AddAtomicObject(handleIdString, new((Entity)obj, handleIdString));
+      _instanceObjectsManager.AddAtomicObject(appId, new(obj, appId));
     }
 
     _instanceObjectsManager.AddDefinitionProxy(definitionId.ToString(), definitionProxy);
@@ -220,7 +228,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
 
           definitionIdAndApplicationIdMap[definitionProxy.applicationId] = id;
           transaction.AddNewlyCreatedDBObject(record, true);
-          var consumedEntitiesHandleValues = constituentEntities.Select(ent => ent.Handle.Value.ToString()).ToArray();
+          var consumedEntitiesHandleValues = constituentEntities.Select(ent => ent.GetSpeckleApplicationId()).ToArray();
           consumedObjectIds.AddRange(consumedEntitiesHandleValues);
           createdObjectIds.RemoveAll(newId => consumedEntitiesHandleValues.Contains(newId));
         }
@@ -272,9 +280,9 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
 
           transaction.AddNewlyCreatedDBObject(blockRef, true);
           conversionResults.Add(
-            new(Status.SUCCESS, instanceProxy, blockRef.Handle.Value.ToString(), "Instance (Block)")
+            new(Status.SUCCESS, instanceProxy, blockRef.GetSpeckleApplicationId(), "Instance (Block)")
           );
-          createdObjectIds.Add(blockRef.Handle.Value.ToString());
+          createdObjectIds.Add(blockRef.GetSpeckleApplicationId());
         }
       }
       catch (Exception ex) when (!ex.IsFatal())

@@ -1,5 +1,6 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
+using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 
@@ -79,9 +80,8 @@ public class AutocadSelectionBinding : ISelectionBinding
             continue;
           }
 
-          var handleString = dbObject.Handle.Value.ToString();
           objectTypes.Add(dbObject.GetType().Name);
-          objs.Add(handleString);
+          objs.Add(dbObject.GetSpeckleApplicationId());
         }
 
         tr.Commit();
