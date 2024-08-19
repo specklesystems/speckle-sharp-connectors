@@ -29,7 +29,7 @@ public class NonNativeFeaturesUtils : INonNativeFeaturesUtils
 
   public void WriteGeometriesToDatasets(
     // Dictionary<TraversalContext, (string nestedParentPath, ACG.Geometry geom)> conversionTracker
-    Dictionary<TraversalContext, ObjectConversionTracker> conversionTracker,
+    Dictionary<TraversalContext, List<ObjectConversionTracker>> conversionTracker,
     Action<string, double?>? onOperationProgressed
   )
   {
@@ -44,6 +44,7 @@ public class NonNativeFeaturesUtils : INonNativeFeaturesUtils
       {
         TraversalContext context = item.Key;
         var trackerItem = item.Value;
+
         ACG.Geometry? geom = trackerItem.HostAppGeom;
         string? datasetId = trackerItem.DatasetId;
         if (geom != null && datasetId == null) // only non-native geomerties, not written into a dataset yet

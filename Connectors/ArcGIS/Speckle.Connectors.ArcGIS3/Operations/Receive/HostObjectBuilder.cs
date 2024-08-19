@@ -88,7 +88,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
 
     int allCount = objectsToConvert.Count;
     int count = 0;
-    Dictionary<TraversalContext, ObjectConversionTracker> conversionTracker = new();
+    Dictionary<TraversalContext, List<ObjectConversionTracker>> conversionTracker = new();
 
     // 1. convert everything
     List<ReceiveConversionResult> results = new(objectsToConvert.Count);
@@ -104,25 +104,45 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
         if (IsGISType(obj))
         {
           string nestedLayerPath = $"{string.Join("\\", path)}";
-          string datasetId = await QueuedTask.Run(() => (string)_converter.Convert(obj)).ConfigureAwait(false);
-          conversionTracker[objectToConvert.TraversalContext] = new ObjectConversionTracker(
-            obj,
-            nestedLayerPath,
-            datasetId
-          );
+          string datasetId = await QueuedTask.Run(() => (string)_converter.Convert(obj)).ConfigureAwait(false); // NOTE: convert call
+          conversionTracker[objectToConvert.TraversalContext] =
+          [
+            new ObjectConversionTracker(obj, nestedLayerPath, datasetId)
+          ];
         }
         else
         {
           obj = _localToGlobalConverterUtils.TransformObjects(objectToConvert.AtomicObject, objectToConvert.Matrix);
 
           string nestedLayerPath = $"{string.Join("\\", path)}\\{obj.speckle_type.Split(".")[^1]}";
-          Geometry converted = await QueuedTask.Run(() => (Geometry)_converter.Convert(obj)).ConfigureAwait(false);
+          var converted = await QueuedTask.Run(() => _converter.Convert(obj)).ConfigureAwait(false); // NOTE: convert call
+          if (converted is Geometry geometry)
+          {
+            conversionTracker[objectToConvert.TraversalContext] =
+            [
+              new ObjectConversionTracker(obj, nestedLayerPath, geometry)
+            ];
+          }
+          else if (converted is IEnumerable<(object, Base)> fallbackConversionResult)
+          {
+            var filtered = new List<ObjectConversionTracker>();
+            foreach (var (conversionResult, originalBaseObject) in fallbackConversionResult)
+            {
+              if (conversionResult is not Geometry fallbackGeometry)
+              {
+                // TODO: throw?
+                continue;
+              }
+              filtered.Add(new ObjectConversionTracker(obj, nestedLayerPath, fallbackGeometry));
+            }
 
-          conversionTracker[objectToConvert.TraversalContext] = new ObjectConversionTracker(
-            obj,
-            nestedLayerPath,
-            converted
-          );
+            conversionTracker[objectToConvert.TraversalContext] = filtered;
+          }
+          // conversionTracker[objectToConvert.TraversalContext] = new ObjectConversionTracker(
+          //   obj,
+          //   nestedLayerPath,
+          //   converted
+          // );
         }
       }
       catch (Exception ex) when (!ex.IsFatal()) // DO NOT CATCH SPECIFIC STUFF, conversion errors should be recoverable
@@ -152,63 +172,65 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     foreach (var item in conversionTracker)
     {
       cancellationToken.ThrowIfCancellationRequested();
-      var trackerItem = conversionTracker[item.Key]; // updated tracker object
-
-      // BAKE OBJECTS HERE
-      if (trackerItem.Exception != null)
+      var trackerItems = conversionTracker[item.Key]; // updated tracker object
+      foreach (var trackerItem in trackerItems)
       {
-        results.Add(new(Status.ERROR, trackerItem.Base, null, null, trackerItem.Exception));
+        // BAKE OBJECTS HERE
+        if (trackerItem.Exception != null)
+        {
+          results.Add(new(Status.ERROR, trackerItem.Base, null, null, trackerItem.Exception));
+        }
+        else if (trackerItem.DatasetId == null)
+        {
+          results.Add(
+            new(
+              Status.ERROR,
+              trackerItem.Base,
+              null,
+              null,
+              new ArgumentException($"Unknown error: Dataset not created for {trackerItem.Base.speckle_type}")
+            )
+          );
+        }
+        else if (bakedMapMembers.TryGetValue(trackerItem.DatasetId, out MapMember? value))
+        {
+          // if the layer already created, just add more features to report, and more color categories
+          // add layer and layer URI to tracker
+          trackerItem.AddConvertedMapMember(value);
+          trackerItem.AddLayerURI(value.URI);
+          // only add a report item
+          AddResultsFromTracker(trackerItem, results);
+
+          // add color category
+          await _colorManager.SetOrEditLayerRenderer(item.Key, trackerItem).ConfigureAwait(false);
+        }
+        else
+        {
+          // no layer yet, create and add layer to Map
+          MapMember mapMember = await AddDatasetsToMap(trackerItem, createdLayerGroups, projectName, modelName)
+            .ConfigureAwait(false);
+
+          // add layer and layer URI to tracker
+          trackerItem.AddConvertedMapMember(mapMember);
+          trackerItem.AddLayerURI(mapMember.URI);
+
+          // add layer URI to bakedIds
+          bakedObjectIds.Add(trackerItem.MappedLayerURI == null ? "" : trackerItem.MappedLayerURI);
+
+          // mark dataset as already created
+          bakedMapMembers[trackerItem.DatasetId] = mapMember;
+
+          // add report item
+          AddResultsFromTracker(trackerItem, results);
+
+          // add color category
+          await _colorManager.SetOrEditLayerRenderer(item.Key, trackerItem).ConfigureAwait(false);
+        }
+
+        onOperationProgressed?.Invoke("Adding to Map", (double)++bakeCount / conversionTracker.Count);
       }
-      else if (trackerItem.DatasetId == null)
-      {
-        results.Add(
-          new(
-            Status.ERROR,
-            trackerItem.Base,
-            null,
-            null,
-            new ArgumentException($"Unknown error: Dataset not created for {trackerItem.Base.speckle_type}")
-          )
-        );
-      }
-      else if (bakedMapMembers.TryGetValue(trackerItem.DatasetId, out MapMember? value))
-      {
-        // if the layer already created, just add more features to report, and more color categories
-        // add layer and layer URI to tracker
-        trackerItem.AddConvertedMapMember(value);
-        trackerItem.AddLayerURI(value.URI);
-        conversionTracker[item.Key] = trackerItem; // not necessary atm, but needed if we use conversionTracker further
-        // only add a report item
-        AddResultsFromTracker(trackerItem, results);
-
-        // add color category
-        await _colorManager.SetOrEditLayerRenderer(item.Key, trackerItem).ConfigureAwait(false);
-      }
-      else
-      {
-        // no layer yet, create and add layer to Map
-        MapMember mapMember = await AddDatasetsToMap(trackerItem, createdLayerGroups, projectName, modelName)
-          .ConfigureAwait(false);
-
-        // add layer and layer URI to tracker
-        trackerItem.AddConvertedMapMember(mapMember);
-        trackerItem.AddLayerURI(mapMember.URI);
-        conversionTracker[item.Key] = trackerItem; // not necessary atm, but needed if we use conversionTracker further
-
-        // add layer URI to bakedIds
-        bakedObjectIds.Add(trackerItem.MappedLayerURI == null ? "" : trackerItem.MappedLayerURI);
-
-        // mark dataset as already created
-        bakedMapMembers[trackerItem.DatasetId] = mapMember;
-
-        // add report item
-        AddResultsFromTracker(trackerItem, results);
-
-        // add color category
-        await _colorManager.SetOrEditLayerRenderer(item.Key, trackerItem).ConfigureAwait(false);
-      }
-      onOperationProgressed?.Invoke("Adding to Map", (double)++bakeCount / conversionTracker.Count);
     }
+
     bakedObjectIds.AddRange(createdLayerGroups.Values.Select(x => x.URI));
 
     // TODO: validated a correct set regarding bakedobject ids
