@@ -53,14 +53,10 @@ public class RhinoColorManager
       case ObjectColorSource.ColorFromLayer:
         if (layerIndex is int layerIndexInt)
         {
-#if NET8_0
-          _objectsByLayerDict.TryAdd(objectId, layerIndexInt);
-#else
           if (!_objectsByLayerDict.ContainsKey(objId))
           {
             _objectsByLayerDict.Add(objId, layerIndexInt);
           }
-#endif
         }
         break;
     }
@@ -147,7 +143,7 @@ public class RhinoColorManager
     foreach (RhinoObject rootObj in atomicObjects)
     {
       ProcessObjectColor(
-        rootObj.GetSpeckleApplicationId(),
+        rootObj.Id.ToString(),
         rootObj.Attributes.ObjectColor,
         rootObj.Attributes.ColorSource,
         rootObj.Attributes.LayerIndex,
