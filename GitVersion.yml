@@ -1,0 +1,7 @@
+workflow: GitFlow/v1
+mode: ManualDeployment
+branches:
+  main:
+    label: rc
+  support:
+    label: beta
