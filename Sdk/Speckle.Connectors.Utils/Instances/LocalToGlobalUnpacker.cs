@@ -43,21 +43,19 @@ public class LocalToGlobalUnpacker : ILocalToGlobalUnpacker
     // 2. Split atomic objects that in absolute or relative coordinates.
     foreach ((TraversalContext tc, Base atomicObject) in atomicObjects)
     {
-      if (atomicObject.applicationId is null)
-      {
-        continue;
-      }
+      // If we have an application id, and it's part of an instance -> go through the relative process
       if (
-        instanceDefinitionProxies is not null
+        atomicObject.applicationId is not null
+        && instanceDefinitionProxies is not null
         && instanceDefinitionProxies.Any(idp => idp.objects.Contains(atomicObject.applicationId))
       )
       {
         objectsAtRelative.Add((tc, atomicObject)); // to use in Instances only
+        continue;
       }
-      else
-      {
-        objectsAtAbsolute.Add((tc, atomicObject)); // to bake
-      }
+
+      // Otherwise we're on the absolute track
+      objectsAtAbsolute.Add((tc, atomicObject));
     }
 
     // 3. Add atomic objects that on absolute coordinates that doesn't need a transformation.
