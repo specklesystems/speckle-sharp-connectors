@@ -45,9 +45,9 @@ public class LocalToGlobalUnpacker : ILocalToGlobalUnpacker
     {
       if (atomicObject.applicationId is null)
       {
-        continue;
+        objectsAtAbsolute.Add((tc, atomicObject)); // to bake objs without appId, e.g. GH
       }
-      if (
+      else if (
         instanceDefinitionProxies is not null
         && instanceDefinitionProxies.Any(idp => idp.objects.Contains(atomicObject.applicationId))
       )
