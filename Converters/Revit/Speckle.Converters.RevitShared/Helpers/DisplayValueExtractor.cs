@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.Helpers;
 
@@ -164,14 +165,14 @@ public sealed class DisplayValueExtractor
     }
 
     var hasCachedStyle = _graphicStyleCache.TryGetValue(
-      geomObj.GraphicsStyleId.ToString()!,
+      geomObj.GraphicsStyleId.ToString().NotNull(),
       out DB.GraphicsStyle graphicStyle
     );
 
     if (!hasCachedStyle && geomObj.GraphicsStyleId != DB.ElementId.InvalidElementId)
     {
       graphicStyle = (DB.GraphicsStyle)element.Document.GetElement(geomObj.GraphicsStyleId);
-      _graphicStyleCache[geomObj.GraphicsStyleId.ToString()!] = graphicStyle;
+      _graphicStyleCache[geomObj.GraphicsStyleId.ToString().NotNull()] = graphicStyle;
     }
 
     if (graphicStyle?.GraphicsStyleCategory.BuiltInCategory == DB.BuiltInCategory.OST_LightingFixtureSource)
