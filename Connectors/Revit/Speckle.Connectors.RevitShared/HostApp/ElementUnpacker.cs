@@ -1,4 +1,5 @@
 using Autodesk.Revit.DB;
+using Autodesk.Revit.DB.Architecture;
 using Speckle.Converters.RevitShared.Helpers;
 
 namespace Speckle.Connectors.Revit.HostApp;
@@ -60,6 +61,11 @@ public class ElementUnpacker
         }
 
         unpackedElements.Add(familyInstance);
+      }
+      else if (element is MultistoryStairs multistoryStairs)
+      {
+        var stairs = multistoryStairs.GetAllStairsIds().Select(_contextStack.Current.Document.GetElement);
+        unpackedElements.AddRange(UnpackElements(stairs));
       }
       else
       {
