@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common.Objects;
-using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.Helpers;
 
@@ -120,17 +119,16 @@ public sealed class DisplayValueExtractor
   {
     foreach (DB.GeometryObject geomObj in geom)
     {
-      // POC: switch could possibly become factory and IIndex<,> pattern and move conversions to
-      // separate IComeConversionInterfaces
+      if (SkipGeometry(geomObj, element))
+      {
+        continue;
+      }
+
       switch (geomObj)
       {
         case DB.Solid solid:
           // skip invalid solid
-          if (
-            solid.Faces.Size == 0
-            || Math.Abs(solid.SurfaceArea) == 0
-            || IsSkippableGraphicStyle(solid.GraphicsStyleId, element.Document)
-          )
+          if (solid.Faces.Size == 0 || Math.Abs(solid.SurfaceArea) == 0)
           {
             continue;
           }
@@ -138,10 +136,7 @@ public sealed class DisplayValueExtractor
           solids.Add(solid);
           break;
         case DB.Mesh mesh:
-          if (IsSkippableGraphicStyle(mesh.GraphicsStyleId, element.Document))
-          {
-            continue;
-          }
+
           meshes.Add(mesh);
           break;
         case DB.GeometryInstance instance:
@@ -156,62 +151,30 @@ public sealed class DisplayValueExtractor
     }
   }
 
-  // POC: should be hoovered up with the new reporting, logging, exception philosophy
-  private void LogInstanceMeshRetrievalWarnings(
-    DB.Element element,
-    int topLevelSolidsCount,
-    int topLevelMeshesCount,
-    int topLevelGeomElementCount,
-    bool hasSymbolGeom
-  )
-  {
-    if (hasSymbolGeom)
-    {
-      if (topLevelSolidsCount > 0)
-      {
-        _logger.LogWarning(
-          $"Element of type {element.GetType()} with uniqueId {element.UniqueId} has valid symbol geometry and {topLevelSolidsCount} top level solids. See comment on method SortInstanceGeometry for link to RevitAPI docs that leads us to believe this shouldn't happen"
-        );
-      }
-      if (topLevelMeshesCount > 0)
-      {
-        _logger.LogWarning(
-          $"Element of type {element.GetType()} with uniqueId {element.UniqueId} has valid symbol geometry and {topLevelMeshesCount} top level meshes. See comment on method SortInstanceGeometry for link to RevitAPI docs that leads us to believe this shouldn't happen"
-        );
-      }
-      if (topLevelGeomElementCount > 0)
-      {
-        _logger.LogWarning(
-          $"Element of type {element.GetType()} with uniqueId {element.UniqueId} has valid symbol geometry and {topLevelGeomElementCount} top level geometry elements. See comment on method SortInstanceGeometry for link to RevitAPI docs that leads us to believe this shouldn't happen"
-        );
-      }
-    }
-  }
-
   /// <summary>
   /// We're caching a dictionary of graphic styles and their ids as it can be a costly operation doing Document.GetElement(solid.GraphicsStyleId) for every solid
   /// </summary>
   private readonly Dictionary<string, DB.GraphicsStyle> _graphicStyleCache = new();
 
-  /// <summary>
-  /// Exclude light source cones and potentially other geometries by their graphic style
-  /// </summary>
-  /// <param name="id"></param>
-  /// <param name="doc"></param>
-  /// <returns></returns>
-  private bool IsSkippableGraphicStyle(DB.ElementId id, DB.Document doc)
+  private bool SkipGeometry(DB.GeometryObject geomObj, DB.Element element)
   {
-    var key = id.ToString().NotNull();
-    if (_graphicStyleCache.TryGetValue(key, out var graphicStyle))
+    if (geomObj.GraphicsStyleId == DB.ElementId.InvalidElementId)
     {
-      graphicStyle = (DB.GraphicsStyle)doc.GetElement(id);
-      _graphicStyleCache.Add(key, graphicStyle);
+      return false; // exit fast on a potential hot path
     }
 
-    if (
-      graphicStyle != null
-      && graphicStyle.GraphicsStyleCategory.Id.IntegerValue == (int)DB.BuiltInCategory.OST_LightingFixtureSource
-    )
+    var hasCachedStyle = _graphicStyleCache.TryGetValue(
+      geomObj.GraphicsStyleId.ToString(),
+      out DB.GraphicsStyle graphicStyle
+    );
+
+    if (!hasCachedStyle && geomObj.GraphicsStyleId != DB.ElementId.InvalidElementId)
+    {
+      graphicStyle = (DB.GraphicsStyle)element.Document.GetElement(geomObj.GraphicsStyleId);
+      _graphicStyleCache[geomObj.GraphicsStyleId.ToString()] = graphicStyle;
+    }
+
+    if (graphicStyle?.GraphicsStyleCategory.BuiltInCategory == DB.BuiltInCategory.OST_LightingFixtureSource)
     {
       return true;
     }
