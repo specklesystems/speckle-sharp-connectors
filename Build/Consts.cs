@@ -7,7 +7,13 @@ public static class Consts
   public static readonly InstallerProject[] InstallerManifests =
   {
     new("arcgis", [new("Connectors/ArcGIS/Speckle.Connectors.ArcGIS3", "net6.0-windows")]),
-    new("rhino", [new("Connectors/Rhino/Speckle.Connectors.Rhino7", "net48")]),
+    new(
+      "rhino",
+      [
+        new("Connectors/Rhino/Speckle.Connectors.Rhino7", "net48"),
+        new("Connectors/Rhino/Speckle.Connectors.Rhino8", "net48")
+      ]
+    ),
     new(
       "revit",
       [
