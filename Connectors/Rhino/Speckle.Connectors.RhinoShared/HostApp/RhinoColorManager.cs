@@ -86,6 +86,7 @@ public class RhinoColorManager
     ColorProxy colorProxy = new(argb, id, name) { objects = new() };
 
     // add the color source as well for receiving in other apps
+    // POC: in order to have high-fidelity color props, we need to send the source somewhere. Currently this is attached to the color proxy, but have discussed sending it as a separate proxy or as an property on the atomic object. TBD if this is the best place for it.
     colorProxy["source"] =
       source is ObjectColorSource.ColorFromParent
         ? "block"
@@ -124,7 +125,7 @@ public class RhinoColorManager
   }
 
   /// <summary>
-  /// Iterates through a given set of autocad objects, layers, and definitions to collect atomic object colors.
+  /// Iterates through a given set of rhino objects, layers, and definitions to collect atomic object colors.
   /// </summary>
   /// <param name="atomicObjects">atomic root objects, including instance objects</param>
   /// <param name="layers">layers used by atomic objects</param>
