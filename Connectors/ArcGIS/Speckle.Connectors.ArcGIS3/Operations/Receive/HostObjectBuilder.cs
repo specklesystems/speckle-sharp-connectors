@@ -106,16 +106,36 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
         {
           string nestedLayerPath = $"{string.Join("\\", path)}";
           string datasetId = "speckleID_" + obj.id;
-          object conversionResult = await QueuedTask.Run(() => _converter.Convert(obj)).ConfigureAwait(false);
 
-          // save converted elements individually
-          if (conversionResult is IEnumerable convertedItems && obj is VectorLayer)
+          // save converted elements individually, for FeatureClasses
+          if (obj is VectorLayer vLayer)
           {
-            var convertedTuples = convertedItems.Cast<(Base, Geometry?, Dictionary<string, object?>)>();
-            foreach ((Base baseObj, Geometry? geom, Dictionary<string, object?> attrs) in convertedTuples)
+            GeometryType geomType = GISLayerGeometryType.GetNativeLayerGeometryType(vLayer);
+            if (geomType != GeometryType.Unknown) // feature class
             {
-              TraversalContext newContext = new(baseObj, "elements", objectToConvert.TraversalContext);
-              conversionTracker[newContext] = new ObjectConversionTracker(baseObj, geom, nestedLayerPath, datasetId);
+              object conversionResult = await QueuedTask.Run(() => _converter.Convert(vLayer)).ConfigureAwait(false);
+              if (conversionResult is IEnumerable convertedItems)
+              {
+                var convertedTuples = convertedItems.Cast<(Base, Geometry?)>();
+                foreach ((Base baseObj, Geometry? geom) in convertedTuples)
+                {
+                  TraversalContext newContext = new(baseObj, "elements", objectToConvert.TraversalContext);
+                  conversionTracker[newContext] = new ObjectConversionTracker(
+                    baseObj,
+                    geom,
+                    nestedLayerPath,
+                    datasetId
+                  );
+                }
+              }
+            }
+            else // Tables
+            {
+              foreach (Base element in vLayer.elements)
+              {
+                TraversalContext newContext = new(element, "elements", objectToConvert.TraversalContext);
+                conversionTracker[newContext] = new ObjectConversionTracker(element, nestedLayerPath, datasetId);
+              }
             }
           }
         }

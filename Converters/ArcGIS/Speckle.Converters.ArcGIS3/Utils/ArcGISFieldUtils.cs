@@ -20,6 +20,22 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
     _characterCleaner = characterCleaner;
   }
 
+  public Dictionary<string, object?> GetAttributesViaFunction(
+    ObjectConversionTracker trackerItem,
+    List<(FieldDescription, Func<Base, object?>)> fieldsAndFunctions
+  )
+  {
+    // set and pass attributes
+    Dictionary<string, object?> attributes = new();
+    foreach ((FieldDescription field, Func<Base, object?> function) in fieldsAndFunctions)
+    {
+      string key = field.AliasName;
+      attributes[key] = function(trackerItem.Base);
+    }
+
+    return attributes;
+  }
+
   public RowBuffer AssignFieldValuesToRow(
     RowBuffer rowBuffer,
     List<FieldDescription> fields,

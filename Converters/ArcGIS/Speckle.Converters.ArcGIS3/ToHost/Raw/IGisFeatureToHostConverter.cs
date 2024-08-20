@@ -10,8 +10,7 @@ namespace Speckle.Converters.ArcGIS3.ToHost.Raw;
 /// </summary>
 /// <exception cref="ArgumentException"> Thrown when IGisFeature is <see cref="GisNonGeometricFeature"/> because it has no geometry, or when Multipatch geometry contained invalid types.</exception>
 /// <exception cref="NotSupportedException">Thrown for unsupported <see cref="IGisFeature"/> classes.</exception>
-public class IGisFeatureToHostConverter
-  : ITypedConverter<IGisFeature, (Base, ACG.Geometry, Dictionary<string, object?>)>
+public class IGisFeatureToHostConverter : ITypedConverter<IGisFeature, (Base, ACG.Geometry)>
 {
   private readonly ITypedConverter<List<SOG.Point>, ACG.Multipoint> _multipointConverter;
   private readonly ITypedConverter<List<SOG.Polyline>, ACG.Polyline> _polylineConverter;
@@ -34,12 +33,8 @@ public class IGisFeatureToHostConverter
     _multipatchConverter = multipatchConverter;
   }
 
-  public (Base, ACG.Geometry, Dictionary<string, object?>) Convert(IGisFeature target)
+  public (Base, ACG.Geometry) Convert(IGisFeature target)
   {
-    // get attributes
-    Dictionary<string, object?> attributes = target.attributes.GetMembers(DynamicBaseMemberType.Dynamic);
-    attributes["Speckle_ID"] = ((Base)target).id;
-
     switch (target)
     {
       case GisNonGeometricFeature:
@@ -47,15 +42,15 @@ public class IGisFeatureToHostConverter
 
       case GisPointFeature pointFeature:
         ACG.Multipoint multipoint = _multipointConverter.Convert(pointFeature.geometry);
-        return (pointFeature, multipoint, attributes);
+        return (pointFeature, multipoint);
 
       case GisPolylineFeature polylineFeature:
         ACG.Polyline polyline = _polylineConverter.Convert(polylineFeature.geometry);
-        return (polylineFeature, polyline, attributes);
+        return (polylineFeature, polyline);
 
       case GisPolygonFeature polygonFeature:
         ACG.Polygon polygon = _polygonConverter.Convert(polygonFeature.geometry);
-        return (polygonFeature, polygon, attributes);
+        return (polygonFeature, polygon);
 
       case GisMultipatchFeature multipatchFeature:
         List<SGIS.PolygonGeometry3d> polygonGeometry = multipatchFeature
@@ -79,7 +74,7 @@ public class IGisFeatureToHostConverter
           );
         }
 
-        return (multipatchFeature, multipatch, attributes);
+        return (multipatchFeature, multipatch);
 
       default:
         throw new NotSupportedException($"{target.GetType} is not supported.");

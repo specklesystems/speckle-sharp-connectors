@@ -47,7 +47,7 @@ public class FeatureClassUtils : IFeatureClassUtils
     }
     catch (Exception ex) when (!ex.IsFatal()) //(GeodatabaseTableException)
     {
-      // "The table was not found."
+      // "The table was not found." | System.InvalidCast
       // delete Table if already exists
       try
       {
@@ -117,11 +117,11 @@ public class FeatureClassUtils : IFeatureClassUtils
       ACG.Geometry? geom = trackerItem.HostAppGeom;
       string? datasetId = trackerItem.DatasetId;
 
-      if (geom != null && datasetId != null) // GIS elements
+      if (datasetId != null) // GIS elements
       {
         continue;
       }
-      else if (geom != null && datasetId == null) // only non-native geomerties, not written into a dataset yet
+      else if (geom != null) // only non-native geomerties, not written into a dataset yet
       {
         // add dictionnary item if doesn't exist yet
         // Key must be unique per parent and speckleType
@@ -218,6 +218,53 @@ public class FeatureClassUtils : IFeatureClassUtils
         geomType = geometry.GeometryType;
       }
 
+      // Create Table
+      if (geomType == ACG.GeometryType.Unknown)
+      {
+        // Create Table
+        try
+        {
+          TableDescription featureClassDescription = new(featureClassName, fields);
+          TableToken featureClassToken = schemaBuilder.Create(featureClassDescription);
+        }
+        catch (ArgumentException ex)
+        {
+          // if name has invalid characters/combinations
+          // or 'The table contains multiple fields with the same name.:
+          throw new ArgumentException($"{ex.Message}: {featureClassName}", ex);
+        }
+        if (!schemaBuilder.Build())
+        {
+          // POC: log somewhere the error in building the feature class
+          IReadOnlyList<string> errors = schemaBuilder.ErrorMessages;
+        }
+        try
+        {
+          Table newFeatureClass = geodatabase.OpenDataset<Table>(featureClassName);
+          geodatabase.ApplyEdits(() =>
+          {
+            WriteFeaturesToTable(newFeatureClass, fieldsAndFunctions, listOfTrackers);
+          });
+        }
+        catch (GeodatabaseException ex)
+        {
+          // do nothing if writing of some geometry groups fails
+          // only record in conversionTracker:
+          foreach (var conversionItem in conversionTracker)
+          {
+            if (conversionItem.Value.DatasetId == featureClassName)
+            {
+              var trackerItem = conversionItem.Value;
+              trackerItem.AddException(ex);
+              conversionTracker[conversionItem.Key] = trackerItem;
+            }
+          }
+        }
+
+        count += 1;
+        onOperationProgressed?.Invoke("Writing to Database", (double)count / featureClassElements.Count);
+        continue;
+      }
       // Create new FeatureClass
       try
       {
@@ -232,8 +279,7 @@ public class FeatureClassUtils : IFeatureClassUtils
         // or 'The table contains multiple fields with the same name.:
         throw new ArgumentException($"{ex.Message}: {featureClassName}", ex);
       }
-      bool buildStatus = schemaBuilder.Build();
-      if (!buildStatus)
+      if (!schemaBuilder.Build())
       {
         // POC: log somewhere the error in building the feature class
         IReadOnlyList<string> errors = schemaBuilder.ErrorMessages;
@@ -291,14 +337,7 @@ public class FeatureClassUtils : IFeatureClassUtils
         }
 
         rowBuffer[newFeatureClass.GetDefinition().GetShapeField()] = shape;
-
-        // set and pass attributes
-        Dictionary<string, object?> attributes = new();
-        foreach ((FieldDescription field, Func<Base, object?> function) in fieldsAndFunctions)
-        {
-          string key = field.AliasName;
-          attributes[key] = function(trackerItem.Base);
-        }
+        Dictionary<string, object?> attributes = _fieldsUtils.GetAttributesViaFunction(trackerItem, fieldsAndFunctions);
 
         // newFeatureClass.CreateRow(rowBuffer).Dispose(); // without extra attributes
         RowBuffer assignedRowBuffer = _fieldsUtils.AssignFieldValuesToRow(
@@ -311,16 +350,23 @@ public class FeatureClassUtils : IFeatureClassUtils
     }
   }
 
-  public void AddFeaturesToTable(Table newFeatureClass, List<IGisFeature> gisFeatures, List<FieldDescription> fields)
+  public void WriteFeaturesToTable(
+    Table newFeatureClass,
+    List<(FieldDescription, Func<Base, object?>)> fieldsAndFunctions,
+    List<ObjectConversionTracker> listOfTrackers
+  )
   {
-    foreach (IGisFeature feat in gisFeatures)
+    foreach (ObjectConversionTracker trackerItem in listOfTrackers)
     {
       using (RowBuffer rowBuffer = newFeatureClass.CreateRowBuffer())
       {
+        Dictionary<string, object?> attributes = _fieldsUtils.GetAttributesViaFunction(trackerItem, fieldsAndFunctions);
+
+        // newFeatureClass.CreateRow(rowBuffer).Dispose(); // without extra attributes
         RowBuffer assignedRowBuffer = _fieldsUtils.AssignFieldValuesToRow(
           rowBuffer,
-          fields,
-          feat.attributes.GetMembers(DynamicBaseMemberType.Dynamic)
+          fieldsAndFunctions.Select(x => x.Item1).ToList(),
+          attributes // trackerItem.HostAppObjAttributes ?? new Dictionary<string, object?>()
         );
         newFeatureClass.CreateRow(assignedRowBuffer).Dispose();
       }
