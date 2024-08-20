@@ -20,14 +20,20 @@ namespace Speckle.Connectors.Rhino.HostApp;
 public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInstanceBaker<List<string>>
 {
   private readonly RhinoLayerManager _layerManager;
+  private readonly RhinoMaterialManager _materialManager;
+  private readonly RhinoColorManager _colorManager;
   private readonly IInstanceObjectsManager<RhinoObject, List<string>> _instanceObjectsManager;
 
   public RhinoInstanceObjectsManager(
     RhinoLayerManager layerManager,
+    RhinoMaterialManager materialManager,
+    RhinoColorManager colorManager,
     IInstanceObjectsManager<RhinoObject, List<string>> instanceObjectsManager
   )
   {
     _layerManager = layerManager;
+    _materialManager = materialManager;
+    _colorManager = colorManager;
     _instanceObjectsManager = instanceObjectsManager;
   }
 
@@ -207,7 +213,20 @@ public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInst
 
           string instanceProxyId = instanceProxy.applicationId ?? instanceProxy.id;
 
-          Guid id = doc.Objects.AddInstanceObject(index, transform, new ObjectAttributes() { LayerIndex = layerIndex });
+          ObjectAttributes atts = new() { LayerIndex = layerIndex };
+          if (_materialManager.ObjectIdAndMaterialIndexMap.TryGetValue(instanceProxyId, out int mIndex))
+          {
+            atts.MaterialIndex = mIndex;
+            atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+          }
+
+          if (_colorManager.ObjectColorsIdMap.TryGetValue(instanceProxyId, out (Color, ObjectColorSource) color))
+          {
+            atts.ObjectColor = color.Item1;
+            atts.ColorSource = color.Item2;
+          }
+
+          Guid id = doc.Objects.AddInstanceObject(index, transform, atts);
           if (id == Guid.Empty)
           {
             conversionResults.Add(new(Status.ERROR, instanceProxy, instanceProxyId, "Instance (Block)"));
