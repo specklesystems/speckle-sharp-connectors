@@ -75,11 +75,13 @@ public class FeatureClassUtils : IFeatureClassUtils
   }
 
   public Dictionary<string, (SGIS.VectorLayer?, List<ObjectConversionTracker>)> GroupGisConversionTrackers(
-    Dictionary<TraversalContext, ObjectConversionTracker> conversionTracker
+    Dictionary<TraversalContext, ObjectConversionTracker> conversionTracker,
+    Action<string, double?>? onOperationProgressed
   )
   {
     Dictionary<string, (SGIS.VectorLayer?, List<ObjectConversionTracker>)> featureClassElements = new();
 
+    double count = 0;
     foreach (var trackerItem in conversionTracker)
     {
       TraversalContext tc = trackerItem.Key;
@@ -98,6 +100,7 @@ public class FeatureClassUtils : IFeatureClassUtils
       {
         featureClassElements[featureClassName].Item2.Add(tracker);
         ClearExistingDataset(featureClassName);
+        onOperationProgressed?.Invoke("Grouping features into layers", count++ / conversionTracker.Count);
       }
     }
 
@@ -105,10 +108,12 @@ public class FeatureClassUtils : IFeatureClassUtils
   }
 
   public Dictionary<string, (SGIS.VectorLayer?, List<ObjectConversionTracker>)> GroupNonGisConversionTrackers(
-    Dictionary<TraversalContext, ObjectConversionTracker> conversionTracker
+    Dictionary<TraversalContext, ObjectConversionTracker> conversionTracker,
+    Action<string, double?>? onOperationProgressed
   )
   {
     // 1. Sort features into groups by path and geom type
+    double count = 0;
     Dictionary<string, (SGIS.VectorLayer?, List<ObjectConversionTracker>)> geometryGroups = new();
     foreach (var item in conversionTracker)
     {
@@ -161,6 +166,8 @@ public class FeatureClassUtils : IFeatureClassUtils
 
         geometryGroups[uniqueKey].Item2.Add(trackerItem);
         ClearExistingDataset(uniqueKey);
+
+        onOperationProgressed?.Invoke("Grouping features into layers", count++ / conversionTracker.Count);
       }
       else
       {
@@ -171,13 +178,27 @@ public class FeatureClassUtils : IFeatureClassUtils
     return geometryGroups;
   }
 
+  public Dictionary<string, (SGIS.VectorLayer?, List<ObjectConversionTracker>)> GroupFeaturesIntoLayers(
+    Dictionary<TraversalContext, ObjectConversionTracker> conversionTracker,
+    Action<string, double?>? onOperationProgressed
+  )
+  {
+    var convertedGroups = GroupGisConversionTrackers(conversionTracker, onOperationProgressed);
+    foreach (var item in GroupNonGisConversionTrackers(conversionTracker, onOperationProgressed))
+    {
+      convertedGroups[item.Key] = item.Value;
+    }
+
+    return convertedGroups;
+  }
+
   public void CreateDatasets(
     Dictionary<TraversalContext, ObjectConversionTracker> conversionTracker,
     Dictionary<string, (SGIS.VectorLayer?, List<ObjectConversionTracker>)> featureClassElements,
     Action<string, double?>? onOperationProgressed
   )
   {
-    int count = 0;
+    double count = 0;
     Geodatabase geodatabase = GetDatabase();
     SchemaBuilder schemaBuilder = new(geodatabase);
 
@@ -261,8 +282,7 @@ public class FeatureClassUtils : IFeatureClassUtils
           }
         }
 
-        count += 1;
-        onOperationProgressed?.Invoke("Writing to Database", (double)count / featureClassElements.Count);
+        onOperationProgressed?.Invoke("Writing to Database", count++ / featureClassElements.Count);
         continue;
       }
       // Create new FeatureClass

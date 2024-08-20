@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Diagnostics.Contracts;
 using ArcGIS.Core.CIM;
 using ArcGIS.Core.Geometry;
@@ -114,10 +113,9 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
             if (geomType != GeometryType.Unknown) // feature class
             {
               object conversionResult = await QueuedTask.Run(() => _converter.Convert(vLayer)).ConfigureAwait(false);
-              if (conversionResult is IEnumerable convertedItems)
+              if (conversionResult is IEnumerable<(Base, Geometry?)> convertedItems)
               {
-                var convertedTuples = convertedItems.Cast<(Base, Geometry?)>();
-                foreach ((Base baseObj, Geometry? geom) in convertedTuples)
+                foreach ((Base baseObj, Geometry? geom) in convertedItems)
                 {
                   TraversalContext newContext = new(baseObj, "elements", objectToConvert.TraversalContext);
                   conversionTracker[newContext] = new ObjectConversionTracker(
@@ -161,21 +159,16 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     }
 
     // 2.1. Group conversionTrackers by same dataset
-    onOperationProgressed?.Invoke("Writing to Database", null);
+    onOperationProgressed?.Invoke("Grouping features into layers", null);
     var convertedGroups = await QueuedTask
       .Run(() =>
       {
-        var convertedGroups = _featureClassUtils.GroupGisConversionTrackers(conversionTracker);
-        foreach (var item in _featureClassUtils.GroupNonGisConversionTrackers(conversionTracker))
-        {
-          convertedGroups[item.Key] = item.Value;
-        }
-
-        return convertedGroups;
+        return _featureClassUtils.GroupFeaturesIntoLayers(conversionTracker, onOperationProgressed);
       })
       .ConfigureAwait(false);
 
     // 2.2. Write Datasets
+    onOperationProgressed?.Invoke("Writing to Database", null);
     await QueuedTask
       .Run(() =>
       {
@@ -263,6 +256,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       }
     }
     bakedObjectIds.AddRange(createdLayerGroups.Values.Select(x => x.URI));
+
     // TODO: validated a correct set regarding bakedobject ids
     return new(bakedObjectIds, results);
   }
