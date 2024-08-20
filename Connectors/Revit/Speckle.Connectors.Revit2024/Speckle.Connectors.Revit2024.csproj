@@ -37,4 +37,11 @@
     <PackageReference Include="CefSharp.Wpf" IncludeAssets="compile" NoWarn="NU1903" VersionOverride="105.03.390.0" />
     <PackageReference Include="Revit.Async" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Plugin\Speckle.Connectors.Revit2024.addin" />
+    <Content Include="Plugin\Speckle.Connectors.Revit2024.addin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>
