@@ -28,4 +28,11 @@
     <PackageReference Include="Microsoft.Web.WebView2" IncludeAssets="compile" />
     <PackageReference Include="Revit.Async" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Plugin\Speckle.Connectors.Revit2025.addin" />
+    <Content Include="Plugin\Speckle.Connectors.Revit2025.addin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>
