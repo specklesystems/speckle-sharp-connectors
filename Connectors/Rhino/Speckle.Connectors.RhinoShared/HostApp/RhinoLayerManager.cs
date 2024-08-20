@@ -35,7 +35,7 @@ public class RhinoLayerManager
   }
 
   /// <summary>
-  /// <para>For receive: Use this method to construct layers in the host app when receiving.</para>.
+  /// <para>For receive: Use this method to construct layers in the host app when receiving. It progressively caches layers while creating them, so a second call to get the same layer will be fast.</para>
   /// </summary>
   public int GetAndCreateLayerFromPath(Collection[] collectionPath, string baseLayerName, out bool isNewLayer)
   {
