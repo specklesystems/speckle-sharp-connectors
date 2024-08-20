@@ -164,21 +164,24 @@ public sealed class DisplayValueExtractor
       return false; // exit fast on a potential hot path
     }
 
-    var hasCachedStyle = _graphicStyleCache.TryGetValue(
-      geomObj.GraphicsStyleId.ToString().NotNull(),
-      out DB.GraphicsStyle graphicStyle
-    );
-
-    if (!hasCachedStyle && geomObj.GraphicsStyleId != DB.ElementId.InvalidElementId)
+    var graphicsStyle = _graphicStyleCache[geomObj.GraphicsStyleId.ToString().NotNull()];
+    if (graphicsStyle is null)
     {
-      graphicStyle = (DB.GraphicsStyle)element.Document.GetElement(geomObj.GraphicsStyleId);
-      _graphicStyleCache[geomObj.GraphicsStyleId.ToString().NotNull()] = graphicStyle;
+      graphicsStyle = (DB.GraphicsStyle)element.Document.GetElement(geomObj.GraphicsStyleId);
+      _graphicStyleCache[geomObj.GraphicsStyleId.ToString().NotNull()] = graphicsStyle;
     }
 
-    if (graphicStyle?.GraphicsStyleCategory.BuiltInCategory == DB.BuiltInCategory.OST_LightingFixtureSource)
+#if REVIT2023_OR_GREATER
+    if (graphicsStyle?.GraphicsStyleCategory.BuiltInCategory == DB.BuiltInCategory.OST_LightingFixtureSource)
     {
       return true;
     }
+#else
+    if (graphicsStyle?.GraphicsStyleCategory.Id.IntegerValue == (int)DB.BuiltInCategory.OST_LightingFixtureSource)
+    {
+      return true;
+    }
+#endif
 
     return false;
   }
