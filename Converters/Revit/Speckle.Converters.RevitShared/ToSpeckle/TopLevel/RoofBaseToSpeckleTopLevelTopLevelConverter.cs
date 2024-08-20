@@ -11,26 +11,34 @@ internal sealed class RoofBaseToSpeckleTopLevelTopLevelConverter
 {
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly ParameterObjectAssigner _parameterObjectAssigner;
+  private readonly IRevitConversionContextStack _contextStack;
 
   public RoofBaseToSpeckleTopLevelTopLevelConverter(
     DisplayValueExtractor displayValueExtractor,
-    ParameterObjectAssigner parameterObjectAssigner
+    ParameterObjectAssigner parameterObjectAssigner,
+    IRevitConversionContextStack contextStack
   )
   {
     _displayValueExtractor = displayValueExtractor;
     _parameterObjectAssigner = parameterObjectAssigner;
+    _contextStack = contextStack;
   }
 
   public override RevitRoof Convert(RoofBase target)
   {
-    RevitRoof revitRoof = new();
     var elementType = (ElementType)target.Document.GetElement(target.GetTypeId());
-    revitRoof.type = elementType.Name;
-    revitRoof.family = elementType.FamilyName;
+    List<Speckle.Objects.Geometry.Mesh> displayValue = _displayValueExtractor.GetDisplayValue(target);
+
+    RevitRoof revitRoof =
+      new()
+      {
+        type = elementType.Name,
+        family = elementType.FamilyName,
+        displayValue = displayValue,
+        units = _contextStack.Current.SpeckleUnits
+      };
 
     _parameterObjectAssigner.AssignParametersToBase(target, revitRoof);
-    revitRoof.displayValue = _displayValueExtractor.GetDisplayValue(target);
-
     return revitRoof;
   }
 }

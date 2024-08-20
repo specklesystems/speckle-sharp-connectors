@@ -17,13 +17,15 @@ public class BeamConversionToSpeckle : ITypedConverter<DB.FamilyInstance, SOBR.R
   private readonly ParameterValueExtractor _parameterValueExtractor;
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly ParameterObjectAssigner _parameterObjectAssigner;
+  private readonly IRevitConversionContextStack _contextStack;
 
   public BeamConversionToSpeckle(
     ITypedConverter<DB.Location, Base> locationConverter,
     ITypedConverter<DB.Level, SOBR.RevitLevel> levelConverter,
     ParameterValueExtractor parameterValueExtractor,
     DisplayValueExtractor displayValueExtractor,
-    ParameterObjectAssigner parameterObjectAssigner
+    ParameterObjectAssigner parameterObjectAssigner,
+    IRevitConversionContextStack contextStack
   )
   {
     _locationConverter = locationConverter;
@@ -31,6 +33,7 @@ public class BeamConversionToSpeckle : ITypedConverter<DB.FamilyInstance, SOBR.R
     _parameterValueExtractor = parameterValueExtractor;
     _displayValueExtractor = displayValueExtractor;
     _parameterObjectAssigner = parameterObjectAssigner;
+    _contextStack = contextStack;
   }
 
   public SOBR.RevitBeam Convert(DB.FamilyInstance target)
@@ -43,22 +46,22 @@ public class BeamConversionToSpeckle : ITypedConverter<DB.FamilyInstance, SOBR.R
       );
     }
     var symbol = (DB.FamilySymbol)target.Document.GetElement(target.GetTypeId());
+    var level = _parameterValueExtractor.GetValueAsDocumentObject<DB.Level>(
+      target,
+      DB.BuiltInParameter.INSTANCE_REFERENCE_LEVEL_PARAM
+    );
+    List<SOG.Mesh> displayValue = _displayValueExtractor.GetDisplayValue(target);
 
     SOBR.RevitBeam speckleBeam =
       new()
       {
         family = symbol.FamilyName,
         type = target.Document.GetElement(target.GetTypeId()).Name,
-        baseLine = baseCurve
+        baseLine = baseCurve,
+        level = _levelConverter.Convert(level),
+        displayValue = displayValue,
+        units = _contextStack.Current.SpeckleUnits
       };
-
-    var level = _parameterValueExtractor.GetValueAsDocumentObject<DB.Level>(
-      target,
-      DB.BuiltInParameter.INSTANCE_REFERENCE_LEVEL_PARAM
-    );
-    speckleBeam.level = _levelConverter.Convert(level);
-
-    speckleBeam.displayValue = _displayValueExtractor.GetDisplayValue(target);
 
     _parameterObjectAssigner.AssignParametersToBase(target, speckleBeam);
 

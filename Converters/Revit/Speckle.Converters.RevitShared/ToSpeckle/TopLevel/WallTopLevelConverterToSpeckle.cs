@@ -45,7 +45,13 @@ public class WallTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.
 
   public override SOBR.RevitWall Convert(DB.Wall target)
   {
-    SOBR.RevitWall speckleWall = new() { family = target.WallType.FamilyName.ToString(), type = target.WallType.Name };
+    SOBR.RevitWall speckleWall =
+      new()
+      {
+        family = target.WallType.FamilyName.ToString(),
+        type = target.WallType.Name,
+        units = _contextStack.Current.SpeckleUnits
+      };
 
     AssignSpecificParameters(target, speckleWall);
     AssignVoids(target, speckleWall);
