@@ -8,10 +8,10 @@
         "dotnet-csharpier"
       ]
     },
-    "gitversion.tool": {
-      "version": "5.12.0",
+    "minver-cli": {
+      "version": "5.0.0",
       "commands": [
-        "dotnet-gitversion"
+        "minver"
       ]
     }
   }

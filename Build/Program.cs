@@ -13,7 +13,6 @@ const string FORMAT = "format";
 const string ZIP = "zip";
 const string VERSION = "version";
 const string RESTORE_TOOLS = "restore-tools";
-const string BUILD_SERVER_VERSION = "build-server-version";
 const string CLEAN_LOCKS = "clean-locks";
 const string CHECK_SOLUTIONS = "check-solutions";
 
@@ -103,26 +102,17 @@ Target(
     Run("dotnet", $"restore {s} --locked-mode");
   }
 );
-
-Target(
-  BUILD_SERVER_VERSION,
-  DependsOn(RESTORE_TOOLS),
-  () =>
-  {
-    Run("dotnet", "tool run dotnet-gitversion /output json /output buildserver");
-  }
-);
-
 Target(
   BUILD,
-  DependsOn(RESTORE),
   Consts.Solutions,
   s =>
   {
-    var version = Environment.GetEnvironmentVariable("GitVersion_FullSemVer") ?? "3.0.0-localBuild";
-    var fileVersion = Environment.GetEnvironmentVariable("GitVersion_AssemblySemFileVer") ?? "3.0.0.0";
-    Console.WriteLine($"Version: {version} & {fileVersion}");
-    Run("dotnet", $"build {s} -c Release --no-restore -p:Version={version} -p:FileVersion={fileVersion} -v:m");
+    var branch = Environment.GetEnvironmentVariable("BRANCH_NAME") ?? "adam-test";
+    Console.WriteLine($"Branch : {branch}");
+    Run(
+      "dotnet",
+      $"build {s} -c Release --no-restore -p:MinVerPreRelease={branch} -p:MinVerBuildMetadata={branch} -v:m"
+    );
   }
 );
 

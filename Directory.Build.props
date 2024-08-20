@@ -9,8 +9,17 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageVersionOverrideEnabled>true</CentralPackageVersionOverrideEnabled>
     <EnableWindowsTargeting>true</EnableWindowsTargeting> <!-- windows packs for .net core  -->
+    <MinVerVerbosity>d</MinVerVerbosity>
+    <MinVerMinimumMajorMinor>3.0</MinVerMinimumMajorMinor>
+    <MinVerDefaultPreReleaseIdentifiers>dev.0</MinVerDefaultPreReleaseIdentifiers>
   </PropertyGroup>
-  
+  <Target Name="MyTarget" AfterTargets="MinVer" Condition="'$(MinVerBuildMetadata)' != ''" >
+    <PropertyGroup>
+      <PackageVersion>$(MinVerMajor).$(MinVerMinor).$(MinVerPatch)-$(MinVerBuildMetadata)</PackageVersion>
+      <FileVersion>$(PackageVersion)</FileVersion>
+      <Version>$(PackageVersion)</Version>
+    </PropertyGroup>
+  </Target>
   <PropertyGroup Label="Analyers">
     <EnableNetAnalyzers>true</EnableNetAnalyzers>
     <AnalysisLevel>latest-AllEnabledByDefault</AnalysisLevel>
