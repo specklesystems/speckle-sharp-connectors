@@ -155,6 +155,18 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       _colorManager.ParseColors(colorProxies);
     }
 
+    // Stage 0.1: Pre bake layers
+    // See [CNX-325: Rhino: Change receive operation order to increase performance](https://linear.app/speckle/issue/CNX-325/rhino-change-receive-operation-order-to-increase-performance)
+    onOperationProgressed?.Invoke("Baking layers (redraw disabled)", null);
+    using (var _ = SpeckleActivityFactory.Start("Pre baking layers"))
+    {
+      using var layerNoDraw = new DisableRedrawScope(doc.Views);
+      foreach (var (path, _) in atomicObjects)
+      {
+        _layerManager.GetAndCreateLayerFromPath(path, baseLayerName, out bool _);
+      }
+    }
+
     // Stage 1: Convert atomic objects
     List<string> bakedObjectIds = new();
     Dictionary<string, List<string>> applicationIdMap = new(); // This map is used in converting blocks in stage 2. keeps track of original app id => resulting new app ids post baking
@@ -168,31 +180,37 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
         onOperationProgressed?.Invoke("Converting objects", (double)++count / atomicObjects.Count);
         try
         {
-          // Convert and bake an object:
           // 1: create layer
           int layerIndex = _layerManager.GetAndCreateLayerFromPath(path, baseLayerName, out bool _);
 
           // 2: convert
           var result = _converter.Convert(obj);
 
-          var objectId = obj.applicationId ?? obj.id; // POC: assuming objects have app ids for this to work?
-
-          // 3: colors and materials
-          int? matIndex = _materialManager.ObjectIdAndMaterialIndexMap.TryGetValue(objectId, out int mIndex)
-            ? mIndex
-            : null;
-          Color? objColor = _colorManager.ObjectColorsIdMap.TryGetValue(objectId, out Color color) ? color : null;
-
-          // 4: actually bake
-          var conversionIds = HandleConversionResult(result, obj, layerIndex, matIndex, objColor).ToList();
-          foreach (var r in conversionIds)
+          // 3: bake
+          var conversionIds = new List<string>();
+          if (result is GeometryBase geometryBase)
           {
-            conversionResults.Add(new(Status.SUCCESS, obj, r, result.GetType().ToString()));
-            bakedObjectIds.Add(r);
+            var guid = BakeObject(geometryBase, obj, layerIndex);
+            conversionIds.Add(guid.ToString());
+          }
+          else if (result is IEnumerable<(object, Base)> fallbackConversionResult)
+          {
+            var guids = BakeObjectsAsGroup(fallbackConversionResult, obj, layerIndex, baseLayerName);
+            conversionIds.AddRange(guids.Select(id => id.ToString()));
           }
 
+          if (conversionIds.Count == 0)
+          {
+            throw new SpeckleConversionException($"Failed to convert object.");
+          }
+
+          // 4: log
+          var id = conversionIds[0];
+          conversionResults.Add(new(Status.SUCCESS, obj, id, result.GetType().ToString()));
+          bakedObjectIds.Add(id);
+
           // 5: populate app id map
-          applicationIdMap[objectId] = conversionIds;
+          applicationIdMap[obj.applicationId ?? obj.id] = conversionIds;
         }
         catch (Exception ex) when (!ex.IsFatal())
         {
@@ -259,82 +277,52 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _groupManager.PurgeGroups(baseLayerName);
   }
 
-  private IReadOnlyList<string> HandleConversionResult(
-    object conversionResult,
-    Base originalObject,
-    int layerIndex,
-    int? materialIndex = null,
-    Color? color = null
-  )
+  private Guid BakeObject(GeometryBase obj, Base originalObject, int layerIndex)
   {
-    var doc = _contextStack.Current.Document;
-    List<string> newObjectIds = new();
-    switch (conversionResult)
+    ObjectAttributes atts = new() { LayerIndex = layerIndex };
+    var objectId = originalObject.applicationId ?? originalObject.id;
+
+    if (_materialManager.ObjectIdAndMaterialIndexMap.TryGetValue(objectId, out int mIndex))
     {
-      case IEnumerable<GeometryBase> list:
-      {
-        Group group = BakeObjectsAsGroup(originalObject.id, list, layerIndex, materialIndex, color);
-        newObjectIds.Add(group.Id.ToString());
-        break;
-      }
-      case GeometryBase newObject:
-      {
-        ObjectAttributes atts = new() { LayerIndex = layerIndex };
-        if (materialIndex is int index)
-        {
-          atts.MaterialIndex = index;
-          atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
-        }
-
-        if (color is Color objColor)
-        {
-          atts.ObjectColor = objColor;
-          atts.ColorSource = ObjectColorSource.ColorFromObject;
-        }
-
-        Guid newObjectGuid = doc.Objects.Add(newObject, atts);
-        newObjectIds.Add(newObjectGuid.ToString());
-        break;
-      }
-      default:
-        throw new SpeckleConversionException(
-          $"Unexpected result from conversion: Expected {nameof(GeometryBase)} but instead got {conversionResult.GetType().Name}"
-        );
+      atts.MaterialIndex = mIndex;
+      atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
     }
 
-    return newObjectIds;
+    if (_colorManager.ObjectColorsIdMap.TryGetValue(objectId, out (Color, ObjectColorSource) color))
+    {
+      atts.ObjectColor = color.Item1;
+      atts.ColorSource = color.Item2;
+    }
+
+    return _contextStack.Current.Document.Objects.Add(obj, atts);
   }
 
-  private Group BakeObjectsAsGroup(
-    string groupName,
-    IEnumerable<GeometryBase> list,
+  private List<Guid> BakeObjectsAsGroup(
+    IEnumerable<(object, Base)> fallbackConversionResult,
+    Base originatingObject,
     int layerIndex,
-    int? materialIndex = null,
-    Color? color = null
+    string baseLayerName
   )
   {
-    var doc = _contextStack.Current.Document;
     List<Guid> objectIds = new();
-    foreach (GeometryBase obj in list)
+    foreach (var (conversionResult, originalBaseObject) in fallbackConversionResult)
     {
-      ObjectAttributes atts = new() { LayerIndex = layerIndex };
-      if (materialIndex is int index)
+      if (conversionResult is not GeometryBase geometryBase)
       {
-        atts.MaterialIndex = index;
-        atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+        // TODO: throw?
+        continue;
       }
 
-      if (color is Color objColor)
-      {
-        atts.ObjectColor = objColor;
-        atts.ColorSource = ObjectColorSource.ColorFromObject;
-      }
-
-      objectIds.Add(doc.Objects.Add(obj, atts));
+      var id = BakeObject(geometryBase, originalBaseObject, layerIndex);
+      objectIds.Add(id);
     }
 
-    int groupIndex = _contextStack.Current.Document.Groups.Add(groupName, objectIds);
+    var groupIndex = _contextStack.Current.Document.Groups.Add(
+      $@"{originatingObject.speckle_type.Split('.').Last()} - {originatingObject.applicationId ?? originatingObject.id}  ({baseLayerName})",
+      objectIds
+    );
     var group = _contextStack.Current.Document.Groups.FindIndex(groupIndex);
-    return group;
+    objectIds.Insert(0, group.Id);
+    return objectIds;
   }
 }

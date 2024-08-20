@@ -5,7 +5,7 @@ using Speckle.Objects.Other;
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 public class MeshByMaterialDictionaryToSpeckle
-  : ITypedConverter<Dictionary<DB.ElementId, List<DB.Mesh>>, List<SOG.Mesh>>
+  : ITypedConverter<(Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId), List<SOG.Mesh>>
 {
   private readonly IRevitConversionContextStack _contextStack;
   private readonly ITypedConverter<DB.XYZ, SOG.Point> _xyzToPointConverter;
@@ -25,7 +25,7 @@ public class MeshByMaterialDictionaryToSpeckle
   /// <summary>
   /// Converts a dictionary of Revit meshes, where key is MaterialId, into a list of Speckle meshes.
   /// </summary>
-  /// <param name="target">A dictionary with DB.ElementId keys and List of DB.Mesh values.</param>
+  /// <param name="args">A tuple consisting of (1) a dictionary with DB.ElementId keys and List of DB.Mesh values and (2) the root element id (the one generating all the meshes).</param>
   /// <returns>
   /// Returns a list of <see cref="SOG.Mesh"/> objects where each mesh represents one unique material in the input dictionary.
   /// </returns>
@@ -34,15 +34,25 @@ public class MeshByMaterialDictionaryToSpeckle
   /// These meshes are created with an initial capacity based on the size of the vertex and face arrays to avoid unnecessary resizing.
   /// Also note that, for each unique material, the method tries to retrieve the related DB.Material from the current document and convert it. If the conversion is successful,
   /// the material is added to the corresponding Speckle mesh. If the conversion fails, the operation simply continues without the material.
+  /// TODO: update description
   /// </remarks>
-  public List<SOG.Mesh> Convert(Dictionary<DB.ElementId, List<DB.Mesh>> target)
+  public List<SOG.Mesh> Convert((Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId) args)
   {
-    var result = new List<SOG.Mesh>(target.Keys.Count);
+    var result = new List<SOG.Mesh>(args.target.Keys.Count);
+    var objectRenderMaterialProxiesMap = _contextStack.RenderMaterialProxyCache.ObjectRenderMaterialProxiesMap;
 
-    foreach (var meshData in target)
+    var materialProxyMap = new Dictionary<string, RenderMaterialProxy>();
+    objectRenderMaterialProxiesMap[args.parentElementId.ToString()!] = materialProxyMap;
+
+    if (args.target.Count == 0)
     {
-      DB.ElementId materialId = meshData.Key;
-      List<DB.Mesh> meshes = meshData.Value;
+      return new();
+    }
+
+    foreach (var keyValuePair in args.target)
+    {
+      DB.ElementId materialId = keyValuePair.Key;
+      List<DB.Mesh> meshes = keyValuePair.Value;
 
       // We compute the final size of the arrays to prevent unnecessary resizing.
       (int verticesSize, int facesSize) = GetVertexAndFaceListSize(meshes);
@@ -51,13 +61,27 @@ public class MeshByMaterialDictionaryToSpeckle
       var speckleMesh = new SOG.Mesh(
         new List<double>(verticesSize),
         new List<int>(facesSize),
-        units: _contextStack.Current.SpeckleUnits
+        units: _contextStack.Current.SpeckleUnits,
+        applicationId: Guid.NewGuid().ToString() // NOTE: as we are composing meshes out of multiple ones for the same material, we need to generate our own application id. c'est la vie.
       );
 
       var doc = _contextStack.Current.Document;
+
       if (doc.GetElement(materialId) is DB.Material material)
       {
-        speckleMesh["renderMaterial"] = _materialConverter.Convert(material);
+        var speckleMaterial = _materialConverter.Convert(material);
+
+        if (!materialProxyMap.TryGetValue(materialId.ToString()!, out RenderMaterialProxy? renderMaterialProxy))
+        {
+          renderMaterialProxy = new RenderMaterialProxy()
+          {
+            value = speckleMaterial,
+            applicationId = materialId.ToString()!,
+            objects = []
+          };
+          materialProxyMap[materialId.ToString()!] = renderMaterialProxy;
+        }
+        renderMaterialProxy.objects.Add(speckleMesh.applicationId!);
       }
 
       // Append the revit mesh data to the speckle mesh

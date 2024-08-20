@@ -76,7 +76,7 @@ public class AutocadMaterialManager
 
       if (transaction.GetObject(entity.MaterialId, OpenMode.ForRead) is Material material)
       {
-        string materialId = material.Handle.ToString();
+        string materialId = material.GetSpeckleApplicationId();
         if (materialProxies.TryGetValue(materialId, out RenderMaterialProxy? value))
         {
           value.objects.Add(rootObj.ApplicationId);
@@ -95,7 +95,7 @@ public class AutocadMaterialManager
     {
       if (transaction.GetObject(layer.MaterialId, OpenMode.ForRead) is Material material)
       {
-        string materialId = material.Handle.ToString();
+        string materialId = material.GetSpeckleApplicationId();
         string layerId = layer.GetSpeckleApplicationId(); // Do not use handle directly, see note in the 'GetSpeckleApplicationId' method
         if (materialProxies.TryGetValue(materialId, out RenderMaterialProxy? value))
         {
@@ -128,7 +128,10 @@ public class AutocadMaterialManager
       // POC: Currently we're relying on the render material name for identification if it's coming from speckle and from which model; could we do something else?
       // POC: we should assume render materials all have application ids?
       string renderMaterialId = renderMaterial.applicationId ?? renderMaterial.id;
-      string matName = $"{renderMaterial.name}-({renderMaterialId})-{baseLayerPrefix}";
+      string matName = _autocadContext.RemoveInvalidChars(
+        $"{renderMaterial.name}-({renderMaterialId})-{baseLayerPrefix}"
+      );
+
       MaterialMap map = new();
       MaterialOpacityComponent opacity = new(renderMaterial.opacity, map);
       var systemDiffuse = System.Drawing.Color.FromArgb(renderMaterial.diffuse);

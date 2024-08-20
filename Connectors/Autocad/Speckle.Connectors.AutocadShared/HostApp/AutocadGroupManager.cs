@@ -1,4 +1,5 @@
 using Autodesk.AutoCAD.DatabaseServices;
+using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Sdk;
@@ -11,6 +12,13 @@ namespace Speckle.Connectors.Autocad.HostApp;
 /// </summary>
 public class AutocadGroupManager
 {
+  private readonly AutocadContext _autocadContext;
+
+  public AutocadGroupManager(AutocadContext autocadContext)
+  {
+    _autocadContext = autocadContext;
+  }
+
   /// <summary>
   /// Unpacks a selection of atomic objects into their groups
   /// </summary>
@@ -32,7 +40,7 @@ public class AutocadGroupManager
         {
           continue;
         }
-        var groupAppId = group.Handle.ToString();
+        var groupAppId = group.GetSpeckleApplicationId();
         if (groupProxies.TryGetValue(groupAppId, out GroupProxy? groupProxy))
         {
           groupProxy.objects.Add(applicationId);
@@ -86,11 +94,12 @@ public class AutocadGroupManager
           ids.Add(entity.ObjectId);
         }
 
-        var newGroup = new Group(gp.name, true); // NOTE: this constructor sets both the description (as it says) but also the name at the same time
+        var groupName = _autocadContext.RemoveInvalidChars(gp.name);
+        var newGroup = new Group(groupName, true); // NOTE: this constructor sets both the description (as it says) but also the name at the same time
         newGroup.Append(ids);
 
         groupDictionary.UpgradeOpen();
-        groupDictionary.SetAt(gp.name, newGroup);
+        groupDictionary.SetAt(groupName, newGroup);
 
         groupCreationTransaction.AddNewlyCreatedDBObject(newGroup, true);
       }

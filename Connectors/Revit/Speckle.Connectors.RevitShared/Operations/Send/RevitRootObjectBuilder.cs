@@ -18,35 +18,32 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
 {
   // POC: SendSelection and RevitConversionContextStack should be interfaces, former needs interfaces
   private readonly IRootToSpeckleConverter _converter;
-  private readonly IRevitConversionContextStack _contextStack;
-  private readonly Dictionary<string, Collection> _collectionCache;
+  private readonly IRevitConversionContextStack _conversionContextStack;
   private readonly Collection _rootObject;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ISyncToThread _syncToThread;
-  private readonly SendSelectionUnpacker _sendSelectionUnpacker;
+  private readonly ElementUnpacker _elementUnpacker;
   private readonly SendCollectionManager _sendCollectionManager;
 
   public RevitRootObjectBuilder(
     IRootToSpeckleConverter converter,
-    IRevitConversionContextStack contextStack,
+    IRevitConversionContextStack conversionContextStack,
     ISendConversionCache sendConversionCache,
     ISyncToThread syncToThread,
-    SendSelectionUnpacker sendSelectionUnpacker,
+    ElementUnpacker elementUnpacker,
     SendCollectionManager sendCollectionManager
   )
   {
     _converter = converter;
-    _contextStack = contextStack;
+    _conversionContextStack = conversionContextStack;
     _sendConversionCache = sendConversionCache;
     _syncToThread = syncToThread;
-    _sendSelectionUnpacker = sendSelectionUnpacker;
+    _elementUnpacker = elementUnpacker;
     _sendCollectionManager = sendCollectionManager;
 
-    // Note, this class is instantiated per unit of work (aka per send operation), so we can safely initialize what we need in here.
-    _collectionCache = new Dictionary<string, Collection>();
     _rootObject = new Collection()
     {
-      name = _contextStack.Current.Document.PathName.Split('\\').Last().Split('.').First()
+      name = _conversionContextStack.Current.Document.PathName.Split('\\').Last().Split('.').First()
     };
   }
 
@@ -58,7 +55,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
   ) =>
     _syncToThread.RunOnThread(() =>
     {
-      var doc = _contextStack.Current.Document;
+      var doc = _conversionContextStack.Current.Document;
 
       if (doc.IsFamilyDocument)
       {
@@ -70,7 +67,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
       // Convert ids to actual revit elements
       foreach (var id in objects)
       {
-        var el = _contextStack.Current.Document.GetElement(id);
+        var el = _conversionContextStack.Current.Document.GetElement(id);
         if (el != null)
         {
           revitElements.Add(el);
@@ -83,9 +80,9 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
       }
 
       // Unpack groups (& other complex data structures)
-      var atomicObjects = _sendSelectionUnpacker.UnpackSelection(revitElements).ToList();
+      var atomicObjects = _elementUnpacker.UnpackSelectionForConversion(revitElements).ToList();
 
-      var countProgress = 0; // because for(int i = 0; ...) loops are so last year
+      var countProgress = 0;
       var cacheHitCount = 0;
       List<SendConversionResult> results = new(revitElements.Count);
 
@@ -109,19 +106,22 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
 
           var collection = _sendCollectionManager.GetAndCreateObjectHostCollection(revitElement, _rootObject);
           collection.elements.Add(converted);
-          // TODO: extract material into proxies here?
           results.Add(new(Status.SUCCESS, applicationId, revitElement.GetType().Name, converted));
         }
         catch (Exception ex) when (!ex.IsFatal())
         {
           results.Add(new(Status.ERROR, applicationId, revitElement.GetType().Name, null, ex));
-          // POC: add logging
         }
 
-        onOperationProgressed?.Invoke("Converting", (double)++countProgress / revitElements.Count);
+        onOperationProgressed?.Invoke("Converting", (double)++countProgress / atomicObjects.Count);
       }
 
-      // POC: Log would be nice, or can be removed.
+      var idsAndSubElementIds = _elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(atomicObjects);
+      var materialProxies = _conversionContextStack.RenderMaterialProxyCache.GetRenderMaterialProxyListForObjects(
+        idsAndSubElementIds
+      );
+      _rootObject["renderMaterialProxies"] = materialProxies;
+
       Debug.WriteLine(
         $"Cache hit count {cacheHitCount} out of {objects.Count} ({(double)cacheHitCount / objects.Count})"
       );
