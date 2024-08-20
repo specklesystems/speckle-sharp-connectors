@@ -29,7 +29,7 @@ public class LevelConversionToSpeckle : BaseTopLevelConverterToSpeckle<DB.Level,
         createView = true
       };
 
-    _parameterObjectAssigner.AssignParametersToBase(target, speckleRoom);
+    _parameterObjectAssigner.AssignParametersToBase(target, level);
 
     return level;
   }
