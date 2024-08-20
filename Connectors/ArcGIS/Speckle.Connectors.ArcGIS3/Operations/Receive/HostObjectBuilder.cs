@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Diagnostics.Contracts;
 using ArcGIS.Core.CIM;
 using ArcGIS.Core.Geometry;
@@ -25,7 +26,7 @@ namespace Speckle.Connectors.ArcGIS.Operations.Receive;
 public class ArcGISHostObjectBuilder : IHostObjectBuilder
 {
   private readonly IRootToHostConverter _converter;
-  private readonly INonNativeFeaturesUtils _nonGisFeaturesUtils;
+  private readonly IFeatureClassUtils _featureClassUtils;
   private readonly ILocalToGlobalUnpacker _localToGlobalUnpacker;
   private readonly ILocalToGlobalConverterUtils _localToGlobalConverterUtils;
 
@@ -37,7 +38,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
   public ArcGISHostObjectBuilder(
     IRootToHostConverter converter,
     IConversionContextStack<ArcGISDocument, Unit> contextStack,
-    INonNativeFeaturesUtils nonGisFeaturesUtils,
+    IFeatureClassUtils featureClassUtils,
     ILocalToGlobalUnpacker localToGlobalUnpacker,
     ILocalToGlobalConverterUtils localToGlobalConverterUtils,
     GraphTraversal traverseFunction,
@@ -46,7 +47,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
   {
     _converter = converter;
     _contextStack = contextStack;
-    _nonGisFeaturesUtils = nonGisFeaturesUtils;
+    _featureClassUtils = featureClassUtils;
     _localToGlobalUnpacker = localToGlobalUnpacker;
     _localToGlobalConverterUtils = localToGlobalConverterUtils;
     _traverseFunction = traverseFunction;
@@ -104,12 +105,19 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
         if (IsGISType(obj))
         {
           string nestedLayerPath = $"{string.Join("\\", path)}";
-          string datasetId = await QueuedTask.Run(() => (string)_converter.Convert(obj)).ConfigureAwait(false);
-          conversionTracker[objectToConvert.TraversalContext] = new ObjectConversionTracker(
-            obj,
-            nestedLayerPath,
-            datasetId
-          );
+          string datasetId = "speckleID_" + obj.id;
+          object conversionResult = await QueuedTask.Run(() => _converter.Convert(obj)).ConfigureAwait(false);
+
+          // save converted elements individually
+          if (conversionResult is IEnumerable convertedItems && obj is VectorLayer)
+          {
+            var convertedTuples = convertedItems.Cast<(Base, Geometry?, Dictionary<string, object?>)>();
+            foreach ((Base baseObj, Geometry? geom, Dictionary<string, object?> attrs) in convertedTuples)
+            {
+              TraversalContext newContext = new(baseObj, "elements", objectToConvert.TraversalContext);
+              conversionTracker[newContext] = new ObjectConversionTracker(baseObj, geom, nestedLayerPath, datasetId);
+            }
+          }
         }
         else
         {
@@ -132,12 +140,26 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       onOperationProgressed?.Invoke("Converting", (double)++count / allCount);
     }
 
-    // 2. convert Database entries with non-GIS geometry datasets
+    // 2.1. Group conversionTrackers by same dataset
     onOperationProgressed?.Invoke("Writing to Database", null);
+    var convertedGroups = await QueuedTask
+      .Run(() =>
+      {
+        var convertedGroups = _featureClassUtils.GroupGisConversionTrackers(conversionTracker);
+        foreach (var item in _featureClassUtils.GroupNonGisConversionTrackers(conversionTracker))
+        {
+          convertedGroups[item.Key] = item.Value;
+        }
+
+        return convertedGroups;
+      })
+      .ConfigureAwait(false);
+
+    // 2.2. Write Datasets
     await QueuedTask
       .Run(() =>
       {
-        _nonGisFeaturesUtils.WriteGeometriesToDatasets(conversionTracker, onOperationProgressed);
+        _featureClassUtils.CreateDatasets(conversionTracker, convertedGroups, onOperationProgressed);
       })
       .ConfigureAwait(false);
 
@@ -210,7 +232,6 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       onOperationProgressed?.Invoke("Adding to Map", (double)++bakeCount / conversionTracker.Count);
     }
     bakedObjectIds.AddRange(createdLayerGroups.Values.Select(x => x.URI));
-
     // TODO: validated a correct set regarding bakedobject ids
     return new(bakedObjectIds, results);
   }

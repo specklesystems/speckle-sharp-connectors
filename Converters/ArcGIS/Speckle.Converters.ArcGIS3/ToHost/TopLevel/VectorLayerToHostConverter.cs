@@ -1,5 +1,4 @@
 using ArcGIS.Core.Data;
-using ArcGIS.Desktop.Mapping;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
@@ -9,44 +8,44 @@ using Speckle.Sdk.Models;
 namespace Speckle.Converters.ArcGIS3.ToHost.TopLevel;
 
 [NameAndRankValue(nameof(VectorLayer), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class VectorLayerToHostConverter : IToHostTopLevelConverter, ITypedConverter<VectorLayer, string>
+public class VectorLayerToHostConverter : IToHostTopLevelConverter, ITypedConverter<VectorLayer, object>
 {
-  private readonly ITypedConverter<VectorLayer, FeatureClass> _featureClassConverter;
+  private readonly ITypedConverter<
+    VectorLayer,
+    List<(Base, ACG.Geometry, Dictionary<string, object?>)>
+  > _featureClassConverter;
   private readonly ITypedConverter<VectorLayer, Table> _tableConverter;
-  private readonly ITypedConverter<VectorLayer, LasDatasetLayer> _pointcloudLayerConverter;
 
   public VectorLayerToHostConverter(
-    ITypedConverter<VectorLayer, FeatureClass> featureClassConverter,
-    ITypedConverter<VectorLayer, Table> tableConverter,
-    ITypedConverter<VectorLayer, LasDatasetLayer> pointcloudLayerConverter
+    ITypedConverter<VectorLayer, List<(Base, ACG.Geometry, Dictionary<string, object?>)>> featureClassConverter,
+    ITypedConverter<VectorLayer, Table> tableConverter
   )
   {
     _featureClassConverter = featureClassConverter;
     _tableConverter = tableConverter;
-    _pointcloudLayerConverter = pointcloudLayerConverter;
   }
 
   public object Convert(Base target) => Convert((VectorLayer)target);
 
-  public string Convert(VectorLayer target)
+  public object Convert(VectorLayer target)
   {
     // pointcloud layers need to be checked separately, because there is no ArcGIS Geometry type
     // for Pointcloud. In ArcGIS it's a completely different layer class, so "GetNativeLayerGeometryType"
     // will return "Invalid" type
     if (target.geomType == GISLayerGeometryType.POINTCLOUD)
     {
-      return _pointcloudLayerConverter.Convert(target).Name;
+      // do nothing;
     }
 
     // check if Speckle VectorLayer should become a FeatureClass, StandaloneTable or PointcloudLayer
     ACG.GeometryType geomType = GISLayerGeometryType.GetNativeLayerGeometryType(target);
     if (geomType != ACG.GeometryType.Unknown) // feature class
     {
-      return _featureClassConverter.Convert(target).GetName();
+      return _featureClassConverter.Convert(target);
     }
     else // table
     {
-      return _tableConverter.Convert(target).GetName();
+      return _tableConverter.Convert(target);
     }
   }
 }
