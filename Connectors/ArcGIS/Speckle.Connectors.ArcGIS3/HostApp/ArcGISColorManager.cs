@@ -1,7 +1,6 @@
 using System.Drawing;
 using ArcGIS.Core.CIM;
 using ArcGIS.Core.Data;
-using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Sdk.Models;
@@ -145,12 +144,16 @@ public class ArcGISColorManager
   /// </summary>
   /// <param name="tc"></param>
   /// <param name="trackerItem"></param>
-  public async Task SetOrEditLayerRenderer(TraversalContext tc, ObjectConversionTracker trackerItem)
+  public CIMUniqueValueRenderer? CreateOrEditLayerRenderer(
+    TraversalContext tc,
+    ObjectConversionTracker trackerItem,
+    CIMRenderer? existingRenderer
+  )
   {
     if (trackerItem.HostAppMapMember is not FeatureLayer fLayer)
     {
       // do nothing with non-feature layers
-      return;
+      return null;
     }
 
     // declare default grey color, create default symbol for the given layer geometry type
@@ -159,8 +162,6 @@ public class ArcGISColorManager
 
     // get existing renderer classes
     List<CIMUniqueValueClass> listUniqueValueClasses = new() { };
-    var existingRenderer = QueuedTask.Run(() => fLayer.GetRenderer()).Result;
-    // should be always UniqueRenderer, it's the only type we are creating atm
     if (existingRenderer is CIMUniqueValueRenderer uniqueRenderer)
     {
       if (uniqueRenderer.Groups[0].Classes != null)
@@ -186,9 +187,9 @@ public class ArcGISColorManager
 
     foreach (var tContext in traversalContexts)
     {
-      CIMUniqueValueClass newUniqueValueClass = CreateColorCategory(tContext, fLayer.ShapeType);
-      if (!listUniqueValueClasses.Select(x => x.Label).Contains(newUniqueValueClass.Label))
+      if (!listUniqueValueClasses.Select(x => x.Label).Contains(tContext.Current.id))
       {
+        CIMUniqueValueClass newUniqueValueClass = CreateColorCategory(tContext, fLayer.ShapeType);
         listUniqueValueClasses.Add(newUniqueValueClass);
       }
     }
@@ -206,9 +207,7 @@ public class ArcGISColorManager
         Groups = listUniqueValueGroups.ToArray(),
         Fields = new string[] { "Speckle_ID" }
       };
-
-    // Set the feature layer's renderer.
-    await QueuedTask.Run(() => fLayer.SetRenderer(uvr)).ConfigureAwait(false);
+    return uvr;
   }
 
   private string GetColorApplicationId(int argb, double order) => $"{argb}_{order}";

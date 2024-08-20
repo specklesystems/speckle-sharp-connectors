@@ -188,7 +188,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
 
     // 3. add layer and tables to the Table Of Content
     int bakeCount = 0;
-    Dictionary<string, MapMember> bakedMapMembers = new();
+    Dictionary<string, (MapMember, CIMUniqueValueRenderer?)> bakedMapMembers = new();
     onOperationProgressed?.Invoke("Adding to Map", bakeCount);
 
     foreach (var item in conversionTracker)
@@ -213,18 +213,21 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
           )
         );
       }
-      else if (bakedMapMembers.TryGetValue(trackerItem.DatasetId, out MapMember? value))
+      else if (bakedMapMembers.TryGetValue(trackerItem.DatasetId, out var value))
       {
         // if the layer already created, just add more features to report, and more color categories
         // add layer and layer URI to tracker
-        trackerItem.AddConvertedMapMember(value);
-        trackerItem.AddLayerURI(value.URI);
+        trackerItem.AddConvertedMapMember(value.Item1);
+        trackerItem.AddLayerURI(value.Item1.URI);
         conversionTracker[item.Key] = trackerItem; // not necessary atm, but needed if we use conversionTracker further
-        // only add a report item
-        AddResultsFromTracker(trackerItem, results);
 
         // add color category
-        await _colorManager.SetOrEditLayerRenderer(item.Key, trackerItem).ConfigureAwait(false);
+        CIMUniqueValueRenderer? uvr = _colorManager.CreateOrEditLayerRenderer(item.Key, trackerItem, value.Item2);
+        // replace renderer
+        bakedMapMembers[trackerItem.DatasetId] = (value.Item1, uvr);
+
+        // only add a report item
+        AddResultsFromTracker(trackerItem, results);
       }
       else
       {
@@ -240,16 +243,24 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
         // add layer URI to bakedIds
         bakedObjectIds.Add(trackerItem.MappedLayerURI == null ? "" : trackerItem.MappedLayerURI);
 
+        // add color category
+        CIMUniqueValueRenderer? uvr = _colorManager.CreateOrEditLayerRenderer(item.Key, trackerItem, null);
         // mark dataset as already created
-        bakedMapMembers[trackerItem.DatasetId] = mapMember;
+        bakedMapMembers[trackerItem.DatasetId] = (mapMember, uvr);
 
         // add report item
         AddResultsFromTracker(trackerItem, results);
-
-        // add color category
-        await _colorManager.SetOrEditLayerRenderer(item.Key, trackerItem).ConfigureAwait(false);
       }
       onOperationProgressed?.Invoke("Adding to Map", (double)++bakeCount / conversionTracker.Count);
+    }
+
+    foreach (var bakedMember in bakedMapMembers)
+    {
+      if (bakedMember.Value.Item1 is FeatureLayer fLayer)
+      {
+        // Set the feature layer's renderer.
+        await QueuedTask.Run(() => fLayer.SetRenderer(bakedMember.Value.Item2)).ConfigureAwait(false);
+      }
     }
     bakedObjectIds.AddRange(createdLayerGroups.Values.Select(x => x.URI));
     // TODO: validated a correct set regarding bakedobject ids
