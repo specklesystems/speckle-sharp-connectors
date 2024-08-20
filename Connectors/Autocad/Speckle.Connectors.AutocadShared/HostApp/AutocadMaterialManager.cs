@@ -76,7 +76,7 @@ public class AutocadMaterialManager
 
       if (transaction.GetObject(entity.MaterialId, OpenMode.ForRead) is Material material)
       {
-        string materialId = material.Handle.ToString();
+        string materialId = material.GetSpeckleApplicationId();
         if (materialProxies.TryGetValue(materialId, out RenderMaterialProxy? value))
         {
           value.objects.Add(rootObj.ApplicationId);
@@ -95,7 +95,7 @@ public class AutocadMaterialManager
     {
       if (transaction.GetObject(layer.MaterialId, OpenMode.ForRead) is Material material)
       {
-        string materialId = material.Handle.ToString();
+        string materialId = material.GetSpeckleApplicationId();
         string layerId = layer.GetSpeckleApplicationId(); // Do not use handle directly, see note in the 'GetSpeckleApplicationId' method
         if (materialProxies.TryGetValue(materialId, out RenderMaterialProxy? value))
         {
