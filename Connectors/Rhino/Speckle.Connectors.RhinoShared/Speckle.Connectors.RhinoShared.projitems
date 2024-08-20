@@ -24,6 +24,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\RhinoConnectorModule.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\RhinoPlugin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\BoundingBox.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Extensions\SpeckleApplicationIdExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\RhinoUnitsExtension.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Filters\RhinoEverythingFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Filters\RhinoSelectionFilter.cs" />
