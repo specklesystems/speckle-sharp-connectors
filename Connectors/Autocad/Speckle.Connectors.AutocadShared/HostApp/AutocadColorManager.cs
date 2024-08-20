@@ -87,6 +87,7 @@ public class AutocadColorManager
     ColorProxy colorProxy = new(argb, id, name) { objects = new() };
 
     // add the color source as well for receiving in other apps
+    // POC: in order to support full fidelity color support across autocad and rhino, we need to keep track of the color source property. Not sure if this is the best place to keep track of the source, vs on a ColorSourceProxy or as a property on the atomic object.
     colorProxy["source"] = color.IsByBlock
       ? "block"
       : color.IsByLayer
