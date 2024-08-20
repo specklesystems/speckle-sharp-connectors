@@ -33,9 +33,9 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
 
   public string GetConnectorVersion() => typeof(AutocadBasicConnectorBinding).Assembly.GetVersion();
 
-  public string GetSourceApplicationName() => Speckle.Connectors.Utils.Connector.Slug;
+  public string GetSourceApplicationName() => Utils.Connector.Slug;
 
-  public string GetSourceApplicationVersion() => Speckle.Connectors.Utils.Connector.VersionString;
+  public string GetSourceApplicationVersion() => Utils.Connector.VersionString;
 
   public Account[] GetAccounts() => AccountManager.GetAccounts().ToArray();
 
