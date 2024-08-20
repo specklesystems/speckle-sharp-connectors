@@ -277,9 +277,7 @@
     <PackageType Condition="'$(PackageType)' == ''">Addin</PackageType>
   </PropertyGroup>
   <PropertyGroup>
-    <ArcGISFolder>$([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro', 'InstallDir', null, RegistryView.Registry64))\bin</ArcGISFolder>
-    <ArcGISFolder Condition="'$(ArcGISFolder)' == ''">$(registry:HKEY_CURRENT_USER\SOFTWARE\ESRI\ArcGISPro@InstallDir)\bin</ArcGISFolder>
-    <ArcGISFolder Condition="'$(ArcGISFolder)' == '' Or !Exists('$(ArcGISFolder)\RegisterAddIn.exe')">$(ProgramData)\EsriProCommon\</ArcGISFolder>
+    <ArcGISFolder>$(ProgramData)\EsriProCommon\</ArcGISFolder>
   </PropertyGroup>
   <Target Name="ArcGISInstallOutput" AfterTargets="Build">
     <Message Text="IntermediateOutputPath Name: $(IntermediateOutputPath)..." Importance="High"/>
