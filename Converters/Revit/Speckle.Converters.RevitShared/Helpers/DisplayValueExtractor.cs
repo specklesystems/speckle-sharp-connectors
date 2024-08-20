@@ -164,14 +164,14 @@ public sealed class DisplayValueExtractor
     }
 
     var hasCachedStyle = _graphicStyleCache.TryGetValue(
-      geomObj.GraphicsStyleId.ToString(),
+      geomObj.GraphicsStyleId.ToString()!,
       out DB.GraphicsStyle graphicStyle
     );
 
     if (!hasCachedStyle && geomObj.GraphicsStyleId != DB.ElementId.InvalidElementId)
     {
       graphicStyle = (DB.GraphicsStyle)element.Document.GetElement(geomObj.GraphicsStyleId);
-      _graphicStyleCache[geomObj.GraphicsStyleId.ToString()] = graphicStyle;
+      _graphicStyleCache[geomObj.GraphicsStyleId.ToString()!] = graphicStyle;
     }
 
     if (graphicStyle?.GraphicsStyleCategory.BuiltInCategory == DB.BuiltInCategory.OST_LightingFixtureSource)
