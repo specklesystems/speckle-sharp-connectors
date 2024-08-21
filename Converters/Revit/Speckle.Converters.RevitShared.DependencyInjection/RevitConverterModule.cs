@@ -23,6 +23,7 @@ public class RevitConverterModule : ISpeckleModule
     builder.AddSingleton(new RevitContext());
 
     builder.AddSingleton(new RevitRenderMaterialProxyCacheSingleton());
+    builder.AddSingleton(new RevitMaterialCacheSingleton());
 
     // POC: do we need ToSpeckleScalingService as is, do we need to interface it out?
     builder.AddScoped<ScalingServiceToSpeckle>();

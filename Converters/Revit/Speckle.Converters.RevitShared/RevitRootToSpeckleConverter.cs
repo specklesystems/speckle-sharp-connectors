@@ -1,7 +1,9 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Sdk;
 using Speckle.Sdk.Models;
+using MaterialQuantity = Speckle.Objects.Other.MaterialQuantity;
 
 namespace Speckle.Converters.RevitShared;
 
@@ -10,16 +12,19 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
 {
   private readonly IConverterResolver<IToSpeckleTopLevelConverter> _toSpeckle;
   private readonly ParameterValueExtractor _parameterValueExtractor;
+  private readonly ITypedConverter<DB.Element, IEnumerable<MaterialQuantity>> _materialQuantityConverter;
   private readonly IRevitConversionContextStack _contextStack;
 
   public RevitRootToSpeckleConverter(
     IConverterResolver<IToSpeckleTopLevelConverter> toSpeckle,
     ParameterValueExtractor parameterValueExtractor,
+    ITypedConverter<DB.Element, IEnumerable<MaterialQuantity>> materialQuantityConverter,
     IRevitConversionContextStack contextStack
   )
   {
     _toSpeckle = toSpeckle;
     _parameterValueExtractor = parameterValueExtractor;
+    _materialQuantityConverter = materialQuantityConverter;
     _contextStack = contextStack;
   }
 
@@ -45,7 +50,16 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
     {
       // POC: is this the right place?
       result.applicationId = element.UniqueId;
-      // TODO: attach material quantities
+
+      try
+      {
+        result["materialQuantities"] = _materialQuantityConverter.Convert(element);
+      }
+      catch (Exception e) when (!e.IsFatal())
+      {
+        // TODO: report quantities not retrievable
+      }
+
       // POC: we've discussed sending Materials as Proxies, containing the object ids of material quantities.
       // POC: this would require redesigning the MaterialQuantities class to no longer have Material as a property. TBD post december.
       _parameterValueExtractor.RemoveUniqueId(element.UniqueId);

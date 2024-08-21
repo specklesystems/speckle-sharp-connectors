@@ -9,19 +9,19 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 public class MaterialQuantitiesToSpeckle : ITypedConverter<DB.Element, IEnumerable<MaterialQuantity>>
 {
-  private readonly MaterialConversionToSpeckleRevitMaterial _materialConversionToSpeckleRevitMaterial;
+  private readonly ITypedConverter<DB.Material, RevitMaterial> _materialConverter;
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly ScalingServiceToSpeckle _scalingService;
   private readonly IRevitConversionContextStack _contextStack;
 
   public MaterialQuantitiesToSpeckle(
-    MaterialConversionToSpeckleRevitMaterial materialConversionToSpeckleRevitMaterial,
+    ITypedConverter<DB.Material, RevitMaterial> materialConverter,
     DisplayValueExtractor displayValueExtractor,
     ScalingServiceToSpeckle scalingService,
     IRevitConversionContextStack contextStack
   )
   {
-    _materialConversionToSpeckleRevitMaterial = materialConversionToSpeckleRevitMaterial;
+    _materialConverter = materialConverter;
     _displayValueExtractor = displayValueExtractor;
     _scalingService = scalingService;
     _contextStack = contextStack;
@@ -150,7 +150,7 @@ public class MaterialQuantitiesToSpeckle : ITypedConverter<DB.Element, IEnumerab
     // convert material
     if (_contextStack.Current.Document.GetElement(materialId) is DB.Material material)
     {
-      RevitMaterial speckleMaterial = _materialConversionToSpeckleRevitMaterial.Convert(material);
+      RevitMaterial speckleMaterial = _materialConverter.Convert(material);
       double factor = _scalingService.ScaleLength(1);
       double area = factor * factor * areaRevitInternalUnits;
       double volume = factor * factor * factor * volumeRevitInternalUnits;
