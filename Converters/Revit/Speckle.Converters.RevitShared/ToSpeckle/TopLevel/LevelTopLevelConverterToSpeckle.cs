@@ -8,8 +8,9 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 public class LevelConversionToSpeckle : BaseTopLevelConverterToSpeckle<DB.Level, SOBR.RevitLevel>
 {
   private readonly ScalingServiceToSpeckle _scalingService;
-   private readonly ParameterObjectAssigner _parameterObjectAssigner;
+  private readonly ParameterObjectAssigner _parameterObjectAssigner;
   private readonly IRevitConversionContextStack _contextStack;
+
   public LevelConversionToSpeckle(
     ScalingServiceToSpeckle scalingService,
     ParameterObjectAssigner parameterObjectAssigner,
@@ -18,7 +19,7 @@ public class LevelConversionToSpeckle : BaseTopLevelConverterToSpeckle<DB.Level,
   {
     _scalingService = scalingService;
     _parameterObjectAssigner = parameterObjectAssigner;
-     _contextStack = contextStack;
+    _contextStack = contextStack;
   }
 
   public override SOBR.RevitLevel Convert(DB.Level target)
