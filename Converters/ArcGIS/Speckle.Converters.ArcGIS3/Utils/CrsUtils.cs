@@ -14,7 +14,7 @@ public class CrsUtils : ICrsUtils
     _contextStack = contextStack;
   }
 
-  public void FindSetCrsDataOnReceive(Base rootObj)
+  public void FindSetCrsDataOnReceive(Base? rootObj)
   {
     if (rootObj is SGIS.VectorLayer vLayer)
     {

@@ -77,9 +77,8 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       _colorManager.ParseColors(colors, onOperationProgressed);
     }
 
-    List<LocalToGlobalMap> objectsToConvert = GetObjectsToConvert(rootObject);
-
     int count = 0;
+    List<LocalToGlobalMap> objectsToConvert = GetObjectsToConvert(rootObject);
     Dictionary<TraversalContext, ObjectConversionTracker> conversionTracker = new();
 
     // 1. convert everything
@@ -94,34 +93,22 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       try
       {
         obj = _localToGlobalConverterUtils.TransformObjects(objectToConvert.AtomicObject, objectToConvert.Matrix);
+        object? conversionResult =
+          obj is GisNonGeometricFeature
+            ? null
+            : await QueuedTask.Run(() => _converter.Convert(obj)).ConfigureAwait(false);
 
-        object conversionResult = await QueuedTask.Run(() => _converter.Convert(obj)).ConfigureAwait(false);
-
-        if (
-          objectToConvert.TraversalContext.Parent?.Current is not VectorLayer
-          && conversionResult is Geometry convertedGeom
-        ) // if simple geometry
+        string nestedLayerPath = $"{string.Join("\\", path)}";
+        if (objectToConvert.TraversalContext.Parent?.Current is not VectorLayer)
         {
-          string nestedLayerPath = $"{string.Join("\\", path)}\\{obj.speckle_type.Split(".")[^1]}";
-
-          conversionTracker[objectToConvert.TraversalContext] = new ObjectConversionTracker(
-            obj,
-            convertedGeom,
-            nestedLayerPath
-          );
+          nestedLayerPath += $"\\{obj.speckle_type.Split(".")[^1]}"; // add sub-layer by speckleType, for non-GIS objects
         }
-        else // if IGisFeature
-        {
-          string nestedLayerPath = $"{string.Join("\\", path)}"; // gis-layer
-          string datasetId = "speckleID_" + obj.id; // gis
 
-          conversionTracker[objectToConvert.TraversalContext] = new ObjectConversionTracker(
-            obj,
-            (((Base, Geometry?))conversionResult).Item2,
-            nestedLayerPath,
-            datasetId
-          );
-        }
+        conversionTracker[objectToConvert.TraversalContext] = new ObjectConversionTracker(
+          obj,
+          (Geometry?)conversionResult,
+          nestedLayerPath
+        );
       }
       catch (Exception ex) when (!ex.IsFatal()) // DO NOT CATCH SPECIFIC STUFF, conversion errors should be recoverable
       {
@@ -130,16 +117,16 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       onOperationProgressed?.Invoke("Converting", (double)++count / objectsToConvert.Count);
     }
 
-    // 2.1. Group conversionTrackers by same dataset
+    // 2.1. Group conversionTrackers (to write into datasets)
     onOperationProgressed?.Invoke("Grouping features into layers", null);
-    var convertedGroups = await QueuedTask
+    Dictionary<string, List<(TraversalContext, ObjectConversionTracker)>> convertedGroups = await QueuedTask
       .Run(() =>
       {
-        return _featureClassUtils.GroupFeaturesIntoLayers(conversionTracker, onOperationProgressed);
+        return _featureClassUtils.GroupConversionTrackers(conversionTracker, onOperationProgressed);
       })
       .ConfigureAwait(false);
 
-    // 2.2. Write Datasets
+    // 2.2. Write groups of objects to Datasets
     onOperationProgressed?.Invoke("Writing to Database", null);
     await QueuedTask
       .Run(() =>
@@ -148,10 +135,10 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       })
       .ConfigureAwait(false);
 
-    // Create placeholder for Group Layers
+    // Create placeholder for GroupLayers
     Dictionary<string, GroupLayer> createdLayerGroups = new();
 
-    // 3. add layer and tables to the Table Of Content
+    // 3. add layer and tables to the Map and Table Of Content
     int bakeCount = 0;
     Dictionary<string, (MapMember, CIMUniqueValueRenderer?)> bakedMapMembers = new();
     onOperationProgressed?.Invoke("Adding to Map", bakeCount);
@@ -235,13 +222,14 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
 
   private List<LocalToGlobalMap> GetObjectsToConvert(Base rootObject)
   {
-    var objectsToConvertTc = _traverseFunction
+    // keep GISlayers in the list, because they are still needed to extract CRS of the commit (code below)
+    List<TraversalContext> objectsToConvertTc = _traverseFunction
       .Traverse(rootObject)
       .Where(ctx => ctx.Current is not Collection || IsGISType(ctx.Current))
       .ToList();
 
     // get CRS from any present VectorLayer
-    var vLayer = objectsToConvertTc.First(x => x.Current is VectorLayer).Current;
+    Base? vLayer = objectsToConvertTc.FirstOrDefault(x => x.Current is VectorLayer)?.Current;
     _crsUtils.FindSetCrsDataOnReceive(vLayer);
 
     var instanceDefinitionProxies = (rootObject["instanceDefinitionProxies"] as List<object>)

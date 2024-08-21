@@ -13,7 +13,7 @@ namespace Speckle.Converters.ArcGIS3.ToHost.TopLevel;
 [NameAndRankValue(nameof(SGIS.GisPolylineFeature), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class GisPolylineFeatureToHostConverter
   : IToHostTopLevelConverter,
-    ITypedConverter<SGIS.GisPolylineFeature, (Base, ACG.Geometry?)>
+    ITypedConverter<SGIS.GisPolylineFeature, ACG.Geometry>
 {
   private readonly ITypedConverter<List<SOG.Polyline>, ACG.Polyline> _polylineConverter;
 
@@ -24,9 +24,9 @@ public class GisPolylineFeatureToHostConverter
 
   public object Convert(Base target) => Convert((SGIS.GisPolylineFeature)target);
 
-  public (Base, ACG.Geometry?) Convert(SGIS.GisPolylineFeature target)
+  public ACG.Geometry Convert(SGIS.GisPolylineFeature target)
   {
     ACG.Polyline polyline = _polylineConverter.Convert(target.geometry);
-    return (target, polyline);
+    return polyline;
   }
 }

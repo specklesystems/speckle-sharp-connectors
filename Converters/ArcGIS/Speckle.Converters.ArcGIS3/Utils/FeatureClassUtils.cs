@@ -4,7 +4,6 @@ using ArcGIS.Core.Data.Exceptions;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Converters.Common;
 using Speckle.InterfaceGenerator;
-using Speckle.Objects;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.GraphTraversal;
@@ -74,47 +73,14 @@ public class FeatureClassUtils : IFeatureClassUtils
     return geodatabase;
   }
 
-  public Dictionary<string, (SGIS.VectorLayer?, List<ObjectConversionTracker>)> GroupGisConversionTrackers(
-    Dictionary<TraversalContext, ObjectConversionTracker> conversionTracker,
-    Action<string, double?>? onOperationProgressed
-  )
-  {
-    Dictionary<string, (SGIS.VectorLayer?, List<ObjectConversionTracker>)> featureClassElements = new();
-
-    double count = 0;
-    foreach (var trackerItem in conversionTracker)
-    {
-      TraversalContext tc = trackerItem.Key;
-      ObjectConversionTracker tracker = trackerItem.Value;
-      if (tc.Parent?.Current is not SGIS.VectorLayer vLayer || tracker.DatasetId is not string featureClassName)
-      {
-        continue; // not GIS elements
-      }
-
-      // add new Feature class, or add geometry to already added class
-      bool added = featureClassElements.TryAdd(
-        featureClassName,
-        (vLayer, new List<ObjectConversionTracker>() { tracker })
-      );
-      if (!added)
-      {
-        featureClassElements[featureClassName].Item2.Add(tracker);
-        ClearExistingDataset(featureClassName);
-        onOperationProgressed?.Invoke("Grouping features into layers", count++ / conversionTracker.Count);
-      }
-    }
-
-    return featureClassElements;
-  }
-
-  public Dictionary<string, (SGIS.VectorLayer?, List<ObjectConversionTracker>)> GroupNonGisConversionTrackers(
+  public Dictionary<string, List<(TraversalContext, ObjectConversionTracker)>> GroupConversionTrackers(
     Dictionary<TraversalContext, ObjectConversionTracker> conversionTracker,
     Action<string, double?>? onOperationProgressed
   )
   {
     // 1. Sort features into groups by path and geom type
     double count = 0;
-    Dictionary<string, (SGIS.VectorLayer?, List<ObjectConversionTracker>)> geometryGroups = new();
+    Dictionary<string, List<(TraversalContext, ObjectConversionTracker)>> geometryGroups = new();
     foreach (var item in conversionTracker)
     {
       TraversalContext context = item.Key;
@@ -122,196 +88,101 @@ public class FeatureClassUtils : IFeatureClassUtils
       ACG.Geometry? geom = trackerItem.HostAppGeom;
       string? datasetId = trackerItem.DatasetId;
 
-      if (datasetId != null) // GIS elements
+      // Add dictionnary item if doesn't exist yet
+      // Key must be unique per parent and speckleType
+      // Adding Offsets/rotation to Unique key, so the modified CAD geometry doesn't overwrite non-modified one
+      // or, same commit received with different Offsets are saved to separate datasets
+      // Also, keep char limit for dataset name under 128: https://pro.arcgis.com/en/pro-app/latest/help/data/geodatabases/manage-saphana/enterprise-geodatabase-limits.htm
+
+      string speckleType = trackerItem.Base.speckle_type.Split(".")[^1];
+      speckleType = speckleType.Length > 10 ? speckleType[..9] : speckleType;
+      string? parentId = context.Parent?.Current.id;
+
+      CRSoffsetRotation activeSR = _contextStack.Current.Document.ActiveCRSoffsetRotation;
+      string xOffset = Convert.ToString(activeSR.LonOffset).Replace(".", "_");
+      xOffset = xOffset.Length > 15 ? xOffset[..14] : xOffset;
+
+      string yOffset = Convert.ToString(activeSR.LatOffset).Replace(".", "_");
+      yOffset = yOffset.Length > 15 ? yOffset[..14] : yOffset;
+
+      string trueNorth = Convert.ToString(activeSR.TrueNorthRadians).Replace(".", "_");
+      trueNorth = trueNorth.Length > 10 ? trueNorth[..9] : trueNorth;
+
+      // text: 36 symbols, speckleTYPE: 10, sr: 10, offsets: 40, id: 32 = 128
+      string uniqueKey =
+        $"speckle_{speckleType}_SR_{activeSR.SpatialReference.Name[..Math.Min(15, activeSR.SpatialReference.Name.Length - 1)]}_X_{xOffset}_Y_{yOffset}_North_{trueNorth}_speckleID_{parentId}";
+
+      // for gis elements, use a parent layer ID
+      if (item.Key.Parent?.Current is SGIS.VectorLayer vLayer)
       {
-        continue;
+        uniqueKey = "speckleID_" + vLayer.id;
       }
-      else if (geom != null) // only non-native geomerties, not written into a dataset yet
+
+      if (!geometryGroups.TryGetValue(uniqueKey, out _))
       {
-        // add dictionnary item if doesn't exist yet
-        // Key must be unique per parent and speckleType
-        // Adding Offsets/rotation to Unique key, so the modified CAD geometry doesn't overwrite non-modified one
-        // or, same commit received with different Offsets are saved to separate datasets
-
-        // Also, keep char limit for dataset name under 128: https://pro.arcgis.com/en/pro-app/latest/help/data/geodatabases/manage-saphana/enterprise-geodatabase-limits.htm
-
-        string speckleType = trackerItem.Base.speckle_type.Split(".")[^1];
-        //speckleType = speckleType.Substring(0, Math.Min(10, speckleType.Length - 1));
-        speckleType = speckleType.Length > 10 ? speckleType[..9] : speckleType;
-        string? parentId = context.Parent?.Current.id;
-
-        CRSoffsetRotation activeSR = _contextStack.Current.Document.ActiveCRSoffsetRotation;
-        string xOffset = Convert.ToString(activeSR.LonOffset).Replace(".", "_");
-        xOffset = xOffset.Length > 15 ? xOffset[..14] : xOffset;
-
-        string yOffset = Convert.ToString(activeSR.LatOffset).Replace(".", "_");
-        yOffset = yOffset.Length > 15 ? yOffset[..14] : yOffset;
-
-        string trueNorth = Convert.ToString(activeSR.TrueNorthRadians).Replace(".", "_");
-        trueNorth = trueNorth.Length > 10 ? trueNorth[..9] : trueNorth;
-
-        // text: 36 symbols, speckleTYPE: 10, sr: 10, offsets: 40, id: 32 = 128
-        string uniqueKey =
-          $"speckle_{speckleType}_SR_{activeSR.SpatialReference.Name[..Math.Min(15, activeSR.SpatialReference.Name.Length - 1)]}_X_{xOffset}_Y_{yOffset}_North_{trueNorth}_speckleID_{parentId}";
-
-        if (!geometryGroups.TryGetValue(uniqueKey, out _))
-        {
-          geometryGroups[uniqueKey] = (null, new List<ObjectConversionTracker>());
-        }
-
-        // record changes in conversion tracker
-        trackerItem.AddDatasetId(uniqueKey);
-        trackerItem.AddDatasetRow(geometryGroups[uniqueKey].Item2.Count);
-        conversionTracker[item.Key] = trackerItem;
-
-        geometryGroups[uniqueKey].Item2.Add(trackerItem);
-        ClearExistingDataset(uniqueKey);
-
-        onOperationProgressed?.Invoke("Grouping features into layers", count++ / conversionTracker.Count);
+        geometryGroups[uniqueKey] = new List<(TraversalContext, ObjectConversionTracker)>();
       }
-      else
-      {
-        throw new ArgumentException($"Unexpected geometry and datasetId values: {geom}, {datasetId}");
-      }
+
+      // record changes in conversion tracker
+      trackerItem.AddDatasetId(uniqueKey);
+      trackerItem.AddDatasetRow(geometryGroups[uniqueKey].Count);
+      conversionTracker[item.Key] = trackerItem;
+
+      geometryGroups[uniqueKey].Add((context, trackerItem));
+      ClearExistingDataset(uniqueKey);
+
+      onOperationProgressed?.Invoke("Grouping features into layers", count++ / conversionTracker.Count);
     }
 
     return geometryGroups;
   }
 
-  public Dictionary<string, (SGIS.VectorLayer?, List<ObjectConversionTracker>)> GroupFeaturesIntoLayers(
-    Dictionary<TraversalContext, ObjectConversionTracker> conversionTracker,
-    Action<string, double?>? onOperationProgressed
-  )
-  {
-    var convertedGroups = GroupGisConversionTrackers(conversionTracker, onOperationProgressed);
-    foreach (var item in GroupNonGisConversionTrackers(conversionTracker, onOperationProgressed))
-    {
-      convertedGroups[item.Key] = item.Value;
-    }
-
-    return convertedGroups;
-  }
-
   public void CreateDatasets(
     Dictionary<TraversalContext, ObjectConversionTracker> conversionTracker,
-    Dictionary<string, (SGIS.VectorLayer?, List<ObjectConversionTracker>)> featureClassElements,
+    Dictionary<string, List<(TraversalContext, ObjectConversionTracker)>> featureClassElements,
     Action<string, double?>? onOperationProgressed
   )
   {
     double count = 0;
     Geodatabase geodatabase = GetDatabase();
-    SchemaBuilder schemaBuilder = new(geodatabase);
 
-    foreach (var item in featureClassElements)
+    foreach (var datasetGroup in featureClassElements)
     {
-      string featureClassName = item.Key;
-      SGIS.VectorLayer? vLayer = item.Value.Item1;
-      List<ObjectConversionTracker> listOfTrackers = item.Value.Item2;
+      string featureClassName = datasetGroup.Key;
+      List<(TraversalContext, ObjectConversionTracker)> listOfContextAndTrackers = datasetGroup.Value;
 
-      // create Fields
-      ACG.GeometryType geomType;
-      List<(FieldDescription, Func<Base, object?>)> fieldsAndFunctions = new();
-      List<FieldDescription> fields = new();
+      // Get Fields and attributeFunction
+      List<(FieldDescription, Func<Base, object?>)> fieldsAndFunctions = _fieldsUtils.GetFieldsAndAttributeFunctions(
+        listOfContextAndTrackers
+      );
 
-      // Get Fields and geom type separately for GIS and non-GIS
-      if (vLayer is not null) // GIS
-      {
-        fields = _fieldsUtils.GetFieldsFromSpeckleLayer(vLayer);
-        fieldsAndFunctions = fields
-          .Select(x =>
-            (
-              x,
-              (Func<Base, object?>)(x.Name == "Speckle_ID" ? y => y?.id : y => (y as IGisFeature)?.attributes[x.Name])
-            )
-          )
-          .ToList();
-        geomType = GISLayerGeometryType.GetNativeLayerGeometryType(vLayer);
-      }
-      else // non-GIS
-      {
-        fieldsAndFunctions = _fieldsUtils.CreateFieldsFromListOfBase(listOfTrackers.Select(x => x.Base).ToList());
-        fields = fieldsAndFunctions.Select(x => x.Item1).ToList();
-        var hostAppGeom = listOfTrackers[0].HostAppGeom;
-        if (hostAppGeom is not ACG.Geometry geometry) // type check, should not happen
-        {
-          throw new SpeckleConversionException("Conversion failed");
-        }
-        geomType = geometry.GeometryType;
-      }
+      // Get geomType
+      ACG.GeometryType geomType = DefineDatasetGeomType(listOfContextAndTrackers);
 
-      // Create Table
-      if (geomType == ACG.GeometryType.Unknown)
+      try
       {
         // Create Table
-        try
+        if (geomType == ACG.GeometryType.Unknown)
         {
-          TableDescription featureClassDescription = new(featureClassName, fields);
-          TableToken featureClassToken = schemaBuilder.Create(featureClassDescription);
-        }
-        catch (ArgumentException ex)
-        {
-          // if name has invalid characters/combinations
-          // or 'The table contains multiple fields with the same name.:
-          throw new ArgumentException($"{ex.Message}: {featureClassName}", ex);
-        }
-        if (!schemaBuilder.Build())
-        {
-          // POC: log somewhere the error in building the feature class
-          IReadOnlyList<string> errors = schemaBuilder.ErrorMessages;
-        }
-        try
-        {
-          Table newFeatureClass = geodatabase.OpenDataset<Table>(featureClassName);
-          geodatabase.ApplyEdits(() =>
-          {
-            WriteFeaturesToTable(newFeatureClass, fieldsAndFunctions, listOfTrackers);
-          });
-        }
-        catch (GeodatabaseException ex)
-        {
-          // do nothing if writing of some geometry groups fails
-          // only record in conversionTracker:
-          foreach (var conversionItem in conversionTracker)
-          {
-            if (conversionItem.Value.DatasetId == featureClassName)
-            {
-              var trackerItem = conversionItem.Value;
-              trackerItem.AddException(ex);
-              conversionTracker[conversionItem.Key] = trackerItem;
-            }
-          }
+          CreateTable(
+            featureClassName,
+            fieldsAndFunctions,
+            geodatabase,
+            listOfContextAndTrackers.Select(x => x.Item2).ToList()
+          );
+
+          onOperationProgressed?.Invoke("Writing to Database", count++ / featureClassElements.Count);
+          continue;
         }
 
-        onOperationProgressed?.Invoke("Writing to Database", count++ / featureClassElements.Count);
-        continue;
-      }
-      // Create new FeatureClass
-      try
-      {
-        ShapeDescription shpDescription =
-          new(geomType, _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference) { HasZ = true };
-        FeatureClassDescription featureClassDescription = new(featureClassName, fields, shpDescription);
-        FeatureClassToken featureClassToken = schemaBuilder.Create(featureClassDescription);
-      }
-      catch (ArgumentException ex)
-      {
-        // if name has invalid characters/combinations
-        // or 'The table contains multiple fields with the same name.:
-        throw new ArgumentException($"{ex.Message}: {featureClassName}", ex);
-      }
-      if (!schemaBuilder.Build())
-      {
-        // POC: log somewhere the error in building the feature class
-        IReadOnlyList<string> errors = schemaBuilder.ErrorMessages;
-      }
-
-      try
-      {
-        FeatureClass newFeatureClass = geodatabase.OpenDataset<FeatureClass>(featureClassName);
-        geodatabase.ApplyEdits(() =>
-        {
-          WriteFeaturesToDataset(newFeatureClass, fieldsAndFunctions, listOfTrackers);
-        });
+        // Create new FeatureClass
+        CreateFeatureClass(
+          featureClassName,
+          geomType,
+          fieldsAndFunctions,
+          geodatabase,
+          listOfContextAndTrackers.Select(x => x.Item2).ToList()
+        );
       }
       catch (GeodatabaseException ex)
       {
@@ -327,9 +198,102 @@ public class FeatureClassUtils : IFeatureClassUtils
           }
         }
       }
-      count += 1;
-      onOperationProgressed?.Invoke("Writing to Database", (double)count / featureClassElements.Count);
+
+      onOperationProgressed?.Invoke("Writing to Database", count++ / featureClassElements.Count);
     }
+  }
+
+  private void CreateFeatureClass(
+    string featureClassName,
+    ACG.GeometryType geomType,
+    List<(FieldDescription, Func<Base, object?>)> fieldsAndFunctions,
+    Geodatabase geodatabase,
+    List<ObjectConversionTracker> conversionTrackers
+  )
+  {
+    SchemaBuilder schemaBuilder = new(geodatabase);
+    List<FieldDescription> fields = fieldsAndFunctions.Select(x => x.Item1).ToList();
+
+    try
+    {
+      ShapeDescription shpDescription =
+        new(geomType, _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference) { HasZ = true };
+      FeatureClassDescription featureClassDescription = new(featureClassName, fields, shpDescription);
+      FeatureClassToken featureClassToken = schemaBuilder.Create(featureClassDescription);
+    }
+    catch (ArgumentException ex)
+    {
+      // if name has invalid characters/combinations
+      // or 'The table contains multiple fields with the same name.:
+      throw new ArgumentException($"{ex.Message}: {featureClassName}", ex);
+    }
+    if (!schemaBuilder.Build())
+    {
+      // POC: log somewhere the error in building the feature class
+      IReadOnlyList<string> errors = schemaBuilder.ErrorMessages;
+    }
+
+    FeatureClass newFeatureClass = geodatabase.OpenDataset<FeatureClass>(featureClassName);
+    geodatabase.ApplyEdits(() =>
+    {
+      WriteFeaturesToDataset(newFeatureClass, fieldsAndFunctions, conversionTrackers);
+    });
+  }
+
+  private void CreateTable(
+    string featureClassName,
+    List<(FieldDescription, Func<Base, object?>)> fieldsAndFunctions,
+    Geodatabase geodatabase,
+    List<ObjectConversionTracker> conversionTrackers
+  )
+  {
+    SchemaBuilder schemaBuilder = new(geodatabase);
+    List<FieldDescription> fields = fieldsAndFunctions.Select(x => x.Item1).ToList();
+
+    try
+    {
+      TableDescription featureClassDescription = new(featureClassName, fields);
+      TableToken featureClassToken = schemaBuilder.Create(featureClassDescription);
+    }
+    catch (ArgumentException ex)
+    {
+      // if name has invalid characters/combinations
+      // or 'The table contains multiple fields with the same name.:
+      throw new ArgumentException($"{ex.Message}: {featureClassName}", ex);
+    }
+    if (!schemaBuilder.Build())
+    {
+      // POC: log somewhere the error in building the feature class
+      IReadOnlyList<string> errors = schemaBuilder.ErrorMessages;
+    }
+
+    Table newFeatureClass = geodatabase.OpenDataset<Table>(featureClassName);
+    geodatabase.ApplyEdits(() =>
+    {
+      WriteFeaturesToTable(newFeatureClass, fieldsAndFunctions, conversionTrackers);
+    });
+  }
+
+  private ACG.GeometryType DefineDatasetGeomType(
+    List<(TraversalContext, ObjectConversionTracker)> listOfContextAndTrackers
+  )
+  {
+    ACG.GeometryType geomType;
+    if (listOfContextAndTrackers.FirstOrDefault().Item1.Parent?.Current is SGIS.VectorLayer vLayer) // GIS
+    {
+      geomType = GISLayerGeometryType.GetNativeLayerGeometryType(vLayer);
+    }
+    else // non-GIS
+    {
+      var hostAppGeom = listOfContextAndTrackers[0].Item2.HostAppGeom;
+      if (hostAppGeom is null) // type check, should not happen
+      {
+        throw new SpeckleConversionException("Conversion failed");
+      }
+      geomType = hostAppGeom.GeometryType;
+    }
+
+    return geomType;
   }
 
   public void WriteFeaturesToDataset(

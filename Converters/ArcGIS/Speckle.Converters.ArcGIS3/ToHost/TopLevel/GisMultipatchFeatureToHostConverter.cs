@@ -13,7 +13,7 @@ namespace Speckle.Converters.ArcGIS3.ToHost.TopLevel;
 [NameAndRankValue(nameof(SGIS.GisMultipatchFeature), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class GisMultipatchFeatureToHostConverter
   : IToHostTopLevelConverter,
-    ITypedConverter<SGIS.GisMultipatchFeature, (Base, ACG.Geometry?)>
+    ITypedConverter<SGIS.GisMultipatchFeature, ACG.Geometry>
 {
   private readonly ITypedConverter<List<SGIS.PolygonGeometry3d>, ACG.Multipatch> _polygon3dConverter;
   private readonly ITypedConverter<List<SGIS.GisMultipatchGeometry>, ACG.Multipatch> _multipatchConverter;
@@ -29,7 +29,7 @@ public class GisMultipatchFeatureToHostConverter
 
   public object Convert(Base target) => Convert((SGIS.GisMultipatchFeature)target);
 
-  public (Base, ACG.Geometry?) Convert(SGIS.GisMultipatchFeature target)
+  public ACG.Geometry Convert(SGIS.GisMultipatchFeature target)
   {
     List<SGIS.PolygonGeometry3d> polygonGeometry = target
       .geometry.Where(o => o is SGIS.PolygonGeometry3d)
@@ -51,7 +51,6 @@ public class GisMultipatchFeatureToHostConverter
         "Multipatch geometry contained no valid types (PolygonGeometry3d or GisMultipatchGeometry"
       );
     }
-
-    return (target, multipatch);
+    return multipatch;
   }
 }

@@ -65,7 +65,7 @@ public struct ObjectConversionTracker
   /// <param name="baseObj">Original received Base object.</param>
   /// <param name="nestedLayerName">String with the full traversed path to the object. Will be used to create nested layer structure in the TOC.</param>
   /// <param name="hostAppGeom">Converted ArcGIS.Core.Geometry.</param>
-  public ObjectConversionTracker(Base baseObj, ACG.Geometry hostAppGeom, string nestedLayerName)
+  public ObjectConversionTracker(Base baseObj, ACG.Geometry? hostAppGeom, string nestedLayerName)
   {
     Base = baseObj;
     NestedLayerName = nestedLayerName;

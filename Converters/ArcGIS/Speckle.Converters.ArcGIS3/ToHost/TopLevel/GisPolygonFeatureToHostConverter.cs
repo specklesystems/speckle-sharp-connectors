@@ -13,7 +13,7 @@ namespace Speckle.Converters.ArcGIS3.ToHost.TopLevel;
 [NameAndRankValue(nameof(SGIS.GisPolygonFeature), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class GisPolygonFeatureToHostConverter
   : IToHostTopLevelConverter,
-    ITypedConverter<SGIS.GisPolygonFeature, (Base, ACG.Geometry?)>
+    ITypedConverter<SGIS.GisPolygonFeature, ACG.Geometry>
 {
   private readonly ITypedConverter<List<SGIS.PolygonGeometry>, ACG.Polygon> _polygonConverter;
 
@@ -24,9 +24,9 @@ public class GisPolygonFeatureToHostConverter
 
   public object Convert(Base target) => Convert((SGIS.GisPolygonFeature)target);
 
-  public (Base, ACG.Geometry?) Convert(SGIS.GisPolygonFeature target)
+  public ACG.Geometry Convert(SGIS.GisPolygonFeature target)
   {
     ACG.Polygon polygon = _polygonConverter.Convert(target.geometry);
-    return (target, polygon);
+    return polygon;
   }
 }

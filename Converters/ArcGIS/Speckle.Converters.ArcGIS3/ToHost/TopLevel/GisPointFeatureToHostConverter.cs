@@ -13,7 +13,7 @@ namespace Speckle.Converters.ArcGIS3.ToHost.TopLevel;
 [NameAndRankValue(nameof(SGIS.GisPointFeature), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class GisPointFeatureToHostConverter
   : IToHostTopLevelConverter,
-    ITypedConverter<SGIS.GisPointFeature, (Base, ACG.Geometry?)>
+    ITypedConverter<SGIS.GisPointFeature, ACG.Geometry>
 {
   private readonly ITypedConverter<List<SOG.Point>, ACG.Multipoint> _multipointConverter;
 
@@ -24,9 +24,9 @@ public class GisPointFeatureToHostConverter
 
   public object Convert(Base target) => Convert((SGIS.GisPointFeature)target);
 
-  public (Base, ACG.Geometry?) Convert(SGIS.GisPointFeature target)
+  public ACG.Geometry Convert(SGIS.GisPointFeature target)
   {
     ACG.Multipoint multipoint = _multipointConverter.Convert(target.geometry);
-    return (target, multipoint);
+    return multipoint;
   }
 }
