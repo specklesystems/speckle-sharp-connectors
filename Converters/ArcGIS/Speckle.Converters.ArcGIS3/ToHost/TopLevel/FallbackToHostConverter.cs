@@ -1,5 +1,6 @@
 ﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Objects;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.TopLevel;
@@ -10,16 +11,19 @@ public class FallbackToHostConverter : IToHostTopLevelConverter, ITypedConverter
   private readonly ITypedConverter<List<SOG.Mesh>, ACG.Multipatch> _meshListConverter;
   private readonly ITypedConverter<List<SOG.Polyline>, ACG.Polyline> _polylineListConverter;
   private readonly ITypedConverter<List<SOG.Point>, ACG.Multipoint> _pointListConverter;
+  private readonly ITypedConverter<IGisFeature, (Base, ACG.Geometry)> _iGisFeatureConverter;
 
   public FallbackToHostConverter(
     ITypedConverter<List<SOG.Mesh>, ACG.Multipatch> meshListConverter,
     ITypedConverter<List<SOG.Polyline>, ACG.Polyline> polylineListConverter,
-    ITypedConverter<List<SOG.Point>, ACG.Multipoint> pointListConverter
+    ITypedConverter<List<SOG.Point>, ACG.Multipoint> pointListConverter,
+    ITypedConverter<IGisFeature, (Base, ACG.Geometry)> iGisFeatureConverter
   )
   {
     _meshListConverter = meshListConverter;
     _polylineListConverter = polylineListConverter;
     _pointListConverter = pointListConverter;
+    _iGisFeatureConverter = iGisFeatureConverter;
   }
 
   public object Convert(Base target) => Convert((DisplayableObject)target);

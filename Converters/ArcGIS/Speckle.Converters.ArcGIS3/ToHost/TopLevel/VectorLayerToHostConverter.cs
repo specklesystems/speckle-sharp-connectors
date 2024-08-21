@@ -7,7 +7,6 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.TopLevel;
 
-[NameAndRankValue(nameof(VectorLayer), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class VectorLayerToHostConverter : IToHostTopLevelConverter, ITypedConverter<VectorLayer, object>
 {
   private readonly ITypedConverter<IGisFeature, (Base, ACG.Geometry)> _iGisFeatureConverter;

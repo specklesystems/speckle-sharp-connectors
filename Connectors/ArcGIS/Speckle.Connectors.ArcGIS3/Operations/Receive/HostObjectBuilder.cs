@@ -28,6 +28,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
   private readonly IFeatureClassUtils _featureClassUtils;
   private readonly ILocalToGlobalUnpacker _localToGlobalUnpacker;
   private readonly ILocalToGlobalConverterUtils _localToGlobalConverterUtils;
+  private readonly ICrsUtils _crsUtils;
 
   // POC: figure out the correct scope to only initialize on Receive
   private readonly IConversionContextStack<ArcGISDocument, Unit> _contextStack;
@@ -40,6 +41,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     IFeatureClassUtils featureClassUtils,
     ILocalToGlobalUnpacker localToGlobalUnpacker,
     ILocalToGlobalConverterUtils localToGlobalConverterUtils,
+    ICrsUtils crsUtils,
     GraphTraversal traverseFunction,
     ArcGISColorManager colorManager
   )
@@ -51,6 +53,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     _localToGlobalConverterUtils = localToGlobalConverterUtils;
     _traverseFunction = traverseFunction;
     _colorManager = colorManager;
+    _crsUtils = crsUtils;
   }
 
   public async Task<HostObjectBuilderResult> Build(
@@ -74,19 +77,8 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       _colorManager.ParseColors(colors, onOperationProgressed);
     }
 
-    var objectsToConvertTc = _traverseFunction
-      .Traverse(rootObject)
-      .Where(ctx => ctx.Current is not Collection || IsGISType(ctx.Current))
-      .Where(ctx => HasGISParent(ctx) is false)
-      .ToList();
+    List<LocalToGlobalMap> objectsToConvert = GetObjectsToConvert(rootObject);
 
-    var instanceDefinitionProxies = (rootObject["instanceDefinitionProxies"] as List<object>)
-      ?.Cast<InstanceDefinitionProxy>()
-      .ToList();
-
-    var objectsToConvert = _localToGlobalUnpacker.Unpack(instanceDefinitionProxies, objectsToConvertTc);
-
-    int allCount = objectsToConvert.Count;
     int count = 0;
     Dictionary<TraversalContext, ObjectConversionTracker> conversionTracker = new();
 
@@ -101,53 +93,33 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       cancellationToken.ThrowIfCancellationRequested();
       try
       {
-        if (IsGISType(obj))
-        {
-          string nestedLayerPath = $"{string.Join("\\", path)}";
-          string datasetId = "speckleID_" + obj.id;
+        obj = _localToGlobalConverterUtils.TransformObjects(objectToConvert.AtomicObject, objectToConvert.Matrix);
 
-          // save converted elements individually, for FeatureClasses
-          if (obj is VectorLayer vLayer)
-          {
-            GeometryType geomType = GISLayerGeometryType.GetNativeLayerGeometryType(vLayer);
-            if (geomType != GeometryType.Unknown) // feature class
-            {
-              object conversionResult = await QueuedTask.Run(() => _converter.Convert(vLayer)).ConfigureAwait(false);
-              if (conversionResult is IEnumerable<(Base, Geometry?)> convertedItems)
-              {
-                foreach ((Base baseObj, Geometry? geom) in convertedItems)
-                {
-                  TraversalContext newContext = new(baseObj, "elements", objectToConvert.TraversalContext);
-                  conversionTracker[newContext] = new ObjectConversionTracker(
-                    baseObj,
-                    geom,
-                    nestedLayerPath,
-                    datasetId
-                  );
-                }
-              }
-            }
-            else // Tables
-            {
-              foreach (Base element in vLayer.elements)
-              {
-                TraversalContext newContext = new(element, "elements", objectToConvert.TraversalContext);
-                conversionTracker[newContext] = new ObjectConversionTracker(element, nestedLayerPath, datasetId);
-              }
-            }
-          }
-        }
-        else
-        {
-          obj = _localToGlobalConverterUtils.TransformObjects(objectToConvert.AtomicObject, objectToConvert.Matrix);
+        object conversionResult = await QueuedTask.Run(() => _converter.Convert(obj)).ConfigureAwait(false);
 
+        if (
+          objectToConvert.TraversalContext.Parent?.Current is not VectorLayer
+          && conversionResult is Geometry convertedGeom
+        ) // if simple geometry
+        {
           string nestedLayerPath = $"{string.Join("\\", path)}\\{obj.speckle_type.Split(".")[^1]}";
-          Geometry converted = await QueuedTask.Run(() => (Geometry)_converter.Convert(obj)).ConfigureAwait(false);
 
           conversionTracker[objectToConvert.TraversalContext] = new ObjectConversionTracker(
             obj,
+            convertedGeom,
+            nestedLayerPath
+          );
+        }
+        else // if IGisFeature
+        {
+          string nestedLayerPath = $"{string.Join("\\", path)}"; // gis-layer
+          string datasetId = "speckleID_" + obj.id; // gis
+
+          conversionTracker[objectToConvert.TraversalContext] = new ObjectConversionTracker(
+            obj,
+            (((Base, Geometry?))conversionResult).Item2,
             nestedLayerPath,
-            converted
+            datasetId
           );
         }
       }
@@ -155,7 +127,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       {
         results.Add(new(Status.ERROR, obj, null, null, ex));
       }
-      onOperationProgressed?.Invoke("Converting", (double)++count / allCount);
+      onOperationProgressed?.Invoke("Converting", (double)++count / objectsToConvert.Count);
     }
 
     // 2.1. Group conversionTrackers by same dataset
@@ -259,6 +231,24 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
 
     // TODO: validated a correct set regarding bakedobject ids
     return new(bakedObjectIds, results);
+  }
+
+  private List<LocalToGlobalMap> GetObjectsToConvert(Base rootObject)
+  {
+    var objectsToConvertTc = _traverseFunction
+      .Traverse(rootObject)
+      .Where(ctx => ctx.Current is not Collection || IsGISType(ctx.Current))
+      .ToList();
+
+    // get CRS from any present VectorLayer
+    var vLayer = objectsToConvertTc.First(x => x.Current is VectorLayer).Current;
+    _crsUtils.FindSetCrsDataOnReceive(vLayer);
+
+    var instanceDefinitionProxies = (rootObject["instanceDefinitionProxies"] as List<object>)
+      ?.Cast<InstanceDefinitionProxy>()
+      .ToList();
+
+    return _localToGlobalUnpacker.Unpack(instanceDefinitionProxies, objectsToConvertTc);
   }
 
   private void AddResultsFromTracker(ObjectConversionTracker trackerItem, List<ReceiveConversionResult> results)

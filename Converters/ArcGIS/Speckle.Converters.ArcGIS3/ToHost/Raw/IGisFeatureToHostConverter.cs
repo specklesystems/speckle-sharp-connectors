@@ -1,16 +1,15 @@
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
-using Speckle.Objects.GIS;
 using Speckle.Sdk.Models;
 
-namespace Speckle.Converters.ArcGIS3.ToHost.Raw;
+namespace Speckle.Converters.ArcGIS3.ToHost.TopLevel;
 
 /// <summary>
 /// Converter for <see cref="IGisFeature"/> with geometry.
 /// </summary>
-/// <exception cref="ArgumentException"> Thrown when IGisFeature is <see cref="GisNonGeometricFeature"/> because it has no geometry, or when Multipatch geometry contained invalid types.</exception>
+/// <exception cref="ArgumentException"> Thrown when IGisFeature is <see cref="SGIS.GisNonGeometricFeature"/> because it has no geometry, or when Multipatch geometry contained invalid types.</exception>
 /// <exception cref="NotSupportedException">Thrown for unsupported <see cref="IGisFeature"/> classes.</exception>
-public class IGisFeatureToHostConverter : ITypedConverter<IGisFeature, (Base, ACG.Geometry)>
+public class IGisFeatureToHostConverter : ITypedConverter<IGisFeature, (Base, ACG.Geometry?)>
 {
   private readonly ITypedConverter<List<SOG.Point>, ACG.Multipoint> _multipointConverter;
   private readonly ITypedConverter<List<SOG.Polyline>, ACG.Polyline> _polylineConverter;
@@ -33,26 +32,27 @@ public class IGisFeatureToHostConverter : ITypedConverter<IGisFeature, (Base, AC
     _multipatchConverter = multipatchConverter;
   }
 
-  public (Base, ACG.Geometry) Convert(IGisFeature target)
+  public (Base, ACG.Geometry?) Convert(IGisFeature target)
   {
     switch (target)
     {
-      case GisNonGeometricFeature:
-        throw new ArgumentException("IGisFeature had null or empty geometry");
+      case SGIS.GisNonGeometricFeature:
+        return ((Base)target, null);
+      // throw new ArgumentException("IGisFeature had null or empty geometry");
 
-      case GisPointFeature pointFeature:
+      case SGIS.GisPointFeature pointFeature:
         ACG.Multipoint multipoint = _multipointConverter.Convert(pointFeature.geometry);
         return (pointFeature, multipoint);
 
-      case GisPolylineFeature polylineFeature:
+      case SGIS.GisPolylineFeature polylineFeature:
         ACG.Polyline polyline = _polylineConverter.Convert(polylineFeature.geometry);
         return (polylineFeature, polyline);
 
-      case GisPolygonFeature polygonFeature:
+      case SGIS.GisPolygonFeature polygonFeature:
         ACG.Polygon polygon = _polygonConverter.Convert(polygonFeature.geometry);
         return (polygonFeature, polygon);
 
-      case GisMultipatchFeature multipatchFeature:
+      case SGIS.GisMultipatchFeature multipatchFeature:
         List<SGIS.PolygonGeometry3d> polygonGeometry = multipatchFeature
           .geometry.Where(o => o is SGIS.PolygonGeometry3d)
           .Cast<SGIS.PolygonGeometry3d>()
