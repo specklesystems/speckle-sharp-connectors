@@ -1,11 +1,10 @@
+workflow: GitFlow/v1
 next-version: 3.0.0
-mode: ContinuousDelivery
-assembly-informational-format: "{Major}.{Minor}.{Patch}-{PreReleaseTag}"
+mode: ManualDeployment
 branches:
   main:
-    regex: ^main$
-    tag: rc
+    label: rc
   develop:
-    tag: beta
-  pull-request:
-    tag: pr
+    label: beta
+  unknown:
+    increment: None
