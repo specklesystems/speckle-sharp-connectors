@@ -1,10 +1,9 @@
 ﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Converters.RevitShared.ToSpeckle;
 using Speckle.Objects;
 
-namespace Speckle.Converters.Revit2023.ToSpeckle.TopLevel;
+namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 [NameAndRankValue(nameof(DB.Grid), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public sealed class GridTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.Grid, SOBE.GridLine>
