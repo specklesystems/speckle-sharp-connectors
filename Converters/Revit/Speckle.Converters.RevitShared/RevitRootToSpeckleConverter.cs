@@ -62,6 +62,8 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
 
       // POC: we've discussed sending Materials as Proxies, containing the object ids of material quantities.
       // POC: this would require redesigning the MaterialQuantities class to no longer have Material as a property. TBD post december.
+      // POC: should we assign parameters here instead?
+      //_parameterObjectAssigner.AssignParametersToBase(element, result);
       _parameterValueExtractor.RemoveUniqueId(element.UniqueId);
     }
 
