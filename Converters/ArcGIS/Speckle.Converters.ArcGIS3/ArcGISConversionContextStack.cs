@@ -86,13 +86,24 @@ public class ArcGISDocument
     QueuedTask.Run(() => Project.Current.AddItem(folderToAdd as IProjectItem));
 
     // Add a file geodatabase or a SQLite or enterprise database connection to a project
-    var gdbToAdd = folderToAdd
-      .GetItems()
-      .FirstOrDefault(folderItem => folderItem.Name.Equals(fGdbName, StringComparison.Ordinal));
-    if (gdbToAdd is not null)
+    try
     {
-      // POC: QueuedTask
-      var addedGeodatabase = QueuedTask.Run(() => Project.Current.AddItem(gdbToAdd as IProjectItem));
+      var gdbToAdd = folderToAdd
+        .GetItems()
+        .FirstOrDefault(folderItem => folderItem.Name.Equals(fGdbName, StringComparison.Ordinal));
+
+      if (gdbToAdd is not null)
+      {
+        // POC: QueuedTask
+        var addedGeodatabase = QueuedTask.Run(() => Project.Current.AddItem(gdbToAdd as IProjectItem));
+      }
+    }
+    catch (NullReferenceException ex)
+    {
+      throw new InvalidOperationException(
+        "Make sure your ArcGIS Pro project folder has permissions to create a new database. E.g., project cannot be saved in a Google Drive folder.",
+        ex
+      );
     }
 
     return databasePath;
