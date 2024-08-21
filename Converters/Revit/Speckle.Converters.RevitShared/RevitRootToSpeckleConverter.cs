@@ -45,6 +45,9 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
     {
       // POC: is this the right place?
       result.applicationId = element.UniqueId;
+      // TODO: attach material quantities
+      // POC: we've discussed sending Materials as Proxies, containing the object ids of material quantities.
+      // POC: this would require redesigning the MaterialQuantities class to no longer have Material as a property. TBD post december.
       _parameterValueExtractor.RemoveUniqueId(element.UniqueId);
     }
 

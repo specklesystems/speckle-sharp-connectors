@@ -1,9 +1,9 @@
-﻿using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Other;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
-public class MaterialConversionToSpeckle : ITypedConverter<DB.Material, RenderMaterial>
+public class MaterialConversionToSpeckleRenderMaterial : ITypedConverter<DB.Material, RenderMaterial>
 {
   public RenderMaterial Convert(DB.Material target) =>
     // POC: not sure we should be pulling in System.Drawing -

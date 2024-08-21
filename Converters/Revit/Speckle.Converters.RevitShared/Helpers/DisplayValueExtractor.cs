@@ -70,7 +70,7 @@ public sealed class DisplayValueExtractor
     return meshesByMaterial;
   }
 
-  private (List<DB.Solid>, List<DB.Mesh>) GetSolidsAndMeshesFromElement(DB.Element element, DB.Options? options)
+  public (List<DB.Solid>, List<DB.Mesh>) GetSolidsAndMeshesFromElement(DB.Element element, DB.Options? options)
   {
     //options = ViewSpecificOptions ?? options ?? new Options() { DetailLevel = DetailLevelSetting };
     options ??= new DB.Options { DetailLevel = DB.ViewDetailLevel.Fine };
