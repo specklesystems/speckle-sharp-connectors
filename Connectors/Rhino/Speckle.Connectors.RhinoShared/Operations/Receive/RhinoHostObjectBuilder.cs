@@ -155,6 +155,18 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       _colorManager.ParseColors(colorProxies);
     }
 
+    // Stage 0.1: Pre bake layers
+    // See [CNX-325: Rhino: Change receive operation order to increase performance](https://linear.app/speckle/issue/CNX-325/rhino-change-receive-operation-order-to-increase-performance)
+    onOperationProgressed?.Invoke("Baking layers (redraw disabled)", null);
+    using (var _ = SpeckleActivityFactory.Start("Pre baking layers"))
+    {
+      using var layerNoDraw = new DisableRedrawScope(doc.Views);
+      foreach (var (path, _) in atomicObjects)
+      {
+        _layerManager.GetAndCreateLayerFromPath(path, baseLayerName, out bool _);
+      }
+    }
+
     // Stage 1: Convert atomic objects
     List<string> bakedObjectIds = new();
     Dictionary<string, List<string>> applicationIdMap = new(); // This map is used in converting blocks in stage 2. keeps track of original app id => resulting new app ids post baking
@@ -276,10 +288,10 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
     }
 
-    if (_colorManager.ObjectColorsIdMap.TryGetValue(objectId, out Color color))
+    if (_colorManager.ObjectColorsIdMap.TryGetValue(objectId, out (Color, ObjectColorSource) color))
     {
-      atts.ObjectColor = color;
-      atts.ColorSource = ObjectColorSource.ColorFromObject;
+      atts.ObjectColor = color.Item1;
+      atts.ColorSource = color.Item2;
     }
 
     return _contextStack.Current.Document.Objects.Add(obj, atts);

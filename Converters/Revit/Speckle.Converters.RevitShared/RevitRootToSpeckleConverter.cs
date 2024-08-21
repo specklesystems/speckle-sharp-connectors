@@ -45,6 +45,8 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
     {
       // POC: is this the right place?
       result.applicationId = element.UniqueId;
+      // POC: should we assign parameters here instead?
+      //_parameterObjectAssigner.AssignParametersToBase(element, result);
       _parameterValueExtractor.RemoveUniqueId(element.UniqueId);
     }
 
