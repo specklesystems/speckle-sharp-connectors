@@ -223,14 +223,14 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
   private List<LocalToGlobalMap> GetObjectsToConvert(Base rootObject)
   {
     // keep GISlayers in the list, because they are still needed to extract CRS of the commit (code below)
-    List<TraversalContext> objectsToConvertTc = _traverseFunction
-      .Traverse(rootObject)
-      .Where(ctx => ctx.Current is not Collection || IsGISType(ctx.Current))
-      .ToList();
+    List<TraversalContext> objectsToConvertTc = _traverseFunction.Traverse(rootObject).ToList();
 
     // get CRS from any present VectorLayer
     Base? vLayer = objectsToConvertTc.FirstOrDefault(x => x.Current is VectorLayer)?.Current;
     _crsUtils.FindSetCrsDataOnReceive(vLayer);
+
+    // now filter the objects
+    objectsToConvertTc = objectsToConvertTc.Where(ctx => ctx.Current is not Collection).ToList();
 
     var instanceDefinitionProxies = (rootObject["instanceDefinitionProxies"] as List<object>)
       ?.Cast<InstanceDefinitionProxy>()
