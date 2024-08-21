@@ -3,7 +3,7 @@ name: .NET Build and Publish
 on:
   push:
     branches: ["main", "dev"] # Continuous delivery on every long-lived branch
-    tags: ["3.*"] # Manual delivery on every 3.x tag
+    tags: ["v3.*"] # Manual delivery on every 3.x tag
 
 jobs:
   build:
