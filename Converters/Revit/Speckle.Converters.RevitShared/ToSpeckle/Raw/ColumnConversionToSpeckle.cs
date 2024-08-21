@@ -40,9 +40,19 @@ public class ColumnConversionToSpeckle : ITypedConverter<DB.FamilyInstance, Revi
   public RevitColumn Convert(DB.FamilyInstance target)
   {
     FamilySymbol symbol = (FamilySymbol)target.Document.GetElement(target.GetTypeId());
+    List<SOG.Mesh> displayValue = _displayValueExtractor.GetDisplayValue(target);
 
     RevitColumn speckleColumn =
-      new() { family = symbol.FamilyName, type = target.Document.GetElement(target.GetTypeId()).Name };
+      new()
+      {
+        family = symbol.FamilyName,
+        type = target.Document.GetElement(target.GetTypeId()).Name,
+        facingFlipped = target.FacingFlipped,
+        handFlipped = target.HandFlipped,
+        isSlanted = target.IsSlantedColumn,
+        displayValue = displayValue,
+        units = _contextStack.Current.SpeckleUnits
+      };
 
     if (
       _parameterValueExtractor.TryGetValueAsDocumentObject<Level>(
@@ -87,20 +97,14 @@ public class ColumnConversionToSpeckle : ITypedConverter<DB.FamilyInstance, Revi
       speckleColumn.topOffset = topOffset.NotNull();
     }
 
-    speckleColumn.facingFlipped = target.FacingFlipped;
-    speckleColumn.handFlipped = target.HandFlipped;
-    speckleColumn.isSlanted = target.IsSlantedColumn;
+    speckleColumn.baseLine =
+      GetBaseCurve(target, speckleColumn.topLevel?.elevation ?? -1, speckleColumn.topOffset)
+      ?? throw new SpeckleConversionException("Unable to find a valid baseCurve for column");
 
     if (target.Location is LocationPoint locationPoint)
     {
       speckleColumn.rotation = locationPoint.Rotation;
     }
-
-    speckleColumn.baseLine =
-      GetBaseCurve(target, speckleColumn.topLevel?.elevation ?? -1, speckleColumn.topOffset)
-      ?? throw new SpeckleConversionException("Unable to find a valid baseCurve for column");
-
-    speckleColumn.displayValue = _displayValueExtractor.GetDisplayValue(target);
 
     _parameterObjectAssigner.AssignParametersToBase(target, speckleColumn);
 
