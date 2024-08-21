@@ -205,9 +205,9 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
           }
 
           // 4: log
-          var id = conversionIds[0];
+          var id = conversionIds[0]; // this is group id if it is a one to many conversion, otherwise id of object itself
           conversionResults.Add(new(Status.SUCCESS, obj, id, result.GetType().ToString()));
-          bakedObjectIds.Add(id);
+          bakedObjectIds.AddRange(conversionIds.Skip(1)); // first item always a group id, which we do not want to deal with later groups and its sub elements. It causes a huge issue on performance.
 
           // 5: populate app id map
           applicationIdMap[obj.applicationId ?? obj.id] = conversionIds;
