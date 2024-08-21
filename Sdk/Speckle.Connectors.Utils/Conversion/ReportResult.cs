@@ -35,7 +35,11 @@ public sealed class SendConversionResult : ConversionResult
     ResultType = result?.speckle_type;
     if (exception is not null)
     {
-      Error = new ErrorWrapper() { Message = exception.Message, StackTrace = exception.StackTrace };
+      Error = new ErrorWrapper()
+      {
+        Message = exception.Message,
+        StackTrace = $"{exception.Message}\n{exception.StackTrace}"
+      };
     }
   }
 }
@@ -57,7 +61,11 @@ public class ReceiveConversionResult : ConversionResult
     ResultType = resultType;
     if (exception is not null)
     {
-      Error = new ErrorWrapper() { Message = exception.Message, StackTrace = exception.StackTrace };
+      Error = new ErrorWrapper()
+      {
+        Message = exception.Message,
+        StackTrace = $"{exception.Message}\n{exception.StackTrace}"
+      };
     }
   }
 }
