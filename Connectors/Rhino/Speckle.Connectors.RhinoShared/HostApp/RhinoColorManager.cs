@@ -1,4 +1,7 @@
+using Rhino;
 using Rhino.DocObjects;
+using Speckle.Connectors.Rhino.Extensions;
+using Speckle.Sdk.Models.Instances;
 using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Connectors.Rhino.HostApp;
@@ -8,57 +11,158 @@ namespace Speckle.Connectors.Rhino.HostApp;
 /// </summary>
 public class RhinoColorManager
 {
-  public Dictionary<string, Color> ObjectColorsIdMap { get; } = new();
+  /// <summary>
+  /// For receive operations
+  /// </summary>
+  public Dictionary<string, (Color, ObjectColorSource)> ObjectColorsIdMap { get; } = new();
 
-  public List<ColorProxy> UnpackColors(List<RhinoObject> atomicObjects, List<Layer> layers)
+  /// <summary>
+  /// For send operations
+  /// </summary>
+  private Dictionary<string, ColorProxy> ColorProxies { get; } = new();
+  private readonly Dictionary<int, Color> _layerColorDict = new(); // keeps track of layer colors for object inheritance
+  private readonly Dictionary<string, int> _objectsByLayerDict = new(); // keeps track of ids for all objects that inherited their color by layer
+
+  /// <summary>
+  /// Processes an object's color and adds the object id to a color proxy in <see cref="ColorProxies"/> if object color is set ByColor, ByMaterial, or ByParent.
+  /// Otherwise, stores the object id and color in a corresponding ByLayer dictionary for further processing block definitions after all objects are converted.
+  /// From testing, a definition object will inherit its layer's color if by layer, otherwise it will inherit the instance color settings (which we are sending with the instance).
+  /// </summary>
+  /// <param name="objId"></param>
+  /// <param name="color"></param>
+  private void ProcessObjectColor(
+    string objId,
+    Color color,
+    ObjectColorSource source,
+    int? layerIndex = null,
+    int? materialIndex = null
+  )
   {
-    Dictionary<string, ColorProxy> colorProxies = new();
-
-    // Stage 1: unpack materials from objects
-    foreach (RhinoObject rhinoObj in atomicObjects)
+    switch (source)
     {
-      ObjectAttributes atts = rhinoObj.Attributes;
+      case ObjectColorSource.ColorFromObject:
+      case ObjectColorSource.ColorFromParent:
+        AddObjectIdToColorProxy(objId, color, source);
+        break;
+      case ObjectColorSource.ColorFromMaterial:
+        if (materialIndex is int materialIndexInt && RhinoDoc.ActiveDoc.Materials.Count > materialIndexInt)
+        {
+          AddObjectIdToColorProxy(objId, RhinoDoc.ActiveDoc.Materials[materialIndexInt].DiffuseColor, source);
+        }
+        break;
+      case ObjectColorSource.ColorFromLayer:
+        if (layerIndex is int layerIndexInt)
+        {
+          if (!_objectsByLayerDict.ContainsKey(objId))
+          {
+            _objectsByLayerDict.Add(objId, layerIndexInt);
+          }
+        }
+        break;
+    }
+  }
 
-      // skip any objects that inherit their colors
-      if (atts.ColorSource != ObjectColorSource.ColorFromObject)
-      {
-        continue;
-      }
+  private void AddObjectIdToColorProxy(string objectId, Color color, ObjectColorSource source)
+  {
+    string colorId = color.GetSpeckleApplicationId(source);
+    if (ColorProxies.TryGetValue(colorId, out ColorProxy? proxy))
+    {
+      proxy.objects.Add(objectId);
+    }
+    else
+    {
+      ColorProxy newColor = ConvertColorToColorProxy(color, source);
+      newColor.objects.Add(objectId);
+      ColorProxies[colorId] = newColor;
+    }
+  }
 
-      // assumes color names are unique
-      string colorId = atts.ObjectColor.Name;
-      string objectId = rhinoObj.Id.ToString();
-      if (colorProxies.TryGetValue(colorId, out ColorProxy? value))
+  private ColorProxy ConvertColorToColorProxy(Color color, ObjectColorSource source)
+  {
+    int argb = color.ToArgb();
+    string id = color.GetSpeckleApplicationId(source);
+    string? name = color.IsNamedColor ? color.Name : null;
+
+    ColorProxy colorProxy = new(argb, id, name) { objects = new() };
+
+    // add the color source as well for receiving in other apps
+    // POC: in order to have high-fidelity color props, we need to send the source somewhere. Currently this is attached to the color proxy, but have discussed sending it as a separate proxy or as an property on the atomic object. TBD if this is the best place for it.
+    colorProxy["source"] =
+      source is ObjectColorSource.ColorFromParent
+        ? "block"
+        : source is ObjectColorSource.ColorFromLayer
+          ? "layer"
+          : source is ObjectColorSource.ColorFromMaterial
+            ? "material"
+            : "object";
+
+    return colorProxy;
+  }
+
+  /// <summary>
+  /// Processes colors for definition objects that had their colors inherited. This method is in place primarily to process complex color inheritance in blocks.
+  /// </summary>
+  /// <returns></returns>
+  /// <remarks>
+  /// We are **always setting the color** (treating it as ColorSource.ByObject) for definition objects with color "ByLayer" because this overrides instance color, to guarantee they look correct in the viewer and when receiving.
+  /// </remarks>
+  public void ProcessDefinitionObjects(List<InstanceDefinitionProxy> definitions)
+  {
+    // process all definition objects, while removing process objects from the by block color dict as necessary
+    foreach (InstanceDefinitionProxy definition in definitions)
+    {
+      foreach (string objectId in definition.objects)
       {
-        value.objects.Add(objectId);
+        if (_objectsByLayerDict.TryGetValue(objectId, out int layerIndex))
+        {
+          if (_layerColorDict.TryGetValue(layerIndex, out Color layerColor))
+          {
+            AddObjectIdToColorProxy(objectId, layerColor, ObjectColorSource.ColorFromLayer);
+          }
+        }
       }
-      else
-      {
-        ColorProxy newColor = new(atts.ObjectColor.ToArgb(), colorId, colorId) { objects = new() };
-        newColor.objects.Add(objectId);
-        colorProxies[colorId] = newColor;
-      }
+    }
+  }
+
+  /// <summary>
+  /// Iterates through a given set of rhino objects, layers, and definitions to collect atomic object colors.
+  /// </summary>
+  /// <param name="atomicObjects">atomic root objects, including instance objects</param>
+  /// <param name="layers">layers used by atomic objects</param>
+  /// <param name="definitions">definitions used by instances in atomic objects</param>
+  /// <returns></returns>
+  /// <remarks>
+  /// Due to complications in color inheritance for blocks, we are processing block definition object colors last.
+  /// </remarks>
+  public List<ColorProxy> UnpackColors(
+    List<RhinoObject> atomicObjects,
+    List<Layer> layers,
+    List<InstanceDefinitionProxy> definitions
+  )
+  {
+    // Stage 1: unpack colors from objects
+    foreach (RhinoObject rootObj in atomicObjects)
+    {
+      ProcessObjectColor(
+        rootObj.Id.ToString(),
+        rootObj.Attributes.ObjectColor,
+        rootObj.Attributes.ColorSource,
+        rootObj.Attributes.LayerIndex,
+        rootObj.Attributes.MaterialIndex
+      );
     }
 
     // Stage 2: make sure we collect layer colors as well
     foreach (Layer layer in layers)
     {
-      // assumes color names are unique
-      string colorId = layer.Color.Name;
-      string layerId = layer.Id.ToString();
-      if (colorProxies.TryGetValue(colorId, out ColorProxy? value))
-      {
-        value.objects.Add(layerId);
-      }
-      else
-      {
-        ColorProxy newColor = new(layer.Color.ToArgb(), colorId, colorId) { objects = new() };
-        newColor.objects.Add(layerId);
-        colorProxies[colorId] = newColor;
-      }
+      ProcessObjectColor(layer.Id.ToString(), layer.Color, ObjectColorSource.ColorFromObject);
+      _layerColorDict.Add(layer.Index, layer.Color);
     }
 
-    return colorProxies.Values.ToList();
+    // Stage 3: process definition objects that inherited their colors
+    ProcessDefinitionObjects(definitions);
+
+    return ColorProxies.Values.ToList();
   }
 
   /// <summary>
@@ -69,12 +173,28 @@ public class RhinoColorManager
   {
     foreach (ColorProxy colorProxy in colorProxies)
     {
+      ObjectColorSource source = ObjectColorSource.ColorFromObject;
+      if (colorProxy["source"] is string proxySource)
+      {
+        switch (proxySource)
+        {
+          case "layer":
+            continue; // skip any colors with source = layer, since object color default source is by layer
+          case "block":
+            source = ObjectColorSource.ColorFromParent;
+            break;
+          case "material":
+            source = ObjectColorSource.ColorFromMaterial;
+            break;
+        }
+      }
+
       foreach (string objectId in colorProxy.objects)
       {
         Color convertedColor = Color.FromArgb(colorProxy.value);
-        if (!ObjectColorsIdMap.TryGetValue(objectId, out Color _))
+        if (!ObjectColorsIdMap.TryGetValue(objectId, out (Color, ObjectColorSource) _))
         {
-          ObjectColorsIdMap.Add(objectId, convertedColor);
+          ObjectColorsIdMap.Add(objectId, (convertedColor, source));
         }
       }
     }
