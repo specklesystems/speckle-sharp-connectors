@@ -1,4 +1,3 @@
-using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
@@ -43,7 +42,10 @@ public class MaterialQuantitiesToSpeckle : ITypedConverter<DB.Element, IEnumerab
       case DB.CeilingAndFloor:
       case DB.Wall:
       case DB.RoofBase:
-        return GetMaterialQuantitiesFromAPICall(target);
+        IEnumerable<MaterialQuantity> hostQuantities = GetMaterialQuantitiesFromAPICall(target)
+          .Where(o => o is not null)
+          .Cast<MaterialQuantity>();
+        return hostQuantities.Any() ? hostQuantities : Enumerable.Empty<MaterialQuantity>();
 
       // These are MEP elements where material quantities are attached to their MEP system
       case DB.Mechanical.Duct:
@@ -54,11 +56,14 @@ public class MaterialQuantitiesToSpeckle : ITypedConverter<DB.Element, IEnumerab
         return quantity == null ? Enumerable.Empty<MaterialQuantity>() : new List<MaterialQuantity>() { quantity };
 
       default:
-        return GetMaterialQuantitiesFromSolids(target);
+        IEnumerable<MaterialQuantity> solidQuantities = GetMaterialQuantitiesFromSolids(target)
+          .Where(o => o is not null)
+          .Cast<MaterialQuantity>();
+        return solidQuantities.Any() ? solidQuantities : Enumerable.Empty<MaterialQuantity>();
     }
   }
 
-  private IEnumerable<MaterialQuantity> GetMaterialQuantitiesFromAPICall(DB.Element element)
+  private IEnumerable<MaterialQuantity?> GetMaterialQuantitiesFromAPICall(DB.Element element)
   {
     foreach (DB.ElementId matId in element.GetMaterialIds(false))
     {
@@ -105,7 +110,7 @@ public class MaterialQuantitiesToSpeckle : ITypedConverter<DB.Element, IEnumerab
     return null;
   }
 
-  private IEnumerable<MaterialQuantity> GetMaterialQuantitiesFromSolids(DB.Element element)
+  private IEnumerable<MaterialQuantity?> GetMaterialQuantitiesFromSolids(DB.Element element)
   {
     var (solids, _) = _displayValueExtractor.GetSolidsAndMeshesFromElement(element, null);
 
@@ -140,7 +145,7 @@ public class MaterialQuantitiesToSpeckle : ITypedConverter<DB.Element, IEnumerab
     return (area, volume);
   }
 
-  private MaterialQuantity CreateMaterialQuantity(
+  private MaterialQuantity? CreateMaterialQuantity(
     DB.Element element,
     DB.ElementId materialId,
     double areaRevitInternalUnits,
@@ -179,7 +184,7 @@ public class MaterialQuantitiesToSpeckle : ITypedConverter<DB.Element, IEnumerab
     }
     else
     {
-      throw new SpeckleConversionException("Could not retrieve material from document");
+      return null;
     }
   }
 }
