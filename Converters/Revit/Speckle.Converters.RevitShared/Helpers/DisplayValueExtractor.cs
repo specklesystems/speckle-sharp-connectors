@@ -165,7 +165,7 @@ public sealed class DisplayValueExtractor
     }
 
     DB.GraphicsStyle? graphicsStyle = null;
-    if (_graphicStyleCache.ContainsKey(geomObj.GraphicsStyleId.ToString().NotNull()))
+    if (!_graphicStyleCache.ContainsKey(geomObj.GraphicsStyleId.ToString().NotNull()))
     {
       graphicsStyle = (DB.GraphicsStyle)element.Document.GetElement(geomObj.GraphicsStyleId);
       _graphicStyleCache[geomObj.GraphicsStyleId.ToString().NotNull()] = graphicsStyle;
