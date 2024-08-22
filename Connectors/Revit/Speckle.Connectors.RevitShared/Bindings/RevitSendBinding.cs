@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Autodesk.Revit.DB;
+using Autofac;
 using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bindings;
@@ -10,12 +11,14 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
+using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
@@ -75,33 +78,28 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     return new List<ISendFilter> { new RevitSelectionFilter() { IsDefault = true } };
   }
 
-  public List<CardSetting> GetSendSettings() =>
+  public List<ICardSetting> GetSendSettings() =>
     new()
     {
-      new()
-      {
-        Id = "modelOrigin",
-        Title = "Model Origin",
-        Type = "string",
-        Enum = ["Internal Origin", "Project Base", "Survey"],
-        Value = "Internal Origin"
-      },
-      new()
-      {
-        Id = "geometryFidelity",
-        Title = "Geometry Fidelity",
-        Type = "string",
-        Enum = ["Coarse", "Medium", "Fine"],
-        Value = "Coarse"
-      },
+      new GeometryFidelitySetting("Coarse") // TODO: get it from document settings?
     };
 
-  public void CancelSend(string modelCardId)
-  {
-    _cancellationManager.CancelOperation(modelCardId);
-  }
+  public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
 
   public SendBindingUICommands Commands { get; }
+
+  private ToSpeckleSettings GetToSpeckleSettings(SenderModelCard modelCard)
+  {
+    var fidelityString = modelCard.Settings?.First(s => s.Id == "geometryFidelity").Value as string;
+    if (
+      fidelityString is not null
+      && GeometryFidelitySetting.GeometryFidelityMap.TryGetValue(fidelityString, out var fidelity)
+    )
+    {
+      return new ToSpeckleSettings(fidelity);
+    }
+    throw new ArgumentException($"Invalid geometry fidelity value: {fidelityString}");
+  }
 
   public async Task Send(string modelCardId)
   {
@@ -116,9 +114,13 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
-      using IUnitOfWork<SendOperation<ElementId>> sendOperation = _unitOfWorkFactory.Resolve<
-        SendOperation<ElementId>
-      >();
+      using IUnitOfWork<SendOperation<ElementId>> sendOperation = _unitOfWorkFactory.Resolve<SendOperation<ElementId>>(
+        b =>
+        {
+          b.RegisterType<ToSpeckleSettings>().SingleInstance();
+          b.Register(c => GetToSpeckleSettings(modelCard));
+        }
+      );
 
       List<ElementId> revitObjects = modelCard
         .SendFilter.NotNull()
