@@ -3,7 +3,7 @@ using ArcGIS.Core.CIM;
 using ArcGIS.Core.Data;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Converters.ArcGIS3.Utils;
-using Speckle.Sdk.Models;
+using Speckle.Objects;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Proxies;
@@ -74,10 +74,12 @@ public class ArcGISColorManager
   /// </summary>
   /// <param name="tc"></param>
   /// <param name="speckleGeometryType"></param>
-  private CIMUniqueValueClass CreateColorCategory(TraversalContext tc, esriGeometryType speckleGeometryType)
+  private CIMUniqueValueClass CreateColorCategory(
+    TraversalContext tc,
+    esriGeometryType speckleGeometryType,
+    string uniqueLabel
+  )
   {
-    Base baseObj = tc.Current;
-
     // declare default white color
     Color color = Color.FromArgb(255, 255, 255, 255);
 
@@ -94,13 +96,13 @@ public class ArcGISColorManager
     CIMSymbolReference symbol = CreateSymbol(speckleGeometryType, color);
 
     // First create a "CIMUniqueValueClass"
-    List<CIMUniqueValue> listUniqueValues = new() { new CIMUniqueValue { FieldValues = new string[] { baseObj.id } } };
+    List<CIMUniqueValue> listUniqueValues = new() { new CIMUniqueValue { FieldValues = new string[] { uniqueLabel } } };
 
     CIMUniqueValueClass newUniqueValueClass =
       new()
       {
         Editable = true,
-        Label = baseObj.id,
+        Label = uniqueLabel,
         Patch = PatchShape.Default,
         Symbol = symbol,
         Visible = true,
@@ -187,9 +189,20 @@ public class ArcGISColorManager
 
     foreach (var tContext in traversalContexts)
     {
-      if (!listUniqueValueClasses.Select(x => x.Label).Contains(tContext.Current.id))
+      // get unique label
+      string uniqueLabel = tContext.Current.id;
+      if (tContext.Current is IGisFeature gisFeat)
       {
-        CIMUniqueValueClass newUniqueValueClass = CreateColorCategory(tContext, fLayer.ShapeType);
+        var existingLabel = gisFeat.attributes["Speckle_ID"];
+        if (existingLabel is string stringLabel)
+        {
+          uniqueLabel = stringLabel;
+        }
+      }
+
+      if (!listUniqueValueClasses.Select(x => x.Label).Contains(uniqueLabel))
+      {
+        CIMUniqueValueClass newUniqueValueClass = CreateColorCategory(tContext, fLayer.ShapeType, uniqueLabel);
         listUniqueValueClasses.Add(newUniqueValueClass);
       }
     }
