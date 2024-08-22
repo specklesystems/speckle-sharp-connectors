@@ -124,7 +124,7 @@ public class RhinoBasicConnectorBinding : IBasicConnectorBinding
     RhinoDoc.ActiveDoc.Objects.UnselectAll();
     List<RhinoObject> rhinoObjectsToSelect = new(rhinoObjects);
 
-    foreach (Group group in groups)
+    foreach (Group group in groups) // This is not performant if we have many groups. That's why we do not store group ids on baked object ids, to not have a problem later on highlighting all model. Mostly for single group highlight from report item.
     {
       int groupIndex = RhinoDoc.ActiveDoc.Groups.Find(group.Name);
       if (groupIndex < 0)
