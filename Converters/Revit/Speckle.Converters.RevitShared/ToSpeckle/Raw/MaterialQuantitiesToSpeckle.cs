@@ -88,7 +88,7 @@ public class MaterialQuantitiesToSpeckle : ITypedConverter<DB.Element, IEnumerab
   }
 
   //Retrieves the revit material from assigned system type for mep elements
-  private static DB.Material? GetMEPSystemRevitMaterial(DB.Element e)
+  private DB.Material? GetMEPSystemRevitMaterial(DB.Element e)
   {
     DB.ElementId idType = DB.ElementId.InvalidElementId;
 
