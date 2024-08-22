@@ -164,8 +164,8 @@ public sealed class DisplayValueExtractor
       return false; // exit fast on a potential hot path
     }
 
-    var graphicsStyle = _graphicStyleCache[geomObj.GraphicsStyleId.ToString().NotNull()];
-    if (graphicsStyle is null)
+    DB.GraphicsStyle? graphicsStyle = null;
+    if (_graphicStyleCache.ContainsKey(geomObj.GraphicsStyleId.ToString().NotNull()))
     {
       graphicsStyle = (DB.GraphicsStyle)element.Document.GetElement(geomObj.GraphicsStyleId);
       _graphicStyleCache[geomObj.GraphicsStyleId.ToString().NotNull()] = graphicsStyle;
