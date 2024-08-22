@@ -195,7 +195,7 @@ public class ArcGISColorManager
     }
 
     // Create a list of CIMUniqueValueGroup
-    CIMUniqueValueGroup uvg = new() { Classes = listUniqueValueClasses.ToArray(), };
+    CIMUniqueValueGroup uvg = new() { Classes = listUniqueValueClasses.ToArray(), Heading = "Speckle_ID" };
     List<CIMUniqueValueGroup> listUniqueValueGroups = new() { uvg };
     // Create the CIMUniqueValueRenderer
     CIMUniqueValueRenderer uvr =
@@ -409,11 +409,11 @@ public class ArcGISColorManager
     // note: usually there is only 1 group
     foreach (CIMUniqueValueGroup group in uniqueRenderer.Groups)
     {
-      string[] headings = group.Heading.Split(",");
+      string[] fieldNames = uniqueRenderer.Fields;
       List<string> usedFields = new();
-      foreach (string heading in headings)
+      foreach (string fieldName in fieldNames)
       {
-        if (fields.TryGetValue(heading, out FieldDescription? headingField))
+        if (fields.TryGetValue(fieldName, out FieldDescription? headingField))
         {
           usedFields.Add(headingField.Name);
         }
