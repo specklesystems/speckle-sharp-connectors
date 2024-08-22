@@ -302,6 +302,8 @@ public class FeatureClassUtils : IFeatureClassUtils
     List<ObjectConversionTracker> listOfTrackers
   )
   {
+    List<FieldDescription> fields = fieldsAndFunctions.Select(x => x.Item1).ToList();
+
     foreach (ObjectConversionTracker trackerItem in listOfTrackers)
     {
       using (RowBuffer rowBuffer = newFeatureClass.CreateRowBuffer())
@@ -326,7 +328,7 @@ public class FeatureClassUtils : IFeatureClassUtils
         // newFeatureClass.CreateRow(rowBuffer).Dispose(); // without extra attributes
         RowBuffer assignedRowBuffer = _fieldsUtils.AssignFieldValuesToRow(
           rowBuffer,
-          fieldsAndFunctions.Select(x => x.Item1).ToList(),
+          fields,
           attributes // trackerItem.HostAppObjAttributes ?? new Dictionary<string, object?>()
         );
         newFeatureClass.CreateRow(assignedRowBuffer).Dispose();
@@ -340,6 +342,7 @@ public class FeatureClassUtils : IFeatureClassUtils
     List<ObjectConversionTracker> listOfTrackers
   )
   {
+    List<FieldDescription> fields = fieldsAndFunctions.Select(x => x.Item1).ToList();
     foreach (ObjectConversionTracker trackerItem in listOfTrackers)
     {
       using (RowBuffer rowBuffer = newFeatureClass.CreateRowBuffer())
@@ -349,7 +352,7 @@ public class FeatureClassUtils : IFeatureClassUtils
         // newFeatureClass.CreateRow(rowBuffer).Dispose(); // without extra attributes
         RowBuffer assignedRowBuffer = _fieldsUtils.AssignFieldValuesToRow(
           rowBuffer,
-          fieldsAndFunctions.Select(x => x.Item1).ToList(),
+          fields,
           attributes // trackerItem.HostAppObjAttributes ?? new Dictionary<string, object?>()
         );
         newFeatureClass.CreateRow(assignedRowBuffer).Dispose();

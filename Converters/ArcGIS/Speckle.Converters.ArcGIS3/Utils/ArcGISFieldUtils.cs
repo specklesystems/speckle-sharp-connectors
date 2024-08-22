@@ -33,6 +33,10 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
     {
       string key = field.AliasName;
       attributes[key] = function(trackerItem.Base);
+      if (attributes[key] is null && key == "Speckle_ID")
+      {
+        attributes[key] = trackerItem.Base.id;
+      }
     }
 
     return attributes;
@@ -320,15 +324,12 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
     {
       fields = GetFieldsFromSpeckleLayer(vLayer);
       fieldsAndFunctions = fields
-        .Select(x =>
-          (x, (Func<Base, object?>)(x.Name == "Speckle_ID" ? y => y?.id : y => (y as IGisFeature)?.attributes[x.Name]))
-        )
+        .Select(x => (x, (Func<Base, object?>)(y => (y as IGisFeature)?.attributes[x.Name])))
         .ToList();
     }
     else // non-GIS
     {
       fieldsAndFunctions = CreateFieldsFromListOfBase(listOfContextAndTrackers.Select(x => x.Item2.Base).ToList());
-      fields = fieldsAndFunctions.Select(x => x.Item1).ToList();
     }
 
     return fieldsAndFunctions;
