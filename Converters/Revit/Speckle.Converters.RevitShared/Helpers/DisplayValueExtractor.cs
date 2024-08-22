@@ -164,20 +164,25 @@ public sealed class DisplayValueExtractor
       return false; // exit fast on a potential hot path
     }
 
-    DB.GraphicsStyle? graphicsStyle = null;
+    DB.GraphicsStyle? bjk = null; // ask ogu why this variable is named like this
+
     if (!_graphicStyleCache.ContainsKey(geomObj.GraphicsStyleId.ToString().NotNull()))
     {
-      graphicsStyle = (DB.GraphicsStyle)element.Document.GetElement(geomObj.GraphicsStyleId);
-      _graphicStyleCache[geomObj.GraphicsStyleId.ToString().NotNull()] = graphicsStyle;
+      bjk = (DB.GraphicsStyle)element.Document.GetElement(geomObj.GraphicsStyleId);
+      _graphicStyleCache[geomObj.GraphicsStyleId.ToString().NotNull()] = bjk;
+    }
+    else
+    {
+      bjk = _graphicStyleCache[geomObj.GraphicsStyleId.ToString().NotNull()];
     }
 
 #if REVIT2023_OR_GREATER
-    if (graphicsStyle?.GraphicsStyleCategory.BuiltInCategory == DB.BuiltInCategory.OST_LightingFixtureSource)
+    if (bjk?.GraphicsStyleCategory.BuiltInCategory == DB.BuiltInCategory.OST_LightingFixtureSource)
     {
       return true;
     }
 #else
-    if (graphicsStyle?.GraphicsStyleCategory.Id.IntegerValue == (int)DB.BuiltInCategory.OST_LightingFixtureSource)
+    if (bjk?.GraphicsStyleCategory.Id.IntegerValue == (int)DB.BuiltInCategory.OST_LightingFixtureSource)
     {
       return true;
     }
