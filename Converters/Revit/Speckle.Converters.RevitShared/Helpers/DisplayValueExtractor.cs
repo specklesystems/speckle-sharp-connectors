@@ -181,7 +181,7 @@ public sealed class DisplayValueExtractor
       return true;
     }
 #else
-    if (graphicsStyle?.GraphicsStyleCategory.Id.IntegerValue == (int)DB.BuiltInCategory.OST_LightingFixtureSource)
+    if (bjk?.GraphicsStyleCategory.Id.IntegerValue == (int)DB.BuiltInCategory.OST_LightingFixtureSource)
     {
       return true;
     }
