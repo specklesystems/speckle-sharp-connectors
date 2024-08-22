@@ -165,6 +165,7 @@ public sealed class DisplayValueExtractor
     }
 
     DB.GraphicsStyle? bjk = null; // ask ogu why this variable is named like this
+
     if (!_graphicStyleCache.ContainsKey(geomObj.GraphicsStyleId.ToString().NotNull()))
     {
       bjk = (DB.GraphicsStyle)element.Document.GetElement(geomObj.GraphicsStyleId);
