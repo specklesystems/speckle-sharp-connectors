@@ -31,25 +31,24 @@ public class GisMultipatchFeatureToHostConverter
 
   public ACG.Geometry Convert(SGIS.GisMultipatchFeature target)
   {
-    List<SGIS.PolygonGeometry3d> polygonGeometry = target
-      .geometry.Where(o => o is SGIS.PolygonGeometry3d)
-      .Cast<SGIS.PolygonGeometry3d>()
-      .ToList();
-    List<SGIS.GisMultipatchGeometry> multipatchGeometry = target
-      .geometry.Where(o => o is SGIS.GisMultipatchGeometry)
-      .Cast<SGIS.GisMultipatchGeometry>()
-      .ToList();
-    ACG.Multipatch? multipatch =
-      polygonGeometry.Count > 0
-        ? _polygon3dConverter.Convert(polygonGeometry)
-        : multipatchGeometry.Count > 0
-          ? _multipatchConverter.Convert(multipatchGeometry)
-          : null;
+    if (target.geometry.Count == 0)
+    {
+      throw new ArgumentException("Multipatch Feature contains no geometries");
+    }
+
+    ACG.Multipatch? multipatch;
+    try
+    {
+      multipatch = _multipatchConverter.Convert(target.geometry.Cast<SGIS.GisMultipatchGeometry>().ToList());
+    }
+    catch (InvalidCastException)
+    {
+      multipatch = _polygon3dConverter.Convert(target.geometry.Cast<SGIS.PolygonGeometry3d>().ToList());
+    }
+
     if (multipatch is null)
     {
-      throw new ArgumentException(
-        "Multipatch geometry contained no valid types (PolygonGeometry3d or GisMultipatchGeometry"
-      );
+      throw new SpeckleConversionException("Multipatch conversion did not return valid geometry");
     }
     return multipatch;
   }
