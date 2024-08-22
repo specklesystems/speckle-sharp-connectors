@@ -23,7 +23,15 @@ public static class Consts
         new("Connectors/Revit/Speckle.Connectors.Revit2025", "net8.0-windows")
       ]
     ),
-    new("autocad", [new("Connectors/Autocad/Speckle.Connectors.Autocad2023", "net48")])
+    new(
+      "autocad",
+      [
+        new("Connectors/Autocad/Speckle.Connectors.Autocad2022", "net48"),
+        new("Connectors/Autocad/Speckle.Connectors.Autocad2023", "net48"),
+        new("Connectors/Autocad/Speckle.Connectors.Autocad2024", "net48"),
+        new("Connectors/Autocad/Speckle.Connectors.Autocad2025", "net8.0-windows")
+      ]
+    )
   };
 }
 
