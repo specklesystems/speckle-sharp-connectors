@@ -188,8 +188,46 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       ChangedObjectIds[elementId.ToString()] = 1;
     }
 
-    // TODO: CHECK IF ANY OF THE ABOVE ELEMENTS NEED TO TRIGGER A FILTER REFRESH
+    if (HaveUnitsChanged(e.GetDocument()))
+    {
+      var objectIds = Store.GetSenders().SelectMany(s => s.SendFilter != null ? s.SendFilter.GetObjectIds() : []);
+      _sendConversionCache.EvictObjects(objectIds);
+    }
     _idleManager.SubscribeToIdle(nameof(RevitSendBinding), RunExpirationChecks);
+  }
+
+  // Keeps track of doc and current units
+  private readonly Dictionary<string, string> _docUnitCache = new();
+
+  private bool HaveUnitsChanged(Document doc)
+  {
+    var docId = doc.Title + doc.PathName;
+    var unitSpecTypeIds = new List<ForgeTypeId>() // list of units we care about
+    {
+      SpecTypeId.Angle,
+      SpecTypeId.Area,
+      SpecTypeId.Distance,
+      SpecTypeId.Length,
+      SpecTypeId.Volume
+    };
+    var units = "";
+    foreach (var typeId in unitSpecTypeIds)
+    {
+      units += doc.GetUnits().GetFormatOptions(typeId).GetUnitTypeId().TypeId;
+    }
+
+    if (_docUnitCache.TryGetValue(docId, out string? value))
+    {
+      if (value == units)
+      {
+        return false;
+      }
+      _docUnitCache[docId] = units;
+      return true;
+    }
+
+    _docUnitCache[docId] = units;
+    return false;
   }
 
   private void RunExpirationChecks()
