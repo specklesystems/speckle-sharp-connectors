@@ -1,3 +1,4 @@
+using Autodesk.Revit.DB;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
@@ -55,23 +56,10 @@ public class MaterialQuantitiesToSpeckle : ITypedConverter<DB.Element, List<Mate
         double area = factor * factor * target.GetMaterialArea(matId, false);
         double volume = factor * factor * factor * target.GetMaterialVolume(matId);
 
-        RevitMaterial? revitMaterial = null;
-        if (_materialCacheSingleton.ConvertedRevitMaterialMap.TryGetValue(id, out RevitMaterial? cachedMaterial))
+        if (_contextStack.Current.Document.GetElement(matId) is DB.Material material)
         {
-          revitMaterial = cachedMaterial;
-        }
-        else
-        {
-          if (_contextStack.Current.Document.GetElement(matId) is DB.Material material)
-          {
-            (RevitMaterial convertedMaterial, RenderMaterial _) = _materialConverter.Convert(material);
-            revitMaterial = convertedMaterial;
-          }
-        }
-
-        if (revitMaterial != null)
-        {
-          quantities.Add(new(revitMaterial, volume, area, _contextStack.Current.SpeckleUnits));
+          (RevitMaterial convertedMaterial, RenderMaterial _) = _materialConverter.Convert(material);
+          quantities.Add(new(convertedMaterial, volume, area, _contextStack.Current.SpeckleUnits));
         }
       }
     }

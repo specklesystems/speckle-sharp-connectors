@@ -31,6 +31,7 @@ public class MaterialConversionToSpeckle : ITypedConverter<DB.Material, (RevitMa
     else
     {
       material = ConvertToRevitMaterial(target);
+      _materialCacheSingleton.ConvertedRevitMaterialMap.Add(target.UniqueId, material);
     }
 
     RenderMaterial renderMaterial;
@@ -46,6 +47,7 @@ public class MaterialConversionToSpeckle : ITypedConverter<DB.Material, (RevitMa
     else
     {
       renderMaterial = ConvertToRenderMaterial(target);
+      _materialCacheSingleton.ConvertedRevitMaterialMap.Add(target.UniqueId, material);
     }
 
     return (material, renderMaterial);
@@ -53,8 +55,6 @@ public class MaterialConversionToSpeckle : ITypedConverter<DB.Material, (RevitMa
 
   private RevitMaterial ConvertToRevitMaterial(DB.Material target)
   {
-    string? id = target.Id.ToString() ?? target.UniqueId;
-
     RevitMaterial material =
       new(
         target.Name,
@@ -65,16 +65,10 @@ public class MaterialConversionToSpeckle : ITypedConverter<DB.Material, (RevitMa
         target.Transparency
       )
       {
-        applicationId = id
+        applicationId = target.UniqueId
       };
 
     _parameterObjectAssigner.AssignParametersToBase(target, material);
-
-    if (!_materialCacheSingleton.ConvertedRevitMaterialMap.ContainsKey(id))
-    {
-      _materialCacheSingleton.ConvertedRevitMaterialMap.Add(id, material);
-    }
-
     return material;
   }
 
@@ -88,15 +82,6 @@ public class MaterialConversionToSpeckle : ITypedConverter<DB.Material, (RevitMa
         diffuse = System.Drawing.Color.FromArgb(target.Color.Red, target.Color.Green, target.Color.Blue).ToArgb(),
         applicationId = target.UniqueId
       };
-
-#if NET8_0
-    _materialCacheSingleton.ConvertedRenderMaterialMap.TryAdd(target.UniqueId, renderMaterial);
-#else
-    if (!_materialCacheSingleton.ConvertedRenderMaterialMap.ContainsKey(target.UniqueId))
-    {
-      _materialCacheSingleton.ConvertedRenderMaterialMap.Add(target.UniqueId, renderMaterial);
-    }
-#endif
 
     return renderMaterial;
   }

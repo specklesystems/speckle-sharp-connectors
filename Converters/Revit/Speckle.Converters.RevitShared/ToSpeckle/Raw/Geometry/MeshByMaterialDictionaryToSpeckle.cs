@@ -73,37 +73,19 @@ public class MeshByMaterialDictionaryToSpeckle
 
       if (doc.GetElement(materialId) is DB.Material material)
       {
-        RenderMaterial? renderMaterial = null;
-        if (
-          _materialCacheSingleton.ConvertedRenderMaterialMap.TryGetValue(
-            material.Id.ToString()!,
-            out RenderMaterial? cachedRenderMaterial
-          )
-        )
-        {
-          renderMaterial = cachedRenderMaterial;
-        }
-        else
-        {
-          (RevitMaterial _, RenderMaterial convertedRenderMaterial) = _materialConverter.Convert(material);
-          renderMaterial = convertedRenderMaterial;
-        }
-
-        if (renderMaterial is null)
-        {
-          continue;
-        }
+        (RevitMaterial _, RenderMaterial convertedRenderMaterial) = _materialConverter.Convert(material);
 
         if (!materialProxyMap.TryGetValue(materialId.ToString()!, out RenderMaterialProxy? renderMaterialProxy))
         {
           renderMaterialProxy = new RenderMaterialProxy()
           {
-            value = renderMaterial,
+            value = convertedRenderMaterial,
             applicationId = materialId.ToString()!,
             objects = []
           };
           materialProxyMap[materialId.ToString()!] = renderMaterialProxy;
         }
+
         renderMaterialProxy.objects.Add(speckleMesh.applicationId!);
       }
 
