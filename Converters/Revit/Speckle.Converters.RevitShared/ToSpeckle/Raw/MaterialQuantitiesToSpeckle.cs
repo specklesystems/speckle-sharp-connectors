@@ -42,12 +42,12 @@ public class MaterialQuantitiesToSpeckle : ITypedConverter<DB.Element, List<Mate
   public List<MaterialQuantity> Convert(DB.Element target)
   {
     List<MaterialQuantity> quantities = new();
-    if (target.Category.HasMaterialQuantities)
+
+    if (target.Category.HasMaterialQuantities) // TODO: null check on category
     {
       foreach (DB.ElementId matId in target.GetMaterialIds(false))
       {
-        string? id = matId.ToString();
-        if (id is null)
+        if (matId is null)
         {
           continue;
         }

@@ -55,6 +55,7 @@ public class MaterialConversionToSpeckle : ITypedConverter<DB.Material, (RevitMa
 
   private RevitMaterial ConvertToRevitMaterial(DB.Material target)
   {
+    // POC: we need to validate these properties on the RevitMaterial class, ie are they used?
     RevitMaterial material =
       new(
         target.Name,
