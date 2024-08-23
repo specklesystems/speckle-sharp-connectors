@@ -78,24 +78,24 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     return new List<ISendFilter> { new RevitSelectionFilter() { IsDefault = true } };
   }
 
-  public List<ICardSetting> GetSendSettings() => [new GeometryFidelitySetting("Medium")];
+  public List<ICardSetting> GetSendSettings() => [new DetailLevelSetting(DetailLevelType.Fine)];
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
 
   public SendBindingUICommands Commands { get; }
 
   // cache invalidation process run with ModelCardId since the settings are model specific
-  private readonly Dictionary<string, GeometryFidelityType> _geometryFidelityCache = new();
+  private readonly Dictionary<string, DetailLevelType> _detailLevelCache = new();
 
   private ToSpeckleSettings GetToSpeckleSettings(SenderModelCard modelCard)
   {
-    var fidelityString = modelCard.Settings?.First(s => s.Id == "geometryFidelity").Value as string;
+    var fidelityString = modelCard.Settings?.First(s => s.Id == "detailLevel").Value as string;
     if (
       fidelityString is not null
-      && GeometryFidelitySetting.GeometryFidelityMap.TryGetValue(fidelityString, out var fidelity)
+      && DetailLevelSetting.GeometryFidelityMap.TryGetValue(fidelityString, out var fidelity)
     )
     {
-      if (_geometryFidelityCache.TryGetValue(modelCard.ModelCardId.NotNull(), out GeometryFidelityType previousType))
+      if (_detailLevelCache.TryGetValue(modelCard.ModelCardId.NotNull(), out DetailLevelType previousType))
       {
         if (previousType != fidelity)
         {
@@ -103,7 +103,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
           _sendConversionCache.EvictObjects(objectIds);
         }
       }
-      _geometryFidelityCache[modelCard.ModelCardId.NotNull()] = fidelity;
+      _detailLevelCache[modelCard.ModelCardId.NotNull()] = fidelity;
       return new ToSpeckleSettings(fidelity);
     }
     throw new ArgumentException($"Invalid geometry fidelity value: {fidelityString}");

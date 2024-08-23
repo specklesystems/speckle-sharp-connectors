@@ -1,10 +1,10 @@
 ﻿namespace Speckle.Converters.RevitShared.Settings;
 
-public enum GeometryFidelityType
+public enum DetailLevelType
 {
   Coarse,
   Medium,
   Fine
 }
 
-public record ToSpeckleSettings(GeometryFidelityType GeometryFidelity);
+public record ToSpeckleSettings(DetailLevelType DetailLevel);

@@ -33,7 +33,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\RevitHostObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\TransactionManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\RevitRootObjectBuilder.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\GeometryFidelity.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\DetailLevelSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\DUI3ControlWebViewDockable.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\IRevitPlugin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitCommand.cs" />
