@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.Helpers;
@@ -12,17 +13,20 @@ public sealed class DisplayValueExtractor
     List<SOG.Mesh>
   > _meshByMaterialConverter;
   private readonly ILogger<DisplayValueExtractor> _logger;
+  private readonly IRevitConversionContextStack _revitConversionContextStack;
 
   public DisplayValueExtractor(
     ITypedConverter<
       (Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId),
       List<SOG.Mesh>
     > meshByMaterialConverter,
-    ILogger<DisplayValueExtractor> logger
+    ILogger<DisplayValueExtractor> logger,
+    IRevitConversionContextStack revitConversionContextStack
   )
   {
     _meshByMaterialConverter = meshByMaterialConverter;
     _logger = logger;
+    _revitConversionContextStack = revitConversionContextStack;
   }
 
   public List<SOG.Mesh> GetDisplayValue(DB.Element element, DB.Options? options = null)
@@ -70,10 +74,22 @@ public sealed class DisplayValueExtractor
     return meshesByMaterial;
   }
 
+  // We do not handle DetailLevelType.Undefined behavior, so we don't use 'DB.ViewDetailLevel' enum directly as option in UI.
+  private readonly Dictionary<DetailLevelType, DB.ViewDetailLevel> _detailLevelMap =
+    new()
+    {
+      { DetailLevelType.Coarse, DB.ViewDetailLevel.Coarse },
+      { DetailLevelType.Medium, DB.ViewDetailLevel.Medium },
+      { DetailLevelType.Fine, DB.ViewDetailLevel.Fine }
+    };
+
   private (List<DB.Solid>, List<DB.Mesh>) GetSolidsAndMeshesFromElement(DB.Element element, DB.Options? options)
   {
     //options = ViewSpecificOptions ?? options ?? new Options() { DetailLevel = DetailLevelSetting };
-    options ??= new DB.Options { DetailLevel = DB.ViewDetailLevel.Fine };
+    options ??= new DB.Options
+    {
+      DetailLevel = _detailLevelMap[_revitConversionContextStack.ToSpeckleSettings.DetailLevel]
+    };
 
     DB.GeometryElement geom;
     try
