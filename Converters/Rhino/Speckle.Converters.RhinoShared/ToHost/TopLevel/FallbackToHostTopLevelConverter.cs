@@ -11,18 +11,21 @@ public class FallbackToHostTopLevelConverter
   : IToHostTopLevelConverter,
     ITypedConverter<DisplayableObject, List<RG.GeometryBase>>
 {
+  private readonly ITypedConverter<SOG.Point, RG.Point> _pointConverter;
   private readonly ITypedConverter<SOG.Line, RG.LineCurve> _lineConverter;
   private readonly ITypedConverter<SOG.Polyline, RG.PolylineCurve> _polylineConverter;
   private readonly ITypedConverter<SOG.Mesh, RG.Mesh> _meshConverter;
   private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
 
   public FallbackToHostTopLevelConverter(
+    ITypedConverter<SOG.Point, RG.Point> pointConverter,
     ITypedConverter<SOG.Line, RG.LineCurve> lineConverter,
     ITypedConverter<SOG.Polyline, RG.PolylineCurve> polylineConverter,
     ITypedConverter<SOG.Mesh, RG.Mesh> meshConverter,
     IConversionContextStack<RhinoDoc, UnitSystem> contextStack
   )
   {
+    _pointConverter = pointConverter;
     _lineConverter = lineConverter;
     _polylineConverter = polylineConverter;
     _meshConverter = meshConverter;
@@ -41,6 +44,7 @@ public class FallbackToHostTopLevelConverter
         SOG.Line line => _lineConverter.Convert(line),
         SOG.Polyline polyline => _polylineConverter.Convert(polyline),
         SOG.Mesh mesh => _meshConverter.Convert(mesh),
+        SOG.Point point => _pointConverter.Convert(point),
         _ => throw new NotSupportedException($"Found unsupported fallback geometry: {item.GetType()}")
       };
       x.Transform(GetUnitsTransform(item));

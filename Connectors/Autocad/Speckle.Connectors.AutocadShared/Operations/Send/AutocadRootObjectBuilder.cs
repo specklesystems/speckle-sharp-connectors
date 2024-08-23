@@ -149,11 +149,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
       modelWithLayers["renderMaterialProxies"] = materialProxies;
 
       // set colors
-      List<ColorProxy> colorProxies = _colorManager.UnpackColors(
-        atomicObjects,
-        usedAcadLayers,
-        instanceDefinitionProxies
-      );
+      List<ColorProxy> colorProxies = _colorManager.UnpackColors(atomicObjects, usedAcadLayers);
       modelWithLayers["colorProxies"] = colorProxies;
 
       return new RootObjectBuilderResult(modelWithLayers, results);

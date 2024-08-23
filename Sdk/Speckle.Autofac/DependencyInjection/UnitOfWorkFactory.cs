@@ -1,10 +1,14 @@
 ﻿using Autofac;
 using Autofac.Core;
-using Speckle.InterfaceGenerator;
 
 namespace Speckle.Autofac.DependencyInjection;
 
-[GenerateAutoInterface]
+public interface IUnitOfWorkFactory
+{
+  public IUnitOfWork<TService> Resolve<TService>(Action<ContainerBuilder>? action = null)
+    where TService : class;
+}
+
 public class UnitOfWorkFactory : IUnitOfWorkFactory
 {
   private readonly ILifetimeScope _parentScope;
@@ -14,14 +18,14 @@ public class UnitOfWorkFactory : IUnitOfWorkFactory
     _parentScope = parentScope;
   }
 
-  public IUnitOfWork<TService> Resolve<TService>()
+  public IUnitOfWork<TService> Resolve<TService>(Action<ContainerBuilder>? action = null)
     where TService : class
   {
     ILifetimeScope? childScope = null;
 
     try
     {
-      childScope = _parentScope.BeginLifetimeScope();
+      childScope = action != null ? _parentScope.BeginLifetimeScope(action) : _parentScope.BeginLifetimeScope();
       var service = childScope.Resolve<TService>();
 
       return new UnitOfWork<TService>(childScope, service);
