@@ -306,6 +306,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       {
         Map map = _contextStack.Current.Document.Map;
         GroupLayer mainGroupLayer = LayerFactory.Instance.CreateGroupLayer(map, 0, $"{projectName}: {modelName}");
+        mainGroupLayer.SetExpanded(true);
         createdLayerGroups["Basic Speckle Group"] = mainGroupLayer; // key doesn't really matter here
       }
 
@@ -322,6 +323,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
         {
           throw new SpeckleException($"Layer '{shortName}' was not created");
         }
+        layer.SetExpanded(false);
 
         // if Scene
         // https://community.esri.com/t5/arcgis-pro-sdk-questions/sdk-equivalent-to-changing-layer-s-elevation/td-p/1346139
@@ -341,7 +343,6 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
           }
         }
 
-        layer.SetExpanded(true);
         return (MapMember)layer;
       }
       catch (ArgumentException)
