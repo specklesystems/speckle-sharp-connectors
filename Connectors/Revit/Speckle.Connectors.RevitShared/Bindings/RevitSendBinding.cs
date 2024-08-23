@@ -88,6 +88,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
   public SendBindingUICommands Commands { get; }
 
+  // cache invalidation process run with ModelCardId since the settings are model specific
+  private readonly Dictionary<string, GeometryFidelityType> _geometryFidelityCache = new();
+
   private ToSpeckleSettings GetToSpeckleSettings(SenderModelCard modelCard)
   {
     var fidelityString = modelCard.Settings?.First(s => s.Id == "geometryFidelity").Value as string;
@@ -96,6 +99,15 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       && GeometryFidelitySetting.GeometryFidelityMap.TryGetValue(fidelityString, out var fidelity)
     )
     {
+      if (_geometryFidelityCache.TryGetValue(modelCard.ModelCardId.NotNull(), out GeometryFidelityType previousType))
+      {
+        if (previousType != fidelity)
+        {
+          var objectIds = modelCard.SendFilter != null ? modelCard.SendFilter.GetObjectIds() : [];
+          _sendConversionCache.EvictObjects(objectIds);
+        }
+      }
+      _geometryFidelityCache[modelCard.ModelCardId.NotNull()] = fidelity;
       return new ToSpeckleSettings(fidelity);
     }
     throw new ArgumentException($"Invalid geometry fidelity value: {fidelityString}");
