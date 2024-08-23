@@ -206,6 +206,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       onOperationProgressed?.Invoke("Adding to Map", (double)++bakeCount / conversionTracker.Count);
     }
 
+    // apply renderers to baked layers
     foreach (var bakedMember in bakedMapMembers)
     {
       if (bakedMember.Value.Item1 is FeatureLayer fLayer)
