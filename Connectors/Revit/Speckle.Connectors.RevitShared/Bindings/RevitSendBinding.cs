@@ -78,11 +78,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     return new List<ISendFilter> { new RevitSelectionFilter() { IsDefault = true } };
   }
 
-  public List<ICardSetting> GetSendSettings() =>
-    new()
-    {
-      new GeometryFidelitySetting("Coarse") // TODO: get it from document settings?
-    };
+  public List<ICardSetting> GetSendSettings() => [new GeometryFidelitySetting("Medium")];
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
 
