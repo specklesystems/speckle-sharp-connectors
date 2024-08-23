@@ -78,7 +78,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     return new List<ISendFilter> { new RevitSelectionFilter() { IsDefault = true } };
   }
 
-  public List<ICardSetting> GetSendSettings() => [new DetailLevelSetting(DetailLevelType.Fine)];
+  public List<ICardSetting> GetSendSettings() => [new DetailLevelSetting(DetailLevelType.Medium)];
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
 
