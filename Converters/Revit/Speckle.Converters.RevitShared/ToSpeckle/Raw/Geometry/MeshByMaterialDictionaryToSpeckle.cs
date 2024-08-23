@@ -1,6 +1,7 @@
-﻿using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Objects.Other;
+using Speckle.Objects.Other.Revit;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -9,17 +10,20 @@ public class MeshByMaterialDictionaryToSpeckle
 {
   private readonly IRevitConversionContextStack _contextStack;
   private readonly ITypedConverter<DB.XYZ, SOG.Point> _xyzToPointConverter;
-  private readonly ITypedConverter<DB.Material, RenderMaterial> _materialConverter;
+  private readonly ITypedConverter<DB.Material, (RevitMaterial, RenderMaterial)> _materialConverter;
+  private readonly RevitMaterialCacheSingleton _materialCacheSingleton;
 
   public MeshByMaterialDictionaryToSpeckle(
-    ITypedConverter<DB.Material, RenderMaterial> materialConverter,
+    ITypedConverter<DB.Material, (RevitMaterial, RenderMaterial)> materialConverter,
     IRevitConversionContextStack contextStack,
-    ITypedConverter<DB.XYZ, SOG.Point> xyzToPointConverter
+    ITypedConverter<DB.XYZ, SOG.Point> xyzToPointConverter,
+    RevitMaterialCacheSingleton materialCacheSingleton
   )
   {
     _materialConverter = materialConverter;
     _contextStack = contextStack;
     _xyzToPointConverter = xyzToPointConverter;
+    _materialCacheSingleton = materialCacheSingleton;
   }
 
   /// <summary>
@@ -69,13 +73,32 @@ public class MeshByMaterialDictionaryToSpeckle
 
       if (doc.GetElement(materialId) is DB.Material material)
       {
-        var speckleMaterial = _materialConverter.Convert(material);
+        RenderMaterial? renderMaterial = null;
+        if (
+          _materialCacheSingleton.ConvertedRenderMaterialMap.TryGetValue(
+            material.Id.ToString()!,
+            out RenderMaterial? cachedRenderMaterial
+          )
+        )
+        {
+          renderMaterial = cachedRenderMaterial;
+        }
+        else
+        {
+          (RevitMaterial _, RenderMaterial convertedRenderMaterial) = _materialConverter.Convert(material);
+          renderMaterial = convertedRenderMaterial;
+        }
+
+        if (renderMaterial is null)
+        {
+          continue;
+        }
 
         if (!materialProxyMap.TryGetValue(materialId.ToString()!, out RenderMaterialProxy? renderMaterialProxy))
         {
           renderMaterialProxy = new RenderMaterialProxy()
           {
-            value = speckleMaterial,
+            value = renderMaterial,
             applicationId = materialId.ToString()!,
             objects = []
           };
