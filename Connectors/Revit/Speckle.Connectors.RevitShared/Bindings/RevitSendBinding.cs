@@ -244,10 +244,23 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   {
     var senders = Store.GetSenders();
     string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
+    var doc = RevitContext.UIApplication?.ActiveUIDocument.Document;
+
+    if (doc == null)
+    {
+      return;
+    }
+
+    // Note: We're using unique ids as application ids in revit, so cache eviction must happen by those.
+    var objUniqueIds = objectIdsList
+      .Select(id => new ElementId(Convert.ToInt32(id)))
+      .Select(doc.GetElement)
+      .Where(el => el is not null)
+      .Select(el => el.UniqueId);
+    _sendConversionCache.EvictObjects(objUniqueIds);
+
+    // Note: we're doing object selection and card expiry management by old school ids
     List<string> expiredSenderIds = new();
-
-    _sendConversionCache.EvictObjects(objectIdsList);
-
     foreach (SenderModelCard modelCard in senders)
     {
       var intersection = modelCard.SendFilter.NotNull().GetObjectIds().Intersect(objectIdsList).ToList();
