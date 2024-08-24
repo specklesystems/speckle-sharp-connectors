@@ -1,5 +1,6 @@
 using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
+using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Converters.RevitShared.Helpers;
 
@@ -12,6 +13,8 @@ namespace Speckle.Converters.RevitShared.Helpers;
 // and the latter is more for connector
 public class RevitConversionContextStack : ConversionContextStack<Document, ForgeTypeId>, IRevitConversionContextStack
 {
+  public ToSpeckleSettings ToSpeckleSettings { get; }
+
   /// <summary>
   /// Persistent cache (across conversions) for all generated render material proxies. Note this cache stores a list of render material proxies per element id.
   /// </summary>
@@ -22,7 +25,8 @@ public class RevitConversionContextStack : ConversionContextStack<Document, Forg
   public RevitConversionContextStack(
     RevitContext context,
     IHostToSpeckleUnitConverter<ForgeTypeId> unitConverter,
-    RevitRenderMaterialProxyCacheSingleton renderMaterialProxyCache
+    RevitRenderMaterialProxyCacheSingleton renderMaterialProxyCache,
+    ToSpeckleSettings toSpeckleSettings
   )
     : base(
       // POC: we probably should not get here without a valid document
@@ -35,6 +39,7 @@ public class RevitConversionContextStack : ConversionContextStack<Document, Forg
       unitConverter
     )
   {
+    ToSpeckleSettings = toSpeckleSettings;
     RenderMaterialProxyCache = renderMaterialProxyCache;
   }
 }

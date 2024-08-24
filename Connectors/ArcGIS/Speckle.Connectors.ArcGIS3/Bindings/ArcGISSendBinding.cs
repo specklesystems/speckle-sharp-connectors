@@ -325,7 +325,7 @@ public sealed class ArcGISSendBinding : ISendBinding
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
 
-  public List<CardSetting> GetSendSettings() => [];
+  public List<ICardSetting> GetSendSettings() => [];
 
   [SuppressMessage(
     "Maintainability",
