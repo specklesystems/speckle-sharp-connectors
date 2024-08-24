@@ -255,6 +255,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     var objUniqueIds = objectIdsList
       .Select(id => new ElementId(Convert.ToInt32(id)))
       .Select(doc.GetElement)
+      .Where(el => el is not null)
       .Select(el => el.UniqueId);
     _sendConversionCache.EvictObjects(objUniqueIds);
 
