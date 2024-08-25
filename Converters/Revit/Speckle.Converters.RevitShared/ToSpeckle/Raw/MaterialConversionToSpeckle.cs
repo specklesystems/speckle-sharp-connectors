@@ -69,7 +69,9 @@ public class MaterialConversionToSpeckle : ITypedConverter<DB.Material, (RevitMa
         applicationId = target.UniqueId
       };
 
-    _parameterObjectAssigner.AssignParametersToBase(target, material);
+    // POC: I'm removing material parameter assigning here as we're exploding a bit the whole space with too many parameters.
+    // We can bring this back if needed/requested by our end users.
+    // _parameterObjectAssigner.AssignParametersToBase(target, material);
     return material;
   }
 
