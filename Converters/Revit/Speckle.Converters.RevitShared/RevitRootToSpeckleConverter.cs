@@ -12,13 +12,13 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
 {
   private readonly IConverterResolver<IToSpeckleTopLevelConverter> _toSpeckle;
   private readonly ParameterValueExtractor _parameterValueExtractor;
-  private readonly ITypedConverter<DB.Element, IEnumerable<MaterialQuantity>> _materialQuantityConverter;
+  private readonly ITypedConverter<DB.Element, List<MaterialQuantity>> _materialQuantityConverter;
   private readonly IRevitConversionContextStack _contextStack;
 
   public RevitRootToSpeckleConverter(
     IConverterResolver<IToSpeckleTopLevelConverter> toSpeckle,
     ParameterValueExtractor parameterValueExtractor,
-    ITypedConverter<DB.Element, IEnumerable<MaterialQuantity>> materialQuantityConverter,
+    ITypedConverter<DB.Element, List<MaterialQuantity>> materialQuantityConverter,
     IRevitConversionContextStack contextStack
   )
   {

@@ -47,7 +47,7 @@ public class MaterialConversionToSpeckle : ITypedConverter<DB.Material, (RevitMa
     else
     {
       renderMaterial = ConvertToRenderMaterial(target);
-      _materialCacheSingleton.ConvertedRevitMaterialMap.Add(target.UniqueId, material);
+      _materialCacheSingleton.ConvertedRenderMaterialMap.Add(target.UniqueId, renderMaterial);
     }
 
     return (material, renderMaterial);

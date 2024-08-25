@@ -13,6 +13,6 @@ namespace Speckle.Converters.RevitShared.Helpers;
 // and the latter is more for connector
 public interface IRevitConversionContextStack : IConversionContextStack<Document, ForgeTypeId>
 {
-  public RevitRenderMaterialProxyCacheSingleton RenderMaterialProxyCache { get; }
+  public RevitMaterialCacheSingleton RenderMaterialProxyCache { get; }
   public ToSpeckleSettings ToSpeckleSettings { get; }
 }
