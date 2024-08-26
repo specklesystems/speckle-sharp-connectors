@@ -246,9 +246,4 @@ public class ParameterValueExtractor
       paramDict[internalName] = param;
     }
   }
-
-  public void RemoveUniqueId(string uniqueId)
-  {
-    _uniqueIdToUsedParameterSetMap.Remove(uniqueId);
-  }
 }
