@@ -6,6 +6,10 @@ using Speckle.Objects.Other.Revit;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
+/// <summary>
+/// Lighter converter for material quantities. It basically returns a For each material quantity available on the target element, it will return a dictionary containing: area, volume, units, material name, material class and material category.
+/// POC: we need to validate this with user needs. It currently does not include material parameters or any other more complex props to ensure speedy sending of data and a lighter payload. We're though keen to re-add more data provided we can validate it.
+/// </summary>
 public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, List<Dictionary<string, object>>>
 {
   private readonly ScalingServiceToSpeckle _scalingService;
@@ -21,7 +25,7 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, List<
   }
 
   /// <summary>
-  ///
+  /// Lighter conversion of material quantities to speckle. For each material quantity available on the target element, it will return a dictionary containing: area, volume, units, material name, material class and material category.
   /// </summary>
   /// <param name="target"></param>
   /// <returns></returns>
@@ -66,22 +70,16 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, List<
 public class MaterialQuantitiesToSpeckle : ITypedConverter<DB.Element, List<MaterialQuantity>>
 {
   private readonly ITypedConverter<DB.Material, (RevitMaterial, RenderMaterial)> _materialConverter;
-  private readonly RevitMaterialCacheSingleton _materialCacheSingleton;
-  private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly ScalingServiceToSpeckle _scalingService;
   private readonly IRevitConversionContextStack _contextStack;
 
   public MaterialQuantitiesToSpeckle(
     ITypedConverter<DB.Material, (RevitMaterial, RenderMaterial)> materialConverter,
-    RevitMaterialCacheSingleton materialCacheSingleton,
-    DisplayValueExtractor displayValueExtractor,
     ScalingServiceToSpeckle scalingService,
     IRevitConversionContextStack contextStack
   )
   {
     _materialConverter = materialConverter;
-    _materialCacheSingleton = materialCacheSingleton;
-    _displayValueExtractor = displayValueExtractor;
     _scalingService = scalingService;
     _contextStack = contextStack;
   }
