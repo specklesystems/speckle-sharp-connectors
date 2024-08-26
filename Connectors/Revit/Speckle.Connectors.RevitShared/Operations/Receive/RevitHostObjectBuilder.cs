@@ -76,6 +76,8 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     using (var _ = SpeckleActivityFactory.Start("BakeObjects"))
     {
       var conversionResults = new List<ReceiveConversionResult>();
+
+      // NOTE!!!! Add 'UniqueId' of the elements once we have receiving in place, otherwise highlight logic will fail.
       var bakedObjectIds = new List<string>();
 
       foreach (TraversalContext tc in objectsGraph)

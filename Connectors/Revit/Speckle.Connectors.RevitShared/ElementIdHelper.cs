@@ -14,4 +14,15 @@ public static class ElementIdHelper
 
     return new ElementId(result);
   }
+
+  public static ElementId GetElementIdByUniqueId(Document doc, string uniqueId)
+  {
+    Element element = doc.GetElement(uniqueId);
+    if (element == null)
+    {
+      throw new SpeckleConversionException($"Cannot find element with UniqueId: {uniqueId}");
+    }
+
+    return element.Id;
+  }
 }

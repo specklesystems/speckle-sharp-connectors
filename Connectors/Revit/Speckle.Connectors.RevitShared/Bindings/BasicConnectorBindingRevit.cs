@@ -77,7 +77,15 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
   {
     SenderModelCard model = (SenderModelCard)_store.GetModelById(modelCardId);
 
-    var elementIds = model.SendFilter.NotNull().GetObjectIds().Select(ElementIdHelper.Parse).ToList();
+    var activeUIDoc =
+      _revitContext.UIApplication?.ActiveUIDocument
+      ?? throw new SpeckleException("Unable to retrieve active UI document");
+
+    var elementIds = model
+      .SendFilter.NotNull()
+      .GetObjectIds()
+      .Select(uid => ElementIdHelper.GetElementIdByUniqueId(activeUIDoc.Document, uid))
+      .ToList();
     if (elementIds.Count == 0)
     {
       Commands.SetModelError(modelCardId, new InvalidOperationException("No objects found to highlight."));
@@ -87,8 +95,15 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     HighlightObjectsOnView(elementIds);
   }
 
-  public void HighlightObjects(List<string> objectIds) =>
-    HighlightObjectsOnView(objectIds.Select(ElementIdHelper.Parse).ToList());
+  public void HighlightObjects(List<string> objectIds)
+  {
+    var activeUIDoc =
+      _revitContext.UIApplication?.ActiveUIDocument
+      ?? throw new SpeckleException("Unable to retrieve active UI document");
+    HighlightObjectsOnView(
+      objectIds.Select(uid => ElementIdHelper.GetElementIdByUniqueId(activeUIDoc.Document, uid)).ToList()
+    );
+  }
 
   private void HighlightObjectsOnView(List<ElementId> objectIds)
   {
