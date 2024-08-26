@@ -4,7 +4,6 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
-using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.Bindings;
 
