@@ -65,7 +65,7 @@ public struct ObjectConversionTracker
   /// <param name="baseObj">Original received Base object.</param>
   /// <param name="nestedLayerName">String with the full traversed path to the object. Will be used to create nested layer structure in the TOC.</param>
   /// <param name="hostAppGeom">Converted ArcGIS.Core.Geometry.</param>
-  public ObjectConversionTracker(Base baseObj, string nestedLayerName, ACG.Geometry hostAppGeom)
+  public ObjectConversionTracker(Base baseObj, ACG.Geometry? hostAppGeom, string nestedLayerName)
   {
     Base = baseObj;
     NestedLayerName = nestedLayerName;
@@ -74,7 +74,7 @@ public struct ObjectConversionTracker
 
   /// <summary>
   /// Constructor for received native GIS layers.
-  /// Initializes a new instance of <see cref="ObjectConversionTracker"/>, accepting datasetID of a coverted Speckle layer.
+  /// Initializes a new instance of <see cref="ObjectConversionTracker"/>, accepting datasetID of a converted Speckle layer.
   /// </summary>
   /// <param name="baseObj">Original received Base object.</param>
   /// <param name="nestedLayerName">String with the full traversed path to the object. Will be used to create nested layer structure in the TOC.</param>
@@ -82,6 +82,22 @@ public struct ObjectConversionTracker
   public ObjectConversionTracker(Base baseObj, string nestedLayerName, string datasetId)
   {
     Base = baseObj;
+    NestedLayerName = nestedLayerName;
+    DatasetId = datasetId;
+  }
+
+  /// <summary>
+  /// Constructor for received native GIS layers.
+  /// Initializes a new instance of <see cref="ObjectConversionTracker"/>, accepting both converted geometry and datasetID.
+  /// </summary>
+  /// <param name="baseObj">Original received Base object.</param>
+  /// <param name="hostAppGeom">Converted ArcGIS.Core.Geometry.</param>
+  /// <param name="nestedLayerName">String with the full traversed path to the object. Will be used to create nested layer structure in the TOC.</param>
+  /// <param name="datasetId">ID of the locally written dataset, created from received Speckle layer.</param>
+  public ObjectConversionTracker(Base baseObj, ACG.Geometry? hostAppGeom, string nestedLayerName, string datasetId)
+  {
+    Base = baseObj;
+    HostAppGeom = hostAppGeom;
     NestedLayerName = nestedLayerName;
     DatasetId = datasetId;
   }
