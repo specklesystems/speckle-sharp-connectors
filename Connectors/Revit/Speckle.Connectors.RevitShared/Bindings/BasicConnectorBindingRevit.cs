@@ -77,14 +77,10 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
   {
     SenderModelCard model = (SenderModelCard)_store.GetModelById(modelCardId);
 
-    var activeUIDoc =
-      _revitContext.UIApplication?.ActiveUIDocument
-      ?? throw new SpeckleException("Unable to retrieve active UI document");
-
     var elementIds = model
       .SendFilter.NotNull()
       .GetObjectIds()
-      .Select(uid => ElementIdHelper.GetElementIdByUniqueId(activeUIDoc.Document, uid))
+      .Select(ElementIdHelper.Parse) // On model card level we store ElementIds of the objects, in report they are UniqueId. It doesn't make sense for now to send UniqueIds via Selection to model card bc API gave us ElementIds from selection.
       .ToList();
     if (elementIds.Count == 0)
     {
@@ -95,11 +91,16 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     HighlightObjectsOnView(elementIds);
   }
 
+  /// <summary>
+  /// Highlights the objects from the given ids.
+  /// </summary>
+  /// <param name="objectIds"> UniqueId's of the DB.Elements.</param>
   public void HighlightObjects(List<string> objectIds)
   {
     var activeUIDoc =
       _revitContext.UIApplication?.ActiveUIDocument
       ?? throw new SpeckleException("Unable to retrieve active UI document");
+
     HighlightObjectsOnView(
       objectIds.Select(uid => ElementIdHelper.GetElementIdByUniqueId(activeUIDoc.Document, uid)).ToList()
     );
