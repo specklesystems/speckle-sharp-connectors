@@ -134,6 +134,11 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         }
       }
 
+      if (results.All(x => x.Status == Status.ERROR))
+      {
+        throw new SpeckleConversionException("Failed to convert all objects."); // fail fast instead creating empty commit! It will appear as model card error with red color.
+      }
+
       using (var _ = SpeckleActivityFactory.Start("UnpackRenderMaterials"))
       {
         // set render materials and colors

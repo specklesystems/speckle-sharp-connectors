@@ -18,14 +18,14 @@ public class RevitConversionContextStack : ConversionContextStack<Document, Forg
   /// <summary>
   /// Persistent cache (across conversions) for all generated render material proxies. Note this cache stores a list of render material proxies per element id.
   /// </summary>
-  public RevitRenderMaterialProxyCacheSingleton RenderMaterialProxyCache { get; }
+  public RevitMaterialCacheSingleton RenderMaterialProxyCache { get; }
 
   public const double TOLERANCE = 0.0164042; // 5mm in ft
 
   public RevitConversionContextStack(
     RevitContext context,
     IHostToSpeckleUnitConverter<ForgeTypeId> unitConverter,
-    RevitRenderMaterialProxyCacheSingleton renderMaterialProxyCache,
+    RevitMaterialCacheSingleton renderMaterialProxyCache,
     ToSpeckleSettings toSpeckleSettings
   )
     : base(
