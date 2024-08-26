@@ -1,7 +1,9 @@
 using System.Text.RegularExpressions;
+using Speckle.InterfaceGenerator;
 
 namespace Speckle.Converters.ArcGIS3.Utils;
 
+[GenerateAutoInterface]
 public class CharacterCleaner : ICharacterCleaner
 {
   public string CleanCharacters(string key)

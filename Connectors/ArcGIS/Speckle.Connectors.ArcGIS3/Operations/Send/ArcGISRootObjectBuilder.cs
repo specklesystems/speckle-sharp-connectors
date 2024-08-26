@@ -63,6 +63,8 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     // reorder selected layers by Table of Content (TOC) order
     List<(MapMember, int)> layersWithDisplayPriority = GetLayerDisplayPriority(MapView.Active.Map, objects);
 
+    onOperationProgressed?.Invoke("Converting", null);
+
     foreach ((MapMember mapMember, _) in layersWithDisplayPriority)
     {
       ct.ThrowIfCancellationRequested();

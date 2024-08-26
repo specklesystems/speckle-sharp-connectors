@@ -90,6 +90,7 @@ public class RhinoMaterialManager
         // POC: Currently we're relying on the render material name for identification if it's coming from speckle and from which model; could we do something else?
         string materialId = speckleRenderMaterial.applicationId ?? speckleRenderMaterial.id;
         string matName = $"{speckleRenderMaterial.name}-({materialId})-{baseLayerName}";
+        matName = matName.Replace("[", "").Replace("]", ""); // "Material" doesn't like square brackets if we create from here. Once they created from Rhino UI, all good..
         Color diffuse = Color.FromArgb(speckleRenderMaterial.diffuse);
         Color emissive = Color.FromArgb(speckleRenderMaterial.emissive);
         double transparency = 1 - speckleRenderMaterial.opacity;
