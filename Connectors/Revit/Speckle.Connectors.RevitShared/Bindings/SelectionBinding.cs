@@ -3,6 +3,7 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.Bindings;
@@ -52,12 +53,16 @@ internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding, ID
       return new SelectionInfo(Array.Empty<string>(), "No objects selected.");
     }
 
+    var activeUIDoc =
+      RevitContext.UIApplication?.ActiveUIDocument
+      ?? throw new SpeckleException("Unable to retrieve active UI document");
+
     // POC: this was also being called on shutdown
     // probably the bridge needs to be able to know if the plugin has been terminated
     // also on termination the OnSelectionChanged event needs unwinding
-    var selectionIds = (RevitContext.UIApplication?.ActiveUIDocument?.Selection.GetElementIds())
-      .NotNull()
-      .Select(id => id.ToString())
+    var selectionIds = activeUIDoc
+      .Selection.GetElementIds()
+      .Select(eid => activeUIDoc.Document.GetElement(eid).UniqueId.ToString())
       .ToList();
     return new SelectionInfo(selectionIds, $"{selectionIds.Count} objects selected.");
   }

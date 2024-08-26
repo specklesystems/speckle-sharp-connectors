@@ -130,10 +130,14 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         }
       );
 
+      var activeUIDoc =
+        RevitContext.UIApplication?.ActiveUIDocument
+        ?? throw new SpeckleException("Unable to retrieve active UI document");
+
       List<ElementId> revitObjects = modelCard
         .SendFilter.NotNull()
         .GetObjectIds()
-        .Select(ElementIdHelper.Parse)
+        .Select(uid => ElementIdHelper.GetElementIdByUniqueId(activeUIDoc.Document, uid))
         .ToList();
 
       if (revitObjects.Count == 0)
