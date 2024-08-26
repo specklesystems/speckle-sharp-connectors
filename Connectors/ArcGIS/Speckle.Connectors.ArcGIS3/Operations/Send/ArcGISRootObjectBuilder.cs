@@ -158,6 +158,11 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
       onOperationProgressed?.Invoke("Converting", (double)++count / objects.Count);
     }
 
+    if (results.All(x => x.Status == Status.ERROR))
+    {
+      throw new SpeckleConversionException("Failed to convert all objects."); // fail fast instead creating empty commit! It will appear as model card error with red color.
+    }
+
     // POC: Add Color Proxies
     List<ColorProxy> colorProxies = _colorManager.UnpackColors(layersWithDisplayPriority);
     rootObjectCollection["colorProxies"] = colorProxies;

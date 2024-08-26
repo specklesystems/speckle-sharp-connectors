@@ -48,7 +48,12 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     _syncToThread = syncToThread;
   }
 
+  // It is already simplified but has many different references since it is a builder. Do not know can we simplify it now.
+  // Later we might consider to refactor proxies from one proxy manager? but we do not know the shape of it all potential
+  // proxy classes yet. So I'm disabling this with pragma now!!!
+#pragma warning disable CA1506
   public Task<RootObjectBuilderResult> Build(
+#pragma warning restore CA1506
     IReadOnlyList<AutocadRootObject> objects,
     SendInfo sendInfo,
     Action<string, double?>? onOperationProgressed = null,
@@ -120,6 +125,11 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
           // POC: add logging
         }
         onOperationProgressed?.Invoke("Converting", (double)++count / atomicObjects.Count);
+      }
+
+      if (results.All(x => x.Status == Status.ERROR))
+      {
+        throw new SpeckleConversionException("Failed to convert all objects."); // fail fast instead creating empty commit! It will appear as model card error with red color.
       }
 
       // POC: Log would be nice, or can be removed.
