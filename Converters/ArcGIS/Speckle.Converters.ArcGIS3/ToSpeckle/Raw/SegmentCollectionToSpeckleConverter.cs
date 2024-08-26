@@ -60,7 +60,7 @@ public class SegmentCollectionToSpeckleConverter : ITypedConverter<ACG.ReadOnlyS
         {
           foreach (ACG.Segment? subSegment in subSegments)
           {
-            points = AddPtsToPolylinePts(
+            AddPtsToPolylinePts(
               points,
               new List<SOG.Point>()
               {
@@ -73,7 +73,7 @@ public class SegmentCollectionToSpeckleConverter : ITypedConverter<ACG.ReadOnlyS
       }
       else
       {
-        points = AddPtsToPolylinePts(
+        AddPtsToPolylinePts(
           points,
           new List<SOG.Point>()
           {
@@ -83,10 +83,24 @@ public class SegmentCollectionToSpeckleConverter : ITypedConverter<ACG.ReadOnlyS
         );
       }
     }
+
+    // check the last point, remove if coincides with the first. Assign as Closed instead
+    bool closed = false;
+    if (
+      Math.Round(points[^1].x, 6) == Math.Round(points[0].x, 6)
+      && Math.Round(points[^1].y, 6) == Math.Round(points[0].y, 6)
+      && Math.Round(points[^1].z, 6) == Math.Round(points[0].z, 6)
+    )
+    {
+      closed = true;
+      points.RemoveAt(points.Count - 1);
+    }
+
     SOG.Polyline polyline =
       new()
       {
-        value = points.SelectMany(pt => new[] { pt.x, pt.y, pt.z }).ToList(),
+        value = points.SelectMany(pt => new[] { pt.x, pt.y, pt.z, }).ToList(),
+        closed = closed,
         units = _contextStack.Current.SpeckleUnits
       };
 
@@ -95,7 +109,13 @@ public class SegmentCollectionToSpeckleConverter : ITypedConverter<ACG.ReadOnlyS
 
   private List<SOG.Point> AddPtsToPolylinePts(List<SOG.Point> points, List<SOG.Point> newSegmentPts)
   {
-    if (points.Count == 0 || points[^1] != newSegmentPts[0])
+    // don't add the same Point as the previous one
+    if (
+      points.Count == 0
+      || Math.Round(points[^1].x, 6) != Math.Round(newSegmentPts[0].x, 6)
+      || Math.Round(points[^1].y, 6) != Math.Round(newSegmentPts[0].y, 6)
+      || Math.Round(points[^1].z, 6) != Math.Round(newSegmentPts[0].z, 6)
+    )
     {
       points.AddRange(newSegmentPts);
     }

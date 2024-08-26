@@ -2,9 +2,11 @@ using System.Collections;
 using ArcGIS.Core.Data;
 using ArcGIS.Core.Data.Exceptions;
 using Speckle.InterfaceGenerator;
+using Speckle.Objects;
 using Speckle.Objects.GIS;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.GraphTraversal;
 using FieldDescription = ArcGIS.Core.Data.DDL.FieldDescription;
 
 namespace Speckle.Converters.ArcGIS3.Utils;
@@ -18,6 +20,26 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
   public ArcGISFieldUtils(ICharacterCleaner characterCleaner)
   {
     _characterCleaner = characterCleaner;
+  }
+
+  public Dictionary<string, object?> GetAttributesViaFunction(
+    ObjectConversionTracker trackerItem,
+    List<(FieldDescription, Func<Base, object?>)> fieldsAndFunctions
+  )
+  {
+    // set and pass attributes
+    Dictionary<string, object?> attributes = new();
+    foreach ((FieldDescription field, Func<Base, object?> function) in fieldsAndFunctions)
+    {
+      string key = field.AliasName;
+      attributes[key] = function(trackerItem.Base);
+      if (attributes[key] is null && key == "Speckle_ID")
+      {
+        attributes[key] = trackerItem.Base.id;
+      }
+    }
+
+    return attributes;
   }
 
   public RowBuffer AssignFieldValuesToRow(
@@ -288,5 +310,28 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
     {
       // do nothing
     }
+  }
+
+  public List<(FieldDescription, Func<Base, object?>)> GetFieldsAndAttributeFunctions(
+    List<(TraversalContext, ObjectConversionTracker)> listOfContextAndTrackers
+  )
+  {
+    List<(FieldDescription, Func<Base, object?>)> fieldsAndFunctions = new();
+    List<FieldDescription> fields = new();
+
+    // Get Fields, geomType and attributeFunction - separately for GIS and non-GIS
+    if (listOfContextAndTrackers.FirstOrDefault().Item1.Parent?.Current is SGIS.VectorLayer vLayer) // GIS
+    {
+      fields = GetFieldsFromSpeckleLayer(vLayer);
+      fieldsAndFunctions = fields
+        .Select(x => (x, (Func<Base, object?>)(y => (y as IGisFeature)?.attributes[x.Name])))
+        .ToList();
+    }
+    else // non-GIS
+    {
+      fieldsAndFunctions = CreateFieldsFromListOfBase(listOfContextAndTrackers.Select(x => x.Item2.Base).ToList());
+    }
+
+    return fieldsAndFunctions;
   }
 }
