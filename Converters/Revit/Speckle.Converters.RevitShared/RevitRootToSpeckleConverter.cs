@@ -3,7 +3,6 @@ using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
-using MaterialQuantity = Speckle.Objects.Other.MaterialQuantity;
 
 namespace Speckle.Converters.RevitShared;
 
@@ -12,13 +11,13 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
 {
   private readonly IConverterResolver<IToSpeckleTopLevelConverter> _toSpeckle;
   private readonly ParameterValueExtractor _parameterValueExtractor;
-  private readonly ITypedConverter<DB.Element, List<MaterialQuantity>> _materialQuantityConverter;
+  private readonly ITypedConverter<DB.Element, List<Dictionary<string, object>>> _materialQuantityConverter;
   private readonly IRevitConversionContextStack _contextStack;
 
   public RevitRootToSpeckleConverter(
     IConverterResolver<IToSpeckleTopLevelConverter> toSpeckle,
     ParameterValueExtractor parameterValueExtractor,
-    ITypedConverter<DB.Element, List<MaterialQuantity>> materialQuantityConverter,
+    ITypedConverter<DB.Element, List<Dictionary<string, object>>> materialQuantityConverter,
     IRevitConversionContextStack contextStack
   )
   {
@@ -43,13 +42,10 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
       objectConverter.Convert(target)
       ?? throw new SpeckleConversionException($"Conversion of object with type {target.GetType()} returned null");
 
-    // POC : where should logic common to most objects go?
-    // shouldn't target ALWAYS be DB.Element?
-    // Dim thinks so, FWIW
-    if (target is DB.Element element)
+    if (target is DB.Element element) // Note: aren't all targets DB elements?
     {
-      // POC: is this the right place?
       result.applicationId = element.UniqueId;
+      result["category"] = element.Category?.Name;
 
       try
       {
@@ -64,7 +60,7 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
       // POC: this would require redesigning the MaterialQuantities class to no longer have Material as a property. TBD post december.
       // POC: should we assign parameters here instead?
       //_parameterObjectAssigner.AssignParametersToBase(element, result);
-      _parameterValueExtractor.RemoveUniqueId(element.UniqueId);
+      // _parameterValueExtractor.RemoveUniqueId(element.UniqueId);
     }
 
     return result;
