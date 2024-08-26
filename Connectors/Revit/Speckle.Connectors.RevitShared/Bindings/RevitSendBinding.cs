@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Autodesk.Revit.DB;
+using Autofac;
 using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bindings;
@@ -10,12 +11,14 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
+using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
@@ -75,33 +78,36 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     return new List<ISendFilter> { new RevitSelectionFilter() { IsDefault = true } };
   }
 
-  public List<CardSetting> GetSendSettings() =>
-    new()
-    {
-      new()
-      {
-        Id = "modelOrigin",
-        Title = "Model Origin",
-        Type = "string",
-        Enum = ["Internal Origin", "Project Base", "Survey"],
-        Value = "Internal Origin"
-      },
-      new()
-      {
-        Id = "geometryFidelity",
-        Title = "Geometry Fidelity",
-        Type = "string",
-        Enum = ["Coarse", "Medium", "Fine"],
-        Value = "Coarse"
-      },
-    };
+  public List<ICardSetting> GetSendSettings() => [new DetailLevelSetting(DetailLevelType.Medium)];
 
-  public void CancelSend(string modelCardId)
-  {
-    _cancellationManager.CancelOperation(modelCardId);
-  }
+  public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
 
   public SendBindingUICommands Commands { get; }
+
+  // cache invalidation process run with ModelCardId since the settings are model specific
+  private readonly Dictionary<string, DetailLevelType> _detailLevelCache = new();
+
+  private ToSpeckleSettings GetToSpeckleSettings(SenderModelCard modelCard)
+  {
+    var fidelityString = modelCard.Settings?.First(s => s.Id == "detailLevel").Value as string;
+    if (
+      fidelityString is not null
+      && DetailLevelSetting.GeometryFidelityMap.TryGetValue(fidelityString, out var fidelity)
+    )
+    {
+      if (_detailLevelCache.TryGetValue(modelCard.ModelCardId.NotNull(), out DetailLevelType previousType))
+      {
+        if (previousType != fidelity)
+        {
+          var objectIds = modelCard.SendFilter != null ? modelCard.SendFilter.GetObjectIds() : [];
+          _sendConversionCache.EvictObjects(objectIds);
+        }
+      }
+      _detailLevelCache[modelCard.ModelCardId.NotNull()] = fidelity;
+      return new ToSpeckleSettings(fidelity);
+    }
+    throw new ArgumentException($"Invalid geometry fidelity value: {fidelityString}");
+  }
 
   public async Task Send(string modelCardId)
   {
@@ -116,9 +122,13 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
-      using IUnitOfWork<SendOperation<ElementId>> sendOperation = _unitOfWorkFactory.Resolve<
-        SendOperation<ElementId>
-      >();
+      using IUnitOfWork<SendOperation<ElementId>> sendOperation = _unitOfWorkFactory.Resolve<SendOperation<ElementId>>(
+        b =>
+        {
+          b.RegisterType<ToSpeckleSettings>().SingleInstance();
+          b.Register(c => GetToSpeckleSettings(modelCard));
+        }
+      );
 
       List<ElementId> revitObjects = modelCard
         .SendFilter.NotNull()
@@ -234,10 +244,23 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   {
     var senders = Store.GetSenders();
     string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
+    var doc = RevitContext.UIApplication?.ActiveUIDocument.Document;
+
+    if (doc == null)
+    {
+      return;
+    }
+
+    // Note: We're using unique ids as application ids in revit, so cache eviction must happen by those.
+    var objUniqueIds = objectIdsList
+      .Select(id => new ElementId(Convert.ToInt32(id)))
+      .Select(doc.GetElement)
+      .Where(el => el is not null)
+      .Select(el => el.UniqueId);
+    _sendConversionCache.EvictObjects(objUniqueIds);
+
+    // Note: we're doing object selection and card expiry management by old school ids
     List<string> expiredSenderIds = new();
-
-    _sendConversionCache.EvictObjects(objectIdsList);
-
     foreach (SenderModelCard modelCard in senders)
     {
       var intersection = modelCard.SendFilter.NotNull().GetObjectIds().Intersect(objectIdsList).ToList();

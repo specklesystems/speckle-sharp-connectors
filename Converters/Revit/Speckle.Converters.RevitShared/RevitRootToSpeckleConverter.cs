@@ -44,7 +44,7 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
     if (target is DB.Element element)
     {
       // POC: is this the right place?
-      result.applicationId = element.UniqueId;
+      result.applicationId = element.UniqueId; // NOTE: caching logic uses unique ids. if we ever change this behaviour here, we should update to match.
       // POC: should we assign parameters here instead?
       //_parameterObjectAssigner.AssignParametersToBase(element, result);
       _parameterValueExtractor.RemoveUniqueId(element.UniqueId);
