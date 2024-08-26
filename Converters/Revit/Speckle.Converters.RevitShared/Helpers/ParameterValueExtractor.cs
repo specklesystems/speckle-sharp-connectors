@@ -33,7 +33,7 @@ public class ParameterValueExtractor
       StorageType.Double => GetValueAsDouble(parameter),
       StorageType.Integer => GetValueAsInt(parameter),
       StorageType.String => GetValueAsString(parameter),
-      StorageType.ElementId => GetValueAsElementId(parameter)?.ToString(),
+      StorageType.ElementId => GetValueAsElementNameOrId(parameter),
       StorageType.None
       or _
         => throw new SpeckleConversionException($"Unsupported parameter storage type {parameter.StorageType}")
@@ -112,17 +112,6 @@ public class ParameterValueExtractor
     return GetValueGeneric(parameter, StorageType.String, (parameter) => parameter.AsString());
   }
 
-  public ElementId GetValueAsElementId(Element element, BuiltInParameter builtInParameter)
-  {
-    if (TryGetValueAsElementId(element, builtInParameter, out var elementId))
-    {
-      return elementId!;
-    }
-    throw new SpeckleConversionException(
-      $"Failed to get {builtInParameter} on element of type {element.GetType()} as ElementId"
-    );
-  }
-
   public bool TryGetValueAsElementId(
     Element element,
     BuiltInParameter builtInParameter,
@@ -142,9 +131,17 @@ public class ParameterValueExtractor
     return false;
   }
 
-  public ElementId? GetValueAsElementId(Parameter parameter)
+  public string? GetValueAsElementNameOrId(Parameter parameter)
   {
-    return GetValueGeneric(parameter, StorageType.ElementId, (parameter) => parameter.AsElementId());
+    if (
+      GetValueGeneric(parameter, StorageType.ElementId, (parameter) => parameter.AsElementId()) is ElementId elementId
+    )
+    {
+      Element element = parameter.Element.Document.GetElement(elementId);
+      return element?.Name ?? elementId.ToString();
+    }
+
+    return null;
   }
 
   public bool TryGetValueAsDocumentObject<T>(
