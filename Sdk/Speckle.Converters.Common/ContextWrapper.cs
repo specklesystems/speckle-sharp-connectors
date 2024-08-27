@@ -1,26 +1,26 @@
 ﻿namespace Speckle.Converters.Common;
 
-public class ContextWrapper<TDocument, THostUnit> : IDisposable
-  where TDocument : class
+public class ContextWrapper<T> : IDisposable
+  where T : IConversionContext<T>
 {
-  private IConversionContextStack<TDocument, THostUnit>? _stack;
+  private IConversionContextStore<T>? _store;
 
-  public IConversionContext<TDocument>? Context { get; private set; }
+  public T? Context { get; private set; }
 
-  public ContextWrapper(IConversionContextStack<TDocument, THostUnit> stack)
+  public ContextWrapper(IConversionContextStore<T> store)
   {
-    _stack = stack;
-    Context = _stack.Current;
+    _store = store;
+    Context = _store.Current;
   }
 
   protected virtual void Dispose(bool disposing)
   {
-    if (disposing && _stack != null)
+    if (disposing && _store != null)
     {
       // technically we could be popping something not this but throwing in dispose is bad
-      _stack.Pop();
-      _stack = null;
-      Context = null;
+      _store.Pop();
+      _store = null;
+      Context = default;
     }
   }
 

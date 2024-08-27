@@ -9,40 +9,31 @@ namespace Speckle.Converters.Common;
   "CA1711:Identifiers should not have incorrect suffix",
   Justification = "Name ends in Stack but it is in fact a Stack, just not inheriting from `System.Collections.Stack`"
 )]
-[GenerateAutoInterface]
-public abstract class ConversionContextStack<TDocument, THostUnit> : IConversionContextStack<TDocument, THostUnit>
-  where TDocument : class
+public class ConversionContextStore<T> : IConversionContextStore<T>
+  where T : IConversionContext<T>
 {
-  private readonly IHostToSpeckleUnitConverter<THostUnit> _unitConverter;
-  private readonly TDocument _document;
-
-  protected ConversionContextStack(
-    TDocument document,
-    THostUnit hostUnit,
-    IHostToSpeckleUnitConverter<THostUnit> unitConverter
-  )
+  protected ConversionContextStore(T state)
   {
-    _document = document;
-    _unitConverter = unitConverter;
-
-    _stack.Push(new ConversionContext<TDocument>(_document, _unitConverter.ConvertOrThrow(hostUnit)));
+    _stack.Push(state);
   }
 
-  private readonly Stack<IConversionContext<TDocument>> _stack = new();
+  private readonly Stack<T> _stack = new();
 
-  public IConversionContext<TDocument> Current => _stack.Peek();
+  public T Current => _stack.Peek();
 
-  public ContextWrapper<TDocument, THostUnit> Push(string speckleUnit)
+  public IDisposable Push()
   {
-    var context = new ConversionContext<TDocument>(_document, speckleUnit);
-    _stack.Push(context);
-    return new ContextWrapper<TDocument, THostUnit>(this);
-  }
-
-  public ContextWrapper<TDocument, THostUnit> Push(THostUnit hostUnit)
-  {
-    return Push(_unitConverter.ConvertOrThrow(hostUnit));
+    _stack.Push(Current.Duplicate());
+    return new ContextWrapper<T>(this);
   }
 
   public void Pop() => _stack.Pop();
+}
+
+public interface IConversionContextStore<T>
+  where T : IConversionContext<T>
+{
+  T Current { get; }
+  System.IDisposable Push();
+  void Pop();
 }
