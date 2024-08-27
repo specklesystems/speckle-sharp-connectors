@@ -1,8 +1,6 @@
-﻿using Speckle.Converters.Common;
+﻿namespace Speckle.Converters.RevitShared.Helpers;
 
-namespace Speckle.Converters.RevitShared.Helpers;
-
-public interface IRevitConversionContext : IConversionContext<IRevitConversionContext>
+public interface IRevitConversionContext
 {
   double Tolerance { get; }
   DB.Document Document { get; }

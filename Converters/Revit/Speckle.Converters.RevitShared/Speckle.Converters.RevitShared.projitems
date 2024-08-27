@@ -10,8 +10,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\IRevitCategories.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Helpers\IRevitConversionContext.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\ISlopeArrowExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\ParameterValueSetter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Helpers\RevitConversionContext.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\RevitRenderMaterialProxyCacheSingleton.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\SlopeArrowExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)IReferencePointConverter.cs" />
@@ -22,7 +24,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\ParameterExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsings.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\DisplayValueExtractor.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Helpers\IRevitConversionContextStack.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)RevitVersionConversionHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ReferencePointConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)RevitConversionSettings.cs" />
@@ -105,7 +106,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\RevitCategories.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\RevitCategoryInfo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\RevitContext.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Helpers\RevitConversionContextStack.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)\Helpers\SendSelection.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\RevitToSpeckleUnitConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)RevitRootToSpeckleConverter.cs" />

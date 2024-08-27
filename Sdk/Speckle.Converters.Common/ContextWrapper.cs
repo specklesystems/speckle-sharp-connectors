@@ -1,7 +1,6 @@
 ﻿namespace Speckle.Converters.Common;
 
 public class ContextWrapper<T> : IDisposable
-  where T : IConversionContext<T>
 {
   private IConversionContextStore<T>? _store;
 
