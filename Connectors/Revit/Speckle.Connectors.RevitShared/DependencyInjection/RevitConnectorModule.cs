@@ -78,13 +78,6 @@ public class RevitConnectorModule : ISpeckleModule
 
   public void RegisterUiDependencies(SpeckleContainerBuilder builder)
   {
-    // if revit 2025 or higher, register webview2 dependencies
-    // else register cefSharp depenedencies
-    // #if REVIT2025
-    // builder.AddDUIView();
-    // builder.AddSingleton<IRevitPlugin, RevitWebViewPlugin>();
-    // builder.AddSingleton<IBrowserScriptExecutor>(c => c.Resolve<DUI3ControlWebView>());
-    // builder.AddSingleton<DUI3ControlWebViewDockable>();
 #if REVIT2022
     //different versons for different versions of CEF
     builder.AddSingleton(new BindingOptions() { CamelCaseJavascriptNames = false });

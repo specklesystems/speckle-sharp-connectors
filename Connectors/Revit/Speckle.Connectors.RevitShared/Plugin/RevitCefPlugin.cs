@@ -130,9 +130,7 @@ internal sealed class RevitCefPlugin : IRevitPlugin
         IBridge bridge = binding.Parent;
 
 #if REVIT2025_OR_GREATER
-
         _cefSharpPanel.Browser.JavascriptObjectRepository.Register(bridge.FrontendBoundName, bridge, _bindingOptions);
-
 #else
         _cefSharpPanel.Browser.JavascriptObjectRepository.Register(
           bridge.FrontendBoundName,
