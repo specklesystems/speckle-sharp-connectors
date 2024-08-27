@@ -2,8 +2,7 @@ namespace Speckle.Converters.RevitShared.Helpers;
 
 /// <summary>
 /// POC: reference point functionality needs to be revisited (we are currently baking in these transforms into all geometry using the point and vector converters, and losing the transform).
-/// This converter stores the selected reference point setting value and provides a method to get out the transform for this reference point.
-/// POC: uses context stack current doc on instantiation and assumes context stack doc won't change. Linked docs will NOT be supported atm.
+/// This converter uses the transform in the reference point setting and provides methods to transform points
 /// </summary>
 public class ReferencePointConverter : IReferencePointConverter
 {
