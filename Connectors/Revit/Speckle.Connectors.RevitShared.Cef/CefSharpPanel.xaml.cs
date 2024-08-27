@@ -1,4 +1,3 @@
-#if !REVIT2025
 using System.Windows.Controls;
 using System.Windows.Threading;
 using Autodesk.Revit.UI;
@@ -32,4 +31,3 @@ public partial class CefSharpPanel : Page, Autodesk.Revit.UI.IDockablePaneProvid
     };
   }
 }
-#endif
