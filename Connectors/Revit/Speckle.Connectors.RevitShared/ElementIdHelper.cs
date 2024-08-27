@@ -5,7 +5,7 @@ namespace Speckle.Connectors.RevitShared;
 
 public static class ElementIdHelper
 {
-  public static ElementId GetElementIdByUniqueId(Document doc, string uniqueId)
+  public static ElementId GetElementIdFromUniqueId(Document doc, string uniqueId)
   {
     Element element = doc.GetElement(uniqueId);
     if (element == null)

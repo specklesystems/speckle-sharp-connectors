@@ -84,7 +84,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     var elementIds = model
       .SendFilter.NotNull()
       .GetObjectIds()
-      .Select(uid => ElementIdHelper.GetElementIdByUniqueId(activeUIDoc.Document, uid))
+      .Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid))
       .ToList();
     if (elementIds.Count == 0)
     {
@@ -106,7 +106,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
       ?? throw new SpeckleException("Unable to retrieve active UI document");
 
     HighlightObjectsOnView(
-      objectIds.Select(uid => ElementIdHelper.GetElementIdByUniqueId(activeUIDoc.Document, uid)).ToList()
+      objectIds.Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid)).ToList()
     );
   }
 

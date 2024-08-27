@@ -13,7 +13,6 @@ using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
-using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
@@ -137,7 +136,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       List<ElementId> revitObjects = modelCard
         .SendFilter.NotNull()
         .GetObjectIds()
-        .Select(uid => ElementIdHelper.GetElementIdByUniqueId(activeUIDoc.Document, uid))
+        .Select(uid => activeUIDoc.Document.GetElement(uid).Id)
         .ToList();
 
       if (revitObjects.Count == 0)
