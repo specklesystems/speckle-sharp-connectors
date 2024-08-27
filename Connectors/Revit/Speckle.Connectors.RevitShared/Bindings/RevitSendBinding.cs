@@ -13,7 +13,6 @@ using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
-using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
@@ -130,10 +129,14 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         }
       );
 
+      var activeUIDoc =
+        RevitContext.UIApplication?.ActiveUIDocument
+        ?? throw new SpeckleException("Unable to retrieve active UI document");
+
       List<ElementId> revitObjects = modelCard
         .SendFilter.NotNull()
         .GetObjectIds()
-        .Select(ElementIdHelper.Parse)
+        .Select(uid => activeUIDoc.Document.GetElement(uid).Id)
         .ToList();
 
       if (revitObjects.Count == 0)
@@ -256,14 +259,15 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       .Select(id => new ElementId(Convert.ToInt32(id)))
       .Select(doc.GetElement)
       .Where(el => el is not null)
-      .Select(el => el.UniqueId);
+      .Select(el => el.UniqueId)
+      .ToList();
     _sendConversionCache.EvictObjects(objUniqueIds);
 
     // Note: we're doing object selection and card expiry management by old school ids
     List<string> expiredSenderIds = new();
     foreach (SenderModelCard modelCard in senders)
     {
-      var intersection = modelCard.SendFilter.NotNull().GetObjectIds().Intersect(objectIdsList).ToList();
+      var intersection = modelCard.SendFilter.NotNull().GetObjectIds().Intersect(objUniqueIds).ToList();
       bool isExpired = intersection.Count != 0;
       if (isExpired)
       {
