@@ -7,7 +7,7 @@ public interface ISendBinding : IBinding
 {
   public List<ISendFilter> GetSendFilters();
 
-  public List<CardSetting> GetSendSettings();
+  public List<ICardSetting> GetSendSettings();
 
   /// <summary>
   /// Instructs the host app to start sending this model.

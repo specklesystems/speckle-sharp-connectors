@@ -63,6 +63,8 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     // reorder selected layers by Table of Content (TOC) order
     List<(MapMember, int)> layersWithDisplayPriority = GetLayerDisplayPriority(MapView.Active.Map, objects);
 
+    onOperationProgressed?.Invoke("Converting", null);
+
     foreach ((MapMember mapMember, _) in layersWithDisplayPriority)
     {
       ct.ThrowIfCancellationRequested();
@@ -154,6 +156,11 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
       }
 
       onOperationProgressed?.Invoke("Converting", (double)++count / objects.Count);
+    }
+
+    if (results.All(x => x.Status == Status.ERROR))
+    {
+      throw new SpeckleConversionException("Failed to convert all objects."); // fail fast instead creating empty commit! It will appear as model card error with red color.
     }
 
     // POC: Add Color Proxies

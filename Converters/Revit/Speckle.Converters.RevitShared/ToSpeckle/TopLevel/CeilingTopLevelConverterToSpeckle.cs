@@ -8,7 +8,7 @@ using Speckle.Objects.Geometry;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
-[NameAndRankValue(nameof(DB.Ceiling), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(nameof(Ceiling), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 internal sealed class CeilingTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.Ceiling, SOBR.RevitCeiling>
 {
   private readonly ITypedConverter<DB.CurveArrArray, List<SOG.Polycurve>> _curveArrArrayConverter;
@@ -35,7 +35,7 @@ internal sealed class CeilingTopLevelConverterToSpeckle : BaseTopLevelConverterT
     _contextStack = contextStack;
   }
 
-  public override RevitCeiling Convert(DB.Ceiling target)
+  public override RevitCeiling Convert(Ceiling target)
   {
     var elementType = (ElementType)target.Document.GetElement(target.GetTypeId());
     // POC: our existing receive operation is checking the "slopeDirection" prop,

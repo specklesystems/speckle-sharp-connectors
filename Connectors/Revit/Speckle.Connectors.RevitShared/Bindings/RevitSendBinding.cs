@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Autodesk.Revit.DB;
+using Autofac;
 using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bindings;
@@ -10,12 +11,13 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
+using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
-using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
@@ -75,33 +77,36 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     return new List<ISendFilter> { new RevitSelectionFilter() { IsDefault = true } };
   }
 
-  public List<CardSetting> GetSendSettings() =>
-    new()
-    {
-      new()
-      {
-        Id = "modelOrigin",
-        Title = "Model Origin",
-        Type = "string",
-        Enum = ["Internal Origin", "Project Base", "Survey"],
-        Value = "Internal Origin"
-      },
-      new()
-      {
-        Id = "geometryFidelity",
-        Title = "Geometry Fidelity",
-        Type = "string",
-        Enum = ["Coarse", "Medium", "Fine"],
-        Value = "Coarse"
-      },
-    };
+  public List<ICardSetting> GetSendSettings() => [new DetailLevelSetting(DetailLevelType.Medium)];
 
-  public void CancelSend(string modelCardId)
-  {
-    _cancellationManager.CancelOperation(modelCardId);
-  }
+  public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
 
   public SendBindingUICommands Commands { get; }
+
+  // cache invalidation process run with ModelCardId since the settings are model specific
+  private readonly Dictionary<string, DetailLevelType> _detailLevelCache = new();
+
+  private ToSpeckleSettings GetToSpeckleSettings(SenderModelCard modelCard)
+  {
+    var fidelityString = modelCard.Settings?.First(s => s.Id == "detailLevel").Value as string;
+    if (
+      fidelityString is not null
+      && DetailLevelSetting.GeometryFidelityMap.TryGetValue(fidelityString, out var fidelity)
+    )
+    {
+      if (_detailLevelCache.TryGetValue(modelCard.ModelCardId.NotNull(), out DetailLevelType previousType))
+      {
+        if (previousType != fidelity)
+        {
+          var objectIds = modelCard.SendFilter != null ? modelCard.SendFilter.GetObjectIds() : [];
+          _sendConversionCache.EvictObjects(objectIds);
+        }
+      }
+      _detailLevelCache[modelCard.ModelCardId.NotNull()] = fidelity;
+      return new ToSpeckleSettings(fidelity);
+    }
+    throw new ArgumentException($"Invalid geometry fidelity value: {fidelityString}");
+  }
 
   public async Task Send(string modelCardId)
   {
@@ -116,14 +121,22 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
-      using IUnitOfWork<SendOperation<ElementId>> sendOperation = _unitOfWorkFactory.Resolve<
-        SendOperation<ElementId>
-      >();
+      using IUnitOfWork<SendOperation<ElementId>> sendOperation = _unitOfWorkFactory.Resolve<SendOperation<ElementId>>(
+        b =>
+        {
+          b.RegisterType<ToSpeckleSettings>().SingleInstance();
+          b.Register(c => GetToSpeckleSettings(modelCard));
+        }
+      );
+
+      var activeUIDoc =
+        RevitContext.UIApplication?.ActiveUIDocument
+        ?? throw new SpeckleException("Unable to retrieve active UI document");
 
       List<ElementId> revitObjects = modelCard
         .SendFilter.NotNull()
         .GetObjectIds()
-        .Select(ElementIdHelper.Parse)
+        .Select(uid => activeUIDoc.Document.GetElement(uid).Id)
         .ToList();
 
       if (revitObjects.Count == 0)
@@ -188,21 +201,73 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       ChangedObjectIds[elementId.ToString()] = 1;
     }
 
-    // TODO: CHECK IF ANY OF THE ABOVE ELEMENTS NEED TO TRIGGER A FILTER REFRESH
+    if (HaveUnitsChanged(e.GetDocument()))
+    {
+      var objectIds = Store.GetSenders().SelectMany(s => s.SendFilter != null ? s.SendFilter.GetObjectIds() : []);
+      _sendConversionCache.EvictObjects(objectIds);
+    }
     _idleManager.SubscribeToIdle(nameof(RevitSendBinding), RunExpirationChecks);
+  }
+
+  // Keeps track of doc and current units
+  private readonly Dictionary<string, string> _docUnitCache = new();
+
+  private bool HaveUnitsChanged(Document doc)
+  {
+    var docId = doc.Title + doc.PathName;
+    var unitSpecTypeIds = new List<ForgeTypeId>() // list of units we care about
+    {
+      SpecTypeId.Angle,
+      SpecTypeId.Area,
+      SpecTypeId.Distance,
+      SpecTypeId.Length,
+      SpecTypeId.Volume
+    };
+    var units = "";
+    foreach (var typeId in unitSpecTypeIds)
+    {
+      units += doc.GetUnits().GetFormatOptions(typeId).GetUnitTypeId().TypeId;
+    }
+
+    if (_docUnitCache.TryGetValue(docId, out string? value))
+    {
+      if (value == units)
+      {
+        return false;
+      }
+      _docUnitCache[docId] = units;
+      return true;
+    }
+
+    _docUnitCache[docId] = units;
+    return false;
   }
 
   private void RunExpirationChecks()
   {
     var senders = Store.GetSenders();
     string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
+    var doc = RevitContext.UIApplication?.ActiveUIDocument.Document;
+
+    if (doc == null)
+    {
+      return;
+    }
+
+    // Note: We're using unique ids as application ids in revit, so cache eviction must happen by those.
+    var objUniqueIds = objectIdsList
+      .Select(id => new ElementId(Convert.ToInt32(id)))
+      .Select(doc.GetElement)
+      .Where(el => el is not null)
+      .Select(el => el.UniqueId)
+      .ToList();
+    _sendConversionCache.EvictObjects(objUniqueIds);
+
+    // Note: we're doing object selection and card expiry management by old school ids
     List<string> expiredSenderIds = new();
-
-    _sendConversionCache.EvictObjects(objectIdsList);
-
     foreach (SenderModelCard modelCard in senders)
     {
-      var intersection = modelCard.SendFilter.NotNull().GetObjectIds().Intersect(objectIdsList).ToList();
+      var intersection = modelCard.SendFilter.NotNull().GetObjectIds().Intersect(objUniqueIds).ToList();
       bool isExpired = intersection.Count != 0;
       if (isExpired)
       {

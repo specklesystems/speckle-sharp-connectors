@@ -142,7 +142,7 @@ public sealed class RhinoSendBinding : ISendBinding
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
 
-  public List<CardSetting> GetSendSettings() => [];
+  public List<ICardSetting> GetSendSettings() => [];
 
   public async Task Send(string modelCardId)
   {

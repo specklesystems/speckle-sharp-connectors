@@ -48,7 +48,12 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     _syncToThread = syncToThread;
   }
 
+  // It is already simplified but has many different references since it is a builder. Do not know can we simplify it now.
+  // Later we might consider to refactor proxies from one proxy manager? but we do not know the shape of it all potential
+  // proxy classes yet. So I'm disabling this with pragma now!!!
+#pragma warning disable CA1506
   public Task<RootObjectBuilderResult> Build(
+#pragma warning restore CA1506
     IReadOnlyList<AutocadRootObject> objects,
     SendInfo sendInfo,
     Action<string, double?>? onOperationProgressed = null,
@@ -122,6 +127,11 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
         onOperationProgressed?.Invoke("Converting", (double)++count / atomicObjects.Count);
       }
 
+      if (results.All(x => x.Status == Status.ERROR))
+      {
+        throw new SpeckleConversionException("Failed to convert all objects."); // fail fast instead creating empty commit! It will appear as model card error with red color.
+      }
+
       // POC: Log would be nice, or can be removed.
       Debug.WriteLine(
         $"Cache hit count {cacheHitCount} out of {objects.Count} ({(double)cacheHitCount / objects.Count})"
@@ -149,11 +159,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
       modelWithLayers["renderMaterialProxies"] = materialProxies;
 
       // set colors
-      List<ColorProxy> colorProxies = _colorManager.UnpackColors(
-        atomicObjects,
-        usedAcadLayers,
-        instanceDefinitionProxies
-      );
+      List<ColorProxy> colorProxies = _colorManager.UnpackColors(atomicObjects, usedAcadLayers);
       modelWithLayers["colorProxies"] = colorProxies;
 
       return new RootObjectBuilderResult(modelWithLayers, results);

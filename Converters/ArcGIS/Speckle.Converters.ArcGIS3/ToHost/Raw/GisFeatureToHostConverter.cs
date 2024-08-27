@@ -8,7 +8,7 @@ namespace Speckle.Converters.ArcGIS3.ToHost.Raw;
 /// Converter for <see cref="GisFeature"/> (which is sent by QGIS V2) with geometry.
 /// </summary>
 /// <exception cref="ArgumentException"> Thrown when GisFeature has null or empty geometry</exception>
-public class GisFeatureToHostConverter : ITypedConverter<GisFeature, (ACG.Geometry, Dictionary<string, object?>)>
+public class GisFeatureToHostConverter : ITypedConverter<GisFeature, (Base, ACG.Geometry)>
 {
   private readonly ITypedConverter<IReadOnlyList<Base>, ACG.Geometry> _geometryConverter;
 
@@ -17,15 +17,12 @@ public class GisFeatureToHostConverter : ITypedConverter<GisFeature, (ACG.Geomet
     _geometryConverter = geometryConverter;
   }
 
-  public (ACG.Geometry, Dictionary<string, object?>) Convert(GisFeature target)
+  public (Base, ACG.Geometry) Convert(GisFeature target)
   {
-    Dictionary<string, object?> attributes = target.attributes.GetMembers(DynamicBaseMemberType.Dynamic);
-    attributes["Speckle_ID"] = target.id;
-
     if (target.geometry is List<Base> geometry)
     {
       ACG.Geometry nativeShape = _geometryConverter.Convert(geometry);
-      return (nativeShape, attributes);
+      return (target, nativeShape);
     }
     else
     {
