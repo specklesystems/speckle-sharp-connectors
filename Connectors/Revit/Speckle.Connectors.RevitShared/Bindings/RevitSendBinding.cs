@@ -30,6 +30,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
+  private readonly ToSpeckleSettingsManager _toSpeckleSettingsManager;
   private readonly ILogger<RevitSendBinding> _logger;
 
   /// <summary>
@@ -49,6 +50,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     IUnitOfWorkFactory unitOfWorkFactory,
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
+    ToSpeckleSettingsManager toSpeckleSettingsManager,
     ILogger<RevitSendBinding> logger
   )
     : base("sendBinding", store, bridge, revitContext)
@@ -58,6 +60,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _unitOfWorkFactory = unitOfWorkFactory;
     _sendConversionCache = sendConversionCache;
     _operationProgressManager = operationProgressManager;
+    _toSpeckleSettingsManager = toSpeckleSettingsManager;
     _logger = logger;
     var topLevelExceptionHandler = Parent.TopLevelExceptionHandler;
 
@@ -84,69 +87,6 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
   public SendBindingUICommands Commands { get; }
 
-  // cache invalidation process run with ModelCardId since the settings are model specific
-  private readonly Dictionary<string, DetailLevelType> _detailLevelCache = new();
-  private readonly Dictionary<string, ReferencePointType> _referencePointCache = new();
-  private readonly ReferencePointManager _referencePointManager = new();
-
-  private ToSpeckleSettings GetToSpeckleSettings(SenderModelCard modelCard)
-  {
-    DetailLevelType detailLevel = GetDetailLevelSetting(modelCard);
-    Transform? referencePointTransform = GetReferencePointSetting(modelCard);
-
-    return new ToSpeckleSettings(detailLevel, referencePointTransform);
-  }
-
-  private DetailLevelType GetDetailLevelSetting(SenderModelCard modelCard)
-  {
-    var fidelityString = modelCard.Settings?.First(s => s.Id == "detailLevel").Value as string;
-    if (
-      fidelityString is not null
-      && DetailLevelSetting.GeometryFidelityMap.TryGetValue(fidelityString, out DetailLevelType fidelity)
-    )
-    {
-      if (_detailLevelCache.TryGetValue(modelCard.ModelCardId.NotNull(), out DetailLevelType previousType))
-      {
-        if (previousType != fidelity)
-        {
-          var objectIds = modelCard.SendFilter != null ? modelCard.SendFilter.GetObjectIds() : [];
-          _sendConversionCache.EvictObjects(objectIds);
-        }
-      }
-      _detailLevelCache[modelCard.ModelCardId.NotNull()] = fidelity;
-      return fidelity;
-    }
-
-    throw new ArgumentException($"Invalid geometry fidelity value: {fidelityString}");
-  }
-
-  private Transform? GetReferencePointSetting(SenderModelCard modelCard)
-  {
-    var referencePointString = modelCard.Settings?.First(s => s.Id == "referencePoint").Value as string;
-    if (
-      referencePointString is not null
-      && ReferencePointSetting.ReferencePointMap.TryGetValue(
-        referencePointString,
-        out ReferencePointType referencePoint
-      )
-    )
-    {
-      if (_referencePointCache.TryGetValue(modelCard.ModelCardId.NotNull(), out ReferencePointType previousType))
-      {
-        if (previousType != referencePoint)
-        {
-          var objectIds = modelCard.SendFilter != null ? modelCard.SendFilter.GetObjectIds() : [];
-          _sendConversionCache.EvictObjects(objectIds);
-        }
-      }
-
-      _referencePointCache[modelCard.ModelCardId.NotNull()] = referencePoint;
-      return _referencePointManager.GetTransform(RevitContext, referencePoint);
-    }
-
-    throw new ArgumentException($"Invalid reference point value: {referencePointString}");
-  }
-
   public async Task Send(string modelCardId)
   {
     // Note: removed top level handling thing as it was confusing me
@@ -164,7 +104,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         b =>
         {
           b.RegisterType<ToSpeckleSettings>().SingleInstance();
-          b.Register(c => GetToSpeckleSettings(modelCard));
+          b.Register(c => _toSpeckleSettingsManager.GetToSpeckleSettings(modelCard));
         }
       );
 
