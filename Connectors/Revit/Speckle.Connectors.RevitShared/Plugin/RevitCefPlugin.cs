@@ -1,4 +1,3 @@
-#if !REVIT2025
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
@@ -88,12 +87,12 @@ internal sealed class RevitCefPlugin : IRevitPlugin
       $"Speckle.Connectors.Revit{Connector.VersionString}.Assets.logo32.png",
       path
     );
-    dui3Button.ToolTip = "Speckle Connector for Revit New UI";
+    dui3Button.ToolTip = "Speckle (Beta) for Revit";
     //dui3Button.AvailabilityClassName = typeof(CmdAvailabilityViews).FullName;
     dui3Button.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://speckle.systems"));
   }
 
-  private void OnApplicationInitialized(object sender, Autodesk.Revit.DB.Events.ApplicationInitializedEventArgs e)
+  private void OnApplicationInitialized(object? sender, Autodesk.Revit.DB.Events.ApplicationInitializedEventArgs e)
   {
     var uiApplication = new UIApplication(sender as Application);
     _revitContext.UIApplication = uiApplication;
@@ -130,12 +129,16 @@ internal sealed class RevitCefPlugin : IRevitPlugin
       {
         IBridge bridge = binding.Parent;
 
+#if REVIT2025_OR_GREATER
+        _cefSharpPanel.Browser.JavascriptObjectRepository.Register(bridge.FrontendBoundName, bridge, _bindingOptions);
+#else
         _cefSharpPanel.Browser.JavascriptObjectRepository.Register(
           bridge.FrontendBoundName,
           bridge,
           true,
           _bindingOptions
         );
+#endif
       }
     };
   }
@@ -148,7 +151,7 @@ internal sealed class RevitCefPlugin : IRevitPlugin
     // Otherwise pane cannot be registered for double-click file open.
     _uIControlledApplication.RegisterDockablePane(
       RevitExternalApplication.DockablePanelId,
-      Connector.Name,
+      "Speckle (Beta) for Revit",
       _cefSharpPanel
     );
   }
@@ -171,4 +174,3 @@ internal sealed class RevitCefPlugin : IRevitPlugin
     return null;
   }
 }
-#endif

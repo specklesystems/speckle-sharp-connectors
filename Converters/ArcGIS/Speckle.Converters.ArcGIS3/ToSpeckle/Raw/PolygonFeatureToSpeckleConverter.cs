@@ -33,7 +33,7 @@ public class PolygonFeatureToSpeckleConverter : ITypedConverter<ACG.Polygon, IRe
       SOG.Polyline polyline = _segmentConverter.Convert(segmentCollection);
 
       bool isExteriorRing = target.IsExteriorRing(idx);
-      if (isExteriorRing is true)
+      if (isExteriorRing)
       {
         polygon = new() { boundary = polyline, voids = new List<SOG.Polyline>() };
         polygonList.Add(polygon);
