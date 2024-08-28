@@ -9,7 +9,7 @@ namespace Speckle.Connectors.Utils;
 public static class Connector
 {
   public static readonly string TabName = "Speckle";
-  public static readonly string TabTitle = "Speckle New UI";
+  public static readonly string TabTitle = "Speckle v3";
 
   public static HostAppVersion Version { get; private set; } = HostAppVersion.v3;
   public static string VersionString { get; private set; } = string.Empty;

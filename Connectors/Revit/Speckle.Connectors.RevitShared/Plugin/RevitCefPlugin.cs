@@ -88,7 +88,7 @@ internal sealed class RevitCefPlugin : IRevitPlugin
       $"Speckle.Connectors.Revit{Connector.VersionString}.Assets.logo32.png",
       path
     );
-    dui3Button.ToolTip = "Speckle Connector for Revit New UI";
+    dui3Button.ToolTip = "Speckle for Revit v3";
     //dui3Button.AvailabilityClassName = typeof(CmdAvailabilityViews).FullName;
     dui3Button.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://speckle.systems"));
   }

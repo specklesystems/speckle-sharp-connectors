@@ -25,7 +25,7 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
   private IRhinoPlugin? _rhinoPlugin;
   private IDisposable? _disposableLogger;
 
-  protected override string LocalPlugInName => "Speckle (New UI)";
+  protected override string LocalPlugInName => "Speckle v3";
   public SpeckleContainer? Container { get; private set; }
 
   public SpeckleConnectorsRhinoPlugin()

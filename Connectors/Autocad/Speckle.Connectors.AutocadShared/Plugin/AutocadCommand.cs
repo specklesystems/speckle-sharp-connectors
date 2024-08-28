@@ -16,7 +16,7 @@ public class AutocadCommand
   private static readonly Guid s_id = new("3223E594-1B09-4E54-B3DD-8EA0BECE7BA5");
   public SpeckleContainer? Container { get; private set; }
   private IDisposable? _disposableLogger;
-  public const string COMMAND_STRING = "SpeckleNewUI";
+  public const string COMMAND_STRING = "SpeckleV3";
 
   [CommandMethod(COMMAND_STRING)]
   public void Command()
