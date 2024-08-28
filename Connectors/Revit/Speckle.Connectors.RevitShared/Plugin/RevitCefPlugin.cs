@@ -70,7 +70,7 @@ internal sealed class RevitCefPlugin : IRevitPlugin
     var dui3Button = (PushButton)
       specklePanel.AddItem(
         new PushButtonData(
-          "testing whatever",
+          Connector.Name,
           Connector.TabTitle,
           typeof(RevitExternalApplication).Assembly.Location,
           typeof(SpeckleRevitCommand).FullName
