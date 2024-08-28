@@ -1,7 +1,4 @@
-using Autodesk.Revit.DB;
-using Autodesk.Revit.UI;
 using Speckle.Connectors.DUI.Settings;
-using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Connectors.Revit.Operations.Send.Settings;
