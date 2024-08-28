@@ -27,7 +27,7 @@ public class AutocadCommand
       return;
     }
 
-    PaletteSet = new PaletteSet("Speckle for Autocad (Beta)", s_id)
+    PaletteSet = new PaletteSet("Speckle (Beta) for Autocad", s_id)
     {
       Size = new Size(400, 500),
       DockEnabled = (DockSides)((int)DockSides.Left + (int)DockSides.Right)
@@ -46,7 +46,7 @@ public class AutocadCommand
 
     var panelWebView = Container.Resolve<DUI3ControlWebView>();
 
-    PaletteSet.AddVisual("Speckle for Autocad (Beta) WebView", panelWebView);
+    PaletteSet.AddVisual("Speckle (Beta) for Autocad WebView", panelWebView);
 
     FocusPalette();
   }
