@@ -31,6 +31,8 @@
       CA1848;CA2254;CA1727;
       <!-- Others we don't want -->
       CA1815;CA1725;
+      <!-- Package using wrong RIDs (Net8 changed them). Usually fixable by updating.  -->
+      NETSDK1206;
       $(NoWarn)
     </NoWarn>
   </PropertyGroup>
