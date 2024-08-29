@@ -83,7 +83,7 @@ public class ArcGISColorManager
     var count = 0;
     foreach (RenderMaterialProxy colorProxy in materialProxies)
     {
-      onOperationProgressed?.Invoke("Converting colors", (double)++count / materialProxies.Count);
+      onOperationProgressed?.Invoke("Converting materials", (double)++count / materialProxies.Count);
       foreach (string objectId in colorProxy.objects)
       {
         Color convertedColor = Color.FromArgb(colorProxy.value.diffuse);
@@ -116,11 +116,11 @@ public class ArcGISColorManager
           color = objColorMaterial;
           break;
         }
-        //if (ObjectColorsIdMap.TryGetValue(appId, out Color objColor))
-        //{
-        //  color = objColor;
-        //  break;
-        //}
+        if (ObjectColorsIdMap.TryGetValue(appId, out Color objColor))
+        {
+          color = objColor;
+          break;
+        }
       }
     }
 
