@@ -12,6 +12,7 @@ using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Objects.GIS;
+using Speckle.Objects.Other;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -69,6 +70,15 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
 
     // Prompt the UI conversion started. Progress bar will swoosh.
     onOperationProgressed?.Invoke("Converting", null);
+
+    // get materials
+    List<RenderMaterialProxy>? materials = (rootObject["renderMaterialProxies"] as List<object>)
+      ?.Cast<RenderMaterialProxy>()
+      .ToList();
+    if (materials != null)
+    {
+      _colorManager.ParseMaterials(materials, onOperationProgressed);
+    }
 
     // get colors
     List<ColorProxy>? colors = (rootObject["colorProxies"] as List<object>)?.Cast<ColorProxy>().ToList();
