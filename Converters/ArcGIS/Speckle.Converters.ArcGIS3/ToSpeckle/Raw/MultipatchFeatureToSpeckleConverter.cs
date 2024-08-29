@@ -37,7 +37,13 @@ public class MultipatchFeatureToSpeckleConverter : ITypedConverter<ACG.Multipatc
       int ptCount = target.GetPatchPointCount(idx);
       for (int ptIdx = ptStartIndex; ptIdx < ptStartIndex + ptCount; ptIdx++)
       {
-        pointList.Add(_pointConverter.Convert(target.Points[ptIdx]));
+        ACG.MapPoint newPt = new ACG.MapPointBuilderEx(
+          target.Points[ptIdx].X,
+          target.Points[ptIdx].Y,
+          target.Points[ptIdx].Z,
+          target.SpatialReference
+        ).ToGeometry();
+        pointList.Add(_pointConverter.Convert(newPt));
       }
       allPoints.Add(pointList);
     }

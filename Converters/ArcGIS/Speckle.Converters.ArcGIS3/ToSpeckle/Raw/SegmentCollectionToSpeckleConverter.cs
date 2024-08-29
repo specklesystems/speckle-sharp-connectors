@@ -60,13 +60,22 @@ public class SegmentCollectionToSpeckleConverter : ITypedConverter<ACG.ReadOnlyS
         {
           foreach (ACG.Segment? subSegment in subSegments)
           {
+            ACG.MapPoint startPt = new ACG.MapPointBuilderEx(
+              subSegment.StartPoint.X,
+              subSegment.StartPoint.Y,
+              subSegment.StartPoint.Z,
+              target.SpatialReference
+            ).ToGeometry();
+            ACG.MapPoint endPt = new ACG.MapPointBuilderEx(
+              subSegment.EndPoint.X,
+              subSegment.EndPoint.Y,
+              subSegment.EndPoint.Z,
+              target.SpatialReference
+            ).ToGeometry();
+
             AddPtsToPolylinePts(
               points,
-              new List<SOG.Point>()
-              {
-                _pointConverter.Convert(subSegment.StartPoint),
-                _pointConverter.Convert(subSegment.EndPoint)
-              }
+              new List<SOG.Point>() { _pointConverter.Convert(startPt), _pointConverter.Convert(endPt) }
             );
           }
         }
@@ -85,14 +94,12 @@ public class SegmentCollectionToSpeckleConverter : ITypedConverter<ACG.ReadOnlyS
     }
 
     // check the last point, remove if coincides with the first. Assign as Closed instead
-    bool closed = false;
     if (
       Math.Round(points[^1].x, 6) == Math.Round(points[0].x, 6)
       && Math.Round(points[^1].y, 6) == Math.Round(points[0].y, 6)
       && Math.Round(points[^1].z, 6) == Math.Round(points[0].z, 6)
     )
     {
-      closed = true;
       points.RemoveAt(points.Count - 1);
     }
 
@@ -100,7 +107,7 @@ public class SegmentCollectionToSpeckleConverter : ITypedConverter<ACG.ReadOnlyS
       new()
       {
         value = points.SelectMany(pt => new[] { pt.x, pt.y, pt.z, }).ToList(),
-        closed = closed,
+        closed = true,
         units = _contextStack.Current.SpeckleUnits
       };
 

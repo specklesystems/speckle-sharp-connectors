@@ -16,7 +16,8 @@ public class MultipointFeatureToSpeckleConverter : ITypedConverter<ACG.Multipoin
     List<SOG.Point> multipoint = new();
     foreach (ACG.MapPoint point in target.Points)
     {
-      multipoint.Add(_pointConverter.Convert(point));
+      ACG.MapPoint newPt = new ACG.MapPointBuilderEx(point.X, point.Y, point.Z, target.SpatialReference).ToGeometry();
+      multipoint.Add(_pointConverter.Convert(newPt));
     }
 
     return multipoint;
