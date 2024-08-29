@@ -4,6 +4,7 @@ using ArcGIS.Core.Data;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Objects;
+using Speckle.Objects.Other;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Proxies;
@@ -14,6 +15,7 @@ public class ArcGISColorManager
 {
   private Dictionary<string, ColorProxy> ColorProxies { get; set; } = new();
   public Dictionary<string, Color> ObjectColorsIdMap { get; set; } = new();
+  public Dictionary<string, Color> ObjectMaterialsIdMap { get; set; } = new();
 
   /// <summary>
   /// Iterates through a given set of arcGIS map members (layers containing objects) and collects their colors.
@@ -70,6 +72,27 @@ public class ArcGISColorManager
   }
 
   /// <summary>
+  /// Parse Color renderMaterials  and stores in ObjectMaterialsIdMap the relationship between object ids and colors
+  /// </summary>
+  /// <param name="materialProxies"></param>
+  /// <param name="onOperationProgressed"></param>
+  public void ParseMaterials(List<RenderMaterialProxy> materialProxies, Action<string, double?>? onOperationProgressed)
+  {
+    // injected as Singleton, so we need to clean existing proxies first
+    ObjectMaterialsIdMap = new();
+    var count = 0;
+    foreach (RenderMaterialProxy colorProxy in materialProxies)
+    {
+      onOperationProgressed?.Invoke("Converting colors", (double)++count / materialProxies.Count);
+      foreach (string objectId in colorProxy.objects)
+      {
+        Color convertedColor = Color.FromArgb(colorProxy.value.diffuse);
+        ObjectMaterialsIdMap.TryAdd(objectId, convertedColor);
+      }
+    }
+  }
+
+  /// <summary>
   /// Create a new CIMUniqueValueClass for UniqueRenderer per each object ID
   /// </summary>
   /// <param name="tc"></param>
@@ -86,10 +109,18 @@ public class ArcGISColorManager
     // get color moving upwards from the object
     foreach (var parent in tc.GetAscendants())
     {
-      if (parent.applicationId is string appId && ObjectColorsIdMap.TryGetValue(appId, out Color objColor))
+      if (parent.applicationId is string appId)
       {
-        color = objColor;
-        break;
+        if (ObjectMaterialsIdMap.TryGetValue(appId, out Color objColorMaterial))
+        {
+          color = objColorMaterial;
+          break;
+        }
+        //if (ObjectColorsIdMap.TryGetValue(appId, out Color objColor))
+        //{
+        //  color = objColor;
+        //  break;
+        //}
       }
     }
 
