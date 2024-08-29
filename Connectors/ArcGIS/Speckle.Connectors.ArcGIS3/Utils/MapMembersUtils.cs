@@ -6,15 +6,15 @@ namespace Speckle.Connectors.ArcGIS.Utils;
 
 public class MapMembersUtils
 {
-  public List<MapMember> GetMapLayers(Map map)
+  public List<MapMember> GetAllMapMembers(Map map)
   {
     // first get all map layers
-    Dictionary<MapMember, int> layersIndices = new();
+    Dictionary<MapMember, int> membersIndices = new();
     int count = 0;
     var layers = map.Layers;
-    count = UnpackMapLayers(layersIndices, layers, count);
+    count = UnpackMapLayers(membersIndices, layers, count);
 
-    return layersIndices.Select(x => x.Key).ToList();
+    return membersIndices.Select(x => x.Key).ToList();
   }
 
   public int UnpackMapLayers(Dictionary<MapMember, int> layersIndices, IEnumerable<ArcLayer> layersToUnpack, int count)

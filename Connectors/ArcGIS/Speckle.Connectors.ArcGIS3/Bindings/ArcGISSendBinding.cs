@@ -206,7 +206,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     var datasetURI = args.Row.GetTable().GetPath();
 
     // find all layers & tables reading from the dataset
-    var allMapMembers = _mapMemberUtils.GetMapLayers(MapView.Active.Map);
+    var allMapMembers = _mapMemberUtils.GetAllMapMembers(MapView.Active.Map);
     foreach (MapMember mapMember in allMapMembers)
     {
       try
