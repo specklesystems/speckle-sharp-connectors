@@ -33,18 +33,11 @@ public sealed class SendConversionResult : ConversionResult
     SourceType = sourceType;
     ResultId = result?.id;
     ResultType = result?.speckle_type;
-    if (exception is not null)
-    {
-      Error = new ErrorWrapper()
-      {
-        Message = exception.Message,
-        StackTrace = $"{exception.Message}\n{exception.StackTrace}"
-      };
-    }
+    Error = FormatError(exception);
   }
 }
 
-public class ReceiveConversionResult : ConversionResult
+public sealed class ReceiveConversionResult : ConversionResult
 {
   public ReceiveConversionResult(
     Status status,
@@ -59,14 +52,7 @@ public class ReceiveConversionResult : ConversionResult
     SourceType = source.speckle_type; // Note: we'll parse it nicely in FE
     ResultId = resultId;
     ResultType = resultType;
-    if (exception is not null)
-    {
-      Error = new ErrorWrapper()
-      {
-        Message = exception.Message,
-        StackTrace = $"{exception.Message}\n{exception.StackTrace}"
-      };
-    }
+    Error = FormatError(exception);
   }
 }
 
@@ -79,37 +65,51 @@ public class ReceiveConversionResult : ConversionResult
 /// </summary>
 public abstract class ConversionResult
 {
-  public Status Status { get; init; }
+  public Status Status { get; protected init; }
 
   /// <summary>
   ///  For receive conversion reports, this is the id of the speckle object. For send, it's the host app object id.
   /// </summary>
-  public string? SourceId { get; init; }
+  public string SourceId { get; protected init; }
 
   /// <summary>
   /// For receive conversion reports, this is the type of the speckle object. For send, it's the host app object type.
   /// </summary>
-  public string? SourceType { get; init; }
+  public string SourceType { get; protected init; }
 
   /// <summary>
   /// For receive conversion reports, this is the id of the host app object. For send, it's the speckle object id.
   /// </summary>
-  public string? ResultId { get; init; }
+  public string? ResultId { get; protected init; }
 
   /// <summary>
   /// For receive conversion reports, this is the type of the host app object. For send, it's the speckle object type.
   /// </summary>
-  public string? ResultType { get; init; }
+  public string? ResultType { get; protected init; }
 
   /// <summary>
   /// The exception, if any.
   /// </summary>
-  public ErrorWrapper? Error { get; init; }
+  public ErrorWrapper? Error { get; protected init; }
 
   // /// <summary>
   // /// Makes it easy for the FE to discriminate (against report types, not people).
   // /// </summary>
   // public string Type => this.GetType().ToString();
+
+  protected static ErrorWrapper? FormatError(Exception? exception)
+  {
+    if (exception is null)
+    {
+      return null;
+    }
+
+    return new ErrorWrapper()
+    {
+      Message = exception.Message,
+      StackTrace = $"{exception.Message}\n{exception.StackTrace}"
+    };
+  }
 }
 
 /// <summary>
