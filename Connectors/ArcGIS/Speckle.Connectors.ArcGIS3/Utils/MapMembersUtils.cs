@@ -10,9 +10,8 @@ public class MapMembersUtils
   {
     // first get all map layers
     Dictionary<MapMember, int> membersIndices = new();
-    int count = 0;
     var layers = map.Layers;
-    count = UnpackMapLayers(membersIndices, layers, count);
+    UnpackMapLayers(membersIndices, layers, 0);
 
     return membersIndices.Select(x => x.Key).ToList();
   }
