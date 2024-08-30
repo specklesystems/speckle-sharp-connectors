@@ -60,7 +60,6 @@ public class MeshByMaterialDictionaryToSpeckle
 
       // use the meshlist converter to convert the mesh values into a single speckle mesh
       SOG.Mesh speckleMesh = _meshListConverter.Convert(meshes);
-      speckleMesh.units = _contextStack.Current.SpeckleUnits;
       speckleMesh.applicationId = Guid.NewGuid().ToString(); // NOTE: as we are composing meshes out of multiple ones for the same material, we need to generate our own application id. c'est la vie.
 
       // get the render material if any
