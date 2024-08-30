@@ -1,4 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using Microsoft.Extensions.Logging;
+using Speckle.Converters.Common.Extensions;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Models;
 
@@ -13,10 +15,15 @@ namespace Speckle.Converters.Common.DependencyInjection.ToHost;
 public sealed class ConverterWithoutFallback : IRootToHostConverter
 {
   private readonly IConverterResolver<IToHostTopLevelConverter> _toHost;
+  private readonly ILogger _logger;
 
-  public ConverterWithoutFallback(IConverterResolver<IToHostTopLevelConverter> converterResolver)
+  public ConverterWithoutFallback(
+    IConverterResolver<IToHostTopLevelConverter> converterResolver,
+    ILogger<ConverterWithoutFallback> logger
+  )
   {
     _toHost = converterResolver;
+    _logger = logger;
   }
 
   public object Convert(Base target)
@@ -26,7 +33,7 @@ public sealed class ConverterWithoutFallback : IRootToHostConverter
       throw new NotSupportedException($"No conversion found for {target.GetType()}");
     }
 
-    object result = converter.Convert(target);
+    object result = converter.ConvertAndLog(target, _logger);
     return result;
   }
 
