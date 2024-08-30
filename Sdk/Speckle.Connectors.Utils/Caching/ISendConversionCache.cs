@@ -19,7 +19,6 @@ public interface ISendConversionCache
   /// </summary>
   /// <param name="objectIds"></param>
   public void EvictObjects(IEnumerable<string> objectIds);
-
   public void ClearCache();
   bool TryGetValue(string projectId, string applicationId, out ObjectReference objectReference);
 }

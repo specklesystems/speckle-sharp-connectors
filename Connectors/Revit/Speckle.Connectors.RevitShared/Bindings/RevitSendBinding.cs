@@ -11,6 +11,7 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
+using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.Utils.Caching;
@@ -32,6 +33,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ToSpeckleSettingsManager _toSpeckleSettingsManager;
   private readonly ILogger<RevitSendBinding> _logger;
+  private readonly ElementUnpacker _elementUnpacker;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -51,7 +53,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
     ToSpeckleSettingsManager toSpeckleSettingsManager,
-    ILogger<RevitSendBinding> logger
+    ILogger<RevitSendBinding> logger,
+    ElementUnpacker elementUnpacker
   )
     : base("sendBinding", store, bridge, revitContext)
   {
@@ -62,6 +65,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _operationProgressManager = operationProgressManager;
     _toSpeckleSettingsManager = toSpeckleSettingsManager;
     _logger = logger;
+    _elementUnpacker = elementUnpacker;
     var topLevelExceptionHandler = Parent.TopLevelExceptionHandler;
 
     Commands = new SendBindingUICommands(bridge);
@@ -186,7 +190,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     if (HaveUnitsChanged(e.GetDocument()))
     {
       var objectIds = Store.GetSenders().SelectMany(s => s.SendFilter != null ? s.SendFilter.GetObjectIds() : []);
-      _sendConversionCache.EvictObjects(objectIds);
+      var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds.ToList());
+      _sendConversionCache.EvictObjects(unpackedObjectIds);
     }
     _idleManager.SubscribeToIdle(nameof(RevitSendBinding), RunExpirationChecks);
   }

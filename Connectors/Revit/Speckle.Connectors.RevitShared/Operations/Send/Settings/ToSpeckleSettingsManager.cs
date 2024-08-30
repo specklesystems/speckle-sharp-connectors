@@ -1,6 +1,7 @@
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using Speckle.Connectors.DUI.Models.Card;
+using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
@@ -12,14 +13,20 @@ public class ToSpeckleSettingsManager
 {
   private readonly RevitContext _revitContext;
   private readonly ISendConversionCache _sendConversionCache;
+  private readonly ElementUnpacker _elementUnpacker;
 
   // cache invalidation process run with ModelCardId since the settings are model specific
   private readonly Dictionary<string, DetailLevelType> _detailLevelCache = new();
-  private readonly Dictionary<string, ReferencePointType> _referencePointCache = new();
+  private readonly Dictionary<string, Transform?> _referencePointCache = new();
 
-  public ToSpeckleSettingsManager(RevitContext revitContext, ISendConversionCache sendConversionCache)
+  public ToSpeckleSettingsManager(
+    RevitContext revitContext,
+    ISendConversionCache sendConversionCache,
+    ElementUnpacker elementUnpacker
+  )
   {
     _revitContext = revitContext;
+    _elementUnpacker = elementUnpacker;
     _sendConversionCache = sendConversionCache;
   }
 
@@ -44,7 +51,8 @@ public class ToSpeckleSettingsManager
         if (previousType != fidelity)
         {
           var objectIds = modelCard.SendFilter != null ? modelCard.SendFilter.GetObjectIds() : [];
-          _sendConversionCache.EvictObjects(objectIds);
+          var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds);
+          _sendConversionCache.EvictObjects(unpackedObjectIds);
         }
       }
       _detailLevelCache[modelCard.ModelCardId.NotNull()] = fidelity;
@@ -65,17 +73,23 @@ public class ToSpeckleSettingsManager
       )
     )
     {
-      if (_referencePointCache.TryGetValue(modelCard.ModelCardId.NotNull(), out ReferencePointType previousType))
+      // get the current transform from setting first
+      // we are doing this because we can't track if reference points were changed between send operations.
+      Transform? currentTransform = GetTransform(_revitContext, referencePoint);
+
+      if (_referencePointCache.TryGetValue(modelCard.ModelCardId.NotNull(), out Transform? previousTransform))
       {
-        if (previousType != referencePoint)
+        // invalidate conversion cache if the transform has changed
+        if (previousTransform != currentTransform)
         {
           var objectIds = modelCard.SendFilter != null ? modelCard.SendFilter.GetObjectIds() : [];
-          _sendConversionCache.EvictObjects(objectIds);
+          var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds);
+          _sendConversionCache.EvictObjects(unpackedObjectIds);
         }
       }
 
-      _referencePointCache[modelCard.ModelCardId.NotNull()] = referencePoint;
-      return GetTransform(_revitContext, referencePoint);
+      _referencePointCache[modelCard.ModelCardId.NotNull()] = currentTransform;
+      return currentTransform;
     }
 
     throw new ArgumentException($"Invalid reference point value: {referencePointString}");
