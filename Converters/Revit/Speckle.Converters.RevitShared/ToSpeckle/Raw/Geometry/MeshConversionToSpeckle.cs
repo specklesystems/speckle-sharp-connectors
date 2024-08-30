@@ -1,23 +1,27 @@
-﻿using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Services;
 using Speckle.Objects.Other;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 public class MeshConversionToSpeckle : ITypedConverter<DB.Mesh, SOG.Mesh>
 {
-  private readonly ITypedConverter<DB.XYZ, SOG.Point> _xyzToPointConverter;
+  private readonly IScalingServiceToSpeckle _toSpeckleScalingService;
   private readonly ITypedConverter<DB.Material, RenderMaterial> _materialConverter;
+  private readonly IReferencePointConverter _referencePointConverter;
   private readonly IRevitConversionContextStack _contextStack;
 
   public MeshConversionToSpeckle(
     IRevitConversionContextStack contextStack,
-    ITypedConverter<DB.XYZ, SOG.Point> xyzToPointConverter,
+    IReferencePointConverter referencePointConverter,
+    IScalingServiceToSpeckle toSpeckleScalingService,
     ITypedConverter<DB.Material, RenderMaterial> materialConverter
   )
   {
     _contextStack = contextStack;
-    _xyzToPointConverter = xyzToPointConverter;
+    _toSpeckleScalingService = toSpeckleScalingService;
+    _referencePointConverter = referencePointConverter;
     _materialConverter = materialConverter;
   }
 
@@ -42,11 +46,16 @@ public class MeshConversionToSpeckle : ITypedConverter<DB.Mesh, SOG.Mesh>
 
   private List<double> GetSpeckleMeshVertexData(DB.Mesh target)
   {
-    var vertices = new List<double>(target.Vertices.Count * 3);
+    List<double> vertices = new(target.Vertices.Count * 3);
 
-    foreach (var vert in target.Vertices)
+    foreach (DB.XYZ vert in target.Vertices)
     {
-      vertices.AddRange(_xyzToPointConverter.Convert(vert).ToList());
+      // We need this method to take into account reference point transforms
+      DB.XYZ extVert = _referencePointConverter.ConvertToExternalCoordinates(vert, true);
+
+      vertices.Add(_toSpeckleScalingService.ScaleLength(extVert.X));
+      vertices.Add(_toSpeckleScalingService.ScaleLength(extVert.Y));
+      vertices.Add(_toSpeckleScalingService.ScaleLength(extVert.Z));
     }
 
     return vertices;
