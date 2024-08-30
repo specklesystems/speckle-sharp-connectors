@@ -1,6 +1,5 @@
 using ArcGIS.Desktop.Internal.Mapping;
 using ArcGIS.Desktop.Mapping;
-using ArcLayer = ArcGIS.Desktop.Mapping.Layer;
 
 namespace Speckle.Connectors.ArcGIS.Utils;
 
@@ -9,35 +8,52 @@ public class MapMembersUtils
   public List<MapMember> GetAllMapMembers(Map map)
   {
     // first get all map layers
-    Dictionary<MapMember, int> membersIndices = new();
+    List<MapMember> mapMembers = new();
     var layers = map.Layers;
-    UnpackMapLayers(membersIndices, layers, 0);
-
-    return membersIndices.Select(x => x.Key).ToList();
+    UnpackMapLayers(mapMembers, layers);
+    UnpackMapLayers(mapMembers, map.StandaloneTables);
+    return mapMembers;
   }
 
-  public int UnpackMapLayers(Dictionary<MapMember, int> layersIndices, IEnumerable<ArcLayer> layersToUnpack, int count)
+  public void UnpackMapLayers(List<MapMember> mapMembers, IEnumerable<MapMember> mapMembersToUnpack)
   {
-    foreach (var layer in layersToUnpack)
+    foreach (var layer in mapMembersToUnpack)
     {
       switch (layer)
       {
         case GroupLayer subGroup:
-          layersIndices[layer] = count;
-          count++;
-          count = UnpackMapLayers(layersIndices, subGroup.Layers, count);
+          mapMembers.Add(layer);
+          UnpackMapLayers(mapMembers, subGroup.Layers);
           break;
         case ILayerContainerInternal subLayerContainerInternal:
-          layersIndices[layer] = count;
-          count++;
-          count = UnpackMapLayers(layersIndices, subLayerContainerInternal.InternalLayers, count);
+          mapMembers.Add(layer);
+          UnpackMapLayers(mapMembers, subLayerContainerInternal.InternalLayers);
           break;
         default:
-          layersIndices[layer] = count;
-          count++;
+          mapMembers.Add(layer);
           break;
       }
     }
-    return count;
+  }
+
+  // Gets the layer display priority for selected layers
+  public List<(MapMember, int)> GetLayerDisplayPriority(Map map, IReadOnlyList<MapMember> selectedMapMembers)
+  {
+    // first get all map layers
+    List<MapMember> allMapMembers = GetAllMapMembers(map);
+
+    // recalculate selected layer priority from all map layers
+    List<(MapMember, int)> selectedLayers = new();
+    int newCount = 0;
+    foreach (MapMember mapMember in allMapMembers)
+    {
+      if (selectedMapMembers.Contains(mapMember))
+      {
+        selectedLayers.Add((mapMember, newCount));
+        newCount++;
+      }
+    }
+
+    return selectedLayers;
   }
 }
