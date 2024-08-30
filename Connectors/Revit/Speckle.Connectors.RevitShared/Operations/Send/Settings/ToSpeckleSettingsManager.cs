@@ -15,7 +15,7 @@ public class ToSpeckleSettingsManager
 
   // cache invalidation process run with ModelCardId since the settings are model specific
   private readonly Dictionary<string, DetailLevelType> _detailLevelCache = new();
-  private readonly Dictionary<string, ReferencePointType> _referencePointCache = new();
+  private readonly Dictionary<string, Transform?> _referencePointCache = new();
 
   public ToSpeckleSettingsManager(RevitContext revitContext, ISendConversionCache sendConversionCache)
   {
@@ -65,17 +65,22 @@ public class ToSpeckleSettingsManager
       )
     )
     {
-      if (_referencePointCache.TryGetValue(modelCard.ModelCardId.NotNull(), out ReferencePointType previousType))
+      // get the current transform from setting first
+      // we are doing this because we can't track if reference points were changed between send operations.
+      Transform? currentTransform = GetTransform(_revitContext, referencePoint);
+
+      if (_referencePointCache.TryGetValue(modelCard.ModelCardId.NotNull(), out Transform? previousTransform))
       {
-        if (previousType != referencePoint)
+        // invalidate conversion cache if the transform has changed
+        if (previousTransform != currentTransform)
         {
           var objectIds = modelCard.SendFilter != null ? modelCard.SendFilter.GetObjectIds() : [];
           _sendConversionCache.EvictObjects(objectIds);
         }
       }
 
-      _referencePointCache[modelCard.ModelCardId.NotNull()] = referencePoint;
-      return GetTransform(_revitContext, referencePoint);
+      _referencePointCache[modelCard.ModelCardId.NotNull()] = currentTransform;
+      return currentTransform;
     }
 
     throw new ArgumentException($"Invalid reference point value: {referencePointString}");
