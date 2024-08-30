@@ -71,7 +71,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\HermiteSplineToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\LineConversionToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\MeshByMaterialDictionaryToSpeckle.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\MeshConversionToSpeckle.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\MeshListConversionToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\NurbsSplineToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\PlaneToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\PointCloudToSpeckleConverter.cs" />
