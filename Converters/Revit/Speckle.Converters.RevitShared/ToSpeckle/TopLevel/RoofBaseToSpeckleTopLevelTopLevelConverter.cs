@@ -5,7 +5,7 @@ using Speckle.Objects.BuiltElements.Revit.RevitRoof;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
-[NameAndRankValue(nameof(DB.RoofBase), 0)]
+[NameAndRankValue(nameof(RoofBase), 0)]
 internal sealed class RoofBaseToSpeckleTopLevelTopLevelConverter
   : BaseTopLevelConverterToSpeckle<DB.RoofBase, RevitRoof>
 {

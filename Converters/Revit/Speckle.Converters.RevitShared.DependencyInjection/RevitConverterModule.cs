@@ -32,7 +32,6 @@ public class RevitConverterModule : ISpeckleModule
     builder.AddScoped<IRevitConversionContextStack, RevitConversionContextStack>();
 
     builder.AddScoped<IReferencePointConverter, ReferencePointConverter>();
-    builder.AddScoped<RevitConversionSettings>();
 
     builder.AddScoped<IRevitVersionConversionHelper, RevitVersionConversionHelper>();
 
