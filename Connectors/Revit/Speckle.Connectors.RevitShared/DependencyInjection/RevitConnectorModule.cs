@@ -63,7 +63,7 @@ public class RevitConnectorModule : ISpeckleModule
 
     // send operation and dependencies
     builder.AddScoped<SendOperation<ElementId>>();
-    builder.AddTransient<ElementUnpacker>();
+    builder.AddScoped<ElementUnpacker>();
     builder.AddScoped<SendCollectionManager>();
     builder.AddScoped<IRootObjectBuilder<ElementId>, RevitRootObjectBuilder>();
     builder.AddSingleton<ISendConversionCache, SendConversionCache>();
