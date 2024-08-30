@@ -30,6 +30,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
+  private readonly ToSpeckleSettingsManager _toSpeckleSettingsManager;
   private readonly ILogger<RevitSendBinding> _logger;
 
   /// <summary>
@@ -49,6 +50,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     IUnitOfWorkFactory unitOfWorkFactory,
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
+    ToSpeckleSettingsManager toSpeckleSettingsManager,
     ILogger<RevitSendBinding> logger
   )
     : base("sendBinding", store, bridge, revitContext)
@@ -58,6 +60,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _unitOfWorkFactory = unitOfWorkFactory;
     _sendConversionCache = sendConversionCache;
     _operationProgressManager = operationProgressManager;
+    _toSpeckleSettingsManager = toSpeckleSettingsManager;
     _logger = logger;
     var topLevelExceptionHandler = Parent.TopLevelExceptionHandler;
 
@@ -77,38 +80,17 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     return new List<ISendFilter> { new RevitSelectionFilter() { IsDefault = true } };
   }
 
-  public List<ICardSetting> GetSendSettings() => [new DetailLevelSetting(DetailLevelType.Medium)];
+  public List<ICardSetting> GetSendSettings() =>
+    [new DetailLevelSetting(DetailLevelType.Medium), new ReferencePointSetting(ReferencePointType.InternalOrigin)];
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
 
   public SendBindingUICommands Commands { get; }
 
-  // cache invalidation process run with ModelCardId since the settings are model specific
-  private readonly Dictionary<string, DetailLevelType> _detailLevelCache = new();
-
-  private ToSpeckleSettings GetToSpeckleSettings(SenderModelCard modelCard)
-  {
-    var fidelityString = modelCard.Settings?.First(s => s.Id == "detailLevel").Value as string;
-    if (
-      fidelityString is not null
-      && DetailLevelSetting.GeometryFidelityMap.TryGetValue(fidelityString, out var fidelity)
-    )
-    {
-      if (_detailLevelCache.TryGetValue(modelCard.ModelCardId.NotNull(), out DetailLevelType previousType))
-      {
-        if (previousType != fidelity)
-        {
-          var objectIds = modelCard.SendFilter != null ? modelCard.SendFilter.GetObjectIds() : [];
-          _sendConversionCache.EvictObjects(objectIds);
-        }
-      }
-      _detailLevelCache[modelCard.ModelCardId.NotNull()] = fidelity;
-      return new ToSpeckleSettings(fidelity);
-    }
-    throw new ArgumentException($"Invalid geometry fidelity value: {fidelityString}");
-  }
-
+  // yes we know Send function calls many different namespace, we know. But currently I don't see any simplification area we can work on!
+#pragma warning disable CA1506
   public async Task Send(string modelCardId)
+#pragma warning restore CA1506
   {
     // Note: removed top level handling thing as it was confusing me
     try
@@ -125,7 +107,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         b =>
         {
           b.RegisterType<ToSpeckleSettings>().SingleInstance();
-          b.Register(c => GetToSpeckleSettings(modelCard));
+          b.Register(c => _toSpeckleSettingsManager.GetToSpeckleSettings(modelCard));
         }
       );
 
