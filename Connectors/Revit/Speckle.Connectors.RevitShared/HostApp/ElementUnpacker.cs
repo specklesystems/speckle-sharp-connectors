@@ -34,6 +34,21 @@ public class ElementUnpacker
     return PackCurtainWallElements(atomicObjects);
   }
 
+  /// <summary>
+  /// Unpacks input element ids into their subelements, eg groups and nested family instances
+  /// </summary>
+  /// <param name="objectIds"></param>
+  /// <returns></returns>
+  /// <remarks>
+  /// This is used to invalidate object ids in the send conversion cache when the selected object id is only the parent element id
+  /// </remarks>
+  public IEnumerable<string> GetUnpackedElementIds(List<string> objectIds)
+  {
+    var doc = _contextStack.Current.Document;
+    var docElements = doc.GetElements(objectIds);
+    return UnpackSelectionForConversion(docElements).Select(o => o.UniqueId).ToList();
+  }
+
   private List<Element> UnpackElements(IEnumerable<Element> elements)
   {
     var unpackedElements = new List<Element>(); // note: could be a hashset/map so we prevent duplicates (?)

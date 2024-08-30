@@ -1,6 +1,7 @@
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using Speckle.Connectors.DUI.Models.Card;
+using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
@@ -12,14 +13,20 @@ public class ToSpeckleSettingsManager
 {
   private readonly RevitContext _revitContext;
   private readonly ISendConversionCache _sendConversionCache;
+  private readonly ElementUnpacker _elementUnpacker;
 
   // cache invalidation process run with ModelCardId since the settings are model specific
   private readonly Dictionary<string, DetailLevelType> _detailLevelCache = new();
   private readonly Dictionary<string, Transform?> _referencePointCache = new();
 
-  public ToSpeckleSettingsManager(RevitContext revitContext, ISendConversionCache sendConversionCache)
+  public ToSpeckleSettingsManager(
+    RevitContext revitContext,
+    ISendConversionCache sendConversionCache,
+    ElementUnpacker elementUnpacker
+  )
   {
     _revitContext = revitContext;
+    _elementUnpacker = elementUnpacker;
     _sendConversionCache = sendConversionCache;
   }
 
@@ -44,7 +51,8 @@ public class ToSpeckleSettingsManager
         if (previousType != fidelity)
         {
           var objectIds = modelCard.SendFilter != null ? modelCard.SendFilter.GetObjectIds() : [];
-          _sendConversionCache.EvictObjects(objectIds);
+          var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds);
+          _sendConversionCache.EvictObjects(unpackedObjectIds);
         }
       }
       _detailLevelCache[modelCard.ModelCardId.NotNull()] = fidelity;
@@ -75,7 +83,8 @@ public class ToSpeckleSettingsManager
         if (previousTransform != currentTransform)
         {
           var objectIds = modelCard.SendFilter != null ? modelCard.SendFilter.GetObjectIds() : [];
-          _sendConversionCache.EvictObjects(objectIds);
+          var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds);
+          _sendConversionCache.EvictObjects(unpackedObjectIds);
         }
       }
 
