@@ -2,6 +2,7 @@ using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects;
 using Speckle.Objects.BuiltElements.Revit;
 using Speckle.Objects.BuiltElements.Revit.RevitRoof;
@@ -19,7 +20,7 @@ public class FootPrintRoofToSpeckleTopLevelConverter
   private readonly ParameterValueExtractor _parameterValueExtractor;
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly ParameterObjectAssigner _parameterObjectAssigner;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly ISettingsStore<RevitConversionSettings> _settings;
 
   public FootPrintRoofToSpeckleTopLevelConverter(
     ITypedConverter<Level, RevitLevel> levelConverter,
@@ -27,7 +28,7 @@ public class FootPrintRoofToSpeckleTopLevelConverter
     ParameterValueExtractor parameterValueExtractor,
     DisplayValueExtractor displayValueExtractor,
     ParameterObjectAssigner parameterObjectAssigner,
-    IRevitConversionContextStack contextStack
+    ISettingsStore<RevitConversionSettings> settings
   )
   {
     _levelConverter = levelConverter;
@@ -35,7 +36,7 @@ public class FootPrintRoofToSpeckleTopLevelConverter
     _parameterValueExtractor = parameterValueExtractor;
     _displayValueExtractor = displayValueExtractor;
     _parameterObjectAssigner = parameterObjectAssigner;
-    _contextStack = contextStack;
+    _settings = settings;
   }
 
   public override RevitFootprintRoof Convert(FootPrintRoof target)
@@ -68,7 +69,7 @@ public class FootPrintRoofToSpeckleTopLevelConverter
         cutOffLevel = topLevel is not null ? _levelConverter.Convert(topLevel) : null,
         slope = slope,
         displayValue = displayValue,
-        units = _contextStack.Current.SpeckleUnits
+        units = _settings.Current.SpeckleUnits
       };
 
     // POC: CNX-9396 again with the incorrect assumption that the first profile is the floor and subsequent profiles

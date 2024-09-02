@@ -1,6 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Converters.RevitShared.ToSpeckle;
 using Speckle.Objects;
 
@@ -10,15 +10,15 @@ namespace Speckle.Converters.RevitShared.ToHost.TopLevel;
 internal sealed class GridlineToHostTopLevelConverter : BaseTopLevelConverterToHost<SOBE.GridLine, DB.Grid>
 {
   private readonly ITypedConverter<ICurve, DB.CurveArray> _curveConverter;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly ISettingsStore<RevitConversionSettings> _settings;
 
   public GridlineToHostTopLevelConverter(
     ITypedConverter<ICurve, DB.CurveArray> curveConverter,
-    IRevitConversionContextStack contextStack
+    ISettingsStore<RevitConversionSettings> settings
   )
   {
     _curveConverter = curveConverter;
-    _contextStack = contextStack;
+    _settings = settings;
   }
 
   public override DB.Grid Convert(SOBE.GridLine target)
@@ -27,8 +27,8 @@ internal sealed class GridlineToHostTopLevelConverter : BaseTopLevelConverterToH
 
     using DB.Grid revitGrid = curve switch
     {
-      DB.Arc arc => DB.Grid.Create(_contextStack.Current.Document, arc),
-      DB.Line line => DB.Grid.Create(_contextStack.Current.Document, line),
+      DB.Arc arc => DB.Grid.Create(_settings.Current.Document, arc),
+      DB.Line line => DB.Grid.Create(_settings.Current.Document, line),
       _ => throw new SpeckleConversionException($"Grid line curve is of type {curve.GetType()} which is not supported")
     };
 
@@ -42,7 +42,7 @@ internal sealed class GridlineToHostTopLevelConverter : BaseTopLevelConverterToH
 
   private bool GridNameIsTaken(string gridName)
   {
-    using var collector = new DB.FilteredElementCollector(_contextStack.Current.Document);
+    using var collector = new DB.FilteredElementCollector(_settings.Current.Document);
 
     IEnumerable<string> gridNames = collector
       .WhereElementIsNotElementType()

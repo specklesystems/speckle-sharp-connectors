@@ -1,6 +1,7 @@
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects.Other;
 using Speckle.Objects.Other.Revit;
 
@@ -13,15 +14,15 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, List<Dictionary<string, object>>>
 {
   private readonly ScalingServiceToSpeckle _scalingService;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly ISettingsStore<RevitConversionSettings> _settings;
 
   public MaterialQuantitiesToSpeckleLite(
     ScalingServiceToSpeckle scalingService,
-    IRevitConversionContextStack contextStack
+    ISettingsStore<RevitConversionSettings> settings
   )
   {
     _scalingService = scalingService;
-    _contextStack = contextStack;
+    _settings = settings;
   }
 
   /// <summary>
@@ -47,9 +48,9 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, List<
         double factor = _scalingService.ScaleLength(1);
         materialQuantity["area"] = factor * factor * target.GetMaterialArea(matId, false);
         materialQuantity["volume"] = factor * factor * factor * target.GetMaterialVolume(matId);
-        materialQuantity["units"] = _contextStack.Current.SpeckleUnits;
+        materialQuantity["units"] = _settings.Current.SpeckleUnits;
 
-        if (_contextStack.Current.Document.GetElement(matId) is DB.Material material)
+        if (_settings.Current.Document.GetElement(matId) is DB.Material material)
         {
           materialQuantity["materialName"] = material.Name;
           materialQuantity["materialCategory"] = material.MaterialCategory;
@@ -71,17 +72,17 @@ public class MaterialQuantitiesToSpeckle : ITypedConverter<DB.Element, List<Mate
 {
   private readonly ITypedConverter<DB.Material, (RevitMaterial, RenderMaterial)> _materialConverter;
   private readonly ScalingServiceToSpeckle _scalingService;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly ISettingsStore<RevitConversionSettings> _settings;
 
   public MaterialQuantitiesToSpeckle(
     ITypedConverter<DB.Material, (RevitMaterial, RenderMaterial)> materialConverter,
     ScalingServiceToSpeckle scalingService,
-    IRevitConversionContextStack contextStack
+    ISettingsStore<RevitConversionSettings> settings
   )
   {
     _materialConverter = materialConverter;
     _scalingService = scalingService;
-    _contextStack = contextStack;
+    _settings = settings;
   }
 
   /// <summary>
@@ -114,11 +115,11 @@ public class MaterialQuantitiesToSpeckle : ITypedConverter<DB.Element, List<Mate
         double area = factor * factor * target.GetMaterialArea(matId, false);
         double volume = factor * factor * factor * target.GetMaterialVolume(matId);
 
-        if (_contextStack.Current.Document.GetElement(matId) is DB.Material material)
+        if (_settings.Current.Document.GetElement(matId) is DB.Material material)
         {
           (RevitMaterial convertedMaterial, RenderMaterial _) = _materialConverter.Convert(material);
           // NOTE: the RevitMaterial class is semi useless, and it used to extract parameters out too for each material. Overkill.
-          quantities.Add(new(convertedMaterial, volume, area, _contextStack.Current.SpeckleUnits));
+          quantities.Add(new(convertedMaterial, volume, area, _settings.Current.SpeckleUnits));
         }
       }
     }

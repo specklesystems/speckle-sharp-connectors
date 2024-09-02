@@ -1,7 +1,8 @@
 using Autodesk.Revit.DB;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects.Geometry;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
@@ -10,17 +11,17 @@ public class PolylineConverterToHost : ITypedConverter<SOG.Polyline, DB.CurveArr
 {
   private readonly ITypedConverter<SOG.Line, DB.Line> _lineConverter;
   private readonly ScalingServiceToHost _scalingService;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly ISettingsStore<RevitConversionSettings> _settings;
 
   public PolylineConverterToHost(
     ITypedConverter<SOG.Line, DB.Line> lineConverter,
     ScalingServiceToHost scalingService,
-    IRevitConversionContextStack contextStack
+    ISettingsStore<RevitConversionSettings> settings
   )
   {
     _lineConverter = lineConverter;
     _scalingService = scalingService;
-    _contextStack = contextStack;
+    _settings = settings;
   }
 
   public CurveArray Convert(Polyline target)
@@ -63,7 +64,7 @@ public class PolylineConverterToHost : ITypedConverter<SOG.Polyline, DB.CurveArr
   public bool IsLineTooShort(SOG.Line line)
   {
     var scaleToNative = _scalingService.ScaleToNative(SOG.Point.Distance(line.start, line.end), line.units);
-    return scaleToNative < _contextStack.Current.Document.Application.ShortCurveTolerance;
+    return scaleToNative < _settings.Current.Document.Application.ShortCurveTolerance;
   }
 
   /// <summary>

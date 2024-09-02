@@ -1,5 +1,7 @@
 using Autodesk.Revit.DB;
+using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Connectors.Revit.Operations.Receive;
 
@@ -9,12 +11,12 @@ namespace Speckle.Connectors.Revit.Operations.Receive;
 /// </summary>
 public sealed class TransactionManager : ITransactionManager
 {
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly ISettingsStore<RevitConversionSettings> _settings;
   private Document Document => _contextStack.Current.Document;
 
-  public TransactionManager(IRevitConversionContextStack contextStack)
+  public TransactionManager(ISettingsStore<RevitConversionSettings> settings)
   {
-    _contextStack = contextStack;
+    _settings = settings;
   }
 
   // poc : these are being disposed. I'm not sure why I need to supress this warning

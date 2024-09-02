@@ -1,21 +1,22 @@
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 public class PointCloudToSpeckleConverter : ITypedConverter<DB.PointCloudInstance, SOG.Pointcloud>
 {
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly ISettingsStore<RevitConversionSettings> _settings;
   private readonly ITypedConverter<DB.XYZ, SOG.Point> _xyzToPointConverter;
   private readonly ITypedConverter<DB.BoundingBoxXYZ, SOG.Box> _boundingBoxConverter;
 
   public PointCloudToSpeckleConverter(
-    IRevitConversionContextStack contextStack,
+    ISettingsStore<RevitConversionSettings> settings,
     ITypedConverter<DB.XYZ, SOG.Point> xyzToPointConverter,
     ITypedConverter<DB.BoundingBoxXYZ, SOG.Box> boundingBoxConverter
   )
   {
-    _contextStack = contextStack;
+    _settings = settings;
     _xyzToPointConverter = xyzToPointConverter;
     _boundingBoxConverter = boundingBoxConverter;
   }
@@ -37,7 +38,7 @@ public class PointCloudToSpeckleConverter : ITypedConverter<DB.PointCloudInstanc
           .SelectMany(o => new List<double>() { o.x, o.y, o.z })
           .ToList(),
         colors = points.Select(o => o.Color).ToList(),
-        units = _contextStack.Current.SpeckleUnits,
+        units = _settings.Current.SpeckleUnits,
         bbox = _boundingBoxConverter.Convert(boundingBox)
       };
 

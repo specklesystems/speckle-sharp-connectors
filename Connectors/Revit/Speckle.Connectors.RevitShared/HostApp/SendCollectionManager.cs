@@ -1,5 +1,7 @@
 using Autodesk.Revit.DB;
+using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.Revit.HostApp;
@@ -9,12 +11,12 @@ namespace Speckle.Connectors.Revit.HostApp;
 /// </summary>
 public class SendCollectionManager
 {
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly ISettingsStore<RevitConversionSettings> _settings;
   private readonly Dictionary<string, Collection> _collectionCache = new();
 
-  public SendCollectionManager(IRevitConversionContextStack contextStack)
+  public SendCollectionManager(ISettingsStore<RevitConversionSettings> settings)
   {
-    _contextStack = contextStack;
+    _settings = settings;
   }
 
   /// <summary>

@@ -1,25 +1,26 @@
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 public class PolylineToSpeckleConverter : ITypedConverter<DB.PolyLine, SOG.Polyline>
 {
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly ISettingsStore<RevitConversionSettings> _settings;
   private readonly ITypedConverter<DB.XYZ, SOG.Point> _xyzToPointConverter;
 
   public PolylineToSpeckleConverter(
-    IRevitConversionContextStack contextStack,
+    ISettingsStore<RevitConversionSettings> settings,
     ITypedConverter<DB.XYZ, SOG.Point> xyzToPointConverter
   )
   {
-    _contextStack = contextStack;
+    _settings = settings;
     _xyzToPointConverter = xyzToPointConverter;
   }
 
   public SOG.Polyline Convert(DB.PolyLine target)
   {
     var coords = target.GetCoordinates().SelectMany(coord => _xyzToPointConverter.Convert(coord).ToList()).ToList();
-    return new SOG.Polyline { value = coords, units = _contextStack.Current.SpeckleUnits };
+    return new SOG.Polyline { value = coords, units = _settings.Current.SpeckleUnits };
   }
 }

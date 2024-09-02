@@ -1,4 +1,5 @@
 using Speckle.Converters.Common;
+using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Converters.RevitShared.Helpers;
 
@@ -6,18 +7,11 @@ namespace Speckle.Converters.RevitShared.Helpers;
 /// POC: reference point functionality needs to be revisited (we are currently baking in these transforms into all geometry using the point and vector converters, and losing the transform).
 /// This converter uses the transform in the reference point setting and provides methods to transform points
 /// </summary>
-public class ReferencePointConverter : IReferencePointConverter
+public class ReferencePointConverter(ISettingsStore<RevitConversionSettings> settings) : IReferencePointConverter
 {
-  private readonly IContextStore<RevitConversionContext> _contextStack;
-
-  public ReferencePointConverter(IContextStore<RevitConversionContext> contextStack)
-  {
-    _contextStack = contextStack;
-  }
-
   public DB.XYZ ConvertToExternalCoordinates(DB.XYZ p, bool isPoint)
   {
-    if (_contextStack.ToSpeckleSettings.ReferencePointTransform is DB.Transform transform)
+    if (settings.Current.ReferencePointTransform is DB.Transform transform)
     {
       return isPoint ? transform.Inverse.OfPoint(p) : transform.Inverse.OfVector(p);
     }
@@ -27,7 +21,7 @@ public class ReferencePointConverter : IReferencePointConverter
 
   public DB.XYZ ConvertToInternalCoordinates(DB.XYZ p, bool isPoint)
   {
-    if (_contextStack.ToSpeckleSettings.ReferencePointTransform is DB.Transform transform)
+    if (settings.Current.ReferencePointTransform is DB.Transform transform)
     {
       return isPoint ? transform.OfPoint(p) : transform.OfVector(p);
     }

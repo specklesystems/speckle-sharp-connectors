@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
@@ -12,24 +13,24 @@ public class TopographyTopLevelConverterToSpeckle
 {
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly ParameterObjectAssigner _parameterObjectAssigner;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly ISettingsStore<RevitConversionSettings> _settings;
 
   public TopographyTopLevelConverterToSpeckle(
     DisplayValueExtractor displayValueExtractor,
     ParameterObjectAssigner parameterObjectAssigner,
-    IRevitConversionContextStack contextStack
+    ISettingsStore<RevitConversionSettings> settings
   )
   {
     _displayValueExtractor = displayValueExtractor;
     _parameterObjectAssigner = parameterObjectAssigner;
-    _contextStack = contextStack;
+    _settings = settings;
   }
 
   public override SOBR.RevitTopography Convert(DBA.TopographySurface target)
   {
     var speckleTopo = new SOBR.RevitTopography
     {
-      units = _contextStack.Current.SpeckleUnits,
+      units = _settings.Current.SpeckleUnits,
       displayValue = _displayValueExtractor.GetDisplayValue(target),
       elementId = target.Id.ToString().NotNull()
     };

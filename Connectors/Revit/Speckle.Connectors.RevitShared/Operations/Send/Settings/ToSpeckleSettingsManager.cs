@@ -5,11 +5,13 @@ using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.Operations.Send.Settings;
 
-public class ToSpeckleSettingsManager
+[GenerateAutoInterface]
+public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 {
   private readonly RevitContext _revitContext;
   private readonly ISendConversionCache _sendConversionCache;
@@ -30,15 +32,7 @@ public class ToSpeckleSettingsManager
     _sendConversionCache = sendConversionCache;
   }
 
-  public ToSpeckleSettings GetToSpeckleSettings(SenderModelCard modelCard)
-  {
-    DetailLevelType detailLevel = GetDetailLevelSetting(modelCard);
-    Transform? referencePointTransform = GetReferencePointSetting(modelCard);
-
-    return new ToSpeckleSettings(detailLevel, referencePointTransform);
-  }
-
-  private DetailLevelType GetDetailLevelSetting(SenderModelCard modelCard)
+  public DetailLevelType GetDetailLevelSetting(SenderModelCard modelCard)
   {
     var fidelityString = modelCard.Settings?.First(s => s.Id == "detailLevel").Value as string;
     if (
@@ -62,7 +56,7 @@ public class ToSpeckleSettingsManager
     throw new ArgumentException($"Invalid geometry fidelity value: {fidelityString}");
   }
 
-  private Transform? GetReferencePointSetting(SenderModelCard modelCard)
+  public Transform? GetReferencePointSetting(SenderModelCard modelCard)
   {
     var referencePointString = modelCard.Settings?.First(s => s.Id == "referencePoint").Value as string;
     if (

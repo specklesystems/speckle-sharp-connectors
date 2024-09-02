@@ -8,6 +8,7 @@ using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -18,7 +19,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
 {
   // POC: SendSelection and RevitConversionContextStack should be interfaces, former needs interfaces
   private readonly IRootToSpeckleConverter _converter;
-  private readonly IRevitConversionContextStack _conversionContextStack;
+  private readonly ISettingsStore<RevitConversionSettings> _settingsStack;
   private readonly Collection _rootObject;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ISyncToThread _syncToThread;

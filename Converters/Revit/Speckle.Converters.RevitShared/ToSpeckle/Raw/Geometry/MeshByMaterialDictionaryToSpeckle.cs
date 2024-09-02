@@ -1,29 +1,32 @@
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects.Other;
 using Speckle.Objects.Other.Revit;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 public class MeshByMaterialDictionaryToSpeckle
   : ITypedConverter<(Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId), List<SOG.Mesh>>
 {
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly ISettingsStore<RevitConversionSettings> _settings;
   private readonly ITypedConverter<DB.Material, (RevitMaterial, RenderMaterial)> _materialConverter;
   private readonly ITypedConverter<List<DB.Mesh>, SOG.Mesh> _meshListConverter;
-  private readonly RevitMaterialCacheSingleton _materialCacheSingleton;
+  private readonly RevitMaterialCacheSingleton _revitMaterialCacheSingleton;
 
   public MeshByMaterialDictionaryToSpeckle(
     ITypedConverter<DB.Material, (RevitMaterial, RenderMaterial)> materialConverter,
     ITypedConverter<List<DB.Mesh>, SOG.Mesh> meshListConverter,
-    IRevitConversionContextStack contextStack,
-    RevitMaterialCacheSingleton materialCacheSingleton
+    ISettingsStore<RevitConversionSettings> settings,
+    RevitMaterialCacheSingleton revitMaterialCacheSingleton
   )
   {
     _materialConverter = materialConverter;
     _meshListConverter = meshListConverter;
-    _contextStack = contextStack;
-    _materialCacheSingleton = materialCacheSingleton;
+    _settings = settings;
+    _revitMaterialCacheSingleton = revitMaterialCacheSingleton;
   }
 
   /// <summary>
@@ -43,10 +46,10 @@ public class MeshByMaterialDictionaryToSpeckle
   public List<SOG.Mesh> Convert((Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId) args)
   {
     var result = new List<SOG.Mesh>(args.target.Keys.Count);
-    var objectRenderMaterialProxiesMap = _contextStack.RenderMaterialProxyCache.ObjectRenderMaterialProxiesMap;
+    var objectRenderMaterialProxiesMap = _revitMaterialCacheSingleton.ObjectRenderMaterialProxiesMap;
 
     var materialProxyMap = new Dictionary<string, RenderMaterialProxy>();
-    objectRenderMaterialProxiesMap[args.parentElementId.ToString()!] = materialProxyMap;
+    objectRenderMaterialProxiesMap[args.parentElementId.ToString().NotNull()] = materialProxyMap;
 
     if (args.target.Count == 0)
     {
@@ -56,6 +59,7 @@ public class MeshByMaterialDictionaryToSpeckle
     foreach (var keyValuePair in args.target)
     {
       DB.ElementId materialId = keyValuePair.Key;
+      string materialIdString = materialId.ToString().NotNull();
       List<DB.Mesh> meshes = keyValuePair.Value;
 
       // use the meshlist converter to convert the mesh values into a single speckle mesh
@@ -63,22 +67,22 @@ public class MeshByMaterialDictionaryToSpeckle
       speckleMesh.applicationId = Guid.NewGuid().ToString(); // NOTE: as we are composing meshes out of multiple ones for the same material, we need to generate our own application id. c'est la vie.
 
       // get the render material if any
-      if (_contextStack.Current.Document.GetElement(materialId) is DB.Material material)
+      if (_settings.Current.Document.GetElement(materialId) is DB.Material material)
       {
         (RevitMaterial _, RenderMaterial convertedRenderMaterial) = _materialConverter.Convert(material);
 
-        if (!materialProxyMap.TryGetValue(materialId.ToString()!, out RenderMaterialProxy? renderMaterialProxy))
+        if (!materialProxyMap.TryGetValue(materialIdString, out RenderMaterialProxy? renderMaterialProxy))
         {
           renderMaterialProxy = new RenderMaterialProxy()
           {
             value = convertedRenderMaterial,
-            applicationId = materialId.ToString()!,
+            applicationId = materialId.ToString(),
             objects = []
           };
-          materialProxyMap[materialId.ToString()!] = renderMaterialProxy;
+          materialProxyMap[materialIdString] = renderMaterialProxy;
         }
 
-        renderMaterialProxy.objects.Add(speckleMesh.applicationId!);
+        renderMaterialProxy.objects.Add(speckleMesh.applicationId);
       }
 
       result.Add(speckleMesh);

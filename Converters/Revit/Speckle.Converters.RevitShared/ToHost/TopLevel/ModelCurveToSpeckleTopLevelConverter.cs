@@ -1,7 +1,7 @@
 using System.Collections;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects;
 using Speckle.Sdk.Common;
 
@@ -11,15 +11,15 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 public class ModelCurveToHostTopLevelConverter : BaseTopLevelConverterToHost<SOBR.Curve.ModelCurve, DB.ModelCurve[]>
 {
   private readonly ITypedConverter<ICurve, DB.CurveArray> _curveConverter;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly ISettingsStore<RevitConversionSettings> _settings;
 
   public ModelCurveToHostTopLevelConverter(
     ITypedConverter<ICurve, DB.CurveArray> curveConverter,
-    IRevitConversionContextStack conversionContext
+    ISettingsStore<RevitConversionSettings> settings
   )
   {
     _curveConverter = curveConverter;
-    _contextStack = conversionContext;
+    _settings = settings;
   }
 
   public override DB.ModelCurve[] Convert(SOBR.Curve.ModelCurve target) =>
@@ -41,18 +41,18 @@ public class ModelCurveToHostTopLevelConverter : BaseTopLevelConverterToHost<SOB
         curve.MakeBound(speckleLine.domain.start, speckleLine.domain.end);
       }
 
-      if (_contextStack.Current.Document.IsFamilyDocument)
+      if (_settings.Current.Document.IsFamilyDocument)
       {
-        yield return _contextStack.Current.Document.FamilyCreate.NewModelCurve(
+        yield return _settings.Current.Document.FamilyCreate.NewModelCurve(
           curve,
-          NewSketchPlaneFromCurve(curve, _contextStack.Current.Document)
+          NewSketchPlaneFromCurve(curve, _settings.Current.Document)
         );
       }
       else
       {
-        yield return _contextStack.Current.Document.Create.NewModelCurve(
+        yield return _settings.Current.Document.Create.NewModelCurve(
           curve,
-          NewSketchPlaneFromCurve(curve, _contextStack.Current.Document)
+          NewSketchPlaneFromCurve(curve, _settings.Current.Document)
         );
       }
     }

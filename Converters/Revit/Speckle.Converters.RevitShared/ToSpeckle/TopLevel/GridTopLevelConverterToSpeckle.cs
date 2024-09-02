@@ -1,6 +1,6 @@
 ﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
@@ -9,15 +9,15 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 public sealed class GridTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.Grid, SOBE.GridLine>
 {
   private readonly ITypedConverter<DB.Curve, ICurve> _curveConverter;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly ISettingsStore<RevitConversionSettings> _settings;
 
   public GridTopLevelConverterToSpeckle(
     ITypedConverter<DB.Curve, ICurve> curveConverter,
-    IRevitConversionContextStack contextStack
+    ISettingsStore<RevitConversionSettings> settings
   )
   {
     _curveConverter = curveConverter;
-    _contextStack = contextStack;
+    _settings = settings;
   }
 
   public override SOBE.GridLine Convert(DB.Grid target) =>
@@ -26,6 +26,6 @@ public sealed class GridTopLevelConverterToSpeckle : BaseTopLevelConverterToSpec
       baseLine = _curveConverter.Convert(target.Curve),
       label = target.Name,
       applicationId = target.UniqueId,
-      units = _contextStack.Current.SpeckleUnits
+      units = _settings.Current.SpeckleUnits
     };
 }

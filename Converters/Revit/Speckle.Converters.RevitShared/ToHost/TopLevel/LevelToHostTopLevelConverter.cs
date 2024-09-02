@@ -1,6 +1,6 @@
 using Speckle.Converters.Common;
-using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Converters.RevitShared.ToSpeckle;
 
 namespace Speckle.Converters.RevitShared.ToHost.ToLevel;
@@ -8,18 +8,21 @@ namespace Speckle.Converters.RevitShared.ToHost.ToLevel;
 [NameAndRankValue(nameof(SOBE.Level), 0)]
 public class LevelToHostTopLevelConverter : BaseTopLevelConverterToHost<SOBE.Level, DB.Level>
 {
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly ISettingsStore<RevitConversionSettings> _settings;
   private readonly ScalingServiceToHost _scalingService;
 
-  public LevelToHostTopLevelConverter(IRevitConversionContextStack contextStack, ScalingServiceToHost scalingService)
+  public LevelToHostTopLevelConverter(
+    ISettingsStore<RevitConversionSettings> settings,
+    ScalingServiceToHost scalingService
+  )
   {
-    _contextStack = contextStack;
+    _settings = settings;
     _scalingService = scalingService;
   }
 
   public override DB.Level Convert(SOBE.Level target)
   {
-    using var documentLevelCollector = new DB.FilteredElementCollector(_contextStack.Current.Document);
+    using var documentLevelCollector = new DB.FilteredElementCollector(_settings.Current.Document);
     var docLevels = documentLevelCollector.OfClass(typeof(DB.Level)).ToElements().Cast<DB.Level>();
 
     // POC : I'm not really understanding the linked use case for this. Do we want to bring this over?
@@ -45,7 +48,7 @@ public class LevelToHostTopLevelConverter : BaseTopLevelConverterToHost<SOBE.Lev
     }
     else
     {
-      revitLevel = DB.Level.Create(_contextStack.Current.Document, targetElevation);
+      revitLevel = DB.Level.Create(_settings.Current.Document, targetElevation);
       revitLevel.Name = target.name;
 
       if (target is SOBR.RevitLevel rl && rl.createView)
@@ -59,17 +62,17 @@ public class LevelToHostTopLevelConverter : BaseTopLevelConverterToHost<SOBE.Lev
 
   private static DB.Level GetExistingLevelByElevation(IEnumerable<DB.Level> docLevels, double elevation)
   {
-    return docLevels.First(l => Math.Abs(l.Elevation - elevation) < RevitConversionContextStack.TOLERANCE);
+    return docLevels.First(l => Math.Abs(l.Elevation - elevation) < RevitConversionSettings.DEFAULT_TOLERANCE);
   }
 
   private DB.ViewPlan CreateViewPlan(string name, DB.ElementId levelId)
   {
-    using var collector = new DB.FilteredElementCollector(_contextStack.Current.Document);
+    using var collector = new DB.FilteredElementCollector(_settings.Current.Document);
     var vt = collector
       .OfClass(typeof(DB.ViewFamilyType))
       .First(el => ((DB.ViewFamilyType)el).ViewFamily == DB.ViewFamily.FloorPlan);
 
-    var view = DB.ViewPlan.Create(_contextStack.Current.Document, vt.Id, levelId);
+    var view = DB.ViewPlan.Create(_settings.Current.Document, vt.Id, levelId);
     view.Name = name;
 
     return view;

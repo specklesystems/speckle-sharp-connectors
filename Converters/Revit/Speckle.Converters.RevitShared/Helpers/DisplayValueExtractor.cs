@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk.Common;
@@ -13,7 +14,7 @@ public sealed class DisplayValueExtractor
     List<SOG.Mesh>
   > _meshByMaterialConverter;
   private readonly ILogger<DisplayValueExtractor> _logger;
-  private readonly IRevitConversionContextStack _revitConversionContextStack;
+  private readonly ISettingsStore<RevitConversionSettings> _settings;
 
   public DisplayValueExtractor(
     ITypedConverter<
@@ -21,12 +22,12 @@ public sealed class DisplayValueExtractor
       List<SOG.Mesh>
     > meshByMaterialConverter,
     ILogger<DisplayValueExtractor> logger,
-    IRevitConversionContextStack revitConversionContextStack
+    ISettingsStore<RevitConversionSettings> settings
   )
   {
     _meshByMaterialConverter = meshByMaterialConverter;
     _logger = logger;
-    _revitConversionContextStack = revitConversionContextStack;
+    _settings = settings;
   }
 
   public List<SOG.Mesh> GetDisplayValue(DB.Element element, DB.Options? options = null)
@@ -86,10 +87,7 @@ public sealed class DisplayValueExtractor
   private (List<DB.Solid>, List<DB.Mesh>) GetSolidsAndMeshesFromElement(DB.Element element, DB.Options? options)
   {
     //options = ViewSpecificOptions ?? options ?? new Options() { DetailLevel = DetailLevelSetting };
-    options ??= new DB.Options
-    {
-      DetailLevel = _detailLevelMap[_revitConversionContextStack.ToSpeckleSettings.DetailLevel]
-    };
+    options ??= new DB.Options { DetailLevel = _detailLevelMap[_settings.Current.DetailLevel] };
 
     DB.GeometryElement geom;
     try

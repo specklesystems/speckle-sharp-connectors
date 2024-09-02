@@ -2,6 +2,7 @@ using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects;
 using Speckle.Objects.BuiltElements.Revit;
 using Speckle.Objects.Geometry;
@@ -16,7 +17,7 @@ internal sealed class CeilingTopLevelConverterToSpeckle : BaseTopLevelConverterT
   private readonly ParameterValueExtractor _parameterValueExtractor;
   private readonly ParameterObjectAssigner _parameterObjectAssigner;
   private readonly DisplayValueExtractor _displayValueExtractor;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly ISettingsStore<RevitConversionSettings> _settings;
 
   public CeilingTopLevelConverterToSpeckle(
     ITypedConverter<CurveArrArray, List<Polycurve>> curveArrArrayConverter,
@@ -24,7 +25,7 @@ internal sealed class CeilingTopLevelConverterToSpeckle : BaseTopLevelConverterT
     ParameterValueExtractor parameterValueExtractor,
     ParameterObjectAssigner parameterObjectAssigner,
     DisplayValueExtractor displayValueExtractor,
-    IRevitConversionContextStack contextStack
+    ISettingsStore<RevitConversionSettings> settings
   )
   {
     _curveArrArrayConverter = curveArrArrayConverter;
@@ -32,7 +33,7 @@ internal sealed class CeilingTopLevelConverterToSpeckle : BaseTopLevelConverterT
     _parameterValueExtractor = parameterValueExtractor;
     _parameterObjectAssigner = parameterObjectAssigner;
     _displayValueExtractor = displayValueExtractor;
-    _contextStack = contextStack;
+    _settings = settings;
   }
 
   public override RevitCeiling Convert(Ceiling target)
@@ -51,7 +52,7 @@ internal sealed class CeilingTopLevelConverterToSpeckle : BaseTopLevelConverterT
         family = elementType.FamilyName,
         level = speckleLevel,
         displayValue = displayValue,
-        units = _contextStack.Current.SpeckleUnits
+        units = _settings.Current.SpeckleUnits
       };
 
     var sketch = (Sketch)target.Document.GetElement(target.SketchId);

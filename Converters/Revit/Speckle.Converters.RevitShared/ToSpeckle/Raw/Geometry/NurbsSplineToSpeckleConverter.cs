@@ -1,6 +1,7 @@
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects.Primitive;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
@@ -8,26 +9,26 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 public class NurbsSplineToSpeckleConverter : ITypedConverter<DB.NurbSpline, SOG.Curve>
 {
   private readonly IRevitVersionConversionHelper _conversionHelper;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly ISettingsStore<RevitConversionSettings> _settings;
   private readonly ITypedConverter<DB.XYZ, SOG.Point> _xyzToPointConverter;
   private readonly ScalingServiceToSpeckle _scalingService;
 
   public NurbsSplineToSpeckleConverter(
     IRevitVersionConversionHelper conversionHelper,
-    IRevitConversionContextStack contextStack,
+    ISettingsStore<RevitConversionSettings> settings,
     ITypedConverter<DB.XYZ, SOG.Point> xyzToPointConverter,
     ScalingServiceToSpeckle scalingService
   )
   {
     _conversionHelper = conversionHelper;
-    _contextStack = contextStack;
+    _settings = settings;
     _xyzToPointConverter = xyzToPointConverter;
     _scalingService = scalingService;
   }
 
   public SOG.Curve Convert(DB.NurbSpline target)
   {
-    var units = _contextStack.Current.SpeckleUnits;
+    var units = _settings.Current.SpeckleUnits;
 
     var points = new List<double>();
     foreach (var p in target.CtrlPoints)

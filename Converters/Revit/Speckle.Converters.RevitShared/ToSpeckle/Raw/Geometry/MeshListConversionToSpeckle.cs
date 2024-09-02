@@ -1,6 +1,7 @@
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -8,15 +9,15 @@ public class MeshListConversionToSpeckle : ITypedConverter<List<DB.Mesh>, SOG.Me
 {
   private readonly IScalingServiceToSpeckle _toSpeckleScalingService;
   private readonly IReferencePointConverter _referencePointConverter;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly ISettingsStore<RevitConversionSettings> _settings;
 
   public MeshListConversionToSpeckle(
-    IRevitConversionContextStack contextStack,
+    ISettingsStore<RevitConversionSettings> settings,
     IReferencePointConverter referencePointConverter,
     IScalingServiceToSpeckle toSpeckleScalingService
   )
   {
-    _contextStack = contextStack;
+    _settings = settings;
     _toSpeckleScalingService = toSpeckleScalingService;
     _referencePointConverter = referencePointConverter;
   }
@@ -54,7 +55,7 @@ public class MeshListConversionToSpeckle : ITypedConverter<List<DB.Mesh>, SOG.Me
       }
     }
 
-    SOG.Mesh speckleMesh = new(vertices, faces, units: _contextStack.Current.SpeckleUnits);
+    SOG.Mesh speckleMesh = new(vertices, faces, units: _settings.Current.SpeckleUnits);
 
     return speckleMesh;
   }

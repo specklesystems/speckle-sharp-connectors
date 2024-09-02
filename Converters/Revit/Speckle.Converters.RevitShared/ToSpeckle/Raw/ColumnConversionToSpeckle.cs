@@ -2,6 +2,7 @@ using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects;
 using Speckle.Objects.BuiltElements.Revit;
 using Speckle.Sdk.Common;
@@ -17,7 +18,7 @@ public class ColumnConversionToSpeckle : ITypedConverter<DB.FamilyInstance, Revi
   private readonly ITypedConverter<Level, RevitLevel> _levelConverter;
   private readonly ParameterValueExtractor _parameterValueExtractor;
   private readonly DisplayValueExtractor _displayValueExtractor;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly ISettingsStore<RevitConversionSettings> _settings;
   private readonly ParameterObjectAssigner _parameterObjectAssigner;
 
   public ColumnConversionToSpeckle(
@@ -25,7 +26,7 @@ public class ColumnConversionToSpeckle : ITypedConverter<DB.FamilyInstance, Revi
     ITypedConverter<Level, RevitLevel> levelConverter,
     ParameterValueExtractor parameterValueExtractor,
     DisplayValueExtractor displayValueExtractor,
-    IRevitConversionContextStack contextStack,
+    ISettingsStore<RevitConversionSettings> settings,
     ParameterObjectAssigner parameterObjectAssigner
   )
   {
@@ -33,7 +34,7 @@ public class ColumnConversionToSpeckle : ITypedConverter<DB.FamilyInstance, Revi
     _levelConverter = levelConverter;
     _parameterValueExtractor = parameterValueExtractor;
     _displayValueExtractor = displayValueExtractor;
-    _contextStack = contextStack;
+    _settings = settings;
     _parameterObjectAssigner = parameterObjectAssigner;
   }
 
@@ -51,7 +52,7 @@ public class ColumnConversionToSpeckle : ITypedConverter<DB.FamilyInstance, Revi
         handFlipped = target.HandFlipped,
         isSlanted = target.IsSlantedColumn,
         displayValue = displayValue,
-        units = _contextStack.Current.SpeckleUnits
+        units = _settings.Current.SpeckleUnits
       };
 
     if (
@@ -134,8 +135,8 @@ public class ColumnConversionToSpeckle : ITypedConverter<DB.FamilyInstance, Revi
 
       return new SOG.Line(
         basePoint,
-        new SOG.Point(basePoint.x, basePoint.y, topLevelElevation + topLevelOffset, _contextStack.Current.SpeckleUnits),
-        _contextStack.Current.SpeckleUnits
+        new SOG.Point(basePoint.x, basePoint.y, topLevelElevation + topLevelOffset, _settings.Current.SpeckleUnits),
+        _settings.Current.SpeckleUnits
       );
     }
 

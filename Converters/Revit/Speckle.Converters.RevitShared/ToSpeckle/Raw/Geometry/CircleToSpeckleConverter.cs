@@ -1,22 +1,23 @@
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 public class CircleToSpeckleConverter : ITypedConverter<DB.Arc, SOG.Circle>
 {
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly ISettingsStore<RevitConversionSettings> _settings;
   private readonly ITypedConverter<DB.Plane, SOG.Plane> _planeConverter;
   private readonly ScalingServiceToSpeckle _scalingService;
 
   public CircleToSpeckleConverter(
-    IRevitConversionContextStack contextStack,
+    ISettingsStore<RevitConversionSettings> settings,
     ITypedConverter<DB.Plane, SOG.Plane> planeConverter,
     ScalingServiceToSpeckle scalingService
   )
   {
-    _contextStack = contextStack;
+    _settings = settings;
     _planeConverter = planeConverter;
     _scalingService = scalingService;
   }
@@ -31,7 +32,7 @@ public class CircleToSpeckleConverter : ITypedConverter<DB.Arc, SOG.Circle>
     {
       plane = _planeConverter.Convert(arcPlane),
       radius = _scalingService.ScaleLength(target.Radius),
-      units = _contextStack.Current.SpeckleUnits,
+      units = _settings.Current.SpeckleUnits,
       length = _scalingService.ScaleLength(target.Length)
     };
 

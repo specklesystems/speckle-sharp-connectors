@@ -1,16 +1,16 @@
 namespace Speckle.Converters.Common;
 
-public sealed class ContextStore<T> : IContextStore<T>
+public sealed class SettingsStore<T> : ISettingsStore<T>
   where T : class
 {
-  private sealed class ContextWrapper(IContextStore<T> store) : IDisposable
+  private sealed class ContextWrapper(ISettingsStore<T> store) : IDisposable
   {
     public void Dispose() =>
       // technically we could be popping something not this but throwing in dispose is bad
       store.Pop();
   }
 
-  public ContextStore(T state)
+  public SettingsStore(T state)
   {
     _stack.Push(state);
   }
@@ -25,5 +25,5 @@ public sealed class ContextStore<T> : IContextStore<T>
     return new ContextWrapper(this);
   }
 
-  void IContextStore<T>.Pop() => _stack.Pop();
+  void ISettingsStore<T>.Pop() => _stack.Pop();
 }

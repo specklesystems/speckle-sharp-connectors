@@ -4,6 +4,7 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Common.DependencyInjection;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Converters.RevitShared.DependencyInjection;
 
@@ -29,7 +30,7 @@ public class RevitConverterModule : ISpeckleModule
     builder.AddScoped<ScalingServiceToHost>();
 
     // POC: the concrete type can come out if we remove all the reference to it
-    builder.AddScoped<IRevitConversionContextStack, RevitConversionContextStack>();
+    builder.AddScoped<ISettingsStore<RevitConversionSettings>, SettingsStore<RevitConversionSettings>>();
 
     builder.AddScoped<IReferencePointConverter, ReferencePointConverter>();
 

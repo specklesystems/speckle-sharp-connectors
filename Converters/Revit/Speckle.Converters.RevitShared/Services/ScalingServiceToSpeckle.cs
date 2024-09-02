@@ -1,5 +1,6 @@
 using Autodesk.Revit.DB;
-using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.Common;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.InterfaceGenerator;
 
 namespace Speckle.Converters.RevitShared.Services;
@@ -12,10 +13,10 @@ public sealed class ScalingServiceToSpeckle : IScalingServiceToSpeckle
   private readonly double _defaultLengthConversionFactor;
 
   // POC: this seems like the reverse relationship
-  public ScalingServiceToSpeckle(IRevitConversionContextStack contextStack)
+  public ScalingServiceToSpeckle(ISettingsStore<RevitConversionSettings> settings)
   {
     // POC: this is accurate for the current context stack
-    Units documentUnits = contextStack.Current.Document.GetUnits();
+    Units documentUnits = settings.Current.Document.GetUnits();
     FormatOptions formatOptions = documentUnits.GetFormatOptions(SpecTypeId.Length);
     var lengthUnitsTypeId = formatOptions.GetUnitTypeId();
     _defaultLengthConversionFactor = ScaleStatic(1, lengthUnitsTypeId);
