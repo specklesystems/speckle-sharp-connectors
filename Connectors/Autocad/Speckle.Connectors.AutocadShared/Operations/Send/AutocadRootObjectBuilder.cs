@@ -1,9 +1,12 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using Autodesk.AutoCAD.DatabaseServices;
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Conversion;
+using Speckle.Connectors.Utils.Extensions;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
 using Speckle.Objects.Other;
@@ -26,6 +29,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
   private readonly AutocadLayerManager _layerManager;
   private readonly AutocadGroupManager _groupManager;
   private readonly ISyncToThread _syncToThread;
+  private readonly ILogger<AutocadRootObjectBuilder> _logger;
 
   public AutocadRootObjectBuilder(
     IRootToSpeckleConverter converter,
@@ -35,7 +39,8 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     AutocadColorManager colorManager,
     AutocadLayerManager layerManager,
     AutocadGroupManager groupManager,
-    ISyncToThread syncToThread
+    ISyncToThread syncToThread,
+    ILogger<AutocadRootObjectBuilder> logger
   )
   {
     _converter = converter;
@@ -46,14 +51,19 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     _layerManager = layerManager;
     _groupManager = groupManager;
     _syncToThread = syncToThread;
+    _logger = logger;
   }
 
-  // It is already simplified but has many different references since it is a builder. Do not know can we simplify it now.
-  // Later we might consider to refactor proxies from one proxy manager? but we do not know the shape of it all potential
-  // proxy classes yet. So I'm disabling this with pragma now!!!
-#pragma warning disable CA1506
+  [SuppressMessage(
+    "Maintainability",
+    "CA1506:Avoid excessive class coupling",
+    Justification = """
+      It is already simplified but has many different references since it is a builder. Do not know can we simplify it now.
+      Later we might consider to refactor proxies from one proxy manager? but we do not know the shape of it all potential
+      proxy classes yet. So I'm supressing this one now!!!
+      """
+  )]
   public Task<RootObjectBuilderResult> Build(
-#pragma warning restore CA1506
     IReadOnlyList<AutocadRootObject> objects,
     SendInfo sendInfo,
     Action<string, double?>? onOperationProgressed = null,
@@ -90,6 +100,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
       foreach (var (entity, applicationId) in atomicObjects)
       {
         ct.ThrowIfCancellationRequested();
+        string sourceType = entity.GetType().ToString();
         try
         {
           Base converted;
@@ -117,12 +128,13 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
           }
 
           layer.elements.Add(converted);
-          results.Add(new(Status.SUCCESS, applicationId, entity.GetType().ToString(), converted));
+          results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
         }
         catch (Exception ex) when (!ex.IsFatal())
         {
-          results.Add(new(Status.ERROR, applicationId, entity.GetType().ToString(), null, ex));
-          // POC: add logging
+          _logger.LogSendConversionError(ex, sourceType);
+
+          results.Add(new(Status.ERROR, applicationId, sourceType, null, ex));
         }
         onOperationProgressed?.Invoke("Converting", (double)++count / atomicObjects.Count);
       }
