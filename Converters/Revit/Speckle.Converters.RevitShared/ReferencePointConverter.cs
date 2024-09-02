@@ -1,3 +1,5 @@
+using Speckle.Converters.Common;
+
 namespace Speckle.Converters.RevitShared.Helpers;
 
 /// <summary>
@@ -6,9 +8,9 @@ namespace Speckle.Converters.RevitShared.Helpers;
 /// </summary>
 public class ReferencePointConverter : IReferencePointConverter
 {
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly IContextStore<RevitConversionContext> _contextStack;
 
-  public ReferencePointConverter(IRevitConversionContextStack contextStack)
+  public ReferencePointConverter(IContextStore<RevitConversionContext> contextStack)
   {
     _contextStack = contextStack;
   }

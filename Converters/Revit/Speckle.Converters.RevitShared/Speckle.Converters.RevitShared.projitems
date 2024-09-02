@@ -10,12 +10,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\IRevitCategories.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Helpers\IRevitConversionContext.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\ISlopeArrowExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\ParameterValueSetter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\RevitMaterialCacheSingleton.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\RevitConversionContext.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Helpers\RevitRenderMaterialProxyCacheSingleton.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\SlopeArrowExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)IReferencePointConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\CategoryExtensions.cs" />
