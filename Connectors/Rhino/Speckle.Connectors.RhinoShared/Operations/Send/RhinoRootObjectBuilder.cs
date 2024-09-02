@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.DocObjects;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
@@ -5,6 +6,7 @@ using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Conversion;
+using Speckle.Connectors.Utils.Extensions;
 using Speckle.Connectors.Utils.Instances;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
@@ -12,6 +14,7 @@ using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.Instances;
 using Layer = Rhino.DocObjects.Layer;
 
 namespace Speckle.Connectors.Rhino.Operations.Send;
@@ -30,6 +33,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   private readonly RhinoMaterialManager _materialManager;
   private readonly RhinoColorManager _colorManager;
   private readonly ISyncToThread _syncToThread;
+  private readonly ILogger<RhinoRootObjectBuilder> _logger;
 
   public RhinoRootObjectBuilder(
     ISendConversionCache sendConversionCache,
@@ -40,7 +44,8 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     IRootToSpeckleConverter rootToSpeckleConverter,
     RhinoMaterialManager materialManager,
     RhinoColorManager colorManager,
-    ISyncToThread syncToThread
+    ISyncToThread syncToThread,
+    ILogger<RhinoRootObjectBuilder> logger
   )
   {
     _sendConversionCache = sendConversionCache;
@@ -52,6 +57,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     _materialManager = materialManager;
     _colorManager = colorManager;
     _syncToThread = syncToThread;
+    _logger = logger;
   }
 
   public Task<RootObjectBuilderResult> Build(
@@ -94,37 +100,8 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
           Layer layer = _contextStack.Current.Document.Layers[rhinoObject.Attributes.LayerIndex];
           versionLayers.Add(layer);
           Collection collectionHost = _layerManager.GetHostObjectCollection(layer, rootObjectCollection);
-          string applicationId = rhinoObject.Id.ToString();
 
-          try
-          {
-            // get from cache or convert:
-            // What we actually do here is check if the object has been previously converted AND has not changed.
-            // If that's the case, we insert in the host collection just its object reference which has been saved from the prior conversion.
-            Base converted;
-            if (rhinoObject is InstanceObject)
-            {
-              converted = instanceProxies[applicationId];
-            }
-            else if (_sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference value))
-            {
-              converted = value;
-            }
-            else
-            {
-              converted = _rootToSpeckleConverter.Convert(rhinoObject);
-              converted.applicationId = applicationId;
-            }
-
-            // add to host
-            collectionHost.elements.Add(converted);
-
-            results.Add(new(Status.SUCCESS, applicationId, rhinoObject.ObjectType.ToString(), converted));
-          }
-          catch (Exception ex) when (!ex.IsFatal())
-          {
-            results.Add(new(Status.ERROR, applicationId, rhinoObject.ObjectType.ToString(), null, ex));
-          }
+          results.Add(ConvertRhinoObject(rhinoObject, collectionHost, instanceProxies, sendInfo));
 
           ++count;
           onOperationProgressed?.Invoke("Converting", (double)count / atomicObjects.Count);
@@ -149,4 +126,45 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       // 5. profit
       return new RootObjectBuilderResult(rootObjectCollection, results);
     });
+
+  private SendConversionResult ConvertRhinoObject(
+    RhinoObject rhinoObject,
+    Collection collectionHost,
+    IReadOnlyDictionary<string, InstanceProxy> instanceProxies,
+    SendInfo sendInfo
+  )
+  {
+    string applicationId = rhinoObject.Id.ToString();
+    string sourceType = rhinoObject.ObjectType.ToString();
+    try
+    {
+      // get from cache or convert:
+      // What we actually do here is check if the object has been previously converted AND has not changed.
+      // If that's the case, we insert in the host collection just its object reference which has been saved from the prior conversion.
+      Base converted;
+      if (rhinoObject is InstanceObject)
+      {
+        converted = instanceProxies[applicationId];
+      }
+      else if (_sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference value))
+      {
+        converted = value;
+      }
+      else
+      {
+        converted = _rootToSpeckleConverter.Convert(rhinoObject);
+        converted.applicationId = applicationId;
+      }
+
+      // add to host
+      collectionHost.elements.Add(converted);
+
+      return new(Status.SUCCESS, applicationId, sourceType, converted);
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogSendConversionError(ex, sourceType);
+      return new(Status.ERROR, applicationId, sourceType, null, ex);
+    }
+  }
 }
