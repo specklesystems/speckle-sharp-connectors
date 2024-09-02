@@ -28,6 +28,9 @@ public class ArcGISConverterModule : ISpeckleModule
     builder.AddScoped<IHostToSpeckleUnitConverter<Unit>, ArcGISToSpeckleUnitConverter>();
 
     // single stack per conversion
-    builder.AddScoped<IConversionContextStack<ArcGISDocument, Unit>, ArcGISConversionContextStack>();
+    builder.AddScoped<
+      IConverterSettingsStore<ArcGISConversionSettings>,
+      ConverterSettingsStore<ArcGISConversionSettings>
+    >();
   }
 }

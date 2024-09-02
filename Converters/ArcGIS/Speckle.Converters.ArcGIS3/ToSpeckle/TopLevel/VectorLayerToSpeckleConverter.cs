@@ -1,5 +1,4 @@
 using ArcGIS.Core.Data;
-using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
@@ -14,15 +13,10 @@ namespace Speckle.Converters.ArcGIS3.ToSpeckle.TopLevel;
 public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConverter<FeatureLayer, VectorLayer>
 {
   private readonly ITypedConverter<(Row, string), IGisFeature> _gisFeatureConverter;
-  private readonly IConversionContextStack<ArcGISDocument, Unit> _contextStack;
 
-  public VectorLayerToSpeckleConverter(
-    ITypedConverter<(Row, string), IGisFeature> gisFeatureConverter,
-    IConversionContextStack<ArcGISDocument, Unit> contextStack
-  )
+  public VectorLayerToSpeckleConverter(ITypedConverter<(Row, string), IGisFeature> gisFeatureConverter)
   {
     _gisFeatureConverter = gisFeatureConverter;
-    _contextStack = contextStack;
   }
 
   public Base Convert(object target)

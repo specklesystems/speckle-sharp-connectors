@@ -32,13 +32,13 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
   private readonly ICrsUtils _crsUtils;
 
   // POC: figure out the correct scope to only initialize on Receive
-  private readonly IConversionContextStack<ArcGISDocument, Unit> _contextStack;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
   private readonly GraphTraversal _traverseFunction;
   private readonly ArcGISColorManager _colorManager;
 
   public ArcGISHostObjectBuilder(
     IRootToHostConverter converter,
-    IConversionContextStack<ArcGISDocument, Unit> contextStack,
+    IConverterSettingsStore<ArcGISConversionSettings> settingsStore,
     IFeatureClassUtils featureClassUtils,
     ILocalToGlobalUnpacker localToGlobalUnpacker,
     ILocalToGlobalConverterUtils localToGlobalConverterUtils,
@@ -48,7 +48,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
   )
   {
     _converter = converter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
     _featureClassUtils = featureClassUtils;
     _localToGlobalUnpacker = localToGlobalUnpacker;
     _localToGlobalConverterUtils = localToGlobalConverterUtils;
@@ -238,7 +238,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
 
     // get CRS from any present VectorLayer
     Base? vLayer = objectsToConvertTc.FirstOrDefault(x => x.Current is VectorLayer)?.Current;
-    _crsUtils.FindSetCrsDataOnReceive(vLayer);
+    var crs = _crsUtils.FindSetCrsDataOnReceive(vLayer); // TODO help
 
     // now filter the objects
     objectsToConvertTc = objectsToConvertTc.Where(ctx => ctx.Current is not Collection).ToList();
@@ -304,8 +304,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     {
       // get layer details
       string? datasetId = trackerItem.DatasetId; // should not be null here
-      Uri uri =
-        new($"{_contextStack.Current.Document.SpeckleDatabasePath.AbsolutePath.Replace('/', '\\')}\\{datasetId}");
+      Uri uri = new($"{_settingsStore.Current.SpeckleDatabasePath.AbsolutePath.Replace('/', '\\')}\\{datasetId}");
       string nestedLayerName = trackerItem.NestedLayerName;
 
       // add group for the current layer
@@ -315,7 +314,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       // if no general group layer found
       if (createdLayerGroups.Count == 0)
       {
-        Map map = _contextStack.Current.Document.Map;
+        Map map = _settingsStore.Current.Map;
         GroupLayer mainGroupLayer = LayerFactory.Instance.CreateGroupLayer(map, 0, $"{projectName}: {modelName}");
         mainGroupLayer.SetExpanded(true);
         createdLayerGroups["Basic Speckle Group"] = mainGroupLayer; // key doesn't really matter here
@@ -338,9 +337,9 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
 
         // if Scene
         // https://community.esri.com/t5/arcgis-pro-sdk-questions/sdk-equivalent-to-changing-layer-s-elevation/td-p/1346139
-        if (_contextStack.Current.Document.Map.IsScene)
+        if (_settingsStore.Current.Map.IsScene)
         {
-          var groundSurfaceLayer = _contextStack.Current.Document.Map.GetGroundElevationSurfaceLayer();
+          var groundSurfaceLayer = _settingsStore.Current.Map.GetGroundElevationSurfaceLayer();
           var layerElevationSurface = new CIMLayerElevationSurface
           {
             ElevationSurfaceLayerURI = groundSurfaceLayer.URI,

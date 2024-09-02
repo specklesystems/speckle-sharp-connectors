@@ -13,11 +13,14 @@ public class RevitConversionSettingsFactory(IHostToSpeckleUnitConverter<DB.Forge
     DB.Transform? referencePointTransform,
     double tolerance = 0.0164042 // 5mm in ft
   ) =>
-    new(unitConverter)
+    new()
     {
       Document = document,
       DetailLevel = detailLevelType,
       ReferencePointTransform = referencePointTransform,
-      Tolerance = tolerance
+      Tolerance = tolerance,
+      SpeckleUnits = unitConverter.ConvertOrThrow(
+        document.GetUnits().GetFormatOptions(DB.SpecTypeId.Length).GetUnitTypeId()
+      )
     };
 }

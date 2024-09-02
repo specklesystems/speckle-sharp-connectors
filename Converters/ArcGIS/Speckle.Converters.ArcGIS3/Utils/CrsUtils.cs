@@ -1,4 +1,3 @@
-using Speckle.Converters.Common;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Models;
 
@@ -7,14 +6,7 @@ namespace Speckle.Converters.ArcGIS3.Utils;
 [GenerateAutoInterface]
 public class CrsUtils : ICrsUtils
 {
-  private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;
-
-  public CrsUtils(IConversionContextStack<ArcGISDocument, ACG.Unit> contextStack)
-  {
-    _contextStack = contextStack;
-  }
-
-  public void FindSetCrsDataOnReceive(Base? rootObj)
+  public CRSoffsetRotation? FindSetCrsDataOnReceive(Base? rootObj)
   {
     if (rootObj is SGIS.VectorLayer vLayer)
     {
@@ -31,12 +23,9 @@ public class CrsUtils : ICrsUtils
       double trueNorthRadians = System.Convert.ToDouble((vLayer.crs?.rotation == null) ? 0 : vLayer.crs.rotation);
       double latOffset = System.Convert.ToDouble((vLayer.crs?.offset_y == null) ? 0 : vLayer.crs.offset_y);
       double lonOffset = System.Convert.ToDouble((vLayer.crs?.offset_x == null) ? 0 : vLayer.crs.offset_x);
-      _contextStack.Current.Document.ActiveCRSoffsetRotation = new CRSoffsetRotation(
-        spatialRef,
-        latOffset,
-        lonOffset,
-        trueNorthRadians
-      );
+      return new CRSoffsetRotation(spatialRef, latOffset, lonOffset, trueNorthRadians);
     }
+
+    return null;
   }
 }

@@ -6,25 +6,23 @@ namespace Speckle.Converters.ArcGIS3.ToHost.Raw;
 
 public class PointToHostConverter : ITypedConverter<SOG.Point, ACG.MapPoint>
 {
-  private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
 
-  public PointToHostConverter(IConversionContextStack<ArcGISDocument, ACG.Unit> contextStack)
+  public PointToHostConverter(IConverterSettingsStore<ArcGISConversionSettings> settingsStore)
   {
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public object Convert(Base target) => Convert((SOG.Point)target);
 
   public ACG.MapPoint Convert(SOG.Point target)
   {
-    SOG.Point scaledMovedRotatedPoint = _contextStack.Current.Document.ActiveCRSoffsetRotation.OffsetRotateOnReceive(
-      target
-    );
+    SOG.Point scaledMovedRotatedPoint = _settingsStore.Current.ActiveCRSoffsetRotation.OffsetRotateOnReceive(target);
     return new ACG.MapPointBuilderEx(
       scaledMovedRotatedPoint.x,
       scaledMovedRotatedPoint.y,
       scaledMovedRotatedPoint.z,
-      _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference
+      _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference
     ).ToGeometry();
   }
 }

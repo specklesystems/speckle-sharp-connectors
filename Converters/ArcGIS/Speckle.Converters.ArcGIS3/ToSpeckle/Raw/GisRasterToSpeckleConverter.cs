@@ -8,11 +8,11 @@ namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
 
 public class GisRasterToSpeckleConverter : ITypedConverter<Raster, RasterElement>
 {
-  private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
 
-  public GisRasterToSpeckleConverter(IConversionContextStack<ArcGISDocument, ACG.Unit> contextStack)
+  public GisRasterToSpeckleConverter(IConverterSettingsStore<ArcGISConversionSettings> settingsStore)
   {
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public Base Convert(object target) => Convert((Raster)target);
@@ -172,7 +172,7 @@ public class GisRasterToSpeckleConverter : ITypedConverter<Raster, RasterElement
       }
     }
 
-    SOG.Mesh mesh = new(newCoords, newFaces, newColors, null, _contextStack.Current.SpeckleUnits, null) { };
+    SOG.Mesh mesh = new(newCoords, newFaces, newColors, null, _settingsStore.Current.SpeckleUnits, null) { };
     rasterElement.displayValue = new List<SOG.Mesh>() { mesh };
 
     return rasterElement;

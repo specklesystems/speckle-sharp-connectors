@@ -334,8 +334,6 @@ public sealed class ArcGISSendBinding : ISendBinding
   )]
   public async Task Send(string modelCardId)
   {
-    //poc: dupe code between connectors
-    using var unitOfWork = _unitOfWorkFactory.Resolve<SendOperation<MapMember>>();
     try
     {
       if (_store.GetModelById(modelCardId) is not SenderModelCard modelCard)
@@ -349,6 +347,8 @@ public sealed class ArcGISSendBinding : ISendBinding
       var sendResult = await QueuedTask
         .Run(async () =>
         {
+          //poc: dupe code between connectors
+          using var unitOfWork = _unitOfWorkFactory.Create();
           List<MapMember> mapMembers = modelCard
             .SendFilter.NotNull()
             .GetObjectIds()
@@ -378,7 +378,8 @@ public sealed class ArcGISSendBinding : ISendBinding
           }
 
           var result = await unitOfWork
-            .Service.Execute(
+            .Resolve<SendOperation<MapMember>>()
+            .Execute(
               mapMembers,
               modelCard.GetSendInfo("ArcGIS"), // POC: get host app name from settings? same for GetReceiveInfo
               (status, progress) =>

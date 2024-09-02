@@ -8,6 +8,7 @@ public interface IConverterSettingsStore<T>
   internal void Pop();
 }
 
-#pragma warning disable CA1040
-public interface IConverterSettings { }
-#pragma warning restore CA1040
+public interface IConverterSettings
+{
+  string SpeckleUnits { get; }
+}

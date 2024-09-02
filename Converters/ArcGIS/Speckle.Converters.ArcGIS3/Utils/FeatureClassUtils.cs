@@ -15,15 +15,15 @@ namespace Speckle.Converters.ArcGIS3.Utils;
 public class FeatureClassUtils : IFeatureClassUtils
 {
   private readonly IArcGISFieldUtils _fieldsUtils;
-  private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
 
   public FeatureClassUtils(
     IArcGISFieldUtils fieldsUtils,
-    IConversionContextStack<ArcGISDocument, ACG.Unit> contextStack
+    IConverterSettingsStore<ArcGISConversionSettings> settingsStore
   )
   {
     _fieldsUtils = fieldsUtils;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public void ClearExistingDataset(string featureClassName)
@@ -66,8 +66,7 @@ public class FeatureClassUtils : IFeatureClassUtils
   private Geodatabase GetDatabase()
   {
     // get database
-    FileGeodatabaseConnectionPath fileGeodatabaseConnectionPath =
-      new(_contextStack.Current.Document.SpeckleDatabasePath);
+    FileGeodatabaseConnectionPath fileGeodatabaseConnectionPath = new(_settingsStore.Current.SpeckleDatabasePath);
     Geodatabase geodatabase = new(fileGeodatabaseConnectionPath);
 
     return geodatabase;
@@ -98,7 +97,7 @@ public class FeatureClassUtils : IFeatureClassUtils
       speckleType = speckleType.Length > 10 ? speckleType[..9] : speckleType;
       string? parentId = context.Parent?.Current.id;
 
-      CRSoffsetRotation activeSR = _contextStack.Current.Document.ActiveCRSoffsetRotation;
+      CRSoffsetRotation activeSR = _settingsStore.Current.ActiveCRSoffsetRotation;
       string xOffset = Convert.ToString(activeSR.LonOffset).Replace(".", "_");
       xOffset = xOffset.Length > 15 ? xOffset[..14] : xOffset;
 
@@ -217,7 +216,7 @@ public class FeatureClassUtils : IFeatureClassUtils
     try
     {
       ShapeDescription shpDescription =
-        new(geomType, _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference) { HasZ = true };
+        new(geomType, _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference) { HasZ = true };
       FeatureClassDescription featureClassDescription = new(featureClassName, fields, shpDescription);
       FeatureClassToken featureClassToken = schemaBuilder.Create(featureClassDescription);
     }

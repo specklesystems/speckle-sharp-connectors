@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Internal.Mapping;
 using ArcGIS.Desktop.Mapping;
@@ -27,18 +26,18 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ArcGISColorManager _colorManager;
-  private readonly IConversionContextStack<ArcGISDocument, Unit> _contextStack;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
 
   public ArcGISRootObjectBuilder(
     ISendConversionCache sendConversionCache,
     ArcGISColorManager colorManager,
-    IConversionContextStack<ArcGISDocument, Unit> contextStack,
+    IConverterSettingsStore<ArcGISConversionSettings> settingsStore,
     IRootToSpeckleConverter rootToSpeckleConverter
   )
   {
     _sendConversionCache = sendConversionCache;
     _colorManager = colorManager;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
     _rootToSpeckleConverter = rootToSpeckleConverter;
   }
 
@@ -114,17 +113,17 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
               .ConfigureAwait(false);
 
             // get units & Active CRS (for writing geometry coords)
-            converted["units"] = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString;
+            converted["units"] = _settingsStore.Current.ActiveCRSoffsetRotation.SpeckleUnitString;
 
-            var spatialRef = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference;
+            var spatialRef = _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference;
             converted["crs"] = new CRS
             {
               wkt = spatialRef.Wkt,
               name = spatialRef.Name,
-              offset_y = Convert.ToSingle(_contextStack.Current.Document.ActiveCRSoffsetRotation.LatOffset),
-              offset_x = Convert.ToSingle(_contextStack.Current.Document.ActiveCRSoffsetRotation.LonOffset),
-              rotation = Convert.ToSingle(_contextStack.Current.Document.ActiveCRSoffsetRotation.TrueNorthRadians),
-              units_native = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString,
+              offset_y = Convert.ToSingle(_settingsStore.Current.ActiveCRSoffsetRotation.LatOffset),
+              offset_x = Convert.ToSingle(_settingsStore.Current.ActiveCRSoffsetRotation.LonOffset),
+              rotation = Convert.ToSingle(_settingsStore.Current.ActiveCRSoffsetRotation.TrueNorthRadians),
+              units_native = _settingsStore.Current.ActiveCRSoffsetRotation.SpeckleUnitString,
             };
           }
 

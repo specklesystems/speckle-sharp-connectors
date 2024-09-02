@@ -54,11 +54,12 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
 
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
-      using IUnitOfWork<ReceiveOperation> unitOfWork = _unitOfWorkFactory.Resolve<ReceiveOperation>();
+      using IUnitOfWork unitOfWork = _unitOfWorkFactory.Create();
 
       // Receive host objects
       var receiveOperationResults = await unitOfWork
-        .Service.Execute(
+        .Resolve<ReceiveOperation>()
+        .Execute(
           modelCard.GetReceiveInfo("ArcGIS"), // POC: get host app name from settings? same for GetSendInfo
           cancellationToken,
           (status, progress) =>
