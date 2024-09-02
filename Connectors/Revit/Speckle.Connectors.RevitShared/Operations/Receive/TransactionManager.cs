@@ -1,6 +1,5 @@
 using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
-using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Connectors.Revit.Operations.Receive;
@@ -12,7 +11,7 @@ namespace Speckle.Connectors.Revit.Operations.Receive;
 public sealed class TransactionManager : ITransactionManager
 {
   private readonly ISettingsStore<RevitConversionSettings> _settings;
-  private Document Document => _contextStack.Current.Document;
+  private Document Document => _settings.Current.Document;
 
   public TransactionManager(ISettingsStore<RevitConversionSettings> settings)
   {

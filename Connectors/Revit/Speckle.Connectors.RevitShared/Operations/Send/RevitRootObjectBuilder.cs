@@ -19,33 +19,33 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
 {
   // POC: SendSelection and RevitConversionContextStack should be interfaces, former needs interfaces
   private readonly IRootToSpeckleConverter _converter;
-  private readonly ISettingsStore<RevitConversionSettings> _settingsStack;
+  private readonly ISettingsStore<RevitConversionSettings> _settings;
   private readonly Collection _rootObject;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ISyncToThread _syncToThread;
   private readonly ElementUnpacker _elementUnpacker;
   private readonly SendCollectionManager _sendCollectionManager;
+  private readonly RevitMaterialCacheSingleton _revitMaterialCacheSingleton;
 
   public RevitRootObjectBuilder(
     IRootToSpeckleConverter converter,
-    IRevitConversionContextStack conversionContextStack,
+    ISettingsStore<RevitConversionSettings> settings,
     ISendConversionCache sendConversionCache,
     ISyncToThread syncToThread,
     ElementUnpacker elementUnpacker,
-    SendCollectionManager sendCollectionManager
+    SendCollectionManager sendCollectionManager,
+    RevitMaterialCacheSingleton revitMaterialCacheSingleton
   )
   {
     _converter = converter;
-    _conversionContextStack = conversionContextStack;
+    _settings = settings;
     _sendConversionCache = sendConversionCache;
     _syncToThread = syncToThread;
     _elementUnpacker = elementUnpacker;
     _sendCollectionManager = sendCollectionManager;
+    _revitMaterialCacheSingleton = revitMaterialCacheSingleton;
 
-    _rootObject = new Collection()
-    {
-      name = _conversionContextStack.Current.Document.PathName.Split('\\').Last().Split('.').First()
-    };
+    _rootObject = new Collection() { name = _settings.Current.Document.PathName.Split('\\').Last().Split('.').First() };
   }
 
   public Task<RootObjectBuilderResult> Build(
@@ -56,7 +56,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
   ) =>
     _syncToThread.RunOnThread(() =>
     {
-      var doc = _conversionContextStack.Current.Document;
+      var doc = _settings.Current.Document;
 
       if (doc.IsFamilyDocument)
       {
@@ -68,7 +68,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
       // Convert ids to actual revit elements
       foreach (var id in objects)
       {
-        var el = _conversionContextStack.Current.Document.GetElement(id);
+        var el = _settings.Current.Document.GetElement(id);
         if (el != null)
         {
           revitElements.Add(el);
@@ -123,9 +123,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
       }
 
       var idsAndSubElementIds = _elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(atomicObjects);
-      var materialProxies = _conversionContextStack.RenderMaterialProxyCache.GetRenderMaterialProxyListForObjects(
-        idsAndSubElementIds
-      );
+      var materialProxies = _revitMaterialCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds);
       _rootObject["renderMaterialProxies"] = materialProxies;
 
       Debug.WriteLine(
