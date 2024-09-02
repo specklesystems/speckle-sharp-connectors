@@ -1,14 +1,13 @@
 ﻿namespace Speckle.Converters.Common;
 
 public interface IConverterSettingsStore<T>
+  where T : class, IConverterSettings
 {
   T Current { get; }
-  IDisposable Push(T nextContext);
+  IDisposable Push(Func<T> nextContext);
   internal void Pop();
 }
 
-public static class SettingsStoreExtensions
-{
-  public static IDisposable Push<T>(this IConverterSettingsStore<T> store, Func<T, T> newContext) =>
-    store.Push(newContext(store.Current));
-}
+#pragma warning disable CA1040
+public interface IConverterSettings { }
+#pragma warning restore CA1040

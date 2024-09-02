@@ -1,15 +1,15 @@
 namespace Speckle.Converters.Common;
 
 public sealed class ConverterSettingsStore<T> : IConverterSettingsStore<T>
-  where T : class
+  where T : class, IConverterSettings
 {
   private readonly Stack<T> _stack = new();
 
   public T Current => _stack.Peek();
 
-  public IDisposable Push(T nextContext)
+  public IDisposable Push(Func<T> nextContext)
   {
-    _stack.Push(nextContext);
+    _stack.Push(nextContext());
     return new ContextWrapper(this);
   }
 

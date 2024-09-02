@@ -30,6 +30,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Settings\DetailLevelType.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\RevitConversionContext.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\ReferencePointType.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Settings\RevitConversionSettingsFactory.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\ArcConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\CircleConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\CurveConverterToHost.cs" />
