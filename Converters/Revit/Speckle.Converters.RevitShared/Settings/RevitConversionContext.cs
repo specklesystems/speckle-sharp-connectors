@@ -2,7 +2,8 @@
 
 public sealed record RevitConversionSettings(
   DB.Document Document,
+  string SpeckleUnits,
   DetailLevelType DetailLevel,
   DB.Transform? ReferencePointTransform,
-  double Tolerance = 0.01
+  double Tolerance = 0.0164042 // 5mm in ft
 );

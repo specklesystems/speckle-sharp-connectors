@@ -1,6 +1,6 @@
 namespace Speckle.Converters.Common;
 
-public sealed class ConverterConverterSettingsStore<T> : IConverterSettingsStore<T>
+public sealed class ConverterSettingsStore<T> : IConverterSettingsStore<T>
   where T : class
 {
   private readonly Stack<T> _stack = new();

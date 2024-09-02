@@ -60,10 +60,8 @@ public class LevelToHostTopLevelConverter : BaseTopLevelConverterToHost<SOBE.Lev
     return revitLevel;
   }
 
-  private static DB.Level GetExistingLevelByElevation(IEnumerable<DB.Level> docLevels, double elevation)
-  {
-    return docLevels.First(l => Math.Abs(l.Elevation - elevation) < RevitConversionSettings.DEFAULT_TOLERANCE);
-  }
+  private DB.Level GetExistingLevelByElevation(IEnumerable<DB.Level> docLevels, double elevation) =>
+    docLevels.First(l => Math.Abs(l.Elevation - elevation) < _converterSettings.Current.Tolerance);
 
   private DB.ViewPlan CreateViewPlan(string name, DB.ElementId levelId)
   {
