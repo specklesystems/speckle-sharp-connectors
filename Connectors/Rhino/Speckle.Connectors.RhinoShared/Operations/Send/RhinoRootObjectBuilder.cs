@@ -146,7 +146,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       {
         converted = instanceProxies[applicationId];
       }
-      else if (_sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference value))
+      else if (_sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value))
       {
         converted = value;
       }
