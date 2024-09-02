@@ -256,6 +256,7 @@
         "dependencies": {
           "Microsoft.Extensions.Logging": "[3.1.0, )",
           "Speckle.Autofac": "[1.0.0, )",
+          "Speckle.Converters.Common": "[1.0.0, )",
           "Speckle.Objects": "[3.1.0-dev.115, )",
           "Speckle.Sdk": "[3.1.0-dev.115, )"
         }

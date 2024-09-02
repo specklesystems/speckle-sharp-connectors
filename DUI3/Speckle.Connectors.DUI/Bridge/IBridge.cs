@@ -1,4 +1,5 @@
 using Speckle.Connectors.DUI.Bindings;
+using Speckle.Connectors.Utils.Operations;
 
 namespace Speckle.Connectors.DUI.Bridge;
 
@@ -7,7 +8,7 @@ namespace Speckle.Connectors.DUI.Bridge;
 /// but if in the future we will have other bridge classes (e.g, ones that wrap around other browsers),
 /// it just might be useful.
 /// </summary>
-public interface IBridge
+public interface IBridge : IBrowserBridge
 {
   // POC: documnetation comments
   string FrontendBoundName { get; }
@@ -38,17 +39,6 @@ public interface IBridge
   /// </remarks>
   /// <param name="action"> Action to run on main thread.</param>
   public void RunOnMainThread(Action action);
-
-  /// <param name="eventName"></param>
-  /// <exception cref="InvalidOperationException">Bridge was not initialized with a binding</exception>
-  public void Send(string eventName);
-
-  /// <inheritdoc cref="Send(string)"/>
-  /// <param name="data">data to store</param>
-  /// <typeparam name="T"></typeparam>
-  /// <exception cref="InvalidOperationException">Bridge was not initialized with a binding</exception>
-  public void Send<T>(string eventName, T data)
-    where T : class;
 
   public ITopLevelExceptionHandler TopLevelExceptionHandler { get; }
 }

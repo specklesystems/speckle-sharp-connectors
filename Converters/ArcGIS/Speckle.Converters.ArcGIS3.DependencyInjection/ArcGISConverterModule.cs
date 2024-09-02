@@ -23,7 +23,6 @@ public class ArcGISConverterModule : ISpeckleModule
     builder.AddScoped<IArcGISFieldUtils, ArcGISFieldUtils>();
     builder.AddScoped<ILocalToGlobalConverterUtils, LocalToGlobalConverterUtils>();
     builder.AddScoped<ICharacterCleaner, CharacterCleaner>();
-    builder.AddScoped<ArcGISDocument>();
 
     builder.AddScoped<IHostToSpeckleUnitConverter<Unit>, ArcGISToSpeckleUnitConverter>();
 

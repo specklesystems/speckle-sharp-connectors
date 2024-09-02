@@ -26,7 +26,6 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly IRevitIdleManager _idleManager;
   private readonly CancellationManager _cancellationManager;
   private readonly ISendConversionCache _sendConversionCache;
-  private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<RevitSendBinding> _logger;
   private readonly ElementUnpacker _elementUnpacker;
   private readonly IRevitSender _revitSender;
@@ -46,7 +45,6 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     CancellationManager cancellationManager,
     IBridge bridge,
     ISendConversionCache sendConversionCache,
-    IOperationProgressManager operationProgressManager,
     ILogger<RevitSendBinding> logger,
     ElementUnpacker elementUnpacker,
     IRevitSender revitSender
@@ -56,7 +54,6 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _idleManager = idleManager;
     _cancellationManager = cancellationManager;
     _sendConversionCache = sendConversionCache;
-    _operationProgressManager = operationProgressManager;
     _logger = logger;
     _elementUnpacker = elementUnpacker;
     _revitSender = revitSender;
@@ -115,18 +112,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       }
 
       var sendResult = await _revitSender
-        .SendOperation(
-          modelCard,
-          revitObjects,
-          (status, progress) =>
-            _operationProgressManager.SetModelProgress(
-              Parent,
-              modelCardId,
-              new ModelCardProgress(modelCardId, status, progress),
-              cancellationToken
-            ),
-          cancellationToken
-        )
+        .SendOperation(Parent, modelCard, revitObjects, cancellationToken)
         .ConfigureAwait(false);
 
       Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);

@@ -375,6 +375,14 @@
           "Autofac": "[5.2.0, )"
         }
       },
+      "speckle.converters.common": {
+        "type": "Project",
+        "dependencies": {
+          "Microsoft.Extensions.Logging.Abstractions": "[3.1.0, )",
+          "Speckle.Autofac": "[1.0.0, )",
+          "Speckle.Objects": "[3.1.0-dev.115, )"
+        }
+      },
       "Microsoft.Extensions.Logging.Abstractions": {
         "type": "CentralTransitive",
         "requested": "[3.1.0, )",

@@ -1,4 +1,5 @@
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.Utils.Operations;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
@@ -16,7 +17,7 @@ public interface IBinding
 
   /// <summary>
   /// Bindings will be wrapped by a browser specific bridge, and they will need
-  /// to use that bridge to send events to the Frontend, via <see cref="IBridge.Send">SendToBrowser(IHostAppEvent)</see>.
+  /// to use that bridge to send events to the Frontend, via <see cref="IBrowserBridge.Send">SendToBrowser(IHostAppEvent)</see>.
   /// TODO: we'll probably need a factory class of sorts to handle the proper wrapping. Currently, on bridge instantiation the parent is set in the bindings class that has been wrapped around. Not vvv elegant.
   /// </summary>
   public IBridge Parent { get; }

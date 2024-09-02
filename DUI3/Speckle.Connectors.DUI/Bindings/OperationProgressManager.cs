@@ -1,7 +1,5 @@
 ﻿using System.Collections.Concurrent;
-using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Models.Card;
-using Speckle.InterfaceGenerator;
+using Speckle.Connectors.Utils.Operations;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
@@ -9,7 +7,6 @@ namespace Speckle.Connectors.DUI.Bindings;
 /// Debouncing progress for every %1 update for UI.
 /// This class requires a specific bridge in its binding, so registering it will create random bridge which we don't want to.
 /// </summary>
-[GenerateAutoInterface]
 public class OperationProgressManager : IOperationProgressManager
 {
   private const string SET_MODEL_PROGRESS_UI_COMMAND_NAME = "setModelProgress";
@@ -18,7 +15,7 @@ public class OperationProgressManager : IOperationProgressManager
   private const int THROTTLE_INTERVAL_MS = 50;
 
   public void SetModelProgress(
-    IBridge bridge,
+    IBrowserBridge bridge,
     string modelCardId,
     ModelCardProgress progress,
     CancellationToken cancellationToken
@@ -48,6 +45,6 @@ public class OperationProgressManager : IOperationProgressManager
     s_lastProgressValues[modelCardId] = (DateTime.Now, progress.Status);
   }
 
-  private void SendProgress(IBridge bridge, string modelCardId, ModelCardProgress progress) =>
+  private void SendProgress(IBrowserBridge bridge, string modelCardId, ModelCardProgress progress) =>
     bridge.Send(SET_MODEL_PROGRESS_UI_COMMAND_NAME, new { modelCardId, progress });
 }
