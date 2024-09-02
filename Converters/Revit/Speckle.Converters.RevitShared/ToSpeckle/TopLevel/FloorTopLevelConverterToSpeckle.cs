@@ -22,7 +22,7 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
   private readonly ParameterObjectAssigner _parameterObjectAssigner;
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly ISlopeArrowExtractor _slopeArrowExtractor;
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public FloorTopLevelConverterToSpeckle(
     ITypedConverter<DB.CurveArrArray, List<SOG.Polycurve>> curveArrArrayConverter,
@@ -31,7 +31,7 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
     ParameterObjectAssigner parameterObjectAssigner,
     DisplayValueExtractor displayValueExtractor,
     ISlopeArrowExtractor slopeArrowExtractor,
-    ISettingsStore<RevitConversionSettings> settings
+    IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _curveArrArrayConverter = curveArrArrayConverter;
@@ -40,7 +40,7 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
     _parameterObjectAssigner = parameterObjectAssigner;
     _displayValueExtractor = displayValueExtractor;
     _slopeArrowExtractor = slopeArrowExtractor;
-    _settings = settings;
+    _converterSettings = converterSettings;
   }
 
   public override SOBR.RevitFloor Convert(DB.Floor target)
@@ -63,7 +63,7 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
         level = speckleLevel,
         structural = structural,
         displayValue = displayValue,
-        units = _settings.Current.SpeckleUnits
+        units = _converterSettings.Current.SpeckleUnits
       };
 
     // POC: Re-evaluate Wall sketch curve extraction, assumption of only one outline is wrong. https://spockle.atlassian.net/browse/CNX-9396

@@ -11,17 +11,17 @@ public class PolylineConverterToHost : ITypedConverter<SOG.Polyline, DB.CurveArr
 {
   private readonly ITypedConverter<SOG.Line, DB.Line> _lineConverter;
   private readonly ScalingServiceToHost _scalingService;
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public PolylineConverterToHost(
     ITypedConverter<SOG.Line, DB.Line> lineConverter,
     ScalingServiceToHost scalingService,
-    ISettingsStore<RevitConversionSettings> settings
+    IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _lineConverter = lineConverter;
     _scalingService = scalingService;
-    _settings = settings;
+    _converterSettings = converterSettings;
   }
 
   public CurveArray Convert(Polyline target)
@@ -64,7 +64,7 @@ public class PolylineConverterToHost : ITypedConverter<SOG.Polyline, DB.CurveArr
   public bool IsLineTooShort(SOG.Line line)
   {
     var scaleToNative = _scalingService.ScaleToNative(SOG.Point.Distance(line.start, line.end), line.units);
-    return scaleToNative < _settings.Current.Document.Application.ShortCurveTolerance;
+    return scaleToNative < _converterSettings.Current.Document.Application.ShortCurveTolerance;
   }
 
   /// <summary>

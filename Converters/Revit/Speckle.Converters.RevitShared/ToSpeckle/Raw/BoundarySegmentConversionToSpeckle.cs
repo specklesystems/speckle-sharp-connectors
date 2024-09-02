@@ -8,15 +8,15 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 public class BoundarySegmentConversionToSpeckle : ITypedConverter<IList<DB.BoundarySegment>, SOG.Polycurve>
 {
   private readonly ITypedConverter<DB.Curve, ICurve> _curveConverter;
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public BoundarySegmentConversionToSpeckle(
     ITypedConverter<DB.Curve, ICurve> curveConverter,
-    ISettingsStore<RevitConversionSettings> settings
+    IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _curveConverter = curveConverter;
-    _settings = settings;
+    _converterSettings = converterSettings;
   }
 
   public SOG.Polycurve Convert(IList<DB.BoundarySegment> target)
@@ -38,7 +38,7 @@ public class BoundarySegmentConversionToSpeckle : ITypedConverter<IList<DB.Bound
       segments.Add(curve);
     }
 
-    var poly = new SOG.Polycurve { segments = segments, units = _settings.Current.SpeckleUnits };
+    var poly = new SOG.Polycurve { segments = segments, units = _converterSettings.Current.SpeckleUnits };
     return poly;
   }
 }

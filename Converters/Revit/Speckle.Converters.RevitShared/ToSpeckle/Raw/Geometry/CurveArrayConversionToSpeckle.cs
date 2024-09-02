@@ -10,17 +10,17 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 public sealed class CurveArrayConversionToSpeckle : ITypedConverter<DB.CurveArray, SOG.Polycurve>
 {
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ScalingServiceToSpeckle _scalingService;
   private readonly ITypedConverter<DB.Curve, ICurve> _curveConverter;
 
   public CurveArrayConversionToSpeckle(
-    ISettingsStore<RevitConversionSettings> settings,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ScalingServiceToSpeckle scalingService,
     ITypedConverter<DB.Curve, ICurve> curveConverter
   )
   {
-    _settings = settings;
+    _converterSettings = converterSettings;
     _scalingService = scalingService;
     _curveConverter = curveConverter;
   }
@@ -31,7 +31,7 @@ public sealed class CurveArrayConversionToSpeckle : ITypedConverter<DB.CurveArra
 
     return new Polycurve()
     {
-      units = _settings.Current.SpeckleUnits,
+      units = _converterSettings.Current.SpeckleUnits,
       closed =
         curves.First().GetEndPoint(0).DistanceTo(curves.Last().GetEndPoint(1))
         < RevitConversionSettings.DEFAULT_TOLERANCE,

@@ -8,17 +8,17 @@ namespace Speckle.Converters.RevitShared.Raw;
 
 internal sealed class ModelCurveArrayToSpeckleConverter : ITypedConverter<DB.ModelCurveArray, SOG.Polycurve>
 {
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly IScalingServiceToSpeckle _scalingService;
   private readonly ITypedConverter<DB.Curve, ICurve> _curveConverter;
 
   public ModelCurveArrayToSpeckleConverter(
-    ISettingsStore<RevitConversionSettings> settings,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     IScalingServiceToSpeckle scalingService,
     ITypedConverter<DB.Curve, ICurve> curveConverter
   )
   {
-    _settings = settings;
+    _converterSettings = converterSettings;
     _scalingService = scalingService;
     _curveConverter = curveConverter;
   }
@@ -37,7 +37,7 @@ internal sealed class ModelCurveArrayToSpeckleConverter : ITypedConverter<DB.Mod
     SOG.Polycurve polycurve =
       new()
       {
-        units = _settings.Current.SpeckleUnits,
+        units = _converterSettings.Current.SpeckleUnits,
         closed = start.DistanceTo(end) < RevitConversionSettings.DEFAULT_TOLERANCE,
         length = _scalingService.ScaleLength(curves.Sum(x => x.Length)),
         segments = curves.Select(x => _curveConverter.Convert(x)).ToList()

@@ -10,8 +10,8 @@ namespace Speckle.Converters.RevitShared.ToHost.Raw.Geometry;
 public class ArcToDirectShapeConverterToHost : CurveToDirectShapeConverterToHostBase<SOG.Arc>
 {
   public ArcToDirectShapeConverterToHost(
-    ISettingsStore<RevitConversionSettings> settings,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ITypedConverter<ICurve, DB.CurveArray> curveConverter
   )
-    : base(settings, curveConverter) { }
+    : base(converterSettings, curveConverter) { }
 }

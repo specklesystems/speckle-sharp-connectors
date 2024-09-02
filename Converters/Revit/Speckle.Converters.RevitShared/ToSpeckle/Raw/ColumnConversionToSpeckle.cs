@@ -18,7 +18,7 @@ public class ColumnConversionToSpeckle : ITypedConverter<DB.FamilyInstance, Revi
   private readonly ITypedConverter<Level, RevitLevel> _levelConverter;
   private readonly ParameterValueExtractor _parameterValueExtractor;
   private readonly DisplayValueExtractor _displayValueExtractor;
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ParameterObjectAssigner _parameterObjectAssigner;
 
   public ColumnConversionToSpeckle(
@@ -26,7 +26,7 @@ public class ColumnConversionToSpeckle : ITypedConverter<DB.FamilyInstance, Revi
     ITypedConverter<Level, RevitLevel> levelConverter,
     ParameterValueExtractor parameterValueExtractor,
     DisplayValueExtractor displayValueExtractor,
-    ISettingsStore<RevitConversionSettings> settings,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ParameterObjectAssigner parameterObjectAssigner
   )
   {
@@ -34,7 +34,7 @@ public class ColumnConversionToSpeckle : ITypedConverter<DB.FamilyInstance, Revi
     _levelConverter = levelConverter;
     _parameterValueExtractor = parameterValueExtractor;
     _displayValueExtractor = displayValueExtractor;
-    _settings = settings;
+    _converterSettings = converterSettings;
     _parameterObjectAssigner = parameterObjectAssigner;
   }
 
@@ -52,7 +52,7 @@ public class ColumnConversionToSpeckle : ITypedConverter<DB.FamilyInstance, Revi
         handFlipped = target.HandFlipped,
         isSlanted = target.IsSlantedColumn,
         displayValue = displayValue,
-        units = _settings.Current.SpeckleUnits
+        units = _converterSettings.Current.SpeckleUnits
       };
 
     if (
@@ -135,8 +135,13 @@ public class ColumnConversionToSpeckle : ITypedConverter<DB.FamilyInstance, Revi
 
       return new SOG.Line(
         basePoint,
-        new SOG.Point(basePoint.x, basePoint.y, topLevelElevation + topLevelOffset, _settings.Current.SpeckleUnits),
-        _settings.Current.SpeckleUnits
+        new SOG.Point(
+          basePoint.x,
+          basePoint.y,
+          topLevelElevation + topLevelOffset,
+          _converterSettings.Current.SpeckleUnits
+        ),
+        _converterSettings.Current.SpeckleUnits
       );
     }
 

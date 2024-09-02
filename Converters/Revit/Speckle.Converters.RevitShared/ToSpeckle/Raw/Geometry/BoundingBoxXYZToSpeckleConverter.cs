@@ -7,17 +7,17 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 public class BoundingBoxXYZToSpeckleConverter : ITypedConverter<DB.BoundingBoxXYZ, SOG.Box>
 {
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<DB.XYZ, SOG.Point> _xyzToPointConverter;
   private readonly ITypedConverter<DB.Plane, SOG.Plane> _planeConverter;
 
   public BoundingBoxXYZToSpeckleConverter(
-    ISettingsStore<RevitConversionSettings> settings,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ITypedConverter<DB.XYZ, SOG.Point> xyzToPointConverter,
     ITypedConverter<DB.Plane, SOG.Plane> planeConverter
   )
   {
-    _settings = settings;
+    _converterSettings = converterSettings;
     _xyzToPointConverter = xyzToPointConverter;
     _planeConverter = planeConverter;
   }
@@ -42,7 +42,7 @@ public class BoundingBoxXYZToSpeckleConverter : ITypedConverter<DB.BoundingBoxXY
       ySize = new Interval { start = min.y, end = max.y },
       zSize = new Interval { start = min.z, end = max.z },
       basePlane = _planeConverter.Convert(plane),
-      units = _settings.Current.SpeckleUnits
+      units = _converterSettings.Current.SpeckleUnits
     };
 
     return box;

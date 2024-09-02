@@ -12,15 +12,15 @@ public sealed class PointToHostTopLevelConverter
   : BaseTopLevelConverterToHost<SOG.Point, DB.Solid>,
     ITypedConverter<SOG.Point, DB.Solid>
 {
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<SOG.Point, DB.XYZ> _pointConverter;
 
   public PointToHostTopLevelConverter(
-    ISettingsStore<RevitConversionSettings> settings,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ITypedConverter<SOG.Point, XYZ> pointConverter
   )
   {
-    _settings = settings;
+    _converterSettings = converterSettings;
     _pointConverter = pointConverter;
   }
 
@@ -52,7 +52,7 @@ public sealed class PointToHostTopLevelConverter
     Solid sphere = GeometryCreationUtilities.CreateRevolvedGeometry(frame, [curveLoop], 0, 2 * Math.PI, options);
 
     using DirectShape ds = DirectShape.CreateElement(
-      _settings.Current.Document,
+      _converterSettings.Current.Document,
       new ElementId(BuiltInCategory.OST_GenericModel)
     );
 

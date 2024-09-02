@@ -8,21 +8,21 @@ namespace Speckle.Converters.RevitShared.ToHost.ToLevel;
 [NameAndRankValue(nameof(SOBE.Level), 0)]
 public class LevelToHostTopLevelConverter : BaseTopLevelConverterToHost<SOBE.Level, DB.Level>
 {
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ScalingServiceToHost _scalingService;
 
   public LevelToHostTopLevelConverter(
-    ISettingsStore<RevitConversionSettings> settings,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ScalingServiceToHost scalingService
   )
   {
-    _settings = settings;
+    _converterSettings = converterSettings;
     _scalingService = scalingService;
   }
 
   public override DB.Level Convert(SOBE.Level target)
   {
-    using var documentLevelCollector = new DB.FilteredElementCollector(_settings.Current.Document);
+    using var documentLevelCollector = new DB.FilteredElementCollector(_converterSettings.Current.Document);
     var docLevels = documentLevelCollector.OfClass(typeof(DB.Level)).ToElements().Cast<DB.Level>();
 
     // POC : I'm not really understanding the linked use case for this. Do we want to bring this over?
@@ -48,7 +48,7 @@ public class LevelToHostTopLevelConverter : BaseTopLevelConverterToHost<SOBE.Lev
     }
     else
     {
-      revitLevel = DB.Level.Create(_settings.Current.Document, targetElevation);
+      revitLevel = DB.Level.Create(_converterSettings.Current.Document, targetElevation);
       revitLevel.Name = target.name;
 
       if (target is SOBR.RevitLevel rl && rl.createView)
@@ -67,12 +67,12 @@ public class LevelToHostTopLevelConverter : BaseTopLevelConverterToHost<SOBE.Lev
 
   private DB.ViewPlan CreateViewPlan(string name, DB.ElementId levelId)
   {
-    using var collector = new DB.FilteredElementCollector(_settings.Current.Document);
+    using var collector = new DB.FilteredElementCollector(_converterSettings.Current.Document);
     var vt = collector
       .OfClass(typeof(DB.ViewFamilyType))
       .First(el => ((DB.ViewFamilyType)el).ViewFamily == DB.ViewFamily.FloorPlan);
 
-    var view = DB.ViewPlan.Create(_settings.Current.Document, vt.Id, levelId);
+    var view = DB.ViewPlan.Create(_converterSettings.Current.Document, vt.Id, levelId);
     view.Name = name;
 
     return view;

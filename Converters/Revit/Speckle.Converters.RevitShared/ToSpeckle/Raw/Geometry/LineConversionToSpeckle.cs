@@ -8,17 +8,17 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 public class LineConversionToSpeckle : ITypedConverter<DB.Line, SOG.Line>
 {
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<DB.XYZ, SOG.Point> _xyzToPointConverter;
   private readonly ScalingServiceToSpeckle _scalingService;
 
   public LineConversionToSpeckle(
-    ISettingsStore<RevitConversionSettings> settings,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ITypedConverter<DB.XYZ, SOG.Point> xyzToPointConverter,
     ScalingServiceToSpeckle scalingService
   )
   {
-    _settings = settings;
+    _converterSettings = converterSettings;
     _xyzToPointConverter = xyzToPointConverter;
     _scalingService = scalingService;
   }
@@ -26,7 +26,7 @@ public class LineConversionToSpeckle : ITypedConverter<DB.Line, SOG.Line>
   public SOG.Line Convert(DB.Line target) =>
     new()
     {
-      units = _settings.Current.SpeckleUnits,
+      units = _converterSettings.Current.SpeckleUnits,
       start = _xyzToPointConverter.Convert(target.GetEndPoint(0)),
       end = _xyzToPointConverter.Convert(target.GetEndPoint(1)),
       domain = new Interval { start = target.GetEndParameter(0), end = target.GetEndParameter(1) },

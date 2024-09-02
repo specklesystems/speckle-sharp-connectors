@@ -6,17 +6,17 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 public class PlaneToSpeckleConverter : ITypedConverter<DB.Plane, SOG.Plane>
 {
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<DB.XYZ, SOG.Point> _xyzToPointConverter;
   private readonly ITypedConverter<DB.XYZ, SOG.Vector> _xyzToVectorConverter;
 
   public PlaneToSpeckleConverter(
-    ISettingsStore<RevitConversionSettings> settings,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ITypedConverter<DB.XYZ, SOG.Point> xyzToPointConverter,
     ITypedConverter<DB.XYZ, SOG.Vector> xyzToVectorConverter
   )
   {
-    _settings = settings;
+    _converterSettings = converterSettings;
     _xyzToPointConverter = xyzToPointConverter;
     _xyzToVectorConverter = xyzToVectorConverter;
   }
@@ -34,7 +34,7 @@ public class PlaneToSpeckleConverter : ITypedConverter<DB.Plane, SOG.Plane>
       normal = normal,
       xdir = xdir,
       ydir = ydir,
-      units = _settings.Current.SpeckleUnits
+      units = _converterSettings.Current.SpeckleUnits
     };
   }
 }

@@ -20,7 +20,7 @@ public class FootPrintRoofToSpeckleTopLevelConverter
   private readonly ParameterValueExtractor _parameterValueExtractor;
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly ParameterObjectAssigner _parameterObjectAssigner;
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public FootPrintRoofToSpeckleTopLevelConverter(
     ITypedConverter<Level, RevitLevel> levelConverter,
@@ -28,7 +28,7 @@ public class FootPrintRoofToSpeckleTopLevelConverter
     ParameterValueExtractor parameterValueExtractor,
     DisplayValueExtractor displayValueExtractor,
     ParameterObjectAssigner parameterObjectAssigner,
-    ISettingsStore<RevitConversionSettings> settings
+    IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _levelConverter = levelConverter;
@@ -36,7 +36,7 @@ public class FootPrintRoofToSpeckleTopLevelConverter
     _parameterValueExtractor = parameterValueExtractor;
     _displayValueExtractor = displayValueExtractor;
     _parameterObjectAssigner = parameterObjectAssigner;
-    _settings = settings;
+    _converterSettings = converterSettings;
   }
 
   public override RevitFootprintRoof Convert(FootPrintRoof target)
@@ -69,7 +69,7 @@ public class FootPrintRoofToSpeckleTopLevelConverter
         cutOffLevel = topLevel is not null ? _levelConverter.Convert(topLevel) : null,
         slope = slope,
         displayValue = displayValue,
-        units = _settings.Current.SpeckleUnits
+        units = _converterSettings.Current.SpeckleUnits
       };
 
     // POC: CNX-9396 again with the incorrect assumption that the first profile is the floor and subsequent profiles

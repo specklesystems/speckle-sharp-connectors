@@ -11,15 +11,15 @@ public abstract class CurveToDirectShapeConverterToHostBase<TCurve>
     IToHostTopLevelConverter
   where TCurve : Base, ICurve
 {
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<ICurve, DB.CurveArray> _curveConverter;
 
   protected CurveToDirectShapeConverterToHostBase(
-    ISettingsStore<RevitConversionSettings> settings,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ITypedConverter<ICurve, DB.CurveArray> curveConverter
   )
   {
-    _settings = settings;
+    _converterSettings = converterSettings;
     _curveConverter = curveConverter;
   }
 
@@ -30,11 +30,11 @@ public abstract class CurveToDirectShapeConverterToHostBase<TCurve>
     DB.CurveArray curveArray = _curveConverter.Convert(target);
     converted.AddRange(curveArray.Cast<DB.Curve>());
 
-    var genericModelCategory = _settings.Current.Document.Settings.Categories.get_Item(
+    var genericModelCategory = _converterSettings.Current.Document.Settings.Categories.get_Item(
       DB.BuiltInCategory.OST_GenericModel
     );
 
-    using var revitDs = DB.DirectShape.CreateElement(_settings.Current.Document, genericModelCategory.Id);
+    using var revitDs = DB.DirectShape.CreateElement(_converterSettings.Current.Document, genericModelCategory.Id);
     if (target is Base speckleObject && speckleObject.applicationId != null)
     {
       revitDs.ApplicationId = speckleObject.applicationId;

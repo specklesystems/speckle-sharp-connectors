@@ -10,7 +10,7 @@ namespace Speckle.Converters.RevitShared.ToHost.TopLevel;
 
 [NameAndRankValue(nameof(SOBR.DirectShape), 0)]
 public sealed class DirectShapeTopLevelConverterToHost(
-  ISettingsStore<RevitConversionSettings> settings,
+  IConverterSettingsStore<RevitConversionSettings> converterSettings,
   ITypedConverter<Brep, DB.Solid> brepConverter,
   ITypedConverter<ICurve, DB.CurveArray> curveConverter,
   ITypedConverter<SOG.Mesh, DB.GeometryObject[]> meshConverter,
@@ -57,9 +57,9 @@ public sealed class DirectShapeTopLevelConverterToHost(
       }
     }
 
-    var cat = settings.Current.Document.Settings.Categories.get_Item(bic);
+    var cat = converterSettings.Current.Document.Settings.Categories.get_Item(bic);
 
-    using var revitDs = DB.DirectShape.CreateElement(settings.Current.Document, cat.Id);
+    using var revitDs = DB.DirectShape.CreateElement(converterSettings.Current.Document, cat.Id);
     if (target.applicationId != null)
     {
       revitDs.ApplicationId = target.applicationId;

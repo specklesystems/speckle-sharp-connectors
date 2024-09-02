@@ -12,15 +12,15 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 public class ModelCurveToSpeckleTopLevelConverter : BaseTopLevelConverterToSpeckle<DB.ModelCurve, SOBR.Curve.ModelCurve>
 {
   private readonly ITypedConverter<DB.Curve, ICurve> _curveConverter;
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public ModelCurveToSpeckleTopLevelConverter(
     ITypedConverter<DB.Curve, ICurve> curveConverter,
-    ISettingsStore<RevitConversionSettings> settings
+    IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _curveConverter = curveConverter;
-    _settings = settings;
+    _converterSettings = converterSettings;
   }
 
   public override SOBR.Curve.ModelCurve Convert(DB.ModelCurve target)
@@ -30,7 +30,7 @@ public class ModelCurveToSpeckleTopLevelConverter : BaseTopLevelConverterToSpeck
       baseCurve = _curveConverter.Convert(target.GeometryCurve),
       lineStyle = target.LineStyle.Name,
       elementId = target.Id.ToString().NotNull(),
-      units = _settings.Current.SpeckleUnits
+      units = _converterSettings.Current.SpeckleUnits
     };
 
     // POC: check this is not going to set the display value to anything we cannot actually display - i.e. polycurve

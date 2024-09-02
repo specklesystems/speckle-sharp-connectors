@@ -8,19 +8,19 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 public class ArcToSpeckleConverter : ITypedConverter<DB.Arc, SOG.Arc>
 {
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<DB.XYZ, SOG.Point> _xyzToPointConverter;
   private readonly ITypedConverter<DB.Plane, SOG.Plane> _planeConverter;
   private readonly ScalingServiceToSpeckle _scalingService;
 
   public ArcToSpeckleConverter(
-    ISettingsStore<RevitConversionSettings> settings,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ITypedConverter<DB.XYZ, SOG.Point> xyzToPointConverter,
     ITypedConverter<DB.Plane, SOG.Plane> planeConverter,
     ScalingServiceToSpeckle scalingService
   )
   {
-    _settings = settings;
+    _converterSettings = converterSettings;
     _xyzToPointConverter = xyzToPointConverter;
     _planeConverter = planeConverter;
     _scalingService = scalingService;
@@ -49,7 +49,7 @@ public class ArcToSpeckleConverter : ITypedConverter<DB.Arc, SOG.Arc>
       startAngle = startAngle,
       endAngle = endAngle,
       angleRadians = endAngle - startAngle,
-      units = _settings.Current.SpeckleUnits,
+      units = _converterSettings.Current.SpeckleUnits,
       endPoint = _xyzToPointConverter.Convert(end),
       startPoint = _xyzToPointConverter.Convert(start),
       midPoint = _xyzToPointConverter.Convert(mid),

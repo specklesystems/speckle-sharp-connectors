@@ -30,7 +30,7 @@ public class RevitConverterModule : ISpeckleModule
     builder.AddScoped<ScalingServiceToHost>();
 
     // POC: the concrete type can come out if we remove all the reference to it
-    builder.AddScoped<ISettingsStore<RevitConversionSettings>, SettingsStore<RevitConversionSettings>>();
+    builder.AddScoped<IConverterSettingsStore<RevitConversionSettings>, SettingsStore<RevitConversionSettings>>();
 
     builder.AddScoped<IReferencePointConverter, ReferencePointConverter>();
 

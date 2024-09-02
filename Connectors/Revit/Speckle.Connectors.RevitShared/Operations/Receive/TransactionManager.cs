@@ -10,12 +10,12 @@ namespace Speckle.Connectors.Revit.Operations.Receive;
 /// </summary>
 public sealed class TransactionManager : ITransactionManager
 {
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
-  private Document Document => _settings.Current.Document;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
+  private Document Document => _converterSettings.Current.Document;
 
-  public TransactionManager(ISettingsStore<RevitConversionSettings> settings)
+  public TransactionManager(IConverterSettingsStore<RevitConversionSettings> converterSettings)
   {
-    _settings = settings;
+    _converterSettings = converterSettings;
   }
 
   // poc : these are being disposed. I'm not sure why I need to supress this warning

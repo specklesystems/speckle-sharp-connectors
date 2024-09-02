@@ -17,7 +17,7 @@ internal sealed class CeilingTopLevelConverterToSpeckle : BaseTopLevelConverterT
   private readonly ParameterValueExtractor _parameterValueExtractor;
   private readonly ParameterObjectAssigner _parameterObjectAssigner;
   private readonly DisplayValueExtractor _displayValueExtractor;
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public CeilingTopLevelConverterToSpeckle(
     ITypedConverter<CurveArrArray, List<Polycurve>> curveArrArrayConverter,
@@ -25,7 +25,7 @@ internal sealed class CeilingTopLevelConverterToSpeckle : BaseTopLevelConverterT
     ParameterValueExtractor parameterValueExtractor,
     ParameterObjectAssigner parameterObjectAssigner,
     DisplayValueExtractor displayValueExtractor,
-    ISettingsStore<RevitConversionSettings> settings
+    IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _curveArrArrayConverter = curveArrArrayConverter;
@@ -33,7 +33,7 @@ internal sealed class CeilingTopLevelConverterToSpeckle : BaseTopLevelConverterT
     _parameterValueExtractor = parameterValueExtractor;
     _parameterObjectAssigner = parameterObjectAssigner;
     _displayValueExtractor = displayValueExtractor;
-    _settings = settings;
+    _converterSettings = converterSettings;
   }
 
   public override RevitCeiling Convert(Ceiling target)
@@ -52,7 +52,7 @@ internal sealed class CeilingTopLevelConverterToSpeckle : BaseTopLevelConverterT
         family = elementType.FamilyName,
         level = speckleLevel,
         displayValue = displayValue,
-        units = _settings.Current.SpeckleUnits
+        units = _converterSettings.Current.SpeckleUnits
       };
 
     var sketch = (Sketch)target.Document.GetElement(target.SketchId);

@@ -14,7 +14,7 @@ public sealed class DisplayValueExtractor
     List<SOG.Mesh>
   > _meshByMaterialConverter;
   private readonly ILogger<DisplayValueExtractor> _logger;
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public DisplayValueExtractor(
     ITypedConverter<
@@ -22,12 +22,12 @@ public sealed class DisplayValueExtractor
       List<SOG.Mesh>
     > meshByMaterialConverter,
     ILogger<DisplayValueExtractor> logger,
-    ISettingsStore<RevitConversionSettings> settings
+    IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _meshByMaterialConverter = meshByMaterialConverter;
     _logger = logger;
-    _settings = settings;
+    _converterSettings = converterSettings;
   }
 
   public List<SOG.Mesh> GetDisplayValue(DB.Element element, DB.Options? options = null)
@@ -87,7 +87,7 @@ public sealed class DisplayValueExtractor
   private (List<DB.Solid>, List<DB.Mesh>) GetSolidsAndMeshesFromElement(DB.Element element, DB.Options? options)
   {
     //options = ViewSpecificOptions ?? options ?? new Options() { DetailLevel = DetailLevelSetting };
-    options ??= new DB.Options { DetailLevel = _detailLevelMap[_settings.Current.DetailLevel] };
+    options ??= new DB.Options { DetailLevel = _detailLevelMap[_converterSettings.Current.DetailLevel] };
 
     DB.GeometryElement geom;
     try

@@ -11,7 +11,7 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 public class MeshByMaterialDictionaryToSpeckle
   : ITypedConverter<(Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId), List<SOG.Mesh>>
 {
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<DB.Material, (RevitMaterial, RenderMaterial)> _materialConverter;
   private readonly ITypedConverter<List<DB.Mesh>, SOG.Mesh> _meshListConverter;
   private readonly RevitMaterialCacheSingleton _revitMaterialCacheSingleton;
@@ -19,13 +19,13 @@ public class MeshByMaterialDictionaryToSpeckle
   public MeshByMaterialDictionaryToSpeckle(
     ITypedConverter<DB.Material, (RevitMaterial, RenderMaterial)> materialConverter,
     ITypedConverter<List<DB.Mesh>, SOG.Mesh> meshListConverter,
-    ISettingsStore<RevitConversionSettings> settings,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     RevitMaterialCacheSingleton revitMaterialCacheSingleton
   )
   {
     _materialConverter = materialConverter;
     _meshListConverter = meshListConverter;
-    _settings = settings;
+    _converterSettings = converterSettings;
     _revitMaterialCacheSingleton = revitMaterialCacheSingleton;
   }
 
@@ -67,7 +67,7 @@ public class MeshByMaterialDictionaryToSpeckle
       speckleMesh.applicationId = Guid.NewGuid().ToString(); // NOTE: as we are composing meshes out of multiple ones for the same material, we need to generate our own application id. c'est la vie.
 
       // get the render material if any
-      if (_settings.Current.Document.GetElement(materialId) is DB.Material material)
+      if (_converterSettings.Current.Document.GetElement(materialId) is DB.Material material)
       {
         (RevitMaterial _, RenderMaterial convertedRenderMaterial) = _materialConverter.Convert(material);
 

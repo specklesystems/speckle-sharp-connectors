@@ -17,7 +17,7 @@ public class ExtrusionRoofToSpeckleTopLevelConverter
   private readonly ParameterValueExtractor _parameterValueExtractor;
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly ParameterObjectAssigner _parameterObjectAssigner;
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public ExtrusionRoofToSpeckleTopLevelConverter(
     ITypedConverter<DB.Level, SOBR.RevitLevel> levelConverter,
@@ -26,7 +26,7 @@ public class ExtrusionRoofToSpeckleTopLevelConverter
     ParameterValueExtractor parameterValueExtractor,
     DisplayValueExtractor displayValueExtractor,
     ParameterObjectAssigner parameterObjectAssigner,
-    ISettingsStore<RevitConversionSettings> settings
+    IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _levelConverter = levelConverter;
@@ -35,7 +35,7 @@ public class ExtrusionRoofToSpeckleTopLevelConverter
     _parameterValueExtractor = parameterValueExtractor;
     _displayValueExtractor = displayValueExtractor;
     _parameterObjectAssigner = parameterObjectAssigner;
-    _settings = settings;
+    _converterSettings = converterSettings;
   }
 
   public override RevitExtrusionRoof Convert(DB.ExtrusionRoof target)
@@ -66,7 +66,7 @@ public class ExtrusionRoofToSpeckleTopLevelConverter
         referenceLine = referenceLine,
         level = speckleLevel,
         displayValue = displayValue,
-        units = _settings.Current.SpeckleUnits
+        units = _converterSettings.Current.SpeckleUnits
       };
 
     _parameterObjectAssigner.AssignParametersToBase(target, speckleExtrusionRoof);

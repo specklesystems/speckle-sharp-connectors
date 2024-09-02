@@ -6,21 +6,21 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 public class PolylineToSpeckleConverter : ITypedConverter<DB.PolyLine, SOG.Polyline>
 {
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<DB.XYZ, SOG.Point> _xyzToPointConverter;
 
   public PolylineToSpeckleConverter(
-    ISettingsStore<RevitConversionSettings> settings,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ITypedConverter<DB.XYZ, SOG.Point> xyzToPointConverter
   )
   {
-    _settings = settings;
+    _converterSettings = converterSettings;
     _xyzToPointConverter = xyzToPointConverter;
   }
 
   public SOG.Polyline Convert(DB.PolyLine target)
   {
     var coords = target.GetCoordinates().SelectMany(coord => _xyzToPointConverter.Convert(coord).ToList()).ToList();
-    return new SOG.Polyline { value = coords, units = _settings.Current.SpeckleUnits };
+    return new SOG.Polyline { value = coords, units = _converterSettings.Current.SpeckleUnits };
   }
 }

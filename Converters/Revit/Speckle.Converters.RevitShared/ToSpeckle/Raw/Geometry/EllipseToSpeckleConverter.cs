@@ -8,17 +8,17 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 public class EllipseToSpeckleConverter : ITypedConverter<DB.Ellipse, SOG.Ellipse>
 {
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<DB.Plane, SOG.Plane> _planeConverter;
   private readonly ScalingServiceToSpeckle _scalingService;
 
   public EllipseToSpeckleConverter(
-    ISettingsStore<RevitConversionSettings> settings,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ITypedConverter<DB.Plane, SOG.Plane> planeConverter,
     ScalingServiceToSpeckle scalingService
   )
   {
-    _settings = settings;
+    _converterSettings = converterSettings;
     _planeConverter = planeConverter;
     _scalingService = scalingService;
   }
@@ -41,7 +41,7 @@ public class EllipseToSpeckleConverter : ITypedConverter<DB.Ellipse, SOG.Ellipse
         domain = Interval.UnitInterval,
         trimDomain = trim,
         length = _scalingService.ScaleLength(target.Length),
-        units = _settings.Current.SpeckleUnits
+        units = _converterSettings.Current.SpeckleUnits
       };
     }
   }

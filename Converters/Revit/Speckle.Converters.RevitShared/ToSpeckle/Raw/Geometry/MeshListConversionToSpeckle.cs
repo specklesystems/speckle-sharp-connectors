@@ -9,15 +9,15 @@ public class MeshListConversionToSpeckle : ITypedConverter<List<DB.Mesh>, SOG.Me
 {
   private readonly IScalingServiceToSpeckle _toSpeckleScalingService;
   private readonly IReferencePointConverter _referencePointConverter;
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public MeshListConversionToSpeckle(
-    ISettingsStore<RevitConversionSettings> settings,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     IReferencePointConverter referencePointConverter,
     IScalingServiceToSpeckle toSpeckleScalingService
   )
   {
-    _settings = settings;
+    _converterSettings = converterSettings;
     _toSpeckleScalingService = toSpeckleScalingService;
     _referencePointConverter = referencePointConverter;
   }
@@ -55,7 +55,7 @@ public class MeshListConversionToSpeckle : ITypedConverter<List<DB.Mesh>, SOG.Me
       }
     }
 
-    SOG.Mesh speckleMesh = new(vertices, faces, units: _settings.Current.SpeckleUnits);
+    SOG.Mesh speckleMesh = new(vertices, faces, units: _converterSettings.Current.SpeckleUnits);
 
     return speckleMesh;
   }

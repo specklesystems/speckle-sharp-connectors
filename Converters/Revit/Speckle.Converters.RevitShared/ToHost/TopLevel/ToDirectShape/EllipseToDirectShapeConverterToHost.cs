@@ -10,8 +10,8 @@ namespace Speckle.Converters.RevitShared.ToHost.Raw.Geometry;
 public class EllipseToDirectShapeConverterToHost : CurveToDirectShapeConverterToHostBase<SOG.Ellipse>
 {
   public EllipseToDirectShapeConverterToHost(
-    ISettingsStore<RevitConversionSettings> settings,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ITypedConverter<ICurve, DB.CurveArray> curveConverter
   )
-    : base(settings, curveConverter) { }
+    : base(converterSettings, curveConverter) { }
 }

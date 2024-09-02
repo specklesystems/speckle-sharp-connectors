@@ -19,21 +19,21 @@ namespace Speckle.Connectors.Revit.Operations.Receive;
 internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 {
   private readonly IRootToHostConverter _converter;
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly GraphTraversal _traverseFunction;
   private readonly ITransactionManager _transactionManager;
   private readonly ISyncToThread _syncToThread;
 
   public RevitHostObjectBuilder(
     IRootToHostConverter converter,
-    ISettingsStore<RevitConversionSettings> settings,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     GraphTraversal traverseFunction,
     ITransactionManager transactionManager,
     ISyncToThread syncToThread
   )
   {
     _converter = converter;
-    _settings = settings;
+    _converterSettings = converterSettings;
     _traverseFunction = traverseFunction;
     _transactionManager = transactionManager;
     _syncToThread = syncToThread;
@@ -55,7 +55,8 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
         objectsToConvert = _traverseFunction.Traverse(rootObject).Where(obj => obj.Current is not Collection);
       }
 
-      using TransactionGroup transactionGroup = new(_settings.Current.Document, $"Received data from {projectName}");
+      using TransactionGroup transactionGroup =
+        new(_converterSettings.Current.Document, $"Received data from {projectName}");
       transactionGroup.Start();
       _transactionManager.StartTransaction();
 

@@ -6,17 +6,17 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 public class PointCloudToSpeckleConverter : ITypedConverter<DB.PointCloudInstance, SOG.Pointcloud>
 {
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<DB.XYZ, SOG.Point> _xyzToPointConverter;
   private readonly ITypedConverter<DB.BoundingBoxXYZ, SOG.Box> _boundingBoxConverter;
 
   public PointCloudToSpeckleConverter(
-    ISettingsStore<RevitConversionSettings> settings,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ITypedConverter<DB.XYZ, SOG.Point> xyzToPointConverter,
     ITypedConverter<DB.BoundingBoxXYZ, SOG.Box> boundingBoxConverter
   )
   {
-    _settings = settings;
+    _converterSettings = converterSettings;
     _xyzToPointConverter = xyzToPointConverter;
     _boundingBoxConverter = boundingBoxConverter;
   }
@@ -38,7 +38,7 @@ public class PointCloudToSpeckleConverter : ITypedConverter<DB.PointCloudInstanc
           .SelectMany(o => new List<double>() { o.x, o.y, o.z })
           .ToList(),
         colors = points.Select(o => o.Color).ToList(),
-        units = _settings.Current.SpeckleUnits,
+        units = _converterSettings.Current.SpeckleUnits,
         bbox = _boundingBoxConverter.Convert(boundingBox)
       };
 

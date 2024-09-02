@@ -19,7 +19,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
 {
   // POC: SendSelection and RevitConversionContextStack should be interfaces, former needs interfaces
   private readonly IRootToSpeckleConverter _converter;
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly Collection _rootObject;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ISyncToThread _syncToThread;
@@ -29,7 +29,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
 
   public RevitRootObjectBuilder(
     IRootToSpeckleConverter converter,
-    ISettingsStore<RevitConversionSettings> settings,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ISendConversionCache sendConversionCache,
     ISyncToThread syncToThread,
     ElementUnpacker elementUnpacker,
@@ -38,14 +38,17 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
   )
   {
     _converter = converter;
-    _settings = settings;
+    _converterSettings = converterSettings;
     _sendConversionCache = sendConversionCache;
     _syncToThread = syncToThread;
     _elementUnpacker = elementUnpacker;
     _sendCollectionManager = sendCollectionManager;
     _revitMaterialCacheSingleton = revitMaterialCacheSingleton;
 
-    _rootObject = new Collection() { name = _settings.Current.Document.PathName.Split('\\').Last().Split('.').First() };
+    _rootObject = new Collection()
+    {
+      name = _converterSettings.Current.Document.PathName.Split('\\').Last().Split('.').First()
+    };
   }
 
   public Task<RootObjectBuilderResult> Build(
@@ -56,7 +59,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
   ) =>
     _syncToThread.RunOnThread(() =>
     {
-      var doc = _settings.Current.Document;
+      var doc = _converterSettings.Current.Document;
 
       if (doc.IsFamilyDocument)
       {
@@ -68,7 +71,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
       // Convert ids to actual revit elements
       foreach (var id in objects)
       {
-        var el = _settings.Current.Document.GetElement(id);
+        var el = _converterSettings.Current.Document.GetElement(id);
         if (el != null)
         {
           revitElements.Add(el);

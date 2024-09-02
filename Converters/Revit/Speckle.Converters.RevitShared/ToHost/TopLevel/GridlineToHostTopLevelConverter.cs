@@ -10,15 +10,15 @@ namespace Speckle.Converters.RevitShared.ToHost.TopLevel;
 internal sealed class GridlineToHostTopLevelConverter : BaseTopLevelConverterToHost<SOBE.GridLine, DB.Grid>
 {
   private readonly ITypedConverter<ICurve, DB.CurveArray> _curveConverter;
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public GridlineToHostTopLevelConverter(
     ITypedConverter<ICurve, DB.CurveArray> curveConverter,
-    ISettingsStore<RevitConversionSettings> settings
+    IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _curveConverter = curveConverter;
-    _settings = settings;
+    _converterSettings = converterSettings;
   }
 
   public override DB.Grid Convert(SOBE.GridLine target)
@@ -27,8 +27,8 @@ internal sealed class GridlineToHostTopLevelConverter : BaseTopLevelConverterToH
 
     using DB.Grid revitGrid = curve switch
     {
-      DB.Arc arc => DB.Grid.Create(_settings.Current.Document, arc),
-      DB.Line line => DB.Grid.Create(_settings.Current.Document, line),
+      DB.Arc arc => DB.Grid.Create(_converterSettings.Current.Document, arc),
+      DB.Line line => DB.Grid.Create(_converterSettings.Current.Document, line),
       _ => throw new SpeckleConversionException($"Grid line curve is of type {curve.GetType()} which is not supported")
     };
 
@@ -42,7 +42,7 @@ internal sealed class GridlineToHostTopLevelConverter : BaseTopLevelConverterToH
 
   private bool GridNameIsTaken(string gridName)
   {
-    using var collector = new DB.FilteredElementCollector(_settings.Current.Document);
+    using var collector = new DB.FilteredElementCollector(_converterSettings.Current.Document);
 
     IEnumerable<string> gridNames = collector
       .WhereElementIsNotElementType()

@@ -11,15 +11,15 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 public class ModelCurveToHostTopLevelConverter : BaseTopLevelConverterToHost<SOBR.Curve.ModelCurve, DB.ModelCurve[]>
 {
   private readonly ITypedConverter<ICurve, DB.CurveArray> _curveConverter;
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public ModelCurveToHostTopLevelConverter(
     ITypedConverter<ICurve, DB.CurveArray> curveConverter,
-    ISettingsStore<RevitConversionSettings> settings
+    IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _curveConverter = curveConverter;
-    _settings = settings;
+    _converterSettings = converterSettings;
   }
 
   public override DB.ModelCurve[] Convert(SOBR.Curve.ModelCurve target) =>
@@ -41,18 +41,18 @@ public class ModelCurveToHostTopLevelConverter : BaseTopLevelConverterToHost<SOB
         curve.MakeBound(speckleLine.domain.start, speckleLine.domain.end);
       }
 
-      if (_settings.Current.Document.IsFamilyDocument)
+      if (_converterSettings.Current.Document.IsFamilyDocument)
       {
-        yield return _settings.Current.Document.FamilyCreate.NewModelCurve(
+        yield return _converterSettings.Current.Document.FamilyCreate.NewModelCurve(
           curve,
-          NewSketchPlaneFromCurve(curve, _settings.Current.Document)
+          NewSketchPlaneFromCurve(curve, _converterSettings.Current.Document)
         );
       }
       else
       {
-        yield return _settings.Current.Document.Create.NewModelCurve(
+        yield return _converterSettings.Current.Document.Create.NewModelCurve(
           curve,
-          NewSketchPlaneFromCurve(curve, _settings.Current.Document)
+          NewSketchPlaneFromCurve(curve, _converterSettings.Current.Document)
         );
       }
     }

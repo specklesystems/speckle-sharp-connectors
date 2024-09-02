@@ -18,7 +18,7 @@ public class WallTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.
   private readonly ITypedConverter<DB.Level, SOBR.RevitLevel> _levelConverter;
   private readonly ITypedConverter<DB.CurveArrArray, List<SOG.Polycurve>> _curveArrArrayConverter;
   private readonly ParameterValueExtractor _parameterValueExtractor;
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly ParameterObjectAssigner _parameterObjectAssigner;
   private readonly IRootToSpeckleConverter _converter;
@@ -27,7 +27,7 @@ public class WallTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.
     ITypedConverter<DB.Curve, ICurve> curveConverter,
     ITypedConverter<DB.Level, SOBR.RevitLevel> levelConverter,
     ITypedConverter<DB.CurveArrArray, List<SOG.Polycurve>> curveArrArrayConverter,
-    ISettingsStore<RevitConversionSettings> settings,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ParameterValueExtractor parameterValueExtractor,
     DisplayValueExtractor displayValueExtractor,
     ParameterObjectAssigner parameterObjectAssigner,
@@ -37,7 +37,7 @@ public class WallTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.
     _curveConverter = curveConverter;
     _levelConverter = levelConverter;
     _curveArrArrayConverter = curveArrArrayConverter;
-    _settings = settings;
+    _converterSettings = converterSettings;
     _parameterValueExtractor = parameterValueExtractor;
     _displayValueExtractor = displayValueExtractor;
     _parameterObjectAssigner = parameterObjectAssigner;
@@ -51,7 +51,7 @@ public class WallTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.
       {
         family = target.WallType.FamilyName.ToString(),
         type = target.WallType.Name,
-        units = _settings.Current.SpeckleUnits
+        units = _converterSettings.Current.SpeckleUnits
       };
 
     AssignSpecificParameters(target, speckleWall);
@@ -135,7 +135,7 @@ public class WallTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.
   {
     foreach (DB.ElementId elementId in elementIds)
     {
-      yield return _converter.Convert(_settings.Current.Document.GetElement(elementId));
+      yield return _converter.Convert(_converterSettings.Current.Document.GetElement(elementId));
     }
   }
 

@@ -10,12 +10,12 @@ namespace Speckle.Connectors.Revit.HostApp;
 /// </summary>
 public class SendCollectionManager
 {
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly Dictionary<string, Collection> _collectionCache = new();
 
-  public SendCollectionManager(ISettingsStore<RevitConversionSettings> settings)
+  public SendCollectionManager(IConverterSettingsStore<RevitConversionSettings> converterSettings)
   {
-    _settings = settings;
+    _converterSettings = converterSettings;
   }
 
   /// <summary>
@@ -27,7 +27,7 @@ public class SendCollectionManager
   /// <returns></returns>
   public Collection GetAndCreateObjectHostCollection(Element element, Collection rootObject)
   {
-    var doc = _settings.Current.Document;
+    var doc = _converterSettings.Current.Document;
     var path = new List<string>();
 
     // Step 1: create path components. Currently, this is

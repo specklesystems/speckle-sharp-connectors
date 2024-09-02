@@ -12,22 +12,22 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 public class HostedElementConversionToSpeckle
 {
   private readonly IRootToSpeckleConverter _converter;
-  private readonly ISettingsStore<RevitConversionSettings> _settings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public HostedElementConversionToSpeckle(
     IRootToSpeckleConverter converter,
-    ISettingsStore<RevitConversionSettings> settings
+    IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _converter = converter;
-    _settings = settings;
+    _converterSettings = converterSettings;
   }
 
   public IEnumerable<Base> ConvertHostedElements(IEnumerable<ElementId> hostedElementIds)
   {
     foreach (var elemId in hostedElementIds)
     {
-      Element element = _settings.Current.Document.GetElement(elemId);
+      Element element = _converterSettings.Current.Document.GetElement(elemId);
 
       Base @base;
       try
