@@ -89,7 +89,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
       foreach (Element revitElement in atomicObjects)
       {
         ct.ThrowIfCancellationRequested();
-        var applicationId = revitElement.Id.ToString();
+        var applicationId = revitElement.UniqueId; // NOTE: converter set applicationIds to unique ids; if we ever change this in the converter, behaviour here needs to match.
         try
         {
           Base converted;
@@ -114,6 +114,11 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
         }
 
         onOperationProgressed?.Invoke("Converting", (double)++countProgress / atomicObjects.Count);
+      }
+
+      if (results.All(x => x.Status == Status.ERROR))
+      {
+        throw new SpeckleConversionException("Failed to convert all objects."); // fail fast instead creating empty commit! It will appear as model card error with red color.
       }
 
       var idsAndSubElementIds = _elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(atomicObjects);

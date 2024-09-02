@@ -22,7 +22,7 @@ public class RevitConverterModule : ISpeckleModule
     builder.AddScoped<IRootToHostConverter, RevitRootToHostConverter>();
     builder.AddSingleton(new RevitContext());
 
-    builder.AddSingleton(new RevitRenderMaterialProxyCacheSingleton());
+    builder.AddSingleton(new RevitMaterialCacheSingleton());
 
     // POC: do we need ToSpeckleScalingService as is, do we need to interface it out?
     builder.AddScoped<ScalingServiceToSpeckle>();
@@ -32,7 +32,6 @@ public class RevitConverterModule : ISpeckleModule
     builder.AddScoped<IRevitConversionContextStack, RevitConversionContextStack>();
 
     builder.AddScoped<IReferencePointConverter, ReferencePointConverter>();
-    builder.AddScoped<RevitConversionSettings>();
 
     builder.AddScoped<IRevitVersionConversionHelper, RevitVersionConversionHelper>();
 

@@ -1,7 +1,6 @@
 using Rhino;
 using Rhino.DocObjects;
 using Speckle.Connectors.Rhino.Extensions;
-using Speckle.Sdk.Models.Instances;
 using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Connectors.Rhino.HostApp;
@@ -20,28 +19,18 @@ public class RhinoColorManager
   /// For send operations
   /// </summary>
   private Dictionary<string, ColorProxy> ColorProxies { get; } = new();
-  private readonly Dictionary<int, Color> _layerColorDict = new(); // keeps track of layer colors for object inheritance
-  private readonly Dictionary<string, int> _objectsByLayerDict = new(); // keeps track of ids for all objects that inherited their color by layer
 
   /// <summary>
   /// Processes an object's color and adds the object id to a color proxy in <see cref="ColorProxies"/> if object color is set ByColor, ByMaterial, or ByParent.
-  /// Otherwise, stores the object id and color in a corresponding ByLayer dictionary for further processing block definitions after all objects are converted.
-  /// From testing, a definition object will inherit its layer's color if by layer, otherwise it will inherit the instance color settings (which we are sending with the instance).
   /// </summary>
   /// <param name="objId"></param>
   /// <param name="color"></param>
-  private void ProcessObjectColor(
-    string objId,
-    Color color,
-    ObjectColorSource source,
-    int? layerIndex = null,
-    int? materialIndex = null
-  )
+  private void ProcessObjectColor(string objId, Color color, ObjectColorSource source, int? materialIndex = null)
   {
     switch (source)
     {
       case ObjectColorSource.ColorFromObject:
-      case ObjectColorSource.ColorFromParent:
+      case ObjectColorSource.ColorFromParent: // will set definition objects to their instance's color settings, and top-level objects will treat this as if by layer.
         AddObjectIdToColorProxy(objId, color, source);
         break;
       case ObjectColorSource.ColorFromMaterial:
@@ -50,14 +39,7 @@ public class RhinoColorManager
           AddObjectIdToColorProxy(objId, RhinoDoc.ActiveDoc.Materials[materialIndexInt].DiffuseColor, source);
         }
         break;
-      case ObjectColorSource.ColorFromLayer:
-        if (layerIndex is int layerIndexInt)
-        {
-          if (!_objectsByLayerDict.ContainsKey(objId))
-          {
-            _objectsByLayerDict.Add(objId, layerIndexInt);
-          }
-        }
+      case ObjectColorSource.ColorFromLayer: // skipping by layer since this is the default receive option in rhino, and commit is structured by layers.
         break;
     }
   }
@@ -87,58 +69,31 @@ public class RhinoColorManager
 
     // add the color source as well for receiving in other apps
     // POC: in order to have high-fidelity color props, we need to send the source somewhere. Currently this is attached to the color proxy, but have discussed sending it as a separate proxy or as an property on the atomic object. TBD if this is the best place for it.
-    colorProxy["source"] =
-      source is ObjectColorSource.ColorFromParent
-        ? "block"
-        : source is ObjectColorSource.ColorFromLayer
-          ? "layer"
-          : source is ObjectColorSource.ColorFromMaterial
-            ? "material"
-            : "object";
+    string speckleSource = "object";
+    switch (source)
+    {
+      case ObjectColorSource.ColorFromParent:
+        speckleSource = "block";
+        break;
+      case ObjectColorSource.ColorFromLayer:
+        speckleSource = "layer";
+        break;
+      case ObjectColorSource.ColorFromMaterial:
+        speckleSource = "material";
+        break;
+    }
 
+    colorProxy["source"] = speckleSource;
     return colorProxy;
   }
 
   /// <summary>
-  /// Processes colors for definition objects that had their colors inherited. This method is in place primarily to process complex color inheritance in blocks.
-  /// </summary>
-  /// <returns></returns>
-  /// <remarks>
-  /// We are **always setting the color** (treating it as ColorSource.ByObject) for definition objects with color "ByLayer" because this overrides instance color, to guarantee they look correct in the viewer and when receiving.
-  /// </remarks>
-  public void ProcessDefinitionObjects(List<InstanceDefinitionProxy> definitions)
-  {
-    // process all definition objects, while removing process objects from the by block color dict as necessary
-    foreach (InstanceDefinitionProxy definition in definitions)
-    {
-      foreach (string objectId in definition.objects)
-      {
-        if (_objectsByLayerDict.TryGetValue(objectId, out int layerIndex))
-        {
-          if (_layerColorDict.TryGetValue(layerIndex, out Color layerColor))
-          {
-            AddObjectIdToColorProxy(objectId, layerColor, ObjectColorSource.ColorFromLayer);
-          }
-        }
-      }
-    }
-  }
-
-  /// <summary>
-  /// Iterates through a given set of rhino objects, layers, and definitions to collect atomic object colors.
+  /// Iterates through a given set of rhino objects and layers to collect colors.
   /// </summary>
   /// <param name="atomicObjects">atomic root objects, including instance objects</param>
   /// <param name="layers">layers used by atomic objects</param>
-  /// <param name="definitions">definitions used by instances in atomic objects</param>
   /// <returns></returns>
-  /// <remarks>
-  /// Due to complications in color inheritance for blocks, we are processing block definition object colors last.
-  /// </remarks>
-  public List<ColorProxy> UnpackColors(
-    List<RhinoObject> atomicObjects,
-    List<Layer> layers,
-    List<InstanceDefinitionProxy> definitions
-  )
+  public List<ColorProxy> UnpackColors(List<RhinoObject> atomicObjects, List<Layer> layers)
   {
     // Stage 1: unpack colors from objects
     foreach (RhinoObject rootObj in atomicObjects)
@@ -147,7 +102,6 @@ public class RhinoColorManager
         rootObj.Id.ToString(),
         rootObj.Attributes.ObjectColor,
         rootObj.Attributes.ColorSource,
-        rootObj.Attributes.LayerIndex,
         rootObj.Attributes.MaterialIndex
       );
     }
@@ -156,11 +110,7 @@ public class RhinoColorManager
     foreach (Layer layer in layers)
     {
       ProcessObjectColor(layer.Id.ToString(), layer.Color, ObjectColorSource.ColorFromObject);
-      _layerColorDict.Add(layer.Index, layer.Color);
     }
-
-    // Stage 3: process definition objects that inherited their colors
-    ProcessDefinitionObjects(definitions);
 
     return ColorProxies.Values.ToList();
   }

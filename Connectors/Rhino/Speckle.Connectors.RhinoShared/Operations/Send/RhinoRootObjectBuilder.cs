@@ -12,7 +12,6 @@ using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
-using Speckle.Sdk.Models.Proxies;
 using Layer = Rhino.DocObjects.Layer;
 
 namespace Speckle.Connectors.Rhino.Operations.Send;
@@ -135,16 +134,16 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         }
       }
 
+      if (results.All(x => x.Status == Status.ERROR))
+      {
+        throw new SpeckleConversionException("Failed to convert all objects."); // fail fast instead creating empty commit! It will appear as model card error with red color.
+      }
+
       using (var _ = SpeckleActivityFactory.Start("UnpackRenderMaterials"))
       {
         // set render materials and colors
         rootObjectCollection["renderMaterialProxies"] = _materialManager.UnpackRenderMaterial(atomicObjects);
-        List<ColorProxy> colorProxies = _colorManager.UnpackColors(
-          atomicObjects,
-          versionLayers.ToList(),
-          instanceDefinitionProxies
-        );
-        rootObjectCollection["colorProxies"] = colorProxies;
+        rootObjectCollection["colorProxies"] = _colorManager.UnpackColors(atomicObjects, versionLayers.ToList());
       }
 
       // 5. profit

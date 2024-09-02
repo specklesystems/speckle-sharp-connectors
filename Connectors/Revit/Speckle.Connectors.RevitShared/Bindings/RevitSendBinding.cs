@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Autodesk.Revit.DB;
+using Autofac;
 using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bindings;
@@ -10,12 +11,14 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
+using Speckle.Connectors.Revit.HostApp;
+using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
-using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
@@ -28,7 +31,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
+  private readonly ToSpeckleSettingsManager _toSpeckleSettingsManager;
   private readonly ILogger<RevitSendBinding> _logger;
+  private readonly ElementUnpacker _elementUnpacker;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -47,7 +52,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     IUnitOfWorkFactory unitOfWorkFactory,
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
-    ILogger<RevitSendBinding> logger
+    ToSpeckleSettingsManager toSpeckleSettingsManager,
+    ILogger<RevitSendBinding> logger,
+    ElementUnpacker elementUnpacker
   )
     : base("sendBinding", store, bridge, revitContext)
   {
@@ -56,7 +63,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _unitOfWorkFactory = unitOfWorkFactory;
     _sendConversionCache = sendConversionCache;
     _operationProgressManager = operationProgressManager;
+    _toSpeckleSettingsManager = toSpeckleSettingsManager;
     _logger = logger;
+    _elementUnpacker = elementUnpacker;
     var topLevelExceptionHandler = Parent.TopLevelExceptionHandler;
 
     Commands = new SendBindingUICommands(bridge);
@@ -75,35 +84,17 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     return new List<ISendFilter> { new RevitSelectionFilter() { IsDefault = true } };
   }
 
-  public List<CardSetting> GetSendSettings() =>
-    new()
-    {
-      new()
-      {
-        Id = "modelOrigin",
-        Title = "Model Origin",
-        Type = "string",
-        Enum = ["Internal Origin", "Project Base", "Survey"],
-        Value = "Internal Origin"
-      },
-      new()
-      {
-        Id = "geometryFidelity",
-        Title = "Geometry Fidelity",
-        Type = "string",
-        Enum = ["Coarse", "Medium", "Fine"],
-        Value = "Coarse"
-      },
-    };
+  public List<ICardSetting> GetSendSettings() =>
+    [new DetailLevelSetting(DetailLevelType.Medium), new ReferencePointSetting(ReferencePointType.InternalOrigin)];
 
-  public void CancelSend(string modelCardId)
-  {
-    _cancellationManager.CancelOperation(modelCardId);
-  }
+  public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
 
   public SendBindingUICommands Commands { get; }
 
+  // yes we know Send function calls many different namespace, we know. But currently I don't see any simplification area we can work on!
+#pragma warning disable CA1506
   public async Task Send(string modelCardId)
+#pragma warning restore CA1506
   {
     // Note: removed top level handling thing as it was confusing me
     try
@@ -116,14 +107,22 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
-      using IUnitOfWork<SendOperation<ElementId>> sendOperation = _unitOfWorkFactory.Resolve<
-        SendOperation<ElementId>
-      >();
+      using IUnitOfWork<SendOperation<ElementId>> sendOperation = _unitOfWorkFactory.Resolve<SendOperation<ElementId>>(
+        b =>
+        {
+          b.RegisterType<ToSpeckleSettings>().SingleInstance();
+          b.Register(c => _toSpeckleSettingsManager.GetToSpeckleSettings(modelCard));
+        }
+      );
+
+      var activeUIDoc =
+        RevitContext.UIApplication?.ActiveUIDocument
+        ?? throw new SpeckleException("Unable to retrieve active UI document");
 
       List<ElementId> revitObjects = modelCard
         .SendFilter.NotNull()
         .GetObjectIds()
-        .Select(ElementIdHelper.Parse)
+        .Select(uid => activeUIDoc.Document.GetElement(uid).Id)
         .ToList();
 
       if (revitObjects.Count == 0)
@@ -191,7 +190,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     if (HaveUnitsChanged(e.GetDocument()))
     {
       var objectIds = Store.GetSenders().SelectMany(s => s.SendFilter != null ? s.SendFilter.GetObjectIds() : []);
-      _sendConversionCache.EvictObjects(objectIds);
+      var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds.ToList());
+      _sendConversionCache.EvictObjects(unpackedObjectIds);
     }
     _idleManager.SubscribeToIdle(nameof(RevitSendBinding), RunExpirationChecks);
   }
@@ -234,13 +234,27 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   {
     var senders = Store.GetSenders();
     string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
+    var doc = RevitContext.UIApplication?.ActiveUIDocument.Document;
+
+    if (doc == null)
+    {
+      return;
+    }
+
+    // Note: We're using unique ids as application ids in revit, so cache eviction must happen by those.
+    var objUniqueIds = objectIdsList
+      .Select(id => new ElementId(Convert.ToInt32(id)))
+      .Select(doc.GetElement)
+      .Where(el => el is not null)
+      .Select(el => el.UniqueId)
+      .ToList();
+    _sendConversionCache.EvictObjects(objUniqueIds);
+
+    // Note: we're doing object selection and card expiry management by old school ids
     List<string> expiredSenderIds = new();
-
-    _sendConversionCache.EvictObjects(objectIdsList);
-
     foreach (SenderModelCard modelCard in senders)
     {
-      var intersection = modelCard.SendFilter.NotNull().GetObjectIds().Intersect(objectIdsList).ToList();
+      var intersection = modelCard.SendFilter.NotNull().GetObjectIds().Intersect(objUniqueIds).ToList();
       bool isExpired = intersection.Count != 0;
       if (isExpired)
       {

@@ -1,10 +1,10 @@
 using System.Drawing;
 using ArcGIS.Core.CIM;
 using ArcGIS.Core.Data;
-using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Converters.ArcGIS3.Utils;
-using Speckle.Sdk.Models;
+using Speckle.Objects;
+using Speckle.Objects.Other;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Proxies;
@@ -15,6 +15,7 @@ public class ArcGISColorManager
 {
   private Dictionary<string, ColorProxy> ColorProxies { get; set; } = new();
   public Dictionary<string, Color> ObjectColorsIdMap { get; set; } = new();
+  public Dictionary<string, Color> ObjectMaterialsIdMap { get; set; } = new();
 
   /// <summary>
   /// Iterates through a given set of arcGIS map members (layers containing objects) and collects their colors.
@@ -71,37 +72,68 @@ public class ArcGISColorManager
   }
 
   /// <summary>
+  /// Parse Color renderMaterials  and stores in ObjectMaterialsIdMap the relationship between object ids and colors
+  /// </summary>
+  /// <param name="materialProxies"></param>
+  /// <param name="onOperationProgressed"></param>
+  public void ParseMaterials(List<RenderMaterialProxy> materialProxies, Action<string, double?>? onOperationProgressed)
+  {
+    // injected as Singleton, so we need to clean existing proxies first
+    ObjectMaterialsIdMap = new();
+    var count = 0;
+    foreach (RenderMaterialProxy colorProxy in materialProxies)
+    {
+      onOperationProgressed?.Invoke("Converting materials", (double)++count / materialProxies.Count);
+      foreach (string objectId in colorProxy.objects)
+      {
+        Color convertedColor = Color.FromArgb(colorProxy.value.diffuse);
+        ObjectMaterialsIdMap.TryAdd(objectId, convertedColor);
+      }
+    }
+  }
+
+  /// <summary>
   /// Create a new CIMUniqueValueClass for UniqueRenderer per each object ID
   /// </summary>
   /// <param name="tc"></param>
   /// <param name="speckleGeometryType"></param>
-  private CIMUniqueValueClass CreateColorCategory(TraversalContext tc, esriGeometryType speckleGeometryType)
+  private CIMUniqueValueClass CreateColorCategory(
+    TraversalContext tc,
+    esriGeometryType speckleGeometryType,
+    string uniqueLabel
+  )
   {
-    Base baseObj = tc.Current;
-
     // declare default white color
     Color color = Color.FromArgb(255, 255, 255, 255);
 
     // get color moving upwards from the object
     foreach (var parent in tc.GetAscendants())
     {
-      if (parent.applicationId is string appId && ObjectColorsIdMap.TryGetValue(appId, out Color objColor))
+      if (parent.applicationId is string appId)
       {
-        color = objColor;
-        break;
+        if (ObjectMaterialsIdMap.TryGetValue(appId, out Color objColorMaterial))
+        {
+          color = objColorMaterial;
+          break;
+        }
+        if (ObjectColorsIdMap.TryGetValue(appId, out Color objColor))
+        {
+          color = objColor;
+          break;
+        }
       }
     }
 
     CIMSymbolReference symbol = CreateSymbol(speckleGeometryType, color);
 
     // First create a "CIMUniqueValueClass"
-    List<CIMUniqueValue> listUniqueValues = new() { new CIMUniqueValue { FieldValues = new string[] { baseObj.id } } };
+    List<CIMUniqueValue> listUniqueValues = new() { new CIMUniqueValue { FieldValues = new string[] { uniqueLabel } } };
 
     CIMUniqueValueClass newUniqueValueClass =
       new()
       {
         Editable = true,
-        Label = baseObj.id,
+        Label = uniqueLabel,
         Patch = PatchShape.Default,
         Symbol = symbol,
         Visible = true,
@@ -145,12 +177,16 @@ public class ArcGISColorManager
   /// </summary>
   /// <param name="tc"></param>
   /// <param name="trackerItem"></param>
-  public async Task SetOrEditLayerRenderer(TraversalContext tc, ObjectConversionTracker trackerItem)
+  public CIMUniqueValueRenderer? CreateOrEditLayerRenderer(
+    TraversalContext tc,
+    ObjectConversionTracker trackerItem,
+    CIMRenderer? existingRenderer
+  )
   {
     if (trackerItem.HostAppMapMember is not FeatureLayer fLayer)
     {
       // do nothing with non-feature layers
-      return;
+      return null;
     }
 
     // declare default grey color, create default symbol for the given layer geometry type
@@ -159,8 +195,6 @@ public class ArcGISColorManager
 
     // get existing renderer classes
     List<CIMUniqueValueClass> listUniqueValueClasses = new() { };
-    var existingRenderer = QueuedTask.Run(() => fLayer.GetRenderer()).Result;
-    // should be always UniqueRenderer, it's the only type we are creating atm
     if (existingRenderer is CIMUniqueValueRenderer uniqueRenderer)
     {
       if (uniqueRenderer.Groups[0].Classes != null)
@@ -186,15 +220,26 @@ public class ArcGISColorManager
 
     foreach (var tContext in traversalContexts)
     {
-      CIMUniqueValueClass newUniqueValueClass = CreateColorCategory(tContext, fLayer.ShapeType);
-      if (!listUniqueValueClasses.Select(x => x.Label).Contains(newUniqueValueClass.Label))
+      // get unique label
+      string uniqueLabel = tContext.Current.id;
+      if (tContext.Current is IGisFeature gisFeat)
       {
+        var existingLabel = gisFeat.attributes["Speckle_ID"];
+        if (existingLabel is string stringLabel)
+        {
+          uniqueLabel = stringLabel;
+        }
+      }
+
+      if (!listUniqueValueClasses.Select(x => x.Label).Contains(uniqueLabel))
+      {
+        CIMUniqueValueClass newUniqueValueClass = CreateColorCategory(tContext, fLayer.ShapeType, uniqueLabel);
         listUniqueValueClasses.Add(newUniqueValueClass);
       }
     }
 
     // Create a list of CIMUniqueValueGroup
-    CIMUniqueValueGroup uvg = new() { Classes = listUniqueValueClasses.ToArray(), };
+    CIMUniqueValueGroup uvg = new() { Classes = listUniqueValueClasses.ToArray(), Heading = "Speckle_ID" };
     List<CIMUniqueValueGroup> listUniqueValueGroups = new() { uvg };
     // Create the CIMUniqueValueRenderer
     CIMUniqueValueRenderer uvr =
@@ -206,9 +251,7 @@ public class ArcGISColorManager
         Groups = listUniqueValueGroups.ToArray(),
         Fields = new string[] { "Speckle_ID" }
       };
-
-    // Set the feature layer's renderer.
-    await QueuedTask.Run(() => fLayer.SetRenderer(uvr)).ConfigureAwait(false);
+    return uvr;
   }
 
   private string GetColorApplicationId(int argb, double order) => $"{argb}_{order}";
@@ -410,11 +453,11 @@ public class ArcGISColorManager
     // note: usually there is only 1 group
     foreach (CIMUniqueValueGroup group in uniqueRenderer.Groups)
     {
-      string[] headings = group.Heading.Split(",");
+      string[] fieldNames = uniqueRenderer.Fields;
       List<string> usedFields = new();
-      foreach (string heading in headings)
+      foreach (string fieldName in fieldNames)
       {
-        if (fields.TryGetValue(heading, out FieldDescription? headingField))
+        if (fields.TryGetValue(fieldName, out FieldDescription? headingField))
         {
           usedFields.Add(headingField.Name);
         }

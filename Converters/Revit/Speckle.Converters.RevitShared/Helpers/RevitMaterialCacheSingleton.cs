@@ -1,4 +1,5 @@
 using Speckle.Objects.Other;
+using Speckle.Objects.Other.Revit;
 
 namespace Speckle.Converters.RevitShared.Helpers;
 
@@ -8,13 +9,23 @@ namespace Speckle.Converters.RevitShared.Helpers;
 /// Why is this needed? Because two reasons: send caching bypasses converter and revit conversions typically generate multiple display values per element. Ask dim for more and he might start crying.
 /// </para>
 /// </summary>
-public class RevitRenderMaterialProxyCacheSingleton
+public class RevitMaterialCacheSingleton
 {
   /// <summary>
   /// map(object id, ( map (materialId, proxy) ) )
   /// a per object map of material proxies. not the best way???
   /// </summary>
   public Dictionary<string, Dictionary<string, RenderMaterialProxy>> ObjectRenderMaterialProxiesMap { get; } = new();
+
+  /// <summary>
+  /// map (DB.Material id, RevitMaterial). This can be generated from converting render materials or material quantities.
+  /// </summary>
+  public Dictionary<string, RevitMaterial> ConvertedRevitMaterialMap { get; } = new();
+
+  /// <summary>
+  /// map (DB.Material id, RenderMaterial). This can be generated from converting render materials or material quantities.
+  /// </summary>
+  public Dictionary<string, RenderMaterial> ConvertedRenderMaterialMap { get; } = new();
 
   /// <summary>
   /// Returns the merged material proxy list for the given object ids. Use this to get post conversion a correct list of material proxies for setting on the root commit object.

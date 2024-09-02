@@ -1,5 +1,6 @@
 using Autodesk.Revit.DB;
 using Autofac;
+using CefSharp;
 using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI;
@@ -10,17 +11,13 @@ using Speckle.Connectors.Revit.Bindings;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Revit.Operations.Receive;
 using Speckle.Connectors.Revit.Operations.Send;
+using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Sdk.Models.GraphTraversal;
-#if REVIT2025
-using Speckle.Connectors.DUI.WebView;
-#else
-using CefSharp;
-#endif
 
 namespace Speckle.Connectors.Revit.DependencyInjection;
 
@@ -70,6 +67,7 @@ public class RevitConnectorModule : ISpeckleModule
     builder.AddScoped<SendCollectionManager>();
     builder.AddScoped<IRootObjectBuilder<ElementId>, RevitRootObjectBuilder>();
     builder.AddSingleton<ISendConversionCache, SendConversionCache>();
+    builder.AddSingleton<ToSpeckleSettingsManager>();
 
     // receive operation and dependencies
     builder.AddScoped<IHostObjectBuilder, RevitHostObjectBuilder>();
@@ -82,14 +80,7 @@ public class RevitConnectorModule : ISpeckleModule
 
   public void RegisterUiDependencies(SpeckleContainerBuilder builder)
   {
-    // if revit 2025 or higher, register webview2 dependencies
-    // else register cefSharp depenedencies
-#if REVIT2025
-    builder.AddDUIView();
-    builder.AddSingleton<IRevitPlugin, RevitWebViewPlugin>();
-    builder.AddSingleton<DUI3ControlWebView>();
-    builder.AddSingleton<DUI3ControlWebViewDockable>();
-#elif REVIT2022
+#if REVIT2022
     //different versons for different versions of CEF
     builder.AddSingleton(new BindingOptions() { CamelCaseJavascriptNames = false });
     builder.AddSingleton<CefSharpPanel>();

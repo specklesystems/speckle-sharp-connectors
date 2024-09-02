@@ -21,7 +21,7 @@ public class VectorToSpeckleConverter : ITypedConverter<DB.XYZ, SOG.Vector>
   {
     // POC: originally had a concept of not transforming, but this was
     // optional arg defaulting to false - removing the argument appeared to break nothing
-    DB.XYZ extPt = _referencePointConverter.ConvertToExternalCoordindates(target, false);
+    DB.XYZ extPt = _referencePointConverter.ConvertToExternalCoordinates(target, false);
     var pointToSpeckle = new SOG.Vector(
       _scalingService.ScaleLength(extPt.X),
       _scalingService.ScaleLength(extPt.Y),

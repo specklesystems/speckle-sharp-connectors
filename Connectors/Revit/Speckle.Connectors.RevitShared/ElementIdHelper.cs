@@ -5,13 +5,14 @@ namespace Speckle.Connectors.RevitShared;
 
 public static class ElementIdHelper
 {
-  public static ElementId Parse(string idStr)
+  public static ElementId GetElementIdFromUniqueId(Document doc, string uniqueId)
   {
-    if (!int.TryParse(idStr, out var result))
+    Element element = doc.GetElement(uniqueId);
+    if (element == null)
     {
-      throw new SpeckleConversionException($"Cannot parse ElementId: {idStr}");
+      throw new SpeckleConversionException($"Cannot find element with UniqueId: {uniqueId}");
     }
 
-    return new ElementId(result);
+    return element.Id;
   }
 }

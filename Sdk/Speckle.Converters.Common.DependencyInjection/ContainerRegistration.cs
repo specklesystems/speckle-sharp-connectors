@@ -24,6 +24,7 @@ public static class ContainerRegistration
     builder.AddScoped<IConverterResolver<IToHostTopLevelConverter>, ConverterResolver<IToHostTopLevelConverter>>();
 
     builder.AddScoped<IRootToHostConverter, ConverterWithFallback>();
+    builder.AddScoped<ConverterWithoutFallback>(); //Register as self, only the `ConverterWithFallback` needs it
 
     builder.InjectNamedTypes<IToSpeckleTopLevelConverter>();
     builder.InjectNamedTypes<IToHostTopLevelConverter>();
