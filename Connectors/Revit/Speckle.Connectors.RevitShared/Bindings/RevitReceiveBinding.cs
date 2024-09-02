@@ -47,7 +47,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
 
   public async Task Receive(string modelCardId)
   {
-    using var unitOfWork = _unitOfWorkFactory.Resolve<ReceiveOperation>();
+    using var unitOfWork = _unitOfWorkFactory.Create();
     try
     {
       // Get receiver card
@@ -61,7 +61,8 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
 
       // Receive host objects
       HostObjectBuilderResult conversionResults = await unitOfWork
-        .Service.Execute(
+        .Resolve<ReceiveOperation>()
+        .Execute(
           modelCard.GetReceiveInfo(Speckle.Connectors.Utils.Connector.Slug),
           cancellationToken,
           (status, progress) =>

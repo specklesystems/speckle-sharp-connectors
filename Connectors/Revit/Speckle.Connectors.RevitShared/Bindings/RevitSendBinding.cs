@@ -17,6 +17,7 @@ using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
+using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
@@ -107,14 +108,16 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
-      using IUnitOfWork<SendOperation<ElementId>> sendOperation = _unitOfWorkFactory.Resolve<SendOperation<ElementId>>(
-        b =>
-        {
-          b.RegisterType<ToSpeckleSettings>().SingleInstance();
-          b.Register(c => _toSpeckleSettingsManager.GetToSpeckleSettings(modelCard));
-        }
-      );
-
+      using var unitOfWork = _unitOfWorkFactory.Create();
+      using var settings = unitOfWork
+        .Resolve<ISettingsStore<RevitConversionSettings>>()
+        .Push(x =>
+          x with
+          {
+            DetailLevel = _toSpeckleSettingsManager.GetDetailLevelSetting(modelCard),
+            ReferencePointTransform = _toSpeckleSettingsManager.GetReferencePointSetting(modelCard)
+          }
+        );
       var activeUIDoc =
         RevitContext.UIApplication?.ActiveUIDocument
         ?? throw new SpeckleException("Unable to retrieve active UI document");
@@ -131,8 +134,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
       }
 
-      var sendResult = await sendOperation
-        .Service.Execute(
+      var sendResult = await unitOfWork
+        .Resolve<SendOperation<ElementId>>()
+        .Execute(
           revitObjects,
           modelCard.GetSendInfo(Speckle.Connectors.Utils.Connector.Slug),
           (status, progress) =>
