@@ -10,11 +10,21 @@ using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.ArcGIS.Bindings;
 
+public interface IArcGISSender
+{
+  Task<SendOperationResult> SendOperation(
+    IBridge parent,
+    SenderModelCard modelCard,
+    IReadOnlyList<MapMember> objects,
+    CancellationToken ct = default
+  );
+}
+
 public class ArcGISSender(
   IUnitOfWorkFactory unitOfWorkFactory,
   IOperationProgressManager operationProgressManager,
   IArcGISConversionSettingsFactory arcGisConversionSettingsFactory
-) : ScopedSender(unitOfWorkFactory, operationProgressManager)
+) : ScopedSender(unitOfWorkFactory, operationProgressManager), IArcGISSender
 {
   public async Task<SendOperationResult> SendOperation(
     IBridge parent,
@@ -23,7 +33,7 @@ public class ArcGISSender(
     CancellationToken ct = default
   )
   {
-    var result = await base.SendOperation<MapMember, ArcGISConversionSettings>(
+    var result = await base.SendOperation(
         parent,
         modelCard.GetSendInfo(Speckle.Connectors.Utils.Connector.Slug),
         modelCard.ModelCardId.NotNull(),

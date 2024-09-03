@@ -17,7 +17,6 @@ using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
-using Speckle.Connectors.Utils.Operations;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
@@ -33,8 +32,8 @@ public sealed class ArcGISSendBinding : ISendBinding
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
   private readonly ISendConversionCache _sendConversionCache;
-  private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<ArcGISSendBinding> _logger;
+  private readonly IArcGISSender _arcGisSender;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   /// <summary>
@@ -54,16 +53,16 @@ public sealed class ArcGISSendBinding : ISendBinding
     IEnumerable<ISendFilter> sendFilters,
     CancellationManager cancellationManager,
     ISendConversionCache sendConversionCache,
-    IOperationProgressManager operationProgressManager,
-    ILogger<ArcGISSendBinding> logger
+    ILogger<ArcGISSendBinding> logger,
+    IArcGISSender arcGisSender
   )
   {
     _store = store;
     _sendFilters = sendFilters.ToList();
     _cancellationManager = cancellationManager;
     _sendConversionCache = sendConversionCache;
-    _operationProgressManager = operationProgressManager;
     _logger = logger;
+    _arcGisSender = arcGisSender;
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
 
     Parent = parent;
@@ -343,8 +342,6 @@ public sealed class ArcGISSendBinding : ISendBinding
       var sendResult = await QueuedTask
         .Run(async () =>
         {
-          //poc: dupe code between connectors
-          using var unitOfWork = _unitOfWorkFactory.Create();
           List<MapMember> mapMembers = modelCard
             .SendFilter.NotNull()
             .GetObjectIds()
@@ -373,20 +370,8 @@ public sealed class ArcGISSendBinding : ISendBinding
             }
           }
 
-          var result = await unitOfWork
-            .Resolve<SendOperation<MapMember>>()
-            .Execute(
-              mapMembers,
-              modelCard.GetSendInfo("ArcGIS"), // POC: get host app name from settings? same for GetReceiveInfo
-              (status, progress) =>
-                _operationProgressManager.SetModelProgress(
-                  Parent,
-                  modelCardId,
-                  new ModelCardProgress(modelCardId, status, progress),
-                  cancellationToken
-                ),
-              cancellationToken
-            )
+          var result = await _arcGisSender
+            .SendOperation(Parent, modelCard, mapMembers, cancellationToken)
             .ConfigureAwait(false);
 
           return result;
