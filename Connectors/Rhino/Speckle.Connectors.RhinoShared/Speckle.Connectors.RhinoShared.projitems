@@ -21,6 +21,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RhinoReceiveBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RhinoSendBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RhinoSelectionBinding.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\RhinoSender.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\RhinoConnectorModule.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\RhinoPlugin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\BoundingBox.cs" />

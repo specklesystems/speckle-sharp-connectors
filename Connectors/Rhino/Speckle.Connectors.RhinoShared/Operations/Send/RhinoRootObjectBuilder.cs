@@ -1,4 +1,3 @@
-using Rhino;
 using Rhino.DocObjects;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.Rhino.HostApp;
@@ -64,7 +63,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     _syncToThread.RunOnThread(() =>
     {
       using var activity = SpeckleActivityFactory.Start("Build");
-      Collection rootObjectCollection = new() { name = _contextStack.Current.Document.Name ?? "Unnamed document" };
+      Collection rootObjectCollection = new() { name = _settingsStore.Current.Document.Name ?? "Unnamed document" };
       int count = 0;
 
       UnpackResult<RhinoObject> unpackResults;
@@ -92,7 +91,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
           cancellationToken.ThrowIfCancellationRequested();
 
           // handle layer
-          Layer layer = _contextStack.Current.Document.Layers[rhinoObject.Attributes.LayerIndex];
+          Layer layer = _settingsStore.Current.Document.Layers[rhinoObject.Attributes.LayerIndex];
           versionLayers.Add(layer);
           Collection collectionHost = _layerManager.GetHostObjectCollection(layer, rootObjectCollection);
           string applicationId = rhinoObject.Id.ToString();

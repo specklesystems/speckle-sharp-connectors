@@ -1,12 +1,10 @@
 using Microsoft.Extensions.Logging;
-using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Utils.Cancellation;
-using Speckle.Connectors.Utils.Operations;
 using Speckle.Sdk;
 
 namespace Speckle.Connectors.Autocad.Bindings;
@@ -18,9 +16,8 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
 
   private readonly DocumentModelStore _store;
   private readonly CancellationManager _cancellationManager;
-  private readonly IUnitOfWorkFactory _unitOfWorkFactory;
-  private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<AutocadReceiveBinding> _logger;
+  private readonly IAutocadSender _autocadSender;
 
   private ReceiveBindingUICommands Commands { get; }
 
@@ -28,16 +25,14 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
     DocumentModelStore store,
     IBridge parent,
     CancellationManager cancellationManager,
-    IUnitOfWorkFactory unitOfWorkFactory,
-    IOperationProgressManager operationProgressManager,
-    ILogger<AutocadReceiveBinding> logger
+    ILogger<AutocadReceiveBinding> logger,
+    IAutocadSender autocadSender
   )
   {
     _store = store;
     _cancellationManager = cancellationManager;
-    _unitOfWorkFactory = unitOfWorkFactory;
-    _operationProgressManager = operationProgressManager;
     _logger = logger;
+    _autocadSender = autocadSender;
     Parent = parent;
     Commands = new ReceiveBindingUICommands(parent);
   }
@@ -62,21 +57,9 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
       // The DocumentActivated event isn't usable probably because it is pushed to back of main thread queue
       Application.DocumentManager.DocumentActivationEnabled = false;
 
-      using var unitOfWork = _unitOfWorkFactory.Create();
       // Receive host objects
-      var operationResults = await unitOfWork
-        .Resolve<ReceiveOperation>()
-        .Execute(
-          modelCard.GetReceiveInfo(Speckle.Connectors.Utils.Connector.Slug),
-          cancellationToken,
-          (status, progress) =>
-            _operationProgressManager.SetModelProgress(
-              Parent,
-              modelCardId,
-              new ModelCardProgress(modelCardId, status, progress),
-              cancellationToken
-            )
-        )
+      var operationResults = await _autocadSender
+        .ReceiveOperation(Parent, modelCard, cancellationToken)
         .ConfigureAwait(false);
 
       Commands.SetModelReceiveResult(modelCardId, operationResults.BakedObjectIds, operationResults.ConversionResults);

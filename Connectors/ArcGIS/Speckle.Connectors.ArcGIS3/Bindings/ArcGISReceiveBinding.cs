@@ -1,12 +1,10 @@
 using Microsoft.Extensions.Logging;
-using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Utils.Cancellation;
-using Speckle.Connectors.Utils.Operations;
 using Speckle.Sdk;
 
 namespace Speckle.Connectors.ArcGIS.Bindings;
@@ -16,9 +14,8 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
   public string Name { get; } = "receiveBinding";
   private readonly CancellationManager _cancellationManager;
   private readonly DocumentModelStore _store;
-  private readonly IUnitOfWorkFactory _unitOfWorkFactory;
-  private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<ArcGISReceiveBinding> _logger;
+  private readonly IArcGISSender _arcGisSender;
 
   private ReceiveBindingUICommands Commands { get; }
   public IBridge Parent { get; }
@@ -27,18 +24,16 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
     DocumentModelStore store,
     IBridge parent,
     CancellationManager cancellationManager,
-    IUnitOfWorkFactory unitOfWorkFactory,
-    IOperationProgressManager operationProgressManager,
-    ILogger<ArcGISReceiveBinding> logger
+    ILogger<ArcGISReceiveBinding> logger,
+    IArcGISSender arcGisSender
   )
   {
     _store = store;
     _cancellationManager = cancellationManager;
     Parent = parent;
     Commands = new ReceiveBindingUICommands(parent);
-    _unitOfWorkFactory = unitOfWorkFactory;
-    _operationProgressManager = operationProgressManager;
     _logger = logger;
+    _arcGisSender = arcGisSender;
   }
 
   public async Task Receive(string modelCardId)
@@ -54,22 +49,9 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
 
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
-      using IUnitOfWork unitOfWork = _unitOfWorkFactory.Create();
-
       // Receive host objects
-      var receiveOperationResults = await unitOfWork
-        .Resolve<ReceiveOperation>()
-        .Execute(
-          modelCard.GetReceiveInfo("ArcGIS"), // POC: get host app name from settings? same for GetSendInfo
-          cancellationToken,
-          (status, progress) =>
-            _operationProgressManager.SetModelProgress(
-              Parent,
-              modelCardId,
-              new ModelCardProgress(modelCardId, status, progress),
-              cancellationToken
-            )
-        )
+      var receiveOperationResults = await _arcGisSender
+        .ReceiveOperation(Parent, modelCard, cancellationToken)
         .ConfigureAwait(false);
 
       modelCard.BakedObjectIds = receiveOperationResults.BakedObjectIds.ToList();

@@ -1,4 +1,5 @@
 ﻿using Speckle.Autofac.DependencyInjection;
+using Speckle.Connectors.Utils.Builders;
 using Speckle.Converters.Common;
 
 namespace Speckle.Connectors.Utils.Operations;
@@ -36,6 +37,36 @@ public abstract class ScopedSender(
             ct
           ),
         ct
+      )
+      .ConfigureAwait(false);
+  }
+
+  protected async Task<HostObjectBuilderResult> ReceiveOperation<TConversionSettings>(
+    IBrowserBridge parent,
+    ReceiveInfo receiveInfo,
+    string modelCardId,
+    TConversionSettings conversionSettings,
+    CancellationToken ct = default
+  )
+    where TConversionSettings : class, IConverterSettings
+  {
+    using var unitOfWork = unitOfWorkFactory.Create();
+    using var settings = unitOfWork
+      .Resolve<IConverterSettingsStore<TConversionSettings>>()
+      .Push(() => conversionSettings);
+
+    return await unitOfWork
+      .Resolve<ReceiveOperation>()
+      .Execute(
+        receiveInfo,
+        ct,
+        (status, progress) =>
+          operationProgressManager.SetModelProgress(
+            parent,
+            modelCardId,
+            new ModelCardProgress(modelCardId, status, progress),
+            ct
+          )
       )
       .ConfigureAwait(false);
   }

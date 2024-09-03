@@ -167,13 +167,7 @@ public sealed class AutocadSendBinding : ISendBinding
       }
 
       var sendResult = await _autocadSender
-        .SendOperation(
-          Parent,
-          modelCard,
-          Application.DocumentManager.CurrentDocument,
-          autocadObjects,
-          cancellationToken
-        )
+        .SendOperation(Parent, modelCard, autocadObjects, cancellationToken)
         .ConfigureAwait(false);
 
       Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);

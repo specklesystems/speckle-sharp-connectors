@@ -3,6 +3,7 @@ using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
+using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
@@ -40,6 +41,30 @@ public class RevitSender(
           activeUIDoc.Document,
           toSpeckleSettingsManager.GetDetailLevelSetting(modelCard),
           toSpeckleSettingsManager.GetReferencePointSetting(modelCard)
+        ),
+        ct
+      )
+      .ConfigureAwait(false);
+    return result;
+  }
+
+  public async Task<HostObjectBuilderResult> ReceiveOperation(
+    IBridge parent,
+    ReceiverModelCard modelCard,
+    CancellationToken ct = default
+  )
+  {
+    var activeUIDoc =
+      revitContext.UIApplication?.ActiveUIDocument
+      ?? throw new SpeckleException("Unable to retrieve active UI document");
+    var result = await base.ReceiveOperation(
+        parent,
+        modelCard.GetReceiveInfo(Speckle.Connectors.Utils.Connector.Slug),
+        modelCard.ModelCardId.NotNull(),
+        revitConversionSettingsFactory.Create(
+          activeUIDoc.Document,
+          DetailLevelType.Coarse, //TODO figure out
+          null
         ),
         ct
       )

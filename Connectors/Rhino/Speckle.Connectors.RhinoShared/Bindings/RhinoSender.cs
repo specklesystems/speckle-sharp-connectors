@@ -1,26 +1,40 @@
-﻿using Speckle.Autofac.DependencyInjection;
-using Speckle.Connectors.Autocad.Operations.Send;
+﻿using Rhino;
+using Rhino.DocObjects;
+using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Operations;
-using Speckle.Converters.Autocad;
-using Speckle.InterfaceGenerator;
+using Speckle.Converters.Rhino;
 using Speckle.Sdk.Common;
 
-namespace Speckle.Connectors.Autocad.Bindings;
+namespace Speckle.Connectors.Rhino.Bindings;
 
-[GenerateAutoInterface]
-public class AutocadSender(
+public interface IRhinoSender
+{
+  Task<SendOperationResult> SendOperation(
+    IBridge parent,
+    SenderModelCard modelCard,
+    IReadOnlyList<RhinoObject> objects,
+    CancellationToken ct = default
+  );
+  Task<HostObjectBuilderResult> ReceiveOperation(
+    IBridge parent,
+    ReceiverModelCard modelCard,
+    CancellationToken ct = default
+  );
+}
+
+public class RhinoSender(
   IUnitOfWorkFactory unitOfWorkFactory,
   IOperationProgressManager operationProgressManager,
-  IAutocadConversionSettingsFactory autocadConversionSettingsFactory
-) : ScopedSender(unitOfWorkFactory, operationProgressManager), IAutocadSender
+  IRhinoConversionSettingsFactory rhinoConversionSettingsFactory
+) : ScopedSender(unitOfWorkFactory, operationProgressManager), IRhinoSender
 {
   public async Task<SendOperationResult> SendOperation(
     IBridge parent,
     SenderModelCard modelCard,
-    IReadOnlyList<AutocadRootObject> objects,
+    IReadOnlyList<RhinoObject> objects,
     CancellationToken ct = default
   )
   {
@@ -29,7 +43,7 @@ public class AutocadSender(
         modelCard.GetSendInfo(Utils.Connector.Slug),
         modelCard.ModelCardId.NotNull(),
         objects,
-        autocadConversionSettingsFactory.Create(Application.DocumentManager.CurrentDocument),
+        rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc),
         ct
       )
       .ConfigureAwait(false);
@@ -46,7 +60,7 @@ public class AutocadSender(
         parent,
         modelCard.GetReceiveInfo(Speckle.Connectors.Utils.Connector.Slug),
         modelCard.ModelCardId.NotNull(),
-        autocadConversionSettingsFactory.Create(Application.DocumentManager.CurrentDocument),
+        rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc),
         ct
       )
       .ConfigureAwait(false);

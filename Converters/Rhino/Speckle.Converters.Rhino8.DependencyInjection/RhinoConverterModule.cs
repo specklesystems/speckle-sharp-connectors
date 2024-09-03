@@ -18,6 +18,9 @@ public class RhinoConverterModule : ISpeckleModule
 
     // register all application converters and context stacks
     builder.AddApplicationConverters<RhinoToSpeckleUnitConverter, UnitSystem>();
-    builder.AddScoped<IConversionContextStack<RhinoDoc, UnitSystem>, RhinoConversionContextStack>();
+    builder.AddScoped<
+      IConverterSettingsStore<RhinoConversionSettings>,
+      ConverterSettingsStore<RhinoConversionSettings>
+    >();
   }
 }

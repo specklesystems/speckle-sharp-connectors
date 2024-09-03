@@ -3,6 +3,7 @@ using ArcGIS.Desktop.Mapping;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card;
+using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.ArcGIS3.Utils;
@@ -16,6 +17,12 @@ public interface IArcGISSender
     IBridge parent,
     SenderModelCard modelCard,
     IReadOnlyList<MapMember> objects,
+    CancellationToken ct = default
+  );
+
+  Task<HostObjectBuilderResult> ReceiveOperation(
+    IBridge parent,
+    ReceiverModelCard modelCard,
     CancellationToken ct = default
   );
 }
@@ -47,5 +54,26 @@ public class ArcGISSender(
       )
       .ConfigureAwait(false);
     return result.NotNull();
+  }
+
+  public async Task<HostObjectBuilderResult> ReceiveOperation(
+    IBridge parent,
+    ReceiverModelCard modelCard,
+    CancellationToken ct = default
+  )
+  {
+    var result = await base.ReceiveOperation(
+        parent,
+        modelCard.GetReceiveInfo(Speckle.Connectors.Utils.Connector.Slug),
+        modelCard.ModelCardId.NotNull(),
+        arcGisConversionSettingsFactory.Create(
+          Project.Current,
+          MapView.Active.Map,
+          new CRSoffsetRotation(MapView.Active.Map)
+        ),
+        ct
+      )
+      .ConfigureAwait(false);
+    return result;
   }
 }
