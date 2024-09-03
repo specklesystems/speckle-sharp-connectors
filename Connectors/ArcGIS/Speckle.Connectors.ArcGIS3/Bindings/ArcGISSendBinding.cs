@@ -8,6 +8,7 @@ using ArcGIS.Desktop.Mapping.Events;
 using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.ArcGIS.Filters;
+using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Exceptions;
@@ -38,6 +39,7 @@ public sealed class ArcGISSendBinding : ISendBinding
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<ArcGISSendBinding> _logger;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly MapMembersUtils _mapMemberUtils;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -58,7 +60,8 @@ public sealed class ArcGISSendBinding : ISendBinding
     CancellationManager cancellationManager,
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
-    ILogger<ArcGISSendBinding> logger
+    ILogger<ArcGISSendBinding> logger,
+    MapMembersUtils mapMemberUtils
   )
   {
     _store = store;
@@ -69,6 +72,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     _operationProgressManager = operationProgressManager;
     _logger = logger;
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
+    _mapMemberUtils = mapMemberUtils;
 
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
@@ -203,23 +207,37 @@ public sealed class ArcGISSendBinding : ISendBinding
     }
 
     // get the path of the edited dataset
-    var datasetURI = args.Row.GetTable().GetPath();
+    Uri datasetPath = args.Row.GetTable().GetPath();
 
-    // find all layers & tables reading from the dataset
     foreach (Layer layer in MapView.Active.Map.Layers)
     {
-      if (layer.GetPath() == datasetURI)
+      try
       {
-        ChangedObjectIds[layer.URI] = 1;
+        if (layer.GetPath() == datasetPath)
+        {
+          ChangedObjectIds[layer.URI] = 1;
+        }
+      }
+      catch (UriFormatException) // layer.GetPath() or table.GetPath() can throw this error, if data source was removed from the hard drive
+      {
+        // ignore layers with invalid source URI
       }
     }
     foreach (StandaloneTable table in MapView.Active.Map.StandaloneTables)
     {
-      if (table.GetPath() == datasetURI)
+      try
       {
-        ChangedObjectIds[table.URI] = 1;
+        if (table.GetPath() == datasetPath)
+        {
+          ChangedObjectIds[table.URI] = 1;
+        }
+      }
+      catch (UriFormatException) // layer.GetPath() or table.GetPath() can throw this error, if data source was removed from the hard drive
+      {
+        // ignore layers with invalid source URI
       }
     }
+
     RunExpirationChecks(false);
   }
 
