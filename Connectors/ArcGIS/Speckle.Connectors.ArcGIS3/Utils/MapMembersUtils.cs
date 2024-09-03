@@ -5,34 +5,48 @@ namespace Speckle.Connectors.ArcGIS.Utils;
 
 public class MapMembersUtils
 {
+  /// <summary>
+  /// Returns all Layers and Standalone Tables present on the Map
+  /// </summary>
+  /// <param name="map"></param>
+  /// <returns></returns>
   public List<MapMember> GetAllMapMembers(Map map)
   {
     // first get all map layers
     List<MapMember> mapMembers = new();
-    UnpackMapLayers(mapMembers, map.Layers);
-    UnpackMapLayers(mapMembers, map.StandaloneTables);
+    var layerMapMembers = UnpackMapLayers(map.Layers);
+    mapMembers.AddRange(layerMapMembers);
+
+    // add tables
+    var standaloneTableMapMembers = UnpackMapLayers(map.StandaloneTables);
+    mapMembers.AddRange(standaloneTableMapMembers);
     return mapMembers;
   }
 
-  public void UnpackMapLayers(List<MapMember> mapMembers, IEnumerable<MapMember> mapMembersToUnpack)
+  public List<MapMember> UnpackMapLayers(IEnumerable<MapMember> mapMembersToUnpack)
   {
+    List<MapMember> mapMembers = new();
     foreach (var layer in mapMembersToUnpack)
     {
       switch (layer)
       {
         case GroupLayer subGroup:
           mapMembers.Add(layer);
-          UnpackMapLayers(mapMembers, subGroup.Layers);
+          var subGroupMapMembers = UnpackMapLayers(subGroup.Layers);
+          mapMembers.AddRange(subGroupMapMembers);
           break;
         case ILayerContainerInternal subLayerContainerInternal:
           mapMembers.Add(layer);
-          UnpackMapLayers(mapMembers, subLayerContainerInternal.InternalLayers);
+          var subLayerMapMembers = UnpackMapLayers(subLayerContainerInternal.InternalLayers);
+          mapMembers.AddRange(subLayerMapMembers);
           break;
         default:
           mapMembers.Add(layer);
           break;
       }
     }
+
+    return mapMembers;
   }
 
   // Gets the layer display priority for selected layers
