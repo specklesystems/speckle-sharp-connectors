@@ -42,14 +42,10 @@ public class PointToSpeckleConverter : ITypedConverter<MapPoint, SOG.Point>
 
       // convert to Speckle Pt
       SOG.Point reprojectedSpecklePt =
-        new(
-          reprojectedPt.X,
-          reprojectedPt.Y,
-          reprojectedPt.Z,
-          _settingsStore.Current.ActiveCRSoffsetRotation.SpeckleUnitString
-        );
+        new(reprojectedPt.X, reprojectedPt.Y, reprojectedPt.Z, _settingsStore.Current.SpeckleUnits);
       SOG.Point scaledMovedRotatedPoint = _settingsStore.Current.ActiveCRSoffsetRotation.OffsetRotateOnSend(
-        reprojectedSpecklePt
+        reprojectedSpecklePt,
+        _settingsStore.Current.SpeckleUnits
       );
       return scaledMovedRotatedPoint;
     }

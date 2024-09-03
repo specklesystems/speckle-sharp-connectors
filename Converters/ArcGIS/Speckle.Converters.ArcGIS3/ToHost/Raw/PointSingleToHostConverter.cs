@@ -17,7 +17,10 @@ public class PointToHostConverter : ITypedConverter<SOG.Point, ACG.MapPoint>
 
   public ACG.MapPoint Convert(SOG.Point target)
   {
-    SOG.Point scaledMovedRotatedPoint = _settingsStore.Current.ActiveCRSoffsetRotation.OffsetRotateOnReceive(target);
+    SOG.Point scaledMovedRotatedPoint = _settingsStore.Current.ActiveCRSoffsetRotation.OffsetRotateOnReceive(
+      target,
+      _settingsStore.Current.SpeckleUnits
+    );
     return new ACG.MapPointBuilderEx(
       scaledMovedRotatedPoint.x,
       scaledMovedRotatedPoint.y,

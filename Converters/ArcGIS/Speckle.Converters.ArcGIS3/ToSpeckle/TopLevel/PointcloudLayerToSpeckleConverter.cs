@@ -103,7 +103,7 @@ public class PointCloudToSpeckleConverter
         colors = speckleColors,
         sizes = values,
         bbox = _boxConverter.Convert(target.QueryExtent()),
-        units = _settingsStore.Current.ActiveCRSoffsetRotation.SpeckleUnitString
+        units = _settingsStore.Current.SpeckleUnits
       };
 
     speckleLayer.elements.Add(cloud);
