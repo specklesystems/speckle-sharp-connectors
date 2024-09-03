@@ -4,13 +4,29 @@ using ArcGIS.Desktop.Core;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Converters.ArcGIS3.Utils;
+using Speckle.Converters.Common;
 using Speckle.InterfaceGenerator;
 
 namespace Speckle.Converters.ArcGIS3;
 
 [GenerateAutoInterface]
-public class ArcGISConversionSettingsFactory : IArcGISConversionSettingsFactory
+public class ArcGISConversionSettingsFactory(IConverterSettingsStore<ArcGISConversionSettings> settingsStore)
+  : IArcGISConversionSettingsFactory
 {
+  public IDisposable Push(Project? project = null, Map? map = null, CRSoffsetRotation? activeCRSoffsetRotation = null)
+  {
+    return settingsStore.Push(
+      () =>
+        new()
+        {
+          Project = project ?? settingsStore.Current.Project,
+          Map = map ?? settingsStore.Current.Map,
+          ActiveCRSoffsetRotation = activeCRSoffsetRotation ?? settingsStore.Current.ActiveCRSoffsetRotation,
+          SpeckleDatabasePath = EnsureOrAddSpeckleDatabase()
+        }
+    );
+  }
+
   public ArcGISConversionSettings Create(Project project, Map map, CRSoffsetRotation activeCRSoffsetRotation)
   {
     return new ArcGISConversionSettings()

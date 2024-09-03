@@ -238,7 +238,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
 
     // get CRS from any present VectorLayer
     Base? vLayer = objectsToConvertTc.FirstOrDefault(x => x.Current is VectorLayer)?.Current;
-    var crs = _crsUtils.FindSetCrsDataOnReceive(vLayer); // TODO help
+    using var crs = _crsUtils.FindSetCrsDataOnReceive(vLayer); // TODO help
 
     // now filter the objects
     objectsToConvertTc = objectsToConvertTc.Where(ctx => ctx.Current is not Collection).ToList();

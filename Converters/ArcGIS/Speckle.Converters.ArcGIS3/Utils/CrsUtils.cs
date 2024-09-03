@@ -4,9 +4,9 @@ using Speckle.Sdk.Models;
 namespace Speckle.Converters.ArcGIS3.Utils;
 
 [GenerateAutoInterface]
-public class CrsUtils : ICrsUtils
+public class CrsUtils(IArcGISConversionSettingsFactory settingsStoreFactory) : ICrsUtils
 {
-  public CRSoffsetRotation? FindSetCrsDataOnReceive(Base? rootObj)
+  public IDisposable? FindSetCrsDataOnReceive(Base? rootObj)
   {
     if (rootObj is SGIS.VectorLayer vLayer)
     {
@@ -23,7 +23,9 @@ public class CrsUtils : ICrsUtils
       double trueNorthRadians = System.Convert.ToDouble((vLayer.crs?.rotation == null) ? 0 : vLayer.crs.rotation);
       double latOffset = System.Convert.ToDouble((vLayer.crs?.offset_y == null) ? 0 : vLayer.crs.offset_y);
       double lonOffset = System.Convert.ToDouble((vLayer.crs?.offset_x == null) ? 0 : vLayer.crs.offset_x);
-      return new CRSoffsetRotation(spatialRef, latOffset, lonOffset, trueNorthRadians);
+      return settingsStoreFactory.Push(
+        activeCRSoffsetRotation: new CRSoffsetRotation(spatialRef, latOffset, lonOffset, trueNorthRadians)
+      );
     }
 
     return null;
