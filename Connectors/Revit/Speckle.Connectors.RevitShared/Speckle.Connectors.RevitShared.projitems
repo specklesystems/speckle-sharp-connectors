@@ -18,7 +18,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RevitBaseBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RevitReceiveBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RevitSender.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Bindings\ScopedSender.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\SelectionBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RevitSendBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ElementIdHelper.cs" />
