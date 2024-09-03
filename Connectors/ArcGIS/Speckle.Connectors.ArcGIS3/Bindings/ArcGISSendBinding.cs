@@ -205,26 +205,13 @@ public sealed class ArcGISSendBinding : ISendBinding
     // get the path of the edited dataset
     Uri datasetPath = args.Row.GetTable().GetPath();
 
-    // find all layers & tables reading from the dataset
-    List<MapMember> allMapMembers = _mapMemberUtils.GetAllMapMembers(MapView.Active.Map);
-    foreach (MapMember mapMember in allMapMembers)
+    foreach (Layer layer in MapView.Active.Map.Layers)
     {
       try
       {
-        if (mapMember is Layer layer)
+        if (layer.GetPath() == datasetPath)
         {
-          if (layer.GetPath() == datasetPath)
-          {
-            ChangedObjectIds[layer.URI] = 1;
-          }
-        }
-
-        if (mapMember is StandaloneTable table)
-        {
-          if (table.GetPath() == datasetPath)
-          {
-            ChangedObjectIds[table.URI] = 1;
-          }
+          ChangedObjectIds[layer.URI] = 1;
         }
       }
       catch (UriFormatException) // layer.GetPath() or table.GetPath() can throw this error, if data source was removed from the hard drive
@@ -232,6 +219,21 @@ public sealed class ArcGISSendBinding : ISendBinding
         // ignore layers with invalid source URI
       }
     }
+    foreach (StandaloneTable table in MapView.Active.Map.StandaloneTables)
+    {
+      try
+      {
+        if (table.GetPath() == datasetPath)
+        {
+          ChangedObjectIds[table.URI] = 1;
+        }
+      }
+      catch (UriFormatException) // layer.GetPath() or table.GetPath() can throw this error, if data source was removed from the hard drive
+      {
+        // ignore layers with invalid source URI
+      }
+    }
+
     RunExpirationChecks(false);
   }
 
