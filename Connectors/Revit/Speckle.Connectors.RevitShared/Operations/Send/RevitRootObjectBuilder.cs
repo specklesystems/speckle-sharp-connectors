@@ -99,7 +99,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
         try
         {
           Base converted;
-          if (_sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference value))
+          if (_sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value))
           {
             converted = value;
             cacheHitCount++;

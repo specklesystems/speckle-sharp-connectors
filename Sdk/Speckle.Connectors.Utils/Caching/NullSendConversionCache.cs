@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.Utils.Caching;
@@ -13,9 +14,13 @@ public class NullSendConversionCache : ISendConversionCache
 
   public void ClearCache() { }
 
-  public bool TryGetValue(string projectId, string applicationId, out ObjectReference objectReference)
+  public bool TryGetValue(
+    string projectId,
+    string applicationId,
+    [NotNullWhen(true)] out ObjectReference? objectReference
+  )
   {
-    objectReference = new ObjectReference();
+    objectReference = null;
     return false;
   }
 }

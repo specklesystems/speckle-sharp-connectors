@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.Utils.Caching;
@@ -20,5 +21,5 @@ public interface ISendConversionCache
   /// <param name="objectIds"></param>
   public void EvictObjects(IEnumerable<string> objectIds);
   public void ClearCache();
-  bool TryGetValue(string projectId, string applicationId, out ObjectReference objectReference);
+  bool TryGetValue(string projectId, string applicationId, [NotNullWhen(true)] out ObjectReference? objectReference);
 }
