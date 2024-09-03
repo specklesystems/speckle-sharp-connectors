@@ -1,9 +1,9 @@
 ﻿using FluentAssertions;
 using Moq;
 using NUnit.Framework;
-using Rhino;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Rhino;
 using Speckle.Converters.Rhino.ToSpeckle.Raw;
 using Speckle.Testing;
 
@@ -19,12 +19,10 @@ public class ArcToSpeckleConverterTests : MoqTest
     var mockPointConverter = Create<ITypedConverter<RG.Point3d, SOG.Point>>();
     var mockPlaneConverter = Create<ITypedConverter<RG.Plane, SOG.Plane>>();
     var mockBoxConverter = Create<ITypedConverter<RG.Box, SOG.Box>>();
-    var mockContextStack = Create<IConversionContextStack<RhinoDoc, UnitSystem>>();
+    var mockContextStack = Create<IConverterSettingsStore<RhinoConversionSettings>>();
     var factory = Create<IBoxFactory>();
 
-    var context = Create<IConversionContext<RhinoDoc>>();
-    context.Setup(x => x.SpeckleUnits).Returns("units");
-    mockContextStack.Setup(cs => cs.Current).Returns(context.Object);
+    mockContextStack.Setup(cs => cs.Current).Returns(new RhinoConversionSettings() { SpeckleUnits = "units" });
 
     var targetArc = Create<RG.Arc>();
     var targetPlane = Create<RG.Plane>();
