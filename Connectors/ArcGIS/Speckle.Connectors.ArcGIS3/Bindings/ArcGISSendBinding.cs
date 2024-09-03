@@ -226,14 +226,13 @@ public sealed class ArcGISSendBinding : ISendBinding
             ChangedObjectIds[table.URI] = 1;
           }
         }
-
-        RunExpirationChecks(false);
       }
       catch (UriFormatException)
       {
         // ignore layers with invalid source URI
       }
     }
+    RunExpirationChecks(false);
   }
 
   private void GetIdsForLayersRemovedEvent(LayerEventsArgs args)
