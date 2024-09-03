@@ -60,13 +60,22 @@ public class SegmentCollectionToSpeckleConverter : ITypedConverter<ACG.ReadOnlyS
         {
           foreach (ACG.Segment? subSegment in subSegments)
           {
+            ACG.MapPoint startPt = new ACG.MapPointBuilderEx(
+              subSegment.StartPoint.X,
+              subSegment.StartPoint.Y,
+              subSegment.StartPoint.Z,
+              target.SpatialReference
+            ).ToGeometry();
+            ACG.MapPoint endPt = new ACG.MapPointBuilderEx(
+              subSegment.EndPoint.X,
+              subSegment.EndPoint.Y,
+              subSegment.EndPoint.Z,
+              target.SpatialReference
+            ).ToGeometry();
+
             AddPtsToPolylinePts(
               points,
-              new List<SOG.Point>()
-              {
-                _pointConverter.Convert(subSegment.StartPoint),
-                _pointConverter.Convert(subSegment.EndPoint)
-              }
+              new List<SOG.Point>() { _pointConverter.Convert(startPt), _pointConverter.Convert(endPt) }
             );
           }
         }
