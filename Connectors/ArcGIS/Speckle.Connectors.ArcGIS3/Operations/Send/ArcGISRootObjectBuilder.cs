@@ -98,7 +98,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
         // don't use cache for group layers
         if (
           mapMember is not GroupLayer
-          && _sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference value)
+          && _sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value)
         )
         {
           converted = value;

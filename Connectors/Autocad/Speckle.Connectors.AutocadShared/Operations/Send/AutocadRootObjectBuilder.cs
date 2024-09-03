@@ -108,7 +108,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
           {
             converted = instanceProxy;
           }
-          else if (_sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference value))
+          else if (_sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value))
           {
             converted = value;
             cacheHitCount++;
