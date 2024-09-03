@@ -1,4 +1,3 @@
-using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.DatabaseServices;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Converters.Autocad;
@@ -18,7 +17,13 @@ public class Civil3dConverterModule : ISpeckleModule
     // register all application converters
     builder.AddApplicationConverters<Civil3dToSpeckleUnitConverter, Autodesk.Aec.BuiltInUnit>();
     builder.AddApplicationConverters<AutocadToSpeckleUnitConverter, UnitsValue>();
-    builder.AddScoped<IConversionContextStack<Document, Autodesk.Aec.BuiltInUnit>, Civil3dConversionContextStack>();
-    builder.AddScoped<IConversionContextStack<Document, UnitsValue>, AutocadConversionContextStack>();
+    builder.AddScoped<
+      IConverterSettingsStore<Civil3dConversionSettings>,
+      ConverterSettingsStore<Civil3dConversionSettings>
+    >();
+    builder.AddScoped<
+      IConverterSettingsStore<AutocadConversionSettings>,
+      ConverterSettingsStore<AutocadConversionSettings>
+    >();
   }
 }

@@ -1,22 +1,20 @@
-using System.Diagnostics.CodeAnalysis;
 using Speckle.Converters.Common;
+using Speckle.InterfaceGenerator;
 
 namespace Speckle.Converters.Civil3d;
 
-// POC: Suppressed naming warning for now, but we should evaluate if we should follow this or disable it.
-[SuppressMessage(
-  "Naming",
-  "CA1711:Identifiers should not have incorrect suffix",
-  Justification = "Name ends in Stack but it is in fact a Stack, just not inheriting from `System.Collections.Stack`"
-)]
-public class Civil3dConversionContextStack : ConversionContextStack<Document, AAEC.BuiltInUnit>
+public class Civil3dConversionSettings : IConverterSettings
 {
-  public Civil3dConversionContextStack(IHostToSpeckleUnitConverter<AAEC.BuiltInUnit> unitConverter)
-    : base(
-      Application.DocumentManager.CurrentDocument,
-      GetDocBuiltInUnit(Application.DocumentManager.CurrentDocument),
-      unitConverter
-    ) { }
+  public Document Document { get; init; }
+  public string SpeckleUnits { get; init; }
+}
+
+[GenerateAutoInterface]
+public class Civil3dConversionSettingsFactory(IHostToSpeckleUnitConverter<AAEC.BuiltInUnit> unitsConverter)
+  : ICivil3dConversionSettingsFactory
+{
+  public Civil3dConversionSettings Create(Document document) =>
+    new() { Document = document, SpeckleUnits = unitsConverter.ConvertOrThrow(GetDocBuiltInUnit(document)) };
 
   private static AAEC.BuiltInUnit GetDocBuiltInUnit(Document doc)
   {
