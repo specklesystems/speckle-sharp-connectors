@@ -27,11 +27,8 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
   private readonly ISyncToThread _syncToThread;
   private readonly ElementUnpacker _elementUnpacker;
   private readonly SendCollectionManager _sendCollectionManager;
-<<<<<<< HEAD
   private readonly RevitMaterialCacheSingleton _revitMaterialCacheSingleton;
-=======
   private readonly ILogger<RevitRootObjectBuilder> _logger;
->>>>>>> origin/dev
 
   public RevitRootObjectBuilder(
     IRootToSpeckleConverter converter,
@@ -40,11 +37,8 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     ISyncToThread syncToThread,
     ElementUnpacker elementUnpacker,
     SendCollectionManager sendCollectionManager,
-<<<<<<< HEAD
-    RevitMaterialCacheSingleton revitMaterialCacheSingleton
-=======
+    RevitMaterialCacheSingleton revitMaterialCacheSingleton,
     ILogger<RevitRootObjectBuilder> logger
->>>>>>> origin/dev
   )
   {
     _converter = converter;
@@ -53,11 +47,8 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     _syncToThread = syncToThread;
     _elementUnpacker = elementUnpacker;
     _sendCollectionManager = sendCollectionManager;
-<<<<<<< HEAD
     _revitMaterialCacheSingleton = revitMaterialCacheSingleton;
-=======
     _logger = logger;
->>>>>>> origin/dev
 
     _rootObject = new Collection()
     {

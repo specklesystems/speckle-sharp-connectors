@@ -28,14 +28,15 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ArcGISColorManager _colorManager;
-  private readonly IConversionContextStack<ArcGISDocument, Unit> _contextStack;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
   private readonly ILogger<ArcGISRootObjectBuilder> _logger;
 
   public ArcGISRootObjectBuilder(
     ISendConversionCache sendConversionCache,
     ArcGISColorManager colorManager,
     IConverterSettingsStore<ArcGISConversionSettings> settingsStore,
-    IRootToSpeckleConverter rootToSpeckleConverter
+    IRootToSpeckleConverter rootToSpeckleConverter,
+    ILogger<ArcGISRootObjectBuilder> logger
   )
   {
     _sendConversionCache = sendConversionCache;

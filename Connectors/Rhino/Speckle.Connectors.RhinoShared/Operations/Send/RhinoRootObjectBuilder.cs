@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-=======
 using Microsoft.Extensions.Logging;
-using Rhino;
->>>>>>> origin/dev
 using Rhino.DocObjects;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.Rhino.HostApp;
