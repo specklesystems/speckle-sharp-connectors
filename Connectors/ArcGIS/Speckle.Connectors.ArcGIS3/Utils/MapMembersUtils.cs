@@ -9,8 +9,7 @@ public class MapMembersUtils
   {
     // first get all map layers
     List<MapMember> mapMembers = new();
-    var layers = map.Layers;
-    UnpackMapLayers(mapMembers, layers);
+    UnpackMapLayers(mapMembers, map.Layers);
     UnpackMapLayers(mapMembers, map.StandaloneTables);
     return mapMembers;
   }
