@@ -23,6 +23,6 @@ public class VectorConverterToHost : ITypedConverter<SOG.Vector, DB.XYZ>
       _scalingService.ScaleToNative(target.y, target.units),
       _scalingService.ScaleToNative(target.z, target.units)
     );
-    return _referencePointConverter.ToInternalCoordinates(revitVector, false);
+    return _referencePointConverter.ConvertToInternalCoordinates(revitVector, false);
   }
 }

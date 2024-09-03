@@ -28,6 +28,17 @@ public class ConfigBinding : IBinding
     _serializerOptions = serializerOptions;
   }
 
+#pragma warning disable CA1024
+  public bool GetIsDevMode()
+#pragma warning restore CA1024
+  {
+#if DEBUG
+    return true;
+#else
+    return false;
+#endif
+  }
+
   public ConnectorConfig GetConfig()
   {
     var rawConfig = ConfigStorage.GetObject(_connectorName);

@@ -1,4 +1,4 @@
-﻿using Speckle.Connectors.DUI.Settings;
+using Speckle.Connectors.DUI.Settings;
 using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Connectors.Revit.Operations.Send.Settings;

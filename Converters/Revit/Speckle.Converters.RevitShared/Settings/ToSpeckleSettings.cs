@@ -1,4 +1,6 @@
-﻿namespace Speckle.Converters.RevitShared.Settings;
+using Autodesk.Revit.DB;
+
+namespace Speckle.Converters.RevitShared.Settings;
 
 public enum DetailLevelType
 {
@@ -7,4 +9,11 @@ public enum DetailLevelType
   Fine
 }
 
-public record ToSpeckleSettings(DetailLevelType DetailLevel);
+public enum ReferencePointType
+{
+  InternalOrigin,
+  ProjectBase,
+  Survey
+}
+
+public record ToSpeckleSettings(DetailLevelType DetailLevel, Transform? ReferencePointTransform);

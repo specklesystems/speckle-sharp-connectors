@@ -11,6 +11,7 @@ using Speckle.Connectors.Revit.Bindings;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Revit.Operations.Receive;
 using Speckle.Connectors.Revit.Operations.Send;
+using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Builders;
@@ -66,6 +67,7 @@ public class RevitConnectorModule : ISpeckleModule
     builder.AddScoped<SendCollectionManager>();
     builder.AddScoped<IRootObjectBuilder<ElementId>, RevitRootObjectBuilder>();
     builder.AddSingleton<ISendConversionCache, SendConversionCache>();
+    builder.AddSingleton<ToSpeckleSettingsManager>();
 
     // receive operation and dependencies
     builder.AddScoped<IHostObjectBuilder, RevitHostObjectBuilder>();
