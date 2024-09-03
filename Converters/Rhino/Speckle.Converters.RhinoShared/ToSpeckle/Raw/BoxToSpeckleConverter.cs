@@ -1,5 +1,4 @@
-﻿using Rhino;
-using Speckle.Converters.Common;
+﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
@@ -8,12 +7,12 @@ public class BoxToSpeckleConverter : ITypedConverter<RG.Box, SOG.Box>
 {
   private readonly ITypedConverter<RG.Plane, SOG.Plane> _planeConverter;
   private readonly ITypedConverter<RG.Interval, SOP.Interval> _intervalConverter;
-  private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
+  private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   public BoxToSpeckleConverter(
     ITypedConverter<RG.Plane, SOG.Plane> planeConverter,
     ITypedConverter<RG.Interval, SOP.Interval> intervalConverter,
-    IConversionContextStack<RhinoDoc, UnitSystem> contextStack
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore
   )
   {
     _planeConverter = planeConverter;
@@ -33,7 +32,7 @@ public class BoxToSpeckleConverter : ITypedConverter<RG.Box, SOG.Box>
       xSize = _intervalConverter.Convert(target.X),
       ySize = _intervalConverter.Convert(target.Y),
       zSize = _intervalConverter.Convert(target.Z),
-      units = _contextStack.Current.SpeckleUnits,
+      units = _settingsStore.Current.SpeckleUnits,
       area = target.Area,
       volume = target.Volume,
     };

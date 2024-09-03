@@ -1,17 +1,39 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using Rhino;
+﻿using Rhino;
 using Speckle.Converters.Common;
+using Speckle.InterfaceGenerator;
 
 namespace Speckle.Converters.Rhino;
 
-// POC: CNX-9268 Suppressed naming warning for now, but we should evaluate if we should follow this or disable it.
-[SuppressMessage(
-  "Naming",
-  "CA1711:Identifiers should not have incorrect suffix",
-  Justification = "Name ends in Stack but it is in fact a Stack, just not inheriting from `System.Collections.Stack`"
-)]
-public class RhinoConversionContextStack : ConversionContextStack<RhinoDoc, UnitSystem>
+public class RhinoConversionSettings : IConverterSettings
 {
-  public RhinoConversionContextStack(IHostToSpeckleUnitConverter<UnitSystem> unitConverter)
-    : base(RhinoDoc.ActiveDoc, RhinoDoc.ActiveDoc.ModelUnitSystem, unitConverter) { }
+  public RhinoDoc Document { get; init; }
+  public string SpeckleUnits { get; init; }
+}
+
+public partial interface IRhinoConversionSettingsFactory
+{
+  IDisposable Push(RhinoDoc? document = default, string? units = default);
+}
+
+[GenerateAutoInterface]
+public class RhinoConversionSettingsFactory(
+  IHostToSpeckleUnitConverter<UnitSystem> unitsConverter,
+  IConverterSettingsStore<RhinoConversionSettings> settingsStore
+) : IRhinoConversionSettingsFactory
+{
+  public RhinoConversionSettings Current => settingsStore.Current;
+
+  public RhinoConversionSettings Create(RhinoDoc document) =>
+    new() { Document = document, SpeckleUnits = unitsConverter.ConvertOrThrow(RhinoDoc.ActiveDoc.ModelUnitSystem) };
+
+  [AutoInterfaceIgnore]
+  public IDisposable Push(RhinoDoc? document = null, string? units = null) =>
+    settingsStore.Push(
+      () =>
+        new RhinoConversionSettings()
+        {
+          Document = document ?? settingsStore.Current.Document,
+          SpeckleUnits = units ?? unitsConverter.ConvertOrThrow(RhinoDoc.ActiveDoc.ModelUnitSystem)
+        }
+    );
 }

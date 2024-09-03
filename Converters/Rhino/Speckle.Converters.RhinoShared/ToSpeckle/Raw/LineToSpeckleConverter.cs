@@ -1,5 +1,4 @@
-﻿using Rhino;
-using Speckle.Converters.Common;
+﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
@@ -8,12 +7,12 @@ public class LineToSpeckleConverter : ITypedConverter<RG.Line, SOG.Line>, ITyped
 {
   private readonly ITypedConverter<RG.Point3d, SOG.Point> _pointConverter;
   private readonly ITypedConverter<RG.Box, SOG.Box> _boxConverter;
-  private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
+  private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   public LineToSpeckleConverter(
     ITypedConverter<RG.Point3d, SOG.Point> pointConverter,
     ITypedConverter<RG.Box, SOG.Box> boxConverter,
-    IConversionContextStack<RhinoDoc, UnitSystem> contextStack
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore
   )
   {
     _pointConverter = pointConverter;
@@ -30,7 +29,7 @@ public class LineToSpeckleConverter : ITypedConverter<RG.Line, SOG.Line>, ITyped
   /// ⚠️ This conversion assumes the domain of a line is (0, LENGTH), as Rhino Lines do not have domain. If you want the domain preserved use LineCurve conversions instead.
   /// </remarks>
   public SOG.Line Convert(RG.Line target) =>
-    new(_pointConverter.Convert(target.From), _pointConverter.Convert(target.To), _contextStack.Current.SpeckleUnits)
+    new(_pointConverter.Convert(target.From), _pointConverter.Convert(target.To), _settingsStore.Current.SpeckleUnits)
     {
       length = target.Length,
       domain = new SOP.Interval { start = 0, end = target.Length },

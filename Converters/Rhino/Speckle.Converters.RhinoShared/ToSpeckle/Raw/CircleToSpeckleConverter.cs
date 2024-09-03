@@ -1,5 +1,4 @@
-﻿using Rhino;
-using Speckle.Converters.Common;
+﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Models;
 
@@ -8,11 +7,11 @@ namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
 public class CircleToSpeckleConverter : ITypedConverter<RG.Circle, SOG.Circle>
 {
   private readonly ITypedConverter<RG.Plane, SOG.Plane> _planeConverter;
-  private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
+  private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   public CircleToSpeckleConverter(
     ITypedConverter<RG.Plane, SOG.Plane> planeConverter,
-    IConversionContextStack<RhinoDoc, UnitSystem> contextStack
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore
   )
   {
     _planeConverter = planeConverter;
@@ -34,7 +33,7 @@ public class CircleToSpeckleConverter : ITypedConverter<RG.Circle, SOG.Circle>
     {
       plane = _planeConverter.Convert(target.Plane),
       radius = target.Radius,
-      units = _contextStack.Current.SpeckleUnits,
+      units = _settingsStore.Current.SpeckleUnits,
       domain = SOP.Interval.UnitInterval,
       length = 2 * Math.PI * target.Radius,
       area = Math.PI * Math.Pow(target.Radius, 2),

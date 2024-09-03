@@ -1,6 +1,7 @@
 using Rhino;
 using Rhino.DocObjects;
 using Speckle.Converters.Common;
+using Speckle.Converters.Rhino;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models.Proxies;
 
@@ -13,9 +14,9 @@ namespace Speckle.Connectors.Rhino.HostApp;
 /// </summary>
 public class RhinoGroupManager // POC: later make it more clean with RhinoGroupUnpacker Packer??? + see same POC comments in instance managers
 {
-  private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
+  private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
-  public RhinoGroupManager(IConversionContextStack<RhinoDoc, UnitSystem> contextStack)
+  public RhinoGroupManager(IConverterSettingsStore<RhinoConversionSettings> settingsStore)
   {
     _settingsStore = settingsStore;
   }
@@ -66,18 +67,18 @@ public class RhinoGroupManager // POC: later make it more clean with RhinoGroupU
     {
       var appIds = groupProxy.objects.SelectMany(oldObjId => applicationIdMap[oldObjId]).Select(id => new Guid(id));
       var groupName = (groupProxy.name ?? "No Name Group") + $" ({baseLayerName})";
-      _contextStack.Current.Document.Groups.Add(groupName, appIds);
+      _settingsStore.Current.Document.Groups.Add(groupName, appIds);
     }
   }
 
   public void PurgeGroups(string baseLayerName)
   {
-    for (int i = _contextStack.Current.Document.Groups.Count; i >= 0; i--)
+    for (int i = _settingsStore.Current.Document.Groups.Count; i >= 0; i--)
     {
-      var group = _contextStack.Current.Document.Groups.FindIndex(i);
+      var group = _settingsStore.Current.Document.Groups.FindIndex(i);
       if (group is { Name: not null } && group.Name.Contains(baseLayerName))
       {
-        _contextStack.Current.Document.Groups.Delete(i);
+        _settingsStore.Current.Document.Groups.Delete(i);
       }
     }
   }

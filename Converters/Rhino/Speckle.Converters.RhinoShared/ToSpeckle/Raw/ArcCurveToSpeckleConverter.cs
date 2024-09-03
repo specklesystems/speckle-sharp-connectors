@@ -1,5 +1,4 @@
-﻿using Rhino;
-using Speckle.Converters.Common;
+﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
 using Speckle.Sdk.Models;
@@ -11,13 +10,13 @@ public class ArcCurveToSpeckleConverter : ITypedConverter<RG.ArcCurve, ICurve>, 
   private readonly ITypedConverter<RG.Circle, SOG.Circle> _circleConverter;
   private readonly ITypedConverter<RG.Arc, SOG.Arc> _arcConverter;
   private readonly ITypedConverter<RG.Interval, SOP.Interval> _intervalConverter;
-  private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
+  private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   public ArcCurveToSpeckleConverter(
     ITypedConverter<RG.Circle, SOG.Circle> circleConverter,
     ITypedConverter<RG.Arc, SOG.Arc> arcConverter,
     ITypedConverter<RG.Interval, SOP.Interval> intervalConverter,
-    IConversionContextStack<RhinoDoc, UnitSystem> contextStack
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore
   )
   {
     _circleConverter = circleConverter;
@@ -38,7 +37,7 @@ public class ArcCurveToSpeckleConverter : ITypedConverter<RG.ArcCurve, ICurve>, 
   /// </remarks>
   public ICurve Convert(RG.ArcCurve target)
   {
-    var tolerance = _contextStack.Current.Document.ModelAbsoluteTolerance;
+    var tolerance = _settingsStore.Current.Document.ModelAbsoluteTolerance;
 
     if (target.IsCompleteCircle)
     {

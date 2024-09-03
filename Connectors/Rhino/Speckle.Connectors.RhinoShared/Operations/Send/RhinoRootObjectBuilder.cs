@@ -8,6 +8,7 @@ using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Instances;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
+using Speckle.Converters.Rhino;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -25,7 +26,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   private readonly ISendConversionCache _sendConversionCache;
   private readonly RhinoInstanceObjectsManager _instanceObjectsManager;
   private readonly RhinoGroupManager _rhinoGroupManager;
-  private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
+  private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
   private readonly RhinoLayerManager _layerManager;
   private readonly RhinoMaterialManager _materialManager;
   private readonly RhinoColorManager _colorManager;
@@ -33,7 +34,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
 
   public RhinoRootObjectBuilder(
     ISendConversionCache sendConversionCache,
-    IConversionContextStack<RhinoDoc, UnitSystem> contextStack,
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore,
     RhinoLayerManager layerManager,
     RhinoInstanceObjectsManager instanceObjectsManager,
     RhinoGroupManager rhinoGroupManager,

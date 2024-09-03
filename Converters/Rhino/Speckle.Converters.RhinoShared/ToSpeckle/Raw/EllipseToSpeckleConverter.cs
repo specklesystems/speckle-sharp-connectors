@@ -1,5 +1,4 @@
-﻿using Rhino;
-using Speckle.Converters.Common;
+﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
@@ -8,12 +7,12 @@ public class EllipseToSpeckleConverter : ITypedConverter<RG.Ellipse, SOG.Ellipse
 {
   private readonly ITypedConverter<RG.Plane, SOG.Plane> _planeConverter;
   private readonly ITypedConverter<RG.Box, SOG.Box> _boxConverter;
-  private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
+  private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   public EllipseToSpeckleConverter(
     ITypedConverter<RG.Plane, SOG.Plane> planeConverter,
     ITypedConverter<RG.Box, SOG.Box> boxConverter,
-    IConversionContextStack<RhinoDoc, UnitSystem> contextStack
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore
   )
   {
     _planeConverter = planeConverter;
@@ -37,7 +36,7 @@ public class EllipseToSpeckleConverter : ITypedConverter<RG.Ellipse, SOG.Ellipse
       plane = _planeConverter.Convert(target.Plane),
       firstRadius = target.Radius1,
       secondRadius = target.Radius2,
-      units = _contextStack.Current.SpeckleUnits,
+      units = _settingsStore.Current.SpeckleUnits,
       domain = SOP.Interval.UnitInterval,
       length = nurbsCurve.GetLength(),
       area = Math.PI * target.Radius1 * target.Radius2,

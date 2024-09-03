@@ -1,14 +1,13 @@
-﻿using Rhino;
-using Speckle.Converters.Common;
+﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
 
 public class VectorToSpeckleConverter : ITypedConverter<RG.Vector3d, SOG.Vector>
 {
-  private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
+  private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
-  public VectorToSpeckleConverter(IConversionContextStack<RhinoDoc, UnitSystem> contextStack)
+  public VectorToSpeckleConverter(IConverterSettingsStore<RhinoConversionSettings> settingsStore)
   {
     _settingsStore = settingsStore;
   }
@@ -19,5 +18,5 @@ public class VectorToSpeckleConverter : ITypedConverter<RG.Vector3d, SOG.Vector>
   /// <param name="target">The Rhino Vector3d object to convert.</param>
   /// <returns>The converted Speckle Vector object.</returns>
   public SOG.Vector Convert(RG.Vector3d target) =>
-    new(target.X, target.Y, target.Z, _contextStack.Current.SpeckleUnits);
+    new(target.X, target.Y, target.Z, _settingsStore.Current.SpeckleUnits);
 }

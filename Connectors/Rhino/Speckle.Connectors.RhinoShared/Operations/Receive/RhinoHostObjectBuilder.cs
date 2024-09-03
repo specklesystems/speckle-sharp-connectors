@@ -6,6 +6,7 @@ using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
+using Speckle.Converters.Rhino;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -23,7 +24,7 @@ namespace Speckle.Connectors.Rhino.Operations.Receive;
 public class RhinoHostObjectBuilder : IHostObjectBuilder
 {
   private readonly IRootToHostConverter _converter;
-  private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
+  private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
   private readonly GraphTraversal _traverseFunction;
   private readonly RhinoInstanceObjectsManager _instanceObjectsManager;
   private readonly RhinoLayerManager _layerManager;
@@ -34,7 +35,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
   public RhinoHostObjectBuilder(
     IRootToHostConverter converter,
-    IConversionContextStack<RhinoDoc, UnitSystem> contextStack,
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore,
     GraphTraversal traverseFunction,
     RhinoLayerManager layerManager,
     RhinoInstanceObjectsManager instanceObjectsManager,
@@ -92,7 +93,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
         onOperationProgressed
       );
 
-      _contextStack.Current.Document.Views.Redraw();
+      _settingsStore.Current.Document.Views.Redraw();
 
       return conversionResults;
     });
@@ -109,7 +110,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   )
   {
     List<(Collection[] collectionPath, Base obj)> atomicObjects = new();
-    RhinoDoc doc = _contextStack.Current.Document;
+    RhinoDoc doc = _settingsStore.Current.Document;
     List<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents = new();
 
     using (var _ = SpeckleActivityFactory.Start("Traversal"))
@@ -257,12 +258,16 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private void PreReceiveDeepClean(string baseLayerName)
   {
     // Remove all previously received layers and render materials from the document
-    int rootLayerIndex = _contextStack.Current.Document.Layers.Find(Guid.Empty, baseLayerName, RhinoMath.UnsetIntIndex);
+    int rootLayerIndex = _settingsStore.Current.Document.Layers.Find(
+      Guid.Empty,
+      baseLayerName,
+      RhinoMath.UnsetIntIndex
+    );
 
     _instanceObjectsManager.PurgeInstances(baseLayerName);
     _materialManager.PurgeMaterials(baseLayerName);
 
-    var doc = _contextStack.Current.Document;
+    var doc = _settingsStore.Current.Document;
     // Cleans up any previously received objects
     if (rootLayerIndex != RhinoMath.UnsetIntIndex)
     {
@@ -303,7 +308,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       atts.ColorSource = color.Item2;
     }
 
-    return _contextStack.Current.Document.Objects.Add(obj, atts);
+    return _settingsStore.Current.Document.Objects.Add(obj, atts);
   }
 
   private List<Guid> BakeObjectsAsGroup(
@@ -326,11 +331,11 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       objectIds.Add(id);
     }
 
-    var groupIndex = _contextStack.Current.Document.Groups.Add(
+    var groupIndex = _settingsStore.Current.Document.Groups.Add(
       $@"{originatingObject.speckle_type.Split('.').Last()} - {originatingObject.applicationId ?? originatingObject.id}  ({baseLayerName})",
       objectIds
     );
-    var group = _contextStack.Current.Document.Groups.FindIndex(groupIndex);
+    var group = _settingsStore.Current.Document.Groups.FindIndex(groupIndex);
     objectIds.Insert(0, group.Id);
     return objectIds;
   }

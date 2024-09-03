@@ -1,5 +1,4 @@
-﻿using Rhino;
-using Speckle.Converters.Common;
+﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
@@ -15,14 +14,14 @@ public class FallbackToHostTopLevelConverter
   private readonly ITypedConverter<SOG.Line, RG.LineCurve> _lineConverter;
   private readonly ITypedConverter<SOG.Polyline, RG.PolylineCurve> _polylineConverter;
   private readonly ITypedConverter<SOG.Mesh, RG.Mesh> _meshConverter;
-  private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
+  private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   public FallbackToHostTopLevelConverter(
     ITypedConverter<SOG.Point, RG.Point> pointConverter,
     ITypedConverter<SOG.Line, RG.LineCurve> lineConverter,
     ITypedConverter<SOG.Polyline, RG.PolylineCurve> polylineConverter,
     ITypedConverter<SOG.Mesh, RG.Mesh> meshConverter,
-    IConversionContextStack<RhinoDoc, UnitSystem> contextStack
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore
   )
   {
     _pointConverter = pointConverter;
@@ -63,7 +62,7 @@ public class FallbackToHostTopLevelConverter
      */
     if (speckleObject["units"] is string units)
     {
-      var scaleFactor = Units.GetConversionFactor(units, _contextStack.Current.SpeckleUnits);
+      var scaleFactor = Units.GetConversionFactor(units, _settingsStore.Current.SpeckleUnits);
       var scale = RG.Transform.Scale(RG.Point3d.Origin, scaleFactor);
       return scale;
     }

@@ -1,6 +1,4 @@
-﻿using Rhino;
-using Speckle.Converters.Common;
-using Speckle.Converters.Common.Objects;
+﻿using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
@@ -15,7 +13,7 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.Brep>
   private readonly ITypedConverter<RG.Mesh, SOG.Mesh> _meshConverter;
   private readonly ITypedConverter<RG.Box, SOG.Box> _boxConverter;
   private readonly ITypedConverter<RG.Interval, SOP.Interval> _intervalConverter;
-  private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
+  private readonly IRhinoConversionSettingsFactory _settingsStore;
 
   public BrepToSpeckleConverter(
     ITypedConverter<RG.Point3d, SOG.Point> pointConverter,
@@ -24,7 +22,7 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.Brep>
     ITypedConverter<RG.Mesh, SOG.Mesh> meshConverter,
     ITypedConverter<RG.Box, SOG.Box> boxConverter,
     ITypedConverter<RG.Interval, SOP.Interval> intervalConverter,
-    IConversionContextStack<RhinoDoc, UnitSystem> contextStack
+    IRhinoConversionSettingsFactory settingsStore
   )
   {
     _pointConverter = pointConverter;
@@ -43,7 +41,7 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.Brep>
   /// <returns>The converted Speckle Brep object.</returns>
   public SOG.Brep Convert(RG.Brep target)
   {
-    var tol = _contextStack.Current.Document.ModelAbsoluteTolerance;
+    var tol = _settingsStore.Current.Document.ModelAbsoluteTolerance;
     target.Repair(tol);
 
     // POC: CNX-9276 This should come as part of the user settings in the context object.
@@ -77,7 +75,7 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.Brep>
     surfaces.AddRange(target.Surfaces.Select(srf => _surfaceConverter.Convert(srf.ToNurbsSurface())));
 
     List<ICurve> curves2d = new(target.Curves2D.Count);
-    using (_contextStack.Push(Units.None))
+    using (_settingsStore.Push(units: Units.None))
     {
       // Curves2D are unitless, so we convert them within a new pushed context with None units.
       curves2d.AddRange(target.Curves2D.Select(curve2d => _curveConverter.Convert(curve2d)));
@@ -95,7 +93,7 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.Brep>
       volume = target.IsSolid ? target.GetVolume() : 0,
       area = target.GetArea(),
       bbox = _boxConverter.Convert(new RG.Box(target.GetBoundingBox(false))),
-      units = _contextStack.Current.SpeckleUnits,
+      units = _settingsStore.Current.SpeckleUnits,
       Edges = new(target.Edges.Count),
       Loops = new(target.Loops.Count),
       Trims = new(target.Trims.Count),
