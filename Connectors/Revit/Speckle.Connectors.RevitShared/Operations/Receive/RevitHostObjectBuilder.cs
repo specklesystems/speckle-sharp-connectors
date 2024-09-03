@@ -73,6 +73,11 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   // POC: Potentially refactor out into an IObjectBaker.
   private HostObjectBuilderResult BakeObjects(IEnumerable<TraversalContext> objectsGraph)
   {
+    // Questions
+    // Create linked model on the fly? A: No
+    // Bake into a group? A: yes
+    // nested groups per collection A: let's try
+
     using (var _ = SpeckleActivityFactory.Start("BakeObjects"))
     {
       var conversionResults = new List<ReceiveConversionResult>();

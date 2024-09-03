@@ -22,6 +22,7 @@ public abstract class CurveToDirectShapeConverterToHostBase<TCurve>
     _curveConverter = curveConverter;
   }
 
+  // should return the direct shape ???
   public List<DB.GeometryObject> Convert(TCurve target)
   {
     var converted = new List<DB.GeometryObject>();
@@ -34,14 +35,15 @@ public abstract class CurveToDirectShapeConverterToHostBase<TCurve>
     );
 
     using var revitDs = DB.DirectShape.CreateElement(_contextStack.Current.Document, genericModelCategory.Id);
+
     if (target is Base speckleObject && speckleObject.applicationId != null)
     {
-      revitDs.ApplicationId = speckleObject.applicationId;
+      revitDs.ApplicationId = speckleObject.applicationId; // questionable
     }
 
     revitDs.ApplicationDataId = Guid.NewGuid().ToString();
     revitDs.SetShape(converted);
-    revitDs.Name = "CurveAsDirectShape";
+    revitDs.Name = "CurveAsDirectShape"; // ??
 
     return converted;
   }

@@ -38,9 +38,13 @@ public class MeshToHostTopLevelConverter
 
     var valid = tsb.AreTargetAndFallbackCompatible(target, fallback);
     //tsb.OpenConnectedFaceSet(target == TessellatedShapeBuilderTarget.Solid);
+
     tsb.OpenConnectedFaceSet(false);
+
     var vertices = ArrayToPoints(mesh.vertices, mesh.units);
 
+    // Note: this will need to be rethought !!!
+    // Stage 0: bake materials in connector (do not forget to purge for second receives?)
     ElementId materialId = ElementId.InvalidElementId;
     if (mesh["renderMaterial"] is RenderMaterial renderMaterial)
     {
@@ -58,6 +62,7 @@ public class MeshToHostTopLevelConverter
 
       var points = mesh.faces.GetRange(i + 1, n).Select(x => vertices[x]).ToArray();
 
+      // NOTE: fuck this and triangulate before
       if (IsNonPlanarQuad(points))
       {
         //Non-planar quads will be triangulated as it's more desirable than `TessellatedShapeBuilder.Build`'s attempt to make them planar.
@@ -67,7 +72,7 @@ public class MeshToHostTopLevelConverter
         tsb.AddFace(face1);
 
         triPoints = new List<XYZ> { points[1], points[2], points[3] };
-        ;
+
         var face2 = new TessellatedFace(triPoints, materialId);
         tsb.AddFace(face2);
       }
@@ -88,6 +93,7 @@ public class MeshToHostTopLevelConverter
     return result.GetGeometricalObjects().ToArray();
   }
 
+  // will disappear, see note on triangualtion
   private static bool IsNonPlanarQuad(IList<XYZ> points)
   {
     if (points.Count != 4)
