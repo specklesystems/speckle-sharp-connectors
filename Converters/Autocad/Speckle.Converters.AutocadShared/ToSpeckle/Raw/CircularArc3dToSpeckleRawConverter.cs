@@ -7,17 +7,17 @@ public class CircularArc3dToSpeckleConverter : ITypedConverter<AG.CircularArc3d,
 {
   private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
   private readonly ITypedConverter<AG.Plane, SOG.Plane> _planeConverter;
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public CircularArc3dToSpeckleConverter(
     ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
     ITypedConverter<AG.Plane, SOG.Plane> planeConverter,
-    IConversionContextStack<Document, ADB.UnitsValue> contextStack
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _pointConverter = pointConverter;
     _planeConverter = planeConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public SOG.Arc Convert(AG.CircularArc3d target)
@@ -46,7 +46,7 @@ public class CircularArc3dToSpeckleConverter : ITypedConverter<AG.CircularArc3d,
         target.StartAngle,
         target.EndAngle,
         target.EndAngle - target.StartAngle, // POC: testing, unsure
-        _contextStack.Current.SpeckleUnits
+        _settingsStore.Current.SpeckleUnits
       )
       {
         startPoint = start,

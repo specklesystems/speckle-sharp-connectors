@@ -24,7 +24,7 @@ public class ArcToSpeckleConverter : ITypedConverter<RG.Arc, SOG.Arc>
     _pointConverter = pointConverter;
     _planeConverter = planeConverter;
     _boxConverter = boxConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
     _boxFactory = boxFactory;
   }
 

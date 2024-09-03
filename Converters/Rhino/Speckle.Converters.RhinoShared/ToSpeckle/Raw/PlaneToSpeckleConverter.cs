@@ -18,7 +18,7 @@ public class PlaneToSpeckleConverter : ITypedConverter<RG.Plane, SOG.Plane>
   {
     _vectorConverter = vectorConverter;
     _pointConverter = pointConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   /// <summary>

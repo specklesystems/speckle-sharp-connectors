@@ -33,7 +33,7 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.Brep>
     _meshConverter = meshConverter;
     _boxConverter = boxConverter;
     _intervalConverter = intervalConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   /// <summary>

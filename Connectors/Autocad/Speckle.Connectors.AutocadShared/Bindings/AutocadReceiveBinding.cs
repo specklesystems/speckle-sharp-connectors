@@ -46,7 +46,6 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
 
   public async Task Receive(string modelCardId)
   {
-    using var unitOfWork = _unitOfWorkFactory.Resolve<ReceiveOperation>();
     try
     {
       // Get receiver card
@@ -63,9 +62,11 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
       // The DocumentActivated event isn't usable probably because it is pushed to back of main thread queue
       Application.DocumentManager.DocumentActivationEnabled = false;
 
+      using var unitOfWork = _unitOfWorkFactory.Create();
       // Receive host objects
       var operationResults = await unitOfWork
-        .Service.Execute(
+        .Resolve<ReceiveOperation>()
+        .Execute(
           modelCard.GetReceiveInfo(Speckle.Connectors.Utils.Connector.Slug),
           cancellationToken,
           (status, progress) =>

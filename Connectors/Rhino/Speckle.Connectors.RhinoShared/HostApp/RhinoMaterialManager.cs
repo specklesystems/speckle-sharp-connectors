@@ -22,7 +22,7 @@ public class RhinoMaterialManager
 
   public RhinoMaterialManager(IConversionContextStack<RhinoDoc, UnitSystem> contextStack)
   {
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   // converts a rhino material to a rhino render material

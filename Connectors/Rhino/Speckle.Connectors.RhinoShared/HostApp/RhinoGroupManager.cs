@@ -17,7 +17,7 @@ public class RhinoGroupManager // POC: later make it more clean with RhinoGroupU
 
   public RhinoGroupManager(IConversionContextStack<RhinoDoc, UnitSystem> contextStack)
   {
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public Dictionary<string, GroupProxy> GroupProxies { get; } = new();

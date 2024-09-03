@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using Autodesk.AutoCAD.DatabaseServices;
 using Microsoft.Extensions.Logging;
-using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
@@ -15,7 +14,6 @@ using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
-using Speckle.Connectors.Utils.Operations;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
@@ -32,11 +30,10 @@ public sealed class AutocadSendBinding : ISendBinding
   private readonly IAutocadIdleManager _idleManager;
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
-  private readonly IUnitOfWorkFactory _unitOfWorkFactory;
   private readonly ISendConversionCache _sendConversionCache;
-  private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<AutocadSendBinding> _logger;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly IAutocadSender _autocadSender;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -52,20 +49,18 @@ public sealed class AutocadSendBinding : ISendBinding
     IBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     CancellationManager cancellationManager,
-    IUnitOfWorkFactory unitOfWorkFactory,
     ISendConversionCache sendConversionCache,
-    IOperationProgressManager operationProgressManager,
-    ILogger<AutocadSendBinding> logger
+    ILogger<AutocadSendBinding> logger,
+    IAutocadSender autocadSender
   )
   {
     _store = store;
     _idleManager = idleManager;
-    _unitOfWorkFactory = unitOfWorkFactory;
     _cancellationManager = cancellationManager;
     _sendFilters = sendFilters.ToList();
     _sendConversionCache = sendConversionCache;
-    _operationProgressManager = operationProgressManager;
     _logger = logger;
+    _autocadSender = autocadSender;
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
@@ -153,8 +148,6 @@ public sealed class AutocadSendBinding : ISendBinding
         throw new InvalidOperationException("No publish model card was found.");
       }
 
-      using var uow = _unitOfWorkFactory.Resolve<SendOperation<AutocadRootObject>>();
-
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
       // Disable document activation (document creation and document switch)
@@ -173,17 +166,12 @@ public sealed class AutocadSendBinding : ISendBinding
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
       }
 
-      var sendResult = await uow
-        .Service.Execute(
+      var sendResult = await _autocadSender
+        .SendOperation(
+          Parent,
+          modelCard,
+          Application.DocumentManager.CurrentDocument,
           autocadObjects,
-          modelCard.GetSendInfo(Speckle.Connectors.Utils.Connector.Slug),
-          (status, progress) =>
-            _operationProgressManager.SetModelProgress(
-              Parent,
-              modelCardId,
-              new ModelCardProgress(modelCardId, status, progress),
-              cancellationToken
-            ),
           cancellationToken
         )
         .ConfigureAwait(false);

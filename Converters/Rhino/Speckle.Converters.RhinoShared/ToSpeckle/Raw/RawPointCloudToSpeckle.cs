@@ -14,7 +14,7 @@ public class RawPointCloudToSpeckle : ITypedConverter<RG.PointCloud, SOG.Pointcl
     ITypedConverter<RG.Box, SOG.Box> boxConverter
   )
   {
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
     _boxConverter = boxConverter;
   }
 

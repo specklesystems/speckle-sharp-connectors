@@ -45,7 +45,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   )
   {
     _converter = converter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
     _traverseFunction = traverseFunction;
     _layerManager = layerManager;
     _instanceObjectsManager = instanceObjectsManager;

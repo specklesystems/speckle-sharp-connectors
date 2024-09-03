@@ -16,7 +16,7 @@ public class CircleToSpeckleConverter : ITypedConverter<RG.Circle, SOG.Circle>
   )
   {
     _planeConverter = planeConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public Base Convert(object target) => Convert((RG.Circle)target);

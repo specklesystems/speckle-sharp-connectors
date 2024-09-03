@@ -8,17 +8,17 @@ public class DBLineToSpeckleRawConverter : ITypedConverter<ADB.Line, SOG.Line>
 {
   private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
   private readonly ITypedConverter<ADB.Extents3d, SOG.Box> _boxConverter;
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public DBLineToSpeckleRawConverter(
     ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
     ITypedConverter<ADB.Extents3d, SOG.Box> boxConverter,
-    IConversionContextStack<Document, ADB.UnitsValue> contextStack
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _pointConverter = pointConverter;
     _boxConverter = boxConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public Base Convert(object target) => Convert((ADB.Line)target);
@@ -27,7 +27,7 @@ public class DBLineToSpeckleRawConverter : ITypedConverter<ADB.Line, SOG.Line>
     new(
       _pointConverter.Convert(target.StartPoint),
       _pointConverter.Convert(target.EndPoint),
-      _contextStack.Current.SpeckleUnits
+      _settingsStore.Current.SpeckleUnits
     )
     {
       length = target.Length,

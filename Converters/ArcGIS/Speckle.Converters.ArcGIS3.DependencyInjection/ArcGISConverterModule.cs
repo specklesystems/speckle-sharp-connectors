@@ -24,8 +24,6 @@ public class ArcGISConverterModule : ISpeckleModule
     builder.AddScoped<ILocalToGlobalConverterUtils, LocalToGlobalConverterUtils>();
     builder.AddScoped<ICharacterCleaner, CharacterCleaner>();
 
-    builder.AddScoped<IHostToSpeckleUnitConverter<Unit>, ArcGISToSpeckleUnitConverter>();
-
     // single stack per conversion
     builder.AddScoped<
       IConverterSettingsStore<ArcGISConversionSettings>,

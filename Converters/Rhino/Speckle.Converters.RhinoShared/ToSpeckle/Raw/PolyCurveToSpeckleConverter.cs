@@ -21,7 +21,7 @@ public class PolyCurveToSpeckleConverter : ITypedConverter<RG.PolyCurve, SOG.Pol
   {
     _intervalConverter = intervalConverter;
     _boxConverter = boxConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   /// <summary>

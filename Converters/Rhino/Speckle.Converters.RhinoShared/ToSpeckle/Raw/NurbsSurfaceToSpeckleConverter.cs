@@ -22,7 +22,7 @@ public class NurbsSurfaceToSpeckleConverter : ITypedConverter<RG.NurbsSurface, S
     _boxConverter = boxConverter;
     _intervalConverter = intervalConverter;
     _controlPointConverter = controlPointConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   /// <summary>

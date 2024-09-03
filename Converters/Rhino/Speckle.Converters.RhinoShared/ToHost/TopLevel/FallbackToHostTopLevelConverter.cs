@@ -29,7 +29,7 @@ public class FallbackToHostTopLevelConverter
     _lineConverter = lineConverter;
     _polylineConverter = polylineConverter;
     _meshConverter = meshConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public object Convert(Base target) => Convert((DisplayableObject)target);

@@ -19,7 +19,7 @@ public class PolylineToSpeckleConverter
   )
   {
     _boxConverter = boxConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
     _intervalConverter = intervalConverter;
   }
 

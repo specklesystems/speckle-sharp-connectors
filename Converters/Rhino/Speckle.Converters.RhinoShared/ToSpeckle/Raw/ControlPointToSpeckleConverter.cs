@@ -11,7 +11,7 @@ public class ControlPointToSpeckleConverter : ITypedConverter<RG.ControlPoint, S
 
   public ControlPointToSpeckleConverter(IConversionContextStack<RhinoDoc, UnitSystem> contextStack)
   {
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   /// <summary>

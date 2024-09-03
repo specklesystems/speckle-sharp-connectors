@@ -44,7 +44,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   )
   {
     _sendConversionCache = sendConversionCache;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
     _layerManager = layerManager;
     _instanceObjectsManager = instanceObjectsManager;
     _rhinoGroupManager = rhinoGroupManager;

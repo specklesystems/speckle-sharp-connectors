@@ -23,7 +23,7 @@ public class ArcCurveToSpeckleConverter : ITypedConverter<RG.ArcCurve, ICurve>, 
     _circleConverter = circleConverter;
     _arcConverter = arcConverter;
     _intervalConverter = intervalConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   /// <summary>

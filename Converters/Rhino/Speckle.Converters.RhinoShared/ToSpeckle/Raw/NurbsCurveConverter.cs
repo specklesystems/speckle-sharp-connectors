@@ -22,7 +22,7 @@ public class NurbsCurveConverter : ITypedConverter<RG.NurbsCurve, SOG.Curve>
     _polylineConverter = polylineConverter;
     _intervalConverter = intervalConverter;
     _boxConverter = boxConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   /// <summary>

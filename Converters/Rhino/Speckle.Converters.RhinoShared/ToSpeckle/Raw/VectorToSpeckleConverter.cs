@@ -10,7 +10,7 @@ public class VectorToSpeckleConverter : ITypedConverter<RG.Vector3d, SOG.Vector>
 
   public VectorToSpeckleConverter(IConversionContextStack<RhinoDoc, UnitSystem> contextStack)
   {
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   /// <summary>

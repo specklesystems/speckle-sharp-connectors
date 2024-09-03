@@ -21,7 +21,7 @@ public class BrepToHostConverter : ITypedConverter<SOG.Brep, RG.Brep>
     ITypedConverter<SOP.Interval, RG.Interval> intervalConverter
   )
   {
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
     _curveConverter = curveConverter;
     _surfaceConverter = surfaceConverter;
     _pointConverter = pointConverter;

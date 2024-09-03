@@ -31,7 +31,7 @@ public class PipeToSpeckleConverter : IToSpeckleTopLevelConverter
     _boxConverter = boxConverter;
     _solidConverter = solidConverter;
     _propertySetConverter = propertySetConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public Base Convert(object target) => Convert((CDB.Pipe)target);

@@ -18,7 +18,7 @@ public class BoxToSpeckleConverter : ITypedConverter<RG.Box, SOG.Box>
   {
     _planeConverter = planeConverter;
     _intervalConverter = intervalConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   /// <summary>

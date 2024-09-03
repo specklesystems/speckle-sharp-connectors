@@ -18,7 +18,7 @@ public class EllipseToSpeckleConverter : ITypedConverter<RG.Ellipse, SOG.Ellipse
   {
     _planeConverter = planeConverter;
     _boxConverter = boxConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   /// <summary>

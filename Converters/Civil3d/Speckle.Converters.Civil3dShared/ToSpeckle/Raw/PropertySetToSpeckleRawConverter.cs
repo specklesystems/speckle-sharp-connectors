@@ -9,17 +9,17 @@ public class PropertySetToSpeckleRawConverter : ITypedConverter<AECPropDB.Proper
 {
   private readonly ITypedConverter<AG.Vector3d, SOG.Vector> _vectorConverter;
   private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public PropertySetToSpeckleRawConverter(
     ITypedConverter<AG.Vector3d, SOG.Vector> vectorConverter,
     ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
-    IConversionContextStack<Document, ADB.UnitsValue> contextStack
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _vectorConverter = vectorConverter;
     _pointConverter = pointConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public List<DataField> Convert(object target) => Convert((AECPropDB.PropertySet)target);

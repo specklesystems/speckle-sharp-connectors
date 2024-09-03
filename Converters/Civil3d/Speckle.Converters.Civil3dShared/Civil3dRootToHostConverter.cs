@@ -17,7 +17,7 @@ public class Civil3dRootToHostConverter : IRootToSpeckleConverter
   )
   {
     _toSpeckle = toSpeckle;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public Base Convert(object target)

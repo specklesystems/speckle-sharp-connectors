@@ -10,7 +10,7 @@ public class PointToSpeckleConverter : ITypedConverter<RG.Point3d, SOG.Point>, I
 
   public PointToSpeckleConverter(IConversionContextStack<RhinoDoc, UnitSystem> contextStack)
   {
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   /// <summary>

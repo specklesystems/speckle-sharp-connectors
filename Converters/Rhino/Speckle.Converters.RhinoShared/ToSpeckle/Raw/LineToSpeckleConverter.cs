@@ -18,7 +18,7 @@ public class LineToSpeckleConverter : ITypedConverter<RG.Line, SOG.Line>, ITyped
   {
     _pointConverter = pointConverter;
     _boxConverter = boxConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   /// <summary>

@@ -4,6 +4,7 @@ using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Instances;
+using Speckle.Converters.Autocad;
 using Speckle.Converters.Common;
 using Speckle.DoubleNumerics;
 using Speckle.Sdk;
@@ -24,8 +25,8 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
   private readonly AutocadLayerManager _autocadLayerManager;
   private readonly AutocadColorManager _autocadColorManager;
   private readonly AutocadMaterialManager _autocadMaterialManager;
-  private readonly IHostToSpeckleUnitConverter<UnitsValue> _unitsConverter;
   private readonly AutocadContext _autocadContext;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   private readonly IInstanceObjectsManager<AutocadRootObject, List<Entity>> _instanceObjectsManager;
 
@@ -33,17 +34,17 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
     AutocadLayerManager autocadLayerManager,
     AutocadColorManager autocadColorManager,
     AutocadMaterialManager autocadMaterialManager,
-    IHostToSpeckleUnitConverter<UnitsValue> unitsConverter,
     AutocadContext autocadContext,
-    IInstanceObjectsManager<AutocadRootObject, List<Entity>> instanceObjectsManager
+    IInstanceObjectsManager<AutocadRootObject, List<Entity>> instanceObjectsManager,
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _autocadLayerManager = autocadLayerManager;
     _autocadColorManager = autocadColorManager;
     _autocadMaterialManager = autocadMaterialManager;
-    _unitsConverter = unitsConverter;
     _autocadContext = autocadContext;
     _instanceObjectsManager = instanceObjectsManager;
+    _settingsStore = settingsStore;
   }
 
   public UnpackResult<AutocadRootObject> UnpackSelection(IEnumerable<AutocadRootObject> objects)
@@ -83,7 +84,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
         definitionId = definitionId.ToString(),
         maxDepth = depth,
         transform = GetMatrix(instance.BlockTransform.ToArray()),
-        units = _unitsConverter.ConvertOrThrow(Application.DocumentManager.CurrentDocument.Database.Insunits)
+        units = _settingsStore.Current.SpeckleUnits
       };
     _instanceObjectsManager.AddInstanceProxy(instanceId, instanceProxy);
 
@@ -370,10 +371,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
 
   private Matrix3d GetMatrix3d(Matrix4x4 matrix, string units)
   {
-    var sf = Units.GetConversionFactor(
-      units,
-      _unitsConverter.ConvertOrThrow(Application.DocumentManager.CurrentDocument.Database.Insunits)
-    );
+    var sf = Units.GetConversionFactor(units, _settingsStore.Current.SpeckleUnits);
 
     var scaledTransform = new[]
     {
