@@ -77,6 +77,10 @@ public sealed class ArcGISSendBinding : ISendBinding
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
     SubscribeToArcGISEvents();
+    _store.DocumentChanged += (_, _) =>
+    {
+      _sendConversionCache.ClearCache();
+    };
   }
 
   private void SubscribeToArcGISEvents()
