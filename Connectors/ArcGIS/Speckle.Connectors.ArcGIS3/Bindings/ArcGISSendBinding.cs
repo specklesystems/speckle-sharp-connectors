@@ -227,7 +227,7 @@ public sealed class ArcGISSendBinding : ISendBinding
           }
         }
       }
-      catch (UriFormatException)
+      catch (UriFormatException) // layer.GetPath() or table.GetPath() can throw this error, if data source was removed from the hard drive
       {
         // ignore layers with invalid source URI
       }
