@@ -60,6 +60,9 @@ public class SegmentCollectionToSpeckleConverter : ITypedConverter<ACG.ReadOnlyS
         {
           foreach (ACG.Segment? subSegment in subSegments)
           {
+            // The reason for this is that as geometry is being split down into parts and densified,
+            // the information of Spatial Reference (Coordinate System) is messed up and shows different information
+            // from the parent geometry.
             ACG.MapPoint startPt = new ACG.MapPointBuilderEx(
               subSegment.StartPoint.X,
               subSegment.StartPoint.Y,
