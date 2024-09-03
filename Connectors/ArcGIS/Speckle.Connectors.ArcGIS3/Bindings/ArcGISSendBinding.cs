@@ -203,7 +203,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     }
 
     // get the path of the edited dataset
-    var datasetURI = args.Row.GetTable().GetPath();
+    Uri datasetPath = args.Row.GetTable().GetPath();
 
     // find all layers & tables reading from the dataset
     List<MapMember> allMapMembers = _mapMemberUtils.GetAllMapMembers(MapView.Active.Map);
@@ -213,7 +213,7 @@ public sealed class ArcGISSendBinding : ISendBinding
       {
         if (mapMember is Layer layer)
         {
-          if (layer.GetPath() == datasetURI)
+          if (layer.GetPath() == datasetPath)
           {
             ChangedObjectIds[layer.URI] = 1;
           }
@@ -221,7 +221,7 @@ public sealed class ArcGISSendBinding : ISendBinding
 
         if (mapMember is StandaloneTable table)
         {
-          if (table.GetPath() == datasetURI)
+          if (table.GetPath() == datasetPath)
           {
             ChangedObjectIds[table.URI] = 1;
           }
