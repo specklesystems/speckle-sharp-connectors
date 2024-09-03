@@ -113,7 +113,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
               .ConfigureAwait(false);
 
             // get units & Active CRS (for writing geometry coords)
-            converted["units"] = _settingsStore.Current.SpeckleUnits.SpeckleUnitString;
+            converted["units"] = _settingsStore.Current.SpeckleUnits;
 
             var spatialRef = _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference;
             converted["crs"] = new CRS
@@ -123,7 +123,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
               offset_y = Convert.ToSingle(_settingsStore.Current.ActiveCRSoffsetRotation.LatOffset),
               offset_x = Convert.ToSingle(_settingsStore.Current.ActiveCRSoffsetRotation.LonOffset),
               rotation = Convert.ToSingle(_settingsStore.Current.ActiveCRSoffsetRotation.TrueNorthRadians),
-              units_native = _settingsStore.Current.ActiveCRSoffsetRotation.SpeckleUnitString,
+              units_native = _settingsStore.Current.SpeckleUnits,
             };
           }
 
