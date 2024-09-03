@@ -1,10 +1,12 @@
 using System.Diagnostics;
 using Autodesk.Revit.DB;
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Conversion;
+using Speckle.Connectors.Utils.Extensions;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
@@ -25,7 +27,11 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
   private readonly ISyncToThread _syncToThread;
   private readonly ElementUnpacker _elementUnpacker;
   private readonly SendCollectionManager _sendCollectionManager;
+<<<<<<< HEAD
   private readonly RevitMaterialCacheSingleton _revitMaterialCacheSingleton;
+=======
+  private readonly ILogger<RevitRootObjectBuilder> _logger;
+>>>>>>> origin/dev
 
   public RevitRootObjectBuilder(
     IRootToSpeckleConverter converter,
@@ -34,7 +40,11 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     ISyncToThread syncToThread,
     ElementUnpacker elementUnpacker,
     SendCollectionManager sendCollectionManager,
+<<<<<<< HEAD
     RevitMaterialCacheSingleton revitMaterialCacheSingleton
+=======
+    ILogger<RevitRootObjectBuilder> logger
+>>>>>>> origin/dev
   )
   {
     _converter = converter;
@@ -43,7 +53,11 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     _syncToThread = syncToThread;
     _elementUnpacker = elementUnpacker;
     _sendCollectionManager = sendCollectionManager;
+<<<<<<< HEAD
     _revitMaterialCacheSingleton = revitMaterialCacheSingleton;
+=======
+    _logger = logger;
+>>>>>>> origin/dev
 
     _rootObject = new Collection()
     {
@@ -93,11 +107,12 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
       foreach (Element revitElement in atomicObjects)
       {
         ct.ThrowIfCancellationRequested();
-        var applicationId = revitElement.UniqueId; // NOTE: converter set applicationIds to unique ids; if we ever change this in the converter, behaviour here needs to match.
+        string applicationId = revitElement.UniqueId; // NOTE: converter set applicationIds to unique ids; if we ever change this in the converter, behaviour here needs to match.
+        string sourceType = revitElement.GetType().Name;
         try
         {
           Base converted;
-          if (_sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference value))
+          if (_sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value))
           {
             converted = value;
             cacheHitCount++;
@@ -110,11 +125,12 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
 
           var collection = _sendCollectionManager.GetAndCreateObjectHostCollection(revitElement, _rootObject);
           collection.elements.Add(converted);
-          results.Add(new(Status.SUCCESS, applicationId, revitElement.GetType().Name, converted));
+          results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
         }
         catch (Exception ex) when (!ex.IsFatal())
         {
-          results.Add(new(Status.ERROR, applicationId, revitElement.GetType().Name, null, ex));
+          _logger.LogSendConversionError(ex, sourceType);
+          results.Add(new(Status.ERROR, applicationId, sourceType, null, ex));
         }
 
         onOperationProgressed?.Invoke("Converting", (double)++countProgress / atomicObjects.Count);

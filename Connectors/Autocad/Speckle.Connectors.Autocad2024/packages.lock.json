@@ -189,8 +189,8 @@
       },
       "Speckle.Sdk.Logging": {
         "type": "Transitive",
-        "resolved": "3.1.0-dev.115",
-        "contentHash": "bM9t/LdnCoaSqnj6MgkFCBSxVad+KMzrsgGtJ6Y1S+WTY43ysArIW7r2cB84OG9IZH3g9DRHLU9Rob848gWj4g=="
+        "resolved": "3.0.1-rc.117",
+        "contentHash": "NOEdqL0luzhm2Q0jShr5zti1yVihVVaFa9sxHLSQ4CqcxdydbmEuJyDBr86QQjJ8V3Q2E99z4zRis4NyYW3D6Q=="
       },
       "SQLitePCLRaw.bundle_e_sqlite3": {
         "type": "Transitive",
@@ -318,7 +318,7 @@
           "Microsoft.Extensions.Logging.Abstractions": "[3.1.0, )",
           "Speckle.Autofac": "[1.0.0, )",
           "Speckle.Connectors.Utils": "[1.0.0, )",
-          "Speckle.Sdk": "[3.1.0-dev.115, )",
+          "Speckle.Sdk": "[3.0.1-rc.117, )",
           "System.Threading.Tasks.Dataflow": "[6.0.0, )"
         }
       },
@@ -335,8 +335,8 @@
           "Microsoft.Extensions.Logging": "[3.1.0, )",
           "Speckle.Autofac": "[1.0.0, )",
           "Speckle.Converters.Common": "[1.0.0, )",
-          "Speckle.Objects": "[3.1.0-dev.115, )",
-          "Speckle.Sdk": "[3.1.0-dev.115, )"
+          "Speckle.Objects": "[3.0.1-rc.117, )",
+          "Speckle.Sdk": "[3.0.1-rc.117, )"
         }
       },
       "speckle.converters.autocad2024": {
@@ -360,7 +360,7 @@
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[3.1.0, )",
           "Speckle.Autofac": "[1.0.0, )",
-          "Speckle.Objects": "[3.1.0-dev.115, )"
+          "Speckle.Objects": "[3.0.1-rc.117, )"
         }
       },
       "speckle.converters.common.dependencyinjection": {
@@ -405,18 +405,18 @@
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.115, )",
-        "resolved": "3.1.0-dev.115",
-        "contentHash": "p4K3/pSsjmKgtM1vg3+TpXryRL3HM49VflQcqhF+zplfsb9vZUhgKf+BnNQtEDyxPcEOEby/nmU179dxtJnCLw==",
+        "requested": "[3.0.1-rc.117, )",
+        "resolved": "3.0.1-rc.117",
+        "contentHash": "YjExrNc/8Ha7rJ5enSDV1idCbwtneYUFOiAc4G5dm6XujuKqGHd4cVafV37FffFNGYl5fqvjTGjQ8mjrUfIEFw==",
         "dependencies": {
-          "Speckle.Sdk": "3.1.0-dev.115"
+          "Speckle.Sdk": "3.0.1-rc.117"
         }
       },
       "Speckle.Sdk": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.115, )",
-        "resolved": "3.1.0-dev.115",
-        "contentHash": "uCo2oOvXAA+Ya+PRRPpBTVPRVC27tZEJU6cH3xgDqkl7sLaycn1ygelz9yZmMorwmjECEHOYuabLsQ+u04M+VQ==",
+        "requested": "[3.0.1-rc.117, )",
+        "resolved": "3.0.1-rc.117",
+        "contentHash": "0rcCz4Dw9Yi62dZ8YG+THCYzHJokvH0F2IYYgqCqgk1CsuoH2IM/lGYYspiGiOLEuR4GG6aLt+Dke6jExANRlw==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.CSharp": "4.7.0",
@@ -426,7 +426,7 @@
           "Polly.Extensions.Http": "3.0.0",
           "Speckle.DoubleNumerics": "4.0.1",
           "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Logging": "3.1.0-dev.115",
+          "Speckle.Sdk.Logging": "3.0.1-rc.117",
           "System.Text.Json": "5.0.2"
         }
       },

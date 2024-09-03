@@ -2,10 +2,12 @@ using System.Diagnostics;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Internal.Mapping;
 using ArcGIS.Desktop.Mapping;
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.ArcGIS.HostApp;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Conversion;
+using Speckle.Connectors.Utils.Extensions;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.Common;
@@ -26,7 +28,8 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ArcGISColorManager _colorManager;
-  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
+  private readonly IConversionContextStack<ArcGISDocument, Unit> _contextStack;
+  private readonly ILogger<ArcGISRootObjectBuilder> _logger;
 
   public ArcGISRootObjectBuilder(
     ISendConversionCache sendConversionCache,
@@ -39,6 +42,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     _colorManager = colorManager;
     _settingsStore = settingsStore;
     _rootToSpeckleConverter = rootToSpeckleConverter;
+    _logger = logger;
   }
 
   public async Task<RootObjectBuilderResult> Build(
@@ -68,9 +72,10 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     {
       ct.ThrowIfCancellationRequested();
       var collectionHost = rootObjectCollection;
-      var applicationId = mapMember.URI;
-      Base converted;
+      string applicationId = mapMember.URI;
+      string sourceType = mapMember.GetType().Name;
 
+      Base converted;
       try
       {
         int groupCount = nestedGroups.Count; // bake here, because count will change in the loop
@@ -91,7 +96,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
         // don't use cache for group layers
         if (
           mapMember is not GroupLayer
-          && _sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference value)
+          && _sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value)
         )
         {
           converted = value;
@@ -146,12 +151,12 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
           parentCollection.Item2.elements.Add(converted);
         }
 
-        results.Add(new(Status.SUCCESS, applicationId, mapMember.GetType().Name, converted));
+        results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        results.Add(new(Status.ERROR, applicationId, mapMember.GetType().Name, null, ex));
-        // POC: add logging
+        _logger.LogSendConversionError(ex, sourceType);
+        results.Add(new(Status.ERROR, applicationId, sourceType, null, ex));
       }
 
       onOperationProgressed?.Invoke("Converting", (double)++count / objects.Count);
