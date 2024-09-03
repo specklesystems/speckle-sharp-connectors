@@ -82,35 +82,24 @@ public class SegmentCollectionToSpeckleConverter : ITypedConverter<ACG.ReadOnlyS
       }
       else
       {
-        ACG.MapPoint startPt = new ACG.MapPointBuilderEx(
-          segment.StartPoint.X,
-          segment.StartPoint.Y,
-          segment.StartPoint.Z,
-          target.SpatialReference
-        ).ToGeometry();
-        ACG.MapPoint endPt = new ACG.MapPointBuilderEx(
-          segment.EndPoint.X,
-          segment.EndPoint.Y,
-          segment.EndPoint.Z,
-          target.SpatialReference
-        ).ToGeometry();
-
         AddPtsToPolylinePts(
           points,
-          new List<SOG.Point>() { _pointConverter.Convert(startPt), _pointConverter.Convert(endPt) }
+          new List<SOG.Point>()
+          {
+            _pointConverter.Convert(segment.StartPoint),
+            _pointConverter.Convert(segment.EndPoint)
+          }
         );
       }
     }
 
     // check the last point, remove if coincides with the first. Assign as Closed instead
-    bool closed = false;
     if (
       Math.Round(points[^1].x, 6) == Math.Round(points[0].x, 6)
       && Math.Round(points[^1].y, 6) == Math.Round(points[0].y, 6)
       && Math.Round(points[^1].z, 6) == Math.Round(points[0].z, 6)
     )
     {
-      closed = true;
       points.RemoveAt(points.Count - 1);
     }
 
@@ -118,7 +107,7 @@ public class SegmentCollectionToSpeckleConverter : ITypedConverter<ACG.ReadOnlyS
       new()
       {
         value = points.SelectMany(pt => new[] { pt.x, pt.y, pt.z, }).ToList(),
-        closed = closed,
+        closed = true,
         units = _contextStack.Current.SpeckleUnits
       };
 
