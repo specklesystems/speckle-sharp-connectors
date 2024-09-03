@@ -48,7 +48,6 @@ public class PolyineFeatureToSpeckleConverter : ITypedConverter<ACG.Polyline, IR
 
     foreach (var segmentCollection in polylineToConvert.Parts)
     {
-      segmentCollection.SpatialReference = target.SpatialReference;
       polylineList.Add(_segmentConverter.Convert(segmentCollection));
     }
     return polylineList;

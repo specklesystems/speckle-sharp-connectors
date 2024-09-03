@@ -30,7 +30,6 @@ public class PolygonFeatureToSpeckleConverter : ITypedConverter<ACG.Polygon, IRe
     for (int idx = 0; idx < partCount; idx++)
     {
       ACG.ReadOnlySegmentCollection segmentCollection = target.Parts[idx];
-      segmentCollection.SpatialReference = target.SpatialReference;
       SOG.Polyline polyline = _segmentConverter.Convert(segmentCollection);
 
       bool isExteriorRing = target.IsExteriorRing(idx);
