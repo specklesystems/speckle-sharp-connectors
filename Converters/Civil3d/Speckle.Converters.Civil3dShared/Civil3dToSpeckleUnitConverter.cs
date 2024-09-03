@@ -20,7 +20,7 @@ public class Civil3dToSpeckleUnitConverter : IHostToSpeckleUnitConverter<AAEC.Bu
     dict[AAEC.BuiltInUnit.Mile] = Units.Miles;
     dict[AAEC.BuiltInUnit.Yards] = Units.Yards;
     dict[AAEC.BuiltInUnit.Foot] = Units.Feet;
-    dict[AAEC.BuiltInUnit.SurveyFoot] = Units.USFeet;
+    //dict[AAEC.BuiltInUnit.SurveyFoot] = Units.USFeet;
     dict[AAEC.BuiltInUnit.Inch] = Units.Inches;
     dict[AAEC.BuiltInUnit.Dimensionless] = Units.None;
     return dict;

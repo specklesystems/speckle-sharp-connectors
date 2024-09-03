@@ -183,7 +183,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Converters.Autocad2
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Converters.Autocad2025", "Converters\Autocad\Speckle.Converters.Autocad2025\Speckle.Converters.Autocad2025.csproj", "{9D66EDE4-AFC2-4F00-B40C-A7E878A2972F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Tests", "Sdk\Speckle.Connectors.Tests\Speckle.Connectors.Tests.csproj", "{5B9A550A-9314-4E91-884E-E54960F589FB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Connectors.Tests", "Sdk\Speckle.Connectors.Tests\Speckle.Connectors.Tests.csproj", "{5B9A550A-9314-4E91-884E-E54960F589FB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -513,6 +513,7 @@ Global
 		Connectors\Autocad\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems*{9166cc10-12e1-4a0f-916b-61f6f2004f5a}*SharedItemsImports = 5
 		Converters\Autocad\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.projitems*{9add1b7a-6401-4202-8613-f668e2fbc0a4}*SharedItemsImports = 13
 		Converters\Autocad\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.projitems*{9d66ede4-afc2-4f00-b40c-a7e878a2972f}*SharedItemsImports = 5
+		Connectors\Revit\Speckle.Connectors.RevitShared.Cef\Speckle.Connectors.RevitShared.Cef.projitems*{a6de3da0-b242-4f49-aef0-4e26af92d16c}*SharedItemsImports = 5
 		Connectors\Revit\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems*{a6de3da0-b242-4f49-aef0-4e26af92d16c}*SharedItemsImports = 5
 		Connectors\Rhino\Speckle.Connectors.RhinoShared\Speckle.Connectors.RhinoShared.projitems*{a6e3a82f-4696-4d92-aba1-38aa80752067}*SharedItemsImports = 5
 		Converters\Autocad\Speckle.Converters.AutocadShared.DependencyInjection\Speckle.Converters.AutocadShared.DependencyInjection.projitems*{a6fb3066-5bb1-4cfa-b63d-e4b4b6a5c3f4}*SharedItemsImports = 5

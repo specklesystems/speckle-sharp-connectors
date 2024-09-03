@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.Utils.Caching;
@@ -25,6 +26,9 @@ public class SendConversionCache : ISendConversionCache
 
   public void ClearCache() => Cache.Clear();
 
-  public bool TryGetValue(string projectId, string applicationId, out ObjectReference objectReference) =>
-    Cache.TryGetValue((applicationId, projectId), out objectReference);
+  public bool TryGetValue(
+    string projectId,
+    string applicationId,
+    [NotNullWhen(true)] out ObjectReference? objectReference
+  ) => Cache.TryGetValue((applicationId, projectId), out objectReference);
 }

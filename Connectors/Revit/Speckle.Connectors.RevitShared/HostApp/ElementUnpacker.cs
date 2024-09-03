@@ -9,11 +9,11 @@ namespace Speckle.Connectors.Revit.HostApp;
 /// </summary>
 public class ElementUnpacker
 {
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly RevitContext _revitContext;
 
-  public ElementUnpacker(IRevitConversionContextStack contextStack)
+  public ElementUnpacker(RevitContext revitContext)
   {
-    _contextStack = contextStack;
+    _revitContext = revitContext;
   }
 
   /// <summary>
@@ -34,9 +34,25 @@ public class ElementUnpacker
     return PackCurtainWallElements(atomicObjects);
   }
 
+  /// <summary>
+  /// Unpacks input element ids into their subelements, eg groups and nested family instances
+  /// </summary>
+  /// <param name="objectIds"></param>
+  /// <returns></returns>
+  /// <remarks>
+  /// This is used to invalidate object ids in the send conversion cache when the selected object id is only the parent element id
+  /// </remarks>
+  public IEnumerable<string> GetUnpackedElementIds(List<string> objectIds)
+  {
+    var doc = _revitContext.UIApplication?.ActiveUIDocument.Document!;
+    var docElements = doc.GetElements(objectIds);
+    return UnpackSelectionForConversion(docElements).Select(o => o.UniqueId).ToList();
+  }
+
   private List<Element> UnpackElements(IEnumerable<Element> elements)
   {
     var unpackedElements = new List<Element>(); // note: could be a hashset/map so we prevent duplicates (?)
+    var doc = _revitContext.UIApplication?.ActiveUIDocument.Document!;
 
     foreach (var element in elements)
     {
@@ -44,16 +60,13 @@ public class ElementUnpacker
       if (element is Group g)
       {
         // POC: this might screw up generating hosting rel generation here, because nested families in groups get flattened out by GetMemberIds().
-        var groupElements = g.GetMemberIds().Select(_contextStack.Current.Document.GetElement);
+        var groupElements = g.GetMemberIds().Select(doc.GetElement);
         unpackedElements.AddRange(UnpackElements(groupElements));
       }
       // UNPACK: Family instances (as they potentially have nested families inside)
       else if (element is FamilyInstance familyInstance)
       {
-        var familyElements = familyInstance
-          .GetSubComponentIds()
-          .Select(_contextStack.Current.Document.GetElement)
-          .ToArray();
+        var familyElements = familyInstance.GetSubComponentIds().Select(doc.GetElement).ToArray();
 
         if (familyElements.Length != 0)
         {
@@ -64,7 +77,7 @@ public class ElementUnpacker
       }
       else if (element is MultistoryStairs multistoryStairs)
       {
-        var stairs = multistoryStairs.GetAllStairsIds().Select(_contextStack.Current.Document.GetElement);
+        var stairs = multistoryStairs.GetAllStairsIds().Select(doc.GetElement);
         unpackedElements.AddRange(UnpackElements(stairs));
       }
       else
