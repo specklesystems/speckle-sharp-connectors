@@ -17,12 +17,12 @@ public abstract class ScopedSender(
     TConversionSettings conversionSettings,
     CancellationToken ct = default
   )
-    where TConversionSettings : class, IConverterSettings
+    where TConversionSettings : class
   {
     using var unitOfWork = unitOfWorkFactory.Create();
     using var settings = unitOfWork
       .Resolve<IConverterSettingsStore<TConversionSettings>>()
-      .Push(() => conversionSettings);
+      .Push(_ => conversionSettings);
 
     return await unitOfWork
       .Resolve<SendOperation<TSendItem>>()
@@ -48,12 +48,12 @@ public abstract class ScopedSender(
     TConversionSettings conversionSettings,
     CancellationToken ct = default
   )
-    where TConversionSettings : class, IConverterSettings
+    where TConversionSettings : class
   {
     using var unitOfWork = unitOfWorkFactory.Create();
     using var settings = unitOfWork
       .Resolve<IConverterSettingsStore<TConversionSettings>>()
-      .Push(() => conversionSettings);
+      .Push(_ => conversionSettings);
 
     return await unitOfWork
       .Resolve<ReceiveOperation>()

@@ -1,8 +1,6 @@
-﻿using Speckle.Converters.Common;
+﻿namespace Speckle.Converters.Autocad;
 
-namespace Speckle.Converters.Autocad;
-
-public class AutocadConversionSettings : IConverterSettings
+public record AutocadConversionSettings
 {
   public Document Document { get; init; }
   public string SpeckleUnits { get; init; }

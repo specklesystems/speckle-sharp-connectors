@@ -1,8 +1,6 @@
-﻿using Speckle.Converters.Common;
+﻿namespace Speckle.Converters.RevitShared.Settings;
 
-namespace Speckle.Converters.RevitShared.Settings;
-
-public class RevitConversionSettings : IConverterSettings
+public record RevitConversionSettings
 {
   public DB.Document Document { get; init; }
   public DetailLevelType DetailLevel { get; init; }

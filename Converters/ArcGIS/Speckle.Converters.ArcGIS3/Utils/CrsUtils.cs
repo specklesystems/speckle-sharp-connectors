@@ -1,10 +1,11 @@
+using Speckle.Converters.Common;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.Utils;
 
 [GenerateAutoInterface]
-public class CrsUtils(IArcGISConversionSettingsFactory settingsStoreFactory) : ICrsUtils
+public class CrsUtils(IConverterSettingsStore<ArcGISConversionSettings> settingsStore) : ICrsUtils
 {
   public IDisposable? FindSetCrsDataOnReceive(Base? rootObj)
   {
@@ -23,8 +24,11 @@ public class CrsUtils(IArcGISConversionSettingsFactory settingsStoreFactory) : I
       double trueNorthRadians = System.Convert.ToDouble((vLayer.crs?.rotation == null) ? 0 : vLayer.crs.rotation);
       double latOffset = System.Convert.ToDouble((vLayer.crs?.offset_y == null) ? 0 : vLayer.crs.offset_y);
       double lonOffset = System.Convert.ToDouble((vLayer.crs?.offset_x == null) ? 0 : vLayer.crs.offset_x);
-      return settingsStoreFactory.Push(
-        activeCRSoffsetRotation: new CRSoffsetRotation(spatialRef, latOffset, lonOffset, trueNorthRadians)
+      return settingsStore.Push(x =>
+        x with
+        {
+          ActiveCRSoffsetRotation = new CRSoffsetRotation(spatialRef, latOffset, lonOffset, trueNorthRadians)
+        }
       );
     }
 

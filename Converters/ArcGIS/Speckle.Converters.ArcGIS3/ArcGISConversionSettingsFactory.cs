@@ -10,31 +10,11 @@ using Speckle.InterfaceGenerator;
 namespace Speckle.Converters.ArcGIS3;
 
 [GenerateAutoInterface]
-public class ArcGISConversionSettingsFactory(
-  IHostToSpeckleUnitConverter<ACG.Unit> unitConverter,
-  IConverterSettingsStore<ArcGISConversionSettings> settingsStore
-) : IArcGISConversionSettingsFactory
+public class ArcGISConversionSettingsFactory(IHostToSpeckleUnitConverter<ACG.Unit> unitConverter)
+  : IArcGISConversionSettingsFactory
 {
-  public IDisposable Push(Project? project = null, Map? map = null, CRSoffsetRotation? activeCRSoffsetRotation = null)
-  {
-    return settingsStore.Push(
-      () =>
-        new()
-        {
-          Project = project ?? settingsStore.Current.Project,
-          Map = map ?? settingsStore.Current.Map,
-          ActiveCRSoffsetRotation = activeCRSoffsetRotation ?? settingsStore.Current.ActiveCRSoffsetRotation,
-          SpeckleDatabasePath = EnsureOrAddSpeckleDatabase(),
-          SpeckleUnits = unitConverter.ConvertOrThrow(
-            (activeCRSoffsetRotation ?? settingsStore.Current.ActiveCRSoffsetRotation).SpatialReference.Unit
-          )
-        }
-    );
-  }
-
-  public ArcGISConversionSettings Create(Project project, Map map, CRSoffsetRotation activeCRSoffsetRotation)
-  {
-    return new ArcGISConversionSettings()
+  public ArcGISConversionSettings Create(Project project, Map map, CRSoffsetRotation activeCRSoffsetRotation) =>
+    new()
     {
       Project = project,
       Map = map,
@@ -42,7 +22,6 @@ public class ArcGISConversionSettingsFactory(
       SpeckleDatabasePath = EnsureOrAddSpeckleDatabase(),
       SpeckleUnits = unitConverter.ConvertOrThrow(activeCRSoffsetRotation.SpatialReference.Unit)
     };
-  }
 
   public Uri EnsureOrAddSpeckleDatabase()
   {

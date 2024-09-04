@@ -1,4 +1,5 @@
-﻿using Speckle.Converters.Common.Objects;
+﻿using Speckle.Converters.Common;
+using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
@@ -13,7 +14,7 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.Brep>
   private readonly ITypedConverter<RG.Mesh, SOG.Mesh> _meshConverter;
   private readonly ITypedConverter<RG.Box, SOG.Box> _boxConverter;
   private readonly ITypedConverter<RG.Interval, SOP.Interval> _intervalConverter;
-  private readonly IRhinoConversionSettingsFactory _settingsStore;
+  private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   public BrepToSpeckleConverter(
     ITypedConverter<RG.Point3d, SOG.Point> pointConverter,
@@ -22,7 +23,7 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.Brep>
     ITypedConverter<RG.Mesh, SOG.Mesh> meshConverter,
     ITypedConverter<RG.Box, SOG.Box> boxConverter,
     ITypedConverter<RG.Interval, SOP.Interval> intervalConverter,
-    IRhinoConversionSettingsFactory settingsStore
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore
   )
   {
     _pointConverter = pointConverter;
@@ -75,7 +76,7 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.Brep>
     surfaces.AddRange(target.Surfaces.Select(srf => _surfaceConverter.Convert(srf.ToNurbsSurface())));
 
     List<ICurve> curves2d = new(target.Curves2D.Count);
-    using (_settingsStore.Push(units: Units.None))
+    using (_settingsStore.Push(x => x with { SpeckleUnits = Units.None }))
     {
       // Curves2D are unitless, so we convert them within a new pushed context with None units.
       curves2d.AddRange(target.Curves2D.Select(curve2d => _curveConverter.Convert(curve2d)));
