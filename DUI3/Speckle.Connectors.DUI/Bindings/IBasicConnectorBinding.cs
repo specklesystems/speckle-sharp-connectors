@@ -1,7 +1,6 @@
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.Utils.Operations;
 
 namespace Speckle.Connectors.DUI.Bindings;
 

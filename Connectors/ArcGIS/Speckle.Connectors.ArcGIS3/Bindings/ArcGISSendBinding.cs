@@ -1,12 +1,15 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using ArcGIS.Core.Data;
+using ArcGIS.Desktop.Core;
 using ArcGIS.Desktop.Editing.Events;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using ArcGIS.Desktop.Mapping.Events;
 using Microsoft.Extensions.Logging;
+using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.ArcGIS.Filters;
+using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Exceptions;
@@ -17,6 +20,10 @@ using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
+using Speckle.Connectors.Utils.Operations;
+using Speckle.Converters.ArcGIS3;
+using Speckle.Converters.ArcGIS3.Utils;
+using Speckle.Converters.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
@@ -29,12 +36,15 @@ public sealed class ArcGISSendBinding : ISendBinding
   public IBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
+  private readonly IUnitOfWorkFactory _unitOfWorkFactory; // POC: unused? :D
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
   private readonly ISendConversionCache _sendConversionCache;
+  private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<ArcGISSendBinding> _logger;
-  private readonly IArcGISSender _arcGisSender;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly MapMembersUtils _mapMemberUtils;
+  private readonly IArcGISConversionSettingsFactory _arcGISConversionSettingsFactory;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -51,19 +61,25 @@ public sealed class ArcGISSendBinding : ISendBinding
     DocumentModelStore store,
     IBridge parent,
     IEnumerable<ISendFilter> sendFilters,
+    IUnitOfWorkFactory unitOfWorkFactory,
     CancellationManager cancellationManager,
     ISendConversionCache sendConversionCache,
+    IOperationProgressManager operationProgressManager,
     ILogger<ArcGISSendBinding> logger,
-    IArcGISSender arcGisSender
+    MapMembersUtils mapMemberUtils,
+    IArcGISConversionSettingsFactory arcGisConversionSettingsFactory
   )
   {
     _store = store;
+    _unitOfWorkFactory = unitOfWorkFactory;
     _sendFilters = sendFilters.ToList();
     _cancellationManager = cancellationManager;
     _sendConversionCache = sendConversionCache;
+    _operationProgressManager = operationProgressManager;
     _logger = logger;
-    _arcGisSender = arcGisSender;
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
+    _mapMemberUtils = mapMemberUtils;
+    _arcGISConversionSettingsFactory = arcGisConversionSettingsFactory;
 
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
@@ -347,6 +363,8 @@ public sealed class ArcGISSendBinding : ISendBinding
   )]
   public async Task Send(string modelCardId)
   {
+    //poc: dupe code between connectors
+
     try
     {
       if (_store.GetModelById(modelCardId) is not SenderModelCard modelCard)
@@ -360,6 +378,16 @@ public sealed class ArcGISSendBinding : ISendBinding
       var sendResult = await QueuedTask
         .Run(async () =>
         {
+          using var unitOfWork = _unitOfWorkFactory.Create();
+          using var settings = unitOfWork
+            .Resolve<IConverterSettingsStore<ArcGISConversionSettings>>()
+            .Push(_ =>
+              _arcGISConversionSettingsFactory.Create(
+                Project.Current,
+                MapView.Active.Map,
+                new CRSoffsetRotation(MapView.Active.Map)
+              )
+            );
           List<MapMember> mapMembers = modelCard
             .SendFilter.NotNull()
             .GetObjectIds()
@@ -388,8 +416,20 @@ public sealed class ArcGISSendBinding : ISendBinding
             }
           }
 
-          var result = await _arcGisSender
-            .SendOperation(Parent, modelCard, mapMembers, cancellationToken)
+          var result = await unitOfWork
+            .Resolve<SendOperation<MapMember>>()
+            .Execute(
+              mapMembers,
+              modelCard.GetSendInfo("ArcGIS"), // POC: get host app name from settings? same for GetReceiveInfo
+              (status, progress) =>
+                _operationProgressManager.SetModelProgress(
+                  Parent,
+                  modelCardId,
+                  new ModelCardProgress(modelCardId, status, progress),
+                  cancellationToken
+                ),
+              cancellationToken
+            )
             .ConfigureAwait(false);
 
           return result;
