@@ -145,10 +145,11 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       })
       .ConfigureAwait(false);
 
+    // 3. add layer and tables to the Map and Table Of Content
+
     // Create placeholder for GroupLayers
     Dictionary<string, GroupLayer> createdLayerGroups = new();
 
-    // 3. add layer and tables to the Map and Table Of Content
     int bakeCount = 0;
     Dictionary<string, (MapMember, CIMUniqueValueRenderer?)> bakedMapMembers = new();
     onOperationProgressed?.Invoke("Adding to Map", bakeCount);
