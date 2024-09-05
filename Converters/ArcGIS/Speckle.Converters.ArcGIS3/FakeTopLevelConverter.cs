@@ -1,6 +1,7 @@
 ﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Geometry;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3;
@@ -12,6 +13,6 @@ public class FakeTopLevelConverter : IToSpeckleTopLevelConverter, ITypedConverte
 
   public Point Convert(String target)
   {
-    return new Point(0, 0, 100) { ["customText"] = target };
+    return new Point(0, 0, 100, Units.Meters) { ["customText"] = target };
   }
 }

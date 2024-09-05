@@ -83,7 +83,7 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
           // create new element attributes from the existing attributes, based on the vector layer visible fields
           // POC: this should be refactored to store the feeature layer properties in the context stack, so this logic can be done in the gisFeatureConverter
           Base elementAttributes = new();
-          foreach (string elementAtt in element.attributes.GetDynamicPropertyKeys())
+          foreach (string elementAtt in element.attributes.DynamicPropertyKeys)
           {
             if (visibleFieldDescriptions.Contains(elementAtt))
             {

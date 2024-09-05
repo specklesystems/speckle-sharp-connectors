@@ -65,7 +65,14 @@ public class RhinoColorManager
     string id = color.GetSpeckleApplicationId(source);
     string? name = color.IsNamedColor ? color.Name : null;
 
-    ColorProxy colorProxy = new(argb, id, name) { objects = new() };
+    ColorProxy colorProxy =
+      new()
+      {
+        value = argb,
+        applicationId = id,
+        name = name,
+        objects = new()
+      };
 
     // add the color source as well for receiving in other apps
     // POC: in order to have high-fidelity color props, we need to send the source somewhere. Currently this is attached to the color proxy, but have discussed sending it as a separate proxy or as an property on the atomic object. TBD if this is the best place for it.

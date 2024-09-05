@@ -3,6 +3,7 @@ using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Objects.BuiltElements.Revit;
 using Speckle.Objects.BuiltElements.Revit.RevitRoof;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -41,10 +42,12 @@ public class ExtrusionRoofToSpeckleTopLevelConverter
   {
     var plane = target.GetProfile().get_Item(0).SketchPlane.GetPlane();
     SOG.Line referenceLine =
-      new(
-        _pointConverter.Convert(plane.Origin.Add(plane.XVec.Normalize().Negate())),
-        _pointConverter.Convert(plane.Origin)
-      );
+      new()
+      {
+        start = _pointConverter.Convert(plane.Origin.Add(plane.XVec.Normalize().Negate())),
+        end = _pointConverter.Convert(plane.Origin),
+        units = Units.Meters, //TODO: This Can't be right!
+      };
     var level = _parameterValueExtractor.GetValueAsDocumentObject<DB.Level>(
       target,
       DB.BuiltInParameter.ROOF_CONSTRAINT_LEVEL_PARAM

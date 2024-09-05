@@ -1,9 +1,41 @@
-﻿using Speckle.InterfaceGenerator;
+﻿using System.Diagnostics.CodeAnalysis;
 using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.Utils.Instances;
 
-[GenerateAutoInterface]
+public interface IInstanceObjectsManager<THostObjectType, TAppIdMapValueType>
+{
+  void AddInstanceProxy(string objectId, InstanceProxy instanceProxy);
+  void AddDefinitionProxy(string objectId, InstanceDefinitionProxy instanceDefinitionProxy);
+  void AddAtomicObject(string objectId, THostObjectType obj);
+  void AddInstanceProxiesByDefinitionId(
+    string definitionId,
+    System.Collections.Generic.List<Speckle.Sdk.Models.Instances.InstanceProxy> instanceProxies
+  );
+  global::Speckle.Connectors.Utils.Instances.UnpackResult<THostObjectType> GetUnpackResult();
+  bool TryGetInstanceProxiesFromDefinitionId(
+    string definitionId,
+    out System.Collections.Generic.List<Speckle.Sdk.Models.Instances.InstanceProxy>? instanceProxiesWithSameDefinition
+  );
+  bool TryGetInstanceDefinitionProxy(
+    string definitionId,
+    out Speckle.Sdk.Models.Instances.InstanceDefinitionProxy? instanceDefinitionProxy
+  );
+  global::Speckle.Sdk.Models.Instances.InstanceProxy GetInstanceProxy(string instanceId);
+
+  /// <summary>
+  /// Update children max depths whenever definition proxy is found on the unpacked dictionary (<see cref="F:Speckle.Connectors.Utils.Instances.InstanceObjectsManager`2._definitionProxies"/>).
+  /// Even if definition unpacked before, max depth of its children must be updated if upcoming max depth is higher than existing one.
+  /// </summary>
+  /// <param name="definitionProxy"> Definition proxy to update max depth of its children.</param>
+  /// <param name="depthDifference"> Value to increase max depth of children.</param>
+  void UpdateChildrenMaxDepth(
+    global::Speckle.Sdk.Models.Instances.InstanceDefinitionProxy definitionProxy,
+    int depthDifference
+  );
+}
+
+// [GenerateAutoInterface]
 public class InstanceObjectsManager<THostObjectType, TAppIdMapValueType>
   : IInstanceObjectsManager<THostObjectType, TAppIdMapValueType>
 {
@@ -28,27 +60,30 @@ public class InstanceObjectsManager<THostObjectType, TAppIdMapValueType>
 
   public bool TryGetInstanceProxiesFromDefinitionId(
     string definitionId,
-    out List<InstanceProxy> instanceProxiesWithSameDefinition
+    [NotNullWhen(true)] out List<InstanceProxy>? instanceProxiesWithSameDefinition
   )
   {
-    instanceProxiesWithSameDefinition = new List<InstanceProxy>();
     if (_instanceProxiesByDefinitionId.TryGetValue(definitionId, out List<InstanceProxy> value))
     {
       instanceProxiesWithSameDefinition = value;
       return true;
     }
+    instanceProxiesWithSameDefinition = null;
     return false;
   }
 
-  public bool TryGetInstanceDefinitionProxy(string definitionId, out InstanceDefinitionProxy instanceDefinitionProxy)
+  public bool TryGetInstanceDefinitionProxy(
+    string definitionId,
+    [NotNullWhen(true)] out InstanceDefinitionProxy? instanceDefinitionProxy
+  )
   {
-    instanceDefinitionProxy = new InstanceDefinitionProxy();
     if (_definitionProxies.TryGetValue(definitionId, out InstanceDefinitionProxy value))
     {
       instanceDefinitionProxy = value;
       return true;
     }
 
+    instanceDefinitionProxy = null;
     return false;
   }
 

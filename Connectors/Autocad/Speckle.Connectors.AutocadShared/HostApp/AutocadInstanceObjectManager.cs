@@ -93,7 +93,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
     if (
       !_instanceObjectsManager.TryGetInstanceProxiesFromDefinitionId(
         definitionId.ToString(),
-        out List<InstanceProxy> instanceProxiesWithSameDefinition
+        out List<InstanceProxy>? instanceProxiesWithSameDefinition
       )
     )
     {
@@ -116,7 +116,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
     instanceProxiesWithSameDefinition.Add(_instanceObjectsManager.GetInstanceProxy(instanceId));
 
     if (
-      _instanceObjectsManager.TryGetInstanceDefinitionProxy(definitionId.ToString(), out InstanceDefinitionProxy value)
+      _instanceObjectsManager.TryGetInstanceDefinitionProxy(definitionId.ToString(), out InstanceDefinitionProxy? value)
     )
     {
       int depthDifference = depth - value.maxDepth;

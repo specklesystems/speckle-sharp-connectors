@@ -1,5 +1,6 @@
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -25,7 +26,8 @@ public class VectorToSpeckleConverter : ITypedConverter<DB.XYZ, SOG.Vector>
     var pointToSpeckle = new SOG.Vector(
       _scalingService.ScaleLength(extPt.X),
       _scalingService.ScaleLength(extPt.Y),
-      _scalingService.ScaleLength(extPt.Z)
+      _scalingService.ScaleLength(extPt.Z),
+      Units.Meters //TODO: this can't be right...
     );
 
     return pointToSpeckle;

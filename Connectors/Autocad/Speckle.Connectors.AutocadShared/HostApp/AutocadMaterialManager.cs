@@ -46,7 +46,12 @@ public class AutocadMaterialManager
     renderMaterial["ior"] = material.Refraction.Index;
     renderMaterial["reflectivity"] = material.Reflectivity;
 
-    return new(renderMaterial, new()) { applicationId = id };
+    return new()
+    {
+      value = renderMaterial,
+      objects = new(),
+      applicationId = id
+    };
   }
 
   /// <summary>

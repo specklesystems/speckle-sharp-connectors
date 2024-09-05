@@ -2,6 +2,7 @@ using ArcGIS.Core.Data;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
@@ -54,7 +55,13 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
       // generate Mesh
       List<int> faces = new() { boundaryPts.Count };
       faces.AddRange(Enumerable.Range(0, boundaryPts.Count).ToList());
-      SOG.Mesh mesh = new(boundaryPts.SelectMany(x => new List<double> { x.x, x.y, x.z }).ToList(), faces);
+      SOG.Mesh mesh =
+        new()
+        {
+          vertices = boundaryPts.SelectMany(x => new List<double> { x.x, x.y, x.z }).ToList(),
+          faces = faces,
+          units = Units.Meters, //TODO: This can't be right
+        };
       displayVal.Add(mesh);
     }
 
@@ -66,7 +73,13 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
     List<SOG.Mesh> displayVal = new();
     foreach (SGIS.GisMultipatchGeometry geo in multipatch)
     {
-      SOG.Mesh displayMesh = new(geo.vertices, geo.faces);
+      SOG.Mesh displayMesh =
+        new()
+        {
+          vertices = geo.vertices,
+          faces = geo.faces,
+          units = Units.Meters //TODO: This can't be right
+        };
       displayVal.Add(displayMesh);
     }
 
