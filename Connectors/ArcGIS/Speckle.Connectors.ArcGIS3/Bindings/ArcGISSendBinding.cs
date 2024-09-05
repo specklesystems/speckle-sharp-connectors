@@ -7,7 +7,6 @@ using ArcGIS.Desktop.Mapping;
 using ArcGIS.Desktop.Mapping.Events;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.ArcGIS.Filters;
-using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Exceptions;
@@ -36,7 +35,6 @@ public sealed class ArcGISSendBinding : ISendBinding
   private readonly ILogger<ArcGISSendBinding> _logger;
   private readonly IArcGISSender _arcGisSender;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
-  private readonly MapMembersUtils _mapMemberUtils;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -57,9 +55,6 @@ public sealed class ArcGISSendBinding : ISendBinding
     ISendConversionCache sendConversionCache,
     ILogger<ArcGISSendBinding> logger,
     IArcGISSender arcGisSender
-    IOperationProgressManager operationProgressManager,
-    ILogger<ArcGISSendBinding> logger,
-    MapMembersUtils mapMemberUtils
   )
   {
     _store = store;
@@ -69,7 +64,6 @@ public sealed class ArcGISSendBinding : ISendBinding
     _logger = logger;
     _arcGisSender = arcGisSender;
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
-    _mapMemberUtils = mapMemberUtils;
 
     Parent = parent;
     Commands = new SendBindingUICommands(parent);

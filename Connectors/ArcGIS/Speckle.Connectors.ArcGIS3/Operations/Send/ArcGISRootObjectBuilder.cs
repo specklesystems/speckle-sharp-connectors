@@ -30,7 +30,6 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ArcGISColorManager _colorManager;
   private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
-  private readonly IConversionContextStack<ArcGISDocument, Unit> _contextStack;
   private readonly MapMembersUtils _mapMemberUtils;
   private readonly ILogger<ArcGISRootObjectBuilder> _logger;
 
