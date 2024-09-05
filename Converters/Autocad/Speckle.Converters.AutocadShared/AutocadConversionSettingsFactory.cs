@@ -8,5 +8,5 @@ public class AutocadConversionSettingsFactory(IHostToSpeckleUnitConverter<ADB.Un
   : IAutocadConversionSettingsFactory
 {
   public AutocadConversionSettings Create(Document document) =>
-    new() { Document = document, SpeckleUnits = unitsConverter.ConvertOrThrow(document.Database.Insunits) };
+    new(document, unitsConverter.ConvertOrThrow(document.Database.Insunits));
 }

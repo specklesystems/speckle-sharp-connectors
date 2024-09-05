@@ -14,14 +14,13 @@ public class ArcGISConversionSettingsFactory(IHostToSpeckleUnitConverter<ACG.Uni
   : IArcGISConversionSettingsFactory
 {
   public ArcGISConversionSettings Create(Project project, Map map, CRSoffsetRotation activeCRSoffsetRotation) =>
-    new()
-    {
-      Project = project,
-      Map = map,
-      ActiveCRSoffsetRotation = activeCRSoffsetRotation,
-      SpeckleDatabasePath = EnsureOrAddSpeckleDatabase(),
-      SpeckleUnits = unitConverter.ConvertOrThrow(activeCRSoffsetRotation.SpatialReference.Unit)
-    };
+    new(
+      project,
+      map,
+      EnsureOrAddSpeckleDatabase(),
+      activeCRSoffsetRotation,
+      unitConverter.ConvertOrThrow(activeCRSoffsetRotation.SpatialReference.Unit)
+    );
 
   public Uri EnsureOrAddSpeckleDatabase()
   {

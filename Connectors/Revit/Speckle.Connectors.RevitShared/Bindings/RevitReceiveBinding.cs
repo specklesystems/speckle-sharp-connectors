@@ -9,7 +9,6 @@ using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
-using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
 
@@ -20,7 +19,6 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
   public string Name => "receiveBinding";
   public IBridge Parent { get; }
 
-  private readonly RevitContext _revitContext;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<RevitReceiveBinding> _logger;
   private readonly CancellationManager _cancellationManager;
@@ -36,7 +34,6 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
     IUnitOfWorkFactory unitOfWorkFactory,
     IOperationProgressManager operationProgressManager,
     ILogger<RevitReceiveBinding> logger,
-    RevitContext revitContext,
     IRevitConversionSettingsFactory revitConversionSettingsFactory
   )
   {
@@ -45,7 +42,6 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
     _unitOfWorkFactory = unitOfWorkFactory;
     _operationProgressManager = operationProgressManager;
     _logger = logger;
-    _revitContext = revitContext;
     _revitConversionSettingsFactory = revitConversionSettingsFactory;
     _cancellationManager = cancellationManager;
 
@@ -67,15 +63,11 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
 
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
-      var activeUIDoc =
-        _revitContext.UIApplication?.ActiveUIDocument
-        ?? throw new SpeckleException("Unable to retrieve active UI document");
       using var unitOfWork = _unitOfWorkFactory.Create();
       using var settings = unitOfWork
         .Resolve<IConverterSettingsStore<RevitConversionSettings>>()
         .Push(_ =>
           _revitConversionSettingsFactory.Create(
-            activeUIDoc.Document,
             DetailLevelType.Coarse, //TODO figure out
             null
           )

@@ -110,21 +110,19 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
-      var activeUIDoc =
-        RevitContext.UIApplication?.ActiveUIDocument
-        ?? throw new SpeckleException("Unable to retrieve active UI document");
-
       using var unitOfWork = _unitOfWorkFactory.Create();
       using var settings = unitOfWork
         .Resolve<IConverterSettingsStore<RevitConversionSettings>>()
         .Push(_ =>
           _revitConversionSettingsFactory.Create(
-            activeUIDoc.Document,
             _toSpeckleSettingsManager.GetDetailLevelSetting(modelCard),
             _toSpeckleSettingsManager.GetReferencePointSetting(modelCard)
           )
         );
 
+      var activeUIDoc =
+        RevitContext.UIApplication?.ActiveUIDocument
+        ?? throw new SpeckleException("Unable to retrieve active UI document");
       List<ElementId> revitObjects = modelCard
         .SendFilter.NotNull()
         .GetObjectIds()

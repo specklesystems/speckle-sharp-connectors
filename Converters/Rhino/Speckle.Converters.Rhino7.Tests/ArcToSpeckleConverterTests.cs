@@ -22,7 +22,9 @@ public class ArcToSpeckleConverterTests : MoqTest
     var mockContextStack = Create<IConverterSettingsStore<RhinoConversionSettings>>();
     var factory = Create<IBoxFactory>();
 
-    mockContextStack.Setup(cs => cs.Current).Returns(new RhinoConversionSettings() { SpeckleUnits = "units" });
+    var doc = Create<global::Rhino.RhinoDoc>();
+
+    mockContextStack.Setup(cs => cs.Current).Returns(new RhinoConversionSettings(doc.Object, "units"));
 
     var targetArc = Create<RG.Arc>();
     var targetPlane = Create<RG.Plane>();

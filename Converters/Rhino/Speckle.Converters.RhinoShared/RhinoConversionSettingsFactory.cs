@@ -13,5 +13,5 @@ public class RhinoConversionSettingsFactory(
   public RhinoConversionSettings Current => settingsStore.Current;
 
   public RhinoConversionSettings Create(RhinoDoc document) =>
-    new() { Document = document, SpeckleUnits = unitsConverter.ConvertOrThrow(RhinoDoc.ActiveDoc.ModelUnitSystem) };
+    new(document, unitsConverter.ConvertOrThrow(RhinoDoc.ActiveDoc.ModelUnitSystem));
 }
