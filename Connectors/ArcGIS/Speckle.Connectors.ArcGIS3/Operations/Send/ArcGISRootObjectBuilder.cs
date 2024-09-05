@@ -49,7 +49,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     _logger = logger;
   }
 
-  public async Task<RootObjectBuilderResult> Build(
+  public RootObjectBuilderResult Build(
     IReadOnlyList<MapMember> objects,
     SendInfo sendInfo,
     Action<string, double?>? onOperationProgressed = null,
@@ -120,9 +120,10 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
           }
           else
           {
-            converted = await QueuedTask
+            converted = QueuedTask
               .Run(() => (Collection)_rootToSpeckleConverter.Convert(mapMember))
-              .ConfigureAwait(false);
+              .GetAwaiter()
+              .GetResult();
 
             // get units & Active CRS (for writing geometry coords)
             converted["units"] = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString;

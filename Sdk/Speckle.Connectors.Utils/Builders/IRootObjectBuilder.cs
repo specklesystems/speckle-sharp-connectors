@@ -6,7 +6,7 @@ namespace Speckle.Connectors.Utils.Builders;
 
 public interface IRootObjectBuilder<in T>
 {
-  public Task<RootObjectBuilderResult> Build(
+  public RootObjectBuilderResult Build(
     IReadOnlyList<T> objects,
     SendInfo sendInfo,
     Action<string, double?>? onOperationProgressed = null,

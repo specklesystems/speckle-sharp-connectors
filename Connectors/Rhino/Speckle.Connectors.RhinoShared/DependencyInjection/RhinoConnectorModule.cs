@@ -39,9 +39,6 @@ public class RhinoConnectorModule : ISpeckleModule
     builder.AddDUI();
     builder.AddDUIView();
 
-    // POC: Overwriting the SyncToMainThread to SyncToCurrentThread for Rhino!
-    builder.AddSingletonInstance<ISyncToThread, SyncToCurrentThread>();
-
     // Register other connector specific types
     builder.AddSingleton<IRhinoPlugin, RhinoPlugin>();
     builder.AddSingleton<DocumentModelStore, RhinoDocumentStore>();

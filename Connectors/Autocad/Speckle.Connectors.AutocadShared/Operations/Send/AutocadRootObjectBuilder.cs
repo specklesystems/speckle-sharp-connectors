@@ -28,7 +28,6 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
   private readonly AutocadColorManager _colorManager;
   private readonly AutocadLayerManager _layerManager;
   private readonly AutocadGroupManager _groupManager;
-  private readonly ISyncToThread _syncToThread;
   private readonly ILogger<AutocadRootObjectBuilder> _logger;
 
   public AutocadRootObjectBuilder(
@@ -39,7 +38,6 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     AutocadColorManager colorManager,
     AutocadLayerManager layerManager,
     AutocadGroupManager groupManager,
-    ISyncToThread syncToThread,
     ILogger<AutocadRootObjectBuilder> logger
   )
   {
@@ -50,7 +48,6 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     _colorManager = colorManager;
     _layerManager = layerManager;
     _groupManager = groupManager;
-    _syncToThread = syncToThread;
     _logger = logger;
   }
 
@@ -63,118 +60,113 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
       proxy classes yet. So I'm supressing this one now!!!
       """
   )]
-  public Task<RootObjectBuilderResult> Build(
+  public RootObjectBuilderResult Build(
     IReadOnlyList<AutocadRootObject> objects,
     SendInfo sendInfo,
     Action<string, double?>? onOperationProgressed = null,
     CancellationToken ct = default
   )
   {
-    return _syncToThread.RunOnThread(() =>
+    Collection modelWithLayers =
+      new()
+      {
+        name = Application
+          .DocumentManager.CurrentDocument.Name // POC: https://spockle.atlassian.net/browse/CNX-9319
+          .Split(_documentPathSeparator, StringSplitOptions.None)
+          .Reverse()
+          .First()
+      };
+
+    // TODO: better handling for document and transactions!!
+    Document doc = Application.DocumentManager.CurrentDocument;
+    using Transaction tr = doc.Database.TransactionManager.StartTransaction();
+
+    // Keeps track of autocad layers used, so we can pass them on later to the material and color unpacker.
+    List<LayerTableRecord> usedAcadLayers = new();
+    int count = 0;
+
+    var (atomicObjects, instanceProxies, instanceDefinitionProxies) = _instanceObjectsManager.UnpackSelection(objects);
+
+    List<SendConversionResult> results = new();
+    var cacheHitCount = 0;
+
+    foreach (var (entity, applicationId) in atomicObjects)
     {
-      Collection modelWithLayers =
-        new()
-        {
-          name = Application
-            .DocumentManager.CurrentDocument.Name // POC: https://spockle.atlassian.net/browse/CNX-9319
-            .Split(_documentPathSeparator, StringSplitOptions.None)
-            .Reverse()
-            .First()
-        };
-
-      // TODO: better handling for document and transactions!!
-      Document doc = Application.DocumentManager.CurrentDocument;
-      using Transaction tr = doc.Database.TransactionManager.StartTransaction();
-
-      // Keeps track of autocad layers used, so we can pass them on later to the material and color unpacker.
-      List<LayerTableRecord> usedAcadLayers = new();
-      int count = 0;
-
-      var (atomicObjects, instanceProxies, instanceDefinitionProxies) = _instanceObjectsManager.UnpackSelection(
-        objects
-      );
-
-      List<SendConversionResult> results = new();
-      var cacheHitCount = 0;
-
-      foreach (var (entity, applicationId) in atomicObjects)
+      ct.ThrowIfCancellationRequested();
+      string sourceType = entity.GetType().ToString();
+      try
       {
-        ct.ThrowIfCancellationRequested();
-        string sourceType = entity.GetType().ToString();
-        try
+        Base converted;
+        if (entity is BlockReference && instanceProxies.TryGetValue(applicationId, out InstanceProxy? instanceProxy))
         {
-          Base converted;
-          if (entity is BlockReference && instanceProxies.TryGetValue(applicationId, out InstanceProxy? instanceProxy))
-          {
-            converted = instanceProxy;
-          }
-          else if (_sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value))
-          {
-            converted = value;
-            cacheHitCount++;
-          }
-          else
-          {
-            converted = _converter.Convert(entity);
-            converted.applicationId = applicationId;
-          }
-
-          // Create and add a collection for each layer if not done so already.
-          Layer layer = _layerManager.GetOrCreateSpeckleLayer(entity, tr, out LayerTableRecord? autocadLayer);
-          if (autocadLayer is not null)
-          {
-            usedAcadLayers.Add(autocadLayer);
-            modelWithLayers.elements.Add(layer);
-          }
-
-          layer.elements.Add(converted);
-          results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
+          converted = instanceProxy;
         }
-        catch (Exception ex) when (!ex.IsFatal())
+        else if (_sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value))
         {
-          _logger.LogSendConversionError(ex, sourceType);
-
-          results.Add(new(Status.ERROR, applicationId, sourceType, null, ex));
+          converted = value;
+          cacheHitCount++;
         }
-        onOperationProgressed?.Invoke("Converting", (double)++count / atomicObjects.Count);
-      }
+        else
+        {
+          converted = _converter.Convert(entity);
+          converted.applicationId = applicationId;
+        }
 
-      if (results.All(x => x.Status == Status.ERROR))
+        // Create and add a collection for each layer if not done so already.
+        Layer layer = _layerManager.GetOrCreateSpeckleLayer(entity, tr, out LayerTableRecord? autocadLayer);
+        if (autocadLayer is not null)
+        {
+          usedAcadLayers.Add(autocadLayer);
+          modelWithLayers.elements.Add(layer);
+        }
+
+        layer.elements.Add(converted);
+        results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
+      }
+      catch (Exception ex) when (!ex.IsFatal())
       {
-        throw new SpeckleConversionException("Failed to convert all objects."); // fail fast instead creating empty commit! It will appear as model card error with red color.
+        _logger.LogSendConversionError(ex, sourceType);
+
+        results.Add(new(Status.ERROR, applicationId, sourceType, null, ex));
       }
+      onOperationProgressed?.Invoke("Converting", (double)++count / atomicObjects.Count);
+    }
 
-      // POC: Log would be nice, or can be removed.
-      Debug.WriteLine(
-        $"Cache hit count {cacheHitCount} out of {objects.Count} ({(double)cacheHitCount / objects.Count})"
-      );
+    if (results.All(x => x.Status == Status.ERROR))
+    {
+      throw new SpeckleConversionException("Failed to convert all objects."); // fail fast instead creating empty commit! It will appear as model card error with red color.
+    }
 
-      var conversionFailedAppIds = results
-        .FindAll(result => result.Status == Status.ERROR)
-        .Select(result => result.SourceId);
+    // POC: Log would be nice, or can be removed.
+    Debug.WriteLine(
+      $"Cache hit count {cacheHitCount} out of {objects.Count} ({(double)cacheHitCount / objects.Count})"
+    );
 
-      // Cleans up objects that failed to convert from definition proxies.
-      // see https://linear.app/speckle/issue/CNX-115/viewer-handle-gracefully-instances-with-elements-that-failed-to
-      foreach (var definitionProxy in instanceDefinitionProxies)
-      {
-        definitionProxy.objects.RemoveAll(id => conversionFailedAppIds.Contains(id));
-      }
-      // Set definition proxies
-      modelWithLayers["instanceDefinitionProxies"] = instanceDefinitionProxies;
+    var conversionFailedAppIds = results
+      .FindAll(result => result.Status == Status.ERROR)
+      .Select(result => result.SourceId);
 
-      // set groups
-      List<GroupProxy> groupProxies = _groupManager.UnpackGroups(atomicObjects);
-      modelWithLayers["groupProxies"] = groupProxies;
+    // Cleans up objects that failed to convert from definition proxies.
+    // see https://linear.app/speckle/issue/CNX-115/viewer-handle-gracefully-instances-with-elements-that-failed-to
+    foreach (var definitionProxy in instanceDefinitionProxies)
+    {
+      definitionProxy.objects.RemoveAll(id => conversionFailedAppIds.Contains(id));
+    }
+    // Set definition proxies
+    modelWithLayers["instanceDefinitionProxies"] = instanceDefinitionProxies;
 
-      // set materials
-      List<RenderMaterialProxy> materialProxies = _materialManager.UnpackMaterials(atomicObjects, usedAcadLayers);
-      modelWithLayers["renderMaterialProxies"] = materialProxies;
+    // set groups
+    List<GroupProxy> groupProxies = _groupManager.UnpackGroups(atomicObjects);
+    modelWithLayers["groupProxies"] = groupProxies;
 
-      // set colors
-      List<ColorProxy> colorProxies = _colorManager.UnpackColors(atomicObjects, usedAcadLayers);
-      modelWithLayers["colorProxies"] = colorProxies;
+    // set materials
+    List<RenderMaterialProxy> materialProxies = _materialManager.UnpackMaterials(atomicObjects, usedAcadLayers);
+    modelWithLayers["renderMaterialProxies"] = materialProxies;
 
-      return new RootObjectBuilderResult(modelWithLayers, results);
-    });
+    // set colors
+    List<ColorProxy> colorProxies = _colorManager.UnpackColors(atomicObjects, usedAcadLayers);
+    modelWithLayers["colorProxies"] = colorProxies;
+
+    return new RootObjectBuilderResult(modelWithLayers, results);
   }
 }

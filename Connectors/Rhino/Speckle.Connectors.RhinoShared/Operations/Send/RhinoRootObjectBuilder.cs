@@ -32,7 +32,6 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   private readonly RhinoLayerManager _layerManager;
   private readonly RhinoMaterialManager _materialManager;
   private readonly RhinoColorManager _colorManager;
-  private readonly ISyncToThread _syncToThread;
   private readonly ILogger<RhinoRootObjectBuilder> _logger;
 
   public RhinoRootObjectBuilder(
@@ -44,7 +43,6 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     IRootToSpeckleConverter rootToSpeckleConverter,
     RhinoMaterialManager materialManager,
     RhinoColorManager colorManager,
-    ISyncToThread syncToThread,
     ILogger<RhinoRootObjectBuilder> logger
   )
   {
@@ -56,76 +54,74 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     _rootToSpeckleConverter = rootToSpeckleConverter;
     _materialManager = materialManager;
     _colorManager = colorManager;
-    _syncToThread = syncToThread;
     _logger = logger;
   }
 
-  public Task<RootObjectBuilderResult> Build(
+  public RootObjectBuilderResult Build(
     IReadOnlyList<RhinoObject> rhinoObjects,
     SendInfo sendInfo,
     Action<string, double?>? onOperationProgressed = null,
     CancellationToken cancellationToken = default
-  ) =>
-    _syncToThread.RunOnThread(() =>
+  )
+  {
+    using var activity = SpeckleActivityFactory.Start("Build");
+    Collection rootObjectCollection = new() { name = _contextStack.Current.Document.Name ?? "Unnamed document" };
+    int count = 0;
+
+    UnpackResult<RhinoObject> unpackResults;
+    using (var _ = SpeckleActivityFactory.Start("UnpackSelection"))
     {
-      using var activity = SpeckleActivityFactory.Start("Build");
-      Collection rootObjectCollection = new() { name = _contextStack.Current.Document.Name ?? "Unnamed document" };
-      int count = 0;
+      unpackResults = _instanceObjectsManager.UnpackSelection(rhinoObjects);
+    }
 
-      UnpackResult<RhinoObject> unpackResults;
-      using (var _ = SpeckleActivityFactory.Start("UnpackSelection"))
+    var (atomicObjects, instanceProxies, instanceDefinitionProxies) = unpackResults;
+    // POC: we should formalise this, sooner or later - or somehow fix it a bit more
+    rootObjectCollection["instanceDefinitionProxies"] = instanceDefinitionProxies; // this won't work re traversal on receive
+
+    _rhinoGroupManager.UnpackGroups(rhinoObjects);
+    rootObjectCollection["groupProxies"] = _rhinoGroupManager.GroupProxies.Values;
+
+    // POC: Handle blocks.
+    List<SendConversionResult> results = new(atomicObjects.Count);
+
+    HashSet<Layer> versionLayers = new();
+    using (var _ = SpeckleActivityFactory.Start("Convert all"))
+    {
+      foreach (RhinoObject rhinoObject in atomicObjects)
       {
-        unpackResults = _instanceObjectsManager.UnpackSelection(rhinoObjects);
+        using var _2 = SpeckleActivityFactory.Start("Convert");
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // handle layer
+        Layer layer = _contextStack.Current.Document.Layers[rhinoObject.Attributes.LayerIndex];
+        versionLayers.Add(layer);
+        Collection collectionHost = _layerManager.GetHostObjectCollection(layer, rootObjectCollection);
+
+        results.Add(ConvertRhinoObject(rhinoObject, collectionHost, instanceProxies, sendInfo));
+
+        ++count;
+        onOperationProgressed?.Invoke("Converting", (double)count / atomicObjects.Count);
+
+        // NOTE: useful for testing ui states, pls keep for now so we can easily uncomment
+        // Thread.Sleep(550);
       }
+    }
 
-      var (atomicObjects, instanceProxies, instanceDefinitionProxies) = unpackResults;
-      // POC: we should formalise this, sooner or later - or somehow fix it a bit more
-      rootObjectCollection["instanceDefinitionProxies"] = instanceDefinitionProxies; // this won't work re traversal on receive
+    if (results.All(x => x.Status == Status.ERROR))
+    {
+      throw new SpeckleConversionException("Failed to convert all objects."); // fail fast instead creating empty commit! It will appear as model card error with red color.
+    }
 
-      _rhinoGroupManager.UnpackGroups(rhinoObjects);
-      rootObjectCollection["groupProxies"] = _rhinoGroupManager.GroupProxies.Values;
+    using (var _ = SpeckleActivityFactory.Start("UnpackRenderMaterials"))
+    {
+      // set render materials and colors
+      rootObjectCollection["renderMaterialProxies"] = _materialManager.UnpackRenderMaterial(atomicObjects);
+      rootObjectCollection["colorProxies"] = _colorManager.UnpackColors(atomicObjects, versionLayers.ToList());
+    }
 
-      // POC: Handle blocks.
-      List<SendConversionResult> results = new(atomicObjects.Count);
-
-      HashSet<Layer> versionLayers = new();
-      using (var _ = SpeckleActivityFactory.Start("Convert all"))
-      {
-        foreach (RhinoObject rhinoObject in atomicObjects)
-        {
-          using var _2 = SpeckleActivityFactory.Start("Convert");
-          cancellationToken.ThrowIfCancellationRequested();
-
-          // handle layer
-          Layer layer = _contextStack.Current.Document.Layers[rhinoObject.Attributes.LayerIndex];
-          versionLayers.Add(layer);
-          Collection collectionHost = _layerManager.GetHostObjectCollection(layer, rootObjectCollection);
-
-          results.Add(ConvertRhinoObject(rhinoObject, collectionHost, instanceProxies, sendInfo));
-
-          ++count;
-          onOperationProgressed?.Invoke("Converting", (double)count / atomicObjects.Count);
-
-          // NOTE: useful for testing ui states, pls keep for now so we can easily uncomment
-          // Thread.Sleep(550);
-        }
-      }
-
-      if (results.All(x => x.Status == Status.ERROR))
-      {
-        throw new SpeckleConversionException("Failed to convert all objects."); // fail fast instead creating empty commit! It will appear as model card error with red color.
-      }
-
-      using (var _ = SpeckleActivityFactory.Start("UnpackRenderMaterials"))
-      {
-        // set render materials and colors
-        rootObjectCollection["renderMaterialProxies"] = _materialManager.UnpackRenderMaterial(atomicObjects);
-        rootObjectCollection["colorProxies"] = _colorManager.UnpackColors(atomicObjects, versionLayers.ToList());
-      }
-
-      // 5. profit
-      return new RootObjectBuilderResult(rootObjectCollection, results);
-    });
+    // 5. profit
+    return new RootObjectBuilderResult(rootObjectCollection, results);
+  }
 
   private SendConversionResult ConvertRhinoObject(
     RhinoObject rhinoObject,

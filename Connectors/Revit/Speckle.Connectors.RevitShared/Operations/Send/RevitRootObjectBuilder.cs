@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
+using Revit.Async;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Utils.Builders;
@@ -23,7 +24,6 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
   private readonly IRevitConversionContextStack _conversionContextStack;
   private readonly Collection _rootObject;
   private readonly ISendConversionCache _sendConversionCache;
-  private readonly ISyncToThread _syncToThread;
   private readonly ElementUnpacker _elementUnpacker;
   private readonly SendCollectionManager _sendCollectionManager;
   private readonly ILogger<RevitRootObjectBuilder> _logger;
@@ -32,7 +32,6 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     IRootToSpeckleConverter converter,
     IRevitConversionContextStack conversionContextStack,
     ISendConversionCache sendConversionCache,
-    ISyncToThread syncToThread,
     ElementUnpacker elementUnpacker,
     SendCollectionManager sendCollectionManager,
     ILogger<RevitRootObjectBuilder> logger
@@ -41,7 +40,6 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     _converter = converter;
     _conversionContextStack = conversionContextStack;
     _sendConversionCache = sendConversionCache;
-    _syncToThread = syncToThread;
     _elementUnpacker = elementUnpacker;
     _sendCollectionManager = sendCollectionManager;
     _logger = logger;
@@ -52,92 +50,96 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     };
   }
 
-  public Task<RootObjectBuilderResult> Build(
+  public RootObjectBuilderResult Build(
     IReadOnlyList<ElementId> objects,
     SendInfo sendInfo,
     Action<string, double?>? onOperationProgressed = null,
     CancellationToken ct = default
   ) =>
-    _syncToThread.RunOnThread(() =>
-    {
-      var doc = _conversionContextStack.Current.Document;
-
-      if (doc.IsFamilyDocument)
+    RevitTask
+      .RunAsync(() =>
       {
-        throw new SpeckleException("Family Environment documents are not supported.");
-      }
+        var doc = _conversionContextStack.Current.Document;
 
-      var revitElements = new List<Element>();
-
-      // Convert ids to actual revit elements
-      foreach (var id in objects)
-      {
-        var el = _conversionContextStack.Current.Document.GetElement(id);
-        if (el != null)
+        if (doc.IsFamilyDocument)
         {
-          revitElements.Add(el);
+          throw new SpeckleException("Family Environment documents are not supported.");
         }
-      }
 
-      if (revitElements.Count == 0)
-      {
-        throw new SpeckleSendFilterException("No objects were found. Please update your send filter!");
-      }
+        var revitElements = new List<Element>();
 
-      // Unpack groups (& other complex data structures)
-      var atomicObjects = _elementUnpacker.UnpackSelectionForConversion(revitElements).ToList();
-
-      var countProgress = 0;
-      var cacheHitCount = 0;
-      List<SendConversionResult> results = new(revitElements.Count);
-
-      foreach (Element revitElement in atomicObjects)
-      {
-        ct.ThrowIfCancellationRequested();
-        string applicationId = revitElement.UniqueId; // NOTE: converter set applicationIds to unique ids; if we ever change this in the converter, behaviour here needs to match.
-        string sourceType = revitElement.GetType().Name;
-        try
+        // Convert ids to actual revit elements
+        foreach (var id in objects)
         {
-          Base converted;
-          if (_sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value))
+          var el = _conversionContextStack.Current.Document.GetElement(id);
+          if (el != null)
           {
-            converted = value;
-            cacheHitCount++;
+            revitElements.Add(el);
           }
-          else
-          {
-            converted = _converter.Convert(revitElement);
-            converted.applicationId = applicationId;
-          }
-
-          var collection = _sendCollectionManager.GetAndCreateObjectHostCollection(revitElement, _rootObject);
-          collection.elements.Add(converted);
-          results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
         }
-        catch (Exception ex) when (!ex.IsFatal())
+
+        if (revitElements.Count == 0)
         {
-          _logger.LogSendConversionError(ex, sourceType);
-          results.Add(new(Status.ERROR, applicationId, sourceType, null, ex));
+          throw new SpeckleSendFilterException("No objects were found. Please update your send filter!");
         }
 
-        onOperationProgressed?.Invoke("Converting", (double)++countProgress / atomicObjects.Count);
-      }
+        List<SendConversionResult> results = new(revitElements.Count);
 
-      if (results.All(x => x.Status == Status.ERROR))
-      {
-        throw new SpeckleConversionException("Failed to convert all objects."); // fail fast instead creating empty commit! It will appear as model card error with red color.
-      }
+        // Unpack groups (& other complex data structures)
+        var atomicObjects = _elementUnpacker.UnpackSelectionForConversion(revitElements).ToList();
 
-      var idsAndSubElementIds = _elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(atomicObjects);
-      var materialProxies = _conversionContextStack.RenderMaterialProxyCache.GetRenderMaterialProxyListForObjects(
-        idsAndSubElementIds
-      );
-      _rootObject["renderMaterialProxies"] = materialProxies;
+        var countProgress = 0;
+        var cacheHitCount = 0;
 
-      Debug.WriteLine(
-        $"Cache hit count {cacheHitCount} out of {objects.Count} ({(double)cacheHitCount / objects.Count})"
-      );
+        foreach (Element revitElement in atomicObjects)
+        {
+          ct.ThrowIfCancellationRequested();
+          string applicationId = revitElement.UniqueId;
+          string sourceType = revitElement.GetType().Name;
+          try
+          {
+            Base converted;
+            if (_sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value))
+            {
+              converted = value;
+              cacheHitCount++;
+            }
+            else
+            {
+              converted = _converter.Convert(revitElement);
+              converted.applicationId = applicationId;
+            }
 
-      return new RootObjectBuilderResult(_rootObject, results);
-    });
+            var collection = _sendCollectionManager.GetAndCreateObjectHostCollection(revitElement, _rootObject);
+            collection.elements.Add(converted);
+            results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
+          }
+          catch (Exception ex) when (!ex.IsFatal())
+          {
+            _logger.LogSendConversionError(ex, sourceType);
+            results.Add(new(Status.ERROR, applicationId, sourceType, null, ex));
+          }
+
+          onOperationProgressed?.Invoke("Converting", (double)++countProgress / atomicObjects.Count);
+        }
+
+        if (results.All(x => x.Status == Status.ERROR))
+        {
+          throw new SpeckleConversionException("Failed to convert all objects.");
+        }
+
+        var idsAndSubElementIds = _elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(atomicObjects);
+        var materialProxies = _conversionContextStack.RenderMaterialProxyCache.GetRenderMaterialProxyListForObjects(
+          idsAndSubElementIds
+        );
+        _rootObject["renderMaterialProxies"] = materialProxies;
+
+        Debug.WriteLine(
+          $"Cache hit count {cacheHitCount} out of {objects.Count} ({(double)cacheHitCount / objects.Count})"
+        );
+
+        return new RootObjectBuilderResult(_rootObject, results);
+      })
+      .GetAwaiter()
+      .GetResult();
 }
