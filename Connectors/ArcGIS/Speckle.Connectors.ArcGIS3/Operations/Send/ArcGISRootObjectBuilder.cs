@@ -187,34 +187,4 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
 
     return new RootObjectBuilderResult(rootObjectCollection, results);
   }
-
-  private int UnpackLayersOrder(
-    Dictionary<MapMember, int> layersIndices,
-    IEnumerable<ArcLayer> layersToUnpack,
-    int count
-  )
-  {
-    foreach (var layer in layersToUnpack)
-    {
-      switch (layer)
-      {
-        case GroupLayer subGroup:
-          layersIndices[layer] = count;
-          count++;
-          count = UnpackLayersOrder(layersIndices, subGroup.Layers, count);
-          break;
-        case ILayerContainerInternal subLayerContainerInternal:
-          layersIndices[layer] = count;
-          count++;
-          count = UnpackLayersOrder(layersIndices, subLayerContainerInternal.InternalLayers, count);
-          break;
-        default:
-          layersIndices[layer] = count;
-          count++;
-          break;
-      }
-    }
-
-    return count;
-  }
 }
