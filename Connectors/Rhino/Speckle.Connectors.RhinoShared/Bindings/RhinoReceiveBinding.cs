@@ -1,4 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
+using Rhino;
+using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Logging;
@@ -6,6 +8,9 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Cancellation;
+using Speckle.Connectors.Utils.Operations;
+using Speckle.Converters.Common;
+using Speckle.Converters.Rhino;
 using Speckle.Sdk;
 
 namespace Speckle.Connectors.Rhino.Bindings;
@@ -17,22 +22,28 @@ public class RhinoReceiveBinding : IReceiveBinding
 
   private readonly CancellationManager _cancellationManager;
   private readonly DocumentModelStore _store;
+  private readonly IUnitOfWorkFactory _unitOfWorkFactory;
+  private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<RhinoReceiveBinding> _logger;
-  private readonly IRhinoSender _rhinoSender;
+  private readonly IRhinoConversionSettingsFactory _rhinoConversionSettingsFactory;
   private ReceiveBindingUICommands Commands { get; }
 
   public RhinoReceiveBinding(
     DocumentModelStore store,
     CancellationManager cancellationManager,
     IBridge parent,
+    IUnitOfWorkFactory unitOfWorkFactory,
+    IOperationProgressManager operationProgressManager,
     ILogger<RhinoReceiveBinding> logger,
-    IRhinoSender rhinoSender
+    IRhinoConversionSettingsFactory rhinoConversionSettingsFactory
   )
   {
     Parent = parent;
     _store = store;
+    _unitOfWorkFactory = unitOfWorkFactory;
+    _operationProgressManager = operationProgressManager;
     _logger = logger;
-    _rhinoSender = rhinoSender;
+    _rhinoConversionSettingsFactory = rhinoConversionSettingsFactory;
     _cancellationManager = cancellationManager;
     Commands = new ReceiveBindingUICommands(parent);
   }
@@ -41,6 +52,10 @@ public class RhinoReceiveBinding : IReceiveBinding
 
   public async Task Receive(string modelCardId)
   {
+    using var unitOfWork = _unitOfWorkFactory.Create();
+    using var settings = unitOfWork
+      .Resolve<IConverterSettingsStore<RhinoConversionSettings>>()
+      .Push(_ => _rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
     try
     {
       // Get receiver card
@@ -53,8 +68,19 @@ public class RhinoReceiveBinding : IReceiveBinding
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
       // Receive host objects
-      HostObjectBuilderResult conversionResults = await _rhinoSender
-        .ReceiveOperation(Parent, modelCard, cancellationToken)
+      HostObjectBuilderResult conversionResults = await unitOfWork
+        .Resolve<ReceiveOperation>()
+        .Execute(
+          modelCard.GetReceiveInfo(Speckle.Connectors.Utils.Connector.Slug),
+          cancellationToken,
+          (status, progress) =>
+            _operationProgressManager.SetModelProgress(
+              Parent,
+              modelCardId,
+              new ModelCardProgress(modelCardId, status, progress),
+              cancellationToken
+            )
+        )
         .ConfigureAwait(false);
 
       modelCard.BakedObjectIds = conversionResults.BakedObjectIds.ToList();

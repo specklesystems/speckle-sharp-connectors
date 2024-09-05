@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.Commands;
 using Rhino.DocObjects;
+using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Exceptions;
@@ -14,6 +15,9 @@ using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
+using Speckle.Connectors.Utils.Operations;
+using Speckle.Converters.Common;
+using Speckle.Converters.Rhino;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
@@ -27,12 +31,14 @@ public sealed class RhinoSendBinding : ISendBinding
 
   private readonly DocumentModelStore _store;
   private readonly IRhinoIdleManager _idleManager;
+  private readonly IUnitOfWorkFactory _unitOfWorkFactory;
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
   private readonly ISendConversionCache _sendConversionCache;
+  private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<RhinoSendBinding> _logger;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
-  private readonly IRhinoSender _rhinoSender;
+  private readonly IRhinoConversionSettingsFactory _rhinoConversionSettingsFactory;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -47,19 +53,23 @@ public sealed class RhinoSendBinding : ISendBinding
     IRhinoIdleManager idleManager,
     IBridge parent,
     IEnumerable<ISendFilter> sendFilters,
+    IUnitOfWorkFactory unitOfWorkFactory,
     CancellationManager cancellationManager,
     ISendConversionCache sendConversionCache,
+    IOperationProgressManager operationProgressManager,
     ILogger<RhinoSendBinding> logger,
-    IRhinoSender rhinoSender
+    IRhinoConversionSettingsFactory rhinoConversionSettingsFactory
   )
   {
     _store = store;
     _idleManager = idleManager;
+    _unitOfWorkFactory = unitOfWorkFactory;
     _sendFilters = sendFilters.ToList();
     _cancellationManager = cancellationManager;
     _sendConversionCache = sendConversionCache;
+    _operationProgressManager = operationProgressManager;
     _logger = logger;
-    _rhinoSender = rhinoSender;
+    _rhinoConversionSettingsFactory = rhinoConversionSettingsFactory;
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler.Parent.TopLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent); // POC: Commands are tightly coupled with their bindings, at least for now, saves us injecting a factory.
@@ -141,6 +151,10 @@ public sealed class RhinoSendBinding : ISendBinding
 
   public async Task Send(string modelCardId)
   {
+    using var unitOfWork = _unitOfWorkFactory.Create();
+    using var settings = unitOfWork
+      .Resolve<IConverterSettingsStore<RhinoConversionSettings>>()
+      .Push(_ => _rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
     try
     {
       if (_store.GetModelById(modelCardId) is not SenderModelCard modelCard)
@@ -164,8 +178,20 @@ public sealed class RhinoSendBinding : ISendBinding
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
       }
 
-      var sendResult = await _rhinoSender
-        .SendOperation(Parent, modelCard, rhinoObjects, cancellationToken)
+      var sendResult = await unitOfWork
+        .Resolve<SendOperation<RhinoObject>>()
+        .Execute(
+          rhinoObjects,
+          modelCard.GetSendInfo(Speckle.Connectors.Utils.Connector.Slug),
+          (status, progress) =>
+            _operationProgressManager.SetModelProgress(
+              Parent,
+              modelCardId,
+              new ModelCardProgress(modelCardId, status, progress),
+              cancellationToken
+            ),
+          cancellationToken
+        )
         .ConfigureAwait(false);
 
       Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
