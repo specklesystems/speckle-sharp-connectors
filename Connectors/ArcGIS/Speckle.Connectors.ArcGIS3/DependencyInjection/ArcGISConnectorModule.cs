@@ -68,7 +68,9 @@ public class ArcGISConnectorModule : ISpeckleModule
     builder.AddScoped<SendOperation<MapMember>>();
     builder.AddScoped<ArcGISRootObjectBuilder>();
     builder.AddScoped<IRootObjectBuilder<MapMember>, ArcGISRootObjectBuilder>();
+
     builder.AddScoped<ArcGISColorManager>();
+    builder.AddScoped<MapMembersUtils>();
 
     builder.AddScoped<ILocalToGlobalUnpacker, LocalToGlobalUnpacker>();
 
