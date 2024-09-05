@@ -8,31 +8,19 @@ public interface IInstanceObjectsManager<THostObjectType, TAppIdMapValueType>
   void AddInstanceProxy(string objectId, InstanceProxy instanceProxy);
   void AddDefinitionProxy(string objectId, InstanceDefinitionProxy instanceDefinitionProxy);
   void AddAtomicObject(string objectId, THostObjectType obj);
-  void AddInstanceProxiesByDefinitionId(
-    string definitionId,
-    System.Collections.Generic.List<Speckle.Sdk.Models.Instances.InstanceProxy> instanceProxies
-  );
-  global::Speckle.Connectors.Utils.Instances.UnpackResult<THostObjectType> GetUnpackResult();
+  void AddInstanceProxiesByDefinitionId(string definitionId, List<InstanceProxy> instanceProxies);
+  UnpackResult<THostObjectType> GetUnpackResult();
   bool TryGetInstanceProxiesFromDefinitionId(
     string definitionId,
-    out System.Collections.Generic.List<Speckle.Sdk.Models.Instances.InstanceProxy>? instanceProxiesWithSameDefinition
+    [NotNullWhen(true)] out List<InstanceProxy>? instanceProxiesWithSameDefinition
   );
   bool TryGetInstanceDefinitionProxy(
     string definitionId,
-    out Speckle.Sdk.Models.Instances.InstanceDefinitionProxy? instanceDefinitionProxy
+    [NotNullWhen(true)] out InstanceDefinitionProxy? instanceDefinitionProxy
   );
-  global::Speckle.Sdk.Models.Instances.InstanceProxy GetInstanceProxy(string instanceId);
+  InstanceProxy GetInstanceProxy(string instanceId);
 
-  /// <summary>
-  /// Update children max depths whenever definition proxy is found on the unpacked dictionary (<see cref="F:Speckle.Connectors.Utils.Instances.InstanceObjectsManager`2._definitionProxies"/>).
-  /// Even if definition unpacked before, max depth of its children must be updated if upcoming max depth is higher than existing one.
-  /// </summary>
-  /// <param name="definitionProxy"> Definition proxy to update max depth of its children.</param>
-  /// <param name="depthDifference"> Value to increase max depth of children.</param>
-  void UpdateChildrenMaxDepth(
-    global::Speckle.Sdk.Models.Instances.InstanceDefinitionProxy definitionProxy,
-    int depthDifference
-  );
+  void UpdateChildrenMaxDepth(InstanceDefinitionProxy definitionProxy, int depthDifference);
 }
 
 // [GenerateAutoInterface]
