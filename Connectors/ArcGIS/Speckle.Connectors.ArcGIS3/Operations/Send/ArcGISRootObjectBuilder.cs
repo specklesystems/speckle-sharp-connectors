@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
-using ArcGIS.Desktop.Internal.Mapping;
 using ArcGIS.Desktop.Mapping;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.ArcGIS.HostApp;
@@ -18,7 +17,6 @@ using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Proxies;
-using ArcLayer = ArcGIS.Desktop.Mapping.Layer;
 
 namespace Speckle.Connectors.ArcGis.Operations.Send;
 
