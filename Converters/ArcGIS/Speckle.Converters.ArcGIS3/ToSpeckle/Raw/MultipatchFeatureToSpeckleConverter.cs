@@ -26,7 +26,7 @@ public class MultipatchFeatureToSpeckleConverter : ITypedConverter<ACG.Multipatc
   {
     List<Base> converted = new();
     // placeholder, needs to be declared in order to be used in the Ring patch type
-    SGIS.PolygonGeometry3d polygonGeom = new() { };
+    SGIS.PolygonGeometry3d polygonGeom = new() { units = _contextStack.Current.SpeckleUnits };
 
     // convert and store all multipatch points per Part
     List<List<SOG.Point>> allPoints = new();
@@ -78,7 +78,7 @@ public class MultipatchFeatureToSpeckleConverter : ITypedConverter<ACG.Multipatc
         }
 
         // first ring means a start of a new PolygonGeometry3d
-        polygonGeom = new() { voids = new List<SOG.Polyline>() };
+        polygonGeom = new() { voids = new List<SOG.Polyline>(), units = _contextStack.Current.SpeckleUnits };
         List<double> pointCoords = allPoints[idx].SelectMany(x => new List<double>() { x.x, x.y, x.z }).ToList();
 
         SOG.Polyline polyline = new() { value = pointCoords, units = _contextStack.Current.SpeckleUnits };
@@ -106,7 +106,12 @@ public class MultipatchFeatureToSpeckleConverter : ITypedConverter<ACG.Multipatc
         {
           // add existing polygon to list, start a new polygon with a boundary
           converted.Add(polygonGeom);
-          polygonGeom = new() { voids = new List<SOG.Polyline>(), boundary = polyline };
+          polygonGeom = new()
+          {
+            voids = new List<SOG.Polyline>(),
+            boundary = polyline,
+            units = _contextStack.Current.SpeckleUnits
+          };
         }
         // if it's already the last part, add to list
         if (idx == target.PartCount - 1)
