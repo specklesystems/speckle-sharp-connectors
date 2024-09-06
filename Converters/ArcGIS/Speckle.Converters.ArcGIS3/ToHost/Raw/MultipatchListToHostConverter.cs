@@ -1,6 +1,5 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.Raw;
 
