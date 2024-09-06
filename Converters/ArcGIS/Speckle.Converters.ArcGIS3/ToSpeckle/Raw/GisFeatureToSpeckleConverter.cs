@@ -38,10 +38,11 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
     foreach (SGIS.PolygonGeometry polygon in polygons)
     {
       // POC: check for voids, we cannot generate display value correctly if any of the polygons have voids
-      if (polygon.voids.Count > 0)
-      {
-        return new();
-      }
+      // Return meshed boundary for now, ignore voids
+      // if (polygon.voids.Count > 0)
+      // {
+      //   return new();
+      // }
 
       // ensure counter-clockwise orientation for up-facing mesh faces
       bool isClockwise = polygon.boundary.IsClockwisePolygon();
