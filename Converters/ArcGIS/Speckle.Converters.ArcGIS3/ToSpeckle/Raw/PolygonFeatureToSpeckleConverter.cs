@@ -44,7 +44,7 @@ public class PolygonFeatureToSpeckleConverter : ITypedConverter<ACG.Polygon, IRe
         {
           boundary = polyline,
           voids = new List<SOG.Polyline>(),
-          units = _contextStack.Current.SpeckleUnits
+          units = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString
         };
         polygonList.Add(polygon);
       }

@@ -26,7 +26,8 @@ public class MultipatchFeatureToSpeckleConverter : ITypedConverter<ACG.Multipatc
   {
     List<Base> converted = new();
     // placeholder, needs to be declared in order to be used in the Ring patch type
-    SGIS.PolygonGeometry3d polygonGeom = new() { units = _contextStack.Current.SpeckleUnits };
+    SGIS.PolygonGeometry3d polygonGeom =
+      new() { units = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString };
 
     // convert and store all multipatch points per Part
     List<List<SOG.Point>> allPoints = new();
@@ -52,19 +53,19 @@ public class MultipatchFeatureToSpeckleConverter : ITypedConverter<ACG.Multipatc
       if (patchType == ACG.PatchType.TriangleStrip)
       {
         SGIS.GisMultipatchGeometry multipatch = target.CompleteMultipatchTriangleStrip(allPoints, idx);
-        multipatch.units = _contextStack.Current.SpeckleUnits;
+        multipatch.units = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString;
         converted.Add(multipatch);
       }
       else if (patchType == ACG.PatchType.Triangles)
       {
         SGIS.GisMultipatchGeometry multipatch = target.CompleteMultipatchTriangles(allPoints, idx);
-        multipatch.units = _contextStack.Current.SpeckleUnits;
+        multipatch.units = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString;
         converted.Add(multipatch);
       }
       else if (patchType == ACG.PatchType.TriangleFan)
       {
         SGIS.GisMultipatchGeometry multipatch = target.CompleteMultipatchTriangleFan(allPoints, idx);
-        multipatch.units = _contextStack.Current.SpeckleUnits;
+        multipatch.units = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString;
         converted.Add(multipatch);
       }
       // in case of RingMultipatch - return PolygonGeometry3d
@@ -78,10 +79,19 @@ public class MultipatchFeatureToSpeckleConverter : ITypedConverter<ACG.Multipatc
         }
 
         // first ring means a start of a new PolygonGeometry3d
-        polygonGeom = new() { voids = new List<SOG.Polyline>(), units = _contextStack.Current.SpeckleUnits };
+        polygonGeom = new()
+        {
+          voids = new List<SOG.Polyline>(),
+          units = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString
+        };
         List<double> pointCoords = allPoints[idx].SelectMany(x => new List<double>() { x.x, x.y, x.z }).ToList();
 
-        SOG.Polyline polyline = new() { value = pointCoords, units = _contextStack.Current.SpeckleUnits };
+        SOG.Polyline polyline =
+          new()
+          {
+            value = pointCoords,
+            units = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString
+          };
         polygonGeom.boundary = polyline;
 
         // if it's already the last part, add to list
@@ -93,7 +103,12 @@ public class MultipatchFeatureToSpeckleConverter : ITypedConverter<ACG.Multipatc
       else if (patchType == ACG.PatchType.Ring)
       {
         List<double> pointCoords = allPoints[idx].SelectMany(x => new List<double>() { x.x, x.y, x.z }).ToList();
-        SOG.Polyline polyline = new() { value = pointCoords, units = _contextStack.Current.SpeckleUnits };
+        SOG.Polyline polyline =
+          new()
+          {
+            value = pointCoords,
+            units = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString
+          };
 
         // every outer ring is oriented clockwise
         bool isClockwise = polyline.IsClockwisePolygon();
@@ -110,7 +125,7 @@ public class MultipatchFeatureToSpeckleConverter : ITypedConverter<ACG.Multipatc
           {
             voids = new List<SOG.Polyline>(),
             boundary = polyline,
-            units = _contextStack.Current.SpeckleUnits
+            units = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString
           };
         }
         // if it's already the last part, add to list
