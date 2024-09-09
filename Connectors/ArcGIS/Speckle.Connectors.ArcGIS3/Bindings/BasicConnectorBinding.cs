@@ -8,6 +8,7 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Utils.Common;
 using Speckle.Sdk.Common;
+using ArcProject = ArcGIS.Desktop.Core.Project;
 
 namespace Speckle.Connectors.ArcGIS.Bindings;
 
@@ -45,7 +46,7 @@ public class BasicConnectorBinding : IBasicConnectorBinding
       return null;
     }
 
-    return new DocumentInfo(MapView.Active.Map.URI, MapView.Active.Map.Name, MapView.Active.Map.Name);
+    return new DocumentInfo(ArcProject.Current.URI, MapView.Active.Map.Name, MapView.Active.Map.URI);
   }
 
   public DocumentModelStore GetDocumentState() => _store;

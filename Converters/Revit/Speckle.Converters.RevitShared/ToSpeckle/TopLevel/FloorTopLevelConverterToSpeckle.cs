@@ -3,7 +3,6 @@ using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.ToSpeckle;
 using Speckle.Objects;
 using Speckle.Objects.BuiltElements.Revit;
-using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Common;
@@ -109,8 +108,8 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
     {
       start = tail,
       end = head,
-      units = Units.Meters
-    }; //TODO: this can't be right
+      units = _contextStack.Current.SpeckleUnits
+    };
 
     if (
       speckleFloor["parameters"] is Base parameters
