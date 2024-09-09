@@ -4,7 +4,6 @@ using Rhino.Geometry;
 using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
-using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
@@ -30,7 +29,6 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private readonly RhinoMaterialManager _materialManager;
   private readonly RhinoColorManager _colorManager;
   private readonly RhinoGroupManager _groupManager;
-  private readonly ISyncToThread _syncToThread;
 
   public RhinoHostObjectBuilder(
     IRootToHostConverter converter,
@@ -40,8 +38,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     RhinoInstanceObjectsManager instanceObjectsManager,
     RhinoMaterialManager materialManager,
     RhinoColorManager colorManager,
-    RhinoGroupManager groupManager,
-    ISyncToThread syncToThread
+    RhinoGroupManager groupManager
   )
   {
     _converter = converter;
@@ -52,7 +49,6 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _materialManager = materialManager;
     _colorManager = colorManager;
     _groupManager = groupManager;
-    _syncToThread = syncToThread;
   }
 
   public Task<HostObjectBuilderResult> Build(
@@ -63,39 +59,36 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     CancellationToken cancellationToken
   )
   {
-    return _syncToThread.RunOnThread(() =>
-    {
-      using var activity = SpeckleActivityFactory.Start("Build");
-      // POC: This is where the top level base-layer name is set. Could be abstracted or injected in the context?
-      var baseLayerName = $"Project {projectName}: Model {modelName}";
+    using var activity = SpeckleActivityFactory.Start("Build");
+    // POC: This is where the top level base-layer name is set. Could be abstracted or injected in the context?
+    var baseLayerName = $"Project {projectName}: Model {modelName}";
 
-      var objectsToConvert = _traverseFunction.Traverse(rootObject).Where(obj => obj.Current is not Collection);
-      var instanceDefinitionProxies = (rootObject["instanceDefinitionProxies"] as List<object>)
-        ?.Cast<InstanceDefinitionProxy>()
-        .ToList();
+    var objectsToConvert = _traverseFunction.Traverse(rootObject).Where(obj => obj.Current is not Collection);
+    var instanceDefinitionProxies = (rootObject["instanceDefinitionProxies"] as List<object>)
+      ?.Cast<InstanceDefinitionProxy>()
+      .ToList();
 
-      var groupProxies = (rootObject["groupProxies"] as List<object>)?.Cast<GroupProxy>().ToList();
+    var groupProxies = (rootObject["groupProxies"] as List<object>)?.Cast<GroupProxy>().ToList();
 
-      List<RenderMaterialProxy>? renderMaterials = (rootObject["renderMaterialProxies"] as List<object>)
-        ?.Cast<RenderMaterialProxy>()
-        .ToList();
+    List<RenderMaterialProxy>? renderMaterials = (rootObject["renderMaterialProxies"] as List<object>)
+      ?.Cast<RenderMaterialProxy>()
+      .ToList();
 
-      List<ColorProxy>? colors = (rootObject["colorProxies"] as List<object>)?.Cast<ColorProxy>().ToList();
+    List<ColorProxy>? colors = (rootObject["colorProxies"] as List<object>)?.Cast<ColorProxy>().ToList();
 
-      var conversionResults = BakeObjects(
-        objectsToConvert,
-        instanceDefinitionProxies,
-        groupProxies,
-        renderMaterials,
-        colors,
-        baseLayerName,
-        onOperationProgressed
-      );
+    var conversionResults = BakeObjects(
+      objectsToConvert,
+      instanceDefinitionProxies,
+      groupProxies,
+      renderMaterials,
+      colors,
+      baseLayerName,
+      onOperationProgressed
+    );
 
-      _contextStack.Current.Document.Views.Redraw();
+    _contextStack.Current.Document.Views.Redraw();
 
-      return conversionResults;
-    });
+    return Task.FromResult(conversionResults);
   }
 
   private HostObjectBuilderResult BakeObjects(
