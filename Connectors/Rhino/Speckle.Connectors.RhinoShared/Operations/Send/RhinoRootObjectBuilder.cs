@@ -26,34 +26,34 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
 {
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;
-  private readonly RhinoInstanceObjectsManager _instanceObjectsManager;
-  private readonly RhinoGroupManager _rhinoGroupManager;
   private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
   private readonly RhinoLayerManager _layerManager;
-  private readonly RhinoMaterialManager _materialManager;
-  private readonly RhinoColorManager _colorManager;
+  private readonly RhinoInstanceUnpacker _instanceUnpacker;
+  private readonly RhinoGroupUnpacker _groupUnpacker;
+  private readonly RhinoMaterialUnpacker _materialUnpacker;
+  private readonly RhinoColorUnpacker _colorUnpacker;
   private readonly ILogger<RhinoRootObjectBuilder> _logger;
 
   public RhinoRootObjectBuilder(
+    IRootToSpeckleConverter rootToSpeckleConverter,
     ISendConversionCache sendConversionCache,
     IConversionContextStack<RhinoDoc, UnitSystem> contextStack,
     RhinoLayerManager layerManager,
-    RhinoInstanceObjectsManager instanceObjectsManager,
-    RhinoGroupManager rhinoGroupManager,
-    IRootToSpeckleConverter rootToSpeckleConverter,
-    RhinoMaterialManager materialManager,
-    RhinoColorManager colorManager,
+    RhinoInstanceUnpacker instanceUnpacker,
+    RhinoGroupUnpacker groupUnpacker,
+    RhinoMaterialUnpacker materialUnpacker,
+    RhinoColorUnpacker colorUnpacker,
     ILogger<RhinoRootObjectBuilder> logger
   )
   {
     _sendConversionCache = sendConversionCache;
     _contextStack = contextStack;
     _layerManager = layerManager;
-    _instanceObjectsManager = instanceObjectsManager;
-    _rhinoGroupManager = rhinoGroupManager;
+    _instanceUnpacker = instanceUnpacker;
+    _groupUnpacker = groupUnpacker;
     _rootToSpeckleConverter = rootToSpeckleConverter;
-    _materialManager = materialManager;
-    _colorManager = colorManager;
+    _materialUnpacker = materialUnpacker;
+    _colorUnpacker = colorUnpacker;
     _logger = logger;
   }
 
@@ -71,15 +71,15 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     UnpackResult<RhinoObject> unpackResults;
     using (var _ = SpeckleActivityFactory.Start("UnpackSelection"))
     {
-      unpackResults = _instanceObjectsManager.UnpackSelection(rhinoObjects);
+      unpackResults = _instanceUnpacker.UnpackSelection(rhinoObjects);
     }
 
     var (atomicObjects, instanceProxies, instanceDefinitionProxies) = unpackResults;
     // POC: we should formalise this, sooner or later - or somehow fix it a bit more
     rootObjectCollection["instanceDefinitionProxies"] = instanceDefinitionProxies; // this won't work re traversal on receive
 
-    _rhinoGroupManager.UnpackGroups(rhinoObjects);
-    rootObjectCollection["groupProxies"] = _rhinoGroupManager.GroupProxies.Values;
+    _groupUnpacker.UnpackGroups(rhinoObjects);
+    rootObjectCollection["groupProxies"] = _groupUnpacker.GroupProxies.Values;
 
     // POC: Handle blocks.
     List<SendConversionResult> results = new(atomicObjects.Count);
@@ -115,8 +115,8 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     using (var _ = SpeckleActivityFactory.Start("UnpackRenderMaterials"))
     {
       // set render materials and colors
-      rootObjectCollection["renderMaterialProxies"] = _materialManager.UnpackRenderMaterial(atomicObjects);
-      rootObjectCollection["colorProxies"] = _colorManager.UnpackColors(atomicObjects, versionLayers.ToList());
+      rootObjectCollection["renderMaterialProxies"] = _materialUnpacker.UnpackRenderMaterial(atomicObjects);
+      rootObjectCollection["colorProxies"] = _colorUnpacker.UnpackColors(atomicObjects, versionLayers.ToList());
     }
 
     // 5. profit

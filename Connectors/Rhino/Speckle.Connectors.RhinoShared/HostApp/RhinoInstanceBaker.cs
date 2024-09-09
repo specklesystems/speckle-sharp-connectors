@@ -1,4 +1,4 @@
-using Rhino;
+﻿using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
 using Speckle.Connectors.Rhino.Extensions;
@@ -13,116 +13,21 @@ using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.Rhino.HostApp;
 
-/// <summary>
-///  Expects to be a scoped dependency per send or receive operation.
-/// POC: Split later unpacker and baker.
-/// </summary>
-public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInstanceBaker<List<string>>
+public class RhinoInstanceBaker : IInstanceBaker<List<string>>
 {
-  private readonly RhinoLayerManager _layerManager;
-  private readonly RhinoMaterialManager _materialManager;
-  private readonly RhinoColorManager _colorManager;
-  private readonly IInstanceObjectsManager<RhinoObject, List<string>> _instanceObjectsManager;
+  private readonly RhinoMaterialBaker _materialBaker;
+  private readonly RhinoLayerManager _layerManager; // TODO: Not sure need splitting?
+  private readonly RhinoColorBaker _colorBaker;
 
-  public RhinoInstanceObjectsManager(
+  public RhinoInstanceBaker(
     RhinoLayerManager layerManager,
-    RhinoMaterialManager materialManager,
-    RhinoColorManager colorManager,
-    IInstanceObjectsManager<RhinoObject, List<string>> instanceObjectsManager
+    RhinoMaterialBaker rhinoMaterialBaker,
+    RhinoColorBaker colorBaker
   )
   {
     _layerManager = layerManager;
-    _materialManager = materialManager;
-    _colorManager = colorManager;
-    _instanceObjectsManager = instanceObjectsManager;
-  }
-
-  public UnpackResult<RhinoObject> UnpackSelection(IEnumerable<RhinoObject> objects)
-  {
-    foreach (var obj in objects)
-    {
-      if (obj is InstanceObject instanceObject)
-      {
-        UnpackInstance(instanceObject);
-      }
-      _instanceObjectsManager.AddAtomicObject(obj.Id.ToString(), obj);
-    }
-    return _instanceObjectsManager.GetUnpackResult();
-  }
-
-  private void UnpackInstance(InstanceObject instance, int depth = 0)
-  {
-    var instanceId = instance.Id.ToString();
-    var instanceDefinitionId = instance.InstanceDefinition.Id.ToString();
-    var currentDoc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
-
-    InstanceProxy instanceProxy =
-      new()
-      {
-        applicationId = instanceId,
-        definitionId = instance.InstanceDefinition.Id.ToString(),
-        transform = XFormToMatrix(instance.InstanceXform),
-        maxDepth = depth,
-        units = currentDoc.ModelUnitSystem.ToSpeckleString()
-      };
-    _instanceObjectsManager.AddInstanceProxy(instanceId, instanceProxy);
-
-    // For each block instance that has the same definition, we need to keep track of the "maximum depth" at which is found.
-    // This will enable on receive to create them in the correct order (descending by max depth, interleaved definitions and instances).
-    // We need to interleave the creation of definitions and instances, as some definitions may depend on instances.
-    if (
-      !_instanceObjectsManager.TryGetInstanceProxiesFromDefinitionId(
-        instanceDefinitionId,
-        out List<InstanceProxy> instanceProxiesWithSameDefinition
-      )
-    )
-    {
-      instanceProxiesWithSameDefinition = new List<InstanceProxy>();
-      _instanceObjectsManager.AddInstanceProxiesByDefinitionId(instanceDefinitionId, instanceProxiesWithSameDefinition);
-    }
-
-    // We ensure that all previous instance proxies that have the same definition are at this max depth. I kind of have a feeling this can be done more elegantly, but YOLO
-    foreach (var instanceProxyWithSameDefinition in instanceProxiesWithSameDefinition)
-    {
-      if (instanceProxyWithSameDefinition.maxDepth < depth)
-      {
-        instanceProxyWithSameDefinition.maxDepth = depth;
-      }
-    }
-
-    instanceProxiesWithSameDefinition.Add(_instanceObjectsManager.GetInstanceProxy(instanceId));
-
-    if (_instanceObjectsManager.TryGetInstanceDefinitionProxy(instanceDefinitionId, out InstanceDefinitionProxy value))
-    {
-      int depthDifference = depth - value.maxDepth;
-      if (depthDifference > 0)
-      {
-        // all MaxDepth of children definitions and its instances should be increased with difference of depth
-        _instanceObjectsManager.UpdateChildrenMaxDepth(value, depthDifference);
-      }
-      return;
-    }
-
-    var definition = new InstanceDefinitionProxy
-    {
-      applicationId = instanceDefinitionId,
-      objects = new List<string>(),
-      maxDepth = depth,
-      name = instance.InstanceDefinition.Name,
-      ["description"] = instance.InstanceDefinition.Description
-    };
-
-    _instanceObjectsManager.AddDefinitionProxy(instance.InstanceDefinition.Id.ToString(), definition);
-
-    foreach (var obj in instance.InstanceDefinition.GetObjects())
-    {
-      definition.objects.Add(obj.Id.ToString());
-      if (obj is InstanceObject localInstance)
-      {
-        UnpackInstance(localInstance, depth + 1);
-      }
-      _instanceObjectsManager.AddAtomicObject(obj.Id.ToString(), obj);
-    }
+    _materialBaker = rhinoMaterialBaker;
+    _colorBaker = colorBaker;
   }
 
   /// <summary>
@@ -214,13 +119,13 @@ public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInst
           string instanceProxyId = instanceProxy.applicationId ?? instanceProxy.id;
 
           ObjectAttributes atts = new() { LayerIndex = layerIndex };
-          if (_materialManager.ObjectIdAndMaterialIndexMap.TryGetValue(instanceProxyId, out int mIndex))
+          if (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(instanceProxyId, out int mIndex))
           {
             atts.MaterialIndex = mIndex;
             atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
           }
 
-          if (_colorManager.ObjectColorsIdMap.TryGetValue(instanceProxyId, out (Color, ObjectColorSource) color))
+          if (_colorBaker.ObjectColorsIdMap.TryGetValue(instanceProxyId, out (Color, ObjectColorSource) color))
           {
             atts.ObjectColor = color.Item1;
             atts.ColorSource = color.Item2;
@@ -258,9 +163,6 @@ public class RhinoInstanceObjectsManager : IInstanceUnpacker<RhinoObject>, IInst
       }
     }
   }
-
-  private Matrix4x4 XFormToMatrix(Transform t) =>
-    new(t.M00, t.M01, t.M02, t.M03, t.M10, t.M11, t.M12, t.M13, t.M20, t.M21, t.M22, t.M23, t.M30, t.M31, t.M32, t.M33);
 
   private Transform MatrixToTransform(Matrix4x4 matrix, string units)
   {

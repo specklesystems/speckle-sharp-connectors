@@ -40,7 +40,7 @@ public class RhinoConnectorModule : ISpeckleModule
     builder.AddDUIView();
 
     // POC: Overwriting the SyncToMainThread to SyncToCurrentThread for Rhino!
-    builder.AddSingletonInstance<ISyncToThread, SyncToCurrentThread>();
+    // builder.AddSingletonInstance<ISyncToThread, SyncToCurrentThread>();
 
     // Register other connector specific types
     builder.AddSingleton<IRhinoPlugin, RhinoPlugin>();
@@ -86,11 +86,21 @@ public class RhinoConnectorModule : ISpeckleModule
       IInstanceObjectsManager<RhinoObject, List<string>>,
       InstanceObjectsManager<RhinoObject, List<string>>
     >();
-    builder.AddScoped<RhinoInstanceObjectsManager>();
-    builder.AddScoped<RhinoGroupManager>();
+
     builder.AddScoped<RhinoLayerManager>();
-    builder.AddScoped<RhinoMaterialManager>();
-    builder.AddScoped<RhinoColorManager>();
+
+    // Register unpackers and bakers
+    builder.AddScoped<RhinoInstanceBaker>();
+    builder.AddScoped<RhinoInstanceUnpacker>();
+
+    builder.AddScoped<RhinoGroupBaker>();
+    builder.AddScoped<RhinoGroupUnpacker>();
+
+    builder.AddScoped<RhinoMaterialBaker>();
+    builder.AddScoped<RhinoMaterialUnpacker>();
+
+    builder.AddScoped<RhinoColorBaker>();
+    builder.AddScoped<RhinoColorUnpacker>();
 
     // operation progress manager
     builder.AddSingleton<IOperationProgressManager, OperationProgressManager>();

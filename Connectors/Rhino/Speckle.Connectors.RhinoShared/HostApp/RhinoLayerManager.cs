@@ -13,15 +13,15 @@ namespace Speckle.Connectors.Rhino.HostApp;
 /// </summary>
 public class RhinoLayerManager
 {
-  private readonly RhinoMaterialManager _materialManager;
-  private readonly RhinoColorManager _colorManager;
+  private readonly RhinoMaterialBaker _materialBaker;
+  private readonly RhinoColorBaker _colorBaker;
   private readonly Dictionary<string, int> _hostLayerCache = new();
   private readonly Dictionary<int, Collection> _layerCollectionCache = new();
 
-  public RhinoLayerManager(RhinoMaterialManager materialManager, RhinoColorManager colorManager)
+  public RhinoLayerManager(RhinoMaterialBaker materialBaker, RhinoColorBaker colorBaker)
   {
-    _materialManager = materialManager;
-    _colorManager = colorManager;
+    _materialBaker = materialBaker;
+    _colorBaker = colorBaker;
   }
 
   /// <summary>
@@ -68,7 +68,7 @@ public class RhinoLayerManager
 
       // set material
       if (
-        _materialManager.ObjectIdAndMaterialIndexMap.TryGetValue(
+        _materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(
           collection.applicationId ?? collection.id,
           out int mIndex
         )
@@ -79,7 +79,7 @@ public class RhinoLayerManager
 
       // set color
       if (
-        _colorManager.ObjectColorsIdMap.TryGetValue(
+        _colorBaker.ObjectColorsIdMap.TryGetValue(
           collection.applicationId ?? collection.id,
           out (Color, ObjectColorSource) color
         )
