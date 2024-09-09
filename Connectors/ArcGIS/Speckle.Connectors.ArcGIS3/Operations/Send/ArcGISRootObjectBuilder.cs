@@ -1,10 +1,10 @@
 using System.Diagnostics;
 using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
-using ArcGIS.Desktop.Internal.Mapping;
 using ArcGIS.Desktop.Mapping;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.ArcGIS.HostApp;
+using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Conversion;
@@ -17,7 +17,6 @@ using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Proxies;
-using ArcLayer = ArcGIS.Desktop.Mapping.Layer;
 
 namespace Speckle.Connectors.ArcGis.Operations.Send;
 
@@ -30,6 +29,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ArcGISColorManager _colorManager;
   private readonly IConversionContextStack<ArcGISDocument, Unit> _contextStack;
+  private readonly MapMembersUtils _mapMemberUtils;
   private readonly ILogger<ArcGISRootObjectBuilder> _logger;
 
   public ArcGISRootObjectBuilder(
@@ -37,6 +37,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     ArcGISColorManager colorManager,
     IConversionContextStack<ArcGISDocument, Unit> contextStack,
     IRootToSpeckleConverter rootToSpeckleConverter,
+    MapMembersUtils mapMemberUtils,
     ILogger<ArcGISRootObjectBuilder> logger
   )
   {
@@ -44,6 +45,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     _colorManager = colorManager;
     _contextStack = contextStack;
     _rootToSpeckleConverter = rootToSpeckleConverter;
+    _mapMemberUtils = mapMemberUtils;
     _logger = logger;
   }
 
@@ -66,7 +68,10 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     List<(GroupLayer, Collection)> nestedGroups = new();
 
     // reorder selected layers by Table of Content (TOC) order
-    List<(MapMember, int)> layersWithDisplayPriority = GetLayerDisplayPriority(MapView.Active.Map, objects);
+    List<(MapMember, int)> layersWithDisplayPriority = _mapMemberUtils.GetLayerDisplayPriority(
+      MapView.Active.Map,
+      objects
+    );
 
     onOperationProgressed?.Invoke("Converting", null);
 
@@ -179,65 +184,5 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     );
 
     return new RootObjectBuilderResult(rootObjectCollection, results);
-  }
-
-  // Gets the layer display priority for selected layers
-  public List<(MapMember, int)> GetLayerDisplayPriority(Map map, IReadOnlyList<MapMember> mapMembers)
-  {
-    // first get all map layers
-    Dictionary<MapMember, int> layersIndices = new();
-    int count = 0;
-    var layers = map.Layers;
-    count = UnpackLayersOrder(layersIndices, layers, count);
-
-    // iterate through tables
-    foreach (var layer in map.StandaloneTables)
-    {
-      layersIndices[layer] = count + 100; // random number, will be recalculated below
-    }
-
-    // recalculate selected layer priority from all map layers
-    List<(MapMember, int)> selectedLayers = new();
-    int newCount = 0;
-    foreach (KeyValuePair<MapMember, int> valuePair in layersIndices)
-    {
-      if (mapMembers.Contains(valuePair.Key))
-      {
-        selectedLayers.Add((valuePair.Key, newCount));
-        newCount++;
-      }
-    }
-
-    return selectedLayers;
-  }
-
-  private int UnpackLayersOrder(
-    Dictionary<MapMember, int> layersIndices,
-    IEnumerable<ArcLayer> layersToUnpack,
-    int count
-  )
-  {
-    foreach (var layer in layersToUnpack)
-    {
-      switch (layer)
-      {
-        case GroupLayer subGroup:
-          layersIndices[layer] = count;
-          count++;
-          count = UnpackLayersOrder(layersIndices, subGroup.Layers, count);
-          break;
-        case ILayerContainerInternal subLayerContainerInternal:
-          layersIndices[layer] = count;
-          count++;
-          count = UnpackLayersOrder(layersIndices, subLayerContainerInternal.InternalLayers, count);
-          break;
-        default:
-          layersIndices[layer] = count;
-          count++;
-          break;
-      }
-    }
-
-    return count;
   }
 }
