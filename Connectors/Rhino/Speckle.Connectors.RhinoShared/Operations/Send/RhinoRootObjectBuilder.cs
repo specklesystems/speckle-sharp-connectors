@@ -65,8 +65,10 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   )
   {
     using var activity = SpeckleActivityFactory.Start("Build");
+    // 0 - Init the root
     Collection rootObjectCollection = new() { name = _contextStack.Current.Document.Name ?? "Unnamed document" };
 
+    // 1 - Unpack the instances
     UnpackResult<RhinoObject> unpackResults;
     using (var _ = SpeckleActivityFactory.Start("UnpackSelection"))
     {
@@ -77,11 +79,12 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     // POC: we should formalise this, sooner or later - or somehow fix it a bit more
     rootObjectCollection[ProxyKeys.INSTANCE_DEFINITION] = instanceDefinitionProxies; // this won't work re traversal on receive
 
+    // 2 - Unpack the groups
     _groupUnpacker.UnpackGroups(rhinoObjects);
     rootObjectCollection[ProxyKeys.GROUP] = _groupUnpacker.GroupProxies.Values;
 
+    // 3 - Convert atomic objects
     List<SendConversionResult> results = new(atomicObjects.Count);
-
     HashSet<Layer> versionLayers = new();
     int count = 0;
     using (var _ = SpeckleActivityFactory.Start("Convert all"))
@@ -113,12 +116,13 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
 
     using (var _ = SpeckleActivityFactory.Start("UnpackRenderMaterials"))
     {
-      // set render materials and colors
+      // 4 - Unpack the render material proxies
       rootObjectCollection[ProxyKeys.RENDER_MATERIAL] = _materialUnpacker.UnpackRenderMaterial(atomicObjects);
+
+      // 5 - Unpack the color proxies
       rootObjectCollection[ProxyKeys.COLOR] = _colorUnpacker.UnpackColors(atomicObjects, versionLayers.ToList());
     }
 
-    // 5. profit
     return new RootObjectBuilderResult(rootObjectCollection, results);
   }
 
