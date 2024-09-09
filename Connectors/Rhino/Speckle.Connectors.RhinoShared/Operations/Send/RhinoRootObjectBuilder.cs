@@ -80,7 +80,6 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     _groupUnpacker.UnpackGroups(rhinoObjects);
     rootObjectCollection[ProxyKeys.GROUP] = _groupUnpacker.GroupProxies.Values;
 
-    // POC: Handle blocks.
     List<SendConversionResult> results = new(atomicObjects.Count);
 
     HashSet<Layer> versionLayers = new();
