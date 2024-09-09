@@ -73,10 +73,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     var (atomicObjects, instanceComponents) = _rootObjectUnpacker.SplitAtomicObjectsAndInstances(
       unpackedRoot.ObjectsToConvert
     );
-    var atomicObjectsWithPath = atomicObjects.Select(o => (_layerManager.GetLayerPath(o), o.Current)).ToList();
-    var instanceComponentsWithPath = instanceComponents
-      .Select(o => (_layerManager.GetLayerPath(o), (o.Current as IInstanceComponent)!))
-      .ToList();
+    var atomicObjectsWithPath = _layerManager.GetAtomicObjectsWithPath(atomicObjects);
+    var instanceComponentsWithPath = _layerManager.GetInstanceComponentsWithPath(instanceComponents);
 
     // 2.1 - these are not captured by traversal, so we need to re-add them here
     if (unpackedRoot.DefinitionProxies != null && unpackedRoot.DefinitionProxies.Count > 0)
@@ -100,7 +98,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       _colorBaker.ParseColors(unpackedRoot.ColorProxies);
     }
 
-    // 4 - bake layers
+    // 4 - Bake layers
     // See [CNX-325: Rhino: Change receive operation order to increase performance](https://linear.app/speckle/issue/CNX-325/rhino-change-receive-operation-order-to-increase-performance)
     onOperationProgressed?.Invoke("Baking layers (redraw disabled)", null);
     using (var _ = SpeckleActivityFactory.Start("Pre baking layers"))

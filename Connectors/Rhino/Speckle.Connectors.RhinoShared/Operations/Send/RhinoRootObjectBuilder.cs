@@ -66,7 +66,6 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   {
     using var activity = SpeckleActivityFactory.Start("Build");
     Collection rootObjectCollection = new() { name = _contextStack.Current.Document.Name ?? "Unnamed document" };
-    int count = 0;
 
     UnpackResult<RhinoObject> unpackResults;
     using (var _ = SpeckleActivityFactory.Start("UnpackSelection"))
@@ -76,15 +75,16 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
 
     var (atomicObjects, instanceProxies, instanceDefinitionProxies) = unpackResults;
     // POC: we should formalise this, sooner or later - or somehow fix it a bit more
-    rootObjectCollection["instanceDefinitionProxies"] = instanceDefinitionProxies; // this won't work re traversal on receive
+    rootObjectCollection[ProxyKeys.INSTANCE_DEFINITION] = instanceDefinitionProxies; // this won't work re traversal on receive
 
     _groupUnpacker.UnpackGroups(rhinoObjects);
-    rootObjectCollection["groupProxies"] = _groupUnpacker.GroupProxies.Values;
+    rootObjectCollection[ProxyKeys.GROUP] = _groupUnpacker.GroupProxies.Values;
 
     // POC: Handle blocks.
     List<SendConversionResult> results = new(atomicObjects.Count);
 
     HashSet<Layer> versionLayers = new();
+    int count = 0;
     using (var _ = SpeckleActivityFactory.Start("Convert all"))
     {
       foreach (RhinoObject rhinoObject in atomicObjects)
@@ -115,8 +115,8 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     using (var _ = SpeckleActivityFactory.Start("UnpackRenderMaterials"))
     {
       // set render materials and colors
-      rootObjectCollection["renderMaterialProxies"] = _materialUnpacker.UnpackRenderMaterial(atomicObjects);
-      rootObjectCollection["colorProxies"] = _colorUnpacker.UnpackColors(atomicObjects, versionLayers.ToList());
+      rootObjectCollection[ProxyKeys.RENDER_MATERIAL] = _materialUnpacker.UnpackRenderMaterial(atomicObjects);
+      rootObjectCollection[ProxyKeys.COLOR] = _colorUnpacker.UnpackColors(atomicObjects, versionLayers.ToList());
     }
 
     // 5. profit

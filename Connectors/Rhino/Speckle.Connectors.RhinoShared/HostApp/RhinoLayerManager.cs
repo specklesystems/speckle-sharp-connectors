@@ -1,8 +1,10 @@
 using System.Diagnostics.Contracts;
 using Rhino;
 using Rhino.DocObjects;
+using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
+using Speckle.Sdk.Models.Instances;
 using Layer = Rhino.DocObjects.Layer;
 using SpeckleLayer = Speckle.Sdk.Models.Collections.Layer;
 
@@ -145,6 +147,14 @@ public class RhinoLayerManager
     return previousCollection;
   }
 
+  public List<(Collection[] path, Base current)> GetAtomicObjectsWithPath(
+    IEnumerable<TraversalContext> atomicObjects
+  ) => atomicObjects.Select(o => (GetLayerPath(o), o.Current)).ToList();
+
+  public List<(Collection[] path, IInstanceComponent instance)> GetInstanceComponentsWithPath(
+    IEnumerable<TraversalContext> instanceComponents
+  ) => instanceComponents.Select(o => (GetLayerPath(o), (o.Current as IInstanceComponent)!)).ToList();
+
   /// <summary>
   /// Gets the full path of the layer, concatenated with Rhino's Layer.
   /// </summary>
@@ -152,7 +162,7 @@ public class RhinoLayerManager
   /// <returns></returns>
   [Pure]
   //POC test me!
-  public Collection[] GetLayerPath(TraversalContext context)
+  private Collection[] GetLayerPath(TraversalContext context)
   {
     Collection[] collectionBasedPath = context.GetAscendantOfType<Collection>().Reverse().ToArray();
 
