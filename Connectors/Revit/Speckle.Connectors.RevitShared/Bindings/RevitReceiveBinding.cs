@@ -1,3 +1,4 @@
+using Autofac;
 using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bindings;
@@ -8,6 +9,7 @@ using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
 
 namespace Speckle.Connectors.Revit.Bindings;
@@ -47,7 +49,12 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
 
   public async Task Receive(string modelCardId)
   {
-    using var unitOfWork = _unitOfWorkFactory.Resolve<ReceiveOperation>();
+    using var unitOfWork = _unitOfWorkFactory.Resolve<ReceiveOperation>(b =>
+    {
+      b.RegisterType<ToSpeckleSettings>().SingleInstance();
+      b.Register(c => new ToSpeckleSettings(default, null));
+    });
+
     try
     {
       // Get receiver card
