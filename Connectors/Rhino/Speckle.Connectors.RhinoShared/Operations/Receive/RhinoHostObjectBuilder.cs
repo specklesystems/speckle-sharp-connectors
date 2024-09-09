@@ -67,42 +67,40 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _layerManager.CreateBaseLayer(baseLayerName);
 
     // 1 - Unpack objects and proxies from root commit object
-    var objectsToConvert = _rootObjectUnpacker.GetObjectsToConvert(rootObject);
-    var instanceDefinitionProxies = _rootObjectUnpacker.TryGetInstanceDefinitionProxies(rootObject);
-    var groupProxies = _rootObjectUnpacker.TryGetGroupProxies(rootObject);
-    var renderMaterials = _rootObjectUnpacker.TryGetRenderMaterialProxies(rootObject);
-    var colorProxies = _rootObjectUnpacker.TryGetColorProxies(rootObject);
+    var unpackedRoot = _rootObjectUnpacker.Unpack(rootObject);
 
     // 2 - Split atomic objects and instance components with their path
-    var (atomicObjects, instanceComponents) = _rootObjectUnpacker.SplitAtomicObjectsAndInstances(objectsToConvert);
+    var (atomicObjects, instanceComponents) = _rootObjectUnpacker.SplitAtomicObjectsAndInstances(
+      unpackedRoot.ObjectsToConvert
+    );
     var atomicObjectsWithPath = atomicObjects.Select(o => (_layerManager.GetLayerPath(o), o.Current)).ToList();
     var instanceComponentsWithPath = instanceComponents
       .Select(o => (_layerManager.GetLayerPath(o), (o.Current as IInstanceComponent)!))
       .ToList();
 
-    // POC: these are not captured by traversal, so we need to re-add them here
-    if (instanceDefinitionProxies != null && instanceDefinitionProxies.Count > 0)
+    // 2.1 - these are not captured by traversal, so we need to re-add them here
+    if (unpackedRoot.DefinitionProxies != null && unpackedRoot.DefinitionProxies.Count > 0)
     {
-      var transformed = instanceDefinitionProxies.Select(proxy =>
+      var transformed = unpackedRoot.DefinitionProxies.Select(proxy =>
         (Array.Empty<Collection>(), proxy as IInstanceComponent)
       );
       instanceComponentsWithPath.AddRange(transformed);
     }
 
-    // Stage 0: Bake materials and colors, as they are used later down the line by layers and objects
+    // 3 - Bake materials and colors, as they are used later down the line by layers and objects
     onOperationProgressed?.Invoke("Converting materials and colors", null);
-    if (renderMaterials != null)
+    if (unpackedRoot.RenderMaterialProxies != null)
     {
       using var _ = SpeckleActivityFactory.Start("Render Materials");
-      _materialBaker.BakeMaterials(renderMaterials, baseLayerName);
+      _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseLayerName);
     }
 
-    if (colorProxies != null)
+    if (unpackedRoot.ColorProxies != null)
     {
-      _colorBaker.ParseColors(colorProxies);
+      _colorBaker.ParseColors(unpackedRoot.ColorProxies);
     }
 
-    // Stage 0.1: Pre bake layers
+    // 4 - bake layers
     // See [CNX-325: Rhino: Change receive operation order to increase performance](https://linear.app/speckle/issue/CNX-325/rhino-change-receive-operation-order-to-increase-performance)
     onOperationProgressed?.Invoke("Baking layers (redraw disabled)", null);
     using (var _ = SpeckleActivityFactory.Start("Pre baking layers"))
@@ -114,7 +112,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       }
     }
 
-    // Stage 1: Convert atomic objects
+    // 5 - Convert atomic objects
     List<string> bakedObjectIds = new();
     Dictionary<string, List<string>> applicationIdMap = new(); // This map is used in converting blocks in stage 2. keeps track of original app id => resulting new app ids post baking
     List<ReceiveConversionResult> conversionResults = new();
@@ -175,7 +173,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       }
     }
 
-    // Stage 2: Convert instances
+    // 6 - Convert instances
     using (var _ = SpeckleActivityFactory.Start("Converting instances"))
     {
       var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = _instanceBaker.BakeInstances(
@@ -191,10 +189,10 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       conversionResults.AddRange(instanceConversionResults); // add instance conversion results to our list
     }
 
-    // Stage 3: Groups
-    if (groupProxies is not null)
+    // 7 - Create groups
+    if (unpackedRoot.GroupProxies is not null)
     {
-      _groupBaker.BakeGroups(groupProxies, applicationIdMap, baseLayerName);
+      _groupBaker.BakeGroups(unpackedRoot.GroupProxies, applicationIdMap, baseLayerName);
     }
 
     _contextStack.Current.Document.Views.Redraw();

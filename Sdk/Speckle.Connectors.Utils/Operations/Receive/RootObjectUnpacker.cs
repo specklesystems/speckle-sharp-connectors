@@ -23,6 +23,15 @@ public class RootObjectUnpacker
     _traverseFunction = traverseFunction;
   }
 
+  public RootObjectUnpackerResult Unpack(Base root) =>
+    new(
+      GetObjectsToConvert(root),
+      TryGetInstanceDefinitionProxies(root),
+      TryGetGroupProxies(root),
+      TryGetRenderMaterialProxies(root),
+      TryGetColorProxies(root)
+    );
+
   public IEnumerable<TraversalContext> GetObjectsToConvert(Base root) =>
     _traverseFunction.Traverse(root).Where(obj => obj.Current is not Collection);
 
