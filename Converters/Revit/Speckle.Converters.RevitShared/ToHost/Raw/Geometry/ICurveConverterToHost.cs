@@ -62,22 +62,6 @@ public class ICurveConverterToHost : ITypedConverter<ICurve, DB.CurveArray>
 
       case SOG.Curve nurbs:
         var n = _curveConverter.Convert(nurbs);
-
-        // poc : in original converter, we were passing a bool into this method 'splitIfClosed'.
-        // https://spockle.atlassian.net/browse/DUI3-462
-        // I'm not entirely sure why we need to split curves, but there are several occurances
-        // of the method being called and overriding the bool to be true.
-
-        //if (IsCurveClosed(n) && splitIfClosed)
-        //{
-        //  var split = SplitCurveInTwoHalves(n);
-        //  curveArray.Append(split.Item1);
-        //  curveArray.Append(split.Item2);
-        //}
-        //else
-        //{
-        //  curveArray.Append(n);
-        //}
         curveArray.Append(n);
         return curveArray;
 
@@ -98,31 +82,5 @@ public class ICurveConverterToHost : ITypedConverter<ICurve, DB.CurveArray>
       default:
         throw new SpeckleConversionException($"The provided geometry of type {target.GetType()} is not a supported");
     }
-  }
-
-  public bool IsCurveClosed(DB.Curve nativeCurve, double tol = 1E-6)
-  {
-    var endPoint = nativeCurve.GetEndPoint(0);
-    var source = nativeCurve.GetEndPoint(1);
-    var distanceTo = endPoint.DistanceTo(source);
-    return distanceTo < tol;
-  }
-
-  public (DB.Curve, DB.Curve) SplitCurveInTwoHalves(DB.Curve nativeCurve)
-  {
-    using var curveArray = new DB.CurveArray();
-    // Revit does not like single curve loop edges, so we split them in two.
-    var start = nativeCurve.GetEndParameter(0);
-    var end = nativeCurve.GetEndParameter(1);
-    var mid = start + (end - start) / 2;
-
-    var a = nativeCurve.Clone();
-    a.MakeBound(start, mid);
-    curveArray.Append(a);
-    var b = nativeCurve.Clone();
-    b.MakeBound(mid, end);
-    curveArray.Append(b);
-
-    return (a, b);
   }
 }

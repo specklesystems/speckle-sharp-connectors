@@ -1,21 +1,17 @@
 using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.ToSpeckle;
 using Speckle.DoubleNumerics;
 using Speckle.Objects.Other;
 
 namespace Speckle.Converters.RevitShared.ToHost.TopLevel;
 
-[NameAndRankValue(nameof(SOG.Mesh), 0)]
-public class MeshToHostTopLevelConverter
-  : BaseTopLevelConverterToHost<SOG.Mesh, DB.GeometryObject[]>,
-    ITypedConverter<SOG.Mesh, DB.GeometryObject[]>
+public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObject>>
 {
   private readonly ITypedConverter<SOG.Point, DB.XYZ> _pointConverter;
   private readonly ITypedConverter<RenderMaterial, DB.Material> _materialConverter;
 
-  public MeshToHostTopLevelConverter(
+  public MeshConverterToHost(
     ITypedConverter<SOG.Point, XYZ> pointConverter,
     ITypedConverter<RenderMaterial, DB.Material> materialConverter
   )
@@ -24,7 +20,7 @@ public class MeshToHostTopLevelConverter
     _materialConverter = materialConverter;
   }
 
-  public override GeometryObject[] Convert(SOG.Mesh mesh)
+  public List<DB.GeometryObject> Convert(SOG.Mesh mesh)
   {
     TessellatedShapeBuilderTarget target = TessellatedShapeBuilderTarget.Mesh;
     TessellatedShapeBuilderFallback fallback = TessellatedShapeBuilderFallback.Salvage;
@@ -85,7 +81,7 @@ public class MeshToHostTopLevelConverter
     tsb.Build();
     var result = tsb.GetBuildResult();
 
-    return result.GetGeometricalObjects().ToArray();
+    return result.GetGeometricalObjects().ToList();
   }
 
   private static bool IsNonPlanarQuad(IList<XYZ> points)
