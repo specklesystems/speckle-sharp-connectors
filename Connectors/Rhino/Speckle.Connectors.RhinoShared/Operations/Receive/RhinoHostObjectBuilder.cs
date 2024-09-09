@@ -89,35 +89,6 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       instanceComponentsWithPath.AddRange(transformed);
     }
 
-    var doc = _contextStack.Current.Document;
-
-    // using (var _ = SpeckleActivityFactory.Start("Traversal"))
-    // {
-    //   // POC: these are not captured by traversal, so we need to re-add them here
-    //   if (instanceDefinitionProxies != null && instanceDefinitionProxies.Count > 0)
-    //   {
-    //     var transformed = instanceDefinitionProxies.Select(proxy =>
-    //       (Array.Empty<Collection>(), proxy as IInstanceComponent)
-    //     );
-    //     instanceComponents.AddRange(transformed);
-    //   }
-    //
-    //   // Split up the instances from the non-instances
-    //   foreach (TraversalContext tc in objectsToConvert)
-    //   {
-    //     Collection[] collectionPath = _layerManager.GetLayerPath(tc);
-    //
-    //     if (tc.Current is IInstanceComponent instanceComponent)
-    //     {
-    //       instanceComponents.Add((collectionPath, instanceComponent));
-    //     }
-    //     else
-    //     {
-    //       atomicObjects.Add((collectionPath, tc.Current));
-    //     }
-    //   }
-    // }
-
     // Stage 0: Bake materials and colors, as they are used later down the line by layers and objects
     onOperationProgressed?.Invoke("Converting materials and colors", null);
     if (renderMaterials != null)
@@ -136,10 +107,10 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     onOperationProgressed?.Invoke("Baking layers (redraw disabled)", null);
     using (var _ = SpeckleActivityFactory.Start("Pre baking layers"))
     {
-      using var layerNoDraw = new DisableRedrawScope(doc.Views);
+      using var layerNoDraw = new DisableRedrawScope(_contextStack.Current.Document.Views);
       foreach (var (path, _) in atomicObjectsWithPath)
       {
-        _layerManager.GetAndCreateLayerFromPath(path, baseLayerName, out bool _);
+        _layerManager.GetAndCreateLayerFromPath(path, baseLayerName);
       }
     }
 
@@ -157,7 +128,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
         try
         {
           // 1: create layer
-          int layerIndex = _layerManager.GetAndCreateLayerFromPath(path, baseLayerName, out bool _);
+          int layerIndex = _layerManager.GetAndCreateLayerFromPath(path, baseLayerName);
 
           // 2: convert
           var result = _converter.Convert(obj);
