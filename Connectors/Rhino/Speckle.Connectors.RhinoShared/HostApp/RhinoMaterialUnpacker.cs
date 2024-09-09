@@ -1,7 +1,9 @@
-﻿using Rhino;
+﻿using Microsoft.Extensions.Logging;
+using Rhino;
 using Rhino.DocObjects;
 using Rhino.Render;
 using Speckle.Objects.Other;
+using Speckle.Sdk;
 using Material = Rhino.DocObjects.Material;
 using PhysicallyBasedMaterial = Rhino.DocObjects.PhysicallyBasedMaterial;
 using RenderMaterial = Rhino.Render.RenderMaterial;
@@ -11,6 +13,13 @@ namespace Speckle.Connectors.Rhino.HostApp;
 
 public class RhinoMaterialUnpacker
 {
+  private readonly ILogger<RhinoMaterialUnpacker> _logger;
+
+  public RhinoMaterialUnpacker(ILogger<RhinoMaterialUnpacker> logger)
+  {
+    _logger = logger;
+  }
+
   public List<RenderMaterialProxy> UnpackRenderMaterial(List<RhinoObject> atomicObjects)
   {
     Dictionary<string, RenderMaterialProxy> renderMaterialProxies = new();
@@ -19,72 +28,86 @@ public class RhinoMaterialUnpacker
     // Stage 1: unpack materials from objects, and collect their uniqe layers in the process
     foreach (RhinoObject rhinoObject in atomicObjects)
     {
-      var layer = RhinoDoc.ActiveDoc.Layers[rhinoObject.Attributes.LayerIndex];
-      usedLayerMap[layer.Id.ToString()] = layer;
-
-      if (rhinoObject.Attributes.MaterialSource != ObjectMaterialSource.MaterialFromObject)
+      try
       {
-        continue; // TODO: will not catch layer materials
-      }
+        var layer = RhinoDoc.ActiveDoc.Layers[rhinoObject.Attributes.LayerIndex];
+        usedLayerMap[layer.Id.ToString()] = layer;
 
-      var rhinoRenderMaterial = rhinoObject.GetRenderMaterial(true);
-      var rhinoMaterial = rhinoObject.GetMaterial(true);
-      var rhinoMaterialId = rhinoRenderMaterial?.Id.ToString() ?? rhinoMaterial?.Id.ToString();
-
-      if (rhinoMaterialId == null)
-      {
-        continue;
-      }
-
-      if (renderMaterialProxies.TryGetValue(rhinoMaterialId, out RenderMaterialProxy? value))
-      {
-        value.objects.Add(rhinoObject.Id.ToString());
-      }
-      else
-      {
-        // TY Rhino api for being a bit confused about materials 💖
-        SpeckleRenderMaterial? myMaterial = null;
-        if (rhinoRenderMaterial is not null)
+        if (rhinoObject.Attributes.MaterialSource != ObjectMaterialSource.MaterialFromObject)
         {
-          myMaterial = ConvertRenderMaterialToSpeckle(rhinoRenderMaterial);
-        }
-        else if (rhinoMaterial is not null)
-        {
-          RenderMaterial convertedRender = ConvertMaterialToRenderMaterial(rhinoMaterial);
-          myMaterial = ConvertRenderMaterialToSpeckle(convertedRender);
+          continue; // TODO: will not catch layer materials
         }
 
-        if (myMaterial is not null)
+        var rhinoRenderMaterial = rhinoObject.GetRenderMaterial(true);
+        var rhinoMaterial = rhinoObject.GetMaterial(true);
+        var rhinoMaterialId = rhinoRenderMaterial?.Id.ToString() ?? rhinoMaterial?.Id.ToString();
+
+        if (rhinoMaterialId == null)
         {
-          renderMaterialProxies[rhinoMaterialId] = new RenderMaterialProxy()
+          continue;
+        }
+
+        if (renderMaterialProxies.TryGetValue(rhinoMaterialId, out RenderMaterialProxy? value))
+        {
+          value.objects.Add(rhinoObject.Id.ToString());
+        }
+        else
+        {
+          // TY Rhino api for being a bit confused about materials 💖
+          SpeckleRenderMaterial? myMaterial = null;
+          if (rhinoRenderMaterial is not null)
           {
-            value = myMaterial,
-            objects = [rhinoObject.Id.ToString()]
-          };
+            myMaterial = ConvertRenderMaterialToSpeckle(rhinoRenderMaterial);
+          }
+          else if (rhinoMaterial is not null)
+          {
+            RenderMaterial convertedRender = ConvertMaterialToRenderMaterial(rhinoMaterial);
+            myMaterial = ConvertRenderMaterialToSpeckle(convertedRender);
+          }
+
+          if (myMaterial is not null)
+          {
+            renderMaterialProxies[rhinoMaterialId] = new RenderMaterialProxy()
+            {
+              value = myMaterial,
+              objects = [rhinoObject.Id.ToString()]
+            };
+          }
         }
+      }
+      catch (Exception e) when (!e.IsFatal())
+      {
+        _logger.LogError(e, "Failed to unpack render material from RhinoObject");
       }
     }
 
     // Stage 2: make sure we collect layer materials as well
     foreach (var layer in usedLayerMap.Values)
     {
-      var material = layer.RenderMaterial;
-      if (material is null)
+      try
       {
-        continue;
-      }
-
-      if (renderMaterialProxies.TryGetValue(material.Id.ToString(), out RenderMaterialProxy? value))
-      {
-        value.objects.Add(layer.Id.ToString());
-      }
-      else
-      {
-        renderMaterialProxies[material.Id.ToString()] = new RenderMaterialProxy()
+        var material = layer.RenderMaterial;
+        if (material is null)
         {
-          value = ConvertRenderMaterialToSpeckle(material),
-          objects = [layer.Id.ToString()]
-        };
+          continue;
+        }
+
+        if (renderMaterialProxies.TryGetValue(material.Id.ToString(), out RenderMaterialProxy? value))
+        {
+          value.objects.Add(layer.Id.ToString());
+        }
+        else
+        {
+          renderMaterialProxies[material.Id.ToString()] = new RenderMaterialProxy()
+          {
+            value = ConvertRenderMaterialToSpeckle(material),
+            objects = [layer.Id.ToString()]
+          };
+        }
+      }
+      catch (Exception e) when (!e.IsFatal())
+      {
+        _logger.LogError(e, "Failed to unpack render material from Rhino Layer"); // TODO: Check with Jedd!
       }
     }
 

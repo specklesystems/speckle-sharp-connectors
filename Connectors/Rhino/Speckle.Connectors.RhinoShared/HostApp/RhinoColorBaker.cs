@@ -1,10 +1,19 @@
-﻿using Rhino.DocObjects;
+﻿using Microsoft.Extensions.Logging;
+using Rhino.DocObjects;
+using Speckle.Sdk;
 using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Connectors.Rhino.HostApp;
 
 public class RhinoColorBaker
 {
+  private readonly ILogger<RhinoColorBaker> _logger;
+
+  public RhinoColorBaker(ILogger<RhinoColorBaker> logger)
+  {
+    _logger = logger;
+  }
+
   /// <summary>
   /// For receive operations
   /// </summary>
@@ -18,29 +27,36 @@ public class RhinoColorBaker
   {
     foreach (ColorProxy colorProxy in colorProxies)
     {
-      ObjectColorSource source = ObjectColorSource.ColorFromObject;
-      if (colorProxy["source"] is string proxySource)
+      try
       {
-        switch (proxySource)
+        ObjectColorSource source = ObjectColorSource.ColorFromObject;
+        if (colorProxy["source"] is string proxySource)
         {
-          case "layer":
-            continue; // skip any colors with source = layer, since object color default source is by layer
-          case "block":
-            source = ObjectColorSource.ColorFromParent;
-            break;
-          case "material":
-            source = ObjectColorSource.ColorFromMaterial;
-            break;
+          switch (proxySource)
+          {
+            case "layer":
+              continue; // skip any colors with source = layer, since object color default source is by layer
+            case "block":
+              source = ObjectColorSource.ColorFromParent;
+              break;
+            case "material":
+              source = ObjectColorSource.ColorFromMaterial;
+              break;
+          }
+        }
+
+        foreach (string objectId in colorProxy.objects)
+        {
+          Color convertedColor = Color.FromArgb(colorProxy.value);
+          if (!ObjectColorsIdMap.TryGetValue(objectId, out (Color, ObjectColorSource) _))
+          {
+            ObjectColorsIdMap.Add(objectId, (convertedColor, source));
+          }
         }
       }
-
-      foreach (string objectId in colorProxy.objects)
+      catch (Exception e) when (!e.IsFatal())
       {
-        Color convertedColor = Color.FromArgb(colorProxy.value);
-        if (!ObjectColorsIdMap.TryGetValue(objectId, out (Color, ObjectColorSource) _))
-        {
-          ObjectColorsIdMap.Add(objectId, (convertedColor, source));
-        }
+        _logger.LogError(e, "Error parsing color proxy"); // TODO: Check with Jedd!
       }
     }
   }

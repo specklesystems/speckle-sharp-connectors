@@ -1,4 +1,5 @@
-﻿using Rhino;
+﻿using Microsoft.Extensions.Logging;
+using Rhino;
 using Speckle.Converters.Common;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
@@ -10,10 +11,15 @@ namespace Speckle.Connectors.Rhino.HostApp;
 public class RhinoMaterialBaker
 {
   private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
+  private readonly ILogger<RhinoMaterialBaker> _logger;
 
-  public RhinoMaterialBaker(IConversionContextStack<RhinoDoc, UnitSystem> contextStack)
+  public RhinoMaterialBaker(
+    IConversionContextStack<RhinoDoc, UnitSystem> contextStack,
+    ILogger<RhinoMaterialBaker> logger
+  )
   {
     _contextStack = contextStack;
+    _logger = logger;
   }
 
   /// <summary>
@@ -72,13 +78,10 @@ public class RhinoMaterialBaker
         {
           ObjectIdAndMaterialIndexMap[objectId] = matIndex;
         }
-
-        // conversionResults.Add(new(Status.SUCCESS, speckleRenderMaterial, matName, "Material"));
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        // TODO: ?
-        // conversionResults.Add(new(Status.ERROR, speckleRenderMaterial, null, null, ex));
+        _logger.LogError(ex, "Failed to add a material to the document."); // TODO: Check with Jedd!
       }
     }
   }

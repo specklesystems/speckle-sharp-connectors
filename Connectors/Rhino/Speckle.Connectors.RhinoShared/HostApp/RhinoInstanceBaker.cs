@@ -1,4 +1,5 @@
-﻿using Rhino;
+﻿using Microsoft.Extensions.Logging;
+using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
 using Speckle.Connectors.Rhino.Extensions;
@@ -18,16 +19,19 @@ public class RhinoInstanceBaker : IInstanceBaker<List<string>>
   private readonly RhinoMaterialBaker _materialBaker;
   private readonly RhinoLayerManager _layerManager; // TODO: Not sure need splitting?
   private readonly RhinoColorBaker _colorBaker;
+  private readonly ILogger<RhinoInstanceBaker> _logger;
 
   public RhinoInstanceBaker(
     RhinoLayerManager layerManager,
     RhinoMaterialBaker rhinoMaterialBaker,
-    RhinoColorBaker colorBaker
+    RhinoColorBaker colorBaker,
+    ILogger<RhinoInstanceBaker> logger
   )
   {
     _layerManager = layerManager;
     _materialBaker = rhinoMaterialBaker;
     _colorBaker = colorBaker;
+    _logger = logger;
   }
 
   /// <summary>
@@ -145,6 +149,7 @@ public class RhinoInstanceBaker : IInstanceBaker<List<string>>
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
+        _logger.LogError(ex, "Failed to create an instance from proxy."); // TODO: Check with Jedd!
         conversionResults.Add(new(Status.ERROR, instanceOrDefinition as Base ?? new Base(), null, null, ex));
       }
     }

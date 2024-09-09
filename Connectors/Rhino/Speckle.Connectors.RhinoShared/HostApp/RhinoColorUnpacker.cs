@@ -1,12 +1,21 @@
-﻿using Rhino;
+﻿using Microsoft.Extensions.Logging;
+using Rhino;
 using Rhino.DocObjects;
 using Speckle.Connectors.Rhino.Extensions;
+using Speckle.Sdk;
 using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Connectors.Rhino.HostApp;
 
 public class RhinoColorUnpacker
 {
+  private readonly ILogger<RhinoColorUnpacker> _logger;
+
+  public RhinoColorUnpacker(ILogger<RhinoColorUnpacker> logger)
+  {
+    _logger = logger;
+  }
+
   /// <summary>
   /// For send operations
   /// </summary>
@@ -90,18 +99,32 @@ public class RhinoColorUnpacker
     // Stage 1: unpack colors from objects
     foreach (RhinoObject rootObj in atomicObjects)
     {
-      ProcessObjectColor(
-        rootObj.Id.ToString(),
-        rootObj.Attributes.ObjectColor,
-        rootObj.Attributes.ColorSource,
-        rootObj.Attributes.MaterialIndex
-      );
+      try
+      {
+        ProcessObjectColor(
+          rootObj.Id.ToString(),
+          rootObj.Attributes.ObjectColor,
+          rootObj.Attributes.ColorSource,
+          rootObj.Attributes.MaterialIndex
+        );
+      }
+      catch (Exception e) when (!e.IsFatal())
+      {
+        _logger.LogError(e, "Failed to unpack colors from Rhino Object."); // TODO: Check with Jedd!
+      }
     }
 
     // Stage 2: make sure we collect layer colors as well
     foreach (Layer layer in layers)
     {
-      ProcessObjectColor(layer.Id.ToString(), layer.Color, ObjectColorSource.ColorFromObject);
+      try
+      {
+        ProcessObjectColor(layer.Id.ToString(), layer.Color, ObjectColorSource.ColorFromObject);
+      }
+      catch (Exception e) when (!e.IsFatal())
+      {
+        _logger.LogError(e, "Failed to unpack colors from Rhino Layer."); // TODO: Check with Jedd!
+      }
     }
 
     return ColorProxies.Values.ToList();
