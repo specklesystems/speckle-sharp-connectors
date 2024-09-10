@@ -24,7 +24,9 @@ public sealed class SendOperation<T>
   )
   {
     using var activity = SpeckleActivityFactory.Start("SendOperation");
-    var buildResult = _rootObjectBuilder.Build(objects, sendInfo, onOperationProgressed, ct);
+    var buildResult = await _rootObjectBuilder
+      .Build(objects, sendInfo, onOperationProgressed, ct)
+      .ConfigureAwait(false);
 
     // POC: Jonathon asks on behalf of willow twin - let's explore how this can work
     // buildResult.RootObject["@report"] = new Report { ConversionResults = buildResult.ConversionResults };
