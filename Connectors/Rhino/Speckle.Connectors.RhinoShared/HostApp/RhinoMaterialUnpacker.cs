@@ -75,9 +75,9 @@ public class RhinoMaterialUnpacker
           }
         }
       }
-      catch (Exception e) when (!e.IsFatal())
+      catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(e, "Failed to unpack render material from RhinoObject");
+        _logger.LogError(ex, "Failed to unpack render material from RhinoObject");
       }
     }
 
@@ -105,9 +105,9 @@ public class RhinoMaterialUnpacker
           };
         }
       }
-      catch (Exception e) when (!e.IsFatal())
+      catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(e, "Failed to unpack render material from Rhino Layer"); // TODO: Check with Jedd!
+        _logger.LogError(ex, "Failed to unpack render material from Rhino Layer"); // TODO: Check with Jedd!
       }
     }
 

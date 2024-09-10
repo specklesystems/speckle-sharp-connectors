@@ -108,9 +108,9 @@ public class RhinoColorUnpacker
           rootObj.Attributes.MaterialIndex
         );
       }
-      catch (Exception e) when (!e.IsFatal())
+      catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(e, "Failed to unpack colors from Rhino Object."); // TODO: Check with Jedd!
+        _logger.LogError(ex, "Failed to unpack colors from Rhino Object."); // TODO: Check with Jedd!
       }
     }
 
@@ -121,9 +121,9 @@ public class RhinoColorUnpacker
       {
         ProcessObjectColor(layer.Id.ToString(), layer.Color, ObjectColorSource.ColorFromObject);
       }
-      catch (Exception e) when (!e.IsFatal())
+      catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(e, "Failed to unpack colors from Rhino Layer."); // TODO: Check with Jedd!
+        _logger.LogError(ex, "Failed to unpack colors from Rhino Layer."); // TODO: Check with Jedd!
       }
     }
 

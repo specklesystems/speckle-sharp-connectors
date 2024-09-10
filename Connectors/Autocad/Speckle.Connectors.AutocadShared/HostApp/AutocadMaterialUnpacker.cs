@@ -64,9 +64,9 @@ public class AutocadMaterialUnpacker
           }
         }
       }
-      catch (Exception e) when (!e.IsFatal())
+      catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(e, "Failed to unpack render material from Autocad Entity");
+        _logger.LogError(ex, "Failed to unpack render material from Autocad Entity");
       }
     }
 
@@ -91,9 +91,9 @@ public class AutocadMaterialUnpacker
           }
         }
       }
-      catch (Exception e) when (!e.IsFatal())
+      catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(e, "Failed to unpack render material from Autocad Layer");
+        _logger.LogError(ex, "Failed to unpack render material from Autocad Layer");
       }
     }
 

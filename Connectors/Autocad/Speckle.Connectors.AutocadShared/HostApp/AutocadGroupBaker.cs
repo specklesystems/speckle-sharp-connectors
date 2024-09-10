@@ -66,10 +66,10 @@ public class AutocadGroupBaker
 
         groupCreationTransaction.AddNewlyCreatedDBObject(newGroup, true);
       }
-      catch (Exception e) when (!e.IsFatal())
+      catch (Exception ex) when (!ex.IsFatal())
       {
-        results.Add(new ReceiveConversionResult(Status.ERROR, gp, null, null, e));
-        _logger.LogError(e, "Failed to bake Autocad Group."); // TODO: Check with Jedd!
+        results.Add(new ReceiveConversionResult(Status.ERROR, gp, null, null, ex));
+        _logger.LogError(ex, "Failed to bake Autocad Group."); // TODO: Check with Jedd!
       }
     }
 

@@ -151,9 +151,9 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
 
       _instanceObjectsManager.AddDefinitionProxy(definitionId.ToString(), definitionProxy);
     }
-    catch (Exception e) when (!e.IsFatal())
+    catch (Exception ex) when (!ex.IsFatal())
     {
-      _logger.LogError(e, "Failed unpacking Autocad instance."); // TODO: Check with Jedd!
+      _logger.LogError(ex, "Failed unpacking Autocad instance."); // TODO: Check with Jedd!
     }
   }
 

@@ -58,9 +58,9 @@ public class AutocadGroupUnpacker
           }
         }
       }
-      catch (Exception e) when (!e.IsFatal())
+      catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(e, "Failed on unpacking Autocad group."); // TODO: Check with Jedd!
+        _logger.LogError(ex, "Failed on unpacking Autocad group."); // TODO: Check with Jedd!
       }
     }
 

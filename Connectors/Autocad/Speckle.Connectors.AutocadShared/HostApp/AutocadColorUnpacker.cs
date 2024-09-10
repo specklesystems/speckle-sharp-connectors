@@ -45,9 +45,9 @@ public class AutocadColorUnpacker
         Entity entity = rootObj.Root;
         ProcessObjectColor(rootObj.ApplicationId, entity.Color);
       }
-      catch (Exception e) when (!e.IsFatal())
+      catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(e, "Failed to unpack colors from Autocad Entity."); // TODO: Check with Jedd!
+        _logger.LogError(ex, "Failed to unpack colors from Autocad Entity."); // TODO: Check with Jedd!
       }
     }
 
@@ -58,9 +58,9 @@ public class AutocadColorUnpacker
       {
         ProcessObjectColor(layer.GetSpeckleApplicationId(), layer.Color);
       }
-      catch (Exception e) when (!e.IsFatal())
+      catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(e, "Failed to unpack colors from Autocad Layer."); // TODO: Check with Jedd!
+        _logger.LogError(ex, "Failed to unpack colors from Autocad Layer."); // TODO: Check with Jedd!
       }
     }
 

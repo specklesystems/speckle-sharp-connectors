@@ -44,9 +44,9 @@ public class AutocadMaterialBaker
             materialDict.Remove(entry.Value);
           }
         }
-        catch (Exception e) when (!e.IsFatal())
+        catch (Exception ex) when (!ex.IsFatal())
         {
-          _logger.LogError(e, "Failed to purge a material from the document."); // TODO: Check with Jedd!
+          _logger.LogError(ex, "Failed to purge a material from the document."); // TODO: Check with Jedd!
         }
       }
     }

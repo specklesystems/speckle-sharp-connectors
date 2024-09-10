@@ -120,9 +120,9 @@ public class RhinoInstanceUnpacker : IInstanceUnpacker<RhinoObject>
         _instanceObjectsManager.AddAtomicObject(obj.Id.ToString(), obj);
       }
     }
-    catch (Exception e) when (!e.IsFatal())
+    catch (Exception ex) when (!ex.IsFatal())
     {
-      _logger.LogError(e, "Failed unpacking Rhino instance."); // TODO: Check with Jedd!
+      _logger.LogError(ex, "Failed unpacking Rhino instance."); // TODO: Check with Jedd!
     }
   }
 

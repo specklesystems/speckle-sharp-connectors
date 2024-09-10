@@ -54,9 +54,9 @@ public class RhinoColorBaker
           }
         }
       }
-      catch (Exception e) when (!e.IsFatal())
+      catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(e, "Error parsing color proxy"); // TODO: Check with Jedd!
+        _logger.LogError(ex, "Error parsing color proxy"); // TODO: Check with Jedd!
       }
     }
   }

@@ -33,9 +33,9 @@ public class RhinoGroupBaker
         var groupName = (groupProxy.name ?? "No Name Group") + $" ({baseLayerName})";
         _contextStack.Current.Document.Groups.Add(groupName, appIds);
       }
-      catch (Exception e) when (!e.IsFatal())
+      catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(e, "Failed to bake Rhino Group."); // TODO: Check with Jedd!
+        _logger.LogError(ex, "Failed to bake Rhino Group."); // TODO: Check with Jedd!
       }
     }
   }
@@ -52,9 +52,9 @@ public class RhinoGroupBaker
           _contextStack.Current.Document.Groups.Delete(i);
         }
       }
-      catch (Exception e) when (!e.IsFatal())
+      catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(e, "Failed to purge Rhino Group."); // TODO: Check with Jedd!
+        _logger.LogError(ex, "Failed to purge Rhino Group."); // TODO: Check with Jedd!
       }
     }
   }
