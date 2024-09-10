@@ -3,8 +3,10 @@ using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.LayerManager;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Converters.Common;
+using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
+using Speckle.Sdk.Models.Instances;
 using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 
 namespace Speckle.Connectors.Autocad.HostApp;
@@ -227,6 +229,14 @@ public class AutocadLayerManager
     groupFilter.NestedFilters.Add(layerFilter);
     Doc.Database.LayerFilters = layerFilterTree;
   }
+
+  public List<(Collection[] path, Base current)> GetAtomicObjectsWithPath(
+    IEnumerable<TraversalContext> atomicObjects
+  ) => atomicObjects.Select(o => (GetLayerPath(o), o.Current)).ToList();
+
+  public List<(Collection[] path, IInstanceComponent instance)> GetInstanceComponentsWithPath(
+    IEnumerable<TraversalContext> instanceComponents
+  ) => instanceComponents.Select(o => (GetLayerPath(o), (o.Current as IInstanceComponent)!)).ToList();
 
   /// <summary>
   /// Gets a valid collection representing a layer for a given context.

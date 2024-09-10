@@ -25,7 +25,6 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private readonly RhinoLayerManager _layerManager;
   private readonly RhinoMaterialBaker _materialBaker;
   private readonly RhinoColorBaker _colorBaker;
-
   private readonly RhinoGroupBaker _groupBaker;
   private readonly RootObjectUnpacker _rootObjectUnpacker;
 
