@@ -48,6 +48,13 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     _logger = logger;
   }
 
+  public Task<RootObjectBuilderResult> Build(
+    IReadOnlyList<AutocadRootObject> objects,
+    SendInfo sendInfo,
+    Action<string, double?>? onOperationProgressed = null,
+    CancellationToken ct = default
+  ) => Task.FromResult(BuildSync(objects, sendInfo, onOperationProgressed, ct));
+
   [SuppressMessage(
     "Maintainability",
     "CA1506:Avoid excessive class coupling",
@@ -57,11 +64,11 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
       proxy classes yet. So I'm supressing this one now!!!
       """
   )]
-  public RootObjectBuilderResult Build(
+  private RootObjectBuilderResult BuildSync(
     IReadOnlyList<AutocadRootObject> objects,
     SendInfo sendInfo,
-    Action<string, double?>? onOperationProgressed = null,
-    CancellationToken ct = default
+    Action<string, double?>? onOperationProgressed,
+    CancellationToken ct
   )
   {
     // 0 - Init the root

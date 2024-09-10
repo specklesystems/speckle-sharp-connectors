@@ -57,11 +57,18 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     _logger = logger;
   }
 
-  public RootObjectBuilderResult Build(
+  public Task<RootObjectBuilderResult> Build(
     IReadOnlyList<RhinoObject> rhinoObjects,
     SendInfo sendInfo,
     Action<string, double?>? onOperationProgressed = null,
     CancellationToken cancellationToken = default
+  ) => Task.FromResult(BuildSync(rhinoObjects, sendInfo, onOperationProgressed, cancellationToken));
+
+  private RootObjectBuilderResult BuildSync(
+    IReadOnlyList<RhinoObject> rhinoObjects,
+    SendInfo sendInfo,
+    Action<string, double?>? onOperationProgressed,
+    CancellationToken cancellationToken
   )
   {
     using var activity = SpeckleActivityFactory.Start("Build");

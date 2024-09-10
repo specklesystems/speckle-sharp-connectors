@@ -50,7 +50,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     };
   }
 
-  public RootObjectBuilderResult Build(
+  public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<ElementId> objects,
     SendInfo sendInfo,
     Action<string, double?>? onOperationProgressed = null,
@@ -104,7 +104,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
         }
         else
         {
-          converted = RevitTask.RunAsync(() => _converter.Convert(revitElement)).GetAwaiter().GetResult();
+          converted = await RevitTask.RunAsync(() => _converter.Convert(revitElement)).ConfigureAwait(false);
           converted.applicationId = applicationId;
         }
 
