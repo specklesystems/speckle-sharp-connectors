@@ -28,7 +28,6 @@ public class AutocadLayerBaker : LayerPathUnpacker
     _colorBaker = colorBaker;
   }
 
-  // Receive
   /// <summary>
   /// Will create a layer with the provided name, or, if it finds an existing one, will "purge" all objects from it.
   /// This ensures we're creating the new objects we've just received rather than overlaying them.
@@ -117,7 +116,6 @@ public class AutocadLayerBaker : LayerPathUnpacker
     return layerName;
   }
 
-  // Receive
   public void DeleteAllLayersByPrefix(string prefix)
   {
     Doc.LockDocument();
@@ -157,7 +155,6 @@ public class AutocadLayerBaker : LayerPathUnpacker
     transaction.Commit();
   }
 
-  // Receive
   /// <summary>
   /// Creates a layer filter for the just received model, grouped under a top level filter "Speckle". Note: manual close and open of the layer properties panel required (it's an acad thing).
   /// This comes in handy to quickly access the layers created for this specific model.
