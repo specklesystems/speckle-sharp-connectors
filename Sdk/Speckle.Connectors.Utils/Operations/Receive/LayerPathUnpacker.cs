@@ -18,5 +18,19 @@ public abstract class LayerPathUnpacker
     IEnumerable<TraversalContext> instanceComponents
   ) => instanceComponents.Select(o => (GetLayerPath(o), (o.Current as IInstanceComponent)!)).ToList();
 
-  protected abstract Collection[] GetLayerPath(TraversalContext context);
+  public Collection[] GetLayerPath(TraversalContext context)
+  {
+    Collection[] collectionBasedPath = context.GetAscendantOfType<Collection>().Reverse().ToArray();
+
+    if (collectionBasedPath.Length == 0)
+    {
+      collectionBasedPath = context
+        .GetPropertyPath()
+        .Reverse()
+        .Select(o => new Collection() { applicationId = Guid.NewGuid().ToString(), name = o })
+        .ToArray();
+    }
+
+    return collectionBasedPath;
+  }
 }

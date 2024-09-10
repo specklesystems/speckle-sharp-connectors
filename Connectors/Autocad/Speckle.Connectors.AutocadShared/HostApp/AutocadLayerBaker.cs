@@ -3,7 +3,6 @@ using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.LayerManager;
 using Speckle.Connectors.Utils.Operations.Receive;
 using Speckle.Sdk.Models.Collections;
-using Speckle.Sdk.Models.GraphTraversal;
 using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 
 namespace Speckle.Connectors.Autocad.HostApp;
@@ -198,23 +197,5 @@ public class AutocadLayerBaker : LayerPathUnpacker
     var layerFilter = new LayerFilter() { Name = filterName, FilterExpression = layerFilterExpression };
     groupFilter.NestedFilters.Add(layerFilter);
     Doc.Database.LayerFilters = layerFilterTree;
-  }
-
-  /// <summary>
-  /// Gets a valid collection representing a layer for a given context.
-  /// </summary>
-  /// <param name="context"></param>
-  /// <returns>A new Speckle Layer object</returns>
-  protected override Collection[] GetLayerPath(TraversalContext context)
-  {
-    Collection[] collectionBasedPath = context.GetAscendantOfType<Collection>().Reverse().ToArray();
-
-    if (collectionBasedPath.Length == 0)
-    {
-      string[] path = context.GetPropertyPath().Reverse().ToArray();
-      collectionBasedPath = [new Collection(string.Join("-", path))];
-    }
-
-    return collectionBasedPath;
   }
 }

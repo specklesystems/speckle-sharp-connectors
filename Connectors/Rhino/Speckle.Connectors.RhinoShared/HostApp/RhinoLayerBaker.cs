@@ -2,7 +2,6 @@ using Rhino;
 using Rhino.DocObjects;
 using Speckle.Connectors.Utils.Operations.Receive;
 using Speckle.Sdk.Models.Collections;
-using Speckle.Sdk.Models.GraphTraversal;
 using Layer = Rhino.DocObjects.Layer;
 
 namespace Speckle.Connectors.Rhino.HostApp;
@@ -89,25 +88,5 @@ public class RhinoLayerBaker : LayerPathUnpacker
     }
 
     return previousLayer.Index;
-  }
-
-  /// <summary>
-  /// Gets the full path of the layer, concatenated with Rhino's Layer.
-  /// </summary>
-  /// <param name="context"></param>
-  protected override Collection[] GetLayerPath(TraversalContext context)
-  {
-    Collection[] collectionBasedPath = context.GetAscendantOfType<Collection>().Reverse().ToArray();
-
-    if (collectionBasedPath.Length == 0)
-    {
-      collectionBasedPath = context
-        .GetPropertyPath()
-        .Reverse()
-        .Select(o => new Collection() { applicationId = Guid.NewGuid().ToString(), name = o })
-        .ToArray();
-    }
-
-    return collectionBasedPath;
   }
 }

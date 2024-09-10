@@ -122,7 +122,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
         onOperationProgressed?.Invoke("Converting objects", (double)++count / atomicObjects.Count);
         try
         {
-          // 1: create layer
+          // 1: get pre-created layer from cache in layer baker
           int layerIndex = _layerBaker.GetAndCreateLayerFromPath(path, baseLayerName);
 
           // 2: convert
