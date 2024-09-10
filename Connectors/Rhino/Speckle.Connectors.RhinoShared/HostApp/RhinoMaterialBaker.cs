@@ -95,9 +95,16 @@ public class RhinoMaterialBaker
     var currentDoc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
     foreach (Material material in currentDoc.Materials)
     {
-      if (!material.IsDeleted && material.Name != null && material.Name.Contains(namePrefix))
+      try
       {
-        currentDoc.Materials.Delete(material);
+        if (!material.IsDeleted && material.Name != null && material.Name.Contains(namePrefix))
+        {
+          currentDoc.Materials.Delete(material);
+        }
+      }
+      catch (Exception e) when (!e.IsFatal())
+      {
+        _logger.LogError(e, "Failed to purge a material from the document."); // TODO: Check with Jedd!
       }
     }
   }

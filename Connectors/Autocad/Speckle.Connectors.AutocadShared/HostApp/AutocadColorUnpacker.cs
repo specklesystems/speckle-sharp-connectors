@@ -1,7 +1,9 @@
 using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
+using Speckle.Sdk;
 using Speckle.Sdk.Models.Proxies;
 using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 
@@ -12,6 +14,13 @@ namespace Speckle.Connectors.Autocad.HostApp;
 /// </summary>
 public class AutocadColorUnpacker
 {
+  private readonly ILogger<AutocadColorUnpacker> _logger;
+
+  public AutocadColorUnpacker(ILogger<AutocadColorUnpacker> logger)
+  {
+    _logger = logger;
+  }
+
   /// <summary>
   /// For send operations
   /// </summary>
@@ -31,14 +40,28 @@ public class AutocadColorUnpacker
     // Stage 1: unpack colors from objects
     foreach (AutocadRootObject rootObj in unpackedAutocadRootObjects)
     {
-      Entity entity = rootObj.Root;
-      ProcessObjectColor(rootObj.ApplicationId, entity.Color);
+      try
+      {
+        Entity entity = rootObj.Root;
+        ProcessObjectColor(rootObj.ApplicationId, entity.Color);
+      }
+      catch (Exception e) when (!e.IsFatal())
+      {
+        _logger.LogError(e, "Failed to unpack colors from Autocad Entity."); // TODO: Check with Jedd!
+      }
     }
 
     // Stage 2: make sure we collect layer colors as well
     foreach (LayerTableRecord layer in layers)
     {
-      ProcessObjectColor(layer.GetSpeckleApplicationId(), layer.Color);
+      try
+      {
+        ProcessObjectColor(layer.GetSpeckleApplicationId(), layer.Color);
+      }
+      catch (Exception e) when (!e.IsFatal())
+      {
+        _logger.LogError(e, "Failed to unpack colors from Autocad Layer."); // TODO: Check with Jedd!
+      }
     }
 
     return ColorProxies.Values.ToList();

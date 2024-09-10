@@ -1,6 +1,8 @@
 using Autodesk.AutoCAD.DatabaseServices;
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
+using Speckle.Sdk;
 using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Connectors.Autocad.HostApp;
@@ -10,6 +12,13 @@ namespace Speckle.Connectors.Autocad.HostApp;
 /// </summary>
 public class AutocadGroupUnpacker
 {
+  private readonly ILogger<AutocadGroupUnpacker> _logger;
+
+  public AutocadGroupUnpacker(ILogger<AutocadGroupUnpacker> logger)
+  {
+    _logger = logger;
+  }
+
   /// <summary>
   /// Unpacks a selection of atomic objects into their groups
   /// </summary>
@@ -23,28 +32,35 @@ public class AutocadGroupUnpacker
 
     foreach (var (dbObject, applicationId) in autocadObjects)
     {
-      var persistentReactorIds = dbObject.GetPersistentReactorIds();
-      foreach (ObjectId oReactorId in persistentReactorIds)
+      try
       {
-        var obj = transaction.GetObject(oReactorId, OpenMode.ForRead);
-        if (obj is not Group group)
+        var persistentReactorIds = dbObject.GetPersistentReactorIds();
+        foreach (ObjectId oReactorId in persistentReactorIds)
         {
-          continue;
-        }
-        var groupAppId = group.GetSpeckleApplicationId();
-        if (groupProxies.TryGetValue(groupAppId, out GroupProxy? groupProxy))
-        {
-          groupProxy.objects.Add(applicationId);
-        }
-        else
-        {
-          groupProxies[groupAppId] = new()
+          var obj = transaction.GetObject(oReactorId, OpenMode.ForRead);
+          if (obj is not Group group)
           {
-            applicationId = groupAppId,
-            name = group.Name,
-            objects = [applicationId]
-          };
+            continue;
+          }
+          var groupAppId = group.GetSpeckleApplicationId();
+          if (groupProxies.TryGetValue(groupAppId, out GroupProxy? groupProxy))
+          {
+            groupProxy.objects.Add(applicationId);
+          }
+          else
+          {
+            groupProxies[groupAppId] = new()
+            {
+              applicationId = groupAppId,
+              name = group.Name,
+              objects = [applicationId]
+            };
+          }
         }
+      }
+      catch (Exception e) when (!e.IsFatal())
+      {
+        _logger.LogError(e, "Failed on unpacking Autocad group."); // TODO: Check with Jedd!
       }
     }
 

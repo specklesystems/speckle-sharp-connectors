@@ -52,7 +52,7 @@ public class RhinoGroupUnpacker
       }
       catch (Exception e) when (!e.IsFatal())
       {
-        _logger.LogError(e, "An exception occurred while unpacking RhinoObjects"); // TODO: Check with Jedd!
+        _logger.LogError(e, "Failed on unpacking Rhino group."); // TODO: Check with Jedd!
       }
     }
   }

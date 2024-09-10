@@ -1,7 +1,6 @@
 using Autodesk.AutoCAD.Colors;
-using Autodesk.AutoCAD.DatabaseServices;
-using Speckle.Connectors.Autocad.HostApp.Extensions;
-using Speckle.Connectors.Autocad.Operations.Send;
+using Microsoft.Extensions.Logging;
+using Speckle.Sdk;
 using Speckle.Sdk.Models.Proxies;
 using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 
@@ -12,6 +11,13 @@ namespace Speckle.Connectors.Autocad.HostApp;
 /// </summary>
 public class AutocadColorBaker
 {
+  private readonly ILogger<AutocadColorBaker> _logger;
+
+  public AutocadColorBaker(ILogger<AutocadColorBaker> logger)
+  {
+    _logger = logger;
+  }
+
   /// <summary>
   /// For receive operations
   /// </summary>
@@ -27,25 +33,32 @@ public class AutocadColorBaker
     var count = 0;
     foreach (ColorProxy colorProxy in colorProxies)
     {
-      onOperationProgressed?.Invoke("Converting colors", (double)++count / colorProxies.Count);
-
-      // skip any colors with source = layer, since object color default source is by layer
-      if (colorProxy["source"] is string source && source == "layer")
+      try
       {
-        continue;
-      }
+        onOperationProgressed?.Invoke("Converting colors", (double)++count / colorProxies.Count);
 
-      foreach (string objectId in colorProxy.objects)
-      {
-        AutocadColor convertedColor = ConvertColorProxyToColor(colorProxy);
-#if NET8_0
-        ObjectColorsIdMap.TryAdd(objectId, convertedColor);
-#else
-        if (!ObjectColorsIdMap.ContainsKey(objectId))
+        // skip any colors with source = layer, since object color default source is by layer
+        if (colorProxy["source"] is string source && source == "layer")
         {
-          ObjectColorsIdMap.Add(objectId, convertedColor);
+          continue;
         }
+
+        foreach (string objectId in colorProxy.objects)
+        {
+          AutocadColor convertedColor = ConvertColorProxyToColor(colorProxy);
+#if NET8_0
+          ObjectColorsIdMap.TryAdd(objectId, convertedColor);
+#else
+          if (!ObjectColorsIdMap.ContainsKey(objectId))
+          {
+            ObjectColorsIdMap.Add(objectId, convertedColor);
+          }
 #endif
+        }
+      }
+      catch (Exception e) when (!e.IsFatal())
+      {
+        _logger.LogError(e, "Failed parsing color proxy."); // TODO: Check with Jedd!
       }
     }
   }

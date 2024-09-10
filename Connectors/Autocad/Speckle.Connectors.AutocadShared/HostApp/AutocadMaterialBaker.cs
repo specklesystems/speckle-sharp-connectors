@@ -1,6 +1,7 @@
 using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.GraphicsInterface;
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
@@ -14,70 +15,15 @@ namespace Speckle.Connectors.Autocad.HostApp;
 /// </summary>
 public class AutocadMaterialBaker
 {
+  private readonly ILogger<AutocadMaterialBaker> _logger;
   private readonly AutocadContext _autocadContext;
-
   private Document Doc => Application.DocumentManager.MdiActiveDocument;
-
   public Dictionary<string, ObjectId> ObjectMaterialsIdMap { get; } = new();
 
-  public AutocadMaterialBaker(AutocadContext autocadContext)
+  public AutocadMaterialBaker(AutocadContext autocadContext, ILogger<AutocadMaterialBaker> logger)
   {
     _autocadContext = autocadContext;
-  }
-
-  private (ObjectId, ReceiveConversionResult) BakeMaterial(
-    RenderMaterial renderMaterial,
-    string baseLayerPrefix,
-    DBDictionary materialDict,
-    Transaction tr
-  )
-  {
-    ObjectId materialId = ObjectId.Null;
-
-    try
-    {
-      // POC: Currently we're relying on the render material name for identification if it's coming from speckle and from which model; could we do something else?
-      // POC: we should assume render materials all have application ids?
-      string renderMaterialId = renderMaterial.applicationId ?? renderMaterial.id;
-      string matName = _autocadContext.RemoveInvalidChars(
-        $"{renderMaterial.name}-({renderMaterialId})-{baseLayerPrefix}"
-      );
-
-      MaterialMap map = new();
-      MaterialOpacityComponent opacity = new(renderMaterial.opacity, map);
-      var systemDiffuse = System.Drawing.Color.FromArgb(renderMaterial.diffuse);
-      EntityColor entityDiffuseColor = new(systemDiffuse.R, systemDiffuse.G, systemDiffuse.B);
-      MaterialColor diffuseColor = new(Method.Override, 1, entityDiffuseColor);
-      MaterialDiffuseComponent diffuse = new(diffuseColor, map);
-
-      Material mat =
-        new()
-        {
-          Name = matName,
-          Opacity = opacity,
-          Diffuse = diffuse
-        };
-
-      if (renderMaterial["reflectivity"] is double reflectivity)
-      {
-        mat.Reflectivity = reflectivity;
-      }
-
-      if (renderMaterial["ior"] is double ior)
-      {
-        mat.Refraction = new(ior, map);
-      }
-
-      // POC: assumes all materials with this prefix has already been purged from doc
-      materialId = materialDict.SetAt(matName, mat);
-      tr.AddNewlyCreatedDBObject(mat, true);
-
-      return (materialId, new(Status.SUCCESS, renderMaterial, matName, "Material"));
-    }
-    catch (Exception ex) when (!ex.IsFatal())
-    {
-      return (materialId, new(Status.ERROR, renderMaterial, null, null, ex));
-    }
+    _logger = logger;
   }
 
   /// <summary>
@@ -91,9 +37,16 @@ public class AutocadMaterialBaker
     {
       foreach (var entry in materialDict)
       {
-        if (entry.Key.Contains(namePrefix))
+        try
         {
-          materialDict.Remove(entry.Value);
+          if (entry.Key.Contains(namePrefix))
+          {
+            materialDict.Remove(entry.Value);
+          }
+        }
+        catch (Exception e) when (!e.IsFatal())
+        {
+          _logger.LogError(e, "Failed to purge a material from the document."); // TODO: Check with Jedd!
         }
       }
     }
@@ -174,5 +127,61 @@ public class AutocadMaterialBaker
 
     transaction.Commit();
     return results;
+  }
+
+  private (ObjectId, ReceiveConversionResult) BakeMaterial(
+    RenderMaterial renderMaterial,
+    string baseLayerPrefix,
+    DBDictionary materialDict,
+    Transaction tr
+  )
+  {
+    ObjectId materialId = ObjectId.Null;
+
+    try
+    {
+      // POC: Currently we're relying on the render material name for identification if it's coming from speckle and from which model; could we do something else?
+      // POC: we should assume render materials all have application ids?
+      string renderMaterialId = renderMaterial.applicationId ?? renderMaterial.id;
+      string matName = _autocadContext.RemoveInvalidChars(
+        $"{renderMaterial.name}-({renderMaterialId})-{baseLayerPrefix}"
+      );
+
+      MaterialMap map = new();
+      MaterialOpacityComponent opacity = new(renderMaterial.opacity, map);
+      var systemDiffuse = System.Drawing.Color.FromArgb(renderMaterial.diffuse);
+      EntityColor entityDiffuseColor = new(systemDiffuse.R, systemDiffuse.G, systemDiffuse.B);
+      MaterialColor diffuseColor = new(Method.Override, 1, entityDiffuseColor);
+      MaterialDiffuseComponent diffuse = new(diffuseColor, map);
+
+      Material mat =
+        new()
+        {
+          Name = matName,
+          Opacity = opacity,
+          Diffuse = diffuse
+        };
+
+      if (renderMaterial["reflectivity"] is double reflectivity)
+      {
+        mat.Reflectivity = reflectivity;
+      }
+
+      if (renderMaterial["ior"] is double ior)
+      {
+        mat.Refraction = new(ior, map);
+      }
+
+      // POC: assumes all materials with this prefix has already been purged from doc
+      materialId = materialDict.SetAt(matName, mat);
+      tr.AddNewlyCreatedDBObject(mat, true);
+
+      return (materialId, new(Status.SUCCESS, renderMaterial, matName, "Material"));
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogError(ex, "Failed to add a material to the document."); // TODO: Check with Jedd!
+      return (materialId, new(Status.ERROR, renderMaterial, null, null, ex));
+    }
   }
 }

@@ -1,5 +1,6 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Geometry;
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Instances;
@@ -15,8 +16,7 @@ using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 namespace Speckle.Connectors.Autocad.HostApp;
 
 /// <summary>
-///  Expects to be a scoped dependency per send or receive operation.
-/// POC: Split later unpacker and baker.
+/// Expects to be a scoped dependency receive operation.
 /// </summary>
 public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
 {
@@ -25,13 +25,15 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
   private readonly AutocadMaterialBaker _materialBaker;
   private readonly IHostToSpeckleUnitConverter<UnitsValue> _unitsConverter;
   private readonly AutocadContext _autocadContext;
+  private readonly ILogger<AutocadInstanceBaker> _logger;
 
   public AutocadInstanceBaker(
     AutocadLayerManager autocadLayerManager,
     AutocadColorBaker colorBaker,
     AutocadMaterialBaker materialBaker,
     IHostToSpeckleUnitConverter<UnitsValue> unitsConverter,
-    AutocadContext autocadContext
+    AutocadContext autocadContext,
+    ILogger<AutocadInstanceBaker> logger
   )
   {
     _autocadLayerManager = autocadLayerManager;
@@ -39,6 +41,7 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
     _materialBaker = materialBaker;
     _unitsConverter = unitsConverter;
     _autocadContext = autocadContext;
+    _logger = logger;
   }
 
   public BakeResult BakeInstances(
@@ -152,6 +155,7 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
+        _logger.LogError(ex, "Failed to create an instance from proxy."); // TODO: Check with Jedd!
         conversionResults.Add(new(Status.ERROR, instanceOrDefinition as Base ?? new Base(), null, null, ex));
       }
     }

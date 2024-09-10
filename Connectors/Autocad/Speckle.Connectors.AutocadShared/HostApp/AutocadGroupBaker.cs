@@ -1,4 +1,5 @@
 using Autodesk.AutoCAD.DatabaseServices;
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Sdk;
 using Speckle.Sdk.Models.Proxies;
@@ -10,11 +11,13 @@ namespace Speckle.Connectors.Autocad.HostApp;
 /// </summary>
 public class AutocadGroupBaker
 {
+  private readonly ILogger<AutocadGroupBaker> _logger;
   private readonly AutocadContext _autocadContext;
 
-  public AutocadGroupBaker(AutocadContext autocadContext)
+  public AutocadGroupBaker(AutocadContext autocadContext, ILogger<AutocadGroupBaker> logger)
   {
     _autocadContext = autocadContext;
+    _logger = logger;
   }
 
   /// <summary>
@@ -63,6 +66,7 @@ public class AutocadGroupBaker
       catch (Exception e) when (!e.IsFatal())
       {
         results.Add(new ReceiveConversionResult(Status.ERROR, gp, null, null, e));
+        _logger.LogError(e, "Failed to bake Autocad Group."); // TODO: Check with Jedd!
       }
     }
 
