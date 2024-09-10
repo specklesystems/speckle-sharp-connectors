@@ -62,6 +62,9 @@ public class RevitRootToHostConverter : IRootToHostConverter
       throw new NotSupportedException($"No display value found for {target.speckle_type}");
     }
 
+    // TODO delete this it just returns a dummy list
+    List<DB.GeometryElement> geometryElements = new();
+    return geometryElements;
     // TODO
   }
 }
