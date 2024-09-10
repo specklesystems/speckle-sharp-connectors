@@ -7,7 +7,9 @@ using Speckle.Sdk.Models.Proxies;
 namespace Speckle.Connectors.Autocad.HostApp;
 
 /// <summary>
-/// This resource expects to be injected "fresh" in each send/receive operation (scoped lifetime). Extracts group information from a set of objects into proxies in send operations; also creates groups from a set of proxies in receive operations.
+/// This resource expects to be injected "fresh" in each receive operation (scoped lifetime).
+/// Extracts group information from a set of objects into proxies in send operations; also creates groups from a set of proxies in receive operations.
+/// TODO: Oguzhan! Check whats happening on second receive unless purge groups? naming etc..
 /// </summary>
 public class AutocadGroupBaker
 {
@@ -26,6 +28,7 @@ public class AutocadGroupBaker
   /// <param name="groupProxies"></param>
   /// <param name="applicationIdMap"></param>
   /// <returns></returns>
+  // TODO: Oguzhan! Do not report here too! But this is TBD that we don't know the shape of the report yet.
   public List<ReceiveConversionResult> CreateGroups(
     IEnumerable<GroupProxy> groupProxies,
     Dictionary<string, List<Entity>> applicationIdMap

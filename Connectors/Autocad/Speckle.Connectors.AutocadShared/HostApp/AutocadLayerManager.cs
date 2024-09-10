@@ -243,7 +243,7 @@ public class AutocadLayerManager
   /// </summary>
   /// <param name="context"></param>
   /// <returns>A new Speckle Layer object</returns>
-  public Collection[] GetLayerPath(TraversalContext context)
+  private Collection[] GetLayerPath(TraversalContext context)
   {
     Collection[] collectionBasedPath = context.GetAscendantOfType<Collection>().Reverse().ToArray();
 

@@ -113,18 +113,6 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
       throw new SpeckleConversionException("Failed to convert all objects."); // fail fast instead creating empty commit! It will appear as model card error with red color.
     }
 
-    // TODO: Check with Dim! I believe this part is not needed anymore since it is fixed on viewer side, but still TBD this is a valid case or not to remove failed objects from definition objects.
-    // var conversionFailedAppIds = results
-    //   .FindAll(result => result.Status == Status.ERROR)
-    //   .Select(result => result.SourceId);
-    //
-    // // Cleans up objects that failed to convert from definition proxies.
-    // // see https://linear.app/speckle/issue/CNX-115/viewer-handle-gracefully-instances-with-elements-that-failed-to
-    // foreach (var definitionProxy in instanceDefinitionProxies)
-    // {
-    //   definitionProxy.objects.RemoveAll(id => conversionFailedAppIds.Contains(id));
-    // }
-
     // 4 - Unpack the render material proxies
     root[ProxyKeys.RENDER_MATERIAL] = _materialUnpacker.UnpackMaterials(atomicObjects, usedAcadLayers);
 
