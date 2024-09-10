@@ -26,16 +26,16 @@ public class RevitRootToHostConverter : IRootToHostConverter
 
   public object Convert(Base target)
   {
-    List<DB.GeometryElement> geometryElements = new();
+    List<DB.GeometryObject> geometryObjects = new();
     switch (target)
     {
       case ICurve curve:
-        var curves = _curveConverter.Convert(curve).Cast<DB.GeometryElement>(); // TODO: check if casting is happening correctly
-        geometryElements.AddRange(curves);
+        var curves = _curveConverter.Convert(curve).Cast<DB.GeometryObject>(); // TODO: check if casting is happening correctly
+        geometryObjects.AddRange(curves);
         break;
       case SOG.Mesh mesh:
-        var meshes = _meshConverter.Convert(mesh).Cast<DB.GeometryElement>();
-        geometryElements.AddRange(meshes); // TODO: check if casting is happening correctly
+        var meshes = _meshConverter.Convert(mesh).Cast<DB.GeometryObject>();
+        geometryObjects.AddRange(meshes); // TODO: check if casting is happening correctly
         break;
       default:
         FallbackToDisplayValue(target);
@@ -53,7 +53,7 @@ public class RevitRootToHostConverter : IRootToHostConverter
       ?? throw new SpeckleConversionException($"Conversion of object with type {target.GetType()} returned null");
   }
 
-  private List<DB.GeometryElement> FallbackToDisplayValue(Base target)
+  private List<DB.GeometryObject> FallbackToDisplayValue(Base target)
   {
     // TODO
     var displayValue = target.TryGetDisplayValue<Base>();
@@ -63,8 +63,8 @@ public class RevitRootToHostConverter : IRootToHostConverter
     }
 
     // TODO delete this it just returns a dummy list
-    List<DB.GeometryElement> geometryElements = new();
-    return geometryElements;
+    List<DB.GeometryObject> geometryObjects = new();
+    return geometryObjects;
     // TODO
   }
 }
