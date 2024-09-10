@@ -10,20 +10,39 @@ namespace Speckle.Connectors.Autocad.HostApp;
 /// <summary>
 /// Expects to be a scoped dependency for a given operation and helps with layer creation and cleanup.
 /// </summary>
-public class AutocadColorManager
+public class AutocadColorUnpacker
 {
-  // POC: Will be addressed to move it into AutocadContext!
-  private Document Doc => Application.DocumentManager.MdiActiveDocument;
-
-  /// <summary>
-  /// For receive operations
-  /// </summary>
-  public Dictionary<string, AutocadColor> ObjectColorsIdMap { get; } = new();
-
   /// <summary>
   /// For send operations
   /// </summary>
   private Dictionary<string, ColorProxy> ColorProxies { get; } = new();
+
+  /// <summary>
+  /// Iterates through a given set of autocad objects and layers to collect colors.
+  /// </summary>
+  /// <param name="unpackedAutocadRootObjects">atomic root objects, including instance objects</param>
+  /// <param name="layers">layers used by atomic objects</param>
+  /// <returns></returns>
+  public List<ColorProxy> UnpackColors(
+    List<AutocadRootObject> unpackedAutocadRootObjects,
+    List<LayerTableRecord> layers
+  )
+  {
+    // Stage 1: unpack colors from objects
+    foreach (AutocadRootObject rootObj in unpackedAutocadRootObjects)
+    {
+      Entity entity = rootObj.Root;
+      ProcessObjectColor(rootObj.ApplicationId, entity.Color);
+    }
+
+    // Stage 2: make sure we collect layer colors as well
+    foreach (LayerTableRecord layer in layers)
+    {
+      ProcessObjectColor(layer.GetSpeckleApplicationId(), layer.Color);
+    }
+
+    return ColorProxies.Values.ToList();
+  }
 
   /// <summary>
   /// Processes an object's color and adds the object id to a color proxy in <see cref="ColorProxies"/> if object color is set ByAci, ByColor, or ByBlock.
@@ -91,78 +110,5 @@ public class AutocadColorManager
     }
 
     return colorProxy;
-  }
-
-  /// <summary>
-  /// Iterates through a given set of autocad objects and layers to collect colors.
-  /// </summary>
-  /// <param name="unpackedAutocadRootObjects">atomic root objects, including instance objects</param>
-  /// <param name="layers">layers used by atomic objects</param>
-  /// <returns></returns>
-  public List<ColorProxy> UnpackColors(
-    List<AutocadRootObject> unpackedAutocadRootObjects,
-    List<LayerTableRecord> layers
-  )
-  {
-    // Stage 1: unpack colors from objects
-    foreach (AutocadRootObject rootObj in unpackedAutocadRootObjects)
-    {
-      Entity entity = rootObj.Root;
-      ProcessObjectColor(rootObj.ApplicationId, entity.Color);
-    }
-
-    // Stage 2: make sure we collect layer colors as well
-    foreach (LayerTableRecord layer in layers)
-    {
-      ProcessObjectColor(layer.GetSpeckleApplicationId(), layer.Color);
-    }
-
-    return ColorProxies.Values.ToList();
-  }
-
-  public AutocadColor ConvertColorProxyToColor(ColorProxy colorProxy)
-  {
-    // if source = block, return a default ByBlock color
-    if (colorProxy["source"] is string source && source == "block")
-    {
-      return AutocadColor.FromColorIndex(ColorMethod.ByBlock, 0);
-    }
-
-    return colorProxy["autocadColorIndex"] is long index
-      ? AutocadColor.FromColorIndex(ColorMethod.ByAci, (short)index)
-      : AutocadColor.FromColor(System.Drawing.Color.FromArgb(colorProxy.value));
-  }
-
-  /// <summary>
-  /// Parse Color Proxies and stores in ObjectColorIdMap the relationship between object ids and colors
-  /// </summary>
-  /// <param name="colorProxies"></param>
-  /// <param name="onOperationProgressed"></param>
-  public void ParseColors(List<ColorProxy> colorProxies, Action<string, double?>? onOperationProgressed)
-  {
-    var count = 0;
-    foreach (ColorProxy colorProxy in colorProxies)
-    {
-      onOperationProgressed?.Invoke("Converting colors", (double)++count / colorProxies.Count);
-
-      // skip any colors with source = layer, since object color default source is by layer
-      if (colorProxy["source"] is string source && source == "layer")
-      {
-        continue;
-      }
-
-      foreach (string objectId in colorProxy.objects)
-      {
-        AutocadColor convertedColor = ConvertColorProxyToColor(colorProxy);
-#if NET8_0
-        ObjectColorsIdMap.TryAdd(objectId, convertedColor);
-#else
-        if (!ObjectColorsIdMap.ContainsKey(objectId))
-        {
-          ObjectColorsIdMap.Add(objectId, convertedColor);
-        }
-#endif
-      }
-    }
   }
 }

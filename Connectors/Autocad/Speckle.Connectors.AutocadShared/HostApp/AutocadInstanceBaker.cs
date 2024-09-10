@@ -1,7 +1,6 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Geometry;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
-using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Instances;
 using Speckle.Converters.Common;
@@ -19,148 +18,27 @@ namespace Speckle.Connectors.Autocad.HostApp;
 ///  Expects to be a scoped dependency per send or receive operation.
 /// POC: Split later unpacker and baker.
 /// </summary>
-public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>, IInstanceBaker<List<Entity>>
+public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
 {
   private readonly AutocadLayerManager _autocadLayerManager;
-  private readonly AutocadColorManager _autocadColorManager;
-  private readonly AutocadMaterialManager _autocadMaterialManager;
+  private readonly AutocadColorBaker _colorBaker;
+  private readonly AutocadMaterialBaker _materialBaker;
   private readonly IHostToSpeckleUnitConverter<UnitsValue> _unitsConverter;
   private readonly AutocadContext _autocadContext;
 
-  private readonly IInstanceObjectsManager<AutocadRootObject, List<Entity>> _instanceObjectsManager;
-
-  public AutocadInstanceObjectManager(
+  public AutocadInstanceBaker(
     AutocadLayerManager autocadLayerManager,
-    AutocadColorManager autocadColorManager,
-    AutocadMaterialManager autocadMaterialManager,
+    AutocadColorBaker colorBaker,
+    AutocadMaterialBaker materialBaker,
     IHostToSpeckleUnitConverter<UnitsValue> unitsConverter,
-    AutocadContext autocadContext,
-    IInstanceObjectsManager<AutocadRootObject, List<Entity>> instanceObjectsManager
+    AutocadContext autocadContext
   )
   {
     _autocadLayerManager = autocadLayerManager;
-    _autocadColorManager = autocadColorManager;
-    _autocadMaterialManager = autocadMaterialManager;
+    _colorBaker = colorBaker;
+    _materialBaker = materialBaker;
     _unitsConverter = unitsConverter;
     _autocadContext = autocadContext;
-    _instanceObjectsManager = instanceObjectsManager;
-  }
-
-  public UnpackResult<AutocadRootObject> UnpackSelection(IEnumerable<AutocadRootObject> objects)
-  {
-    using var transaction = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
-
-    foreach (var obj in objects)
-    {
-      // Note: isDynamicBlock always returns false for a selection of doc objects. Instances of dynamic blocks are represented in the document as blocks that have
-      // a definition reference to the anonymous block table record.
-      if (obj.Root is BlockReference blockReference && !blockReference.IsDynamicBlock)
-      {
-        UnpackInstance(blockReference, 0, transaction);
-      }
-      _instanceObjectsManager.AddAtomicObject(obj.ApplicationId, obj);
-    }
-    return _instanceObjectsManager.GetUnpackResult();
-  }
-
-  private void UnpackInstance(BlockReference instance, int depth, Transaction transaction)
-  {
-    string instanceId = instance.GetSpeckleApplicationId();
-
-    // If this instance has a reference to an anonymous block, it means it's spawned from a dynamic block. Anonymous blocks are
-    // used to represent specific "instances" of dynamic ones.
-    // We do not want to send the full dynamic block definition, but its current "instance", as such here we're making sure we
-    // take up the anon block table reference definition (if it exists). If it's not an instance of a dynamic block, we're
-    // using the normal def reference.
-    ObjectId definitionId = !instance.AnonymousBlockTableRecord.IsNull
-      ? instance.AnonymousBlockTableRecord
-      : instance.BlockTableRecord;
-
-    InstanceProxy instanceProxy =
-      new()
-      {
-        applicationId = instanceId,
-        definitionId = definitionId.ToString(),
-        maxDepth = depth,
-        transform = GetMatrix(instance.BlockTransform.ToArray()),
-        units = _unitsConverter.ConvertOrThrow(Application.DocumentManager.CurrentDocument.Database.Insunits)
-      };
-    _instanceObjectsManager.AddInstanceProxy(instanceId, instanceProxy);
-
-    // For each block instance that has the same definition, we need to keep track of the "maximum depth" at which is found.
-    // This will enable on receive to create them in the correct order (descending by max depth, interleaved definitions and instances).
-    // We need to interleave the creation of definitions and instances, as some definitions may depend on instances.
-    if (
-      !_instanceObjectsManager.TryGetInstanceProxiesFromDefinitionId(
-        definitionId.ToString(),
-        out List<InstanceProxy> instanceProxiesWithSameDefinition
-      )
-    )
-    {
-      instanceProxiesWithSameDefinition = new List<InstanceProxy>();
-      _instanceObjectsManager.AddInstanceProxiesByDefinitionId(
-        definitionId.ToString(),
-        instanceProxiesWithSameDefinition
-      );
-    }
-
-    // We ensure that all previous instance proxies that have the same definition are at this max depth. I kind of have a feeling this can be done more elegantly, but YOLO
-    foreach (var instanceProxyWithSameDefinition in instanceProxiesWithSameDefinition)
-    {
-      if (instanceProxyWithSameDefinition.maxDepth < depth)
-      {
-        instanceProxyWithSameDefinition.maxDepth = depth;
-      }
-    }
-
-    instanceProxiesWithSameDefinition.Add(_instanceObjectsManager.GetInstanceProxy(instanceId));
-
-    if (
-      _instanceObjectsManager.TryGetInstanceDefinitionProxy(definitionId.ToString(), out InstanceDefinitionProxy value)
-    )
-    {
-      int depthDifference = depth - value.maxDepth;
-      if (depthDifference > 0)
-      {
-        // all MaxDepth of children definitions and its instances should be increased with difference of depth
-        _instanceObjectsManager.UpdateChildrenMaxDepth(value, depthDifference);
-      }
-      return;
-    }
-
-    var definition = (BlockTableRecord)transaction.GetObject(definitionId, OpenMode.ForRead);
-    var definitionProxy = new InstanceDefinitionProxy()
-    {
-      applicationId = definitionId.ToString(),
-      objects = new(),
-      maxDepth = depth,
-      name = !instance.AnonymousBlockTableRecord.IsNull ? "Dynamic instance " + definitionId : definition.Name,
-      ["comments"] = definition.Comments
-    };
-
-    // Go through each definition object
-    foreach (ObjectId id in definition)
-    {
-      Entity obj = (Entity)transaction.GetObject(id, OpenMode.ForRead);
-
-      // In the case of dynamic blocks, this prevents sending objects that are not visibile in its current state.
-      if (!obj.Visible)
-      {
-        continue;
-      }
-
-      string appId = obj.GetSpeckleApplicationId();
-      definitionProxy.objects.Add(appId);
-
-      if (obj is BlockReference blockReference)
-      {
-        UnpackInstance(blockReference, depth + 1, transaction);
-      }
-
-      _instanceObjectsManager.AddAtomicObject(appId, new(obj, appId));
-    }
-
-    _instanceObjectsManager.AddDefinitionProxy(definitionId.ToString(), definitionProxy);
   }
 
   public BakeResult BakeInstances(
@@ -242,16 +120,10 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
 
           // get color and material if any
           string instanceId = instanceProxy.applicationId ?? instanceProxy.id;
-          AutocadColor? objColor = _autocadColorManager.ObjectColorsIdMap.TryGetValue(
-            instanceId,
-            out AutocadColor? color
-          )
+          AutocadColor? objColor = _colorBaker.ObjectColorsIdMap.TryGetValue(instanceId, out AutocadColor? color)
             ? color
             : null;
-          ObjectId objMaterial = _autocadMaterialManager.ObjectMaterialsIdMap.TryGetValue(
-            instanceId,
-            out ObjectId matId
-          )
+          ObjectId objMaterial = _materialBaker.ObjectMaterialsIdMap.TryGetValue(instanceId, out ObjectId matId)
             ? matId
             : ObjectId.Null;
 
@@ -346,28 +218,6 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
     transaction.Commit();
   }
 
-  private Matrix4x4 GetMatrix(double[] t)
-  {
-    return new Matrix4x4(
-      t[0],
-      t[1],
-      t[2],
-      t[3],
-      t[4],
-      t[5],
-      t[6],
-      t[7],
-      t[8],
-      t[9],
-      t[10],
-      t[11],
-      t[12],
-      t[13],
-      t[14],
-      t[15]
-    );
-  }
-
   private Matrix3d GetMatrix3d(Matrix4x4 matrix, string units)
   {
     var sf = Units.GetConversionFactor(
@@ -405,7 +255,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
   }
 
   // https://forums.autodesk.com/t5/net/set-blocktransform-values/m-p/6452121#M49479
-  private static double[] MakePerpendicular(Matrix3d matrix)
+  private double[] MakePerpendicular(Matrix3d matrix)
   {
     // Get the basis vectors of the matrix
     Vector3d right = new(matrix[0, 0], matrix[1, 0], matrix[2, 0]);
@@ -414,8 +264,8 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
     Vector3d newForward = right.CrossProduct(up).GetNormal();
     Vector3d newUp = newForward.CrossProduct(right).GetNormal();
 
-    return new[]
-    {
+    return
+    [
       right.X,
       newUp.X,
       newForward.X,
@@ -431,7 +281,7 @@ public class AutocadInstanceObjectManager : IInstanceUnpacker<AutocadRootObject>
       0.0,
       0.0,
       0.0,
-      matrix[3, 3],
-    };
+      matrix[3, 3]
+    ];
   }
 }

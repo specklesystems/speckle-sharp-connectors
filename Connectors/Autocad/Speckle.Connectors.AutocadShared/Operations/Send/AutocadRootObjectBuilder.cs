@@ -20,31 +20,31 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
   private readonly IRootToSpeckleConverter _converter;
   private readonly string[] _documentPathSeparator = ["\\"];
   private readonly ISendConversionCache _sendConversionCache;
-  private readonly AutocadInstanceObjectManager _instanceObjectsManager;
-  private readonly AutocadMaterialManager _materialManager;
-  private readonly AutocadColorManager _colorManager;
+  private readonly AutocadInstanceUnpacker _instanceUnpacker;
+  private readonly AutocadMaterialUnpacker _materialUnpacker;
+  private readonly AutocadColorUnpacker _colorUnpacker;
   private readonly AutocadLayerManager _layerManager;
-  private readonly AutocadGroupManager _groupManager;
+  private readonly AutocadGroupUnpacker _groupUnpacker;
   private readonly ILogger<AutocadRootObjectBuilder> _logger;
 
   public AutocadRootObjectBuilder(
     IRootToSpeckleConverter converter,
     ISendConversionCache sendConversionCache,
-    AutocadInstanceObjectManager instanceObjectManager,
-    AutocadMaterialManager materialManager,
-    AutocadColorManager colorManager,
+    AutocadInstanceUnpacker instanceObjectManager,
+    AutocadMaterialUnpacker materialUnpacker,
+    AutocadColorUnpacker colorUnpacker,
     AutocadLayerManager layerManager,
-    AutocadGroupManager groupManager,
+    AutocadGroupUnpacker groupUnpacker,
     ILogger<AutocadRootObjectBuilder> logger
   )
   {
     _converter = converter;
     _sendConversionCache = sendConversionCache;
-    _instanceObjectsManager = instanceObjectManager;
-    _materialManager = materialManager;
-    _colorManager = colorManager;
+    _instanceUnpacker = instanceObjectManager;
+    _materialUnpacker = materialUnpacker;
+    _colorUnpacker = colorUnpacker;
     _layerManager = layerManager;
-    _groupManager = groupManager;
+    _groupUnpacker = groupUnpacker;
     _logger = logger;
   }
 
@@ -80,11 +80,11 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     using Transaction tr = doc.Database.TransactionManager.StartTransaction();
 
     // 1 - Unpack the instances
-    var (atomicObjects, instanceProxies, instanceDefinitionProxies) = _instanceObjectsManager.UnpackSelection(objects);
+    var (atomicObjects, instanceProxies, instanceDefinitionProxies) = _instanceUnpacker.UnpackSelection(objects);
     root[ProxyKeys.INSTANCE_DEFINITION] = instanceDefinitionProxies;
 
     // 2 - Unpack the groups
-    root[ProxyKeys.GROUP] = _groupManager.UnpackGroups(atomicObjects);
+    root[ProxyKeys.GROUP] = _groupUnpacker.UnpackGroups(atomicObjects);
 
     // 3 - Convert atomic objects
     List<LayerTableRecord> usedAcadLayers = new(); // Keeps track of autocad layers used, so we can pass them on later to the material and color unpacker.
@@ -126,10 +126,10 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     // }
 
     // 4 - Unpack the render material proxies
-    root[ProxyKeys.RENDER_MATERIAL] = _materialManager.UnpackMaterials(atomicObjects, usedAcadLayers);
+    root[ProxyKeys.RENDER_MATERIAL] = _materialUnpacker.UnpackMaterials(atomicObjects, usedAcadLayers);
 
     // 5 - Unpack the color proxies
-    root[ProxyKeys.COLOR] = _colorManager.UnpackColors(atomicObjects, usedAcadLayers);
+    root[ProxyKeys.COLOR] = _colorUnpacker.UnpackColors(atomicObjects, usedAcadLayers);
 
     return new RootObjectBuilderResult(root, results);
   }

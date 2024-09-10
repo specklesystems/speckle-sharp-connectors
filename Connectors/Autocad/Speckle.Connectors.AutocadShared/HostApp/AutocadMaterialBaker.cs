@@ -1,8 +1,6 @@
 using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.GraphicsInterface;
-using Speckle.Connectors.Autocad.HostApp.Extensions;
-using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
@@ -14,104 +12,17 @@ namespace Speckle.Connectors.Autocad.HostApp;
 /// <summary>
 /// Expects to be a scoped dependency for a given operation and helps with layer creation and cleanup.
 /// </summary>
-public class AutocadMaterialManager
+public class AutocadMaterialBaker
 {
   private readonly AutocadContext _autocadContext;
 
-  // POC: Will be addressed to move it into AutocadContext!
   private Document Doc => Application.DocumentManager.MdiActiveDocument;
 
   public Dictionary<string, ObjectId> ObjectMaterialsIdMap { get; } = new();
 
-  public AutocadMaterialManager(AutocadContext autocadContext)
+  public AutocadMaterialBaker(AutocadContext autocadContext)
   {
     _autocadContext = autocadContext;
-  }
-
-  private RenderMaterialProxy ConvertMaterialToRenderMaterialProxy(Material material, string id)
-  {
-    EntityColor diffuseColor = material.Diffuse.Color.Color;
-    System.Drawing.Color diffuse = System.Drawing.Color.FromArgb(
-      diffuseColor.Red,
-      diffuseColor.Green,
-      diffuseColor.Blue
-    );
-
-    string name = material.Name;
-    double opacity = material.Opacity.Percentage;
-
-    RenderMaterial renderMaterial = new(opacity: opacity, diffuse: diffuse) { name = name, applicationId = id };
-
-    // Add additional properties
-    renderMaterial["ior"] = material.Refraction.Index;
-    renderMaterial["reflectivity"] = material.Reflectivity;
-
-    return new(renderMaterial, new()) { applicationId = id };
-  }
-
-  /// <summary>
-  /// Iterates through a given set of autocad objects and collects their materials. Note: expects objects to be "atomic", and extracted out of their instances already.
-  /// </summary>
-  /// <param name="unpackedAutocadObjects"></param>
-  /// <param name="layers"></param>
-  /// <returns></returns>
-  public List<RenderMaterialProxy> UnpackMaterials(
-    List<AutocadRootObject> unpackedAutocadObjects,
-    List<LayerTableRecord> layers
-  )
-  {
-    Dictionary<string, RenderMaterialProxy> materialProxies = new();
-    using var transaction = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
-
-    // Stage 1: unpack materials from objects
-    foreach (AutocadRootObject rootObj in unpackedAutocadObjects)
-    {
-      Entity entity = rootObj.Root;
-
-      // skip inherited materials
-      if (entity.Material == "ByLayer" || entity.Material == "ByBlock")
-      {
-        continue;
-      }
-
-      if (transaction.GetObject(entity.MaterialId, OpenMode.ForRead) is Material material)
-      {
-        string materialId = material.GetSpeckleApplicationId();
-        if (materialProxies.TryGetValue(materialId, out RenderMaterialProxy? value))
-        {
-          value.objects.Add(rootObj.ApplicationId);
-        }
-        else
-        {
-          RenderMaterialProxy materialProxy = ConvertMaterialToRenderMaterialProxy(material, materialId);
-          materialProxy.objects.Add(rootObj.ApplicationId);
-          materialProxies[materialId] = materialProxy;
-        }
-      }
-    }
-
-    // Stage 2: make sure we collect layer colors as well
-    foreach (LayerTableRecord layer in layers)
-    {
-      if (transaction.GetObject(layer.MaterialId, OpenMode.ForRead) is Material material)
-      {
-        string materialId = material.GetSpeckleApplicationId();
-        string layerId = layer.GetSpeckleApplicationId(); // Do not use handle directly, see note in the 'GetSpeckleApplicationId' method
-        if (materialProxies.TryGetValue(materialId, out RenderMaterialProxy? value))
-        {
-          value.objects.Add(layerId);
-        }
-        else
-        {
-          RenderMaterialProxy materialProxy = ConvertMaterialToRenderMaterialProxy(material, materialId);
-          materialProxy.objects.Add(layerId);
-          materialProxies[materialId] = materialProxy;
-        }
-      }
-    }
-
-    transaction.Commit();
-    return materialProxies.Values.ToList();
   }
 
   private (ObjectId, ReceiveConversionResult) BakeMaterial(

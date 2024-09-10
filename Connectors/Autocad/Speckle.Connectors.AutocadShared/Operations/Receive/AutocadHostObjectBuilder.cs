@@ -22,20 +22,20 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
   private readonly AutocadLayerManager _layerManager;
   private readonly IRootToHostConverter _converter;
   private readonly ISyncToThread _syncToThread;
-  private readonly AutocadGroupManager _groupManager;
-  private readonly AutocadMaterialManager _materialManager;
-  private readonly AutocadColorManager _colorManager;
-  private readonly AutocadInstanceObjectManager _instanceObjectsManager;
+  private readonly AutocadGroupBaker _groupBaker;
+  private readonly AutocadMaterialBaker _materialBaker;
+  private readonly AutocadColorBaker _colorBaker;
+  private readonly AutocadInstanceBaker _instanceBaker;
   private readonly AutocadContext _autocadContext;
   private readonly RootObjectUnpacker _rootObjectUnpacker;
 
   public AutocadHostObjectBuilder(
     IRootToHostConverter converter,
     AutocadLayerManager layerManager,
-    AutocadGroupManager groupManager,
-    AutocadInstanceObjectManager instanceObjectsManager,
-    AutocadMaterialManager materialManager,
-    AutocadColorManager colorManager,
+    AutocadGroupBaker groupBaker,
+    AutocadInstanceBaker instanceBaker,
+    AutocadMaterialBaker materialBaker,
+    AutocadColorBaker colorBaker,
     ISyncToThread syncToThread,
     AutocadContext autocadContext,
     RootObjectUnpacker rootObjectUnpacker
@@ -43,10 +43,10 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
   {
     _converter = converter;
     _layerManager = layerManager;
-    _groupManager = groupManager;
-    _instanceObjectsManager = instanceObjectsManager;
-    _materialManager = materialManager;
-    _colorManager = colorManager;
+    _groupBaker = groupBaker;
+    _instanceBaker = instanceBaker;
+    _materialBaker = materialBaker;
+    _colorBaker = colorBaker;
     _syncToThread = syncToThread;
     _autocadContext = autocadContext;
     _rootObjectUnpacker = rootObjectUnpacker;
@@ -93,7 +93,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       // 3 - Bake materials and colors, as they are used later down the line by layers and objects
       if (unpackedRoot.RenderMaterialProxies != null)
       {
-        _materialManager.ParseAndBakeRenderMaterials(
+        _materialBaker.ParseAndBakeRenderMaterials(
           unpackedRoot.RenderMaterialProxies,
           baseLayerPrefix,
           onOperationProgressed
@@ -102,7 +102,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
 
       if (unpackedRoot.ColorProxies != null)
       {
-        _colorManager.ParseColors(unpackedRoot.ColorProxies, onOperationProgressed);
+        _colorBaker.ParseColors(unpackedRoot.ColorProxies, onOperationProgressed);
       }
 
       // 5 - Convert atomic objects
@@ -138,7 +138,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       }
 
       // 6 - Convert instances
-      var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = _instanceObjectsManager.BakeInstances(
+      var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = _instanceBaker.BakeInstances(
         instanceComponentsWithPath,
         applicationIdMap,
         baseLayerPrefix,
@@ -153,7 +153,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       // 7 - Create groups
       if (unpackedRoot.GroupProxies != null)
       {
-        List<ReceiveConversionResult> groupResults = _groupManager.CreateGroups(
+        List<ReceiveConversionResult> groupResults = _groupBaker.CreateGroups(
           unpackedRoot.GroupProxies,
           applicationIdMap
         );
@@ -166,8 +166,8 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
   private void PreReceiveDeepClean(string baseLayerPrefix)
   {
     _layerManager.DeleteAllLayersByPrefix(baseLayerPrefix);
-    _instanceObjectsManager.PurgeInstances(baseLayerPrefix);
-    _materialManager.PurgeMaterials(baseLayerPrefix);
+    _instanceBaker.PurgeInstances(baseLayerPrefix);
+    _materialBaker.PurgeMaterials(baseLayerPrefix);
   }
 
   private IEnumerable<Entity> ConvertObject(Base obj, Collection[] layerPath, string baseLayerNamePrefix)
@@ -199,12 +199,12 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
   private Entity BakeObject(Entity entity, Base originalObject, string layerName)
   {
     var objId = originalObject.applicationId ?? originalObject.id;
-    if (_colorManager.ObjectColorsIdMap.TryGetValue(objId, out AutocadColor? color))
+    if (_colorBaker.ObjectColorsIdMap.TryGetValue(objId, out AutocadColor? color))
     {
       entity.Color = color;
     }
 
-    if (_materialManager.ObjectMaterialsIdMap.TryGetValue(objId, out ObjectId matId))
+    if (_materialBaker.ObjectMaterialsIdMap.TryGetValue(objId, out ObjectId matId))
     {
       entity.MaterialId = matId;
     }

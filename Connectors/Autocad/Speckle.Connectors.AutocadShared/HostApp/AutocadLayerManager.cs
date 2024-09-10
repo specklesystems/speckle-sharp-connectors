@@ -17,8 +17,8 @@ namespace Speckle.Connectors.Autocad.HostApp;
 public class AutocadLayerManager
 {
   private readonly AutocadContext _autocadContext;
-  private readonly AutocadMaterialManager _materialManager;
-  private readonly AutocadColorManager _colorManager;
+  private readonly AutocadMaterialBaker _materialBaker;
+  private readonly AutocadColorBaker _colorBaker;
   private readonly string _layerFilterName = "Speckle";
   public Dictionary<string, Layer> CollectionCache { get; } = new();
 
@@ -28,13 +28,13 @@ public class AutocadLayerManager
 
   public AutocadLayerManager(
     AutocadContext autocadContext,
-    AutocadMaterialManager materialManager,
-    AutocadColorManager colorManager
+    AutocadMaterialBaker materialBaker,
+    AutocadColorBaker colorBaker
   )
   {
     _autocadContext = autocadContext;
-    _materialManager = materialManager;
-    _colorManager = colorManager;
+    _materialBaker = materialBaker;
+    _colorBaker = colorBaker;
   }
 
   public Layer GetOrCreateSpeckleLayer(Entity entity, Transaction tr, out LayerTableRecord? layer)
@@ -75,7 +75,7 @@ public class AutocadLayerManager
     // get the color and material if any, of the leaf collection with a color
     AutocadColor? layerColor = null;
     ObjectId layerMaterial = ObjectId.Null;
-    if (_colorManager.ObjectColorsIdMap.Count > 0 || _materialManager.ObjectMaterialsIdMap.Count > 0)
+    if (_colorBaker.ObjectColorsIdMap.Count > 0 || _materialBaker.ObjectMaterialsIdMap.Count > 0)
     {
       bool foundColor = false;
       bool foundMaterial = false;
@@ -87,12 +87,12 @@ public class AutocadLayerManager
 
         if (!foundColor)
         {
-          foundColor = _colorManager.ObjectColorsIdMap.TryGetValue(layerId, out layerColor);
+          foundColor = _colorBaker.ObjectColorsIdMap.TryGetValue(layerId, out layerColor);
         }
 
         if (!foundMaterial)
         {
-          foundMaterial = _materialManager.ObjectMaterialsIdMap.TryGetValue(layerId, out layerMaterial);
+          foundMaterial = _materialBaker.ObjectMaterialsIdMap.TryGetValue(layerId, out layerMaterial);
         }
 
         if (foundColor && foundMaterial)
