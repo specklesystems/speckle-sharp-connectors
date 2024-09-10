@@ -1,4 +1,4 @@
-﻿using Autodesk.AutoCAD.DatabaseServices;
+using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Runtime;
 using Speckle.Connectors.Autocad.Operations.Send;
 
@@ -25,7 +25,7 @@ public static class DocumentExtensions
             {
               if (tr.GetObject(myObjectId, OpenMode.ForRead) is DBObject dbObject)
               {
-                objects.Add(new(dbObject, objectIdHandle));
+                objects.Add(new((Entity)dbObject, objectIdHandle));
               }
             }
           }

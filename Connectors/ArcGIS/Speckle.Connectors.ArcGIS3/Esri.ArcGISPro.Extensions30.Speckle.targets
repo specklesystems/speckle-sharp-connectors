@@ -12,6 +12,9 @@
       <PackageOutputPath ParameterType="System.String" Output="true"/>
     </ParameterGroup>
     <Task>
+      <!--      <Reference Include="System.IO.Compression.FileSystem"/>-->
+      <!--      <Reference Include="System.Xml.Linq"/>-->
+      <!--      <Reference Include="System.Xml"/>-->
       <Using Namespace="System"/>
       <Using Namespace="System.IO"/>
       <Using Namespace="System.Xml.Linq"/>
@@ -201,6 +204,8 @@
       <CleanInfo ParameterType="System.String" Output="true"/>
     </ParameterGroup>
     <Task>
+      <Reference Include="System.Xml.Linq"/>
+      <Reference Include="System.Xml"/>
       <Using Namespace="System"/>
       <Using Namespace="System.IO"/>
       <Using Namespace="System.Xml.Linq"/>
@@ -272,8 +277,9 @@
     <PackageType Condition="'$(PackageType)' == ''">Addin</PackageType>
   </PropertyGroup>
   <PropertyGroup>
-    <ArcGISFolder>$([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro', 'InstallDir', null, RegistryView.Registry64))</ArcGISFolder>
-    <ArcGISFolder Condition="'$(ArcGISFolder)' == ''">$(registry:HKEY_CURRENT_USER\SOFTWARE\ESRI\ArcGISPro@InstallDir)</ArcGISFolder>
+    <ArcGISFolder>$([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SOFTWARE\ESRI\ArcGISPro', 'InstallDir', null, RegistryView.Registry64))\bin</ArcGISFolder>
+    <ArcGISFolder Condition="'$(ArcGISFolder)' == ''">$(registry:HKEY_CURRENT_USER\SOFTWARE\ESRI\ArcGISPro@InstallDir)\bin</ArcGISFolder>
+    <ArcGISFolder Condition="'$(ArcGISFolder)' == '' Or !Exists('$(ArcGISFolder)\RegisterAddIn.exe')">$(ProgramData)\EsriProCommon\</ArcGISFolder>
   </PropertyGroup>
   <Target Name="ArcGISInstallOutput" AfterTargets="Build">
     <Message Text="IntermediateOutputPath Name: $(IntermediateOutputPath)..." Importance="High"/>
@@ -329,9 +335,9 @@
     <!-- Shell out to RegisterAddIn.exe to install the package -->
     <Message Text="Deploying $(PackageType)..." Importance="High"/>
     <Message Text="ArcGISFolder Name: $(ArcGISFolder)..." Importance="High"/>
-    <Message Text="Unable to execute RegisterAddIn.exe. ArcGIS Pro is not installed." Importance="High" Condition="'$(ArcGISFolder)' == ''"/>
-    <Message Text="Execute RegisterAddIn.exe &quot;$(PackageFile)&quot; /s..." Importance="High" Condition="'$(ArcGISFolder)' != ''"/>
-    <Exec IgnoreExitCode="true" WorkingDirectory="$(ArcGISFolder)bin" Command="RegisterAddIn.exe &quot;$(PackageFile)&quot; /s" Condition="'$(ArcGISFolder)' != '' AND $(PackageFile) != '' ">
+    <Message Text="Unable to execute RegisterAddIn.exe. ArcGIS Pro is not installed." Importance="High" Condition="!Exists('$(ArcGISFolder)')"/>
+    <Message Text="Execute RegisterAddIn.exe &quot;$(PackageFile)&quot; /s..." Importance="High" Condition="Exists('$(ArcGISFolder)')"/>
+    <Exec IgnoreExitCode="true" WorkingDirectory="$(ArcGISFolder)" Command="RegisterAddIn.exe &quot;$(PackageFile)&quot; /s" Condition="Exists('$(ArcGISFolder)') AND $(PackageFile) != '' ">
       <Output TaskParameter="ExitCode" PropertyName="ESRIRegAddinExitCode" />
     </Exec>
     <RemoveDir Condition="Exists('$(ZipIntermediatePath)')" Directories="$(ZipIntermediatePath)" />
@@ -342,10 +348,10 @@
                 PackageType="$(PackageType)">
       <Output TaskParameter="CleanInfo" PropertyName="CleanInfo" />
     </CleanAddIn>
-    <Message Text="Clean $(PackageType)..." Importance="High"/>
-    <Message Text="Execute RegisterAddIn.exe &quot;$(CleanInfo)&quot; /u..." Importance="High" Condition="'$(ArcGISFolder)' != ''"/>
-    <Message Text="Unable to execute RegisterAddIn.exe. ArcGIS Pro is not installed." Importance="High" Condition="'$(ArcGISFolder)' == ''"/>
-    <Exec IgnoreExitCode="true" WorkingDirectory="$(ArcGISFolder)bin" Command="RegisterAddIn.exe &quot;$(CleanInfo)&quot; /u /s" Condition="'$(ArcGISFolder)' != '' AND $(CleanInfo) != ''">
+    <Message Text="Clean $(PackageType).$(ArcGISFolder).." Importance="High"/>
+    <Message Text="Execute RegisterAddIn.exe &quot;$(CleanInfo)&quot; /u..." Importance="High" Condition="Exists('$(ArcGISFolder)')"/>
+    <Message Text="Unable to execute RegisterAddIn.exe. ArcGIS Pro is not installed." Importance="High" Condition="!Exists('$(ArcGISFolder)')"/>
+    <Exec IgnoreExitCode="true" WorkingDirectory="$(ArcGISFolder)" Command="RegisterAddIn.exe &quot;$(CleanInfo)&quot; /u /s" Condition="Exists('$(ArcGISFolder)') AND $(CleanInfo) != ''">
       <Output TaskParameter="ExitCode" PropertyName="ESRIRegAddinExitCode" />
     </Exec>
   </Target>

@@ -1,8 +1,9 @@
-using Objects;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.ToSpeckle;
-using Speckle.Core.Models;
+using Speckle.Objects;
+using Speckle.Objects.BuiltElements.Revit;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Common;
 
@@ -20,6 +21,7 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
   private readonly ParameterObjectAssigner _parameterObjectAssigner;
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly ISlopeArrowExtractor _slopeArrowExtractor;
+  private readonly IRevitConversionContextStack _contextStack;
 
   public FloorTopLevelConverterToSpeckle(
     ITypedConverter<DB.CurveArrArray, List<SOG.Polycurve>> curveArrArrayConverter,
@@ -27,7 +29,8 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
     ParameterValueExtractor parameterValueExtractor,
     ParameterObjectAssigner parameterObjectAssigner,
     DisplayValueExtractor displayValueExtractor,
-    ISlopeArrowExtractor slopeArrowExtractor
+    ISlopeArrowExtractor slopeArrowExtractor,
+    IRevitConversionContextStack contextStack
   )
   {
     _curveArrArrayConverter = curveArrArrayConverter;
@@ -36,19 +39,31 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
     _parameterObjectAssigner = parameterObjectAssigner;
     _displayValueExtractor = displayValueExtractor;
     _slopeArrowExtractor = slopeArrowExtractor;
+    _contextStack = contextStack;
   }
 
   public override SOBR.RevitFloor Convert(DB.Floor target)
   {
-    SOBR.RevitFloor speckleFloor = new();
-
     var sketch = (DB.Sketch)target.Document.GetElement(target.SketchId);
     List<SOG.Polycurve> profiles = _curveArrArrayConverter.Convert(sketch.Profile);
 
     DB.ElementType type = (DB.ElementType)target.Document.GetElement(target.GetTypeId());
+    var level = _parameterValueExtractor.GetValueAsDocumentObject<DB.Level>(target, DB.BuiltInParameter.LEVEL_PARAM);
+    RevitLevel speckleLevel = _levelConverter.Convert(level);
+    bool structural =
+      _parameterValueExtractor.GetValueAsBool(target, DB.BuiltInParameter.FLOOR_PARAM_IS_STRUCTURAL) ?? false;
+    List<SOG.Mesh> displayValue = _displayValueExtractor.GetDisplayValue(target);
 
-    speckleFloor.family = type.FamilyName;
-    speckleFloor.type = type.Name;
+    SOBR.RevitFloor speckleFloor =
+      new()
+      {
+        family = type.FamilyName,
+        type = type.Name,
+        level = speckleLevel,
+        structural = structural,
+        displayValue = displayValue,
+        units = _contextStack.Current.SpeckleUnits
+      };
 
     // POC: Re-evaluate Wall sketch curve extraction, assumption of only one outline is wrong. https://spockle.atlassian.net/browse/CNX-9396
     if (profiles.Count > 0)
@@ -61,11 +76,6 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
       speckleFloor.voids = profiles.Skip(1).ToList<ICurve>();
     }
 
-    var level = _parameterValueExtractor.GetValueAsDocumentObject<DB.Level>(target, DB.BuiltInParameter.LEVEL_PARAM);
-    speckleFloor.level = _levelConverter.Convert(level);
-    speckleFloor.structural =
-      _parameterValueExtractor.GetValueAsBool(target, DB.BuiltInParameter.FLOOR_PARAM_IS_STRUCTURAL) ?? false;
-
     double? slopeParam = null;
     if (_parameterValueExtractor.TryGetValueAsDouble(target, DB.BuiltInParameter.ROOF_SLOPE, out var slope))
     {
@@ -75,10 +85,6 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
 
     _parameterObjectAssigner.AssignParametersToBase(target, speckleFloor);
     TryAssignSlopeFromSlopeArrow(target, speckleFloor, slopeParam);
-
-    speckleFloor.displayValue = _displayValueExtractor.GetDisplayValue(target);
-    // POC: hosted elements OOS for alpha, but this exists in existing connector
-    //_hostedElementConverter.AssignHostedElements(target, speckleCeiling);
 
     return speckleFloor;
   }

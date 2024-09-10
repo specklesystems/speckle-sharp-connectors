@@ -2,7 +2,8 @@
 using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.ToSpeckle;
-using Speckle.Core.Models;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Revit2023.ToSpeckle;
 
@@ -36,7 +37,7 @@ public class DirectShapeTopLevelConverterToSpeckle : BaseTopLevelConverterToSpec
       {
         displayValue = geometries,
         units = _contextStack.Current.SpeckleUnits,
-        elementId = target.Id.ToString()
+        elementId = target.Id.ToString().NotNull()
       };
 
     _parameterObjectAssigner.AssignParametersToBase(target, result);

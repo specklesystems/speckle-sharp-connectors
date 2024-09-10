@@ -1,7 +1,7 @@
 using System.Runtime.Serialization;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Core.Transports;
 using Speckle.Newtonsoft.Json;
+using Speckle.Sdk.Transports;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
@@ -26,6 +26,17 @@ public class ConfigBinding : IBinding
     ConfigStorage = new SQLiteTransport(scope: "DUI3Config"); // POC: maybe inject? (if we ever want to use a different storage for configs later down the line)
     _connectorName = connectorName;
     _serializerOptions = serializerOptions;
+  }
+
+#pragma warning disable CA1024
+  public bool GetIsDevMode()
+#pragma warning restore CA1024
+  {
+#if DEBUG
+    return true;
+#else
+    return false;
+#endif
   }
 
   public ConnectorConfig GetConfig()

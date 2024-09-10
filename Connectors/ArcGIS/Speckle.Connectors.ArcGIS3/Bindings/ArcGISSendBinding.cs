@@ -1,22 +1,27 @@
+using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using ArcGIS.Core.Data;
+using ArcGIS.Desktop.Editing.Events;
+using ArcGIS.Desktop.Framework.Threading.Tasks;
+using ArcGIS.Desktop.Mapping;
+using ArcGIS.Desktop.Mapping.Events;
+using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
+using Speckle.Connectors.ArcGIS.Filters;
+using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.Utils.Cancellation;
+using Speckle.Connectors.DUI.Exceptions;
+using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
-using ArcGIS.Desktop.Mapping.Events;
-using ArcGIS.Desktop.Mapping;
-using Speckle.Connectors.ArcGIS.Filters;
-using ArcGIS.Desktop.Editing.Events;
-using ArcGIS.Desktop.Framework.Threading.Tasks;
-using ArcGIS.Core.Data;
-using Speckle.Connectors.DUI.Exceptions;
-using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Caching;
+using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.ArcGIS.Bindings;
 
@@ -31,12 +36,19 @@ public sealed class ArcGISSendBinding : ISendBinding
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
   private readonly ISendConversionCache _sendConversionCache;
+  private readonly IOperationProgressManager _operationProgressManager;
+  private readonly ILogger<ArcGISSendBinding> _logger;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly MapMembersUtils _mapMemberUtils;
 
   /// <summary>
-  /// Used internally to aggregate the changed objects' id.
+  /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
+  /// [CNX-202: Unhandled Exception Occurred when receiving in Rhino](https://linear.app/speckle/issue/CNX-202/unhandled-exception-occurred-when-receiving-in-rhino)
+  /// As to why a concurrent dictionary, it's because it's the cheapest/easiest way to do so.
+  /// https://stackoverflow.com/questions/18922985/concurrent-hashsett-in-net-framework
   /// </summary>
-  private HashSet<string> ChangedObjectIds { get; set; } = new();
+  private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
+
   private List<FeatureLayer> SubscribedLayers { get; set; } = new();
   private List<StandaloneTable> SubscribedTables { get; set; } = new();
 
@@ -47,7 +59,9 @@ public sealed class ArcGISSendBinding : ISendBinding
     IUnitOfWorkFactory unitOfWorkFactory,
     CancellationManager cancellationManager,
     ISendConversionCache sendConversionCache,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    IOperationProgressManager operationProgressManager,
+    ILogger<ArcGISSendBinding> logger,
+    MapMembersUtils mapMemberUtils
   )
   {
     _store = store;
@@ -55,10 +69,18 @@ public sealed class ArcGISSendBinding : ISendBinding
     _sendFilters = sendFilters.ToList();
     _cancellationManager = cancellationManager;
     _sendConversionCache = sendConversionCache;
-    _topLevelExceptionHandler = topLevelExceptionHandler;
+    _operationProgressManager = operationProgressManager;
+    _logger = logger;
+    _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
+    _mapMemberUtils = mapMemberUtils;
+
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
     SubscribeToArcGISEvents();
+    _store.DocumentChanged += (_, _) =>
+    {
+      _sendConversionCache.ClearCache();
+    };
   }
 
   private void SubscribeToArcGISEvents()
@@ -88,12 +110,14 @@ public sealed class ArcGISSendBinding : ISendBinding
       true
     );
 
+    /*
     LayersAddedEvent.Subscribe(a => _topLevelExceptionHandler.CatchUnhandled(() => GetIdsForLayersAddedEvent(a)), true);
 
     StandaloneTablesAddedEvent.Subscribe(
       a => _topLevelExceptionHandler.CatchUnhandled(() => GetIdsForStandaloneTablesAddedEvent(a)),
       true
     );
+    */
   }
 
   private void SubscribeToMapMembersDataSourceChange()
@@ -183,23 +207,37 @@ public sealed class ArcGISSendBinding : ISendBinding
     }
 
     // get the path of the edited dataset
-    var datasetURI = args.Row.GetTable().GetPath();
+    Uri datasetPath = args.Row.GetTable().GetPath();
 
-    // find all layers & tables reading from the dataset
     foreach (Layer layer in MapView.Active.Map.Layers)
     {
-      if (layer.GetPath() == datasetURI)
+      try
       {
-        ChangedObjectIds.Add(layer.URI);
+        if (layer.GetPath() == datasetPath)
+        {
+          ChangedObjectIds[layer.URI] = 1;
+        }
+      }
+      catch (UriFormatException) // layer.GetPath() or table.GetPath() can throw this error, if data source was removed from the hard drive
+      {
+        // ignore layers with invalid source URI
       }
     }
     foreach (StandaloneTable table in MapView.Active.Map.StandaloneTables)
     {
-      if (table.GetPath() == datasetURI)
+      try
       {
-        ChangedObjectIds.Add(table.URI);
+        if (table.GetPath() == datasetPath)
+        {
+          ChangedObjectIds[table.URI] = 1;
+        }
+      }
+      catch (UriFormatException) // layer.GetPath() or table.GetPath() can throw this error, if data source was removed from the hard drive
+      {
+        // ignore layers with invalid source URI
       }
     }
+
     RunExpirationChecks(false);
   }
 
@@ -207,7 +245,7 @@ public sealed class ArcGISSendBinding : ISendBinding
   {
     foreach (Layer layer in args.Layers)
     {
-      ChangedObjectIds.Add(layer.URI);
+      ChangedObjectIds[layer.URI] = 1;
     }
     RunExpirationChecks(true);
   }
@@ -216,9 +254,25 @@ public sealed class ArcGISSendBinding : ISendBinding
   {
     foreach (StandaloneTable table in args.Tables)
     {
-      ChangedObjectIds.Add(table.URI);
+      ChangedObjectIds[table.URI] = 1;
     }
     RunExpirationChecks(true);
+  }
+
+  private void AddChangedNestedObjectIds(GroupLayer group)
+  {
+    ChangedObjectIds[group.URI] = 1;
+    foreach (var member in group.Layers)
+    {
+      if (member is GroupLayer subGroup)
+      {
+        AddChangedNestedObjectIds(subGroup);
+      }
+      else
+      {
+        ChangedObjectIds[member.URI] = 1;
+      }
+    }
   }
 
   private void GetIdsForMapPropertyChangedEvent(MapPropertyChangedEventArgs args)
@@ -227,7 +281,14 @@ public sealed class ArcGISSendBinding : ISendBinding
     {
       foreach (MapMember member in map.Layers)
       {
-        ChangedObjectIds.Add(member.URI);
+        if (member is GroupLayer group)
+        {
+          AddChangedNestedObjectIds(group);
+        }
+        else
+        {
+          ChangedObjectIds[member.URI] = 1;
+        }
       }
     }
     RunExpirationChecks(false);
@@ -278,7 +339,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     {
       foreach (MapMember member in args.MapMembers)
       {
-        ChangedObjectIds.Add(member.URI);
+        ChangedObjectIds[member.URI] = 1;
       }
       RunExpirationChecks(false);
     }
@@ -286,20 +347,7 @@ public sealed class ArcGISSendBinding : ISendBinding
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
 
-  // POC: delete this
-  public List<CardSetting> GetSendSettings()
-  {
-    return new List<CardSetting>
-    {
-      new()
-      {
-        Id = "includeAttributes",
-        Title = "Include Attributes",
-        Value = true,
-        Type = "boolean"
-      },
-    };
-  }
+  public List<ICardSetting> GetSendSettings() => [];
 
   [SuppressMessage(
     "Maintainability",
@@ -318,21 +366,13 @@ public sealed class ArcGISSendBinding : ISendBinding
         throw new InvalidOperationException("No publish model card was found.");
       }
 
-      // Init cancellation token source -> Manager also cancel it if exist before
-      CancellationTokenSource cts = _cancellationManager.InitCancellationTokenSource(modelCardId);
-
-      var sendInfo = new SendInfo(
-        modelCard.AccountId.NotNull(),
-        modelCard.ProjectId.NotNull(),
-        modelCard.ModelId.NotNull(),
-        "ArcGIS"
-      );
+      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
       var sendResult = await QueuedTask
         .Run(async () =>
         {
-          List<MapMember> mapMembers = modelCard.SendFilter
-            .NotNull()
+          List<MapMember> mapMembers = modelCard
+            .SendFilter.NotNull()
             .GetObjectIds()
             .Select(id => (MapMember)MapView.Active.Map.FindLayer(id) ?? MapView.Active.Map.FindStandaloneTable(id))
             .Where(obj => obj != null)
@@ -346,13 +386,31 @@ public sealed class ArcGISSendBinding : ISendBinding
             );
           }
 
-          var result = await unitOfWork.Service
-            .Execute(
+          // subscribe to the selected layer events
+          foreach (MapMember mapMember in mapMembers)
+          {
+            if (mapMember is FeatureLayer featureLayer)
+            {
+              SubscribeToFeatureLayerDataSourceChange(featureLayer);
+            }
+            else if (mapMember is StandaloneTable table)
+            {
+              SubscribeToTableDataSourceChange(table);
+            }
+          }
+
+          var result = await unitOfWork
+            .Service.Execute(
               mapMembers,
-              sendInfo,
+              modelCard.GetSendInfo("ArcGIS"), // POC: get host app name from settings? same for GetReceiveInfo
               (status, progress) =>
-                Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts),
-              cts.Token
+                _operationProgressManager.SetModelProgress(
+                  Parent,
+                  modelCardId,
+                  new ModelCardProgress(modelCardId, status, progress),
+                  cancellationToken
+                ),
+              cancellationToken
             )
             .ConfigureAwait(false);
 
@@ -362,15 +420,17 @@ public sealed class ArcGISSendBinding : ISendBinding
 
       Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
     }
-    // Catch here specific exceptions if they related to model card.
-    catch (SpeckleSendFilterException e)
-    {
-      Commands.SetModelError(modelCardId, e);
-    }
     catch (OperationCanceledException)
     {
-      // SWALLOW -> UI handles it immediately, so we do not need to handle anything
+      // SWALLOW -> UI handles it immediately, so we do not need to handle anything for now!
+      // Idea for later -> when cancel called, create promise from UI to solve it later with this catch block.
+      // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
       return;
+    }
+    catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
+    {
+      _logger.LogModelCardHandledError(ex);
+      Commands.SetModelError(modelCardId, ex);
     }
   }
 
@@ -383,7 +443,7 @@ public sealed class ArcGISSendBinding : ISendBinding
   {
     var senders = _store.GetSenders();
     List<string> expiredSenderIds = new();
-    string[] objectIdsList = ChangedObjectIds.ToArray();
+    string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
 
     _sendConversionCache.EvictObjects(objectIdsList);
 
@@ -391,7 +451,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     {
       var objIds = sender.SendFilter.NotNull().GetObjectIds();
       var intersection = objIds.Intersect(objectIdsList).ToList();
-      bool isExpired = sender.SendFilter.NotNull().CheckExpiry(ChangedObjectIds.ToArray());
+      bool isExpired = sender.SendFilter.NotNull().CheckExpiry(objectIdsList);
       if (isExpired)
       {
         expiredSenderIds.Add(sender.ModelCardId.NotNull());
@@ -406,6 +466,6 @@ public sealed class ArcGISSendBinding : ISendBinding
     }
 
     Commands.SetModelsExpired(expiredSenderIds);
-    ChangedObjectIds = new HashSet<string>();
+    ChangedObjectIds = new();
   }
 }

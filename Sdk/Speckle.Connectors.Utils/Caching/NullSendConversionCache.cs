@@ -1,4 +1,5 @@
-using Speckle.Core.Models;
+using System.Diagnostics.CodeAnalysis;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.Utils.Caching;
 
@@ -7,13 +8,19 @@ namespace Speckle.Connectors.Utils.Caching;
 /// </summary>
 public class NullSendConversionCache : ISendConversionCache
 {
-  public void StoreSendResult(string projectId, Dictionary<string, ObjectReference> convertedReferences) { }
+  public void StoreSendResult(string projectId, IReadOnlyDictionary<string, ObjectReference> convertedReferences) { }
 
   public void EvictObjects(IEnumerable<string> objectIds) { }
 
-  public bool TryGetValue(string projectId, string applicationId, out ObjectReference objectReference)
+  public void ClearCache() { }
+
+  public bool TryGetValue(
+    string projectId,
+    string applicationId,
+    [NotNullWhen(true)] out ObjectReference? objectReference
+  )
   {
-    objectReference = new ObjectReference();
+    objectReference = null;
     return false;
   }
 }

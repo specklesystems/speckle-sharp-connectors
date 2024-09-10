@@ -1,5 +1,6 @@
 using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
+using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Converters.RevitShared.Helpers;
 
@@ -12,9 +13,21 @@ namespace Speckle.Converters.RevitShared.Helpers;
 // and the latter is more for connector
 public class RevitConversionContextStack : ConversionContextStack<Document, ForgeTypeId>, IRevitConversionContextStack
 {
+  public ToSpeckleSettings ToSpeckleSettings { get; }
+
+  /// <summary>
+  /// Persistent cache (across conversions) for all generated render material proxies. Note this cache stores a list of render material proxies per element id.
+  /// </summary>
+  public RevitMaterialCacheSingleton RenderMaterialProxyCache { get; }
+
   public const double TOLERANCE = 0.0164042; // 5mm in ft
 
-  public RevitConversionContextStack(RevitContext context, IHostToSpeckleUnitConverter<ForgeTypeId> unitConverter)
+  public RevitConversionContextStack(
+    RevitContext context,
+    IHostToSpeckleUnitConverter<ForgeTypeId> unitConverter,
+    RevitMaterialCacheSingleton renderMaterialProxyCache,
+    ToSpeckleSettings toSpeckleSettings
+  )
     : base(
       // POC: we probably should not get here without a valid document
       // so should this perpetuate or do we assume this is valid?
@@ -24,5 +37,9 @@ public class RevitConversionContextStack : ConversionContextStack<Document, Forg
         ?? throw new SpeckleConversionException("Active UI document could not be determined"),
       context.UIApplication.ActiveUIDocument.Document.GetUnits().GetFormatOptions(SpecTypeId.Length).GetUnitTypeId(),
       unitConverter
-    ) { }
+    )
+  {
+    ToSpeckleSettings = toSpeckleSettings;
+    RenderMaterialProxyCache = renderMaterialProxyCache;
+  }
 }

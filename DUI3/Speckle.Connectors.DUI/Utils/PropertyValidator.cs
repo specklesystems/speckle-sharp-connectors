@@ -1,5 +1,5 @@
-using Speckle.Connectors.Utils;
 using Speckle.Newtonsoft.Json;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.DUI.Utils;
 

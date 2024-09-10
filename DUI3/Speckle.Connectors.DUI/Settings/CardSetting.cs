@@ -1,8 +1,9 @@
-using Speckle.Connectors.DUI.Utils;
+using Speckle.InterfaceGenerator;
 
 namespace Speckle.Connectors.DUI.Settings;
 
-public class CardSetting : DiscriminatedObject
+[GenerateAutoInterface]
+public class CardSetting : ICardSetting
 {
   public string? Id { get; set; }
   public string? Title { get; set; }

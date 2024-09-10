@@ -1,7 +1,9 @@
 using System.Collections;
+using Microsoft.Extensions.Logging;
+using Speckle.Converters.Common.Extensions;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Models;
-using Speckle.Core.Models.Extensions;
+using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Extensions;
 
 namespace Speckle.Converters.Common.DependencyInjection.ToHost;
 
@@ -15,11 +17,13 @@ namespace Speckle.Converters.Common.DependencyInjection.ToHost;
 /// <seealso cref="ConverterWithoutFallback"/>
 public sealed class ConverterWithFallback : IRootToHostConverter
 {
+  private readonly ILogger<ConverterWithFallback> _logger;
   private readonly ConverterWithoutFallback _baseConverter;
 
-  public ConverterWithFallback(IConverterResolver<IToHostTopLevelConverter> toHost)
+  public ConverterWithFallback(ConverterWithoutFallback baseConverter, ILogger<ConverterWithFallback> logger)
   {
-    _baseConverter = new ConverterWithoutFallback(toHost);
+    _logger = logger;
+    _baseConverter = baseConverter;
   }
 
   /// <summary>
@@ -31,7 +35,7 @@ public sealed class ConverterWithFallback : IRootToHostConverter
   /// <remarks>
   /// The conversion is done in the following order of preference:
   /// 1. Direct conversion using the <see cref="ConverterWithoutFallback"/>.
-  /// 2. Fallback to display value using the <see cref="Speckle.Core.Models.Extensions.BaseExtensions.TryGetDisplayValue{T}"/> method, if a direct conversion is not possible.
+  /// 2. Fallback to display value using the <see cref="Speckle.Sdk.Models.Extensions.BaseExtensions.TryGetDisplayValue{T}"/> method, if a direct conversion is not possible.
   ///
   /// If the direct conversion is not available and there is no displayValue, a <see cref="System.NotSupportedException"/> is thrown.
   /// </remarks>
@@ -43,7 +47,7 @@ public sealed class ConverterWithFallback : IRootToHostConverter
     // Direct conversion if a converter is found
     if (_baseConverter.TryGetConverter(type, out IToHostTopLevelConverter? result))
     {
-      return result.Convert(target);
+      return result.ConvertAndLog(target, _logger); // 1-1 mapping
     }
 
     // Fallback to display value if it exists.
@@ -54,7 +58,7 @@ public sealed class ConverterWithFallback : IRootToHostConverter
       {
         throw new NotSupportedException($"No display value found for {type}");
       }
-      return FallbackToDisplayValue(displayValue);
+      return FallbackToDisplayValue(displayValue); // 1 - many mapping
     }
 
     throw new NotSupportedException($"No conversion found for {type}");
@@ -63,7 +67,15 @@ public sealed class ConverterWithFallback : IRootToHostConverter
   private object FallbackToDisplayValue(IReadOnlyList<Base> displayValue)
   {
     var tempDisplayableObject = new DisplayableObject(displayValue);
+    var conversionResult = _baseConverter.Convert(tempDisplayableObject);
 
-    return _baseConverter.Convert(tempDisplayableObject);
+    // if the host app returns a list of objects as the result of the fallback conversion, we zip them together with the original base display value objects that generated them.
+    if (conversionResult is IEnumerable<object> result)
+    {
+      return result.Zip(displayValue, (a, b) => (a, b));
+    }
+
+    // if not, and the host app "merges" together somehow multiple display values into one entity, we return that.
+    return conversionResult;
   }
 }

@@ -1,65 +1,48 @@
 using Speckle.Converters.Common;
-using Objects.BuiltElements.Revit;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Objects.BuiltElements.Revit;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
-// POC: not currently used? clearly some missing pieces
+// POC: used as placeholder for revit instances
 [NameAndRankValue(nameof(DB.Element), 0)]
 public class ElementTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.Element, RevitElement>
 {
   private readonly DisplayValueExtractor _displayValueExtractor;
+  private readonly ParameterObjectAssigner _parameterObjectAssigner;
+  private readonly IRevitConversionContextStack _contextStack;
 
-  public ElementTopLevelConverterToSpeckle(DisplayValueExtractor displayValueExtractor)
+  public ElementTopLevelConverterToSpeckle(
+    DisplayValueExtractor displayValueExtractor,
+    ParameterObjectAssigner parameterObjectAssigner,
+    IRevitConversionContextStack contextStack
+  )
   {
     _displayValueExtractor = displayValueExtractor;
+    _parameterObjectAssigner = parameterObjectAssigner;
+    _contextStack = contextStack;
   }
 
   public override RevitElement Convert(DB.Element target)
   {
-    RevitElement speckleElement = new();
+    string family = target.Document.GetElement(target.GetTypeId()) is DB.FamilySymbol symbol
+      ? symbol.FamilyName
+      : "no family";
+    string category = target.Category?.Name ?? "no category";
+    List<Speckle.Objects.Geometry.Mesh> displayValue = _displayValueExtractor.GetDisplayValue(target);
 
-    if (target.Document.GetElement(target.GetTypeId()) is DB.FamilySymbol symbol)
-    {
-      speckleElement.family = symbol.FamilyName;
-      speckleElement.type = symbol.Name;
-    }
-    else
-    {
-      speckleElement.type = target.Name;
-    }
-    speckleElement.type = target.Name;
+    RevitElement speckleElement =
+      new()
+      {
+        type = target.Name,
+        category = category,
+        family = family,
+        displayValue = displayValue
+      };
 
-    //var baseGeometry = LocationToSpeckle(target);
-    //if (baseGeometry is Geometry.Point point)
-    //{
-    //  speckleElement["basePoint"] = point;
-    //}
-    //else if (baseGeometry is Geometry.Line line)
-    //{
-    //  speckleElement["baseLine"] = line;
-    //}
+    speckleElement["units"] = _contextStack.Current.SpeckleUnits;
 
-    speckleElement.category = target.Category.Name;
-
-    speckleElement.displayValue = _displayValueExtractor.GetDisplayValue(target);
-
-    //GetHostedElements(speckleElement, target, out notes);
-
-    //var displayValue = GetElementDisplayValue(target);
-
-    //if (!displayValue.Any())
-    //{
-    //  notes.Add(
-    //    "Element does not have visible geometry. It will be sent to Speckle but won't be visible in the viewer."
-    //  );
-    //}
-    //else
-    //{
-    //  speckleElement.displayValue = displayValue;
-    //}
-
-    //GetAllRevitParamsAndIds(speckleElement, target);
+    _parameterObjectAssigner.AssignParametersToBase(target, speckleElement);
 
     return speckleElement;
   }

@@ -1,8 +1,11 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.LayerManager;
-using Speckle.Core.Models;
-using Speckle.Core.Models.GraphTraversal;
+using Speckle.Connectors.Autocad.HostApp.Extensions;
+using Speckle.Converters.Common;
+using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.GraphTraversal;
+using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 
 namespace Speckle.Connectors.Autocad.HostApp;
 
@@ -12,27 +15,89 @@ namespace Speckle.Connectors.Autocad.HostApp;
 public class AutocadLayerManager
 {
   private readonly AutocadContext _autocadContext;
+  private readonly AutocadMaterialManager _materialManager;
+  private readonly AutocadColorManager _colorManager;
   private readonly string _layerFilterName = "Speckle";
+  public Dictionary<string, Layer> CollectionCache { get; } = new();
 
   // POC: Will be addressed to move it into AutocadContext!
   private Document Doc => Application.DocumentManager.MdiActiveDocument;
   private readonly HashSet<string> _uniqueLayerNames = new();
 
-  public AutocadLayerManager(AutocadContext autocadContext)
+  public AutocadLayerManager(
+    AutocadContext autocadContext,
+    AutocadMaterialManager materialManager,
+    AutocadColorManager colorManager
+  )
   {
     _autocadContext = autocadContext;
+    _materialManager = materialManager;
+    _colorManager = colorManager;
+  }
+
+  public Layer GetOrCreateSpeckleLayer(Entity entity, Transaction tr, out LayerTableRecord? layer)
+  {
+    string layerName = entity.Layer;
+    layer = null;
+    if (CollectionCache.TryGetValue(layerName, out Layer? speckleLayer))
+    {
+      return speckleLayer;
+    }
+    if (tr.GetObject(entity.LayerId, OpenMode.ForRead) is LayerTableRecord autocadLayer)
+    {
+      // Layers and geometries can have same application ids.....
+      // We should prevent it for sketchup converter. Because when it happens "objects_to_bake" definition
+      // is changing on the way if it happens.
+      speckleLayer = new Layer(layerName) { applicationId = autocadLayer.GetSpeckleApplicationId() }; // Do not use handle directly, see note in the 'GetSpeckleApplicationId' method
+      CollectionCache[layerName] = speckleLayer;
+      layer = autocadLayer;
+      return speckleLayer;
+    }
+    throw new SpeckleConversionException("Unexpected condition in GetOrCreateSpeckleLayer");
   }
 
   /// <summary>
   /// Will create a layer with the provided name, or, if it finds an existing one, will "purge" all objects from it.
   /// This ensures we're creating the new objects we've just received rather than overlaying them.
   /// </summary>
-  /// <param name="layerName">Name to search layer for purge and create.</param>
-  public void CreateLayerForReceive(string layerName)
+  /// <returns>The name of the existing or created layer</returns>
+  public string CreateLayerForReceive(Collection[] layerPath, string baseLayerPrefix)
   {
+    string[] namePath = layerPath.Select(c => c.name).ToArray();
+    string layerName = _autocadContext.RemoveInvalidChars(baseLayerPrefix + string.Join("-", namePath));
     if (!_uniqueLayerNames.Add(layerName))
     {
-      return;
+      return layerName;
+    }
+
+    // get the color and material if any, of the leaf collection with a color
+    AutocadColor? layerColor = null;
+    ObjectId layerMaterial = ObjectId.Null;
+    if (_colorManager.ObjectColorsIdMap.Count > 0 || _materialManager.ObjectMaterialsIdMap.Count > 0)
+    {
+      bool foundColor = false;
+      bool foundMaterial = false;
+
+      // Goes up the tree to find any potential parent layer that has a material/color
+      for (int j = layerPath.Length - 1; j >= 0; j--)
+      {
+        string layerId = layerPath[j].applicationId ?? layerPath[j].id;
+
+        if (!foundColor)
+        {
+          foundColor = _colorManager.ObjectColorsIdMap.TryGetValue(layerId, out layerColor);
+        }
+
+        if (!foundMaterial)
+        {
+          foundMaterial = _materialManager.ObjectMaterialsIdMap.TryGetValue(layerId, out layerMaterial);
+        }
+
+        if (foundColor && foundMaterial)
+        {
+          break;
+        }
+      }
     }
 
     Doc.LockDocument();
@@ -42,28 +107,41 @@ public class AutocadLayerManager
       transaction.TransactionManager.GetObject(Doc.Database.LayerTableId, OpenMode.ForRead) as LayerTable;
     LayerTableRecord layerTableRecord = new() { Name = layerName };
 
+    if (layerColor is not null)
+    {
+      layerTableRecord.Color = layerColor;
+    }
+
+    if (layerMaterial != ObjectId.Null)
+    {
+      layerTableRecord.MaterialId = layerMaterial;
+    }
+
     bool hasLayer = layerTable != null && layerTable.Has(layerName);
     if (hasLayer)
     {
-      TypedValue[] tvs = { new((int)DxfCode.LayerName, layerName) };
+      TypedValue[] tvs = [new((int)DxfCode.LayerName, layerName)];
       SelectionFilter selectionFilter = new(tvs);
       SelectionSet selectionResult = Doc.Editor.SelectAll(selectionFilter).Value;
       if (selectionResult == null)
       {
-        return;
+        return layerName;
       }
+
       foreach (SelectedObject selectedObject in selectionResult)
       {
         transaction.GetObject(selectedObject.ObjectId, OpenMode.ForWrite).Erase();
       }
 
-      return;
+      return layerName;
     }
 
     layerTable?.UpgradeOpen();
     layerTable?.Add(layerTableRecord);
     transaction.AddNewlyCreatedDBObject(layerTableRecord, true);
     transaction.Commit();
+
+    return layerName;
   }
 
   public void DeleteAllLayersByPrefix(string prefix)
@@ -72,19 +150,26 @@ public class AutocadLayerManager
     using Transaction transaction = Doc.TransactionManager.StartTransaction();
 
     var layerTable = (LayerTable)transaction.TransactionManager.GetObject(Doc.Database.LayerTableId, OpenMode.ForRead);
+    var activeLayer = (LayerTableRecord)transaction.GetObject(Doc.Database.Clayer, OpenMode.ForRead);
     foreach (var layerId in layerTable)
     {
       var layer = (LayerTableRecord)transaction.GetObject(layerId, OpenMode.ForRead);
       var layerName = layer.Name;
       if (layer.Name.Contains(prefix))
       {
+        if (activeLayer.Name == layerName)
+        {
+          // Layer `0` cannot be deleted or renamed in Autocad, so it is safe to get zero layer id.
+          ObjectId zeroLayerId = layerTable["0"];
+          Doc.Database.Clayer = zeroLayerId;
+        }
         // Delete objects from this layer
-        TypedValue[] tvs = { new((int)DxfCode.LayerName, layerName) };
+        TypedValue[] tvs = [new((int)DxfCode.LayerName, layerName)];
         SelectionFilter selectionFilter = new(tvs);
         SelectionSet selectionResult = Doc.Editor.SelectAll(selectionFilter).Value;
         if (selectionResult == null)
         {
-          return;
+          continue;
         }
         foreach (SelectedObject selectedObject in selectionResult)
         {
@@ -144,17 +229,20 @@ public class AutocadLayerManager
   }
 
   /// <summary>
-  /// Gets a valid layer name for a given context.
+  /// Gets a valid collection representing a layer for a given context.
   /// </summary>
   /// <param name="context"></param>
-  /// <param name="baseLayerPrefix"></param>
-  /// <returns></returns>
-  public string GetLayerPath(TraversalContext context, string baseLayerPrefix)
+  /// <returns>A new Speckle Layer object</returns>
+  public Collection[] GetLayerPath(TraversalContext context)
   {
-    string[] collectionBasedPath = context.GetAscendantOfType<Collection>().Select(c => c.name).Reverse().ToArray();
-    string[] path = collectionBasedPath.Length != 0 ? collectionBasedPath : context.GetPropertyPath().ToArray();
+    Collection[] collectionBasedPath = context.GetAscendantOfType<Collection>().Reverse().ToArray();
 
-    var name = baseLayerPrefix + string.Join("-", path);
-    return _autocadContext.RemoveInvalidChars(name);
+    if (collectionBasedPath.Length == 0)
+    {
+      string[] path = context.GetPropertyPath().Reverse().ToArray();
+      collectionBasedPath = [new Collection(string.Join("-", path))];
+    }
+
+    return collectionBasedPath;
   }
 }

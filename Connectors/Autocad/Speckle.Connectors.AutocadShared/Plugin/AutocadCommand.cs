@@ -1,12 +1,12 @@
 using System.Drawing;
+using System.IO;
 using System.Reflection;
 using Autodesk.AutoCAD.Runtime;
 using Autodesk.AutoCAD.Windows;
 using Speckle.Autofac.DependencyInjection;
-using Speckle.Connectors.Autocad.HostApp;
-using Speckle.Core.Kits;
-using Speckle.Connectors.Autocad.Interfaces;
 using Speckle.Connectors.DUI.WebView;
+using Speckle.Connectors.Utils;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Autocad.Plugin;
 
@@ -14,11 +14,11 @@ public class AutocadCommand
 {
   private static PaletteSet? PaletteSet { get; set; }
   private static readonly Guid s_id = new("3223E594-1B09-4E54-B3DD-8EA0BECE7BA5");
-  private IAutocadPlugin? _autocadPlugin;
-
   public SpeckleContainer? Container { get; private set; }
+  private IDisposable? _disposableLogger;
+  public const string COMMAND_STRING = "SpeckleBeta";
 
-  [CommandMethod("SpeckleNewUI")]
+  [CommandMethod(COMMAND_STRING)]
   public void Command()
   {
     if (PaletteSet != null)
@@ -27,7 +27,7 @@ public class AutocadCommand
       return;
     }
 
-    PaletteSet = new PaletteSet("Speckle DUI3", s_id)
+    PaletteSet = new PaletteSet("Speckle (Beta) for Autocad", s_id)
     {
       Size = new Size(400, 500),
       DockEnabled = (DockSides)((int)DockSides.Left + (int)DockSides.Right)
@@ -35,25 +35,18 @@ public class AutocadCommand
 
     var builder = SpeckleContainerBuilder.CreateInstance();
 
-#if CIVIL3D2024
-    AutocadSettings autocadSettings = new (HostApplications.Civil3D, HostAppVersion.v2024);
-#elif AUTOCAD2023
-    AutocadSettings autocadSettings = new(HostApplications.AutoCAD, HostAppVersion.v2023);
-#else
-    AutocadSettings autocadSettings = new(HostApplications.AutoCAD, HostAppVersion.v2023);
-#endif
+    // init DI
+    _disposableLogger = Connector.Initialize(AppUtils.App, AppUtils.Version);
     Container = builder
-      .LoadAutofacModules(Assembly.GetExecutingAssembly(), autocadSettings.Modules)
-      .AddSingleton(autocadSettings)
+      .LoadAutofacModules(
+        Assembly.GetExecutingAssembly(),
+        [Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location).NotNull()]
+      )
       .Build();
-
-    // Resolve root plugin object and initialise.
-    _autocadPlugin = Container.Resolve<IAutocadPlugin>();
-    _autocadPlugin.Initialise();
 
     var panelWebView = Container.Resolve<DUI3ControlWebView>();
 
-    PaletteSet.AddVisual("Speckle DUI3 WebView", panelWebView);
+    PaletteSet.AddVisual("Speckle (Beta) for Autocad WebView", panelWebView);
 
     FocusPalette();
   }

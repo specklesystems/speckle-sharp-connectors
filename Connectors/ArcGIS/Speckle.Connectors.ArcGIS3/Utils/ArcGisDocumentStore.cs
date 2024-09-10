@@ -5,8 +5,8 @@ using ArcGIS.Desktop.Mapping;
 using ArcGIS.Desktop.Mapping.Events;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
-using Speckle.Connectors.Utils;
 using Speckle.Newtonsoft.Json;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.ArcGIS.Utils;
 
@@ -37,7 +37,7 @@ public class ArcGISDocumentStore : DocumentModelStore
     );
 
     // in case plugin was loaded into already opened Map, read metadata from the current Map
-    if (IsDocumentInit == false && MapView.Active != null)
+    if (!IsDocumentInit && MapView.Active != null)
     {
       IsDocumentInit = true;
       ReadFromFile();

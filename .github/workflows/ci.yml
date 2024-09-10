@@ -1,16 +1,11 @@
 name: .NET Build
 
 on:
-  pull_request: # Run build on every pull request that is not to main/dev
+  pull_request: # Run build on every pull request that is not to main
     branches-ignore:
       - main
-      - dev
-  workflow_call:
-    outputs:
-      version:
-        value: ${{ jobs.build.outputs.version }}
 
-jobs:
+jobs:   
   build:
     runs-on: windows-latest
     outputs:
@@ -31,22 +26,31 @@ jobs:
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
-
-      - name: ⚒️ Run GitVersion
-        run: ./build.ps1 build-server-version
 
       - name: ⚒️ Run build
-        run: ./build.ps1
+        run: ./build.ps1 test
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: ⬆️ Upload artifacts
-        uses: actions/upload-artifact@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
         with:
-          name: output-${{ env.GitVersion_FullSemVer }}
-          path: output/*.*
-          compression-level: 0 # no compression
+          dotnet-version: 8.0.2xx # Align with global.json (including roll forward rules)
+      
+      - name: Cache Nuget     
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
 
-      - id: set-version
-        name: Set version to output
-        run: echo "version=${{ env.GitVersion_FullSemVer }}" >> "$GITHUB_OUTPUT"
+      - name: ⚒️ Run build
+        run: ./build.sh test-only
+        
+      - name: Upload coverage reports to Codecov with GitHub Action
+        uses: codecov/codecov-action@v4
+        with:
+          file: Converters/**/coverage.xml
+          token: ${{ secrets.CODECOV_TOKEN }}

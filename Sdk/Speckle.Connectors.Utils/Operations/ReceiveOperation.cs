@@ -1,52 +1,115 @@
 using Speckle.Connectors.Utils.Builders;
-using Speckle.Core.Api;
-using Speckle.Core.Credentials;
-using Speckle.Core.Models;
-using Speckle.Core.Transports;
+using Speckle.Sdk.Api;
+using Speckle.Sdk.Credentials;
+using Speckle.Sdk.Logging;
+using Speckle.Sdk.Models;
+using Speckle.Sdk.Transports;
 
 namespace Speckle.Connectors.Utils.Operations;
 
 public sealed class ReceiveOperation
 {
   private readonly IHostObjectBuilder _hostObjectBuilder;
-  private readonly ISyncToThread _syncToThread;
+  private readonly AccountService _accountService;
+  private readonly IServerTransportFactory _serverTransportFactory;
+  private readonly IProgressDisplayManager _progressDisplayManager;
 
-  public ReceiveOperation(IHostObjectBuilder hostObjectBuilder, ISyncToThread syncToThread)
+  public ReceiveOperation(
+    IHostObjectBuilder hostObjectBuilder,
+    AccountService accountService,
+    IServerTransportFactory serverTransportFactory,
+    IProgressDisplayManager progressDisplayManager
+  )
   {
     _hostObjectBuilder = hostObjectBuilder;
-    _syncToThread = syncToThread;
+    _accountService = accountService;
+    _serverTransportFactory = serverTransportFactory;
+    _progressDisplayManager = progressDisplayManager;
   }
 
   public async Task<HostObjectBuilderResult> Execute(
-    string accountId, // POC: all these string arguments exists in ModelCard but not sure to pass this dependency here, TBD!
-    string projectId,
-    string projectName,
-    string modelName,
-    string versionId,
+    ReceiveInfo receiveInfo,
     CancellationToken cancellationToken,
     Action<string, double?>? onOperationProgressed = null
   )
   {
+    using var execute = SpeckleActivityFactory.Start();
+    Speckle.Sdk.Api.GraphQL.Models.Version? version;
+    Base? commitObject;
+    HostObjectBuilderResult? res;
     // 2 - Check account exist
-    Account account = AccountManager.GetAccount(accountId);
-
-    // 3 - Get commit object from server
+    Account account = _accountService.GetAccountWithServerUrlFallback(receiveInfo.AccountId, receiveInfo.ServerUrl);
     using Client apiClient = new(account);
-    Commit version = await apiClient.CommitGet(projectId, versionId, cancellationToken).ConfigureAwait(false);
 
-    using ServerTransport transport = new(account, projectId);
-    Base commitObject = await Speckle.Core.Api.Operations
-      .Receive(version.referencedObject, transport, cancellationToken: cancellationToken)
-      .ConfigureAwait(false);
+    using (var _ = SpeckleActivityFactory.Start("Receive version"))
+    {
+      version = await apiClient
+        .Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ModelId, receiveInfo.ProjectId, cancellationToken)
+        .ConfigureAwait(false);
+    }
 
-    cancellationToken.ThrowIfCancellationRequested();
+    int totalCount = 1;
+
+    using var transport = _serverTransportFactory.Create(account, receiveInfo.ProjectId);
+    using (var _ = SpeckleActivityFactory.Start("Receive objects"))
+    {
+      _progressDisplayManager.Begin();
+      commitObject = await Speckle
+        .Sdk.Api.Operations.Receive(
+          version.referencedObject,
+          transport,
+          onProgressAction: dict =>
+          {
+            if (!_progressDisplayManager.ShouldUpdate())
+            {
+              return;
+            }
+            // NOTE: this looks weird for the user, as when deserialization kicks in, the progress bar will go down, and then start progressing again.
+            // This is something we're happy to live with until we refactor the whole receive pipeline.
+            var args = dict.FirstOrDefault();
+            if (args is null)
+            {
+              return;
+            }
+            switch (args.ProgressEvent)
+            {
+              case ProgressEvent.DownloadBytes:
+                onOperationProgressed?.Invoke(
+                  $"Downloading ({_progressDisplayManager.CalculateSpeed(args)})",
+                  _progressDisplayManager.CalculatePercentage(args)
+                );
+                break;
+              case ProgressEvent.DownloadObject:
+                onOperationProgressed?.Invoke("Downloading Root Object...", null);
+                break;
+              case ProgressEvent.DeserializeObject:
+                onOperationProgressed?.Invoke(
+                  $"Deserializing ({_progressDisplayManager.CalculateSpeed(args)})",
+                  _progressDisplayManager.CalculatePercentage(args)
+                );
+                break;
+            }
+          },
+          onTotalChildrenCountKnown: c => totalCount = c,
+          cancellationToken: cancellationToken
+        )
+        .ConfigureAwait(false);
+
+      cancellationToken.ThrowIfCancellationRequested();
+    }
 
     // 4 - Convert objects
-    return await _syncToThread
-      .RunOnThread(() =>
-      {
-        return _hostObjectBuilder.Build(commitObject, projectName, modelName, onOperationProgressed, cancellationToken);
-      })
+    using (var _ = SpeckleActivityFactory.Start("Convert"))
+    {
+      res = await _hostObjectBuilder
+        .Build(commitObject, receiveInfo.ProjectName, receiveInfo.ModelName, onOperationProgressed, cancellationToken)
+        .ConfigureAwait(false);
+    }
+
+    await apiClient
+      .Version.Received(new(version.id, receiveInfo.ProjectId, receiveInfo.SourceApplication), cancellationToken)
       .ConfigureAwait(false);
+
+    return res;
   }
 }

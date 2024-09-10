@@ -1,9 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
-using ArcGIS.Core.Data.DDL;
 using ArcGIS.Core.Data;
+using ArcGIS.Core.Data.DDL;
 using ArcGIS.Desktop.Core;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
+using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 
 namespace Speckle.Converters.ArcGIS3;
@@ -13,12 +14,16 @@ public class ArcGISDocument
   public Project Project { get; }
   public Map Map { get; }
   public Uri SpeckleDatabasePath { get; }
+  public CRSoffsetRotation ActiveCRSoffsetRotation { get; set; }
 
   public ArcGISDocument()
   {
     Project = Project.Current;
     Map = MapView.Active.Map;
     SpeckleDatabasePath = EnsureOrAddSpeckleDatabase();
+    // CRS of either: incoming commit to be applied to all received objects, or CRS to convert all objects to, before sending
+    // created per Send/Receive operation, will be the same for all objects in the operation
+    ActiveCRSoffsetRotation = new CRSoffsetRotation(MapView.Active.Map);
   }
 
   private const string FGDB_NAME = "Speckle.gdb";
@@ -81,13 +86,24 @@ public class ArcGISDocument
     QueuedTask.Run(() => Project.Current.AddItem(folderToAdd as IProjectItem));
 
     // Add a file geodatabase or a SQLite or enterprise database connection to a project
-    var gdbToAdd = folderToAdd
-      .GetItems()
-      .FirstOrDefault(folderItem => folderItem.Name.Equals(fGdbName, StringComparison.Ordinal));
-    if (gdbToAdd is not null)
+    try
     {
-      // POC: QueuedTask
-      var addedGeodatabase = QueuedTask.Run(() => Project.Current.AddItem(gdbToAdd as IProjectItem));
+      var gdbToAdd = folderToAdd
+        .GetItems()
+        .FirstOrDefault(folderItem => folderItem.Name.Equals(fGdbName, StringComparison.Ordinal));
+
+      if (gdbToAdd is not null)
+      {
+        // POC: QueuedTask
+        var addedGeodatabase = QueuedTask.Run(() => Project.Current.AddItem(gdbToAdd as IProjectItem));
+      }
+    }
+    catch (NullReferenceException ex)
+    {
+      throw new InvalidOperationException(
+        "Make sure your ArcGIS Pro project folder has permissions to create a new database. E.g., project cannot be saved in a Google Drive folder.",
+        ex
+      );
     }
 
     return databasePath;

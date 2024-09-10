@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
+using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Newtonsoft.Json;
-using Speckle.Connectors.DUI.Models.Card;
 
 namespace Speckle.Connectors.DUI.Models;
 

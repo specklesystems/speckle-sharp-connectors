@@ -1,12 +1,12 @@
 using Autodesk.Revit.DB;
-using Objects;
-using Objects.BuiltElements.Revit;
-using Objects.BuiltElements.Revit.RevitRoof;
-using Objects.Geometry;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Objects;
+using Speckle.Objects.BuiltElements.Revit;
+using Speckle.Objects.BuiltElements.Revit.RevitRoof;
+using Speckle.Objects.Geometry;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -18,24 +18,24 @@ public class FootPrintRoofToSpeckleTopLevelConverter
   private readonly ITypedConverter<DB.ModelCurveArrArray, SOG.Polycurve[]> _modelCurveArrArrayConverter;
   private readonly ParameterValueExtractor _parameterValueExtractor;
   private readonly DisplayValueExtractor _displayValueExtractor;
-  private readonly HostedElementConversionToSpeckle _hostedElementConverter;
   private readonly ParameterObjectAssigner _parameterObjectAssigner;
+  private readonly IRevitConversionContextStack _contextStack;
 
   public FootPrintRoofToSpeckleTopLevelConverter(
     ITypedConverter<Level, RevitLevel> levelConverter,
     ITypedConverter<ModelCurveArrArray, Polycurve[]> modelCurveArrArrayConverter,
     ParameterValueExtractor parameterValueExtractor,
     DisplayValueExtractor displayValueExtractor,
-    HostedElementConversionToSpeckle hostedElementConverter,
-    ParameterObjectAssigner parameterObjectAssigner
+    ParameterObjectAssigner parameterObjectAssigner,
+    IRevitConversionContextStack contextStack
   )
   {
     _levelConverter = levelConverter;
     _modelCurveArrArrayConverter = modelCurveArrArrayConverter;
     _parameterValueExtractor = parameterValueExtractor;
     _displayValueExtractor = displayValueExtractor;
-    _hostedElementConverter = hostedElementConverter;
     _parameterObjectAssigner = parameterObjectAssigner;
+    _contextStack = contextStack;
   }
 
   public override RevitFootprintRoof Convert(FootPrintRoof target)
@@ -56,12 +56,19 @@ public class FootPrintRoofToSpeckleTopLevelConverter
     //We currently don't validate the success or failure of this TryGet as it's not necessary, but will be once we start the above ticket.
     _parameterValueExtractor.TryGetValueAsDouble(target, DB.BuiltInParameter.ROOF_SLOPE, out var slope);
 
+    var elementType = (ElementType)target.Document.GetElement(target.GetTypeId());
+    List<Speckle.Objects.Geometry.Mesh> displayValue = _displayValueExtractor.GetDisplayValue(target);
+
     RevitFootprintRoof speckleFootprintRoof =
       new()
       {
+        type = elementType.Name,
+        family = elementType.FamilyName,
         level = _levelConverter.Convert(baseLevel),
         cutOffLevel = topLevel is not null ? _levelConverter.Convert(topLevel) : null,
-        slope = slope
+        slope = slope,
+        displayValue = displayValue,
+        units = _contextStack.Current.SpeckleUnits
       };
 
     // POC: CNX-9396 again with the incorrect assumption that the first profile is the floor and subsequent profiles
@@ -69,20 +76,12 @@ public class FootPrintRoofToSpeckleTopLevelConverter
     // POC: CNX-9403 in current connector, we are doing serious gymnastics to get the slope of the floor as defined by
     // slope arrow. The way we are doing it relies on dynamic props and only works for Revit <-> Revit
     var profiles = _modelCurveArrArrayConverter.Convert(target.GetProfiles());
-    speckleFootprintRoof.outline = profiles.FirstOrDefault();
+    speckleFootprintRoof.outline = profiles.FirstOrDefault().NotNull();
     speckleFootprintRoof.voids = profiles.Skip(1).ToList<ICurve>();
-
-    var elementType = (ElementType)target.Document.GetElement(target.GetTypeId());
-    speckleFootprintRoof.type = elementType.Name;
-    speckleFootprintRoof.family = elementType.FamilyName;
 
     // POC: we are starting to see logic that is happening in all converters. We should definitely consider some
     // conversion pipeline behavior. Would probably require adding interfaces into objects kit
     _parameterObjectAssigner.AssignParametersToBase(target, speckleFootprintRoof);
-    speckleFootprintRoof.displayValue = _displayValueExtractor.GetDisplayValue(target);
-    speckleFootprintRoof.elements = _hostedElementConverter
-      .ConvertHostedElements(target.GetHostedElementIds())
-      .ToList();
 
     return speckleFootprintRoof;
   }

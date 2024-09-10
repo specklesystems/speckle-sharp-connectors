@@ -1,7 +1,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Kits;
-using Speckle.Core.Models;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.ToHost.Geometry;
 
@@ -31,12 +31,7 @@ public class CircleToHostConverter : IToHostTopLevelConverter, ITypedConverter<S
     AG.Point3d origin = _pointConverter.Convert(target.plane.origin);
     double f = Units.GetConversionFactor(target.units, _contextStack.Current.SpeckleUnits);
 
-    if (target.radius is null)
-    {
-      throw new ArgumentNullException(nameof(target), "Cannot convert circle without radius value.");
-    }
-
-    var radius = f * (double)target.radius;
+    var radius = f * target.radius;
     return new(origin, normal, radius);
   }
 }

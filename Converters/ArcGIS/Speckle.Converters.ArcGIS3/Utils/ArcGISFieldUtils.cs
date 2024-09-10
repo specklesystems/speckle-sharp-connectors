@@ -1,13 +1,17 @@
 using System.Collections;
 using ArcGIS.Core.Data;
 using ArcGIS.Core.Data.Exceptions;
-using Objects.GIS;
-using Speckle.Core.Logging;
-using Speckle.Core.Models;
+using Speckle.InterfaceGenerator;
+using Speckle.Objects;
+using Speckle.Objects.GIS;
+using Speckle.Sdk;
+using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.GraphTraversal;
 using FieldDescription = ArcGIS.Core.Data.DDL.FieldDescription;
 
 namespace Speckle.Converters.ArcGIS3.Utils;
 
+[GenerateAutoInterface]
 public class ArcGISFieldUtils : IArcGISFieldUtils
 {
   private readonly ICharacterCleaner _characterCleaner;
@@ -16,6 +20,26 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
   public ArcGISFieldUtils(ICharacterCleaner characterCleaner)
   {
     _characterCleaner = characterCleaner;
+  }
+
+  public Dictionary<string, object?> GetAttributesViaFunction(
+    ObjectConversionTracker trackerItem,
+    List<(FieldDescription, Func<Base, object?>)> fieldsAndFunctions
+  )
+  {
+    // set and pass attributes
+    Dictionary<string, object?> attributes = new();
+    foreach ((FieldDescription field, Func<Base, object?> function) in fieldsAndFunctions)
+    {
+      string key = field.AliasName;
+      attributes[key] = function(trackerItem.Base);
+      if (attributes[key] is null && key == "Speckle_ID")
+      {
+        attributes[key] = trackerItem.Base.id;
+      }
+    }
+
+    return attributes;
   }
 
   public RowBuffer AssignFieldValuesToRow(
@@ -89,6 +113,14 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
         }
       }
     }
+
+    // every feature needs Speckle_ID to be colored (before we implement native GIS renderers on Receive)
+    if (!fieldAdded.Contains("Speckle_ID"))
+    {
+      FieldDescription fieldDescriptionId =
+        new(_characterCleaner.CleanCharacters("Speckle_ID"), FieldType.String) { AliasName = "Speckle_ID" };
+      fields.Add(fieldDescriptionId);
+    }
     return fields;
   }
 
@@ -101,6 +133,7 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
     {
       // get all members by default, but only Dynamic ones from the basic geometry
       Dictionary<string, object?> members = new();
+      members["Speckle_ID"] = baseObj.id; // to use for unique color values
 
       // leave out until we decide which properties to support on Receive
       /*
@@ -117,7 +150,12 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
       foreach (KeyValuePair<string, object?> field in members)
       {
         // POC: TODO check for the forbidden characters/combinations: https://support.esri.com/en-us/knowledge-base/what-characters-should-not-be-used-in-arcgis-for-field--000005588
-        Func<Base, object?> function = x => x[field.Key];
+        string key = field.Key;
+        if (field.Key == "Speckle_ID")
+        {
+          key = "id";
+        }
+        Func<Base, object?> function = x => x[key];
         TraverseAttributes(field, function, fieldsAndFunctions, fieldAdded);
       }
     }
@@ -258,7 +296,7 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
         // 2. change to NewType if it's String (and the old one is not)
         if (
           newFieldType != FieldType.Blob && existingFieldType == FieldType.Blob
-          || (newFieldType == FieldType.String && existingFieldType != FieldType.String)
+          || newFieldType == FieldType.String && existingFieldType != FieldType.String
         )
         {
           fieldsAndFunctions[index] = (
@@ -272,5 +310,28 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
     {
       // do nothing
     }
+  }
+
+  public List<(FieldDescription, Func<Base, object?>)> GetFieldsAndAttributeFunctions(
+    List<(TraversalContext, ObjectConversionTracker)> listOfContextAndTrackers
+  )
+  {
+    List<(FieldDescription, Func<Base, object?>)> fieldsAndFunctions = new();
+    List<FieldDescription> fields = new();
+
+    // Get Fields, geomType and attributeFunction - separately for GIS and non-GIS
+    if (listOfContextAndTrackers.FirstOrDefault().Item1.Parent?.Current is SGIS.VectorLayer vLayer) // GIS
+    {
+      fields = GetFieldsFromSpeckleLayer(vLayer);
+      fieldsAndFunctions = fields
+        .Select(x => (x, (Func<Base, object?>)(y => (y as IGisFeature)?.attributes[x.Name])))
+        .ToList();
+    }
+    else // non-GIS
+    {
+      fieldsAndFunctions = CreateFieldsFromListOfBase(listOfContextAndTrackers.Select(x => x.Item2.Base).ToList());
+    }
+
+    return fieldsAndFunctions;
   }
 }

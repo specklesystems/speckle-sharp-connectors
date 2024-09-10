@@ -1,13 +1,13 @@
-using Objects;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.ToSpeckle;
+using Speckle.Objects;
 
 namespace Speckle.Converters.RevitShared.ToHost.TopLevel;
 
 [NameAndRankValue(nameof(SOBE.GridLine), 0)]
-internal class GridlineToHostTopLevelConverter : BaseTopLevelConverterToHost<SOBE.GridLine, DB.Grid>
+internal sealed class GridlineToHostTopLevelConverter : BaseTopLevelConverterToHost<SOBE.GridLine, DB.Grid>
 {
   private readonly ITypedConverter<ICurve, DB.CurveArray> _curveConverter;
   private readonly IRevitConversionContextStack _contextStack;

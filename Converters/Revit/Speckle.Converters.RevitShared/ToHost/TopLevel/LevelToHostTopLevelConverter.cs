@@ -1,7 +1,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Converters.RevitShared.ToSpeckle;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Converters.RevitShared.ToSpeckle;
 
 namespace Speckle.Converters.RevitShared.ToHost.ToLevel;
 
@@ -59,7 +59,7 @@ public class LevelToHostTopLevelConverter : BaseTopLevelConverterToHost<SOBE.Lev
 
   private static DB.Level GetExistingLevelByElevation(IEnumerable<DB.Level> docLevels, double elevation)
   {
-    return docLevels.FirstOrDefault(l => Math.Abs(l.Elevation - elevation) < RevitConversionContextStack.TOLERANCE);
+    return docLevels.First(l => Math.Abs(l.Elevation - elevation) < RevitConversionContextStack.TOLERANCE);
   }
 
   private DB.ViewPlan CreateViewPlan(string name, DB.ElementId levelId)

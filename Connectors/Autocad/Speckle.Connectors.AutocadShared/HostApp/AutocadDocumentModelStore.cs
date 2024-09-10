@@ -1,7 +1,7 @@
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
-using Speckle.Connectors.Utils;
 using Speckle.Newtonsoft.Json;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Autocad.HostApp;
 

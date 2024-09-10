@@ -1,14 +1,13 @@
 using Autodesk.AutoCAD.DatabaseServices;
-using Sentry.Reflection;
-using Speckle.Connectors.Autocad.HostApp;
+using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Core.Credentials;
-using Speckle.Connectors.Autocad.HostApp.Extensions;
-using Speckle.Connectors.Utils;
-using Speckle.Core.Logging;
+using Speckle.Connectors.Utils.Common;
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Credentials;
 
 namespace Speckle.Connectors.Autocad.Bindings;
 
@@ -18,14 +17,12 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
   public IBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly AutocadSettings _settings;
 
   public BasicConnectorBindingCommands Commands { get; }
 
-  public AutocadBasicConnectorBinding(DocumentModelStore store, AutocadSettings settings, IBridge parent)
+  public AutocadBasicConnectorBinding(DocumentModelStore store, IBridge parent)
   {
     _store = store;
-    _settings = settings;
     Parent = parent;
     Commands = new BasicConnectorBindingCommands(parent);
     _store.DocumentChanged += (_, _) =>
@@ -34,12 +31,11 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
     };
   }
 
-  public string GetConnectorVersion() =>
-    typeof(AutocadBasicConnectorBinding).Assembly.GetNameAndVersion().Version ?? "No version";
+  public string GetConnectorVersion() => typeof(AutocadBasicConnectorBinding).Assembly.GetVersion();
 
-  public string GetSourceApplicationName() => _settings.HostAppInfo.Slug;
+  public string GetSourceApplicationName() => Utils.Connector.Slug;
 
-  public string GetSourceApplicationVersion() => _settings.HostAppVersion.ToString();
+  public string GetSourceApplicationVersion() => Utils.Connector.VersionString;
 
   public Account[] GetAccounts() => AccountManager.GetAccounts().ToArray();
 
@@ -121,7 +117,17 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
       try
       {
         doc.Editor.SetImpliedSelection(Array.Empty<ObjectId>()); // Deselects
-        doc.Editor.SetImpliedSelection(objectIds); // Selects
+        try
+        {
+          doc.Editor.SetImpliedSelection(objectIds);
+        }
+        catch (Exception e) when (!e.IsFatal())
+        {
+          // SWALLOW REASON:
+          // If the objects under the blocks, it won't be able to select them.
+          // If we try, API will throw the invalid input error, because we request something from API that Autocad doesn't
+          // handle it on its current canvas. Block elements only selectable when in its scope.
+        }
         doc.Editor.UpdateScreen();
 
         Extents3d selectedExtents = new();
@@ -129,10 +135,18 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
         var tr = doc.TransactionManager.StartTransaction();
         foreach (ObjectId objectId in objectIds)
         {
-          var entity = (Entity)tr.GetObject(objectId, OpenMode.ForRead);
-          if (entity != null)
+          try
           {
-            selectedExtents.AddExtents(entity.GeometricExtents);
+            var entity = (Entity?)tr.GetObject(objectId, OpenMode.ForRead);
+            if (entity?.GeometricExtents != null)
+            {
+              selectedExtents.AddExtents(entity.GeometricExtents);
+            }
+          }
+          catch (Exception e) when (!e.IsFatal())
+          {
+            // Note: we're swallowing exeptions here because of a weird case when receiving blocks, we would have
+            // acad api throw an error on accessing entity.GeometricExtents.
           }
         }
 

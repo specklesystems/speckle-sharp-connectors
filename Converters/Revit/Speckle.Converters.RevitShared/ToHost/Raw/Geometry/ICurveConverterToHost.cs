@@ -1,6 +1,6 @@
-using Objects;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Objects;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -89,10 +89,9 @@ public class ICurveConverterToHost : ITypedConverter<ICurve, DB.CurveArray>
         {
           // Enumerate all curves in the array to ensure polylines get fully converted.
           using var subCurves = Convert(seg);
-          var crvEnumerator = subCurves.GetEnumerator();
-          while (crvEnumerator.MoveNext() && crvEnumerator.Current != null)
+          foreach (DB.Curve curve in subCurves)
           {
-            curveArray.Append(crvEnumerator.Current as DB.Curve);
+            curveArray.Append(curve);
           }
         }
         return curveArray;
@@ -115,7 +114,7 @@ public class ICurveConverterToHost : ITypedConverter<ICurve, DB.CurveArray>
     // Revit does not like single curve loop edges, so we split them in two.
     var start = nativeCurve.GetEndParameter(0);
     var end = nativeCurve.GetEndParameter(1);
-    var mid = start + ((end - start) / 2);
+    var mid = start + (end - start) / 2;
 
     var a = nativeCurve.Clone();
     a.MakeBound(start, mid);

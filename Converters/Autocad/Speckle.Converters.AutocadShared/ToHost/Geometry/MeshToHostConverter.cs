@@ -1,8 +1,8 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Models;
-using Objects.Utils;
-using Speckle.Core.Logging;
+using Speckle.Objects.Utils;
+using Speckle.Sdk;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.Geometry;
 

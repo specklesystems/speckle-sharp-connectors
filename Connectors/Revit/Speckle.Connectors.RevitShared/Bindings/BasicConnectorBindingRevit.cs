@@ -1,14 +1,14 @@
 using System.Reflection;
 using Autodesk.Revit.DB;
 using Revit.Async;
-using Speckle.Connectors.Utils.Reflection;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.Revit.Plugin;
-using Speckle.Connectors.Utils;
+using Speckle.Connectors.RevitShared;
+using Speckle.Connectors.Utils.Common;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Core.Logging;
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
@@ -22,20 +22,13 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
   private readonly DocumentModelStore _store;
   private readonly RevitContext _revitContext;
-  private readonly RevitSettings _revitSettings;
 
-  public BasicConnectorBindingRevit(
-    DocumentModelStore store,
-    RevitSettings revitSettings,
-    IBridge parent,
-    RevitContext revitContext
-  )
+  public BasicConnectorBindingRevit(DocumentModelStore store, IBridge parent, RevitContext revitContext)
   {
     Name = "baseBinding";
     Parent = parent;
     _store = store;
     _revitContext = revitContext;
-    _revitSettings = revitSettings;
     Commands = new BasicConnectorBindingCommands(parent);
 
     // POC: event binding?
@@ -45,14 +38,11 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     };
   }
 
-  public string GetConnectorVersion()
-  {
-    return Assembly.GetAssembly(GetType()).GetVersion();
-  }
+  public string GetConnectorVersion() => Assembly.GetAssembly(GetType()).NotNull().GetVersion();
 
-  public string GetSourceApplicationName() => _revitSettings.HostSlug.ToLower(); // POC: maybe not right place but... // ANOTHER POC: We should align this naming from somewhere in common DUI projects instead old structs. I know there are other POC comments around this
+  public string GetSourceApplicationName() => Speckle.Connectors.Utils.Connector.Slug.ToLower(); // POC: maybe not right place but... // ANOTHER POC: We should align this naming from somewhere in common DUI projects instead old structs. I know there are other POC comments around this
 
-  public string GetSourceApplicationVersion() => _revitSettings.HostAppVersion; // POC: maybe not right place but...
+  public string GetSourceApplicationVersion() => Speckle.Connectors.Utils.Connector.VersionString; // POC: maybe not right place but...
 
   public DocumentInfo? GetDocumentInfo()
   {
@@ -87,7 +77,15 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
   {
     SenderModelCard model = (SenderModelCard)_store.GetModelById(modelCardId);
 
-    var elementIds = model.SendFilter.NotNull().GetObjectIds().Select(ElementId.Parse).ToList();
+    var activeUIDoc =
+      _revitContext.UIApplication?.ActiveUIDocument
+      ?? throw new SpeckleException("Unable to retrieve active UI document");
+
+    var elementIds = model
+      .SendFilter.NotNull()
+      .GetObjectIds()
+      .Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid))
+      .ToList();
     if (elementIds.Count == 0)
     {
       Commands.SetModelError(modelCardId, new InvalidOperationException("No objects found to highlight."));
@@ -97,8 +95,20 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     HighlightObjectsOnView(elementIds);
   }
 
-  public void HighlightObjects(List<string> objectIds) =>
-    HighlightObjectsOnView(objectIds.Select(ElementId.Parse).ToList());
+  /// <summary>
+  /// Highlights the objects from the given ids.
+  /// </summary>
+  /// <param name="objectIds"> UniqueId's of the DB.Elements.</param>
+  public void HighlightObjects(List<string> objectIds)
+  {
+    var activeUIDoc =
+      _revitContext.UIApplication?.ActiveUIDocument
+      ?? throw new SpeckleException("Unable to retrieve active UI document");
+
+    HighlightObjectsOnView(
+      objectIds.Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid)).ToList()
+    );
+  }
 
   private void HighlightObjectsOnView(List<ElementId> objectIds)
   {

@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -11,22 +12,26 @@ public class TopographyTopLevelConverterToSpeckle
 {
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly ParameterObjectAssigner _parameterObjectAssigner;
+  private readonly IRevitConversionContextStack _contextStack;
 
   public TopographyTopLevelConverterToSpeckle(
     DisplayValueExtractor displayValueExtractor,
-    ParameterObjectAssigner parameterObjectAssigner
+    ParameterObjectAssigner parameterObjectAssigner,
+    IRevitConversionContextStack contextStack
   )
   {
     _displayValueExtractor = displayValueExtractor;
     _parameterObjectAssigner = parameterObjectAssigner;
+    _contextStack = contextStack;
   }
 
   public override SOBR.RevitTopography Convert(DBA.TopographySurface target)
   {
     var speckleTopo = new SOBR.RevitTopography
     {
+      units = _contextStack.Current.SpeckleUnits,
       displayValue = _displayValueExtractor.GetDisplayValue(target),
-      elementId = target.Id.ToString()
+      elementId = target.Id.ToString().NotNull()
     };
 
     // POC: shouldn't we just do this in the RevitConverter ?

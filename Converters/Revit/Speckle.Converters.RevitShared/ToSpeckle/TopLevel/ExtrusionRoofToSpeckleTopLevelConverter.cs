@@ -1,9 +1,8 @@
-using Objects.BuiltElements.Revit.RevitRoof;
-using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common;
+using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
-
-using Speckle.Converters.RevitShared.Extensions;
+using Speckle.Objects.BuiltElements.Revit;
+using Speckle.Objects.BuiltElements.Revit.RevitRoof;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -16,8 +15,8 @@ public class ExtrusionRoofToSpeckleTopLevelConverter
   private readonly ITypedConverter<DB.XYZ, SOG.Point> _pointConverter;
   private readonly ParameterValueExtractor _parameterValueExtractor;
   private readonly DisplayValueExtractor _displayValueExtractor;
-  private readonly HostedElementConversionToSpeckle _hostedElementConverter;
   private readonly ParameterObjectAssigner _parameterObjectAssigner;
+  private readonly IRevitConversionContextStack _contextStack;
 
   public ExtrusionRoofToSpeckleTopLevelConverter(
     ITypedConverter<DB.Level, SOBR.RevitLevel> levelConverter,
@@ -25,8 +24,8 @@ public class ExtrusionRoofToSpeckleTopLevelConverter
     ITypedConverter<DB.XYZ, SOG.Point> pointConverter,
     ParameterValueExtractor parameterValueExtractor,
     DisplayValueExtractor displayValueExtractor,
-    HostedElementConversionToSpeckle hostedElementConverter,
-    ParameterObjectAssigner parameterObjectAssigner
+    ParameterObjectAssigner parameterObjectAssigner,
+    IRevitConversionContextStack contextStack
   )
   {
     _levelConverter = levelConverter;
@@ -34,38 +33,42 @@ public class ExtrusionRoofToSpeckleTopLevelConverter
     _pointConverter = pointConverter;
     _parameterValueExtractor = parameterValueExtractor;
     _displayValueExtractor = displayValueExtractor;
-    _hostedElementConverter = hostedElementConverter;
     _parameterObjectAssigner = parameterObjectAssigner;
+    _contextStack = contextStack;
   }
 
   public override RevitExtrusionRoof Convert(DB.ExtrusionRoof target)
   {
-    var speckleExtrusionRoof = new RevitExtrusionRoof
-    {
-      start = _parameterValueExtractor.GetValueAsDouble(target, DB.BuiltInParameter.EXTRUSION_START_PARAM),
-      end = _parameterValueExtractor.GetValueAsDouble(target, DB.BuiltInParameter.EXTRUSION_END_PARAM)
-    };
     var plane = target.GetProfile().get_Item(0).SketchPlane.GetPlane();
-    speckleExtrusionRoof.referenceLine = new SOG.Line(
-      _pointConverter.Convert(plane.Origin.Add(plane.XVec.Normalize().Negate())),
-      _pointConverter.Convert(plane.Origin)
-    );
+    SOG.Line referenceLine =
+      new(
+        _pointConverter.Convert(plane.Origin.Add(plane.XVec.Normalize().Negate())),
+        _pointConverter.Convert(plane.Origin)
+      );
     var level = _parameterValueExtractor.GetValueAsDocumentObject<DB.Level>(
       target,
       DB.BuiltInParameter.ROOF_CONSTRAINT_LEVEL_PARAM
     );
-    speckleExtrusionRoof.level = _levelConverter.Convert(level);
-    speckleExtrusionRoof.outline = _modelCurveArrayConverter.Convert(target.GetProfile());
-
+    RevitLevel speckleLevel = _levelConverter.Convert(level);
+    SOG.Polycurve outline = _modelCurveArrayConverter.Convert(target.GetProfile());
     var elementType = (DB.ElementType)target.Document.GetElement(target.GetTypeId());
-    speckleExtrusionRoof.type = elementType.Name;
-    speckleExtrusionRoof.family = elementType.FamilyName;
+    List<SOG.Mesh> displayValue = _displayValueExtractor.GetDisplayValue(target);
+
+    RevitExtrusionRoof speckleExtrusionRoof =
+      new()
+      {
+        start = _parameterValueExtractor.GetValueAsDouble(target, DB.BuiltInParameter.EXTRUSION_START_PARAM),
+        end = _parameterValueExtractor.GetValueAsDouble(target, DB.BuiltInParameter.EXTRUSION_END_PARAM),
+        type = elementType.Name,
+        family = elementType.FamilyName,
+        outline = outline,
+        referenceLine = referenceLine,
+        level = speckleLevel,
+        displayValue = displayValue,
+        units = _contextStack.Current.SpeckleUnits
+      };
 
     _parameterObjectAssigner.AssignParametersToBase(target, speckleExtrusionRoof);
-    speckleExtrusionRoof.displayValue = _displayValueExtractor.GetDisplayValue(target);
-    speckleExtrusionRoof.elements = _hostedElementConverter
-      .ConvertHostedElements(target.GetHostedElementIds())
-      .ToList();
 
     return speckleExtrusionRoof;
   }

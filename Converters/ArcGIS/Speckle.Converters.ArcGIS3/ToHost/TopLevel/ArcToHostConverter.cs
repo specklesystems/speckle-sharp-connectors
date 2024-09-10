@@ -1,6 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Models;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.TopLevel;
 
@@ -25,7 +25,7 @@ public class ArcToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG.
   {
     if (target.startPoint.z != target.midPoint.z || target.startPoint.z != target.endPoint.z)
     {
-      throw new ArgumentException("Only Arc in XY plane are supported");
+      throw new ArgumentException("Only Arcs in XY plane are supported");
     }
     ACG.MapPoint fromPt = _pointConverter.Convert(target.startPoint);
     ACG.MapPoint toPt = _pointConverter.Convert(target.endPoint);
@@ -35,13 +35,13 @@ public class ArcToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG.
       fromPt,
       toPt,
       new ACG.Coordinate2D(midPt),
-      _contextStack.Current.Document.Map.SpatialReference
+      _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference
     );
 
     return new ACG.PolylineBuilderEx(
       segment,
       ACG.AttributeFlags.HasZ,
-      _contextStack.Current.Document.Map.SpatialReference
+      _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference
     ).ToGeometry();
   }
 }

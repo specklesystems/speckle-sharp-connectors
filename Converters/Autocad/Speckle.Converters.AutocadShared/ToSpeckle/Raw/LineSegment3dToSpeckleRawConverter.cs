@@ -25,6 +25,6 @@ public class LineSegment3dToSpeckleRawConverter : ITypedConverter<AG.LineSegment
     )
     {
       length = target.Length,
-      domain = new SOP.Interval(0, target.Length),
+      domain = new SOP.Interval { start = 0, end = target.Length },
     };
 }

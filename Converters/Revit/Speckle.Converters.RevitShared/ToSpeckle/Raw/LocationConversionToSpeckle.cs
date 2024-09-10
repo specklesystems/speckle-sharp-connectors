@@ -1,7 +1,7 @@
-using Objects;
-using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common;
-using Speckle.Core.Models;
+using Speckle.Converters.Common.Objects;
+using Speckle.Objects;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 

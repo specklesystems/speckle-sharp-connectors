@@ -7,10 +7,10 @@ using Revit.Async;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.Revit.Plugin;
-using Speckle.Connectors.Utils;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Core.Logging;
 using Speckle.Newtonsoft.Json;
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.HostApp;
 
@@ -40,15 +40,18 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     _documentModelStorageSchema = documentModelStorageSchema;
     _idStorageSchema = idStorageSchema;
 
-    UIApplication uiApplication = _revitContext.UIApplication.NotNull();
+    _idleManager.RunAsync(() =>
+    {
+      UIApplication uiApplication = _revitContext.UIApplication.NotNull();
 
-    uiApplication.ViewActivated += (s, e) => topLevelExceptionHandler.CatchUnhandled(() => OnViewActivated(s, e));
+      uiApplication.ViewActivated += (s, e) => topLevelExceptionHandler.CatchUnhandled(() => OnViewActivated(s, e));
 
-    uiApplication.Application.DocumentOpening += (_, _) =>
-      topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
+      uiApplication.Application.DocumentOpening += (_, _) =>
+        topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
 
-    uiApplication.Application.DocumentOpened += (_, _) =>
-      topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
+      uiApplication.Application.DocumentOpened += (_, _) =>
+        topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
+    });
 
     Models.CollectionChanged += (_, _) => topLevelExceptionHandler.CatchUnhandled(WriteToFile);
 
@@ -61,7 +64,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
   /// <summary>
   /// This is the place where we track document switch for new document -> Responsible to Read from new doc
   /// </summary>
-  private void OnViewActivated(object sender, ViewActivatedEventArgs e)
+  private void OnViewActivated(object? _, ViewActivatedEventArgs e)
   {
     if (e.Document == null)
     {
@@ -75,11 +78,14 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     }
 
     IsDocumentInit = true;
-    _idleManager.SubscribeToIdle(() =>
-    {
-      ReadFromFile();
-      OnDocumentChanged();
-    });
+    _idleManager.SubscribeToIdle(
+      nameof(RevitDocumentStore),
+      () =>
+      {
+        ReadFromFile();
+        OnDocumentChanged();
+      }
+    );
   }
 
   public override void WriteToFile()

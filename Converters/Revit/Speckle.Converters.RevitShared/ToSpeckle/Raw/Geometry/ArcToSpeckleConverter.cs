@@ -1,7 +1,7 @@
-using Objects.Primitive;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Objects.Primitive;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -31,8 +31,8 @@ public class ArcToSpeckleConverter : ITypedConverter<DB.Arc, SOG.Arc>
     var arcPlane = DB.Plane.CreateByOriginAndBasis(target.Center, target.XDirection, target.YDirection);
     DB.XYZ center = target.Center;
 
-    DB.XYZ dir0 = (target.GetEndPoint(0) - center).Normalize();
-    DB.XYZ dir1 = (target.GetEndPoint(1) - center).Normalize();
+    DB.XYZ dir0 = target.GetEndPoint(0).Subtract(center).Normalize();
+    DB.XYZ dir1 = target.GetEndPoint(1).Subtract(center).Normalize();
 
     DB.XYZ start = target.Evaluate(0, true);
     DB.XYZ end = target.Evaluate(1, true);
@@ -53,7 +53,7 @@ public class ArcToSpeckleConverter : ITypedConverter<DB.Arc, SOG.Arc>
       startPoint = _xyzToPointConverter.Convert(start),
       midPoint = _xyzToPointConverter.Convert(mid),
       length = _scalingService.ScaleLength(target.Length),
-      domain = new Interval(target.GetEndParameter(0), target.GetEndParameter(1))
+      domain = new Interval { start = target.GetEndParameter(0), end = target.GetEndParameter(1) }
     };
   }
 }

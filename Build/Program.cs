@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.IO.Compression;
 using Build;
 using GlobExpressions;
@@ -11,11 +8,14 @@ const string CLEAN = "clean";
 const string RESTORE = "restore";
 const string BUILD = "build";
 const string TEST = "test";
+const string TEST_ONLY = "test-only";
 const string FORMAT = "format";
 const string ZIP = "zip";
 const string VERSION = "version";
 const string RESTORE_TOOLS = "restore-tools";
 const string BUILD_SERVER_VERSION = "build-server-version";
+const string CLEAN_LOCKS = "clean-locks";
+const string CHECK_SOLUTIONS = "check-solutions";
 
 //need to pass arguments
 /*var arguments = new List<string>();
@@ -25,6 +25,20 @@ if (args.Length > 1)
   args = new[] { arguments.First() };
   //arguments = arguments.Skip(1).ToList();
 }*/
+
+Target(
+  CLEAN_LOCKS,
+  () =>
+  {
+    foreach (var f in Glob.Files(".", "**/*.lock.json"))
+    {
+      Console.WriteLine("Found and will delete: " + f);
+      File.Delete(f);
+    }
+    Console.WriteLine("Running restore now.");
+    Run("dotnet", "restore .\\Speckle.Connectors.sln --no-cache");
+  }
+);
 
 Target(
   CLEAN,
@@ -82,6 +96,7 @@ Target(
 
 Target(
   RESTORE,
+  DependsOn(FORMAT),
   Consts.Solutions,
   s =>
   {
@@ -107,28 +122,33 @@ Target(
     var version = Environment.GetEnvironmentVariable("GitVersion_FullSemVer") ?? "3.0.0-localBuild";
     var fileVersion = Environment.GetEnvironmentVariable("GitVersion_AssemblySemFileVer") ?? "3.0.0.0";
     Console.WriteLine($"Version: {version} & {fileVersion}");
-    Run(
-      "dotnet",
-      $"build {s} -c Release --no-restore -p:IsDesktopBuild=false -p:Version={version} -p:FileVersion={fileVersion} -v:m"
-    );
+    Run("dotnet", $"build {s} -c Release --no-restore -p:Version={version} -p:FileVersion={fileVersion} -v:m");
+  }
+);
+
+Target(CHECK_SOLUTIONS, Solutions.CompareConnectorsToLocal);
+
+Target(
+  TEST,
+  DependsOn(BUILD, CHECK_SOLUTIONS),
+  Glob.Files(".", "**/*.Tests.csproj"),
+  file =>
+  {
+    Run("dotnet", $"test {file} -c Release --no-build --no-restore --verbosity=minimal");
   }
 );
 
 Target(
-  TEST,
-  DependsOn(BUILD),
-  Consts.TestProjects,
-  t =>
+  TEST_ONLY,
+  DependsOn(FORMAT),
+  Glob.Files(".", "**/*.Tests.csproj"),
+  file =>
   {
-    IEnumerable<string> GetFiles(string d)
-    {
-      return Glob.Files(".", d);
-    }
-
-    foreach (var file in GetFiles($"**/{t}.csproj"))
-    {
-      Run("dotnet", $"test {file} -c Release --no-build --no-restore --verbosity=normal");
-    }
+    Run("dotnet", $"restore {file} --locked-mode");
+    Run(
+      "dotnet",
+      $"test {file} -c Release --no-restore --verbosity=minimal  /p:AltCover=true /p:AltCoverAttributeFilter=ExcludeFromCodeCoverage /p:AltCoverVerbosity=Warning"
+    );
   }
 );
 

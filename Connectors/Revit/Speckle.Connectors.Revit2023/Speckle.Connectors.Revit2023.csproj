@@ -1,12 +1,16 @@
-<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
-    <UseWpf>true</UseWpf>
-    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+    <UseWpf>true</UseWpf>    
+    <RevitVersion>2023</RevitVersion>
+    <DefineConstants>$(DefineConstants);REVIT2023;REVIT2022_OR_GREATER;REVIT2023_OR_GREATER</DefineConstants>
+    <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
 
   <Import Project="..\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems" Label="Shared" />
+
+  <Import Project="..\Speckle.Connectors.RevitShared.Cef\Speckle.Connectors.RevitShared.Cef.projitems" Label="Shared" />
   
   <ItemGroup>
     <Reference Include="PresentationCore" />
@@ -34,21 +38,10 @@
     <PackageReference Include="Revit.Async" />
   </ItemGroup>
 
-  <Target AfterTargets="Clean" Name="CleanAddinFolder">
-    <RemoveDir Directories="$(TargetDir);$(ProjectDir)\..\Release\Release2023;$(AppData)\Autodesk\Revit\Addins\2023\Speckle.Connectors.Revit2023;" />
-    <Delete Files="$(AppData)\Autodesk\Revit\Addins\2023\Speckle.Connectors.Revit2023.addin" />
-  </Target>
-
-  <Target Name="AfterBuildMigrated" AfterTargets="Build" Condition="$([MSBuild]::IsOsPlatform('Windows'))">
-    <CallTarget Condition="'$(IsDesktopBuild)' == true" Targets="AfterBuildDebug" />
-  </Target>
-
-  <Target Name="AfterBuildDebug">
-    <ItemGroup>
-      <RevitDLLs Include="$(TargetDir)\**\*.*" Exclude="$(TargetDir)*.addin" />
-      <SourceManifest Include="$(TargetDir)\Plugin\*.addin" />
-    </ItemGroup>
-    <Copy DestinationFolder="$(AppData)\Autodesk\REVIT\Addins\2023\Speckle.Connectors.Revit2023\%(RecursiveDir)" SourceFiles="@(RevitDLLs)" />
-    <Copy DestinationFolder="$(AppData)\Autodesk\REVIT\Addins\2023\" SourceFiles="@(SourceManifest)" />
-  </Target>
+  <ItemGroup>
+    <None Remove="Plugin\Speckle.Connectors.Revit2023.addin" />
+    <Content Include="Plugin\Speckle.Connectors.Revit2023.addin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>

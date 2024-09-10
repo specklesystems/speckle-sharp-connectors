@@ -1,7 +1,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Kits;
-using Speckle.Core.Models;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.TopLevel;
 
@@ -24,12 +24,11 @@ public class CircleToHostConverter : IToHostTopLevelConverter, ITypedConverter<S
 
   public ACG.Polyline Convert(SOG.Circle target)
   {
-    if (target.radius == null)
-    {
-      throw new SpeckleConversionException("Conversion failed: Circle doesn't have a radius");
-    }
     if (
-      target.plane.normal.x != 0 || target.plane.normal.y != 0 || target.plane.xdir.z != 0 || target.plane.ydir.z != 0
+      target.plane.normal.x != 0
+      || target.plane.normal.y != 0
+      || target.plane.xdir.z != 0
+      || target.plane.ydir.z != 0
     )
     {
       throw new ArgumentException("Only Circles in XY plane are supported");
@@ -43,13 +42,13 @@ public class CircleToHostConverter : IToHostTopLevelConverter, ITypedConverter<S
       new ACG.Coordinate2D(centerPt.X, centerPt.Y),
       (double)target.radius * scaleFactor,
       ACG.ArcOrientation.ArcClockwise,
-      _contextStack.Current.Document.Map.SpatialReference
+      _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference
     );
 
     return new ACG.PolylineBuilderEx(
       circleSegment,
       ACG.AttributeFlags.HasZ,
-      _contextStack.Current.Document.Map.SpatialReference
+      _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference
     ).ToGeometry();
   }
 }

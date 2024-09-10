@@ -1,33 +1,27 @@
-using ArcGIS.Core.CIM;
 using ArcGIS.Core.Data;
 using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Mapping;
-using Objects.GIS;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Models;
+using Speckle.Objects;
+using Speckle.Objects.GIS;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToSpeckle.TopLevel;
 
 [NameAndRankValue(nameof(FeatureLayer), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConverter<FeatureLayer, VectorLayer>
 {
-  private readonly ITypedConverter<Row, GisFeature> _gisFeatureConverter;
-  private readonly IFeatureClassUtils _featureClassUtils;
-  private readonly IArcGISFieldUtils _fieldsUtils;
+  private readonly ITypedConverter<(Row, string), IGisFeature> _gisFeatureConverter;
   private readonly IConversionContextStack<ArcGISDocument, Unit> _contextStack;
 
   public VectorLayerToSpeckleConverter(
-    ITypedConverter<Row, GisFeature> gisFeatureConverter,
-    IFeatureClassUtils featureClassUtils,
-    IArcGISFieldUtils fieldsUtils,
+    ITypedConverter<(Row, string), IGisFeature> gisFeatureConverter,
     IConversionContextStack<ArcGISDocument, Unit> contextStack
   )
   {
     _gisFeatureConverter = gisFeatureConverter;
-    _featureClassUtils = featureClassUtils;
-    _fieldsUtils = fieldsUtils;
     _contextStack = contextStack;
   }
 
@@ -36,43 +30,17 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
     return Convert((FeatureLayer)target);
   }
 
-  private string AssignSpeckleGeometryType(esriGeometryType nativeGeometryType)
-  {
-    return nativeGeometryType switch
-    {
-      esriGeometryType.esriGeometryMultipoint => GISLayerGeometryType.POINT,
-      esriGeometryType.esriGeometryPoint => GISLayerGeometryType.POINT,
-      esriGeometryType.esriGeometryLine => GISLayerGeometryType.POLYLINE,
-      esriGeometryType.esriGeometryPolyline => GISLayerGeometryType.POLYLINE,
-      esriGeometryType.esriGeometryPolygon => GISLayerGeometryType.POLYGON,
-      esriGeometryType.esriGeometryMultiPatch => GISLayerGeometryType.MULTIPATCH,
-      _ => GISLayerGeometryType.NONE,
-    };
-  }
-
   public VectorLayer Convert(FeatureLayer target)
   {
     VectorLayer speckleLayer = new();
 
-    // get document CRS (for writing geometry coords)
-    var spatialRef = _contextStack.Current.Document.Map.SpatialReference;
-    speckleLayer.crs = new CRS
-    {
-      wkt = spatialRef.Wkt,
-      name = spatialRef.Name,
-      units_native = spatialRef.Unit.ToString(),
-    };
-
-    // other properties
-    speckleLayer.name = target.Name;
-    speckleLayer.units = _contextStack.Current.SpeckleUnits;
-
     // get feature class fields
     var allLayerAttributes = new Base();
     var dispayTable = target as IDisplayTable;
-    IReadOnlyList<FieldDescription> allFieldDescriptions = dispayTable.GetFieldDescriptions();
-    List<FieldDescription> addedFieldDescriptions = new();
-    foreach (FieldDescription field in allFieldDescriptions)
+    HashSet<string> visibleFieldDescriptions = new();
+
+    // POC: this should be refactored into a stored method of supported/unsupported field types, since this logic is duplicated in GisFeature converter
+    foreach (FieldDescription field in dispayTable.GetFieldDescriptions())
     {
       if (field.IsVisible)
       {
@@ -86,20 +54,22 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
         {
           continue;
         }
-        addedFieldDescriptions.Add(field);
+
+        visibleFieldDescriptions.Add(field.Name);
         allLayerAttributes[name] = GISAttributeFieldType.FieldTypeToSpeckle(field.Type);
       }
     }
     speckleLayer.attributes = allLayerAttributes;
 
     // get a simple geometry type
-    string spekleGeometryType = AssignSpeckleGeometryType(target.ShapeType);
+    string spekleGeometryType = GISLayerGeometryType.LayerGeometryTypeToSpeckle(target.ShapeType);
     speckleLayer.geomType = spekleGeometryType;
 
     // search the rows
     // RowCursor is IDisposable but is not being correctly picked up by IDE warnings.
     // This means we need to be carefully adding using statements based on the API documentation coming from each method/class
 
+    int count = 1;
     using (RowCursor rowCursor = target.Search())
     {
       while (rowCursor.MoveNext())
@@ -107,20 +77,24 @@ public class VectorLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
         // Same IDisposable issue appears to happen on Row class too. Docs say it should always be disposed of manually by the caller.
         using (Row row = rowCursor.Current)
         {
-          GisFeature element = _gisFeatureConverter.Convert(row);
+          string appId = $"{target.URI}_{count}";
+          IGisFeature element = _gisFeatureConverter.Convert((row, appId));
 
-          // replace element "attributes", to remove those non-visible on Layer level
+          // create new element attributes from the existing attributes, based on the vector layer visible fields
+          // POC: this should be refactored to store the feeature layer properties in the context stack, so this logic can be done in the gisFeatureConverter
           Base elementAttributes = new();
-          foreach (FieldDescription field in addedFieldDescriptions)
+          foreach (string elementAtt in element.attributes.GetDynamicPropertyKeys())
           {
-            if (field.IsVisible)
+            if (visibleFieldDescriptions.Contains(elementAtt))
             {
-              elementAttributes[field.Name] = element.attributes[field.Name];
+              elementAttributes[elementAtt] = element.attributes[elementAtt];
             }
           }
+
           element.attributes = elementAttributes;
-          speckleLayer.elements.Add(element);
+          speckleLayer.elements.Add((Base)element);
         }
+        count++;
       }
     }
 

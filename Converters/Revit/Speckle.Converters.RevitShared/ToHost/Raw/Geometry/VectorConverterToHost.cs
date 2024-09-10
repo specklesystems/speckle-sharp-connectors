@@ -1,7 +1,7 @@
 using Autodesk.Revit.DB;
-using Objects.Geometry;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Objects.Geometry;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -23,6 +23,6 @@ public class VectorConverterToHost : ITypedConverter<SOG.Vector, DB.XYZ>
       _scalingService.ScaleToNative(target.y, target.units),
       _scalingService.ScaleToNative(target.z, target.units)
     );
-    return _referencePointConverter.ToInternalCoordinates(revitVector, false);
+    return _referencePointConverter.ConvertToInternalCoordinates(revitVector, false);
   }
 }

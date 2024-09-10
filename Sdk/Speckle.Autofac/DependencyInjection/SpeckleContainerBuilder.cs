@@ -1,6 +1,5 @@
 ﻿using System.Reflection;
 using Autofac;
-using Microsoft.Extensions.Logging;
 using Speckle.Autofac.Files;
 using Module = Autofac.Module;
 
@@ -64,7 +63,9 @@ public class SpeckleContainerBuilder
       return assembly;
     }
     // POC: catch only certain exceptions
-    catch (Exception ex) when (!ex.IsFatal())
+#pragma warning disable CA1031
+    catch (Exception)
+#pragma warning restore CA1031
     {
       return null;
     }
@@ -88,8 +89,8 @@ public class SpeckleContainerBuilder
     {
       var types = new List<Type>();
       foreach (
-        var asm in AppDomain.CurrentDomain
-          .GetAssemblies()
+        var asm in AppDomain
+          .CurrentDomain.GetAssemblies()
           .Where(x => x.GetName().Name.StartsWith("Speckle", StringComparison.OrdinalIgnoreCase))
       )
       {
@@ -101,7 +102,7 @@ public class SpeckleContainerBuilder
   public IReadOnlyList<Type> SpeckleTypes => _types.Value;
   public ContainerBuilder ContainerBuilder { get; }
 
-  private class ModuleAdapter : Module
+  private sealed class ModuleAdapter : Module
   {
     private readonly ISpeckleModule _speckleModule;
 
@@ -157,6 +158,13 @@ public class SpeckleContainerBuilder
     return this;
   }
 
+  public SpeckleContainerBuilder AddSingleton<T>(Func<ISpeckleContainerContext, T> action)
+    where T : notnull
+  {
+    ContainerBuilder.Register<T>(c => action(new SpeckleContainerContext(c))).SingleInstance();
+    return this;
+  }
+
   public SpeckleContainerBuilder AddSingleton<TInterface, T>(string param, string value)
     where T : class, TInterface
     where TInterface : notnull
@@ -202,7 +210,11 @@ public class SpeckleContainerBuilder
     return this;
   }
 
-  //Scans assembly for classes that implement the same name interface and registers as transient
+  /// <summary>
+  /// Scans the assembly.
+  /// Scan matches classes with interfaces that match Iclass and registers them as Transient with the interface.
+  /// Do this when scoping isn't known but all types should be registered for DI.
+  /// </summary>
   public SpeckleContainerBuilder ScanAssembly(Assembly assembly)
   {
     ContainerBuilder
@@ -213,6 +225,13 @@ public class SpeckleContainerBuilder
     return this;
   }
 
+  /// <summary>
+  /// Scans the assembly containing the type T.
+  /// Scan matches classes with interfaces that match Iclass and registers them as Transient with the interface.
+  /// Do this when scoping isn't known but all types should be registered for DI.
+  /// </summary>
+  /// <typeparam name="T"></typeparam>
+  /// <returns></returns>
   public SpeckleContainerBuilder ScanAssemblyOfType<T>() => ScanAssembly(typeof(T).Assembly);
 
   private static IEnumerable<Type> GetInterfacesWithNameName(Type type) =>
@@ -221,14 +240,6 @@ public class SpeckleContainerBuilder
   public SpeckleContainer Build()
   {
     var container = ContainerBuilder.Build();
-
-    // POC: we could create the factory on construction of the container and then inject that and store it
-    var logger = container.Resolve<ILoggerFactory>().CreateLogger<SpeckleContainerBuilder>();
-
-    // POC: we could probably expand on this
-    List<string> assemblies = AppDomain.CurrentDomain.GetAssemblies().Select(x => x.FullName).ToList();
-    logger.LogInformation("Loaded assemblies: {@Assemblies}", assemblies);
-
     return new SpeckleContainer(container);
   }
 }

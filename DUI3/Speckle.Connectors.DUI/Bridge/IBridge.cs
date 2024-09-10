@@ -12,7 +12,7 @@ public interface IBridge
   // POC: documnetation comments
   string FrontendBoundName { get; }
 
-  void AssociateWithBinding(IBinding binding, Action<string> scriptMethod, object browser, Action showDevToolsAction);
+  void AssociateWithBinding(IBinding binding);
 
   /// <summary>
   /// This method is called by the Frontend bridge to understand what it can actually call. It should return the method names of the bindings that this bridge wraps around.
@@ -33,16 +33,22 @@ public interface IBridge
   /// Run actions on main thread.
   /// Some applications might need to run some operations on main thread as deferred actions.
   /// </summary>
+  /// <remarks>
+  /// Exceptions will be caught by <see cref="TopLevelExceptionHandler"/>
+  /// </remarks>
   /// <param name="action"> Action to run on main thread.</param>
   public void RunOnMainThread(Action action);
 
   /// <param name="eventName"></param>
-  /// <exception cref="InvalidOperationException">Bridge was not associated with a binding</exception>
+  /// <exception cref="InvalidOperationException">Bridge was not initialized with a binding</exception>
   public void Send(string eventName);
 
   /// <inheritdoc cref="Send(string)"/>
   /// <param name="data">data to store</param>
   /// <typeparam name="T"></typeparam>
+  /// <exception cref="InvalidOperationException">Bridge was not initialized with a binding</exception>
   public void Send<T>(string eventName, T data)
     where T : class;
+
+  public ITopLevelExceptionHandler TopLevelExceptionHandler { get; }
 }

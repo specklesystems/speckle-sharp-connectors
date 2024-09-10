@@ -1,11 +1,11 @@
-﻿using Speckle.Autofac.DependencyInjection;
+using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Connectors.Utils.Operations;
-using Speckle.Core.Transports;
 using Speckle.Newtonsoft.Json;
 using Speckle.Newtonsoft.Json.Serialization;
+using Speckle.Sdk.Transports;
 
 namespace Speckle.Connectors.DUI;
 
@@ -15,11 +15,11 @@ public static class ContainerRegistration
   {
     // send operation and dependencies
     speckleContainerBuilder.AddSingletonInstance<ISyncToThread, SyncToUIThread>();
-    speckleContainerBuilder.AddTransient<ITransport, ServerTransport>();
     speckleContainerBuilder.AddSingleton<IRootObjectSender, RootObjectSender>();
     speckleContainerBuilder.AddTransient<IBridge, BrowserBridge>(); // POC: Each binding should have it's own bridge instance
-    speckleContainerBuilder.AddSingleton<ITopLevelExceptionHandler, TopLevelExceptionHandler>();
     speckleContainerBuilder.AddSingleton(GetJsonSerializerSettings());
+    speckleContainerBuilder.ScanAssemblyOfType<IdleCallManager>();
+    speckleContainerBuilder.ScanAssemblyOfType<IServerTransportFactory>();
   }
 
   private static JsonSerializerSettings GetJsonSerializerSettings()

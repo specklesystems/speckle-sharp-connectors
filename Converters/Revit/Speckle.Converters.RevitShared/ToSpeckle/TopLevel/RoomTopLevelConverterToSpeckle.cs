@@ -1,8 +1,8 @@
-﻿using Objects;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Core.Models;
+using Speckle.Objects;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -15,6 +15,7 @@ public class RoomTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DBA
   private readonly ParameterValueExtractor _parameterValueExtractor;
   private readonly ITypedConverter<DB.Location, Base> _locationConverter;
   private readonly ITypedConverter<IList<DB.BoundarySegment>, SOG.Polycurve> _boundarySegmentConverter;
+  private readonly IRevitConversionContextStack _contextStack;
 
   public RoomTopLevelConverterToSpeckle(
     DisplayValueExtractor displayValueExtractor,
@@ -22,7 +23,8 @@ public class RoomTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DBA
     ITypedConverter<DB.Level, SOBR.RevitLevel> levelConverter,
     ParameterValueExtractor parameterValueExtractor,
     ITypedConverter<DB.Location, Base> locationConverter,
-    ITypedConverter<IList<DB.BoundarySegment>, SOG.Polycurve> boundarySegmentConverter
+    ITypedConverter<IList<DB.BoundarySegment>, SOG.Polycurve> boundarySegmentConverter,
+    IRevitConversionContextStack contextStack
   )
   {
     _displayValueExtractor = displayValueExtractor;
@@ -31,6 +33,7 @@ public class RoomTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DBA
     _parameterValueExtractor = parameterValueExtractor;
     _locationConverter = locationConverter;
     _boundarySegmentConverter = boundarySegmentConverter;
+    _contextStack = contextStack;
   }
 
   public override SOBE.Room Convert(DBA.Room target)
@@ -56,7 +59,8 @@ public class RoomTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DBA
       displayValue = displayValue,
       area = area,
       outline = outline,
-      voids = voids
+      voids = voids,
+      units = _contextStack.Current.SpeckleUnits
     };
 
     _parameterObjectAssigner.AssignParametersToBase(target, speckleRoom);

@@ -1,7 +1,7 @@
 using Speckle.Converters.Autocad.Extensions;
-using Speckle.Converters.Common.Objects;
-using Speckle.Core.Kits;
 using Speckle.Converters.Common;
+using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.Autocad2023.ToHost.Raw;
 

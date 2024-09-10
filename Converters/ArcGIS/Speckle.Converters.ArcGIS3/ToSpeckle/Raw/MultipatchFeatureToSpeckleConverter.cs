@@ -1,10 +1,13 @@
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Models;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
 
+/// <summary>
+/// Converts Multipatch objects into a list containing some combination of GisMultipatchGeometry or PolygonGeometry3d objects
+/// </summary>
 public class MultipatchFeatureToSpeckleConverter : ITypedConverter<ACG.Multipatch, IReadOnlyList<Base>>
 {
   private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;
@@ -78,7 +81,7 @@ public class MultipatchFeatureToSpeckleConverter : ITypedConverter<ACG.Multipatc
         polygonGeom = new() { voids = new List<SOG.Polyline>() };
         List<double> pointCoords = allPoints[idx].SelectMany(x => new List<double>() { x.x, x.y, x.z }).ToList();
 
-        SOG.Polyline polyline = new(pointCoords, _contextStack.Current.SpeckleUnits) { };
+        SOG.Polyline polyline = new() { value = pointCoords, units = _contextStack.Current.SpeckleUnits };
         polygonGeom.boundary = polyline;
 
         // if it's already the last part, add to list
@@ -90,7 +93,7 @@ public class MultipatchFeatureToSpeckleConverter : ITypedConverter<ACG.Multipatc
       else if (patchType == ACG.PatchType.Ring)
       {
         List<double> pointCoords = allPoints[idx].SelectMany(x => new List<double>() { x.x, x.y, x.z }).ToList();
-        SOG.Polyline polyline = new(pointCoords, _contextStack.Current.SpeckleUnits) { };
+        SOG.Polyline polyline = new() { value = pointCoords, units = _contextStack.Current.SpeckleUnits };
 
         // every outer ring is oriented clockwise
         bool isClockwise = polyline.IsClockwisePolygon();

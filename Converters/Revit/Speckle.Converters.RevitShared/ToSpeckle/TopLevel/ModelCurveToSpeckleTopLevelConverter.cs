@@ -1,7 +1,8 @@
-using Objects;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Objects;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -28,7 +29,7 @@ public class ModelCurveToSpeckleTopLevelConverter : BaseTopLevelConverterToSpeck
     {
       baseCurve = _curveConverter.Convert(target.GeometryCurve),
       lineStyle = target.LineStyle.Name,
-      elementId = target.Id.ToString(),
+      elementId = target.Id.ToString().NotNull(),
       units = _conversionContext.Current.SpeckleUnits
     };
 

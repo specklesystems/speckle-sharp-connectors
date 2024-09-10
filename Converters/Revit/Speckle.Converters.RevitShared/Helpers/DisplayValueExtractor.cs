@@ -1,48 +1,41 @@
 using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.RevitShared.Settings;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.Helpers;
 
 // POC: needs breaking down https://spockle.atlassian.net/browse/CNX-9354
 public sealed class DisplayValueExtractor
 {
-  private readonly ITypedConverter<Dictionary<DB.ElementId, List<DB.Mesh>>, List<SOG.Mesh>> _meshByMaterialConverter;
+  private readonly ITypedConverter<
+    (Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId),
+    List<SOG.Mesh>
+  > _meshByMaterialConverter;
   private readonly ILogger<DisplayValueExtractor> _logger;
+  private readonly IRevitConversionContextStack _revitConversionContextStack;
 
   public DisplayValueExtractor(
-    ITypedConverter<Dictionary<DB.ElementId, List<DB.Mesh>>, List<SOG.Mesh>> meshByMaterialConverter,
-    ILogger<DisplayValueExtractor> logger
+    ITypedConverter<
+      (Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId),
+      List<SOG.Mesh>
+    > meshByMaterialConverter,
+    ILogger<DisplayValueExtractor> logger,
+    IRevitConversionContextStack revitConversionContextStack
   )
   {
     _meshByMaterialConverter = meshByMaterialConverter;
     _logger = logger;
+    _revitConversionContextStack = revitConversionContextStack;
   }
 
-  public List<SOG.Mesh> GetDisplayValue(
-    DB.Element element,
-    DB.Options? options = null,
-    // POC: should this be part of the context?
-    DB.Transform? transform = null
-  )
+  public List<SOG.Mesh> GetDisplayValue(DB.Element element, DB.Options? options = null)
   {
-    var displayMeshes = new List<SOG.Mesh>();
-
-    // test if the element is a group first
-    if (element is DB.Group g)
-    {
-      foreach (var id in g.GetMemberIds())
-      {
-        var groupMeshes = GetDisplayValue(element.Document.GetElement(id), options);
-        displayMeshes.AddRange(groupMeshes);
-      }
-      return displayMeshes;
-    }
-
-    var (solids, meshes) = GetSolidsAndMeshesFromElement(element, options, transform);
+    var (solids, meshes) = GetSolidsAndMeshesFromElement(element, options);
 
     var meshesByMaterial = GetMeshesByMaterial(meshes, solids);
 
-    return _meshByMaterialConverter.Convert(meshesByMaterial);
+    return _meshByMaterialConverter.Convert((meshesByMaterial, element.Id));
   }
 
   private static Dictionary<DB.ElementId, List<DB.Mesh>> GetMeshesByMaterial(
@@ -81,14 +74,22 @@ public sealed class DisplayValueExtractor
     return meshesByMaterial;
   }
 
-  private (List<DB.Solid>, List<DB.Mesh>) GetSolidsAndMeshesFromElement(
-    DB.Element element,
-    DB.Options? options,
-    DB.Transform? transform = null
-  )
+  // We do not handle DetailLevelType.Undefined behavior, so we don't use 'DB.ViewDetailLevel' enum directly as option in UI.
+  private readonly Dictionary<DetailLevelType, DB.ViewDetailLevel> _detailLevelMap =
+    new()
+    {
+      { DetailLevelType.Coarse, DB.ViewDetailLevel.Coarse },
+      { DetailLevelType.Medium, DB.ViewDetailLevel.Medium },
+      { DetailLevelType.Fine, DB.ViewDetailLevel.Fine }
+    };
+
+  private (List<DB.Solid>, List<DB.Mesh>) GetSolidsAndMeshesFromElement(DB.Element element, DB.Options? options)
   {
     //options = ViewSpecificOptions ?? options ?? new Options() { DetailLevel = DetailLevelSetting };
-    options ??= new DB.Options { DetailLevel = DB.ViewDetailLevel.Fine };
+    options ??= new DB.Options
+    {
+      DetailLevel = _detailLevelMap[_revitConversionContextStack.ToSpeckleSettings.DetailLevel]
+    };
 
     DB.GeometryElement geom;
     try
@@ -108,7 +109,7 @@ public sealed class DisplayValueExtractor
     if (geom != null)
     {
       // retrieves all meshes and solids from a geometry element
-      SortGeometry(element, solids, meshes, geom, transform?.Inverse);
+      SortGeometry(element, solids, meshes, geom);
     }
 
     return (solids, meshes);
@@ -124,132 +125,45 @@ public sealed class DisplayValueExtractor
   ///
   /// This remark also leads me to think that a family instance will not have top-level solids and geom instances.
   /// We are logging cases where this is not true.
+  ///
+  /// Note: this is basically a geometry unpacker for all types of geometry
   /// </summary>
   /// <param name="element"></param>
   /// <param name="solids"></param>
   /// <param name="meshes"></param>
   /// <param name="geom"></param>
-  /// <param name="inverseTransform"></param>
-  private void SortGeometry(
-    DB.Element element,
-    List<DB.Solid> solids,
-    List<DB.Mesh> meshes,
-    DB.GeometryElement geom,
-    DB.Transform? inverseTransform = null
-  )
+  private void SortGeometry(DB.Element element, List<DB.Solid> solids, List<DB.Mesh> meshes, DB.GeometryElement geom)
   {
-    var topLevelSolidsCount = 0;
-    var topLevelMeshesCount = 0;
-    var topLevelGeomElementCount = 0;
-    var topLevelGeomInstanceCount = 0;
-    bool hasSymbolGeometry = false;
-
     foreach (DB.GeometryObject geomObj in geom)
     {
-      // POC: switch could possibly become factory and IIndex<,> pattern and move conversions to
-      // separate IComeConversionInterfaces
+      if (SkipGeometry(geomObj, element))
+      {
+        continue;
+      }
+
       switch (geomObj)
       {
         case DB.Solid solid:
           // skip invalid solid
-          if (
-            solid.Faces.Size == 0
-            || Math.Abs(solid.SurfaceArea) == 0
-            || IsSkippableGraphicStyle(solid.GraphicsStyleId, element.Document)
-          )
+          if (solid.Faces.Size == 0 || Math.Abs(solid.SurfaceArea) == 0)
           {
             continue;
-          }
-
-          if (inverseTransform != null)
-          {
-            topLevelSolidsCount++;
-            solid = DB.SolidUtils.CreateTransformed(solid, inverseTransform);
           }
 
           solids.Add(solid);
           break;
         case DB.Mesh mesh:
-          if (IsSkippableGraphicStyle(mesh.GraphicsStyleId, element.Document))
-          {
-            continue;
-          }
-
-          if (inverseTransform != null)
-          {
-            topLevelMeshesCount++;
-            mesh = mesh.get_Transformed(inverseTransform);
-          }
 
           meshes.Add(mesh);
           break;
         case DB.GeometryInstance instance:
           // element transforms should not be carried down into nested geometryInstances.
           // Nested geomInstances should have their geom retreived with GetInstanceGeom, not GetSymbolGeom
-          if (inverseTransform != null)
-          {
-            topLevelGeomInstanceCount++;
-            SortGeometry(element, solids, meshes, instance.GetSymbolGeometry());
-            if (meshes.Count > 0 || solids.Count > 0)
-            {
-              hasSymbolGeometry = true;
-            }
-          }
-          else
-          {
-            SortGeometry(element, solids, meshes, instance.GetInstanceGeometry());
-          }
+          SortGeometry(element, solids, meshes, instance.GetInstanceGeometry());
           break;
         case DB.GeometryElement geometryElement:
-          if (inverseTransform != null)
-          {
-            topLevelGeomElementCount++;
-          }
           SortGeometry(element, solids, meshes, geometryElement);
           break;
-      }
-    }
-
-    if (inverseTransform != null)
-    {
-      LogInstanceMeshRetrievalWarnings(
-        element,
-        topLevelSolidsCount,
-        topLevelMeshesCount,
-        topLevelGeomElementCount,
-        hasSymbolGeometry
-      );
-    }
-  }
-
-  // POC: should be hoovered up with the new reporting, logging, exception philosophy
-  private void LogInstanceMeshRetrievalWarnings(
-    DB.Element element,
-    int topLevelSolidsCount,
-    int topLevelMeshesCount,
-    int topLevelGeomElementCount,
-    bool hasSymbolGeom
-  )
-  {
-    if (hasSymbolGeom)
-    {
-      if (topLevelSolidsCount > 0)
-      {
-        _logger.LogWarning(
-          $"Element of type {element.GetType()} with uniqueId {element.UniqueId} has valid symbol geometry and {topLevelSolidsCount} top level solids. See comment on method SortInstanceGeometry for link to RevitAPI docs that leads us to believe this shouldn't happen"
-        );
-      }
-      if (topLevelMeshesCount > 0)
-      {
-        _logger.LogWarning(
-          $"Element of type {element.GetType()} with uniqueId {element.UniqueId} has valid symbol geometry and {topLevelMeshesCount} top level meshes. See comment on method SortInstanceGeometry for link to RevitAPI docs that leads us to believe this shouldn't happen"
-        );
-      }
-      if (topLevelGeomElementCount > 0)
-      {
-        _logger.LogWarning(
-          $"Element of type {element.GetType()} with uniqueId {element.UniqueId} has valid symbol geometry and {topLevelGeomElementCount} top level geometry elements. See comment on method SortInstanceGeometry for link to RevitAPI docs that leads us to believe this shouldn't happen"
-        );
       }
     }
   }
@@ -259,28 +173,36 @@ public sealed class DisplayValueExtractor
   /// </summary>
   private readonly Dictionary<string, DB.GraphicsStyle> _graphicStyleCache = new();
 
-  /// <summary>
-  /// Exclude light source cones and potentially other geometries by their graphic style
-  /// </summary>
-  /// <param name="id"></param>
-  /// <param name="doc"></param>
-  /// <returns></returns>
-  private bool IsSkippableGraphicStyle(DB.ElementId id, DB.Document doc)
+  private bool SkipGeometry(DB.GeometryObject geomObj, DB.Element element)
   {
-    var key = id.ToString();
-    if (_graphicStyleCache.TryGetValue(key, out var graphicStyle))
+    if (geomObj.GraphicsStyleId == DB.ElementId.InvalidElementId)
     {
-      graphicStyle = (DB.GraphicsStyle)doc.GetElement(id);
-      _graphicStyleCache.Add(key, graphicStyle);
+      return false; // exit fast on a potential hot path
     }
 
-    if (
-      graphicStyle != null
-      && graphicStyle.GraphicsStyleCategory.Id.IntegerValue == (int)DB.BuiltInCategory.OST_LightingFixtureSource
-    )
+    DB.GraphicsStyle? bjk = null; // ask ogu why this variable is named like this
+
+    if (!_graphicStyleCache.ContainsKey(geomObj.GraphicsStyleId.ToString().NotNull()))
+    {
+      bjk = (DB.GraphicsStyle)element.Document.GetElement(geomObj.GraphicsStyleId);
+      _graphicStyleCache[geomObj.GraphicsStyleId.ToString().NotNull()] = bjk;
+    }
+    else
+    {
+      bjk = _graphicStyleCache[geomObj.GraphicsStyleId.ToString().NotNull()];
+    }
+
+#if REVIT2023_OR_GREATER
+    if (bjk?.GraphicsStyleCategory.BuiltInCategory == DB.BuiltInCategory.OST_LightingFixtureSource)
     {
       return true;
     }
+#else
+    if (bjk?.GraphicsStyleCategory.Id.IntegerValue == (int)DB.BuiltInCategory.OST_LightingFixtureSource)
+    {
+      return true;
+    }
+#endif
 
     return false;
   }

@@ -1,9 +1,9 @@
 using ArcGIS.Core.Data.Raster;
 using ArcGIS.Core.Geometry;
-using Objects.GIS;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Models;
+using Speckle.Objects.GIS;
+using Speckle.Sdk.Models;
 using RasterLayer = ArcGIS.Desktop.Mapping.RasterLayer;
 
 namespace Speckle.Converters.ArcGIS3.ToSpeckle.TopLevel;
@@ -32,21 +32,12 @@ public class RasterLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
   {
     var speckleLayer = new SGIS.RasterLayer();
 
-    // get document CRS (for writing geometry coords)
-    var spatialRef = _contextStack.Current.Document.Map.SpatialReference;
-    speckleLayer.crs = new CRS
-    {
-      wkt = spatialRef.Wkt,
-      name = spatialRef.Name,
-      units_native = spatialRef.Unit.ToString(),
-    };
-
     // layer native crs (for writing properties e.g. resolution, origin etc.)
     var spatialRefRaster = target.GetSpatialReference();
     // get active map CRS if layer CRS is empty
     if (spatialRefRaster.Unit is null)
     {
-      spatialRefRaster = _contextStack.Current.Document.Map.SpatialReference;
+      spatialRefRaster = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference;
     }
     speckleLayer.rasterCrs = new CRS
     {
@@ -55,12 +46,9 @@ public class RasterLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
       units_native = spatialRefRaster.Unit.ToString(),
     };
 
-    // other properties
-    speckleLayer.name = target.Name;
-    speckleLayer.units = _contextStack.Current.SpeckleUnits;
-
     // write details about the Raster
     RasterElement element = _gisRasterConverter.Convert(target.GetRaster());
+    element.applicationId = $"{target.URI}_0";
     speckleLayer.elements.Add(element);
 
     return speckleLayer;

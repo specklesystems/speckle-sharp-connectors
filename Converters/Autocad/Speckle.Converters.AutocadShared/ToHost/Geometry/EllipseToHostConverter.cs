@@ -1,7 +1,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Kits;
-using Speckle.Core.Models;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.ToHost.Geometry;
 
@@ -33,14 +33,8 @@ public class EllipseToHostConverter : IToHostTopLevelConverter, ITypedConverter<
     AG.Vector3d normal = _vectorConverter.Convert(target.plane.normal);
     AG.Vector3d xAxis = _vectorConverter.Convert(target.plane.xdir);
 
-    // POC: how possibly we might have firstRadius and secondRadius is possibly null?
-    if (target.firstRadius is null || target.secondRadius is null)
-    {
-      throw new ArgumentNullException(nameof(target), "Cannot convert ellipse without radius values.");
-    }
-
-    AG.Vector3d majorAxis = f * (double)target.firstRadius * xAxis.GetNormal();
-    double radiusRatio = (double)target.secondRadius / (double)target.firstRadius;
+    AG.Vector3d majorAxis = f * target.firstRadius * xAxis.GetNormal();
+    double radiusRatio = target.secondRadius / (double)target.firstRadius;
 
     // get trim
     double startAngle = 0;

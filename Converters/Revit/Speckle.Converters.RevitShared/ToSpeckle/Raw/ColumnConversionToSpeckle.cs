@@ -1,10 +1,11 @@
 using Autodesk.Revit.DB;
-using Objects;
-using Objects.BuiltElements.Revit;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Core.Models;
+using Speckle.Objects;
+using Speckle.Objects.BuiltElements.Revit;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -39,9 +40,19 @@ public class ColumnConversionToSpeckle : ITypedConverter<DB.FamilyInstance, Revi
   public RevitColumn Convert(DB.FamilyInstance target)
   {
     FamilySymbol symbol = (FamilySymbol)target.Document.GetElement(target.GetTypeId());
+    List<SOG.Mesh> displayValue = _displayValueExtractor.GetDisplayValue(target);
 
     RevitColumn speckleColumn =
-      new() { family = symbol.FamilyName, type = target.Document.GetElement(target.GetTypeId()).Name };
+      new()
+      {
+        family = symbol.FamilyName,
+        type = target.Document.GetElement(target.GetTypeId()).Name,
+        facingFlipped = target.FacingFlipped,
+        handFlipped = target.HandFlipped,
+        isSlanted = target.IsSlantedColumn,
+        displayValue = displayValue,
+        units = _contextStack.Current.SpeckleUnits
+      };
 
     if (
       _parameterValueExtractor.TryGetValueAsDocumentObject<Level>(
@@ -51,7 +62,7 @@ public class ColumnConversionToSpeckle : ITypedConverter<DB.FamilyInstance, Revi
       )
     )
     {
-      speckleColumn.level = _levelConverter.Convert(level.NotNull());
+      speckleColumn.level = _levelConverter.Convert(level);
     }
     if (
       _parameterValueExtractor.TryGetValueAsDocumentObject<Level>(
@@ -61,7 +72,7 @@ public class ColumnConversionToSpeckle : ITypedConverter<DB.FamilyInstance, Revi
       )
     )
     {
-      speckleColumn.topLevel = _levelConverter.Convert(topLevel.NotNull());
+      speckleColumn.topLevel = _levelConverter.Convert(topLevel);
     }
 
     if (
@@ -86,20 +97,14 @@ public class ColumnConversionToSpeckle : ITypedConverter<DB.FamilyInstance, Revi
       speckleColumn.topOffset = topOffset.NotNull();
     }
 
-    speckleColumn.facingFlipped = target.FacingFlipped;
-    speckleColumn.handFlipped = target.HandFlipped;
-    speckleColumn.isSlanted = target.IsSlantedColumn;
+    speckleColumn.baseLine =
+      GetBaseCurve(target, speckleColumn.topLevel?.elevation ?? -1, speckleColumn.topOffset)
+      ?? throw new SpeckleConversionException("Unable to find a valid baseCurve for column");
 
     if (target.Location is LocationPoint locationPoint)
     {
       speckleColumn.rotation = locationPoint.Rotation;
     }
-
-    speckleColumn.baseLine =
-      GetBaseCurve(target, speckleColumn.topLevel?.elevation ?? -1, speckleColumn.topOffset)
-      ?? throw new SpeckleConversionException("Unable to find a valid baseCurve for column");
-
-    speckleColumn.displayValue = _displayValueExtractor.GetDisplayValue(target);
 
     _parameterObjectAssigner.AssignParametersToBase(target, speckleColumn);
 
