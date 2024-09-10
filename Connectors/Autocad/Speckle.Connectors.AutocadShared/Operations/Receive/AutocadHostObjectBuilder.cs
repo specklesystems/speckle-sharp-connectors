@@ -59,6 +59,8 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     Action<string, double?>? onOperationProgressed,
     CancellationToken _
   ) =>
+    // NOTE: This is the only place we apply ISyncToThread across connectors. We need to sync up with main thread here
+    //  after GetObject and Deserialization. It is anti-pattern now. Happiness level 3/10 but works.
     _syncToThread.RunOnThread(() =>
     {
       // Prompt the UI conversion started. Progress bar will swoosh.
