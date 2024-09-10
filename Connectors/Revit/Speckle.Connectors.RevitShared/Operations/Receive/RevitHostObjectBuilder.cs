@@ -88,6 +88,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
           {
             bakedObjectIds.Add(ds.UniqueId.ToString());
           }
+          // should I add resultId and resultType here to the ReceiveConversionResult?
           conversionResults.Add(new(Status.SUCCESS, tc.Current));
         }
         catch (Exception ex) when (!ex.IsFatal())
