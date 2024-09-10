@@ -38,9 +38,10 @@ public static class SharedRegistration
     builder.AddSingleton<DocumentModelStore, AutocadDocumentStore>();
     builder.AddSingleton<AutocadContext>();
 
-    builder.AddScoped<AutocadLayerManager>();
-
     // Unpackers and builders
+    builder.AddScoped<AutocadLayerUnpacker>();
+    builder.AddScoped<AutocadLayerBaker>();
+
     builder.AddScoped<AutocadInstanceUnpacker>();
     builder.AddScoped<AutocadInstanceBaker>();
 

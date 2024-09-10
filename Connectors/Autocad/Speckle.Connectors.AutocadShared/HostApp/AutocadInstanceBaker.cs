@@ -20,7 +20,7 @@ namespace Speckle.Connectors.Autocad.HostApp;
 /// </summary>
 public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
 {
-  private readonly AutocadLayerManager _autocadLayerManager;
+  private readonly AutocadLayerBaker _layerBaker;
   private readonly AutocadColorBaker _colorBaker;
   private readonly AutocadMaterialBaker _materialBaker;
   private readonly IHostToSpeckleUnitConverter<UnitsValue> _unitsConverter;
@@ -28,7 +28,7 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
   private readonly ILogger<AutocadInstanceBaker> _logger;
 
   public AutocadInstanceBaker(
-    AutocadLayerManager autocadLayerManager,
+    AutocadLayerBaker layerBaker,
     AutocadColorBaker colorBaker,
     AutocadMaterialBaker materialBaker,
     IHostToSpeckleUnitConverter<UnitsValue> unitsConverter,
@@ -36,7 +36,7 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
     ILogger<AutocadInstanceBaker> logger
   )
   {
-    _autocadLayerManager = autocadLayerManager;
+    _layerBaker = layerBaker;
     _colorBaker = colorBaker;
     _materialBaker = materialBaker;
     _unitsConverter = unitsConverter;
@@ -119,7 +119,7 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
           );
 
           // POC: collectionPath for instances should be an array of size 1, because we are flattening collections on traversal
-          string layerName = _autocadLayerManager.CreateLayerForReceive(collectionPath, baseLayerName);
+          string layerName = _layerBaker.CreateLayerForReceive(collectionPath, baseLayerName);
 
           // get color and material if any
           string instanceId = instanceProxy.applicationId ?? instanceProxy.id;

@@ -37,7 +37,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoInstanceBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoInstanceUnpacker.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoLayerManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoLayerBaker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoLayerUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoMaterialBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoMaterialUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SpeckleRhinoPanelHost.cs" />

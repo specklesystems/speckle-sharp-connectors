@@ -17,18 +17,18 @@ namespace Speckle.Connectors.Rhino.HostApp;
 public class RhinoInstanceBaker : IInstanceBaker<List<string>>
 {
   private readonly RhinoMaterialBaker _materialBaker;
-  private readonly RhinoLayerManager _layerManager; // TODO: Not sure need splitting?
+  private readonly RhinoLayerBaker _layerBaker;
   private readonly RhinoColorBaker _colorBaker;
   private readonly ILogger<RhinoInstanceBaker> _logger;
 
   public RhinoInstanceBaker(
-    RhinoLayerManager layerManager,
+    RhinoLayerBaker layerBaker,
     RhinoMaterialBaker rhinoMaterialBaker,
     RhinoColorBaker colorBaker,
     ILogger<RhinoInstanceBaker> logger
   )
   {
-    _layerManager = layerManager;
+    _layerBaker = layerBaker;
     _materialBaker = rhinoMaterialBaker;
     _colorBaker = colorBaker;
     _logger = logger;
@@ -118,7 +118,7 @@ public class RhinoInstanceBaker : IInstanceBaker<List<string>>
           var transform = MatrixToTransform(instanceProxy.transform, instanceProxy.units);
 
           // POC: having layer creation during instance bake means no render materials!!
-          int layerIndex = _layerManager.GetAndCreateLayerFromPath(layerCollection, baseLayerName);
+          int layerIndex = _layerBaker.GetAndCreateLayerFromPath(layerCollection, baseLayerName);
 
           string instanceProxyId = instanceProxy.applicationId ?? instanceProxy.id;
 

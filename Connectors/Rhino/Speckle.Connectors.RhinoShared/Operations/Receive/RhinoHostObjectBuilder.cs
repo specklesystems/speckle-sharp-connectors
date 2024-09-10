@@ -22,7 +22,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private readonly IRootToHostConverter _converter;
   private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
   private readonly RhinoInstanceBaker _instanceBaker;
-  private readonly RhinoLayerManager _layerManager;
+  private readonly RhinoLayerBaker _layerBaker;
   private readonly RhinoMaterialBaker _materialBaker;
   private readonly RhinoColorBaker _colorBaker;
   private readonly RhinoGroupBaker _groupBaker;
@@ -31,7 +31,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   public RhinoHostObjectBuilder(
     IRootToHostConverter converter,
     IConversionContextStack<RhinoDoc, UnitSystem> contextStack,
-    RhinoLayerManager layerManager,
+    RhinoLayerBaker layerBaker,
     RootObjectUnpacker rootObjectUnpacker,
     RhinoInstanceBaker instanceBaker,
     RhinoMaterialBaker materialBaker,
@@ -45,7 +45,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _instanceBaker = instanceBaker;
     _materialBaker = materialBaker;
     _colorBaker = colorBaker;
-    _layerManager = layerManager;
+    _layerBaker = layerBaker;
     _groupBaker = groupBaker;
   }
 
@@ -63,7 +63,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
     // 0 - Clean then Rock n Roll!
     PreReceiveDeepClean(baseLayerName);
-    _layerManager.CreateBaseLayer(baseLayerName);
+    _layerBaker.CreateBaseLayer(baseLayerName);
 
     // 1 - Unpack objects and proxies from root commit object
     var unpackedRoot = _rootObjectUnpacker.Unpack(rootObject);
@@ -72,8 +72,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     var (atomicObjects, instanceComponents) = _rootObjectUnpacker.SplitAtomicObjectsAndInstances(
       unpackedRoot.ObjectsToConvert
     );
-    var atomicObjectsWithPath = _layerManager.GetAtomicObjectsWithPath(atomicObjects);
-    var instanceComponentsWithPath = _layerManager.GetInstanceComponentsWithPath(instanceComponents);
+    var atomicObjectsWithPath = _layerBaker.GetAtomicObjectsWithPath(atomicObjects);
+    var instanceComponentsWithPath = _layerBaker.GetInstanceComponentsWithPath(instanceComponents);
 
     // 2.1 - these are not captured by traversal, so we need to re-add them here
     if (unpackedRoot.DefinitionProxies != null && unpackedRoot.DefinitionProxies.Count > 0)
@@ -105,7 +105,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       using var layerNoDraw = new DisableRedrawScope(_contextStack.Current.Document.Views);
       foreach (var (path, _) in atomicObjectsWithPath)
       {
-        _layerManager.GetAndCreateLayerFromPath(path, baseLayerName);
+        _layerBaker.GetAndCreateLayerFromPath(path, baseLayerName);
       }
     }
 
@@ -123,7 +123,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
         try
         {
           // 1: create layer
-          int layerIndex = _layerManager.GetAndCreateLayerFromPath(path, baseLayerName);
+          int layerIndex = _layerBaker.GetAndCreateLayerFromPath(path, baseLayerName);
 
           // 2: convert
           var result = _converter.Convert(obj);

@@ -23,12 +23,13 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadGroupUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadInstanceBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadInstanceUnpacker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadLayerBaker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadLayerUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadMaterialBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadContext.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadDocumentManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadDocumentModelStore.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadIdleManager.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadLayerManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadMaterialUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Extensions\DatabaseExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Extensions\DocumentExtensions.cs" />

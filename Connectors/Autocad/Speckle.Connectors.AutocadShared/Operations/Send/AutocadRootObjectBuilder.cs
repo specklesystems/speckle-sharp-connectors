@@ -23,7 +23,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
   private readonly AutocadInstanceUnpacker _instanceUnpacker;
   private readonly AutocadMaterialUnpacker _materialUnpacker;
   private readonly AutocadColorUnpacker _colorUnpacker;
-  private readonly AutocadLayerManager _layerManager;
+  private readonly AutocadLayerUnpacker _layerUnpacker;
   private readonly AutocadGroupUnpacker _groupUnpacker;
   private readonly ILogger<AutocadRootObjectBuilder> _logger;
 
@@ -33,7 +33,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     AutocadInstanceUnpacker instanceObjectManager,
     AutocadMaterialUnpacker materialUnpacker,
     AutocadColorUnpacker colorUnpacker,
-    AutocadLayerManager layerManager,
+    AutocadLayerUnpacker layerUnpacker,
     AutocadGroupUnpacker groupUnpacker,
     ILogger<AutocadRootObjectBuilder> logger
   )
@@ -43,7 +43,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     _instanceUnpacker = instanceObjectManager;
     _materialUnpacker = materialUnpacker;
     _colorUnpacker = colorUnpacker;
-    _layerManager = layerManager;
+    _layerUnpacker = layerUnpacker;
     _groupUnpacker = groupUnpacker;
     _logger = logger;
   }
@@ -102,7 +102,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
       ct.ThrowIfCancellationRequested();
 
       // Create and add a collection for each layer if not done so already.
-      Layer layer = _layerManager.GetOrCreateSpeckleLayer(entity, tr, out LayerTableRecord? autocadLayer);
+      Layer layer = _layerUnpacker.GetOrCreateSpeckleLayer(entity, tr, out LayerTableRecord? autocadLayer);
       if (autocadLayer is not null)
       {
         usedAcadLayers.Add(autocadLayer);

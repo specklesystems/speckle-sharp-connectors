@@ -19,7 +19,7 @@ namespace Speckle.Connectors.Autocad.Operations.Receive;
 /// </summary>
 public class AutocadHostObjectBuilder : IHostObjectBuilder
 {
-  private readonly AutocadLayerManager _layerManager;
+  private readonly AutocadLayerBaker _layerBaker;
   private readonly IRootToHostConverter _converter;
   private readonly ISyncToThread _syncToThread;
   private readonly AutocadGroupBaker _groupBaker;
@@ -31,7 +31,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
 
   public AutocadHostObjectBuilder(
     IRootToHostConverter converter,
-    AutocadLayerManager layerManager,
+    AutocadLayerBaker layerBaker,
     AutocadGroupBaker groupBaker,
     AutocadInstanceBaker instanceBaker,
     AutocadMaterialBaker materialBaker,
@@ -42,7 +42,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
   )
   {
     _converter = converter;
-    _layerManager = layerManager;
+    _layerBaker = layerBaker;
     _groupBaker = groupBaker;
     _instanceBaker = instanceBaker;
     _materialBaker = materialBaker;
@@ -67,7 +67,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       onOperationProgressed?.Invoke("Converting", null);
 
       // Layer filter for received commit with project and model name
-      _layerManager.CreateLayerFilter(projectName, modelName);
+      _layerBaker.CreateLayerFilter(projectName, modelName);
 
       // 0 - Clean then Rock n Roll!
       string baseLayerPrefix = _autocadContext.RemoveInvalidChars($"SPK-{projectName}-{modelName}-");
@@ -80,8 +80,8 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       var (atomicObjects, instanceComponents) = _rootObjectUnpacker.SplitAtomicObjectsAndInstances(
         unpackedRoot.ObjectsToConvert
       );
-      var atomicObjectsWithPath = _layerManager.GetAtomicObjectsWithPath(atomicObjects);
-      var instanceComponentsWithPath = _layerManager.GetInstanceComponentsWithPath(instanceComponents);
+      var atomicObjectsWithPath = _layerBaker.GetAtomicObjectsWithPath(atomicObjects);
+      var instanceComponentsWithPath = _layerBaker.GetInstanceComponentsWithPath(instanceComponents);
 
       // POC: these are not captured by traversal, so we need to re-add them here
       if (unpackedRoot.DefinitionProxies != null && unpackedRoot.DefinitionProxies.Count > 0)
@@ -167,14 +167,14 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
 
   private void PreReceiveDeepClean(string baseLayerPrefix)
   {
-    _layerManager.DeleteAllLayersByPrefix(baseLayerPrefix);
+    _layerBaker.DeleteAllLayersByPrefix(baseLayerPrefix);
     _instanceBaker.PurgeInstances(baseLayerPrefix);
     _materialBaker.PurgeMaterials(baseLayerPrefix);
   }
 
   private IEnumerable<Entity> ConvertObject(Base obj, Collection[] layerPath, string baseLayerNamePrefix)
   {
-    string layerName = _layerManager.CreateLayerForReceive(layerPath, baseLayerNamePrefix);
+    string layerName = _layerBaker.CreateLayerForReceive(layerPath, baseLayerNamePrefix);
     var convertedEntities = new List<Entity>();
 
     using var tr = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();

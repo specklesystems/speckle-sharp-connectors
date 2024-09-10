@@ -87,9 +87,10 @@ public class RhinoConnectorModule : ISpeckleModule
       InstanceObjectsManager<RhinoObject, List<string>>
     >();
 
-    builder.AddScoped<RhinoLayerManager>();
-
     // Register unpackers and bakers
+    builder.AddScoped<RhinoLayerUnpacker>();
+    builder.AddScoped<RhinoLayerBaker>();
+
     builder.AddScoped<RhinoInstanceBaker>();
     builder.AddScoped<RhinoInstanceUnpacker>();
 

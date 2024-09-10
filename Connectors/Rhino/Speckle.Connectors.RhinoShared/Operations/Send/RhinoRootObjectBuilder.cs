@@ -27,7 +27,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
-  private readonly RhinoLayerManager _layerManager;
+  private readonly RhinoLayerUnpacker _layerUnpacker;
   private readonly RhinoInstanceUnpacker _instanceUnpacker;
   private readonly RhinoGroupUnpacker _groupUnpacker;
   private readonly RhinoMaterialUnpacker _materialUnpacker;
@@ -38,7 +38,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     IRootToSpeckleConverter rootToSpeckleConverter,
     ISendConversionCache sendConversionCache,
     IConversionContextStack<RhinoDoc, UnitSystem> contextStack,
-    RhinoLayerManager layerManager,
+    RhinoLayerUnpacker layerUnpacker,
     RhinoInstanceUnpacker instanceUnpacker,
     RhinoGroupUnpacker groupUnpacker,
     RhinoMaterialUnpacker materialUnpacker,
@@ -48,7 +48,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   {
     _sendConversionCache = sendConversionCache;
     _contextStack = contextStack;
-    _layerManager = layerManager;
+    _layerUnpacker = layerUnpacker;
     _instanceUnpacker = instanceUnpacker;
     _groupUnpacker = groupUnpacker;
     _rootToSpeckleConverter = rootToSpeckleConverter;
@@ -104,7 +104,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         // handle layer
         Layer layer = _contextStack.Current.Document.Layers[rhinoObject.Attributes.LayerIndex];
         versionLayers.Add(layer);
-        Collection collectionHost = _layerManager.GetHostObjectCollection(layer, rootObjectCollection);
+        Collection collectionHost = _layerUnpacker.GetHostObjectCollection(layer, rootObjectCollection);
 
         var result = ConvertRhinoObject(rhinoObject, collectionHost, instanceProxies, sendInfo.ProjectId);
         results.Add(result);

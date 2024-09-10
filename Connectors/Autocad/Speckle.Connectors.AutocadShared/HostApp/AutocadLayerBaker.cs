@@ -1,32 +1,23 @@
-using Autodesk.AutoCAD.DatabaseServices;
+﻿using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.LayerManager;
-using Speckle.Connectors.Autocad.HostApp.Extensions;
-using Speckle.Converters.Common;
-using Speckle.Sdk.Models;
+using Speckle.Connectors.Utils.Operations.Receive;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
-using Speckle.Sdk.Models.Instances;
 using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 
 namespace Speckle.Connectors.Autocad.HostApp;
 
-/// <summary>
-/// Expects to be a scoped dependency for a given operation and helps with layer creation and cleanup.
-/// </summary>
-public class AutocadLayerManager
+public class AutocadLayerBaker : LayerPathUnpacker
 {
+  private readonly string _layerFilterName = "Speckle";
   private readonly AutocadContext _autocadContext;
   private readonly AutocadMaterialBaker _materialBaker;
   private readonly AutocadColorBaker _colorBaker;
-  private readonly string _layerFilterName = "Speckle";
-  public Dictionary<string, Layer> CollectionCache { get; } = new();
-
-  // POC: Will be addressed to move it into AutocadContext!
   private Document Doc => Application.DocumentManager.MdiActiveDocument;
   private readonly HashSet<string> _uniqueLayerNames = new();
 
-  public AutocadLayerManager(
+  public AutocadLayerBaker(
     AutocadContext autocadContext,
     AutocadMaterialBaker materialBaker,
     AutocadColorBaker colorBaker
@@ -37,27 +28,7 @@ public class AutocadLayerManager
     _colorBaker = colorBaker;
   }
 
-  public Layer GetOrCreateSpeckleLayer(Entity entity, Transaction tr, out LayerTableRecord? layer)
-  {
-    string layerName = entity.Layer;
-    layer = null;
-    if (CollectionCache.TryGetValue(layerName, out Layer? speckleLayer))
-    {
-      return speckleLayer;
-    }
-    if (tr.GetObject(entity.LayerId, OpenMode.ForRead) is LayerTableRecord autocadLayer)
-    {
-      // Layers and geometries can have same application ids.....
-      // We should prevent it for sketchup converter. Because when it happens "objects_to_bake" definition
-      // is changing on the way if it happens.
-      speckleLayer = new Layer(layerName) { applicationId = autocadLayer.GetSpeckleApplicationId() }; // Do not use handle directly, see note in the 'GetSpeckleApplicationId' method
-      CollectionCache[layerName] = speckleLayer;
-      layer = autocadLayer;
-      return speckleLayer;
-    }
-    throw new SpeckleConversionException("Unexpected condition in GetOrCreateSpeckleLayer");
-  }
-
+  // Receive
   /// <summary>
   /// Will create a layer with the provided name, or, if it finds an existing one, will "purge" all objects from it.
   /// This ensures we're creating the new objects we've just received rather than overlaying them.
@@ -146,6 +117,7 @@ public class AutocadLayerManager
     return layerName;
   }
 
+  // Receive
   public void DeleteAllLayersByPrefix(string prefix)
   {
     Doc.LockDocument();
@@ -185,6 +157,7 @@ public class AutocadLayerManager
     transaction.Commit();
   }
 
+  // Receive
   /// <summary>
   /// Creates a layer filter for the just received model, grouped under a top level filter "Speckle". Note: manual close and open of the layer properties panel required (it's an acad thing).
   /// This comes in handy to quickly access the layers created for this specific model.
@@ -230,20 +203,12 @@ public class AutocadLayerManager
     Doc.Database.LayerFilters = layerFilterTree;
   }
 
-  public List<(Collection[] path, Base current)> GetAtomicObjectsWithPath(
-    IEnumerable<TraversalContext> atomicObjects
-  ) => atomicObjects.Select(o => (GetLayerPath(o), o.Current)).ToList();
-
-  public List<(Collection[] path, IInstanceComponent instance)> GetInstanceComponentsWithPath(
-    IEnumerable<TraversalContext> instanceComponents
-  ) => instanceComponents.Select(o => (GetLayerPath(o), (o.Current as IInstanceComponent)!)).ToList();
-
   /// <summary>
   /// Gets a valid collection representing a layer for a given context.
   /// </summary>
   /// <param name="context"></param>
   /// <returns>A new Speckle Layer object</returns>
-  private Collection[] GetLayerPath(TraversalContext context)
+  protected override Collection[] GetLayerPath(TraversalContext context)
   {
     Collection[] collectionBasedPath = context.GetAscendantOfType<Collection>().Reverse().ToArray();
 

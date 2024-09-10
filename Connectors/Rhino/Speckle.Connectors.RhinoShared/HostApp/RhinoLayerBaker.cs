@@ -1,26 +1,22 @@
-using System.Diagnostics.Contracts;
 using Rhino;
 using Rhino.DocObjects;
-using Speckle.Sdk.Models;
+using Speckle.Connectors.Utils.Operations.Receive;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
-using Speckle.Sdk.Models.Instances;
 using Layer = Rhino.DocObjects.Layer;
-using SpeckleLayer = Speckle.Sdk.Models.Collections.Layer;
 
 namespace Speckle.Connectors.Rhino.HostApp;
 
 /// <summary>
-/// Utility class managing layer creation and/or extraction from rhino. Expects to be a scoped dependency per send or receive operation.
+/// Utility class managing layer creation. Expects to be a scoped dependency per receive operation.
 /// </summary>
-public class RhinoLayerManager
+public class RhinoLayerBaker : LayerPathUnpacker
 {
   private readonly RhinoMaterialBaker _materialBaker;
   private readonly RhinoColorBaker _colorBaker;
   private readonly Dictionary<string, int> _hostLayerCache = new();
-  private readonly Dictionary<int, Collection> _layerCollectionCache = new();
 
-  public RhinoLayerManager(RhinoMaterialBaker materialBaker, RhinoColorBaker colorBaker)
+  public RhinoLayerBaker(RhinoMaterialBaker materialBaker, RhinoColorBaker colorBaker)
   {
     _materialBaker = materialBaker;
     _colorBaker = colorBaker;
@@ -33,7 +29,6 @@ public class RhinoLayerManager
   public void CreateBaseLayer(string baseLayerName)
   {
     var index = RhinoDoc.ActiveDoc.Layers.Add(new Layer { Name = baseLayerName }); // POC: too much effort right now to wrap around the interfaced layers and doc
-    // var index = _contextStack.Current.Document.Layers.Add(new Layer { Name = baseLayerName });
     _hostLayerCache.Add(baseLayerName, index);
   }
 
@@ -97,84 +92,22 @@ public class RhinoLayerManager
   }
 
   /// <summary>
-  /// <para>For send: Use this method to construct the root commit object while converting objects.</para>
-  /// <para>Returns the host collection corresponding to the provided layer. If it's the first time that it is being asked for, it will be created and stored in the root object collection.</para>
-  /// </summary>
-  /// <param name="layer">The layer you want the equivalent collection for.</param>
-  /// <param name="rootObjectCollection">The root object that will be sent to Speckle, and will host all collections.</param>
-  /// <returns></returns>
-  public Collection GetHostObjectCollection(Layer layer, Collection rootObjectCollection)
-  {
-    if (_layerCollectionCache.TryGetValue(layer.Index, out Collection? value))
-    {
-      return value;
-    }
-
-    var names = layer.FullPath.Split(new[] { Layer.PathSeparator }, StringSplitOptions.None);
-    var path = names[0];
-    var index = 0;
-    var previousCollection = rootObjectCollection;
-    foreach (var layerName in names)
-    {
-      var existingLayerIndex = RhinoDoc.ActiveDoc.Layers.FindByFullPath(path, -1);
-      Collection? childCollection = null;
-      if (_layerCollectionCache.TryGetValue(existingLayerIndex, out Collection? collection))
-      {
-        childCollection = collection;
-      }
-      else
-      {
-        childCollection = new SpeckleLayer(layerName)
-        {
-          applicationId = RhinoDoc.ActiveDoc.Layers[existingLayerIndex].Id.ToString()
-        };
-
-        previousCollection.elements.Add(childCollection);
-        _layerCollectionCache[existingLayerIndex] = childCollection;
-      }
-
-      previousCollection = childCollection;
-
-      if (index < names.Length - 1)
-      {
-        path += Layer.PathSeparator + names[index + 1];
-      }
-
-      index++;
-    }
-
-    _layerCollectionCache[layer.Index] = previousCollection;
-    return previousCollection;
-  }
-
-  public List<(Collection[] path, Base current)> GetAtomicObjectsWithPath(
-    IEnumerable<TraversalContext> atomicObjects
-  ) => atomicObjects.Select(o => (GetLayerPath(o), o.Current)).ToList();
-
-  public List<(Collection[] path, IInstanceComponent instance)> GetInstanceComponentsWithPath(
-    IEnumerable<TraversalContext> instanceComponents
-  ) => instanceComponents.Select(o => (GetLayerPath(o), (o.Current as IInstanceComponent)!)).ToList();
-
-  /// <summary>
   /// Gets the full path of the layer, concatenated with Rhino's Layer.
   /// </summary>
   /// <param name="context"></param>
-  /// <returns></returns>
-  [Pure]
-  //POC test me!
-  private Collection[] GetLayerPath(TraversalContext context)
+  protected override Collection[] GetLayerPath(TraversalContext context)
   {
     Collection[] collectionBasedPath = context.GetAscendantOfType<Collection>().Reverse().ToArray();
 
-    Collection[] collectionPath =
-      collectionBasedPath.Length != 0
-        ? collectionBasedPath
-        : context
-          .GetPropertyPath()
-          .Reverse()
-          .Select(o => new Collection() { applicationId = Guid.NewGuid().ToString(), name = o })
-          .ToArray();
+    if (collectionBasedPath.Length == 0)
+    {
+      collectionBasedPath = context
+        .GetPropertyPath()
+        .Reverse()
+        .Select(o => new Collection() { applicationId = Guid.NewGuid().ToString(), name = o })
+        .ToArray();
+    }
 
-    return collectionPath;
+    return collectionBasedPath;
   }
 }
