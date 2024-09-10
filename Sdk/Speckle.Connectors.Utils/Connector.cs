@@ -1,4 +1,4 @@
-﻿using Speckle.Objects.Geometry;
+using Speckle.Objects.Geometry;
 using Speckle.Sdk;
 using Speckle.Sdk.Host;
 using Speckle.Sdk.Logging;
@@ -30,7 +30,7 @@ public static class Connector
       application,
       version,
       new(MinimumLevel: SpeckleLogLevel.Information, Console: true, File: new(Path: "SpeckleCoreLog.txt")),
-      new(Console: true, Otel: new())
+      new(Console: false, Otel: new())
     );
 #else
     var config = new SpeckleConfiguration(
@@ -38,18 +38,18 @@ public static class Connector
       version,
       new(
         MinimumLevel: SpeckleLogLevel.Information,
-        Console: true,
+        Console: false,
         File: new(Path: "SpeckleCoreLog.txt"),
         Otel: new(
-          Endpoint: "https://seq.speckle.systems/ingest/otlp/v1/logs",
-          Headers: new() { { "X-Seq-ApiKey", "agZqxG4jQELxQQXh0iZQ" } }
+          Endpoint: "https://seq-dev.speckle.systems/ingest/otlp/v1/logs",
+          Headers: new() { { "X-Seq-ApiKey", "y5YnBp12ZE1Czh4tzZWn" } }
         )
       ),
       new(
         Console: false,
         Otel: new(
-          Endpoint: "https://seq.speckle.systems/ingest/otlp/v1/traces",
-          Headers: new() { { "X-Seq-ApiKey", "agZqxG4jQELxQQXh0iZQ" } }
+          Endpoint: "https://seq-dev.speckle.systems/ingest/otlp/v1/traces",
+          Headers: new() { { "X-Seq-ApiKey", "y5YnBp12ZE1Czh4tzZWn" } }
         )
       )
     );

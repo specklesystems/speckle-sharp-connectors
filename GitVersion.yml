@@ -1,10 +1,2 @@
 workflow: GitFlow/v1
 next-version: 3.0.0
-mode: ManualDeployment
-branches:
-  main:
-    label: rc
-  develop:
-    label: beta
-  unknown:
-    increment: None
