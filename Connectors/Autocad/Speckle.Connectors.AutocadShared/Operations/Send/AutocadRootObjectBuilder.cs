@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Autodesk.AutoCAD.DatabaseServices;
 using Microsoft.Extensions.Logging;
@@ -9,12 +8,10 @@ using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Extensions;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
-using Speckle.Objects.Other;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
-using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Connectors.Autocad.Operations.Send;
 
@@ -67,7 +64,8 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     CancellationToken ct = default
   )
   {
-    Collection modelWithLayers =
+    // 0 - Init the root
+    Collection root =
       new()
       {
         name = Application
@@ -81,54 +79,32 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     Document doc = Application.DocumentManager.CurrentDocument;
     using Transaction tr = doc.Database.TransactionManager.StartTransaction();
 
-    // Keeps track of autocad layers used, so we can pass them on later to the material and color unpacker.
-    List<LayerTableRecord> usedAcadLayers = new();
-    int count = 0;
-
+    // 1 - Unpack the instances
     var (atomicObjects, instanceProxies, instanceDefinitionProxies) = _instanceObjectsManager.UnpackSelection(objects);
+    root[ProxyKeys.INSTANCE_DEFINITION] = instanceDefinitionProxies;
 
+    // 2 - Unpack the groups
+    root[ProxyKeys.GROUP] = _groupManager.UnpackGroups(atomicObjects);
+
+    // 3 - Convert atomic objects
+    List<LayerTableRecord> usedAcadLayers = new(); // Keeps track of autocad layers used, so we can pass them on later to the material and color unpacker.
     List<SendConversionResult> results = new();
-    var cacheHitCount = 0;
-
+    int count = 0;
     foreach (var (entity, applicationId) in atomicObjects)
     {
       ct.ThrowIfCancellationRequested();
-      string sourceType = entity.GetType().ToString();
-      try
+
+      // Create and add a collection for each layer if not done so already.
+      Layer layer = _layerManager.GetOrCreateSpeckleLayer(entity, tr, out LayerTableRecord? autocadLayer);
+      if (autocadLayer is not null)
       {
-        Base converted;
-        if (entity is BlockReference && instanceProxies.TryGetValue(applicationId, out InstanceProxy? instanceProxy))
-        {
-          converted = instanceProxy;
-        }
-        else if (_sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value))
-        {
-          converted = value;
-          cacheHitCount++;
-        }
-        else
-        {
-          converted = _converter.Convert(entity);
-          converted.applicationId = applicationId;
-        }
-
-        // Create and add a collection for each layer if not done so already.
-        Layer layer = _layerManager.GetOrCreateSpeckleLayer(entity, tr, out LayerTableRecord? autocadLayer);
-        if (autocadLayer is not null)
-        {
-          usedAcadLayers.Add(autocadLayer);
-          modelWithLayers.elements.Add(layer);
-        }
-
-        layer.elements.Add(converted);
-        results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
+        usedAcadLayers.Add(autocadLayer);
+        root.elements.Add(layer);
       }
-      catch (Exception ex) when (!ex.IsFatal())
-      {
-        _logger.LogSendConversionError(ex, sourceType);
 
-        results.Add(new(Status.ERROR, applicationId, sourceType, null, ex));
-      }
+      var result = ConvertAutocadEntity(entity, applicationId, layer, instanceProxies, sendInfo.ProjectId);
+      results.Add(result);
+
       onOperationProgressed?.Invoke("Converting", (double)++count / atomicObjects.Count);
     }
 
@@ -137,36 +113,60 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
       throw new SpeckleConversionException("Failed to convert all objects."); // fail fast instead creating empty commit! It will appear as model card error with red color.
     }
 
-    // POC: Log would be nice, or can be removed.
-    Debug.WriteLine(
-      $"Cache hit count {cacheHitCount} out of {objects.Count} ({(double)cacheHitCount / objects.Count})"
-    );
+    // TODO: Check with Dim! I believe this part is not needed anymore since it is fixed on viewer side, but still TBD this is a valid case or not to remove failed objects from definition objects.
+    // var conversionFailedAppIds = results
+    //   .FindAll(result => result.Status == Status.ERROR)
+    //   .Select(result => result.SourceId);
+    //
+    // // Cleans up objects that failed to convert from definition proxies.
+    // // see https://linear.app/speckle/issue/CNX-115/viewer-handle-gracefully-instances-with-elements-that-failed-to
+    // foreach (var definitionProxy in instanceDefinitionProxies)
+    // {
+    //   definitionProxy.objects.RemoveAll(id => conversionFailedAppIds.Contains(id));
+    // }
 
-    var conversionFailedAppIds = results
-      .FindAll(result => result.Status == Status.ERROR)
-      .Select(result => result.SourceId);
+    // 4 - Unpack the render material proxies
+    root[ProxyKeys.RENDER_MATERIAL] = _materialManager.UnpackMaterials(atomicObjects, usedAcadLayers);
 
-    // Cleans up objects that failed to convert from definition proxies.
-    // see https://linear.app/speckle/issue/CNX-115/viewer-handle-gracefully-instances-with-elements-that-failed-to
-    foreach (var definitionProxy in instanceDefinitionProxies)
+    // 5 - Unpack the color proxies
+    root[ProxyKeys.COLOR] = _colorManager.UnpackColors(atomicObjects, usedAcadLayers);
+
+    return new RootObjectBuilderResult(root, results);
+  }
+
+  private SendConversionResult ConvertAutocadEntity(
+    Entity entity,
+    string applicationId,
+    Collection collectionHost,
+    IReadOnlyDictionary<string, InstanceProxy> instanceProxies,
+    string projectId
+  )
+  {
+    string sourceType = entity.GetType().ToString();
+    try
     {
-      definitionProxy.objects.RemoveAll(id => conversionFailedAppIds.Contains(id));
+      Base converted;
+      if (entity is BlockReference && instanceProxies.TryGetValue(applicationId, out InstanceProxy? instanceProxy))
+      {
+        converted = instanceProxy;
+      }
+      else if (_sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value))
+      {
+        converted = value;
+      }
+      else
+      {
+        converted = _converter.Convert(entity);
+        converted.applicationId = applicationId;
+      }
+
+      collectionHost.elements.Add(converted);
+      return new(Status.SUCCESS, applicationId, sourceType, converted);
     }
-    // Set definition proxies
-    modelWithLayers["instanceDefinitionProxies"] = instanceDefinitionProxies;
-
-    // set groups
-    List<GroupProxy> groupProxies = _groupManager.UnpackGroups(atomicObjects);
-    modelWithLayers["groupProxies"] = groupProxies;
-
-    // set materials
-    List<RenderMaterialProxy> materialProxies = _materialManager.UnpackMaterials(atomicObjects, usedAcadLayers);
-    modelWithLayers["renderMaterialProxies"] = materialProxies;
-
-    // set colors
-    List<ColorProxy> colorProxies = _colorManager.UnpackColors(atomicObjects, usedAcadLayers);
-    modelWithLayers["colorProxies"] = colorProxies;
-
-    return new RootObjectBuilderResult(modelWithLayers, results);
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogSendConversionError(ex, sourceType);
+      return new(Status.ERROR, applicationId, sourceType, null, ex);
+    }
   }
 }
