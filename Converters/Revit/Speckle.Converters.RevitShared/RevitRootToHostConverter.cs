@@ -38,7 +38,7 @@ public class RevitRootToHostConverter : IRootToHostConverter
         geometryObjects.AddRange(meshes); // TODO: check if casting is happening correctly
         break;
       default:
-        FallbackToDisplayValue(target);
+        geometryObjects.AddRange(FallbackToDisplayValue(target));
         break;
     }
 
@@ -55,16 +55,27 @@ public class RevitRootToHostConverter : IRootToHostConverter
 
   private List<DB.GeometryObject> FallbackToDisplayValue(Base target)
   {
-    // TODO
     var displayValue = target.TryGetDisplayValue<Base>();
-    if (displayValue is IList && !displayValue.Any())
+    if ((displayValue is IList && !displayValue.Any()) || displayValue is null)
     {
       throw new NotSupportedException($"No display value found for {target.speckle_type}");
     }
 
-    // TODO delete this it just returns a dummy list
     List<DB.GeometryObject> geometryObjects = new();
+    foreach (var baseObject in displayValue)
+    {
+      switch (baseObject)
+      {
+        case ICurve curve:
+          var curves = _curveConverter.Convert(curve).Cast<DB.GeometryObject>(); // TODO: check if casting is happening correctly
+          geometryObjects.AddRange(curves);
+          break;
+        case SOG.Mesh mesh:
+          var meshes = _meshConverter.Convert(mesh).Cast<DB.GeometryObject>();
+          geometryObjects.AddRange(meshes); // TODO: check if casting is happening correctly
+          break;
+      }
+    }
     return geometryObjects;
-    // TODO
   }
 }
