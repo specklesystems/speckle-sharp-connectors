@@ -76,8 +76,6 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     using (var _ = SpeckleActivityFactory.Start("BakeObjects"))
     {
       var conversionResults = new List<ReceiveConversionResult>();
-
-      // NOTE!!!! Add 'UniqueId' of the elements once we have receiving in place, otherwise highlight logic will fail.
       var bakedObjectIds = new List<string>();
 
       foreach (TraversalContext tc in objectsGraph)
@@ -86,6 +84,12 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
         {
           using var activity = SpeckleActivityFactory.Start("BakeObject");
           var result = _converter.Convert(tc.Current);
+          if (result is Autodesk.Revit.DB.DirectShape ds)
+          {
+            bakedObjectIds.Add(ds.UniqueId.ToString());
+          }
+          // should I add resultId and resultType here to the ReceiveConversionResult?
+          conversionResults.Add(new(Status.SUCCESS, tc.Current));
         }
         catch (Exception ex) when (!ex.IsFatal())
         {
