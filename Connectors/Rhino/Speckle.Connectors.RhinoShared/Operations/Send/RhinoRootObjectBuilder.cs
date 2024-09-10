@@ -99,7 +99,8 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         versionLayers.Add(layer);
         Collection collectionHost = _layerManager.GetHostObjectCollection(layer, rootObjectCollection);
 
-        results.Add(ConvertRhinoObject(rhinoObject, collectionHost, instanceProxies, sendInfo));
+        var result = ConvertRhinoObject(rhinoObject, collectionHost, instanceProxies, sendInfo.ProjectId);
+        results.Add(result);
 
         ++count;
         onOperationProgressed?.Invoke("Converting", (double)count / atomicObjects.Count);
@@ -130,7 +131,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     RhinoObject rhinoObject,
     Collection collectionHost,
     IReadOnlyDictionary<string, InstanceProxy> instanceProxies,
-    SendInfo sendInfo
+    string projectId
   )
   {
     string applicationId = rhinoObject.Id.ToString();
@@ -145,7 +146,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       {
         converted = instanceProxies[applicationId];
       }
-      else if (_sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value))
+      else if (_sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value))
       {
         converted = value;
       }
