@@ -1,6 +1,5 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.Raw;
 
@@ -27,7 +26,7 @@ public class MultipatchListToHostConverter : ITypedConverter<List<SGIS.GisMultip
       {
         newPatch.AddPoint(
           _pointConverter.Convert(
-            new SOG.Point(part.vertices[i * 3], part.vertices[i * 3 + 1], part.vertices[i * 3 + 2], Units.Meters) //TODO: this can't be right (units)
+            new SOG.Point(part.vertices[i * 3], part.vertices[i * 3 + 1], part.vertices[i * 3 + 2], part.units)
           )
         );
       }
