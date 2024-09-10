@@ -177,7 +177,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
 
     // POC: Add Color Proxies
     List<ColorProxy> colorProxies = _colorManager.UnpackColors(layersWithDisplayPriority);
-    rootObjectCollection["colorProxies"] = colorProxies;
+    rootObjectCollection[ProxyKeys.COLOR] = colorProxies;
 
     // POC: Log would be nice, or can be removed.
     Debug.WriteLine(

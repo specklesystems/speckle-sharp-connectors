@@ -130,7 +130,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     var materialProxies = _conversionContextStack.RenderMaterialProxyCache.GetRenderMaterialProxyListForObjects(
       idsAndSubElementIds
     );
-    _rootObject["renderMaterialProxies"] = materialProxies;
+    _rootObject[ProxyKeys.RENDER_MATERIAL] = materialProxies;
 
     Debug.WriteLine(
       $"Cache hit count {cacheHitCount} out of {objects.Count} ({(double)cacheHitCount / objects.Count})"
