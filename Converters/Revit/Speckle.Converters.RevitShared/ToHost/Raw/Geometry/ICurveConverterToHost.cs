@@ -61,6 +61,10 @@ public class ICurveConverterToHost : ITypedConverter<ICurve, DB.CurveArray>
         return _polylineConverter.Convert(spiral.displayValue);
 
       case SOG.Curve nurbs:
+        if (nurbs.closed) // NOTE: ensure we always nicely convert cyclical curves
+        {
+          return _polylineConverter.Convert(nurbs.displayValue);
+        }
         var n = _curveConverter.Convert(nurbs);
         curveArray.Append(n);
         return curveArray;
