@@ -86,6 +86,12 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
         {
           using var activity = SpeckleActivityFactory.Start("BakeObject");
           var result = _converter.Convert(tc.Current);
+          if (result is Autodesk.Revit.DB.DirectShape ds)
+          {
+            //bakedObjectIds.Add(ds.Id.ToString());
+            bakedObjectIds.Add(ds.UniqueId.ToString());
+          }
+          conversionResults.Add(new(Status.ERROR, tc.Current));
         }
         catch (Exception ex) when (!ex.IsFatal())
         {
