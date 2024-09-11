@@ -5,6 +5,7 @@ using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Common;
 using Speckle.Connectors.Utils.Operations;
+using Speckle.Connectors.Utils.Operations.Receive;
 
 namespace Speckle.Connectors.Utils;
 
@@ -14,6 +15,7 @@ public static class ContainerRegistration
   {
     // send operation and dependencies
     builder.AddSingleton<CancellationManager>();
+    builder.AddScoped<RootObjectUnpacker>();
     builder.AddScoped<ReceiveOperation>();
     builder.AddSingleton<AccountService>();
     builder.ScanAssembly(Assembly.GetExecutingAssembly());

@@ -1,59 +1,30 @@
-using Autodesk.AutoCAD.DatabaseServices;
+﻿using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.LayerManager;
-using Speckle.Connectors.Autocad.HostApp.Extensions;
-using Speckle.Converters.Common;
+using Speckle.Connectors.Utils.Operations.Receive;
 using Speckle.Sdk.Models.Collections;
-using Speckle.Sdk.Models.GraphTraversal;
 using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 
 namespace Speckle.Connectors.Autocad.HostApp;
 
-/// <summary>
-/// Expects to be a scoped dependency for a given operation and helps with layer creation and cleanup.
-/// </summary>
-public class AutocadLayerManager
+public class AutocadLayerBaker : LayerPathUnpacker
 {
-  private readonly AutocadContext _autocadContext;
-  private readonly AutocadMaterialManager _materialManager;
-  private readonly AutocadColorManager _colorManager;
   private readonly string _layerFilterName = "Speckle";
-  public Dictionary<string, Layer> CollectionCache { get; } = new();
-
-  // POC: Will be addressed to move it into AutocadContext!
+  private readonly AutocadContext _autocadContext;
+  private readonly AutocadMaterialBaker _materialBaker;
+  private readonly AutocadColorBaker _colorBaker;
   private Document Doc => Application.DocumentManager.MdiActiveDocument;
   private readonly HashSet<string> _uniqueLayerNames = new();
 
-  public AutocadLayerManager(
+  public AutocadLayerBaker(
     AutocadContext autocadContext,
-    AutocadMaterialManager materialManager,
-    AutocadColorManager colorManager
+    AutocadMaterialBaker materialBaker,
+    AutocadColorBaker colorBaker
   )
   {
     _autocadContext = autocadContext;
-    _materialManager = materialManager;
-    _colorManager = colorManager;
-  }
-
-  public Layer GetOrCreateSpeckleLayer(Entity entity, Transaction tr, out LayerTableRecord? layer)
-  {
-    string layerName = entity.Layer;
-    layer = null;
-    if (CollectionCache.TryGetValue(layerName, out Layer? speckleLayer))
-    {
-      return speckleLayer;
-    }
-    if (tr.GetObject(entity.LayerId, OpenMode.ForRead) is LayerTableRecord autocadLayer)
-    {
-      // Layers and geometries can have same application ids.....
-      // We should prevent it for sketchup converter. Because when it happens "objects_to_bake" definition
-      // is changing on the way if it happens.
-      speckleLayer = new Layer(layerName) { applicationId = autocadLayer.GetSpeckleApplicationId() }; // Do not use handle directly, see note in the 'GetSpeckleApplicationId' method
-      CollectionCache[layerName] = speckleLayer;
-      layer = autocadLayer;
-      return speckleLayer;
-    }
-    throw new SpeckleConversionException("Unexpected condition in GetOrCreateSpeckleLayer");
+    _materialBaker = materialBaker;
+    _colorBaker = colorBaker;
   }
 
   /// <summary>
@@ -73,7 +44,7 @@ public class AutocadLayerManager
     // get the color and material if any, of the leaf collection with a color
     AutocadColor? layerColor = null;
     ObjectId layerMaterial = ObjectId.Null;
-    if (_colorManager.ObjectColorsIdMap.Count > 0 || _materialManager.ObjectMaterialsIdMap.Count > 0)
+    if (_colorBaker.ObjectColorsIdMap.Count > 0 || _materialBaker.ObjectMaterialsIdMap.Count > 0)
     {
       bool foundColor = false;
       bool foundMaterial = false;
@@ -85,12 +56,12 @@ public class AutocadLayerManager
 
         if (!foundColor)
         {
-          foundColor = _colorManager.ObjectColorsIdMap.TryGetValue(layerId, out layerColor);
+          foundColor = _colorBaker.ObjectColorsIdMap.TryGetValue(layerId, out layerColor);
         }
 
         if (!foundMaterial)
         {
-          foundMaterial = _materialManager.ObjectMaterialsIdMap.TryGetValue(layerId, out layerMaterial);
+          foundMaterial = _materialBaker.ObjectMaterialsIdMap.TryGetValue(layerId, out layerMaterial);
         }
 
         if (foundColor && foundMaterial)
@@ -226,23 +197,5 @@ public class AutocadLayerManager
     var layerFilter = new LayerFilter() { Name = filterName, FilterExpression = layerFilterExpression };
     groupFilter.NestedFilters.Add(layerFilter);
     Doc.Database.LayerFilters = layerFilterTree;
-  }
-
-  /// <summary>
-  /// Gets a valid collection representing a layer for a given context.
-  /// </summary>
-  /// <param name="context"></param>
-  /// <returns>A new Speckle Layer object</returns>
-  public Collection[] GetLayerPath(TraversalContext context)
-  {
-    Collection[] collectionBasedPath = context.GetAscendantOfType<Collection>().Reverse().ToArray();
-
-    if (collectionBasedPath.Length == 0)
-    {
-      string[] path = context.GetPropertyPath().Reverse().ToArray();
-      collectionBasedPath = [new Collection(string.Join("-", path))];
-    }
-
-    return collectionBasedPath;
   }
 }
