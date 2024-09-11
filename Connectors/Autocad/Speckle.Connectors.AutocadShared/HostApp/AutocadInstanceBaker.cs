@@ -155,7 +155,7 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(ex, "Failed to create an instance from proxy."); // TODO: Check with Jedd!
+        _logger.LogError(ex, "Failed to create an instance from proxy");
         conversionResults.Add(new(Status.ERROR, instanceOrDefinition as Base ?? new Base(), null, null, ex));
       }
     }

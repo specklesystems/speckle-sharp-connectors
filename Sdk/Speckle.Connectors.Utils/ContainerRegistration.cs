@@ -16,7 +16,6 @@ public static class ContainerRegistration
     // send operation and dependencies
     builder.AddSingleton<CancellationManager>();
     builder.AddScoped<RootObjectUnpacker>();
-    builder.AddScoped<RootObjectUnpackerResult>();
     builder.AddScoped<ReceiveOperation>();
     builder.AddSingleton<AccountService>();
     builder.ScanAssembly(Assembly.GetExecutingAssembly());

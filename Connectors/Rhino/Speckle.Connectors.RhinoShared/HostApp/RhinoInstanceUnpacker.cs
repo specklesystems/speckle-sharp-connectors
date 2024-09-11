@@ -122,7 +122,7 @@ public class RhinoInstanceUnpacker : IInstanceUnpacker<RhinoObject>
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      _logger.LogError(ex, "Failed unpacking Rhino instance."); // TODO: Check with Jedd!
+      _logger.LogError(ex, "Failed unpacking Rhino instance");
     }
   }
 

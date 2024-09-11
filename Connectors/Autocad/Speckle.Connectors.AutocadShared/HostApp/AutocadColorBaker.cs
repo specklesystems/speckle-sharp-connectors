@@ -58,7 +58,7 @@ public class AutocadColorBaker
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(ex, "Failed parsing color proxy."); // TODO: Check with Jedd!
+        _logger.LogError(ex, "Failed parsing color proxy");
       }
     }
   }

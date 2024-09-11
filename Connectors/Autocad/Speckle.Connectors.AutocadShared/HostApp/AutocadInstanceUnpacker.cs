@@ -123,8 +123,7 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
         applicationId = definitionId.ToString(),
         objects = new(),
         maxDepth = depth,
-        name = !instance.AnonymousBlockTableRecord.IsNull ? "Dynamic instance " + definitionId : definition.Name,
-        ["comments"] = definition.Comments
+        name = !instance.AnonymousBlockTableRecord.IsNull ? "Dynamic instance " + definitionId : definition.Name
       };
 
       // Go through each definition object
@@ -153,7 +152,7 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      _logger.LogError(ex, "Failed unpacking Autocad instance."); // TODO: Check with Jedd!
+      _logger.LogError(ex, "Failed unpacking Autocad instance");
     }
   }
 

@@ -46,7 +46,7 @@ public class AutocadMaterialBaker
         }
         catch (Exception ex) when (!ex.IsFatal())
         {
-          _logger.LogError(ex, "Failed to purge a material from the document."); // TODO: Check with Jedd!
+          _logger.LogError(ex, "Failed to purge a material from the document");
         }
       }
     }
@@ -180,7 +180,7 @@ public class AutocadMaterialBaker
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      _logger.LogError(ex, "Failed to add a material to the document."); // TODO: Check with Jedd!
+      _logger.LogError(ex, "Failed to add a material to the document");
       return (materialId, new(Status.ERROR, renderMaterial, null, null, ex));
     }
   }

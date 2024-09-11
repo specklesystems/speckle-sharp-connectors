@@ -81,7 +81,7 @@ public class RhinoMaterialBaker
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(ex, "Failed to add a material to the document."); // TODO: Check with Jedd!
+        _logger.LogError(ex, "Failed to add a material to the document");
       }
     }
   }
@@ -104,7 +104,7 @@ public class RhinoMaterialBaker
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(ex, "Failed to purge a material from the document."); // TODO: Check with Jedd!
+        _logger.LogError(ex, "Failed to purge a material from the document");
       }
     }
   }

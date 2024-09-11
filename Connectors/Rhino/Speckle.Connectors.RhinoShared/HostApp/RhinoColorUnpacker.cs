@@ -110,7 +110,7 @@ public class RhinoColorUnpacker
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(ex, "Failed to unpack colors from Rhino Object."); // TODO: Check with Jedd!
+        _logger.LogError(ex, "Failed to unpack colors from Rhino Object");
       }
     }
 
@@ -123,7 +123,7 @@ public class RhinoColorUnpacker
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(ex, "Failed to unpack colors from Rhino Layer."); // TODO: Check with Jedd!
+        _logger.LogError(ex, "Failed to unpack colors from Rhino Layer");
       }
     }
 

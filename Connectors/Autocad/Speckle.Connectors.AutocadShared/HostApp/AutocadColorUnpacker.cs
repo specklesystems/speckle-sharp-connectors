@@ -47,7 +47,7 @@ public class AutocadColorUnpacker
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(ex, "Failed to unpack colors from Autocad Entity."); // TODO: Check with Jedd!
+        _logger.LogError(ex, "Failed to unpack colors from Autocad Entity");
       }
     }
 
@@ -60,7 +60,7 @@ public class AutocadColorUnpacker
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(ex, "Failed to unpack colors from Autocad Layer."); // TODO: Check with Jedd!
+        _logger.LogError(ex, "Failed to unpack colors from Autocad Layer");
       }
     }
 

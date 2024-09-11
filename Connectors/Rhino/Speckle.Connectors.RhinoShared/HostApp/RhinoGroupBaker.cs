@@ -35,7 +35,7 @@ public class RhinoGroupBaker
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(ex, "Failed to bake Rhino Group."); // TODO: Check with Jedd!
+        _logger.LogError(ex, "Failed to bake Rhino Group");
       }
     }
   }
@@ -54,7 +54,7 @@ public class RhinoGroupBaker
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(ex, "Failed to purge Rhino Group."); // TODO: Check with Jedd!
+        _logger.LogError(ex, "Failed to purge Rhino Group");
       }
     }
   }

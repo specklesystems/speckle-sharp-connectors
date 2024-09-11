@@ -69,7 +69,7 @@ public class AutocadGroupBaker
       catch (Exception ex) when (!ex.IsFatal())
       {
         results.Add(new ReceiveConversionResult(Status.ERROR, gp, null, null, ex));
-        _logger.LogError(ex, "Failed to bake Autocad Group."); // TODO: Check with Jedd!
+        _logger.LogError(ex, "Failed to bake Autocad Group");
       }
     }
 
