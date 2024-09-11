@@ -105,11 +105,7 @@ public sealed class BrowserBridge : IBridge
     // This conveniently executes the code outside the UI thread and does not block during long operations (such as sending).
     _actionBlock = new ActionBlock<RunMethodArgs>(
       OnActionBlock,
-      new ExecutionDataflowBlockOptions
-      {
-        MaxDegreeOfParallelism = 1000,
-        CancellationToken = new CancellationTokenSource(TimeSpan.FromDays(10000)).Token // Do not change the timespan. This time defines the session time that we enable for user.
-      }
+      new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = 1000 }
     );
 
     _logger.LogInformation("Bridge bound to front end name {FrontEndName}", binding.Name);
