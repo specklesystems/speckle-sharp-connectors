@@ -108,7 +108,7 @@ public sealed class BrowserBridge : IBridge
       new ExecutionDataflowBlockOptions
       {
         MaxDegreeOfParallelism = 1000,
-        CancellationToken = new CancellationTokenSource(TimeSpan.FromHours(3)).Token // Not sure we need such a long time. //TODO: This token source is not disposed....
+        CancellationToken = new CancellationTokenSource(TimeSpan.FromDays(10000)).Token // Do not change the timespan. This time defines the session time that we enable for user.
       }
     );
 
