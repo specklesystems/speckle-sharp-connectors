@@ -71,7 +71,7 @@ public class RevitConnectorModule : ISpeckleModule
     // receive operation and dependencies
     builder.AddScoped<IHostObjectBuilder, RevitHostObjectBuilder>();
     builder.AddScoped<ITransactionManager, TransactionManager>();
-    builder.AddScoped<RevitGroupManager>();
+    builder.AddScoped<RevitGroupBaker>();
     builder.AddSingleton<RevitUtils>();
     builder.AddSingleton<IFailuresPreprocessor, HideWarningsFailuresPreprocessor>();
     builder.AddSingleton(DefaultTraversal.CreateTraversalFunc());
@@ -89,7 +89,7 @@ public class RevitConnectorModule : ISpeckleModule
     builder.AddSingleton<IBrowserScriptExecutor>(c => c.Resolve<CefSharpPanel>());
     builder.AddSingleton<IRevitPlugin, RevitCefPlugin>();
 #else
-    // POC: different versons for different versions of CEF
+    // different versions for different versions of CEF
     builder.AddSingleton(BindingOptions.DefaultBinder);
 
     var panel = new CefSharpPanel();

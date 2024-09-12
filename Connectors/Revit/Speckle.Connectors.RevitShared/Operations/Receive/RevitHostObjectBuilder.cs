@@ -4,7 +4,6 @@ using Revit.Async;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
-using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
@@ -25,8 +24,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   private readonly IRevitConversionContextStack _contextStack;
   private readonly GraphTraversal _traverseFunction;
   private readonly ITransactionManager _transactionManager;
-  private readonly ISyncToThread _syncToThread;
-  private readonly RevitGroupManager _groupManager;
+  private readonly RevitGroupBaker _groupManager;
   private readonly ILogger<RevitHostObjectBuilder> _logger;
 
   public RevitHostObjectBuilder(
@@ -34,8 +32,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     IRevitConversionContextStack contextStack,
     GraphTraversal traverseFunction,
     ITransactionManager transactionManager,
-    ISyncToThread syncToThread,
-    RevitGroupManager groupManager,
+    RevitGroupBaker groupManager,
     ILogger<RevitHostObjectBuilder> logger
   )
   {
@@ -43,7 +40,6 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     _contextStack = contextStack;
     _traverseFunction = traverseFunction;
     _transactionManager = transactionManager;
-    _syncToThread = syncToThread;
     _groupManager = groupManager;
     _logger = logger;
   }

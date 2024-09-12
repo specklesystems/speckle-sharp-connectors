@@ -6,13 +6,17 @@ using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.Revit.HostApp;
 
-public class RevitGroupManager : LayerPathUnpacker
+/// <summary>
+/// <para>On receive, this class will help structure atomic objects into nested revit groups based on the hierarchy that they're coming from. Expects to be a scoped dependency per receive operation.</para>
+/// <para>How to use: during atomic object conversion, on each succesful conversion call <see cref="AddToGroupMapping"/>. Afterward, at the end of the recieve operation, call <see cref="BakeGroups"/> to actually create the groups in the revit document.</para>
+/// </summary>
+public class RevitGroupBaker : TraversalContextUnpacker
 {
   private readonly IRevitConversionContextStack _contextStack;
   private readonly ITransactionManager _transactionManager;
   private readonly RevitUtils _revitUtils;
 
-  public RevitGroupManager(
+  public RevitGroupBaker(
     IRevitConversionContextStack contextStack,
     ITransactionManager transactionManager,
     RevitUtils revitUtils
@@ -23,11 +27,14 @@ public class RevitGroupManager : LayerPathUnpacker
     _revitUtils = revitUtils;
   }
 
-  // We cannot add objects to groups in revit, we need to create a group all at once with all its subkids
-  // We need to create groups at the end of the day in a separate new transaction
-  public void AddToGroupMapping(TraversalContext tc, DirectShape ds)
+  /// <summary>
+  /// Adds the object to the correct group in preparation for <see cref="BakeGroups"/> at the end of the receive operation.
+  /// </summary>
+  /// <param name="traversalContext"></param>
+  /// <param name="revitElement"></param>
+  public void AddToGroupMapping(TraversalContext traversalContext, Element revitElement)
   {
-    var collectionPath = GetLayerPath(tc);
+    var collectionPath = GetCollectionPath(traversalContext);
     var currentLayerName = "Base Group";
     FakeGroup? previousGroup = null;
     var currentDepth = 0;
@@ -52,11 +59,15 @@ public class RevitGroupManager : LayerPathUnpacker
       previousGroup = group;
     }
 
-    previousGroup!.Ids.Add(ds.Id);
+    previousGroup!.Ids.Add(revitElement.Id);
   }
 
   private readonly Dictionary<string, FakeGroup> _groupCache = new();
 
+  /// <summary>
+  /// Bakes the accumulated groups in Revit, with their objects.
+  /// </summary>
+  /// <param name="baseGroupName"></param>
   public void BakeGroups(string baseGroupName)
   {
     var orderedGroups = _groupCache.Values.OrderByDescending(group => group.Depth);
@@ -73,6 +84,9 @@ public class RevitGroupManager : LayerPathUnpacker
     lastGroup!.GroupType.Name = baseGroupName;
   }
 
+  /// <summary>
+  /// Little intermediate data structure that helps with the operations above.
+  /// </summary>
   private sealed class FakeGroup
   {
     public List<ElementId> Ids { get; set; } = new();
