@@ -89,12 +89,9 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       transactionGroup.Assimilate();
     }
 
-    // TODO: swallow warning
-    // https://github.com/speckleworks/SpeckleRevitReboot/blob/master/SpeckleRevitReboot/ErrorEater.cs
-    // how to use: https://github.com/speckleworks/SpeckleRevitReboot/blob/cc0fb0ee1d3a8a314b58cc98c3de4994fb5816f9/SpeckleRevitReboot/UI/Receiver.cs#L147
     using TransactionGroup createGroupTransaction = new(_contextStack.Current.Document, "Creating group");
     createGroupTransaction.Start();
-    _transactionManager.StartTransaction();
+    _transactionManager.StartTransaction(true);
 
     // TODO: needs try catch and logging
     // TODO: check selection logic

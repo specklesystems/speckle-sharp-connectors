@@ -73,6 +73,7 @@ public class RevitConnectorModule : ISpeckleModule
     builder.AddScoped<ITransactionManager, TransactionManager>();
     builder.AddScoped<RevitGroupManager>();
     builder.AddSingleton<RevitUtils>();
+    builder.AddSingleton<IFailuresPreprocessor, HideWarningsFailuresPreprocessor>();
     builder.AddSingleton(DefaultTraversal.CreateTraversalFunc());
 
     // operation progress manager
