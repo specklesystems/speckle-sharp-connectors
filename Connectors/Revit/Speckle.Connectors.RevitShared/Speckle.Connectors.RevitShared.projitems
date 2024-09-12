@@ -26,6 +26,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\IStorageSchema.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitDocumentStore.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\RevitConnectorModule.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitGroupManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SendCollectionManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\ElementUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\ITransactionManager.cs" />
