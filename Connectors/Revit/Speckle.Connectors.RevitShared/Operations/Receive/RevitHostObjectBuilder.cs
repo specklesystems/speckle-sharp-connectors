@@ -1,4 +1,5 @@
 using Autodesk.Revit.DB;
+using Microsoft.Extensions.Logging;
 using Revit.Async;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Utils.Builders;
@@ -26,6 +27,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   private readonly ITransactionManager _transactionManager;
   private readonly ISyncToThread _syncToThread;
   private readonly RevitGroupManager _groupManager;
+  private readonly ILogger<RevitHostObjectBuilder> _logger;
 
   public RevitHostObjectBuilder(
     IRootToHostConverter converter,
@@ -33,7 +35,8 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     GraphTraversal traverseFunction,
     ITransactionManager transactionManager,
     ISyncToThread syncToThread,
-    RevitGroupManager groupManager
+    RevitGroupManager groupManager,
+    ILogger<RevitHostObjectBuilder> logger
   )
   {
     _converter = converter;
@@ -42,6 +45,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     _transactionManager = transactionManager;
     _syncToThread = syncToThread;
     _groupManager = groupManager;
+    _logger = logger;
   }
 
   public Task<HostObjectBuilderResult> Build(
@@ -93,10 +97,15 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     createGroupTransaction.Start();
     _transactionManager.StartTransaction(true);
 
-    // TODO: needs try catch and logging
-    // TODO: check selection logic
-    var baseGroupName = $"Project {projectName} - Model {modelName}";
-    _groupManager.BakeGroups(baseGroupName);
+    try
+    {
+      var baseGroupName = $"Project {projectName} - Model {modelName}";
+      _groupManager.BakeGroups(baseGroupName);
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogError(ex, "Failed to create group after receiving elements in Revit");
+    }
 
     using (var _ = SpeckleActivityFactory.Start("Commit"))
     {
