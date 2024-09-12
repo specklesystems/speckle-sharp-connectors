@@ -50,17 +50,14 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     string modelName,
     Action<string, double?>? onOperationProgressed,
     CancellationToken cancellationToken
-  )
-  {
-    return RevitTask.RunAsync(
-      () => BuildSync(rootObject, projectName, modelName, onOperationProgressed, cancellationToken)
-    );
-  }
-#pragma warning disable IDE0060
+  ) =>
+    RevitTask.RunAsync(() => BuildSync(rootObject, projectName, modelName, onOperationProgressed, cancellationToken));
+
   private HostObjectBuilderResult BuildSync(
     Base rootObject,
     string projectName,
     string modelName,
+#pragma warning disable IDE0060
     Action<string, double?>? onOperationProgressed,
     CancellationToken cancellationToken
   )
@@ -82,6 +79,8 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 
     Dictionary<string, List<string>> applicationIdMap = new();
 
+    // TODO: progress reporting
+    // TODO: cancellation
     var conversionResults = BakeObjects(objectsToConvert, out elementIds);
 
     using (var _ = SpeckleActivityFactory.Start("Commit"))
@@ -90,11 +89,17 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       transactionGroup.Assimilate();
     }
 
+    // TODO: swallow warning
+    // https://github.com/speckleworks/SpeckleRevitReboot/blob/master/SpeckleRevitReboot/ErrorEater.cs
+    // how to use: https://github.com/speckleworks/SpeckleRevitReboot/blob/cc0fb0ee1d3a8a314b58cc98c3de4994fb5816f9/SpeckleRevitReboot/UI/Receiver.cs#L147
     using TransactionGroup createGroupTransaction = new(_contextStack.Current.Document, "Creating group");
     createGroupTransaction.Start();
     _transactionManager.StartTransaction();
 
-    _groupManager.BakeGroups();
+    // TODO: needs try catch and logging
+    // TODO: check selection logic
+    var baseGroupName = $"Project {projectName} - Model {modelName}";
+    _groupManager.BakeGroups(baseGroupName);
 
     using (var _ = SpeckleActivityFactory.Start("Commit"))
     {
@@ -139,7 +144,6 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       }
 
       elemIds = elementIds;
-
       return new(bakedObjectIds, conversionResults);
     }
   }
