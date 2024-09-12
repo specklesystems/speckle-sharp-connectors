@@ -54,33 +54,6 @@
         "resolved": "0.9.6",
         "contentHash": "HKH7tYrYYlCK1ct483hgxERAdVdMtl7gUKW9ijWXxA1UsYR4Z+TrRHYmzZ9qmpu1NnTycSrp005NYM78GDKV1w=="
       },
-      "Speckle.Objects": {
-        "type": "Direct",
-        "requested": "[3.0.1-rc.118, )",
-        "resolved": "3.0.1-rc.118",
-        "contentHash": "5VgLOrOMGsdGqZJwZXjyUrLX+kO+wb6qy0nQgDWuHG+aZdPyGmjyLW3YeaCnDQBu/uDJnQu7ddj5LqbIlTif0w==",
-        "dependencies": {
-          "Speckle.Sdk": "3.0.1-rc.118"
-        }
-      },
-      "Speckle.Sdk": {
-        "type": "Direct",
-        "requested": "[3.0.1-rc.118, )",
-        "resolved": "3.0.1-rc.118",
-        "contentHash": "cKiVG0LMRmF4vgTWq2L8xOYoTGiAF9n8OyycmWHCdW6l7wLTre6B4AOWtW9j9NA427C3sJmZ4R9dSbNYRLxDRQ==",
-        "dependencies": {
-          "GraphQL.Client": "6.0.0",
-          "Microsoft.CSharp": "4.7.0",
-          "Microsoft.Data.Sqlite": "7.0.7",
-          "Polly": "7.2.3",
-          "Polly.Contrib.WaitAndRetry": "1.1.1",
-          "Polly.Extensions.Http": "3.0.0",
-          "Speckle.DoubleNumerics": "4.0.1",
-          "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Logging": "3.0.1-rc.118",
-          "System.Text.Json": "5.0.2"
-        }
-      },
       "GraphQL.Client": {
         "type": "Transitive",
         "resolved": "6.0.0",
@@ -247,11 +220,6 @@
         "resolved": "13.0.2",
         "contentHash": "g1BejUZwax5PRfL6xHgLEK23sqHWOgOj9hE7RvfRRlN00AGt8GnPYt8HedSK7UB3HiRW8zCA9Pn0iiYxCK24BA=="
       },
-      "Speckle.Sdk.Logging": {
-        "type": "Transitive",
-        "resolved": "3.0.1-rc.118",
-        "contentHash": "rzzJTTlTyeC7O2XOBAGqTrAbd7vk245mXat1v2okqlnEIvoAQj+kiId53v69i+3jv9svoqohkvaWJ2ZD8MkDXA=="
-      },
       "SQLitePCLRaw.bundle_e_sqlite3": {
         "type": "Transitive",
         "resolved": "2.1.4",
@@ -374,6 +342,30 @@
         "dependencies": {
           "Autofac": "[5.2.0, )"
         }
+      },
+      "speckle.objects": {
+        "type": "Project",
+        "dependencies": {
+          "Speckle.Sdk": "[1.0.0, )"
+        }
+      },
+      "speckle.sdk": {
+        "type": "Project",
+        "dependencies": {
+          "GraphQL.Client": "[6.0.0, )",
+          "Microsoft.CSharp": "[4.7.0, )",
+          "Microsoft.Data.Sqlite": "[7.0.7, )",
+          "Polly": "[7.2.3, )",
+          "Polly.Contrib.WaitAndRetry": "[1.1.1, )",
+          "Polly.Extensions.Http": "[3.0.0, )",
+          "Speckle.DoubleNumerics": "[4.0.1, )",
+          "Speckle.Newtonsoft.Json": "[13.0.2, )",
+          "Speckle.Sdk.Logging": "[1.0.0, )",
+          "System.Text.Json": "[5.0.2, )"
+        }
+      },
+      "speckle.sdk.logging": {
+        "type": "Project"
       },
       "Microsoft.Extensions.Logging.Abstractions": {
         "type": "CentralTransitive",
