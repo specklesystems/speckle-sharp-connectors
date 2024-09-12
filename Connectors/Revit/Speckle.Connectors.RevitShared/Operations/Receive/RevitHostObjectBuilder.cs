@@ -61,12 +61,12 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     Base rootObject,
     string projectName,
     string modelName,
-#pragma warning disable IDE0060
     Action<string, double?>? onOperationProgressed,
     CancellationToken cancellationToken
   )
-#pragma warning restore IDE0060
   {
+    onOperationProgressed?.Invoke("Converting", null);
+
     using var activity = SpeckleActivityFactory.Start("Build");
     IEnumerable<TraversalContext> objectsToConvert;
 
@@ -81,11 +81,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     transactionGroup.Start();
     _transactionManager.StartTransaction();
 
-    Dictionary<string, List<string>> applicationIdMap = new();
-
-    // TODO: progress reporting
-    // TODO: cancellation
-    var conversionResults = BakeObjects(objectsToConvert, out elementIds);
+    var conversionResults = BakeObjects(objectsToConvert, onOperationProgressed, cancellationToken, out elementIds);
 
     using (var _ = SpeckleActivityFactory.Start("Commit"))
     {
@@ -116,7 +112,12 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     return conversionResults;
   }
 
-  private HostObjectBuilderResult BakeObjects(IEnumerable<TraversalContext> objectsGraph, out List<ElementId> elemIds)
+  private HostObjectBuilderResult BakeObjects(
+    IEnumerable<TraversalContext> objectsGraph,
+    Action<string, double?>? onOperationProgressed,
+    CancellationToken cancellationToken,
+    out List<ElementId> elemIds
+  )
   {
     using (var _ = SpeckleActivityFactory.Start("BakeObjects"))
     {
@@ -124,12 +125,18 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       var bakedObjectIds = new List<string>();
       var elementIds = new List<ElementId>();
 
-      foreach (TraversalContext tc in objectsGraph)
+      // is this a dumb idea?
+      var objectList = objectsGraph.ToList();
+      int count = 0;
+
+      foreach (TraversalContext tc in objectList)
       {
+        cancellationToken.ThrowIfCancellationRequested();
         try
         {
           using var activity = SpeckleActivityFactory.Start("BakeObject");
           var result = _converter.Convert(tc.Current);
+          onOperationProgressed?.Invoke("Converting", (double)++count / objectList.Count);
 
           // Note: our current converter always returns a DS for now
           if (result is DirectShape ds)
