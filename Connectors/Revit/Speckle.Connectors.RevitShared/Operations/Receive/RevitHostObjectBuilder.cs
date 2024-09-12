@@ -1,4 +1,5 @@
 using Autodesk.Revit.DB;
+using Revit.Async;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
@@ -49,50 +50,63 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     string modelName,
     Action<string, double?>? onOperationProgressed,
     CancellationToken cancellationToken
-  ) =>
-    _syncToThread.RunOnThread(() =>
+  )
+  {
+    return RevitTask.RunAsync(
+      () => BuildSync(rootObject, projectName, modelName, onOperationProgressed, cancellationToken)
+    );
+  }
+#pragma warning disable IDE0060
+  private HostObjectBuilderResult BuildSync(
+    Base rootObject,
+    string projectName,
+    string modelName,
+    Action<string, double?>? onOperationProgressed,
+    CancellationToken cancellationToken
+  )
+#pragma warning restore IDE0060
+  {
+    using var activity = SpeckleActivityFactory.Start("Build");
+    IEnumerable<TraversalContext> objectsToConvert;
+
+    using (var _ = SpeckleActivityFactory.Start("Traverse"))
     {
-      using var activity = SpeckleActivityFactory.Start("Build");
-      IEnumerable<TraversalContext> objectsToConvert;
-      using (var _ = SpeckleActivityFactory.Start("Traverse"))
-      {
-        objectsToConvert = _traverseFunction.Traverse(rootObject).Where(obj => obj.Current is not Collection);
-      }
+      objectsToConvert = _traverseFunction.Traverse(rootObject).Where(obj => obj.Current is not Collection);
+    }
 
-      var elementIds = new List<ElementId>();
+    var elementIds = new List<ElementId>();
 
-      using TransactionGroup transactionGroup =
-        new(_contextStack.Current.Document, $"Received data from {projectName}");
-      transactionGroup.Start();
-      _transactionManager.StartTransaction();
+    using TransactionGroup transactionGroup = new(_contextStack.Current.Document, $"Received data from {projectName}");
+    transactionGroup.Start();
+    _transactionManager.StartTransaction();
 
-      Dictionary<string, List<string>> applicationIdMap = new();
-      var conversionResults = BakeObjects(objectsToConvert, out elementIds);
+    Dictionary<string, List<string>> applicationIdMap = new();
+    var conversionResults = BakeObjects(objectsToConvert, out elementIds);
 
-      using (var _ = SpeckleActivityFactory.Start("Commit"))
-      {
-        _transactionManager.CommitTransaction();
-        transactionGroup.Assimilate();
-      }
+    using (var _ = SpeckleActivityFactory.Start("Commit"))
+    {
+      _transactionManager.CommitTransaction();
+      transactionGroup.Assimilate();
+    }
 
-      //var groupProxies = (rootObject["groupProxies"] as List<object>)?.Cast<GroupProxy>().ToList();
-      _groupManager.CreateGroups();
+    //var groupProxies = (rootObject["groupProxies"] as List<object>)?.Cast<GroupProxy>().ToList();
+    //_groupManager.CreateGroups();
 
-      // creating group has to be in a separate tranasction, else Revit will show a warning
-      using TransactionGroup createGroupTransaction = new(_contextStack.Current.Document, "Creating group");
-      createGroupTransaction.Start();
-      _transactionManager.StartTransaction();
+    // creating group has to be in a separate tranasction, else Revit will show a warning
+    // using TransactionGroup createGroupTransaction = new(_contextStack.Current.Document, "Creating group");
+    // createGroupTransaction.Start();
+    // _transactionManager.StartTransaction();
+    //
+    // _contextStack.Current.Document.Create.NewGroup(elementIds);
+    //
+    // using (var _ = SpeckleActivityFactory.Start("Commit"))
+    // {
+    //   _transactionManager.CommitTransaction();
+    //   createGroupTransaction.Assimilate();
+    // }
 
-      _contextStack.Current.Document.Create.NewGroup(elementIds);
-
-      using (var _ = SpeckleActivityFactory.Start("Commit"))
-      {
-        _transactionManager.CommitTransaction();
-        createGroupTransaction.Assimilate();
-      }
-
-      return conversionResults;
-    });
+    return conversionResults;
+  }
 
   // POC: Potentially refactor out into an IObjectBaker.
   private HostObjectBuilderResult BakeObjects(IEnumerable<TraversalContext> objectsGraph, out List<ElementId> elemIds)
@@ -129,7 +143,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       }
 
       // create group
-      //_contextStack.Current.Document.Create.NewGroup(elementIds);
+      _contextStack.Current.Document.Create.NewGroup(elementIds);
       elemIds = elementIds;
 
       return new(bakedObjectIds, conversionResults);
