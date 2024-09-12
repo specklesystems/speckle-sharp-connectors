@@ -41,7 +41,8 @@ public class ConfigBinding : IBinding
 
   public ConnectorConfig GetConfig()
   {
-    var rawConfig = ConfigStorage.GetObject(_connectorName);
+    // TODO: GetObject became a task and now we must await it. Calling .Result now but this should be done better.
+    var rawConfig = ConfigStorage.GetObject(_connectorName).Result;
     if (rawConfig is null)
     {
       return SeedConfig();

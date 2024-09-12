@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
+  
+  <Target Name="DeepClean">
+    <Message Text="Deep clean of $(MSBuildProjectName).csproj" Importance="high"/>
+    <RemoveDir Directories="$(BaseIntermediateOutputPath)"/>
+    <RemoveDir Directories="$(BaseOutputPath)"/>
+  </Target>
+  
   <Target AfterTargets="Clean" Name="CleanAddinsRevit" Condition="'$(RevitVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
     <RemoveDir Directories="$(TargetDir);$(ProjectDir)\..\Release\Release$(RevitVersion);$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\Speckle.Connectors.Revit$(RevitVersion);" />
     <Delete Files="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\Speckle.Connectors.Revit$(RevitVersion).addin" />
