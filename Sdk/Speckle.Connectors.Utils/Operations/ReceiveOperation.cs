@@ -13,18 +13,23 @@ public sealed class ReceiveOperation
   private readonly AccountService _accountService;
   private readonly IServerTransportFactory _serverTransportFactory;
   private readonly IProgressDisplayManager _progressDisplayManager;
+  private readonly IActivityFactory _activityFactory;
+  private readonly IOperations _operations;
+  private readonly IClientFactory _clientFactory;
 
   public ReceiveOperation(
     IHostObjectBuilder hostObjectBuilder,
     AccountService accountService,
     IServerTransportFactory serverTransportFactory,
-    IProgressDisplayManager progressDisplayManager
-  )
+    IProgressDisplayManager progressDisplayManager, IActivityFactory activityFactory, IOperations operations, IClientFactory clientFactory)
   {
     _hostObjectBuilder = hostObjectBuilder;
     _accountService = accountService;
     _serverTransportFactory = serverTransportFactory;
     _progressDisplayManager = progressDisplayManager;
+    _activityFactory = activityFactory;
+    _operations = operations;
+    _clientFactory = clientFactory;
   }
 
   public async Task<HostObjectBuilderResult> Execute(
@@ -33,15 +38,15 @@ public sealed class ReceiveOperation
     Action<string, double?>? onOperationProgressed = null
   )
   {
-    using var execute = SpeckleActivityFactory.Start();
+    using var execute = _activityFactory.Start();
     Speckle.Sdk.Api.GraphQL.Models.Version? version;
     Base? commitObject;
     HostObjectBuilderResult? res;
     // 2 - Check account exist
     Account account = _accountService.GetAccountWithServerUrlFallback(receiveInfo.AccountId, receiveInfo.ServerUrl);
-    using Client apiClient = new(account);
+    using Client apiClient = _clientFactory.Create(account);
 
-    using (var _ = SpeckleActivityFactory.Start("Receive version"))
+    using (var _ = _activityFactory.Start("Receive version"))
     {
       version = await apiClient
         .Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ModelId, receiveInfo.ProjectId, cancellationToken)
@@ -51,11 +56,10 @@ public sealed class ReceiveOperation
     int totalCount = 1;
 
     using var transport = _serverTransportFactory.Create(account, receiveInfo.ProjectId);
-    using (var _ = SpeckleActivityFactory.Start("Receive objects"))
+    using (var _ = _activityFactory.Start("Receive objects"))
     {
       _progressDisplayManager.Begin();
-      commitObject = await Speckle
-        .Sdk.Api.Operations.Receive(
+      commitObject = await _operations.Receive(
           version.referencedObject,
           transport,
           onProgressAction: dict =>
@@ -99,7 +103,7 @@ public sealed class ReceiveOperation
     }
 
     // 4 - Convert objects
-    using (var _ = SpeckleActivityFactory.Start("Convert"))
+    using (var _ = _activityFactory.Start("Convert"))
     {
       res = await _hostObjectBuilder
         .Build(commitObject, receiveInfo.ProjectName, receiveInfo.ModelName, onOperationProgressed, cancellationToken)

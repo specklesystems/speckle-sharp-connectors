@@ -1,7 +1,11 @@
+using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Speckle.Autofac.DependencyInjection;
+using Speckle.Connectors.Logging;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk;
 using Speckle.Sdk.Host;
-using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.Utils;
@@ -18,42 +22,42 @@ public static class Connector
 
   public static HostApplication HostApp { get; private set; }
 
-  public static IDisposable? Initialize(HostApplication application, HostAppVersion version)
+  public static IDisposable? Initialize(HostApplication application, HostAppVersion version, SpeckleContainerBuilder builder)
   {
     Version = version;
     VersionString = HostApplications.GetVersion(version);
     HostApp = application;
     TypeLoader.Initialize(typeof(Base).Assembly, typeof(Point).Assembly);
 
-#if DEBUG || LOCAL
-    var config = new SpeckleConfiguration(
-      application,
-      version,
-      new(MinimumLevel: SpeckleLogLevel.Information, Console: true, File: new(Path: "SpeckleCoreLog.txt")),
-      new(Console: false, Otel: new())
-    );
-#else
-    var config = new SpeckleConfiguration(
-      application,
-      version,
-      new(
-        MinimumLevel: SpeckleLogLevel.Information,
-        Console: false,
-        File: new(Path: "SpeckleCoreLog.txt"),
-        Otel: new(
-          Endpoint: "https://seq-dev.speckle.systems/ingest/otlp/v1/logs",
-          Headers: new() { { "X-Seq-ApiKey", "y5YnBp12ZE1Czh4tzZWn" } }
-        )
-      ),
-      new(
-        Console: false,
-        Otel: new(
-          Endpoint: "https://seq-dev.speckle.systems/ingest/otlp/v1/traces",
-          Headers: new() { { "X-Seq-ApiKey", "y5YnBp12ZE1Czh4tzZWn" } }
-        )
-      )
-    );
-#endif
-    return Setup.Initialize(config);
+    IServiceCollection serviceCollection = new ServiceCollection();
+    serviceCollection.AddLogging(x => x.AddConsole());
+    serviceCollection.AddSpeckleSdk(new SpeckleConfiguration(application, version));
+    builder.ContainerBuilder.Populate(serviceCollection);
+    return TracingBuilder.Initialize(VersionString, Slug, GetPackageVersion(Assembly.GetExecutingAssembly()) ,new SpeckleTracing
+    (
+     true, null
+    ));
+  }
+  private static string GetPackageVersion(Assembly assembly)
+  {
+    // MinVer https://github.com/adamralph/minver?tab=readme-ov-file#version-numbers
+    // together with Microsoft.SourceLink.GitHub https://github.com/dotnet/sourcelink
+    // fills AssemblyInformationalVersionAttribute by
+    // {majorVersion}.{minorVersion}.{patchVersion}.{pre-release label}.{pre-release version}.{gitHeight}+{Git SHA of current commit}
+    // Ex: 1.5.0-alpha.1.40+807f703e1b4d9874a92bd86d9f2d4ebe5b5d52e4
+    // The following parts are optional: pre-release label, pre-release version, git height, Git SHA of current commit
+    // For package version, value of AssemblyInformationalVersionAttribute without commit hash is returned.
+
+    var informationalVersion = assembly
+      .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+      ?.InformationalVersion;
+    if (informationalVersion is null)
+    {
+      return String.Empty;
+    }
+
+    var indexOfPlusSign = informationalVersion.IndexOf('+');
+    return indexOfPlusSign > 0 ? informationalVersion[..indexOfPlusSign] : informationalVersion;
   }
 }
+

@@ -190,6 +190,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.DUI.Test
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Revit2022.Tests", "Converters\Revit\Speckle.Converters.Revit2022.Tests\Speckle.Converters.Revit2022.Tests.csproj", "{C34D0246-6C16-4E81-AE57-2CE70F81484B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Logging", "Sdk\Speckle.Connectors.Logging\Speckle.Connectors.Logging.csproj", "{38497468-6B28-4F8F-A9E0-3167E90DDD89}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Local|Any CPU = Local|Any CPU
@@ -301,6 +303,8 @@ Global
 		{5F91F0E5-E7FD-48C1-87C5-0913C55FF094}.Local|Any CPU.Build.0 = Local|Any CPU
 		{C34D0246-6C16-4E81-AE57-2CE70F81484B}.Local|Any CPU.ActiveCfg = Local|Any CPU
 		{C34D0246-6C16-4E81-AE57-2CE70F81484B}.Local|Any CPU.Build.0 = Local|Any CPU
+		{38497468-6B28-4F8F-A9E0-3167E90DDD89}.Local|Any CPU.ActiveCfg = Debug|Any CPU
+		{38497468-6B28-4F8F-A9E0-3167E90DDD89}.Local|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -385,6 +389,7 @@ Global
 		{27AFBC57-F493-4B51-BEE0-0C364B6A6A13} = {844572F4-7281-49B4-BD92-722607606C98}
 		{5F91F0E5-E7FD-48C1-87C5-0913C55FF094} = {FD4D6594-D81E-456F-8F2E-35B09E04A755}
 		{C34D0246-6C16-4E81-AE57-2CE70F81484B} = {0AF38BA3-65A0-481B-8CBB-B82E406E1575}
+		{38497468-6B28-4F8F-A9E0-3167E90DDD89} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}

@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Configurations>Debug;Release;Local</Configurations>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ILRepackTargetConfigurations>Debug;Release;Local</ILRepackTargetConfigurations>
+    <ILRepackRenameInternalized>true</ILRepackRenameInternalized>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="ILRepack.FullAuto">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" PrivateAssets="all"/>
+    <PackageReference Include="OpenTelemetry.Exporter.Console" PrivateAssets="all"/>
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" PrivateAssets="all"/>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\speckle-sharp-sdk\src\Speckle.Sdk.Logging\Speckle.Sdk.Logging.csproj" />
+  </ItemGroup>
+</Project>

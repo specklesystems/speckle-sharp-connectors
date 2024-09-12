@@ -41,7 +41,7 @@ public class ConfigBinding : IBinding
 
   public ConnectorConfig GetConfig()
   {
-    var rawConfig = ConfigStorage.GetObject(_connectorName);
+    var rawConfig = ConfigStorage.GetObject(_connectorName).GetAwaiter().GetResult();
     if (rawConfig is null)
     {
       return SeedConfig();

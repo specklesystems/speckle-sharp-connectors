@@ -11,11 +11,13 @@ public class RhinoGroupBaker
 {
   private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
   private readonly ILogger<RhinoGroupBaker> _logger;
+  private readonly IActivityFactory _activityFactory;
 
-  public RhinoGroupBaker(IConversionContextStack<RhinoDoc, UnitSystem> contextStack, ILogger<RhinoGroupBaker> logger)
+  public RhinoGroupBaker(IConversionContextStack<RhinoDoc, UnitSystem> contextStack, ILogger<RhinoGroupBaker> logger, IActivityFactory activityFactory)
   {
     _contextStack = contextStack;
     _logger = logger;
+    _activityFactory = activityFactory;
   }
 
   public void BakeGroups(
@@ -24,7 +26,7 @@ public class RhinoGroupBaker
     string baseLayerName
   )
   {
-    using var _ = SpeckleActivityFactory.Start();
+    using var _ = _activityFactory.Start();
     foreach (GroupProxy groupProxy in groupProxies.OrderBy(g => g.objects.Count))
     {
       try

@@ -7,8 +7,9 @@ namespace Speckle.Connectors.Utils.Operations;
 /// Note: Be sure it is registered on refactorings. Otherwise, we won't be able to do any send/receive ops.
 /// This can safely be registered as singleton.
 /// </summary>
-public class AccountService
+public class AccountService(IAccountManager accountManager)
 {
+
   /// <summary>
   /// Account to retrieve with its id, if not exist try to retrieve from matching serverUrl.
   /// </summary>
@@ -20,11 +21,11 @@ public class AccountService
   {
     try
     {
-      return AccountManager.GetAccount(accountId);
+      return accountManager.GetAccount(accountId);
     }
     catch (SpeckleAccountManagerException)
     {
-      var accounts = AccountManager.GetAccounts(serverUrl);
+      var accounts = accountManager.GetAccounts(serverUrl);
       return accounts.First()
         ?? throw new SpeckleAccountManagerException($"No any account found that matches with server {serverUrl}");
     }

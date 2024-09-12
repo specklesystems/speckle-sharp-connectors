@@ -27,6 +27,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private readonly RhinoColorBaker _colorBaker;
   private readonly RhinoGroupBaker _groupBaker;
   private readonly RootObjectUnpacker _rootObjectUnpacker;
+  private readonly IActivityFactory _activityFactory;
 
   public RhinoHostObjectBuilder(
     IRootToHostConverter converter,
@@ -36,8 +37,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     RhinoInstanceBaker instanceBaker,
     RhinoMaterialBaker materialBaker,
     RhinoColorBaker colorBaker,
-    RhinoGroupBaker groupBaker
-  )
+    RhinoGroupBaker groupBaker, IActivityFactory activityFactory)
   {
     _converter = converter;
     _contextStack = contextStack;
@@ -47,6 +47,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _colorBaker = colorBaker;
     _layerBaker = layerBaker;
     _groupBaker = groupBaker;
+    _activityFactory = activityFactory;
   }
 
   public Task<HostObjectBuilderResult> Build(
@@ -57,7 +58,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     CancellationToken cancellationToken
   )
   {
-    using var activity = SpeckleActivityFactory.Start("Build");
+    using var activity = _activityFactory.Start("Build");
     // POC: This is where the top level base-layer name is set. Could be abstracted or injected in the context?
     var baseLayerName = $"Project {projectName}: Model {modelName}";
 
@@ -88,7 +89,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     onOperationProgressed?.Invoke("Converting materials and colors", null);
     if (unpackedRoot.RenderMaterialProxies != null)
     {
-      using var _ = SpeckleActivityFactory.Start("Render Materials");
+      using var _ = _activityFactory.Start("Render Materials");
       _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseLayerName);
     }
 
@@ -100,7 +101,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     // 4 - Bake layers
     // See [CNX-325: Rhino: Change receive operation order to increase performance](https://linear.app/speckle/issue/CNX-325/rhino-change-receive-operation-order-to-increase-performance)
     onOperationProgressed?.Invoke("Baking layers (redraw disabled)", null);
-    using (var _ = SpeckleActivityFactory.Start("Pre baking layers"))
+    using (var _ = _activityFactory.Start("Pre baking layers"))
     {
       using var layerNoDraw = new DisableRedrawScope(_contextStack.Current.Document.Views);
       foreach (var (path, _) in atomicObjectsWithPath)
@@ -115,7 +116,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     List<ReceiveConversionResult> conversionResults = new();
 
     int count = 0;
-    using (var _ = SpeckleActivityFactory.Start("Converting objects"))
+    using (var _ = _activityFactory.Start("Converting objects"))
     {
       foreach (var (path, obj) in atomicObjectsWithPath)
       {
@@ -171,7 +172,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     }
 
     // 6 - Convert instances
-    using (var _ = SpeckleActivityFactory.Start("Converting instances"))
+    using (var _ = _activityFactory.Start("Converting instances"))
     {
       var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = _instanceBaker.BakeInstances(
         instanceComponentsWithPath,
