@@ -1,7 +1,9 @@
 using Autodesk.Revit.DB;
+using Microsoft.Extensions.Logging;
+using Revit.Async;
+using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
-using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
@@ -22,21 +24,24 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   private readonly IRevitConversionContextStack _contextStack;
   private readonly GraphTraversal _traverseFunction;
   private readonly ITransactionManager _transactionManager;
-  private readonly ISyncToThread _syncToThread;
+  private readonly RevitGroupBaker _groupManager;
+  private readonly ILogger<RevitHostObjectBuilder> _logger;
 
   public RevitHostObjectBuilder(
     IRootToHostConverter converter,
     IRevitConversionContextStack contextStack,
     GraphTraversal traverseFunction,
     ITransactionManager transactionManager,
-    ISyncToThread syncToThread
+    RevitGroupBaker groupManager,
+    ILogger<RevitHostObjectBuilder> logger
   )
   {
     _converter = converter;
     _contextStack = contextStack;
     _traverseFunction = traverseFunction;
     _transactionManager = transactionManager;
-    _syncToThread = syncToThread;
+    _groupManager = groupManager;
+    _logger = logger;
   }
 
   public Task<HostObjectBuilderResult> Build(
@@ -46,50 +51,100 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     Action<string, double?>? onOperationProgressed,
     CancellationToken cancellationToken
   ) =>
-    _syncToThread.RunOnThread(() =>
+    RevitTask.RunAsync(() => BuildSync(rootObject, projectName, modelName, onOperationProgressed, cancellationToken));
+
+  private HostObjectBuilderResult BuildSync(
+    Base rootObject,
+    string projectName,
+    string modelName,
+    Action<string, double?>? onOperationProgressed,
+    CancellationToken cancellationToken
+  )
+  {
+    onOperationProgressed?.Invoke("Converting", null);
+
+    using var activity = SpeckleActivityFactory.Start("Build");
+    IEnumerable<TraversalContext> objectsToConvert;
+
+    using (var _ = SpeckleActivityFactory.Start("Traverse"))
     {
-      using var activity = SpeckleActivityFactory.Start("Build");
-      IEnumerable<TraversalContext> objectsToConvert;
-      using (var _ = SpeckleActivityFactory.Start("Traverse"))
-      {
-        objectsToConvert = _traverseFunction.Traverse(rootObject).Where(obj => obj.Current is not Collection);
-      }
+      objectsToConvert = _traverseFunction.Traverse(rootObject).Where(obj => obj.Current is not Collection);
+    }
 
-      using TransactionGroup transactionGroup =
-        new(_contextStack.Current.Document, $"Received data from {projectName}");
-      transactionGroup.Start();
-      _transactionManager.StartTransaction();
+    var elementIds = new List<ElementId>();
 
-      var conversionResults = BakeObjects(objectsToConvert);
+    using TransactionGroup transactionGroup = new(_contextStack.Current.Document, $"Received data from {projectName}");
+    transactionGroup.Start();
+    _transactionManager.StartTransaction();
 
-      using (var _ = SpeckleActivityFactory.Start("Commit"))
-      {
-        _transactionManager.CommitTransaction();
-        transactionGroup.Assimilate();
-      }
-      return conversionResults;
-    });
+    var conversionResults = BakeObjects(objectsToConvert, onOperationProgressed, cancellationToken, out elementIds);
 
-  // POC: Potentially refactor out into an IObjectBaker.
-  private HostObjectBuilderResult BakeObjects(IEnumerable<TraversalContext> objectsGraph)
+    using (var _ = SpeckleActivityFactory.Start("Commit"))
+    {
+      _transactionManager.CommitTransaction();
+      transactionGroup.Assimilate();
+    }
+
+    using TransactionGroup createGroupTransaction = new(_contextStack.Current.Document, "Creating group");
+    createGroupTransaction.Start();
+    _transactionManager.StartTransaction(true);
+
+    try
+    {
+      var baseGroupName = $"Project {projectName} - Model {modelName}";
+      _groupManager.BakeGroups(baseGroupName);
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogError(ex, "Failed to create group after receiving elements in Revit");
+    }
+
+    using (var _ = SpeckleActivityFactory.Start("Commit"))
+    {
+      _transactionManager.CommitTransaction();
+      createGroupTransaction.Assimilate();
+    }
+
+    return conversionResults;
+  }
+
+  private HostObjectBuilderResult BakeObjects(
+    IEnumerable<TraversalContext> objectsGraph,
+    Action<string, double?>? onOperationProgressed,
+    CancellationToken cancellationToken,
+    out List<ElementId> elemIds
+  )
   {
     using (var _ = SpeckleActivityFactory.Start("BakeObjects"))
     {
       var conversionResults = new List<ReceiveConversionResult>();
       var bakedObjectIds = new List<string>();
+      var elementIds = new List<ElementId>();
 
-      foreach (TraversalContext tc in objectsGraph)
+      // is this a dumb idea?
+      var objectList = objectsGraph.ToList();
+      int count = 0;
+
+      foreach (TraversalContext tc in objectList)
       {
+        cancellationToken.ThrowIfCancellationRequested();
         try
         {
           using var activity = SpeckleActivityFactory.Start("BakeObject");
           var result = _converter.Convert(tc.Current);
-          if (result is Autodesk.Revit.DB.DirectShape ds)
+          onOperationProgressed?.Invoke("Converting", (double)++count / objectList.Count);
+
+          // Note: our current converter always returns a DS for now
+          if (result is DirectShape ds)
           {
             bakedObjectIds.Add(ds.UniqueId.ToString());
+            _groupManager.AddToGroupMapping(tc, ds);
           }
-          // should I add resultId and resultType here to the ReceiveConversionResult?
-          conversionResults.Add(new(Status.SUCCESS, tc.Current));
+          else
+          {
+            throw new SpeckleConversionException($"Failed to cast {result.GetType()} to Direct Shape.");
+          }
+          conversionResults.Add(new(Status.SUCCESS, tc.Current, ds.UniqueId, "Direct Shape"));
         }
         catch (Exception ex) when (!ex.IsFatal())
         {
@@ -97,6 +152,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
         }
       }
 
+      elemIds = elementIds;
       return new(bakedObjectIds, conversionResults);
     }
   }

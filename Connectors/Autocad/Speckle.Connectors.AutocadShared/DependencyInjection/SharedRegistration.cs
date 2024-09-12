@@ -37,10 +37,23 @@ public static class SharedRegistration
     builder.AddSingleton(new AutocadDocumentManager()); // TODO: Dependent to TransactionContext, can be moved to AutocadContext
     builder.AddSingleton<DocumentModelStore, AutocadDocumentStore>();
     builder.AddSingleton<AutocadContext>();
-    builder.AddScoped<AutocadGroupManager>();
-    builder.AddScoped<AutocadLayerManager>();
-    builder.AddScoped<AutocadColorManager>();
-    builder.AddScoped<AutocadMaterialManager>();
+
+    // Unpackers and builders
+    builder.AddScoped<AutocadLayerUnpacker>();
+    builder.AddScoped<AutocadLayerBaker>();
+
+    builder.AddScoped<AutocadInstanceUnpacker>();
+    builder.AddScoped<AutocadInstanceBaker>();
+
+    builder.AddScoped<AutocadGroupUnpacker>();
+    builder.AddScoped<AutocadGroupBaker>();
+
+    builder.AddScoped<AutocadColorUnpacker>();
+    builder.AddScoped<AutocadColorBaker>();
+
+    builder.AddScoped<AutocadMaterialUnpacker>();
+    builder.AddScoped<AutocadMaterialBaker>();
+
     builder.AddSingleton<IAutocadIdleManager, AutocadIdleManager>();
     builder.AddSingleton<IHostToSpeckleUnitConverter<UnitsValue>>();
 
@@ -84,7 +97,6 @@ public static class SharedRegistration
       IInstanceObjectsManager<AutocadRootObject, List<Entity>>,
       InstanceObjectsManager<AutocadRootObject, List<Entity>>
     >();
-    builder.AddScoped<AutocadInstanceObjectManager>();
   }
 
   public static void LoadReceive(SpeckleContainerBuilder builder)

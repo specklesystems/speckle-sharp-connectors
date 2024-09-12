@@ -9,5 +9,7 @@ public interface ITransactionManager : IDisposable
   void RollbackSubTransaction();
   void RollbackTransaction();
   void StartSubtransaction();
-  void StartTransaction();
+
+  // POC improve how the error handling behaviour is selected
+  void StartTransaction(bool enableFailurePreprocessor = false);
 }
