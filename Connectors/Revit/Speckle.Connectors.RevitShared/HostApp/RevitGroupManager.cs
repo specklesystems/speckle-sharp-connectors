@@ -10,11 +10,17 @@ public class RevitGroupManager : LayerPathUnpacker
 {
   private readonly IRevitConversionContextStack _contextStack;
   private readonly ITransactionManager _transactionManager;
+  private readonly RevitUtils _revitUtils;
 
-  public RevitGroupManager(IRevitConversionContextStack contextStack, ITransactionManager transactionManager)
+  public RevitGroupManager(
+    IRevitConversionContextStack contextStack,
+    ITransactionManager transactionManager,
+    RevitUtils revitUtils
+  )
   {
     _contextStack = contextStack;
     _transactionManager = transactionManager;
+    _revitUtils = revitUtils;
   }
 
   // We cannot add objects to groups in revit, we need to create a group all at once with all its subkids
@@ -29,7 +35,7 @@ public class RevitGroupManager : LayerPathUnpacker
     foreach (var collection in collectionPath)
     {
       currentLayerName += "::" + collection.name;
-      if (_groupCache.TryGetValue(currentLayerName, out FakeGroup g))
+      if (_groupCache.TryGetValue(currentLayerName, out var g))
       {
         previousGroup = g;
         currentDepth++;
@@ -38,7 +44,7 @@ public class RevitGroupManager : LayerPathUnpacker
 
       var group = new FakeGroup()
       {
-        Name = collection.name, // TODO: Sanitize all names according to revit's liking
+        Name = _revitUtils.RemoveInvalidChars(collection.name),
         Depth = currentDepth++,
         Parent = previousGroup!
       };
@@ -59,10 +65,7 @@ public class RevitGroupManager : LayerPathUnpacker
     foreach (var group in orderedGroups)
     {
       var docGroup = _contextStack.Current.Document.Create.NewGroup(group.Ids);
-      if (group.Parent != null)
-      {
-        group.Parent.Ids.Add(docGroup.Id);
-      }
+      group.Parent?.Ids.Add(docGroup.Id);
       docGroup.GroupType.Name = group.Name;
       lastGroup = docGroup;
     }
