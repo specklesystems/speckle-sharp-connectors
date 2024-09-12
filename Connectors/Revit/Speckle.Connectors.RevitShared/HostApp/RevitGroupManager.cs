@@ -1,14 +1,12 @@
 using Autodesk.Revit.DB;
 using Speckle.Connectors.Revit.Operations.Receive;
-using Speckle.Connectors.Utils.Conversion;
+using Speckle.Connectors.Utils.Operations.Receive;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Sdk;
-using Speckle.Sdk.Logging;
-using Speckle.Sdk.Models.Proxies;
+using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.Revit.HostApp;
 
-public class RevitGroupManager
+public class RevitGroupManager : LayerPathUnpacker
 {
   private readonly IRevitConversionContextStack _contextStack;
   private readonly ITransactionManager _transactionManager;
@@ -34,49 +32,56 @@ public class RevitGroupManager
     return;
   }
 
-  public List<ReceiveConversionResult> CreateGroups(
-    IEnumerable<GroupProxy> groupProxies,
-    Dictionary<string, List<string>> applicationIdMap
-  )
+  // We cannot add objects to groups in revit, we need to create a group all at once with all its subkids
+  // We need to create groups at the end of the day in a separate new transaction
+  public void AddToGroupMapping(TraversalContext tc, DirectShape ds)
   {
-    List<ReceiveConversionResult> results = new();
-
-    using TransactionGroup createGroupTransaction = new(_contextStack.Current.Document, "Creating Revit group");
-    createGroupTransaction.Start();
-    _transactionManager.StartTransaction();
-
-    //_contextStack.Current.Document.Create.NewGroup(elementIds);
-
-    foreach (var gp in groupProxies.OrderBy(group => group.objects.Count))
+    var collectionPath = GetLayerPath(tc);
+    var currentLayerName = "Base Group";
+    var previousGroup = _baseGroup;
+    var currentDepth = 0;
+    foreach (var collection in collectionPath)
     {
-      try
+      currentLayerName += "::" + collection.name;
+      if (_groupCache.TryGetValue(currentLayerName, out FakeGroup g))
       {
-        var entities = gp.objects.SelectMany(oldObjId => applicationIdMap[oldObjId]);
-        //var appIds = gp.objects.SelectMany(oldObjId => applicationIdMap[oldObjId]).Select(id => new Guid(id));
-        //var ids = new ObjectIdCollection();
-        var ids = new List<ElementId>();
-
-        foreach (var entity in entities) { }
-
-        //var groupName = _autocadContext.RemoveInvalidChars(gp.name);
-        //var newGroup = new Group(groupName, true);
-        //newGroup.Append(ids);
-        //groupDictionary.UpgradeOpen();
-        //groupDictionary.SetAt(groupName, newGroup);
-        //groupCreationTransaction.AddNewlyCreatedDBObject(newGroup, true);
+        previousGroup = g;
+        continue;
       }
-      catch (Exception e) when (!e.IsFatal())
+
+      var group = new FakeGroup()
       {
-        results.Add(new ReceiveConversionResult(Status.ERROR, gp, null, null, e));
-      }
+        Name = currentLayerName,
+        Depth = currentDepth++,
+        Parent = previousGroup
+      };
+      _groupCache[currentLayerName] = group;
+      previousGroup = group;
     }
 
-    using (var _ = SpeckleActivityFactory.Start("Commit"))
-    {
-      _transactionManager.CommitTransaction();
-      createGroupTransaction.Assimilate();
-    }
-
-    return results;
+    previousGroup.Ids.Add(ds.Id);
   }
+
+  private readonly Dictionary<string, FakeGroup> _groupCache = new();
+
+  public void BakeGroups()
+  {
+    var orderedGroups = _groupCache.Values.OrderByDescending(group => group.Depth);
+    foreach (var group in orderedGroups)
+    {
+      var docGroup = _contextStack.Current.Document.Create.NewGroup(group.Ids); // TODO
+      group.Parent.Ids.Add(docGroup.Id);
+    }
+  }
+
+  private FakeGroup _baseGroup = new() { Name = "Base Group", Depth = 0 };
+}
+
+sealed class FakeGroup
+{
+  public List<ElementId> Ids { get; set; } = new();
+  public int Depth { get; set; }
+  public string Name { get; set; }
+  public string HostId { get; set; } // will be used on baking, should be subsumed into ids
+  public FakeGroup Parent { get; set; }
 }

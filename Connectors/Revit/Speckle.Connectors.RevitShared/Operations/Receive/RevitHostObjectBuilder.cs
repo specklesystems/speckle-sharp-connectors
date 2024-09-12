@@ -81,6 +81,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     _transactionManager.StartTransaction();
 
     Dictionary<string, List<string>> applicationIdMap = new();
+
     var conversionResults = BakeObjects(objectsToConvert, out elementIds);
 
     using (var _ = SpeckleActivityFactory.Start("Commit"))
@@ -89,26 +90,21 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       transactionGroup.Assimilate();
     }
 
-    //var groupProxies = (rootObject["groupProxies"] as List<object>)?.Cast<GroupProxy>().ToList();
-    //_groupManager.CreateGroups();
+    using TransactionGroup createGroupTransaction = new(_contextStack.Current.Document, "Creating group");
+    createGroupTransaction.Start();
+    _transactionManager.StartTransaction();
 
-    // creating group has to be in a separate tranasction, else Revit will show a warning
-    // using TransactionGroup createGroupTransaction = new(_contextStack.Current.Document, "Creating group");
-    // createGroupTransaction.Start();
-    // _transactionManager.StartTransaction();
-    //
-    // _contextStack.Current.Document.Create.NewGroup(elementIds);
-    //
-    // using (var _ = SpeckleActivityFactory.Start("Commit"))
-    // {
-    //   _transactionManager.CommitTransaction();
-    //   createGroupTransaction.Assimilate();
-    // }
+    _groupManager.BakeGroups();
+
+    using (var _ = SpeckleActivityFactory.Start("Commit"))
+    {
+      _transactionManager.CommitTransaction();
+      createGroupTransaction.Assimilate();
+    }
 
     return conversionResults;
   }
 
-  // POC: Potentially refactor out into an IObjectBaker.
   private HostObjectBuilderResult BakeObjects(IEnumerable<TraversalContext> objectsGraph, out List<ElementId> elemIds)
   {
     using (var _ = SpeckleActivityFactory.Start("BakeObjects"))
@@ -123,18 +119,18 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
         {
           using var activity = SpeckleActivityFactory.Start("BakeObject");
           var result = _converter.Convert(tc.Current);
-          if (result is Autodesk.Revit.DB.DirectShape ds)
+
+          // Note: our current converter always returns a DS for now
+          if (result is DirectShape ds)
           {
             bakedObjectIds.Add(ds.UniqueId.ToString());
-            elementIds.Add(ds.Id);
-            var path = tc.GetPropertyPath();
-            foreach (var s in path)
-            {
-              Console.WriteLine(s);
-            }
+            _groupManager.AddToGroupMapping(tc, ds);
           }
-          // should I add resultId and resultType here to the ReceiveConversionResult?
-          conversionResults.Add(new(Status.SUCCESS, tc.Current));
+          else
+          {
+            throw new SpeckleConversionException($"Failed to cast {result.GetType()} to Direct Shape.");
+          }
+          conversionResults.Add(new(Status.SUCCESS, tc.Current, ds.UniqueId, "Direct Shape"));
         }
         catch (Exception ex) when (!ex.IsFatal())
         {
@@ -142,8 +138,6 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
         }
       }
 
-      // create group
-      _contextStack.Current.Document.Create.NewGroup(elementIds);
       elemIds = elementIds;
 
       return new(bakedObjectIds, conversionResults);

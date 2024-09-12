@@ -47,6 +47,7 @@ public class RhinoLayerBaker : LayerPathUnpacker
     var currentLayerName = baseLayerName;
     var currentDocument = RhinoDoc.ActiveDoc; // POC: too much effort right now to wrap around the interfaced layers
     Layer previousLayer = currentDocument.Layers.FindName(currentLayerName);
+
     foreach (Collection collection in collectionPath)
     {
       currentLayerName += Layer.PathSeparator + collection.name;
