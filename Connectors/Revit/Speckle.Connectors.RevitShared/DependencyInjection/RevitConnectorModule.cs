@@ -31,7 +31,6 @@ public class RevitConnectorModule : ISpeckleModule
     builder.AddDUI();
     RegisterUiDependencies(builder);
 
-    builder.AddSingletonInstance<ISyncToThread, RevitContextAccessor>();
     // register
     builder.AddSingleton<DocumentModelStore, RevitDocumentStore>();
 
