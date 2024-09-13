@@ -4,7 +4,6 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Autodesk.Windows;
 using Speckle.Sdk;
-using Speckle.Sdk.Logging;
 
 namespace Speckle.Connectors.Autocad.Plugin;
 
@@ -178,17 +177,14 @@ public class AutocadRibbon
     {
       stream = assembly.GetManifestResourceStream(resource);
     }
-    catch (FileLoadException flEx)
+    catch (FileLoadException)
     {
-      SpeckleLog.Logger.Error(flEx, "Could not load app image source: {exceptionMessage}");
     }
-    catch (FileNotFoundException fnfEx)
+    catch (FileNotFoundException)
     {
-      SpeckleLog.Logger.Error(fnfEx, "Could not find app image source: {exceptionMessage}");
     }
-    catch (NotImplementedException niEx)
+    catch (NotImplementedException)
     {
-      SpeckleLog.Logger.Error(niEx, "App image source could not be loaded: {exceptionMessage}");
     }
 
     if (stream is null)
