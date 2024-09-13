@@ -38,8 +38,8 @@ public static class Connector
       Slug,
       GetPackageVersion(Assembly.GetExecutingAssembly()),
       new(
-        new SpeckleLogging(Console: true, Otel: null, MinimumLevel: SpeckleLogLevel.Information),
-        new SpeckleTracing(true, Otel: null)
+        new SpeckleLogging(Console: true, Otel: null, MinimumLevel: SpeckleLogLevel.Warning),
+        new SpeckleTracing(Console: false, Otel: null)
       )
     );
 
