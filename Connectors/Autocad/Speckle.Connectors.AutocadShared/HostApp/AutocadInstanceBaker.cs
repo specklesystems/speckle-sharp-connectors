@@ -24,25 +24,25 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
   private readonly AutocadLayerBaker _layerBaker;
   private readonly AutocadColorBaker _colorBaker;
   private readonly AutocadMaterialBaker _materialBaker;
-  private readonly IHostToSpeckleUnitConverter<UnitsValue> _unitsConverter;
   private readonly AutocadContext _autocadContext;
   private readonly ILogger<AutocadInstanceBaker> _logger;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _converterSettings;
 
   public AutocadInstanceBaker(
     AutocadLayerBaker layerBaker,
     AutocadColorBaker colorBaker,
     AutocadMaterialBaker materialBaker,
-    IHostToSpeckleUnitConverter<UnitsValue> unitsConverter,
     AutocadContext autocadContext,
-    ILogger<AutocadInstanceBaker> logger
+    ILogger<AutocadInstanceBaker> logger,
+    IConverterSettingsStore<AutocadConversionSettings> converterSettings
   )
   {
     _layerBaker = layerBaker;
     _colorBaker = colorBaker;
     _materialBaker = materialBaker;
-    _unitsConverter = unitsConverter;
     _autocadContext = autocadContext;
     _logger = logger;
+    _converterSettings = converterSettings;
   }
 
   public BakeResult BakeInstances(
@@ -225,7 +225,7 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
 
   private Matrix3d GetMatrix3d(Matrix4x4 matrix, string units)
   {
-    var sf = Units.GetConversionFactor(units, _settingsStore.Current.SpeckleUnits);
+    var sf = Units.GetConversionFactor(units, _converterSettings.Current.SpeckleUnits);
 
     var scaledTransform = new[]
     {

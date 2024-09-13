@@ -26,7 +26,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
 {
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;
-  private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
+  private readonly IConverterSettingsStore<RhinoConversionSettings> _converterSettings;
   private readonly RhinoLayerUnpacker _layerUnpacker;
   private readonly RhinoInstanceUnpacker _instanceUnpacker;
   private readonly RhinoGroupUnpacker _groupUnpacker;
@@ -37,7 +37,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   public RhinoRootObjectBuilder(
     IRootToSpeckleConverter rootToSpeckleConverter,
     ISendConversionCache sendConversionCache,
-    IConversionContextStack<RhinoDoc, UnitSystem> contextStack,
+    IConverterSettingsStore<RhinoConversionSettings> converterSettings,
     RhinoLayerUnpacker layerUnpacker,
     RhinoInstanceUnpacker instanceUnpacker,
     RhinoGroupUnpacker groupUnpacker,
@@ -47,7 +47,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   )
   {
     _sendConversionCache = sendConversionCache;
-    _contextStack = contextStack;
+    _converterSettings = converterSettings;
     _layerUnpacker = layerUnpacker;
     _instanceUnpacker = instanceUnpacker;
     _groupUnpacker = groupUnpacker;
@@ -73,7 +73,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   {
     using var activity = SpeckleActivityFactory.Start("Build");
     // 0 - Init the root
-    Collection rootObjectCollection = new() { name = _contextStack.Current.Document.Name ?? "Unnamed document" };
+    Collection rootObjectCollection = new() { name = _converterSettings.Current.Document.Name ?? "Unnamed document" };
 
     // 1 - Unpack the instances
     UnpackResult<RhinoObject> unpackResults;
@@ -102,7 +102,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         cancellationToken.ThrowIfCancellationRequested();
 
         // handle layer
-        Layer layer = _contextStack.Current.Document.Layers[rhinoObject.Attributes.LayerIndex];
+        Layer layer = _converterSettings.Current.Document.Layers[rhinoObject.Attributes.LayerIndex];
         versionLayers.Add(layer);
         Collection collectionHost = _layerUnpacker.GetHostObjectCollection(layer, rootObjectCollection);
 

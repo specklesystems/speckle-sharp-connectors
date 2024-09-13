@@ -61,7 +61,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     CancellationToken ct = default
   )
   {
-    var doc = _conversionContextStack.Current.Document;
+    var doc = _converterSettings.Current.Document;
 
     if (doc.IsFamilyDocument)
     {
@@ -73,7 +73,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     // Convert ids to actual revit elements
     foreach (var id in objects)
     {
-      var el = _conversionContextStack.Current.Document.GetElement(id);
+      var el = _converterSettings.Current.Document.GetElement(id);
       if (el != null)
       {
         revitElements.Add(el);
@@ -131,9 +131,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     }
 
     var idsAndSubElementIds = _elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(atomicObjects);
-    var materialProxies = _conversionContextStack.RenderMaterialProxyCache.GetRenderMaterialProxyListForObjects(
-      idsAndSubElementIds
-    );
+    var materialProxies = _revitMaterialCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds);
     _rootObject[ProxyKeys.RENDER_MATERIAL] = materialProxies;
 
     Debug.WriteLine(
