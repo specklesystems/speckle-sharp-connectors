@@ -3,27 +3,6 @@ using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.Utils.Instances;
 
-public interface IInstanceObjectsManager<THostObjectType, TAppIdMapValueType>
-{
-  void AddInstanceProxy(string objectId, InstanceProxy instanceProxy);
-  void AddDefinitionProxy(string objectId, InstanceDefinitionProxy instanceDefinitionProxy);
-  void AddAtomicObject(string objectId, THostObjectType obj);
-  void AddInstanceProxiesByDefinitionId(string definitionId, List<InstanceProxy> instanceProxies);
-  UnpackResult<THostObjectType> GetUnpackResult();
-  bool TryGetInstanceProxiesFromDefinitionId(
-    string definitionId,
-    [NotNullWhen(true)] out List<InstanceProxy>? instanceProxiesWithSameDefinition
-  );
-  bool TryGetInstanceDefinitionProxy(
-    string definitionId,
-    [NotNullWhen(true)] out InstanceDefinitionProxy? instanceDefinitionProxy
-  );
-  InstanceProxy GetInstanceProxy(string instanceId);
-
-  void UpdateChildrenMaxDepth(InstanceDefinitionProxy definitionProxy, int depthDifference);
-}
-
-// [GenerateAutoInterface]
 public class InstanceObjectsManager<THostObjectType, TAppIdMapValueType>
   : IInstanceObjectsManager<THostObjectType, TAppIdMapValueType>
 {

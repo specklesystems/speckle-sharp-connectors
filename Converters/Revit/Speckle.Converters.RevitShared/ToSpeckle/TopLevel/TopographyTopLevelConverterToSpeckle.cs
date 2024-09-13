@@ -32,7 +32,7 @@ public class TopographyTopLevelConverterToSpeckle
       units = _contextStack.Current.SpeckleUnits,
       displayValue = _displayValueExtractor.GetDisplayValue(target),
       elementId = target.Id.ToString().NotNull(),
-      baseGeometry = null! //TODO: this can't be correct
+      baseGeometry = null! //TODO: this can't be correct, see https://linear.app/speckle/issue/CNX-461/revit-check-why-topographytospeckle-sets-no-basegeometry
     };
 
     // POC: shouldn't we just do this in the RevitConverter ?
