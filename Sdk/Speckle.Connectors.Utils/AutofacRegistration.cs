@@ -11,10 +11,7 @@ namespace Speckle.Connectors.Utils;
 /// </summary>
 internal static class AutofacRegistration
 {
-
-  public static void Populate(
-    this ContainerBuilder builder,
-    IEnumerable<ServiceDescriptor> descriptors)
+  public static void Populate(this ContainerBuilder builder, IEnumerable<ServiceDescriptor> descriptors)
   {
     Populate(builder, descriptors, null);
   }
@@ -22,13 +19,13 @@ internal static class AutofacRegistration
   public static void Populate(
     this ContainerBuilder builder,
     IEnumerable<ServiceDescriptor> descriptors,
-    object? lifetimeScopeTagForSingletons)
+    object? lifetimeScopeTagForSingletons
+  )
   {
     if (descriptors == null)
     {
       throw new ArgumentNullException(nameof(descriptors));
     }
-
 
     Register(builder, descriptors, lifetimeScopeTagForSingletons!);
   }
@@ -50,10 +47,14 @@ internal static class AutofacRegistration
   /// The <paramref name="registrationBuilder" />, configured with the proper lifetime scope,
   /// and available for additional configuration.
   /// </returns>
-  private static IRegistrationBuilder<object, TActivatorData, TRegistrationStyle> ConfigureLifecycle<TActivatorData, TRegistrationStyle>(
+  private static IRegistrationBuilder<object, TActivatorData, TRegistrationStyle> ConfigureLifecycle<
+    TActivatorData,
+    TRegistrationStyle
+  >(
     this IRegistrationBuilder<object, TActivatorData, TRegistrationStyle> registrationBuilder,
     ServiceLifetime lifecycleKind,
-    object lifetimeScopeTagForSingleton)
+    object lifetimeScopeTagForSingleton
+  )
   {
     switch (lifecycleKind)
     {
@@ -94,11 +95,16 @@ internal static class AutofacRegistration
   /// with provided <paramref name="lifetimeScopeTagForSingletons"/>
   /// instead of using <see cref="IRegistrationBuilder{TLimit,TActivatorData,TRegistrationStyle}.SingleInstance"/>.
   /// </param>
-  [SuppressMessage("CA2000", "CA2000", Justification = "Registrations created here are disposed when the built container is disposed.")]
+  [SuppressMessage(
+    "CA2000",
+    "CA2000",
+    Justification = "Registrations created here are disposed when the built container is disposed."
+  )]
   private static void Register(
     ContainerBuilder builder,
     IEnumerable<ServiceDescriptor> descriptors,
-    object lifetimeScopeTagForSingletons)
+    object lifetimeScopeTagForSingletons
+  )
   {
     foreach (var descriptor in descriptors)
     {
@@ -123,11 +129,15 @@ internal static class AutofacRegistration
       }
       else if (descriptor.ImplementationFactory != null)
       {
-        var registration = RegistrationBuilder.ForDelegate(descriptor.ServiceType, (context, parameters) =>
-          {
-            var serviceProvider = context.Resolve<IServiceProvider>();
-            return descriptor.ImplementationFactory(serviceProvider);
-          })
+        var registration = RegistrationBuilder
+          .ForDelegate(
+            descriptor.ServiceType,
+            (context, parameters) =>
+            {
+              var serviceProvider = context.Resolve<IServiceProvider>();
+              return descriptor.ImplementationFactory(serviceProvider);
+            }
+          )
           .ConfigureLifecycle(descriptor.Lifetime, lifetimeScopeTagForSingletons)
           .CreateRegistration();
 

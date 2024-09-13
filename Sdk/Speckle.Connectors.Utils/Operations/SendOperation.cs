@@ -9,9 +9,13 @@ public sealed class SendOperation<T>
 {
   private readonly IRootObjectBuilder<T> _rootObjectBuilder;
   private readonly IRootObjectSender _baseObjectSender;
-  private readonly IActivityFactory _activityFactory;
+  private readonly ISdkActivityFactory _activityFactory;
 
-  public SendOperation(IRootObjectBuilder<T> rootObjectBuilder, IRootObjectSender baseObjectSender, IActivityFactory activityFactory)
+  public SendOperation(
+    IRootObjectBuilder<T> rootObjectBuilder,
+    IRootObjectSender baseObjectSender,
+    ISdkActivityFactory activityFactory
+  )
   {
     _rootObjectBuilder = rootObjectBuilder;
     _baseObjectSender = baseObjectSender;

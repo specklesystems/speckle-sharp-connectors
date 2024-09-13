@@ -33,7 +33,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   private readonly RhinoMaterialUnpacker _materialUnpacker;
   private readonly RhinoColorUnpacker _colorUnpacker;
   private readonly ILogger<RhinoRootObjectBuilder> _logger;
-  private readonly IActivityFactory _activityFactory;
+  private readonly ISdkActivityFactory _activityFactory;
 
   public RhinoRootObjectBuilder(
     IRootToSpeckleConverter rootToSpeckleConverter,
@@ -44,7 +44,9 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     RhinoGroupUnpacker groupUnpacker,
     RhinoMaterialUnpacker materialUnpacker,
     RhinoColorUnpacker colorUnpacker,
-    ILogger<RhinoRootObjectBuilder> logger, IActivityFactory activityFactory)
+    ILogger<RhinoRootObjectBuilder> logger,
+    ISdkActivityFactory activityFactory
+  )
   {
     _sendConversionCache = sendConversionCache;
     _contextStack = contextStack;

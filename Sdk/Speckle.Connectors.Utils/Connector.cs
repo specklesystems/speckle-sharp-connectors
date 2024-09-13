@@ -22,7 +22,11 @@ public static class Connector
 
   public static HostApplication HostApp { get; private set; }
 
-  public static IDisposable? Initialize(HostApplication application, HostAppVersion version, SpeckleContainerBuilder builder)
+  public static IDisposable? Initialize(
+    HostApplication application,
+    HostAppVersion version,
+    SpeckleContainerBuilder builder
+  )
   {
     Version = version;
     VersionString = HostApplications.GetVersion(version);
@@ -32,12 +36,16 @@ public static class Connector
     IServiceCollection serviceCollection = new ServiceCollection();
     serviceCollection.AddLogging(x => x.AddConsole());
     serviceCollection.AddSpeckleSdk(new SpeckleConfiguration(application, version));
+    serviceCollection.AddSingleton<Speckle.Sdk.Logging.ISdkActivityFactory, ConnectorActivityFactory>();
     builder.ContainerBuilder.Populate(serviceCollection);
-    return TracingBuilder.Initialize(VersionString, Slug, GetPackageVersion(Assembly.GetExecutingAssembly()) ,new SpeckleTracing
-    (
-     true, null
-    ));
+    return TracingBuilder.Initialize(
+      VersionString,
+      Slug,
+      GetPackageVersion(Assembly.GetExecutingAssembly()),
+      new SpeckleTracing(true, null)
+    );
   }
+
   private static string GetPackageVersion(Assembly assembly)
   {
     // MinVer https://github.com/adamralph/minver?tab=readme-ov-file#version-numbers
@@ -60,4 +68,3 @@ public static class Connector
     return indexOfPlusSign > 0 ? informationalVersion[..indexOfPlusSign] : informationalVersion;
   }
 }
-

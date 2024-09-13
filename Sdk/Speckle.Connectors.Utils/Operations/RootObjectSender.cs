@@ -29,7 +29,10 @@ public sealed class RootObjectSender : IRootObjectSender
     IServerTransportFactory transportFactory,
     ISendConversionCache sendConversionCache,
     AccountService accountService,
-    IProgressDisplayManager progressDisplayManager,  IOperations operations, IClientFactory clientFactory)
+    IProgressDisplayManager progressDisplayManager,
+    IOperations operations,
+    IClientFactory clientFactory
+  )
   {
     _transportFactory = transportFactory;
     _sendConversionCache = sendConversionCache;
@@ -60,7 +63,8 @@ public sealed class RootObjectSender : IRootObjectSender
     using var transport = _transportFactory.Create(account, sendInfo.ProjectId, 60, null);
 
     _progressDisplayManager.Begin();
-    var sendResult = await _operations.Send(
+    var sendResult = await _operations
+      .Send(
         commitObject,
         transport,
         true,

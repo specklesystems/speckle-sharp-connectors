@@ -366,10 +366,7 @@
         }
       },
       "speckle.connectors.logging": {
-        "type": "Project",
-        "dependencies": {
-          "Speckle.Sdk.Logging": "[1.0.0, )"
-        }
+        "type": "Project"
       },
       "speckle.connectors.utils": {
         "type": "Project",
@@ -431,12 +428,8 @@
           "Polly.Extensions.Http": "[3.0.0, )",
           "Speckle.DoubleNumerics": "[4.0.1, )",
           "Speckle.Newtonsoft.Json": "[13.0.2, )",
-          "Speckle.Sdk.Logging": "[1.0.0, )",
           "System.Text.Json": "[5.0.2, )"
         }
-      },
-      "speckle.sdk.logging": {
-        "type": "Project"
       },
       "Autofac": {
         "type": "CentralTransitive",

@@ -23,14 +23,16 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   private readonly GraphTraversal _traverseFunction;
   private readonly ITransactionManager _transactionManager;
   private readonly ISyncToThread _syncToThread;
-  private readonly IActivityFactory _activityFactory;
+  private readonly ISdkActivityFactory _activityFactory;
 
   public RevitHostObjectBuilder(
     IRootToHostConverter converter,
     IRevitConversionContextStack contextStack,
     GraphTraversal traverseFunction,
     ITransactionManager transactionManager,
-    ISyncToThread syncToThread, IActivityFactory activityFactory)
+    ISyncToThread syncToThread,
+    ISdkActivityFactory activityFactory
+  )
   {
     _converter = converter;
     _contextStack = contextStack;

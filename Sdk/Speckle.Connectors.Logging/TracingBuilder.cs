@@ -2,17 +2,21 @@
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using Speckle.Sdk.Logging;
 
 namespace Speckle.Connectors.Logging;
 
 public static class TracingBuilder
 {
-  public static IDisposable? Initialize(string applicationAndVersion, string slug, string connectorVersion, SpeckleTracing? speckleTracing)
+  public static IDisposable? Initialize(
+    string applicationAndVersion,
+    string slug,
+    string connectorVersion,
+    SpeckleTracing? speckleTracing
+  )
   {
     var resourceBuilder = ResourceBuilder
       .CreateEmpty()
-      .AddService(serviceName: ActivityFactory.TracingSource, serviceVersion: connectorVersion)
+      .AddService(serviceName: LoggingActivityFactory.TRACING_SOURCE, serviceVersion: connectorVersion)
       .AddAttributes(
         new List<KeyValuePair<string, object>>
         {
@@ -57,7 +61,9 @@ public static class TracingBuilder
       return null;
     }
 
-    var tracerProviderBuilder = OpenTelemetry.Sdk.CreateTracerProviderBuilder().AddSource(ActivityFactory.TracingSource);
+    var tracerProviderBuilder = OpenTelemetry
+      .Sdk.CreateTracerProviderBuilder()
+      .AddSource(LoggingActivityFactory.TRACING_SOURCE);
     tracerProviderBuilder = tracerProviderBuilder.AddHttpClientInstrumentation();
     if (otelEnabled)
     {

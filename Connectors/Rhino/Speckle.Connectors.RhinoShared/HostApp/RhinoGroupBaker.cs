@@ -11,9 +11,13 @@ public class RhinoGroupBaker
 {
   private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
   private readonly ILogger<RhinoGroupBaker> _logger;
-  private readonly IActivityFactory _activityFactory;
+  private readonly ISdkActivityFactory _activityFactory;
 
-  public RhinoGroupBaker(IConversionContextStack<RhinoDoc, UnitSystem> contextStack, ILogger<RhinoGroupBaker> logger, IActivityFactory activityFactory)
+  public RhinoGroupBaker(
+    IConversionContextStack<RhinoDoc, UnitSystem> contextStack,
+    ILogger<RhinoGroupBaker> logger,
+    ISdkActivityFactory activityFactory
+  )
   {
     _contextStack = contextStack;
     _logger = logger;

@@ -27,7 +27,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private readonly RhinoColorBaker _colorBaker;
   private readonly RhinoGroupBaker _groupBaker;
   private readonly RootObjectUnpacker _rootObjectUnpacker;
-  private readonly IActivityFactory _activityFactory;
+  private readonly ISdkActivityFactory _activityFactory;
 
   public RhinoHostObjectBuilder(
     IRootToHostConverter converter,
@@ -37,7 +37,9 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     RhinoInstanceBaker instanceBaker,
     RhinoMaterialBaker materialBaker,
     RhinoColorBaker colorBaker,
-    RhinoGroupBaker groupBaker, IActivityFactory activityFactory)
+    RhinoGroupBaker groupBaker,
+    ISdkActivityFactory activityFactory
+  )
   {
     _converter = converter;
     _contextStack = contextStack;

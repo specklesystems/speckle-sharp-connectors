@@ -13,7 +13,7 @@ public sealed class ReceiveOperation
   private readonly AccountService _accountService;
   private readonly IServerTransportFactory _serverTransportFactory;
   private readonly IProgressDisplayManager _progressDisplayManager;
-  private readonly IActivityFactory _activityFactory;
+  private readonly ISdkActivityFactory _activityFactory;
   private readonly IOperations _operations;
   private readonly IClientFactory _clientFactory;
 
@@ -21,7 +21,11 @@ public sealed class ReceiveOperation
     IHostObjectBuilder hostObjectBuilder,
     AccountService accountService,
     IServerTransportFactory serverTransportFactory,
-    IProgressDisplayManager progressDisplayManager, IActivityFactory activityFactory, IOperations operations, IClientFactory clientFactory)
+    IProgressDisplayManager progressDisplayManager,
+    ISdkActivityFactory activityFactory,
+    IOperations operations,
+    IClientFactory clientFactory
+  )
   {
     _hostObjectBuilder = hostObjectBuilder;
     _accountService = accountService;
@@ -59,7 +63,8 @@ public sealed class ReceiveOperation
     using (var _ = _activityFactory.Start("Receive objects"))
     {
       _progressDisplayManager.Begin();
-      commitObject = await _operations.Receive(
+      commitObject = await _operations
+        .Receive(
           version.referencedObject,
           transport,
           onProgressAction: dict =>

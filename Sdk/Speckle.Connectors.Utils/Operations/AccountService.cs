@@ -9,7 +9,6 @@ namespace Speckle.Connectors.Utils.Operations;
 /// </summary>
 public class AccountService(IAccountManager accountManager)
 {
-
   /// <summary>
   /// Account to retrieve with its id, if not exist try to retrieve from matching serverUrl.
   /// </summary>
