@@ -10,7 +10,7 @@ namespace Speckle.Connectors.Logging.Internal;
 
 internal static class LogBuilder
 {
-  public static void Initialize(
+  public static ISpeckleLogger Initialize(
     string applicationAndVersion,
     string connectorVersion,
     SpeckleLogging? speckleLogging,
@@ -59,6 +59,8 @@ internal static class LogBuilder
       .Information(
         "Initialized logger inside {hostApplication}/{productVersion}/{version} for user {id}. Path info {userApplicationDataPath} {installApplicationDataPath}."
       );
+
+    return new SpeckleLogger(logger);
   }
 
   private static FileVersionInfo GetFileVersionInfo()

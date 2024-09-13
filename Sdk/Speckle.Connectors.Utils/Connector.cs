@@ -33,17 +33,23 @@ public static class Connector
     HostApp = application;
     TypeLoader.Initialize(typeof(Base).Assembly, typeof(Point).Assembly);
 
-    IServiceCollection serviceCollection = new ServiceCollection();
-    serviceCollection.AddLogging(x => x.AddConsole());
-    serviceCollection.AddSpeckleSdk(new SpeckleConfiguration(application, version));
-    serviceCollection.AddSingleton<Speckle.Sdk.Logging.ISdkActivityFactory, ConnectorActivityFactory>();
-    builder.ContainerBuilder.Populate(serviceCollection);
-    return Observability.Initialize(
+    var (logging, tracing) = Observability.Initialize(
       VersionString,
       Slug,
       GetPackageVersion(Assembly.GetExecutingAssembly()),
-      new(new SpeckleLogging(Console: true, Otel: null), new SpeckleTracing(true, Otel: null))
+      new(
+        new SpeckleLogging(Console: true, Otel: null, MinimumLevel: SpeckleLogLevel.Information),
+        new SpeckleTracing(true, Otel: null)
+      )
     );
+
+    IServiceCollection serviceCollection = new ServiceCollection();
+    serviceCollection.AddLogging(x => x.AddProvider(new SpeckleLogProvider(logging)));
+    serviceCollection.AddSpeckleSdk(new SpeckleConfiguration(application, version));
+    serviceCollection.AddSingleton<Speckle.Sdk.Logging.ISdkActivityFactory, ConnectorActivityFactory>();
+    //do this last
+    builder.ContainerBuilder.Populate(serviceCollection);
+    return tracing;
   }
 
   private static string GetPackageVersion(Assembly assembly)

@@ -4,7 +4,7 @@ namespace Speckle.Connectors.Logging;
 
 public static class Observability
 {
-  public static IDisposable? Initialize(
+  public static (ISpeckleLogger, IDisposable?) Initialize(
     string applicationAndVersion,
     string slug,
     string connectorVersion,
@@ -12,7 +12,13 @@ public static class Observability
   )
   {
     var resourceBuilder = ResourceCreator.Create(applicationAndVersion, slug, connectorVersion);
-    LogBuilder.Initialize(applicationAndVersion, connectorVersion, observability.Logging, resourceBuilder);
-    return TracingBuilder.Initialize(observability.Tracing, resourceBuilder);
+    var logging = LogBuilder.Initialize(
+      applicationAndVersion,
+      connectorVersion,
+      observability.Logging,
+      resourceBuilder
+    );
+    var tracing = TracingBuilder.Initialize(observability.Tracing, resourceBuilder);
+    return (logging, tracing);
   }
 }
