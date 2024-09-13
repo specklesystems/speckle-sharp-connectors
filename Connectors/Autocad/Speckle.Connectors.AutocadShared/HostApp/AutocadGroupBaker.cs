@@ -1,6 +1,5 @@
 using Autodesk.AutoCAD.DatabaseServices;
-using Speckle.Connectors.Autocad.HostApp.Extensions;
-using Speckle.Connectors.Autocad.Operations.Send;
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Sdk;
 using Speckle.Sdk.Models.Proxies;
@@ -8,56 +7,19 @@ using Speckle.Sdk.Models.Proxies;
 namespace Speckle.Connectors.Autocad.HostApp;
 
 /// <summary>
-/// This resource expects to be injected "fresh" in each send/receive operation (scoped lifetime). Extracts group information from a set of objects into proxies in send operations; also creates groups from a set of proxies in receive operations.
+/// This resource expects to be injected "fresh" in each receive operation (scoped lifetime).
+/// Extracts group information from a set of objects into proxies in send operations; also creates groups from a set of proxies in receive operations.
+/// TODO: Oguzhan! Check whats happening on second receive unless purge groups? naming etc..
 /// </summary>
-public class AutocadGroupManager
+public class AutocadGroupBaker
 {
+  private readonly ILogger<AutocadGroupBaker> _logger;
   private readonly AutocadContext _autocadContext;
 
-  public AutocadGroupManager(AutocadContext autocadContext)
+  public AutocadGroupBaker(AutocadContext autocadContext, ILogger<AutocadGroupBaker> logger)
   {
     _autocadContext = autocadContext;
-  }
-
-  /// <summary>
-  /// Unpacks a selection of atomic objects into their groups
-  /// </summary>
-  /// <param name="autocadObjects"></param>
-  /// <returns></returns>
-  public List<GroupProxy> UnpackGroups(IEnumerable<AutocadRootObject> autocadObjects)
-  {
-    var groupProxies = new Dictionary<string, GroupProxy>();
-
-    using var transaction = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
-
-    foreach (var (dbObject, applicationId) in autocadObjects)
-    {
-      var persistentReactorIds = dbObject.GetPersistentReactorIds();
-      foreach (ObjectId oReactorId in persistentReactorIds)
-      {
-        var obj = transaction.GetObject(oReactorId, OpenMode.ForRead);
-        if (obj is not Group group)
-        {
-          continue;
-        }
-        var groupAppId = group.GetSpeckleApplicationId();
-        if (groupProxies.TryGetValue(groupAppId, out GroupProxy? groupProxy))
-        {
-          groupProxy.objects.Add(applicationId);
-        }
-        else
-        {
-          groupProxies[groupAppId] = new()
-          {
-            applicationId = groupAppId,
-            name = group.Name,
-            objects = [applicationId]
-          };
-        }
-      }
-    }
-
-    return groupProxies.Values.ToList();
+    _logger = logger;
   }
 
   /// <summary>
@@ -66,6 +28,7 @@ public class AutocadGroupManager
   /// <param name="groupProxies"></param>
   /// <param name="applicationIdMap"></param>
   /// <returns></returns>
+  // TODO: Oguzhan! Do not report here too! But this is TBD that we don't know the shape of the report yet.
   public List<ReceiveConversionResult> CreateGroups(
     IEnumerable<GroupProxy> groupProxies,
     Dictionary<string, List<Entity>> applicationIdMap
@@ -103,9 +66,10 @@ public class AutocadGroupManager
 
         groupCreationTransaction.AddNewlyCreatedDBObject(newGroup, true);
       }
-      catch (Exception e) when (!e.IsFatal())
+      catch (Exception ex) when (!ex.IsFatal())
       {
-        results.Add(new ReceiveConversionResult(Status.ERROR, gp, null, null, e));
+        results.Add(new ReceiveConversionResult(Status.ERROR, gp, null, null, ex));
+        _logger.LogError(ex, "Failed to bake Autocad Group");
       }
     }
 

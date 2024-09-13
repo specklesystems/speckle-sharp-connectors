@@ -8,6 +8,7 @@ using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Instances;
+using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
@@ -72,7 +73,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     onOperationProgressed?.Invoke("Converting", null);
 
     // get materials
-    List<RenderMaterialProxy>? materials = (rootObject["renderMaterialProxies"] as List<object>)
+    List<RenderMaterialProxy>? materials = (rootObject[ProxyKeys.RENDER_MATERIAL] as List<object>)
       ?.Cast<RenderMaterialProxy>()
       .ToList();
     if (materials != null)
@@ -81,7 +82,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     }
 
     // get colors
-    List<ColorProxy>? colors = (rootObject["colorProxies"] as List<object>)?.Cast<ColorProxy>().ToList();
+    List<ColorProxy>? colors = (rootObject[ProxyKeys.COLOR] as List<object>)?.Cast<ColorProxy>().ToList();
     if (colors != null)
     {
       _colorManager.ParseColors(colors, onOperationProgressed);
@@ -145,10 +146,11 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       })
       .ConfigureAwait(false);
 
+    // 3. add layer and tables to the Map and Table Of Content
+
     // Create placeholder for GroupLayers
     Dictionary<string, GroupLayer> createdLayerGroups = new();
 
-    // 3. add layer and tables to the Map and Table Of Content
     int bakeCount = 0;
     Dictionary<string, (MapMember, CIMUniqueValueRenderer?)> bakedMapMembers = new();
     onOperationProgressed?.Invoke("Adding to Map", bakeCount);
@@ -243,7 +245,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     // now filter the objects
     objectsToConvertTc = objectsToConvertTc.Where(ctx => ctx.Current is not Collection).ToList();
 
-    var instanceDefinitionProxies = (rootObject["instanceDefinitionProxies"] as List<object>)
+    var instanceDefinitionProxies = (rootObject[ProxyKeys.INSTANCE_DEFINITION] as List<object>)
       ?.Cast<InstanceDefinitionProxy>()
       .ToList();
 

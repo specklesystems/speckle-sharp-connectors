@@ -52,6 +52,7 @@ jobs:
     steps:
       - name: 🔫 Trigger Build Installers
         uses: ALEEF02/workflow-dispatch@v3.0.0
+        continue-on-error: true
         with:
           workflow: Build Installers
           repo: specklesystems/connector-installers
@@ -63,6 +64,10 @@ jobs:
           wait-for-completion-timeout: 10m
           display-workflow-run-url: true
           display-workflow-run-url-interval: 10s
+
+      - uses: geekyeggo/delete-artifact@v5
+        with:
+          name: output-*
 
   test:
     runs-on: ubuntu-latest
