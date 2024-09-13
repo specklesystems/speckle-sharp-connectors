@@ -157,7 +157,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
       _logger.LogModelCardHandledError(ex);
-      Commands.SetModelError(modelCardId, ex);
+      await Commands.SetModelError(modelCardId, ex).ConfigureAwait(false);
     }
   }
 
@@ -268,16 +268,18 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
   // POC: Will be re-addressed later with better UX with host apps that are friendly on async doc operations.
   // That's why don't bother for now how to get rid of from dup logic in other bindings.
-  private void OnDocumentChanged()
+  private async void OnDocumentChanged()
   {
     if (_cancellationManager.NumberOfOperations > 0)
     {
       _cancellationManager.CancelAllOperations();
-      Commands.SetGlobalNotification(
-        ToastNotificationType.INFO,
-        "Document Switch",
-        "Operations cancelled because of document swap!"
-      );
+      await Commands
+        .SetGlobalNotification(
+          ToastNotificationType.INFO,
+          "Document Switch",
+          "Operations cancelled because of document swap!"
+        )
+        .ConfigureAwait(false);
     }
   }
 }

@@ -104,15 +104,17 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
     }
   }
 
-  private void SetGlobalNotification(ToastNotificationType type, string title, string message, bool autoClose) =>
-    Parent.Send(
-      BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, //TODO: We could move these constants into a DUI3 constants static class
-      new
-      {
-        type,
-        title,
-        description = message,
-        autoClose
-      }
-    );
+  private async void SetGlobalNotification(ToastNotificationType type, string title, string message, bool autoClose) =>
+    await Parent
+      .Send(
+        BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, //TODO: We could move these constants into a DUI3 constants static class
+        new
+        {
+          type,
+          title,
+          description = message,
+          autoClose
+        }
+      )
+      .ConfigureAwait(false);
 }

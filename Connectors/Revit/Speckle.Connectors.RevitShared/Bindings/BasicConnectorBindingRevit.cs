@@ -73,7 +73,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
   public void RemoveModel(ModelCard model) => _store.RemoveModel(model);
 
-  public void HighlightModel(string modelCardId)
+  public async Task HighlightModel(string modelCardId)
   {
     SenderModelCard model = (SenderModelCard)_store.GetModelById(modelCardId);
 
@@ -86,31 +86,36 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
       .GetObjectIds()
       .Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid))
       .ToList();
+
     if (elementIds.Count == 0)
     {
-      Commands.SetModelError(modelCardId, new InvalidOperationException("No objects found to highlight."));
+      await Commands
+        .SetModelError(modelCardId, new InvalidOperationException("No objects found to highlight."))
+        .ConfigureAwait(false);
       return;
     }
 
-    HighlightObjectsOnView(elementIds);
+    await HighlightObjectsOnView(elementIds).ConfigureAwait(false);
   }
 
   /// <summary>
   /// Highlights the objects from the given ids.
   /// </summary>
   /// <param name="objectIds"> UniqueId's of the DB.Elements.</param>
-  public void HighlightObjects(List<string> objectIds)
+  public async Task HighlightObjects(List<string> objectIds)
   {
     var activeUIDoc =
       _revitContext.UIApplication?.ActiveUIDocument
       ?? throw new SpeckleException("Unable to retrieve active UI document");
 
-    HighlightObjectsOnView(
-      objectIds.Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid)).ToList()
-    );
+    await HighlightObjectsOnView(
+        objectIds.Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid)).ToList()
+      )
+      .ConfigureAwait(false);
+    ;
   }
 
-  private void HighlightObjectsOnView(List<ElementId> objectIds)
+  private async Task HighlightObjectsOnView(List<ElementId> objectIds)
   {
     // POC: don't know if we can rely on storing the ActiveUIDocument, hence getting it each time
     var activeUIDoc =
@@ -118,10 +123,13 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
       ?? throw new SpeckleException("Unable to retrieve active UI document");
 
     // UiDocument operations should be wrapped into RevitTask, otherwise doesn't work on other tasks.
-    RevitTask.RunAsync(() =>
-    {
-      activeUIDoc.Selection.SetElementIds(objectIds);
-      activeUIDoc.ShowElements(objectIds);
-    });
+    await RevitTask
+      .RunAsync(() =>
+      {
+        activeUIDoc.Selection.SetElementIds(objectIds);
+        activeUIDoc.ShowElements(objectIds);
+      })
+      .ConfigureAwait(false);
+    ;
   }
 }

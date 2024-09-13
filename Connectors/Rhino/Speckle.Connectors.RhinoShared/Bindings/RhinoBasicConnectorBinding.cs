@@ -54,7 +54,7 @@ public class RhinoBasicConnectorBinding : IBasicConnectorBinding
 
   public void RemoveModel(ModelCard model) => _store.RemoveModel(model);
 
-  public void HighlightObjects(List<string> objectIds)
+  public Task HighlightObjects(List<string> objectIds)
   {
     var objects = GetObjectsFromIds(objectIds);
 
@@ -67,9 +67,10 @@ public class RhinoBasicConnectorBinding : IBasicConnectorBinding
     }
 
     HighlightObjectsOnView(objects.rhinoObjects, objects.groups);
+    return Task.CompletedTask;
   }
 
-  public void HighlightModel(string modelCardId)
+  public async Task HighlightModel(string modelCardId)
   {
     var objectIds = new List<string>();
     var myModel = _store.GetModelById(modelCardId);
@@ -86,7 +87,9 @@ public class RhinoBasicConnectorBinding : IBasicConnectorBinding
 
     if (objectIds.Count == 0)
     {
-      Commands.SetModelError(modelCardId, new OperationCanceledException("No objects found to highlight."));
+      await Commands
+        .SetModelError(modelCardId, new OperationCanceledException("No objects found to highlight."))
+        .ConfigureAwait(false);
       return;
     }
 
@@ -96,7 +99,9 @@ public class RhinoBasicConnectorBinding : IBasicConnectorBinding
 
     if (objects.rhinoObjects.Count == 0 && objects.groups.Count == 0)
     {
-      Commands.SetModelError(modelCardId, new OperationCanceledException("No objects found to highlight."));
+      await Commands
+        .SetModelError(modelCardId, new OperationCanceledException("No objects found to highlight."))
+        .ConfigureAwait(false);
       return;
     }
 
