@@ -3,7 +3,7 @@ using Speckle.Connectors.Logging;
 
 namespace Speckle.Connectors.Utils;
 
-public sealed class SpeckleLogProvider(ISpeckleLogger speckleLogger) : ILoggerProvider
+public sealed class SpeckleLogProvider(Logger speckleLogger) : ILoggerProvider
 {
   public void Dispose() { }
 

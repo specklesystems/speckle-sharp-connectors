@@ -3,7 +3,7 @@ using Speckle.Connectors.Logging;
 
 namespace Speckle.Connectors.Utils;
 
-public class SpeckleLogger(ISpeckleLogger logger) : ILogger
+public class SpeckleLogger(Logger logger) : ILogger
 {
   public void Log<TState>(
     LogLevel logLevel,
