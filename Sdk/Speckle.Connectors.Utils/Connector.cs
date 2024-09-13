@@ -38,11 +38,14 @@ public static class Connector
     serviceCollection.AddSpeckleSdk(new SpeckleConfiguration(application, version));
     serviceCollection.AddSingleton<Speckle.Sdk.Logging.ISdkActivityFactory, ConnectorActivityFactory>();
     builder.ContainerBuilder.Populate(serviceCollection);
-    return TracingBuilder.Initialize(
+    return Observability.Initialize(
       VersionString,
       Slug,
       GetPackageVersion(Assembly.GetExecutingAssembly()),
-      new SpeckleTracing(true, null)
+      new (
+        new SpeckleLogging(Console:true, Otel:null),
+      new SpeckleTracing(true, Otel: null)
+      )
     );
   }
 

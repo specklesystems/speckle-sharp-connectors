@@ -16,5 +16,10 @@
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" PrivateAssets="all"/>
     <PackageReference Include="OpenTelemetry.Exporter.Console" PrivateAssets="all"/>
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" PrivateAssets="all"/>
+    <PackageReference Include="Serilog" PrivateAssets="all"/>
+    <PackageReference Include="Serilog.Exceptions" PrivateAssets="all"/>
+    <PackageReference Include="Serilog.Sinks.Console" PrivateAssets="all"/>
+    <PackageReference Include="Serilog.Sinks.File" PrivateAssets="all"/>
+    <PackageReference Include="Serilog.Sinks.OpenTelemetry" PrivateAssets="all"/>
   </ItemGroup>
 </Project>
