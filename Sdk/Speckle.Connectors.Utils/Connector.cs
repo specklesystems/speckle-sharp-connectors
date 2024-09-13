@@ -42,10 +42,7 @@ public static class Connector
       VersionString,
       Slug,
       GetPackageVersion(Assembly.GetExecutingAssembly()),
-      new (
-        new SpeckleLogging(Console:true, Otel:null),
-      new SpeckleTracing(true, Otel: null)
-      )
+      new(new SpeckleLogging(Console: true, Otel: null), new SpeckleTracing(true, Otel: null))
     );
   }
 

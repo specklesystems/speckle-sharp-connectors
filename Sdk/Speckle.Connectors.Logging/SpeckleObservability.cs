@@ -6,7 +6,6 @@ namespace Speckle.Connectors.Logging;
 
 public record SpeckleObservability(SpeckleLogging? Logging = null, SpeckleTracing? Tracing = null);
 
-
 public record SpeckleLogging(
   SpeckleLogLevel MinimumLevel = SpeckleLogLevel.Warning,
   bool Console = true,

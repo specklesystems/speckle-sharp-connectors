@@ -7,10 +7,12 @@ namespace Speckle.Connectors.Utils;
 public sealed class ConnectorActivityFactory : ISdkActivityFactory, IDisposable
 {
   private readonly LoggingActivityFactory _loggingActivityFactory = new();
+
   public void Dispose() => _loggingActivityFactory.Dispose();
 
-  public ISdkActivity? Start(string? name = default, string source = "")  {
-    var activity = _loggingActivityFactory?.Start(name , source);
+  public ISdkActivity? Start(string? name = default, string source = "")
+  {
+    var activity = _loggingActivityFactory?.Start(name, source);
     if (activity is null)
     {
       return null;
@@ -18,7 +20,7 @@ public sealed class ConnectorActivityFactory : ISdkActivityFactory, IDisposable
     return new ConnectorActivity(activity.NotNull());
   }
 
-  private readonly struct  ConnectorActivity(LoggingActivity activity) : ISdkActivity
+  private readonly struct ConnectorActivity(LoggingActivity activity) : ISdkActivity
   {
     public void Dispose() => activity.Dispose();
 
@@ -26,15 +28,17 @@ public sealed class ConnectorActivityFactory : ISdkActivityFactory, IDisposable
 
     public void RecordException(Exception e) => activity.RecordException(e);
 
-    public string TraceId=> activity.TraceId;
-    public void SetStatus(SdkActivityStatusCode code) => activity.SetStatus(
-      code switch
-      {
-        SdkActivityStatusCode.Error => LoggingActivityStatusCode.Error,
-        SdkActivityStatusCode.Unset => LoggingActivityStatusCode.Unset,
-        SdkActivityStatusCode.Ok => LoggingActivityStatusCode.Ok,
-        _ => throw new ArgumentOutOfRangeException(nameof(code), code, null)
-      }
-    );
+    public string TraceId => activity.TraceId;
+
+    public void SetStatus(SdkActivityStatusCode code) =>
+      activity.SetStatus(
+        code switch
+        {
+          SdkActivityStatusCode.Error => LoggingActivityStatusCode.Error,
+          SdkActivityStatusCode.Unset => LoggingActivityStatusCode.Unset,
+          SdkActivityStatusCode.Ok => LoggingActivityStatusCode.Ok,
+          _ => throw new ArgumentOutOfRangeException(nameof(code), code, null)
+        }
+      );
   }
 }

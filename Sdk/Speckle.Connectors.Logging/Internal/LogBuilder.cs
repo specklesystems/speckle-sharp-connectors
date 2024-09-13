@@ -13,7 +13,8 @@ internal static class LogBuilder
   public static void Initialize(
     string applicationAndVersion,
     string connectorVersion,
-    SpeckleLogging? speckleLogging, ResourceBuilder resourceBuilder
+    SpeckleLogging? speckleLogging,
+    ResourceBuilder resourceBuilder
   )
   {
     var fileVersionInfo = GetFileVersionInfo();
@@ -98,5 +99,4 @@ internal static class LogBuilder
       o.Headers = speckleOtelLogging.Headers ?? o.Headers;
       o.ResourceAttributes = resourceBuilder.Build().Attributes.ToDictionary(x => x.Key, x => x.Value);
     });
-
 }

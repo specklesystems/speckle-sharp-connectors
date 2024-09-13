@@ -27,7 +27,6 @@ internal static class SpecklePathProvider
   /// </summary>
   public static string UserSpeckleFolderPath => EnsureFolderExists(UserApplicationDataPath(), APPLICATION_NAME);
 
-
   /// <summary>
   /// Get the platform specific user configuration folder path.<br/>
   /// will be the <see cref="Environment.SpecialFolder.ApplicationData"/> path e.g.:

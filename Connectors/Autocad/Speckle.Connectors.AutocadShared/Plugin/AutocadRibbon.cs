@@ -177,15 +177,9 @@ public class AutocadRibbon
     {
       stream = assembly.GetManifestResourceStream(resource);
     }
-    catch (FileLoadException)
-    {
-    }
-    catch (FileNotFoundException)
-    {
-    }
-    catch (NotImplementedException)
-    {
-    }
+    catch (FileLoadException) { }
+    catch (FileNotFoundException) { }
+    catch (NotImplementedException) { }
 
     if (stream is null)
     {

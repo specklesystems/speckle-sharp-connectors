@@ -5,10 +5,7 @@ namespace Speckle.Connectors.Logging.Internal;
 
 internal static class ResourceCreator
 {
-  internal static ResourceBuilder Create(
-    string applicationAndVersion,
-    string slug,
-    string connectorVersion) =>
+  internal static ResourceBuilder Create(string applicationAndVersion, string slug, string connectorVersion) =>
     ResourceBuilder
       .CreateEmpty()
       .AddService(serviceName: LoggingActivityFactory.TRACING_SOURCE, serviceVersion: connectorVersion)

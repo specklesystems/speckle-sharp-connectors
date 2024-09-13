@@ -6,6 +6,7 @@ namespace Speckle.Connectors.Logging;
 public readonly struct LoggingActivity
 {
   private readonly Activity _activity;
+
   internal LoggingActivity(Activity activity)
   {
     _activity = activity;
