@@ -14,10 +14,6 @@ using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.Revit.Operations.Receive;
 
-/// <summary>
-/// Potentially consolidate all application specific IHostObjectBuilders
-/// https://spockle.atlassian.net/browse/DUI3-465
-/// </summary>
 internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 {
   private readonly IRootToHostConverter _converter;
@@ -84,10 +80,11 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     if (unpackedRoot.RenderMaterialProxies != null)
     {
       _materialBaker.MapLayersRenderMaterials(unpackedRoot);
-      _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseLayerName);
-      foreach (var item in _materialBaker.ObjectIdAndMaterialIndexMap)
+      // NOTE: do not set _contextStack.RenderMaterialProxyCache directly, things stop working. Ogu/Dim do not know why :) not a problem as we hopefully will refactor some of these hacks out.
+      var map = _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseLayerName);
+      foreach (var kvp in map)
       {
-        _contextStack.RenderMaterialProxyCache.ObjectIdAndMaterialIndexMap.Add(item.Key, item.Value); // Massive hack!
+        _contextStack.RenderMaterialProxyCache.ObjectIdAndMaterialIndexMap.Add(kvp.Key, kvp.Value);
       }
     }
 
@@ -134,7 +131,6 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     {
       var conversionResults = new List<ReceiveConversionResult>();
       var bakedObjectIds = new List<string>();
-      var elementIds = new List<ElementId>();
 
       // is this a dumb idea?
       var objectList = objectsGraph.ToList();
