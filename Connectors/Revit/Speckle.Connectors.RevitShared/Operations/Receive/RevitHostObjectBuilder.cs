@@ -25,7 +25,10 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   private readonly GraphTraversal _traverseFunction;
   private readonly ITransactionManager _transactionManager;
   private readonly RevitGroupBaker _groupManager;
+  private readonly RevitMaterialBaker _materialBaker;
   private readonly ILogger<RevitHostObjectBuilder> _logger;
+
+  //private readonly RootObjectUnpacker _rootObjectUnpacker;
 
   public RevitHostObjectBuilder(
     IRootToHostConverter converter,
@@ -33,6 +36,8 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     GraphTraversal traverseFunction,
     ITransactionManager transactionManager,
     RevitGroupBaker groupManager,
+    RevitMaterialBaker materialBaker,
+    //RootObjectUnpacker rootObjectUnpacker,
     ILogger<RevitHostObjectBuilder> logger
   )
   {
@@ -41,6 +46,8 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     _traverseFunction = traverseFunction;
     _transactionManager = transactionManager;
     _groupManager = groupManager;
+    _materialBaker = materialBaker;
+    //_rootObjectUnpacker = rootObjectUnpacker;
     _logger = logger;
   }
 
@@ -76,6 +83,12 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     using TransactionGroup transactionGroup = new(_contextStack.Current.Document, $"Received data from {projectName}");
     transactionGroup.Start();
     _transactionManager.StartTransaction();
+
+    /*var unpackedRoot = _rootObjectUnpacker.Unpack(rootObject);
+    if (unpackedRoot.RenderMaterialProxies != null)
+    {
+      _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies);
+    }*/
 
     var conversionResults = BakeObjects(objectsToConvert, onOperationProgressed, cancellationToken, out elementIds);
 
@@ -137,6 +150,14 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
           // Note: our current converter always returns a DS for now
           if (result is DirectShape ds)
           {
+            /*var newMaterialId = Material.Create(_contextStack.Current.Document, "MyNewMaterial");
+            var revitMaterial = (Material)_contextStack.Current.Document.GetElement(newMaterialId);
+            revitMaterial.Color = new Color(0, 255, 255);
+            revitMaterial.Transparency = 100;
+            revitMaterial.Shininess = 75;
+            revitMaterial.Smoothness = 25;
+            ds.M*/
+
             bakedObjectIds.Add(ds.UniqueId.ToString());
             _groupManager.AddToGroupMapping(tc, ds);
           }

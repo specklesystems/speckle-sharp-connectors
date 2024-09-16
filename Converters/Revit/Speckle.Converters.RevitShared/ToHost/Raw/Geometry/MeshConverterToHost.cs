@@ -2,6 +2,7 @@ using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.DoubleNumerics;
+using Speckle.Objects.Other;
 
 namespace Speckle.Converters.RevitShared.ToHost.TopLevel;
 
@@ -32,10 +33,10 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObj
     var vertices = ArrayToPoints(mesh.vertices, mesh.units);
 
     ElementId materialId = ElementId.InvalidElementId;
-    // if (mesh["renderMaterial"] is RenderMaterial renderMaterial)
-    // {
-    //   materialId = _materialConverter.Convert(renderMaterial).Id;
-    // }
+    //if (mesh["renderMaterial"] is RenderMaterial renderMaterial)
+    //{
+    //  materialId = _materialConverter.Convert(renderMaterial).Id;
+    //}
 
     int i = 0;
     while (i < mesh.faces.Count)

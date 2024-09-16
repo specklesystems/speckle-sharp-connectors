@@ -42,12 +42,12 @@ public class RevitRootToHostConverter : IRootToHostConverter
         geometryObjects.Add(DB.Point.Create(xyz));
         break;
       case ICurve curve:
-        var curves = _curveConverter.Convert(curve).Cast<DB.GeometryObject>(); // TODO: check if casting is happening correctly
+        var curves = _curveConverter.Convert(curve).Cast<DB.GeometryObject>();
         geometryObjects.AddRange(curves);
         break;
       case SOG.Mesh mesh:
         var meshes = _meshConverter.Convert(mesh).Cast<DB.GeometryObject>();
-        geometryObjects.AddRange(meshes); // TODO: check if casting is happening correctly
+        geometryObjects.AddRange(meshes);
         break;
       default:
         geometryObjects.AddRange(FallbackToDisplayValue(target));
@@ -66,16 +66,6 @@ public class RevitRootToHostConverter : IRootToHostConverter
     ds.SetShape(geometryObjects);
 
     return ds;
-
-    // var objectConverter = _converterResolver.GetConversionForType(target.GetType());
-    //
-    // if (objectConverter == null)
-    // {
-    //   throw new SpeckleConversionException($"No conversion found for {target.GetType().Name}");
-    // }
-    //
-    // return objectConverter.Convert(target)
-    //   ?? throw new SpeckleConversionException($"Conversion of object with type {target.GetType()} returned null");
   }
 
   private List<DB.GeometryObject> FallbackToDisplayValue(Base target)
@@ -96,7 +86,7 @@ public class RevitRootToHostConverter : IRootToHostConverter
           geometryObjects.Add(DB.Point.Create(xyz));
           break;
         case ICurve curve:
-          var curves = _curveConverter.Convert(curve).Cast<DB.GeometryObject>(); // TODO: check if casting is happening correctly
+          var curves = _curveConverter.Convert(curve).Cast<DB.GeometryObject>();
           geometryObjects.AddRange(curves);
           break;
         case SOG.Mesh mesh:

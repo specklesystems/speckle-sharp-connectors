@@ -72,6 +72,7 @@ public class RevitConnectorModule : ISpeckleModule
     builder.AddScoped<IHostObjectBuilder, RevitHostObjectBuilder>();
     builder.AddScoped<ITransactionManager, TransactionManager>();
     builder.AddScoped<RevitGroupBaker>();
+    builder.AddScoped<RevitMaterialBaker>();
     builder.AddSingleton<RevitUtils>();
     builder.AddSingleton<IFailuresPreprocessor, HideWarningsFailuresPreprocessor>();
     builder.AddSingleton(DefaultTraversal.CreateTraversalFunc());
