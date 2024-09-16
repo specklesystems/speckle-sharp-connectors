@@ -93,8 +93,12 @@ public class DBPolyfaceMeshToSpeckleConverter : IToSpeckleTopLevelConverter
     SOG.Box bbox = _boxConverter.Convert(target.GeometricExtents);
 
     SOG.Mesh speckleMesh =
-      new(vertices, faces, colors, null, _settingsStore.Current.SpeckleUnits)
+      new()
       {
+        vertices = vertices,
+        faces = faces,
+        colors = colors,
+        units = _contextStack.Current.SpeckleUnits,
         bbox = bbox,
         ["faceVisibility"] = faceVisibility
       };

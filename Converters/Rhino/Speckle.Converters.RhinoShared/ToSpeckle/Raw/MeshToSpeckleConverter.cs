@@ -67,8 +67,13 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
     double volume = target.IsClosed ? target.Volume() : 0;
     SOG.Box bbox = _boxConverter.Convert(new RG.Box(target.GetBoundingBox(false)));
 
-    return new SOG.Mesh(vertexCoordinates, faces, colors, textureCoordinates, _settingsStore.Current.SpeckleUnits)
+    return new SOG.Mesh
     {
+      vertices = vertexCoordinates,
+      faces = faces,
+      colors = colors,
+      textureCoordinates = textureCoordinates,
+      units = _contextStack.Current.SpeckleUnits,
       volume = volume,
       bbox = bbox
     };

@@ -40,12 +40,7 @@ public class ExtrusionRoofToSpeckleTopLevelConverter
 
   public override RevitExtrusionRoof Convert(DB.ExtrusionRoof target)
   {
-    var plane = target.GetProfile().get_Item(0).SketchPlane.GetPlane();
-    SOG.Line referenceLine =
-      new(
-        _pointConverter.Convert(plane.Origin.Add(plane.XVec.Normalize().Negate())),
-        _pointConverter.Convert(plane.Origin)
-      );
+    SOG.Line referenceLine = ConvertReferenceLine(target);
     var level = _parameterValueExtractor.GetValueAsDocumentObject<DB.Level>(
       target,
       DB.BuiltInParameter.ROOF_CONSTRAINT_LEVEL_PARAM
@@ -72,5 +67,18 @@ public class ExtrusionRoofToSpeckleTopLevelConverter
     _parameterObjectAssigner.AssignParametersToBase(target, speckleExtrusionRoof);
 
     return speckleExtrusionRoof;
+  }
+
+  private SOG.Line ConvertReferenceLine(DB.ExtrusionRoof target)
+  {
+    var plane = target.GetProfile().get_Item(0).SketchPlane.GetPlane();
+    SOG.Line referenceLine =
+      new()
+      {
+        start = _pointConverter.Convert(plane.Origin.Add(plane.XVec.Normalize().Negate())),
+        end = _pointConverter.Convert(plane.Origin),
+        units = _contextStack.Current.SpeckleUnits,
+      };
+    return referenceLine;
   }
 }

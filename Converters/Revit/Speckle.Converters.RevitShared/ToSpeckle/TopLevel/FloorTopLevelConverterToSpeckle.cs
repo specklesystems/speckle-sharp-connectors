@@ -105,7 +105,13 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
     slopeParam ??= slope;
     speckleFloor.slope = (double)slopeParam;
 
-    speckleFloor.slopeDirection = new SOG.Line(tail, head);
+    speckleFloor.slopeDirection = new SOG.Line()
+    {
+      start = tail,
+      end = head,
+      units = _contextStack.Current.SpeckleUnits
+    };
+
     if (
       speckleFloor["parameters"] is Base parameters
       && parameters["FLOOR_HEIGHTABOVELEVEL_PARAM"] is SOBR.Parameter offsetParam

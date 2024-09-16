@@ -1,5 +1,6 @@
 using ArcGIS.Core.Data;
 using Speckle.Converters.ArcGIS3.Utils;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
 using Speckle.Sdk.Models;
@@ -14,6 +15,7 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
   private readonly ITypedConverter<ACG.Polygon, IReadOnlyList<SGIS.PolygonGeometry>> _polygonConverter;
   private readonly ITypedConverter<ACG.Multipatch, IReadOnlyList<Base>> _multipatchConverter;
   private readonly ITypedConverter<Row, Base> _attributeConverter;
+  private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;
 
   public GisFeatureToSpeckleConverter(
     ITypedConverter<ACG.MapPoint, SOG.Point> pointConverter,
@@ -21,7 +23,8 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
     ITypedConverter<ACG.Polyline, IReadOnlyList<SOG.Polyline>> polylineConverter,
     ITypedConverter<ACG.Polygon, IReadOnlyList<SGIS.PolygonGeometry>> polygonConverter,
     ITypedConverter<ACG.Multipatch, IReadOnlyList<Base>> multipatchConverter,
-    ITypedConverter<Row, Base> attributeConverter
+    ITypedConverter<Row, Base> attributeConverter,
+    IConversionContextStack<ArcGISDocument, ACG.Unit> contextStack
   )
   {
     _pointConverter = pointConverter;
@@ -30,6 +33,7 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
     _polygonConverter = polygonConverter;
     _multipatchConverter = multipatchConverter;
     _attributeConverter = attributeConverter;
+    _contextStack = contextStack;
   }
 
   private List<SOG.Mesh> GetPolygonDisplayMeshes(List<SGIS.PolygonGeometry> polygons)
@@ -38,10 +42,11 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
     foreach (SGIS.PolygonGeometry polygon in polygons)
     {
       // POC: check for voids, we cannot generate display value correctly if any of the polygons have voids
-      if (polygon.voids.Count > 0)
-      {
-        return new();
-      }
+      // Return meshed boundary for now, ignore voids
+      // if (polygon.voids.Count > 0)
+      // {
+      //   return new();
+      // }
 
       // ensure counter-clockwise orientation for up-facing mesh faces
       bool isClockwise = polygon.boundary.IsClockwisePolygon();
@@ -54,7 +59,13 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
       // generate Mesh
       List<int> faces = new() { boundaryPts.Count };
       faces.AddRange(Enumerable.Range(0, boundaryPts.Count).ToList());
-      SOG.Mesh mesh = new(boundaryPts.SelectMany(x => new List<double> { x.x, x.y, x.z }).ToList(), faces);
+      SOG.Mesh mesh =
+        new()
+        {
+          vertices = boundaryPts.SelectMany(x => new List<double> { x.x, x.y, x.z }).ToList(),
+          faces = faces,
+          units = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString
+        };
       displayVal.Add(mesh);
     }
 
@@ -66,7 +77,13 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
     List<SOG.Mesh> displayVal = new();
     foreach (SGIS.GisMultipatchGeometry geo in multipatch)
     {
-      SOG.Mesh displayMesh = new(geo.vertices, geo.faces);
+      SOG.Mesh displayMesh =
+        new()
+        {
+          vertices = geo.vertices,
+          faces = geo.faces,
+          units = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString
+        };
       displayVal.Add(displayMesh);
     }
 

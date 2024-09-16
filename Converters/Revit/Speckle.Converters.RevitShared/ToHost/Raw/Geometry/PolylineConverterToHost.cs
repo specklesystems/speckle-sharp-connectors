@@ -38,7 +38,15 @@ public class PolylineConverterToHost : ITypedConverter<SOG.Polyline, DB.CurveArr
       var lastPt = pts[0];
       for (var i = 1; i < pts.Count; i++)
       {
-        var success = TryAppendLineSafely(curveArray, new SOG.Line(lastPt, pts[i], target.units));
+        var success = TryAppendLineSafely(
+          curveArray,
+          new SOG.Line
+          {
+            start = lastPt,
+            end = pts[i],
+            units = target.units
+          }
+        );
         if (success)
         {
           lastPt = pts[i];
@@ -47,7 +55,15 @@ public class PolylineConverterToHost : ITypedConverter<SOG.Polyline, DB.CurveArr
 
       if (target.closed)
       {
-        TryAppendLineSafely(curveArray, new SOG.Line(pts[^1], pts[0], target.units));
+        TryAppendLineSafely(
+          curveArray,
+          new SOG.Line
+          {
+            start = pts[^1],
+            end = pts[0],
+            units = target.units
+          }
+        );
       }
     }
     return curveArray;

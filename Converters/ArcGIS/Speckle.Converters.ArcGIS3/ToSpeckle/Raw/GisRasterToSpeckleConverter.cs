@@ -172,7 +172,14 @@ public class GisRasterToSpeckleConverter : ITypedConverter<Raster, RasterElement
       }
     }
 
-    SOG.Mesh mesh = new(newCoords, newFaces, newColors, null, _settingsStore.Current.SpeckleUnits, null) { };
+    SOG.Mesh mesh =
+      new()
+      {
+        vertices = newCoords,
+        faces = newFaces,
+        colors = newColors,
+        units = _contextStack.Current.SpeckleUnits
+      };
     rasterElement.displayValue = new List<SOG.Mesh>() { mesh };
 
     return rasterElement;
