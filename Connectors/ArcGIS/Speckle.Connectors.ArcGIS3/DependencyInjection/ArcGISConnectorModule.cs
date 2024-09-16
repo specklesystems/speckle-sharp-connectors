@@ -68,8 +68,6 @@ public class ArcGISConnectorModule : ISpeckleModule
     builder.AddScoped<ArcGISColorManager>();
     builder.AddScoped<MapMembersUtils>();
 
-    builder.AddScoped<ILocalToGlobalUnpacker, LocalToGlobalUnpacker>();
-
     // register send conversion cache
     builder.AddSingleton<ISendConversionCache, SendConversionCache>();
 
