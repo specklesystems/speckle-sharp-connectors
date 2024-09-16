@@ -10,11 +10,17 @@ public class RevitMaterialBaker
 {
   private readonly IRevitConversionContextStack _contextStack;
   private readonly ILogger<RevitMaterialBaker> _logger;
+  private readonly RevitUtils _revitUtils;
 
-  public RevitMaterialBaker(IRevitConversionContextStack contextStack, ILogger<RevitMaterialBaker> logger)
+  public RevitMaterialBaker(
+    IRevitConversionContextStack contextStack,
+    ILogger<RevitMaterialBaker> logger,
+    RevitUtils revitUtils
+  )
   {
     _contextStack = contextStack;
     _logger = logger;
+    _revitUtils = revitUtils;
   }
 
   public Dictionary<string, string> ObjectIdAndMaterialIndexMap { get; } = new();
@@ -31,7 +37,7 @@ public class RevitMaterialBaker
         double transparency = 1 - speckleRenderMaterial.opacity;
         double smoothness = 1 - speckleRenderMaterial.roughness;
         string materialId = speckleRenderMaterial.applicationId ?? speckleRenderMaterial.id;
-        string matName = $"{speckleRenderMaterial.name}-({materialId})-{baseLayerName}";
+        string matName = _revitUtils.RemoveInvalidChars($"{speckleRenderMaterial.name}-({materialId})-{baseLayerName}");
 
         var newMaterialId = Autodesk.Revit.DB.Material.Create(_contextStack.Current.Document, matName);
         var revitMaterial = (Autodesk.Revit.DB.Material)_contextStack.Current.Document.GetElement(newMaterialId);
