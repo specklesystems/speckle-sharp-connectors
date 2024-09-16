@@ -1,19 +1,20 @@
+﻿using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.DocObjects;
 using Speckle.Connectors.Rhino.Extensions;
+using Speckle.Sdk;
 using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Connectors.Rhino.HostApp;
 
-/// <summary>
-/// Utility class managing colors on objects and layers. Expects to be a scoped dependency per send or receive operation.
-/// </summary>
-public class RhinoColorManager
+public class RhinoColorUnpacker
 {
-  /// <summary>
-  /// For receive operations
-  /// </summary>
-  public Dictionary<string, (Color, ObjectColorSource)> ObjectColorsIdMap { get; } = new();
+  private readonly ILogger<RhinoColorUnpacker> _logger;
+
+  public RhinoColorUnpacker(ILogger<RhinoColorUnpacker> logger)
+  {
+    _logger = logger;
+  }
 
   /// <summary>
   /// For send operations
@@ -98,55 +99,34 @@ public class RhinoColorManager
     // Stage 1: unpack colors from objects
     foreach (RhinoObject rootObj in atomicObjects)
     {
-      ProcessObjectColor(
-        rootObj.Id.ToString(),
-        rootObj.Attributes.ObjectColor,
-        rootObj.Attributes.ColorSource,
-        rootObj.Attributes.MaterialIndex
-      );
+      try
+      {
+        ProcessObjectColor(
+          rootObj.Id.ToString(),
+          rootObj.Attributes.ObjectColor,
+          rootObj.Attributes.ColorSource,
+          rootObj.Attributes.MaterialIndex
+        );
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        _logger.LogError(ex, "Failed to unpack colors from Rhino Object");
+      }
     }
 
     // Stage 2: make sure we collect layer colors as well
     foreach (Layer layer in layers)
     {
-      ProcessObjectColor(layer.Id.ToString(), layer.Color, ObjectColorSource.ColorFromObject);
+      try
+      {
+        ProcessObjectColor(layer.Id.ToString(), layer.Color, ObjectColorSource.ColorFromObject);
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        _logger.LogError(ex, "Failed to unpack colors from Rhino Layer");
+      }
     }
 
     return ColorProxies.Values.ToList();
-  }
-
-  /// <summary>
-  /// Parse Color Proxies and stores in ObjectColorsIdMap the relationship between object ids and colors
-  /// </summary>
-  /// <param name="colorProxies"></param>
-  public void ParseColors(List<ColorProxy> colorProxies)
-  {
-    foreach (ColorProxy colorProxy in colorProxies)
-    {
-      ObjectColorSource source = ObjectColorSource.ColorFromObject;
-      if (colorProxy["source"] is string proxySource)
-      {
-        switch (proxySource)
-        {
-          case "layer":
-            continue; // skip any colors with source = layer, since object color default source is by layer
-          case "block":
-            source = ObjectColorSource.ColorFromParent;
-            break;
-          case "material":
-            source = ObjectColorSource.ColorFromMaterial;
-            break;
-        }
-      }
-
-      foreach (string objectId in colorProxy.objects)
-      {
-        Color convertedColor = Color.FromArgb(colorProxy.value);
-        if (!ObjectColorsIdMap.TryGetValue(objectId, out (Color, ObjectColorSource) _))
-        {
-          ObjectColorsIdMap.Add(objectId, (convertedColor, source));
-        }
-      }
-    }
   }
 }

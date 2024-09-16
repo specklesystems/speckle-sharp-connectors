@@ -35,10 +35,6 @@ public class ArcGISConnectorModule : ISpeckleModule
     builder.AddDUI();
     builder.AddDUIView();
 
-    // POC: Overwriting the SyncToMainThread to SyncToCurrentThread for ArcGIS only!
-    // On SendOperation, once we called QueuedTask, it expect to run everything on same thread.
-    // builder.AddSingletonInstance<ISyncToThread, SyncToQueuedTask>();
-
     builder.AddSingleton<DocumentModelStore, ArcGISDocumentStore>();
     // Register bindings
     builder.AddSingleton<IBinding, TestBinding>();
