@@ -2,6 +2,7 @@ using Autodesk.Revit.DB;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.DependencyInjection;
+using Speckle.Converters.Revit2023.ToSpeckle.Parameters;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
 
@@ -42,5 +43,8 @@ public class RevitConverterModule : ISpeckleModule
     builder.AddScoped<ISlopeArrowExtractor, SlopeArrowExtractor>();
 
     builder.AddScoped<IRevitCategories, RevitCategories>();
+
+    builder.AddScoped<ParameterDefinitionHandler>();
+    builder.AddScoped<ParameterExtractor>();
   }
 }

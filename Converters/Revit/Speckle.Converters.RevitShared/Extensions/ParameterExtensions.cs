@@ -16,16 +16,14 @@ public static class ParameterExtensions
     {
       return rp.GUID.ToString();
     }
-    else
-    {
-      var def = (InternalDefinition)rp.Definition;
-      if (def.BuiltInParameter == BuiltInParameter.INVALID)
-      {
-        return def.Name;
-      }
 
-      return def.BuiltInParameter.ToString();
+    var def = (InternalDefinition)rp.Definition;
+    if (def.BuiltInParameter == BuiltInParameter.INVALID)
+    {
+      return def.Name;
     }
+
+    return def.BuiltInParameter.ToString();
   }
 
   public static BuiltInParameter? GetBuiltInParameter(this Parameter rp)
