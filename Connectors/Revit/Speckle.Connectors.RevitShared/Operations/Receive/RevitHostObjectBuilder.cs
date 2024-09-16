@@ -141,9 +141,6 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     using var _ = SpeckleActivityFactory.Start("BakeObjects");
     var conversionResults = new List<ReceiveConversionResult>();
     var bakedObjectIds = new List<string>();
-
-    // is this a dumb idea?
-    var objectList = localToGlobalMaps.ToList();
     int count = 0;
 
     foreach (LocalToGlobalMap localToGlobalMap in localToGlobalMaps)
@@ -157,7 +154,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
           localToGlobalMap.Matrix
         );
         var result = _converter.Convert(atomicObject);
-        onOperationProgressed?.Invoke("Converting", (double)++count / objectList.Count);
+        onOperationProgressed?.Invoke("Converting", (double)++count / localToGlobalMaps.Count);
 
         // Note: our current converter always returns a DS for now
         if (result is DirectShape ds)
