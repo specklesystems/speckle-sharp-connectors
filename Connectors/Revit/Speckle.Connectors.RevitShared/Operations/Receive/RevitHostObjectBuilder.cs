@@ -83,6 +83,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 
     if (unpackedRoot.RenderMaterialProxies != null)
     {
+      _materialBaker.MapLayersRenderMaterials(unpackedRoot);
       _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseLayerName);
       foreach (var item in _materialBaker.ObjectIdAndMaterialIndexMap)
       {
