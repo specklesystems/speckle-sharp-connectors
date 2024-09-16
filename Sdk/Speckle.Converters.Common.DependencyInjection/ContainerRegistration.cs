@@ -23,6 +23,7 @@ public static class ContainerRegistration
     builder.AddScoped<IFactory<IToHostTopLevelConverter>, Factory<IToHostTopLevelConverter>>();
     builder.AddScoped<IConverterResolver<IToHostTopLevelConverter>, ConverterResolver<IToHostTopLevelConverter>>();
 
+    builder.AddScoped<LocalToGlobalConverterUtils>();
     builder.AddScoped<IRootToHostConverter, ConverterWithFallback>();
     builder.AddScoped<ConverterWithoutFallback>(); //Register as self, only the `ConverterWithFallback` needs it
 
