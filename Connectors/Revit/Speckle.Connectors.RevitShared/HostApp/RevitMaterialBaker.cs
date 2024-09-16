@@ -19,7 +19,7 @@ public class RevitMaterialBaker
 
   public Dictionary<string, string> ObjectIdAndMaterialIndexMap { get; } = new();
 
-  public void BakeMaterials(List<RenderMaterialProxy> speckleRenderMaterialProxies)
+  public void BakeMaterials(List<RenderMaterialProxy> speckleRenderMaterialProxies, string baseLayerName)
   {
     foreach (var proxy in speckleRenderMaterialProxies)
     {
@@ -30,11 +30,10 @@ public class RevitMaterialBaker
         var diffuse = System.Drawing.Color.FromArgb(speckleRenderMaterial.diffuse);
         double transparency = 1 - speckleRenderMaterial.opacity;
         double smoothness = 1 - speckleRenderMaterial.roughness;
+        string materialId = speckleRenderMaterial.applicationId ?? speckleRenderMaterial.id;
+        string matName = $"{speckleRenderMaterial.name}-({materialId})-{baseLayerName}";
 
-        var newMaterialId = Autodesk.Revit.DB.Material.Create(
-          _contextStack.Current.Document,
-          speckleRenderMaterial.name
-        );
+        var newMaterialId = Autodesk.Revit.DB.Material.Create(_contextStack.Current.Document, matName);
         var revitMaterial = (Autodesk.Revit.DB.Material)_contextStack.Current.Document.GetElement(newMaterialId);
         revitMaterial.Color = new Color(diffuse.R, diffuse.G, diffuse.B);
 
@@ -42,15 +41,9 @@ public class RevitMaterialBaker
         revitMaterial.Shininess = (int)(speckleRenderMaterial.metalness * 128);
         revitMaterial.Smoothness = (int)(smoothness * 128);
 
-        // do i need something like this?
-        if (speckleRenderMaterial["shine"] is double shine)
-        {
-          revitMaterial.Shininess = (int)(shine * 128);
-        }
-
         foreach (var objectId in proxy.objects)
         {
-          ObjectIdAndMaterialIndexMap[objectId] = revitMaterial.UniqueId;
+          ObjectIdAndMaterialIndexMap[objectId] = revitMaterial.Id.ToString();
         }
       }
       catch (Exception ex) when (!ex.IsFatal())

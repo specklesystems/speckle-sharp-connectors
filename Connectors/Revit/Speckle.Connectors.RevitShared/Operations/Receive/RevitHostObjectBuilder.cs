@@ -69,6 +69,8 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     CancellationToken cancellationToken
   )
   {
+    var baseLayerName = $"Project {projectName}: Model {modelName}"; // TODO: unify this across connectors!
+
     onOperationProgressed?.Invoke("Converting", null);
 
     // 1 - Unpack objects and proxies from root commit object
@@ -90,7 +92,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 
     if (unpackedRoot.RenderMaterialProxies != null)
     {
-      _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies);
+      _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseLayerName);
       foreach (var item in _materialBaker.ObjectIdAndMaterialIndexMap)
       {
         _contextStack.RenderMaterialProxyCache.ObjectIdAndMaterialIndexMap.Add(item.Key, item.Value); // Massive hack!

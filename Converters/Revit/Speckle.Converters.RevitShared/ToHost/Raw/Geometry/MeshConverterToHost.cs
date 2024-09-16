@@ -41,12 +41,11 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObj
     if (
       _revitContextStack.RenderMaterialProxyCache.ObjectIdAndMaterialIndexMap.TryGetValue(
         mesh.applicationId ?? mesh.id,
-        out var uniqueId
+        out var mappedElementId
       )
     )
     {
-      Element element = _revitContextStack.Current.Document.GetElement(uniqueId);
-      materialId = element.Id;
+      materialId = ElementId.Parse(mappedElementId);
     }
 
     int i = 0;
