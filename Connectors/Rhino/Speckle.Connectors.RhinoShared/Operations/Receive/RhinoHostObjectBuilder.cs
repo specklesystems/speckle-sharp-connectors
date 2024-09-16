@@ -119,53 +119,59 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     {
       foreach (var (path, obj) in atomicObjectsWithPath)
       {
-        onOperationProgressed?.Invoke("Converting objects", (double)++count / atomicObjects.Count);
-        try
+        using (var convertActivity = SpeckleActivityFactory.Start("Converting object"))
         {
-          // 1: get pre-created layer from cache in layer baker
-          int layerIndex = _layerBaker.GetAndCreateLayerFromPath(path, baseLayerName);
-
-          // 2: convert
-          var result = _converter.Convert(obj);
-
-          // 3: bake
-          var conversionIds = new List<string>();
-          if (result is GeometryBase geometryBase)
+          onOperationProgressed?.Invoke("Converting objects", (double)++count / atomicObjects.Count);
+          try
           {
-            var guid = BakeObject(geometryBase, obj, layerIndex);
-            conversionIds.Add(guid.ToString());
-          }
-          else if (result is IEnumerable<(object, Base)> fallbackConversionResult)
-          {
-            var guids = BakeObjectsAsGroup(fallbackConversionResult, obj, layerIndex, baseLayerName);
-            conversionIds.AddRange(guids.Select(id => id.ToString()));
-          }
+            // 1: get pre-created layer from cache in layer baker
+            int layerIndex = _layerBaker.GetAndCreateLayerFromPath(path, baseLayerName);
 
-          if (conversionIds.Count == 0)
-          {
-            throw new SpeckleConversionException($"Failed to convert object.");
-          }
+            // 2: convert
+            var result = _converter.Convert(obj);
 
-          // 4: log
-          var id = conversionIds[0]; // this is group id if it is a one to many conversion, otherwise id of object itself
-          conversionResults.Add(new(Status.SUCCESS, obj, id, result.GetType().ToString()));
-          if (conversionIds.Count == 1)
-          {
-            bakedObjectIds.Add(id);
-          }
-          else
-          {
-            // first item always a group id if it is a one-to-many,
-            // we do not want to deal with later groups and its sub elements. It causes a huge issue on performance.
-            bakedObjectIds.AddRange(conversionIds.Skip(1));
-          }
+            // 3: bake
+            var conversionIds = new List<string>();
+            if (result is GeometryBase geometryBase)
+            {
+              var guid = BakeObject(geometryBase, obj, layerIndex);
+              conversionIds.Add(guid.ToString());
+            }
+            else if (result is IEnumerable<(object, Base)> fallbackConversionResult)
+            {
+              var guids = BakeObjectsAsGroup(fallbackConversionResult, obj, layerIndex, baseLayerName);
+              conversionIds.AddRange(guids.Select(id => id.ToString()));
+            }
 
-          // 5: populate app id map
-          applicationIdMap[obj.applicationId ?? obj.id] = conversionIds;
-        }
-        catch (Exception ex) when (!ex.IsFatal())
-        {
-          conversionResults.Add(new(Status.ERROR, obj, null, null, ex));
+            if (conversionIds.Count == 0)
+            {
+              throw new SpeckleConversionException($"Failed to convert object.");
+            }
+
+            // 4: log
+            var id = conversionIds[0]; // this is group id if it is a one to many conversion, otherwise id of object itself
+            conversionResults.Add(new(Status.SUCCESS, obj, id, result.GetType().ToString()));
+            if (conversionIds.Count == 1)
+            {
+              bakedObjectIds.Add(id);
+            }
+            else
+            {
+              // first item always a group id if it is a one-to-many,
+              // we do not want to deal with later groups and its sub elements. It causes a huge issue on performance.
+              bakedObjectIds.AddRange(conversionIds.Skip(1));
+            }
+
+            // 5: populate app id map
+            applicationIdMap[obj.applicationId ?? obj.id] = conversionIds;
+            convertActivity?.SetStatus(SpeckleActivityStatusCode.Ok);
+          }
+          catch (Exception ex) when (!ex.IsFatal())
+          {
+            conversionResults.Add(new(Status.ERROR, obj, null, null, ex));
+            convertActivity?.SetStatus(SpeckleActivityStatusCode.Error);
+            convertActivity?.RecordException(ex);
+          }
         }
       }
     }
