@@ -10,15 +10,10 @@ using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
-using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.Revit.Operations.Receive;
 
-/// <summary>
-/// Potentially consolidate all application specific IHostObjectBuilders
-/// https://spockle.atlassian.net/browse/DUI3-465
-/// </summary>
 internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 {
   private readonly IRootToHostConverter _converter;
@@ -77,14 +72,6 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     var unpackedRoot = _rootObjectUnpacker.Unpack(rootObject);
 
     using var activity = SpeckleActivityFactory.Start("Build");
-    IEnumerable<TraversalContext> objectsToConvert;
-
-    using (var _ = SpeckleActivityFactory.Start("Traverse"))
-    {
-      objectsToConvert = _traverseFunction.Traverse(rootObject).Where(obj => obj.Current is not Collection);
-    }
-
-    var elementIds = new List<ElementId>();
 
     using TransactionGroup transactionGroup = new(_contextStack.Current.Document, $"Received data from {projectName}");
     transactionGroup.Start();
@@ -92,14 +79,16 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 
     if (unpackedRoot.RenderMaterialProxies != null)
     {
-      _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseLayerName);
-      foreach (var item in _materialBaker.ObjectIdAndMaterialIndexMap)
+      _materialBaker.MapLayersRenderMaterials(unpackedRoot);
+      // NOTE: do not set _contextStack.RenderMaterialProxyCache directly, things stop working. Ogu/Dim do not know why :) not a problem as we hopefully will refactor some of these hacks out.
+      var map = _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseLayerName);
+      foreach (var kvp in map)
       {
-        _contextStack.RenderMaterialProxyCache.ObjectIdAndMaterialIndexMap.Add(item.Key, item.Value); // Massive hack!
+        _contextStack.RenderMaterialProxyCache.ObjectIdAndMaterialIndexMap.Add(kvp.Key, kvp.Value);
       }
     }
 
-    var conversionResults = BakeObjects(objectsToConvert, onOperationProgressed, cancellationToken, out elementIds);
+    var conversionResults = BakeObjects(unpackedRoot.ObjectsToConvert, onOperationProgressed, cancellationToken);
 
     using (var _ = SpeckleActivityFactory.Start("Commit"))
     {
@@ -135,15 +124,13 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   private HostObjectBuilderResult BakeObjects(
     IEnumerable<TraversalContext> objectsGraph,
     Action<string, double?>? onOperationProgressed,
-    CancellationToken cancellationToken,
-    out List<ElementId> elemIds
+    CancellationToken cancellationToken
   )
   {
     using (var _ = SpeckleActivityFactory.Start("BakeObjects"))
     {
       var conversionResults = new List<ReceiveConversionResult>();
       var bakedObjectIds = new List<string>();
-      var elementIds = new List<ElementId>();
 
       // is this a dumb idea?
       var objectList = objectsGraph.ToList();
@@ -175,8 +162,6 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
           conversionResults.Add(new(Status.ERROR, tc.Current, null, null, ex));
         }
       }
-
-      elemIds = elementIds;
       return new(bakedObjectIds, conversionResults);
     }
   }

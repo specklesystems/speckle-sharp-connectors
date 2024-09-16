@@ -45,7 +45,7 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObj
       )
     )
     {
-      materialId = ElementId.Parse(mappedElementId);
+      materialId = mappedElementId;
     }
 
     int i = 0;
