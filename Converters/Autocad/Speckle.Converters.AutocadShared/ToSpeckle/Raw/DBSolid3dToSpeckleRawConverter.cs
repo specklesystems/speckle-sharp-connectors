@@ -71,8 +71,10 @@ public class Solid3dToSpeckleRawConverter : ITypedConverter<ADB.Solid3d, SOG.Mes
 
     // create speckle mesh
     SOG.Mesh mesh =
-      new(convertedVertices, faces)
+      new()
       {
+        vertices = convertedVertices,
+        faces = faces,
         units = _contextStack.Current.SpeckleUnits,
         bbox = bbox,
         area = area,

@@ -24,13 +24,11 @@ public class DBLineToSpeckleRawConverter : ITypedConverter<ADB.Line, SOG.Line>
   public Base Convert(object target) => Convert((ADB.Line)target);
 
   public SOG.Line Convert(ADB.Line target) =>
-    new(
-      _pointConverter.Convert(target.StartPoint),
-      _pointConverter.Convert(target.EndPoint),
-      _contextStack.Current.SpeckleUnits
-    )
+    new()
     {
-      length = target.Length,
+      start = _pointConverter.Convert(target.StartPoint),
+      end = _pointConverter.Convert(target.EndPoint),
+      units = _contextStack.Current.SpeckleUnits,
       domain = new SOP.Interval { start = 0, end = target.Length },
       bbox = _boxConverter.Convert(target.GeometricExtents)
     };

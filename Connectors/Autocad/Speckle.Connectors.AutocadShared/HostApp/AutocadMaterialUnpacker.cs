@@ -119,6 +119,11 @@ public class AutocadMaterialUnpacker
     renderMaterial["ior"] = material.Refraction.Index;
     renderMaterial["reflectivity"] = material.Reflectivity;
 
-    return new(renderMaterial, new()) { applicationId = id };
+    return new RenderMaterialProxy()
+    {
+      value = renderMaterial,
+      objects = new(),
+      applicationId = id
+    };
   }
 }

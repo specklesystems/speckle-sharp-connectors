@@ -54,12 +54,18 @@ public class MeshListConversionToSpeckle : ITypedConverter<List<DB.Mesh>, SOG.Me
       }
     }
 
-    SOG.Mesh speckleMesh = new(vertices, faces, units: _contextStack.Current.SpeckleUnits);
+    SOG.Mesh speckleMesh =
+      new()
+      {
+        vertices = vertices,
+        faces = faces,
+        units = _contextStack.Current.SpeckleUnits
+      };
 
     return speckleMesh;
   }
 
-  private static (int vertexCount, int) GetVertexAndFaceListSize(List<DB.Mesh> meshes)
+  private static (int vertexCount, int) GetVertexAndFaceListSize(IReadOnlyList<DB.Mesh?> meshes)
   {
     int numberOfVertices = 0;
     int numberOfFaces = 0;

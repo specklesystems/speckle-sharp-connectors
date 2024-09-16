@@ -40,10 +40,12 @@ public class MeshListToHostConverter : ITypedConverter<List<SOG.Mesh>, ACG.Multi
         int ptIndex = part.faces[i];
         newPatch.AddPoint(
           _pointConverter.Convert(
-            new SOG.Point(part.vertices[ptIndex * 3], part.vertices[ptIndex * 3 + 1], part.vertices[ptIndex * 3 + 2])
-            {
-              units = part.units
-            }
+            new SOG.Point(
+              part.vertices[ptIndex * 3],
+              part.vertices[ptIndex * 3 + 1],
+              part.vertices[ptIndex * 3 + 2],
+              part.units
+            )
           )
         );
       }
