@@ -30,9 +30,11 @@ public class LineToSpeckleConverter : ITypedConverter<RG.Line, SOG.Line>, ITyped
   /// ⚠️ This conversion assumes the domain of a line is (0, LENGTH), as Rhino Lines do not have domain. If you want the domain preserved use LineCurve conversions instead.
   /// </remarks>
   public SOG.Line Convert(RG.Line target) =>
-    new(_pointConverter.Convert(target.From), _pointConverter.Convert(target.To), _contextStack.Current.SpeckleUnits)
+    new()
     {
-      length = target.Length,
+      start = _pointConverter.Convert(target.From),
+      end = _pointConverter.Convert(target.To),
+      units = _contextStack.Current.SpeckleUnits,
       domain = new SOP.Interval { start = 0, end = target.Length },
       bbox = _boxConverter.Convert(new RG.Box(target.BoundingBox))
     };

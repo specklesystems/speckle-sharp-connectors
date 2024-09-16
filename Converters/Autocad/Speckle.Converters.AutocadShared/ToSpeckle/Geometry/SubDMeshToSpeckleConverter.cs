@@ -72,7 +72,15 @@ public class DBSubDMeshToSpeckleConverter : IToSpeckleTopLevelConverter
     // bbox
     SOG.Box bbox = _boxConverter.Convert(target.GeometricExtents);
 
-    SOG.Mesh speckleMesh = new(vertices, faces, colors, null, _contextStack.Current.SpeckleUnits) { bbox = bbox };
+    SOG.Mesh speckleMesh =
+      new()
+      {
+        vertices = vertices,
+        faces = faces,
+        colors = colors,
+        units = _contextStack.Current.SpeckleUnits,
+        bbox = bbox
+      };
 
     return speckleMesh;
   }

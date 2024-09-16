@@ -132,11 +132,17 @@ public class ColumnConversionToSpeckle : ITypedConverter<DB.FamilyInstance, Revi
       //  return RevitInstanceToSpeckle(revitColumn, out notes, null);
       //}
 
-      return new SOG.Line(
-        basePoint,
-        new SOG.Point(basePoint.x, basePoint.y, topLevelElevation + topLevelOffset, _contextStack.Current.SpeckleUnits),
-        _contextStack.Current.SpeckleUnits
-      );
+      return new SOG.Line
+      {
+        start = basePoint,
+        end = new SOG.Point(
+          basePoint.x,
+          basePoint.y,
+          topLevelElevation + topLevelOffset,
+          _contextStack.Current.SpeckleUnits
+        ),
+        units = _contextStack.Current.SpeckleUnits,
+      };
     }
 
     return null;

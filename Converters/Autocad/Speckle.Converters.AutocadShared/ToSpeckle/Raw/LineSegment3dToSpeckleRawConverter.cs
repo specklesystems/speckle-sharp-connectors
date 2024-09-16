@@ -18,13 +18,11 @@ public class LineSegment3dToSpeckleRawConverter : ITypedConverter<AG.LineSegment
   }
 
   public SOG.Line Convert(AG.LineSegment3d target) =>
-    new(
-      _pointConverter.Convert(target.StartPoint),
-      _pointConverter.Convert(target.EndPoint),
-      _contextStack.Current.SpeckleUnits
-    )
+    new()
     {
-      length = target.Length,
+      start = _pointConverter.Convert(target.StartPoint),
+      end = _pointConverter.Convert(target.EndPoint),
+      units = _contextStack.Current.SpeckleUnits,
       domain = new SOP.Interval { start = 0, end = target.Length },
     };
 }

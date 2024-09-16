@@ -62,7 +62,7 @@ public class RhinoInstanceUnpacker : IInstanceUnpacker<RhinoObject>
       if (
         !_instanceObjectsManager.TryGetInstanceProxiesFromDefinitionId(
           instanceDefinitionId,
-          out List<InstanceProxy> instanceProxiesWithSameDefinition
+          out List<InstanceProxy>? instanceProxiesWithSameDefinition
         )
       )
       {
@@ -85,7 +85,7 @@ public class RhinoInstanceUnpacker : IInstanceUnpacker<RhinoObject>
       instanceProxiesWithSameDefinition.Add(_instanceObjectsManager.GetInstanceProxy(instanceId));
 
       if (
-        _instanceObjectsManager.TryGetInstanceDefinitionProxy(instanceDefinitionId, out InstanceDefinitionProxy value)
+        _instanceObjectsManager.TryGetInstanceDefinitionProxy(instanceDefinitionId, out InstanceDefinitionProxy? value)
       )
       {
         int depthDifference = depth - value.maxDepth;

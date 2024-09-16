@@ -239,6 +239,9 @@ dotnet_diagnostic.ide0290.severity = suggestion # primary constructors: subjecti
 dotnet_diagnostic.ide0290.severity = suggestion # Use primary constructor: Subjective
 dotnet_diagnostic.ide0037.severity = suggestion # Use inferred member names: Sometimes its nice to be explicit
 dotnet_diagnostic.ide0301.severity = suggestion # Use collection expression for empty: Subjective, intent
+dotnet_diagnostic.ide0021.severity = suggestion # Use expression body for constructors : Subjective
+dotnet_diagnostic.ide0090.severity = suggestion # Simplify new expression : Subjective
+
 dotnet_diagnostic.ide0047.severity = suggestion # Parentheses preferences: IDEs don't properly pick it up
 
 # Maintainability rules
