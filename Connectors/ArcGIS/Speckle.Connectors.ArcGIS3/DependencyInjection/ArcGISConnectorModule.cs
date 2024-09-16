@@ -17,7 +17,6 @@ using Speckle.Connectors.DUI.WebView;
 using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
-using Speckle.Connectors.Utils.Instances;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Sdk.Models.GraphTraversal;
 
