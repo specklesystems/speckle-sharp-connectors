@@ -97,9 +97,6 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       }
     }
 
-    // TODO: RevitMaterialBaker -> it will produce the map.
-    // TODO: you need inject this dictionary to your RevitConversionContextStack
-
     var conversionResults = BakeObjects(objectsToConvert, onOperationProgressed, cancellationToken, out elementIds);
 
     using (var _ = SpeckleActivityFactory.Start("Commit"))
@@ -162,14 +159,6 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
           // Note: our current converter always returns a DS for now
           if (result is DirectShape ds)
           {
-            /*var newMaterialId = Material.Create(_contextStack.Current.Document, "MyNewMaterial");
-            var revitMaterial = (Material)_contextStack.Current.Document.GetElement(newMaterialId);
-            revitMaterial.Color = new Color(0, 255, 255);
-            revitMaterial.Transparency = 100;
-            revitMaterial.Shininess = 75;
-            revitMaterial.Smoothness = 25;
-            ds.M*/
-
             bakedObjectIds.Add(ds.UniqueId.ToString());
             _groupManager.AddToGroupMapping(tc, ds);
           }

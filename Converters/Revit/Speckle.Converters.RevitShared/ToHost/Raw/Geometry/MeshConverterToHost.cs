@@ -33,7 +33,6 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObj
     };
 
     var valid = tsb.AreTargetAndFallbackCompatible(target, fallback);
-    //tsb.OpenConnectedFaceSet(target == TessellatedShapeBuilderTarget.Solid);
     tsb.OpenConnectedFaceSet(false);
     var vertices = ArrayToPoints(mesh.vertices, mesh.units);
 
@@ -42,17 +41,13 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObj
     if (
       _revitContextStack.RenderMaterialProxyCache.ObjectIdAndMaterialIndexMap.TryGetValue(
         mesh.applicationId ?? mesh.id,
-        out string uniqueId
+        out var uniqueId
       )
     )
     {
       Element element = _revitContextStack.Current.Document.GetElement(uniqueId);
       materialId = element.Id;
     }
-    //if (mesh["renderMaterial"] is RenderMaterial renderMaterial)
-    //{
-    //  materialId = _materialConverter.Convert(renderMaterial).Id;
-    //}
 
     int i = 0;
     while (i < mesh.faces.Count)
@@ -75,7 +70,7 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObj
 
         triPoints = new List<XYZ> { points[1], points[2], points[3] };
 
-        var face2 = new TessellatedFace(triPoints, materialId); // TODO: need to try get material id from map
+        var face2 = new TessellatedFace(triPoints, materialId);
         tsb.AddFace(face2);
       }
       else

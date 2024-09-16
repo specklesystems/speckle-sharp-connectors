@@ -27,22 +27,27 @@ public class RevitMaterialBaker
 
       try
       {
-        string materialId = speckleRenderMaterial.applicationId ?? speckleRenderMaterial.id;
-        string matName = $"{speckleRenderMaterial.name}-({materialId})";
-        //string matName = $"{speckleRenderMaterial.name}-({materialId})-{baseLayerName}";
-        //matName = matName.Replace("[", "").Replace("]", ""); // "Material" doesn't like square brackets if we create from here. Once they created from Rhino UI, all good..
         var diffuse = System.Drawing.Color.FromArgb(speckleRenderMaterial.diffuse);
-        var emissive = System.Drawing.Color.FromArgb(speckleRenderMaterial.emissive);
         double transparency = 1 - speckleRenderMaterial.opacity;
+        double smoothness = 1 - speckleRenderMaterial.roughness;
 
-        var newMaterialId = Autodesk.Revit.DB.Material.Create(_contextStack.Current.Document, matName);
+        var newMaterialId = Autodesk.Revit.DB.Material.Create(
+          _contextStack.Current.Document,
+          speckleRenderMaterial.name
+        );
         var revitMaterial = (Autodesk.Revit.DB.Material)_contextStack.Current.Document.GetElement(newMaterialId);
         revitMaterial.Color = new Color(diffuse.R, diffuse.G, diffuse.B);
-        revitMaterial.Transparency = (int)(transparency * 100);
-        revitMaterial.Shininess = 75;
-        revitMaterial.Smoothness = 25;
 
-        // Create the object <> material index map
+        revitMaterial.Transparency = (int)(transparency * 100);
+        revitMaterial.Shininess = (int)(speckleRenderMaterial.metalness * 128);
+        revitMaterial.Smoothness = (int)(smoothness * 128);
+
+        // do i need something like this?
+        if (speckleRenderMaterial["shine"] is double shine)
+        {
+          revitMaterial.Shininess = (int)(shine * 128);
+        }
+
         foreach (var objectId in proxy.objects)
         {
           ObjectIdAndMaterialIndexMap[objectId] = revitMaterial.UniqueId;
