@@ -10,7 +10,6 @@ using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
-using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.Revit.Operations.Receive;
@@ -77,14 +76,6 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     var unpackedRoot = _rootObjectUnpacker.Unpack(rootObject);
 
     using var activity = SpeckleActivityFactory.Start("Build");
-    IEnumerable<TraversalContext> objectsToConvert;
-
-    using (var _ = SpeckleActivityFactory.Start("Traverse"))
-    {
-      objectsToConvert = _traverseFunction.Traverse(rootObject).Where(obj => obj.Current is not Collection);
-    }
-
-    var elementIds = new List<ElementId>();
 
     using TransactionGroup transactionGroup = new(_contextStack.Current.Document, $"Received data from {projectName}");
     transactionGroup.Start();
@@ -99,7 +90,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       }
     }
 
-    var conversionResults = BakeObjects(objectsToConvert, onOperationProgressed, cancellationToken, out elementIds);
+    var conversionResults = BakeObjects(unpackedRoot.ObjectsToConvert, onOperationProgressed, cancellationToken);
 
     using (var _ = SpeckleActivityFactory.Start("Commit"))
     {
@@ -135,8 +126,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   private HostObjectBuilderResult BakeObjects(
     IEnumerable<TraversalContext> objectsGraph,
     Action<string, double?>? onOperationProgressed,
-    CancellationToken cancellationToken,
-    out List<ElementId> elemIds
+    CancellationToken cancellationToken
   )
   {
     using (var _ = SpeckleActivityFactory.Start("BakeObjects"))
@@ -175,8 +165,6 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
           conversionResults.Add(new(Status.ERROR, tc.Current, null, null, ex));
         }
       }
-
-      elemIds = elementIds;
       return new(bakedObjectIds, conversionResults);
     }
   }
