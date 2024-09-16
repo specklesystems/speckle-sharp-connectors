@@ -1,6 +1,7 @@
 using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.RevitShared.Helpers;
 using Speckle.DoubleNumerics;
 
 namespace Speckle.Converters.RevitShared.ToHost.TopLevel;
@@ -8,10 +9,15 @@ namespace Speckle.Converters.RevitShared.ToHost.TopLevel;
 public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObject>>
 {
   private readonly ITypedConverter<SOG.Point, DB.XYZ> _pointConverter;
+  private readonly IRevitConversionContextStack _revitContextStack;
 
-  public MeshConverterToHost(ITypedConverter<SOG.Point, XYZ> pointConverter)
+  public MeshConverterToHost(
+    ITypedConverter<SOG.Point, XYZ> pointConverter,
+    IRevitConversionContextStack revitContextStack
+  )
   {
     _pointConverter = pointConverter;
+    _revitContextStack = revitContextStack;
   }
 
   public List<DB.GeometryObject> Convert(SOG.Mesh mesh)
@@ -27,15 +33,20 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObj
     };
 
     var valid = tsb.AreTargetAndFallbackCompatible(target, fallback);
-    //tsb.OpenConnectedFaceSet(target == TessellatedShapeBuilderTarget.Solid);
     tsb.OpenConnectedFaceSet(false);
     var vertices = ArrayToPoints(mesh.vertices, mesh.units);
 
     ElementId materialId = ElementId.InvalidElementId;
-    // if (mesh["renderMaterial"] is RenderMaterial renderMaterial)
-    // {
-    //   materialId = _materialConverter.Convert(renderMaterial).Id;
-    // }
+
+    if (
+      _revitContextStack.RenderMaterialProxyCache.ObjectIdAndMaterialIndexMap.TryGetValue(
+        mesh.applicationId ?? mesh.id,
+        out var mappedElementId
+      )
+    )
+    {
+      materialId = ElementId.Parse(mappedElementId);
+    }
 
     int i = 0;
     while (i < mesh.faces.Count)
@@ -57,7 +68,7 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObj
         tsb.AddFace(face1);
 
         triPoints = new List<XYZ> { points[1], points[2], points[3] };
-        ;
+
         var face2 = new TessellatedFace(triPoints, materialId);
         tsb.AddFace(face2);
       }

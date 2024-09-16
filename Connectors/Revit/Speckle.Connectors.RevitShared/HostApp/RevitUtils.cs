@@ -2,7 +2,7 @@ namespace Speckle.Connectors.Revit.HostApp;
 
 public class RevitUtils
 {
-  private const string REVIT_INVALID_CHARS = @"<>/\:;""?*|=,‘";
+  private const string REVIT_INVALID_CHARS = @"<>/\:;""?*|=,‘()";
 
   public string RemoveInvalidChars(string str)
   {
