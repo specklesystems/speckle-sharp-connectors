@@ -4,6 +4,7 @@ using Revit.Async;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
+using Speckle.Connectors.Utils.Operations.Receive;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
@@ -28,7 +29,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   private readonly RevitMaterialBaker _materialBaker;
   private readonly ILogger<RevitHostObjectBuilder> _logger;
 
-  //private readonly RootObjectUnpacker _rootObjectUnpacker;
+  private readonly RootObjectUnpacker _rootObjectUnpacker;
 
   public RevitHostObjectBuilder(
     IRootToHostConverter converter,
@@ -37,7 +38,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     ITransactionManager transactionManager,
     RevitGroupBaker groupManager,
     RevitMaterialBaker materialBaker,
-    //RootObjectUnpacker rootObjectUnpacker,
+    RootObjectUnpacker rootObjectUnpacker,
     ILogger<RevitHostObjectBuilder> logger
   )
   {
@@ -47,7 +48,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     _transactionManager = transactionManager;
     _groupManager = groupManager;
     _materialBaker = materialBaker;
-    //_rootObjectUnpacker = rootObjectUnpacker;
+    _rootObjectUnpacker = rootObjectUnpacker;
     _logger = logger;
   }
 
@@ -70,6 +71,9 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   {
     onOperationProgressed?.Invoke("Converting", null);
 
+    // 1 - Unpack objects and proxies from root commit object
+    var unpackedRoot = _rootObjectUnpacker.Unpack(rootObject);
+
     using var activity = SpeckleActivityFactory.Start("Build");
     IEnumerable<TraversalContext> objectsToConvert;
 
@@ -84,11 +88,17 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     transactionGroup.Start();
     _transactionManager.StartTransaction();
 
-    /*var unpackedRoot = _rootObjectUnpacker.Unpack(rootObject);
     if (unpackedRoot.RenderMaterialProxies != null)
     {
       _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies);
-    }*/
+      foreach (var item in _materialBaker.ObjectIdAndMaterialIndexMap)
+      {
+        _contextStack.RenderMaterialProxyCache.ObjectIdAndMaterialIndexMap.Add(item.Key, item.Value); // Massive hack!
+      }
+    }
+
+    // TODO: RevitMaterialBaker -> it will produce the map.
+    // TODO: you need inject this dictionary to your RevitConversionContextStack
 
     var conversionResults = BakeObjects(objectsToConvert, onOperationProgressed, cancellationToken, out elementIds);
 
@@ -117,6 +127,8 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       _transactionManager.CommitTransaction();
       createGroupTransaction.Assimilate();
     }
+
+    _contextStack.RenderMaterialProxyCache.ObjectIdAndMaterialIndexMap.Clear(); // Massive hack!
 
     return conversionResults;
   }

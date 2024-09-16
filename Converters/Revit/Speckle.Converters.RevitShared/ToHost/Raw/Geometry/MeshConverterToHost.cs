@@ -1,18 +1,23 @@
 using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.RevitShared.Helpers;
 using Speckle.DoubleNumerics;
-using Speckle.Objects.Other;
 
 namespace Speckle.Converters.RevitShared.ToHost.TopLevel;
 
 public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObject>>
 {
   private readonly ITypedConverter<SOG.Point, DB.XYZ> _pointConverter;
+  private readonly IRevitConversionContextStack _revitContextStack;
 
-  public MeshConverterToHost(ITypedConverter<SOG.Point, XYZ> pointConverter)
+  public MeshConverterToHost(
+    ITypedConverter<SOG.Point, XYZ> pointConverter,
+    IRevitConversionContextStack revitContextStack
+  )
   {
     _pointConverter = pointConverter;
+    _revitContextStack = revitContextStack;
   }
 
   public List<DB.GeometryObject> Convert(SOG.Mesh mesh)
@@ -33,6 +38,17 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObj
     var vertices = ArrayToPoints(mesh.vertices, mesh.units);
 
     ElementId materialId = ElementId.InvalidElementId;
+
+    if (
+      _revitContextStack.RenderMaterialProxyCache.ObjectIdAndMaterialIndexMap.TryGetValue(
+        mesh.applicationId ?? mesh.id,
+        out string uniqueId
+      )
+    )
+    {
+      Element element = _revitContextStack.Current.Document.GetElement(uniqueId);
+      materialId = element.Id;
+    }
     //if (mesh["renderMaterial"] is RenderMaterial renderMaterial)
     //{
     //  materialId = _materialConverter.Convert(renderMaterial).Id;
@@ -58,8 +74,8 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObj
         tsb.AddFace(face1);
 
         triPoints = new List<XYZ> { points[1], points[2], points[3] };
-        ;
-        var face2 = new TessellatedFace(triPoints, materialId);
+
+        var face2 = new TessellatedFace(triPoints, materialId); // TODO: need to try get material id from map
         tsb.AddFace(face2);
       }
       else

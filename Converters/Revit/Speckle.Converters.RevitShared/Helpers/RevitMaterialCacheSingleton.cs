@@ -17,6 +17,8 @@ public class RevitMaterialCacheSingleton
   /// </summary>
   public Dictionary<string, Dictionary<string, RenderMaterialProxy>> ObjectRenderMaterialProxiesMap { get; } = new();
 
+  public Dictionary<string, string> ObjectIdAndMaterialIndexMap { get; } = new();
+
   /// <summary>
   /// map (DB.Material id, RevitMaterial). This can be generated from converting render materials or material quantities.
   /// </summary>

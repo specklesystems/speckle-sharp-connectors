@@ -20,6 +20,8 @@ public class RevitConversionContextStack : ConversionContextStack<Document, Forg
   /// </summary>
   public RevitMaterialCacheSingleton RenderMaterialProxyCache { get; }
 
+  // TODO: we need here RevitMaterialBaker.ObjectIdAndMaterialIndexMap in here "per instance/conversion"
+
   public const double TOLERANCE = 0.0164042; // 5mm in ft
 
   public RevitConversionContextStack(

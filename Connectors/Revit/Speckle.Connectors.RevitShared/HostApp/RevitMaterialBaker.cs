@@ -17,6 +17,8 @@ public class RevitMaterialBaker
     _logger = logger;
   }
 
+  public Dictionary<string, string> ObjectIdAndMaterialIndexMap { get; } = new();
+
   public void BakeMaterials(List<RenderMaterialProxy> speckleRenderMaterialProxies)
   {
     foreach (var proxy in speckleRenderMaterialProxies)
@@ -33,12 +35,18 @@ public class RevitMaterialBaker
         var emissive = System.Drawing.Color.FromArgb(speckleRenderMaterial.emissive);
         double transparency = 1 - speckleRenderMaterial.opacity;
 
-        var newMaterialId = Autodesk.Revit.DB.Material.Create(_contextStack.Current.Document, "MyNewMaterial");
+        var newMaterialId = Autodesk.Revit.DB.Material.Create(_contextStack.Current.Document, matName);
         var revitMaterial = (Autodesk.Revit.DB.Material)_contextStack.Current.Document.GetElement(newMaterialId);
         revitMaterial.Color = new Color(diffuse.R, diffuse.G, diffuse.B);
         revitMaterial.Transparency = (int)(transparency * 100);
         revitMaterial.Shininess = 75;
         revitMaterial.Smoothness = 25;
+
+        // Create the object <> material index map
+        foreach (var objectId in proxy.objects)
+        {
+          ObjectIdAndMaterialIndexMap[objectId] = revitMaterial.UniqueId;
+        }
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
