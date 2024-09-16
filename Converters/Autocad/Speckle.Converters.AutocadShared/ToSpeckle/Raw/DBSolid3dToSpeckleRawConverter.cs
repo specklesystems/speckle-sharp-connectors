@@ -75,7 +75,7 @@ public class Solid3dToSpeckleRawConverter : ITypedConverter<ADB.Solid3d, SOG.Mes
       {
         vertices = convertedVertices,
         faces = faces,
-        units = _contextStack.Current.SpeckleUnits,
+        units = _settingsStore.Current.SpeckleUnits,
         bbox = bbox,
         area = area,
         volume = volume

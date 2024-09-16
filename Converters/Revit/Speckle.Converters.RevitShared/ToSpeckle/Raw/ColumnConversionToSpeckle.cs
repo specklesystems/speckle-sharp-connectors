@@ -140,9 +140,9 @@ public class ColumnConversionToSpeckle : ITypedConverter<DB.FamilyInstance, Revi
           basePoint.x,
           basePoint.y,
           topLevelElevation + topLevelOffset,
-          _contextStack.Current.SpeckleUnits
+          _converterSettings.Current.SpeckleUnits
         ),
-        units = _contextStack.Current.SpeckleUnits,
+        units = _converterSettings.Current.SpeckleUnits,
       };
     }
 

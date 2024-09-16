@@ -77,7 +77,7 @@ public class ExtrusionRoofToSpeckleTopLevelConverter
       {
         start = _pointConverter.Convert(plane.Origin.Add(plane.XVec.Normalize().Negate())),
         end = _pointConverter.Convert(plane.Origin),
-        units = _contextStack.Current.SpeckleUnits,
+        units = _converterSettings.Current.SpeckleUnits,
       };
     return referenceLine;
   }

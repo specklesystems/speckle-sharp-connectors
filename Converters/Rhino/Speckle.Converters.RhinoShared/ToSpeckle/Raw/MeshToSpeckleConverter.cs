@@ -73,7 +73,7 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
       faces = faces,
       colors = colors,
       textureCoordinates = textureCoordinates,
-      units = _contextStack.Current.SpeckleUnits,
+      units = _settingsStore.Current.SpeckleUnits,
       volume = volume,
       bbox = bbox
     };

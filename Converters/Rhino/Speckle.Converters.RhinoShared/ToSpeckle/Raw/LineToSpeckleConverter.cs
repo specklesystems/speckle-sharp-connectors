@@ -1,4 +1,4 @@
-using Speckle.Converters.Common;
+﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
@@ -33,7 +33,7 @@ public class LineToSpeckleConverter : ITypedConverter<RG.Line, SOG.Line>, ITyped
     {
       start = _pointConverter.Convert(target.From),
       end = _pointConverter.Convert(target.To),
-      units = _contextStack.Current.SpeckleUnits,
+      units = _settingsStore.Current.SpeckleUnits,
       domain = new SOP.Interval { start = 0, end = target.Length },
       bbox = _boxConverter.Convert(new RG.Box(target.BoundingBox))
     };

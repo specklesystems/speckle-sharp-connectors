@@ -109,7 +109,7 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
     {
       start = tail,
       end = head,
-      units = _contextStack.Current.SpeckleUnits
+      units = _converterSettings.Current.SpeckleUnits
     };
 
     if (

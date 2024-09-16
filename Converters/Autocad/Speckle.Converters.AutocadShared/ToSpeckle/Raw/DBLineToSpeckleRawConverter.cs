@@ -28,7 +28,7 @@ public class DBLineToSpeckleRawConverter : ITypedConverter<ADB.Line, SOG.Line>
     {
       start = _pointConverter.Convert(target.StartPoint),
       end = _pointConverter.Convert(target.EndPoint),
-      units = _contextStack.Current.SpeckleUnits,
+      units = _settingsStore.Current.SpeckleUnits,
       domain = new SOP.Interval { start = 0, end = target.Length },
       bbox = _boxConverter.Convert(target.GeometricExtents)
     };

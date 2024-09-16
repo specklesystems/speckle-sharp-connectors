@@ -78,7 +78,7 @@ public class DBSubDMeshToSpeckleConverter : IToSpeckleTopLevelConverter
         vertices = vertices,
         faces = faces,
         colors = colors,
-        units = _contextStack.Current.SpeckleUnits,
+        units = _settingsStore.Current.SpeckleUnits,
         bbox = bbox
       };
 

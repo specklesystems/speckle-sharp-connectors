@@ -1,4 +1,4 @@
-using Speckle.Converters.Common;
+﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
@@ -22,7 +22,7 @@ public class LineSegment3dToSpeckleRawConverter : ITypedConverter<AG.LineSegment
     {
       start = _pointConverter.Convert(target.StartPoint),
       end = _pointConverter.Convert(target.EndPoint),
-      units = _contextStack.Current.SpeckleUnits,
+      units = _settingsStore.Current.SpeckleUnits,
       domain = new SOP.Interval { start = 0, end = target.Length },
     };
 }

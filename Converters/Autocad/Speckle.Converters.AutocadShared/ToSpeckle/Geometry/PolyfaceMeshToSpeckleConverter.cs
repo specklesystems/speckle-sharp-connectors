@@ -98,7 +98,7 @@ public class DBPolyfaceMeshToSpeckleConverter : IToSpeckleTopLevelConverter
         vertices = vertices,
         faces = faces,
         colors = colors,
-        units = _contextStack.Current.SpeckleUnits,
+        units = _settingsStore.Current.SpeckleUnits,
         bbox = bbox,
         ["faceVisibility"] = faceVisibility
       };
