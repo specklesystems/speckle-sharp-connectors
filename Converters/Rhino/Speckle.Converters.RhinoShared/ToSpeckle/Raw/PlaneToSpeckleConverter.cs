@@ -1,4 +1,3 @@
-using Rhino;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
@@ -8,17 +7,17 @@ public class PlaneToSpeckleConverter : ITypedConverter<RG.Plane, SOG.Plane>
 {
   private readonly ITypedConverter<RG.Vector3d, SOG.Vector> _vectorConverter;
   private readonly ITypedConverter<RG.Point3d, SOG.Point> _pointConverter;
-  private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
+  private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   public PlaneToSpeckleConverter(
     ITypedConverter<RG.Vector3d, SOG.Vector> vectorConverter,
     ITypedConverter<RG.Point3d, SOG.Point> pointConverter,
-    IConversionContextStack<RhinoDoc, UnitSystem> contextStack
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore
   )
   {
     _vectorConverter = vectorConverter;
     _pointConverter = pointConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   /// <summary>
@@ -33,6 +32,6 @@ public class PlaneToSpeckleConverter : ITypedConverter<RG.Plane, SOG.Plane>
       normal = _vectorConverter.Convert(target.ZAxis),
       xdir = _vectorConverter.Convert(target.XAxis),
       ydir = _vectorConverter.Convert(target.YAxis),
-      units = _contextStack.Current.SpeckleUnits
+      units = _settingsStore.Current.SpeckleUnits
     };
 }

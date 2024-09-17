@@ -8,15 +8,15 @@ namespace Speckle.Converters.ArcGIS3.ToHost.TopLevel;
 public class ArcToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG.Arc, ACG.Polyline>
 {
   private readonly ITypedConverter<SOG.Point, ACG.MapPoint> _pointConverter;
-  private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
 
   public ArcToHostConverter(
     ITypedConverter<SOG.Point, ACG.MapPoint> pointConverter,
-    IConversionContextStack<ArcGISDocument, ACG.Unit> contextStack
+    IConverterSettingsStore<ArcGISConversionSettings> settingsStore
   )
   {
     _pointConverter = pointConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public object Convert(Base target) => Convert((SOG.Arc)target);
@@ -35,13 +35,13 @@ public class ArcToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG.
       fromPt,
       toPt,
       new ACG.Coordinate2D(midPt),
-      _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference
+      _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference
     );
 
     return new ACG.PolylineBuilderEx(
       segment,
       ACG.AttributeFlags.HasZ,
-      _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference
+      _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference
     ).ToGeometry();
   }
 }

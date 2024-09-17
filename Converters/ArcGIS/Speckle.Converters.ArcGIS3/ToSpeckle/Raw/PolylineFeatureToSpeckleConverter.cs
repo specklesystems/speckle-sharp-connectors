@@ -6,15 +6,15 @@ namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
 public class PolyineFeatureToSpeckleConverter : ITypedConverter<ACG.Polyline, IReadOnlyList<SOG.Polyline>>
 {
   private readonly ITypedConverter<ACG.ReadOnlySegmentCollection, SOG.Polyline> _segmentConverter;
-  private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
 
   public PolyineFeatureToSpeckleConverter(
     ITypedConverter<ACG.ReadOnlySegmentCollection, SOG.Polyline> segmentConverter,
-    IConversionContextStack<ArcGISDocument, ACG.Unit> contextStack
+    IConverterSettingsStore<ArcGISConversionSettings> settingsStore
   )
   {
     _segmentConverter = segmentConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public IReadOnlyList<SOG.Polyline> Convert(ACG.Polyline target)
@@ -26,10 +26,9 @@ public class PolyineFeatureToSpeckleConverter : ITypedConverter<ACG.Polyline, IR
     // densify the polylines with curves using precision value of the Map's Spatial Reference
     if (target.HasCurves)
     {
-      double tolerance = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference.XYTolerance;
-      double conversionFactorToMeter = _contextStack
+      double tolerance = _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference.XYTolerance;
+      double conversionFactorToMeter = _settingsStore
         .Current
-        .Document
         .ActiveCRSoffsetRotation
         .SpatialReference
         .Unit

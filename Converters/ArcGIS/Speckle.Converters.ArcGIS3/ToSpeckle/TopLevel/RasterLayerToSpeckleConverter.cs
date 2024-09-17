@@ -1,5 +1,4 @@
 using ArcGIS.Core.Data.Raster;
-using ArcGIS.Core.Geometry;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects.GIS;
@@ -12,15 +11,15 @@ namespace Speckle.Converters.ArcGIS3.ToSpeckle.TopLevel;
 public class RasterLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConverter<RasterLayer, SGIS.RasterLayer>
 {
   private readonly ITypedConverter<Raster, RasterElement> _gisRasterConverter;
-  private readonly IConversionContextStack<ArcGISDocument, Unit> _contextStack;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
 
   public RasterLayerToSpeckleConverter(
     ITypedConverter<Raster, RasterElement> gisRasterConverter,
-    IConversionContextStack<ArcGISDocument, Unit> contextStack
+    IConverterSettingsStore<ArcGISConversionSettings> settingsStore
   )
   {
     _gisRasterConverter = gisRasterConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public Base Convert(object target)
@@ -37,7 +36,7 @@ public class RasterLayerToSpeckleConverter : IToSpeckleTopLevelConverter, ITyped
     // get active map CRS if layer CRS is empty
     if (spatialRefRaster.Unit is null)
     {
-      spatialRefRaster = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference;
+      spatialRefRaster = _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference;
     }
     speckleLayer.rasterCrs = new CRS
     {

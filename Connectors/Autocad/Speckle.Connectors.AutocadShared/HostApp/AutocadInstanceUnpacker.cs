@@ -79,7 +79,7 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
       if (
         !_instanceObjectsManager.TryGetInstanceProxiesFromDefinitionId(
           definitionId.ToString(),
-          out List<InstanceProxy> instanceProxiesWithSameDefinition
+          out List<InstanceProxy>? instanceProxiesWithSameDefinition
         )
       )
       {
@@ -104,7 +104,7 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
       if (
         _instanceObjectsManager.TryGetInstanceDefinitionProxy(
           definitionId.ToString(),
-          out InstanceDefinitionProxy value
+          out InstanceDefinitionProxy? value
         )
       )
       {

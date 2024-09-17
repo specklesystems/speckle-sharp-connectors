@@ -8,17 +8,17 @@ public class Solid3dToSpeckleRawConverter : ITypedConverter<ADB.Solid3d, SOG.Mes
 {
   private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
   private readonly ITypedConverter<ADB.Extents3d, SOG.Box> _boxConverter;
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public Solid3dToSpeckleRawConverter(
     ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
     ITypedConverter<ADB.Extents3d, SOG.Box> boxConverter,
-    IConversionContextStack<Document, ADB.UnitsValue> contextStack
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _pointConverter = pointConverter;
     _boxConverter = boxConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public Base Convert(object target) => Convert((ADB.Solid3d)target);
@@ -71,9 +71,11 @@ public class Solid3dToSpeckleRawConverter : ITypedConverter<ADB.Solid3d, SOG.Mes
 
     // create speckle mesh
     SOG.Mesh mesh =
-      new(convertedVertices, faces)
+      new()
       {
-        units = _contextStack.Current.SpeckleUnits,
+        vertices = convertedVertices,
+        faces = faces,
+        units = _settingsStore.Current.SpeckleUnits,
         bbox = bbox,
         area = area,
         volume = volume

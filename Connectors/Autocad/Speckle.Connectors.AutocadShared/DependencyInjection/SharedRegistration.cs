@@ -18,7 +18,6 @@ using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Instances;
 using Speckle.Connectors.Utils.Operations;
-using Speckle.Converters.Common;
 using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.Autocad.DependencyInjection;
@@ -55,7 +54,6 @@ public static class SharedRegistration
     builder.AddScoped<AutocadMaterialBaker>();
 
     builder.AddSingleton<IAutocadIdleManager, AutocadIdleManager>();
-    builder.AddSingleton<IHostToSpeckleUnitConverter<UnitsValue>>();
 
     // operation progress manager
     builder.AddSingleton<IOperationProgressManager, OperationProgressManager>();

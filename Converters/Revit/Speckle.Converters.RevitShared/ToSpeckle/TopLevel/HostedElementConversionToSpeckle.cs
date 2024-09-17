@@ -1,6 +1,6 @@
 using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
-using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
@@ -12,19 +12,22 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 public class HostedElementConversionToSpeckle
 {
   private readonly IRootToSpeckleConverter _converter;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
-  public HostedElementConversionToSpeckle(IRootToSpeckleConverter converter, IRevitConversionContextStack contextStack)
+  public HostedElementConversionToSpeckle(
+    IRootToSpeckleConverter converter,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings
+  )
   {
     _converter = converter;
-    _contextStack = contextStack;
+    _converterSettings = converterSettings;
   }
 
   public IEnumerable<Base> ConvertHostedElements(IEnumerable<ElementId> hostedElementIds)
   {
     foreach (var elemId in hostedElementIds)
     {
-      Element element = _contextStack.Current.Document.GetElement(elemId);
+      Element element = _converterSettings.Current.Document.GetElement(elemId);
 
       Base @base;
       try

@@ -1,6 +1,5 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 
@@ -10,21 +9,15 @@ namespace Speckle.Converters.RevitShared;
 public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
 {
   private readonly IConverterResolver<IToSpeckleTopLevelConverter> _toSpeckle;
-  private readonly ParameterValueExtractor _parameterValueExtractor;
   private readonly ITypedConverter<DB.Element, List<Dictionary<string, object>>> _materialQuantityConverter;
-  private readonly IRevitConversionContextStack _contextStack;
 
   public RevitRootToSpeckleConverter(
     IConverterResolver<IToSpeckleTopLevelConverter> toSpeckle,
-    ParameterValueExtractor parameterValueExtractor,
-    ITypedConverter<DB.Element, List<Dictionary<string, object>>> materialQuantityConverter,
-    IRevitConversionContextStack contextStack
+    ITypedConverter<DB.Element, List<Dictionary<string, object>>> materialQuantityConverter
   )
   {
     _toSpeckle = toSpeckle;
-    _parameterValueExtractor = parameterValueExtractor;
     _materialQuantityConverter = materialQuantityConverter;
-    _contextStack = contextStack;
   }
 
   // POC: our assumption here is target is valid for conversion

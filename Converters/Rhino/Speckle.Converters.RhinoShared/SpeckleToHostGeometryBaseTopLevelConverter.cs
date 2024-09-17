@@ -1,5 +1,4 @@
-﻿using Rhino;
-using Speckle.Converters.Common;
+﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
@@ -10,15 +9,15 @@ public abstract class SpeckleToHostGeometryBaseTopLevelConverter<TIn, TOut> : IT
   where TIn : Base
   where TOut : RG.GeometryBase
 {
-  protected IConversionContextStack<RhinoDoc, UnitSystem> ContextStack { get; private set; }
+  protected IConverterSettingsStore<RhinoConversionSettings> SettingsStore { get; private set; }
   private readonly ITypedConverter<TIn, TOut> _geometryBaseConverter;
 
   protected SpeckleToHostGeometryBaseTopLevelConverter(
-    IConversionContextStack<RhinoDoc, UnitSystem> contextStack,
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore,
     ITypedConverter<TIn, TOut> geometryBaseConverter
   )
   {
-    ContextStack = contextStack;
+    SettingsStore = settingsStore;
     _geometryBaseConverter = geometryBaseConverter;
   }
 
@@ -34,7 +33,7 @@ public abstract class SpeckleToHostGeometryBaseTopLevelConverter<TIn, TOut> : IT
      */
     if (castedBase["units"] is string units)
     {
-      var scaleFactor = Units.GetConversionFactor(units, ContextStack.Current.SpeckleUnits);
+      var scaleFactor = Units.GetConversionFactor(units, SettingsStore.Current.SpeckleUnits);
       var scale = RG.Transform.Scale(RG.Point3d.Origin, scaleFactor);
       result.Transform(scale);
     }

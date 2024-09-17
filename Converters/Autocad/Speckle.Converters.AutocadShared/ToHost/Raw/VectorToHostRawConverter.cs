@@ -7,18 +7,18 @@ namespace Speckle.Converters.Autocad.ToHost.Raw;
 
 public class VectorToHostRawConverter : ITypedConverter<SOG.Vector, AG.Vector3d>
 {
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
-  public VectorToHostRawConverter(IConversionContextStack<Document, ADB.UnitsValue> contextStack)
+  public VectorToHostRawConverter(IConverterSettingsStore<AutocadConversionSettings> settingsStore)
   {
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public object Convert(Base target) => Convert((SOG.Vector)target);
 
   public AG.Vector3d Convert(SOG.Vector target)
   {
-    double f = Units.GetConversionFactor(target.units, _contextStack.Current.SpeckleUnits);
+    double f = Units.GetConversionFactor(target.units, _settingsStore.Current.SpeckleUnits);
     return new(target.x * f, target.y * f, target.z * f);
   }
 }
