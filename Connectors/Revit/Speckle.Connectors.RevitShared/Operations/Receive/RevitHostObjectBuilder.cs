@@ -4,6 +4,7 @@ using Revit.Async;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
+using Speckle.Connectors.Utils.Instances;
 using Speckle.Connectors.Utils.Operations.Receive;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
@@ -20,6 +21,8 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   private readonly IRevitConversionContextStack _contextStack;
   private readonly GraphTraversal _traverseFunction;
   private readonly ITransactionManager _transactionManager;
+  private readonly ILocalToGlobalUnpacker _localToGlobalUnpacker;
+  private readonly LocalToGlobalConverterUtils _localToGlobalConverterUtils;
   private readonly RevitGroupBaker _groupManager;
   private readonly RevitMaterialBaker _materialBaker;
   private readonly ILogger<RevitHostObjectBuilder> _logger;
@@ -31,6 +34,8 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     IRevitConversionContextStack contextStack,
     GraphTraversal traverseFunction,
     ITransactionManager transactionManager,
+    ILocalToGlobalUnpacker localToGlobalUnpacker,
+    LocalToGlobalConverterUtils localToGlobalConverterUtils,
     RevitGroupBaker groupManager,
     RevitMaterialBaker materialBaker,
     RootObjectUnpacker rootObjectUnpacker,
@@ -41,6 +46,8 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     _contextStack = contextStack;
     _traverseFunction = traverseFunction;
     _transactionManager = transactionManager;
+    _localToGlobalUnpacker = localToGlobalUnpacker;
+    _localToGlobalConverterUtils = localToGlobalConverterUtils;
     _groupManager = groupManager;
     _materialBaker = materialBaker;
     _rootObjectUnpacker = rootObjectUnpacker;
@@ -70,6 +77,10 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 
     // 1 - Unpack objects and proxies from root commit object
     var unpackedRoot = _rootObjectUnpacker.Unpack(rootObject);
+    var localToGlobalMaps = _localToGlobalUnpacker.Unpack(
+      unpackedRoot.DefinitionProxies,
+      unpackedRoot.ObjectsToConvert.ToList()
+    );
 
     using var activity = SpeckleActivityFactory.Start("Build");
 
@@ -88,7 +99,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       }
     }
 
-    var conversionResults = BakeObjects(unpackedRoot.ObjectsToConvert, onOperationProgressed, cancellationToken);
+    var conversionResults = BakeObjects(localToGlobalMaps, onOperationProgressed, cancellationToken);
 
     using (var _ = SpeckleActivityFactory.Start("Commit"))
     {
@@ -122,48 +133,47 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   }
 
   private HostObjectBuilderResult BakeObjects(
-    IEnumerable<TraversalContext> objectsGraph,
+    List<LocalToGlobalMap> localToGlobalMaps,
     Action<string, double?>? onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
-    using (var _ = SpeckleActivityFactory.Start("BakeObjects"))
+    using var _ = SpeckleActivityFactory.Start("BakeObjects");
+    var conversionResults = new List<ReceiveConversionResult>();
+    var bakedObjectIds = new List<string>();
+    int count = 0;
+
+    foreach (LocalToGlobalMap localToGlobalMap in localToGlobalMaps)
     {
-      var conversionResults = new List<ReceiveConversionResult>();
-      var bakedObjectIds = new List<string>();
-
-      // is this a dumb idea?
-      var objectList = objectsGraph.ToList();
-      int count = 0;
-
-      foreach (TraversalContext tc in objectList)
+      cancellationToken.ThrowIfCancellationRequested();
+      try
       {
-        cancellationToken.ThrowIfCancellationRequested();
-        try
-        {
-          using var activity = SpeckleActivityFactory.Start("BakeObject");
-          var result = _converter.Convert(tc.Current);
-          onOperationProgressed?.Invoke("Converting", (double)++count / objectList.Count);
+        using var activity = SpeckleActivityFactory.Start("BakeObject");
+        var atomicObject = _localToGlobalConverterUtils.TransformObjects(
+          localToGlobalMap.AtomicObject,
+          localToGlobalMap.Matrix
+        );
+        var result = _converter.Convert(atomicObject);
+        onOperationProgressed?.Invoke("Converting", (double)++count / localToGlobalMaps.Count);
 
-          // Note: our current converter always returns a DS for now
-          if (result is DirectShape ds)
-          {
-            bakedObjectIds.Add(ds.UniqueId.ToString());
-            _groupManager.AddToGroupMapping(tc, ds);
-          }
-          else
-          {
-            throw new SpeckleConversionException($"Failed to cast {result.GetType()} to Direct Shape.");
-          }
-          conversionResults.Add(new(Status.SUCCESS, tc.Current, ds.UniqueId, "Direct Shape"));
-        }
-        catch (Exception ex) when (!ex.IsFatal())
+        // Note: our current converter always returns a DS for now
+        if (result is DirectShape ds)
         {
-          conversionResults.Add(new(Status.ERROR, tc.Current, null, null, ex));
+          bakedObjectIds.Add(ds.UniqueId.ToString());
+          _groupManager.AddToGroupMapping(localToGlobalMap.TraversalContext, ds);
         }
+        else
+        {
+          throw new SpeckleConversionException($"Failed to cast {result.GetType()} to Direct Shape.");
+        }
+        conversionResults.Add(new(Status.SUCCESS, atomicObject, ds.UniqueId, "Direct Shape"));
       }
-      return new(bakedObjectIds, conversionResults);
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        conversionResults.Add(new(Status.ERROR, localToGlobalMap.AtomicObject, null, null, ex));
+      }
     }
+    return new(bakedObjectIds, conversionResults);
   }
 
   public void Dispose()

@@ -17,6 +17,7 @@ using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Operations;
+using Speckle.Converters.Common;
 using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.Revit.DependencyInjection;
@@ -76,6 +77,8 @@ public class RevitConnectorModule : ISpeckleModule
     builder.AddSingleton<RevitUtils>();
     builder.AddSingleton<IFailuresPreprocessor, HideWarningsFailuresPreprocessor>();
     builder.AddSingleton(DefaultTraversal.CreateTraversalFunc());
+
+    builder.AddScoped<LocalToGlobalConverterUtils>();
 
     // operation progress manager
     builder.AddSingleton<IOperationProgressManager, OperationProgressManager>();
