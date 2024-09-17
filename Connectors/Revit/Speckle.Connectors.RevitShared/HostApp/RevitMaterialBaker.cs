@@ -149,12 +149,17 @@ public class RevitMaterialBaker
   public void PurgeMaterials(string baseGroupName)
   {
     var validBaseGroupName = _revitUtils.RemoveInvalidChars(baseGroupName);
-    using (var collector = new FilteredElementCollector(_contextStack.Current.Document))
+    var document = _contextStack.Current.Document;
+
+    using (var collector = new FilteredElementCollector(document))
     {
-      ICollection<Element> allMaterials = collector.OfClass(typeof(Autodesk.Revit.DB.Material)).ToElements();
-      var materials = from element in collector where element.Name.Contains(validBaseGroupName) select element;
-      var elementIds = materials.Select(element => element.Id).ToList();
-      _contextStack.Current.Document.Delete(elementIds);
+      var materialIds = collector
+        .OfClass(typeof(Autodesk.Revit.DB.Material))
+        .Where(m => m.Name.Contains(validBaseGroupName))
+        .Select(m => m.Id)
+        .ToList();
+
+      document.Delete(materialIds);
     }
   }
 }

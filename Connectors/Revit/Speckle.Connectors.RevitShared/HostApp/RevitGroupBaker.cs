@@ -88,12 +88,17 @@ public class RevitGroupBaker : TraversalContextUnpacker
   public void PurgeGroups(string baseGroupName)
   {
     var validBaseGroupName = _revitUtils.RemoveInvalidChars(baseGroupName);
-    using (var collector = new FilteredElementCollector(_contextStack.Current.Document))
+    var document = _contextStack.Current.Document;
+
+    using (var collector = new FilteredElementCollector(document))
     {
-      ICollection<Element> groupsTypes = collector.OfClass(typeof(GroupType)).ToElements();
-      var groups = from element in collector where element.Name == validBaseGroupName select element;
-      var elementIds = groups.Select(element => element.Id).ToList();
-      _contextStack.Current.Document.Delete(elementIds);
+      var groupIds = collector
+        .OfClass(typeof(GroupType))
+        .Where(g => g.Name == validBaseGroupName)
+        .Select(g => g.Id)
+        .ToList();
+
+      document.Delete(groupIds);
     }
   }
 
