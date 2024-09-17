@@ -13,7 +13,7 @@ public class RevitConverterModule : ISpeckleModule
   public void Load(SpeckleContainerBuilder builder)
   {
     //register types by default
-    builder.ScanAssemblyOfType<SlopeArrowExtractor>();
+    builder.ScanAssemblyOfType<RevitConversionSettings>();
     // Register single root
     builder.AddRootCommon<RevitRootToSpeckleConverter>();
 

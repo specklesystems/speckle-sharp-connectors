@@ -11,6 +11,9 @@ public class Civil3dConverterModule : ISpeckleModule
 {
   public void Load(SpeckleContainerBuilder builder)
   {
+    //register types by default
+    builder.ScanAssemblyOfType<Civil3dConversionSettings>();
+    builder.ScanAssemblyOfType<AutocadConversionSettings>();
     // Register single root
     builder.AddRootCommon<Civil3dRootToHostConverter>();
 

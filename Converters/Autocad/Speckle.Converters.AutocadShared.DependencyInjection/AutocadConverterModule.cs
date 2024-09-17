@@ -11,7 +11,7 @@ public class AutocadConverterModule : ISpeckleModule
   public void Load(SpeckleContainerBuilder builder)
   {
     //register types by default
-    builder.ScanAssemblyOfType<AutocadConversionSettingsFactory>();
+    builder.ScanAssemblyOfType<AutocadConversionSettings>();
     // add single root converter
     builder.AddRootCommon<AutocadRootToHostConverter>();
 

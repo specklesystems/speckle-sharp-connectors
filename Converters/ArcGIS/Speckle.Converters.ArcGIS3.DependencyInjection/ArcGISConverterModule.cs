@@ -10,6 +10,8 @@ public class ArcGISConverterModule : ISpeckleModule
 {
   public void Load(SpeckleContainerBuilder builder)
   {
+    //register types by default
+    builder.ScanAssemblyOfType<ArcGISConversionSettings>();
     // add single root converter
     //don't need a host specific RootToSpeckleConverter
     builder.AddRootCommon<RootToSpeckleConverter>();
