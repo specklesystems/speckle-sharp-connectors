@@ -45,7 +45,7 @@ public static class Connector
 
     IServiceCollection serviceCollection = new ServiceCollection();
     serviceCollection.AddLogging(x => x.AddProvider(new SpeckleLogProvider(logging)));
-    serviceCollection.AddSpeckleSdk(new SpeckleConfiguration(application, version));
+    serviceCollection.AddSpeckleSdk(application, version);
     serviceCollection.AddSingleton<Speckle.Sdk.Logging.ISdkActivityFactory, ConnectorActivityFactory>();
     //do this last
     builder.ContainerBuilder.Populate(serviceCollection);

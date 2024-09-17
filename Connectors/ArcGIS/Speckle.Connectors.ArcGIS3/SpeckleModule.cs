@@ -32,7 +32,7 @@ internal sealed class SpeckleModule : Module
 
     var builder = SpeckleContainerBuilder.CreateInstance();
     // init DI
-    _disposableLogger = Connector.Initialize(HostApplications.ArcGIS, GetVersion());
+    _disposableLogger = Connector.Initialize(HostApplications.ArcGIS, GetVersion(), builder);
 
     Container = builder
       .LoadAutofacModules(
