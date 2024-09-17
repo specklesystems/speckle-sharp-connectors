@@ -60,7 +60,15 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
         // TODO: report quantities not retrievable
       }
 
-      var _ = _parameterExtractor.GetParameters(element);
+      try
+      {
+        var parameters = _parameterExtractor.GetParameters(element);
+        result["parameter2"] = parameters;
+      }
+      catch (Exception e) when (!e.IsFatal())
+      {
+        // TODO: report failed parameter retrieval
+      }
     }
 
     return result;

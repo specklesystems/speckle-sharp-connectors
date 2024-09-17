@@ -1,5 +1,6 @@
 using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
+using Speckle.Converters.Revit2023.ToSpeckle.Parameters;
 using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Converters.RevitShared.Helpers;
@@ -14,5 +15,6 @@ namespace Speckle.Converters.RevitShared.Helpers;
 public interface IRevitConversionContextStack : IConversionContextStack<Document, ForgeTypeId>
 {
   public RevitMaterialCacheSingleton RenderMaterialProxyCache { get; }
+  public ParameterDefinitionHandler ParameterDefinitionHandler { get; }
   public ToSpeckleSettings ToSpeckleSettings { get; }
 }

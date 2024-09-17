@@ -1,90 +1,133 @@
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Services;
 
 namespace Speckle.Converters.Revit2023.ToSpeckle.Parameters;
 
 public class ParameterDefinitionHandler
 {
-  private readonly IRevitConversionContextStack _contextStack;
-  private readonly Dictionary<string, object> _definitions = new();
+  public Dictionary<string, Dictionary<string, object?>> Definitions { get; } = new();
 
-  public ParameterDefinitionHandler(IRevitConversionContextStack contextStack)
-  {
-    _contextStack = contextStack;
-  }
-
-  public string HandleDefinition(DB.Parameter parameter)
+  public (string internalDefinitionName, string humanReadableName, string groupName) HandleDefinition(
+    DB.Parameter parameter
+  )
   {
     var definition = parameter.Definition;
-    var name = definition.Name;
+    var internalDefinitionName = definition.Name; // aka real, internal name
+    var humanReadableName = definition.Name;
 
-    if (definition is DB.InternalDefinition internalDefinition)
+    if (parameter.IsShared)
     {
-      name = internalDefinition.BuiltInParameter.ToString();
+      internalDefinitionName = parameter.GUID.ToString(); // Note: unsure it's needed
     }
 
-    if (_definitions.ContainsKey(name))
+    if (
+      definition is DB.InternalDefinition internalDefinition
+      && internalDefinition.BuiltInParameter != DB.BuiltInParameter.INVALID
+    )
     {
-      return name;
+      internalDefinitionName = internalDefinition.BuiltInParameter.ToString();
     }
 
-    _definitions[name] = new Dictionary<string, object>()
+#pragma warning disable CA1854 // swapping leads to nullability errors
+    if (Definitions.ContainsKey(internalDefinitionName))
+#pragma warning restore CA1854
     {
-      ["definitionName"] = name,
-      ["units"] = definition.GetDataType().TypeId,
+      var def = Definitions[internalDefinitionName];
+      return (internalDefinitionName, humanReadableName, def["group"]! as string ?? "unknown group");
+    }
+
+    string? units = null;
+    if (parameter.StorageType == DB.StorageType.Double)
+    {
+      units = DB.LabelUtils.GetLabelForUnit(parameter.GetUnitTypeId());
+    }
+
+    var group = DB.LabelUtils.GetLabelForGroup(parameter.Definition.GetGroupTypeId());
+
+    Definitions[internalDefinitionName] = new Dictionary<string, object?>()
+    {
+      ["definitionName"] = internalDefinitionName,
+      ["name"] = humanReadableName,
+      ["units"] = units,
       ["isShared"] = parameter.IsShared,
       ["isReadOnly"] = parameter.IsReadOnly,
-      ["typeId"] = definition.GetGroupTypeId().TypeId
+      ["group"] = group
     };
-    return name;
+
+    return (internalDefinitionName, humanReadableName, group);
   }
 }
 
 public class ParameterExtractor
 {
   private readonly ParameterDefinitionHandler _parameterDefinitionHandler;
+  private readonly IRevitConversionContextStack _contextStack;
+  private readonly ScalingServiceToSpeckle _scalingServiceToSpeckle;
 
-  public ParameterExtractor(ParameterDefinitionHandler parameterDefinitionHandler)
+  public ParameterExtractor(IRevitConversionContextStack contextStack, ScalingServiceToSpeckle scalingServiceToSpeckle)
   {
-    _parameterDefinitionHandler = parameterDefinitionHandler;
+    _parameterDefinitionHandler = contextStack.ParameterDefinitionHandler;
+    _contextStack = contextStack;
+    _scalingServiceToSpeckle = scalingServiceToSpeckle;
   }
 
-  public List<object> GetParameters(DB.Element element)
+  public Dictionary<string, Dictionary<string, object?>> GetParameters(DB.Element element)
   {
-    var paramsList = new List<object>();
-    var parameters = element.Parameters;
-    foreach (DB.Parameter parameter in parameters)
+    var paramDict = new Dictionary<string, Dictionary<string, object?>>();
+
+    foreach (DB.Parameter parameter in element.Parameters)
     {
-      var name = _parameterDefinitionHandler.HandleDefinition(parameter);
-      paramsList.Add(name);
+      var (internalDefinitionName, humanReadableName, groupName) = _parameterDefinitionHandler.HandleDefinition(
+        parameter
+      );
+      var param = new Dictionary<string, object?>()
+      {
+        ["value"] = GetValue(parameter),
+        ["name"] = humanReadableName,
+        ["internalDefinitionName"] = internalDefinitionName,
+      };
+
+      if (!paramDict.TryGetValue(groupName, out Dictionary<string, object?>? paramGroup))
+      {
+        paramGroup = new Dictionary<string, object?>();
+        paramDict[groupName] = paramGroup;
+      }
+
+      var targetKey = humanReadableName;
+      if (paramGroup.ContainsKey(humanReadableName))
+      {
+        targetKey = internalDefinitionName;
+      }
+
+      paramGroup[targetKey] = param;
     }
 
-    return paramsList;
+    return paramDict;
   }
 
-  private object GetValue(DB.Parameter parameter)
+  private readonly Dictionary<DB.ElementId, string?> _elementNameCache = new();
+
+  private object? GetValue(DB.Parameter parameter)
   {
     switch (parameter.StorageType)
     {
       case DB.StorageType.Double:
-        return parameter.AsDouble(); // TODO: scaling
+        return _scalingServiceToSpeckle.Scale(parameter.AsDouble(), parameter.GetUnitTypeId());
       case DB.StorageType.Integer:
         return parameter.AsInteger();
-      case DB.StorageType.String:
-        return parameter.AsString();
       case DB.StorageType.ElementId:
-        // TODO: return friendly name, not element id
-        break;
+        var elId = parameter.AsElementId()!;
+        if (_elementNameCache.TryGetValue(elId, out string? value))
+        {
+          return value;
+        }
+        var docElement = _contextStack.Current.Document.GetElement(elId);
+        var docElementName = docElement?.Name;
+        _elementNameCache[parameter.AsElementId()] = docElementName;
+        return docElementName;
+      case DB.StorageType.String:
+      default:
+        return parameter.AsString();
     }
   }
 }
-
-// #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-// #pragma warning disable IDE1006
-// public class SimpleParam : Base
-// {
-//   public string name { get; set; }
-//   public string definitionId { get; set; }
-//   public object value { get; set; }
-// }
-// #pragma warning restore IDE1006
-// #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.

@@ -111,6 +111,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         b =>
         {
           b.RegisterType<ToSpeckleSettings>().SingleInstance();
+          // b.RegisterType<ParameterDefinitionHandler>().InstancePerLifetimeScope();
           b.Register(c => _toSpeckleSettingsManager.GetToSpeckleSettings(modelCard));
         }
       );
