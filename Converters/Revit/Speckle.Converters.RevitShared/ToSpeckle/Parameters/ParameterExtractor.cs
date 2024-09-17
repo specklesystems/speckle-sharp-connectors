@@ -3,8 +3,12 @@ using Speckle.Converters.RevitShared.Services;
 
 namespace Speckle.Converters.Revit2023.ToSpeckle.Parameters;
 
+/// <summary>
+/// Extracts parameters out from an element and populates the <see cref="ParameterDefinitionHandler"/> cache. Expects to be scoped per operation.
+/// </summary>
 public class ParameterExtractor
 {
+  /// POC: Note that we're abusing dictionaries in here because we've yet to have a simple way to serialize non-base derived classes (or structs?)
   private readonly ParameterDefinitionHandler _parameterDefinitionHandler;
   private readonly IRevitConversionContextStack _contextStack;
   private readonly ScalingServiceToSpeckle _scalingServiceToSpeckle;
@@ -20,6 +24,11 @@ public class ParameterExtractor
     _scalingServiceToSpeckle = scalingServiceToSpeckle;
   }
 
+  /// <summary>
+  /// Extracts parameters out from an element and populates the <see cref="ParameterDefinitionHandler"/> cache. Expects to be scoped per operation.
+  /// </summary>
+  /// <param name="element"></param>
+  /// <returns></returns>
   public Dictionary<string, Dictionary<string, object?>> GetParameters(DB.Element element)
   {
     var paramDict = new Dictionary<string, Dictionary<string, object?>>();
@@ -33,7 +42,7 @@ public class ParameterExtractor
       {
         ["value"] = GetValue(parameter),
         ["name"] = humanReadableName,
-        ["internalDefinitionName"] = internalDefinitionName,
+        ["internalDefinitionName"] = internalDefinitionName
       };
 
       if (!paramDict.TryGetValue(groupName, out Dictionary<string, object?>? paramGroup))

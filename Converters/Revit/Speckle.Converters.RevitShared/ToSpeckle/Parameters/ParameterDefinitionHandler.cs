@@ -1,10 +1,14 @@
 namespace Speckle.Converters.Revit2023.ToSpeckle.Parameters;
 
+/// <summary>
+/// Keeps track during a send conversion operation of the definitions used.
+/// </summary>
 public class ParameterDefinitionHandler
 {
   /// <summary>
   /// Keeps track of all parameter definitions used in the current send operation. This should be attached to the root commit object post conversion.
   /// </summary>
+  /// POC: Note that we're abusing dictionaries in here because we've yet to have a simple way to serialize non-base derived classes (or structs?)
   public Dictionary<string, Dictionary<string, object?>> Definitions { get; } = new();
 
   /// <summary>
@@ -33,7 +37,7 @@ public class ParameterDefinitionHandler
       internalDefinitionName = internalDefinition.BuiltInParameter.ToString();
     }
 
-#pragma warning disable CA1854 // swapping leads to nullability errors
+#pragma warning disable CA1854 // swapping leads to nullability errors; should be resolved once we type this more strongly.
     if (Definitions.ContainsKey(internalDefinitionName))
 #pragma warning restore CA1854
     {
