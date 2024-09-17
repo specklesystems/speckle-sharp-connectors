@@ -25,7 +25,7 @@ public static class Connector
     HostApp = application;
     TypeLoader.Initialize(typeof(Base).Assembly, typeof(Point).Assembly);
 
-#if DEBUG || LOCAL
+#if DEBUG //temp change don't stage
     var config = new SpeckleConfiguration(
       application,
       version,
