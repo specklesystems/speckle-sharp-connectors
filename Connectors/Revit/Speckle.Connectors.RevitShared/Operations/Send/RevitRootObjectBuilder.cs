@@ -10,6 +10,7 @@ using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Extensions;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
+using Speckle.Converters.Revit2023.ToSpeckle.Parameters;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
@@ -27,6 +28,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
   private readonly ElementUnpacker _elementUnpacker;
   private readonly SendCollectionManager _sendCollectionManager;
   private readonly ILogger<RevitRootObjectBuilder> _logger;
+  private readonly ParameterDefinitionHandler _parameterDefinitionHandler;
 
   public RevitRootObjectBuilder(
     IRootToSpeckleConverter converter,
@@ -34,7 +36,8 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     ISendConversionCache sendConversionCache,
     ElementUnpacker elementUnpacker,
     SendCollectionManager sendCollectionManager,
-    ILogger<RevitRootObjectBuilder> logger
+    ILogger<RevitRootObjectBuilder> logger,
+    ParameterDefinitionHandler parameterDefinitionHandler
   )
   {
     _converter = converter;
@@ -43,6 +46,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     _elementUnpacker = elementUnpacker;
     _sendCollectionManager = sendCollectionManager;
     _logger = logger;
+    _parameterDefinitionHandler = parameterDefinitionHandler;
 
     _rootObject = new Collection()
     {
@@ -132,7 +136,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     );
     _rootObject[ProxyKeys.RENDER_MATERIAL] = materialProxies;
 
-    _rootObject["definitions"] = _conversionContextStack.ParameterDefinitionHandler.Definitions;
+    _rootObject["definitions"] = _parameterDefinitionHandler.Definitions;
 
     Debug.WriteLine(
       $"Cache hit count {cacheHitCount} out of {objects.Count} ({(double)cacheHitCount / objects.Count})"

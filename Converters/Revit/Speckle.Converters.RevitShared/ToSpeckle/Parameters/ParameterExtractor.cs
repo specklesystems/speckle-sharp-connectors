@@ -9,9 +9,13 @@ public class ParameterExtractor
   private readonly IRevitConversionContextStack _contextStack;
   private readonly ScalingServiceToSpeckle _scalingServiceToSpeckle;
 
-  public ParameterExtractor(IRevitConversionContextStack contextStack, ScalingServiceToSpeckle scalingServiceToSpeckle)
+  public ParameterExtractor(
+    IRevitConversionContextStack contextStack,
+    ScalingServiceToSpeckle scalingServiceToSpeckle,
+    ParameterDefinitionHandler parameterDefinitionHandler
+  )
   {
-    _parameterDefinitionHandler = contextStack.ParameterDefinitionHandler;
+    _parameterDefinitionHandler = parameterDefinitionHandler;
     _contextStack = contextStack;
     _scalingServiceToSpeckle = scalingServiceToSpeckle;
   }

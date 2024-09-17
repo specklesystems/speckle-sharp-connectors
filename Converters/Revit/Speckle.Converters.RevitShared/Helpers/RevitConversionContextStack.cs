@@ -1,6 +1,5 @@
 using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
-using Speckle.Converters.Revit2023.ToSpeckle.Parameters;
 using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Converters.RevitShared.Helpers;
@@ -21,18 +20,12 @@ public class RevitConversionContextStack : ConversionContextStack<Document, Forg
   /// </summary>
   public RevitMaterialCacheSingleton RenderMaterialProxyCache { get; }
 
-  /// <summary>
-  /// Operation scoped dude
-  /// </summary>
-  public ParameterDefinitionHandler ParameterDefinitionHandler { get; }
-
   public const double TOLERANCE = 0.0164042; // 5mm in ft
 
   public RevitConversionContextStack(
     RevitContext context,
     IHostToSpeckleUnitConverter<ForgeTypeId> unitConverter,
     RevitMaterialCacheSingleton renderMaterialProxyCache,
-    ParameterDefinitionHandler parameterDefinitionHandler,
     ToSpeckleSettings toSpeckleSettings
   )
     : base(
@@ -48,6 +41,5 @@ public class RevitConversionContextStack : ConversionContextStack<Document, Forg
   {
     ToSpeckleSettings = toSpeckleSettings;
     RenderMaterialProxyCache = renderMaterialProxyCache;
-    ParameterDefinitionHandler = parameterDefinitionHandler;
   }
 }

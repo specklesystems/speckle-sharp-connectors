@@ -30,25 +30,25 @@ public sealed class ParameterObjectAssigner
 #pragma warning restore IDE0060
   {
     // return;
-    Dictionary<string, Parameter> instanceParameters = _parameterValueExtractor.GetAllRemainingParams(target);
-    ElementId elementId = target.GetTypeId();
-
-    Base paramBase = new();
-    AssignSpeckleParamToBaseObject(instanceParameters, paramBase);
-
-    // POC: Some elements can have an invalid element type ID, I don't think we want to continue here.
-    if (elementId != ElementId.InvalidElementId && target is not Level) //ignore type props of levels..!
-    {
-      var elementType = target.Document.GetElement(elementId);
-      // I don't think we should be adding the type parameters to the object like this
-      Dictionary<string, Parameter> typeParameters = _parameterValueExtractor.GetAllRemainingParams(elementType);
-      AssignSpeckleParamToBaseObject(typeParameters, paramBase, true);
-    }
-
-    if (paramBase.GetMembers(DynamicBaseMemberType.Dynamic).Count > 0)
-    {
-      @base["parameters"] = paramBase;
-    }
+    // Dictionary<string, Parameter> instanceParameters = _parameterValueExtractor.GetAllRemainingParams(target);
+    // ElementId elementId = target.GetTypeId();
+    //
+    // Base paramBase = new();
+    // AssignSpeckleParamToBaseObject(instanceParameters, paramBase);
+    //
+    // // POC: Some elements can have an invalid element type ID, I don't think we want to continue here.
+    // if (elementId != ElementId.InvalidElementId && target is not Level) //ignore type props of levels..!
+    // {
+    //   var elementType = target.Document.GetElement(elementId);
+    //   // I don't think we should be adding the type parameters to the object like this
+    //   Dictionary<string, Parameter> typeParameters = _parameterValueExtractor.GetAllRemainingParams(elementType);
+    //   AssignSpeckleParamToBaseObject(typeParameters, paramBase, true);
+    // }
+    //
+    // if (paramBase.GetMembers(DynamicBaseMemberType.Dynamic).Count > 0)
+    // {
+    //   @base["parameters"] = paramBase;
+    // }
   }
 
   private void AssignSpeckleParamToBaseObject(
