@@ -111,9 +111,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
       using var unitOfWork = _unitOfWorkFactory.Create();
-      using var settings = unitOfWork
+      unitOfWork
         .Resolve<IConverterSettingsStore<RevitConversionSettings>>()
-        .Push(_ =>
+        .Initialize(
           _revitConversionSettingsFactory.Create(
             _toSpeckleSettingsManager.GetDetailLevelSetting(modelCard),
             _toSpeckleSettingsManager.GetReferencePointSetting(modelCard)

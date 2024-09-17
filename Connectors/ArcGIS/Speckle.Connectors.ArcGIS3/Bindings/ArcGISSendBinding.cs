@@ -379,9 +379,9 @@ public sealed class ArcGISSendBinding : ISendBinding
         .Run(async () =>
         {
           using var unitOfWork = _unitOfWorkFactory.Create();
-          using var settings = unitOfWork
+          unitOfWork
             .Resolve<IConverterSettingsStore<ArcGISConversionSettings>>()
-            .Push(_ =>
+            .Initialize(
               _arcGISConversionSettingsFactory.Create(
                 Project.Current,
                 MapView.Active.Map,

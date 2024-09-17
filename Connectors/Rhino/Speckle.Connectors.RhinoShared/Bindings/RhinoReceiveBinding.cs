@@ -53,9 +53,9 @@ public class RhinoReceiveBinding : IReceiveBinding
   public async Task Receive(string modelCardId)
   {
     using var unitOfWork = _unitOfWorkFactory.Create();
-    using var settings = unitOfWork
+    unitOfWork
       .Resolve<IConverterSettingsStore<RhinoConversionSettings>>()
-      .Push(_ => _rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
+      .Initialize(_rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
     try
     {
       // Get receiver card

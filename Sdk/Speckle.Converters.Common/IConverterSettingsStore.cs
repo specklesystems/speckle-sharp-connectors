@@ -5,4 +5,5 @@ public interface IConverterSettingsStore<T>
 {
   T Current { get; }
   IDisposable Push(Func<T, T> nextContext);
+  void Initialize(T context);
 }

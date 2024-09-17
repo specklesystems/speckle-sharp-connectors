@@ -52,9 +52,9 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
   public async Task Receive(string modelCardId)
   {
     using var unitOfWork = _unitOfWorkFactory.Create();
-    using var settings = unitOfWork
+    unitOfWork
       .Resolve<IConverterSettingsStore<AutocadConversionSettings>>()
-      .Push(_ => _autocadConversionSettingsFactory.Create(Application.DocumentManager.CurrentDocument));
+      .Initialize(_autocadConversionSettingsFactory.Create(Application.DocumentManager.CurrentDocument));
     try
     {
       // Get receiver card

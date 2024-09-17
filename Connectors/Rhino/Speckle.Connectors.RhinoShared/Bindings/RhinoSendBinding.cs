@@ -152,9 +152,9 @@ public sealed class RhinoSendBinding : ISendBinding
   public async Task Send(string modelCardId)
   {
     using var unitOfWork = _unitOfWorkFactory.Create();
-    using var settings = unitOfWork
+    unitOfWork
       .Resolve<IConverterSettingsStore<RhinoConversionSettings>>()
-      .Push(_ => _rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
+      .Initialize(_rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
     try
     {
       if (_store.GetModelById(modelCardId) is not SenderModelCard modelCard)

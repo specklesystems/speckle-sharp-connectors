@@ -62,9 +62,9 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
 
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
       using var unitOfWork = _unitOfWorkFactory.Create();
-      using var settings = unitOfWork
+      unitOfWork
         .Resolve<IConverterSettingsStore<ArcGISConversionSettings>>()
-        .Push(_ =>
+        .Initialize(
           _arcGISConversionSettingsFactory.Create(
             Project.Current,
             MapView.Active.Map,

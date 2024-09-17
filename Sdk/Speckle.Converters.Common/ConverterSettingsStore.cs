@@ -13,6 +13,15 @@ public sealed class ConverterSettingsStore<T> : IConverterSettingsStore<T>
     return new ContextWrapper(this);
   }
 
+  public void Initialize(T context)
+  {
+    if (_stack.Count != 0)
+    {
+      throw new ArgumentException("Already initialized");
+    }
+    _stack.Push(context);
+  }
+
   private sealed class ContextWrapper(ConverterSettingsStore<T> store) : IDisposable
   {
     public void Dispose() =>

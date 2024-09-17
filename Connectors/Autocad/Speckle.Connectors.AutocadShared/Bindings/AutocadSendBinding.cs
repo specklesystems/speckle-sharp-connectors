@@ -159,9 +159,9 @@ public sealed class AutocadSendBinding : ISendBinding
       }
 
       using var unitOfWork = _unitOfWorkFactory.Create();
-      using var settings = unitOfWork
+      unitOfWork
         .Resolve<IConverterSettingsStore<AutocadConversionSettings>>()
-        .Push(_ => _autocadConversionSettingsFactory.Create(Application.DocumentManager.CurrentDocument));
+        .Initialize(_autocadConversionSettingsFactory.Create(Application.DocumentManager.CurrentDocument));
 
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 

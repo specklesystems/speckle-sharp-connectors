@@ -64,9 +64,9 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
       using var unitOfWork = _unitOfWorkFactory.Create();
-      using var settings = unitOfWork
+      unitOfWork
         .Resolve<IConverterSettingsStore<RevitConversionSettings>>()
-        .Push(_ =>
+        .Initialize(
           _revitConversionSettingsFactory.Create(
             DetailLevelType.Coarse, //TODO figure out
             null
