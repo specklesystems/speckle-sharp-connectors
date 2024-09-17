@@ -7,15 +7,15 @@ namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
 public class PolygonFeatureToSpeckleConverter : ITypedConverter<ACG.Polygon, IReadOnlyList<PolygonGeometry>>
 {
   private readonly ITypedConverter<ACG.ReadOnlySegmentCollection, SOG.Polyline> _segmentConverter;
-  private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
 
   public PolygonFeatureToSpeckleConverter(
     ITypedConverter<ACG.ReadOnlySegmentCollection, SOG.Polyline> segmentConverter,
-    IConversionContextStack<ArcGISDocument, ACG.Unit> contextStack
+    IConverterSettingsStore<ArcGISConversionSettings> settingsStore
   )
   {
     _segmentConverter = segmentConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public IReadOnlyList<PolygonGeometry> Convert(ACG.Polygon target)
@@ -44,7 +44,7 @@ public class PolygonFeatureToSpeckleConverter : ITypedConverter<ACG.Polygon, IRe
         {
           boundary = polyline,
           voids = new List<SOG.Polyline>(),
-          units = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString
+          units = _settingsStore.Current.SpeckleUnits
         };
         polygonList.Add(polygon);
       }

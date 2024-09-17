@@ -21,19 +21,19 @@ public class Polyline3dToSpeckleConverter
   private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
   private readonly ITypedConverter<ADB.Spline, SOG.Curve> _splineConverter;
   private readonly ITypedConverter<ADB.Extents3d, SOG.Box> _boxConverter;
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public Polyline3dToSpeckleConverter(
     ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
     ITypedConverter<ADB.Spline, SOG.Curve> splineConverter,
     ITypedConverter<ADB.Extents3d, SOG.Box> boxConverter,
-    IConversionContextStack<Document, ADB.UnitsValue> contextStack
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _pointConverter = pointConverter;
     _splineConverter = splineConverter;
     _boxConverter = boxConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public Base Convert(object target) => Convert((ADB.Polyline3d)target);
@@ -60,7 +60,7 @@ public class Polyline3dToSpeckleConverter
     List<ADB.PolylineVertex3d> vertices = target
       .GetSubEntities<ADB.PolylineVertex3d>(
         ADB.OpenMode.ForRead,
-        _contextStack.Current.Document.TransactionManager.TopTransaction
+        _settingsStore.Current.Document.TransactionManager.TopTransaction
       )
       .Where(e => e.VertexType != ADB.Vertex3dType.FitVertex) // Do not collect fit vertex points, they are not used for creation
       .ToList();
@@ -94,7 +94,7 @@ public class Polyline3dToSpeckleConverter
         }
       }
 
-      SOG.Polyline displayValue = segmentValues.ConvertToSpecklePolyline(_contextStack.Current.SpeckleUnits);
+      SOG.Polyline displayValue = segmentValues.ConvertToSpecklePolyline(_settingsStore.Current.SpeckleUnits);
       if (displayValue != null)
       {
         spline.displayValue = displayValue;
@@ -105,7 +105,7 @@ public class Polyline3dToSpeckleConverter
     // for simple polyline3ds just get the polyline segment from the value
     else
     {
-      SOG.Polyline polyline = value.ConvertToSpecklePolyline(_contextStack.Current.SpeckleUnits);
+      SOG.Polyline polyline = value.ConvertToSpecklePolyline(_settingsStore.Current.SpeckleUnits);
       if (target.Closed)
       {
         polyline.closed = true;
@@ -125,7 +125,7 @@ public class Polyline3dToSpeckleConverter
         closed = target.Closed,
         length = target.Length,
         bbox = bbox,
-        units = _contextStack.Current.SpeckleUnits
+        units = _settingsStore.Current.SpeckleUnits
       };
 
     return polycurve;

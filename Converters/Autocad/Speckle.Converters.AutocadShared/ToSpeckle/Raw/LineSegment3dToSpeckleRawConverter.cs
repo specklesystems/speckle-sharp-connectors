@@ -6,15 +6,15 @@ namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 public class LineSegment3dToSpeckleRawConverter : ITypedConverter<AG.LineSegment3d, SOG.Line>
 {
   private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public LineSegment3dToSpeckleRawConverter(
     ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
-    IConversionContextStack<Document, ADB.UnitsValue> contextStack
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _pointConverter = pointConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public SOG.Line Convert(AG.LineSegment3d target) =>
@@ -22,7 +22,7 @@ public class LineSegment3dToSpeckleRawConverter : ITypedConverter<AG.LineSegment
     {
       start = _pointConverter.Convert(target.StartPoint),
       end = _pointConverter.Convert(target.EndPoint),
-      units = _contextStack.Current.SpeckleUnits,
+      units = _settingsStore.Current.SpeckleUnits,
       domain = new SOP.Interval { start = 0, end = target.Length },
     };
 }

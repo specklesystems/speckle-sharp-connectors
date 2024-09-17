@@ -15,17 +15,17 @@ public class PointCloudToSpeckleConverter
 {
   private readonly ITypedConverter<ACG.MapPoint, SOG.Point> _pointConverter;
   private readonly ITypedConverter<ACG.Envelope, SOG.Box> _boxConverter;
-  private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
 
   public PointCloudToSpeckleConverter(
     ITypedConverter<ACG.MapPoint, SOG.Point> pointConverter,
     ITypedConverter<ACG.Envelope, SOG.Box> boxConverter,
-    IConversionContextStack<ArcGISDocument, ACG.Unit> contextStack
+    IConverterSettingsStore<ArcGISConversionSettings> settingsStore
   )
   {
     _pointConverter = pointConverter;
     _boxConverter = boxConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   private int GetPointColor(LasPoint pt, object renderer)
@@ -103,7 +103,7 @@ public class PointCloudToSpeckleConverter
         colors = speckleColors,
         sizes = values,
         bbox = _boxConverter.Convert(target.QueryExtent()),
-        units = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString
+        units = _settingsStore.Current.SpeckleUnits
       };
 
     speckleLayer.elements.Add(cloud);

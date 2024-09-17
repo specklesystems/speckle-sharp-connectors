@@ -19,21 +19,21 @@ public class PolylineToSpeckleConverter
   private readonly ITypedConverter<AG.CircularArc3d, SOG.Arc> _arcConverter;
   private readonly ITypedConverter<AG.Vector3d, SOG.Vector> _vectorConverter;
   private readonly ITypedConverter<ADB.Extents3d, SOG.Box> _boxConverter;
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public PolylineToSpeckleConverter(
     ITypedConverter<AG.LineSegment3d, SOG.Line> lineConverter,
     ITypedConverter<AG.CircularArc3d, SOG.Arc> arcConverter,
     ITypedConverter<AG.Vector3d, SOG.Vector> vectorConverter,
     ITypedConverter<ADB.Extents3d, SOG.Box> boxConverter,
-    IConversionContextStack<Document, ADB.UnitsValue> contextStack
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _lineConverter = lineConverter;
     _arcConverter = arcConverter;
     _vectorConverter = vectorConverter;
     _boxConverter = boxConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public Base Convert(object target) => Convert((ADB.Polyline)target);
@@ -86,7 +86,7 @@ public class PolylineToSpeckleConverter
         length = target.Length,
         area = target.Area,
         bbox = bbox,
-        units = _contextStack.Current.SpeckleUnits
+        units = _settingsStore.Current.SpeckleUnits
       };
 
     return polycurve;

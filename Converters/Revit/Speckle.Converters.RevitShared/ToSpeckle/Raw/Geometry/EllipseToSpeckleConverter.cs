@@ -1,23 +1,24 @@
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects.Primitive;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 public class EllipseToSpeckleConverter : ITypedConverter<DB.Ellipse, SOG.Ellipse>
 {
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<DB.Plane, SOG.Plane> _planeConverter;
   private readonly ScalingServiceToSpeckle _scalingService;
 
   public EllipseToSpeckleConverter(
-    IRevitConversionContextStack contextStack,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ITypedConverter<DB.Plane, SOG.Plane> planeConverter,
     ScalingServiceToSpeckle scalingService
   )
   {
-    _contextStack = contextStack;
+    _converterSettings = converterSettings;
     _planeConverter = planeConverter;
     _scalingService = scalingService;
   }
@@ -40,7 +41,7 @@ public class EllipseToSpeckleConverter : ITypedConverter<DB.Ellipse, SOG.Ellipse
         domain = Interval.UnitInterval,
         trimDomain = trim,
         length = _scalingService.ScaleLength(target.Length),
-        units = _contextStack.Current.SpeckleUnits
+        units = _converterSettings.Current.SpeckleUnits
       };
     }
   }

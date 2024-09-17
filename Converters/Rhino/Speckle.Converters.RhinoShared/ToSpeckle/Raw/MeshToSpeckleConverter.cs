@@ -1,4 +1,3 @@
-using Rhino;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
@@ -9,17 +8,17 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
 {
   private readonly ITypedConverter<RG.Point3d, SOG.Point> _pointConverter;
   private readonly ITypedConverter<RG.Box, SOG.Box> _boxConverter;
-  private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
+  private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   public MeshToSpeckleConverter(
     ITypedConverter<RG.Point3d, SOG.Point> pointConverter,
     ITypedConverter<RG.Box, SOG.Box> boxConverter,
-    IConversionContextStack<RhinoDoc, UnitSystem> contextStack
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore
   )
   {
     _pointConverter = pointConverter;
     _boxConverter = boxConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   /// <summary>
@@ -74,7 +73,7 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
       faces = faces,
       colors = colors,
       textureCoordinates = textureCoordinates,
-      units = _contextStack.Current.SpeckleUnits,
+      units = _settingsStore.Current.SpeckleUnits,
       volume = volume,
       bbox = bbox
     };

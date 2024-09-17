@@ -10,17 +10,17 @@ public class EllipseToHostConverter : IToHostTopLevelConverter, ITypedConverter<
 {
   private readonly ITypedConverter<SOG.Point, AG.Point3d> _pointConverter;
   private readonly ITypedConverter<SOG.Vector, AG.Vector3d> _vectorConverter;
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public EllipseToHostConverter(
     ITypedConverter<SOG.Point, AG.Point3d> pointConverter,
     ITypedConverter<SOG.Vector, AG.Vector3d> vectorConverter,
-    IConversionContextStack<Document, ADB.UnitsValue> contextStack
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _pointConverter = pointConverter;
     _vectorConverter = vectorConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public object Convert(Base target) => Convert((SOG.Ellipse)target);
@@ -28,7 +28,7 @@ public class EllipseToHostConverter : IToHostTopLevelConverter, ITypedConverter<
   /// <exception cref="ArgumentNullException"> Throws if any ellipse radius value is null.</exception>
   public ADB.Ellipse Convert(SOG.Ellipse target)
   {
-    double f = Units.GetConversionFactor(target.units, _contextStack.Current.SpeckleUnits);
+    double f = Units.GetConversionFactor(target.units, _settingsStore.Current.SpeckleUnits);
     AG.Point3d origin = _pointConverter.Convert(target.plane.origin);
     AG.Vector3d normal = _vectorConverter.Convert(target.plane.normal);
     AG.Vector3d xAxis = _vectorConverter.Convert(target.plane.xdir);

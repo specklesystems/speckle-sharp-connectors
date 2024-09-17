@@ -10,6 +10,8 @@ public class ArcGISConverterModule : ISpeckleModule
 {
   public void Load(SpeckleContainerBuilder builder)
   {
+    //register types by default
+    builder.ScanAssemblyOfType<ArcGISConversionSettings>();
     // add single root converter
     //don't need a host specific RootToSpeckleConverter
     builder.AddRootCommon<RootToSpeckleConverter>();
@@ -23,11 +25,11 @@ public class ArcGISConverterModule : ISpeckleModule
     builder.AddScoped<IArcGISFieldUtils, ArcGISFieldUtils>();
     builder.AddScoped<ILocalToGlobalConverterUtils, LocalToGlobalConverterUtils>();
     builder.AddScoped<ICharacterCleaner, CharacterCleaner>();
-    builder.AddScoped<ArcGISDocument>();
-
-    builder.AddScoped<IHostToSpeckleUnitConverter<Unit>, ArcGISToSpeckleUnitConverter>();
 
     // single stack per conversion
-    builder.AddScoped<IConversionContextStack<ArcGISDocument, Unit>, ArcGISConversionContextStack>();
+    builder.AddScoped<
+      IConverterSettingsStore<ArcGISConversionSettings>,
+      ConverterSettingsStore<ArcGISConversionSettings>
+    >();
   }
 }

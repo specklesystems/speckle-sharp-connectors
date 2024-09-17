@@ -8,17 +8,17 @@ public class PlaneToSpeckleRawConverter : ITypedConverter<AG.Plane, SOG.Plane>
 {
   private readonly ITypedConverter<AG.Vector3d, SOG.Vector> _vectorConverter;
   private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public PlaneToSpeckleRawConverter(
     ITypedConverter<AG.Vector3d, SOG.Vector> vectorConverter,
     ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
-    IConversionContextStack<Document, ADB.UnitsValue> contextStack
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _vectorConverter = vectorConverter;
     _pointConverter = pointConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public Base Convert(object target) => Convert((AG.Plane)target);
@@ -30,6 +30,6 @@ public class PlaneToSpeckleRawConverter : ITypedConverter<AG.Plane, SOG.Plane>
       normal = _vectorConverter.Convert(target.Normal),
       xdir = _vectorConverter.Convert(target.GetCoordinateSystem().Xaxis),
       ydir = _vectorConverter.Convert(target.GetCoordinateSystem().Yaxis),
-      units = _contextStack.Current.SpeckleUnits,
+      units = _settingsStore.Current.SpeckleUnits,
     };
 }

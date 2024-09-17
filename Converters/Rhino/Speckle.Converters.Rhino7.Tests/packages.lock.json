@@ -78,9 +78,9 @@
       },
       "Speckle.Rhino7.Fakes": {
         "type": "Direct",
-        "requested": "[0.2.2-preview.2, )",
-        "resolved": "0.2.2-preview.2",
-        "contentHash": "l4sP+NW1RPfI7/agOGHkXtcvpq24CLRsnUsK3QJwgDydHnsS4TWAM/OslkyLiytTzA6i4Hdsu7UQXRlizKv48g==",
+        "requested": "[0.3.0, 1.0.0)",
+        "resolved": "0.3.0",
+        "contentHash": "6nDQudPvrsaVgrGWicQ50fb3LzyEp8QMCltJZs6itzyYlHYC8xjmCHK1Z305f3y9QfK9QQa93sBrEtS7xIhcEQ==",
         "dependencies": {
           "System.Drawing.Common": "8.0.6"
         }

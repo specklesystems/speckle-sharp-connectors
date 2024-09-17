@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using Rhino;
 using Speckle.Converters.Common;
+using Speckle.Converters.Rhino;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
@@ -10,15 +11,15 @@ namespace Speckle.Connectors.Rhino.HostApp;
 
 public class RhinoMaterialBaker
 {
-  private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
+  private readonly IConverterSettingsStore<RhinoConversionSettings> _converterSettings;
   private readonly ILogger<RhinoMaterialBaker> _logger;
 
   public RhinoMaterialBaker(
-    IConversionContextStack<RhinoDoc, UnitSystem> contextStack,
+    IConverterSettingsStore<RhinoConversionSettings> converterSettings,
     ILogger<RhinoMaterialBaker> logger
   )
   {
-    _contextStack = contextStack;
+    _converterSettings = converterSettings;
     _logger = logger;
   }
 
@@ -29,7 +30,7 @@ public class RhinoMaterialBaker
 
   public void BakeMaterials(List<RenderMaterialProxy> speckleRenderMaterialProxies, string baseLayerName)
   {
-    var doc = _contextStack.Current.Document; // POC: too much right now to interface around
+    var doc = _converterSettings.Current.Document; // POC: too much right now to interface around
     // List<ReceiveConversionResult> conversionResults = new(); // TODO: return this guy
 
     foreach (var proxy in speckleRenderMaterialProxies)

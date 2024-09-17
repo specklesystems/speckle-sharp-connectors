@@ -5,15 +5,15 @@ namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
 
 public class SegmentCollectionToSpeckleConverter : ITypedConverter<ACG.ReadOnlySegmentCollection, SOG.Polyline>
 {
-  private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
   private readonly ITypedConverter<ACG.MapPoint, SOG.Point> _pointConverter;
 
   public SegmentCollectionToSpeckleConverter(
-    IConversionContextStack<ArcGISDocument, ACG.Unit> contextStack,
+    IConverterSettingsStore<ArcGISConversionSettings> settingsStore,
     ITypedConverter<ACG.MapPoint, SOG.Point> pointConverter
   )
   {
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
     _pointConverter = pointConverter;
   }
 
@@ -33,13 +33,12 @@ public class SegmentCollectionToSpeckleConverter : ITypedConverter<ACG.ReadOnlyS
         ACG.Polyline polylineFromSegment = new ACG.PolylineBuilderEx(
           segment,
           ACG.AttributeFlags.HasZ,
-          _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference
+          _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference
         ).ToGeometry();
 
-        double tolerance = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference.XYTolerance;
-        double conversionFactorToMeter = _contextStack
+        double tolerance = _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference.XYTolerance;
+        double conversionFactorToMeter = _settingsStore
           .Current
-          .Document
           .ActiveCRSoffsetRotation
           .SpatialReference
           .Unit
@@ -113,7 +112,7 @@ public class SegmentCollectionToSpeckleConverter : ITypedConverter<ACG.ReadOnlyS
       {
         value = points.SelectMany(pt => new[] { pt.x, pt.y, pt.z, }).ToList(),
         closed = closed,
-        units = _contextStack.Current.SpeckleUnits
+        units = _settingsStore.Current.SpeckleUnits
       };
 
     return polyline;

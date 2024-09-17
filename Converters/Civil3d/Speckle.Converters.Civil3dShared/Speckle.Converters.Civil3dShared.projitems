@@ -9,7 +9,7 @@
     <Import_RootNamespace>Speckle.Converters.Civil3dShared</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)Civil3dConversionContextStack.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Civil3dConversionSettings.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Civil3dRootToHostConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Civil3dToSpeckleUnitConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsings.cs" />

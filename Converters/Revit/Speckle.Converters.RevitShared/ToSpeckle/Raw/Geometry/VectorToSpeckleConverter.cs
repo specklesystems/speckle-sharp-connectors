@@ -1,6 +1,7 @@
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -8,17 +9,17 @@ public class VectorToSpeckleConverter : ITypedConverter<DB.XYZ, SOG.Vector>
 {
   private readonly IReferencePointConverter _referencePointConverter;
   private readonly ScalingServiceToSpeckle _scalingService;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _settingsStore;
 
   public VectorToSpeckleConverter(
     IReferencePointConverter referencePointConverter,
     ScalingServiceToSpeckle scalingService,
-    IRevitConversionContextStack contextStack
+    IConverterSettingsStore<RevitConversionSettings> settingsStore
   )
   {
     _referencePointConverter = referencePointConverter;
     _scalingService = scalingService;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public SOG.Vector Convert(DB.XYZ target)
@@ -30,7 +31,7 @@ public class VectorToSpeckleConverter : ITypedConverter<DB.XYZ, SOG.Vector>
       _scalingService.ScaleLength(extPt.X),
       _scalingService.ScaleLength(extPt.Y),
       _scalingService.ScaleLength(extPt.Z),
-      _contextStack.Current.SpeckleUnits
+      _settingsStore.Current.SpeckleUnits
     );
 
     return pointToSpeckle;
