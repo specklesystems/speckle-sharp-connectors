@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Logging;
+using Speckle.Connectors.Utils.Common;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk;
 using Speckle.Sdk.Host;
@@ -36,7 +37,7 @@ public static class Connector
     var (logging, tracing) = Observability.Initialize(
       VersionString,
       Slug,
-      GetPackageVersion(Assembly.GetExecutingAssembly()),
+      Assembly.GetExecutingAssembly().GetVersion(),
       new(
         new SpeckleLogging(Console: true, Otel: null, MinimumLevel: SpeckleLogLevel.Warning),
         new SpeckleTracing(Console: false, Otel: null)
@@ -50,27 +51,5 @@ public static class Connector
     //do this last
     builder.ContainerBuilder.Populate(serviceCollection);
     return tracing;
-  }
-
-  private static string GetPackageVersion(Assembly assembly)
-  {
-    // MinVer https://github.com/adamralph/minver?tab=readme-ov-file#version-numbers
-    // together with Microsoft.SourceLink.GitHub https://github.com/dotnet/sourcelink
-    // fills AssemblyInformationalVersionAttribute by
-    // {majorVersion}.{minorVersion}.{patchVersion}.{pre-release label}.{pre-release version}.{gitHeight}+{Git SHA of current commit}
-    // Ex: 1.5.0-alpha.1.40+807f703e1b4d9874a92bd86d9f2d4ebe5b5d52e4
-    // The following parts are optional: pre-release label, pre-release version, git height, Git SHA of current commit
-    // For package version, value of AssemblyInformationalVersionAttribute without commit hash is returned.
-
-    var informationalVersion = assembly
-      .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-      ?.InformationalVersion;
-    if (informationalVersion is null)
-    {
-      return String.Empty;
-    }
-
-    var indexOfPlusSign = informationalVersion.IndexOf('+');
-    return indexOfPlusSign > 0 ? informationalVersion[..indexOfPlusSign] : informationalVersion;
   }
 }
