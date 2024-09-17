@@ -25,8 +25,11 @@ public sealed class ParameterObjectAssigner
     _logger = logger;
   }
 
+#pragma warning disable IDE0060
   public void AssignParametersToBase(Element target, Base @base)
+#pragma warning restore IDE0060
   {
+    // return;
     Dictionary<string, Parameter> instanceParameters = _parameterValueExtractor.GetAllRemainingParams(target);
     ElementId elementId = target.GetTypeId();
 
