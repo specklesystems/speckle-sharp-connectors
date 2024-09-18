@@ -102,6 +102,8 @@ public class RhinoMaterialUnpacker
               objects = [layer.Id.ToString()]
             };
           }
+
+          continue;
         }
 
         // 2. As fallback, try to create from index
