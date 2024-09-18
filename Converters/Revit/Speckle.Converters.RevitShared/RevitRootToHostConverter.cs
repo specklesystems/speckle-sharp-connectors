@@ -1,4 +1,5 @@
 using System.Collections;
+using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
@@ -59,10 +60,21 @@ public class RevitRootToHostConverter : IRootToHostConverter
       throw new SpeckleConversionException($"No supported conversion for {target.speckle_type} found.");
     }
 
-    var ds = DB.DirectShape.CreateElement(
-      _revitContextStack.Current.Document,
-      new DB.ElementId(DB.BuiltInCategory.OST_GenericModel) // TODO: inherit category from target if any.
-    );
+    var category = DB.BuiltInCategory.OST_GenericModel;
+    if (target["category"] is string categoryString)
+    {
+      var res = Enum.TryParse($"OST_{categoryString}", out DB.BuiltInCategory cat);
+      if (res)
+      {
+        var c = Category.GetCategory(_revitContextStack.Current.Document, cat);
+        if (c is not null && DirectShape.IsValidCategoryId(c.Id, _revitContextStack.Current.Document))
+        {
+          category = cat;
+        }
+      }
+    }
+
+    var ds = DB.DirectShape.CreateElement(_revitContextStack.Current.Document, new DB.ElementId(category));
     ds.SetShape(geometryObjects);
 
     return ds;
