@@ -67,7 +67,8 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
     try
     {
       var parameters = _parameterExtractor.GetParameters(element);
-      result["revitParams"] = parameters;
+      // NOTE: we're conflicting with a strongly typed (Base) `parameters` property set on revit elements. We can revert this to be back to parameters later, but this will mean frontend legwork to add another special parsing case for the properties view of an object.
+      result["properties"] = parameters;
     }
     catch (Exception e) when (!e.IsFatal())
     {

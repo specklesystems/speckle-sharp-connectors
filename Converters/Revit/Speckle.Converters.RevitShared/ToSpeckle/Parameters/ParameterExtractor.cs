@@ -31,33 +31,89 @@ public class ParameterExtractor
     _scalingServiceToSpeckle = scalingServiceToSpeckle;
   }
 
+  private readonly Dictionary<DB.ElementId, Dictionary<string, Dictionary<string, object?>>> _typeParameterCache =
+    new();
+
   /// <summary>
   /// Extracts parameters out from an element and populates the <see cref="ParameterDefinitionHandler"/> cache. Expects to be scoped per operation.
   /// </summary>
   /// <param name="element"></param>
   /// <returns></returns>
-  public Dictionary<string, Dictionary<string, object?>> GetParameters(DB.Element element)
+  public Dictionary<string, object?> GetParameters(DB.Element element)
   {
-    var paramDict = new Dictionary<string, Dictionary<string, object?>>();
+    // NOTE: Woe and despair, I'm really abusing dictionaries here. See note at the top of class.
+    var instanceParameterDictionary = ParseParameterSet(element.Parameters);
 
-    foreach (DB.Parameter parameter in element.Parameters)
+    var typeId = element.GetTypeId();
+    if (typeId == DB.ElementId.InvalidElementId)
+    {
+      return CreateParameterDictionary(instanceParameterDictionary, null);
+    }
+
+    if (
+      _typeParameterCache.TryGetValue(
+        typeId,
+        out Dictionary<string, Dictionary<string, object?>>? typeParameterDictionary
+      )
+    )
+    {
+      return CreateParameterDictionary(instanceParameterDictionary, typeParameterDictionary);
+    }
+
+    var type = _settingsStore.Current.Document.GetElement(typeId) as DB.ElementType;
+    if (type == null)
+    {
+      return CreateParameterDictionary(instanceParameterDictionary, null);
+    }
+
+    typeParameterDictionary = ParseParameterSet(type.Parameters);
+    _typeParameterCache[typeId] = typeParameterDictionary;
+
+    return CreateParameterDictionary(instanceParameterDictionary, typeParameterDictionary);
+  }
+
+  private Dictionary<string, object?> CreateParameterDictionary(
+    Dictionary<string, Dictionary<string, object?>> instanceParams,
+    Dictionary<string, Dictionary<string, object?>>? typeParams
+  )
+  {
+    return new Dictionary<string, object?>()
+    {
+      ["Instance Parameters"] = instanceParams,
+      ["Type Parameters"] = typeParams
+    };
+  }
+
+  private Dictionary<string, Dictionary<string, object?>> ParseParameterSet(DB.ParameterSet parameters)
+  {
+    var _ = _settingsStore.Current.SendParameterNullOrEmptyStrings;
+    var dict = new Dictionary<string, Dictionary<string, object?>>();
+    foreach (DB.Parameter parameter in parameters)
     {
       try
       {
+        var value = GetValue(parameter);
+        // POC: note, as discussed briefly with the team, we've decided to not send null value parameters out. This can/should become a send setting.
+        if (value == null || (value is string s && string.IsNullOrEmpty(s)))
+        {
+          continue;
+        }
+
         var (internalDefinitionName, humanReadableName, groupName) = _parameterDefinitionHandler.HandleDefinition(
           parameter
         );
+
         var param = new Dictionary<string, object?>()
         {
-          ["value"] = GetValue(parameter),
+          ["value"] = value,
           ["name"] = humanReadableName,
           ["internalDefinitionName"] = internalDefinitionName
         };
 
-        if (!paramDict.TryGetValue(groupName, out Dictionary<string, object?>? paramGroup))
+        if (!dict.TryGetValue(groupName, out Dictionary<string, object?>? paramGroup))
         {
           paramGroup = new Dictionary<string, object?>();
-          paramDict[groupName] = paramGroup;
+          dict[groupName] = paramGroup;
         }
 
         var targetKey = humanReadableName;
@@ -74,7 +130,7 @@ public class ParameterExtractor
       }
     }
 
-    return paramDict;
+    return dict;
   }
 
   private readonly Dictionary<DB.ElementId, string?> _elementNameCache = new();

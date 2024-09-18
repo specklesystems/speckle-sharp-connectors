@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
 using Revit.Async;
@@ -138,11 +137,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     var materialProxies = _revitMaterialCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds);
     _rootObject[ProxyKeys.RENDER_MATERIAL] = materialProxies;
 
-    _rootObject["definitions"] = _parameterDefinitionHandler.Definitions;
-
-    Debug.WriteLine(
-      $"Cache hit count {cacheHitCount} out of {objects.Count} ({(double)cacheHitCount / objects.Count})"
-    );
+    _rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;
 
     return new RootObjectBuilderResult(_rootObject, results);
   }

@@ -14,6 +14,7 @@ public class RevitConversionSettingsFactory(
   public RevitConversionSettings Create(
     DetailLevelType detailLevelType,
     DB.Transform? referencePointTransform,
+    bool sendEmptyOrNullParams,
     double tolerance = 0.0164042 // 5mm in ft
   )
   {
@@ -23,6 +24,7 @@ public class RevitConversionSettingsFactory(
       detailLevelType,
       referencePointTransform,
       unitConverter.ConvertOrThrow(document.GetUnits().GetFormatOptions(DB.SpecTypeId.Length).GetUnitTypeId()),
+      sendEmptyOrNullParams,
       tolerance
     );
   }
