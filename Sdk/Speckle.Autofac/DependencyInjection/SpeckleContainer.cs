@@ -2,18 +2,10 @@ using Autofac;
 
 namespace Speckle.Autofac.DependencyInjection;
 
-public class SpeckleContainer
+public sealed class SpeckleContainer(IContainer container) : IDisposable
 {
-  private readonly IContainer _container;
-
-  public SpeckleContainer(IContainer container)
-  {
-    _container = container;
-  }
-
   public T Resolve<T>()
-    where T : class
-  {
-    return _container.Resolve<T>();
-  }
+    where T : class => container.Resolve<T>();
+
+  public void Dispose() => container.Dispose();
 }

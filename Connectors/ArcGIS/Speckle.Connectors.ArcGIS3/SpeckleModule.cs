@@ -60,6 +60,7 @@ internal sealed class SpeckleModule : Module
     //TODO - add your business logic
     //return false to ~cancel~ Application close
     _disposableLogger?.Dispose();
+    Container.Dispose();
     return true;
   }
 }

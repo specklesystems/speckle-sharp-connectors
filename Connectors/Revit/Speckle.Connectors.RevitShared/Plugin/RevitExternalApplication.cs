@@ -74,6 +74,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
       // need to look for commonality
       _revitPlugin?.Shutdown();
       _disposableLogger?.Dispose();
+      _container?.Dispose();
     }
     catch (Exception e) when (!e.IsFatal())
     {
