@@ -86,15 +86,14 @@ public class ParameterExtractor
 
   private Dictionary<string, Dictionary<string, object?>> ParseParameterSet(DB.ParameterSet parameters)
   {
-    var _ = _settingsStore.Current.SendParameterNullOrEmptyStrings;
     var dict = new Dictionary<string, Dictionary<string, object?>>();
     foreach (DB.Parameter parameter in parameters)
     {
       try
       {
         var value = GetValue(parameter);
-        // POC: note, as discussed briefly with the team, we've decided to not send null value parameters out. This can/should become a send setting.
-        if (value == null || (value is string s && string.IsNullOrEmpty(s)))
+        var isNullOrEmpty = value == null || (value is string s && string.IsNullOrEmpty(s));
+        if (!_settingsStore.Current.SendParameterNullOrEmptyStrings && isNullOrEmpty)
         {
           continue;
         }
