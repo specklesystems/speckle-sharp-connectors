@@ -87,6 +87,7 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
   {
     _rhinoPlugin?.Shutdown();
     _disposableLogger?.Dispose();
+    Container?.Dispose();
     base.OnShutdown();
   }
 }
