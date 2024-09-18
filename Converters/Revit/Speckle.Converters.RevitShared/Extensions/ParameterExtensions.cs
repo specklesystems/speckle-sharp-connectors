@@ -2,6 +2,7 @@ using Autodesk.Revit.DB;
 
 namespace Speckle.Converters.RevitShared.Extensions;
 
+[Obsolete("Will be removed in the near future")]
 public static class ParameterExtensions
 {
   /// <summary>

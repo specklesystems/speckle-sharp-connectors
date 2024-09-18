@@ -6,8 +6,7 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.Helpers;
 
-// POC: rationalise whether this and ParameterObjectBuilder are sufficiently different??
-// did it go away?
+[Obsolete("Do not use this anymore. It's been replaced by the ParameterExtractor class.")]
 public sealed class ParameterObjectAssigner
 {
   private readonly ITypedConverter<Parameter, SOBR.Parameter> _paramConverter;
@@ -26,7 +25,8 @@ public sealed class ParameterObjectAssigner
   }
 
 #pragma warning disable IDE0060
-  public void AssignParametersToBase(Element target, Base @base)
+  [Obsolete("Do not use this anymore. It's been replaced by the ParameterExtractor class.")]
+  public void AssignParametersToBase(Element target, Base @base) // NOTE: commented out for ease of benchmarking (for now)
 #pragma warning restore IDE0060
   {
     // return;
