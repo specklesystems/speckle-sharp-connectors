@@ -185,28 +185,31 @@ public sealed class ArcGISSendBinding : ISendBinding
   {
     RowCreatedEvent.Subscribe(
       (args) =>
-      {
-        OnRowChanged(args);
-      },
+        Parent.TopLevelExceptionHandler.FireAndForget(async () =>
+        {
+          await OnRowChanged(args).ConfigureAwait(false);
+        }),
       layerTable
     );
     RowChangedEvent.Subscribe(
       (args) =>
-      {
-        OnRowChanged(args);
-      },
+        Parent.TopLevelExceptionHandler.FireAndForget(async () =>
+        {
+          await OnRowChanged(args).ConfigureAwait(false);
+        }),
       layerTable
     );
     RowDeletedEvent.Subscribe(
       (args) =>
-      {
-        OnRowChanged(args);
-      },
+        Parent.TopLevelExceptionHandler.FireAndForget(async () =>
+        {
+          await OnRowChanged(args).ConfigureAwait(false);
+        }),
       layerTable
     );
   }
 
-  private void OnRowChanged(RowChangedEventArgs args)
+  private async Task OnRowChanged(RowChangedEventArgs args)
   {
     if (args == null || MapView.Active == null)
     {
@@ -245,16 +248,16 @@ public sealed class ArcGISSendBinding : ISendBinding
       }
     }
 
-    RunExpirationChecks(false);
+    await RunExpirationChecks(false).ConfigureAwait(false);
   }
 
-  private void GetIdsForLayersRemovedEvent(LayerEventsArgs args)
+  private async Task GetIdsForLayersRemovedEvent(LayerEventsArgs args)
   {
     foreach (Layer layer in args.Layers)
     {
       ChangedObjectIds[layer.URI] = 1;
     }
-    RunExpirationChecks(true);
+    await RunExpirationChecks(true).ConfigureAwait(false);
   }
 
   private void GetIdsForStandaloneTablesRemovedEvent(StandaloneTableEventArgs args)
@@ -263,7 +266,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     {
       ChangedObjectIds[table.URI] = 1;
     }
-    RunExpirationChecks(true);
+    RunExpirationChecks(true).ConfigureAwait(false);
   }
 
   private void AddChangedNestedObjectIds(GroupLayer group)
@@ -298,7 +301,7 @@ public sealed class ArcGISSendBinding : ISendBinding
         }
       }
     }
-    RunExpirationChecks(false);
+    RunExpirationChecks(false).ConfigureAwait(false);
   }
 
   private void GetIdsForLayersAddedEvent(LayerEventsArgs args)
@@ -348,7 +351,7 @@ public sealed class ArcGISSendBinding : ISendBinding
       {
         ChangedObjectIds[member.URI] = 1;
       }
-      RunExpirationChecks(false);
+      RunExpirationChecks(false).ConfigureAwait(false);
     }
   }
 
@@ -421,13 +424,7 @@ public sealed class ArcGISSendBinding : ISendBinding
             .Execute(
               mapMembers,
               modelCard.GetSendInfo("ArcGIS"), // POC: get host app name from settings? same for GetReceiveInfo
-              (status, progress) =>
-                _operationProgressManager.SetModelProgress(
-                  Parent,
-                  modelCardId,
-                  new ModelCardProgress(modelCardId, status, progress),
-                  cancellationToken
-                ),
+              _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
               cancellationToken
             )
             .ConfigureAwait(false);
@@ -436,7 +433,9 @@ public sealed class ArcGISSendBinding : ISendBinding
         })
         .ConfigureAwait(false);
 
-      Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
+      await Commands
+        .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
+        .ConfigureAwait(false);
     }
     catch (OperationCanceledException)
     {
@@ -457,7 +456,7 @@ public sealed class ArcGISSendBinding : ISendBinding
   /// <summary>
   /// Checks if any sender model cards contain any of the changed objects. If so, also updates the changed objects hashset for each model card - this last part is important for on send change detection.
   /// </summary>
-  private void RunExpirationChecks(bool idsDeleted)
+  private async Task RunExpirationChecks(bool idsDeleted)
   {
     var senders = _store.GetSenders();
     List<string> expiredSenderIds = new();
@@ -483,7 +482,7 @@ public sealed class ArcGISSendBinding : ISendBinding
       }
     }
 
-    Commands.SetModelsExpired(expiredSenderIds);
+    await Commands.SetModelsExpired(expiredSenderIds).ConfigureAwait(false);
     ChangedObjectIds = new();
   }
 }

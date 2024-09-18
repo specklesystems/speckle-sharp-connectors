@@ -4,33 +4,33 @@ using Speckle.Connectors.Utils.Conversion;
 namespace Speckle.Connectors.DUI.Bindings;
 
 // POC: Send Commands share all commands from BasicBindings + some, this pattern should be revised
-public class SendBindingUICommands : BasicConnectorBindingCommands
+public class SendBindingUICommands(IBridge bridge) : BasicConnectorBindingCommands(bridge)
 {
   private const string REFRESH_SEND_FILTERS_UI_COMMAND_NAME = "refreshSendFilters";
   private const string SET_MODELS_EXPIRED_UI_COMMAND_NAME = "setModelsExpired";
   private const string SET_MODEL_SEND_RESULT_UI_COMMAND_NAME = "setModelSendResult";
 
-  public SendBindingUICommands(IBridge bridge)
-    : base(bridge) { }
-
   // POC.. the only reasons this needs the bridge is to send? realtionship to these messages and the bridge is unclear
-  public void RefreshSendFilters() => Bridge.Send(REFRESH_SEND_FILTERS_UI_COMMAND_NAME);
+  public async Task RefreshSendFilters() =>
+    await Bridge.Send(REFRESH_SEND_FILTERS_UI_COMMAND_NAME).ConfigureAwait(false);
 
-  public void SetModelsExpired(IEnumerable<string> expiredModelIds) =>
-    Bridge.Send(SET_MODELS_EXPIRED_UI_COMMAND_NAME, expiredModelIds);
+  public async Task SetModelsExpired(IEnumerable<string> expiredModelIds) =>
+    await Bridge.Send(SET_MODELS_EXPIRED_UI_COMMAND_NAME, expiredModelIds).ConfigureAwait(false);
 
-  public void SetModelSendResult(
+  public async Task SetModelSendResult(
     string modelCardId,
     string versionId,
     IEnumerable<SendConversionResult> sendConversionResults
   ) =>
-    Bridge.Send(
-      SET_MODEL_SEND_RESULT_UI_COMMAND_NAME,
-      new
-      {
-        modelCardId,
-        versionId,
-        sendConversionResults
-      }
-    );
+    await Bridge
+      .Send(
+        SET_MODEL_SEND_RESULT_UI_COMMAND_NAME,
+        new
+        {
+          modelCardId,
+          versionId,
+          sendConversionResults
+        }
+      )
+      .ConfigureAwait(false);
 }

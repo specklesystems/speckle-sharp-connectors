@@ -114,7 +114,7 @@ public sealed class BrowserBridge : IBridge
   private async Task OnActionBlock(RunMethodArgs args)
   {
     Result<object?> result = await TopLevelExceptionHandler
-      .CatchUnhandled(async () => await ExecuteMethod(args.MethodName, args.MethodArgs).ConfigureAwait(false))
+      .CatchUnhandledAsync(async () => await ExecuteMethod(args.MethodName, args.MethodArgs).ConfigureAwait(false))
       .ConfigureAwait(false);
 
     string resultJson = result.IsSuccess

@@ -26,9 +26,10 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
     Parent = parent;
     Commands = new BasicConnectorBindingCommands(parent);
     _store.DocumentChanged += (_, _) =>
-    {
-      Commands.NotifyDocumentChanged();
-    };
+      parent.TopLevelExceptionHandler.FireAndForget(async () =>
+      {
+        await Commands.NotifyDocumentChanged().ConfigureAwait(false);
+      });
   }
 
   public string GetConnectorVersion() => typeof(AutocadBasicConnectorBinding).Assembly.GetVersion();
@@ -59,7 +60,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
 
   public void RemoveModel(ModelCard model) => _store.RemoveModel(model);
 
-  public async Task HighlightObjects(List<string> objectIds)
+  public async Task HighlightObjects(IReadOnlyList<string> objectIds)
   {
     // POC: Will be addressed to move it into AutocadContext!
     var doc = Application.DocumentManager.MdiActiveDocument;

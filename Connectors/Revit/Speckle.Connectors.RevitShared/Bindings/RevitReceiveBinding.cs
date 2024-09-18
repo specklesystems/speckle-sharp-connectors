@@ -78,13 +78,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
         .Execute(
           modelCard.GetReceiveInfo(Speckle.Connectors.Utils.Connector.Slug),
           cancellationToken,
-          (status, progress) =>
-            _operationProgressManager.SetModelProgress(
-              Parent,
-              modelCardId,
-              new ModelCardProgress(modelCardId, status, progress),
-              cancellationToken
-            )
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken)
         )
         .ConfigureAwait(false);
 

@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using Autodesk.AutoCAD.DatabaseServices;
 using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
-using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.DUI.Bindings;
@@ -31,7 +30,7 @@ public sealed class AutocadSendBinding : ISendBinding
   public IBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly IAutocadIdleManager _idleManager;
+  private readonly IAppIdleManager _idleManager;
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
@@ -51,7 +50,7 @@ public sealed class AutocadSendBinding : ISendBinding
 
   public AutocadSendBinding(
     DocumentModelStore store,
-    IAutocadIdleManager idleManager,
+    IAppIdleManager idleManager,
     IBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     CancellationManager cancellationManager,
@@ -116,7 +115,7 @@ public sealed class AutocadSendBinding : ISendBinding
     _idleManager.SubscribeToIdle(nameof(AutocadSendBinding), RunExpirationChecks);
   }
 
-  private void RunExpirationChecks()
+  private async Task RunExpirationChecks()
   {
     var senders = _store.GetSenders();
     string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
@@ -134,7 +133,7 @@ public sealed class AutocadSendBinding : ISendBinding
       }
     }
 
-    Commands.SetModelsExpired(expiredSenderIds);
+    await Commands.SetModelsExpired(expiredSenderIds).ConfigureAwait(false);
     ChangedObjectIds = new();
   }
 
@@ -185,19 +184,15 @@ public sealed class AutocadSendBinding : ISendBinding
         .Resolve<SendOperation<AutocadRootObject>>()
         .Execute(
           autocadObjects,
-          modelCard.GetSendInfo(Speckle.Connectors.Utils.Connector.Slug),
-          (status, progress) =>
-            _operationProgressManager.SetModelProgress(
-              Parent,
-              modelCardId,
-              new ModelCardProgress(modelCardId, status, progress),
-              cancellationToken
-            ),
+          modelCard.GetSendInfo(Utils.Connector.Slug),
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
           cancellationToken
         )
         .ConfigureAwait(false);
 
-      Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
+      await Commands
+        .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
+        .ConfigureAwait(false);
     }
     catch (OperationCanceledException)
     {

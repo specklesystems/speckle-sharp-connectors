@@ -33,9 +33,10 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
     // POC: event binding?
     _store.DocumentChanged += (_, _) =>
-    {
-      Commands.NotifyDocumentChanged();
-    };
+      parent.TopLevelExceptionHandler.FireAndForget(async () =>
+      {
+        await Commands.NotifyDocumentChanged().ConfigureAwait(false);
+      });
   }
 
   public string GetConnectorVersion() => Assembly.GetAssembly(GetType()).NotNull().GetVersion();
@@ -102,7 +103,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
   /// Highlights the objects from the given ids.
   /// </summary>
   /// <param name="objectIds"> UniqueId's of the DB.Elements.</param>
-  public async Task HighlightObjects(List<string> objectIds)
+  public async Task HighlightObjects(IReadOnlyList<string> objectIds)
   {
     var activeUIDoc =
       _revitContext.UIApplication?.ActiveUIDocument

@@ -21,7 +21,7 @@ public interface IBasicConnectorBinding : IBinding
   /// <param name="modelCardId"></param>
   public Task HighlightModel(string modelCardId);
 
-  public Task HighlightObjects(List<string> objectIds);
+  public Task HighlightObjects(IReadOnlyList<string> objectIds);
 
   public BasicConnectorBindingCommands Commands { get; }
 }
@@ -54,7 +54,7 @@ public class BasicConnectorBindingCommands
     Bridge = bridge;
   }
 
-  public async void NotifyDocumentChanged() =>
+  public async Task NotifyDocumentChanged() =>
     await Bridge.Send(NOTIFY_DOCUMENT_CHANGED_EVENT_NAME).ConfigureAwait(false);
 
   /// <summary>

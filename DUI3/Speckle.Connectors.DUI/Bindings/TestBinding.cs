@@ -41,24 +41,27 @@ public class TestBinding : IBinding
       thisIsABoolean = false
     };
 
-  public void TriggerEvent(string eventName)
+  public async Task TriggerEvent(string eventName)
   {
     switch (eventName)
     {
       case "emptyTestEvent":
-        Parent.Send("emptyTestEvent");
+        await Parent.Send("emptyTestEvent").ConfigureAwait(false);
+
         break;
       case "testEvent":
       default:
-        Parent.Send(
-          "testEvent",
-          new
-          {
-            IsOk = true,
-            Name = "foo",
-            Count = 42
-          }
-        );
+        await Parent
+          .Send(
+            "testEvent",
+            new
+            {
+              IsOk = true,
+              Name = "foo",
+              Count = 42
+            }
+          )
+          .ConfigureAwait(false);
         break;
     }
   }

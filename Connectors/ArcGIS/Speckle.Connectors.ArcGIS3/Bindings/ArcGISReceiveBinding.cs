@@ -77,13 +77,7 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
         .Execute(
           modelCard.GetReceiveInfo("ArcGIS"), // POC: get host app name from settings? same for GetSendInfo
           cancellationToken,
-          (status, progress) =>
-            _operationProgressManager.SetModelProgress(
-              Parent,
-              modelCardId,
-              new ModelCardProgress(modelCardId, status, progress),
-              cancellationToken
-            )
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken)
         )
         .ConfigureAwait(false);
 

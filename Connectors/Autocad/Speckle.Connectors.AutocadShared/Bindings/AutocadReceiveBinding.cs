@@ -75,15 +75,9 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
       var operationResults = await unitOfWork
         .Resolve<ReceiveOperation>()
         .Execute(
-          modelCard.GetReceiveInfo(Speckle.Connectors.Utils.Connector.Slug),
+          modelCard.GetReceiveInfo(Utils.Connector.Slug),
           cancellationToken,
-          (status, progress) =>
-            _operationProgressManager.SetModelProgress(
-              Parent,
-              modelCardId,
-              new ModelCardProgress(modelCardId, status, progress),
-              cancellationToken
-            )
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken)
         )
         .ConfigureAwait(false);
 

@@ -53,7 +53,7 @@ public static class SharedRegistration
     builder.AddScoped<AutocadMaterialUnpacker>();
     builder.AddScoped<AutocadMaterialBaker>();
 
-    builder.AddSingleton<IAutocadIdleManager, AutocadIdleManager>();
+    builder.AddSingleton<IAppIdleManager, AutocadIdleManager>();
 
     // operation progress manager
     builder.AddSingleton<IOperationProgressManager, OperationProgressManager>();

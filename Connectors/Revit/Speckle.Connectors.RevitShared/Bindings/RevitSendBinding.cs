@@ -139,19 +139,15 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         .Resolve<SendOperation<ElementId>>()
         .Execute(
           revitObjects,
-          modelCard.GetSendInfo(Speckle.Connectors.Utils.Connector.Slug),
-          (status, progress) =>
-            _operationProgressManager.SetModelProgress(
-              Parent,
-              modelCardId,
-              new ModelCardProgress(modelCardId, status, progress),
-              cancellationToken
-            ),
+          modelCard.GetSendInfo(Utils.Connector.Slug),
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
           cancellationToken
         )
         .ConfigureAwait(false);
 
-      Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
+      await Commands
+        .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
+        .ConfigureAwait(false);
     }
     catch (OperationCanceledException)
     {
@@ -235,7 +231,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     return false;
   }
 
-  private void RunExpirationChecks()
+  private async Task RunExpirationChecks()
   {
     var senders = Store.GetSenders();
     string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
@@ -267,7 +263,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       }
     }
 
-    Commands.SetModelsExpired(expiredSenderIds);
+    await Commands.SetModelsExpired(expiredSenderIds).ConfigureAwait(false);
     ChangedObjectIds = new();
   }
 

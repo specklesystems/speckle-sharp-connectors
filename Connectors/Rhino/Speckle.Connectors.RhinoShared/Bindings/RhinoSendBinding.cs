@@ -12,7 +12,6 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
-using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
@@ -30,7 +29,7 @@ public sealed class RhinoSendBinding : ISendBinding
   public IBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly IRhinoIdleManager _idleManager;
+  private readonly IAppIdleManager _idleManager;
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
@@ -50,7 +49,7 @@ public sealed class RhinoSendBinding : ISendBinding
 
   public RhinoSendBinding(
     DocumentModelStore store,
-    IRhinoIdleManager idleManager,
+    IAppIdleManager idleManager,
     IBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     IUnitOfWorkFactory unitOfWorkFactory,
@@ -182,19 +181,15 @@ public sealed class RhinoSendBinding : ISendBinding
         .Resolve<SendOperation<RhinoObject>>()
         .Execute(
           rhinoObjects,
-          modelCard.GetSendInfo(Speckle.Connectors.Utils.Connector.Slug),
-          (status, progress) =>
-            _operationProgressManager.SetModelProgress(
-              Parent,
-              modelCardId,
-              new ModelCardProgress(modelCardId, status, progress),
-              cancellationToken
-            ),
+          modelCard.GetSendInfo(Utils.Connector.Slug),
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
           cancellationToken
         )
         .ConfigureAwait(false);
 
-      Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
+      await Commands
+        .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
+        .ConfigureAwait(false);
     }
     catch (OperationCanceledException)
     {
@@ -215,7 +210,7 @@ public sealed class RhinoSendBinding : ISendBinding
   /// <summary>
   /// Checks if any sender model cards contain any of the changed objects. If so, also updates the changed objects hashset for each model card - this last part is important for on send change detection.
   /// </summary>
-  private void RunExpirationChecks()
+  private async Task RunExpirationChecks()
   {
     var senders = _store.GetSenders();
     string[] objectIdsList = ChangedObjectIds.Keys.ToArray(); // NOTE: could not copy to array happens here
@@ -233,7 +228,7 @@ public sealed class RhinoSendBinding : ISendBinding
       }
     }
 
-    Commands.SetModelsExpired(expiredSenderIds);
+    await Commands.SetModelsExpired(expiredSenderIds).ConfigureAwait(false);
     ChangedObjectIds = new();
   }
 }

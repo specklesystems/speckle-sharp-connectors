@@ -17,7 +17,24 @@ public class OperationProgressManager : IOperationProgressManager
     new();
   private const int THROTTLE_INTERVAL_MS = 50;
 
-  public void SetModelProgress(
+  public Action<string, double?> CreateOperationProgressEventHandler(
+    IBridge bridge,
+    string modelCardId,
+    CancellationToken cancellationToken
+  )
+  {
+    return EventHandler;
+
+    void EventHandler(string status, double? progress)
+    {
+      bridge.TopLevelExceptionHandler.FireAndForget(
+        () =>
+          SetModelProgress(bridge, modelCardId, new ModelCardProgress(modelCardId, status, progress), cancellationToken)
+      );
+    }
+  }
+
+  public async Task SetModelProgress(
     IBridge bridge,
     string modelCardId,
     ModelCardProgress progress,
@@ -34,7 +51,7 @@ public class OperationProgressManager : IOperationProgressManager
       t.Item1 = DateTime.Now;
       s_lastProgressValues[modelCardId] = (t.Item1, progress.Status);
       // Since it's the first time we get a call for this model card, we should send it out
-      SendProgress(bridge, modelCardId, progress);
+      await SendProgress(bridge, modelCardId, progress).ConfigureAwait(false);
       return;
     }
 
@@ -44,10 +61,10 @@ public class OperationProgressManager : IOperationProgressManager
     {
       return;
     }
-    SendProgress(bridge, modelCardId, progress);
+    await SendProgress(bridge, modelCardId, progress).ConfigureAwait(false);
     s_lastProgressValues[modelCardId] = (DateTime.Now, progress.Status);
   }
 
-  private void SendProgress(IBridge bridge, string modelCardId, ModelCardProgress progress) =>
-    bridge.Send(SET_MODEL_PROGRESS_UI_COMMAND_NAME, new { modelCardId, progress });
+  private static async Task SendProgress(IBridge bridge, string modelCardId, ModelCardProgress progress) =>
+    await bridge.Send(SET_MODEL_PROGRESS_UI_COMMAND_NAME, new { modelCardId, progress }).ConfigureAwait(false);
 }

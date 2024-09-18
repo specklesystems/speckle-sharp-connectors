@@ -45,7 +45,7 @@ public class RhinoConnectorModule : ISpeckleModule
     // Register other connector specific types
     builder.AddSingleton<IRhinoPlugin, RhinoPlugin>();
     builder.AddSingleton<DocumentModelStore, RhinoDocumentStore>();
-    builder.AddSingleton<IRhinoIdleManager, RhinoIdleManager>();
+    builder.AddSingleton<IAppIdleManager, RhinoIdleManager>();
 
     // Register bindings
     builder.AddSingleton<IBinding, TestBinding>();
