@@ -8,10 +8,13 @@ public class AccountBinding : IBinding
   public string Name => "accountsBinding";
   public IBridge Parent { get; }
 
-  public AccountBinding(IBridge bridge)
+  private readonly IAccountManager _accountManager;
+
+  public AccountBinding(IBridge bridge, IAccountManager accountManager)
   {
     Parent = bridge;
+    _accountManager = accountManager;
   }
 
-  public Account[] GetAccounts() => AccountManager.GetAccounts().ToArray();
+  public Account[] GetAccounts() => _accountManager.GetAccounts().ToArray();
 }

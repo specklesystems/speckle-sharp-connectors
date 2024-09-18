@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Configurations>Debug;Release;Local</Configurations>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ILRepackTargetConfigurations>Debug;Release;Local</ILRepackTargetConfigurations>
+    <ILRepackRenameInternalized>true</ILRepackRenameInternalized>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="ILRepack.FullAuto">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" PrivateAssets="all"/>
+    <PackageReference Include="OpenTelemetry.Exporter.Console" PrivateAssets="all"/>
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" PrivateAssets="all"/>
+    <PackageReference Include="Serilog" PrivateAssets="all"/>
+    <PackageReference Include="Serilog.Exceptions" PrivateAssets="all"/>
+    <PackageReference Include="Serilog.Sinks.Console" PrivateAssets="all"/>
+    <PackageReference Include="Serilog.Sinks.File" PrivateAssets="all"/>
+    <PackageReference Include="Serilog.Sinks.OpenTelemetry" PrivateAssets="all"/>
+  </ItemGroup>
+</Project>
