@@ -47,12 +47,12 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
     try
     {
       AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<SpeckleConnectorsRhinoPlugin>;
-      _disposableLogger = Connector.Initialize(HostApplications.Rhino, GetVersion());
+      var builder = SpeckleContainerBuilder.CreateInstance();
+      _disposableLogger = Connector.Initialize(HostApplications.Rhino, GetVersion(), builder);
 
       // POC: We must load the Rhino connector module manually because we only search for DLL files when calling `LoadAutofacModules`,
       // but the Rhino connector has `.rhp` as it's extension.
-      Container = SpeckleContainerBuilder
-        .CreateInstance()
+      Container = builder
         .LoadAutofacModules(
           Assembly.GetExecutingAssembly(),
           [Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location).NotNull()]

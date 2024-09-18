@@ -41,10 +41,10 @@ internal sealed class RevitExternalApplication : IExternalApplication
     {
       // POC: not sure what this is doing...  could be messing up our Aliasing????
       AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<RevitExternalApplication>;
+      var builder = SpeckleContainerBuilder.CreateInstance();
       // init DI
-      _disposableLogger = Connector.Initialize(HostApplications.Revit, GetVersion());
-      _container = SpeckleContainerBuilder
-        .CreateInstance()
+      _disposableLogger = Connector.Initialize(HostApplications.Revit, GetVersion(), builder);
+      _container = builder
         .LoadAutofacModules(
           Assembly.GetExecutingAssembly(),
           [Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location).NotNull()]

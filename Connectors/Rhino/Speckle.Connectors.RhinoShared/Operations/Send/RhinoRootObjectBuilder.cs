@@ -33,6 +33,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   private readonly RhinoMaterialUnpacker _materialUnpacker;
   private readonly RhinoColorUnpacker _colorUnpacker;
   private readonly ILogger<RhinoRootObjectBuilder> _logger;
+  private readonly ISdkActivityFactory _activityFactory;
 
   public RhinoRootObjectBuilder(
     IRootToSpeckleConverter rootToSpeckleConverter,
@@ -43,7 +44,8 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     RhinoGroupUnpacker groupUnpacker,
     RhinoMaterialUnpacker materialUnpacker,
     RhinoColorUnpacker colorUnpacker,
-    ILogger<RhinoRootObjectBuilder> logger
+    ILogger<RhinoRootObjectBuilder> logger,
+    ISdkActivityFactory activityFactory
   )
   {
     _sendConversionCache = sendConversionCache;
@@ -55,6 +57,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     _materialUnpacker = materialUnpacker;
     _colorUnpacker = colorUnpacker;
     _logger = logger;
+    _activityFactory = activityFactory;
   }
 
   public Task<RootObjectBuilderResult> Build(
@@ -71,13 +74,13 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     CancellationToken cancellationToken
   )
   {
-    using var activity = SpeckleActivityFactory.Start("Build");
+    using var activity = _activityFactory.Start("Build");
     // 0 - Init the root
     Collection rootObjectCollection = new() { name = _converterSettings.Current.Document.Name ?? "Unnamed document" };
 
     // 1 - Unpack the instances
     UnpackResult<RhinoObject> unpackResults;
-    using (var _ = SpeckleActivityFactory.Start("UnpackSelection"))
+    using (var _ = _activityFactory.Start("UnpackSelection"))
     {
       unpackResults = _instanceUnpacker.UnpackSelection(rhinoObjects);
     }
@@ -94,11 +97,11 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     List<SendConversionResult> results = new(atomicObjects.Count);
     HashSet<Layer> versionLayers = new();
     int count = 0;
-    using (var _ = SpeckleActivityFactory.Start("Convert all"))
+    using (var _ = _activityFactory.Start("Convert all"))
     {
       foreach (RhinoObject rhinoObject in atomicObjects)
       {
-        using var _2 = SpeckleActivityFactory.Start("Convert");
+        using var _2 = _activityFactory.Start("Convert");
         cancellationToken.ThrowIfCancellationRequested();
 
         // handle layer
@@ -122,7 +125,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       throw new SpeckleConversionException("Failed to convert all objects."); // fail fast instead creating empty commit! It will appear as model card error with red color.
     }
 
-    using (var _ = SpeckleActivityFactory.Start("UnpackRenderMaterials"))
+    using (var _ = _activityFactory.Start("UnpackRenderMaterials"))
     {
       // 4 - Unpack the render material proxies
       rootObjectCollection[ProxyKeys.RENDER_MATERIAL] = _materialUnpacker.UnpackRenderMaterial(atomicObjects);
