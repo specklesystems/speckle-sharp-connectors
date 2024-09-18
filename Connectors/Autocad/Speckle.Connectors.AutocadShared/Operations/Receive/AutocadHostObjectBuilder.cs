@@ -224,7 +224,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
   {
     var ids = new ObjectIdCollection();
     var entities = new List<Entity>();
-    foreach (var (conversionResult, originalBaseObject) in fallbackConversionResult)
+    foreach (var (conversionResult, _) in fallbackConversionResult)
     {
       if (conversionResult is not Entity entity)
       {
@@ -232,7 +232,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
         continue;
       }
 
-      BakeObject(entity, originalBaseObject, layerName);
+      BakeObject(entity, originatingObject, layerName);
       ids.Add(entity.ObjectId);
       entities.Add(entity);
     }
