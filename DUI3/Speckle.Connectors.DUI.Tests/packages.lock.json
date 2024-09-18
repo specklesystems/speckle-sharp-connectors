@@ -327,20 +327,7 @@
           "Autofac": "[5.2.0, )"
         }
       },
-      "speckle.connectors.dui": {
-        "type": "Project",
-        "dependencies": {
-          "Microsoft.Extensions.Logging.Abstractions": "[3.1.0, )",
-          "Speckle.Autofac": "[1.0.0, )",
-          "Speckle.Connectors.Utils": "[1.0.0, )",
-          "Speckle.Sdk": "[3.1.0-dev.142, )",
-          "System.Threading.Tasks.Dataflow": "[6.0.0, )"
-        }
-      },
-      "speckle.connectors.logging": {
-        "type": "Project"
-      },
-      "speckle.connectors.utils": {
+      "speckle.connectors.common": {
         "type": "Project",
         "dependencies": {
           "Speckle.Autofac": "[1.0.0, )",
@@ -348,6 +335,19 @@
           "Speckle.Objects": "[3.1.0-dev.142, )",
           "Speckle.Sdk": "[3.1.0-dev.142, )"
         }
+      },
+      "speckle.connectors.dui": {
+        "type": "Project",
+        "dependencies": {
+          "Microsoft.Extensions.Logging.Abstractions": "[3.1.0, )",
+          "Speckle.Autofac": "[1.0.0, )",
+          "Speckle.Connectors.Common": "[1.0.0, )",
+          "Speckle.Sdk": "[3.1.0-dev.142, )",
+          "System.Threading.Tasks.Dataflow": "[6.0.0, )"
+        }
+      },
+      "speckle.connectors.logging": {
+        "type": "Project"
       },
       "speckle.testing": {
         "type": "Project",

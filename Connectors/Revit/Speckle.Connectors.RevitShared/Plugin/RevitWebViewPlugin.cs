@@ -7,7 +7,7 @@ using Autodesk.Revit.ApplicationServices;
 using Autodesk.Revit.UI;
 using Revit.Async;
 using Speckle.Connectors.DUI.WebView;
-using Speckle.Connectors.Utils;
+using Speckle.Connectors.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 

@@ -35,7 +35,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Connectors.DUI", "D
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Autofac", "Sdk\Speckle.Autofac\Speckle.Autofac.csproj", "{C9D4CA21-182B-4ED2-81BB-280A6FD713F6}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Connectors.Utils", "Sdk\Speckle.Connectors.Utils\Speckle.Connectors.Utils.csproj", "{7291B93C-615D-42DE-B8C1-3F9DF643E0FC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Connectors.Common", "Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj", "{7291B93C-615D-42DE-B8C1-3F9DF643E0FC}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Converters.Common", "Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj", "{8AEF06C0-CA5C-4460-BC2D-ADE5F35D0434}"
 EndProject
