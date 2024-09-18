@@ -15,7 +15,7 @@ public class DBCurveToSpeckleRawConverter : ITypedConverter<ADB.Curve, Objects.I
   private readonly ITypedConverter<ADB.Circle, SOG.Circle> _circleConverter;
   private readonly ITypedConverter<ADB.Ellipse, SOG.Ellipse> _ellipseConverter;
   private readonly ITypedConverter<ADB.Spline, SOG.Curve> _splineConverter;
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public DBCurveToSpeckleRawConverter(
     ITypedConverter<ADB.Line, SOG.Line> lineConverter,
@@ -26,7 +26,7 @@ public class DBCurveToSpeckleRawConverter : ITypedConverter<ADB.Curve, Objects.I
     ITypedConverter<ADB.Circle, SOG.Circle> circleConverter,
     ITypedConverter<ADB.Ellipse, SOG.Ellipse> ellipseConverter,
     ITypedConverter<ADB.Spline, SOG.Curve> splineConverter,
-    IConversionContextStack<Document, ADB.UnitsValue> contextStack
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _lineConverter = lineConverter;
@@ -37,7 +37,7 @@ public class DBCurveToSpeckleRawConverter : ITypedConverter<ADB.Curve, Objects.I
     _circleConverter = circleConverter;
     _ellipseConverter = ellipseConverter;
     _splineConverter = splineConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   /// <summary>

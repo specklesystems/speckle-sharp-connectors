@@ -1,34 +1,25 @@
 ﻿using Autofac;
-using Speckle.InterfaceGenerator;
 
 namespace Speckle.Autofac.DependencyInjection;
 
-public partial interface IUnitOfWork<TService> : IDisposable
-  where TService : class { }
-
-[GenerateAutoInterface]
-public sealed class UnitOfWork<TService> : IUnitOfWork<TService>
-  where TService : class
+public interface IUnitOfWork : IDisposable
 {
-  private readonly ILifetimeScope _unitOfWorkScope;
+  T Resolve<T>()
+    where T : class;
+}
+
+public sealed class UnitOfWork(ILifetimeScope unitOfWorkScope) : IUnitOfWork
+{
   private bool _notDisposed = true;
 
-  public UnitOfWork(ILifetimeScope unitOfWorkScope, TService service)
+  public T Resolve<T>()
+    where T : class => unitOfWorkScope.Resolve<T>();
+
+  public void Dispose()
   {
-    _unitOfWorkScope = unitOfWorkScope;
-    Service = service;
-  }
-
-  public TService Service { get; }
-
-  [AutoInterfaceIgnore]
-  public void Dispose() => Disposing(true);
-
-  private void Disposing(bool fromDispose)
-  {
-    if (_notDisposed && fromDispose)
+    if (_notDisposed)
     {
-      _unitOfWorkScope.Dispose();
+      unitOfWorkScope.Dispose();
       _notDisposed = false;
     }
   }

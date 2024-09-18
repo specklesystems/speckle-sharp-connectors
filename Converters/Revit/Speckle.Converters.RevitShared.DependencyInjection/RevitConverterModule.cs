@@ -2,9 +2,10 @@ using Autodesk.Revit.DB;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.DependencyInjection;
-using Speckle.Converters.Revit2023.ToSpeckle.Parameters;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Converters.RevitShared.Settings;
+using Speckle.Converters.RevitShared.ToSpeckle;
 
 namespace Speckle.Converters.RevitShared.DependencyInjection;
 
@@ -13,7 +14,7 @@ public class RevitConverterModule : ISpeckleModule
   public void Load(SpeckleContainerBuilder builder)
   {
     //register types by default
-    builder.ScanAssemblyOfType<SlopeArrowExtractor>();
+    builder.ScanAssemblyOfType<RevitConversionSettings>();
     // Register single root
     builder.AddRootCommon<RevitRootToSpeckleConverter>();
 
@@ -30,7 +31,10 @@ public class RevitConverterModule : ISpeckleModule
     builder.AddScoped<ScalingServiceToHost>();
 
     // POC: the concrete type can come out if we remove all the reference to it
-    builder.AddScoped<IRevitConversionContextStack, RevitConversionContextStack>();
+    builder.AddScoped<
+      IConverterSettingsStore<RevitConversionSettings>,
+      ConverterSettingsStore<RevitConversionSettings>
+    >();
 
     builder.AddScoped<IReferencePointConverter, ReferencePointConverter>();
 

@@ -10,17 +10,17 @@ public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Cur
 {
   private readonly ITypedConverter<AG.Interval, SOP.Interval> _intervalConverter;
   private readonly ITypedConverter<ADB.Extents3d, SOG.Box> _boxConverter;
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public DBSplineToSpeckleRawConverter(
     ITypedConverter<AG.Interval, SOP.Interval> intervalConverter,
     ITypedConverter<ADB.Extents3d, SOG.Box> boxConverter,
-    IConversionContextStack<Document, ADB.UnitsValue> contextStack
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _intervalConverter = intervalConverter;
     _boxConverter = boxConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public Base Convert(object target) => Convert((ADB.Spline)target);
@@ -109,8 +109,8 @@ public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Cur
       length = length,
       domain = domain,
       bbox = _boxConverter.Convert(target.GeometricExtents),
-      units = _contextStack.Current.SpeckleUnits,
-      displayValue = target.Database is not null ? GetDisplayValue(target) : null!,
+      units = _settingsStore.Current.SpeckleUnits,
+      displayValue = target.Database is not null ? GetDisplayValue(target) : null!, //TODO change?
     };
 
     // POC: get display value if this is a database-resident spline
@@ -129,7 +129,7 @@ public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Cur
       case ADB.Polyline2d o:
         verticesList = o.GetSubEntities<ADB.Vertex2d>(
             ADB.OpenMode.ForRead,
-            _contextStack.Current.Document.TransactionManager.TopTransaction
+            _settingsStore.Current.Document.TransactionManager.TopTransaction
           )
           .Where(e => e.VertexType != ADB.Vertex2dType.SplineControlVertex) // POC: not validated yet!
           .SelectMany(o => o.Position.ToArray())
@@ -139,7 +139,7 @@ public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Cur
       case ADB.Polyline3d o:
         verticesList = o.GetSubEntities<ADB.PolylineVertex3d>(
             ADB.OpenMode.ForRead,
-            _contextStack.Current.Document.TransactionManager.TopTransaction
+            _settingsStore.Current.Document.TransactionManager.TopTransaction
           )
           .Where(e => e.VertexType != ADB.Vertex3dType.ControlVertex)
           .SelectMany(o => o.Position.ToArray())
@@ -147,6 +147,6 @@ public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Cur
         break;
     }
 
-    return verticesList.ConvertToSpecklePolyline(_contextStack.Current.SpeckleUnits);
+    return verticesList.ConvertToSpecklePolyline(_settingsStore.Current.SpeckleUnits);
   }
 }

@@ -1,7 +1,8 @@
-using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Converters.RevitShared.Settings;
 
-namespace Speckle.Converters.Revit2023.ToSpeckle.Parameters;
+namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 /// <summary>
 /// Extracts parameters out from an element and populates the <see cref="ParameterDefinitionHandler"/> cache. Expects to be scoped per operation.
@@ -10,17 +11,17 @@ public class ParameterExtractor
 {
   /// POC: Note that we're abusing dictionaries in here because we've yet to have a simple way to serialize non-base derived classes (or structs?)
   private readonly ParameterDefinitionHandler _parameterDefinitionHandler;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _settingsStore;
   private readonly ScalingServiceToSpeckle _scalingServiceToSpeckle;
 
   public ParameterExtractor(
-    IRevitConversionContextStack contextStack,
+    IConverterSettingsStore<RevitConversionSettings> settingsStore,
     ScalingServiceToSpeckle scalingServiceToSpeckle,
     ParameterDefinitionHandler parameterDefinitionHandler
   )
   {
     _parameterDefinitionHandler = parameterDefinitionHandler;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
     _scalingServiceToSpeckle = scalingServiceToSpeckle;
   }
 
@@ -79,7 +80,7 @@ public class ParameterExtractor
         {
           return value;
         }
-        var docElement = _contextStack.Current.Document.GetElement(elId);
+        var docElement = _settingsStore.Current.Document.GetElement(elId);
         var docElementName = docElement?.Name;
         _elementNameCache[parameter.AsElementId()] = docElementName;
         return docElementName;

@@ -1,3 +1,4 @@
+using Speckle.Converters.Autocad;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
@@ -8,15 +9,15 @@ namespace Speckle.Converters.AutocadShared.ToHost.Raw;
 /// </summary>
 public class PolycurveToHostPolylineRawConverter : ITypedConverter<SOG.Polycurve, ADB.Polyline>
 {
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
   private readonly ITypedConverter<SOG.Point, AG.Point3d> _pointConverter;
 
   public PolycurveToHostPolylineRawConverter(
-    IConversionContextStack<Document, ADB.UnitsValue> contextStack,
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore,
     ITypedConverter<SOG.Point, AG.Point3d> pointConverter
   )
   {
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
     _pointConverter = pointConverter;
   }
 
@@ -26,7 +27,7 @@ public class PolycurveToHostPolylineRawConverter : ITypedConverter<SOG.Polycurve
     AG.Plane plane =
       new(
         AG.Point3d.Origin,
-        AG.Vector3d.ZAxis.TransformBy(_contextStack.Current.Document.Editor.CurrentUserCoordinateSystem)
+        AG.Vector3d.ZAxis.TransformBy(_settingsStore.Current.Document.Editor.CurrentUserCoordinateSystem)
       );
 
     int count = 0;

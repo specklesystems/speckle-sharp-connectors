@@ -15,7 +15,7 @@ public class PipeToSpeckleConverter : IToSpeckleTopLevelConverter
   private readonly ITypedConverter<ADB.Extents3d, SOG.Box> _boxConverter;
   private readonly ITypedConverter<ADB.Solid3d, SOG.Mesh> _solidConverter;
   private readonly ITypedConverter<AECPropDB.PropertySet, List<DataField>> _propertySetConverter;
-  private readonly IConversionContextStack<Document, AAEC.BuiltInUnit> _contextStack;
+  private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
 
   public PipeToSpeckleConverter(
     ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
@@ -23,7 +23,7 @@ public class PipeToSpeckleConverter : IToSpeckleTopLevelConverter
     ITypedConverter<ADB.Extents3d, SOG.Box> boxConverter,
     ITypedConverter<ADB.Solid3d, SOG.Mesh> solidConverter,
     ITypedConverter<AECPropDB.PropertySet, List<DataField>> propertySetConverter,
-    IConversionContextStack<Document, AAEC.BuiltInUnit> contextStack
+    IConverterSettingsStore<Civil3dConversionSettings> settingsStore
   )
   {
     _pointConverter = pointConverter;
@@ -31,7 +31,7 @@ public class PipeToSpeckleConverter : IToSpeckleTopLevelConverter
     _boxConverter = boxConverter;
     _solidConverter = solidConverter;
     _propertySetConverter = propertySetConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public Base Convert(object target) => Convert((CDB.Pipe)target);
@@ -48,7 +48,7 @@ public class PipeToSpeckleConverter : IToSpeckleTopLevelConverter
         diameter = target.InnerDiameterOrWidth,
         length = target.Length3DToInsideEdge,
         displayValue = new List<SOG.Mesh> { pipeMesh },
-        units = _contextStack.Current.SpeckleUnits
+        units = _settingsStore.Current.SpeckleUnits
       };
 
     // POC: not setting property sets yet, need to determine connector parameter interoperability

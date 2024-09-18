@@ -25,7 +25,7 @@ public class Polyline2dToSpeckleConverter
   private readonly ITypedConverter<ADB.Spline, SOG.Curve> _splineConverter;
   private readonly ITypedConverter<AG.Vector3d, SOG.Vector> _vectorConverter;
   private readonly ITypedConverter<ADB.Extents3d, SOG.Box> _boxConverter;
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public Polyline2dToSpeckleConverter(
     ITypedConverter<ADB.Arc, SOG.Arc> arcConverter,
@@ -34,7 +34,7 @@ public class Polyline2dToSpeckleConverter
     ITypedConverter<ADB.Spline, SOG.Curve> splineConverter,
     ITypedConverter<AG.Vector3d, SOG.Vector> vectorConverter,
     ITypedConverter<ADB.Extents3d, SOG.Box> boxConverter,
-    IConversionContextStack<Document, ADB.UnitsValue> contextStack
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _arcConverter = arcConverter;
@@ -43,7 +43,7 @@ public class Polyline2dToSpeckleConverter
     _splineConverter = splineConverter;
     _vectorConverter = vectorConverter;
     _boxConverter = boxConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public Base Convert(object target) => Convert((ADB.Polyline2d)target);
@@ -78,7 +78,7 @@ public class Polyline2dToSpeckleConverter
     List<ADB.Vertex2d> vertices = target
       .GetSubEntities<ADB.Vertex2d>(
         ADB.OpenMode.ForRead,
-        _contextStack.Current.Document.TransactionManager.TopTransaction
+        _settingsStore.Current.Document.TransactionManager.TopTransaction
       )
       .Where(e => e.VertexType != ADB.Vertex2dType.CurveFitVertex && e.VertexType != ADB.Vertex2dType.SplineFitVertex) // Do not collect fit vertex points, they are not used for creation
       .ToList();
@@ -160,7 +160,7 @@ public class Polyline2dToSpeckleConverter
     if (isSpline)
     {
       SOG.Curve spline = _splineConverter.Convert(target.Spline);
-      SOG.Polyline displayValue = segmentValues.ConvertToSpecklePolyline(_contextStack.Current.SpeckleUnits);
+      SOG.Polyline displayValue = segmentValues.ConvertToSpecklePolyline(_settingsStore.Current.SpeckleUnits);
       if (displayValue != null)
       {
         spline.displayValue = displayValue;
@@ -185,7 +185,7 @@ public class Polyline2dToSpeckleConverter
         length = target.Length,
         area = target.Area,
         bbox = bbox,
-        units = _contextStack.Current.SpeckleUnits
+        units = _settingsStore.Current.SpeckleUnits
       };
 
     return polycurve;

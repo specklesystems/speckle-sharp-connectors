@@ -1,6 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.Revit2023.ToSpeckle.Parameters;
+using Speckle.Converters.RevitShared.ToSpeckle;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 

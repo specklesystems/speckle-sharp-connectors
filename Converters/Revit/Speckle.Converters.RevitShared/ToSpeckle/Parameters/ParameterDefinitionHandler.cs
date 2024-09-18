@@ -1,4 +1,4 @@
-namespace Speckle.Converters.Revit2023.ToSpeckle.Parameters;
+namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 /// <summary>
 /// Keeps track during a send conversion operation of the definitions used.

@@ -1,5 +1,6 @@
 using Autodesk.Revit.DB;
-using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.Common;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.Revit.HostApp;
@@ -9,12 +10,12 @@ namespace Speckle.Connectors.Revit.HostApp;
 /// </summary>
 public class SendCollectionManager
 {
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly Dictionary<string, Collection> _collectionCache = new();
 
-  public SendCollectionManager(IRevitConversionContextStack contextStack)
+  public SendCollectionManager(IConverterSettingsStore<RevitConversionSettings> converterSettings)
   {
-    _contextStack = contextStack;
+    _converterSettings = converterSettings;
   }
 
   /// <summary>
@@ -26,7 +27,7 @@ public class SendCollectionManager
   /// <returns></returns>
   public Collection GetAndCreateObjectHostCollection(Element element, Collection rootObject)
   {
-    var doc = _contextStack.Current.Document;
+    var doc = _converterSettings.Current.Document;
     var path = new List<string>();
 
     // Step 1: create path components. Currently, this is
