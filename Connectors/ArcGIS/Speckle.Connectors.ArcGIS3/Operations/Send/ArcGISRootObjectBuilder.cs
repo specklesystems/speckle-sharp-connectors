@@ -131,17 +131,17 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
                   .ConfigureAwait(false);
 
                 // get units & Active CRS (for writing geometry coords)
-                converted["units"] = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString;
+                converted["units"] = _settingsStore.Current.SpeckleUnits;
 
-                var spatialRef = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference;
+                var spatialRef = _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference;
                 converted["crs"] = new CRS
                 {
                   wkt = spatialRef.Wkt,
                   name = spatialRef.Name,
-                  offset_y = Convert.ToSingle(_contextStack.Current.Document.ActiveCRSoffsetRotation.LatOffset),
-                  offset_x = Convert.ToSingle(_contextStack.Current.Document.ActiveCRSoffsetRotation.LonOffset),
-                  rotation = Convert.ToSingle(_contextStack.Current.Document.ActiveCRSoffsetRotation.TrueNorthRadians),
-                  units_native = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString,
+                  offset_y = Convert.ToSingle(_settingsStore.Current.ActiveCRSoffsetRotation.LatOffset),
+                  offset_x = Convert.ToSingle(_settingsStore.Current.ActiveCRSoffsetRotation.LonOffset),
+                  rotation = Convert.ToSingle(_settingsStore.Current.ActiveCRSoffsetRotation.TrueNorthRadians),
+                  units_native = _settingsStore.Current.SpeckleUnits
                 };
               }
 
