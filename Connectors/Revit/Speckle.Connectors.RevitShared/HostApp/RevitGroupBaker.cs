@@ -35,13 +35,13 @@ public class RevitGroupBaker : TraversalContextUnpacker
   public void AddToGroupMapping(TraversalContext traversalContext, Element revitElement)
   {
     var collectionPath = GetCollectionPath(traversalContext);
-    var currentLayerName = "Base Group";
+    var currentLayerName = string.Empty;
     FakeGroup? previousGroup = null;
     var currentDepth = 0;
 
     foreach (var collection in collectionPath)
     {
-      currentLayerName += "::" + collection.name;
+      currentLayerName += collection.name + "-";
       if (_groupCache.TryGetValue(currentLayerName, out var g))
       {
         previousGroup = g;
@@ -51,6 +51,7 @@ public class RevitGroupBaker : TraversalContextUnpacker
 
       var group = new FakeGroup()
       {
+        // POC group names should be unique
         Name = _revitUtils.RemoveInvalidChars(collection.name),
         Depth = currentDepth++,
         Parent = previousGroup!
@@ -81,7 +82,24 @@ public class RevitGroupBaker : TraversalContextUnpacker
       lastGroup = docGroup;
     }
 
-    lastGroup!.GroupType.Name = baseGroupName;
+    lastGroup!.GroupType.Name = _revitUtils.RemoveInvalidChars(baseGroupName);
+  }
+
+  public void PurgeGroups(string baseGroupName)
+  {
+    var validBaseGroupName = _revitUtils.RemoveInvalidChars(baseGroupName);
+    var document = _contextStack.Current.Document;
+
+    using (var collector = new FilteredElementCollector(document))
+    {
+      var groupIds = collector
+        .OfClass(typeof(GroupType))
+        .Where(g => g.Name == validBaseGroupName)
+        .Select(g => g.Id)
+        .ToList();
+
+      document.Delete(groupIds);
+    }
   }
 
   /// <summary>

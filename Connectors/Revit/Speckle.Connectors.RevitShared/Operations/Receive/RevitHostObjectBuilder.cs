@@ -23,7 +23,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   private readonly ITransactionManager _transactionManager;
   private readonly ILocalToGlobalUnpacker _localToGlobalUnpacker;
   private readonly LocalToGlobalConverterUtils _localToGlobalConverterUtils;
-  private readonly RevitGroupBaker _groupManager;
+  private readonly RevitGroupBaker _groupBaker;
   private readonly RevitMaterialBaker _materialBaker;
   private readonly ILogger<RevitHostObjectBuilder> _logger;
 
@@ -48,7 +48,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     _transactionManager = transactionManager;
     _localToGlobalUnpacker = localToGlobalUnpacker;
     _localToGlobalConverterUtils = localToGlobalConverterUtils;
-    _groupManager = groupManager;
+    _groupBaker = groupManager;
     _materialBaker = materialBaker;
     _rootObjectUnpacker = rootObjectUnpacker;
     _logger = logger;
@@ -71,9 +71,30 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     CancellationToken cancellationToken
   )
   {
-    var baseLayerName = $"Project {projectName}: Model {modelName}"; // TODO: unify this across connectors!
+    var baseGroupName = $"Project {projectName}: Model {modelName}"; // TODO: unify this across connectors!
 
     onOperationProgressed?.Invoke("Converting", null);
+    using var activity = SpeckleActivityFactory.Start("Build");
+
+    // 0 - Clean then Rock n Roll! 🎸
+    using TransactionGroup preReceiveCleanTransaction = new(_contextStack.Current.Document, "Pre-receive clean");
+    preReceiveCleanTransaction.Start();
+    _transactionManager.StartTransaction(true);
+
+    try
+    {
+      PreReceiveDeepClean(baseGroupName);
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogError(ex, "Failed to clean up before receive in Revit");
+    }
+
+    using (var _ = SpeckleActivityFactory.Start("Commit"))
+    {
+      _transactionManager.CommitTransaction();
+      preReceiveCleanTransaction.Assimilate();
+    }
 
     // 1 - Unpack objects and proxies from root commit object
     var unpackedRoot = _rootObjectUnpacker.Unpack(rootObject);
@@ -81,8 +102,6 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       unpackedRoot.DefinitionProxies,
       unpackedRoot.ObjectsToConvert.ToList()
     );
-
-    using var activity = SpeckleActivityFactory.Start("Build");
 
     using TransactionGroup transactionGroup = new(_contextStack.Current.Document, $"Received data from {projectName}");
     transactionGroup.Start();
@@ -92,7 +111,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     {
       _materialBaker.MapLayersRenderMaterials(unpackedRoot);
       // NOTE: do not set _contextStack.RenderMaterialProxyCache directly, things stop working. Ogu/Dim do not know why :) not a problem as we hopefully will refactor some of these hacks out.
-      var map = _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseLayerName);
+      var map = _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseGroupName);
       foreach (var kvp in map)
       {
         _contextStack.RenderMaterialProxyCache.ObjectIdAndMaterialIndexMap.Add(kvp.Key, kvp.Value);
@@ -113,8 +132,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 
     try
     {
-      var baseGroupName = $"Project {projectName} - Model {modelName}";
-      _groupManager.BakeGroups(baseGroupName);
+      _groupBaker.BakeGroups(baseGroupName);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
@@ -160,7 +178,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
         if (result is DirectShape ds)
         {
           bakedObjectIds.Add(ds.UniqueId.ToString());
-          _groupManager.AddToGroupMapping(localToGlobalMap.TraversalContext, ds);
+          _groupBaker.AddToGroupMapping(localToGlobalMap.TraversalContext, ds);
         }
         else
         {
@@ -174,6 +192,12 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       }
     }
     return new(bakedObjectIds, conversionResults);
+  }
+
+  private void PreReceiveDeepClean(string baseGroupName)
+  {
+    _groupBaker.PurgeGroups(baseGroupName);
+    _materialBaker.PurgeMaterials(baseGroupName);
   }
 
   public void Dispose()
