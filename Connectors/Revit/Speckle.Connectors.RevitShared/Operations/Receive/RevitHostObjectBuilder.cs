@@ -85,14 +85,18 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 
       foreach (TraversalContext tc in objectsGraph)
       {
+        using var activity = SpeckleActivityFactory.Start("BakeObject");
         try
         {
           using var activity = _activityFactory.Start("BakeObject");
           var result = _converter.Convert(tc.Current);
+          activity?.SetStatus(SpeckleActivityStatusCode.Ok);
         }
         catch (Exception ex) when (!ex.IsFatal())
         {
           conversionResults.Add(new(Status.ERROR, tc.Current, null, null, ex));
+          activity?.RecordException(ex);
+          activity?.SetStatus(SpeckleActivityStatusCode.Error);
         }
       }
 
