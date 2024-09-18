@@ -39,8 +39,21 @@ public static class Connector
       Slug,
       Assembly.GetExecutingAssembly().GetVersion(),
       new(
-        new SpeckleLogging(Console: true, Otel: null, MinimumLevel: SpeckleLogLevel.Warning),
-        new SpeckleTracing(Console: false, Otel: null)
+        new SpeckleLogging(
+          Console: true,
+          Otel: new(
+            Endpoint: "https://seq-dev.speckle.systems/ingest/otlp/v1/logs",
+            Headers: new() { { "X-Seq-ApiKey", "y5YnBp12ZE1Czh4tzZWn" } }
+          ),
+          MinimumLevel: SpeckleLogLevel.Warning
+        ),
+        new SpeckleTracing(
+          Console: false,
+          Otel: new(
+            Endpoint: "https://seq-dev.speckle.systems/ingest/otlp/v1/traces",
+            Headers: new() { { "X-Seq-ApiKey", "y5YnBp12ZE1Czh4tzZWn" } }
+          )
+        )
       )
     );
 
