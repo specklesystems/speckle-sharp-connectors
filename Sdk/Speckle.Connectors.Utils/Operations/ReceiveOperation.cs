@@ -117,7 +117,7 @@ public sealed class ReceiveOperation
     CancellationToken cancellationToken
   )
   {
-    using var conversionActivity = SpeckleActivityFactory.Start("Convert");
+    using var conversionActivity = SpeckleActivityFactory.Start("ReceiveOperation.ConvertObjects");
     conversionActivity?.SetTag("smellsLikeV2Data", commitObject.SmellsLikeV2Data());
     conversionActivity?.SetTag("receiveInfo", receiveInfo);
 
