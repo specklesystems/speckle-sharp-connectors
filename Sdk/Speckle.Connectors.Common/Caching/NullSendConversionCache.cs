@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Speckle.Sdk.Models;
 
-namespace Speckle.Connectors.Utils.Caching;
+namespace Speckle.Connectors.Common.Caching;
 
 /// <summary>
 /// A null send conversion cache for future use in connectors that cannot support <see cref="ISendConversionCache"/>. It does nothing!

@@ -1,7 +1,7 @@
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
 
-namespace Speckle.Connectors.Utils.Instances;
+namespace Speckle.Connectors.Common.Instances;
 
 public interface IInstanceBaker<TAppIdMapValueType>
 {

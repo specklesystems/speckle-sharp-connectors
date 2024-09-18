@@ -1,6 +1,6 @@
 ﻿using Speckle.Sdk.Credentials;
 
-namespace Speckle.Connectors.Utils.Operations;
+namespace Speckle.Connectors.Common.Operations;
 
 /// <summary>
 /// Service that responsible to get account for DUI3 from account id otherwise from server url if any.

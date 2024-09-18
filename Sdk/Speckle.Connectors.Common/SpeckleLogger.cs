@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Logging;
 
-namespace Speckle.Connectors.Utils;
+namespace Speckle.Connectors.Common;
 
 public class SpeckleLogger(Logger logger) : ILogger
 {

@@ -1,6 +1,6 @@
 ﻿using System.Reflection;
 
-namespace Speckle.Connectors.Utils.Common;
+namespace Speckle.Connectors.Common.Common;
 
 public static class AssemblyExtensions
 {

@@ -4,6 +4,10 @@ using Rhino;
 using Rhino.Commands;
 using Rhino.DocObjects;
 using Speckle.Autofac.DependencyInjection;
+using Speckle.Connectors.Common;
+using Speckle.Connectors.Common.Caching;
+using Speckle.Connectors.Common.Cancellation;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Exceptions;
@@ -13,9 +17,6 @@ using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Rhino.HostApp;
-using Speckle.Connectors.Utils.Caching;
-using Speckle.Connectors.Utils.Cancellation;
-using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
@@ -182,7 +183,7 @@ public sealed class RhinoSendBinding : ISendBinding
         .Resolve<SendOperation<RhinoObject>>()
         .Execute(
           rhinoObjects,
-          modelCard.GetSendInfo(Speckle.Connectors.Utils.Connector.Slug),
+          modelCard.GetSendInfo(Connector.Slug),
           (status, progress) =>
             _operationProgressManager.SetModelProgress(
               Parent,

@@ -1,4 +1,4 @@
-﻿namespace Speckle.Connectors.Utils.Instances;
+﻿namespace Speckle.Connectors.Common.Instances;
 
 public interface IInstanceUnpacker<THostObjectType>
 {

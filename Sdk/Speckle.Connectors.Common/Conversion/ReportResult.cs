@@ -1,6 +1,6 @@
 using Speckle.Sdk.Models;
 
-namespace Speckle.Connectors.Utils.Conversion;
+namespace Speckle.Connectors.Common.Conversion;
 
 // Removing this for now, this was to faciliate us sending conversion results inside the commit object
 // We may want this back in future, but need to spark a discussion first

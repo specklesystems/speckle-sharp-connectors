@@ -3,7 +3,7 @@ using System.Reflection;
 using ArcGIS.Desktop.Framework;
 using Speckle.Autofac;
 using Speckle.Autofac.DependencyInjection;
-using Speckle.Connectors.Utils;
+using Speckle.Connectors.Common;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Host;
 using Module = ArcGIS.Desktop.Framework.Contracts.Module;

@@ -7,9 +7,9 @@ using Autodesk.Revit.ApplicationServices;
 using Autodesk.Revit.UI;
 using CefSharp;
 using Revit.Async;
+using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.Utils;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 

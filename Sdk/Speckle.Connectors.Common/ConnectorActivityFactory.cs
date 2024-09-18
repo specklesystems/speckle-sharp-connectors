@@ -2,7 +2,7 @@
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Logging;
 
-namespace Speckle.Connectors.Utils;
+namespace Speckle.Connectors.Common;
 
 public sealed class ConnectorActivityFactory : ISdkActivityFactory, IDisposable
 {

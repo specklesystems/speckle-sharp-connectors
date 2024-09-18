@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Speckle.Sdk.Models.Instances;
 
-namespace Speckle.Connectors.Utils.Instances;
+namespace Speckle.Connectors.Common.Instances;
 
 public interface IInstanceObjectsManager<THostObjectType, TAppIdMapValueType>
 {

@@ -4,7 +4,7 @@ using Autofac;
 using Autofac.Builder;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Speckle.Connectors.Utils;
+namespace Speckle.Connectors.Common;
 
 /// <summary>
 /// Extension methods for registering ASP.NET Core dependencies with Autofac.

@@ -1,7 +1,7 @@
 ﻿using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.GraphTraversal;
 
-namespace Speckle.Connectors.Utils.Builders;
+namespace Speckle.Connectors.Common.Builders;
 
 public static class TraversalExtensions
 {

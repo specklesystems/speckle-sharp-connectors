@@ -1,7 +1,7 @@
 ﻿using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Transports;
 
-namespace Speckle.Connectors.Utils.Operations;
+namespace Speckle.Connectors.Common.Operations;
 
 [GenerateAutoInterface]
 public class ProgressDisplayManager(IStopwatchManager stopwatch) : IProgressDisplayManager

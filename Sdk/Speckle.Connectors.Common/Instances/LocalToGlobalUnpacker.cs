@@ -4,7 +4,7 @@ using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
 
-namespace Speckle.Connectors.Utils.Instances;
+namespace Speckle.Connectors.Common.Instances;
 
 /// <summary>
 /// Utility for the connectors that doesn't support instancing.

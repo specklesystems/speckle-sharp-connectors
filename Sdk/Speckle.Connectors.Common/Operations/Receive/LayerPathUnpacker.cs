@@ -3,7 +3,7 @@ using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
 
-namespace Speckle.Connectors.Utils.Operations.Receive;
+namespace Speckle.Connectors.Common.Operations.Receive;
 
 /// <summary>
 /// Utility class to unpack layer structure from path of collections or property tree.

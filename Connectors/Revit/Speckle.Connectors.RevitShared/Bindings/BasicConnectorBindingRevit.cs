@@ -1,14 +1,15 @@
 using System.Reflection;
 using Autodesk.Revit.DB;
 using Revit.Async;
+using Speckle.Connectors.Common.Common;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.RevitShared;
-using Speckle.Connectors.Utils.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
+using Connector = Speckle.Connectors.Common.Connector;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
@@ -40,9 +41,9 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
   public string GetConnectorVersion() => Assembly.GetAssembly(GetType()).NotNull().GetVersion();
 
-  public string GetSourceApplicationName() => Speckle.Connectors.Utils.Connector.Slug.ToLower(); // POC: maybe not right place but... // ANOTHER POC: We should align this naming from somewhere in common DUI projects instead old structs. I know there are other POC comments around this
+  public string GetSourceApplicationName() => Connector.Slug.ToLower(); // POC: maybe not right place but... // ANOTHER POC: We should align this naming from somewhere in common DUI projects instead old structs. I know there are other POC comments around this
 
-  public string GetSourceApplicationVersion() => Speckle.Connectors.Utils.Connector.VersionString; // POC: maybe not right place but...
+  public string GetSourceApplicationVersion() => Connector.VersionString; // POC: maybe not right place but...
 
   public DocumentInfo? GetDocumentInfo()
   {

@@ -1,12 +1,13 @@
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
+using Speckle.Connectors.Common;
+using Speckle.Connectors.Common.Common;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Rhino.Extensions;
-using Speckle.Connectors.Utils.Common;
 using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Rhino.Bindings;
@@ -33,7 +34,7 @@ public class RhinoBasicConnectorBinding : IBasicConnectorBinding
 
   public string GetConnectorVersion() => typeof(RhinoBasicConnectorBinding).Assembly.GetVersion();
 
-  public string GetSourceApplicationName() => Speckle.Connectors.Utils.Connector.Slug;
+  public string GetSourceApplicationName() => Connector.Slug;
 
   public string GetSourceApplicationVersion() => "7";
 

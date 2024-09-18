@@ -2,13 +2,14 @@ using ArcGIS.Core.Data;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Connectors.ArcGIS.Utils;
+using Speckle.Connectors.Common.Common;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.Utils.Common;
 using Speckle.Sdk.Common;
 using ArcProject = ArcGIS.Desktop.Core.Project;
+using Connector = Speckle.Connectors.Common.Connector;
 
 namespace Speckle.Connectors.ArcGIS.Bindings;
 
@@ -33,9 +34,9 @@ public class BasicConnectorBinding : IBasicConnectorBinding
     };
   }
 
-  public string GetSourceApplicationName() => Speckle.Connectors.Utils.Connector.Slug;
+  public string GetSourceApplicationName() => Connector.Slug;
 
-  public string GetSourceApplicationVersion() => Speckle.Connectors.Utils.Connector.VersionString;
+  public string GetSourceApplicationVersion() => Connector.VersionString;
 
   public string GetConnectorVersion() => typeof(BasicConnectorBinding).Assembly.GetVersion();
 

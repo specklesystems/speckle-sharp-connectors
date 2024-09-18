@@ -1,4 +1,4 @@
-﻿namespace Speckle.Connectors.Utils.Operations;
+﻿namespace Speckle.Connectors.Common.Operations;
 
 public static class ProxyKeys
 {

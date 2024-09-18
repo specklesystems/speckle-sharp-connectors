@@ -8,17 +8,17 @@ using Speckle.Connectors.ArcGIS.HostApp;
 using Speckle.Connectors.ArcGIS.Operations.Receive;
 using Speckle.Connectors.ArcGis.Operations.Send;
 using Speckle.Connectors.ArcGIS.Utils;
+using Speckle.Connectors.Common;
+using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Caching;
+using Speckle.Connectors.Common.Instances;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
-using Speckle.Connectors.Utils;
-using Speckle.Connectors.Utils.Builders;
-using Speckle.Connectors.Utils.Caching;
-using Speckle.Connectors.Utils.Instances;
-using Speckle.Connectors.Utils.Operations;
 using Speckle.Sdk.Models.GraphTraversal;
 
 // POC: This is a temp reference to root object senders to tweak CI failing after having generic interfaces into common project.

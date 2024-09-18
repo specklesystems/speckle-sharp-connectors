@@ -1,4 +1,4 @@
-namespace Speckle.Connectors.Utils.Cancellation;
+namespace Speckle.Connectors.Common.Cancellation;
 
 /// <summary>
 /// Provides a mechanism for cancelling operations.

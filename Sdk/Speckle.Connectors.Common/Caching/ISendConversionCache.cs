@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Speckle.Sdk.Models;
 
-namespace Speckle.Connectors.Utils.Caching;
+namespace Speckle.Connectors.Common.Caching;
 
 /// <summary>
 /// <para>Stores object references resulting from a send operation. These can be retrieved back during a subsequent send operation to bypass conversion if

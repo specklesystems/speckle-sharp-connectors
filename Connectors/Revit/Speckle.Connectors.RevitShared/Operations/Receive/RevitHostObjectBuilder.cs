@@ -1,7 +1,7 @@
 using Autodesk.Revit.DB;
-using Speckle.Connectors.Utils.Builders;
-using Speckle.Connectors.Utils.Conversion;
-using Speckle.Connectors.Utils.Operations;
+using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;

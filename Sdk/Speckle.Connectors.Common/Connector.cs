@@ -2,14 +2,14 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
+using Speckle.Connectors.Common.Common;
 using Speckle.Connectors.Logging;
-using Speckle.Connectors.Utils.Common;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk;
 using Speckle.Sdk.Host;
 using Speckle.Sdk.Models;
 
-namespace Speckle.Connectors.Utils;
+namespace Speckle.Connectors.Common;
 
 public static class Connector
 {

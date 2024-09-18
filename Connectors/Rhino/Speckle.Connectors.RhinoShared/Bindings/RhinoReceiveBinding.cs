@@ -1,14 +1,15 @@
 ﻿using Microsoft.Extensions.Logging;
 using Rhino;
 using Speckle.Autofac.DependencyInjection;
+using Speckle.Connectors.Common;
+using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Cancellation;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.Utils.Builders;
-using Speckle.Connectors.Utils.Cancellation;
-using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
@@ -71,7 +72,7 @@ public class RhinoReceiveBinding : IReceiveBinding
       HostObjectBuilderResult conversionResults = await unitOfWork
         .Resolve<ReceiveOperation>()
         .Execute(
-          modelCard.GetReceiveInfo(Speckle.Connectors.Utils.Connector.Slug),
+          modelCard.GetReceiveInfo(Connector.Slug),
           cancellationToken,
           (status, progress) =>
             _operationProgressManager.SetModelProgress(

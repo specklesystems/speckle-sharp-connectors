@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Speckle.Sdk.Models;
 
-namespace Speckle.Connectors.Utils.Caching;
+namespace Speckle.Connectors.Common.Caching;
 
 ///<inheritdoc/>
 public class SendConversionCache : ISendConversionCache

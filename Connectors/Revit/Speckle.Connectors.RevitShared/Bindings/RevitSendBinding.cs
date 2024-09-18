@@ -2,6 +2,9 @@ using System.Collections.Concurrent;
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
+using Speckle.Connectors.Common.Caching;
+using Speckle.Connectors.Common.Cancellation;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Exceptions;
@@ -13,14 +16,12 @@ using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
-using Speckle.Connectors.Utils.Caching;
-using Speckle.Connectors.Utils.Cancellation;
-using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
+using Connector = Speckle.Connectors.Common.Connector;
 
 namespace Speckle.Connectors.Revit.Bindings;
 
@@ -139,7 +140,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         .Resolve<SendOperation<ElementId>>()
         .Execute(
           revitObjects,
-          modelCard.GetSendInfo(Speckle.Connectors.Utils.Connector.Slug),
+          modelCard.GetSendInfo(Connector.Slug),
           (status, progress) =>
             _operationProgressManager.SetModelProgress(
               Parent,

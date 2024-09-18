@@ -4,8 +4,8 @@ using System.Reflection;
 using Autodesk.AutoCAD.Runtime;
 using Autodesk.AutoCAD.Windows;
 using Speckle.Autofac.DependencyInjection;
+using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI.WebView;
-using Speckle.Connectors.Utils;
 using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Autocad.Plugin;

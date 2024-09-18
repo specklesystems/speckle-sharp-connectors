@@ -2,7 +2,7 @@ using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.GraphicsInterface;
 using Microsoft.Extensions.Logging;
-using Speckle.Connectors.Utils.Conversion;
+using Speckle.Connectors.Common.Conversion;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
 using Material = Autodesk.AutoCAD.DatabaseServices.Material;

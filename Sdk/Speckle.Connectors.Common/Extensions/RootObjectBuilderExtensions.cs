@@ -1,8 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
-using Speckle.Connectors.Utils.Builders;
+using Speckle.Connectors.Common.Builders;
 using Speckle.Sdk;
 
-namespace Speckle.Connectors.Utils.Extensions;
+namespace Speckle.Connectors.Common.Extensions;
 
 public static class RootObjectBuilderExtensions
 {

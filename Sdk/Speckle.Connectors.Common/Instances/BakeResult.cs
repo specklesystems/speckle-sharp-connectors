@@ -1,6 +1,6 @@
-﻿using Speckle.Connectors.Utils.Conversion;
+﻿using Speckle.Connectors.Common.Conversion;
 
-namespace Speckle.Connectors.Utils.Instances;
+namespace Speckle.Connectors.Common.Instances;
 
 public record BakeResult(
   List<string> CreatedInstanceIds,

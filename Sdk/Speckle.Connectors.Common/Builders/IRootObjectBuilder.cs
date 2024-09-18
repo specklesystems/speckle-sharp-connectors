@@ -1,8 +1,8 @@
-﻿using Speckle.Connectors.Utils.Conversion;
-using Speckle.Connectors.Utils.Operations;
+﻿using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Sdk.Models;
 
-namespace Speckle.Connectors.Utils.Builders;
+namespace Speckle.Connectors.Common.Builders;
 
 public interface IRootObjectBuilder<in T>
 {

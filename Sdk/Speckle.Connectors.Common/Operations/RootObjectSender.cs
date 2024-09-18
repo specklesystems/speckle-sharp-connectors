@@ -1,4 +1,4 @@
-using Speckle.Connectors.Utils.Caching;
+using Speckle.Connectors.Common.Caching;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Inputs;
@@ -6,7 +6,7 @@ using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Transports;
 
-namespace Speckle.Connectors.Utils.Operations;
+namespace Speckle.Connectors.Common.Operations;
 
 /// <summary>
 /// Default implementation of the <see cref="IRootObjectSender"/> which takes a <see cref="Base"/> and sends

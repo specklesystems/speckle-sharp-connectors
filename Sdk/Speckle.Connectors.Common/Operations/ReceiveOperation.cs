@@ -1,11 +1,11 @@
-using Speckle.Connectors.Utils.Builders;
+using Speckle.Connectors.Common.Builders;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Transports;
 
-namespace Speckle.Connectors.Utils.Operations;
+namespace Speckle.Connectors.Common.Operations;
 
 public sealed class ReceiveOperation
 {

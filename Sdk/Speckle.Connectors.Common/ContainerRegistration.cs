@@ -2,11 +2,11 @@ using System.Reflection;
 using Autofac;
 using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
-using Speckle.Connectors.Utils.Cancellation;
-using Speckle.Connectors.Utils.Operations;
-using Speckle.Connectors.Utils.Operations.Receive;
+using Speckle.Connectors.Common.Cancellation;
+using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Operations.Receive;
 
-namespace Speckle.Connectors.Utils;
+namespace Speckle.Connectors.Common;
 
 public static class ContainerRegistration
 {

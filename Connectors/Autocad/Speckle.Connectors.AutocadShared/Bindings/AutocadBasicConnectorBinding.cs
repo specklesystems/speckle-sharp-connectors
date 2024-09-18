@@ -1,10 +1,11 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
+using Speckle.Connectors.Common;
+using Speckle.Connectors.Common.Common;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.Utils.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Credentials;
@@ -35,9 +36,9 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
 
   public string GetConnectorVersion() => typeof(AutocadBasicConnectorBinding).Assembly.GetVersion();
 
-  public string GetSourceApplicationName() => Utils.Connector.Slug;
+  public string GetSourceApplicationName() => Connector.Slug;
 
-  public string GetSourceApplicationVersion() => Utils.Connector.VersionString;
+  public string GetSourceApplicationVersion() => Connector.VersionString;
 
   public Account[] GetAccounts() => _accountManager.GetAccounts().ToArray();
 

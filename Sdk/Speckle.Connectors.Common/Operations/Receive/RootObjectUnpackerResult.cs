@@ -3,7 +3,7 @@ using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
 using Speckle.Sdk.Models.Proxies;
 
-namespace Speckle.Connectors.Utils.Operations.Receive;
+namespace Speckle.Connectors.Common.Operations.Receive;
 
 public record RootObjectUnpackerResult(
   IEnumerable<TraversalContext> ObjectsToConvert,

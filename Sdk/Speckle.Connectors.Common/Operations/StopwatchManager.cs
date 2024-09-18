@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using Speckle.InterfaceGenerator;
 
-namespace Speckle.Connectors.Utils.Operations;
+namespace Speckle.Connectors.Common.Operations;
 
 [GenerateAutoInterface]
 public class StopwatchManager : IStopwatchManager

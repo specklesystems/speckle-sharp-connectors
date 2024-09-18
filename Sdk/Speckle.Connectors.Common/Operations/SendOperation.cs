@@ -1,9 +1,9 @@
-using Speckle.Connectors.Utils.Builders;
-using Speckle.Connectors.Utils.Conversion;
+using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Conversion;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 
-namespace Speckle.Connectors.Utils.Operations;
+namespace Speckle.Connectors.Common.Operations;
 
 public sealed class SendOperation<T>
 {
