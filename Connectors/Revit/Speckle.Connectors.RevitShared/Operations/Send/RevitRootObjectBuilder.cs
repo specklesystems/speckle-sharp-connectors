@@ -11,6 +11,7 @@ using Speckle.Connectors.Utils.Extensions;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -21,32 +22,35 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
 {
   // POC: SendSelection and RevitConversionContextStack should be interfaces, former needs interfaces
   private readonly IRootToSpeckleConverter _converter;
-  private readonly IRevitConversionContextStack _conversionContextStack;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly Collection _rootObject;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ElementUnpacker _elementUnpacker;
   private readonly SendCollectionManager _sendCollectionManager;
+  private readonly RevitMaterialCacheSingleton _revitMaterialCacheSingleton;
   private readonly ILogger<RevitRootObjectBuilder> _logger;
 
   public RevitRootObjectBuilder(
     IRootToSpeckleConverter converter,
-    IRevitConversionContextStack conversionContextStack,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ISendConversionCache sendConversionCache,
     ElementUnpacker elementUnpacker,
     SendCollectionManager sendCollectionManager,
+    RevitMaterialCacheSingleton revitMaterialCacheSingleton,
     ILogger<RevitRootObjectBuilder> logger
   )
   {
     _converter = converter;
-    _conversionContextStack = conversionContextStack;
+    _converterSettings = converterSettings;
     _sendConversionCache = sendConversionCache;
     _elementUnpacker = elementUnpacker;
     _sendCollectionManager = sendCollectionManager;
+    _revitMaterialCacheSingleton = revitMaterialCacheSingleton;
     _logger = logger;
 
     _rootObject = new Collection()
     {
-      name = _conversionContextStack.Current.Document.PathName.Split('\\').Last().Split('.').First()
+      name = _converterSettings.Current.Document.PathName.Split('\\').Last().Split('.').First()
     };
   }
 
@@ -57,7 +61,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     CancellationToken ct = default
   )
   {
-    var doc = _conversionContextStack.Current.Document;
+    var doc = _converterSettings.Current.Document;
 
     if (doc.IsFamilyDocument)
     {
@@ -69,7 +73,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     // Convert ids to actual revit elements
     foreach (var id in objects)
     {
-      var el = _conversionContextStack.Current.Document.GetElement(id);
+      var el = _converterSettings.Current.Document.GetElement(id);
       if (el != null)
       {
         revitElements.Add(el);
@@ -127,9 +131,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     }
 
     var idsAndSubElementIds = _elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(atomicObjects);
-    var materialProxies = _conversionContextStack.RenderMaterialProxyCache.GetRenderMaterialProxyListForObjects(
-      idsAndSubElementIds
-    );
+    var materialProxies = _revitMaterialCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds);
     _rootObject[ProxyKeys.RENDER_MATERIAL] = materialProxies;
 
     Debug.WriteLine(

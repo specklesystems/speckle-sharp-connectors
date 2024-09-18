@@ -1,4 +1,3 @@
-using Rhino;
 using Rhino.Geometry;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
@@ -10,19 +9,19 @@ public class NurbsCurveConverter : ITypedConverter<RG.NurbsCurve, SOG.Curve>
   private readonly ITypedConverter<RG.Polyline, SOG.Polyline> _polylineConverter;
   private readonly ITypedConverter<RG.Interval, SOP.Interval> _intervalConverter;
   private readonly ITypedConverter<RG.Box, SOG.Box> _boxConverter;
-  private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
+  private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   public NurbsCurveConverter(
     ITypedConverter<RG.Polyline, SOG.Polyline> polylineConverter,
     ITypedConverter<RG.Interval, SOP.Interval> intervalConverter,
     ITypedConverter<RG.Box, SOG.Box> boxConverter,
-    IConversionContextStack<RhinoDoc, UnitSystem> contextStack
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore
   )
   {
     _polylineConverter = polylineConverter;
     _intervalConverter = intervalConverter;
     _boxConverter = boxConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   /// <summary>
@@ -38,7 +37,7 @@ public class NurbsCurveConverter : ITypedConverter<RG.NurbsCurve, SOG.Curve>
   public SOG.Curve Convert(RG.NurbsCurve target)
   {
     // tolerance
-    double tolerance = _contextStack.Current.Document.ModelAbsoluteTolerance;
+    double tolerance = _settingsStore.Current.Document.ModelAbsoluteTolerance;
 
     if (target.ToPolyline(0, 1, 0, 0, 0, tolerance, 0, 0, true) is not PolylineCurve polylineCurve)
     {
@@ -67,7 +66,7 @@ public class NurbsCurveConverter : ITypedConverter<RG.NurbsCurve, SOG.Curve>
     var myCurve = new SOG.Curve
     {
       displayValue = displayPoly,
-      units = _contextStack.Current.SpeckleUnits,
+      units = _settingsStore.Current.SpeckleUnits,
       weights = nurbsCurve.Points.Select(ctp => ctp.Weight).ToList(),
       points = nurbsCurve.Points.SelectMany(ctp => new[] { ctp.Location.X, ctp.Location.Y, ctp.Location.Z }).ToList(),
       knots = knots,

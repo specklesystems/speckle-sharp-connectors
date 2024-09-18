@@ -15,7 +15,7 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
   private readonly ITypedConverter<ACG.Polygon, IReadOnlyList<SGIS.PolygonGeometry>> _polygonConverter;
   private readonly ITypedConverter<ACG.Multipatch, IReadOnlyList<Base>> _multipatchConverter;
   private readonly ITypedConverter<Row, Base> _attributeConverter;
-  private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
 
   public GisFeatureToSpeckleConverter(
     ITypedConverter<ACG.MapPoint, SOG.Point> pointConverter,
@@ -24,7 +24,7 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
     ITypedConverter<ACG.Polygon, IReadOnlyList<SGIS.PolygonGeometry>> polygonConverter,
     ITypedConverter<ACG.Multipatch, IReadOnlyList<Base>> multipatchConverter,
     ITypedConverter<Row, Base> attributeConverter,
-    IConversionContextStack<ArcGISDocument, ACG.Unit> contextStack
+    IConverterSettingsStore<ArcGISConversionSettings> settingsStore
   )
   {
     _pointConverter = pointConverter;
@@ -33,7 +33,7 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
     _polygonConverter = polygonConverter;
     _multipatchConverter = multipatchConverter;
     _attributeConverter = attributeConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   private List<SOG.Mesh> GetPolygonDisplayMeshes(List<SGIS.PolygonGeometry> polygons)
@@ -64,7 +64,7 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
         {
           vertices = boundaryPts.SelectMany(x => new List<double> { x.x, x.y, x.z }).ToList(),
           faces = faces,
-          units = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString
+          units = _settingsStore.Current.SpeckleUnits
         };
       displayVal.Add(mesh);
     }
@@ -82,7 +82,7 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
         {
           vertices = geo.vertices,
           faces = geo.faces,
-          units = _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString
+          units = _settingsStore.Current.SpeckleUnits
         };
       displayVal.Add(displayMesh);
     }

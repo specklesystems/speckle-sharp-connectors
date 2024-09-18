@@ -1,6 +1,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects.BuiltElements.Revit;
 using Speckle.Objects.BuiltElements.Revit.RevitRoof;
 
@@ -16,7 +17,7 @@ public class ExtrusionRoofToSpeckleTopLevelConverter
   private readonly ParameterValueExtractor _parameterValueExtractor;
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly ParameterObjectAssigner _parameterObjectAssigner;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public ExtrusionRoofToSpeckleTopLevelConverter(
     ITypedConverter<DB.Level, SOBR.RevitLevel> levelConverter,
@@ -25,7 +26,7 @@ public class ExtrusionRoofToSpeckleTopLevelConverter
     ParameterValueExtractor parameterValueExtractor,
     DisplayValueExtractor displayValueExtractor,
     ParameterObjectAssigner parameterObjectAssigner,
-    IRevitConversionContextStack contextStack
+    IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _levelConverter = levelConverter;
@@ -34,7 +35,7 @@ public class ExtrusionRoofToSpeckleTopLevelConverter
     _parameterValueExtractor = parameterValueExtractor;
     _displayValueExtractor = displayValueExtractor;
     _parameterObjectAssigner = parameterObjectAssigner;
-    _contextStack = contextStack;
+    _converterSettings = converterSettings;
   }
 
   public override RevitExtrusionRoof Convert(DB.ExtrusionRoof target)
@@ -60,7 +61,7 @@ public class ExtrusionRoofToSpeckleTopLevelConverter
         referenceLine = referenceLine,
         level = speckleLevel,
         displayValue = displayValue,
-        units = _contextStack.Current.SpeckleUnits
+        units = _converterSettings.Current.SpeckleUnits
       };
 
     _parameterObjectAssigner.AssignParametersToBase(target, speckleExtrusionRoof);
@@ -76,7 +77,7 @@ public class ExtrusionRoofToSpeckleTopLevelConverter
       {
         start = _pointConverter.Convert(plane.Origin.Add(plane.XVec.Normalize().Negate())),
         end = _pointConverter.Convert(plane.Origin),
-        units = _contextStack.Current.SpeckleUnits,
+        units = _converterSettings.Current.SpeckleUnits,
       };
     return referenceLine;
   }
