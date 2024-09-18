@@ -22,6 +22,11 @@ public class ModelCard : DiscriminatedObject
   public string? ProjectId { get; set; }
 
   /// <summary>
+  /// Workspace id.
+  /// </summary>
+  public string? WorkspaceId { get; set; }
+
+  /// <summary>
   /// Account id that model card created with it initially.
   /// </summary>
   public string? AccountId { get; set; }

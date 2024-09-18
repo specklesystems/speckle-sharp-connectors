@@ -7,15 +7,15 @@ namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
 
 public class EnvelopToSpeckleConverter : ITypedConverter<Envelope, SOG.Box>
 {
-  private readonly IConversionContextStack<ArcGISDocument, Unit> _contextStack;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
   private readonly ITypedConverter<MapPoint, SOG.Point> _pointConverter;
 
   public EnvelopToSpeckleConverter(
-    IConversionContextStack<ArcGISDocument, Unit> contextStack,
+    IConverterSettingsStore<ArcGISConversionSettings> settingsStore,
     ITypedConverter<MapPoint, SOG.Point> pointConverter
   )
   {
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
     _pointConverter = pointConverter;
   }
 
@@ -25,18 +25,18 @@ public class EnvelopToSpeckleConverter : ITypedConverter<Envelope, SOG.Box>
       target.XMin,
       target.YMin,
       target.ZMin,
-      _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference
+      _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference
     ).ToGeometry();
     MapPoint pointMax = new MapPointBuilderEx(
       target.XMax,
       target.YMax,
       target.ZMax,
-      _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference
+      _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference
     ).ToGeometry();
     SOG.Point minPtSpeckle = _pointConverter.Convert(pointMin);
     SOG.Point maxPtSpeckle = _pointConverter.Convert(pointMax);
 
-    var units = _contextStack.Current.SpeckleUnits;
+    var units = _settingsStore.Current.SpeckleUnits;
 
     SOG.Plane plane =
       new()
@@ -54,7 +54,7 @@ public class EnvelopToSpeckleConverter : ITypedConverter<Envelope, SOG.Box>
       xSize = new Interval { start = minPtSpeckle.x, end = maxPtSpeckle.x },
       ySize = new Interval { start = minPtSpeckle.y, end = maxPtSpeckle.y },
       zSize = new Interval { start = minPtSpeckle.z, end = maxPtSpeckle.z },
-      units = _contextStack.Current.SpeckleUnits
+      units = _settingsStore.Current.SpeckleUnits
     };
   }
 }

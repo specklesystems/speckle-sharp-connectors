@@ -7,10 +7,15 @@ namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
 public class PolygonFeatureToSpeckleConverter : ITypedConverter<ACG.Polygon, IReadOnlyList<PolygonGeometry>>
 {
   private readonly ITypedConverter<ACG.ReadOnlySegmentCollection, SOG.Polyline> _segmentConverter;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
 
-  public PolygonFeatureToSpeckleConverter(ITypedConverter<ACG.ReadOnlySegmentCollection, SOG.Polyline> segmentConverter)
+  public PolygonFeatureToSpeckleConverter(
+    ITypedConverter<ACG.ReadOnlySegmentCollection, SOG.Polyline> segmentConverter,
+    IConverterSettingsStore<ArcGISConversionSettings> settingsStore
+  )
   {
     _segmentConverter = segmentConverter;
+    _settingsStore = settingsStore;
   }
 
   public IReadOnlyList<PolygonGeometry> Convert(ACG.Polygon target)
@@ -35,7 +40,12 @@ public class PolygonFeatureToSpeckleConverter : ITypedConverter<ACG.Polygon, IRe
       bool isExteriorRing = target.IsExteriorRing(idx);
       if (isExteriorRing)
       {
-        polygon = new() { boundary = polyline, voids = new List<SOG.Polyline>() };
+        polygon = new()
+        {
+          boundary = polyline,
+          voids = new List<SOG.Polyline>(),
+          units = _settingsStore.Current.SpeckleUnits
+        };
         polygonList.Add(polygon);
       }
       else // interior part

@@ -5,12 +5,12 @@ namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 
 public class PointToSpeckleRawConverter : ITypedConverter<AG.Point3d, SOG.Point>
 {
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
-  public PointToSpeckleRawConverter(IConversionContextStack<Document, ADB.UnitsValue> contextStack)
+  public PointToSpeckleRawConverter(IConverterSettingsStore<AutocadConversionSettings> settingsStore)
   {
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
-  public SOG.Point Convert(AG.Point3d target) => new(target.X, target.Y, target.Z, _contextStack.Current.SpeckleUnits);
+  public SOG.Point Convert(AG.Point3d target) => new(target.X, target.Y, target.Z, _settingsStore.Current.SpeckleUnits);
 }

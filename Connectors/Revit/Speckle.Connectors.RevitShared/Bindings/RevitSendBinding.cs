@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using Autodesk.Revit.DB;
-using Autofac;
 using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bindings;
@@ -17,6 +16,7 @@ using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
+using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
@@ -34,6 +34,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly ToSpeckleSettingsManager _toSpeckleSettingsManager;
   private readonly ILogger<RevitSendBinding> _logger;
   private readonly ElementUnpacker _elementUnpacker;
+  private readonly IRevitConversionSettingsFactory _revitConversionSettingsFactory;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -54,7 +55,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     IOperationProgressManager operationProgressManager,
     ToSpeckleSettingsManager toSpeckleSettingsManager,
     ILogger<RevitSendBinding> logger,
-    ElementUnpacker elementUnpacker
+    ElementUnpacker elementUnpacker,
+    IRevitConversionSettingsFactory revitConversionSettingsFactory
   )
     : base("sendBinding", store, bridge, revitContext)
   {
@@ -66,6 +68,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _toSpeckleSettingsManager = toSpeckleSettingsManager;
     _logger = logger;
     _elementUnpacker = elementUnpacker;
+    _revitConversionSettingsFactory = revitConversionSettingsFactory;
     var topLevelExceptionHandler = Parent.TopLevelExceptionHandler;
 
     Commands = new SendBindingUICommands(bridge);
@@ -107,18 +110,19 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
-      using IUnitOfWork<SendOperation<ElementId>> sendOperation = _unitOfWorkFactory.Resolve<SendOperation<ElementId>>(
-        b =>
-        {
-          b.RegisterType<ToSpeckleSettings>().SingleInstance();
-          b.Register(c => _toSpeckleSettingsManager.GetToSpeckleSettings(modelCard));
-        }
-      );
+      using var unitOfWork = _unitOfWorkFactory.Create();
+      unitOfWork
+        .Resolve<IConverterSettingsStore<RevitConversionSettings>>()
+        .Initialize(
+          _revitConversionSettingsFactory.Create(
+            _toSpeckleSettingsManager.GetDetailLevelSetting(modelCard),
+            _toSpeckleSettingsManager.GetReferencePointSetting(modelCard)
+          )
+        );
 
       var activeUIDoc =
         RevitContext.UIApplication?.ActiveUIDocument
         ?? throw new SpeckleException("Unable to retrieve active UI document");
-
       List<ElementId> revitObjects = modelCard
         .SendFilter.NotNull()
         .GetObjectIds()
@@ -131,8 +135,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
       }
 
-      var sendResult = await sendOperation
-        .Service.Execute(
+      var sendResult = await unitOfWork
+        .Resolve<SendOperation<ElementId>>()
+        .Execute(
           revitObjects,
           modelCard.GetSendInfo(Speckle.Connectors.Utils.Connector.Slug),
           (status, progress) =>

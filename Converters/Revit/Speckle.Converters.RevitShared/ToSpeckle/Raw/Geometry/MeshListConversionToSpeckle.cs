@@ -1,6 +1,7 @@
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -8,15 +9,15 @@ public class MeshListConversionToSpeckle : ITypedConverter<List<DB.Mesh>, SOG.Me
 {
   private readonly IScalingServiceToSpeckle _toSpeckleScalingService;
   private readonly IReferencePointConverter _referencePointConverter;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public MeshListConversionToSpeckle(
-    IRevitConversionContextStack contextStack,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     IReferencePointConverter referencePointConverter,
     IScalingServiceToSpeckle toSpeckleScalingService
   )
   {
-    _contextStack = contextStack;
+    _converterSettings = converterSettings;
     _toSpeckleScalingService = toSpeckleScalingService;
     _referencePointConverter = referencePointConverter;
   }
@@ -54,12 +55,18 @@ public class MeshListConversionToSpeckle : ITypedConverter<List<DB.Mesh>, SOG.Me
       }
     }
 
-    SOG.Mesh speckleMesh = new(vertices, faces, units: _contextStack.Current.SpeckleUnits);
+    SOG.Mesh speckleMesh =
+      new()
+      {
+        vertices = vertices,
+        faces = faces,
+        units = _converterSettings.Current.SpeckleUnits
+      };
 
     return speckleMesh;
   }
 
-  private static (int vertexCount, int) GetVertexAndFaceListSize(List<DB.Mesh> meshes)
+  private static (int vertexCount, int) GetVertexAndFaceListSize(IReadOnlyList<DB.Mesh?> meshes)
   {
     int numberOfVertices = 0;
     int numberOfFaces = 0;

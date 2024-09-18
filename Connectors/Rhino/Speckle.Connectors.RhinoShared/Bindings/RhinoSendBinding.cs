@@ -16,6 +16,8 @@ using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
+using Speckle.Converters.Common;
+using Speckle.Converters.Rhino;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
@@ -36,6 +38,7 @@ public sealed class RhinoSendBinding : ISendBinding
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<RhinoSendBinding> _logger;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly IRhinoConversionSettingsFactory _rhinoConversionSettingsFactory;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -54,7 +57,8 @@ public sealed class RhinoSendBinding : ISendBinding
     CancellationManager cancellationManager,
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
-    ILogger<RhinoSendBinding> logger
+    ILogger<RhinoSendBinding> logger,
+    IRhinoConversionSettingsFactory rhinoConversionSettingsFactory
   )
   {
     _store = store;
@@ -65,6 +69,7 @@ public sealed class RhinoSendBinding : ISendBinding
     _sendConversionCache = sendConversionCache;
     _operationProgressManager = operationProgressManager;
     _logger = logger;
+    _rhinoConversionSettingsFactory = rhinoConversionSettingsFactory;
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler.Parent.TopLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent); // POC: Commands are tightly coupled with their bindings, at least for now, saves us injecting a factory.
@@ -146,7 +151,10 @@ public sealed class RhinoSendBinding : ISendBinding
 
   public async Task Send(string modelCardId)
   {
-    using var unitOfWork = _unitOfWorkFactory.Resolve<SendOperation<RhinoObject>>();
+    using var unitOfWork = _unitOfWorkFactory.Create();
+    unitOfWork
+      .Resolve<IConverterSettingsStore<RhinoConversionSettings>>()
+      .Initialize(_rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
     try
     {
       if (_store.GetModelById(modelCardId) is not SenderModelCard modelCard)
@@ -171,7 +179,8 @@ public sealed class RhinoSendBinding : ISendBinding
       }
 
       var sendResult = await unitOfWork
-        .Service.Execute(
+        .Resolve<SendOperation<RhinoObject>>()
+        .Execute(
           rhinoObjects,
           modelCard.GetSendInfo(Speckle.Connectors.Utils.Connector.Slug),
           (status, progress) =>

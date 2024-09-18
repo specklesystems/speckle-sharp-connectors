@@ -1,25 +1,26 @@
 using System.Text.RegularExpressions;
 using Autodesk.Revit.DB;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects.Other;
 
 namespace Speckle.Converters.RevitShared.ToHost.Raw;
 
 public class RenderMaterialToHostConverter : ITypedConverter<RenderMaterial, DB.Material>
 {
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
-  public RenderMaterialToHostConverter(IRevitConversionContextStack contextStack)
+  public RenderMaterialToHostConverter(IConverterSettingsStore<RevitConversionSettings> converterSettings)
   {
-    _contextStack = contextStack;
+    _converterSettings = converterSettings;
   }
 
   public DB.Material Convert(RenderMaterial target)
   {
     string matName = RemoveProhibitedCharacters(target.name);
 
-    using FilteredElementCollector collector = new(_contextStack.Current.Document);
+    using FilteredElementCollector collector = new(_converterSettings.Current.Document);
 
     // Try and find an existing material
     var existing = collector
@@ -33,8 +34,11 @@ public class RenderMaterialToHostConverter : ITypedConverter<RenderMaterial, DB.
     }
 
     // Create new material
-    ElementId materialId = DB.Material.Create(_contextStack.Current.Document, matName ?? Guid.NewGuid().ToString());
-    DB.Material mat = (DB.Material)_contextStack.Current.Document.GetElement(materialId);
+    ElementId materialId = DB.Material.Create(
+      _converterSettings.Current.Document,
+      matName ?? Guid.NewGuid().ToString()
+    );
+    DB.Material mat = (DB.Material)_converterSettings.Current.Document.GetElement(materialId);
 
     var sysColor = System.Drawing.Color.FromArgb(target.diffuse);
     mat.Color = new DB.Color(sysColor.R, sysColor.G, sysColor.B);

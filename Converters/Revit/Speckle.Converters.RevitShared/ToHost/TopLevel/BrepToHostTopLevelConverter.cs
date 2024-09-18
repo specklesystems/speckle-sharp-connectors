@@ -1,7 +1,5 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.ToSpeckle;
 using Speckle.Objects;
 using Speckle.Objects.Other;
@@ -13,22 +11,16 @@ public sealed class BrepTopLevelConverterToHost
   : BaseTopLevelConverterToHost<SOG.Brep, DB.Solid>,
     ITypedConverter<SOG.Brep, DB.Solid>
 {
-  private readonly IRevitConversionContextStack _contextStack;
-  private readonly ScalingServiceToHost _scalingService;
   private readonly ITypedConverter<RenderMaterial, DB.Material> _materialConverter;
   private readonly ITypedConverter<SOG.Surface, DB.BRepBuilderSurfaceGeometry> _surfaceConverter;
   private readonly ITypedConverter<ICurve, DB.CurveArray> _curveConverter;
 
   public BrepTopLevelConverterToHost(
-    IRevitConversionContextStack contextStack,
-    ScalingServiceToHost scalingService,
     ITypedConverter<RenderMaterial, DB.Material> materialConverter,
     ITypedConverter<SOG.Surface, DB.BRepBuilderSurfaceGeometry> surfaceConverter,
     ITypedConverter<ICurve, DB.CurveArray> curveConverter
   )
   {
-    _contextStack = contextStack;
-    _scalingService = scalingService;
     _materialConverter = materialConverter;
     _surfaceConverter = surfaceConverter;
     _curveConverter = curveConverter;

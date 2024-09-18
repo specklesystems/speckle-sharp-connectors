@@ -6,11 +6,11 @@ namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
 
 public class PointToSpeckleConverter : ITypedConverter<MapPoint, SOG.Point>
 {
-  private readonly IConversionContextStack<ArcGISDocument, Unit> _contextStack;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
 
-  public PointToSpeckleConverter(IConversionContextStack<ArcGISDocument, Unit> contextStack)
+  public PointToSpeckleConverter(IConverterSettingsStore<ArcGISConversionSettings> settingsStore)
   {
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public SOG.Point Convert(MapPoint target)
@@ -19,12 +19,12 @@ public class PointToSpeckleConverter : ITypedConverter<MapPoint, SOG.Point>
     {
       // reproject to Active CRS
       if (
-        GeometryEngine.Instance.Project(target, _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference)
+        GeometryEngine.Instance.Project(target, _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference)
         is not MapPoint reprojectedPt
       )
       {
         throw new SpeckleConversionException(
-          $"Conversion to Spatial Reference {_contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference.Name} failed"
+          $"Conversion to Spatial Reference {_settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference.Name} failed"
         );
       }
 
@@ -36,27 +36,23 @@ public class PointToSpeckleConverter : ITypedConverter<MapPoint, SOG.Point>
       )
       {
         throw new SpeckleConversionException(
-          $"Conversion to Spatial Reference {_contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference.Name} failed: coordinates undefined"
+          $"Conversion to Spatial Reference {_settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference.Name} failed: coordinates undefined"
         );
       }
 
       // convert to Speckle Pt
       SOG.Point reprojectedSpecklePt =
-        new(
-          reprojectedPt.X,
-          reprojectedPt.Y,
-          reprojectedPt.Z,
-          _contextStack.Current.Document.ActiveCRSoffsetRotation.SpeckleUnitString
-        );
-      SOG.Point scaledMovedRotatedPoint = _contextStack.Current.Document.ActiveCRSoffsetRotation.OffsetRotateOnSend(
-        reprojectedSpecklePt
+        new(reprojectedPt.X, reprojectedPt.Y, reprojectedPt.Z, _settingsStore.Current.SpeckleUnits);
+      SOG.Point scaledMovedRotatedPoint = _settingsStore.Current.ActiveCRSoffsetRotation.OffsetRotateOnSend(
+        reprojectedSpecklePt,
+        _settingsStore.Current.SpeckleUnits
       );
       return scaledMovedRotatedPoint;
     }
     catch (ArgumentException ex)
     {
       throw new SpeckleConversionException(
-        $"Conversion to Spatial Reference {_contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference.Name} failed",
+        $"Conversion to Spatial Reference {_settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference.Name} failed",
         ex
       );
     }

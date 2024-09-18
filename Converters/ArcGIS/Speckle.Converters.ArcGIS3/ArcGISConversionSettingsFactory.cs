@@ -1,37 +1,33 @@
-using System.Diagnostics.CodeAnalysis;
-using ArcGIS.Core.Data;
+﻿using ArcGIS.Core.Data;
 using ArcGIS.Core.Data.DDL;
 using ArcGIS.Desktop.Core;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
+using Speckle.InterfaceGenerator;
 
 namespace Speckle.Converters.ArcGIS3;
 
-public class ArcGISDocument
+[GenerateAutoInterface]
+public class ArcGISConversionSettingsFactory(IHostToSpeckleUnitConverter<ACG.Unit> unitConverter)
+  : IArcGISConversionSettingsFactory
 {
-  public Project Project { get; }
-  public Map Map { get; }
-  public Uri SpeckleDatabasePath { get; }
-  public CRSoffsetRotation ActiveCRSoffsetRotation { get; set; }
-
-  public ArcGISDocument()
-  {
-    Project = Project.Current;
-    Map = MapView.Active.Map;
-    SpeckleDatabasePath = EnsureOrAddSpeckleDatabase();
-    // CRS of either: incoming commit to be applied to all received objects, or CRS to convert all objects to, before sending
-    // created per Send/Receive operation, will be the same for all objects in the operation
-    ActiveCRSoffsetRotation = new CRSoffsetRotation(MapView.Active.Map);
-  }
-
-  private const string FGDB_NAME = "Speckle.gdb";
+  public ArcGISConversionSettings Create(Project project, Map map, CRSoffsetRotation activeCRSoffsetRotation) =>
+    new(
+      project,
+      map,
+      EnsureOrAddSpeckleDatabase(),
+      activeCRSoffsetRotation,
+      unitConverter.ConvertOrThrow(activeCRSoffsetRotation.SpatialReference.Unit)
+    );
 
   public Uri EnsureOrAddSpeckleDatabase()
   {
     return AddDatabaseToProject(GetDatabasePath());
   }
+
+  private const string FGDB_NAME = "Speckle.gdb";
 
   public Uri GetDatabasePath()
   {
@@ -108,19 +104,4 @@ public class ArcGISDocument
 
     return databasePath;
   }
-}
-
-// POC: Suppressed naming warning for now, but we should evaluate if we should follow this or disable it.
-[SuppressMessage(
-  "Naming",
-  "CA1711:Identifiers should not have incorrect suffix",
-  Justification = "Name ends in Stack but it is in fact a Stack, just not inheriting from `System.Collections.Stack`"
-)]
-public class ArcGISConversionContextStack : ConversionContextStack<ArcGISDocument, ACG.Unit>
-{
-  public ArcGISConversionContextStack(
-    IHostToSpeckleUnitConverter<ACG.Unit> unitConverter,
-    ArcGISDocument arcGisDocument
-  )
-    : base(arcGisDocument, MapView.Active.Map.SpatialReference.Unit, unitConverter) { }
 }
