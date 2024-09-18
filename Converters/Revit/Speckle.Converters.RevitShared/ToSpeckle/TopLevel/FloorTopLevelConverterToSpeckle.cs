@@ -1,5 +1,6 @@
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Converters.RevitShared.ToSpeckle;
 using Speckle.Objects;
 using Speckle.Objects.BuiltElements.Revit;
@@ -21,7 +22,7 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
   private readonly ParameterObjectAssigner _parameterObjectAssigner;
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly ISlopeArrowExtractor _slopeArrowExtractor;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public FloorTopLevelConverterToSpeckle(
     ITypedConverter<DB.CurveArrArray, List<SOG.Polycurve>> curveArrArrayConverter,
@@ -30,7 +31,7 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
     ParameterObjectAssigner parameterObjectAssigner,
     DisplayValueExtractor displayValueExtractor,
     ISlopeArrowExtractor slopeArrowExtractor,
-    IRevitConversionContextStack contextStack
+    IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _curveArrArrayConverter = curveArrArrayConverter;
@@ -39,7 +40,7 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
     _parameterObjectAssigner = parameterObjectAssigner;
     _displayValueExtractor = displayValueExtractor;
     _slopeArrowExtractor = slopeArrowExtractor;
-    _contextStack = contextStack;
+    _converterSettings = converterSettings;
   }
 
   public override SOBR.RevitFloor Convert(DB.Floor target)
@@ -62,7 +63,7 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
         level = speckleLevel,
         structural = structural,
         displayValue = displayValue,
-        units = _contextStack.Current.SpeckleUnits
+        units = _converterSettings.Current.SpeckleUnits
       };
 
     // POC: Re-evaluate Wall sketch curve extraction, assumption of only one outline is wrong. https://spockle.atlassian.net/browse/CNX-9396
@@ -108,7 +109,7 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
     {
       start = tail,
       end = head,
-      units = _contextStack.Current.SpeckleUnits
+      units = _converterSettings.Current.SpeckleUnits
     };
 
     if (

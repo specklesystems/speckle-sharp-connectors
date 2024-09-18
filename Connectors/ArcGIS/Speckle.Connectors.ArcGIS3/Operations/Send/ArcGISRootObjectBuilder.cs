@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Microsoft.Extensions.Logging;
@@ -29,14 +28,14 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ArcGISColorManager _colorManager;
-  private readonly IConversionContextStack<ArcGISDocument, Unit> _contextStack;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
   private readonly MapMembersUtils _mapMemberUtils;
   private readonly ILogger<ArcGISRootObjectBuilder> _logger;
 
   public ArcGISRootObjectBuilder(
     ISendConversionCache sendConversionCache,
     ArcGISColorManager colorManager,
-    IConversionContextStack<ArcGISDocument, Unit> contextStack,
+    IConverterSettingsStore<ArcGISConversionSettings> settingsStore,
     IRootToSpeckleConverter rootToSpeckleConverter,
     MapMembersUtils mapMemberUtils,
     ILogger<ArcGISRootObjectBuilder> logger
@@ -44,7 +43,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
   {
     _sendConversionCache = sendConversionCache;
     _colorManager = colorManager;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
     _rootToSpeckleConverter = rootToSpeckleConverter;
     _mapMemberUtils = mapMemberUtils;
     _logger = logger;

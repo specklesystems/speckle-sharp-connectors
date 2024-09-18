@@ -7,6 +7,8 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
+using Speckle.Converters.Autocad;
+using Speckle.Converters.Common;
 using Speckle.Sdk;
 
 namespace Speckle.Connectors.Autocad.Bindings;
@@ -21,6 +23,7 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<AutocadReceiveBinding> _logger;
+  private readonly IAutocadConversionSettingsFactory _autocadConversionSettingsFactory;
 
   private ReceiveBindingUICommands Commands { get; }
 
@@ -30,7 +33,8 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
     CancellationManager cancellationManager,
     IUnitOfWorkFactory unitOfWorkFactory,
     IOperationProgressManager operationProgressManager,
-    ILogger<AutocadReceiveBinding> logger
+    ILogger<AutocadReceiveBinding> logger,
+    IAutocadConversionSettingsFactory autocadConversionSettingsFactory
   )
   {
     _store = store;
@@ -38,6 +42,7 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
     _unitOfWorkFactory = unitOfWorkFactory;
     _operationProgressManager = operationProgressManager;
     _logger = logger;
+    _autocadConversionSettingsFactory = autocadConversionSettingsFactory;
     Parent = parent;
     Commands = new ReceiveBindingUICommands(parent);
   }
@@ -46,7 +51,10 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
 
   public async Task Receive(string modelCardId)
   {
-    using var unitOfWork = _unitOfWorkFactory.Resolve<ReceiveOperation>();
+    using var unitOfWork = _unitOfWorkFactory.Create();
+    unitOfWork
+      .Resolve<IConverterSettingsStore<AutocadConversionSettings>>()
+      .Initialize(_autocadConversionSettingsFactory.Create(Application.DocumentManager.CurrentDocument));
     try
     {
       // Get receiver card
@@ -65,7 +73,8 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
 
       // Receive host objects
       var operationResults = await unitOfWork
-        .Service.Execute(
+        .Resolve<ReceiveOperation>()
+        .Execute(
           modelCard.GetReceiveInfo(Speckle.Connectors.Utils.Connector.Slug),
           cancellationToken,
           (status, progress) =>

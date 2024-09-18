@@ -3,7 +3,7 @@ using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
-using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -19,21 +19,21 @@ namespace Speckle.Connectors.Revit.Operations.Receive;
 internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 {
   private readonly IRootToHostConverter _converter;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly GraphTraversal _traverseFunction;
   private readonly ITransactionManager _transactionManager;
   private readonly ISyncToThread _syncToThread;
 
   public RevitHostObjectBuilder(
     IRootToHostConverter converter,
-    IRevitConversionContextStack contextStack,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     GraphTraversal traverseFunction,
     ITransactionManager transactionManager,
     ISyncToThread syncToThread
   )
   {
     _converter = converter;
-    _contextStack = contextStack;
+    _converterSettings = converterSettings;
     _traverseFunction = traverseFunction;
     _transactionManager = transactionManager;
     _syncToThread = syncToThread;
@@ -56,7 +56,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       }
 
       using TransactionGroup transactionGroup =
-        new(_contextStack.Current.Document, $"Received data from {projectName}");
+        new(_converterSettings.Current.Document, $"Received data from {projectName}");
       transactionGroup.Start();
       _transactionManager.StartTransaction();
 

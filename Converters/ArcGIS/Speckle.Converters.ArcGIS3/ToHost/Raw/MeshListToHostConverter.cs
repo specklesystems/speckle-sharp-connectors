@@ -7,15 +7,15 @@ namespace Speckle.Converters.ArcGIS3.ToHost.Raw;
 public class MeshListToHostConverter : ITypedConverter<List<SOG.Mesh>, ACG.Multipatch>
 {
   private readonly ITypedConverter<SOG.Point, ACG.MapPoint> _pointConverter;
-  private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
 
   public MeshListToHostConverter(
     ITypedConverter<SOG.Point, ACG.MapPoint> pointConverter,
-    IConversionContextStack<ArcGISDocument, ACG.Unit> contextStack
+    IConverterSettingsStore<ArcGISConversionSettings> settingsStore
   )
   {
     _pointConverter = pointConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public ACG.Multipatch Convert(List<SOG.Mesh> target)
@@ -24,8 +24,7 @@ public class MeshListToHostConverter : ITypedConverter<List<SOG.Mesh>, ACG.Multi
     {
       throw new SpeckleConversionException("Feature contains no geometries");
     }
-    ACG.MultipatchBuilderEx multipatchPart =
-      new(_contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference);
+    ACG.MultipatchBuilderEx multipatchPart = new(_settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference);
 
     foreach (SOG.Mesh part in target)
     {

@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Converters.RevitShared.ToSpeckle;
 
 namespace Speckle.Converters.RevitShared.ToHost.TopLevel;
@@ -12,15 +12,15 @@ public sealed class PointToHostTopLevelConverter
   : BaseTopLevelConverterToHost<SOG.Point, DB.Solid>,
     ITypedConverter<SOG.Point, DB.Solid>
 {
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<SOG.Point, DB.XYZ> _pointConverter;
 
   public PointToHostTopLevelConverter(
-    IRevitConversionContextStack contextStack,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ITypedConverter<SOG.Point, XYZ> pointConverter
   )
   {
-    _contextStack = contextStack;
+    _converterSettings = converterSettings;
     _pointConverter = pointConverter;
   }
 
@@ -52,7 +52,7 @@ public sealed class PointToHostTopLevelConverter
     Solid sphere = GeometryCreationUtilities.CreateRevolvedGeometry(frame, [curveLoop], 0, 2 * Math.PI, options);
 
     using DirectShape ds = DirectShape.CreateElement(
-      _contextStack.Current.Document,
+      _converterSettings.Current.Document,
       new ElementId(BuiltInCategory.OST_GenericModel)
     );
 

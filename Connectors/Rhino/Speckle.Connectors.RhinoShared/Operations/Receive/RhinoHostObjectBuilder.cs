@@ -6,6 +6,7 @@ using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Operations.Receive;
 using Speckle.Converters.Common;
+using Speckle.Converters.Rhino;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -20,7 +21,7 @@ namespace Speckle.Connectors.Rhino.Operations.Receive;
 public class RhinoHostObjectBuilder : IHostObjectBuilder
 {
   private readonly IRootToHostConverter _converter;
-  private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
+  private readonly IConverterSettingsStore<RhinoConversionSettings> _converterSettings;
   private readonly RhinoInstanceBaker _instanceBaker;
   private readonly RhinoLayerBaker _layerBaker;
   private readonly RhinoMaterialBaker _materialBaker;
@@ -30,7 +31,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
   public RhinoHostObjectBuilder(
     IRootToHostConverter converter,
-    IConversionContextStack<RhinoDoc, UnitSystem> contextStack,
+    IConverterSettingsStore<RhinoConversionSettings> converterSettings,
     RhinoLayerBaker layerBaker,
     RootObjectUnpacker rootObjectUnpacker,
     RhinoInstanceBaker instanceBaker,
@@ -40,7 +41,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   )
   {
     _converter = converter;
-    _contextStack = contextStack;
+    _converterSettings = converterSettings;
     _rootObjectUnpacker = rootObjectUnpacker;
     _instanceBaker = instanceBaker;
     _materialBaker = materialBaker;
@@ -102,7 +103,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     onOperationProgressed?.Invoke("Baking layers (redraw disabled)", null);
     using (var _ = SpeckleActivityFactory.Start("Pre baking layers"))
     {
-      using var layerNoDraw = new DisableRedrawScope(_contextStack.Current.Document.Views);
+      using var layerNoDraw = new DisableRedrawScope(_converterSettings.Current.Document.Views);
       foreach (var (path, _) in atomicObjectsWithPath)
       {
         _layerBaker.GetAndCreateLayerFromPath(path, baseLayerName);
@@ -198,7 +199,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       _groupBaker.BakeGroups(unpackedRoot.GroupProxies, applicationIdMap, baseLayerName);
     }
 
-    _contextStack.Current.Document.Views.Redraw();
+    _converterSettings.Current.Document.Views.Redraw();
 
     return Task.FromResult(new HostObjectBuilderResult(bakedObjectIds, conversionResults));
   }
@@ -206,12 +207,16 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private void PreReceiveDeepClean(string baseLayerName)
   {
     // Remove all previously received layers and render materials from the document
-    int rootLayerIndex = _contextStack.Current.Document.Layers.Find(Guid.Empty, baseLayerName, RhinoMath.UnsetIntIndex);
+    int rootLayerIndex = _converterSettings.Current.Document.Layers.Find(
+      Guid.Empty,
+      baseLayerName,
+      RhinoMath.UnsetIntIndex
+    );
 
     _instanceBaker.PurgeInstances(baseLayerName);
     _materialBaker.PurgeMaterials(baseLayerName);
 
-    var doc = _contextStack.Current.Document;
+    var doc = _converterSettings.Current.Document;
     // Cleans up any previously received objects
     if (rootLayerIndex != RhinoMath.UnsetIntIndex)
     {
@@ -252,7 +257,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       atts.ColorSource = color.Item2;
     }
 
-    return _contextStack.Current.Document.Objects.Add(obj, atts);
+    return _converterSettings.Current.Document.Objects.Add(obj, atts);
   }
 
   private List<Guid> BakeObjectsAsGroup(
@@ -275,11 +280,11 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       objectIds.Add(id);
     }
 
-    var groupIndex = _contextStack.Current.Document.Groups.Add(
+    var groupIndex = _converterSettings.Current.Document.Groups.Add(
       $@"{originatingObject.speckle_type.Split('.').Last()} - {originatingObject.applicationId ?? originatingObject.id}  ({baseLayerName})",
       objectIds
     );
-    var group = _contextStack.Current.Document.Groups.FindIndex(groupIndex);
+    var group = _converterSettings.Current.Document.Groups.FindIndex(groupIndex);
     objectIds.Insert(0, group.Id);
     return objectIds;
   }

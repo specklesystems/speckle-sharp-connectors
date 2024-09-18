@@ -8,17 +8,17 @@ public class DBCircleToSpeckleRawConverter : ITypedConverter<ADB.Circle, SOG.Cir
 {
   private readonly ITypedConverter<AG.Plane, SOG.Plane> _planeConverter;
   private readonly ITypedConverter<ADB.Extents3d, SOG.Box> _boxConverter;
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public DBCircleToSpeckleRawConverter(
     ITypedConverter<AG.Plane, SOG.Plane> planeConverter,
     ITypedConverter<ADB.Extents3d, SOG.Box> boxConverter,
-    IConversionContextStack<Document, ADB.UnitsValue> contextStack
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _planeConverter = planeConverter;
     _boxConverter = boxConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public Base Convert(object target) => Convert((ADB.Circle)target);
@@ -32,7 +32,7 @@ public class DBCircleToSpeckleRawConverter : ITypedConverter<ADB.Circle, SOG.Cir
       {
         plane = plane,
         radius = target.Radius,
-        units = _contextStack.Current.SpeckleUnits,
+        units = _settingsStore.Current.SpeckleUnits,
         length = target.Circumference,
         bbox = bbox
       };

@@ -1,5 +1,4 @@
-﻿using Rhino;
-using Speckle.Converters.Common;
+﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
@@ -9,7 +8,7 @@ public class ArcToSpeckleConverter : ITypedConverter<RG.Arc, SOG.Arc>
   private readonly ITypedConverter<RG.Point3d, SOG.Point> _pointConverter;
   private readonly ITypedConverter<RG.Plane, SOG.Plane> _planeConverter;
   private readonly ITypedConverter<RG.Box, SOG.Box> _boxConverter;
-  private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
+  private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   private readonly IBoxFactory _boxFactory;
 
@@ -17,14 +16,14 @@ public class ArcToSpeckleConverter : ITypedConverter<RG.Arc, SOG.Arc>
     ITypedConverter<RG.Point3d, SOG.Point> pointConverter,
     ITypedConverter<RG.Plane, SOG.Plane> planeConverter,
     ITypedConverter<RG.Box, SOG.Box> boxConverter,
-    IConversionContextStack<RhinoDoc, UnitSystem> contextStack,
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore,
     IBoxFactory boxFactory
   )
   {
     _pointConverter = pointConverter;
     _planeConverter = planeConverter;
     _boxConverter = boxConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
     _boxFactory = boxFactory;
   }
 
@@ -43,7 +42,7 @@ public class ArcToSpeckleConverter : ITypedConverter<RG.Arc, SOG.Arc>
       target.StartAngle,
       target.EndAngle,
       target.Angle,
-      _contextStack.Current.SpeckleUnits
+      _settingsStore.Current.SpeckleUnits
     )
     {
       startPoint = _pointConverter.Convert(target.StartPoint),
