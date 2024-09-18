@@ -123,7 +123,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     {
       foreach (var (path, obj) in atomicObjectsWithPath)
       {
-        using (var convertActivity = SpeckleActivityFactory.Start("Converting object"))
+        using (var convertActivity = _activityFactory.Start("Converting object"))
         {
           onOperationProgressed?.Invoke("Converting objects", (double)++count / atomicObjects.Count);
           try
@@ -168,12 +168,12 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
             // 5: populate app id map
             applicationIdMap[obj.applicationId ?? obj.id] = conversionIds;
-            convertActivity?.SetStatus(SpeckleActivityStatusCode.Ok);
+            convertActivity?.SetStatus(SdkActivityStatusCode.Ok);
           }
           catch (Exception ex) when (!ex.IsFatal())
           {
             conversionResults.Add(new(Status.ERROR, obj, null, null, ex));
-            convertActivity?.SetStatus(SpeckleActivityStatusCode.Error);
+            convertActivity?.SetStatus(SdkActivityStatusCode.Error);
             convertActivity?.RecordException(ex);
           }
         }

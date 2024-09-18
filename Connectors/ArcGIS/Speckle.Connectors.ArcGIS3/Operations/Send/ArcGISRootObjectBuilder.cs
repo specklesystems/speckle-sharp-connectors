@@ -31,6 +31,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
   private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
   private readonly MapMembersUtils _mapMemberUtils;
   private readonly ILogger<ArcGISRootObjectBuilder> _logger;
+  private readonly ISdkActivityFactory _activityFactory;
 
   public ArcGISRootObjectBuilder(
     ISendConversionCache sendConversionCache,
@@ -38,7 +39,8 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     IConverterSettingsStore<ArcGISConversionSettings> settingsStore,
     IRootToSpeckleConverter rootToSpeckleConverter,
     MapMembersUtils mapMemberUtils,
-    ILogger<ArcGISRootObjectBuilder> logger
+    ILogger<ArcGISRootObjectBuilder> logger,
+    ISdkActivityFactory activityFactory
   )
   {
     _sendConversionCache = sendConversionCache;
@@ -47,6 +49,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     _rootToSpeckleConverter = rootToSpeckleConverter;
     _mapMemberUtils = mapMemberUtils;
     _logger = logger;
+    _activityFactory = activityFactory;
   }
 
 #pragma warning disable CA1506
@@ -76,13 +79,13 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     );
 
     onOperationProgressed?.Invoke("Converting", null);
-    using (var __ = SpeckleActivityFactory.Start("Converting objects"))
+    using (var __ = _activityFactory.Start("Converting objects"))
     {
       foreach ((MapMember mapMember, _) in layersWithDisplayPriority)
       {
         ct.ThrowIfCancellationRequested();
 
-        using (var convertingActivity = SpeckleActivityFactory.Start("Converting object"))
+        using (var convertingActivity = _activityFactory.Start("Converting object"))
         {
           var collectionHost = rootObjectCollection;
           string applicationId = mapMember.URI;
@@ -168,13 +171,13 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
             }
 
             results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
-            convertingActivity?.SetStatus(SpeckleActivityStatusCode.Ok);
+            convertingActivity?.SetStatus(SdkActivityStatusCode.Ok);
           }
           catch (Exception ex) when (!ex.IsFatal())
           {
             _logger.LogSendConversionError(ex, sourceType);
             results.Add(new(Status.ERROR, applicationId, sourceType, null, ex));
-            convertingActivity?.SetStatus(SpeckleActivityStatusCode.Error);
+            convertingActivity?.SetStatus(SdkActivityStatusCode.Error);
             convertingActivity?.RecordException(ex);
           }
         }
