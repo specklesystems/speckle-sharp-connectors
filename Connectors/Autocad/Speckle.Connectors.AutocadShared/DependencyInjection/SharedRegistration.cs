@@ -21,7 +21,7 @@ namespace Speckle.Connectors.Autocad.DependencyInjection;
 
 public static class SharedRegistration
 {
-  public static void AddAutocad(this IServiceCollection serviceCollection)
+  public static void AddAutocadBase(this IServiceCollection serviceCollection)
   {
     serviceCollection.AddConnectorUtils();
     serviceCollection.AddDUI();
@@ -60,6 +60,7 @@ public static class SharedRegistration
     serviceCollection.AddSingleton<IBinding, AutocadSelectionBinding>();
     serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
     serviceCollection.AddSingleton<IBasicConnectorBinding, AutocadBasicConnectorBinding>();
+    serviceCollection.AddSingleton<IBinding, ConfigBinding>();
   
     serviceCollection.RegisterTopLevelExceptionHandler();
   }

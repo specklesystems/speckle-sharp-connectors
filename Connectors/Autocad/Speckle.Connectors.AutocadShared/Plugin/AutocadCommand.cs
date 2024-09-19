@@ -5,8 +5,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Autocad.DependencyInjection;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI.WebView;
+#if AUTOCAD
 using Speckle.Converters.Autocad;
-
+#elif CIVIL3D
+using Speckle.Converters.Civil3d;
+#endif
 namespace Speckle.Connectors.Autocad.Plugin;
 
 public class AutocadCommand
@@ -36,8 +39,13 @@ public class AutocadCommand
     // init DI
     var services = new ServiceCollection();
     _disposableLogger = services.Initialize(AppUtils.App, AppUtils.Version);
+    #if AUTOCAD
     services.AddAutocad();
     services.AddAutocadConverters();
+#elif CIVIL3D
+    services.AddCivil3d();
+    services.AddCivil3dConverters();
+    #endif
     Container = services.BuildServiceProvider();
 
     var panelWebView = Container.GetRequiredService<DUI3ControlWebView>();
