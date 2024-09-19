@@ -94,10 +94,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
   public SendBindingUICommands Commands { get; }
 
-  // yes we know Send function calls many different namespace, we know. But currently I don't see any simplification area we can work on!
-#pragma warning disable CA1506
   public async Task Send(string modelCardId)
-#pragma warning restore CA1506
   {
     // Note: removed top level handling thing as it was confusing me
     try
