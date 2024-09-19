@@ -321,7 +321,6 @@
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[3.1.0, )",
-          "Speckle.Autofac": "[1.0.0, )",
           "Speckle.Objects": "[3.1.0-dev.142, )"
         }
       },

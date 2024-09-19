@@ -305,7 +305,6 @@
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[3.1.0, )",
-          "Speckle.Autofac": "[1.0.0, )",
           "Speckle.Objects": "[3.1.0-dev.142, )"
         }
       },
@@ -321,15 +320,6 @@
         "dependencies": {
           "RhinoCommon": "[8.9.24194.18121, )",
           "Speckle.Converters.Common": "[1.0.0, )"
-        }
-      },
-      "Autofac": {
-        "type": "CentralTransitive",
-        "requested": "[5.2.0, )",
-        "resolved": "5.2.0",
-        "contentHash": "V8dBH0dsv75uDzl7Sw+HkhKDPUw2eXnlMjcSVMH+tLo2s67MpTKGyDj1pDcpR+IF2u4YRs0s3/x7R88YJzIWvg==",
-        "dependencies": {
-          "Microsoft.Bcl.AsyncInterfaces": "1.1.0"
         }
       },
       "Microsoft.Extensions.Logging": {

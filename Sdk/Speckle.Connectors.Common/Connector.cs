@@ -1,7 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Common.Common;
 using Speckle.Connectors.Logging;
 using Speckle.Objects.Geometry;
@@ -24,9 +23,9 @@ public static class Connector
   public static HostApplication HostApp { get; private set; }
 
   public static IDisposable? Initialize(
+    this IServiceCollection serviceCollection,
     HostApplication application,
-    HostAppVersion version,
-    SpeckleContainerBuilder builder
+    HostAppVersion version
   )
   {
     Version = version;
@@ -57,12 +56,9 @@ public static class Connector
       )
     );
 
-    IServiceCollection serviceCollection = new ServiceCollection();
     serviceCollection.AddLogging(x => x.AddProvider(new SpeckleLogProvider(logging)));
     serviceCollection.AddSpeckleSdk(application, version);
     serviceCollection.AddSingleton<Speckle.Sdk.Logging.ISdkActivityFactory, ConnectorActivityFactory>();
-    //do this last
-    builder.ContainerBuilder.Populate(serviceCollection);
     return tracing;
   }
 }

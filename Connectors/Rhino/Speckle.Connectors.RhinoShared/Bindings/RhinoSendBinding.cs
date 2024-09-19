@@ -1,9 +1,9 @@
 using System.Collections.Concurrent;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.Commands;
 using Rhino.DocObjects;
-using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
@@ -32,7 +32,7 @@ public sealed class RhinoSendBinding : ISendBinding
 
   private readonly DocumentModelStore _store;
   private readonly IRhinoIdleManager _idleManager;
-  private readonly IUnitOfWorkFactory _unitOfWorkFactory;
+  private readonly IServiceProvider _serviceProvider;
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
   private readonly ISendConversionCache _sendConversionCache;
@@ -54,7 +54,7 @@ public sealed class RhinoSendBinding : ISendBinding
     IRhinoIdleManager idleManager,
     IBridge parent,
     IEnumerable<ISendFilter> sendFilters,
-    IUnitOfWorkFactory unitOfWorkFactory,
+    IServiceProvider serviceProvider,
     CancellationManager cancellationManager,
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
@@ -64,7 +64,7 @@ public sealed class RhinoSendBinding : ISendBinding
   {
     _store = store;
     _idleManager = idleManager;
-    _unitOfWorkFactory = unitOfWorkFactory;
+    _serviceProvider = serviceProvider;
     _sendFilters = sendFilters.ToList();
     _cancellationManager = cancellationManager;
     _sendConversionCache = sendConversionCache;
@@ -152,9 +152,9 @@ public sealed class RhinoSendBinding : ISendBinding
 
   public async Task Send(string modelCardId)
   {
-    using var unitOfWork = _unitOfWorkFactory.Create();
-    unitOfWork
-      .Resolve<IConverterSettingsStore<RhinoConversionSettings>>()
+    using var scope = _serviceProvider.CreateScope();
+    scope
+      .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
       .Initialize(_rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
     try
     {
@@ -179,8 +179,8 @@ public sealed class RhinoSendBinding : ISendBinding
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
       }
 
-      var sendResult = await unitOfWork
-        .Resolve<SendOperation<RhinoObject>>()
+      var sendResult = await scope
+        .ServiceProvider.GetRequiredService<SendOperation<RhinoObject>>()
         .Execute(
           rhinoObjects,
           modelCard.GetSendInfo(Connector.Slug),

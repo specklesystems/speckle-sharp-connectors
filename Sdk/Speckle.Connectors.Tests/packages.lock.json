@@ -321,16 +321,9 @@
         "resolved": "5.0.2",
         "contentHash": "I47dVIGiV6SfAyppphxqupertT/5oZkYLDCX6vC3HpOI4ZLjyoKAreUoem2ie6G0RbRuFrlqz/PcTQjfb2DOfQ=="
       },
-      "speckle.autofac": {
-        "type": "Project",
-        "dependencies": {
-          "Autofac": "[5.2.0, )"
-        }
-      },
       "speckle.connectors.common": {
         "type": "Project",
         "dependencies": {
-          "Speckle.Autofac": "[1.0.0, )",
           "Speckle.Connectors.Logging": "[1.0.0, )",
           "Speckle.Objects": "[3.1.0-dev.142, )",
           "Speckle.Sdk": "[3.1.0-dev.142, )"

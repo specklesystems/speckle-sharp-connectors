@@ -1,16 +1,18 @@
-using Speckle.Autofac.DependencyInjection;
+using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Newtonsoft.Json;
 using Speckle.Newtonsoft.Json.Serialization;
+using Speckle.Sdk;
 using Speckle.Sdk.Transports;
 
 namespace Speckle.Connectors.DUI;
 
 public static class ContainerRegistration
-{
+{ /*
   public static void AddDUI(this SpeckleContainerBuilder speckleContainerBuilder)
   {
     // send operation and dependencies
@@ -20,6 +22,18 @@ public static class ContainerRegistration
     speckleContainerBuilder.AddSingleton(GetJsonSerializerSettings());
     speckleContainerBuilder.ScanAssemblyOfType<IdleCallManager>();
     speckleContainerBuilder.ScanAssemblyOfType<IServerTransportFactory>();
+  }
+*/
+  public static void AddDUI(this IServiceCollection serviceCollection)
+  {
+    // send operation and dependencies
+    serviceCollection.AddSingleton<ISyncToThread, SyncToUIThread>();
+    serviceCollection.AddSingleton<IRootObjectSender, RootObjectSender>();
+    serviceCollection.AddTransient<IBridge, BrowserBridge>(); // POC: Each binding should have it's own bridge instance
+    serviceCollection.AddSingleton(GetJsonSerializerSettings());
+
+    serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetAssembly(typeof(IdleCallManager)));
+    serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetAssembly(typeof(IServerTransportFactory)));
   }
 
   private static JsonSerializerSettings GetJsonSerializerSettings()

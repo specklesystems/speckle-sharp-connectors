@@ -1,6 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Rhino;
-using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Cancellation;
@@ -23,7 +23,7 @@ public class RhinoReceiveBinding : IReceiveBinding
 
   private readonly CancellationManager _cancellationManager;
   private readonly DocumentModelStore _store;
-  private readonly IUnitOfWorkFactory _unitOfWorkFactory;
+  private readonly IServiceProvider _serviceProvider;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<RhinoReceiveBinding> _logger;
   private readonly IRhinoConversionSettingsFactory _rhinoConversionSettingsFactory;
@@ -33,18 +33,18 @@ public class RhinoReceiveBinding : IReceiveBinding
     DocumentModelStore store,
     CancellationManager cancellationManager,
     IBridge parent,
-    IUnitOfWorkFactory unitOfWorkFactory,
     IOperationProgressManager operationProgressManager,
     ILogger<RhinoReceiveBinding> logger,
-    IRhinoConversionSettingsFactory rhinoConversionSettingsFactory
+    IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
+    IServiceProvider serviceProvider
   )
   {
     Parent = parent;
     _store = store;
-    _unitOfWorkFactory = unitOfWorkFactory;
     _operationProgressManager = operationProgressManager;
     _logger = logger;
     _rhinoConversionSettingsFactory = rhinoConversionSettingsFactory;
+    _serviceProvider = serviceProvider;
     _cancellationManager = cancellationManager;
     Commands = new ReceiveBindingUICommands(parent);
   }
@@ -53,9 +53,9 @@ public class RhinoReceiveBinding : IReceiveBinding
 
   public async Task Receive(string modelCardId)
   {
-    using var unitOfWork = _unitOfWorkFactory.Create();
-    unitOfWork
-      .Resolve<IConverterSettingsStore<RhinoConversionSettings>>()
+    using var scope = _serviceProvider.CreateScope();
+    scope
+      .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
       .Initialize(_rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
     try
     {
@@ -69,8 +69,8 @@ public class RhinoReceiveBinding : IReceiveBinding
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
       // Receive host objects
-      HostObjectBuilderResult conversionResults = await unitOfWork
-        .Resolve<ReceiveOperation>()
+      HostObjectBuilderResult conversionResults = await scope
+        .ServiceProvider.GetRequiredService<ReceiveOperation>()
         .Execute(
           modelCard.GetReceiveInfo(Connector.Slug),
           cancellationToken,

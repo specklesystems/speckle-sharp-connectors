@@ -1,6 +1,6 @@
 using Speckle.Autofac.DependencyInjection;
-using Speckle.Converters.Common.DependencyInjection.ToHost;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Registration;
 
 namespace Speckle.Converters.Common.DependencyInjection;
 

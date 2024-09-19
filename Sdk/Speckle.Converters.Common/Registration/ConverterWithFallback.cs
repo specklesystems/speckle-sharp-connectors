@@ -5,7 +5,7 @@ using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Extensions;
 
-namespace Speckle.Converters.Common.DependencyInjection.ToHost;
+namespace Speckle.Converters.Common.Registration;
 
 // POC: CNX-9394 Find a better home for this outside `DependencyInjection` project
 /// <summary>

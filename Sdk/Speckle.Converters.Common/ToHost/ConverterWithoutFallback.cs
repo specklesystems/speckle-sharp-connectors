@@ -2,23 +2,24 @@
 using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common.Extensions;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Registration;
 using Speckle.Sdk.Models;
 
-namespace Speckle.Converters.Common.DependencyInjection.ToHost;
+namespace Speckle.Converters.Common.ToHost;
 
 // POC: CNX-9394 Find a better home for this outside `DependencyInjection` project
 /// <summary>
 /// Provides an implementation for <see cref="IRootToHostConverter"/>
-/// that resolves a <see cref="IToHostTopLevelConverter"/> via the injected <see cref="IConverterResolver{TConverter}"/>
+/// that resolves a <see cref="IToHostTopLevelConverter"/> via the injected <see cref="IConverterManager{TConverter}"/>
 /// </summary>
 /// <seealso cref="ConverterWithFallback"/>
 public sealed class ConverterWithoutFallback : IRootToHostConverter
 {
-  private readonly IConverterResolver<IToHostTopLevelConverter> _toHost;
+  private readonly IConverterManager<IToHostTopLevelConverter> _toHost;
   private readonly ILogger _logger;
 
   public ConverterWithoutFallback(
-    IConverterResolver<IToHostTopLevelConverter> converterResolver,
+    IConverterManager<IToHostTopLevelConverter> converterResolver,
     ILogger<ConverterWithoutFallback> logger
   )
   {
@@ -40,7 +41,7 @@ public sealed class ConverterWithoutFallback : IRootToHostConverter
   internal bool TryGetConverter(Type target, [NotNullWhen(true)] out IToHostTopLevelConverter? result)
   {
     // Direct conversion if a converter is found
-    var objectConverter = _toHost.GetConversionForType(target);
+    var objectConverter = _toHost.ResolveConverter(target.Name);
     if (objectConverter != null)
     {
       result = objectConverter;

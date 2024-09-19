@@ -321,16 +321,9 @@
         "resolved": "5.0.2",
         "contentHash": "I47dVIGiV6SfAyppphxqupertT/5oZkYLDCX6vC3HpOI4ZLjyoKAreUoem2ie6G0RbRuFrlqz/PcTQjfb2DOfQ=="
       },
-      "speckle.autofac": {
-        "type": "Project",
-        "dependencies": {
-          "Autofac": "[5.2.0, )"
-        }
-      },
       "speckle.connectors.common": {
         "type": "Project",
         "dependencies": {
-          "Speckle.Autofac": "[1.0.0, )",
           "Speckle.Connectors.Logging": "[1.0.0, )",
           "Speckle.Objects": "[3.1.0-dev.142, )",
           "Speckle.Sdk": "[3.1.0-dev.142, )"
@@ -340,7 +333,6 @@
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[3.1.0, )",
-          "Speckle.Autofac": "[1.0.0, )",
           "Speckle.Connectors.Common": "[1.0.0, )",
           "Speckle.Sdk": "[3.1.0-dev.142, )",
           "System.Threading.Tasks.Dataflow": "[6.0.0, )"
@@ -355,12 +347,6 @@
           "Moq": "[4.20.70, )",
           "NUnit": "[4.1.0, )"
         }
-      },
-      "Autofac": {
-        "type": "CentralTransitive",
-        "requested": "[5.2.0, )",
-        "resolved": "5.2.0",
-        "contentHash": "V8dBH0dsv75uDzl7Sw+HkhKDPUw2eXnlMjcSVMH+tLo2s67MpTKGyDj1pDcpR+IF2u4YRs0s3/x7R88YJzIWvg=="
       },
       "Microsoft.Extensions.Logging": {
         "type": "CentralTransitive",

@@ -8,7 +8,6 @@
     <PackageReference Include="Autofac" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Speckle.Autofac\Speckle.Autofac.csproj" />
     <ProjectReference Include="..\Speckle.Connectors.Logging\Speckle.Connectors.Logging.csproj" />
   </ItemGroup>
     <ItemGroup Condition="'$(Configuration)' == 'Local'"> 

@@ -1,12 +1,9 @@
-using System.IO;
-using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 using Rhino.PlugIns;
-using Speckle.Autofac;
-using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Rhino.DependencyInjection;
+using Speckle.Converters.Rhino;
 using Speckle.Sdk;
-using Speckle.Sdk.Common;
 using Speckle.Sdk.Host;
 using Speckle.Sdk.Models.Extensions;
 
@@ -26,7 +23,7 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
   private IDisposable? _disposableLogger;
 
   protected override string LocalPlugInName => "Speckle (Beta) for Rhino";
-  public SpeckleContainer? Container { get; private set; }
+  public ServiceProvider? Container { get; private set; }
 
   public SpeckleConnectorsRhinoPlugin()
   {
@@ -47,20 +44,17 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
     try
     {
       AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<SpeckleConnectorsRhinoPlugin>;
-      var builder = SpeckleContainerBuilder.CreateInstance();
-      _disposableLogger = Connector.Initialize(HostApplications.Rhino, GetVersion(), builder);
+      var services = new ServiceCollection();
+      _disposableLogger = services.Initialize(HostApplications.Rhino, GetVersion());
+      services.AddRhino();
+      services.AddRhinoConverters();
 
       // POC: We must load the Rhino connector module manually because we only search for DLL files when calling `LoadAutofacModules`,
       // but the Rhino connector has `.rhp` as it's extension.
-      Container = builder
-        .LoadAutofacModules(
-          Assembly.GetExecutingAssembly(),
-          [Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location).NotNull()]
-        )
-        .Build();
+      Container = services.BuildServiceProvider();
 
       // Resolve root plugin object and initialise.
-      _rhinoPlugin = Container.Resolve<IRhinoPlugin>();
+      _rhinoPlugin = Container.GetRequiredService<IRhinoPlugin>();
       _rhinoPlugin.Initialise();
 
       return LoadReturnCode.Success;
