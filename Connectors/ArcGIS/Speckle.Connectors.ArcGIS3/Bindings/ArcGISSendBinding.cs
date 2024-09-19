@@ -6,10 +6,9 @@ using ArcGIS.Desktop.Editing.Events;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using ArcGIS.Desktop.Mapping.Events;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.ArcGIS.Filters;
-using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
@@ -36,14 +35,13 @@ public sealed class ArcGISSendBinding : ISendBinding
   public IBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly IUnitOfWorkFactory _unitOfWorkFactory; // POC: unused? :D
+  private readonly IServiceProvider _serviceProvider;
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<ArcGISSendBinding> _logger;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
-  private readonly MapMembersUtils _mapMemberUtils;
   private readonly IArcGISConversionSettingsFactory _arcGISConversionSettingsFactory;
 
   /// <summary>
@@ -61,24 +59,22 @@ public sealed class ArcGISSendBinding : ISendBinding
     DocumentModelStore store,
     IBridge parent,
     IEnumerable<ISendFilter> sendFilters,
-    IUnitOfWorkFactory unitOfWorkFactory,
+    IServiceProvider serviceProvider,
     CancellationManager cancellationManager,
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
     ILogger<ArcGISSendBinding> logger,
-    MapMembersUtils mapMemberUtils,
     IArcGISConversionSettingsFactory arcGisConversionSettingsFactory
   )
   {
     _store = store;
-    _unitOfWorkFactory = unitOfWorkFactory;
+    _serviceProvider = serviceProvider;
     _sendFilters = sendFilters.ToList();
     _cancellationManager = cancellationManager;
     _sendConversionCache = sendConversionCache;
     _operationProgressManager = operationProgressManager;
     _logger = logger;
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
-    _mapMemberUtils = mapMemberUtils;
     _arcGISConversionSettingsFactory = arcGisConversionSettingsFactory;
 
     Parent = parent;
@@ -378,9 +374,9 @@ public sealed class ArcGISSendBinding : ISendBinding
       var sendResult = await QueuedTask
         .Run(async () =>
         {
-          using var unitOfWork = _unitOfWorkFactory.Create();
-          unitOfWork
-            .Resolve<IConverterSettingsStore<ArcGISConversionSettings>>()
+          using var scope = _serviceProvider.CreateScope();
+          scope.ServiceProvider
+            .GetRequiredService<IConverterSettingsStore<ArcGISConversionSettings>>()
             .Initialize(
               _arcGISConversionSettingsFactory.Create(
                 Project.Current,
@@ -416,8 +412,8 @@ public sealed class ArcGISSendBinding : ISendBinding
             }
           }
 
-          var result = await unitOfWork
-            .Resolve<SendOperation<MapMember>>()
+          var result = await scope.ServiceProvider
+            .GetRequiredService<SendOperation<MapMember>>()
             .Execute(
               mapMembers,
               modelCard.GetSendInfo("ArcGIS"), // POC: get host app name from settings? same for GetReceiveInfo

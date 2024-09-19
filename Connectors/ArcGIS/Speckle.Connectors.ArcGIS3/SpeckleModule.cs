@@ -1,10 +1,8 @@
-using System.IO;
-using System.Reflection;
 using ArcGIS.Desktop.Framework;
-using Speckle.Autofac;
-using Speckle.Autofac.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
+using Speckle.Connectors.ArcGIS.DependencyInjection;
 using Speckle.Connectors.Common;
-using Speckle.Sdk.Common;
+using Speckle.Converters.ArcGIS3;
 using Speckle.Sdk.Host;
 using Module = ArcGIS.Desktop.Framework.Contracts.Module;
 
@@ -24,22 +22,18 @@ internal sealed class SpeckleModule : Module
   public static SpeckleModule Current =>
     s_this ??= (SpeckleModule)FrameworkApplication.FindModule("ConnectorArcGIS_Module");
 
-  public SpeckleContainer Container { get; }
+  public ServiceProvider Container { get; }
 
   public SpeckleModule()
   {
     AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<SpeckleModule>;
 
-    var builder = SpeckleContainerBuilder.CreateInstance();
+    var services = new ServiceCollection();
     // init DI
-    _disposableLogger = Connector.Initialize(HostApplications.ArcGIS, GetVersion(), builder);
-
-    Container = builder
-      .LoadAutofacModules(
-        Assembly.GetExecutingAssembly(),
-        [Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location).NotNull()]
-      )
-      .Build();
+    _disposableLogger = services.Initialize(HostApplications.ArcGIS, GetVersion());
+    services.AddArcGIS();
+    services.AddArcGISConverters();
+    Container = services.BuildServiceProvider();
   }
 
   private HostAppVersion GetVersion()

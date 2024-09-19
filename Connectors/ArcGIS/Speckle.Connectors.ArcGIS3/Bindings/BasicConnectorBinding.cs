@@ -2,7 +2,6 @@ using ArcGIS.Core.Data;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Connectors.ArcGIS.Utils;
-using Speckle.Connectors.Common.Common;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
@@ -10,7 +9,6 @@ using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using ArcProject = ArcGIS.Desktop.Core.Project;
-using Connector = Speckle.Connectors.Common.Connector;
 
 namespace Speckle.Connectors.ArcGIS.Bindings;
 
