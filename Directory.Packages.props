@@ -1,7 +1,6 @@
 <Project>
   <ItemGroup>
     <PackageVersion Include="altcover" Version="8.8.173" />
-    <PackageVersion Include="Autofac" Version="5.2.0" />
     <PackageVersion Include="Bullseye" Version="5.0.0" />
     <PackageVersion Include="CefSharp.Wpf" Version="92.0.260" />
     <PackageVersion Include="Esri.ArcGISPro.Extensions30" Version="3.2.0.49743" />

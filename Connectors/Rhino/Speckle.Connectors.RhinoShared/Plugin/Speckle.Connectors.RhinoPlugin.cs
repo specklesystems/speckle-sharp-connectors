@@ -49,7 +49,6 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
       services.AddRhino();
       services.AddRhinoConverters();
 
-      // POC: We must load the Rhino connector module manually because we only search for DLL files when calling `LoadAutofacModules`,
       // but the Rhino connector has `.rhp` as it's extension.
       Container = services.BuildServiceProvider();
 
