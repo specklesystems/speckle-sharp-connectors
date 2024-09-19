@@ -17,6 +17,7 @@ using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
 using Speckle.Connectors.Utils.Operations;
+using Speckle.Converters.Common;
 using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.Revit.DependencyInjection;
@@ -46,7 +47,7 @@ public class RevitConnectorModule : ISpeckleModule
     builder.AddSingleton<IBinding, AccountBinding>();
     builder.AddSingleton<IBinding, SelectionBinding>();
     builder.AddSingleton<IBinding, RevitSendBinding>();
-    // builder.AddSingleton<IBinding, RevitReceiveBinding>(); // TODO: Have it back once we comfortable enough!
+    builder.AddSingleton<IBinding, RevitReceiveBinding>();
     builder.AddSingleton<IRevitIdleManager, RevitIdleManager>();
 
     builder.ContainerBuilder.RegisterType<TopLevelExceptionHandlerBinding>().As<IBinding>().AsSelf().SingleInstance();
@@ -71,7 +72,13 @@ public class RevitConnectorModule : ISpeckleModule
     // receive operation and dependencies
     builder.AddScoped<IHostObjectBuilder, RevitHostObjectBuilder>();
     builder.AddScoped<ITransactionManager, TransactionManager>();
+    builder.AddScoped<RevitGroupBaker>();
+    builder.AddScoped<RevitMaterialBaker>();
+    builder.AddSingleton<RevitUtils>();
+    builder.AddSingleton<IFailuresPreprocessor, HideWarningsFailuresPreprocessor>();
     builder.AddSingleton(DefaultTraversal.CreateTraversalFunc());
+
+    builder.AddScoped<LocalToGlobalConverterUtils>();
 
     // operation progress manager
     builder.AddSingleton<IOperationProgressManager, OperationProgressManager>();
@@ -86,7 +93,7 @@ public class RevitConnectorModule : ISpeckleModule
     builder.AddSingleton<IBrowserScriptExecutor>(c => c.Resolve<CefSharpPanel>());
     builder.AddSingleton<IRevitPlugin, RevitCefPlugin>();
 #else
-    // POC: different versons for different versions of CEF
+    // different versions for different versions of CEF
     builder.AddSingleton(BindingOptions.DefaultBinder);
 
     var panel = new CefSharpPanel();

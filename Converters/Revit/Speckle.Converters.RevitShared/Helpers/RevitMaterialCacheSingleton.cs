@@ -18,6 +18,11 @@ public class RevitMaterialCacheSingleton
   public Dictionary<string, Dictionary<string, RenderMaterialProxy>> ObjectRenderMaterialProxiesMap { get; } = new();
 
   /// <summary>
+  /// POC: The map we mutate PER RECEIVE operation, this smells a LOT! Once we have better conversion context stack that we can manage our data between connector - converter, this property must go away!
+  /// </summary>
+  public Dictionary<string, DB.ElementId> ObjectIdAndMaterialIndexMap { get; } = new();
+
+  /// <summary>
   /// map (DB.Material id, RevitMaterial). This can be generated from converting render materials or material quantities.
   /// </summary>
   public Dictionary<string, RevitMaterial> ConvertedRevitMaterialMap { get; } = new();
