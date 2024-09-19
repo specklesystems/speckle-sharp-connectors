@@ -22,18 +22,24 @@ public sealed class RootObjectSender : IRootObjectSender
   private readonly ISendConversionCache _sendConversionCache;
   private readonly AccountService _accountService;
   private readonly IProgressDisplayManager _progressDisplayManager;
+  private readonly IOperations _operations;
+  private readonly IClientFactory _clientFactory;
 
   public RootObjectSender(
     IServerTransportFactory transportFactory,
     ISendConversionCache sendConversionCache,
     AccountService accountService,
-    IProgressDisplayManager progressDisplayManager
+    IProgressDisplayManager progressDisplayManager,
+    IOperations operations,
+    IClientFactory clientFactory
   )
   {
     _transportFactory = transportFactory;
     _sendConversionCache = sendConversionCache;
     _accountService = accountService;
     _progressDisplayManager = progressDisplayManager;
+    _operations = operations;
+    _clientFactory = clientFactory;
   }
 
   /// <summary>
@@ -57,8 +63,8 @@ public sealed class RootObjectSender : IRootObjectSender
     using var transport = _transportFactory.Create(account, sendInfo.ProjectId, 60, null);
 
     _progressDisplayManager.Begin();
-    var sendResult = await Sdk
-      .Api.Operations.Send(
+    var sendResult = await _operations
+      .Send(
         commitObject,
         transport,
         true,
@@ -107,7 +113,7 @@ public sealed class RootObjectSender : IRootObjectSender
     onOperationProgressed?.Invoke("Linking version to model...", null);
 
     // 8 - Create the version (commit)
-    using var apiClient = new Client(account);
+    using var apiClient = _clientFactory.Create(account);
     _ = await apiClient
       .Version.Create(
         new CreateVersionInput(

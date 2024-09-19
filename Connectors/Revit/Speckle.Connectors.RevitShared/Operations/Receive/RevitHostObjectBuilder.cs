@@ -7,7 +7,7 @@ using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Instances;
 using Speckle.Connectors.Utils.Operations.Receive;
 using Speckle.Converters.Common;
-using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -18,7 +18,7 @@ namespace Speckle.Connectors.Revit.Operations.Receive;
 internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 {
   private readonly IRootToHostConverter _converter;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly GraphTraversal _traverseFunction;
   private readonly ITransactionManager _transactionManager;
   private readonly ILocalToGlobalUnpacker _localToGlobalUnpacker;
@@ -28,12 +28,15 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   private readonly ILogger<RevitHostObjectBuilder> _logger;
 
   private readonly RootObjectUnpacker _rootObjectUnpacker;
+  private readonly ISdkActivityFactory _activityFactory;
 
   public RevitHostObjectBuilder(
     IRootToHostConverter converter,
-    IRevitConversionContextStack contextStack,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     GraphTraversal traverseFunction,
     ITransactionManager transactionManager,
+    ISyncToThread syncToThread,
+    ISdkActivityFactory activityFactory,
     ILocalToGlobalUnpacker localToGlobalUnpacker,
     LocalToGlobalConverterUtils localToGlobalConverterUtils,
     RevitGroupBaker groupManager,
@@ -43,15 +46,17 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   )
   {
     _converter = converter;
-    _contextStack = contextStack;
+    _converterSettings = converterSettings;
     _traverseFunction = traverseFunction;
     _transactionManager = transactionManager;
+    _syncToThread = syncToThread;
     _localToGlobalUnpacker = localToGlobalUnpacker;
     _localToGlobalConverterUtils = localToGlobalConverterUtils;
     _groupBaker = groupManager;
     _materialBaker = materialBaker;
     _rootObjectUnpacker = rootObjectUnpacker;
     _logger = logger;
+    _activityFactory = activityFactory;
   }
 
   public Task<HostObjectBuilderResult> Build(
@@ -103,7 +108,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       unpackedRoot.ObjectsToConvert.ToList()
     );
 
-    using TransactionGroup transactionGroup = new(_contextStack.Current.Document, $"Received data from {projectName}");
+    using TransactionGroup transactionGroup = new(_converterSettings.Current.Document, $"Received data from {projectName}");
     transactionGroup.Start();
     _transactionManager.StartTransaction();
 

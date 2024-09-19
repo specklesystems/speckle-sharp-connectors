@@ -7,15 +7,15 @@ namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 public class BoxToSpeckleRawConverter : ITypedConverter<ADB.Extents3d, SOG.Box>
 {
   private readonly ITypedConverter<AG.Plane, SOG.Plane> _planeConverter;
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public BoxToSpeckleRawConverter(
     ITypedConverter<AG.Plane, SOG.Plane> planeConverter,
-    IConversionContextStack<Document, ADB.UnitsValue> contextStack
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _planeConverter = planeConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public Base Convert(object target) => Convert((ADB.Extents3d)target);
@@ -29,7 +29,7 @@ public class BoxToSpeckleRawConverter : ITypedConverter<ADB.Extents3d, SOG.Box>
     double volume = xSize.Length * ySize.Length * zSize.Length;
 
     // get the base plane of the bounding box from extents and current UCS
-    var ucs = _contextStack.Current.Document.Editor.CurrentUserCoordinateSystem.CoordinateSystem3d;
+    var ucs = _settingsStore.Current.Document.Editor.CurrentUserCoordinateSystem.CoordinateSystem3d;
     AG.Plane acadPlane = new(target.MinPoint, ucs.Xaxis, ucs.Yaxis);
     SOG.Plane plane = _planeConverter.Convert(acadPlane);
 
@@ -40,7 +40,7 @@ public class BoxToSpeckleRawConverter : ITypedConverter<ADB.Extents3d, SOG.Box>
         xSize = xSize,
         ySize = ySize,
         zSize = zSize,
-        units = _contextStack.Current.SpeckleUnits,
+        units = _settingsStore.Current.SpeckleUnits,
         volume = volume,
       };
 

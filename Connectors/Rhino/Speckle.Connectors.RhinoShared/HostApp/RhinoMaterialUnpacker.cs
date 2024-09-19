@@ -86,21 +86,55 @@ public class RhinoMaterialUnpacker
     {
       try
       {
-        var material = layer.RenderMaterial;
-        if (material is null)
+        // 1. Try to create from RenderMaterial
+        var renderMaterial = layer.RenderMaterial;
+        if (renderMaterial is not null)
+        {
+          if (renderMaterialProxies.TryGetValue(renderMaterial.Id.ToString(), out RenderMaterialProxy? value))
+          {
+            value.objects.Add(layer.Id.ToString());
+          }
+          else
+          {
+            renderMaterialProxies[renderMaterial.Id.ToString()] = new RenderMaterialProxy()
+            {
+              value = ConvertRenderMaterialToSpeckle(renderMaterial),
+              objects = [layer.Id.ToString()]
+            };
+          }
+
+          continue;
+        }
+
+        // 2. As fallback, try to create from index
+        // ON RECEIVE: when creating a layer on receive we cannot set RenderMaterial to layer. (RhinoCommon API limitation, it tested)
+        // We can only set render material index of layer. So for the second send, we also need to check its index!
+        var renderMaterialIndex = layer.RenderMaterialIndex;
+        if (renderMaterialIndex == -1)
         {
           continue;
         }
 
-        if (renderMaterialProxies.TryGetValue(material.Id.ToString(), out RenderMaterialProxy? value))
+        var renderMaterialFromIndex = RhinoDoc.ActiveDoc.Materials[renderMaterialIndex];
+        if (renderMaterialFromIndex is null)
         {
-          value.objects.Add(layer.Id.ToString());
+          continue;
+        }
+
+        if (
+          renderMaterialProxies.TryGetValue(
+            renderMaterialFromIndex.Id.ToString(),
+            out RenderMaterialProxy? renderMaterialProxy
+          )
+        )
+        {
+          renderMaterialProxy.objects.Add(layer.Id.ToString());
         }
         else
         {
-          renderMaterialProxies[material.Id.ToString()] = new RenderMaterialProxy()
+          renderMaterialProxies[renderMaterialFromIndex.Id.ToString()] = new RenderMaterialProxy()
           {
-            value = ConvertRenderMaterialToSpeckle(material),
+            value = ConvertRenderMaterialToSpeckle(ConvertMaterialToRenderMaterial(renderMaterialFromIndex)),
             objects = [layer.Id.ToString()]
           };
         }

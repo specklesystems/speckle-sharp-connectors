@@ -13,6 +13,7 @@ namespace Speckle.Connectors.Autocad.Bindings;
 
 public class AutocadBasicConnectorBinding : IBasicConnectorBinding
 {
+  private readonly IAccountManager _accountManager;
   public string Name { get; set; } = "baseBinding";
   public IBridge Parent { get; }
 
@@ -20,10 +21,11 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
 
   public BasicConnectorBindingCommands Commands { get; }
 
-  public AutocadBasicConnectorBinding(DocumentModelStore store, IBridge parent)
+  public AutocadBasicConnectorBinding(DocumentModelStore store, IBridge parent, IAccountManager accountManager)
   {
     _store = store;
     Parent = parent;
+    _accountManager = accountManager;
     Commands = new BasicConnectorBindingCommands(parent);
     _store.DocumentChanged += (_, _) =>
     {
@@ -37,7 +39,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
 
   public string GetSourceApplicationVersion() => Utils.Connector.VersionString;
 
-  public Account[] GetAccounts() => AccountManager.GetAccounts().ToArray();
+  public Account[] GetAccounts() => _accountManager.GetAccounts().ToArray();
 
   public DocumentInfo? GetDocumentInfo()
   {

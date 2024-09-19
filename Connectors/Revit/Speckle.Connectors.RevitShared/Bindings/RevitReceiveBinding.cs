@@ -9,6 +9,7 @@ using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Cancellation;
 using Speckle.Connectors.Utils.Operations;
+using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
 
@@ -24,6 +25,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
   private readonly CancellationManager _cancellationManager;
   private readonly DocumentModelStore _store;
   private readonly IUnitOfWorkFactory _unitOfWorkFactory;
+  private readonly IRevitConversionSettingsFactory _revitConversionSettingsFactory;
   private ReceiveBindingUICommands Commands { get; }
 
   public RevitReceiveBinding(
@@ -32,7 +34,8 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
     IBridge parent,
     IUnitOfWorkFactory unitOfWorkFactory,
     IOperationProgressManager operationProgressManager,
-    ILogger<RevitReceiveBinding> logger
+    ILogger<RevitReceiveBinding> logger,
+    IRevitConversionSettingsFactory revitConversionSettingsFactory
   )
   {
     Parent = parent;
@@ -40,6 +43,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
     _unitOfWorkFactory = unitOfWorkFactory;
     _operationProgressManager = operationProgressManager;
     _logger = logger;
+    _revitConversionSettingsFactory = revitConversionSettingsFactory;
     _cancellationManager = cancellationManager;
 
     Commands = new ReceiveBindingUICommands(parent);
@@ -49,12 +53,6 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
 
   public async Task Receive(string modelCardId)
   {
-    using var unitOfWork = _unitOfWorkFactory.Resolve<ReceiveOperation>(b =>
-    {
-      b.RegisterType<ToSpeckleSettings>().SingleInstance();
-      b.Register(c => new ToSpeckleSettings(default, null));
-    });
-
     try
     {
       // Get receiver card
@@ -66,9 +64,19 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
 
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
+      using var unitOfWork = _unitOfWorkFactory.Create();
+      unitOfWork
+        .Resolve<IConverterSettingsStore<RevitConversionSettings>>()
+        .Initialize(
+          _revitConversionSettingsFactory.Create(
+            DetailLevelType.Coarse, //TODO figure out
+            null
+          )
+        );
       // Receive host objects
       HostObjectBuilderResult conversionResults = await unitOfWork
-        .Service.Execute(
+        .Resolve<ReceiveOperation>()
+        .Execute(
           modelCard.GetReceiveInfo(Speckle.Connectors.Utils.Connector.Slug),
           cancellationToken,
           (status, progress) =>

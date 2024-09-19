@@ -6,7 +6,7 @@ using Speckle.Connectors.DUI.Bridge;
 
 namespace Speckle.Connectors.DUI.WebView;
 
-public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExecutor
+public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExecutor, IDisposable
 {
   private readonly IEnumerable<Lazy<IBinding>> _bindings;
 
@@ -58,4 +58,7 @@ public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExec
   }
 
   public void ShowDevTools() => Browser.CoreWebView2.OpenDevToolsWindow();
+
+  //https://github.com/MicrosoftEdge/WebView2Feedback/issues/2161
+  public void Dispose() => Browser.Dispatcher.Invoke(() => Browser.Dispose(), DispatcherPriority.Send);
 }

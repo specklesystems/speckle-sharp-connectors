@@ -1,9 +1,8 @@
-﻿using Speckle.InterfaceGenerator;
+﻿using System.Diagnostics.CodeAnalysis;
 using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.Utils.Instances;
 
-[GenerateAutoInterface]
 public class InstanceObjectsManager<THostObjectType, TAppIdMapValueType>
   : IInstanceObjectsManager<THostObjectType, TAppIdMapValueType>
 {
@@ -28,27 +27,30 @@ public class InstanceObjectsManager<THostObjectType, TAppIdMapValueType>
 
   public bool TryGetInstanceProxiesFromDefinitionId(
     string definitionId,
-    out List<InstanceProxy> instanceProxiesWithSameDefinition
+    [NotNullWhen(true)] out List<InstanceProxy>? instanceProxiesWithSameDefinition
   )
   {
-    instanceProxiesWithSameDefinition = new List<InstanceProxy>();
     if (_instanceProxiesByDefinitionId.TryGetValue(definitionId, out List<InstanceProxy> value))
     {
       instanceProxiesWithSameDefinition = value;
       return true;
     }
+    instanceProxiesWithSameDefinition = null;
     return false;
   }
 
-  public bool TryGetInstanceDefinitionProxy(string definitionId, out InstanceDefinitionProxy instanceDefinitionProxy)
+  public bool TryGetInstanceDefinitionProxy(
+    string definitionId,
+    [NotNullWhen(true)] out InstanceDefinitionProxy? instanceDefinitionProxy
+  )
   {
-    instanceDefinitionProxy = new InstanceDefinitionProxy();
     if (_definitionProxies.TryGetValue(definitionId, out InstanceDefinitionProxy value))
     {
       instanceDefinitionProxy = value;
       return true;
     }
 
+    instanceDefinitionProxy = null;
     return false;
   }
 

@@ -16,16 +16,15 @@ namespace Speckle.Converters.ArcGIS3.Utils;
 public struct CRSoffsetRotation
 {
   public ACG.SpatialReference SpatialReference { get; }
-  public string SpeckleUnitString { get; set; }
   public double LatOffset { get; set; }
   public double LonOffset { get; set; }
   public double TrueNorthRadians { get; set; }
 
-  public SOG.Point OffsetRotateOnReceive(SOG.Point pointOriginal)
+  public SOG.Point OffsetRotateOnReceive(SOG.Point pointOriginal, string speckleUnitString)
   {
     // scale point to match units of the SpatialReference
     string originalUnits = pointOriginal.units;
-    SOG.Point point = ScalePoint(pointOriginal, originalUnits, SpeckleUnitString);
+    SOG.Point point = ScalePoint(pointOriginal, originalUnits, speckleUnitString);
 
     // 1. rotate coordinates
     NormalizeAngle();
@@ -34,16 +33,16 @@ public struct CRSoffsetRotation
     // 2. offset coordinates
     x2 += LonOffset;
     y2 += LatOffset;
-    SOG.Point movedPoint = new(x2, y2, point.z, SpeckleUnitString);
+    SOG.Point movedPoint = new(x2, y2, point.z, speckleUnitString);
 
     return movedPoint;
   }
 
-  public SOG.Point OffsetRotateOnSend(SOG.Point point)
+  public SOG.Point OffsetRotateOnSend(SOG.Point point, string speckleUnitString)
   {
     // scale point to match units of the SpatialReference
     string originalUnits = point.units;
-    point = ScalePoint(point, originalUnits, SpeckleUnitString);
+    point = ScalePoint(point, originalUnits, speckleUnitString);
 
     // 1. offset coordinates
     NormalizeAngle();
@@ -52,7 +51,7 @@ public struct CRSoffsetRotation
     // 2. rotate coordinates
     double x2 = x * Math.Cos(TrueNorthRadians) + y * Math.Sin(TrueNorthRadians);
     double y2 = -x * Math.Sin(TrueNorthRadians) + y * Math.Cos(TrueNorthRadians);
-    SOG.Point movedPoint = new(x2, y2, point.z, SpeckleUnitString);
+    SOG.Point movedPoint = new(x2, y2, point.z, speckleUnitString);
 
     return movedPoint;
   }
@@ -61,11 +60,6 @@ public struct CRSoffsetRotation
   {
     double scaleFactor = Units.GetConversionFactor(fromUnit, toUnit);
     return new SOG.Point(point.x * scaleFactor, point.y * scaleFactor, point.z * scaleFactor, toUnit);
-  }
-
-  private readonly string GetSpeckleUnit(ACG.SpatialReference spatialReference)
-  {
-    return new ArcGISToSpeckleUnitConverter().ConvertOrThrow(spatialReference.Unit);
   }
 
   private void NormalizeAngle()
@@ -112,7 +106,6 @@ public struct CRSoffsetRotation
   public CRSoffsetRotation(ACG.SpatialReference spatialReference)
   {
     SpatialReference = spatialReference;
-    SpeckleUnitString = GetSpeckleUnit(spatialReference);
     LatOffset = 0;
     LonOffset = 0;
     TrueNorthRadians = 0;
@@ -127,7 +120,6 @@ public struct CRSoffsetRotation
     ACG.SpatialReference spatialReference = map.SpatialReference;
 
     SpatialReference = spatialReference;
-    SpeckleUnitString = GetSpeckleUnit(spatialReference);
 
     // read from metadata
     string metadata = map.GetMetadata();
@@ -185,7 +177,6 @@ public struct CRSoffsetRotation
   )
   {
     SpatialReference = spatialReference;
-    SpeckleUnitString = GetSpeckleUnit(spatialReference);
     LatOffset = latOffset;
     LonOffset = lonOffset;
     TrueNorthRadians = trueNorthRadians;

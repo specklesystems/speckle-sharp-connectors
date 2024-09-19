@@ -9,15 +9,15 @@ namespace Speckle.Converters.ArcGIS3.ToHost.TopLevel;
 public class CircleToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG.Circle, ACG.Polyline>
 {
   private readonly ITypedConverter<SOG.Point, ACG.MapPoint> _pointConverter;
-  private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
 
   public CircleToHostConverter(
     ITypedConverter<SOG.Point, ACG.MapPoint> pointConverter,
-    IConversionContextStack<ArcGISDocument, ACG.Unit> contextStack
+    IConverterSettingsStore<ArcGISConversionSettings> settingsStore
   )
   {
     _pointConverter = pointConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public object Convert(Base target) => Convert((SOG.Circle)target);
@@ -37,18 +37,18 @@ public class CircleToHostConverter : IToHostTopLevelConverter, ITypedConverter<S
     // create a native ArcGIS circle segment
     ACG.MapPoint centerPt = _pointConverter.Convert(target.plane.origin);
 
-    double scaleFactor = Units.GetConversionFactor(target.units, _contextStack.Current.SpeckleUnits);
+    double scaleFactor = Units.GetConversionFactor(target.units, _settingsStore.Current.SpeckleUnits);
     ACG.EllipticArcSegment circleSegment = ACG.EllipticArcBuilderEx.CreateCircle(
       new ACG.Coordinate2D(centerPt.X, centerPt.Y),
       (double)target.radius * scaleFactor,
       ACG.ArcOrientation.ArcClockwise,
-      _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference
+      _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference
     );
 
     return new ACG.PolylineBuilderEx(
       circleSegment,
       ACG.AttributeFlags.HasZ,
-      _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference
+      _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference
     ).ToGeometry();
   }
 }

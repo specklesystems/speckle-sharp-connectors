@@ -10,15 +10,15 @@ namespace Speckle.Converters.Autocad.Geometry;
 public class MeshToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG.Mesh, ADB.PolyFaceMesh>
 {
   private readonly ITypedConverter<SOG.Point, AG.Point3d> _pointConverter;
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public MeshToHostConverter(
     ITypedConverter<SOG.Point, AG.Point3d> pointConverter,
-    IConversionContextStack<Document, ADB.UnitsValue> contextStack
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _pointConverter = pointConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public object Convert(Base target) => Convert((SOG.Mesh)target);
@@ -40,13 +40,14 @@ public class MeshToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG
 
     ADB.PolyFaceMesh mesh = new();
 
-    ADB.Transaction tr = _contextStack.Current.Document.TransactionManager.TopTransaction;
+    //TODO using?
+    ADB.Transaction tr = _settingsStore.Current.Document.TransactionManager.TopTransaction;
 
     mesh.SetDatabaseDefaults();
 
     // append mesh to blocktable record - necessary before adding vertices and faces
     var btr = (ADB.BlockTableRecord)
-      tr.GetObject(_contextStack.Current.Document.Database.CurrentSpaceId, ADB.OpenMode.ForWrite);
+      tr.GetObject(_settingsStore.Current.Document.Database.CurrentSpaceId, ADB.OpenMode.ForWrite);
     btr.AppendEntity(mesh);
     tr.AddNewlyCreatedDBObject(mesh, true);
 

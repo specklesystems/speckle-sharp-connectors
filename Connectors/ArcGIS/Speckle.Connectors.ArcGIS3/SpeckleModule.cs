@@ -32,7 +32,7 @@ internal sealed class SpeckleModule : Module
 
     var builder = SpeckleContainerBuilder.CreateInstance();
     // init DI
-    _disposableLogger = Connector.Initialize(HostApplications.ArcGIS, GetVersion());
+    _disposableLogger = Connector.Initialize(HostApplications.ArcGIS, GetVersion(), builder);
 
     Container = builder
       .LoadAutofacModules(
@@ -60,6 +60,7 @@ internal sealed class SpeckleModule : Module
     //TODO - add your business logic
     //return false to ~cancel~ Application close
     _disposableLogger?.Dispose();
+    Container.Dispose();
     return true;
   }
 }

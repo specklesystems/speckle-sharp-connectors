@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
-using Rhino;
 using Speckle.Converters.Common;
+using Speckle.Converters.Rhino;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models.Proxies;
@@ -9,13 +9,19 @@ namespace Speckle.Connectors.Rhino.HostApp;
 
 public class RhinoGroupBaker
 {
-  private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
+  private readonly IConverterSettingsStore<RhinoConversionSettings> _converterSettings;
   private readonly ILogger<RhinoGroupBaker> _logger;
+  private readonly ISdkActivityFactory _activityFactory;
 
-  public RhinoGroupBaker(IConversionContextStack<RhinoDoc, UnitSystem> contextStack, ILogger<RhinoGroupBaker> logger)
+  public RhinoGroupBaker(
+    IConverterSettingsStore<RhinoConversionSettings> converterSettings,
+    ILogger<RhinoGroupBaker> logger,
+    ISdkActivityFactory activityFactory
+  )
   {
-    _contextStack = contextStack;
+    _converterSettings = converterSettings;
     _logger = logger;
+    _activityFactory = activityFactory;
   }
 
   public void BakeGroups(
@@ -24,14 +30,14 @@ public class RhinoGroupBaker
     string baseLayerName
   )
   {
-    using var _ = SpeckleActivityFactory.Start();
+    using var _ = _activityFactory.Start();
     foreach (GroupProxy groupProxy in groupProxies.OrderBy(g => g.objects.Count))
     {
       try
       {
         var appIds = groupProxy.objects.SelectMany(oldObjId => applicationIdMap[oldObjId]).Select(id => new Guid(id));
         var groupName = (groupProxy.name ?? "No Name Group") + $" ({baseLayerName})";
-        _contextStack.Current.Document.Groups.Add(groupName, appIds);
+        _converterSettings.Current.Document.Groups.Add(groupName, appIds);
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
@@ -42,14 +48,14 @@ public class RhinoGroupBaker
 
   public void PurgeGroups(string baseLayerName)
   {
-    for (int i = _contextStack.Current.Document.Groups.Count; i >= 0; i--)
+    for (int i = _converterSettings.Current.Document.Groups.Count; i >= 0; i--)
     {
       try
       {
-        var group = _contextStack.Current.Document.Groups.FindIndex(i);
+        var group = _converterSettings.Current.Document.Groups.FindIndex(i);
         if (group is { Name: not null } && group.Name.Contains(baseLayerName))
         {
-          _contextStack.Current.Document.Groups.Delete(i);
+          _converterSettings.Current.Document.Groups.Delete(i);
         }
       }
       catch (Exception ex) when (!ex.IsFatal())

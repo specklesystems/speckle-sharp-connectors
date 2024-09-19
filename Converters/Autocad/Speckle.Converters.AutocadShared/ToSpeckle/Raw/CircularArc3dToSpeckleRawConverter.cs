@@ -7,17 +7,17 @@ public class CircularArc3dToSpeckleConverter : ITypedConverter<AG.CircularArc3d,
 {
   private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
   private readonly ITypedConverter<AG.Plane, SOG.Plane> _planeConverter;
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public CircularArc3dToSpeckleConverter(
     ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
     ITypedConverter<AG.Plane, SOG.Plane> planeConverter,
-    IConversionContextStack<Document, ADB.UnitsValue> contextStack
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _pointConverter = pointConverter;
     _planeConverter = planeConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public SOG.Arc Convert(AG.CircularArc3d target)
@@ -27,16 +27,7 @@ public class CircularArc3dToSpeckleConverter : ITypedConverter<AG.CircularArc3d,
     SOG.Point end = _pointConverter.Convert(target.EndPoint);
     double startParam = target.GetParameterOf(target.StartPoint);
     double endParam = target.GetParameterOf(target.EndPoint);
-    AG.Point3d midPoint = target.EvaluatePoint(endParam - startParam / 2.0);
-
-    // some circular arcs will **not** return a correct value from `EvaluatePoint` using the indicated parameter at the midpoint.
-    // so far, this has happened with some arc segments in the polyline method. They will have an end param > 1, and evaluatePoint returns the endpoint
-    // this is why we are checking for midpoint == endpoint, and using a [0,1] parameterization if this is the case.
-    if (midPoint.IsEqualTo(target.EndPoint))
-    {
-      midPoint = target.EvaluatePoint(0.5);
-    }
-
+    AG.Point3d midPoint = target.EvaluatePoint(target.StartAngle + (target.EndAngle - target.StartAngle) / 2);
     SOG.Point mid = _pointConverter.Convert(midPoint);
 
     SOG.Arc arc =
@@ -46,7 +37,7 @@ public class CircularArc3dToSpeckleConverter : ITypedConverter<AG.CircularArc3d,
         target.StartAngle,
         target.EndAngle,
         target.EndAngle - target.StartAngle, // POC: testing, unsure
-        _contextStack.Current.SpeckleUnits
+        _settingsStore.Current.SpeckleUnits
       )
       {
         startPoint = start,

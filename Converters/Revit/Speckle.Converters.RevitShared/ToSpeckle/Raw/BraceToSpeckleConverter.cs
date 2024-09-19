@@ -1,5 +1,6 @@
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
@@ -11,15 +12,15 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 public class BraceToSpeckleConverter : ITypedConverter<DB.FamilyInstance, SOBR.RevitBrace>
 {
   private readonly ITypedConverter<DB.FamilyInstance, SOBR.RevitBeam> _beamConverter;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public BraceToSpeckleConverter(
     ITypedConverter<DB.FamilyInstance, SOBR.RevitBeam> beamConverter,
-    IRevitConversionContextStack contextStack
+    IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _beamConverter = beamConverter;
-    _contextStack = contextStack;
+    _converterSettings = converterSettings;
   }
 
   public SOBR.RevitBrace Convert(DB.FamilyInstance target)
@@ -39,7 +40,7 @@ public class BraceToSpeckleConverter : ITypedConverter<DB.FamilyInstance, SOBR.R
       family = beam.family,
       parameters = beam.parameters,
       displayValue = beam.displayValue,
-      units = _contextStack.Current.SpeckleUnits
+      units = _converterSettings.Current.SpeckleUnits
     };
 
     var dynamicProps = beam.GetMembers(DynamicBaseMemberType.Dynamic);

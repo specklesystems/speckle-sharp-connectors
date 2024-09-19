@@ -1,5 +1,6 @@
 using Autodesk.Revit.DB;
-using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.Common;
+using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Connectors.Revit.Operations.Receive;
 
@@ -9,13 +10,13 @@ namespace Speckle.Connectors.Revit.Operations.Receive;
 /// </summary>
 public sealed class TransactionManager : ITransactionManager
 {
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly IFailuresPreprocessor _errorPreprocessingService;
-  private Document Document => _contextStack.Current.Document;
+  private Document Document => _converterSettings.Current.Document;
 
-  public TransactionManager(IRevitConversionContextStack contextStack, IFailuresPreprocessor errorPreprocessingService)
+  public TransactionManager(IConverterSettingsStore<RevitConversionSettings> converterSettings, IFailuresPreprocessor errorPreprocessingService)
   {
-    _contextStack = contextStack;
+    _converterSettings = converterSettings;
     _errorPreprocessingService = errorPreprocessingService;
   }
 
