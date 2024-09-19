@@ -93,22 +93,22 @@ public sealed class ArcGISSendBinding : ISendBinding
   private void SubscribeToArcGISEvents()
   {
     LayersRemovedEvent.Subscribe(
-      a => _topLevelExceptionHandler.CatchUnhandled(() => GetIdsForLayersRemovedEvent(a)),
+      a => _topLevelExceptionHandler.FireAndForget(() => GetIdsForLayersRemovedEvent(a)),
       true
     );
 
     StandaloneTablesRemovedEvent.Subscribe(
-      a => _topLevelExceptionHandler.CatchUnhandled(() => GetIdsForStandaloneTablesRemovedEvent(a)),
+      a => _topLevelExceptionHandler.FireAndForget(() => GetIdsForStandaloneTablesRemovedEvent(a)),
       true
     );
 
     MapPropertyChangedEvent.Subscribe(
-      a => _topLevelExceptionHandler.CatchUnhandled(() => GetIdsForMapPropertyChangedEvent(a)),
+      a => _topLevelExceptionHandler.FireAndForget(() => GetIdsForMapPropertyChangedEvent(a)),
       true
     ); // Map units, CRS etc.
 
     MapMemberPropertiesChangedEvent.Subscribe(
-      a => _topLevelExceptionHandler.CatchUnhandled(() => GetIdsForMapMemberPropertiesChangedEvent(a)),
+      a => _topLevelExceptionHandler.FireAndForget(() => GetIdsForMapMemberPropertiesChangedEvent(a)),
       true
     ); // e.g. Layer name
 
@@ -260,13 +260,13 @@ public sealed class ArcGISSendBinding : ISendBinding
     await RunExpirationChecks(true).ConfigureAwait(false);
   }
 
-  private void GetIdsForStandaloneTablesRemovedEvent(StandaloneTableEventArgs args)
+  private async Task GetIdsForStandaloneTablesRemovedEvent(StandaloneTableEventArgs args)
   {
     foreach (StandaloneTable table in args.Tables)
     {
       ChangedObjectIds[table.URI] = 1;
     }
-    RunExpirationChecks(true).ConfigureAwait(false);
+    await RunExpirationChecks(true).ConfigureAwait(false);
   }
 
   private void AddChangedNestedObjectIds(GroupLayer group)
@@ -285,7 +285,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     }
   }
 
-  private void GetIdsForMapPropertyChangedEvent(MapPropertyChangedEventArgs args)
+  private async Task GetIdsForMapPropertyChangedEvent(MapPropertyChangedEventArgs args)
   {
     foreach (Map map in args.Maps)
     {
@@ -301,7 +301,7 @@ public sealed class ArcGISSendBinding : ISendBinding
         }
       }
     }
-    RunExpirationChecks(false).ConfigureAwait(false);
+    await RunExpirationChecks(false).ConfigureAwait(false);
   }
 
   private void GetIdsForLayersAddedEvent(LayerEventsArgs args)
@@ -323,7 +323,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     }
   }
 
-  private void GetIdsForMapMemberPropertiesChangedEvent(MapMemberPropertiesChangedEventArgs args)
+  private async Task GetIdsForMapMemberPropertiesChangedEvent(MapMemberPropertiesChangedEventArgs args)
   {
     // don't subscribe to all events (e.g. expanding group, changing visibility etc.)
     bool validEvent = false;
@@ -351,7 +351,7 @@ public sealed class ArcGISSendBinding : ISendBinding
       {
         ChangedObjectIds[member.URI] = 1;
       }
-      RunExpirationChecks(false).ConfigureAwait(false);
+      await RunExpirationChecks(false).ConfigureAwait(false);
     }
   }
 
