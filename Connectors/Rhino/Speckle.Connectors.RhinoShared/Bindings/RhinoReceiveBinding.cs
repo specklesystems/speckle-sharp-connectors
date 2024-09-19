@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Rhino;
-using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
@@ -27,6 +26,7 @@ public class RhinoReceiveBinding : IReceiveBinding
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<RhinoReceiveBinding> _logger;
   private readonly IRhinoConversionSettingsFactory _rhinoConversionSettingsFactory;
+  private readonly ISpeckleApplication _speckleApplication;
   private ReceiveBindingUICommands Commands { get; }
 
   public RhinoReceiveBinding(
@@ -36,8 +36,7 @@ public class RhinoReceiveBinding : IReceiveBinding
     IOperationProgressManager operationProgressManager,
     ILogger<RhinoReceiveBinding> logger,
     IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
-    IServiceProvider serviceProvider
-  )
+    IServiceProvider serviceProvider, ISpeckleApplication speckleApplication)
   {
     Parent = parent;
     _store = store;
@@ -45,6 +44,7 @@ public class RhinoReceiveBinding : IReceiveBinding
     _logger = logger;
     _rhinoConversionSettingsFactory = rhinoConversionSettingsFactory;
     _serviceProvider = serviceProvider;
+    _speckleApplication = speckleApplication;
     _cancellationManager = cancellationManager;
     Commands = new ReceiveBindingUICommands(parent);
   }
@@ -72,7 +72,7 @@ public class RhinoReceiveBinding : IReceiveBinding
       HostObjectBuilderResult conversionResults = await scope
         .ServiceProvider.GetRequiredService<ReceiveOperation>()
         .Execute(
-          modelCard.GetReceiveInfo(Connector.Slug),
+          modelCard.GetReceiveInfo(_speckleApplication.Slug),
           cancellationToken,
           (status, progress) =>
             _operationProgressManager.SetModelProgress(

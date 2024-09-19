@@ -44,7 +44,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
       AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<RevitExternalApplication>;
       var services = new ServiceCollection();
       // init DI
-      _disposableLogger = services.Initialize(HostApplications.Revit, GetVersion(), Assembly.GetExecutingAssembly().GetVersion());
+      _disposableLogger = services.Initialize(HostApplications.Revit, GetVersion());
       services.AddRevit();
       services.AddRevitConverters();
       services.AddSingleton(application);

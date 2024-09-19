@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.Commands;
 using Rhino.DocObjects;
-using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
@@ -40,6 +39,7 @@ public sealed class RhinoSendBinding : ISendBinding
   private readonly ILogger<RhinoSendBinding> _logger;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IRhinoConversionSettingsFactory _rhinoConversionSettingsFactory;
+  private readonly ISpeckleApplication _speckleApplication;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -59,8 +59,7 @@ public sealed class RhinoSendBinding : ISendBinding
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
     ILogger<RhinoSendBinding> logger,
-    IRhinoConversionSettingsFactory rhinoConversionSettingsFactory
-  )
+    IRhinoConversionSettingsFactory rhinoConversionSettingsFactory, ISpeckleApplication speckleApplication)
   {
     _store = store;
     _idleManager = idleManager;
@@ -71,6 +70,7 @@ public sealed class RhinoSendBinding : ISendBinding
     _operationProgressManager = operationProgressManager;
     _logger = logger;
     _rhinoConversionSettingsFactory = rhinoConversionSettingsFactory;
+    _speckleApplication = speckleApplication;
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler.Parent.TopLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent); // POC: Commands are tightly coupled with their bindings, at least for now, saves us injecting a factory.
@@ -183,7 +183,7 @@ public sealed class RhinoSendBinding : ISendBinding
         .ServiceProvider.GetRequiredService<SendOperation<RhinoObject>>()
         .Execute(
           rhinoObjects,
-          modelCard.GetSendInfo(Connector.Slug),
+          modelCard.GetSendInfo(_speckleApplication.Slug),
           (status, progress) =>
             _operationProgressManager.SetModelProgress(
               Parent,

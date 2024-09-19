@@ -18,8 +18,7 @@ public static class Connector
   public static IDisposable? Initialize(
     this IServiceCollection serviceCollection,
     HostApplication application,
-    HostAppVersion version,
-    string speckleVersion
+    HostAppVersion version
   )
   {
     TypeLoader.Initialize(typeof(Base).Assembly, typeof(Point).Assembly);
@@ -48,7 +47,7 @@ public static class Connector
     );
 
     serviceCollection.AddLogging(x => x.AddProvider(new SpeckleLogProvider(logging)));
-    serviceCollection.AddSpeckleSdk(application, version, speckleVersion);
+    serviceCollection.AddSpeckleSdk(application, version, Assembly.GetExecutingAssembly().GetVersion());
     serviceCollection.AddSingleton<Speckle.Sdk.Logging.ISdkActivityFactory, ConnectorActivityFactory>();
     return tracing;
   }
