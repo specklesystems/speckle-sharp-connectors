@@ -12,7 +12,6 @@ using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
-using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.Revit.Operations.Receive;
 
@@ -20,8 +19,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 {
   private readonly IRootToHostConverter _converter;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
-  private readonly GraphTraversal _traverseFunction;
-  private readonly RevitMaterialCacheSingleton _revitMaterialCacheSingleton;
+  private readonly RevitToHostCacheSingleton _revitToHostCacheSingleton;
   private readonly ITransactionManager _transactionManager;
   private readonly ILocalToGlobalUnpacker _localToGlobalUnpacker;
   private readonly LocalToGlobalConverterUtils _localToGlobalConverterUtils;
@@ -35,7 +33,6 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   public RevitHostObjectBuilder(
     IRootToHostConverter converter,
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
-    GraphTraversal traverseFunction,
     ITransactionManager transactionManager,
     ISdkActivityFactory activityFactory,
     ILocalToGlobalUnpacker localToGlobalUnpacker,
@@ -44,12 +41,11 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     RevitMaterialBaker materialBaker,
     RootObjectUnpacker rootObjectUnpacker,
     ILogger<RevitHostObjectBuilder> logger,
-    RevitMaterialCacheSingleton revitMaterialCacheSingleton
+    RevitToHostCacheSingleton revitToHostCacheSingleton
   )
   {
     _converter = converter;
     _converterSettings = converterSettings;
-    _traverseFunction = traverseFunction;
     _transactionManager = transactionManager;
     _localToGlobalUnpacker = localToGlobalUnpacker;
     _localToGlobalConverterUtils = localToGlobalConverterUtils;
@@ -57,7 +53,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     _materialBaker = materialBaker;
     _rootObjectUnpacker = rootObjectUnpacker;
     _logger = logger;
-    _revitMaterialCacheSingleton = revitMaterialCacheSingleton;
+    _revitToHostCacheSingleton = revitToHostCacheSingleton;
     _activityFactory = activityFactory;
   }
 
@@ -122,7 +118,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       var map = _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseGroupName);
       foreach (var kvp in map)
       {
-        _revitMaterialCacheSingleton.ObjectIdAndMaterialIndexMap.Add(kvp.Key, kvp.Value);
+        _revitToHostCacheSingleton.MaterialsByObjectId.Add(kvp.Key, kvp.Value);
       }
     }
 
@@ -153,7 +149,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       createGroupTransaction.Assimilate();
     }
 
-    _revitMaterialCacheSingleton.ObjectIdAndMaterialIndexMap.Clear(); // Massive hack!
+    _revitToHostCacheSingleton.MaterialsByObjectId.Clear(); // Massive hack!
 
     return conversionResults;
   }

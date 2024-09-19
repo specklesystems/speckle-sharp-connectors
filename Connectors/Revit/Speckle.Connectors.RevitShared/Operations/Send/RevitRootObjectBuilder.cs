@@ -27,7 +27,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ElementUnpacker _elementUnpacker;
   private readonly SendCollectionManager _sendCollectionManager;
-  private readonly RevitMaterialCacheSingleton _revitMaterialCacheSingleton;
+  private readonly RevitToSpeckleCacheSingleton _revitToSpeckleCacheSingleton;
   private readonly ILogger<RevitRootObjectBuilder> _logger;
 
   public RevitRootObjectBuilder(
@@ -36,7 +36,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     ISendConversionCache sendConversionCache,
     ElementUnpacker elementUnpacker,
     SendCollectionManager sendCollectionManager,
-    RevitMaterialCacheSingleton revitMaterialCacheSingleton,
+    RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton,
     ILogger<RevitRootObjectBuilder> logger
   )
   {
@@ -45,7 +45,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     _sendConversionCache = sendConversionCache;
     _elementUnpacker = elementUnpacker;
     _sendCollectionManager = sendCollectionManager;
-    _revitMaterialCacheSingleton = revitMaterialCacheSingleton;
+    _revitToSpeckleCacheSingleton = revitToSpeckleCacheSingleton;
     _logger = logger;
 
     _rootObject = new Collection()
@@ -131,7 +131,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     }
 
     var idsAndSubElementIds = _elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(atomicObjects);
-    var materialProxies = _revitMaterialCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds);
+    var materialProxies = _revitToSpeckleCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds);
     _rootObject[ProxyKeys.RENDER_MATERIAL] = materialProxies;
 
     Debug.WriteLine(
