@@ -21,7 +21,6 @@ using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
-using Connector = Speckle.Connectors.Common.Connector;
 
 namespace Speckle.Connectors.Revit.Bindings;
 
@@ -36,6 +35,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly ILogger<RevitSendBinding> _logger;
   private readonly ElementUnpacker _elementUnpacker;
   private readonly IRevitConversionSettingsFactory _revitConversionSettingsFactory;
+  private readonly ISpeckleApplication _speckleApplication;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -57,8 +57,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     ToSpeckleSettingsManager toSpeckleSettingsManager,
     ILogger<RevitSendBinding> logger,
     ElementUnpacker elementUnpacker,
-    IRevitConversionSettingsFactory revitConversionSettingsFactory
-  )
+    IRevitConversionSettingsFactory revitConversionSettingsFactory, ISpeckleApplication speckleApplication)
     : base("sendBinding", store, bridge, revitContext)
   {
     _idleManager = idleManager;
@@ -70,6 +69,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _logger = logger;
     _elementUnpacker = elementUnpacker;
     _revitConversionSettingsFactory = revitConversionSettingsFactory;
+    _speckleApplication = speckleApplication;
     var topLevelExceptionHandler = Parent.TopLevelExceptionHandler;
 
     Commands = new SendBindingUICommands(bridge);
@@ -140,7 +140,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         .ServiceProvider.GetRequiredService<SendOperation<ElementId>>()
         .Execute(
           revitObjects,
-          modelCard.GetSendInfo(Connector.Slug),
+          modelCard.GetSendInfo(_speckleApplication.Slug),
           (status, progress) =>
             _operationProgressManager.SetModelProgress(
               Parent,

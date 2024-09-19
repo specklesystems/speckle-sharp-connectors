@@ -1,7 +1,9 @@
+using System.Reflection;
 using Autodesk.Revit.UI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common;
+using Speckle.Connectors.Common.Common;
 using Speckle.Connectors.Revit.DependencyInjection;
 using Speckle.Converters.RevitShared;
 using Speckle.Sdk;
@@ -42,9 +44,10 @@ internal sealed class RevitExternalApplication : IExternalApplication
       AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<RevitExternalApplication>;
       var services = new ServiceCollection();
       // init DI
-      _disposableLogger = services.Initialize(HostApplications.Revit, GetVersion());
+      _disposableLogger = services.Initialize(HostApplications.Revit, GetVersion(), Assembly.GetExecutingAssembly().GetVersion());
       services.AddRevit();
       services.AddRevitConverters();
+      services.AddSingleton(application);
       _container = services.BuildServiceProvider();
 
       // resolve root object

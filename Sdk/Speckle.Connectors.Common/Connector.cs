@@ -15,27 +15,18 @@ public static class Connector
   public static readonly string TabName = "Speckle";
   public static readonly string TabTitle = "Speckle (Beta)";
 
-  public static HostAppVersion Version { get; private set; } = HostAppVersion.v3;
-  public static string VersionString { get; private set; } = string.Empty;
-  public static string Name => HostApp.Name;
-  public static string Slug => HostApp.Slug;
-
-  public static HostApplication HostApp { get; private set; }
-
   public static IDisposable? Initialize(
     this IServiceCollection serviceCollection,
     HostApplication application,
-    HostAppVersion version
+    HostAppVersion version,
+    string speckleVersion
   )
   {
-    Version = version;
-    VersionString = HostApplications.GetVersion(version);
-    HostApp = application;
     TypeLoader.Initialize(typeof(Base).Assembly, typeof(Point).Assembly);
 
     var (logging, tracing) = Observability.Initialize(
-      VersionString,
-      Slug,
+      application.Slug,
+      HostApplications.GetVersion(version),
       Assembly.GetExecutingAssembly().GetVersion(),
       new(
         new SpeckleLogging(
@@ -57,7 +48,7 @@ public static class Connector
     );
 
     serviceCollection.AddLogging(x => x.AddProvider(new SpeckleLogProvider(logging)));
-    serviceCollection.AddSpeckleSdk(application, version);
+    serviceCollection.AddSpeckleSdk(application, version, speckleVersion);
     serviceCollection.AddSingleton<Speckle.Sdk.Logging.ISdkActivityFactory, ConnectorActivityFactory>();
     return tracing;
   }

@@ -1,7 +1,5 @@
-using System.Reflection;
 using Autodesk.Revit.DB;
 using Revit.Async;
-using Speckle.Connectors.Common.Common;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
@@ -9,7 +7,6 @@ using Speckle.Connectors.RevitShared;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
-using Connector = Speckle.Connectors.Common.Connector;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
@@ -23,13 +20,15 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
   private readonly DocumentModelStore _store;
   private readonly RevitContext _revitContext;
+  private readonly ISpeckleApplication _speckleApplication;
 
-  public BasicConnectorBindingRevit(DocumentModelStore store, IBridge parent, RevitContext revitContext)
+  public BasicConnectorBindingRevit(DocumentModelStore store, IBridge parent, RevitContext revitContext, ISpeckleApplication speckleApplication)
   {
     Name = "baseBinding";
     Parent = parent;
     _store = store;
     _revitContext = revitContext;
+    _speckleApplication = speckleApplication;
     Commands = new BasicConnectorBindingCommands(parent);
 
     // POC: event binding?
@@ -39,12 +38,11 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     };
   }
 
-  public string GetConnectorVersion() => Assembly.GetAssembly(GetType()).NotNull().GetVersion();
+  public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
 
-  public string GetSourceApplicationName() => Connector.Slug.ToLower(); // POC: maybe not right place but... // ANOTHER POC: We should align this naming from somewhere in common DUI projects instead old structs. I know there are other POC comments around this
+  public string GetSourceApplicationName() => _speckleApplication.Slug;
 
-  public string GetSourceApplicationVersion() => Connector.VersionString; // POC: maybe not right place but...
-
+  public string GetSourceApplicationVersion() => _speckleApplication.AppVersion;
   public DocumentInfo? GetDocumentInfo()
   {
     // POC: not sure why this would ever be null, is this needed?

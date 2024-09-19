@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
@@ -26,6 +25,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
   private readonly DocumentModelStore _store;
   private readonly IServiceProvider _serviceProvider;
   private readonly IRevitConversionSettingsFactory _revitConversionSettingsFactory;
+  private readonly ISpeckleApplication _speckleApplication;
   private ReceiveBindingUICommands Commands { get; }
 
   public RevitReceiveBinding(
@@ -35,8 +35,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
     IServiceProvider serviceProvider,
     IOperationProgressManager operationProgressManager,
     ILogger<RevitReceiveBinding> logger,
-    IRevitConversionSettingsFactory revitConversionSettingsFactory
-  )
+    IRevitConversionSettingsFactory revitConversionSettingsFactory, ISpeckleApplication speckleApplication)
   {
     Parent = parent;
     _store = store;
@@ -44,6 +43,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
     _operationProgressManager = operationProgressManager;
     _logger = logger;
     _revitConversionSettingsFactory = revitConversionSettingsFactory;
+    _speckleApplication = speckleApplication;
     _cancellationManager = cancellationManager;
 
     Commands = new ReceiveBindingUICommands(parent);
@@ -77,7 +77,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
       HostObjectBuilderResult conversionResults = await scope
         .ServiceProvider.GetRequiredService<ReceiveOperation>()
         .Execute(
-          modelCard.GetReceiveInfo(Connector.Slug),
+          modelCard.GetReceiveInfo(_speckleApplication.Slug),
           cancellationToken,
           (status, progress) =>
             _operationProgressManager.SetModelProgress(

@@ -8,6 +8,7 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Rhino.Extensions;
+using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Rhino.Bindings;
@@ -19,11 +20,13 @@ public class RhinoBasicConnectorBinding : IBasicConnectorBinding
   public BasicConnectorBindingCommands Commands { get; }
 
   private readonly DocumentModelStore _store;
+  private readonly ISpeckleApplication _speckleApplication;
 
-  public RhinoBasicConnectorBinding(DocumentModelStore store, IBridge parent)
+  public RhinoBasicConnectorBinding(DocumentModelStore store, IBridge parent, ISpeckleApplication speckleApplication)
   {
     _store = store;
     Parent = parent;
+    _speckleApplication = speckleApplication;
     Commands = new BasicConnectorBindingCommands(parent);
 
     _store.DocumentChanged += (_, _) =>
@@ -32,11 +35,11 @@ public class RhinoBasicConnectorBinding : IBasicConnectorBinding
     };
   }
 
-  public string GetConnectorVersion() => typeof(RhinoBasicConnectorBinding).Assembly.GetVersion();
+  public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
 
-  public string GetSourceApplicationName() => Connector.Slug;
+  public string GetSourceApplicationName() => _speckleApplication.Slug;
 
-  public string GetSourceApplicationVersion() => "7";
+  public string GetSourceApplicationVersion() => _speckleApplication.AppVersion;
 
   public DocumentInfo? GetDocumentInfo()
   {
