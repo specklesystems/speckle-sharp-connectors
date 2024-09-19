@@ -84,7 +84,7 @@ public static class ServiceRegistration
     panel.Browser.JavascriptObjectRepository.NameConverter = null;
 
     serviceCollection.AddSingleton(panel);
-    serviceCollection.AddSingleton<IBrowserScriptExecutor>(c => c.Resolve<CefSharpPanel>());
+    serviceCollection.AddSingleton<IBrowserScriptExecutor>(c => c.GetRequiredService<CefSharpPanel>());
     serviceCollection.AddSingleton<IRevitPlugin, RevitCefPlugin>();
 #endif
   }

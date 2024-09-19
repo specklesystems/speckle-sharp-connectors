@@ -1,5 +1,6 @@
 using Autodesk.Revit.UI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Revit.DependencyInjection;
 using Speckle.Converters.RevitShared;
@@ -52,6 +53,10 @@ internal sealed class RevitExternalApplication : IExternalApplication
     }
     catch (Exception e) when (!e.IsFatal())
     {
+      _container
+        .GetRequiredService<ILoggerFactory>()
+        .CreateLogger<RevitExternalApplication>()
+        .LogCritical(e, "Unhandled exception");
       // POC: feedback?
       return Result.Failed;
     }
