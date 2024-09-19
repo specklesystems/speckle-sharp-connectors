@@ -6,6 +6,7 @@ using System.Windows.Media.Imaging;
 using Autodesk.Revit.ApplicationServices;
 using Autodesk.Revit.UI;
 using CefSharp;
+using Microsoft.Extensions.DependencyInjection;
 using Revit.Async;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI.Bindings;
@@ -18,24 +19,25 @@ namespace Speckle.Connectors.Revit.Plugin;
 internal sealed class RevitCefPlugin : IRevitPlugin
 {
   private readonly UIControlledApplication _uIControlledApplication;
-  private readonly IEnumerable<Lazy<IBinding>> _bindings; // should be lazy to ensure the bindings are not created too early
+  private readonly IServiceProvider _serviceProvider; // should be lazy to ensure the bindings are not created too early
   private readonly BindingOptions _bindingOptions;
   private readonly RevitContext _revitContext;
   private readonly CefSharpPanel _cefSharpPanel;
+  private readonly ISpeckleApplication _speckleApplication;
 
   public RevitCefPlugin(
     UIControlledApplication uIControlledApplication,
-    IEnumerable<Lazy<IBinding>> bindings,
+    IServiceProvider serviceProvider,
     BindingOptions bindingOptions,
     RevitContext revitContext,
-    CefSharpPanel cefSharpPanel
-  )
+    CefSharpPanel cefSharpPanel, ISpeckleApplication speckleApplication)
   {
     _uIControlledApplication = uIControlledApplication;
-    _bindings = bindings;
+    _serviceProvider = serviceProvider;
     _bindingOptions = bindingOptions;
     _revitContext = revitContext;
     _cefSharpPanel = cefSharpPanel;
+    _speckleApplication = speckleApplication;
   }
 
   public void Initialise()
@@ -70,7 +72,7 @@ internal sealed class RevitCefPlugin : IRevitPlugin
     var dui3Button = (PushButton)
       specklePanel.AddItem(
         new PushButtonData(
-          Connector.Name,
+          _speckleApplication.Application,
           Connector.TabTitle,
           typeof(RevitExternalApplication).Assembly.Location,
           typeof(SpeckleRevitCommand).FullName
@@ -78,13 +80,13 @@ internal sealed class RevitCefPlugin : IRevitPlugin
       );
 
     string path = typeof(RevitCefPlugin).Assembly.Location;
-    dui3Button.Image = LoadPngImgSource($"Speckle.Connectors.Revit{Connector.VersionString}.Assets.logo16.png", path);
+    dui3Button.Image = LoadPngImgSource($"Speckle.Connectors.Revit{_speckleApplication.AppVersion}.Assets.logo16.png", path);
     dui3Button.LargeImage = LoadPngImgSource(
-      $"Speckle.Connectors.Revit{Connector.VersionString}.Assets.logo32.png",
+      $"Speckle.Connectors.Revit{_speckleApplication.AppVersion}.Assets.logo32.png",
       path
     );
     dui3Button.ToolTipImage = LoadPngImgSource(
-      $"Speckle.Connectors.Revit{Connector.VersionString}.Assets.logo32.png",
+      $"Speckle.Connectors.Revit{_speckleApplication.AppVersion}.Assets.logo32.png",
       path
     );
     dui3Button.ToolTip = "Speckle (Beta) for Revit";
@@ -108,8 +110,9 @@ internal sealed class RevitCefPlugin : IRevitPlugin
   /// </summary>
   private void PostApplicationInit()
   {
+    var bindings = _serviceProvider.GetRequiredService<IEnumerable<IBinding>>();
     // binding the bindings to each bridge
-    foreach (IBinding binding in _bindings.Select(x => x.Value))
+    foreach (IBinding binding in bindings)
     {
       Debug.WriteLine(binding.Name);
       binding.Parent.AssociateWithBinding(binding);
@@ -122,10 +125,10 @@ internal sealed class RevitCefPlugin : IRevitPlugin
         return;
       }
 
-#if DEBUG
+#if DEBUG || LOCAL
       _cefSharpPanel.Browser.ShowDevTools();
 #endif
-      foreach (IBinding binding in _bindings.Select(x => x.Value))
+      foreach (IBinding binding in bindings)
       {
         IBridge bridge = binding.Parent;
 
