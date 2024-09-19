@@ -1,4 +1,5 @@
 using Autodesk.AutoCAD.DatabaseServices;
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
@@ -17,7 +18,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
   public IBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly ISpeckleApplication _speckleApplication;
+  private readonly ILogger<AutocadBasicConnectorBinding> _logger;
 
   public BasicConnectorBindingCommands Commands { get; }
 
@@ -25,7 +26,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
     DocumentModelStore store,
     IBridge parent,
     IAccountManager accountManager,
-    ISpeckleApplication speckleApplication
+    ILogger<AutocadBasicConnectorBinding> logger
   )
   {
     _store = store;
@@ -37,6 +38,8 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
     {
       Commands.NotifyDocumentChanged();
     };
+
+    _logger = logger;
   }
 
   public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
@@ -90,8 +93,10 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
     var objectIds = Array.Empty<ObjectId>();
 
     var model = _store.GetModelById(modelCardId);
+
     if (model == null)
     {
+      _logger.LogError("Model was null when highlighting received model");
       return;
     }
 

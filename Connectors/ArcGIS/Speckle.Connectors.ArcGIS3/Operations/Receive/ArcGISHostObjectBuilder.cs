@@ -29,7 +29,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
   private readonly IRootToHostConverter _converter;
   private readonly IFeatureClassUtils _featureClassUtils;
   private readonly ILocalToGlobalUnpacker _localToGlobalUnpacker;
-  private readonly ILocalToGlobalConverterUtils _localToGlobalConverterUtils;
+  private readonly LocalToGlobalConverterUtils _localToGlobalConverterUtils;
   private readonly ICrsUtils _crsUtils;
 
   // POC: figure out the correct scope to only initialize on Receive
@@ -42,7 +42,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     IConverterSettingsStore<ArcGISConversionSettings> settingsStore,
     IFeatureClassUtils featureClassUtils,
     ILocalToGlobalUnpacker localToGlobalUnpacker,
-    ILocalToGlobalConverterUtils localToGlobalConverterUtils,
+    LocalToGlobalConverterUtils localToGlobalConverterUtils,
     ICrsUtils crsUtils,
     GraphTraversal traverseFunction,
     ArcGISColorManager colorManager

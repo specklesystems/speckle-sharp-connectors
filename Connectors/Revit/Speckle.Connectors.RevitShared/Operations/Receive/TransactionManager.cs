@@ -11,11 +11,16 @@ namespace Speckle.Connectors.Revit.Operations.Receive;
 public sealed class TransactionManager : ITransactionManager
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
+  private readonly IFailuresPreprocessor _errorPreprocessingService;
   private Document Document => _converterSettings.Current.Document;
 
-  public TransactionManager(IConverterSettingsStore<RevitConversionSettings> converterSettings)
+  public TransactionManager(
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
+    IFailuresPreprocessor errorPreprocessingService
+  )
   {
     _converterSettings = converterSettings;
+    _errorPreprocessingService = errorPreprocessingService;
   }
 
   // poc : these are being disposed. I'm not sure why I need to supress this warning
@@ -24,17 +29,21 @@ public sealed class TransactionManager : ITransactionManager
   private SubTransaction? _subTransaction;
 #pragma warning restore CA2213 // Disposable fields should be disposed
 
-  public void StartTransaction()
+  // POC find a better way to use IFailuresPreprocessor
+  public void StartTransaction(bool enableFailurePreprocessor = false)
   {
     if (_transaction == null || !_transaction.IsValidObject || _transaction.GetStatus() != TransactionStatus.Started)
     {
       _transaction = new Transaction(Document, "Speckle Transaction");
-      var failOpts = _transaction.GetFailureHandlingOptions();
-      // POC: make sure to implement and add the failure preprocessor
-      // https://spockle.atlassian.net/browse/DUI3-461
-      //failOpts.SetFailuresPreprocessor(_errorPreprocessingService);
-      failOpts.SetClearAfterRollback(true);
-      _transaction.SetFailureHandlingOptions(failOpts);
+
+      if (enableFailurePreprocessor)
+      {
+        var failOpts = _transaction.GetFailureHandlingOptions();
+        failOpts.SetFailuresPreprocessor(_errorPreprocessingService);
+        failOpts.SetClearAfterRollback(true);
+        _transaction.SetFailureHandlingOptions(failOpts);
+      }
+
       _transaction.Start();
     }
   }

@@ -16,6 +16,11 @@ using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
+using Speckle.Connectors.Utils;
+using Speckle.Connectors.Utils.Builders;
+using Speckle.Connectors.Utils.Caching;
+using Speckle.Connectors.Utils.Operations;
+using Speckle.Converters.Common;
 using Speckle.Sdk.Models.GraphTraversal;
 
 // POC: This is a temp reference to root object senders to tweak CI failing after having generic interfaces into common project.
@@ -55,10 +60,10 @@ public static class ArcGISConnectorModule
     serviceCollection.AddScoped<ArcGISRootObjectBuilder>();
     serviceCollection.AddScoped<IRootObjectBuilder<MapMember>, ArcGISRootObjectBuilder>();
 
-    serviceCollection.AddScoped<ArcGISColorManager>();
-    serviceCollection.AddScoped<MapMembersUtils>();
+    builder.AddScoped<LocalToGlobalConverterUtils>();
 
-    serviceCollection.AddScoped<ILocalToGlobalUnpacker, LocalToGlobalUnpacker>();
+    builder.AddScoped<ArcGISColorManager>();
+    builder.AddScoped<MapMembersUtils>();
 
     // register send conversion cache
     serviceCollection.AddSingleton<ISendConversionCache, SendConversionCache>();

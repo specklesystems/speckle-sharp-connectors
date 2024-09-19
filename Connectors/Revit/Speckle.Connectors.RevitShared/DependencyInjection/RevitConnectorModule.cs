@@ -15,6 +15,11 @@ using Speckle.Connectors.Revit.Operations.Receive;
 using Speckle.Connectors.Revit.Operations.Send;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
+using Speckle.Connectors.Utils;
+using Speckle.Connectors.Utils.Builders;
+using Speckle.Connectors.Utils.Caching;
+using Speckle.Connectors.Utils.Operations;
+using Speckle.Converters.Common;
 using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.Revit.DependencyInjection;
@@ -38,13 +43,13 @@ public static class ServiceRegistration
     // POC: we need to review the scopes and create a document on what the policy is
     // and where the UoW should be
     // register UI bindings
-    serviceCollection.AddSingleton<IBinding, TestBinding>();
-    serviceCollection.AddSingleton<IBinding, ConfigBinding>();
-    serviceCollection.AddSingleton<IBinding, AccountBinding>();
-    serviceCollection.AddSingleton<IBinding, SelectionBinding>();
-    serviceCollection.AddSingleton<IBinding, RevitSendBinding>();
-    // builder.AddSingleton<IBinding, RevitReceiveBinding>(); // TODO: Have it back once we comfortable enough!
-    serviceCollection.AddSingleton<IRevitIdleManager, RevitIdleManager>();
+    builder.AddSingleton<IBinding, TestBinding>();
+    builder.AddSingleton<IBinding, ConfigBinding>("connectorName", "Revit"); // POC: Easier like this for now, should be cleaned up later
+    builder.AddSingleton<IBinding, AccountBinding>();
+    builder.AddSingleton<IBinding, SelectionBinding>();
+    builder.AddSingleton<IBinding, RevitSendBinding>();
+    builder.AddSingleton<IBinding, RevitReceiveBinding>();
+    builder.AddSingleton<IRevitIdleManager, RevitIdleManager>();
 
     serviceCollection.RegisterTopLevelExceptionHandler();
 
@@ -60,9 +65,15 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<ToSpeckleSettingsManager>();
 
     // receive operation and dependencies
-    serviceCollection.AddScoped<IHostObjectBuilder, RevitHostObjectBuilder>();
-    serviceCollection.AddScoped<ITransactionManager, TransactionManager>();
-    serviceCollection.AddSingleton(DefaultTraversal.CreateTraversalFunc());
+    builder.AddScoped<IHostObjectBuilder, RevitHostObjectBuilder>();
+    builder.AddScoped<ITransactionManager, TransactionManager>();
+    builder.AddScoped<RevitGroupBaker>();
+    builder.AddScoped<RevitMaterialBaker>();
+    builder.AddSingleton<RevitUtils>();
+    builder.AddSingleton<IFailuresPreprocessor, HideWarningsFailuresPreprocessor>();
+    builder.AddSingleton(DefaultTraversal.CreateTraversalFunc());
+
+    builder.AddScoped<LocalToGlobalConverterUtils>();
 
     // operation progress manager
     serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();
@@ -77,8 +88,8 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<IBrowserScriptExecutor>(sp => sp.GetRequiredService<CefSharpPanel>());
     serviceCollection.AddSingleton<IRevitPlugin, RevitCefPlugin>();
 #else
-    // POC: different versons for different versions of CEF
-    serviceCollection.AddSingleton(BindingOptions.DefaultBinder);
+    // different versions for different versions of CEF
+    builder.AddSingleton(BindingOptions.DefaultBinder);
 
     var panel = new CefSharpPanel();
     panel.Browser.JavascriptObjectRepository.NameConverter = null;
