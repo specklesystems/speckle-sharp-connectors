@@ -37,7 +37,7 @@ public class BasicConnectorBinding : IBasicConnectorBinding
 
   public string GetSourceApplicationName() => _speckleApplication.Slug;
 
-  public string GetSourceApplicationVersion() => _speckleApplication.Application;
+  public string GetSourceApplicationVersion() => _speckleApplication.HostApplicationVersion;
 
   public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
 

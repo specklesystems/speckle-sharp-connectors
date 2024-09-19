@@ -37,7 +37,7 @@ public class RhinoBasicConnectorBinding : IBasicConnectorBinding
 
   public string GetSourceApplicationName() => _speckleApplication.Slug;
 
-  public string GetSourceApplicationVersion() => _speckleApplication.AppVersion;
+  public string GetSourceApplicationVersion() => _speckleApplication.HostApplicationVersion;
 
   public DocumentInfo? GetDocumentInfo()
   {

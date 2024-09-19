@@ -42,7 +42,7 @@ public class ConfigBinding : IBinding
 
   public async Task<ConnectorConfig> GetConfig()
   {
-    var rawConfig = await ConfigStorage.GetObject(_speckleApplication.Application).ConfigureAwait(false);
+    var rawConfig = await ConfigStorage.GetObject(_speckleApplication.HostApplication).ConfigureAwait(false);
     if (rawConfig is null)
     {
       return SeedConfig();
@@ -74,7 +74,7 @@ public class ConfigBinding : IBinding
   public void UpdateConfig(ConnectorConfig config)
   {
     var str = JsonConvert.SerializeObject(config, _serializerOptions);
-    ConfigStorage.UpdateObject(_speckleApplication.Application, str);
+    ConfigStorage.UpdateObject(_speckleApplication.HostApplication, str);
   }
 }
 

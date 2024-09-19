@@ -79,15 +79,15 @@ internal sealed class RevitWebViewPlugin : IRevitPlugin
 
     string path = typeof(RevitWebViewPlugin).Assembly.Location;
     dui3Button.Image = LoadPngImgSource(
-      $"Speckle.Connectors.Revit{_speckleApplication.AppVersion}.Assets.logo16.png",
+      $"Speckle.Connectors.Revit{_speckleApplication.HostApplicationVersion}.Assets.logo16.png",
       path
     );
     dui3Button.LargeImage = LoadPngImgSource(
-      $"Speckle.Connectors.Revit{_speckleApplication.AppVersion}.Assets.logo32.png",
+      $"Speckle.Connectors.Revit{_speckleApplication.HostApplicationVersion}.Assets.logo32.png",
       path
     );
     dui3Button.ToolTipImage = LoadPngImgSource(
-      $"Speckle.Connectors.Revit{_speckleApplication.AppVersion}.Assets.logo32.png",
+      $"Speckle.Connectors.Revit{_speckleApplication.HostApplicationVersion}.Assets.logo32.png",
       path
     );
     dui3Button.ToolTip = "Speckle (Beta) for Revit";
