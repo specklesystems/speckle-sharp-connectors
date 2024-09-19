@@ -90,15 +90,12 @@ public class AutocadMaterialBaker
     transaction.Commit();
   }
 
-  public List<ReceiveConversionResult> ParseAndBakeRenderMaterials(
+  public void ParseAndBakeRenderMaterials(
     List<RenderMaterialProxy> materialProxies,
     string baseLayerPrefix,
     Action<string, double?>? onOperationProgressed
   )
   {
-    List<ReceiveConversionResult> results = new();
-    Dictionary<string, string> objectRenderMaterialsIdMap = new();
-
     using var transaction = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
     var materialDict = transaction.GetObject(Doc.Database.MaterialDictionaryId, OpenMode.ForWrite) as DBDictionary;
 
@@ -106,7 +103,7 @@ public class AutocadMaterialBaker
     {
       // POC: we should report failed conversion here if material dict is not accessible, but it is not linked to a Base source
       transaction.Commit();
-      return results;
+      return;
     }
 
     var count = 0;
@@ -127,31 +124,10 @@ public class AutocadMaterialBaker
           materialDict,
           transaction
         );
-
-        results.Add(result);
-      }
-      else
-      {
-        // POC: this shouldn't happen, but will if there are render materials with the same applicationID
-        results.Add(
-          new(
-            Status.ERROR,
-            renderMaterial,
-            exception: new ArgumentException("Another render material of the same id has already been created.")
-          )
-        );
       }
 
       if (materialId == ObjectId.Null)
       {
-        results.Add(
-          new(
-            Status.ERROR,
-            renderMaterial,
-            exception: new InvalidOperationException("Render material failed to be added to document.")
-          )
-        );
-
         continue;
       }
 
@@ -163,7 +139,6 @@ public class AutocadMaterialBaker
     }
 
     transaction.Commit();
-    return results;
   }
 
   private (ObjectId, ReceiveConversionResult) BakeMaterial(
