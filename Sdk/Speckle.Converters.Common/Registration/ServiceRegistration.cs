@@ -24,8 +24,8 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<IRootToHostConverter, ConverterWithFallback>();
     serviceCollection.AddScoped<ConverterWithoutFallback>(); //Register as self, only the `ConverterWithFallback` needs it
 
-    serviceCollection.InjectNamedTypes<IToSpeckleTopLevelConverter>(converterAssembly);
-    serviceCollection.InjectNamedTypes<IToHostTopLevelConverter>(converterAssembly);
+    serviceCollection.AddConverters<IToSpeckleTopLevelConverter>(converterAssembly);
+    serviceCollection.AddConverters<IToHostTopLevelConverter>(converterAssembly);
   }
 
   public static IServiceCollection AddApplicationConverters<THostToSpeckleUnitConverter, THostUnits>(
@@ -39,7 +39,7 @@ public static class ServiceRegistration
     return serviceCollection;
   }
 
-  public static void InjectNamedTypes<T>(this IServiceCollection serviceCollection, Assembly converterAssembly)
+  public static void AddConverters<T>(this IServiceCollection serviceCollection, Assembly converterAssembly)
   {
     ConcurrentDictionary<string, Type> converterTypes = new();
     var types = converterAssembly.ExportedTypes.Where(x => x.GetInterfaces().Contains(typeof(T)));
@@ -82,7 +82,7 @@ public static class ServiceRegistration
       // register subsequent types with rank
       namedTypes.RemoveAt(0);
     }
-    serviceCollection.AddSingleton<IConverterManager<T>>(sp => new ConverterManager<T>(converterTypes, sp));
+    serviceCollection.AddScoped<IConverterManager<T>>(sp => new ConverterManager<T>(converterTypes, sp));
   }
 
   public static void RegisterRawConversions(this IServiceCollection serviceCollection, Assembly conversionAssembly)
