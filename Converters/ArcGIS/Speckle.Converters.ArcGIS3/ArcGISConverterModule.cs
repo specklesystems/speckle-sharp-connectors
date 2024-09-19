@@ -26,7 +26,7 @@ public static class ArcGISConverterModule
     serviceCollection.AddScoped<IFeatureClassUtils, FeatureClassUtils>();
     serviceCollection.AddScoped<ICrsUtils, CrsUtils>();
     serviceCollection.AddScoped<IArcGISFieldUtils, ArcGISFieldUtils>();
-    serviceCollection.AddScoped<ILocalToGlobalConverterUtils, LocalToGlobalConverterUtils>();
+    serviceCollection.AddScoped<LocalToGlobalConverterUtils>();
     serviceCollection.AddScoped<ICharacterCleaner, CharacterCleaner>();
 
     // single stack per conversion

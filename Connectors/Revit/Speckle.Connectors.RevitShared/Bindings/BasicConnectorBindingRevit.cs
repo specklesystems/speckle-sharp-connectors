@@ -21,12 +21,14 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
   private readonly DocumentModelStore _store;
   private readonly RevitContext _revitContext;
+  private readonly ISpeckleApplication _speckleApplication;
   private readonly ILogger<BasicConnectorBindingRevit> _logger;
 
   public BasicConnectorBindingRevit(
     DocumentModelStore store,
     IBridge parent,
     RevitContext revitContext,
+    ISpeckleApplication speckleApplication,
     ILogger<BasicConnectorBindingRevit> logger
   )
   {
@@ -34,6 +36,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     Parent = parent;
     _store = store;
     _revitContext = revitContext;
+    _speckleApplication = speckleApplication;
     _logger = logger;
     Commands = new BasicConnectorBindingCommands(parent);
 

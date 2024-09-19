@@ -9,17 +9,12 @@ using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
-using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
-using Speckle.Connectors.Utils;
-using Speckle.Connectors.Utils.Builders;
-using Speckle.Connectors.Utils.Caching;
-using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
 using Speckle.Sdk.Models.GraphTraversal;
 
@@ -60,10 +55,10 @@ public static class ArcGISConnectorModule
     serviceCollection.AddScoped<ArcGISRootObjectBuilder>();
     serviceCollection.AddScoped<IRootObjectBuilder<MapMember>, ArcGISRootObjectBuilder>();
 
-    builder.AddScoped<LocalToGlobalConverterUtils>();
+    serviceCollection.AddScoped<LocalToGlobalConverterUtils>();
 
-    builder.AddScoped<ArcGISColorManager>();
-    builder.AddScoped<MapMembersUtils>();
+    serviceCollection.AddScoped<ArcGISColorManager>();
+    serviceCollection.AddScoped<MapMembersUtils>();
 
     // register send conversion cache
     serviceCollection.AddSingleton<ISendConversionCache, SendConversionCache>();

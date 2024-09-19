@@ -18,6 +18,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
   public IBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
+  private readonly ISpeckleApplication _speckleApplication;
   private readonly ILogger<AutocadBasicConnectorBinding> _logger;
 
   public BasicConnectorBindingCommands Commands { get; }
@@ -26,6 +27,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
     DocumentModelStore store,
     IBridge parent,
     IAccountManager accountManager,
+    ISpeckleApplication speckleApplication,
     ILogger<AutocadBasicConnectorBinding> logger
   )
   {
