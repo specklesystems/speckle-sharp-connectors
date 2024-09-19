@@ -353,12 +353,6 @@
           "System.Runtime.CompilerServices.Unsafe": "4.5.3"
         }
       },
-      "speckle.autofac": {
-        "type": "Project",
-        "dependencies": {
-          "Autofac": "[5.2.0, )"
-        }
-      },
       "speckle.connectors.logging": {
         "type": "Project"
       },
