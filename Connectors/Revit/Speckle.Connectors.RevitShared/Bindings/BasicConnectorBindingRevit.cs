@@ -1,5 +1,6 @@
 using System.Reflection;
 using Autodesk.Revit.DB;
+using Microsoft.Extensions.Logging;
 using Revit.Async;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
@@ -22,13 +23,20 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
   private readonly DocumentModelStore _store;
   private readonly RevitContext _revitContext;
+  private readonly ILogger<BasicConnectorBindingRevit> _logger;
 
-  public BasicConnectorBindingRevit(DocumentModelStore store, IBridge parent, RevitContext revitContext)
+  public BasicConnectorBindingRevit(
+    DocumentModelStore store,
+    IBridge parent,
+    RevitContext revitContext,
+    ILogger<BasicConnectorBindingRevit> logger
+  )
   {
     Name = "baseBinding";
     Parent = parent;
     _store = store;
     _revitContext = revitContext;
+    _logger = logger;
     Commands = new BasicConnectorBindingCommands(parent);
 
     // POC: event binding?
@@ -79,7 +87,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
     if (model is null)
     {
-      // should we log or throw here?
+      _logger.LogError("Model was null when highlighting received model");
       return;
     }
 
