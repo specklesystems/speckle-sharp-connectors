@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
@@ -70,11 +70,9 @@ public class TopLevelExceptionHandlerTests : MoqTest
     var bridge = Create<IBridge>();
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
-#pragma warning disable CA2201
     var exception = Assert.Throws<AggregateException>(
       () => sut.CatchUnhandled(new Func<string>(() => throw new AppDomainUnloadedException()))
     );
-#pragma warning restore CA2201
     exception.InnerExceptions.Single().Should().BeOfType<AppDomainUnloadedException>();
   }
 
@@ -115,11 +113,9 @@ public class TopLevelExceptionHandlerTests : MoqTest
     var bridge = Create<IBridge>();
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
-#pragma warning disable CA2201
     var exception = Assert.ThrowsAsync<AppDomainUnloadedException>(
       async () => await sut.CatchUnhandledAsync(new Func<Task<string>>(() => throw new AppDomainUnloadedException()))
     );
-#pragma warning restore CA2201
     exception.Should().BeOfType<AppDomainUnloadedException>();
   }
 }
