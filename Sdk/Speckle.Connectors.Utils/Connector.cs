@@ -39,6 +39,9 @@ public static class Connector
       Slug,
       Assembly.GetExecutingAssembly().GetVersion(),
       new(
+#if DEBUG || LOCAL
+        new SpeckleLogging(Console: true, MinimumLevel: SpeckleLogLevel.Debug), new SpeckleTracing(Console: false)
+#else
         new SpeckleLogging(
           Console: true,
           Otel: new(
@@ -54,6 +57,7 @@ public static class Connector
             Headers: new() { { "X-Seq-ApiKey", "y5YnBp12ZE1Czh4tzZWn" } }
           )
         )
+#endif
       )
     );
 
