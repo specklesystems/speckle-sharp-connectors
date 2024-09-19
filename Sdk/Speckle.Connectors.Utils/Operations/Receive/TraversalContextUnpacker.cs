@@ -8,17 +8,23 @@ namespace Speckle.Connectors.Utils.Operations.Receive;
 /// <summary>
 /// Utility class to unpack layer structure from path of collections or property tree.
 /// </summary>
-public abstract class LayerPathUnpacker
+public abstract class TraversalContextUnpacker
 {
   public List<(Collection[] path, Base current)> GetAtomicObjectsWithPath(
     IEnumerable<TraversalContext> atomicObjects
-  ) => atomicObjects.Select(o => (GetLayerPath(o), o.Current)).ToList();
+  ) => atomicObjects.Select(o => (GetCollectionPath(o), o.Current)).ToList();
 
   public List<(Collection[] path, IInstanceComponent instance)> GetInstanceComponentsWithPath(
     IEnumerable<TraversalContext> instanceComponents
-  ) => instanceComponents.Select(o => (GetLayerPath(o), (o.Current as IInstanceComponent)!)).ToList();
+  ) => instanceComponents.Select(o => (GetCollectionPath(o), (o.Current as IInstanceComponent)!)).ToList();
 
-  public Collection[] GetLayerPath(TraversalContext context)
+  /// <summary>
+  /// Returns the collection path for the provided traversal context. If data is coming from a dynamic/non-dui3 connector, the collection path will be generated based on the property path. This function enforces that every collection will have a name and an application id.
+  /// POC: this should be a util living somewhere else, most likely as an extension of the traversal context.
+  /// </summary>
+  /// <param name="context"></param>
+  /// <returns></returns>
+  public Collection[] GetCollectionPath(TraversalContext context)
   {
     Collection[] collectionBasedPath = context.GetAscendantOfType<Collection>().Reverse().ToArray();
 
@@ -29,6 +35,11 @@ public abstract class LayerPathUnpacker
         .Reverse()
         .Select(o => new Collection() { applicationId = Guid.NewGuid().ToString(), name = o })
         .ToArray();
+    }
+
+    foreach (var collection in collectionBasedPath)
+    {
+      collection.applicationId ??= Guid.NewGuid().ToString();
     }
 
     return collectionBasedPath;

@@ -7,7 +7,7 @@ using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 
 namespace Speckle.Connectors.Autocad.HostApp;
 
-public class AutocadLayerBaker : LayerPathUnpacker
+public class AutocadLayerBaker : TraversalContextUnpacker
 {
   private readonly string _layerFilterName = "Speckle";
   private readonly AutocadContext _autocadContext;

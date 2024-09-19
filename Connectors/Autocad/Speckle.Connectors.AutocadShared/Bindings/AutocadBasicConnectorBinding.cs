@@ -1,4 +1,5 @@
 using Autodesk.AutoCAD.DatabaseServices;
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
@@ -13,23 +14,32 @@ namespace Speckle.Connectors.Autocad.Bindings;
 
 public class AutocadBasicConnectorBinding : IBasicConnectorBinding
 {
+  private readonly IAccountManager _accountManager;
   public string Name { get; set; } = "baseBinding";
   public IBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
+  private readonly ILogger<AutocadBasicConnectorBinding> _logger;
 
   public BasicConnectorBindingCommands Commands { get; }
 
-  public AutocadBasicConnectorBinding(DocumentModelStore store, IBridge parent)
+  public AutocadBasicConnectorBinding(
+    DocumentModelStore store,
+    IBridge parent,
+    IAccountManager accountManager,
+    ILogger<AutocadBasicConnectorBinding> logger
+  )
   {
     _store = store;
     Parent = parent;
+    _accountManager = accountManager;
     Commands = new BasicConnectorBindingCommands(parent);
     _store.DocumentChanged += (_, _) =>
       parent.TopLevelExceptionHandler.FireAndForget(async () =>
       {
         await Commands.NotifyDocumentChanged().ConfigureAwait(false);
       });
+    _logger = logger;
   }
 
   public string GetConnectorVersion() => typeof(AutocadBasicConnectorBinding).Assembly.GetVersion();
@@ -38,7 +48,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
 
   public string GetSourceApplicationVersion() => Utils.Connector.VersionString;
 
-  public Account[] GetAccounts() => AccountManager.GetAccounts().ToArray();
+  public Account[] GetAccounts() => _accountManager.GetAccounts().ToArray();
 
   public DocumentInfo? GetDocumentInfo()
   {
@@ -83,8 +93,10 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
     var objectIds = Array.Empty<ObjectId>();
 
     var model = _store.GetModelById(modelCardId);
+
     if (model == null)
     {
+      _logger.LogError("Model was null when highlighting received model");
       return;
     }
 

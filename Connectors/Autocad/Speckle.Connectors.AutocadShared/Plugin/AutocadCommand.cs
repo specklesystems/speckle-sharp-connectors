@@ -36,7 +36,7 @@ public class AutocadCommand
     var builder = SpeckleContainerBuilder.CreateInstance();
 
     // init DI
-    _disposableLogger = Connector.Initialize(AppUtils.App, AppUtils.Version);
+    _disposableLogger = Connector.Initialize(AppUtils.App, AppUtils.Version, builder);
     Container = builder
       .LoadAutofacModules(
         Assembly.GetExecutingAssembly(),

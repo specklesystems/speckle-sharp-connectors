@@ -11,14 +11,17 @@ public class RhinoGroupBaker
 {
   private readonly IConverterSettingsStore<RhinoConversionSettings> _converterSettings;
   private readonly ILogger<RhinoGroupBaker> _logger;
+  private readonly ISdkActivityFactory _activityFactory;
 
   public RhinoGroupBaker(
     IConverterSettingsStore<RhinoConversionSettings> converterSettings,
-    ILogger<RhinoGroupBaker> logger
+    ILogger<RhinoGroupBaker> logger,
+    ISdkActivityFactory activityFactory
   )
   {
     _converterSettings = converterSettings;
     _logger = logger;
+    _activityFactory = activityFactory;
   }
 
   public void BakeGroups(
@@ -27,7 +30,7 @@ public class RhinoGroupBaker
     string baseLayerName
   )
   {
-    using var _ = SpeckleActivityFactory.Start();
+    using var _ = _activityFactory.Start();
     foreach (GroupProxy groupProxy in groupProxies.OrderBy(g => g.objects.Count))
     {
       try

@@ -9,7 +9,7 @@ namespace Speckle.Connectors.Rhino.HostApp;
 /// <summary>
 /// Utility class managing layer creation. Expects to be a scoped dependency per receive operation.
 /// </summary>
-public class RhinoLayerBaker : LayerPathUnpacker
+public class RhinoLayerBaker : TraversalContextUnpacker
 {
   private readonly RhinoMaterialBaker _materialBaker;
   private readonly RhinoColorBaker _colorBaker;

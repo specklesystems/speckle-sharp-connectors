@@ -1,30 +1,26 @@
 using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.ToSpeckle;
+using Speckle.Converters.RevitShared.Helpers;
 using Speckle.DoubleNumerics;
-using Speckle.Objects.Other;
 
 namespace Speckle.Converters.RevitShared.ToHost.TopLevel;
 
-[NameAndRankValue(nameof(SOG.Mesh), 0)]
-public class MeshToHostTopLevelConverter
-  : BaseTopLevelConverterToHost<SOG.Mesh, DB.GeometryObject[]>,
-    ITypedConverter<SOG.Mesh, DB.GeometryObject[]>
+public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObject>>
 {
   private readonly ITypedConverter<SOG.Point, DB.XYZ> _pointConverter;
-  private readonly ITypedConverter<RenderMaterial, DB.Material> _materialConverter;
+  private readonly RevitMaterialCacheSingleton _revitMaterialCacheSingleton;
 
-  public MeshToHostTopLevelConverter(
+  public MeshConverterToHost(
     ITypedConverter<SOG.Point, XYZ> pointConverter,
-    ITypedConverter<RenderMaterial, DB.Material> materialConverter
+    RevitMaterialCacheSingleton revitMaterialCacheSingleton
   )
   {
     _pointConverter = pointConverter;
-    _materialConverter = materialConverter;
+    _revitMaterialCacheSingleton = revitMaterialCacheSingleton;
   }
 
-  public override GeometryObject[] Convert(SOG.Mesh mesh)
+  public List<DB.GeometryObject> Convert(SOG.Mesh mesh)
   {
     TessellatedShapeBuilderTarget target = TessellatedShapeBuilderTarget.Mesh;
     TessellatedShapeBuilderFallback fallback = TessellatedShapeBuilderFallback.Salvage;
@@ -37,14 +33,19 @@ public class MeshToHostTopLevelConverter
     };
 
     var valid = tsb.AreTargetAndFallbackCompatible(target, fallback);
-    //tsb.OpenConnectedFaceSet(target == TessellatedShapeBuilderTarget.Solid);
     tsb.OpenConnectedFaceSet(false);
     var vertices = ArrayToPoints(mesh.vertices, mesh.units);
 
     ElementId materialId = ElementId.InvalidElementId;
-    if (mesh["renderMaterial"] is RenderMaterial renderMaterial)
+
+    if (
+      _revitMaterialCacheSingleton.ObjectIdAndMaterialIndexMap.TryGetValue(
+        mesh.applicationId ?? mesh.id,
+        out var mappedElementId
+      )
+    )
     {
-      materialId = _materialConverter.Convert(renderMaterial).Id;
+      materialId = mappedElementId;
     }
 
     int i = 0;
@@ -67,7 +68,7 @@ public class MeshToHostTopLevelConverter
         tsb.AddFace(face1);
 
         triPoints = new List<XYZ> { points[1], points[2], points[3] };
-        ;
+
         var face2 = new TessellatedFace(triPoints, materialId);
         tsb.AddFace(face2);
       }
@@ -85,7 +86,7 @@ public class MeshToHostTopLevelConverter
     tsb.Build();
     var result = tsb.GetBuildResult();
 
-    return result.GetGeometricalObjects().ToArray();
+    return result.GetGeometricalObjects().ToList();
   }
 
   private static bool IsNonPlanarQuad(IList<XYZ> points)

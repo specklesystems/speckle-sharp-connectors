@@ -1,14 +1,11 @@
-﻿using Speckle.Converters.Common;
-using Speckle.DoubleNumerics;
-using Speckle.InterfaceGenerator;
+﻿using Speckle.DoubleNumerics;
 using Speckle.Objects;
 using Speckle.Sdk.Models;
 
-namespace Speckle.Converters.ArcGIS3.Utils;
+namespace Speckle.Converters.Common;
 
 // POC: We could pass transformation matrices to converters by default and evaluate there instead as utils.
-[GenerateAutoInterface]
-public class LocalToGlobalConverterUtils : ILocalToGlobalConverterUtils
+public class LocalToGlobalConverterUtils
 {
   private Vector3 TransformPt(Vector3 vector, Matrix4x4 matrix)
   {
@@ -28,7 +25,9 @@ public class LocalToGlobalConverterUtils : ILocalToGlobalConverterUtils
       return atomicObject;
     }
 
-    List<Objects.Other.Transform> transforms = matrix.Select(x => new Objects.Other.Transform(x, "none")).ToList();
+    List<Speckle.Objects.Other.Transform> transforms = matrix
+      .Select(x => new Speckle.Objects.Other.Transform(x, "none"))
+      .ToList();
 
     if (atomicObject is ITransformable c)
     {
