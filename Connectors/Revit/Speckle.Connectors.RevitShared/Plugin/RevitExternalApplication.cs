@@ -1,9 +1,7 @@
-using System.Reflection;
 using Autodesk.Revit.UI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common;
-using Speckle.Connectors.Common.Common;
 using Speckle.Connectors.Revit.DependencyInjection;
 using Speckle.Converters.RevitShared;
 using Speckle.Sdk;
