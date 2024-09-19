@@ -14,7 +14,10 @@ public sealed class TransactionManager : ITransactionManager
   private readonly IFailuresPreprocessor _errorPreprocessingService;
   private Document Document => _converterSettings.Current.Document;
 
-  public TransactionManager(IConverterSettingsStore<RevitConversionSettings> converterSettings, IFailuresPreprocessor errorPreprocessingService)
+  public TransactionManager(
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
+    IFailuresPreprocessor errorPreprocessingService
+  )
   {
     _converterSettings = converterSettings;
     _errorPreprocessingService = errorPreprocessingService;
@@ -26,6 +29,7 @@ public sealed class TransactionManager : ITransactionManager
   private SubTransaction? _subTransaction;
 #pragma warning restore CA2213 // Disposable fields should be disposed
 
+  // POC find a better way to use IFailuresPreprocessor
   public void StartTransaction(bool enableFailurePreprocessor = false)
   {
     if (_transaction == null || !_transaction.IsValidObject || _transaction.GetStatus() != TransactionStatus.Started)
