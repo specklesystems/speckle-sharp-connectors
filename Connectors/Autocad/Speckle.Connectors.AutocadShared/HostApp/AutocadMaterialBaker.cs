@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
+using Speckle.Sdk.Models;
 using Material = Autodesk.AutoCAD.DatabaseServices.Material;
 using RenderMaterial = Speckle.Objects.Other.RenderMaterial;
 
@@ -24,6 +25,42 @@ public class AutocadMaterialBaker
   {
     _autocadContext = autocadContext;
     _logger = logger;
+  }
+
+  /// <summary>
+  /// Try to get material id from original object or its parent (if provided) as fallback).
+  /// It covers one-to-many problem, i.e.
+  ///  - rhino: Brep (material id is extracted into render material proxy objects) -> [Mesh, Mesh, ...] (child objects application ids ARE NOT EXIST in render material proxy objects)
+  ///  - revit : RevitElement (material IS NOT extracted into render material proxy objects) -> [Mesh, Mesh...] (child objects application ids EXIST in render material proxy objects)
+  /// </summary>
+  /// <remarks>
+  /// This is a question that we need to answer where to handle these cases.
+  /// We alsa do reverse search for layer render materials on Revit Receive, and mutating the proxy list accordingly.
+  /// These cases are increasing, and need some ideation around it before going more messy.
+  /// </remarks>
+  public bool TryGetMaterialId(Base originalObject, Base? parentObject, out ObjectId materialId)
+  {
+    materialId = ObjectId.Null;
+    var originalObjectId = originalObject.applicationId ?? originalObject.id;
+    if (ObjectMaterialsIdMap.TryGetValue(originalObjectId, out ObjectId originalObjectMaterialId))
+    {
+      materialId = originalObjectMaterialId;
+      return true;
+    }
+
+    if (parentObject is null)
+    {
+      return false;
+    }
+
+    var subObjectId = parentObject.applicationId ?? parentObject.id;
+    if (ObjectMaterialsIdMap.TryGetValue(subObjectId, out ObjectId subObjectMaterialId))
+    {
+      materialId = subObjectMaterialId;
+      return true;
+    }
+
+    return false;
   }
 
   /// <summary>
