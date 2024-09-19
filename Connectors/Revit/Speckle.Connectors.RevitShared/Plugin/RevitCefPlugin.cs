@@ -30,7 +30,9 @@ internal sealed class RevitCefPlugin : IRevitPlugin
     IServiceProvider serviceProvider,
     BindingOptions bindingOptions,
     RevitContext revitContext,
-    CefSharpPanel cefSharpPanel, ISpeckleApplication speckleApplication)
+    CefSharpPanel cefSharpPanel,
+    ISpeckleApplication speckleApplication
+  )
   {
     _uIControlledApplication = uIControlledApplication;
     _serviceProvider = serviceProvider;
@@ -80,7 +82,10 @@ internal sealed class RevitCefPlugin : IRevitPlugin
       );
 
     string path = typeof(RevitCefPlugin).Assembly.Location;
-    dui3Button.Image = LoadPngImgSource($"Speckle.Connectors.Revit{_speckleApplication.AppVersion}.Assets.logo16.png", path);
+    dui3Button.Image = LoadPngImgSource(
+      $"Speckle.Connectors.Revit{_speckleApplication.AppVersion}.Assets.logo16.png",
+      path
+    );
     dui3Button.LargeImage = LoadPngImgSource(
       $"Speckle.Connectors.Revit{_speckleApplication.AppVersion}.Assets.logo32.png",
       path

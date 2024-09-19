@@ -22,7 +22,12 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
   private readonly RevitContext _revitContext;
   private readonly ISpeckleApplication _speckleApplication;
 
-  public BasicConnectorBindingRevit(DocumentModelStore store, IBridge parent, RevitContext revitContext, ISpeckleApplication speckleApplication)
+  public BasicConnectorBindingRevit(
+    DocumentModelStore store,
+    IBridge parent,
+    RevitContext revitContext,
+    ISpeckleApplication speckleApplication
+  )
   {
     Name = "baseBinding";
     Parent = parent;
@@ -43,6 +48,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
   public string GetSourceApplicationName() => _speckleApplication.Slug;
 
   public string GetSourceApplicationVersion() => _speckleApplication.AppVersion;
+
   public DocumentInfo? GetDocumentInfo()
   {
     // POC: not sure why this would ever be null, is this needed?

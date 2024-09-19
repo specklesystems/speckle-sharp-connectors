@@ -375,8 +375,8 @@ public sealed class ArcGISSendBinding : ISendBinding
         .Run(async () =>
         {
           using var scope = _serviceProvider.CreateScope();
-          scope.ServiceProvider
-            .GetRequiredService<IConverterSettingsStore<ArcGISConversionSettings>>()
+          scope
+            .ServiceProvider.GetRequiredService<IConverterSettingsStore<ArcGISConversionSettings>>()
             .Initialize(
               _arcGISConversionSettingsFactory.Create(
                 Project.Current,
@@ -412,8 +412,8 @@ public sealed class ArcGISSendBinding : ISendBinding
             }
           }
 
-          var result = await scope.ServiceProvider
-            .GetRequiredService<SendOperation<MapMember>>()
+          var result = await scope
+            .ServiceProvider.GetRequiredService<SendOperation<MapMember>>()
             .Execute(
               mapMembers,
               modelCard.GetSendInfo("ArcGIS"), // POC: get host app name from settings? same for GetReceiveInfo

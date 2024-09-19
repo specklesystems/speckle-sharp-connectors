@@ -60,7 +60,9 @@ public sealed class AutocadSendBinding : ISendBinding
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
     ILogger<AutocadSendBinding> logger,
-    IAutocadConversionSettingsFactory autocadConversionSettingsFactory, ISpeckleApplication speckleApplication)
+    IAutocadConversionSettingsFactory autocadConversionSettingsFactory,
+    ISpeckleApplication speckleApplication
+  )
   {
     _store = store;
     _idleManager = idleManager;
@@ -160,8 +162,8 @@ public sealed class AutocadSendBinding : ISendBinding
       }
 
       using var scope = _serviceProvider.CreateScope();
-      scope.ServiceProvider
-        .GetRequiredService<IConverterSettingsStore<AutocadConversionSettings>>()
+      scope
+        .ServiceProvider.GetRequiredService<IConverterSettingsStore<AutocadConversionSettings>>()
         .Initialize(_autocadConversionSettingsFactory.Create(Application.DocumentManager.CurrentDocument));
 
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
@@ -182,7 +184,8 @@ public sealed class AutocadSendBinding : ISendBinding
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
       }
 
-      var sendResult = await scope.ServiceProvider.GetRequiredService<SendOperation<AutocadRootObject>>()
+      var sendResult = await scope
+        .ServiceProvider.GetRequiredService<SendOperation<AutocadRootObject>>()
         .Execute(
           autocadObjects,
           modelCard.GetSendInfo(_speckleApplication.Slug),

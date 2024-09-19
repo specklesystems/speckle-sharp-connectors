@@ -23,7 +23,7 @@ using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.ArcGIS.DependencyInjection;
 
-public static class ArcGISConnectorModule 
+public static class ArcGISConnectorModule
 {
   public static void AddArcGIS(this IServiceCollection serviceCollection)
   {

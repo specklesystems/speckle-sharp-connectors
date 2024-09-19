@@ -36,7 +36,9 @@ public class RhinoReceiveBinding : IReceiveBinding
     IOperationProgressManager operationProgressManager,
     ILogger<RhinoReceiveBinding> logger,
     IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
-    IServiceProvider serviceProvider, ISpeckleApplication speckleApplication)
+    IServiceProvider serviceProvider,
+    ISpeckleApplication speckleApplication
+  )
   {
     Parent = parent;
     _store = store;

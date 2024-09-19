@@ -35,7 +35,9 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
     IServiceProvider serviceProvider,
     IOperationProgressManager operationProgressManager,
     ILogger<RevitReceiveBinding> logger,
-    IRevitConversionSettingsFactory revitConversionSettingsFactory, ISpeckleApplication speckleApplication)
+    IRevitConversionSettingsFactory revitConversionSettingsFactory,
+    ISpeckleApplication speckleApplication
+  )
   {
     Parent = parent;
     _store = store;

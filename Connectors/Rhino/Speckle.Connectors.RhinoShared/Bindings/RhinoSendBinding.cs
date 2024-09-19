@@ -59,7 +59,9 @@ public sealed class RhinoSendBinding : ISendBinding
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
     ILogger<RhinoSendBinding> logger,
-    IRhinoConversionSettingsFactory rhinoConversionSettingsFactory, ISpeckleApplication speckleApplication)
+    IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
+    ISpeckleApplication speckleApplication
+  )
   {
     _store = store;
     _idleManager = idleManager;

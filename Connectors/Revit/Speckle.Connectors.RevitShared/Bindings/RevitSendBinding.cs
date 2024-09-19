@@ -57,7 +57,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     ToSpeckleSettingsManager toSpeckleSettingsManager,
     ILogger<RevitSendBinding> logger,
     ElementUnpacker elementUnpacker,
-    IRevitConversionSettingsFactory revitConversionSettingsFactory, ISpeckleApplication speckleApplication)
+    IRevitConversionSettingsFactory revitConversionSettingsFactory,
+    ISpeckleApplication speckleApplication
+  )
     : base("sendBinding", store, bridge, revitContext)
   {
     _idleManager = idleManager;

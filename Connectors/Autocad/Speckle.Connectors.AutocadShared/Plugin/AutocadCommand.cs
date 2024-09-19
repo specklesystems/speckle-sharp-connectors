@@ -35,17 +35,16 @@ public class AutocadCommand
       DockEnabled = (DockSides)((int)DockSides.Left + (int)DockSides.Right)
     };
 
-
     // init DI
     var services = new ServiceCollection();
     _disposableLogger = services.Initialize(AppUtils.App, AppUtils.Version);
-    #if AUTOCAD
+#if AUTOCAD
     services.AddAutocad();
     services.AddAutocadConverters();
 #elif CIVIL3D
     services.AddCivil3d();
     services.AddCivil3dConverters();
-    #endif
+#endif
     Container = services.BuildServiceProvider();
 
     var panelWebView = Container.GetRequiredService<DUI3ControlWebView>();

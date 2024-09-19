@@ -6,7 +6,7 @@ using Speckle.Sdk;
 
 namespace Speckle.Converters.Civil3d;
 
-public static class ServiceRegistration 
+public static class ServiceRegistration
 {
   public static void AddCivil3dConverters(this IServiceCollection serviceCollection)
   {
@@ -19,7 +19,9 @@ public static class ServiceRegistration
     serviceCollection.AddRootCommon<Civil3dRootToHostConverter>(civil3dAssembly);
 
     // register all application converters
-    serviceCollection.AddApplicationConverters<Civil3dToSpeckleUnitConverter, Autodesk.Aec.BuiltInUnit>(civil3dAssembly);
+    serviceCollection.AddApplicationConverters<Civil3dToSpeckleUnitConverter, Autodesk.Aec.BuiltInUnit>(
+      civil3dAssembly
+    );
     serviceCollection.AddApplicationConverters<AutocadToSpeckleUnitConverter, ADB.UnitsValue>(autocadAssembly);
     serviceCollection.AddScoped<
       IConverterSettingsStore<Civil3dConversionSettings>,

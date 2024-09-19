@@ -28,7 +28,9 @@ internal sealed class RevitWebViewPlugin : IRevitPlugin
   public RevitWebViewPlugin(
     UIControlledApplication uIControlledApplication,
     RevitContext revitContext,
-    DUI3ControlWebViewDockable webViewPanel, ISpeckleApplication speckleApplication)
+    DUI3ControlWebViewDockable webViewPanel,
+    ISpeckleApplication speckleApplication
+  )
   {
     _uIControlledApplication = uIControlledApplication;
     _revitContext = revitContext;
@@ -76,7 +78,10 @@ internal sealed class RevitWebViewPlugin : IRevitPlugin
       );
 
     string path = typeof(RevitWebViewPlugin).Assembly.Location;
-    dui3Button.Image = LoadPngImgSource($"Speckle.Connectors.Revit{_speckleApplication.AppVersion}.Assets.logo16.png", path);
+    dui3Button.Image = LoadPngImgSource(
+      $"Speckle.Connectors.Revit{_speckleApplication.AppVersion}.Assets.logo16.png",
+      path
+    );
     dui3Button.LargeImage = LoadPngImgSource(
       $"Speckle.Connectors.Revit{_speckleApplication.AppVersion}.Assets.logo32.png",
       path

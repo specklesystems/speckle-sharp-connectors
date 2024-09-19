@@ -35,7 +35,9 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
     IServiceProvider serviceProvider,
     IOperationProgressManager operationProgressManager,
     ILogger<AutocadReceiveBinding> logger,
-    IAutocadConversionSettingsFactory autocadConversionSettingsFactory, ISpeckleApplication speckleApplication)
+    IAutocadConversionSettingsFactory autocadConversionSettingsFactory,
+    ISpeckleApplication speckleApplication
+  )
   {
     _store = store;
     _cancellationManager = cancellationManager;
@@ -53,8 +55,8 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
   public async Task Receive(string modelCardId)
   {
     using var scope = _serviceProvider.CreateScope();
-    scope.ServiceProvider
-      .GetRequiredService<IConverterSettingsStore<AutocadConversionSettings>>()
+    scope
+      .ServiceProvider.GetRequiredService<IConverterSettingsStore<AutocadConversionSettings>>()
       .Initialize(_autocadConversionSettingsFactory.Create(Application.DocumentManager.CurrentDocument));
     try
     {
@@ -73,8 +75,8 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
       Application.DocumentManager.DocumentActivationEnabled = false;
 
       // Receive host objects
-      var operationResults = await scope.ServiceProvider
-        .GetRequiredService<ReceiveOperation>()
+      var operationResults = await scope
+        .ServiceProvider.GetRequiredService<ReceiveOperation>()
         .Execute(
           modelCard.GetReceiveInfo(_speckleApplication.Slug),
           cancellationToken,

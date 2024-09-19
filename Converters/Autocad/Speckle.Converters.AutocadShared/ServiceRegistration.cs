@@ -8,7 +8,7 @@ namespace Speckle.Converters.Autocad;
 
 public static class ServiceRegistration
 {
-  public static void AddAutocadConverters(this  IServiceCollection serviceCollection)
+  public static void AddAutocadConverters(this IServiceCollection serviceCollection)
   {
     var converterAssembly = Assembly.GetExecutingAssembly();
     //register types by default

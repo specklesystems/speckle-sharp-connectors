@@ -21,7 +21,12 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
 
   public BasicConnectorBindingCommands Commands { get; }
 
-  public AutocadBasicConnectorBinding(DocumentModelStore store, IBridge parent, IAccountManager accountManager, ISpeckleApplication speckleApplication)
+  public AutocadBasicConnectorBinding(
+    DocumentModelStore store,
+    IBridge parent,
+    IAccountManager accountManager,
+    ISpeckleApplication speckleApplication
+  )
   {
     _store = store;
     Parent = parent;
@@ -34,7 +39,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
     };
   }
 
-  public string GetConnectorVersion() =>_speckleApplication.SpeckleVersion;
+  public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
 
   public string GetSourceApplicationName() => _speckleApplication.Slug;
 

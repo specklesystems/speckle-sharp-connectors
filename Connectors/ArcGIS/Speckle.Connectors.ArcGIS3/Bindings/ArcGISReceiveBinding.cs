@@ -62,8 +62,8 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
 
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
       using var scope = _serviceProvider.CreateScope();
-      scope.ServiceProvider
-        .GetRequiredService<IConverterSettingsStore<ArcGISConversionSettings>>()
+      scope
+        .ServiceProvider.GetRequiredService<IConverterSettingsStore<ArcGISConversionSettings>>()
         .Initialize(
           _arcGISConversionSettingsFactory.Create(
             Project.Current,
@@ -72,8 +72,8 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
           )
         );
       // Receive host objects
-      var receiveOperationResults = await scope.ServiceProvider
-        .GetRequiredService<ReceiveOperation>()
+      var receiveOperationResults = await scope
+        .ServiceProvider.GetRequiredService<ReceiveOperation>()
         .Execute(
           modelCard.GetReceiveInfo("ArcGIS"), // POC: get host app name from settings? same for GetSendInfo
           cancellationToken,

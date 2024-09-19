@@ -8,7 +8,7 @@ using Speckle.Sdk;
 
 namespace Speckle.Converters.ArcGIS3;
 
-public static class ArcGISConverterModule 
+public static class ArcGISConverterModule
 {
   public static void AddArcGISConverters(this IServiceCollection serviceCollection)
   {
