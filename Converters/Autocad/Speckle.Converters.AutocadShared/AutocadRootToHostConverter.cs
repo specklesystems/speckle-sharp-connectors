@@ -1,18 +1,18 @@
 using Autodesk.AutoCAD.DatabaseServices;
-using Speckle.Autofac.DependencyInjection;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Registration;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad;
 
 public class AutocadRootToHostConverter : IRootToSpeckleConverter
 {
-  private readonly IFactory<IToSpeckleTopLevelConverter> _toSpeckle;
+  private readonly IConverterManager<IToSpeckleTopLevelConverter> _toSpeckle;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public AutocadRootToHostConverter(
-    IFactory<IToSpeckleTopLevelConverter> toSpeckle,
+    IConverterManager<IToSpeckleTopLevelConverter> toSpeckle,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
@@ -37,7 +37,7 @@ public class AutocadRootToHostConverter : IRootToSpeckleConverter
       {
         using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
         {
-          var objectConverter = _toSpeckle.ResolveInstance(type.Name);
+          var objectConverter = _toSpeckle.ResolveConverter(type.Name);
 
           if (objectConverter == null)
           {
