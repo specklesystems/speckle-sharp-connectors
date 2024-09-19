@@ -301,24 +301,11 @@
         "resolved": "4.5.0",
         "contentHash": "okurQJO6NRE/apDIP23ajJ0hpiNmJ+f0BwOlB/cSqTLQlw5upkf+5+96+iG2Jw40G1fCVCyPz/FhIABUjMR+RQ=="
       },
-      "speckle.autofac": {
-        "type": "Project",
-        "dependencies": {
-          "Autofac": "[5.2.0, )"
-        }
-      },
       "speckle.converters.common": {
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[3.1.0, )",
           "Speckle.Objects": "[3.1.0-dev.142, )"
-        }
-      },
-      "speckle.converters.common.dependencyinjection": {
-        "type": "Project",
-        "dependencies": {
-          "Speckle.Autofac": "[1.0.0, )",
-          "Speckle.Converters.Common": "[1.0.0, )"
         }
       },
       "Microsoft.Extensions.Logging": {

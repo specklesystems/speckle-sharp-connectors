@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Utils;
@@ -54,5 +55,16 @@ public static class ContainerRegistration
         Converters = { new DiscriminatedObjectConverter(), new AbstractConverter<DiscriminatedObject, ISendFilter>() }
       };
     return settings;
+  }
+
+  public static void RegisterTopLevelExceptionHandler(this IServiceCollection serviceCollection)
+  {
+    serviceCollection.AddSingleton<IBinding, TopLevelExceptionHandlerBinding>(sp =>
+      sp.GetRequiredService<TopLevelExceptionHandlerBinding>()
+    );
+    serviceCollection.AddSingleton<TopLevelExceptionHandlerBinding>();
+    serviceCollection.AddSingleton<ITopLevelExceptionHandler>(c =>
+      c.GetRequiredService<TopLevelExceptionHandlerBinding>().Parent.TopLevelExceptionHandler
+    );
   }
 }

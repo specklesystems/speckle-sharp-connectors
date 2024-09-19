@@ -1,5 +1,5 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Cancellation;
@@ -24,7 +24,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
   private readonly ILogger<RevitReceiveBinding> _logger;
   private readonly CancellationManager _cancellationManager;
   private readonly DocumentModelStore _store;
-  private readonly IUnitOfWorkFactory _unitOfWorkFactory;
+  private readonly IServiceProvider _serviceProvider;
   private readonly IRevitConversionSettingsFactory _revitConversionSettingsFactory;
   private ReceiveBindingUICommands Commands { get; }
 
@@ -32,7 +32,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
     DocumentModelStore store,
     CancellationManager cancellationManager,
     IBridge parent,
-    IUnitOfWorkFactory unitOfWorkFactory,
+    IServiceProvider serviceProvider,
     IOperationProgressManager operationProgressManager,
     ILogger<RevitReceiveBinding> logger,
     IRevitConversionSettingsFactory revitConversionSettingsFactory
@@ -40,7 +40,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
   {
     Parent = parent;
     _store = store;
-    _unitOfWorkFactory = unitOfWorkFactory;
+    _serviceProvider = serviceProvider;
     _operationProgressManager = operationProgressManager;
     _logger = logger;
     _revitConversionSettingsFactory = revitConversionSettingsFactory;
@@ -64,9 +64,9 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
 
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
-      using var unitOfWork = _unitOfWorkFactory.Create();
-      unitOfWork
-        .Resolve<IConverterSettingsStore<RevitConversionSettings>>()
+      using var scope = _serviceProvider.CreateScope();
+      scope
+        .ServiceProvider.GetRequiredService<IConverterSettingsStore<RevitConversionSettings>>()
         .Initialize(
           _revitConversionSettingsFactory.Create(
             DetailLevelType.Coarse, //TODO figure out
@@ -74,8 +74,8 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
           )
         );
       // Receive host objects
-      HostObjectBuilderResult conversionResults = await unitOfWork
-        .Resolve<ReceiveOperation>()
+      HostObjectBuilderResult conversionResults = await scope
+        .ServiceProvider.GetRequiredService<ReceiveOperation>()
         .Execute(
           modelCard.GetReceiveInfo(Connector.Slug),
           cancellationToken,

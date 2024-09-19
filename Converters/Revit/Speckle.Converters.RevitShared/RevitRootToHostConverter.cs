@@ -1,21 +1,22 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Registration;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared;
 
 public class RevitRootToHostConverter : IRootToHostConverter
 {
-  private readonly IConverterResolver<IToHostTopLevelConverter> _converterResolver;
+  private readonly IConverterManager<IToHostTopLevelConverter> _converterResolver;
 
-  public RevitRootToHostConverter(IConverterResolver<IToHostTopLevelConverter> converterResolver)
+  public RevitRootToHostConverter(IConverterManager<IToHostTopLevelConverter> converterResolver)
   {
     _converterResolver = converterResolver;
   }
 
   public object Convert(Base target)
   {
-    var objectConverter = _converterResolver.GetConversionForType(target.GetType());
+    var objectConverter = _converterResolver.ResolveConverter(target.GetType().Name);
 
     if (objectConverter == null)
     {

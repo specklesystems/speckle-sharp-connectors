@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using Autodesk.Revit.DB;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
@@ -29,7 +29,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 {
   private readonly IRevitIdleManager _idleManager;
   private readonly CancellationManager _cancellationManager;
-  private readonly IUnitOfWorkFactory _unitOfWorkFactory;
+  private readonly IServiceProvider _serviceProvider;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ToSpeckleSettingsManager _toSpeckleSettingsManager;
@@ -51,7 +51,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     DocumentModelStore store,
     CancellationManager cancellationManager,
     IBridge bridge,
-    IUnitOfWorkFactory unitOfWorkFactory,
+    IServiceProvider serviceProvider,
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
     ToSpeckleSettingsManager toSpeckleSettingsManager,
@@ -63,7 +63,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   {
     _idleManager = idleManager;
     _cancellationManager = cancellationManager;
-    _unitOfWorkFactory = unitOfWorkFactory;
+    _serviceProvider = serviceProvider;
     _sendConversionCache = sendConversionCache;
     _operationProgressManager = operationProgressManager;
     _toSpeckleSettingsManager = toSpeckleSettingsManager;
@@ -111,9 +111,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
-      using var unitOfWork = _unitOfWorkFactory.Create();
-      unitOfWork
-        .Resolve<IConverterSettingsStore<RevitConversionSettings>>()
+      using var scope = _serviceProvider.CreateScope();
+      scope
+        .ServiceProvider.GetRequiredService<IConverterSettingsStore<RevitConversionSettings>>()
         .Initialize(
           _revitConversionSettingsFactory.Create(
             _toSpeckleSettingsManager.GetDetailLevelSetting(modelCard),
@@ -136,8 +136,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
       }
 
-      var sendResult = await unitOfWork
-        .Resolve<SendOperation<ElementId>>()
+      var sendResult = await scope
+        .ServiceProvider.GetRequiredService<SendOperation<ElementId>>()
         .Execute(
           revitObjects,
           modelCard.GetSendInfo(Connector.Slug),

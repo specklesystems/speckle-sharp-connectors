@@ -49,13 +49,7 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<IBinding, ConfigBinding>(); // POC: Easier like this for now, should be cleaned up later
     serviceCollection.AddSingleton<IBinding, AccountBinding>();
 
-    serviceCollection.AddSingleton<IBinding, TopLevelExceptionHandlerBinding>(sp =>
-      sp.GetRequiredService<TopLevelExceptionHandlerBinding>()
-    );
-    serviceCollection.AddSingleton<TopLevelExceptionHandlerBinding>();
-    serviceCollection.AddSingleton<ITopLevelExceptionHandler>(c =>
-      c.GetRequiredService<TopLevelExceptionHandlerBinding>().Parent.TopLevelExceptionHandler
-    );
+    serviceCollection.RegisterTopLevelExceptionHandler();
 
     serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
     serviceCollection.AddSingleton<IBasicConnectorBinding, RhinoBasicConnectorBinding>();

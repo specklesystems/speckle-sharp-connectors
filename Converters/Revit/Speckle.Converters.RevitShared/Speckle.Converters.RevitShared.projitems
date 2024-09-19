@@ -25,6 +25,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)RevitVersionConversionHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ReferencePointConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)RevitRootToHostConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\ScalingServiceToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\ScalingServiceToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\DetailLevelType.cs" />
