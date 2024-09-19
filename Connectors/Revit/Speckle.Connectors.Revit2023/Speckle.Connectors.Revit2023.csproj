@@ -35,7 +35,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Plugin\Speckle.Connectors.Revit2023.addin" />
     <Content Include="Plugin\Speckle.Connectors.Revit2023.addin">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
