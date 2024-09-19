@@ -1,7 +1,8 @@
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Utils.Operations.Receive;
-using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.Common;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
 using Speckle.Sdk.Models.Collections;
@@ -15,19 +16,19 @@ namespace Speckle.Connectors.Revit.HostApp;
 /// </summary>
 public class RevitMaterialBaker
 {
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ILogger<RevitMaterialBaker> _logger;
   private readonly RevitUtils _revitUtils;
 
   public RevitMaterialBaker(
-    IRevitConversionContextStack contextStack,
     ILogger<RevitMaterialBaker> logger,
-    RevitUtils revitUtils
+    RevitUtils revitUtils,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
-    _contextStack = contextStack;
     _logger = logger;
     _revitUtils = revitUtils;
+    _converterSettings = converterSettings;
   }
 
   /// <summary>
@@ -124,8 +125,8 @@ public class RevitMaterialBaker
         string materialId = speckleRenderMaterial.applicationId ?? speckleRenderMaterial.id;
         string matName = _revitUtils.RemoveInvalidChars($"{speckleRenderMaterial.name}-({materialId})-{baseLayerName}");
 
-        var newMaterialId = Autodesk.Revit.DB.Material.Create(_contextStack.Current.Document, matName);
-        var revitMaterial = (Autodesk.Revit.DB.Material)_contextStack.Current.Document.GetElement(newMaterialId);
+        var newMaterialId = Autodesk.Revit.DB.Material.Create(_converterSettings.Current.Document, matName);
+        var revitMaterial = (Autodesk.Revit.DB.Material)_converterSettings.Current.Document.GetElement(newMaterialId);
         revitMaterial.Color = new Color(diffuse.R, diffuse.G, diffuse.B);
 
         revitMaterial.Transparency = (int)(transparency * 100);
@@ -149,7 +150,7 @@ public class RevitMaterialBaker
   public void PurgeMaterials(string baseGroupName)
   {
     var validBaseGroupName = _revitUtils.RemoveInvalidChars(baseGroupName);
-    var document = _contextStack.Current.Document;
+    var document = _converterSettings.Current.Document;
 
     using (var collector = new FilteredElementCollector(document))
     {

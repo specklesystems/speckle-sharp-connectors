@@ -2,7 +2,7 @@ using System.Collections;
 using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Extensions;
@@ -11,25 +11,25 @@ namespace Speckle.Converters.RevitShared;
 
 public class RevitRootToHostConverter : IRootToHostConverter
 {
-  private readonly IRevitConversionContextStack _revitContextStack;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly IConverterResolver<IToHostTopLevelConverter> _converterResolver;
   private readonly ITypedConverter<SOG.Point, DB.XYZ> _pointConverter;
   private readonly ITypedConverter<ICurve, DB.CurveArray> _curveConverter;
   private readonly ITypedConverter<SOG.Mesh, List<DB.GeometryObject>> _meshConverter;
 
   public RevitRootToHostConverter(
-    IRevitConversionContextStack revitContextStack,
     IConverterResolver<IToHostTopLevelConverter> converterResolver,
     ITypedConverter<SOG.Point, DB.XYZ> pointConverter,
     ITypedConverter<ICurve, DB.CurveArray> curveConverter,
-    ITypedConverter<SOG.Mesh, List<DB.GeometryObject>> meshConverter
+    ITypedConverter<SOG.Mesh, List<DB.GeometryObject>> meshConverter,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
-    _revitContextStack = revitContextStack;
     _converterResolver = converterResolver;
     _pointConverter = pointConverter;
     _curveConverter = curveConverter;
     _meshConverter = meshConverter;
+    _converterSettings = converterSettings;
   }
 
   public object Convert(Base target)
@@ -66,15 +66,15 @@ public class RevitRootToHostConverter : IRootToHostConverter
       var res = Enum.TryParse($"OST_{categoryString}", out DB.BuiltInCategory cat);
       if (res)
       {
-        var c = Category.GetCategory(_revitContextStack.Current.Document, cat);
-        if (c is not null && DirectShape.IsValidCategoryId(c.Id, _revitContextStack.Current.Document))
+        var c = Category.GetCategory(_converterSettings.Current.Document, cat);
+        if (c is not null && DirectShape.IsValidCategoryId(c.Id, _converterSettings.Current.Document))
         {
           category = cat;
         }
       }
     }
 
-    var ds = DB.DirectShape.CreateElement(_revitContextStack.Current.Document, new DB.ElementId(category));
+    var ds = DB.DirectShape.CreateElement(_converterSettings.Current.Document, new DB.ElementId(category));
     ds.SetShape(geometryObjects);
 
     return ds;

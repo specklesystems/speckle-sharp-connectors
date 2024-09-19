@@ -7,6 +7,7 @@ using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Instances;
 using Speckle.Connectors.Utils.Operations.Receive;
 using Speckle.Converters.Common;
+using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
@@ -20,6 +21,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   private readonly IRootToHostConverter _converter;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly GraphTraversal _traverseFunction;
+  private readonly RevitMaterialCacheSingleton _revitMaterialCacheSingleton;
   private readonly ITransactionManager _transactionManager;
   private readonly ILocalToGlobalUnpacker _localToGlobalUnpacker;
   private readonly LocalToGlobalConverterUtils _localToGlobalConverterUtils;
@@ -35,27 +37,27 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
     GraphTraversal traverseFunction,
     ITransactionManager transactionManager,
-    ISyncToThread syncToThread,
     ISdkActivityFactory activityFactory,
     ILocalToGlobalUnpacker localToGlobalUnpacker,
     LocalToGlobalConverterUtils localToGlobalConverterUtils,
     RevitGroupBaker groupManager,
     RevitMaterialBaker materialBaker,
     RootObjectUnpacker rootObjectUnpacker,
-    ILogger<RevitHostObjectBuilder> logger
+    ILogger<RevitHostObjectBuilder> logger,
+    RevitMaterialCacheSingleton revitMaterialCacheSingleton
   )
   {
     _converter = converter;
     _converterSettings = converterSettings;
     _traverseFunction = traverseFunction;
     _transactionManager = transactionManager;
-    _syncToThread = syncToThread;
     _localToGlobalUnpacker = localToGlobalUnpacker;
     _localToGlobalConverterUtils = localToGlobalConverterUtils;
     _groupBaker = groupManager;
     _materialBaker = materialBaker;
     _rootObjectUnpacker = rootObjectUnpacker;
     _logger = logger;
+    _revitMaterialCacheSingleton = revitMaterialCacheSingleton;
     _activityFactory = activityFactory;
   }
 
@@ -79,10 +81,10 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     var baseGroupName = $"Project {projectName}: Model {modelName}"; // TODO: unify this across connectors!
 
     onOperationProgressed?.Invoke("Converting", null);
-    using var activity = SpeckleActivityFactory.Start("Build");
+    using var activity = _activityFactory.Start("Build");
 
     // 0 - Clean then Rock n Roll! 🎸
-    using TransactionGroup preReceiveCleanTransaction = new(_contextStack.Current.Document, "Pre-receive clean");
+    using TransactionGroup preReceiveCleanTransaction = new(_converterSettings.Current.Document, "Pre-receive clean");
     preReceiveCleanTransaction.Start();
     _transactionManager.StartTransaction(true);
 
@@ -95,7 +97,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       _logger.LogError(ex, "Failed to clean up before receive in Revit");
     }
 
-    using (var _ = SpeckleActivityFactory.Start("Commit"))
+    using (var _ = _activityFactory.Start("Commit"))
     {
       _transactionManager.CommitTransaction();
       preReceiveCleanTransaction.Assimilate();
@@ -108,7 +110,8 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       unpackedRoot.ObjectsToConvert.ToList()
     );
 
-    using TransactionGroup transactionGroup = new(_converterSettings.Current.Document, $"Received data from {projectName}");
+    using TransactionGroup transactionGroup =
+      new(_converterSettings.Current.Document, $"Received data from {projectName}");
     transactionGroup.Start();
     _transactionManager.StartTransaction();
 
@@ -119,19 +122,19 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       var map = _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseGroupName);
       foreach (var kvp in map)
       {
-        _contextStack.RenderMaterialProxyCache.ObjectIdAndMaterialIndexMap.Add(kvp.Key, kvp.Value);
+        _revitMaterialCacheSingleton.ObjectIdAndMaterialIndexMap.Add(kvp.Key, kvp.Value);
       }
     }
 
     var conversionResults = BakeObjects(localToGlobalMaps, onOperationProgressed, cancellationToken);
 
-    using (var _ = SpeckleActivityFactory.Start("Commit"))
+    using (var _ = _activityFactory.Start("Commit"))
     {
       _transactionManager.CommitTransaction();
       transactionGroup.Assimilate();
     }
 
-    using TransactionGroup createGroupTransaction = new(_contextStack.Current.Document, "Creating group");
+    using TransactionGroup createGroupTransaction = new(_converterSettings.Current.Document, "Creating group");
     createGroupTransaction.Start();
     _transactionManager.StartTransaction(true);
 
@@ -144,13 +147,13 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       _logger.LogError(ex, "Failed to create group after receiving elements in Revit");
     }
 
-    using (var _ = SpeckleActivityFactory.Start("Commit"))
+    using (var _ = _activityFactory.Start("Commit"))
     {
       _transactionManager.CommitTransaction();
       createGroupTransaction.Assimilate();
     }
 
-    _contextStack.RenderMaterialProxyCache.ObjectIdAndMaterialIndexMap.Clear(); // Massive hack!
+    _revitMaterialCacheSingleton.ObjectIdAndMaterialIndexMap.Clear(); // Massive hack!
 
     return conversionResults;
   }
@@ -161,7 +164,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     CancellationToken cancellationToken
   )
   {
-    using var _ = SpeckleActivityFactory.Start("BakeObjects");
+    using var _ = _activityFactory.Start("BakeObjects");
     var conversionResults = new List<ReceiveConversionResult>();
     var bakedObjectIds = new List<string>();
     int count = 0;
@@ -171,7 +174,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       cancellationToken.ThrowIfCancellationRequested();
       try
       {
-        using var activity = SpeckleActivityFactory.Start("BakeObject");
+        using var activity = _activityFactory.Start("BakeObject");
         var atomicObject = _localToGlobalConverterUtils.TransformObjects(
           localToGlobalMap.AtomicObject,
           localToGlobalMap.Matrix

@@ -9,15 +9,15 @@ namespace Speckle.Converters.RevitShared.ToHost.TopLevel;
 public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObject>>
 {
   private readonly ITypedConverter<SOG.Point, DB.XYZ> _pointConverter;
-  private readonly IRevitConversionContextStack _revitContextStack;
+  private readonly RevitMaterialCacheSingleton _revitMaterialCacheSingleton;
 
   public MeshConverterToHost(
     ITypedConverter<SOG.Point, XYZ> pointConverter,
-    IRevitConversionContextStack revitContextStack
+    RevitMaterialCacheSingleton revitMaterialCacheSingleton
   )
   {
     _pointConverter = pointConverter;
-    _revitContextStack = revitContextStack;
+    _revitMaterialCacheSingleton = revitMaterialCacheSingleton;
   }
 
   public List<DB.GeometryObject> Convert(SOG.Mesh mesh)
@@ -39,7 +39,7 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObj
     ElementId materialId = ElementId.InvalidElementId;
 
     if (
-      _revitContextStack.RenderMaterialProxyCache.ObjectIdAndMaterialIndexMap.TryGetValue(
+      _revitMaterialCacheSingleton.ObjectIdAndMaterialIndexMap.TryGetValue(
         mesh.applicationId ?? mesh.id,
         out var mappedElementId
       )

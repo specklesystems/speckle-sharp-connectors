@@ -1,4 +1,3 @@
-using Autofac;
 using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bindings;

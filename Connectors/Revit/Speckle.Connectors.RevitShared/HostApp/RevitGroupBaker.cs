@@ -1,7 +1,7 @@
 using Autodesk.Revit.DB;
-using Speckle.Connectors.Revit.Operations.Receive;
 using Speckle.Connectors.Utils.Operations.Receive;
-using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.Common;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.Revit.HostApp;
@@ -12,18 +12,12 @@ namespace Speckle.Connectors.Revit.HostApp;
 /// </summary>
 public class RevitGroupBaker : TraversalContextUnpacker
 {
-  private readonly IRevitConversionContextStack _contextStack;
-  private readonly ITransactionManager _transactionManager;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly RevitUtils _revitUtils;
 
-  public RevitGroupBaker(
-    IRevitConversionContextStack contextStack,
-    ITransactionManager transactionManager,
-    RevitUtils revitUtils
-  )
+  public RevitGroupBaker(IConverterSettingsStore<RevitConversionSettings> converterSettings, RevitUtils revitUtils)
   {
-    _contextStack = contextStack;
-    _transactionManager = transactionManager;
+    _converterSettings = converterSettings;
     _revitUtils = revitUtils;
   }
 
@@ -76,7 +70,7 @@ public class RevitGroupBaker : TraversalContextUnpacker
 
     foreach (var group in orderedGroups)
     {
-      var docGroup = _contextStack.Current.Document.Create.NewGroup(group.Ids);
+      var docGroup = _converterSettings.Current.Document.Create.NewGroup(group.Ids);
       group.Parent?.Ids.Add(docGroup.Id);
       docGroup.GroupType.Name = group.Name;
       lastGroup = docGroup;
@@ -88,7 +82,7 @@ public class RevitGroupBaker : TraversalContextUnpacker
   public void PurgeGroups(string baseGroupName)
   {
     var validBaseGroupName = _revitUtils.RemoveInvalidChars(baseGroupName);
-    var document = _contextStack.Current.Document;
+    var document = _converterSettings.Current.Document;
 
     using (var collector = new FilteredElementCollector(document))
     {
