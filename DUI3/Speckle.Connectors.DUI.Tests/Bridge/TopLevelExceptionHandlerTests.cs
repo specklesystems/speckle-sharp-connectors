@@ -26,7 +26,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
     var bridge = Create<IBridge>();
 
-    bridge.Setup(x => x.Send(BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, It.IsAny<object>()));
+    bridge.Setup(x => x.Send(BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, It.IsAny<object>(), default));
 
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
@@ -53,7 +53,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
     var bridge = Create<IBridge>();
 
-    bridge.Setup(x => x.Send(BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, It.IsAny<object>()));
+    bridge.Setup(x => x.Send(BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, It.IsAny<object>(), default));
 
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
@@ -98,7 +98,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
     var bridge = Create<IBridge>();
 
-    bridge.Setup(x => x.Send(BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, It.IsAny<object>()));
+    bridge.Setup(x => x.Send(BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, It.IsAny<object>(), default));
 
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 

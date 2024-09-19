@@ -14,7 +14,7 @@ public interface IIdleCallManager
 [SuppressMessage("ReSharper", "InconsistentlySynchronizedField")]
 public sealed class IdleCallManager : IIdleCallManager
 {
-  private readonly ConcurrentDictionary<string, Func<Task>> _calls = new();
+  internal ConcurrentDictionary<string, Func<Task>> Calls { get; } = new();
 
   private readonly object _lock = new();
   public bool IdleSubscriptionCalled { get; private set; }
@@ -42,7 +42,7 @@ public sealed class IdleCallManager : IIdleCallManager
 
   internal void SubscribeInternal(string id, Func<Task> action, Action addEvent)
   {
-    _calls.TryAdd(id, action);
+    Calls.TryAdd(id, action);
     if (!IdleSubscriptionCalled)
     {
       lock (_lock)
@@ -61,12 +61,12 @@ public sealed class IdleCallManager : IIdleCallManager
 
   internal async Task AppOnIdleInternal(Action removeEvent)
   {
-    foreach (KeyValuePair<string, Func<Task>> kvp in _calls)
+    foreach (KeyValuePair<string, Func<Task>> kvp in Calls)
     {
       await _topLevelExceptionHandler.CatchUnhandledAsync(kvp.Value).ConfigureAwait(false);
     }
 
-    _calls.Clear();
+    Calls.Clear();
 
     if (IdleSubscriptionCalled)
     {
