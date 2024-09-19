@@ -204,8 +204,8 @@
       <CleanInfo ParameterType="System.String" Output="true"/>
     </ParameterGroup>
     <Task>
-      <Reference Include="System.Xml.Linq"/>
-      <Reference Include="System.Xml"/>
+<!--      <Reference Include="System.Xml.Linq"/>-->
+<!--      <Reference Include="System.Xml"/>-->
       <Using Namespace="System"/>
       <Using Namespace="System.IO"/>
       <Using Namespace="System.Xml.Linq"/>
