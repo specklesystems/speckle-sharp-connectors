@@ -80,7 +80,7 @@ public sealed class BrowserBridge : IBrowserBridge
     _logger = logger;
     TopLevelExceptionHandler = new TopLevelExceptionHandler(topLogger, this);
     // Capture the main thread's SynchronizationContext
-    _mainThreadContext = SynchronizationContext.Current;
+    _mainThreadContext = SynchronizationContext.Current.NotNull("No UI thread to capture?");
     _browserScriptExecutor = browserScriptExecutor;
   }
 
