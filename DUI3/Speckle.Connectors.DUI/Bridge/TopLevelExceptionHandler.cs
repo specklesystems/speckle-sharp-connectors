@@ -80,12 +80,13 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
       catch (Exception ex) when (!ex.IsFatal())
       {
         _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
-        SetGlobalNotification(
-          ToastNotificationType.DANGER,
-          "Unhandled Exception Occured",
-          ex.ToFormattedString(),
-          false
-        );
+        await SetGlobalNotification(
+            ToastNotificationType.DANGER,
+            "Unhandled Exception Occured",
+            ex.ToFormattedString(),
+            false
+          )
+          .ConfigureAwait(false);
         return new(ex);
       }
     }
@@ -107,7 +108,7 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
   /// <param name="function"><inheritdoc cref="CatchUnhandled{T}(Func{T})"/></param>
   public async void FireAndForget(Func<Task> function) => await CatchUnhandledAsync(function).ConfigureAwait(false);
 
-  private async void SetGlobalNotification(ToastNotificationType type, string title, string message, bool autoClose) =>
+  private async Task SetGlobalNotification(ToastNotificationType type, string title, string message, bool autoClose) =>
     await Parent
       .Send(
         BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, //TODO: We could move these constants into a DUI3 constants static class

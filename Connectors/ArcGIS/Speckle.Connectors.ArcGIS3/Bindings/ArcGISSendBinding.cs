@@ -93,22 +93,32 @@ public sealed class ArcGISSendBinding : ISendBinding
   private void SubscribeToArcGISEvents()
   {
     LayersRemovedEvent.Subscribe(
-      a => _topLevelExceptionHandler.FireAndForget(() => GetIdsForLayersRemovedEvent(a)),
+      a =>
+        _topLevelExceptionHandler.FireAndForget(async () => await GetIdsForLayersRemovedEvent(a).ConfigureAwait(false)),
       true
     );
 
     StandaloneTablesRemovedEvent.Subscribe(
-      a => _topLevelExceptionHandler.FireAndForget(() => GetIdsForStandaloneTablesRemovedEvent(a)),
+      a =>
+        _topLevelExceptionHandler.FireAndForget(
+          async () => await GetIdsForStandaloneTablesRemovedEvent(a).ConfigureAwait(false)
+        ),
       true
     );
 
     MapPropertyChangedEvent.Subscribe(
-      a => _topLevelExceptionHandler.FireAndForget(() => GetIdsForMapPropertyChangedEvent(a)),
+      a =>
+        _topLevelExceptionHandler.FireAndForget(
+          async () => await GetIdsForMapPropertyChangedEvent(a).ConfigureAwait(false)
+        ),
       true
     ); // Map units, CRS etc.
 
     MapMemberPropertiesChangedEvent.Subscribe(
-      a => _topLevelExceptionHandler.FireAndForget(() => GetIdsForMapMemberPropertiesChangedEvent(a)),
+      a =>
+        _topLevelExceptionHandler.FireAndForget(
+          async () => await GetIdsForMapMemberPropertiesChangedEvent(a).ConfigureAwait(false)
+        ),
       true
     ); // e.g. Layer name
 

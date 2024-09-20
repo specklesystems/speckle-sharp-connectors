@@ -79,7 +79,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
         topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
     });
-    Store.DocumentChanged += (_, _) => topLevelExceptionHandler.CatchUnhandled(OnDocumentChanged);
+    Store.DocumentChanged += (_, _) =>
+      topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged().ConfigureAwait(false));
   }
 
   public List<ISendFilter> GetSendFilters()
@@ -266,7 +267,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
   // POC: Will be re-addressed later with better UX with host apps that are friendly on async doc operations.
   // That's why don't bother for now how to get rid of from dup logic in other bindings.
-  private async void OnDocumentChanged()
+  private async Task OnDocumentChanged()
   {
     if (_cancellationManager.NumberOfOperations > 0)
     {
