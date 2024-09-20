@@ -92,7 +92,7 @@ public class RevitGroupBaker : TraversalContextUnpacker
     }
   }
 
-  public List<Group> GetGroupsByName(Autodesk.Revit.DB.Document doc, string groupName)
+  private List<Group> GetGroupsByName(Autodesk.Revit.DB.Document doc, string groupName)
   {
     var validGroupName = _revitUtils.RemoveInvalidChars(groupName);
 
