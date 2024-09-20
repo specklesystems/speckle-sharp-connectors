@@ -78,11 +78,9 @@ public class RhinoReceiveBinding : IReceiveBinding
         .ConfigureAwait(false);
 
       modelCard.BakedObjectIds = conversionResults.BakedObjectIds.ToList();
-      Commands.SetModelReceiveResult(
-        modelCardId,
-        conversionResults.BakedObjectIds,
-        conversionResults.ConversionResults
-      );
+      await Commands
+        .SetModelReceiveResult(modelCardId, conversionResults.BakedObjectIds, conversionResults.ConversionResults)
+        .ConfigureAwait(false);
     }
     catch (OperationCanceledException)
     {

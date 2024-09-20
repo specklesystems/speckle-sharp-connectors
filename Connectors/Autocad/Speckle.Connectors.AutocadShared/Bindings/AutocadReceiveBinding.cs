@@ -81,7 +81,9 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
         )
         .ConfigureAwait(false);
 
-      Commands.SetModelReceiveResult(modelCardId, operationResults.BakedObjectIds, operationResults.ConversionResults);
+      await Commands
+        .SetModelReceiveResult(modelCardId, operationResults.BakedObjectIds, operationResults.ConversionResults)
+        .ConfigureAwait(false);
     }
     catch (OperationCanceledException)
     {

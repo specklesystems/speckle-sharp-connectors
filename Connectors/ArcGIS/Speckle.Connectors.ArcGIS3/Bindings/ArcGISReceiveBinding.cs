@@ -82,11 +82,13 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
         .ConfigureAwait(false);
 
       modelCard.BakedObjectIds = receiveOperationResults.BakedObjectIds.ToList();
-      Commands.SetModelReceiveResult(
-        modelCardId,
-        receiveOperationResults.BakedObjectIds,
-        receiveOperationResults.ConversionResults
-      );
+      await Commands
+        .SetModelReceiveResult(
+          modelCardId,
+          receiveOperationResults.BakedObjectIds,
+          receiveOperationResults.ConversionResults
+        )
+        .ConfigureAwait(false);
     }
     catch (OperationCanceledException)
     {
