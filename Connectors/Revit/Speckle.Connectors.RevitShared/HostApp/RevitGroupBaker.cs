@@ -81,18 +81,42 @@ public class RevitGroupBaker : TraversalContextUnpacker
 
   public void PurgeGroups(string baseGroupName)
   {
-    var validBaseGroupName = _revitUtils.RemoveInvalidChars(baseGroupName);
     var document = _converterSettings.Current.Document;
+    var groups = GetGroupsByName(document, baseGroupName);
 
-    using (var collector = new FilteredElementCollector(document))
+    foreach (var group in groups)
     {
-      var groupIds = collector
-        .OfClass(typeof(GroupType))
-        .Where(g => g.Name == validBaseGroupName)
-        .Select(g => g.Id)
-        .ToList();
+      List<ElementId> subgroupTypeIds = new List<ElementId>();
+      CollectSubGroupTypeIds(document, group, subgroupTypeIds);
+      document.Delete(subgroupTypeIds);
+    }
+  }
 
-      document.Delete(groupIds);
+  public List<Group> GetGroupsByName(Autodesk.Revit.DB.Document doc, string groupName)
+  {
+    var validGroupName = _revitUtils.RemoveInvalidChars(groupName);
+
+    using (var collector = new FilteredElementCollector(doc))
+    {
+      ICollection<Element> groupElements = collector.OfClass(typeof(Group)).ToElements();
+      List<Group> groups = groupElements.Cast<Group>().Where(g => g.GroupType.Name == validGroupName).ToList();
+      return groups;
+    }
+  }
+
+  private void CollectSubGroupTypeIds(Autodesk.Revit.DB.Document document, Group group, List<ElementId> subGroupTypeIds)
+  {
+    ICollection<ElementId> groupMemberIds = group.GetMemberIds();
+
+    foreach (ElementId memberId in groupMemberIds)
+    {
+      Element element = document.GetElement(memberId);
+
+      if (element is Group subgroup)
+      {
+        subGroupTypeIds.Add(subgroup.GroupType.Id);
+        CollectSubGroupTypeIds(document, subgroup, subGroupTypeIds);
+      }
     }
   }
 
