@@ -44,7 +44,7 @@ public class FeatureClassUtils : IFeatureClassUtils
       schemaBuilder.Build();
       MapView.Active.Redraw(true);
     }
-    catch (Exception ex) when (!ex.IsFatal()) //(GeodatabaseTableException)
+    catch (GeodatabaseTableException ex)
     {
       // "The table was not found." | System.InvalidCast
       // delete Table if already exists
@@ -56,7 +56,7 @@ public class FeatureClassUtils : IFeatureClassUtils
         schemaBuilder.Build();
         MapView.Active.Redraw(true);
       }
-      catch (Exception ex2) when (!ex2.IsFatal()) //(GeodatabaseTableException)
+      catch (GeodatabaseTableException ex2) //(GeodatabaseTableException)
       {
         // "The table was not found.", do nothing
       }
