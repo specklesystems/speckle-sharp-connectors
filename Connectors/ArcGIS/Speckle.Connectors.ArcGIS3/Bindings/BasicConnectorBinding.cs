@@ -16,13 +16,13 @@ namespace Speckle.Connectors.ArcGIS.Bindings;
 public class BasicConnectorBinding : IBasicConnectorBinding
 {
   public string Name => "baseBinding";
-  public IBridge Parent { get; }
+  public IBrowserBridge Parent { get; }
 
   public BasicConnectorBindingCommands Commands { get; }
   private readonly DocumentModelStore _store;
   private readonly ISpeckleApplication _speckleApplication;
 
-  public BasicConnectorBinding(DocumentModelStore store, IBridge parent, ISpeckleApplication speckleApplication)
+  public BasicConnectorBinding(DocumentModelStore store, IBrowserBridge parent, ISpeckleApplication speckleApplication)
   {
     _store = store;
     _speckleApplication = speckleApplication;

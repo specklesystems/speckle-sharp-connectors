@@ -15,7 +15,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 {
   // POC: name and bridge might be better for them to be protected props?
   public string Name { get; private set; }
-  public IBridge Parent { get; private set; }
+  public IBrowserBridge Parent { get; private set; }
 
   public BasicConnectorBindingCommands Commands { get; }
 
@@ -26,7 +26,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
   public BasicConnectorBindingRevit(
     DocumentModelStore store,
-    IBridge parent,
+    IBrowserBridge parent,
     RevitContext revitContext,
     ISpeckleApplication speckleApplication,
     ILogger<BasicConnectorBindingRevit> logger

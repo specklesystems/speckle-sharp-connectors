@@ -18,7 +18,7 @@ namespace Speckle.Connectors.DUI.Bridge;
 /// </summary>
 [ClassInterface(ClassInterfaceType.AutoDual)]
 [ComVisible(true)]
-public sealed class BrowserBridge : IBridge
+public sealed class BrowserBridge : IBrowserBridge
 {
   /// <summary>
   /// The name under which we expect the frontend to hoist this bindings class to the global scope.

@@ -135,7 +135,7 @@ internal sealed class RevitCefPlugin : IRevitPlugin
 #endif
       foreach (IBinding binding in bindings)
       {
-        IBridge bridge = binding.Parent;
+        IBrowserBridge bridge = binding.Parent;
 
 #if REVIT2025_OR_GREATER
         _cefSharpPanel.Browser.JavascriptObjectRepository.Register(bridge.FrontendBoundName, bridge, _bindingOptions);

@@ -17,7 +17,7 @@ namespace Speckle.Connectors.Revit.Bindings;
 internal sealed class RevitReceiveBinding : IReceiveBinding
 {
   public string Name => "receiveBinding";
-  public IBridge Parent { get; }
+  public IBrowserBridge Parent { get; }
 
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<RevitReceiveBinding> _logger;
@@ -31,7 +31,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
   public RevitReceiveBinding(
     DocumentModelStore store,
     CancellationManager cancellationManager,
-    IBridge parent,
+    IBrowserBridge parent,
     IServiceProvider serviceProvider,
     IOperationProgressManager operationProgressManager,
     ILogger<RevitReceiveBinding> logger,

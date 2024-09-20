@@ -32,7 +32,7 @@ public sealed class ArcGISSendBinding : ISendBinding
 {
   public string Name => "sendBinding";
   public SendBindingUICommands Commands { get; }
-  public IBridge Parent { get; }
+  public IBrowserBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
   private readonly IServiceProvider _serviceProvider;
@@ -57,7 +57,7 @@ public sealed class ArcGISSendBinding : ISendBinding
 
   public ArcGISSendBinding(
     DocumentModelStore store,
-    IBridge parent,
+    IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     IServiceProvider serviceProvider,
     CancellationManager cancellationManager,

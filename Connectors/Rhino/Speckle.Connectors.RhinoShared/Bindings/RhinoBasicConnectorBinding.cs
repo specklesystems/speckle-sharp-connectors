@@ -14,13 +14,17 @@ namespace Speckle.Connectors.Rhino.Bindings;
 public class RhinoBasicConnectorBinding : IBasicConnectorBinding
 {
   public string Name => "baseBinding";
-  public IBridge Parent { get; }
+  public IBrowserBridge Parent { get; }
   public BasicConnectorBindingCommands Commands { get; }
 
   private readonly DocumentModelStore _store;
   private readonly ISpeckleApplication _speckleApplication;
 
-  public RhinoBasicConnectorBinding(DocumentModelStore store, IBridge parent, ISpeckleApplication speckleApplication)
+  public RhinoBasicConnectorBinding(
+    DocumentModelStore store,
+    IBrowserBridge parent,
+    ISpeckleApplication speckleApplication
+  )
   {
     _store = store;
     Parent = parent;

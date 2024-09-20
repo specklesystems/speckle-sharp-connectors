@@ -16,7 +16,7 @@ namespace Speckle.Connectors.Autocad.Bindings;
 public sealed class AutocadReceiveBinding : IReceiveBinding
 {
   public string Name => "receiveBinding";
-  public IBridge Parent { get; }
+  public IBrowserBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
   private readonly CancellationManager _cancellationManager;
@@ -30,7 +30,7 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
 
   public AutocadReceiveBinding(
     DocumentModelStore store,
-    IBridge parent,
+    IBrowserBridge parent,
     CancellationManager cancellationManager,
     IServiceProvider serviceProvider,
     IOperationProgressManager operationProgressManager,

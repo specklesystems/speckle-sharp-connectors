@@ -10,9 +10,9 @@ namespace Speckle.Connectors.DUI.Bindings;
 public class TestBinding : IBinding
 {
   public string Name => "testBinding";
-  public IBridge Parent { get; }
+  public IBrowserBridge Parent { get; }
 
-  public TestBinding(IBridge bridge)
+  public TestBinding(IBrowserBridge bridge)
   {
     Parent = bridge;
   }

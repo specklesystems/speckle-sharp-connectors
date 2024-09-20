@@ -16,12 +16,16 @@ namespace Speckle.Connectors.DUI.Bindings;
 public class ConfigBinding : IBinding
 {
   public string Name => "configBinding";
-  public IBridge Parent { get; }
+  public IBrowserBridge Parent { get; }
   private SQLiteTransport ConfigStorage { get; }
   private readonly ISpeckleApplication _speckleApplication;
   private readonly JsonSerializerSettings _serializerOptions;
 
-  public ConfigBinding(ISpeckleApplication speckleApplication, IBridge bridge, JsonSerializerSettings serializerOptions)
+  public ConfigBinding(
+    ISpeckleApplication speckleApplication,
+    IBrowserBridge bridge,
+    JsonSerializerSettings serializerOptions
+  )
   {
     Parent = bridge;
     ConfigStorage = new SQLiteTransport(scope: "DUI3Config"); // POC: maybe inject? (if we ever want to use a different storage for configs later down the line)

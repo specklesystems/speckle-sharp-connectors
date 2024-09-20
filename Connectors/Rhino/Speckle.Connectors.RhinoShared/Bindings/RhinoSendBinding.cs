@@ -27,7 +27,7 @@ public sealed class RhinoSendBinding : ISendBinding
 {
   public string Name => "sendBinding";
   public SendBindingUICommands Commands { get; }
-  public IBridge Parent { get; }
+  public IBrowserBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
   private readonly IRhinoIdleManager _idleManager;
@@ -52,7 +52,7 @@ public sealed class RhinoSendBinding : ISendBinding
   public RhinoSendBinding(
     DocumentModelStore store,
     IRhinoIdleManager idleManager,
-    IBridge parent,
+    IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     IServiceProvider serviceProvider,
     CancellationManager cancellationManager,

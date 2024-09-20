@@ -28,7 +28,7 @@ public sealed class AutocadSendBinding : ISendBinding
   public string Name => "sendBinding";
   public SendBindingUICommands Commands { get; }
   private OperationProgressManager OperationProgressManager { get; }
-  public IBridge Parent { get; }
+  public IBrowserBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
   private readonly IAutocadIdleManager _idleManager;
@@ -53,7 +53,7 @@ public sealed class AutocadSendBinding : ISendBinding
   public AutocadSendBinding(
     DocumentModelStore store,
     IAutocadIdleManager idleManager,
-    IBridge parent,
+    IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     CancellationManager cancellationManager,
     IServiceProvider serviceProvider,

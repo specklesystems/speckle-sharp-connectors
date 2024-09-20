@@ -27,11 +27,11 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
   private readonly IArcGISConversionSettingsFactory _arcGISConversionSettingsFactory;
 
   private ReceiveBindingUICommands Commands { get; }
-  public IBridge Parent { get; }
+  public IBrowserBridge Parent { get; }
 
   public ArcGISReceiveBinding(
     DocumentModelStore store,
-    IBridge parent,
+    IBrowserBridge parent,
     CancellationManager cancellationManager,
     IServiceProvider serviceProvider,
     IOperationProgressManager operationProgressManager,

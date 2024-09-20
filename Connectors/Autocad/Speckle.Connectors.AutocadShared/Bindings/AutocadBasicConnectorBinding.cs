@@ -15,7 +15,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
 {
   private readonly IAccountManager _accountManager;
   public string Name { get; set; } = "baseBinding";
-  public IBridge Parent { get; }
+  public IBrowserBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
   private readonly ISpeckleApplication _speckleApplication;
@@ -25,7 +25,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
 
   public AutocadBasicConnectorBinding(
     DocumentModelStore store,
-    IBridge parent,
+    IBrowserBridge parent,
     IAccountManager accountManager,
     ISpeckleApplication speckleApplication,
     ILogger<AutocadBasicConnectorBinding> logger

@@ -7,7 +7,7 @@ namespace Speckle.Connectors.DUI.Bridge;
 /// but if in the future we will have other bridge classes (e.g, ones that wrap around other browsers),
 /// it just might be useful.
 /// </summary>
-public interface IBridge
+public interface IBrowserBridge
 {
   // POC: documnetation comments
   string FrontendBoundName { get; }

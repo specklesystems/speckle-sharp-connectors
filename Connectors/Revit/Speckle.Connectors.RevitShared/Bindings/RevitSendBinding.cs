@@ -50,7 +50,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     RevitContext revitContext,
     DocumentModelStore store,
     CancellationManager cancellationManager,
-    IBridge bridge,
+    IBrowserBridge bridge,
     IServiceProvider serviceProvider,
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
