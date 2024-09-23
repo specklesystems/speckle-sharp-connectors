@@ -16,7 +16,7 @@
     <PackageReference Include="NUnit3TestAdapter" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+    <ProjectReference Include="..\Speckle.Connectors.Utils\Speckle.Connectors.Utils.csproj" />
     <ProjectReference Include="..\Speckle.Testing\Speckle.Testing.csproj" />
   </ItemGroup>
 </Project>

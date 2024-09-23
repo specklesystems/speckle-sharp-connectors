@@ -1,6 +1,6 @@
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
-using Speckle.Connectors.Common.Operations.Receive;
+using Speckle.Connectors.Utils.Operations.Receive;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects.Other;

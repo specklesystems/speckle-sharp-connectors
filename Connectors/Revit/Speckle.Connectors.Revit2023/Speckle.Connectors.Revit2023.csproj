@@ -24,9 +24,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Converters\Revit\Speckle.Converters.Revit2023.DependencyInjection\Speckle.Converters.Revit2023.DependencyInjection.csproj" />
     <ProjectReference Include="..\..\..\Converters\Revit\Speckle.Converters.Revit2023\Speckle.Converters.Revit2023.csproj" />
     <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
-    <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common.DependencyInjection\Speckle.Converters.Common.DependencyInjection.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Autofac\Speckle.Autofac.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Utils\Speckle.Connectors.Utils.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -35,6 +39,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="Plugin\Speckle.Connectors.Revit2023.addin" />
     <Content Include="Plugin\Speckle.Connectors.Revit2023.addin">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

@@ -1,10 +1,10 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
-using Speckle.Connectors.Common.Builders;
-using Speckle.Connectors.Common.Conversion;
-using Speckle.Connectors.Common.Operations;
-using Speckle.Connectors.Common.Operations.Receive;
+using Speckle.Connectors.Utils.Builders;
+using Speckle.Connectors.Utils.Conversion;
+using Speckle.Connectors.Utils.Operations;
+using Speckle.Connectors.Utils.Operations.Receive;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;

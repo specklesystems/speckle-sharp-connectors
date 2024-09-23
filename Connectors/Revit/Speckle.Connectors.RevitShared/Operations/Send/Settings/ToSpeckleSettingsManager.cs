@@ -1,8 +1,8 @@
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
-using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Revit.HostApp;
+using Speckle.Connectors.Utils.Caching;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.InterfaceGenerator;

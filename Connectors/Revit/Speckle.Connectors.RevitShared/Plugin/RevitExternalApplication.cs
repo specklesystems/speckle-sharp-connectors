@@ -1,11 +1,11 @@
+using System.IO;
+using System.Reflection;
 using Autodesk.Revit.UI;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Speckle.Connectors.Common;
-using Speckle.Connectors.DUI;
-using Speckle.Connectors.Revit.DependencyInjection;
-using Speckle.Converters.RevitShared;
+using Speckle.Autofac;
+using Speckle.Autofac.DependencyInjection;
+using Speckle.Connectors.Utils;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Host;
 
 namespace Speckle.Connectors.Revit.Plugin;
@@ -14,7 +14,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
 {
   private IRevitPlugin? _revitPlugin;
 
-  private ServiceProvider? _container;
+  private SpeckleContainer? _container;
   private IDisposable? _disposableLogger;
 
   // POC: move to somewhere central?
@@ -41,25 +41,23 @@ internal sealed class RevitExternalApplication : IExternalApplication
     {
       // POC: not sure what this is doing...  could be messing up our Aliasing????
       AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<RevitExternalApplication>;
-      var services = new ServiceCollection();
+      var builder = SpeckleContainerBuilder.CreateInstance();
       // init DI
-      _disposableLogger = services.Initialize(HostApplications.Revit, GetVersion());
-      services.AddRevit();
-      services.AddRevitConverters();
-      services.AddSingleton(application);
-      _container = services.BuildServiceProvider();
-      _container.UseDUI();
+      _disposableLogger = Connector.Initialize(HostApplications.Revit, GetVersion(), builder);
+      _container = builder
+        .LoadAutofacModules(
+          Assembly.GetExecutingAssembly(),
+          [Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location).NotNull()]
+        )
+        .AddSingleton(application) // inject UIControlledApplication application
+        .Build();
 
       // resolve root object
-      _revitPlugin = _container.GetRequiredService<IRevitPlugin>();
+      _revitPlugin = _container.Resolve<IRevitPlugin>();
       _revitPlugin.Initialise();
     }
     catch (Exception e) when (!e.IsFatal())
     {
-      _container
-        .GetRequiredService<ILoggerFactory>()
-        .CreateLogger<RevitExternalApplication>()
-        .LogCritical(e, "Unhandled exception");
       // POC: feedback?
       return Result.Failed;
     }

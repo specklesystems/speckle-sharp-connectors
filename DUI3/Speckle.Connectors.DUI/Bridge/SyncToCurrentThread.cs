@@ -1,4 +1,4 @@
-﻿using Speckle.Connectors.Common.Operations;
+﻿using Speckle.Connectors.Utils.Operations;
 
 namespace Speckle.Connectors.DUI.Bridge;
 

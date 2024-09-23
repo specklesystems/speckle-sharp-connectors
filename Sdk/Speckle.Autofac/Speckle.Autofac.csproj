@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Configurations>Debug;Release;Local</Configurations>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Autofac" />
+  </ItemGroup>
+
+</Project>

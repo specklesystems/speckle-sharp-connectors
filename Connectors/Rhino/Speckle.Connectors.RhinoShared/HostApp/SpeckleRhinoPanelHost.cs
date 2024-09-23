@@ -1,7 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
-using Microsoft.Extensions.DependencyInjection;
 using Rhino.UI;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Connectors.Rhino.Plugin;
@@ -15,10 +14,10 @@ public class SpeckleRhinoPanelHost : RhinoWindows.Controls.WpfElementHost
   private readonly DUI3ControlWebView? _webView;
 
   public SpeckleRhinoPanelHost(uint docSn)
-    : base(SpeckleConnectorsRhinoPlugin.Instance.Container?.GetRequiredService<DUI3ControlWebView>(), null)
+    : base(SpeckleConnectorsRhinoPlugin.Instance.Container?.Resolve<DUI3ControlWebView>(), null)
   {
     _docSn = docSn;
-    _webView = SpeckleConnectorsRhinoPlugin.Instance.Container?.GetRequiredService<DUI3ControlWebView>();
+    _webView = SpeckleConnectorsRhinoPlugin.Instance.Container?.Resolve<DUI3ControlWebView>();
     Panels.Closed += PanelsOnClosed;
   }
 

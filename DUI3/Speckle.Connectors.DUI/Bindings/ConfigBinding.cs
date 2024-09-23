@@ -1,7 +1,6 @@
 using System.Runtime.Serialization;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Newtonsoft.Json;
-using Speckle.Sdk;
 using Speckle.Sdk.Transports;
 
 namespace Speckle.Connectors.DUI.Bindings;
@@ -16,20 +15,16 @@ namespace Speckle.Connectors.DUI.Bindings;
 public class ConfigBinding : IBinding
 {
   public string Name => "configBinding";
-  public IBrowserBridge Parent { get; }
+  public IBridge Parent { get; }
   private SQLiteTransport ConfigStorage { get; }
-  private readonly ISpeckleApplication _speckleApplication;
+  private readonly string _connectorName;
   private readonly JsonSerializerSettings _serializerOptions;
 
-  public ConfigBinding(
-    ISpeckleApplication speckleApplication,
-    IBrowserBridge bridge,
-    JsonSerializerSettings serializerOptions
-  )
+  public ConfigBinding(IBridge bridge, JsonSerializerSettings serializerOptions, string connectorName)
   {
     Parent = bridge;
     ConfigStorage = new SQLiteTransport(scope: "DUI3Config"); // POC: maybe inject? (if we ever want to use a different storage for configs later down the line)
-    _speckleApplication = speckleApplication;
+    _connectorName = connectorName;
     _serializerOptions = serializerOptions;
   }
 
@@ -46,7 +41,7 @@ public class ConfigBinding : IBinding
 
   public async Task<ConnectorConfig> GetConfig()
   {
-    var rawConfig = await ConfigStorage.GetObject(_speckleApplication.HostApplication).ConfigureAwait(false);
+    var rawConfig = await ConfigStorage.GetObject(_connectorName).ConfigureAwait(false);
     if (rawConfig is null)
     {
       return SeedConfig();
@@ -78,7 +73,7 @@ public class ConfigBinding : IBinding
   public void UpdateConfig(ConnectorConfig config)
   {
     var str = JsonConvert.SerializeObject(config, _serializerOptions);
-    ConfigStorage.UpdateObject(_speckleApplication.HostApplication, str);
+    ConfigStorage.UpdateObject(_connectorName, str);
   }
 }
 

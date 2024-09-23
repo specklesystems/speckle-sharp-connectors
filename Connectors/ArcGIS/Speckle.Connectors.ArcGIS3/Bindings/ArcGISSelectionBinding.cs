@@ -8,9 +8,9 @@ namespace Speckle.Connectors.ArcGIS.Bindings;
 public class ArcGISSelectionBinding : ISelectionBinding
 {
   public string Name => "selectionBinding";
-  public IBrowserBridge Parent { get; }
+  public IBridge Parent { get; }
 
-  public ArcGISSelectionBinding(IBrowserBridge parent)
+  public ArcGISSelectionBinding(IBridge parent)
   {
     Parent = parent;
     var topLevelHandler = parent.TopLevelExceptionHandler;

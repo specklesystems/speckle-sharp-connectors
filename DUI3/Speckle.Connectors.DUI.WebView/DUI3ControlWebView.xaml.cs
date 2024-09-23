@@ -1,6 +1,5 @@
 using System.Windows.Controls;
 using System.Windows.Threading;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Web.WebView2.Core;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
@@ -9,17 +8,18 @@ namespace Speckle.Connectors.DUI.WebView;
 
 public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExecutor, IDisposable
 {
-  private readonly IServiceProvider _serviceProvider;
+  private readonly IEnumerable<Lazy<IBinding>> _bindings;
 
-  public DUI3ControlWebView(IServiceProvider serviceProvider)
+  public DUI3ControlWebView(
+    IEnumerable<Lazy<IBinding>> bindings,
+    Lazy<ITopLevelExceptionHandler> topLevelExceptionHandler
+  )
   {
-    _serviceProvider = serviceProvider;
+    _bindings = bindings;
     InitializeComponent();
 
     Browser.CoreWebView2InitializationCompleted += (sender, args) =>
-      _serviceProvider
-        .GetRequiredService<ITopLevelExceptionHandler>()
-        .CatchUnhandled(() => OnInitialized(sender, args));
+      topLevelExceptionHandler.Value.CatchUnhandled(() => OnInitialized(sender, args));
   }
 
   public bool IsBrowserInitialized => Browser.IsInitialized;
@@ -45,9 +45,9 @@ public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExec
 
     // We use Lazy here to delay creating the binding until after the Browser is fully initialized.
     // Otherwise the Browser cannot respond to any requests to ExecuteScriptAsyncMethod
-    foreach (var binding in _serviceProvider.GetRequiredService<IEnumerable<IBinding>>())
+    foreach (Lazy<IBinding> lazyBinding in _bindings)
     {
-      SetupBinding(binding);
+      SetupBinding(lazyBinding.Value);
     }
   }
 
