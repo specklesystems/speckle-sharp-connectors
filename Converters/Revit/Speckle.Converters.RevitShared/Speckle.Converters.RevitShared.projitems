@@ -51,16 +51,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\ToDirectShape\PolycurveConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\ToDirectShape\PolylineConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\VectorConverterToHost.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\RenderMaterialToHostConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\SurfaceConverterToHost.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\BaseTopLevelConverterToHost.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\BrepToHostTopLevelConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\DirectShapeTopLevelConverterToHost.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\LevelToHostTopLevelConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\GridlineToHostTopLevelConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\MeshToHostTopLevelConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\ModelCurveToSpeckleTopLevelConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\PointToHostTopLevelConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Parameters\ParameterDefinitionHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Parameters\ParameterExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\BeamConversionToSpeckle.cs" />
