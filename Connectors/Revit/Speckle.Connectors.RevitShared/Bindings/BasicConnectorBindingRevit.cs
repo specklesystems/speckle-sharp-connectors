@@ -1,5 +1,6 @@
 using System.Reflection;
 using Autodesk.Revit.DB;
+using Microsoft.Extensions.Logging;
 using Revit.Async;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
@@ -22,13 +23,20 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
   private readonly DocumentModelStore _store;
   private readonly RevitContext _revitContext;
+  private readonly ILogger<BasicConnectorBindingRevit> _logger;
 
-  public BasicConnectorBindingRevit(DocumentModelStore store, IBridge parent, RevitContext revitContext)
+  public BasicConnectorBindingRevit(
+    DocumentModelStore store,
+    IBridge parent,
+    RevitContext revitContext,
+    ILogger<BasicConnectorBindingRevit> logger
+  )
   {
     Name = "baseBinding";
     Parent = parent;
     _store = store;
     _revitContext = revitContext;
+    _logger = logger;
     Commands = new BasicConnectorBindingCommands(parent);
 
     // POC: event binding?
@@ -75,17 +83,37 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
   public void HighlightModel(string modelCardId)
   {
-    SenderModelCard model = (SenderModelCard)_store.GetModelById(modelCardId);
+    var model = _store.GetModelById(modelCardId);
+
+    if (model is null)
+    {
+      _logger.LogError("Model was null when highlighting received model");
+      return;
+    }
 
     var activeUIDoc =
       _revitContext.UIApplication?.ActiveUIDocument
       ?? throw new SpeckleException("Unable to retrieve active UI document");
 
-    var elementIds = model
-      .SendFilter.NotNull()
-      .GetObjectIds()
-      .Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid))
-      .ToList();
+    var elementIds = new List<ElementId>();
+
+    if (model is SenderModelCard senderModelCard)
+    {
+      elementIds = senderModelCard
+        .SendFilter.NotNull()
+        .GetObjectIds()
+        .Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid))
+        .ToList();
+    }
+
+    if (model is ReceiverModelCard receiverModelCard)
+    {
+      elementIds = receiverModelCard
+        .BakedObjectIds.NotNull()
+        .Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid))
+        .ToList();
+    }
+
     if (elementIds.Count == 0)
     {
       Commands.SetModelError(modelCardId, new InvalidOperationException("No objects found to highlight."));

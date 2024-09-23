@@ -3,7 +3,6 @@ using Autofac;
 using Microsoft.Extensions.Logging;
 using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.Utils.Cancellation;
-using Speckle.Connectors.Utils.Common;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Connectors.Utils.Operations.Receive;
 
@@ -20,7 +19,6 @@ public static class ContainerRegistration
     builder.AddSingleton<AccountService>();
     builder.ScanAssembly(Assembly.GetExecutingAssembly());
 
-    builder.AddSingleton<ILoggerFactory>(new SpeckleLoggerFactory());
     builder.ContainerBuilder.RegisterGeneric(typeof(Logger<>)).As(typeof(ILogger<>)).SingleInstance();
   }
 }

@@ -9,6 +9,7 @@ using Speckle.Connectors.Utils.Extensions;
 using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
+using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
@@ -26,6 +27,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
   private readonly AutocadLayerUnpacker _layerUnpacker;
   private readonly AutocadGroupUnpacker _groupUnpacker;
   private readonly ILogger<AutocadRootObjectBuilder> _logger;
+  private readonly ISdkActivityFactory _activityFactory;
 
   public AutocadRootObjectBuilder(
     IRootToSpeckleConverter converter,
@@ -35,7 +37,8 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     AutocadColorUnpacker colorUnpacker,
     AutocadLayerUnpacker layerUnpacker,
     AutocadGroupUnpacker groupUnpacker,
-    ILogger<AutocadRootObjectBuilder> logger
+    ILogger<AutocadRootObjectBuilder> logger,
+    ISdkActivityFactory activityFactory
   )
   {
     _converter = converter;
@@ -46,6 +49,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     _layerUnpacker = layerUnpacker;
     _groupUnpacker = groupUnpacker;
     _logger = logger;
+    _activityFactory = activityFactory;
   }
 
   public Task<RootObjectBuilderResult> Build(
@@ -92,41 +96,45 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
 
     // 2 - Unpack the groups
     root[ProxyKeys.GROUP] = _groupUnpacker.UnpackGroups(atomicObjects);
-
-    // 3 - Convert atomic objects
-    List<LayerTableRecord> usedAcadLayers = new(); // Keeps track of autocad layers used, so we can pass them on later to the material and color unpacker.
-    List<SendConversionResult> results = new();
-    int count = 0;
-    foreach (var (entity, applicationId) in atomicObjects)
+    using (var _ = _activityFactory.Start("Converting objects"))
     {
-      ct.ThrowIfCancellationRequested();
-
-      // Create and add a collection for each layer if not done so already.
-      Layer layer = _layerUnpacker.GetOrCreateSpeckleLayer(entity, tr, out LayerTableRecord? autocadLayer);
-      if (autocadLayer is not null)
+      // 3 - Convert atomic objects
+      List<LayerTableRecord> usedAcadLayers = new(); // Keeps track of autocad layers used, so we can pass them on later to the material and color unpacker.
+      List<SendConversionResult> results = new();
+      int count = 0;
+      foreach (var (entity, applicationId) in atomicObjects)
       {
-        usedAcadLayers.Add(autocadLayer);
-        root.elements.Add(layer);
+        ct.ThrowIfCancellationRequested();
+        using (var convertActivity = _activityFactory.Start("Converting object"))
+        {
+          // Create and add a collection for each layer if not done so already.
+          Layer layer = _layerUnpacker.GetOrCreateSpeckleLayer(entity, tr, out LayerTableRecord? autocadLayer);
+          if (autocadLayer is not null)
+          {
+            usedAcadLayers.Add(autocadLayer);
+            root.elements.Add(layer);
+          }
+
+          var result = ConvertAutocadEntity(entity, applicationId, layer, instanceProxies, sendInfo.ProjectId);
+          results.Add(result);
+
+          onOperationProgressed?.Invoke("Converting", (double)++count / atomicObjects.Count);
+        }
       }
 
-      var result = ConvertAutocadEntity(entity, applicationId, layer, instanceProxies, sendInfo.ProjectId);
-      results.Add(result);
+      if (results.All(x => x.Status == Status.ERROR))
+      {
+        throw new SpeckleConversionException("Failed to convert all objects."); // fail fast instead creating empty commit! It will appear as model card error with red color.
+      }
 
-      onOperationProgressed?.Invoke("Converting", (double)++count / atomicObjects.Count);
+      // 4 - Unpack the render material proxies
+      root[ProxyKeys.RENDER_MATERIAL] = _materialUnpacker.UnpackMaterials(atomicObjects, usedAcadLayers);
+
+      // 5 - Unpack the color proxies
+      root[ProxyKeys.COLOR] = _colorUnpacker.UnpackColors(atomicObjects, usedAcadLayers);
+
+      return new RootObjectBuilderResult(root, results);
     }
-
-    if (results.All(x => x.Status == Status.ERROR))
-    {
-      throw new SpeckleConversionException("Failed to convert all objects."); // fail fast instead creating empty commit! It will appear as model card error with red color.
-    }
-
-    // 4 - Unpack the render material proxies
-    root[ProxyKeys.RENDER_MATERIAL] = _materialUnpacker.UnpackMaterials(atomicObjects, usedAcadLayers);
-
-    // 5 - Unpack the color proxies
-    root[ProxyKeys.COLOR] = _colorUnpacker.UnpackColors(atomicObjects, usedAcadLayers);
-
-    return new RootObjectBuilderResult(root, results);
   }
 
   private SendConversionResult ConvertAutocadEntity(

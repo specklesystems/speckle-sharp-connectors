@@ -9,11 +9,17 @@ public sealed class SendOperation<T>
 {
   private readonly IRootObjectBuilder<T> _rootObjectBuilder;
   private readonly IRootObjectSender _baseObjectSender;
+  private readonly ISdkActivityFactory _activityFactory;
 
-  public SendOperation(IRootObjectBuilder<T> rootObjectBuilder, IRootObjectSender baseObjectSender)
+  public SendOperation(
+    IRootObjectBuilder<T> rootObjectBuilder,
+    IRootObjectSender baseObjectSender,
+    ISdkActivityFactory activityFactory
+  )
   {
     _rootObjectBuilder = rootObjectBuilder;
     _baseObjectSender = baseObjectSender;
+    _activityFactory = activityFactory;
   }
 
   public async Task<SendOperationResult> Execute(
@@ -23,7 +29,7 @@ public sealed class SendOperation<T>
     CancellationToken ct = default
   )
   {
-    using var activity = SpeckleActivityFactory.Start("SendOperation");
+    using var activity = _activityFactory.Start("SendOperation");
     var buildResult = await _rootObjectBuilder
       .Build(objects, sendInfo, onOperationProgressed, ct)
       .ConfigureAwait(false);

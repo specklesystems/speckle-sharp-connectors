@@ -17,8 +17,8 @@ using Speckle.Connectors.DUI.WebView;
 using Speckle.Connectors.Utils;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Caching;
-using Speckle.Connectors.Utils.Instances;
 using Speckle.Connectors.Utils.Operations;
+using Speckle.Converters.Common;
 using Speckle.Sdk.Models.GraphTraversal;
 
 // POC: This is a temp reference to root object senders to tweak CI failing after having generic interfaces into common project.
@@ -65,10 +65,10 @@ public class ArcGISConnectorModule : ISpeckleModule
     builder.AddScoped<ArcGISRootObjectBuilder>();
     builder.AddScoped<IRootObjectBuilder<MapMember>, ArcGISRootObjectBuilder>();
 
+    builder.AddScoped<LocalToGlobalConverterUtils>();
+
     builder.AddScoped<ArcGISColorManager>();
     builder.AddScoped<MapMembersUtils>();
-
-    builder.AddScoped<ILocalToGlobalUnpacker, LocalToGlobalUnpacker>();
 
     // register send conversion cache
     builder.AddSingleton<ISendConversionCache, SendConversionCache>();
