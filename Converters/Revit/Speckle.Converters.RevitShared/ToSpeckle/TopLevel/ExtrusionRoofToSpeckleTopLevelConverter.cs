@@ -16,7 +16,6 @@ public class ExtrusionRoofToSpeckleTopLevelConverter
   private readonly ITypedConverter<DB.XYZ, SOG.Point> _pointConverter;
   private readonly ParameterValueExtractor _parameterValueExtractor;
   private readonly DisplayValueExtractor _displayValueExtractor;
-  private readonly ParameterObjectAssigner _parameterObjectAssigner;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public ExtrusionRoofToSpeckleTopLevelConverter(
@@ -25,7 +24,6 @@ public class ExtrusionRoofToSpeckleTopLevelConverter
     ITypedConverter<DB.XYZ, SOG.Point> pointConverter,
     ParameterValueExtractor parameterValueExtractor,
     DisplayValueExtractor displayValueExtractor,
-    ParameterObjectAssigner parameterObjectAssigner,
     IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
@@ -34,7 +32,6 @@ public class ExtrusionRoofToSpeckleTopLevelConverter
     _pointConverter = pointConverter;
     _parameterValueExtractor = parameterValueExtractor;
     _displayValueExtractor = displayValueExtractor;
-    _parameterObjectAssigner = parameterObjectAssigner;
     _converterSettings = converterSettings;
   }
 
@@ -63,8 +60,6 @@ public class ExtrusionRoofToSpeckleTopLevelConverter
         displayValue = displayValue,
         units = _converterSettings.Current.SpeckleUnits
       };
-
-    _parameterObjectAssigner.AssignParametersToBase(target, speckleExtrusionRoof);
 
     return speckleExtrusionRoof;
   }

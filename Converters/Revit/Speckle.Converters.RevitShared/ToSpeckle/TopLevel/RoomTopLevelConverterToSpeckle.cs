@@ -11,7 +11,6 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 public class RoomTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DBA.Room, SOBE.Room>
 {
   private readonly DisplayValueExtractor _displayValueExtractor;
-  private readonly ParameterObjectAssigner _parameterObjectAssigner;
   private readonly ITypedConverter<DB.Level, SOBR.RevitLevel> _levelConverter;
   private readonly ParameterValueExtractor _parameterValueExtractor;
   private readonly ITypedConverter<DB.Location, Base> _locationConverter;
@@ -20,7 +19,6 @@ public class RoomTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DBA
 
   public RoomTopLevelConverterToSpeckle(
     DisplayValueExtractor displayValueExtractor,
-    ParameterObjectAssigner parameterObjectAssigner,
     ITypedConverter<DB.Level, SOBR.RevitLevel> levelConverter,
     ParameterValueExtractor parameterValueExtractor,
     ITypedConverter<DB.Location, Base> locationConverter,
@@ -29,7 +27,6 @@ public class RoomTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DBA
   )
   {
     _displayValueExtractor = displayValueExtractor;
-    _parameterObjectAssigner = parameterObjectAssigner;
     _levelConverter = levelConverter;
     _parameterValueExtractor = parameterValueExtractor;
     _locationConverter = locationConverter;
@@ -63,8 +60,6 @@ public class RoomTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DBA
       voids = voids,
       units = _converterSettings.Current.SpeckleUnits
     };
-
-    _parameterObjectAssigner.AssignParametersToBase(target, speckleRoom);
 
     // POC: Removed dynamic property `phaseCreated` as it seems the info is included in the parameters already
 
