@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
 using Revit.Async;
@@ -12,6 +11,7 @@ using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Converters.RevitShared.ToSpeckle;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -29,6 +29,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
   private readonly SendCollectionManager _sendCollectionManager;
   private readonly RevitMaterialCacheSingleton _revitMaterialCacheSingleton;
   private readonly ILogger<RevitRootObjectBuilder> _logger;
+  private readonly ParameterDefinitionHandler _parameterDefinitionHandler;
 
   public RevitRootObjectBuilder(
     IRootToSpeckleConverter converter,
@@ -36,8 +37,9 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     ISendConversionCache sendConversionCache,
     ElementUnpacker elementUnpacker,
     SendCollectionManager sendCollectionManager,
-    RevitMaterialCacheSingleton revitMaterialCacheSingleton,
-    ILogger<RevitRootObjectBuilder> logger
+    ILogger<RevitRootObjectBuilder> logger,
+    ParameterDefinitionHandler parameterDefinitionHandler,
+    RevitMaterialCacheSingleton revitMaterialCacheSingleton
   )
   {
     _converter = converter;
@@ -47,6 +49,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     _sendCollectionManager = sendCollectionManager;
     _revitMaterialCacheSingleton = revitMaterialCacheSingleton;
     _logger = logger;
+    _parameterDefinitionHandler = parameterDefinitionHandler;
 
     _rootObject = new Collection()
     {
@@ -108,7 +111,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
         }
         else
         {
-          converted = await RevitTask.RunAsync(() => _converter.Convert(revitElement)).ConfigureAwait(false);
+          converted = await RevitTask.RunAsync(() => _converter.Convert(revitElement)).ConfigureAwait(false); // Could we run these batched? Is there maybe a performance penalty for running these to speckle conversions individually in revittask.runasync?
           converted.applicationId = applicationId;
         }
 
@@ -133,10 +136,8 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     var idsAndSubElementIds = _elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(atomicObjects);
     var materialProxies = _revitMaterialCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds);
     _rootObject[ProxyKeys.RENDER_MATERIAL] = materialProxies;
-
-    Debug.WriteLine(
-      $"Cache hit count {cacheHitCount} out of {objects.Count} ({(double)cacheHitCount / objects.Count})"
-    );
+    // NOTE: these are currently not used anywhere, so we could even skip them (?).
+    _rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;
 
     return new RootObjectBuilderResult(_rootObject, results);
   }
