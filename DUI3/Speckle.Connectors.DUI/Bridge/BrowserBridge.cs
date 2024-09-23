@@ -18,7 +18,7 @@ namespace Speckle.Connectors.DUI.Bridge;
 /// </summary>
 [ClassInterface(ClassInterfaceType.AutoDual)]
 [ComVisible(true)]
-public sealed class BrowserBridge : IBrowserBridge
+public sealed class BrowserBridge : IBridge
 {
   /// <summary>
   /// The name under which we expect the frontend to hoist this bindings class to the global scope.
@@ -80,7 +80,7 @@ public sealed class BrowserBridge : IBrowserBridge
     _logger = logger;
     TopLevelExceptionHandler = new TopLevelExceptionHandler(topLogger, this);
     // Capture the main thread's SynchronizationContext
-    _mainThreadContext = SynchronizationContext.Current.NotNull("No UI thread to capture?");
+    _mainThreadContext = SynchronizationContext.Current;
     _browserScriptExecutor = browserScriptExecutor;
   }
 

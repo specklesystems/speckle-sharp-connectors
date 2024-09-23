@@ -1,12 +1,12 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Speckle.Connectors.Common.Cancellation;
-using Speckle.Connectors.Common.Operations;
+using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
+using Speckle.Connectors.Utils.Cancellation;
+using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Autocad;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
@@ -16,36 +16,33 @@ namespace Speckle.Connectors.Autocad.Bindings;
 public sealed class AutocadReceiveBinding : IReceiveBinding
 {
   public string Name => "receiveBinding";
-  public IBrowserBridge Parent { get; }
+  public IBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
   private readonly CancellationManager _cancellationManager;
-  private readonly IServiceProvider _serviceProvider;
+  private readonly IUnitOfWorkFactory _unitOfWorkFactory;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<AutocadReceiveBinding> _logger;
   private readonly IAutocadConversionSettingsFactory _autocadConversionSettingsFactory;
-  private readonly ISpeckleApplication _speckleApplication;
 
   private ReceiveBindingUICommands Commands { get; }
 
   public AutocadReceiveBinding(
     DocumentModelStore store,
-    IBrowserBridge parent,
+    IBridge parent,
     CancellationManager cancellationManager,
-    IServiceProvider serviceProvider,
+    IUnitOfWorkFactory unitOfWorkFactory,
     IOperationProgressManager operationProgressManager,
     ILogger<AutocadReceiveBinding> logger,
-    IAutocadConversionSettingsFactory autocadConversionSettingsFactory,
-    ISpeckleApplication speckleApplication
+    IAutocadConversionSettingsFactory autocadConversionSettingsFactory
   )
   {
     _store = store;
     _cancellationManager = cancellationManager;
-    _serviceProvider = serviceProvider;
+    _unitOfWorkFactory = unitOfWorkFactory;
     _operationProgressManager = operationProgressManager;
     _logger = logger;
     _autocadConversionSettingsFactory = autocadConversionSettingsFactory;
-    _speckleApplication = speckleApplication;
     Parent = parent;
     Commands = new ReceiveBindingUICommands(parent);
   }
@@ -54,9 +51,9 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
 
   public async Task Receive(string modelCardId)
   {
-    using var scope = _serviceProvider.CreateScope();
-    scope
-      .ServiceProvider.GetRequiredService<IConverterSettingsStore<AutocadConversionSettings>>()
+    using var unitOfWork = _unitOfWorkFactory.Create();
+    unitOfWork
+      .Resolve<IConverterSettingsStore<AutocadConversionSettings>>()
       .Initialize(_autocadConversionSettingsFactory.Create(Application.DocumentManager.CurrentDocument));
     try
     {
@@ -75,10 +72,10 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
       Application.DocumentManager.DocumentActivationEnabled = false;
 
       // Receive host objects
-      var operationResults = await scope
-        .ServiceProvider.GetRequiredService<ReceiveOperation>()
+      var operationResults = await unitOfWork
+        .Resolve<ReceiveOperation>()
         .Execute(
-          modelCard.GetReceiveInfo(_speckleApplication.Slug),
+          modelCard.GetReceiveInfo(Speckle.Connectors.Utils.Connector.Slug),
           cancellationToken,
           (status, progress) =>
             _operationProgressManager.SetModelProgress(

@@ -1,6 +1,6 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Microsoft.Extensions.Logging;
-using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Utils.Conversion;
 using Speckle.Sdk;
 using Speckle.Sdk.Models.Proxies;
 

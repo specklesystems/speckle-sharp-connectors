@@ -3,11 +3,11 @@
 namespace Speckle.Connectors.DUI.Bindings;
 
 /// <summary>
-/// Simple binding that can be injected into non-<see cref="IBinding"/> services to get access to the <see cref="IBrowserBridge.TopLevelExceptionHandler"/>
+/// Simple binding that can be injected into non-<see cref="IBinding"/> services to get access to the <see cref="IBridge.TopLevelExceptionHandler"/>
 /// </summary>
 /// <param name="parent"></param>
-public sealed class TopLevelExceptionHandlerBinding(IBrowserBridge parent) : IBinding
+public sealed class TopLevelExceptionHandlerBinding(IBridge parent) : IBinding
 {
   public string Name => "topLevelExceptionHandlerBinding";
-  public IBrowserBridge Parent => parent;
+  public IBridge Parent => parent;
 }

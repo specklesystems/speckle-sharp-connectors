@@ -1,6 +1,5 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.Common.Registration;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 
@@ -9,11 +8,11 @@ namespace Speckle.Converters.RevitShared;
 // POC: maybe possible to restrict the access so this cannot be created directly?
 public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
 {
-  private readonly IConverterManager<IToSpeckleTopLevelConverter> _toSpeckle;
+  private readonly IConverterResolver<IToSpeckleTopLevelConverter> _toSpeckle;
   private readonly ITypedConverter<DB.Element, List<Dictionary<string, object>>> _materialQuantityConverter;
 
   public RevitRootToSpeckleConverter(
-    IConverterManager<IToSpeckleTopLevelConverter> toSpeckle,
+    IConverterResolver<IToSpeckleTopLevelConverter> toSpeckle,
     ITypedConverter<DB.Element, List<Dictionary<string, object>>> materialQuantityConverter
   )
   {
@@ -25,7 +24,7 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
   // if it cannot be converted then we should throw
   public Base Convert(object target)
   {
-    var objectConverter = _toSpeckle.ResolveConverter(target.GetType().Name);
+    var objectConverter = _toSpeckle.GetConversionForType(target.GetType());
 
     if (objectConverter == null)
     {

@@ -2,7 +2,7 @@ using Autodesk.AutoCAD.DatabaseServices;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
-using Speckle.Connectors.Common.Instances;
+using Speckle.Connectors.Utils.Instances;
 using Speckle.Converters.Common;
 using Speckle.DoubleNumerics;
 using Speckle.Sdk;

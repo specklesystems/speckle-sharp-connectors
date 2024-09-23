@@ -1,5 +1,5 @@
 using Autodesk.Revit.DB;
-using Speckle.Connectors.Common.Operations.Receive;
+using Speckle.Connectors.Utils.Operations.Receive;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk.Models.GraphTraversal;

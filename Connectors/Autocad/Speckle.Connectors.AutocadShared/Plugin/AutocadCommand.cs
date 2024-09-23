@@ -1,23 +1,20 @@
 using System.Drawing;
+using System.IO;
+using System.Reflection;
 using Autodesk.AutoCAD.Runtime;
 using Autodesk.AutoCAD.Windows;
-using Microsoft.Extensions.DependencyInjection;
-using Speckle.Connectors.Autocad.DependencyInjection;
-using Speckle.Connectors.Common;
-using Speckle.Connectors.DUI;
+using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.WebView;
-#if AUTOCAD
-using Speckle.Converters.Autocad;
-#elif CIVIL3D
-using Speckle.Converters.Civil3d;
-#endif
+using Speckle.Connectors.Utils;
+using Speckle.Sdk.Common;
+
 namespace Speckle.Connectors.Autocad.Plugin;
 
 public class AutocadCommand
 {
   private static PaletteSet? PaletteSet { get; set; }
   private static readonly Guid s_id = new("3223E594-1B09-4E54-B3DD-8EA0BECE7BA5");
-  public ServiceProvider? Container { get; private set; }
+  public SpeckleContainer? Container { get; private set; }
   private IDisposable? _disposableLogger;
   public const string COMMAND_STRING = "SpeckleBeta";
 
@@ -36,20 +33,18 @@ public class AutocadCommand
       DockEnabled = (DockSides)((int)DockSides.Left + (int)DockSides.Right)
     };
 
-    // init DI
-    var services = new ServiceCollection();
-    _disposableLogger = services.Initialize(AppUtils.App, AppUtils.Version);
-#if AUTOCAD
-    services.AddAutocad();
-    services.AddAutocadConverters();
-#elif CIVIL3D
-    services.AddCivil3d();
-    services.AddCivil3dConverters();
-#endif
-    Container = services.BuildServiceProvider();
-    Container.UseDUI();
+    var builder = SpeckleContainerBuilder.CreateInstance();
 
-    var panelWebView = Container.GetRequiredService<DUI3ControlWebView>();
+    // init DI
+    _disposableLogger = Connector.Initialize(AppUtils.App, AppUtils.Version, builder);
+    Container = builder
+      .LoadAutofacModules(
+        Assembly.GetExecutingAssembly(),
+        [Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location).NotNull()]
+      )
+      .Build();
+
+    var panelWebView = Container.Resolve<DUI3ControlWebView>();
 
     PaletteSet.AddVisual("Speckle (Beta) for Autocad WebView", panelWebView);
 

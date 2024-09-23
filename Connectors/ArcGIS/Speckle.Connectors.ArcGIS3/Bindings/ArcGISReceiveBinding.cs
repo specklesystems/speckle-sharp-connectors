@@ -1,14 +1,14 @@
 using ArcGIS.Desktop.Core;
 using ArcGIS.Desktop.Mapping;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Speckle.Connectors.Common.Cancellation;
-using Speckle.Connectors.Common.Operations;
+using Speckle.Autofac.DependencyInjection;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
+using Speckle.Connectors.Utils.Cancellation;
+using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
@@ -21,19 +21,19 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
   public string Name { get; } = "receiveBinding";
   private readonly CancellationManager _cancellationManager;
   private readonly DocumentModelStore _store;
-  private readonly IServiceProvider _serviceProvider;
+  private readonly IUnitOfWorkFactory _unitOfWorkFactory;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<ArcGISReceiveBinding> _logger;
   private readonly IArcGISConversionSettingsFactory _arcGISConversionSettingsFactory;
 
   private ReceiveBindingUICommands Commands { get; }
-  public IBrowserBridge Parent { get; }
+  public IBridge Parent { get; }
 
   public ArcGISReceiveBinding(
     DocumentModelStore store,
-    IBrowserBridge parent,
+    IBridge parent,
     CancellationManager cancellationManager,
-    IServiceProvider serviceProvider,
+    IUnitOfWorkFactory unitOfWorkFactory,
     IOperationProgressManager operationProgressManager,
     ILogger<ArcGISReceiveBinding> logger,
     IArcGISConversionSettingsFactory arcGisConversionSettingsFactory
@@ -43,7 +43,7 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
     _cancellationManager = cancellationManager;
     Parent = parent;
     Commands = new ReceiveBindingUICommands(parent);
-    _serviceProvider = serviceProvider;
+    _unitOfWorkFactory = unitOfWorkFactory;
     _operationProgressManager = operationProgressManager;
     _logger = logger;
     _arcGISConversionSettingsFactory = arcGisConversionSettingsFactory;
@@ -61,9 +61,9 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
       }
 
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
-      using var scope = _serviceProvider.CreateScope();
-      scope
-        .ServiceProvider.GetRequiredService<IConverterSettingsStore<ArcGISConversionSettings>>()
+      using var unitOfWork = _unitOfWorkFactory.Create();
+      unitOfWork
+        .Resolve<IConverterSettingsStore<ArcGISConversionSettings>>()
         .Initialize(
           _arcGISConversionSettingsFactory.Create(
             Project.Current,
@@ -72,8 +72,8 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
           )
         );
       // Receive host objects
-      var receiveOperationResults = await scope
-        .ServiceProvider.GetRequiredService<ReceiveOperation>()
+      var receiveOperationResults = await unitOfWork
+        .Resolve<ReceiveOperation>()
         .Execute(
           modelCard.GetReceiveInfo("ArcGIS"), // POC: get host app name from settings? same for GetSendInfo
           cancellationToken,

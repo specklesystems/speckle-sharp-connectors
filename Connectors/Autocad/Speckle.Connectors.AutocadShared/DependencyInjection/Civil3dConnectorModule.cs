@@ -1,14 +1,19 @@
 #if CIVIL3D
-using Microsoft.Extensions.DependencyInjection;
+
+using Speckle.Autofac.DependencyInjection;
+using Speckle.Connectors.DUI.Bindings;
 
 namespace Speckle.Connectors.Autocad.DependencyInjection;
 
-public static class Civil3dConnectorModule
+public class Civil3dConnectorModule : ISpeckleModule
 {
-  public static void AddCivil3d(this IServiceCollection serviceCollection)
+  public void Load(SpeckleContainerBuilder builder)
   {
-    serviceCollection.AddAutocadBase();
-    serviceCollection.LoadSend();
+    SharedRegistration.Load(builder);
+    SharedRegistration.LoadSend(builder);
+
+    // Register bindings
+    builder.AddSingleton<IBinding, ConfigBinding>("connectorName", "Civil3d"); // POC: Easier like this for now, should be cleaned up later
   }
 }
 #endif
