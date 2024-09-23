@@ -60,8 +60,7 @@ public class ParameterExtractor
       return CreateParameterDictionary(instanceParameterDictionary, typeParameterDictionary);
     }
 
-    var type = _settingsStore.Current.Document.GetElement(typeId) as DB.ElementType;
-    if (type == null)
+    if (_settingsStore.Current.Document.GetElement(typeId) is not DB.ElementType type)
     {
       return CreateParameterDictionary(instanceParameterDictionary, null);
     }
