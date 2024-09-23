@@ -55,6 +55,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     {
       name = _converterSettings.Current.Document.PathName.Split('\\').Last().Split('.').First()
     };
+    _rootObject["units"] = _converterSettings.Current.SpeckleUnits;
   }
 
   public async Task<RootObjectBuilderResult> Build(
