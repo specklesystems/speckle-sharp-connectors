@@ -19,15 +19,13 @@ public class ColumnConversionToSpeckle : ITypedConverter<DB.FamilyInstance, Revi
   private readonly ParameterValueExtractor _parameterValueExtractor;
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
-  private readonly ParameterObjectAssigner _parameterObjectAssigner;
 
   public ColumnConversionToSpeckle(
     ITypedConverter<Location, Base> locationConverter,
     ITypedConverter<Level, RevitLevel> levelConverter,
     ParameterValueExtractor parameterValueExtractor,
     DisplayValueExtractor displayValueExtractor,
-    IConverterSettingsStore<RevitConversionSettings> converterSettings,
-    ParameterObjectAssigner parameterObjectAssigner
+    IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _locationConverter = locationConverter;
@@ -35,7 +33,6 @@ public class ColumnConversionToSpeckle : ITypedConverter<DB.FamilyInstance, Revi
     _parameterValueExtractor = parameterValueExtractor;
     _displayValueExtractor = displayValueExtractor;
     _converterSettings = converterSettings;
-    _parameterObjectAssigner = parameterObjectAssigner;
   }
 
   public RevitColumn Convert(DB.FamilyInstance target)
@@ -106,8 +103,6 @@ public class ColumnConversionToSpeckle : ITypedConverter<DB.FamilyInstance, Revi
     {
       speckleColumn.rotation = locationPoint.Rotation;
     }
-
-    _parameterObjectAssigner.AssignParametersToBase(target, speckleColumn);
 
     return speckleColumn;
   }

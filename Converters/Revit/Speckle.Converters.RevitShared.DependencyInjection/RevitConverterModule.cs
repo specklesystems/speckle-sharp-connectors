@@ -43,7 +43,6 @@ public class RevitConverterModule : ISpeckleModule
     builder.AddScoped<ParameterValueExtractor>();
     builder.AddScoped<ParameterValueSetter>();
     builder.AddScoped<DisplayValueExtractor>();
-    builder.AddScoped<ParameterObjectAssigner>();
     builder.AddScoped<ISlopeArrowExtractor, SlopeArrowExtractor>();
 
     builder.AddScoped<IRevitCategories, RevitCategories>();

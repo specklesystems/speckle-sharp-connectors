@@ -97,7 +97,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\RoomTopLevelConverterToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\TopographyTopLevelConverterToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\WallTopLevelConverterToSpeckle.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)\Helpers\ParameterObjectAssigner.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\ParameterValueExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\RevitCategories.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\RevitCategoryInfo.cs" />

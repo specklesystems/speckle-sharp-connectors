@@ -19,7 +19,6 @@ public class FootPrintRoofToSpeckleTopLevelConverter
   private readonly ITypedConverter<DB.ModelCurveArrArray, SOG.Polycurve[]> _modelCurveArrArrayConverter;
   private readonly ParameterValueExtractor _parameterValueExtractor;
   private readonly DisplayValueExtractor _displayValueExtractor;
-  private readonly ParameterObjectAssigner _parameterObjectAssigner;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public FootPrintRoofToSpeckleTopLevelConverter(
@@ -27,7 +26,6 @@ public class FootPrintRoofToSpeckleTopLevelConverter
     ITypedConverter<ModelCurveArrArray, Polycurve[]> modelCurveArrArrayConverter,
     ParameterValueExtractor parameterValueExtractor,
     DisplayValueExtractor displayValueExtractor,
-    ParameterObjectAssigner parameterObjectAssigner,
     IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
@@ -35,7 +33,6 @@ public class FootPrintRoofToSpeckleTopLevelConverter
     _modelCurveArrArrayConverter = modelCurveArrArrayConverter;
     _parameterValueExtractor = parameterValueExtractor;
     _displayValueExtractor = displayValueExtractor;
-    _parameterObjectAssigner = parameterObjectAssigner;
     _converterSettings = converterSettings;
   }
 
@@ -79,10 +76,6 @@ public class FootPrintRoofToSpeckleTopLevelConverter
     var profiles = _modelCurveArrArrayConverter.Convert(target.GetProfiles());
     speckleFootprintRoof.outline = profiles.FirstOrDefault().NotNull();
     speckleFootprintRoof.voids = profiles.Skip(1).ToList<ICurve>();
-
-    // POC: we are starting to see logic that is happening in all converters. We should definitely consider some
-    // conversion pipeline behavior. Would probably require adding interfaces into objects kit
-    _parameterObjectAssigner.AssignParametersToBase(target, speckleFootprintRoof);
 
     return speckleFootprintRoof;
   }

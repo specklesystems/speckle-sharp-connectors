@@ -88,7 +88,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 
   public bool GetSendParameterNullOrEmptyStringsSetting(SenderModelCard modelCard)
   {
-    var value = modelCard.Settings?.First(s => s.Id == "nullemptyparams").Value as bool?;
+    var value = modelCard.Settings?.FirstOrDefault(s => s.Id == "nullemptyparams").Value as bool?;
     var returnValue = value != null && value.NotNull();
     if (_sendNullParamsCache.TryGetValue(modelCard.ModelCardId.NotNull(), out bool? previousValue))
     {
