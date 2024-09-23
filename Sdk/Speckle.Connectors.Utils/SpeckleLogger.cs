@@ -16,22 +16,22 @@ public class SpeckleLogger(Logger logger) : ILogger
     switch (logLevel)
     {
       case LogLevel.Critical:
-        logger.Write(SpeckleLogLevel.Fatal, exception, formatter(state, exception));
+        logger.Write(SpeckleLogLevel.Fatal, eventId.Id, state, exception, formatter);
         break;
       case LogLevel.Trace:
-        logger.Write(SpeckleLogLevel.Verbose, exception, formatter(state, exception));
+        logger.Write(SpeckleLogLevel.Verbose,  eventId.Id, state, exception, formatter);
         break;
       case LogLevel.Debug:
-        logger.Write(SpeckleLogLevel.Debug, exception, formatter(state, exception));
+        logger.Write(SpeckleLogLevel.Debug, eventId.Id, state, exception, formatter);
         break;
       case LogLevel.Information:
-        logger.Write(SpeckleLogLevel.Information, exception, formatter(state, exception));
+        logger.Write(SpeckleLogLevel.Information,  eventId.Id, state, exception, formatter);
         break;
       case LogLevel.Warning:
-        logger.Write(SpeckleLogLevel.Warning, exception, formatter(state, exception));
+        logger.Write(SpeckleLogLevel.Warning, eventId.Id, state, exception, formatter);
         break;
       case LogLevel.Error:
-        logger.Write(SpeckleLogLevel.Error, exception, formatter(state, exception));
+        logger.Write(SpeckleLogLevel.Error,  eventId.Id, state, exception, formatter);
         break;
       case LogLevel.None:
       default:
