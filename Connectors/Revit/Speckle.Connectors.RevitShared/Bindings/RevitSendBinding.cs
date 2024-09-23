@@ -88,7 +88,11 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   }
 
   public List<ICardSetting> GetSendSettings() =>
-    [new DetailLevelSetting(DetailLevelType.Medium), new ReferencePointSetting(ReferencePointType.InternalOrigin)];
+    [
+      new DetailLevelSetting(DetailLevelType.Medium),
+      new ReferencePointSetting(ReferencePointType.InternalOrigin),
+      new SendParameterNullOrEmptyStringsSetting(false)
+    ];
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
 
@@ -116,7 +120,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         .Initialize(
           _revitConversionSettingsFactory.Create(
             _toSpeckleSettingsManager.GetDetailLevelSetting(modelCard),
-            _toSpeckleSettingsManager.GetReferencePointSetting(modelCard)
+            _toSpeckleSettingsManager.GetReferencePointSetting(modelCard),
+            _toSpeckleSettingsManager.GetSendParameterNullOrEmptyStringsSetting(modelCard)
           )
         );
 

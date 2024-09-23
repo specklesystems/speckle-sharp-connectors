@@ -20,7 +20,6 @@ public class WallTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.
   private readonly ParameterValueExtractor _parameterValueExtractor;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly DisplayValueExtractor _displayValueExtractor;
-  private readonly ParameterObjectAssigner _parameterObjectAssigner;
   private readonly IRootToSpeckleConverter _converter;
 
   public WallTopLevelConverterToSpeckle(
@@ -30,7 +29,6 @@ public class WallTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ParameterValueExtractor parameterValueExtractor,
     DisplayValueExtractor displayValueExtractor,
-    ParameterObjectAssigner parameterObjectAssigner,
     IRootToSpeckleConverter converter
   )
   {
@@ -40,7 +38,6 @@ public class WallTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.
     _converterSettings = converterSettings;
     _parameterValueExtractor = parameterValueExtractor;
     _displayValueExtractor = displayValueExtractor;
-    _parameterObjectAssigner = parameterObjectAssigner;
     _converter = converter;
   }
 
@@ -58,7 +55,6 @@ public class WallTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.
     AssignVoids(target, speckleWall);
     AssignHostedElements(speckleWall, GetChildElements(target));
     AssignDisplayValue(target, speckleWall);
-    _parameterObjectAssigner.AssignParametersToBase(target, speckleWall);
 
     return speckleWall;
   }

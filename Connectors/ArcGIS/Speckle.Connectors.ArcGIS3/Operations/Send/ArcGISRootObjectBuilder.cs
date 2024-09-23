@@ -28,7 +28,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ArcGISColorManager _colorManager;
-  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _converterSettings;
   private readonly MapMembersUtils _mapMemberUtils;
   private readonly ILogger<ArcGISRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
@@ -36,7 +36,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
   public ArcGISRootObjectBuilder(
     ISendConversionCache sendConversionCache,
     ArcGISColorManager colorManager,
-    IConverterSettingsStore<ArcGISConversionSettings> settingsStore,
+    IConverterSettingsStore<ArcGISConversionSettings> converterSettings,
     IRootToSpeckleConverter rootToSpeckleConverter,
     MapMembersUtils mapMemberUtils,
     ILogger<ArcGISRootObjectBuilder> logger,
@@ -45,7 +45,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
   {
     _sendConversionCache = sendConversionCache;
     _colorManager = colorManager;
-    _settingsStore = settingsStore;
+    _converterSettings = converterSettings;
     _rootToSpeckleConverter = rootToSpeckleConverter;
     _mapMemberUtils = mapMemberUtils;
     _logger = logger;
@@ -67,6 +67,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     int count = 0;
 
     Collection rootObjectCollection = new() { name = MapView.Active.Map.Name }; //TODO: Collections
+    rootObjectCollection["units"] = _converterSettings.Current.SpeckleUnits;
 
     List<SendConversionResult> results = new(objects.Count);
     var cacheHitCount = 0;
@@ -134,17 +135,17 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
                   .ConfigureAwait(false);
 
                 // get units & Active CRS (for writing geometry coords)
-                converted["units"] = _settingsStore.Current.SpeckleUnits;
+                converted["units"] = _converterSettings.Current.SpeckleUnits;
 
-                var spatialRef = _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference;
+                var spatialRef = _converterSettings.Current.ActiveCRSoffsetRotation.SpatialReference;
                 converted["crs"] = new CRS
                 {
                   wkt = spatialRef.Wkt,
                   name = spatialRef.Name,
-                  offset_y = Convert.ToSingle(_settingsStore.Current.ActiveCRSoffsetRotation.LatOffset),
-                  offset_x = Convert.ToSingle(_settingsStore.Current.ActiveCRSoffsetRotation.LonOffset),
-                  rotation = Convert.ToSingle(_settingsStore.Current.ActiveCRSoffsetRotation.TrueNorthRadians),
-                  units_native = _settingsStore.Current.SpeckleUnits
+                  offset_y = Convert.ToSingle(_converterSettings.Current.ActiveCRSoffsetRotation.LatOffset),
+                  offset_x = Convert.ToSingle(_converterSettings.Current.ActiveCRSoffsetRotation.LonOffset),
+                  rotation = Convert.ToSingle(_converterSettings.Current.ActiveCRSoffsetRotation.TrueNorthRadians),
+                  units_native = _converterSettings.Current.SpeckleUnits
                 };
               }
 
