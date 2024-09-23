@@ -111,7 +111,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
         }
         else
         {
-          converted = await RevitTask.RunAsync(() => _converter.Convert(revitElement)).ConfigureAwait(false);
+          converted = await RevitTask.RunAsync(() => _converter.Convert(revitElement)).ConfigureAwait(false); // Could we run these batched? Is there maybe a performance penalty for running these to speckle conversions individually in revittask.runasync?
           converted.applicationId = applicationId;
         }
 
@@ -136,7 +136,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     var idsAndSubElementIds = _elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(atomicObjects);
     var materialProxies = _revitMaterialCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds);
     _rootObject[ProxyKeys.RENDER_MATERIAL] = materialProxies;
-
+    // NOTE: these are currently not used anywhere, so we could even skip them (?).
     _rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;
 
     return new RootObjectBuilderResult(_rootObject, results);

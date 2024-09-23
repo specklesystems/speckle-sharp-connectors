@@ -149,7 +149,7 @@ public class ParameterExtractor
           return value;
         }
         var docElement = _settingsStore.Current.Document.GetElement(elId);
-        var docElementName = docElement?.Name;
+        var docElementName = docElement?.Name ?? elId.ToString();
         _elementNameCache[parameter.AsElementId()] = docElementName;
         return docElementName;
       case DB.StorageType.String:
