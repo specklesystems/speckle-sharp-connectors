@@ -1,4 +1,5 @@
 using System.Windows.Controls;
+using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.DUI.WebView;
 
 namespace Speckle.Connectors.ArcGIS;
@@ -12,6 +13,6 @@ public class SpeckleDUI3Wrapper : UserControl
 
   private void Initialize()
   {
-    Content = SpeckleModule.Current.Container.Resolve<DUI3ControlWebView>();
+    Content = SpeckleModule.Current.Container.GetRequiredService<DUI3ControlWebView>();
   }
 }

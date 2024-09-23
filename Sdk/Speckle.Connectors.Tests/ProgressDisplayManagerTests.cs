@@ -1,6 +1,6 @@
 ﻿using FluentAssertions;
 using NUnit.Framework;
-using Speckle.Connectors.Utils.Operations;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Sdk.Transports;
 using Speckle.Testing;
 

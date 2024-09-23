@@ -1,18 +1,17 @@
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
 using Revit.Async;
+using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Instances;
+using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.Revit.HostApp;
-using Speckle.Connectors.Utils.Builders;
-using Speckle.Connectors.Utils.Conversion;
-using Speckle.Connectors.Utils.Instances;
-using Speckle.Connectors.Utils.Operations.Receive;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
-using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.Revit.Operations.Receive;
 
@@ -20,7 +19,6 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 {
   private readonly IRootToHostConverter _converter;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
-  private readonly GraphTraversal _traverseFunction;
   private readonly RevitMaterialCacheSingleton _revitMaterialCacheSingleton;
   private readonly ITransactionManager _transactionManager;
   private readonly ILocalToGlobalUnpacker _localToGlobalUnpacker;
@@ -35,7 +33,6 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   public RevitHostObjectBuilder(
     IRootToHostConverter converter,
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
-    GraphTraversal traverseFunction,
     ITransactionManager transactionManager,
     ISdkActivityFactory activityFactory,
     ILocalToGlobalUnpacker localToGlobalUnpacker,
@@ -49,7 +46,6 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   {
     _converter = converter;
     _converterSettings = converterSettings;
-    _traverseFunction = traverseFunction;
     _transactionManager = transactionManager;
     _localToGlobalUnpacker = localToGlobalUnpacker;
     _localToGlobalConverterUtils = localToGlobalConverterUtils;
