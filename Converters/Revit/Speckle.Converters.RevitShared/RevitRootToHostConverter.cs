@@ -1,11 +1,8 @@
-using System.Collections;
 using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Settings;
-using Speckle.Objects;
 using Speckle.Sdk.Models;
-using Speckle.Sdk.Models.Extensions;
 
 namespace Speckle.Converters.RevitShared;
 
@@ -13,55 +10,55 @@ public class RevitRootToHostConverter : IRootToHostConverter
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly IConverterResolver<IToHostTopLevelConverter> _converterResolver;
-  private readonly ITypedConverter<SOG.Point, DB.XYZ> _pointConverter;
-  private readonly ITypedConverter<ICurve, DB.CurveArray> _curveConverter;
-  private readonly ITypedConverter<SOG.Mesh, List<DB.GeometryObject>> _meshConverter;
+  private readonly ITypedConverter<Base, List<DB.GeometryObject>> _baseToGeometryConverter;
 
   public RevitRootToHostConverter(
     IConverterResolver<IToHostTopLevelConverter> converterResolver,
-    ITypedConverter<SOG.Point, DB.XYZ> pointConverter,
-    ITypedConverter<ICurve, DB.CurveArray> curveConverter,
-    ITypedConverter<SOG.Mesh, List<DB.GeometryObject>> meshConverter,
+    ITypedConverter<Base, List<DB.GeometryObject>> baseToGeometryConverter,
     IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _converterResolver = converterResolver;
-    _pointConverter = pointConverter;
-    _curveConverter = curveConverter;
-    _meshConverter = meshConverter;
+    _baseToGeometryConverter = baseToGeometryConverter;
     _converterSettings = converterSettings;
   }
 
   public object Convert(Base target)
   {
-    List<DB.GeometryObject> geometryObjects = new();
-
-    switch (target)
-    {
-      case SOG.Point point:
-        var xyz = _pointConverter.Convert(point);
-        geometryObjects.Add(DB.Point.Create(xyz));
-        break;
-      case ICurve curve:
-        var curves = _curveConverter.Convert(curve).Cast<DB.GeometryObject>();
-        geometryObjects.AddRange(curves);
-        break;
-      case SOG.Mesh mesh:
-        var meshes = _meshConverter.Convert(mesh).Cast<DB.GeometryObject>();
-        geometryObjects.AddRange(meshes);
-        break;
-      default:
-        geometryObjects.AddRange(FallbackToDisplayValue(target));
-        break;
-    }
+    List<DB.GeometryObject> geometryObjects = _baseToGeometryConverter.Convert(target);
 
     if (geometryObjects.Count == 0)
     {
       throw new SpeckleConversionException($"No supported conversion for {target.speckle_type} found.");
     }
 
-    var category = DB.BuiltInCategory.OST_GenericModel;
-    if (target["category"] is string categoryString)
+    // create direct shape from geometries
+    DB.DirectShape result = CreateDirectShape(geometryObjects, target["category"] as string);
+
+    return result;
+  }
+
+  private DB.DirectShape CreateDirectShape(List<GeometryObject> geometry, string? category)
+  {
+    // split any closed curves for ds. will fail on append otherwise.
+    List<DB.GeometryObject> cleanedGeometryObjects = new();
+    foreach (DB.GeometryObject geometryObject in geometry)
+    {
+      if (geometryObject is DB.Curve curve && IsCurveClosed(curve))
+      {
+        (DB.Curve firstCurve, DB.Curve secondCurve) = SplitCurveInTwoHalves(curve);
+        cleanedGeometryObjects.Add(firstCurve);
+        cleanedGeometryObjects.Add(secondCurve);
+      }
+      else
+      {
+        cleanedGeometryObjects.Add(geometryObject);
+      }
+    }
+
+    // set ds category
+    var dsCategory = BuiltInCategory.OST_GenericModel;
+    if (category is string categoryString)
     {
       var res = Enum.TryParse($"OST_{categoryString}", out DB.BuiltInCategory cat);
       if (res)
@@ -69,44 +66,55 @@ public class RevitRootToHostConverter : IRootToHostConverter
         var c = Category.GetCategory(_converterSettings.Current.Document, cat);
         if (c is not null && DirectShape.IsValidCategoryId(c.Id, _converterSettings.Current.Document))
         {
-          category = cat;
+          dsCategory = cat;
         }
       }
     }
 
-    var ds = DB.DirectShape.CreateElement(_converterSettings.Current.Document, new DB.ElementId(category));
-    ds.SetShape(geometryObjects);
+    var result = DirectShape.CreateElement(_converterSettings.Current.Document, new DB.ElementId(dsCategory));
 
-    return ds;
+    // check for valid geometry
+    if (!result.IsValidShape(cleanedGeometryObjects))
+    {
+      _converterSettings.Current.Document.Delete(result.Id);
+      throw new SpeckleConversionException("Invalid geometry (eg closed curves) found for creating directshape.");
+    }
+
+    result.SetShape(cleanedGeometryObjects);
+
+    return result;
   }
 
-  private List<DB.GeometryObject> FallbackToDisplayValue(Base target)
+  private bool IsCurveClosed(DB.Curve nativeCurve, double tol = 1E-6)
   {
-    var displayValue = target.TryGetDisplayValue<Base>();
-    if ((displayValue is IList && !displayValue.Any()) || displayValue is null)
+    if (nativeCurve.IsClosed)
     {
-      throw new NotSupportedException($"No display value found for {target.speckle_type}");
+      return true;
     }
 
-    List<DB.GeometryObject> geometryObjects = new();
-    foreach (var baseObject in displayValue)
+    var endPoint = nativeCurve.GetEndPoint(0);
+    var source = nativeCurve.GetEndPoint(1);
+    var distanceTo = endPoint.DistanceTo(source);
+    return distanceTo < tol;
+  }
+
+  private (DB.Curve, DB.Curve) SplitCurveInTwoHalves(DB.Curve nativeCurve)
+  {
+    if (!nativeCurve.IsBound)
     {
-      switch (baseObject)
-      {
-        case SOG.Point point:
-          var xyz = _pointConverter.Convert(point);
-          geometryObjects.Add(DB.Point.Create(xyz));
-          break;
-        case ICurve curve:
-          var curves = _curveConverter.Convert(curve).Cast<DB.GeometryObject>();
-          geometryObjects.AddRange(curves);
-          break;
-        case SOG.Mesh mesh:
-          var meshes = _meshConverter.Convert(mesh).Cast<DB.GeometryObject>();
-          geometryObjects.AddRange(meshes);
-          break;
-      }
+      nativeCurve.MakeBound(0, nativeCurve.Period);
     }
-    return geometryObjects;
+
+    var start = nativeCurve.GetEndParameter(0);
+    var end = nativeCurve.GetEndParameter(1);
+    var mid = start + ((end - start) / 2);
+
+    var a = nativeCurve.Clone();
+    a.MakeBound(start, mid);
+
+    var b = nativeCurve.Clone();
+    b.MakeBound(mid, end);
+
+    return (a, b);
   }
 }

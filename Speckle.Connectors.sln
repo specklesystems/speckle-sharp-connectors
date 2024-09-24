@@ -185,7 +185,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Converters.Autocad2
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Connectors.Tests", "Sdk\Speckle.Connectors.Tests\Speckle.Connectors.Tests.csproj", "{5B9A550A-9314-4E91-884E-E54960F589FB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Logging", "Sdk\Speckle.Connectors.Logging\Speckle.Connectors.Logging.csproj", "{8098BAFC-DF1C-4AFA-A93E-08121E6D09D4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Connectors.Logging", "Sdk\Speckle.Connectors.Logging\Speckle.Connectors.Logging.csproj", "{8098BAFC-DF1C-4AFA-A93E-08121E6D09D4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
