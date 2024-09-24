@@ -1,5 +1,5 @@
 ﻿using ArcGIS.Desktop.Framework.Threading.Tasks;
-using Speckle.Connectors.Utils.Operations;
+using Speckle.Connectors.Common.Operations;
 
 namespace Speckle.Connectors.ArcGIS.HostApp;
 

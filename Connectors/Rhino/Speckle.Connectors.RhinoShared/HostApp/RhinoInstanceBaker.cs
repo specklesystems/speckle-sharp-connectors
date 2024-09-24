@@ -2,9 +2,9 @@
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
+using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Rhino.Extensions;
-using Speckle.Connectors.Utils.Conversion;
-using Speckle.Connectors.Utils.Instances;
 using Speckle.DoubleNumerics;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;

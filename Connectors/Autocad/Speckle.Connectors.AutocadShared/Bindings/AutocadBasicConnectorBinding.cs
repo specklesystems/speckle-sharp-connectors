@@ -5,7 +5,6 @@ using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.Utils.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Credentials;
@@ -16,23 +15,26 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
 {
   private readonly IAccountManager _accountManager;
   public string Name { get; set; } = "baseBinding";
-  public IBridge Parent { get; }
+  public IBrowserBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
+  private readonly ISpeckleApplication _speckleApplication;
   private readonly ILogger<AutocadBasicConnectorBinding> _logger;
 
   public BasicConnectorBindingCommands Commands { get; }
 
   public AutocadBasicConnectorBinding(
     DocumentModelStore store,
-    IBridge parent,
+    IBrowserBridge parent,
     IAccountManager accountManager,
+    ISpeckleApplication speckleApplication,
     ILogger<AutocadBasicConnectorBinding> logger
   )
   {
     _store = store;
     Parent = parent;
     _accountManager = accountManager;
+    _speckleApplication = speckleApplication;
     Commands = new BasicConnectorBindingCommands(parent);
     _store.DocumentChanged += (_, _) =>
     {
@@ -42,11 +44,11 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
     _logger = logger;
   }
 
-  public string GetConnectorVersion() => typeof(AutocadBasicConnectorBinding).Assembly.GetVersion();
+  public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
 
-  public string GetSourceApplicationName() => Utils.Connector.Slug;
+  public string GetSourceApplicationName() => _speckleApplication.Slug;
 
-  public string GetSourceApplicationVersion() => Utils.Connector.VersionString;
+  public string GetSourceApplicationVersion() => _speckleApplication.HostApplicationVersion;
 
   public Account[] GetAccounts() => _accountManager.GetAccounts().ToArray();
 

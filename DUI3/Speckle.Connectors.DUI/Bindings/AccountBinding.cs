@@ -6,11 +6,11 @@ namespace Speckle.Connectors.DUI.Bindings;
 public class AccountBinding : IBinding
 {
   public string Name => "accountsBinding";
-  public IBridge Parent { get; }
+  public IBrowserBridge Parent { get; }
 
   private readonly IAccountManager _accountManager;
 
-  public AccountBinding(IBridge bridge, IAccountManager accountManager)
+  public AccountBinding(IBrowserBridge bridge, IAccountManager accountManager)
   {
     Parent = bridge;
     _accountManager = accountManager;

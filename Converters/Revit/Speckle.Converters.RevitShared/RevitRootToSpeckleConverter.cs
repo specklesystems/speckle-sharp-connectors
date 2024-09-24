@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Registration;
 using Speckle.Converters.RevitShared.ToSpeckle;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
@@ -9,13 +10,13 @@ namespace Speckle.Converters.RevitShared;
 
 public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
 {
-  private readonly IConverterResolver<IToSpeckleTopLevelConverter> _toSpeckle;
+  private readonly IConverterManager<IToSpeckleTopLevelConverter> _toSpeckle;
   private readonly ITypedConverter<DB.Element, List<Dictionary<string, object>>> _materialQuantityConverter;
   private readonly ParameterExtractor _parameterExtractor;
   private readonly ILogger<RevitRootToSpeckleConverter> _logger;
 
   public RevitRootToSpeckleConverter(
-    IConverterResolver<IToSpeckleTopLevelConverter> toSpeckle,
+    IConverterManager<IToSpeckleTopLevelConverter> toSpeckle,
     ITypedConverter<DB.Element, List<Dictionary<string, object>>> materialQuantityConverter,
     ParameterExtractor parameterExtractor,
     ILogger<RevitRootToSpeckleConverter> logger
@@ -34,7 +35,7 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
       throw new SpeckleConversionException($"Target object is not a db element, it's a {target.GetType()}");
     }
 
-    var objectConverter = _toSpeckle.GetConversionForType(target.GetType());
+    var objectConverter = _toSpeckle.ResolveConverter(target.GetType(), true);
 
     if (objectConverter == null)
     {

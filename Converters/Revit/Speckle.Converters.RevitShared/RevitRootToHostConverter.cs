@@ -9,16 +9,13 @@ namespace Speckle.Converters.RevitShared;
 public class RevitRootToHostConverter : IRootToHostConverter
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
-  private readonly IConverterResolver<IToHostTopLevelConverter> _converterResolver;
   private readonly ITypedConverter<Base, List<DB.GeometryObject>> _baseToGeometryConverter;
 
   public RevitRootToHostConverter(
-    IConverterResolver<IToHostTopLevelConverter> converterResolver,
     ITypedConverter<Base, List<DB.GeometryObject>> baseToGeometryConverter,
     IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
-    _converterResolver = converterResolver;
     _baseToGeometryConverter = baseToGeometryConverter;
     _converterSettings = converterSettings;
   }
