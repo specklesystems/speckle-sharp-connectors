@@ -21,8 +21,9 @@ public class ConverterManager<T>(ConcurrentDictionary<string, Type> converterTyp
       {
         return GetType(baseType.Name);
       }
+      return default;
     }
-    return default;
+    return obj;
   }
 
   private T? GetType(string typeName)

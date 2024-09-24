@@ -155,6 +155,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Connectors.Tests", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Logging", "Sdk\Speckle.Connectors.Logging\Speckle.Connectors.Logging.csproj", "{8098BAFC-DF1C-4AFA-A93E-08121E6D09D4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Common.Tests", "Sdk\Speckle.Converters.Common.Tests\Speckle.Converters.Common.Tests.csproj", "{9EF292C6-1333-4502-AD9C-224D99847185}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -309,6 +311,10 @@ Global
 		{8098BAFC-DF1C-4AFA-A93E-08121E6D09D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8098BAFC-DF1C-4AFA-A93E-08121E6D09D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8098BAFC-DF1C-4AFA-A93E-08121E6D09D4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9EF292C6-1333-4502-AD9C-224D99847185}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9EF292C6-1333-4502-AD9C-224D99847185}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9EF292C6-1333-4502-AD9C-224D99847185}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9EF292C6-1333-4502-AD9C-224D99847185}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -378,6 +384,7 @@ Global
 		{9D66EDE4-AFC2-4F00-B40C-A7E878A2972F} = {B2BF1FAE-D0F4-4961-84CB-A00D3CABD236}
 		{5B9A550A-9314-4E91-884E-E54960F589FB} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
 		{8098BAFC-DF1C-4AFA-A93E-08121E6D09D4} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
+		{9EF292C6-1333-4502-AD9C-224D99847185} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}
