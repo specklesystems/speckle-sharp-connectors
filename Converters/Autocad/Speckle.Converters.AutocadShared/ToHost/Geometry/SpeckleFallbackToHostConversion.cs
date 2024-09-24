@@ -1,4 +1,4 @@
-﻿using Speckle.Converters.Common;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Models;
 
@@ -12,18 +12,21 @@ public class SpeckleFallbackToAutocadTopLevelConverter
   private readonly ITypedConverter<SOG.Line, ADB.Line> _lineConverter;
   private readonly ITypedConverter<SOG.Polyline, ADB.Polyline3d> _polylineConverter;
   private readonly ITypedConverter<SOG.Mesh, ADB.PolyFaceMesh> _meshConverter;
+  private readonly ITypedConverter<SOG.Arc, ADB.Arc> _arcConverter;
   private readonly ITypedConverter<SOG.Point, ADB.DBPoint> _pointConverter;
 
   public SpeckleFallbackToAutocadTopLevelConverter(
     ITypedConverter<SOG.Line, ADB.Line> lineConverter,
     ITypedConverter<SOG.Polyline, ADB.Polyline3d> polylineConverter,
     ITypedConverter<SOG.Mesh, ADB.PolyFaceMesh> meshConverter,
+    ITypedConverter<SOG.Arc, ADB.Arc> arcConverter,
     ITypedConverter<SOG.Point, ADB.DBPoint> pointConverter
   )
   {
     _lineConverter = lineConverter;
     _polylineConverter = polylineConverter;
     _meshConverter = meshConverter;
+    _arcConverter = arcConverter;
     _pointConverter = pointConverter;
   }
 
@@ -39,6 +42,7 @@ public class SpeckleFallbackToAutocadTopLevelConverter
         SOG.Line line => _lineConverter.Convert(line),
         SOG.Polyline polyline => _polylineConverter.Convert(polyline),
         SOG.Mesh mesh => _meshConverter.Convert(mesh),
+        SOG.Arc arc => _arcConverter.Convert(arc),
         SOG.Point point => _pointConverter.Convert(point),
         _ => throw new NotSupportedException($"Found unsupported fallback geometry: {item.GetType()}")
       };
