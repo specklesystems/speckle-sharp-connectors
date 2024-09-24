@@ -40,22 +40,6 @@ public class RevitRootToHostConverter : IRootToHostConverter
 
   private DB.DirectShape CreateDirectShape(List<GeometryObject> geometry, string? category)
   {
-    // split any closed curves for ds. will fail on append otherwise.
-    List<DB.GeometryObject> cleanedGeometryObjects = new();
-    foreach (DB.GeometryObject geometryObject in geometry)
-    {
-      if (geometryObject is DB.Curve curve && IsCurveClosed(curve))
-      {
-        (DB.Curve firstCurve, DB.Curve secondCurve) = SplitCurveInTwoHalves(curve);
-        cleanedGeometryObjects.Add(firstCurve);
-        cleanedGeometryObjects.Add(secondCurve);
-      }
-      else
-      {
-        cleanedGeometryObjects.Add(geometryObject);
-      }
-    }
-
     // set ds category
     var dsCategory = BuiltInCategory.OST_GenericModel;
     if (category is string categoryString)
@@ -74,47 +58,14 @@ public class RevitRootToHostConverter : IRootToHostConverter
     var result = DirectShape.CreateElement(_converterSettings.Current.Document, new DB.ElementId(dsCategory));
 
     // check for valid geometry
-    if (!result.IsValidShape(cleanedGeometryObjects))
+    if (!result.IsValidShape(geometry))
     {
       _converterSettings.Current.Document.Delete(result.Id);
-      throw new SpeckleConversionException("Invalid geometry (eg closed curves) found for creating directshape.");
+      throw new SpeckleConversionException("Invalid geometry (eg unbounded curves) found for creating directshape.");
     }
 
-    result.SetShape(cleanedGeometryObjects);
+    result.SetShape(geometry);
 
     return result;
-  }
-
-  private bool IsCurveClosed(DB.Curve nativeCurve, double tol = 1E-6)
-  {
-    if (nativeCurve.IsClosed)
-    {
-      return true;
-    }
-
-    var endPoint = nativeCurve.GetEndPoint(0);
-    var source = nativeCurve.GetEndPoint(1);
-    var distanceTo = endPoint.DistanceTo(source);
-    return distanceTo < tol;
-  }
-
-  private (DB.Curve, DB.Curve) SplitCurveInTwoHalves(DB.Curve nativeCurve)
-  {
-    if (!nativeCurve.IsBound)
-    {
-      nativeCurve.MakeBound(0, nativeCurve.Period);
-    }
-
-    var start = nativeCurve.GetEndParameter(0);
-    var end = nativeCurve.GetEndParameter(1);
-    var mid = start + ((end - start) / 2);
-
-    var a = nativeCurve.Clone();
-    a.MakeBound(start, mid);
-
-    var b = nativeCurve.Clone();
-    b.MakeBound(mid, end);
-
-    return (a, b);
   }
 }
