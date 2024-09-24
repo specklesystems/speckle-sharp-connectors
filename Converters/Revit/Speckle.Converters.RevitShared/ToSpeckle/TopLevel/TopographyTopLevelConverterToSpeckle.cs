@@ -12,17 +12,14 @@ public class TopographyTopLevelConverterToSpeckle
   : BaseTopLevelConverterToSpeckle<DBA.TopographySurface, SOBR.RevitTopography>
 {
   private readonly DisplayValueExtractor _displayValueExtractor;
-  private readonly ParameterObjectAssigner _parameterObjectAssigner;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public TopographyTopLevelConverterToSpeckle(
     DisplayValueExtractor displayValueExtractor,
-    ParameterObjectAssigner parameterObjectAssigner,
     IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _displayValueExtractor = displayValueExtractor;
-    _parameterObjectAssigner = parameterObjectAssigner;
     _converterSettings = converterSettings;
   }
 
@@ -35,9 +32,6 @@ public class TopographyTopLevelConverterToSpeckle
       elementId = target.Id.ToString().NotNull(),
       baseGeometry = null! //TODO: this can't be correct, see https://linear.app/speckle/issue/CNX-461/revit-check-why-topographytospeckle-sets-no-basegeometry
     };
-
-    // POC: shouldn't we just do this in the RevitConverter ?
-    _parameterObjectAssigner.AssignParametersToBase(target, speckleTopo);
 
     return speckleTopo;
   }
