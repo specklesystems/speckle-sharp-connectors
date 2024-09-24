@@ -10,23 +10,32 @@ public class ConverterManager<T>(ConcurrentDictionary<string, Type> converterTyp
 {
   public string Name => typeof(T).Name;
 
-  public T? ResolveConverter(Type type, bool checkBase = false)
+  public T? ResolveConverter(Type type, bool recursive = false)
   {
-    var typeName = type.Name;
-    var obj = GetType(typeName);
-    if (obj is null && checkBase)
+    while (true)
     {
-      var baseType = type.BaseType;
-      if (baseType is not null)
+      var typeName = type.Name;
+      var converter = GetConverterByType(typeName);
+      if (converter is null && recursive)
       {
-        return GetType(baseType.Name);
+        var baseType = type.BaseType;
+        if (baseType is not null)
+        {
+          type = baseType;
+        }
+        else
+        {
+          return default;
+        }
       }
-      return default;
-    }
-    return obj;
+      else
+      {
+        return converter;
+      }
+    } 
   }
 
-  private T? GetType(string typeName)
+  private T? GetConverterByType(string typeName)
   {
     if (converterTypes.TryGetValue(typeName, out var converter))
     {
