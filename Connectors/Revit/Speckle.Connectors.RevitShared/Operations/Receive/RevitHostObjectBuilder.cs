@@ -1,10 +1,10 @@
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
-using Revit.Async;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Instances;
+using Speckle.Connectors.Utils.Operations;
 using Speckle.Connectors.Utils.Operations.Receive;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
@@ -61,26 +61,17 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     _activityFactory = activityFactory;
   }
 
-  public Task<HostObjectBuilderResult> Build(
+  public async Task<HostObjectBuilderResult> Build(
     Base rootObject,
     string projectName,
     string modelName,
-    Action<string, double?>? onOperationProgressed,
-    CancellationToken cancellationToken
-  ) =>
-    RevitTask.RunAsync(() => BuildSync(rootObject, projectName, modelName, onOperationProgressed, cancellationToken));
-
-  private HostObjectBuilderResult BuildSync(
-    Base rootObject,
-    string projectName,
-    string modelName,
-    Action<string, double?>? onOperationProgressed,
+    ProgressAction onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
     var baseGroupName = $"Project {projectName}: Model {modelName}"; // TODO: unify this across connectors!
 
-    onOperationProgressed?.Invoke("Converting", null);
+    await onOperationProgressed.Invoke("Converting", null).ConfigureAwait(true);
     using var activity = _activityFactory.Start("Build");
 
     // 0 - Clean then Rock n Roll! 🎸
@@ -126,7 +117,8 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       }
     }
 
-    var conversionResults = BakeObjects(localToGlobalMaps, onOperationProgressed, cancellationToken);
+    var conversionResults = await BakeObjects(localToGlobalMaps, onOperationProgressed, cancellationToken)
+      .ConfigureAwait(true);
 
     using (var _ = _activityFactory.Start("Commit"))
     {
@@ -158,9 +150,9 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     return conversionResults;
   }
 
-  private HostObjectBuilderResult BakeObjects(
+  private async Task<HostObjectBuilderResult> BakeObjects(
     List<LocalToGlobalMap> localToGlobalMaps,
-    Action<string, double?>? onOperationProgressed,
+    ProgressAction onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
@@ -180,7 +172,9 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
           localToGlobalMap.Matrix
         );
         var result = _converter.Convert(atomicObject);
-        onOperationProgressed?.Invoke("Converting", (double)++count / localToGlobalMaps.Count);
+        await onOperationProgressed
+          .Invoke("Converting", (double)++count / localToGlobalMaps.Count)
+          .ConfigureAwait(false);
 
         // Note: our current converter always returns a DS for now
         if (result is DirectShape ds)

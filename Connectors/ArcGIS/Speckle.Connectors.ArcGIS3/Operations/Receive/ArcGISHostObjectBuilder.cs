@@ -62,7 +62,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     Base rootObject,
     string projectName,
     string modelName,
-    Action<string, double?>? onOperationProgressed,
+    ProgressAction onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
@@ -70,7 +70,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     // ATM, GIS commit CRS is stored per layer (in FeatureClass converter), but should be moved to the Root level too
 
     // Prompt the UI conversion started. Progress bar will swoosh.
-    onOperationProgressed?.Invoke("Converting", null);
+    await onOperationProgressed.Invoke("Converting", null).ConfigureAwait(true);
 
     // get materials
     List<RenderMaterialProxy>? materials = (rootObject[ProxyKeys.RENDER_MATERIAL] as List<object>)
@@ -78,14 +78,14 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       .ToList();
     if (materials != null)
     {
-      _colorManager.ParseMaterials(materials, onOperationProgressed);
+      await _colorManager.ParseMaterials(materials, onOperationProgressed).ConfigureAwait(false);
     }
 
     // get colors
     List<ColorProxy>? colors = (rootObject[ProxyKeys.COLOR] as List<object>)?.Cast<ColorProxy>().ToList();
     if (colors != null)
     {
-      _colorManager.ParseColors(colors, onOperationProgressed);
+      await _colorManager.ParseColors(colors, onOperationProgressed).ConfigureAwait(false);
     }
 
     int count = 0;
@@ -125,24 +125,33 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       {
         results.Add(new(Status.ERROR, obj, null, null, ex));
       }
-      onOperationProgressed?.Invoke("Converting", (double)++count / objectsToConvert.Count);
+      await onOperationProgressed.Invoke("Converting", (double)++count / objectsToConvert.Count).ConfigureAwait(false);
     }
 
     // 2.1. Group conversionTrackers (to write into datasets)
-    onOperationProgressed?.Invoke("Grouping features into layers", null);
+    await onOperationProgressed.Invoke("Grouping features into layers", null).ConfigureAwait(false);
     Dictionary<string, List<(TraversalContext, ObjectConversionTracker)>> convertedGroups = await QueuedTask
-      .Run(() =>
+      .Run(async () =>
       {
-        return _featureClassUtils.GroupConversionTrackers(conversionTracker, onOperationProgressed);
+        return await _featureClassUtils
+          .GroupConversionTrackers(
+            conversionTracker,
+            async (s, progres) => await onOperationProgressed(s, progres).ConfigureAwait(false)
+          )
+          .ConfigureAwait(true);
       })
       .ConfigureAwait(false);
 
     // 2.2. Write groups of objects to Datasets
-    onOperationProgressed?.Invoke("Writing to Database", null);
+    await onOperationProgressed.Invoke("Writing to Database", null).ConfigureAwait(false);
     await QueuedTask
       .Run(() =>
       {
-        _featureClassUtils.CreateDatasets(conversionTracker, convertedGroups, onOperationProgressed);
+        _featureClassUtils.CreateDatasets(
+          conversionTracker,
+          convertedGroups,
+          async (s, progres) => await onOperationProgressed(s, progres).ConfigureAwait(false)
+        );
       })
       .ConfigureAwait(false);
 
@@ -153,7 +162,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
 
     int bakeCount = 0;
     Dictionary<string, (MapMember, CIMUniqueValueRenderer?)> bakedMapMembers = new();
-    onOperationProgressed?.Invoke("Adding to Map", bakeCount);
+    await onOperationProgressed.Invoke("Adding to Map", bakeCount).ConfigureAwait(false);
 
     foreach (var item in conversionTracker)
     {
@@ -215,7 +224,9 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
         // add report item
         AddResultsFromTracker(trackerItem, results);
       }
-      onOperationProgressed?.Invoke("Adding to Map", (double)++bakeCount / conversionTracker.Count);
+      await onOperationProgressed
+        .Invoke("Adding to Map", (double)++bakeCount / conversionTracker.Count)
+        .ConfigureAwait(false);
     }
 
     // apply renderers to baked layers
@@ -295,78 +306,80 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     }
   }
 
-  private Task<MapMember> AddDatasetsToMap(
+  private async Task<MapMember> AddDatasetsToMap(
     ObjectConversionTracker trackerItem,
     Dictionary<string, GroupLayer> createdLayerGroups,
     string projectName,
     string modelName
   )
   {
-    return QueuedTask.Run(() =>
-    {
-      // get layer details
-      string? datasetId = trackerItem.DatasetId; // should not be null here
-      Uri uri = new($"{_settingsStore.Current.SpeckleDatabasePath.AbsolutePath.Replace('/', '\\')}\\{datasetId}");
-      string nestedLayerName = trackerItem.NestedLayerName;
-
-      // add group for the current layer
-      string shortName = nestedLayerName.Split("\\")[^1];
-      string nestedLayerPath = string.Join("\\", nestedLayerName.Split("\\").SkipLast(1));
-
-      // if no general group layer found
-      if (createdLayerGroups.Count == 0)
+    return await QueuedTask
+      .Run(() =>
       {
-        Map map = _settingsStore.Current.Map;
-        GroupLayer mainGroupLayer = LayerFactory.Instance.CreateGroupLayer(map, 0, $"{projectName}: {modelName}");
-        mainGroupLayer.SetExpanded(true);
-        createdLayerGroups["Basic Speckle Group"] = mainGroupLayer; // key doesn't really matter here
-      }
+        // get layer details
+        string? datasetId = trackerItem.DatasetId; // should not be null here
+        Uri uri = new($"{_settingsStore.Current.SpeckleDatabasePath.AbsolutePath.Replace('/', '\\')}\\{datasetId}");
+        string nestedLayerName = trackerItem.NestedLayerName;
 
-      var groupLayer = CreateNestedGroupLayer(nestedLayerPath, createdLayerGroups);
+        // add group for the current layer
+        string shortName = nestedLayerName.Split("\\")[^1];
+        string nestedLayerPath = string.Join("\\", nestedLayerName.Split("\\").SkipLast(1));
 
-      // Most of the Speckle-written datasets will be containing geometry and added as Layers
-      // although, some datasets might be just tables (e.g. native GIS Tables, in the future maybe Revit schedules etc.
-      // We can create a connection to the dataset in advance and determine its type, but this will be more
-      // expensive, than assuming by default that it's a layer with geometry (which in most cases it's expected to be)
-      try
-      {
-        var layer = LayerFactory.Instance.CreateLayer(uri, groupLayer, layerName: shortName);
-        if (layer == null)
+        // if no general group layer found
+        if (createdLayerGroups.Count == 0)
         {
-          throw new SpeckleException($"Layer '{shortName}' was not created");
+          Map map = _settingsStore.Current.Map;
+          GroupLayer mainGroupLayer = LayerFactory.Instance.CreateGroupLayer(map, 0, $"{projectName}: {modelName}");
+          mainGroupLayer.SetExpanded(true);
+          createdLayerGroups["Basic Speckle Group"] = mainGroupLayer; // key doesn't really matter here
         }
-        layer.SetExpanded(false);
 
-        // if Scene
-        // https://community.esri.com/t5/arcgis-pro-sdk-questions/sdk-equivalent-to-changing-layer-s-elevation/td-p/1346139
-        if (_settingsStore.Current.Map.IsScene)
+        var groupLayer = CreateNestedGroupLayer(nestedLayerPath, createdLayerGroups);
+
+        // Most of the Speckle-written datasets will be containing geometry and added as Layers
+        // although, some datasets might be just tables (e.g. native GIS Tables, in the future maybe Revit schedules etc.
+        // We can create a connection to the dataset in advance and determine its type, but this will be more
+        // expensive, than assuming by default that it's a layer with geometry (which in most cases it's expected to be)
+        try
         {
-          var groundSurfaceLayer = _settingsStore.Current.Map.GetGroundElevationSurfaceLayer();
-          var layerElevationSurface = new CIMLayerElevationSurface
+          var layer = LayerFactory.Instance.CreateLayer(uri, groupLayer, layerName: shortName);
+          if (layer == null)
           {
-            ElevationSurfaceLayerURI = groundSurfaceLayer.URI,
-          };
-
-          // for Feature Layers
-          if (layer.GetDefinition() is CIMFeatureLayer cimLyr)
-          {
-            cimLyr.LayerElevation = layerElevationSurface;
-            layer.SetDefinition(cimLyr);
+            throw new SpeckleException($"Layer '{shortName}' was not created");
           }
-        }
+          layer.SetExpanded(false);
 
-        return (MapMember)layer;
-      }
-      catch (ArgumentException)
-      {
-        StandaloneTable table = StandaloneTableFactory.Instance.CreateStandaloneTable(
-          uri,
-          groupLayer,
-          tableName: shortName
-        );
-        return table;
-      }
-    });
+          // if Scene
+          // https://community.esri.com/t5/arcgis-pro-sdk-questions/sdk-equivalent-to-changing-layer-s-elevation/td-p/1346139
+          if (_settingsStore.Current.Map.IsScene)
+          {
+            var groundSurfaceLayer = _settingsStore.Current.Map.GetGroundElevationSurfaceLayer();
+            var layerElevationSurface = new CIMLayerElevationSurface
+            {
+              ElevationSurfaceLayerURI = groundSurfaceLayer.URI,
+            };
+
+            // for Feature Layers
+            if (layer.GetDefinition() is CIMFeatureLayer cimLyr)
+            {
+              cimLyr.LayerElevation = layerElevationSurface;
+              layer.SetDefinition(cimLyr);
+            }
+          }
+
+          return (MapMember)layer;
+        }
+        catch (ArgumentException)
+        {
+          StandaloneTable table = StandaloneTableFactory.Instance.CreateStandaloneTable(
+            uri,
+            groupLayer,
+            tableName: shortName
+          );
+          return table;
+        }
+      })
+      .ConfigureAwait(false);
   }
 
   private GroupLayer CreateNestedGroupLayer(string nestedLayerPath, Dictionary<string, GroupLayer> createdLayerGroups)

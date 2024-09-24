@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card;
+using Speckle.Connectors.Utils.Operations;
 using Speckle.InterfaceGenerator;
 
 namespace Speckle.Connectors.DUI.Bindings;
@@ -15,9 +16,9 @@ public class OperationProgressManager : IOperationProgressManager
   private const string SET_MODEL_PROGRESS_UI_COMMAND_NAME = "setModelProgress";
   private static readonly ConcurrentDictionary<string, (DateTime lastCallTime, string status)> s_lastProgressValues =
     new();
-  private const int THROTTLE_INTERVAL_MS = 50;
+  private const int THROTTLE_INTERVAL_MS = 200;
 
-  public Action<string, double?> CreateOperationProgressEventHandler(
+  public ProgressAction CreateOperationProgressEventHandler(
     IBridge bridge,
     string modelCardId,
     CancellationToken cancellationToken
@@ -25,14 +26,23 @@ public class OperationProgressManager : IOperationProgressManager
   {
     return EventHandler;
 
-    void EventHandler(string status, double? progress)
+    async Task EventHandler(string status, double? progress)
     {
-      bridge.TopLevelExceptionHandler.FireAndForget(
-        () =>
-          SetModelProgress(bridge, modelCardId, new ModelCardProgress(modelCardId, status, progress), cancellationToken)
-      );
+      await bridge
+        .TopLevelExceptionHandler.CatchUnhandledAsync(
+          () =>
+            SetModelProgress(
+              bridge,
+              modelCardId,
+              new ModelCardProgress(modelCardId, status, progress),
+              cancellationToken
+            )
+        )
+        .ConfigureAwait(false);
     }
   }
+
+  private int _numberOfUpdates;
 
   public async Task SetModelProgress(
     IBridge bridge,
@@ -55,14 +65,16 @@ public class OperationProgressManager : IOperationProgressManager
       return;
     }
 
-    var elapsedMs = (DateTime.Now - t.Item1).Milliseconds;
+    var currentTime = DateTime.Now;
+    var elapsedMs = (currentTime - t.Item1).Milliseconds;
 
     if (elapsedMs < THROTTLE_INTERVAL_MS && t.Item2 == progress.Status)
     {
       return;
     }
+    _numberOfUpdates++;
+    s_lastProgressValues[modelCardId] = (currentTime, progress.Status);
     await SendProgress(bridge, modelCardId, progress).ConfigureAwait(false);
-    s_lastProgressValues[modelCardId] = (DateTime.Now, progress.Status);
   }
 
   private static async Task SendProgress(IBridge bridge, string modelCardId, ModelCardProgress progress) =>

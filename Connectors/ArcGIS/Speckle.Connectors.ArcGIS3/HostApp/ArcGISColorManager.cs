@@ -2,6 +2,7 @@ using System.Drawing;
 using ArcGIS.Core.CIM;
 using ArcGIS.Core.Data;
 using ArcGIS.Desktop.Mapping;
+using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Objects;
 using Speckle.Objects.Other;
@@ -55,14 +56,16 @@ public class ArcGISColorManager
   /// </summary>
   /// <param name="colorProxies"></param>
   /// <param name="onOperationProgressed"></param>
-  public void ParseColors(List<ColorProxy> colorProxies, Action<string, double?>? onOperationProgressed)
+  public async Task ParseColors(List<ColorProxy> colorProxies, ProgressAction onOperationProgressed)
   {
     // injected as Singleton, so we need to clean existing proxies first
     ObjectColorsIdMap = new();
     var count = 0;
     foreach (ColorProxy colorProxy in colorProxies)
     {
-      onOperationProgressed?.Invoke("Converting colors", (double)++count / colorProxies.Count);
+      await onOperationProgressed
+        .Invoke("Converting colors", (double)++count / colorProxies.Count)
+        .ConfigureAwait(false);
       foreach (string objectId in colorProxy.objects)
       {
         Color convertedColor = Color.FromArgb(colorProxy.value);
@@ -76,14 +79,16 @@ public class ArcGISColorManager
   /// </summary>
   /// <param name="materialProxies"></param>
   /// <param name="onOperationProgressed"></param>
-  public void ParseMaterials(List<RenderMaterialProxy> materialProxies, Action<string, double?>? onOperationProgressed)
+  public async Task ParseMaterials(List<RenderMaterialProxy> materialProxies, ProgressAction onOperationProgressed)
   {
     // injected as Singleton, so we need to clean existing proxies first
     ObjectMaterialsIdMap = new();
     var count = 0;
     foreach (RenderMaterialProxy colorProxy in materialProxies)
     {
-      onOperationProgressed?.Invoke("Converting materials", (double)++count / materialProxies.Count);
+      await onOperationProgressed
+        .Invoke("Converting materials", (double)++count / materialProxies.Count)
+        .ConfigureAwait(false);
       foreach (string objectId in colorProxy.objects)
       {
         Color convertedColor = Color.FromArgb(colorProxy.value.diffuse);

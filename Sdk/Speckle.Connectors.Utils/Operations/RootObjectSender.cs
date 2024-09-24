@@ -50,13 +50,13 @@ public sealed class RootObjectSender : IRootObjectSender
   public async Task<(string rootObjId, IReadOnlyDictionary<string, ObjectReference> convertedReferences)> Send(
     Base commitObject,
     SendInfo sendInfo,
-    Action<string, double?>? onOperationProgressed = null,
+    ProgressAction onOperationProgressed,
     CancellationToken ct = default
   )
   {
     ct.ThrowIfCancellationRequested();
 
-    onOperationProgressed?.Invoke("Uploading...", null);
+    await onOperationProgressed.Invoke("Uploading...", null).ConfigureAwait(false);
 
     Account account = _accountService.GetAccountWithServerUrlFallback(sendInfo.AccountId, sendInfo.ServerUrl);
 
@@ -85,17 +85,17 @@ public sealed class RootObjectSender : IRootObjectSender
 
           switch (args.ProgressEvent)
           {
-            case ProgressEvent.UploadBytes:
-              onOperationProgressed?.Invoke(
+            case ProgressEvent.UploadBytes: //TODO: These progress calls are not awaited
+              onOperationProgressed.Invoke(
                 $"Uploading ({_progressDisplayManager.CalculateSpeed(args)})",
                 _progressDisplayManager.CalculatePercentage(args)
               );
               break;
             case ProgressEvent.UploadObject:
-              onOperationProgressed?.Invoke("Uploading Root Object...", null);
+              onOperationProgressed.Invoke("Uploading Root Object...", null);
               break;
             case ProgressEvent.SerializeObject:
-              onOperationProgressed?.Invoke(
+              onOperationProgressed.Invoke(
                 $"Serializing ({_progressDisplayManager.CalculateSpeed(args)})",
                 _progressDisplayManager.CalculatePercentage(args)
               );
@@ -110,7 +110,7 @@ public sealed class RootObjectSender : IRootObjectSender
 
     ct.ThrowIfCancellationRequested();
 
-    onOperationProgressed?.Invoke("Linking version to model...", null);
+    await onOperationProgressed.Invoke("Linking version to model...", null).ConfigureAwait(false);
 
     // 8 - Create the version (commit)
     using var apiClient = _clientFactory.Create(account);

@@ -25,7 +25,7 @@ public sealed class SendOperation<T>
   public async Task<SendOperationResult> Execute(
     IReadOnlyList<T> objects,
     SendInfo sendInfo,
-    Action<string, double?>? onOperationProgressed = null,
+    ProgressAction onOperationProgressed,
     CancellationToken ct = default
   )
   {

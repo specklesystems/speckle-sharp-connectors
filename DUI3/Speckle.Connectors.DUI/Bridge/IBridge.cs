@@ -33,32 +33,17 @@ public interface IBridge
   /// Posts an <paramref name="action"/> onto the main thread
   /// Some applications might need to run some operations on main thread as deferred actions.
   /// </summary>
-  /// <remarks>
-  /// This function returns immediately; fire and forget.<br/>
-  /// Exceptions will be caught by <see cref="TopLevelExceptionHandler"/>
-  /// </remarks>
-  /// <param name="action"> Action to run on the main thread</param>
-  /// <seealso cref="RunOnMainThreadAsync"/>
-  /// <seealso cref="RunOnMainThreadAsync{T}"/>
-  public void RunOnMainThread(Action action);
+  /// <returns>An awaitable <see cref="Task{T}"/></returns>
+  /// <param name="action">Action to run on the main thread</param>
+  public Task<T> RunOnMainThreadAsync<T>(Func<Task<T>> action);
 
   /// <summary>
-  /// <inheritdoc cref="RunOnMainThread"/>
-  /// </summary>
-  /// <returns>An awaitable <see cref="Task"/></returns>
-  /// <param name="action"><inheritdoc cref="RunOnMainThread"/></param>
-  /// <seealso cref="RunOnMainThread"/>
-  /// <seealso cref="RunOnMainThreadAsync{T}"/>
-  public Task RunOnMainThreadAsync(Action action);
-
-  /// <summary>
-  /// <inheritdoc cref="RunOnMainThread"/>
+  /// Posts an <paramref name="action"/> onto the main thread
+  /// Some applications might need to run some operations on main thread as deferred actions.
   /// </summary>
   /// <returns>An awaitable <see cref="Task{T}"/></returns>
-  /// <param name="action"><inheritdoc cref="RunOnMainThread"/></param>
-  /// <seealso cref="RunOnMainThread"/>
-  /// <seealso cref="RunOnMainThreadAsync"/>
-  public Task<T> RunOnMainThreadAsync<T>(Func<T> action);
+  /// <param name="action">Action to run on the main thread</param>
+  public Task RunOnMainThreadAsync(Func<Task> action);
 
   /// <param name="eventName"></param>
   /// <exception cref="InvalidOperationException">Bridge was not initialized with a binding</exception>

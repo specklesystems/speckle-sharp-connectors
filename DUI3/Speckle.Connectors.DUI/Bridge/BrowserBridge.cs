@@ -177,26 +177,27 @@ public sealed class BrowserBridge : IBridge
     );
   }
 
-  public Task RunOnMainThreadAsync(Action action)
+  public async Task RunOnMainThreadAsync(Func<Task> action)
   {
-    return RunOnMainThreadAsync<object?>(() =>
-    {
-      action.Invoke();
-      return null;
-    });
+    await RunOnMainThreadAsync<object?>(async () =>
+      {
+        await action.Invoke().ConfigureAwait(false);
+        return null;
+      })
+      .ConfigureAwait(false);
   }
 
   [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "TaskCompletionSource")]
-  public Task<T> RunOnMainThreadAsync<T>(Func<T> action)
+  public Task<T> RunOnMainThreadAsync<T>(Func<Task<T>> action)
   {
     TaskCompletionSource<T> tcs = new();
 
     _mainThreadContext.Post(
-      _ =>
+      async _ =>
       {
         try
         {
-          T result = action.Invoke();
+          T result = await action.Invoke().ConfigureAwait(false);
           tcs.SetResult(result);
         }
         catch (Exception ex)

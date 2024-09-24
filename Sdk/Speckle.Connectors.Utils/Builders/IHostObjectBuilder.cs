@@ -1,4 +1,5 @@
 ﻿using Speckle.Connectors.Utils.Conversion;
+using Speckle.Connectors.Utils.Operations;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.Utils.Builders;
@@ -21,7 +22,7 @@ public interface IHostObjectBuilder
     Base rootObject,
     string projectName,
     string modelName,
-    Action<string, double?>? onOperationProgressed,
+    ProgressAction onOperationProgressed,
     CancellationToken cancellationToken
   );
 }

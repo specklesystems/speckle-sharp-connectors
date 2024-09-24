@@ -141,10 +141,11 @@ public sealed class AutocadSendBinding : ISendBinding
 
   public List<ICardSetting> GetSendSettings() => [];
 
-  public Task Send(string modelCardId)
+  public async Task Send(string modelCardId)
   {
-    Parent.RunOnMainThread(async () => await SendInternal(modelCardId).ConfigureAwait(false));
-    return Task.CompletedTask;
+    await Parent
+      .RunOnMainThreadAsync(async () => await SendInternal(modelCardId).ConfigureAwait(false))
+      .ConfigureAwait(false);
   }
 
   private async Task SendInternal(string modelCardId)

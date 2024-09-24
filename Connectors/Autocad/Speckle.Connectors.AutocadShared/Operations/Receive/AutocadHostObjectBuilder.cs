@@ -52,118 +52,128 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     _rootObjectUnpacker = rootObjectUnpacker;
   }
 
-  public Task<HostObjectBuilderResult> Build(
+  public async Task<HostObjectBuilderResult> Build(
     Base rootObject,
     string projectName,
     string modelName,
-    Action<string, double?>? onOperationProgressed,
+    ProgressAction onOperationProgressed,
     CancellationToken _
-  ) =>
+  )
+  {
     // NOTE: This is the only place we apply ISyncToThread across connectors. We need to sync up with main thread here
     //  after GetObject and Deserialization. It is anti-pattern now. Happiness level 3/10 but works.
-    _syncToThread.RunOnThread(() =>
+    return await _syncToThread
+      .RunOnThread(
+        async () => await BuildImpl(rootObject, projectName, modelName, onOperationProgressed).ConfigureAwait(false)
+      )
+      .ConfigureAwait(false);
+  }
+
+  private async Task<HostObjectBuilderResult> BuildImpl(
+    Base rootObject,
+    string projectName,
+    string modelName,
+    ProgressAction onOperationProgressed
+  )
+  {
+    // Prompt the UI conversion started. Progress bar will swoosh.
+    await onOperationProgressed.Invoke("Converting", null).ConfigureAwait(true);
+
+    // Layer filter for received commit with project and model name
+    _layerBaker.CreateLayerFilter(projectName, modelName);
+
+    // 0 - Clean then Rock n Roll!
+    string baseLayerPrefix = _autocadContext.RemoveInvalidChars($"SPK-{projectName}-{modelName}-");
+    PreReceiveDeepClean(baseLayerPrefix);
+
+    // 1 - Unpack objects and proxies from root commit object
+    var unpackedRoot = _rootObjectUnpacker.Unpack(rootObject);
+
+    // 2 - Split atomic objects and instance components with their path
+    var (atomicObjects, instanceComponents) = _rootObjectUnpacker.SplitAtomicObjectsAndInstances(
+      unpackedRoot.ObjectsToConvert
+    );
+    var atomicObjectsWithPath = _layerBaker.GetAtomicObjectsWithPath(atomicObjects);
+    var instanceComponentsWithPath = _layerBaker.GetInstanceComponentsWithPath(instanceComponents);
+
+    // POC: these are not captured by traversal, so we need to re-add them here
+    if (unpackedRoot.DefinitionProxies != null && unpackedRoot.DefinitionProxies.Count > 0)
     {
-      // Prompt the UI conversion started. Progress bar will swoosh.
-      onOperationProgressed?.Invoke("Converting", null);
-
-      // Layer filter for received commit with project and model name
-      _layerBaker.CreateLayerFilter(projectName, modelName);
-
-      // 0 - Clean then Rock n Roll!
-      string baseLayerPrefix = _autocadContext.RemoveInvalidChars($"SPK-{projectName}-{modelName}-");
-      PreReceiveDeepClean(baseLayerPrefix);
-
-      // 1 - Unpack objects and proxies from root commit object
-      var unpackedRoot = _rootObjectUnpacker.Unpack(rootObject);
-
-      // 2 - Split atomic objects and instance components with their path
-      var (atomicObjects, instanceComponents) = _rootObjectUnpacker.SplitAtomicObjectsAndInstances(
-        unpackedRoot.ObjectsToConvert
+      var transformed = unpackedRoot.DefinitionProxies.Select(proxy =>
+        (Array.Empty<Collection>(), proxy as IInstanceComponent)
       );
-      var atomicObjectsWithPath = _layerBaker.GetAtomicObjectsWithPath(atomicObjects);
-      var instanceComponentsWithPath = _layerBaker.GetInstanceComponentsWithPath(instanceComponents);
+      instanceComponentsWithPath.AddRange(transformed);
+    }
 
-      // POC: these are not captured by traversal, so we need to re-add them here
-      if (unpackedRoot.DefinitionProxies != null && unpackedRoot.DefinitionProxies.Count > 0)
+    // 3 - Bake materials and colors, as they are used later down the line by layers and objects
+    if (unpackedRoot.RenderMaterialProxies != null)
+    {
+      await _materialBaker
+        .ParseAndBakeRenderMaterials(unpackedRoot.RenderMaterialProxies, baseLayerPrefix, onOperationProgressed)
+        .ConfigureAwait(true);
+    }
+
+    if (unpackedRoot.ColorProxies != null)
+    {
+      await _colorBaker.ParseColors(unpackedRoot.ColorProxies, onOperationProgressed).ConfigureAwait(true);
+    }
+
+    // 5 - Convert atomic objects
+    List<ReceiveConversionResult> results = new();
+    List<string> bakedObjectIds = new();
+    Dictionary<string, List<Entity>> applicationIdMap = new();
+    var count = 0;
+    foreach (var (layerPath, atomicObject) in atomicObjectsWithPath)
+    {
+      string objectId = atomicObject.applicationId ?? atomicObject.id;
+      await onOperationProgressed
+        .Invoke("Converting objects", (double)++count / atomicObjects.Count)
+        .ConfigureAwait(false);
+      try
       {
-        var transformed = unpackedRoot.DefinitionProxies.Select(proxy =>
-          (Array.Empty<Collection>(), proxy as IInstanceComponent)
+        List<Entity> convertedObjects = ConvertObject(atomicObject, layerPath, baseLayerPrefix).ToList();
+
+        applicationIdMap[objectId] = convertedObjects;
+
+        results.AddRange(
+          convertedObjects.Select(e => new ReceiveConversionResult(
+            Status.SUCCESS,
+            atomicObject,
+            e.GetSpeckleApplicationId(),
+            e.GetType().ToString()
+          ))
         );
-        instanceComponentsWithPath.AddRange(transformed);
-      }
 
-      // 3 - Bake materials and colors, as they are used later down the line by layers and objects
-      if (unpackedRoot.RenderMaterialProxies != null)
+        bakedObjectIds.AddRange(convertedObjects.Select(e => e.GetSpeckleApplicationId()));
+      }
+      catch (Exception ex) when (!ex.IsFatal())
       {
-        _materialBaker.ParseAndBakeRenderMaterials(
-          unpackedRoot.RenderMaterialProxies,
-          baseLayerPrefix,
-          onOperationProgressed
-        );
+        results.Add(new(Status.ERROR, atomicObject, null, null, ex));
       }
+    }
 
-      if (unpackedRoot.ColorProxies != null)
-      {
-        _colorBaker.ParseColors(unpackedRoot.ColorProxies, onOperationProgressed);
-      }
+    // 6 - Convert instances
+    var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = await _instanceBaker
+      .BakeInstances(instanceComponentsWithPath, applicationIdMap, baseLayerPrefix, onOperationProgressed)
+      .ConfigureAwait(true);
 
-      // 5 - Convert atomic objects
-      List<ReceiveConversionResult> results = new();
-      List<string> bakedObjectIds = new();
-      Dictionary<string, List<Entity>> applicationIdMap = new();
-      var count = 0;
-      foreach (var (layerPath, atomicObject) in atomicObjectsWithPath)
-      {
-        string objectId = atomicObject.applicationId ?? atomicObject.id;
-        onOperationProgressed?.Invoke("Converting objects", (double)++count / atomicObjects.Count);
-        try
-        {
-          List<Entity> convertedObjects = ConvertObject(atomicObject, layerPath, baseLayerPrefix).ToList();
+    bakedObjectIds.RemoveAll(id => consumedObjectIds.Contains(id));
+    bakedObjectIds.AddRange(createdInstanceIds);
+    results.RemoveAll(result => result.ResultId != null && consumedObjectIds.Contains(result.ResultId));
+    results.AddRange(instanceConversionResults);
 
-          applicationIdMap[objectId] = convertedObjects;
-
-          results.AddRange(
-            convertedObjects.Select(e => new ReceiveConversionResult(
-              Status.SUCCESS,
-              atomicObject,
-              e.GetSpeckleApplicationId(),
-              e.GetType().ToString()
-            ))
-          );
-
-          bakedObjectIds.AddRange(convertedObjects.Select(e => e.GetSpeckleApplicationId()));
-        }
-        catch (Exception ex) when (!ex.IsFatal())
-        {
-          results.Add(new(Status.ERROR, atomicObject, null, null, ex));
-        }
-      }
-
-      // 6 - Convert instances
-      var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = _instanceBaker.BakeInstances(
-        instanceComponentsWithPath,
-        applicationIdMap,
-        baseLayerPrefix,
-        onOperationProgressed
+    // 7 - Create groups
+    if (unpackedRoot.GroupProxies != null)
+    {
+      List<ReceiveConversionResult> groupResults = _groupBaker.CreateGroups(
+        unpackedRoot.GroupProxies,
+        applicationIdMap
       );
+      results.AddRange(groupResults);
+    }
 
-      bakedObjectIds.RemoveAll(id => consumedObjectIds.Contains(id));
-      bakedObjectIds.AddRange(createdInstanceIds);
-      results.RemoveAll(result => result.ResultId != null && consumedObjectIds.Contains(result.ResultId));
-      results.AddRange(instanceConversionResults);
-
-      // 7 - Create groups
-      if (unpackedRoot.GroupProxies != null)
-      {
-        List<ReceiveConversionResult> groupResults = _groupBaker.CreateGroups(
-          unpackedRoot.GroupProxies,
-          applicationIdMap
-        );
-        results.AddRange(groupResults);
-      }
-
-      return new HostObjectBuilderResult(bakedObjectIds, results);
-    });
+    return new HostObjectBuilderResult(bakedObjectIds, results);
+  }
 
   private void PreReceiveDeepClean(string baseLayerPrefix)
   {

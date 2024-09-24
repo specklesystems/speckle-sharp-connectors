@@ -41,7 +41,9 @@ public class AutocadSelectionBinding : ISelectionBinding
     if (!_visitedDocuments.Contains(document))
     {
       document.ImpliedSelectionChanged += (_, _) =>
-        _topLevelExceptionHandler.CatchUnhandled(() => Parent.RunOnMainThread(OnSelectionChanged));
+        _topLevelExceptionHandler.FireAndForget(
+          async () => await Parent.RunOnMainThreadAsync(OnSelectionChanged).ConfigureAwait(false)
+        );
 
       _visitedDocuments.Add(document);
     }
@@ -52,10 +54,10 @@ public class AutocadSelectionBinding : ISelectionBinding
   // Ui requests to GetSelection() should just return this local copy that is kept up to date by the event handler.
   private SelectionInfo _selectionInfo;
 
-  private void OnSelectionChanged()
+  private async Task OnSelectionChanged()
   {
     _selectionInfo = GetSelectionInternal();
-    Parent.Send(SELECTION_EVENT, _selectionInfo);
+    await Parent.Send(SELECTION_EVENT, _selectionInfo).ConfigureAwait(false);
   }
 
   public SelectionInfo GetSelection() => _selectionInfo;

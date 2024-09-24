@@ -127,7 +127,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
   {
     var doc = Application.DocumentManager.MdiActiveDocument;
 
-    var postCallback = await Parent
+    await Parent
       .RunOnMainThreadAsync(async () =>
       {
         try
@@ -187,7 +187,5 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
         }
       })
       .ConfigureAwait(false);
-
-    await postCallback.ConfigureAwait(false);
   }
 }

@@ -60,18 +60,11 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     _activityFactory = activityFactory;
   }
 
-  public Task<RootObjectBuilderResult> Build(
+  public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<RhinoObject> rhinoObjects,
     SendInfo sendInfo,
-    Action<string, double?>? onOperationProgressed = null,
+    ProgressAction onOperationProgressed,
     CancellationToken cancellationToken = default
-  ) => Task.FromResult(BuildSync(rhinoObjects, sendInfo, onOperationProgressed, cancellationToken));
-
-  private RootObjectBuilderResult BuildSync(
-    IReadOnlyList<RhinoObject> rhinoObjects,
-    SendInfo sendInfo,
-    Action<string, double?>? onOperationProgressed,
-    CancellationToken cancellationToken
   )
   {
     using var activity = _activityFactory.Start("Build");
@@ -113,7 +106,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         results.Add(result);
 
         ++count;
-        onOperationProgressed?.Invoke("Converting", (double)count / atomicObjects.Count);
+        await onOperationProgressed.Invoke("Converting", (double)count / atomicObjects.Count).ConfigureAwait(false);
 
         // NOTE: useful for testing ui states, pls keep for now so we can easily uncomment
         // Thread.Sleep(550);

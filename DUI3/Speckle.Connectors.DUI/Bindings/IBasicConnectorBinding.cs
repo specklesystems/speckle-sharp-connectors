@@ -43,7 +43,6 @@ public enum ToastNotificationType
 public class BasicConnectorBindingCommands
 {
   private const string NOTIFY_DOCUMENT_CHANGED_EVENT_NAME = "documentChanged";
-  private const string SET_MODEL_PROGRESS_UI_COMMAND_NAME = "setModelProgress";
   private const string SET_MODEL_ERROR_UI_COMMAND_NAME = "setModelError";
   public const string SET_GLOBAL_NOTIFICATION = "setGlobalNotification";
 
@@ -82,19 +81,6 @@ public class BasicConnectorBindingCommands
         }
       )
       .ConfigureAwait(false);
-
-  public async Task SetModelProgress(string modelCardId, ModelCardProgress progress, CancellationTokenSource cts)
-  {
-    // NOTE: To prevent potential race condition
-    // After cancelling operation some parts could still send last progress update which was set progress on UI
-    // after it forced to be undefined. This is the safest way to prevent any case like this.
-    if (!cts.IsCancellationRequested)
-    {
-      await Bridge
-        .Send(SET_MODEL_PROGRESS_UI_COMMAND_NAME, new { modelCardId, progress }, cts.Token)
-        .ConfigureAwait(false);
-    }
-  }
 
   public async Task SetModelError(string modelCardId, Exception error) =>
     await Bridge

@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Autodesk.AutoCAD.DatabaseServices;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp;
@@ -52,27 +51,11 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     _activityFactory = activityFactory;
   }
 
-  public Task<RootObjectBuilderResult> Build(
+  public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<AutocadRootObject> objects,
     SendInfo sendInfo,
-    Action<string, double?>? onOperationProgressed = null,
+    ProgressAction onOperationProgressed,
     CancellationToken ct = default
-  ) => Task.FromResult(BuildSync(objects, sendInfo, onOperationProgressed, ct));
-
-  [SuppressMessage(
-    "Maintainability",
-    "CA1506:Avoid excessive class coupling",
-    Justification = """
-      It is already simplified but has many different references since it is a builder. Do not know can we simplify it now.
-      Later we might consider to refactor proxies from one proxy manager? but we do not know the shape of it all potential
-      proxy classes yet. So I'm supressing this one now!!!
-      """
-  )]
-  private RootObjectBuilderResult BuildSync(
-    IReadOnlyList<AutocadRootObject> objects,
-    SendInfo sendInfo,
-    Action<string, double?>? onOperationProgressed,
-    CancellationToken ct
   )
   {
     // 0 - Init the root
@@ -118,7 +101,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
           var result = ConvertAutocadEntity(entity, applicationId, layer, instanceProxies, sendInfo.ProjectId);
           results.Add(result);
 
-          onOperationProgressed?.Invoke("Converting", (double)++count / atomicObjects.Count);
+          await onOperationProgressed.Invoke("Converting", (double)++count / atomicObjects.Count).ConfigureAwait(true);
         }
       }
 

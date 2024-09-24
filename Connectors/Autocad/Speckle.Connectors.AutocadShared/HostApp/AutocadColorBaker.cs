@@ -1,5 +1,6 @@
 using Autodesk.AutoCAD.Colors;
 using Microsoft.Extensions.Logging;
+using Speckle.Connectors.Utils.Operations;
 using Speckle.Sdk;
 using Speckle.Sdk.Models.Proxies;
 using AutocadColor = Autodesk.AutoCAD.Colors.Color;
@@ -28,14 +29,16 @@ public class AutocadColorBaker
   /// </summary>
   /// <param name="colorProxies"></param>
   /// <param name="onOperationProgressed"></param>
-  public void ParseColors(List<ColorProxy> colorProxies, Action<string, double?>? onOperationProgressed)
+  public async Task ParseColors(IReadOnlyCollection<ColorProxy> colorProxies, ProgressAction onOperationProgressed)
   {
     var count = 0;
     foreach (ColorProxy colorProxy in colorProxies)
     {
       try
       {
-        onOperationProgressed?.Invoke("Converting colors", (double)++count / colorProxies.Count);
+        await onOperationProgressed
+          .Invoke("Converting colors", (double)++count / colorProxies.Count)
+          .ConfigureAwait(true);
 
         // skip any colors with source = layer, since object color default source is by layer
         if (colorProxy["source"] is string source && source == "layer")

@@ -72,9 +72,9 @@ public class FeatureClassUtils : IFeatureClassUtils
     return geodatabase;
   }
 
-  public Dictionary<string, List<(TraversalContext, ObjectConversionTracker)>> GroupConversionTrackers(
+  public async Task<Dictionary<string, List<(TraversalContext, ObjectConversionTracker)>>> GroupConversionTrackers(
     Dictionary<TraversalContext, ObjectConversionTracker> conversionTracker,
-    Action<string, double?>? onOperationProgressed
+    Func<string, double?, Task> onOperationProgressed
   )
   {
     // 1. Sort features into groups by path and geom type
@@ -130,16 +130,18 @@ public class FeatureClassUtils : IFeatureClassUtils
       geometryGroups[uniqueKey].Add((context, trackerItem));
       ClearExistingDataset(uniqueKey);
 
-      onOperationProgressed?.Invoke("Grouping features into layers", count++ / conversionTracker.Count);
+      await onOperationProgressed
+        .Invoke("Grouping features into layers", count++ / conversionTracker.Count)
+        .ConfigureAwait(false);
     }
 
     return geometryGroups;
   }
 
-  public void CreateDatasets(
+  public async Task CreateDatasets(
     Dictionary<TraversalContext, ObjectConversionTracker> conversionTracker,
     Dictionary<string, List<(TraversalContext, ObjectConversionTracker)>> featureClassElements,
-    Action<string, double?>? onOperationProgressed
+    Func<string, double?, Task> onOperationProgressed
   )
   {
     double count = 0;
@@ -170,7 +172,9 @@ public class FeatureClassUtils : IFeatureClassUtils
             listOfContextAndTrackers.Select(x => x.Item2).ToList()
           );
 
-          onOperationProgressed?.Invoke("Writing to Database", count++ / featureClassElements.Count);
+          await onOperationProgressed
+            .Invoke("Writing to Database", count++ / featureClassElements.Count)
+            .ConfigureAwait(false);
           continue;
         }
 
@@ -198,7 +202,9 @@ public class FeatureClassUtils : IFeatureClassUtils
         }
       }
 
-      onOperationProgressed?.Invoke("Writing to Database", count++ / featureClassElements.Count);
+      await onOperationProgressed
+        .Invoke("Writing to Database", count++ / featureClassElements.Count)
+        .ConfigureAwait(false);
     }
   }
 

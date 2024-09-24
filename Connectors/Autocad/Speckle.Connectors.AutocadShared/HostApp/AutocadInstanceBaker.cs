@@ -1,9 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Geometry;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Utils.Conversion;
 using Speckle.Connectors.Utils.Instances;
+using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Autocad;
 using Speckle.Converters.Common;
 using Speckle.DoubleNumerics;
@@ -45,11 +47,12 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
     _converterSettings = converterSettings;
   }
 
-  public BakeResult BakeInstances(
-    List<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
+  [SuppressMessage("Maintainability", "CA1506:Avoid excessive class coupling")]
+  public async Task<BakeResult> BakeInstances(
+    IReadOnlyCollection<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
     Dictionary<string, List<Entity>> applicationIdMap,
     string baseLayerName,
-    Action<string, double?>? onOperationProgressed
+    ProgressAction onOperationProgressed
   )
   {
     var sortedInstanceComponents = instanceComponents
@@ -69,7 +72,10 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
     {
       try
       {
-        onOperationProgressed?.Invoke("Converting blocks", (double)++count / sortedInstanceComponents.Count);
+        await onOperationProgressed
+          .Invoke("Converting blocks", (double)++count / sortedInstanceComponents.Count)
+          .ConfigureAwait(false);
+
         if (instanceOrDefinition is InstanceDefinitionProxy { applicationId: not null } definitionProxy)
         {
           // TODO: create definition (block table record)

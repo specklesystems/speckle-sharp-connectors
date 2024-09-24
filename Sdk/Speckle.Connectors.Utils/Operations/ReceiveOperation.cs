@@ -38,8 +38,8 @@ public sealed class ReceiveOperation
 
   public async Task<HostObjectBuilderResult> Execute(
     ReceiveInfo receiveInfo,
-    CancellationToken cancellationToken,
-    Action<string, double?>? onOperationProgressed = null
+    ProgressAction onOperationProgressed,
+    CancellationToken cancellationToken
   )
   {
     using var execute = _activityFactory.Start();
@@ -82,17 +82,17 @@ public sealed class ReceiveOperation
             }
             switch (args.ProgressEvent)
             {
-              case ProgressEvent.DownloadBytes:
-                onOperationProgressed?.Invoke(
+              case ProgressEvent.DownloadBytes: //TODO: These Invoke calls are not awaited!
+                onOperationProgressed.Invoke(
                   $"Downloading ({_progressDisplayManager.CalculateSpeed(args)})",
                   _progressDisplayManager.CalculatePercentage(args)
                 );
                 break;
               case ProgressEvent.DownloadObject:
-                onOperationProgressed?.Invoke("Downloading Root Object...", null);
+                onOperationProgressed.Invoke("Downloading Root Object...", null);
                 break;
               case ProgressEvent.DeserializeObject:
-                onOperationProgressed?.Invoke(
+                onOperationProgressed.Invoke(
                   $"Deserializing ({_progressDisplayManager.CalculateSpeed(args)})",
                   _progressDisplayManager.CalculatePercentage(args)
                 );

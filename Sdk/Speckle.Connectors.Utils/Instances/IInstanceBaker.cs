@@ -1,3 +1,4 @@
+using Speckle.Connectors.Utils.Operations;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
 
@@ -13,11 +14,11 @@ public interface IInstanceBaker<TAppIdMapValueType>
   /// <param name="baseLayerName"></param>
   /// <param name="onOperationProgressed"></param>
   /// <returns></returns>
-  BakeResult BakeInstances(
-    List<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
+  Task<BakeResult> BakeInstances(
+    IReadOnlyCollection<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
     Dictionary<string, TAppIdMapValueType> applicationIdMap,
     string baseLayerName,
-    Action<string, double?>? onOperationProgressed
+    ProgressAction onOperationProgressed
   );
 
   /// <summary>

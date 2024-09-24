@@ -3,6 +3,7 @@ using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.GraphicsInterface;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Utils.Conversion;
+using Speckle.Connectors.Utils.Operations;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
 using Material = Autodesk.AutoCAD.DatabaseServices.Material;
@@ -53,14 +54,13 @@ public class AutocadMaterialBaker
     transaction.Commit();
   }
 
-  public List<ReceiveConversionResult> ParseAndBakeRenderMaterials(
-    List<RenderMaterialProxy> materialProxies,
+  public async Task<List<ReceiveConversionResult>> ParseAndBakeRenderMaterials(
+    IReadOnlyCollection<RenderMaterialProxy> materialProxies,
     string baseLayerPrefix,
-    Action<string, double?>? onOperationProgressed
+    ProgressAction onOperationProgressed
   )
   {
     List<ReceiveConversionResult> results = new();
-    Dictionary<string, string> objectRenderMaterialsIdMap = new();
 
     using var transaction = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
     var materialDict = transaction.GetObject(Doc.Database.MaterialDictionaryId, OpenMode.ForWrite) as DBDictionary;
@@ -75,7 +75,9 @@ public class AutocadMaterialBaker
     var count = 0;
     foreach (RenderMaterialProxy materialProxy in materialProxies)
     {
-      onOperationProgressed?.Invoke("Converting render materials", (double)++count / materialProxies.Count);
+      await onOperationProgressed
+        .Invoke("Converting render materials", (double)++count / materialProxies.Count)
+        .ConfigureAwait(true);
 
       // bake render material
       RenderMaterial renderMaterial = materialProxy.value;

@@ -57,7 +57,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
   public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<ElementId> objects,
     SendInfo sendInfo,
-    Action<string, double?>? onOperationProgressed = null,
+    ProgressAction onOperationProgressed,
     CancellationToken ct = default
   )
   {
@@ -122,7 +122,9 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
         results.Add(new(Status.ERROR, applicationId, sourceType, null, ex));
       }
 
-      onOperationProgressed?.Invoke("Converting", (double)++countProgress / atomicObjects.Count);
+      await onOperationProgressed
+        .Invoke("Converting", (double)++countProgress / atomicObjects.Count)
+        .ConfigureAwait(false);
     }
 
     if (results.All(x => x.Status == Status.ERROR))

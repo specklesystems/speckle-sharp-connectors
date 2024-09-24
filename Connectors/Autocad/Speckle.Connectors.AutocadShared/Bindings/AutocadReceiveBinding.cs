@@ -76,8 +76,8 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
         .Resolve<ReceiveOperation>()
         .Execute(
           modelCard.GetReceiveInfo(Utils.Connector.Slug),
-          cancellationToken,
-          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken)
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
+          cancellationToken
         )
         .ConfigureAwait(false);
 
