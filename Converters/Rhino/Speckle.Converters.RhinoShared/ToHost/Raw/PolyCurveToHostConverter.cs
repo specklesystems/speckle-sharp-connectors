@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
 using Speckle.Sdk.Common;
@@ -6,13 +7,16 @@ namespace Speckle.Converters.Rhino.ToHost.Raw;
 
 public class PolyCurveToHostConverter : ITypedConverter<SOG.Polycurve, RG.PolyCurve>
 {
-  public ITypedConverter<ICurve, RG.Curve>? CurveConverter { get; set; } // POC: CNX-9311 Circular dependency injected by the container using property.
-
   private readonly ITypedConverter<SOP.Interval, RG.Interval> _intervalConverter;
+  private readonly IServiceProvider _serviceProvider;
 
-  public PolyCurveToHostConverter(ITypedConverter<SOP.Interval, RG.Interval> intervalConverter)
+  public PolyCurveToHostConverter(
+    ITypedConverter<SOP.Interval, RG.Interval> intervalConverter,
+    IServiceProvider serviceProvider
+  )
   {
     _intervalConverter = intervalConverter;
+    _serviceProvider = serviceProvider;
   }
 
   /// <summary>
@@ -27,7 +31,7 @@ public class PolyCurveToHostConverter : ITypedConverter<SOG.Polycurve, RG.PolyCu
 
     foreach (var segment in target.segments)
     {
-      RG.Curve childCurve = CurveConverter.NotNull().Convert(segment);
+      RG.Curve childCurve = _serviceProvider.GetRequiredService<ITypedConverter<ICurve, RG.Curve>>().Convert(segment);
       if (!childCurve.IsValid)
       {
         throw new ConversionException($"Failed to convert segment {segment}");

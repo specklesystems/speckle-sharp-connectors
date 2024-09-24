@@ -1,21 +1,17 @@
 #if AUTOCAD
-using Speckle.Autofac.DependencyInjection;
-using Speckle.Connectors.DUI.Bindings;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Speckle.Connectors.Autocad.DependencyInjection;
 
-public class AutocadConnectorModule : ISpeckleModule
+public static class AutocadConnectorModule
 {
-  public void Load(SpeckleContainerBuilder builder)
+  public static void AddAutocad(this IServiceCollection serviceCollection)
   {
-    SharedRegistration.Load(builder);
+    serviceCollection.AddAutocadBase();
 
     // Operations
-    SharedRegistration.LoadSend(builder);
-    SharedRegistration.LoadReceive(builder);
-
-    // Register bindings
-    builder.AddSingleton<IBinding, ConfigBinding>("connectorName", "Autocad"); // POC: Easier like this for now, should be cleaned up later
+    serviceCollection.LoadSend();
+    serviceCollection.LoadReceive();
   }
 }
 #endif

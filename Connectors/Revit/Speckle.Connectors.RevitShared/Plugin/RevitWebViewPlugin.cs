@@ -7,7 +7,7 @@ using Autodesk.Revit.ApplicationServices;
 using Autodesk.Revit.UI;
 using Revit.Async;
 using Speckle.Connectors.DUI.WebView;
-using Speckle.Connectors.Utils;
+using Speckle.Connectors.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 
@@ -18,6 +18,7 @@ internal sealed class RevitWebViewPlugin : IRevitPlugin
   private readonly UIControlledApplication _uIControlledApplication;
   private readonly RevitContext _revitContext;
   private readonly DUI3ControlWebViewDockable _webViewPanel;
+  private readonly ISpeckleApplication _speckleApplication;
 
   [System.Diagnostics.CodeAnalysis.SuppressMessage(
     "Style",
@@ -27,12 +28,14 @@ internal sealed class RevitWebViewPlugin : IRevitPlugin
   public RevitWebViewPlugin(
     UIControlledApplication uIControlledApplication,
     RevitContext revitContext,
-    DUI3ControlWebViewDockable webViewPanel
+    DUI3ControlWebViewDockable webViewPanel,
+    ISpeckleApplication speckleApplication
   )
   {
     _uIControlledApplication = uIControlledApplication;
     _revitContext = revitContext;
     _webViewPanel = webViewPanel;
+    _speckleApplication = speckleApplication;
   }
 
   public void Initialise()
@@ -75,13 +78,16 @@ internal sealed class RevitWebViewPlugin : IRevitPlugin
       );
 
     string path = typeof(RevitWebViewPlugin).Assembly.Location;
-    dui3Button.Image = LoadPngImgSource($"Speckle.Connectors.Revit{Connector.VersionString}.Assets.logo16.png", path);
+    dui3Button.Image = LoadPngImgSource(
+      $"Speckle.Connectors.Revit{_speckleApplication.HostApplicationVersion}.Assets.logo16.png",
+      path
+    );
     dui3Button.LargeImage = LoadPngImgSource(
-      $"Speckle.Connectors.Revit{Connector.VersionString}.Assets.logo32.png",
+      $"Speckle.Connectors.Revit{_speckleApplication.HostApplicationVersion}.Assets.logo32.png",
       path
     );
     dui3Button.ToolTipImage = LoadPngImgSource(
-      $"Speckle.Connectors.Revit{Connector.VersionString}.Assets.logo32.png",
+      $"Speckle.Connectors.Revit{_speckleApplication.HostApplicationVersion}.Assets.logo32.png",
       path
     );
     dui3Button.ToolTip = "Speckle (Beta) for Revit";
