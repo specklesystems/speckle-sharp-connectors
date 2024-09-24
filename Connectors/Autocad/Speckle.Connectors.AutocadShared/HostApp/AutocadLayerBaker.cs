@@ -1,7 +1,7 @@
 ﻿using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.LayerManager;
-using Speckle.Connectors.Utils.Operations.Receive;
+using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Sdk.Models.Collections;
 using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 

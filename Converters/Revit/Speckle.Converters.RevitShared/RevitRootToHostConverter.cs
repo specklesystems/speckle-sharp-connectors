@@ -12,20 +12,17 @@ namespace Speckle.Converters.RevitShared;
 public class RevitRootToHostConverter : IRootToHostConverter
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
-  private readonly IConverterResolver<IToHostTopLevelConverter> _converterResolver;
   private readonly ITypedConverter<SOG.Point, DB.XYZ> _pointConverter;
   private readonly ITypedConverter<ICurve, DB.CurveArray> _curveConverter;
   private readonly ITypedConverter<SOG.Mesh, List<DB.GeometryObject>> _meshConverter;
 
   public RevitRootToHostConverter(
-    IConverterResolver<IToHostTopLevelConverter> converterResolver,
     ITypedConverter<SOG.Point, DB.XYZ> pointConverter,
     ITypedConverter<ICurve, DB.CurveArray> curveConverter,
     ITypedConverter<SOG.Mesh, List<DB.GeometryObject>> meshConverter,
     IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
-    _converterResolver = converterResolver;
     _pointConverter = pointConverter;
     _curveConverter = curveConverter;
     _meshConverter = meshConverter;

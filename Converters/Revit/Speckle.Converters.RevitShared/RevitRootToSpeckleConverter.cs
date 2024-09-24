@@ -2,6 +2,7 @@ using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Registration;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Converters.RevitShared.ToSpeckle;
 using Speckle.Sdk;
@@ -11,7 +12,7 @@ namespace Speckle.Converters.RevitShared;
 
 public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
 {
-  private readonly IConverterResolver<IToSpeckleTopLevelConverter> _toSpeckle;
+  private readonly IConverterManager<IToSpeckleTopLevelConverter> _toSpeckle;
   private readonly ITypedConverter<DB.Element, List<Dictionary<string, object>>> _materialQuantityConverter;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ParameterExtractor _parameterExtractor;
@@ -20,7 +21,7 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
   private readonly Dictionary<WorksetId, string> _worksetCache = new();
 
   public RevitRootToSpeckleConverter(
-    IConverterResolver<IToSpeckleTopLevelConverter> toSpeckle,
+    IConverterManager<IToSpeckleTopLevelConverter> toSpeckle,
     ITypedConverter<DB.Element, List<Dictionary<string, object>>> materialQuantityConverter,
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ParameterExtractor parameterExtractor,
@@ -41,7 +42,7 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
       throw new SpeckleConversionException($"Target object is not a db element, it's a {target.GetType()}");
     }
 
-    var objectConverter = _toSpeckle.GetConversionForType(target.GetType());
+    var objectConverter = _toSpeckle.ResolveConverter(target.GetType(), true);
 
     if (objectConverter == null)
     {
