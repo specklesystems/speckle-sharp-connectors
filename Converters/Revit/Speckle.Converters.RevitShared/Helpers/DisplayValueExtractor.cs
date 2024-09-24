@@ -68,7 +68,12 @@ public sealed class DisplayValueExtractor
           meshesByMaterial[materialId] = value;
         }
 
-        value.Add(face.Triangulate());
+        var mesh = face.Triangulate(); //Revit API can return null here
+        if (mesh is null)
+        {
+          continue;
+        }
+        value.Add(mesh);
       }
     }
 
