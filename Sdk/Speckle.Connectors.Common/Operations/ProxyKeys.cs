@@ -6,4 +6,5 @@ public static class ProxyKeys
   public const string RENDER_MATERIAL = "renderMaterialProxies";
   public const string INSTANCE_DEFINITION = "instanceDefinitionProxies";
   public const string GROUP = "groupProxies";
+  public const string PARAMETER_DEFINITIONS = "parameterDefinitions";
 }

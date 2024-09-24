@@ -72,7 +72,8 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
         .Initialize(
           _revitConversionSettingsFactory.Create(
             DetailLevelType.Coarse, //TODO figure out
-            null
+            null,
+            false
           )
         );
       // Receive host objects

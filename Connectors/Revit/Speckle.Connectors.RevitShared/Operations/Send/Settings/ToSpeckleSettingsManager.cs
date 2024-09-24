@@ -20,6 +20,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
   // cache invalidation process run with ModelCardId since the settings are model specific
   private readonly Dictionary<string, DetailLevelType> _detailLevelCache = new();
   private readonly Dictionary<string, Transform?> _referencePointCache = new();
+  private readonly Dictionary<string, bool?> _sendNullParamsCache = new();
 
   public ToSpeckleSettingsManager(
     RevitContext revitContext,
@@ -44,9 +45,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
       {
         if (previousType != fidelity)
         {
-          var objectIds = modelCard.SendFilter != null ? modelCard.SendFilter.GetObjectIds() : [];
-          var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds);
-          _sendConversionCache.EvictObjects(unpackedObjectIds);
+          EvictCacheForModelCard(modelCard);
         }
       }
       _detailLevelCache[modelCard.ModelCardId.NotNull()] = fidelity;
@@ -76,9 +75,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
         // invalidate conversion cache if the transform has changed
         if (previousTransform != currentTransform)
         {
-          var objectIds = modelCard.SendFilter != null ? modelCard.SendFilter.GetObjectIds() : [];
-          var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds);
-          _sendConversionCache.EvictObjects(unpackedObjectIds);
+          EvictCacheForModelCard(modelCard);
         }
       }
 
@@ -87,6 +84,29 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     }
 
     throw new ArgumentException($"Invalid reference point value: {referencePointString}");
+  }
+
+  public bool GetSendParameterNullOrEmptyStringsSetting(SenderModelCard modelCard)
+  {
+    var value = modelCard.Settings?.First(s => s.Id == "nullemptyparams").Value as bool?;
+    var returnValue = value != null && value.NotNull();
+    if (_sendNullParamsCache.TryGetValue(modelCard.ModelCardId.NotNull(), out bool? previousValue))
+    {
+      if (previousValue != returnValue)
+      {
+        EvictCacheForModelCard(modelCard);
+      }
+    }
+
+    _sendNullParamsCache[modelCard.ModelCardId] = returnValue;
+    return returnValue;
+  }
+
+  private void EvictCacheForModelCard(SenderModelCard modelCard)
+  {
+    var objectIds = modelCard.SendFilter != null ? modelCard.SendFilter.GetObjectIds() : [];
+    var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds);
+    _sendConversionCache.EvictObjects(unpackedObjectIds);
   }
 
   private Transform? GetTransform(RevitContext context, ReferencePointType referencePointType)
