@@ -25,3 +25,9 @@ This uses a new Configuration for the solutions and projects which means that `L
 Run this to delete package.lock.json files when restores go run.
 
 ![image](/Images/clean-locks.png) 
+
+### Deep Clean
+
+Run this to clean out bin and obj directories.  Then a restore is run to get things ready for a build.
+
+![image](/Images/deep-clean.png)
