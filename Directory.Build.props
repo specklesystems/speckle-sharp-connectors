@@ -10,6 +10,7 @@
     <CentralPackageVersionOverrideEnabled>true</CentralPackageVersionOverrideEnabled>
     <EnableWindowsTargeting>true</EnableWindowsTargeting> <!-- windows packs for .net core  -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <AutomaticallyUseReferenceAssemblyPackages>false</AutomaticallyUseReferenceAssemblyPackages>
   </PropertyGroup>
   
   <PropertyGroup Label="Analyers">

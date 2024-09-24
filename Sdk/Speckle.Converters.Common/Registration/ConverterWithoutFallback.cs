@@ -40,7 +40,7 @@ public sealed class ConverterWithoutFallback : IRootToHostConverter
   internal bool TryGetConverter(Type target, [NotNullWhen(true)] out IToHostTopLevelConverter? result)
   {
     // Direct conversion if a converter is found
-    var objectConverter = _toHost.ResolveConverter(target.Name);
+    var objectConverter = _toHost.ResolveConverter(target);
     if (objectConverter != null)
     {
       result = objectConverter;

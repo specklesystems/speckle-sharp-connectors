@@ -37,7 +37,7 @@ public class Civil3dRootToHostConverter : IRootToSpeckleConverter
       {
         using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
         {
-          var objectConverter = _toSpeckle.ResolveConverter(type.Name);
+          var objectConverter = _toSpeckle.ResolveConverter(type);
 
           if (objectConverter == null)
           {

@@ -20,7 +20,7 @@ public class RootToSpeckleConverter : IRootToSpeckleConverter
     Type type = target.GetType();
     try
     {
-      var objectConverter = _toSpeckle.ResolveConverter(type.Name); //poc: would be nice to have supertypes resolve
+      var objectConverter = _toSpeckle.ResolveConverter(type); //poc: would be nice to have supertypes resolve
 
       if (objectConverter == null)
       {

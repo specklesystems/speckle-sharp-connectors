@@ -5,6 +5,7 @@ using Speckle.Converters.Common.Registration;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Converters.RevitShared.ToSpeckle;
 using Speckle.Sdk;
 
 namespace Speckle.Converters.RevitShared;
@@ -44,10 +45,11 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<ParameterValueExtractor>();
     serviceCollection.AddScoped<ParameterValueSetter>();
     serviceCollection.AddScoped<DisplayValueExtractor>();
-    serviceCollection.AddScoped<ParameterObjectAssigner>();
     serviceCollection.AddScoped<ISlopeArrowExtractor, SlopeArrowExtractor>();
 
     serviceCollection.AddScoped<IRevitCategories, RevitCategories>();
+    serviceCollection.AddScoped<ParameterDefinitionHandler>();
+    serviceCollection.AddScoped<ParameterExtractor>();
     return serviceCollection;
   }
 }
