@@ -32,7 +32,7 @@ public class ConverterManager<T>(ConcurrentDictionary<string, Type> converterTyp
       {
         return converter;
       }
-    } 
+    }
   }
 
   private T? GetConverterByType(string typeName)
