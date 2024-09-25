@@ -2,11 +2,12 @@ using System.Diagnostics.CodeAnalysis;
 using Autodesk.AutoCAD.DatabaseServices;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp;
-using Speckle.Connectors.Utils.Builders;
-using Speckle.Connectors.Utils.Caching;
-using Speckle.Connectors.Utils.Conversion;
-using Speckle.Connectors.Utils.Extensions;
-using Speckle.Connectors.Utils.Operations;
+using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Caching;
+using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Extensions;
+using Speckle.Connectors.Common.Operations;
+using Speckle.Converters.Autocad;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
@@ -20,6 +21,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
 {
   private readonly IRootToSpeckleConverter _converter;
   private readonly string[] _documentPathSeparator = ["\\"];
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _converterSettings;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly AutocadInstanceUnpacker _instanceUnpacker;
   private readonly AutocadMaterialUnpacker _materialUnpacker;
@@ -27,6 +29,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
   private readonly AutocadLayerUnpacker _layerUnpacker;
   private readonly AutocadGroupUnpacker _groupUnpacker;
   private readonly ILogger<AutocadRootObjectBuilder> _logger;
+  private readonly ISdkActivityFactory _activityFactory;
 
   public AutocadRootObjectBuilder(
     IRootToSpeckleConverter converter,
@@ -36,7 +39,9 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     AutocadColorUnpacker colorUnpacker,
     AutocadLayerUnpacker layerUnpacker,
     AutocadGroupUnpacker groupUnpacker,
-    ILogger<AutocadRootObjectBuilder> logger
+    ILogger<AutocadRootObjectBuilder> logger,
+    ISdkActivityFactory activityFactory,
+    IConverterSettingsStore<AutocadConversionSettings> converterSettings
   )
   {
     _converter = converter;
@@ -47,6 +52,8 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     _layerUnpacker = layerUnpacker;
     _groupUnpacker = groupUnpacker;
     _logger = logger;
+    _activityFactory = activityFactory;
+    _converterSettings = converterSettings;
   }
 
   public Task<RootObjectBuilderResult> Build(
@@ -82,6 +89,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
           .Reverse()
           .First()
       };
+    root["units"] = _converterSettings.Current.SpeckleUnits;
 
     // TODO: better handling for document and transactions!!
     Document doc = Application.DocumentManager.CurrentDocument;
@@ -93,7 +101,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
 
     // 2 - Unpack the groups
     root[ProxyKeys.GROUP] = _groupUnpacker.UnpackGroups(atomicObjects);
-    using (var _ = SpeckleActivityFactory.Start("Converting objects"))
+    using (var _ = _activityFactory.Start("Converting objects"))
     {
       // 3 - Convert atomic objects
       List<LayerTableRecord> usedAcadLayers = new(); // Keeps track of autocad layers used, so we can pass them on later to the material and color unpacker.
@@ -102,7 +110,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
       foreach (var (entity, applicationId) in atomicObjects)
       {
         ct.ThrowIfCancellationRequested();
-        using (var convertActivity = SpeckleActivityFactory.Start("Converting object"))
+        using (var convertActivity = _activityFactory.Start("Converting object"))
         {
           // Create and add a collection for each layer if not done so already.
           Layer layer = _layerUnpacker.GetOrCreateSpeckleLayer(entity, tr, out LayerTableRecord? autocadLayer);

@@ -1,5 +1,5 @@
+using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.Utils.Conversion;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
@@ -10,7 +10,7 @@ public class SendBindingUICommands : BasicConnectorBindingCommands
   private const string SET_MODELS_EXPIRED_UI_COMMAND_NAME = "setModelsExpired";
   private const string SET_MODEL_SEND_RESULT_UI_COMMAND_NAME = "setModelSendResult";
 
-  public SendBindingUICommands(IBridge bridge)
+  public SendBindingUICommands(IBrowserBridge bridge)
     : base(bridge) { }
 
   // POC.. the only reasons this needs the bridge is to send? realtionship to these messages and the bridge is unclear

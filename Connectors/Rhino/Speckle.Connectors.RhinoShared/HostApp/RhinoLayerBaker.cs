@@ -1,6 +1,6 @@
 using Rhino;
 using Rhino.DocObjects;
-using Speckle.Connectors.Utils.Operations.Receive;
+using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Sdk.Models.Collections;
 using Layer = Rhino.DocObjects.Layer;
 
@@ -9,7 +9,7 @@ namespace Speckle.Connectors.Rhino.HostApp;
 /// <summary>
 /// Utility class managing layer creation. Expects to be a scoped dependency per receive operation.
 /// </summary>
-public class RhinoLayerBaker : LayerPathUnpacker
+public class RhinoLayerBaker : TraversalContextUnpacker
 {
   private readonly RhinoMaterialBaker _materialBaker;
   private readonly RhinoColorBaker _colorBaker;
@@ -47,6 +47,7 @@ public class RhinoLayerBaker : LayerPathUnpacker
     var currentLayerName = baseLayerName;
     var currentDocument = RhinoDoc.ActiveDoc; // POC: too much effort right now to wrap around the interfaced layers
     Layer previousLayer = currentDocument.Layers.FindName(currentLayerName);
+
     foreach (Collection collection in collectionPath)
     {
       currentLayerName += Layer.PathSeparator + collection.name;

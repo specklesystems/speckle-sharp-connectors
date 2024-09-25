@@ -21,8 +21,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RhinoReceiveBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RhinoSendBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RhinoSelectionBinding.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\RhinoConnectorModule.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\RhinoPlugin.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Registration\ServiceRegistration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\BoundingBox.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\SpeckleApplicationIdExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\RhinoUnitsExtension.cs" />
@@ -45,6 +44,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\DisableRedrawScope.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\RhinoHostObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\RhinoRootObjectBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\RhinoPlugin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\Speckle.Connectors.RhinoCommand.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\Speckle.Connectors.RhinoPlugin.cs" />
   </ItemGroup>

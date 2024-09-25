@@ -4,11 +4,11 @@ using ArcGIS.Desktop.Mapping;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.ArcGIS.HostApp;
 using Speckle.Connectors.ArcGIS.Utils;
-using Speckle.Connectors.Utils.Builders;
-using Speckle.Connectors.Utils.Caching;
-using Speckle.Connectors.Utils.Conversion;
-using Speckle.Connectors.Utils.Extensions;
-using Speckle.Connectors.Utils.Operations;
+using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Caching;
+using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Extensions;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.Common;
 using Speckle.Objects.GIS;
@@ -28,25 +28,28 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ArcGISColorManager _colorManager;
-  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _converterSettings;
   private readonly MapMembersUtils _mapMemberUtils;
   private readonly ILogger<ArcGISRootObjectBuilder> _logger;
+  private readonly ISdkActivityFactory _activityFactory;
 
   public ArcGISRootObjectBuilder(
     ISendConversionCache sendConversionCache,
     ArcGISColorManager colorManager,
-    IConverterSettingsStore<ArcGISConversionSettings> settingsStore,
+    IConverterSettingsStore<ArcGISConversionSettings> converterSettings,
     IRootToSpeckleConverter rootToSpeckleConverter,
     MapMembersUtils mapMemberUtils,
-    ILogger<ArcGISRootObjectBuilder> logger
+    ILogger<ArcGISRootObjectBuilder> logger,
+    ISdkActivityFactory activityFactory
   )
   {
     _sendConversionCache = sendConversionCache;
     _colorManager = colorManager;
-    _settingsStore = settingsStore;
+    _converterSettings = converterSettings;
     _rootToSpeckleConverter = rootToSpeckleConverter;
     _mapMemberUtils = mapMemberUtils;
     _logger = logger;
+    _activityFactory = activityFactory;
   }
 
 #pragma warning disable CA1506
@@ -64,6 +67,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     int count = 0;
 
     Collection rootObjectCollection = new() { name = MapView.Active.Map.Name }; //TODO: Collections
+    rootObjectCollection["units"] = _converterSettings.Current.SpeckleUnits;
 
     List<SendConversionResult> results = new(objects.Count);
     var cacheHitCount = 0;
@@ -76,13 +80,13 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     );
 
     onOperationProgressed?.Invoke("Converting", null);
-    using (var __ = SpeckleActivityFactory.Start("Converting objects"))
+    using (var __ = _activityFactory.Start("Converting objects"))
     {
       foreach ((MapMember mapMember, _) in layersWithDisplayPriority)
       {
         ct.ThrowIfCancellationRequested();
 
-        using (var convertingActivity = SpeckleActivityFactory.Start("Converting object"))
+        using (var convertingActivity = _activityFactory.Start("Converting object"))
         {
           var collectionHost = rootObjectCollection;
           string applicationId = mapMember.URI;
@@ -131,17 +135,17 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
                   .ConfigureAwait(false);
 
                 // get units & Active CRS (for writing geometry coords)
-                converted["units"] = _settingsStore.Current.SpeckleUnits;
+                converted["units"] = _converterSettings.Current.SpeckleUnits;
 
-                var spatialRef = _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference;
+                var spatialRef = _converterSettings.Current.ActiveCRSoffsetRotation.SpatialReference;
                 converted["crs"] = new CRS
                 {
                   wkt = spatialRef.Wkt,
                   name = spatialRef.Name,
-                  offset_y = Convert.ToSingle(_settingsStore.Current.ActiveCRSoffsetRotation.LatOffset),
-                  offset_x = Convert.ToSingle(_settingsStore.Current.ActiveCRSoffsetRotation.LonOffset),
-                  rotation = Convert.ToSingle(_settingsStore.Current.ActiveCRSoffsetRotation.TrueNorthRadians),
-                  units_native = _settingsStore.Current.SpeckleUnits
+                  offset_y = Convert.ToSingle(_converterSettings.Current.ActiveCRSoffsetRotation.LatOffset),
+                  offset_x = Convert.ToSingle(_converterSettings.Current.ActiveCRSoffsetRotation.LonOffset),
+                  rotation = Convert.ToSingle(_converterSettings.Current.ActiveCRSoffsetRotation.TrueNorthRadians),
+                  units_native = _converterSettings.Current.SpeckleUnits
                 };
               }
 
@@ -168,13 +172,13 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
             }
 
             results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
-            convertingActivity?.SetStatus(SpeckleActivityStatusCode.Ok);
+            convertingActivity?.SetStatus(SdkActivityStatusCode.Ok);
           }
           catch (Exception ex) when (!ex.IsFatal())
           {
             _logger.LogSendConversionError(ex, sourceType);
             results.Add(new(Status.ERROR, applicationId, sourceType, null, ex));
-            convertingActivity?.SetStatus(SpeckleActivityStatusCode.Error);
+            convertingActivity?.SetStatus(SdkActivityStatusCode.Error);
             convertingActivity?.RecordException(ex);
           }
         }

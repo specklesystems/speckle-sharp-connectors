@@ -1,10 +1,10 @@
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
+using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.Rhino.HostApp;
-using Speckle.Connectors.Utils.Builders;
-using Speckle.Connectors.Utils.Conversion;
-using Speckle.Connectors.Utils.Operations.Receive;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
@@ -28,6 +28,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private readonly RhinoColorBaker _colorBaker;
   private readonly RhinoGroupBaker _groupBaker;
   private readonly RootObjectUnpacker _rootObjectUnpacker;
+  private readonly ISdkActivityFactory _activityFactory;
 
   public RhinoHostObjectBuilder(
     IRootToHostConverter converter,
@@ -37,7 +38,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     RhinoInstanceBaker instanceBaker,
     RhinoMaterialBaker materialBaker,
     RhinoColorBaker colorBaker,
-    RhinoGroupBaker groupBaker
+    RhinoGroupBaker groupBaker,
+    ISdkActivityFactory activityFactory
   )
   {
     _converter = converter;
@@ -48,6 +50,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _colorBaker = colorBaker;
     _layerBaker = layerBaker;
     _groupBaker = groupBaker;
+    _activityFactory = activityFactory;
   }
 
   public Task<HostObjectBuilderResult> Build(
@@ -58,7 +61,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     CancellationToken cancellationToken
   )
   {
-    using var activity = SpeckleActivityFactory.Start("Build");
+    using var activity = _activityFactory.Start("Build");
     // POC: This is where the top level base-layer name is set. Could be abstracted or injected in the context?
     var baseLayerName = $"Project {projectName}: Model {modelName}";
 
@@ -89,7 +92,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     onOperationProgressed?.Invoke("Converting materials and colors", null);
     if (unpackedRoot.RenderMaterialProxies != null)
     {
-      using var _ = SpeckleActivityFactory.Start("Render Materials");
+      using var _ = _activityFactory.Start("Render Materials");
       _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseLayerName);
     }
 
@@ -101,7 +104,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     // 4 - Bake layers
     // See [CNX-325: Rhino: Change receive operation order to increase performance](https://linear.app/speckle/issue/CNX-325/rhino-change-receive-operation-order-to-increase-performance)
     onOperationProgressed?.Invoke("Baking layers (redraw disabled)", null);
-    using (var _ = SpeckleActivityFactory.Start("Pre baking layers"))
+    using (var _ = _activityFactory.Start("Pre baking layers"))
     {
       using var layerNoDraw = new DisableRedrawScope(_converterSettings.Current.Document.Views);
       foreach (var (path, _) in atomicObjectsWithPath)
@@ -116,11 +119,11 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     List<ReceiveConversionResult> conversionResults = new();
 
     int count = 0;
-    using (var _ = SpeckleActivityFactory.Start("Converting objects"))
+    using (var _ = _activityFactory.Start("Converting objects"))
     {
       foreach (var (path, obj) in atomicObjectsWithPath)
       {
-        using (var convertActivity = SpeckleActivityFactory.Start("Converting object"))
+        using (var convertActivity = _activityFactory.Start("Converting object"))
         {
           onOperationProgressed?.Invoke("Converting objects", (double)++count / atomicObjects.Count);
           try
@@ -165,12 +168,12 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
             // 5: populate app id map
             applicationIdMap[obj.applicationId ?? obj.id] = conversionIds;
-            convertActivity?.SetStatus(SpeckleActivityStatusCode.Ok);
+            convertActivity?.SetStatus(SdkActivityStatusCode.Ok);
           }
           catch (Exception ex) when (!ex.IsFatal())
           {
             conversionResults.Add(new(Status.ERROR, obj, null, null, ex));
-            convertActivity?.SetStatus(SpeckleActivityStatusCode.Error);
+            convertActivity?.SetStatus(SdkActivityStatusCode.Error);
             convertActivity?.RecordException(ex);
           }
         }
@@ -178,7 +181,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     }
 
     // 6 - Convert instances
-    using (var _ = SpeckleActivityFactory.Start("Converting instances"))
+    using (var _ = _activityFactory.Start("Converting instances"))
     {
       var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = _instanceBaker.BakeInstances(
         instanceComponentsWithPath,

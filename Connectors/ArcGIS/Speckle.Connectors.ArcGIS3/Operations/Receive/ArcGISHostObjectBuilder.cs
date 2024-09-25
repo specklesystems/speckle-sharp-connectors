@@ -5,10 +5,10 @@ using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Connectors.ArcGIS.HostApp;
 using Speckle.Connectors.ArcGIS.Utils;
-using Speckle.Connectors.Utils.Builders;
-using Speckle.Connectors.Utils.Conversion;
-using Speckle.Connectors.Utils.Instances;
-using Speckle.Connectors.Utils.Operations;
+using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Instances;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
@@ -29,7 +29,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
   private readonly IRootToHostConverter _converter;
   private readonly IFeatureClassUtils _featureClassUtils;
   private readonly ILocalToGlobalUnpacker _localToGlobalUnpacker;
-  private readonly ILocalToGlobalConverterUtils _localToGlobalConverterUtils;
+  private readonly LocalToGlobalConverterUtils _localToGlobalConverterUtils;
   private readonly ICrsUtils _crsUtils;
 
   // POC: figure out the correct scope to only initialize on Receive
@@ -42,7 +42,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     IConverterSettingsStore<ArcGISConversionSettings> settingsStore,
     IFeatureClassUtils featureClassUtils,
     ILocalToGlobalUnpacker localToGlobalUnpacker,
-    ILocalToGlobalConverterUtils localToGlobalConverterUtils,
+    LocalToGlobalConverterUtils localToGlobalConverterUtils,
     ICrsUtils crsUtils,
     GraphTraversal traverseFunction,
     ArcGISColorManager colorManager

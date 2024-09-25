@@ -1,17 +1,18 @@
 <Project>
   <ItemGroup>
     <PackageVersion Include="altcover" Version="8.8.173" />
-    <PackageVersion Include="Autofac" Version="5.2.0" />
     <PackageVersion Include="Bullseye" Version="5.0.0" />
     <PackageVersion Include="CefSharp.Wpf" Version="92.0.260" />
     <PackageVersion Include="Esri.ArcGISPro.Extensions30" Version="3.2.0.49743" />
     <PackageVersion Include="FluentAssertions" Version="6.12.0" />
     <PackageVersion Include="Glob" Version="1.1.9" />
+    <PackageVersion Include="ILRepack.FullAuto" Version="1.6.0" />
     <PackageVersion Include="Microsoft.Build" Version="17.10.4" />
     <PackageVersion Include="Moq" Version="4.20.70" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.0" />
-    <PackageVersion Include="Microsoft.Extensions.Logging" Version="3.1.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="2.2.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="2.2.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="2.2.0" />
     <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.1938.49" />
     <PackageVersion Include="NUnit" Version="4.1.0" />
     <PackageVersion Include="NUnit.Analyzers" Version="4.2.0" />
@@ -19,11 +20,19 @@
     <PackageVersion Include="Revit.Async" Version="2.1.1" />
     <PackageVersion Include="RhinoCommon" Version="8.9.24194.18121" />
     <PackageVersion Include="RhinoWindows" Version="8.9.24194.18121" />
-    <PackageVersion Include="Speckle.Objects" Version="3.1.0-dev.136" />
-    <PackageVersion Include="Speckle.Sdk" Version="3.1.0-dev.136" />
+    <PackageVersion Include="OpenTelemetry.Exporter.Console" version="1.9.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.9.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" version="1.9.0" />
+    <PackageVersion Include="Serilog" Version="4.0.1" />
+    <PackageVersion Include="Serilog.Exceptions" Version="8.4.0" />
+    <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageVersion Include="Serilog.Sinks.File" Version="6.0.0" />
+    <PackageVersion Include="Serilog.Sinks.OpenTelemetry" Version="4.0.0" />
     <PackageVersion Include="Speckle.AutoCAD.API" Version="2023.0.0" />
     <PackageVersion Include="Speckle.Civil3D.API" Version="2024.0.0" />
-    <PackageVersion Include="Speckle.Revit.API" Version="2023.0.0" />
+    <PackageVersion Include="Speckle.Revit.API" Version="2023.0.0" />  
+    <PackageVersion Include="Speckle.Objects" Version="3.1.0-dev.145" />
+    <PackageVersion Include="Speckle.Sdk" Version="3.1.0-dev.145" />
     <PackageVersion Include="SimpleExec" Version="12.0.0" />
     <PackageVersion Include="System.Threading.Tasks.Dataflow" Version="6.0.0" />
     <GlobalPackageReference Include="PolySharp" Version="1.14.1" />

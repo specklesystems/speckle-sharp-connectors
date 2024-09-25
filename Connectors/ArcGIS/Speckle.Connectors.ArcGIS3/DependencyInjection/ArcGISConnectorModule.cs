@@ -1,24 +1,21 @@
 using ArcGIS.Desktop.Mapping;
-using Autofac;
-using Speckle.Autofac;
-using Speckle.Autofac.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.ArcGIS.Bindings;
 using Speckle.Connectors.ArcGIS.Filters;
 using Speckle.Connectors.ArcGIS.HostApp;
 using Speckle.Connectors.ArcGIS.Operations.Receive;
 using Speckle.Connectors.ArcGis.Operations.Send;
 using Speckle.Connectors.ArcGIS.Utils;
+using Speckle.Connectors.Common;
+using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Caching;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
-using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
-using Speckle.Connectors.Utils;
-using Speckle.Connectors.Utils.Builders;
-using Speckle.Connectors.Utils.Caching;
-using Speckle.Connectors.Utils.Instances;
-using Speckle.Connectors.Utils.Operations;
+using Speckle.Converters.Common;
 using Speckle.Sdk.Models.GraphTraversal;
 
 // POC: This is a temp reference to root object senders to tweak CI failing after having generic interfaces into common project.
@@ -26,54 +23,47 @@ using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.ArcGIS.DependencyInjection;
 
-public class ArcGISConnectorModule : ISpeckleModule
+public static class ArcGISConnectorModule
 {
-  public void Load(SpeckleContainerBuilder builder)
+  public static void AddArcGIS(this IServiceCollection serviceCollection)
   {
-    builder.AddAutofac();
-    builder.AddConnectorUtils();
-    builder.AddDUI();
-    builder.AddDUIView();
+    serviceCollection.AddConnectorUtils();
+    serviceCollection.AddDUI();
+    serviceCollection.AddDUIView();
 
-    builder.AddSingleton<DocumentModelStore, ArcGISDocumentStore>();
+    serviceCollection.AddSingleton<DocumentModelStore, ArcGISDocumentStore>();
     // Register bindings
-    builder.AddSingleton<IBinding, TestBinding>();
-    builder.AddSingleton<IBinding, ConfigBinding>("connectorName", "ArcGIS"); // POC: Easier like this for now, should be cleaned up later
-    builder.AddSingleton<IBinding, AccountBinding>();
+    serviceCollection.AddSingleton<IBinding, TestBinding>();
+    serviceCollection.AddSingleton<IBinding, ConfigBinding>();
+    serviceCollection.AddSingleton<IBinding, AccountBinding>();
 
-    builder.ContainerBuilder.RegisterType<TopLevelExceptionHandlerBinding>().As<IBinding>().AsSelf().SingleInstance();
-    builder.AddSingleton<ITopLevelExceptionHandler>(c =>
-      c.Resolve<TopLevelExceptionHandlerBinding>().Parent.TopLevelExceptionHandler
-    );
+    serviceCollection.RegisterTopLevelExceptionHandler();
 
-    builder
-      .ContainerBuilder.RegisterType<BasicConnectorBinding>()
-      .As<IBinding>()
-      .As<IBasicConnectorBinding>()
-      .SingleInstance();
+    serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
+    serviceCollection.AddSingleton<IBasicConnectorBinding, BasicConnectorBinding>();
 
-    builder.AddSingleton<IBinding, ArcGISSelectionBinding>();
-    builder.AddSingleton<IBinding, ArcGISSendBinding>();
-    builder.AddSingleton<IBinding, ArcGISReceiveBinding>();
+    serviceCollection.AddSingleton<IBinding, ArcGISSelectionBinding>();
+    serviceCollection.AddSingleton<IBinding, ArcGISSendBinding>();
+    serviceCollection.AddSingleton<IBinding, ArcGISReceiveBinding>();
 
-    builder.AddTransient<ISendFilter, ArcGISSelectionFilter>();
-    builder.AddScoped<IHostObjectBuilder, ArcGISHostObjectBuilder>();
-    builder.AddSingleton(DefaultTraversal.CreateTraversalFunc());
+    serviceCollection.AddTransient<ISendFilter, ArcGISSelectionFilter>();
+    serviceCollection.AddScoped<IHostObjectBuilder, ArcGISHostObjectBuilder>();
+    serviceCollection.AddSingleton(DefaultTraversal.CreateTraversalFunc());
 
     // register send operation and dependencies
-    builder.AddScoped<SendOperation<MapMember>>();
-    builder.AddScoped<ArcGISRootObjectBuilder>();
-    builder.AddScoped<IRootObjectBuilder<MapMember>, ArcGISRootObjectBuilder>();
+    serviceCollection.AddScoped<SendOperation<MapMember>>();
+    serviceCollection.AddScoped<ArcGISRootObjectBuilder>();
+    serviceCollection.AddScoped<IRootObjectBuilder<MapMember>, ArcGISRootObjectBuilder>();
 
-    builder.AddScoped<ArcGISColorManager>();
-    builder.AddScoped<MapMembersUtils>();
+    serviceCollection.AddScoped<LocalToGlobalConverterUtils>();
 
-    builder.AddScoped<ILocalToGlobalUnpacker, LocalToGlobalUnpacker>();
+    serviceCollection.AddScoped<ArcGISColorManager>();
+    serviceCollection.AddScoped<MapMembersUtils>();
 
     // register send conversion cache
-    builder.AddSingleton<ISendConversionCache, SendConversionCache>();
+    serviceCollection.AddSingleton<ISendConversionCache, SendConversionCache>();
 
     // operation progress manager
-    builder.AddSingleton<IOperationProgressManager, OperationProgressManager>();
+    serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();
   }
 }

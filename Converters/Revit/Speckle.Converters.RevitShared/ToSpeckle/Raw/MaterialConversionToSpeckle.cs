@@ -7,15 +7,10 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 public class MaterialConversionToSpeckle : ITypedConverter<DB.Material, (RevitMaterial, RenderMaterial)>
 {
-  private readonly ParameterObjectAssigner _parameterObjectAssigner;
   private readonly RevitMaterialCacheSingleton _materialCacheSingleton;
 
-  public MaterialConversionToSpeckle(
-    ParameterObjectAssigner parameterObjectAssigner,
-    RevitMaterialCacheSingleton materialCacheSingleton
-  )
+  public MaterialConversionToSpeckle(RevitMaterialCacheSingleton materialCacheSingleton)
   {
-    _parameterObjectAssigner = parameterObjectAssigner;
     _materialCacheSingleton = materialCacheSingleton;
   }
 
