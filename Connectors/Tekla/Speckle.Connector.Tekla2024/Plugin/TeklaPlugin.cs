@@ -8,7 +8,7 @@ namespace Speckle.Connector.Tekla2024.Plugin;
 
 [Plugin("Speckle.Connectors.Tekla")]
 [PluginUserInterface("Speckle.Connector.Tekla2024.SpeckleTeklaPanelHost")]
-[InputObjectDependency(InputObjectDependency.NOT_DEPENDENT)]
+[InputObjectDependency(InputObjectDependency.NOT_DEPENDENT)] // See DevDocs/InputObjectDependency.NOT_DEPENDENT.png
 public class TeklaPlugin : PluginBase
 {
   public static ServiceProvider? Container { get; private set; }
