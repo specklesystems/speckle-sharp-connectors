@@ -1,8 +1,10 @@
 ﻿using System.Windows.Forms;
 using System.Windows.Forms.Integration;
 using Microsoft.Extensions.DependencyInjection;
-using Speckle.Connector.Tekla2024.Plugin;
+using Speckle.Connectors.Common;
+using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.WebView;
+using Speckle.Sdk.Host;
 using Tekla.Structures.Dialog;
 using Tekla.Structures.Model;
 using Tekla.Structures.Model.Operations;
@@ -14,8 +16,21 @@ public class SpeckleTeklaPanelHost : PluginFormBase
   private ElementHost Host { get; }
   public Model Model { get; private set; }
 
+  public static new ServiceProvider? Container { get; private set; }
+
+  // TODO: private IDisposable? _disposableLogger;
+
   public SpeckleTeklaPanelHost()
   {
+    var services = new ServiceCollection();
+    services.Initialize(HostApplications.TeklaStructures, GetVersion());
+    services.AddTekla();
+
+    // TODO: Add Tekla converters
+
+    Container = services.BuildServiceProvider();
+    Container.UseDUI(); // TODO: this might not needed? ISyncToThread?
+
     Model = new Model(); // don't know what is this..
     if (!Model.GetConnectionStatus())
     {
@@ -26,13 +41,22 @@ public class SpeckleTeklaPanelHost : PluginFormBase
         MessageBoxIcon.Error
       );
     }
-    var webview = TeklaPlugin.Container.GetRequiredService<DUI3ControlWebView>();
-    Host = new() { Child = webview };
+    var webview = Container.GetRequiredService<DUI3ControlWebView>();
+    Host = new() { Child = webview, Dock = DockStyle.Fill };
     Controls.Add(Host);
     Operation.DisplayPrompt("Speckle connector initialized.");
 
     Show();
     Activate();
     Focus();
+  }
+
+  private HostAppVersion GetVersion()
+  {
+#if TEKLA2024
+    return HostAppVersion.v2024;
+#else
+    throw new NotImplementedException();
+#endif
   }
 }
