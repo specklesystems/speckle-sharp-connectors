@@ -1,7 +1,7 @@
-﻿using System.IO;
-using System.Reflection;
-using Speckle.Autofac.DependencyInjection;
-using Speckle.Sdk.Common;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Speckle.Connectors.Common;
+using Speckle.Connectors.DUI;
+using Speckle.Sdk.Host;
 using Tekla.Structures.Plugins;
 
 namespace Speckle.Connector.Tekla2024.Plugin;
@@ -10,20 +10,31 @@ namespace Speckle.Connector.Tekla2024.Plugin;
 [PluginUserInterface("Speckle.Connector.Tekla2024.SpeckleTeklaPanelHost")]
 public class TeklaPlugin : PluginBase
 {
-  public static SpeckleContainer Container { get; private set; }
+  public static ServiceProvider? Container { get; private set; }
+  private IDisposable? _disposableLogger;
 #pragma warning disable IDE1006
   public override bool Run(List<InputDefinition> Input)
   {
-    var builder = SpeckleContainerBuilder.CreateInstance();
-    Container = builder
-      .LoadAutofacModules(
-        Assembly.GetExecutingAssembly(),
-        [Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location).NotNull()]
-      )
-      .Build();
+    var services = new ServiceCollection();
+    _disposableLogger = services.Initialize(HostApplications.TeklaStructures, GetVersion());
+    services.AddTekla();
+    // TODO: Add Tekla converters
+
+    Container = services.BuildServiceProvider();
+    Container.UseDUI(); // TODO: this might not needed? ISyncToThread?
+
     return true;
   }
 #pragma warning restore IDE1006
 
   public override List<InputDefinition> DefineInput() => new();
+
+  private HostAppVersion GetVersion()
+  {
+#if TEKLA2024
+    return HostAppVersion.v2024;
+#else
+    throw new NotImplementedException();
+#endif
+  }
 }

@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <UseWpf>true</UseWpf>
+    <DefineConstants>$(DefineConstants);TEKLA2024</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
