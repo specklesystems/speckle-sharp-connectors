@@ -12,16 +12,13 @@ namespace Speckle.Converters.Revit2023.ToSpeckle;
 public class DirectShapeTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.DirectShape, SOBR.DirectShape>
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
-  private readonly ParameterObjectAssigner _parameterObjectAssigner;
   private readonly DisplayValueExtractor _displayValueExtractor;
 
   public DirectShapeTopLevelConverterToSpeckle(
-    ParameterObjectAssigner parameterObjectAssigner,
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
     DisplayValueExtractor displayValueExtractor
   )
   {
-    _parameterObjectAssigner = parameterObjectAssigner;
     _converterSettings = converterSettings;
     _displayValueExtractor = displayValueExtractor;
   }
@@ -40,8 +37,6 @@ public class DirectShapeTopLevelConverterToSpeckle : BaseTopLevelConverterToSpec
         units = _converterSettings.Current.SpeckleUnits,
         elementId = target.Id.ToString().NotNull()
       };
-
-    _parameterObjectAssigner.AssignParametersToBase(target, result);
 
     result["type"] = target.Name;
 

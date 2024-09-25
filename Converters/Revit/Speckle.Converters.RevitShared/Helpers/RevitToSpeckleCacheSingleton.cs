@@ -15,6 +15,7 @@ namespace Speckle.Converters.RevitShared.Helpers;
 /// Why is this needed? Because two reasons: send caching bypasses converter and revit conversions typically generate multiple display values per element.
 /// Ask dim for more and he might start crying.
 /// </para>
+/// TODO: this dude needs to be split into single responsability (render materials and material quantities), and removed from the context - as it's not needed for it to be there. It can be DI'ed as appropriate (see ParameterDefinitionHandler)
 /// </summary>
 public class RevitToSpeckleCacheSingleton
 {

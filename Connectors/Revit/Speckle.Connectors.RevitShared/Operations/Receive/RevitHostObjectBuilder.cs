@@ -1,11 +1,11 @@
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
 using Revit.Async;
+using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Instances;
+using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.Revit.HostApp;
-using Speckle.Connectors.Utils.Builders;
-using Speckle.Connectors.Utils.Conversion;
-using Speckle.Connectors.Utils.Instances;
-using Speckle.Connectors.Utils.Operations.Receive;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;

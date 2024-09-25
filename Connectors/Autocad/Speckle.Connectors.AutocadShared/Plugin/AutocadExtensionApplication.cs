@@ -1,5 +1,5 @@
 using Autodesk.AutoCAD.Runtime;
-using Speckle.Autofac;
+using Speckle.Connectors.Common;
 
 namespace Speckle.Connectors.Autocad.Plugin;
 

@@ -132,6 +132,22 @@ public class ElementUnpacker
             }
           }
           break;
+        case FootPrintRoof footPrintRoof:
+          if (footPrintRoof.CurtainGrids is { } gs)
+          {
+            foreach (CurtainGrid roofGrid in gs)
+            {
+              foreach (var mullionId in roofGrid.GetMullionIds())
+              {
+                ids.Add(mullionId.ToString());
+              }
+              foreach (var panelId in roofGrid.GetPanelIds())
+              {
+                ids.Add(panelId.ToString());
+              }
+            }
+          }
+          break;
         default:
           break;
       }

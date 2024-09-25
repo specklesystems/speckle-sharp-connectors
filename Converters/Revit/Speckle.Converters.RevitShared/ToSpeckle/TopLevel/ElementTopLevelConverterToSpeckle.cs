@@ -10,17 +10,14 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 public class ElementTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.Element, RevitElement>
 {
   private readonly DisplayValueExtractor _displayValueExtractor;
-  private readonly ParameterObjectAssigner _parameterObjectAssigner;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public ElementTopLevelConverterToSpeckle(
     DisplayValueExtractor displayValueExtractor,
-    ParameterObjectAssigner parameterObjectAssigner,
     IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _displayValueExtractor = displayValueExtractor;
-    _parameterObjectAssigner = parameterObjectAssigner;
     _converterSettings = converterSettings;
   }
 
@@ -42,8 +39,6 @@ public class ElementTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<
       };
 
     speckleElement["units"] = _converterSettings.Current.SpeckleUnits;
-
-    _parameterObjectAssigner.AssignParametersToBase(target, speckleElement);
 
     return speckleElement;
   }

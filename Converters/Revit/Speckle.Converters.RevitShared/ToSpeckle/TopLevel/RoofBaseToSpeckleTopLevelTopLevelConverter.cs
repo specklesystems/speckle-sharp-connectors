@@ -11,17 +11,14 @@ internal sealed class RoofBaseToSpeckleTopLevelTopLevelConverter
   : BaseTopLevelConverterToSpeckle<DB.RoofBase, RevitRoof>
 {
   private readonly DisplayValueExtractor _displayValueExtractor;
-  private readonly ParameterObjectAssigner _parameterObjectAssigner;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public RoofBaseToSpeckleTopLevelTopLevelConverter(
     DisplayValueExtractor displayValueExtractor,
-    ParameterObjectAssigner parameterObjectAssigner,
     IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _displayValueExtractor = displayValueExtractor;
-    _parameterObjectAssigner = parameterObjectAssigner;
     _converterSettings = converterSettings;
   }
 
@@ -38,8 +35,6 @@ internal sealed class RoofBaseToSpeckleTopLevelTopLevelConverter
         displayValue = displayValue,
         units = _converterSettings.Current.SpeckleUnits
       };
-
-    _parameterObjectAssigner.AssignParametersToBase(target, revitRoof);
     return revitRoof;
   }
 }
