@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk.Common;
@@ -13,7 +14,7 @@ public sealed class DisplayValueExtractor
     List<SOG.Mesh>
   > _meshByMaterialConverter;
   private readonly ILogger<DisplayValueExtractor> _logger;
-  private readonly IRevitConversionContextStack _revitConversionContextStack;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public DisplayValueExtractor(
     ITypedConverter<
@@ -21,12 +22,12 @@ public sealed class DisplayValueExtractor
       List<SOG.Mesh>
     > meshByMaterialConverter,
     ILogger<DisplayValueExtractor> logger,
-    IRevitConversionContextStack revitConversionContextStack
+    IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _meshByMaterialConverter = meshByMaterialConverter;
     _logger = logger;
-    _revitConversionContextStack = revitConversionContextStack;
+    _converterSettings = converterSettings;
   }
 
   public List<SOG.Mesh> GetDisplayValue(DB.Element element, DB.Options? options = null)
@@ -67,7 +68,12 @@ public sealed class DisplayValueExtractor
           meshesByMaterial[materialId] = value;
         }
 
-        value.Add(face.Triangulate());
+        var mesh = face.Triangulate(); //Revit API can return null here
+        if (mesh is null)
+        {
+          continue;
+        }
+        value.Add(mesh);
       }
     }
 
@@ -86,10 +92,7 @@ public sealed class DisplayValueExtractor
   private (List<DB.Solid>, List<DB.Mesh>) GetSolidsAndMeshesFromElement(DB.Element element, DB.Options? options)
   {
     //options = ViewSpecificOptions ?? options ?? new Options() { DetailLevel = DetailLevelSetting };
-    options ??= new DB.Options
-    {
-      DetailLevel = _detailLevelMap[_revitConversionContextStack.ToSpeckleSettings.DetailLevel]
-    };
+    options ??= new DB.Options { DetailLevel = _detailLevelMap[_converterSettings.Current.DetailLevel] };
 
     DB.GeometryElement geom;
     try

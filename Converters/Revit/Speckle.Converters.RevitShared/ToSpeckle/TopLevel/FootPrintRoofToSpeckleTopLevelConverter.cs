@@ -2,11 +2,14 @@ using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects;
 using Speckle.Objects.BuiltElements.Revit;
 using Speckle.Objects.BuiltElements.Revit.RevitRoof;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Extensions;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -18,24 +21,24 @@ public class FootPrintRoofToSpeckleTopLevelConverter
   private readonly ITypedConverter<DB.ModelCurveArrArray, SOG.Polycurve[]> _modelCurveArrArrayConverter;
   private readonly ParameterValueExtractor _parameterValueExtractor;
   private readonly DisplayValueExtractor _displayValueExtractor;
-  private readonly ParameterObjectAssigner _parameterObjectAssigner;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly IRootToSpeckleConverter _converter;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public FootPrintRoofToSpeckleTopLevelConverter(
     ITypedConverter<Level, RevitLevel> levelConverter,
     ITypedConverter<ModelCurveArrArray, Polycurve[]> modelCurveArrArrayConverter,
     ParameterValueExtractor parameterValueExtractor,
     DisplayValueExtractor displayValueExtractor,
-    ParameterObjectAssigner parameterObjectAssigner,
-    IRevitConversionContextStack contextStack
+    IRootToSpeckleConverter converter,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _levelConverter = levelConverter;
     _modelCurveArrArrayConverter = modelCurveArrArrayConverter;
     _parameterValueExtractor = parameterValueExtractor;
     _displayValueExtractor = displayValueExtractor;
-    _parameterObjectAssigner = parameterObjectAssigner;
-    _contextStack = contextStack;
+    _converter = converter;
+    _converterSettings = converterSettings;
   }
 
   public override RevitFootprintRoof Convert(FootPrintRoof target)
@@ -68,8 +71,28 @@ public class FootPrintRoofToSpeckleTopLevelConverter
         cutOffLevel = topLevel is not null ? _levelConverter.Convert(topLevel) : null,
         slope = slope,
         displayValue = displayValue,
-        units = _contextStack.Current.SpeckleUnits
+        units = _converterSettings.Current.SpeckleUnits
       };
+
+    // Shockingly, roofs can have curtain grids on them. I guess it makes sense: https://en.wikipedia.org/wiki/Louvre_Pyramid
+    if (target.CurtainGrids is { } gs)
+    {
+      List<Base> roofChildren = new();
+      foreach (CurtainGrid grid in gs)
+      {
+        roofChildren.AddRange(ConvertElements(grid.GetMullionIds()));
+        roofChildren.AddRange(ConvertElements(grid.GetPanelIds()));
+      }
+
+      if (speckleFootprintRoof.GetDetachedProp("elements") is List<Base> elements)
+      {
+        elements.AddRange(roofChildren);
+      }
+      else
+      {
+        speckleFootprintRoof.SetDetachedProp("elements", roofChildren);
+      }
+    }
 
     // POC: CNX-9396 again with the incorrect assumption that the first profile is the floor and subsequent profiles
     // are voids
@@ -79,10 +102,14 @@ public class FootPrintRoofToSpeckleTopLevelConverter
     speckleFootprintRoof.outline = profiles.FirstOrDefault().NotNull();
     speckleFootprintRoof.voids = profiles.Skip(1).ToList<ICurve>();
 
-    // POC: we are starting to see logic that is happening in all converters. We should definitely consider some
-    // conversion pipeline behavior. Would probably require adding interfaces into objects kit
-    _parameterObjectAssigner.AssignParametersToBase(target, speckleFootprintRoof);
-
     return speckleFootprintRoof;
+  }
+
+  private IEnumerable<Base> ConvertElements(IEnumerable<DB.ElementId> elementIds)
+  {
+    foreach (DB.ElementId elementId in elementIds)
+    {
+      yield return _converter.Convert(_converterSettings.Current.Document.GetElement(elementId));
+    }
   }
 }

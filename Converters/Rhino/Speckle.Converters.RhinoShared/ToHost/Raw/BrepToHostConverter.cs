@@ -1,4 +1,3 @@
-using Rhino;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
@@ -7,21 +6,21 @@ namespace Speckle.Converters.Rhino.ToHost.Raw;
 
 public class BrepToHostConverter : ITypedConverter<SOG.Brep, RG.Brep>
 {
-  private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
+  private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
   private readonly ITypedConverter<ICurve, RG.Curve> _curveConverter;
   private readonly ITypedConverter<SOG.Surface, RG.NurbsSurface> _surfaceConverter;
   private readonly ITypedConverter<SOG.Point, RG.Point3d> _pointConverter;
   private readonly ITypedConverter<SOP.Interval, RG.Interval> _intervalConverter;
 
   public BrepToHostConverter(
-    IConversionContextStack<RhinoDoc, UnitSystem> contextStack,
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore,
     ITypedConverter<ICurve, RG.Curve> curveConverter,
     ITypedConverter<SOG.Surface, RG.NurbsSurface> surfaceConverter,
     ITypedConverter<SOG.Point, RG.Point3d> pointConverter,
     ITypedConverter<SOP.Interval, RG.Interval> intervalConverter
   )
   {
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
     _curveConverter = curveConverter;
     _surfaceConverter = surfaceConverter;
     _pointConverter = pointConverter;
@@ -42,7 +41,7 @@ public class BrepToHostConverter : ITypedConverter<SOG.Brep, RG.Brep>
   /// <remarks>⚠️ This conversion does NOT perform scaling.</remarks>
   public RG.Brep Convert(SOG.Brep target)
   {
-    var tolerance = _contextStack.Current.Document.ModelAbsoluteTolerance;
+    var tolerance = _settingsStore.Current.Document.ModelAbsoluteTolerance;
 
     var rhinoBrep = new RG.Brep();
 

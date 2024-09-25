@@ -1,28 +1,32 @@
-﻿using Rhino;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
-using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
 
 public class PolyCurveToSpeckleConverter : ITypedConverter<RG.PolyCurve, SOG.Polycurve>
 {
-  public ITypedConverter<RG.Curve, ICurve>? CurveConverter { get; set; } // POC: CNX-9279 This created a circular dependency on the constructor, making it a property allows for the container to resolve it correctly
+  private readonly IServiceProvider _serviceProvider;
   private readonly ITypedConverter<RG.Interval, SOP.Interval> _intervalConverter;
   private readonly ITypedConverter<RG.Box, SOG.Box> _boxConverter;
-  private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
+  private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   public PolyCurveToSpeckleConverter(
     ITypedConverter<RG.Interval, SOP.Interval> intervalConverter,
     ITypedConverter<RG.Box, SOG.Box> boxConverter,
-    IConversionContextStack<RhinoDoc, UnitSystem> contextStack
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore,
+    IServiceProvider serviceProvider
   )
   {
     _intervalConverter = intervalConverter;
     _boxConverter = boxConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
+    _serviceProvider = serviceProvider;
   }
+
+  private Lazy<ITypedConverter<RG.Curve, ICurve>> CurveConverter =>
+    new(() => _serviceProvider.GetRequiredService<ITypedConverter<RG.Curve, ICurve>>());
 
   /// <summary>
   /// Converts a Rhino PolyCurve to a Speckle Polycurve.
@@ -41,8 +45,8 @@ public class PolyCurveToSpeckleConverter : ITypedConverter<RG.PolyCurve, SOG.Pol
       domain = _intervalConverter.Convert(target.Domain),
       length = target.GetLength(),
       bbox = _boxConverter.Convert(new RG.Box(target.GetBoundingBox(true))),
-      segments = target.DuplicateSegments().Select(x => CurveConverter.NotNull().Convert(x)).ToList(),
-      units = _contextStack.Current.SpeckleUnits
+      segments = target.DuplicateSegments().Select(x => CurveConverter.Value.Convert(x)).ToList(),
+      units = _settingsStore.Current.SpeckleUnits
     };
     return myPoly;
   }

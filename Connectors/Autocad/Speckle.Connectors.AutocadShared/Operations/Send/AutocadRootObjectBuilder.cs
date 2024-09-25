@@ -1,20 +1,19 @@
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Autodesk.AutoCAD.DatabaseServices;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp;
-using Speckle.Connectors.Utils.Builders;
-using Speckle.Connectors.Utils.Caching;
-using Speckle.Connectors.Utils.Conversion;
-using Speckle.Connectors.Utils.Extensions;
-using Speckle.Connectors.Utils.Operations;
+using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Caching;
+using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Extensions;
+using Speckle.Connectors.Common.Operations;
+using Speckle.Converters.Autocad;
 using Speckle.Converters.Common;
-using Speckle.Objects.Other;
 using Speckle.Sdk;
+using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
-using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Connectors.Autocad.Operations.Send;
 
@@ -22,37 +21,47 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
 {
   private readonly IRootToSpeckleConverter _converter;
   private readonly string[] _documentPathSeparator = ["\\"];
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _converterSettings;
   private readonly ISendConversionCache _sendConversionCache;
-  private readonly AutocadInstanceObjectManager _instanceObjectsManager;
-  private readonly AutocadMaterialManager _materialManager;
-  private readonly AutocadColorManager _colorManager;
-  private readonly AutocadLayerManager _layerManager;
-  private readonly AutocadGroupManager _groupManager;
-  private readonly ISyncToThread _syncToThread;
+  private readonly AutocadInstanceUnpacker _instanceUnpacker;
+  private readonly AutocadMaterialUnpacker _materialUnpacker;
+  private readonly AutocadColorUnpacker _colorUnpacker;
+  private readonly AutocadLayerUnpacker _layerUnpacker;
+  private readonly AutocadGroupUnpacker _groupUnpacker;
   private readonly ILogger<AutocadRootObjectBuilder> _logger;
+  private readonly ISdkActivityFactory _activityFactory;
 
   public AutocadRootObjectBuilder(
     IRootToSpeckleConverter converter,
     ISendConversionCache sendConversionCache,
-    AutocadInstanceObjectManager instanceObjectManager,
-    AutocadMaterialManager materialManager,
-    AutocadColorManager colorManager,
-    AutocadLayerManager layerManager,
-    AutocadGroupManager groupManager,
-    ISyncToThread syncToThread,
-    ILogger<AutocadRootObjectBuilder> logger
+    AutocadInstanceUnpacker instanceObjectManager,
+    AutocadMaterialUnpacker materialUnpacker,
+    AutocadColorUnpacker colorUnpacker,
+    AutocadLayerUnpacker layerUnpacker,
+    AutocadGroupUnpacker groupUnpacker,
+    ILogger<AutocadRootObjectBuilder> logger,
+    ISdkActivityFactory activityFactory,
+    IConverterSettingsStore<AutocadConversionSettings> converterSettings
   )
   {
     _converter = converter;
     _sendConversionCache = sendConversionCache;
-    _instanceObjectsManager = instanceObjectManager;
-    _materialManager = materialManager;
-    _colorManager = colorManager;
-    _layerManager = layerManager;
-    _groupManager = groupManager;
-    _syncToThread = syncToThread;
+    _instanceUnpacker = instanceObjectManager;
+    _materialUnpacker = materialUnpacker;
+    _colorUnpacker = colorUnpacker;
+    _layerUnpacker = layerUnpacker;
+    _groupUnpacker = groupUnpacker;
     _logger = logger;
+    _activityFactory = activityFactory;
+    _converterSettings = converterSettings;
   }
+
+  public Task<RootObjectBuilderResult> Build(
+    IReadOnlyList<AutocadRootObject> objects,
+    SendInfo sendInfo,
+    Action<string, double?>? onOperationProgressed = null,
+    CancellationToken ct = default
+  ) => Task.FromResult(BuildSync(objects, sendInfo, onOperationProgressed, ct));
 
   [SuppressMessage(
     "Maintainability",
@@ -63,80 +72,59 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
       proxy classes yet. So I'm supressing this one now!!!
       """
   )]
-  public Task<RootObjectBuilderResult> Build(
+  private RootObjectBuilderResult BuildSync(
     IReadOnlyList<AutocadRootObject> objects,
     SendInfo sendInfo,
-    Action<string, double?>? onOperationProgressed = null,
-    CancellationToken ct = default
+    Action<string, double?>? onOperationProgressed,
+    CancellationToken ct
   )
   {
-    return _syncToThread.RunOnThread(() =>
+    // 0 - Init the root
+    Collection root =
+      new()
+      {
+        name = Application
+          .DocumentManager.CurrentDocument.Name // POC: https://spockle.atlassian.net/browse/CNX-9319
+          .Split(_documentPathSeparator, StringSplitOptions.None)
+          .Reverse()
+          .First()
+      };
+    root["units"] = _converterSettings.Current.SpeckleUnits;
+
+    // TODO: better handling for document and transactions!!
+    Document doc = Application.DocumentManager.CurrentDocument;
+    using Transaction tr = doc.Database.TransactionManager.StartTransaction();
+
+    // 1 - Unpack the instances
+    var (atomicObjects, instanceProxies, instanceDefinitionProxies) = _instanceUnpacker.UnpackSelection(objects);
+    root[ProxyKeys.INSTANCE_DEFINITION] = instanceDefinitionProxies;
+
+    // 2 - Unpack the groups
+    root[ProxyKeys.GROUP] = _groupUnpacker.UnpackGroups(atomicObjects);
+    using (var _ = _activityFactory.Start("Converting objects"))
     {
-      Collection modelWithLayers =
-        new()
-        {
-          name = Application
-            .DocumentManager.CurrentDocument.Name // POC: https://spockle.atlassian.net/browse/CNX-9319
-            .Split(_documentPathSeparator, StringSplitOptions.None)
-            .Reverse()
-            .First()
-        };
-
-      // TODO: better handling for document and transactions!!
-      Document doc = Application.DocumentManager.CurrentDocument;
-      using Transaction tr = doc.Database.TransactionManager.StartTransaction();
-
-      // Keeps track of autocad layers used, so we can pass them on later to the material and color unpacker.
-      List<LayerTableRecord> usedAcadLayers = new();
-      int count = 0;
-
-      var (atomicObjects, instanceProxies, instanceDefinitionProxies) = _instanceObjectsManager.UnpackSelection(
-        objects
-      );
-
+      // 3 - Convert atomic objects
+      List<LayerTableRecord> usedAcadLayers = new(); // Keeps track of autocad layers used, so we can pass them on later to the material and color unpacker.
       List<SendConversionResult> results = new();
-      var cacheHitCount = 0;
-
+      int count = 0;
       foreach (var (entity, applicationId) in atomicObjects)
       {
         ct.ThrowIfCancellationRequested();
-        string sourceType = entity.GetType().ToString();
-        try
+        using (var convertActivity = _activityFactory.Start("Converting object"))
         {
-          Base converted;
-          if (entity is BlockReference && instanceProxies.TryGetValue(applicationId, out InstanceProxy? instanceProxy))
-          {
-            converted = instanceProxy;
-          }
-          else if (_sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value))
-          {
-            converted = value;
-            cacheHitCount++;
-          }
-          else
-          {
-            converted = _converter.Convert(entity);
-            converted.applicationId = applicationId;
-          }
-
           // Create and add a collection for each layer if not done so already.
-          Layer layer = _layerManager.GetOrCreateSpeckleLayer(entity, tr, out LayerTableRecord? autocadLayer);
+          Layer layer = _layerUnpacker.GetOrCreateSpeckleLayer(entity, tr, out LayerTableRecord? autocadLayer);
           if (autocadLayer is not null)
           {
             usedAcadLayers.Add(autocadLayer);
-            modelWithLayers.elements.Add(layer);
+            root.elements.Add(layer);
           }
 
-          layer.elements.Add(converted);
-          results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
-        }
-        catch (Exception ex) when (!ex.IsFatal())
-        {
-          _logger.LogSendConversionError(ex, sourceType);
+          var result = ConvertAutocadEntity(entity, applicationId, layer, instanceProxies, sendInfo.ProjectId);
+          results.Add(result);
 
-          results.Add(new(Status.ERROR, applicationId, sourceType, null, ex));
+          onOperationProgressed?.Invoke("Converting", (double)++count / atomicObjects.Count);
         }
-        onOperationProgressed?.Invoke("Converting", (double)++count / atomicObjects.Count);
       }
 
       if (results.All(x => x.Status == Status.ERROR))
@@ -144,37 +132,49 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
         throw new SpeckleConversionException("Failed to convert all objects."); // fail fast instead creating empty commit! It will appear as model card error with red color.
       }
 
-      // POC: Log would be nice, or can be removed.
-      Debug.WriteLine(
-        $"Cache hit count {cacheHitCount} out of {objects.Count} ({(double)cacheHitCount / objects.Count})"
-      );
+      // 4 - Unpack the render material proxies
+      root[ProxyKeys.RENDER_MATERIAL] = _materialUnpacker.UnpackMaterials(atomicObjects, usedAcadLayers);
 
-      var conversionFailedAppIds = results
-        .FindAll(result => result.Status == Status.ERROR)
-        .Select(result => result.SourceId);
+      // 5 - Unpack the color proxies
+      root[ProxyKeys.COLOR] = _colorUnpacker.UnpackColors(atomicObjects, usedAcadLayers);
 
-      // Cleans up objects that failed to convert from definition proxies.
-      // see https://linear.app/speckle/issue/CNX-115/viewer-handle-gracefully-instances-with-elements-that-failed-to
-      foreach (var definitionProxy in instanceDefinitionProxies)
+      return new RootObjectBuilderResult(root, results);
+    }
+  }
+
+  private SendConversionResult ConvertAutocadEntity(
+    Entity entity,
+    string applicationId,
+    Collection collectionHost,
+    IReadOnlyDictionary<string, InstanceProxy> instanceProxies,
+    string projectId
+  )
+  {
+    string sourceType = entity.GetType().ToString();
+    try
+    {
+      Base converted;
+      if (entity is BlockReference && instanceProxies.TryGetValue(applicationId, out InstanceProxy? instanceProxy))
       {
-        definitionProxy.objects.RemoveAll(id => conversionFailedAppIds.Contains(id));
+        converted = instanceProxy;
       }
-      // Set definition proxies
-      modelWithLayers["instanceDefinitionProxies"] = instanceDefinitionProxies;
+      else if (_sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value))
+      {
+        converted = value;
+      }
+      else
+      {
+        converted = _converter.Convert(entity);
+        converted.applicationId = applicationId;
+      }
 
-      // set groups
-      List<GroupProxy> groupProxies = _groupManager.UnpackGroups(atomicObjects);
-      modelWithLayers["groupProxies"] = groupProxies;
-
-      // set materials
-      List<RenderMaterialProxy> materialProxies = _materialManager.UnpackMaterials(atomicObjects, usedAcadLayers);
-      modelWithLayers["renderMaterialProxies"] = materialProxies;
-
-      // set colors
-      List<ColorProxy> colorProxies = _colorManager.UnpackColors(atomicObjects, usedAcadLayers);
-      modelWithLayers["colorProxies"] = colorProxies;
-
-      return new RootObjectBuilderResult(modelWithLayers, results);
-    });
+      collectionHost.elements.Add(converted);
+      return new(Status.SUCCESS, applicationId, sourceType, converted);
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogSendConversionError(ex, sourceType);
+      return new(Status.ERROR, applicationId, sourceType, null, ex);
+    }
   }
 }

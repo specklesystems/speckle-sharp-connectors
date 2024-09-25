@@ -2,9 +2,9 @@
 using NUnit.Framework;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Raw;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects;
 using Speckle.Testing;
 
@@ -15,7 +15,7 @@ public class ModelCurveArrayToSpeckleConverterTests : MoqTest
   [Test]
   public void Convert_Empty()
   {
-    var revitConversionContextStack = Create<IRevitConversionContextStack>();
+    var revitConversionContextStack = Create<IConverterSettingsStore<RevitConversionSettings>>();
     var scalingServiceToSpeckle = Create<IScalingServiceToSpeckle>();
     var curveConverter = Create<ITypedConverter<DB.Curve, ICurve>>();
 
@@ -32,7 +32,7 @@ public class ModelCurveArrayToSpeckleConverterTests : MoqTest
   [Test]
   public void Convert()
   {
-    var revitConversionContextStack = Create<IRevitConversionContextStack>();
+    var revitConversionContextStack = Create<IConverterSettingsStore<RevitConversionSettings>>();
     var scalingServiceToSpeckle = Create<IScalingServiceToSpeckle>();
     var curveConverter = Create<ITypedConverter<DB.Curve, ICurve>>();
 
@@ -50,11 +50,10 @@ public class ModelCurveArrayToSpeckleConverterTests : MoqTest
     geometry2.Setup(x => x.Length).Returns(3);
     geometry2.Setup(x => x.GetEndPoint(1)).Returns(endpoint2.Object);
 
-    var context = Create<IConversionContext<DB.Document>>();
-    revitConversionContextStack.Setup(x => x.Current).Returns(context.Object);
-
     var units = "units";
-    context.Setup(x => x.SpeckleUnits).Returns(units);
+    revitConversionContextStack
+      .Setup(x => x.Current)
+      .Returns(new RevitConversionSettings(null!, DetailLevelType.Coarse, null, units, false));
 
     var scaleLength = 2.2;
     scalingServiceToSpeckle.Setup(x => x.ScaleLength(2 + 3)).Returns(scaleLength);

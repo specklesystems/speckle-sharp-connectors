@@ -1,6 +1,7 @@
 using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects.BuiltElements.Revit.RevitRoof;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
@@ -10,18 +11,15 @@ internal sealed class RoofBaseToSpeckleTopLevelTopLevelConverter
   : BaseTopLevelConverterToSpeckle<DB.RoofBase, RevitRoof>
 {
   private readonly DisplayValueExtractor _displayValueExtractor;
-  private readonly ParameterObjectAssigner _parameterObjectAssigner;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public RoofBaseToSpeckleTopLevelTopLevelConverter(
     DisplayValueExtractor displayValueExtractor,
-    ParameterObjectAssigner parameterObjectAssigner,
-    IRevitConversionContextStack contextStack
+    IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _displayValueExtractor = displayValueExtractor;
-    _parameterObjectAssigner = parameterObjectAssigner;
-    _contextStack = contextStack;
+    _converterSettings = converterSettings;
   }
 
   public override RevitRoof Convert(RoofBase target)
@@ -35,10 +33,8 @@ internal sealed class RoofBaseToSpeckleTopLevelTopLevelConverter
         type = elementType.Name,
         family = elementType.FamilyName,
         displayValue = displayValue,
-        units = _contextStack.Current.SpeckleUnits
+        units = _converterSettings.Current.SpeckleUnits
       };
-
-    _parameterObjectAssigner.AssignParametersToBase(target, revitRoof);
     return revitRoof;
   }
 }

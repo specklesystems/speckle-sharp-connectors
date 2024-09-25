@@ -1,6 +1,7 @@
 ﻿using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Converters.RevitShared.ToSpeckle;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
@@ -10,18 +11,15 @@ namespace Speckle.Converters.Revit2023.ToSpeckle;
 [NameAndRankValue(nameof(DB.DirectShape), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class DirectShapeTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.DirectShape, SOBR.DirectShape>
 {
-  private readonly IRevitConversionContextStack _contextStack;
-  private readonly ParameterObjectAssigner _parameterObjectAssigner;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly DisplayValueExtractor _displayValueExtractor;
 
   public DirectShapeTopLevelConverterToSpeckle(
-    ParameterObjectAssigner parameterObjectAssigner,
-    IRevitConversionContextStack contextStack,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     DisplayValueExtractor displayValueExtractor
   )
   {
-    _parameterObjectAssigner = parameterObjectAssigner;
-    _contextStack = contextStack;
+    _converterSettings = converterSettings;
     _displayValueExtractor = displayValueExtractor;
   }
 
@@ -36,11 +34,9 @@ public class DirectShapeTopLevelConverterToSpeckle : BaseTopLevelConverterToSpec
       new(target.Name, category, geometries)
       {
         displayValue = geometries,
-        units = _contextStack.Current.SpeckleUnits,
+        units = _converterSettings.Current.SpeckleUnits,
         elementId = target.Id.ToString().NotNull()
       };
-
-    _parameterObjectAssigner.AssignParametersToBase(target, result);
 
     result["type"] = target.Name;
 

@@ -1,15 +1,17 @@
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Revit.HostApp;
-using Speckle.Connectors.Utils.Caching;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.Operations.Send.Settings;
 
-public class ToSpeckleSettingsManager
+[GenerateAutoInterface]
+public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 {
   private readonly RevitContext _revitContext;
   private readonly ISendConversionCache _sendConversionCache;
@@ -18,6 +20,7 @@ public class ToSpeckleSettingsManager
   // cache invalidation process run with ModelCardId since the settings are model specific
   private readonly Dictionary<string, DetailLevelType> _detailLevelCache = new();
   private readonly Dictionary<string, Transform?> _referencePointCache = new();
+  private readonly Dictionary<string, bool?> _sendNullParamsCache = new();
 
   public ToSpeckleSettingsManager(
     RevitContext revitContext,
@@ -30,15 +33,7 @@ public class ToSpeckleSettingsManager
     _sendConversionCache = sendConversionCache;
   }
 
-  public ToSpeckleSettings GetToSpeckleSettings(SenderModelCard modelCard)
-  {
-    DetailLevelType detailLevel = GetDetailLevelSetting(modelCard);
-    Transform? referencePointTransform = GetReferencePointSetting(modelCard);
-
-    return new ToSpeckleSettings(detailLevel, referencePointTransform);
-  }
-
-  private DetailLevelType GetDetailLevelSetting(SenderModelCard modelCard)
+  public DetailLevelType GetDetailLevelSetting(SenderModelCard modelCard)
   {
     var fidelityString = modelCard.Settings?.First(s => s.Id == "detailLevel").Value as string;
     if (
@@ -50,9 +45,7 @@ public class ToSpeckleSettingsManager
       {
         if (previousType != fidelity)
         {
-          var objectIds = modelCard.SendFilter != null ? modelCard.SendFilter.GetObjectIds() : [];
-          var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds);
-          _sendConversionCache.EvictObjects(unpackedObjectIds);
+          EvictCacheForModelCard(modelCard);
         }
       }
       _detailLevelCache[modelCard.ModelCardId.NotNull()] = fidelity;
@@ -62,7 +55,7 @@ public class ToSpeckleSettingsManager
     throw new ArgumentException($"Invalid geometry fidelity value: {fidelityString}");
   }
 
-  private Transform? GetReferencePointSetting(SenderModelCard modelCard)
+  public Transform? GetReferencePointSetting(SenderModelCard modelCard)
   {
     var referencePointString = modelCard.Settings?.First(s => s.Id == "referencePoint").Value as string;
     if (
@@ -82,9 +75,7 @@ public class ToSpeckleSettingsManager
         // invalidate conversion cache if the transform has changed
         if (previousTransform != currentTransform)
         {
-          var objectIds = modelCard.SendFilter != null ? modelCard.SendFilter.GetObjectIds() : [];
-          var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds);
-          _sendConversionCache.EvictObjects(unpackedObjectIds);
+          EvictCacheForModelCard(modelCard);
         }
       }
 
@@ -93,6 +84,29 @@ public class ToSpeckleSettingsManager
     }
 
     throw new ArgumentException($"Invalid reference point value: {referencePointString}");
+  }
+
+  public bool GetSendParameterNullOrEmptyStringsSetting(SenderModelCard modelCard)
+  {
+    var value = modelCard.Settings?.First(s => s.Id == "nullemptyparams").Value as bool?;
+    var returnValue = value != null && value.NotNull();
+    if (_sendNullParamsCache.TryGetValue(modelCard.ModelCardId.NotNull(), out bool? previousValue))
+    {
+      if (previousValue != returnValue)
+      {
+        EvictCacheForModelCard(modelCard);
+      }
+    }
+
+    _sendNullParamsCache[modelCard.ModelCardId] = returnValue;
+    return returnValue;
+  }
+
+  private void EvictCacheForModelCard(SenderModelCard modelCard)
+  {
+    var objectIds = modelCard.SendFilter != null ? modelCard.SendFilter.GetObjectIds() : [];
+    var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds);
+    _sendConversionCache.EvictObjects(unpackedObjectIds);
   }
 
   private Transform? GetTransform(RevitContext context, ReferencePointType referencePointType)

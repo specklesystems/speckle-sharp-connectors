@@ -1,17 +1,15 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
-using Speckle.Connectors.Utils.Builders;
-using Speckle.Connectors.Utils.Conversion;
-using Speckle.Connectors.Utils.Operations;
+using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Converters.Common;
-using Speckle.Objects.Other;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
-using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
-using Speckle.Sdk.Models.Proxies;
 using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 
 namespace Speckle.Connectors.Autocad.Operations.Receive;
@@ -21,37 +19,37 @@ namespace Speckle.Connectors.Autocad.Operations.Receive;
 /// </summary>
 public class AutocadHostObjectBuilder : IHostObjectBuilder
 {
-  private readonly AutocadLayerManager _autocadLayerManager;
+  private readonly AutocadLayerBaker _layerBaker;
   private readonly IRootToHostConverter _converter;
-  private readonly GraphTraversal _traversalFunction;
   private readonly ISyncToThread _syncToThread;
-  private readonly AutocadGroupManager _groupManager;
-  private readonly AutocadMaterialManager _materialManager;
-  private readonly AutocadColorManager _colorManager;
-  private readonly AutocadInstanceObjectManager _instanceObjectsManager;
+  private readonly AutocadGroupBaker _groupBaker;
+  private readonly AutocadMaterialBaker _materialBaker;
+  private readonly AutocadColorBaker _colorBaker;
+  private readonly AutocadInstanceBaker _instanceBaker;
   private readonly AutocadContext _autocadContext;
+  private readonly RootObjectUnpacker _rootObjectUnpacker;
 
   public AutocadHostObjectBuilder(
     IRootToHostConverter converter,
-    GraphTraversal traversalFunction,
-    AutocadLayerManager autocadLayerManager,
-    AutocadGroupManager groupManager,
-    AutocadInstanceObjectManager instanceObjectsManager,
-    AutocadMaterialManager materialManager,
-    AutocadColorManager colorManager,
+    AutocadLayerBaker layerBaker,
+    AutocadGroupBaker groupBaker,
+    AutocadInstanceBaker instanceBaker,
+    AutocadMaterialBaker materialBaker,
+    AutocadColorBaker colorBaker,
     ISyncToThread syncToThread,
-    AutocadContext autocadContext
+    AutocadContext autocadContext,
+    RootObjectUnpacker rootObjectUnpacker
   )
   {
     _converter = converter;
-    _traversalFunction = traversalFunction;
-    _autocadLayerManager = autocadLayerManager;
-    _groupManager = groupManager;
-    _instanceObjectsManager = instanceObjectsManager;
-    _materialManager = materialManager;
-    _colorManager = colorManager;
+    _layerBaker = layerBaker;
+    _groupBaker = groupBaker;
+    _instanceBaker = instanceBaker;
+    _materialBaker = materialBaker;
+    _colorBaker = colorBaker;
     _syncToThread = syncToThread;
     _autocadContext = autocadContext;
+    _rootObjectUnpacker = rootObjectUnpacker;
   }
 
   public Task<HostObjectBuilderResult> Build(
@@ -60,89 +58,61 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     string modelName,
     Action<string, double?>? onOperationProgressed,
     CancellationToken _
-  )
-  {
-    return _syncToThread.RunOnThread(() =>
+  ) =>
+    // NOTE: This is the only place we apply ISyncToThread across connectors. We need to sync up with main thread here
+    //  after GetObject and Deserialization. It is anti-pattern now. Happiness level 3/10 but works.
+    _syncToThread.RunOnThread(() =>
     {
       // Prompt the UI conversion started. Progress bar will swoosh.
       onOperationProgressed?.Invoke("Converting", null);
 
       // Layer filter for received commit with project and model name
-      _autocadLayerManager.CreateLayerFilter(projectName, modelName);
+      _layerBaker.CreateLayerFilter(projectName, modelName);
 
+      // 0 - Clean then Rock n Roll!
       string baseLayerPrefix = _autocadContext.RemoveInvalidChars($"SPK-{projectName}-{modelName}-");
-
       PreReceiveDeepClean(baseLayerPrefix);
 
-      List<ReceiveConversionResult> results = new();
-      List<string> bakedObjectIds = new();
+      // 1 - Unpack objects and proxies from root commit object
+      var unpackedRoot = _rootObjectUnpacker.Unpack(rootObject);
 
-      var objectGraph = _traversalFunction.Traverse(rootObject).Where(obj => obj.Current is not Collection);
+      // 2 - Split atomic objects and instance components with their path
+      var (atomicObjects, instanceComponents) = _rootObjectUnpacker.SplitAtomicObjectsAndInstances(
+        unpackedRoot.ObjectsToConvert
+      );
+      var atomicObjectsWithPath = _layerBaker.GetAtomicObjectsWithPath(atomicObjects);
+      var instanceComponentsWithPath = _layerBaker.GetInstanceComponentsWithPath(instanceComponents);
 
       // POC: these are not captured by traversal, so we need to re-add them here
-      var instanceDefinitionProxies = (rootObject["instanceDefinitionProxies"] as List<object>)
-        ?.Cast<InstanceDefinitionProxy>()
-        .ToList();
-
-      var instanceComponents = new List<(Collection[] path, IInstanceComponent obj)>();
-      // POC: these are not captured by traversal, so we need to re-add them here
-      if (instanceDefinitionProxies != null && instanceDefinitionProxies.Count > 0)
+      if (unpackedRoot.DefinitionProxies != null && unpackedRoot.DefinitionProxies.Count > 0)
       {
-        var transformed = instanceDefinitionProxies.Select(proxy =>
+        var transformed = unpackedRoot.DefinitionProxies.Select(proxy =>
           (Array.Empty<Collection>(), proxy as IInstanceComponent)
         );
-        instanceComponents.AddRange(transformed);
+        instanceComponentsWithPath.AddRange(transformed);
       }
 
-      // POC: get colors
-      List<ColorProxy>? colors = (rootObject["colorProxies"] as List<object>)?.Cast<ColorProxy>().ToList();
-      if (colors != null)
+      // 3 - Bake materials and colors, as they are used later down the line by layers and objects
+      if (unpackedRoot.RenderMaterialProxies != null)
       {
-        _colorManager.ParseColors(colors, onOperationProgressed);
-      }
-
-      // POC: get render materials
-      List<RenderMaterialProxy>? renderMaterials = (rootObject["renderMaterialProxies"] as List<object>)
-        ?.Cast<RenderMaterialProxy>()
-        .ToList();
-
-      if (renderMaterials != null)
-      {
-        List<ReceiveConversionResult> materialResults = _materialManager.ParseAndBakeRenderMaterials(
-          renderMaterials,
+        _materialBaker.ParseAndBakeRenderMaterials(
+          unpackedRoot.RenderMaterialProxies,
           baseLayerPrefix,
           onOperationProgressed
         );
-
-        results.AddRange(materialResults);
       }
 
-      // POC: get group proxies
-      var groupProxies = (rootObject["groupProxies"] as List<object>)?.Cast<GroupProxy>().ToList();
-
-      var atomicObjects = new List<(Collection[] layerPath, Base obj)>();
-
-      foreach (TraversalContext tc in objectGraph)
+      if (unpackedRoot.ColorProxies != null)
       {
-        // create new speckle layer from layer path
-        Collection[] layerPath = _autocadLayerManager.GetLayerPath(tc);
-        switch (tc.Current)
-        {
-          case IInstanceComponent instanceComponent:
-            instanceComponents.Add((layerPath, instanceComponent));
-            break;
-          case GroupProxy:
-            continue;
-          default:
-            atomicObjects.Add((layerPath, tc.Current));
-            break;
-        }
+        _colorBaker.ParseColors(unpackedRoot.ColorProxies, onOperationProgressed);
       }
 
-      // Stage 1: Convert atomic objects
+      // 5 - Convert atomic objects
+      List<ReceiveConversionResult> results = new();
+      List<string> bakedObjectIds = new();
       Dictionary<string, List<Entity>> applicationIdMap = new();
       var count = 0;
-      foreach (var (layerPath, atomicObject) in atomicObjects)
+      foreach (var (layerPath, atomicObject) in atomicObjectsWithPath)
       {
         string objectId = atomicObject.applicationId ?? atomicObject.id;
         onOperationProgressed?.Invoke("Converting objects", (double)++count / atomicObjects.Count);
@@ -169,9 +139,9 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
         }
       }
 
-      // Stage 2: Convert instances
-      var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = _instanceObjectsManager.BakeInstances(
-        instanceComponents,
+      // 6 - Convert instances
+      var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = _instanceBaker.BakeInstances(
+        instanceComponentsWithPath,
         applicationIdMap,
         baseLayerPrefix,
         onOperationProgressed
@@ -182,27 +152,29 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       results.RemoveAll(result => result.ResultId != null && consumedObjectIds.Contains(result.ResultId));
       results.AddRange(instanceConversionResults);
 
-      // Stage 3: Create group
-      if (groupProxies != null)
+      // 7 - Create groups
+      if (unpackedRoot.GroupProxies != null)
       {
-        List<ReceiveConversionResult> groupResults = _groupManager.CreateGroups(groupProxies, applicationIdMap);
+        List<ReceiveConversionResult> groupResults = _groupBaker.CreateGroups(
+          unpackedRoot.GroupProxies,
+          applicationIdMap
+        );
         results.AddRange(groupResults);
       }
 
       return new HostObjectBuilderResult(bakedObjectIds, results);
     });
-  }
 
   private void PreReceiveDeepClean(string baseLayerPrefix)
   {
-    _autocadLayerManager.DeleteAllLayersByPrefix(baseLayerPrefix);
-    _instanceObjectsManager.PurgeInstances(baseLayerPrefix);
-    _materialManager.PurgeMaterials(baseLayerPrefix);
+    _layerBaker.DeleteAllLayersByPrefix(baseLayerPrefix);
+    _instanceBaker.PurgeInstances(baseLayerPrefix);
+    _materialBaker.PurgeMaterials(baseLayerPrefix);
   }
 
   private IEnumerable<Entity> ConvertObject(Base obj, Collection[] layerPath, string baseLayerNamePrefix)
   {
-    string layerName = _autocadLayerManager.CreateLayerForReceive(layerPath, baseLayerNamePrefix);
+    string layerName = _layerBaker.CreateLayerForReceive(layerPath, baseLayerNamePrefix);
     var convertedEntities = new List<Entity>();
 
     using var tr = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
@@ -226,15 +198,15 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     return convertedEntities;
   }
 
-  private Entity BakeObject(Entity entity, Base originalObject, string layerName)
+  private Entity BakeObject(Entity entity, Base originalObject, string layerName, Base? parentObject = null)
   {
     var objId = originalObject.applicationId ?? originalObject.id;
-    if (_colorManager.ObjectColorsIdMap.TryGetValue(objId, out AutocadColor? color))
+    if (_colorBaker.ObjectColorsIdMap.TryGetValue(objId, out AutocadColor? color))
     {
       entity.Color = color;
     }
 
-    if (_materialManager.ObjectMaterialsIdMap.TryGetValue(objId, out ObjectId matId))
+    if (_materialBaker.TryGetMaterialId(originalObject, parentObject, out ObjectId matId))
     {
       entity.MaterialId = matId;
     }
@@ -245,14 +217,14 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
 
   private List<Entity> BakeObjectsAsGroup(
     IEnumerable<(object, Base)> fallbackConversionResult,
-    Base originatingObject,
+    Base parentObject,
     string layerName,
     string baseLayerName
   )
   {
     var ids = new ObjectIdCollection();
     var entities = new List<Entity>();
-    foreach (var (conversionResult, originalBaseObject) in fallbackConversionResult)
+    foreach (var (conversionResult, originalObject) in fallbackConversionResult)
     {
       if (conversionResult is not Entity entity)
       {
@@ -260,7 +232,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
         continue;
       }
 
-      BakeObject(entity, originalBaseObject, layerName);
+      BakeObject(entity, originalObject, layerName, parentObject);
       ids.Add(entity.ObjectId);
       entities.Add(entity);
     }
@@ -270,7 +242,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       tr.GetObject(Application.DocumentManager.CurrentDocument.Database.GroupDictionaryId, OpenMode.ForWrite);
 
     var groupName = _autocadContext.RemoveInvalidChars(
-      $@"{originatingObject.speckle_type.Split('.').Last()} - {originatingObject.applicationId ?? originatingObject.id}  ({baseLayerName})"
+      $@"{parentObject.speckle_type.Split('.').Last()} - {parentObject.applicationId ?? parentObject.id}  ({baseLayerName})"
     );
 
     var newGroup = new Group(groupName, true);

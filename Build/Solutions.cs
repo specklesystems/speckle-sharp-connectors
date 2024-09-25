@@ -45,7 +45,6 @@ public static class Solutions
 
     CheckAndRemoveKnown("Speckle.Objects");
     CheckAndRemoveKnown("Speckle.Sdk");
-    CheckAndRemoveKnown("Speckle.Sdk.Logging");
     if (localProjects.Count != 0)
     {
       throw new InvalidOperationException(

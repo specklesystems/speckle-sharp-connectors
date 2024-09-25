@@ -1,5 +1,4 @@
-﻿using Rhino;
-using Speckle.Converters.Common;
+﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converters.Rhino.ToHost.TopLevel;
@@ -8,8 +7,8 @@ namespace Speckle.Converters.Rhino.ToHost.TopLevel;
 public class CircleToHostTopLevelConverter : SpeckleToHostGeometryBaseTopLevelConverter<SOG.Circle, RG.ArcCurve>
 {
   public CircleToHostTopLevelConverter(
-    IConversionContextStack<RhinoDoc, UnitSystem> contextStack,
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore,
     ITypedConverter<SOG.Circle, RG.ArcCurve> geometryBaseConverter
   )
-    : base(contextStack, geometryBaseConverter) { }
+    : base(settingsStore, geometryBaseConverter) { }
 }

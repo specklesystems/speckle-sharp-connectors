@@ -1,5 +1,4 @@
-﻿using Rhino;
-using Speckle.Converters.Common;
+﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converters.Rhino.ToHost.TopLevel;
@@ -8,8 +7,8 @@ namespace Speckle.Converters.Rhino.ToHost.TopLevel;
 public class PointToHostTopLevelConverter : SpeckleToHostGeometryBaseTopLevelConverter<SOG.Point, RG.Point>
 {
   public PointToHostTopLevelConverter(
-    IConversionContextStack<RhinoDoc, UnitSystem> contextStack,
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore,
     ITypedConverter<SOG.Point, RG.Point> geometryBaseConverter
   )
-    : base(contextStack, geometryBaseConverter) { }
+    : base(settingsStore, geometryBaseConverter) { }
 }

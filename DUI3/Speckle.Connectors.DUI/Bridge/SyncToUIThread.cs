@@ -1,13 +1,13 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using Speckle.Connectors.Utils.Operations;
+using Speckle.Connectors.Common.Operations;
 
 namespace Speckle.Connectors.DUI.Bridge;
 
 public class SyncToUIThread : ISyncToThread
 {
-  private readonly IBridge _bridge;
+  private readonly IBrowserBridge _bridge;
 
-  public SyncToUIThread(IBridge bridge)
+  public SyncToUIThread(IBrowserBridge bridge)
   {
     _bridge = bridge;
   }

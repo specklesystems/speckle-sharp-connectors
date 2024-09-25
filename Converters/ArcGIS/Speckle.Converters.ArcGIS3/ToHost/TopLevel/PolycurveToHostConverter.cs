@@ -7,19 +7,16 @@ namespace Speckle.Converters.ArcGIS3.ToHost.TopLevel;
 [NameAndRankValue(nameof(SOG.Polycurve), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class PolycurveToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG.Polycurve, ACG.Polyline>
 {
-  private readonly ITypedConverter<SOG.Point, ACG.MapPoint> _pointConverter;
   private readonly IRootToHostConverter _converter;
-  private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
 
   public PolycurveToHostConverter(
-    ITypedConverter<SOG.Point, ACG.MapPoint> pointConverter,
     IRootToHostConverter converter,
-    IConversionContextStack<ArcGISDocument, ACG.Unit> contextStack
+    IConverterSettingsStore<ArcGISConversionSettings> settingsStore
   )
   {
-    _pointConverter = pointConverter;
     _converter = converter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public object Convert(Base target) => Convert((SOG.Polycurve)target);
@@ -54,7 +51,7 @@ public class PolycurveToHostConverter : IToHostTopLevelConverter, ITypedConverte
     return new ACG.PolylineBuilderEx(
       segments,
       ACG.AttributeFlags.HasZ,
-      _contextStack.Current.Document.ActiveCRSoffsetRotation.SpatialReference
+      _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference
     ).ToGeometry();
   }
 }

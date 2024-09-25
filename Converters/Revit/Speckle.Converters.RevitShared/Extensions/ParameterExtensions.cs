@@ -2,6 +2,7 @@ using Autodesk.Revit.DB;
 
 namespace Speckle.Converters.RevitShared.Extensions;
 
+[Obsolete("Will be removed in the near future")]
 public static class ParameterExtensions
 {
   /// <summary>
@@ -16,16 +17,14 @@ public static class ParameterExtensions
     {
       return rp.GUID.ToString();
     }
-    else
-    {
-      var def = (InternalDefinition)rp.Definition;
-      if (def.BuiltInParameter == BuiltInParameter.INVALID)
-      {
-        return def.Name;
-      }
 
-      return def.BuiltInParameter.ToString();
+    var def = (InternalDefinition)rp.Definition;
+    if (def.BuiltInParameter == BuiltInParameter.INVALID)
+    {
+      return def.Name;
     }
+
+    return def.BuiltInParameter.ToString();
   }
 
   public static BuiltInParameter? GetBuiltInParameter(this Parameter rp)

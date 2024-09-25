@@ -8,6 +8,7 @@ namespace Speckle.Converters.RevitShared.Helpers;
 /// <para>
 /// Why is this needed? Because two reasons: send caching bypasses converter and revit conversions typically generate multiple display values per element. Ask dim for more and he might start crying.
 /// </para>
+/// TODO: this dude needs to be split into single responsability (render materials and material quantities), and removed from the context - as it's not needed for it to be there. It can be DI'ed as appropriate (see ParameterDefinitionHandler)
 /// </summary>
 public class RevitMaterialCacheSingleton
 {
@@ -16,6 +17,11 @@ public class RevitMaterialCacheSingleton
   /// a per object map of material proxies. not the best way???
   /// </summary>
   public Dictionary<string, Dictionary<string, RenderMaterialProxy>> ObjectRenderMaterialProxiesMap { get; } = new();
+
+  /// <summary>
+  /// POC: The map we mutate PER RECEIVE operation, this smells a LOT! Once we have better conversion context stack that we can manage our data between connector - converter, this property must go away!
+  /// </summary>
+  public Dictionary<string, DB.ElementId> ObjectIdAndMaterialIndexMap { get; } = new();
 
   /// <summary>
   /// map (DB.Material id, RevitMaterial). This can be generated from converting render materials or material quantities.

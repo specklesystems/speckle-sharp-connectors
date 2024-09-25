@@ -1,4 +1,3 @@
-using Rhino;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
@@ -10,16 +9,16 @@ public class PolylineToSpeckleConverter
 {
   private readonly ITypedConverter<RG.Box, SOG.Box> _boxConverter;
   private readonly ITypedConverter<RG.Interval, SOP.Interval> _intervalConverter;
-  private readonly IConversionContextStack<RhinoDoc, UnitSystem> _contextStack;
+  private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   public PolylineToSpeckleConverter(
     ITypedConverter<RG.Box, SOG.Box> boxConverter,
-    IConversionContextStack<RhinoDoc, UnitSystem> contextStack,
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore,
     ITypedConverter<RG.Interval, SOP.Interval> intervalConverter
   )
   {
     _boxConverter = boxConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
     _intervalConverter = intervalConverter;
   }
 
@@ -46,7 +45,7 @@ public class PolylineToSpeckleConverter
     return new SOG.Polyline
     {
       value = points,
-      units = _contextStack.Current.SpeckleUnits,
+      units = _settingsStore.Current.SpeckleUnits,
       bbox = box,
       length = target.Length,
       domain = new() { start = 0, end = target.Length },

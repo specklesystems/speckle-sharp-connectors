@@ -1,9 +1,12 @@
 using System.Collections.Concurrent;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.Commands;
 using Rhino.DocObjects;
-using Speckle.Autofac.DependencyInjection;
+using Speckle.Connectors.Common.Caching;
+using Speckle.Connectors.Common.Cancellation;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Exceptions;
@@ -13,9 +16,8 @@ using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Rhino.HostApp;
-using Speckle.Connectors.Utils.Caching;
-using Speckle.Connectors.Utils.Cancellation;
-using Speckle.Connectors.Utils.Operations;
+using Speckle.Converters.Common;
+using Speckle.Converters.Rhino;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
@@ -25,17 +27,19 @@ public sealed class RhinoSendBinding : ISendBinding
 {
   public string Name => "sendBinding";
   public SendBindingUICommands Commands { get; }
-  public IBridge Parent { get; }
+  public IBrowserBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
   private readonly IRhinoIdleManager _idleManager;
-  private readonly IUnitOfWorkFactory _unitOfWorkFactory;
+  private readonly IServiceProvider _serviceProvider;
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<RhinoSendBinding> _logger;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly IRhinoConversionSettingsFactory _rhinoConversionSettingsFactory;
+  private readonly ISpeckleApplication _speckleApplication;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -48,23 +52,27 @@ public sealed class RhinoSendBinding : ISendBinding
   public RhinoSendBinding(
     DocumentModelStore store,
     IRhinoIdleManager idleManager,
-    IBridge parent,
+    IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
-    IUnitOfWorkFactory unitOfWorkFactory,
+    IServiceProvider serviceProvider,
     CancellationManager cancellationManager,
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
-    ILogger<RhinoSendBinding> logger
+    ILogger<RhinoSendBinding> logger,
+    IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
+    ISpeckleApplication speckleApplication
   )
   {
     _store = store;
     _idleManager = idleManager;
-    _unitOfWorkFactory = unitOfWorkFactory;
+    _serviceProvider = serviceProvider;
     _sendFilters = sendFilters.ToList();
     _cancellationManager = cancellationManager;
     _sendConversionCache = sendConversionCache;
     _operationProgressManager = operationProgressManager;
     _logger = logger;
+    _rhinoConversionSettingsFactory = rhinoConversionSettingsFactory;
+    _speckleApplication = speckleApplication;
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler.Parent.TopLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent); // POC: Commands are tightly coupled with their bindings, at least for now, saves us injecting a factory.
@@ -146,7 +154,10 @@ public sealed class RhinoSendBinding : ISendBinding
 
   public async Task Send(string modelCardId)
   {
-    using var unitOfWork = _unitOfWorkFactory.Resolve<SendOperation<RhinoObject>>();
+    using var scope = _serviceProvider.CreateScope();
+    scope
+      .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
+      .Initialize(_rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
     try
     {
       if (_store.GetModelById(modelCardId) is not SenderModelCard modelCard)
@@ -170,10 +181,11 @@ public sealed class RhinoSendBinding : ISendBinding
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
       }
 
-      var sendResult = await unitOfWork
-        .Service.Execute(
+      var sendResult = await scope
+        .ServiceProvider.GetRequiredService<SendOperation<RhinoObject>>()
+        .Execute(
           rhinoObjects,
-          modelCard.GetSendInfo(Speckle.Connectors.Utils.Connector.Slug),
+          modelCard.GetSendInfo(_speckleApplication.Slug),
           (status, progress) =>
             _operationProgressManager.SetModelProgress(
               Parent,

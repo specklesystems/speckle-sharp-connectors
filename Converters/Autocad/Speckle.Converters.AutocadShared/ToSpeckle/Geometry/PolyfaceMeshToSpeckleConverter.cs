@@ -16,17 +16,17 @@ public class DBPolyfaceMeshToSpeckleConverter : IToSpeckleTopLevelConverter
 {
   private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
   private readonly ITypedConverter<ADB.Extents3d, SOG.Box> _boxConverter;
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public DBPolyfaceMeshToSpeckleConverter(
     ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
     ITypedConverter<ADB.Extents3d, SOG.Box> boxConverter,
-    IConversionContextStack<Document, ADB.UnitsValue> contextStack
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _pointConverter = pointConverter;
     _boxConverter = boxConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public Base Convert(object target) => RawConvert((ADB.PolyFaceMesh)target);
@@ -37,7 +37,7 @@ public class DBPolyfaceMeshToSpeckleConverter : IToSpeckleTopLevelConverter
     List<int> faces = new();
     List<int> faceVisibility = new();
     List<int> colors = new();
-    using (ADB.Transaction tr = _contextStack.Current.Document.Database.TransactionManager.StartTransaction())
+    using (ADB.Transaction tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
     {
       foreach (ADB.ObjectId id in target)
       {
@@ -93,8 +93,12 @@ public class DBPolyfaceMeshToSpeckleConverter : IToSpeckleTopLevelConverter
     SOG.Box bbox = _boxConverter.Convert(target.GeometricExtents);
 
     SOG.Mesh speckleMesh =
-      new(vertices, faces, colors, null, _contextStack.Current.SpeckleUnits)
+      new()
       {
+        vertices = vertices,
+        faces = faces,
+        colors = colors,
+        units = _settingsStore.Current.SpeckleUnits,
         bbox = bbox,
         ["faceVisibility"] = faceVisibility
       };

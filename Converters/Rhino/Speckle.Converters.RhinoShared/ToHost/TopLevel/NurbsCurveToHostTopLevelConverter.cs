@@ -1,5 +1,4 @@
-﻿using Rhino;
-using Speckle.Converters.Common;
+﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converters.Rhino.ToHost.TopLevel;
@@ -8,8 +7,8 @@ namespace Speckle.Converters.Rhino.ToHost.TopLevel;
 public class NurbsCurveToHostTopLevelConverter : SpeckleToHostGeometryBaseTopLevelConverter<SOG.Curve, RG.NurbsCurve>
 {
   public NurbsCurveToHostTopLevelConverter(
-    IConversionContextStack<RhinoDoc, UnitSystem> contextStack,
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore,
     ITypedConverter<SOG.Curve, RG.NurbsCurve> geometryBaseConverter
   )
-    : base(contextStack, geometryBaseConverter) { }
+    : base(settingsStore, geometryBaseConverter) { }
 }

@@ -1,6 +1,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects;
 using Speckle.Objects.BuiltElements.Revit;
 using Speckle.Sdk.Models;
@@ -17,29 +18,26 @@ public class WallTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.
   private readonly ITypedConverter<DB.Level, SOBR.RevitLevel> _levelConverter;
   private readonly ITypedConverter<DB.CurveArrArray, List<SOG.Polycurve>> _curveArrArrayConverter;
   private readonly ParameterValueExtractor _parameterValueExtractor;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly DisplayValueExtractor _displayValueExtractor;
-  private readonly ParameterObjectAssigner _parameterObjectAssigner;
   private readonly IRootToSpeckleConverter _converter;
 
   public WallTopLevelConverterToSpeckle(
     ITypedConverter<DB.Curve, ICurve> curveConverter,
     ITypedConverter<DB.Level, SOBR.RevitLevel> levelConverter,
     ITypedConverter<DB.CurveArrArray, List<SOG.Polycurve>> curveArrArrayConverter,
-    IRevitConversionContextStack contextStack,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ParameterValueExtractor parameterValueExtractor,
     DisplayValueExtractor displayValueExtractor,
-    ParameterObjectAssigner parameterObjectAssigner,
     IRootToSpeckleConverter converter
   )
   {
     _curveConverter = curveConverter;
     _levelConverter = levelConverter;
     _curveArrArrayConverter = curveArrArrayConverter;
-    _contextStack = contextStack;
+    _converterSettings = converterSettings;
     _parameterValueExtractor = parameterValueExtractor;
     _displayValueExtractor = displayValueExtractor;
-    _parameterObjectAssigner = parameterObjectAssigner;
     _converter = converter;
   }
 
@@ -50,14 +48,13 @@ public class WallTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.
       {
         family = target.WallType.FamilyName.ToString(),
         type = target.WallType.Name,
-        units = _contextStack.Current.SpeckleUnits
+        units = _converterSettings.Current.SpeckleUnits
       };
 
     AssignSpecificParameters(target, speckleWall);
     AssignVoids(target, speckleWall);
     AssignHostedElements(speckleWall, GetChildElements(target));
     AssignDisplayValue(target, speckleWall);
-    _parameterObjectAssigner.AssignParametersToBase(target, speckleWall);
 
     return speckleWall;
   }
@@ -134,7 +131,7 @@ public class WallTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.
   {
     foreach (DB.ElementId elementId in elementIds)
     {
-      yield return _converter.Convert(_contextStack.Current.Document.GetElement(elementId));
+      yield return _converter.Convert(_converterSettings.Current.Document.GetElement(elementId));
     }
   }
 

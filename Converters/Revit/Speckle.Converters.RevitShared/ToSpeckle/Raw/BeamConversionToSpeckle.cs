@@ -1,6 +1,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects;
 using Speckle.Sdk.Models;
 
@@ -16,24 +17,21 @@ public class BeamConversionToSpeckle : ITypedConverter<DB.FamilyInstance, SOBR.R
   private readonly ITypedConverter<DB.Level, SOBR.RevitLevel> _levelConverter;
   private readonly ParameterValueExtractor _parameterValueExtractor;
   private readonly DisplayValueExtractor _displayValueExtractor;
-  private readonly ParameterObjectAssigner _parameterObjectAssigner;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public BeamConversionToSpeckle(
     ITypedConverter<DB.Location, Base> locationConverter,
     ITypedConverter<DB.Level, SOBR.RevitLevel> levelConverter,
     ParameterValueExtractor parameterValueExtractor,
     DisplayValueExtractor displayValueExtractor,
-    ParameterObjectAssigner parameterObjectAssigner,
-    IRevitConversionContextStack contextStack
+    IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _locationConverter = locationConverter;
     _levelConverter = levelConverter;
     _parameterValueExtractor = parameterValueExtractor;
     _displayValueExtractor = displayValueExtractor;
-    _parameterObjectAssigner = parameterObjectAssigner;
-    _contextStack = contextStack;
+    _converterSettings = converterSettings;
   }
 
   public SOBR.RevitBeam Convert(DB.FamilyInstance target)
@@ -60,10 +58,8 @@ public class BeamConversionToSpeckle : ITypedConverter<DB.FamilyInstance, SOBR.R
         baseLine = baseCurve,
         level = _levelConverter.Convert(level),
         displayValue = displayValue,
-        units = _contextStack.Current.SpeckleUnits
+        units = _converterSettings.Current.SpeckleUnits
       };
-
-    _parameterObjectAssigner.AssignParametersToBase(target, speckleBeam);
 
     return speckleBeam;
   }

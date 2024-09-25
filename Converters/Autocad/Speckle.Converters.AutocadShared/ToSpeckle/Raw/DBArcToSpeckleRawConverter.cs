@@ -9,19 +9,19 @@ public class DBArcToSpeckleRawConverter : ITypedConverter<ADB.Arc, SOG.Arc>
   private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
   private readonly ITypedConverter<AG.Plane, SOG.Plane> _planeConverter;
   private readonly ITypedConverter<ADB.Extents3d, SOG.Box> _boxConverter;
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public DBArcToSpeckleRawConverter(
     ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
     ITypedConverter<AG.Plane, SOG.Plane> planeConverter,
     ITypedConverter<ADB.Extents3d, SOG.Box> boxConverter,
-    IConversionContextStack<Document, ADB.UnitsValue> contextStack
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _pointConverter = pointConverter;
     _planeConverter = planeConverter;
     _boxConverter = boxConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public Base Convert(object target) => Convert((ADB.Arc)target);
@@ -42,7 +42,7 @@ public class DBArcToSpeckleRawConverter : ITypedConverter<ADB.Arc, SOG.Arc>
         target.StartAngle,
         target.EndAngle,
         target.TotalAngle,
-        _contextStack.Current.SpeckleUnits
+        _settingsStore.Current.SpeckleUnits
       )
       {
         startPoint = start,

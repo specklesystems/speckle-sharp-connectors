@@ -1,11 +1,10 @@
-using System.Reflection;
 using Autodesk.Revit.DB;
+using Microsoft.Extensions.Logging;
 using Revit.Async;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.RevitShared;
-using Speckle.Connectors.Utils.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
@@ -16,19 +15,29 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 {
   // POC: name and bridge might be better for them to be protected props?
   public string Name { get; private set; }
-  public IBridge Parent { get; private set; }
+  public IBrowserBridge Parent { get; private set; }
 
   public BasicConnectorBindingCommands Commands { get; }
 
   private readonly DocumentModelStore _store;
   private readonly RevitContext _revitContext;
+  private readonly ISpeckleApplication _speckleApplication;
+  private readonly ILogger<BasicConnectorBindingRevit> _logger;
 
-  public BasicConnectorBindingRevit(DocumentModelStore store, IBridge parent, RevitContext revitContext)
+  public BasicConnectorBindingRevit(
+    DocumentModelStore store,
+    IBrowserBridge parent,
+    RevitContext revitContext,
+    ISpeckleApplication speckleApplication,
+    ILogger<BasicConnectorBindingRevit> logger
+  )
   {
     Name = "baseBinding";
     Parent = parent;
     _store = store;
     _revitContext = revitContext;
+    _speckleApplication = speckleApplication;
+    _logger = logger;
     Commands = new BasicConnectorBindingCommands(parent);
 
     // POC: event binding?
@@ -38,11 +47,11 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     };
   }
 
-  public string GetConnectorVersion() => Assembly.GetAssembly(GetType()).NotNull().GetVersion();
+  public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
 
-  public string GetSourceApplicationName() => Speckle.Connectors.Utils.Connector.Slug.ToLower(); // POC: maybe not right place but... // ANOTHER POC: We should align this naming from somewhere in common DUI projects instead old structs. I know there are other POC comments around this
+  public string GetSourceApplicationName() => _speckleApplication.Slug;
 
-  public string GetSourceApplicationVersion() => Speckle.Connectors.Utils.Connector.VersionString; // POC: maybe not right place but...
+  public string GetSourceApplicationVersion() => _speckleApplication.HostApplicationVersion;
 
   public DocumentInfo? GetDocumentInfo()
   {
@@ -75,17 +84,37 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
   public void HighlightModel(string modelCardId)
   {
-    SenderModelCard model = (SenderModelCard)_store.GetModelById(modelCardId);
+    var model = _store.GetModelById(modelCardId);
+
+    if (model is null)
+    {
+      _logger.LogError("Model was null when highlighting received model");
+      return;
+    }
 
     var activeUIDoc =
       _revitContext.UIApplication?.ActiveUIDocument
       ?? throw new SpeckleException("Unable to retrieve active UI document");
 
-    var elementIds = model
-      .SendFilter.NotNull()
-      .GetObjectIds()
-      .Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid))
-      .ToList();
+    var elementIds = new List<ElementId>();
+
+    if (model is SenderModelCard senderModelCard)
+    {
+      elementIds = senderModelCard
+        .SendFilter.NotNull()
+        .GetObjectIds()
+        .Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid))
+        .ToList();
+    }
+
+    if (model is ReceiverModelCard receiverModelCard)
+    {
+      elementIds = receiverModelCard
+        .BakedObjectIds.NotNull()
+        .Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid))
+        .ToList();
+    }
+
     if (elementIds.Count == 0)
     {
       Commands.SetModelError(modelCardId, new InvalidOperationException("No objects found to highlight."));

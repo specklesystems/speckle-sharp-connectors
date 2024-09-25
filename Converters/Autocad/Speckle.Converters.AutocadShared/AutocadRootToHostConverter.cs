@@ -1,30 +1,31 @@
 using Autodesk.AutoCAD.DatabaseServices;
-using Speckle.Autofac.DependencyInjection;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Registration;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad;
 
 public class AutocadRootToHostConverter : IRootToSpeckleConverter
 {
-  private readonly IFactory<IToSpeckleTopLevelConverter> _toSpeckle;
-  private readonly IConversionContextStack<Document, UnitsValue> _contextStack;
+  private readonly IConverterManager<IToSpeckleTopLevelConverter> _toSpeckle;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public AutocadRootToHostConverter(
-    IFactory<IToSpeckleTopLevelConverter> toSpeckle,
-    IConversionContextStack<Document, UnitsValue> contextStack
+    IConverterManager<IToSpeckleTopLevelConverter> toSpeckle,
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _toSpeckle = toSpeckle;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public Base Convert(object target)
   {
     if (target is not DBObject dbObject)
     {
-      throw new NotSupportedException(
+      throw new ConversionNotSupportedException(
         $"Conversion of {target.GetType().Name} to Speckle is not supported. Only objects that inherit from DBObject are."
       );
     }
@@ -33,15 +34,15 @@ public class AutocadRootToHostConverter : IRootToSpeckleConverter
 
     try
     {
-      using (var l = _contextStack.Current.Document.LockDocument())
+      using (var l = _settingsStore.Current.Document.LockDocument())
       {
-        using (var tr = _contextStack.Current.Document.Database.TransactionManager.StartTransaction())
+        using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
         {
-          var objectConverter = _toSpeckle.ResolveInstance(type.Name);
+          var objectConverter = _toSpeckle.ResolveConverter(type);
 
           if (objectConverter == null)
           {
-            throw new NotSupportedException($"No conversion found for {target.GetType().Name}");
+            throw new ConversionNotSupportedException($"No conversion found for {target.GetType().Name}");
           }
 
           var convertedObject = objectConverter.Convert(dbObject);
