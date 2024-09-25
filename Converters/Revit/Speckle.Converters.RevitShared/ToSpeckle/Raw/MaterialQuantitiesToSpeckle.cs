@@ -70,19 +70,19 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, List<
 [Obsolete("Creates a rather bloated data structure - 2.0 style. More in the comment above.")]
 public class MaterialQuantitiesToSpeckle : ITypedConverter<DB.Element, List<MaterialQuantity>>
 {
-  private readonly ITypedConverter<DB.Material, (RevitMaterial, RenderMaterial)> _materialConverter;
+  private readonly ITypedConverter<DB.Material, RevitMaterial> _revitMaterialConverter;
   private readonly ScalingServiceToSpeckle _scalingService;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public MaterialQuantitiesToSpeckle(
-    ITypedConverter<DB.Material, (RevitMaterial, RenderMaterial)> materialConverter,
     ScalingServiceToSpeckle scalingService,
-    IConverterSettingsStore<RevitConversionSettings> converterSettings
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
+    ITypedConverter<DB.Material, RevitMaterial> revitMaterialConverter
   )
   {
-    _materialConverter = materialConverter;
     _scalingService = scalingService;
     _converterSettings = converterSettings;
+    _revitMaterialConverter = revitMaterialConverter;
   }
 
   /// <summary>
@@ -117,7 +117,7 @@ public class MaterialQuantitiesToSpeckle : ITypedConverter<DB.Element, List<Mate
 
         if (_converterSettings.Current.Document.GetElement(matId) is DB.Material material)
         {
-          (RevitMaterial convertedMaterial, RenderMaterial _) = _materialConverter.Convert(material);
+          RevitMaterial convertedMaterial = _revitMaterialConverter.Convert(material);
           // NOTE: the RevitMaterial class is semi useless, and it used to extract parameters out too for each material. Overkill.
           quantities.Add(new(convertedMaterial, volume, area, _converterSettings.Current.SpeckleUnits));
         }
