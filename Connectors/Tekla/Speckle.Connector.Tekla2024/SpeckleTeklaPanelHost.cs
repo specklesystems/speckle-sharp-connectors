@@ -30,5 +30,9 @@ public class SpeckleTeklaPanelHost : PluginFormBase
     Host = new() { Child = webview };
     Controls.Add(Host);
     Operation.DisplayPrompt("Speckle connector initialized.");
+
+    Show();
+    Activate();
+    Focus();
   }
 }
