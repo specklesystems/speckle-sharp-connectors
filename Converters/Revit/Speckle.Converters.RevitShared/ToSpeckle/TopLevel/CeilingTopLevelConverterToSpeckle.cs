@@ -15,7 +15,6 @@ internal sealed class CeilingTopLevelConverterToSpeckle : BaseTopLevelConverterT
   private readonly ITypedConverter<DB.CurveArrArray, List<SOG.Polycurve>> _curveArrArrayConverter;
   private readonly ITypedConverter<DB.Level, SOBR.RevitLevel> _levelConverter;
   private readonly ParameterValueExtractor _parameterValueExtractor;
-  private readonly ParameterObjectAssigner _parameterObjectAssigner;
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
@@ -23,7 +22,6 @@ internal sealed class CeilingTopLevelConverterToSpeckle : BaseTopLevelConverterT
     ITypedConverter<CurveArrArray, List<Polycurve>> curveArrArrayConverter,
     ITypedConverter<DB.Level, RevitLevel> levelConverter,
     ParameterValueExtractor parameterValueExtractor,
-    ParameterObjectAssigner parameterObjectAssigner,
     DisplayValueExtractor displayValueExtractor,
     IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
@@ -31,7 +29,6 @@ internal sealed class CeilingTopLevelConverterToSpeckle : BaseTopLevelConverterT
     _curveArrArrayConverter = curveArrArrayConverter;
     _levelConverter = levelConverter;
     _parameterValueExtractor = parameterValueExtractor;
-    _parameterObjectAssigner = parameterObjectAssigner;
     _displayValueExtractor = displayValueExtractor;
     _converterSettings = converterSettings;
   }
@@ -66,8 +63,6 @@ internal sealed class CeilingTopLevelConverterToSpeckle : BaseTopLevelConverterT
     {
       speckleCeiling.voids = profiles.Skip(1).ToList<ICurve>();
     }
-
-    _parameterObjectAssigner.AssignParametersToBase(target, speckleCeiling);
 
     return speckleCeiling;
   }

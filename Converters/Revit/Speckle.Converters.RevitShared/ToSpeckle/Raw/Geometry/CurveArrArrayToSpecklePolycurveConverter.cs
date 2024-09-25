@@ -4,7 +4,7 @@ using Speckle.Objects.Geometry;
 
 namespace Speckle.Converters.RevitShared.Raw;
 
-internal sealed class CurveArrArrayToSpecklePolycurveConverter : ITypedConverter<DB.CurveArrArray, List<SOG.Polycurve>>
+public sealed class CurveArrArrayToSpecklePolycurveConverter : ITypedConverter<DB.CurveArrArray, List<SOG.Polycurve>>
 {
   private readonly ITypedConverter<DB.CurveArray, SOG.Polycurve> _curveArrayConverter;
 

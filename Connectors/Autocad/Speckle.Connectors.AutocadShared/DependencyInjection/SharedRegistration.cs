@@ -1,111 +1,101 @@
 using Autodesk.AutoCAD.DatabaseServices;
-using Autofac;
-using Speckle.Autofac;
-using Speckle.Autofac.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Autocad.Bindings;
 using Speckle.Connectors.Autocad.Filters;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.Operations.Receive;
 using Speckle.Connectors.Autocad.Operations.Send;
+using Speckle.Connectors.Common;
+using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Caching;
+using Speckle.Connectors.Common.Instances;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
-using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
-using Speckle.Connectors.Utils;
-using Speckle.Connectors.Utils.Builders;
-using Speckle.Connectors.Utils.Caching;
-using Speckle.Connectors.Utils.Instances;
-using Speckle.Connectors.Utils.Operations;
 using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.Autocad.DependencyInjection;
 
 public static class SharedRegistration
 {
-  public static void Load(SpeckleContainerBuilder builder)
+  public static void AddAutocadBase(this IServiceCollection serviceCollection)
   {
-    builder.AddAutofac();
-    builder.AddConnectorUtils();
-    builder.AddDUI();
-    builder.AddDUIView();
+    serviceCollection.AddConnectorUtils();
+    serviceCollection.AddDUI();
+    serviceCollection.AddDUIView();
 
     // Register other connector specific types
-    builder.AddTransient<TransactionContext>();
-    builder.AddSingleton(new AutocadDocumentManager()); // TODO: Dependent to TransactionContext, can be moved to AutocadContext
-    builder.AddSingleton<DocumentModelStore, AutocadDocumentStore>();
-    builder.AddSingleton<AutocadContext>();
+    serviceCollection.AddTransient<TransactionContext>();
+    serviceCollection.AddSingleton(new AutocadDocumentManager()); // TODO: Dependent to TransactionContext, can be moved to AutocadContext
+    serviceCollection.AddSingleton<DocumentModelStore, AutocadDocumentStore>();
+    serviceCollection.AddSingleton<AutocadContext>();
 
     // Unpackers and builders
-    builder.AddScoped<AutocadLayerUnpacker>();
-    builder.AddScoped<AutocadLayerBaker>();
+    serviceCollection.AddScoped<AutocadLayerUnpacker>();
+    serviceCollection.AddScoped<AutocadLayerBaker>();
 
-    builder.AddScoped<AutocadInstanceUnpacker>();
-    builder.AddScoped<AutocadInstanceBaker>();
+    serviceCollection.AddScoped<AutocadInstanceUnpacker>();
+    serviceCollection.AddScoped<AutocadInstanceBaker>();
 
-    builder.AddScoped<AutocadGroupUnpacker>();
-    builder.AddScoped<AutocadGroupBaker>();
+    serviceCollection.AddScoped<AutocadGroupUnpacker>();
+    serviceCollection.AddScoped<AutocadGroupBaker>();
 
-    builder.AddScoped<AutocadColorUnpacker>();
-    builder.AddScoped<AutocadColorBaker>();
+    serviceCollection.AddScoped<AutocadColorUnpacker>();
+    serviceCollection.AddScoped<AutocadColorBaker>();
 
-    builder.AddScoped<AutocadMaterialUnpacker>();
-    builder.AddScoped<AutocadMaterialBaker>();
+    serviceCollection.AddScoped<AutocadMaterialUnpacker>();
+    serviceCollection.AddScoped<AutocadMaterialBaker>();
 
-    builder.AddSingleton<IAutocadIdleManager, AutocadIdleManager>();
+    serviceCollection.AddSingleton<IAutocadIdleManager, AutocadIdleManager>();
 
     // operation progress manager
-    builder.AddSingleton<IOperationProgressManager, OperationProgressManager>();
+    serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();
 
     // Register bindings
-    builder.AddSingleton<IBinding, TestBinding>();
-    builder.AddSingleton<IBinding, AccountBinding>();
-    builder.AddSingleton<IBinding, AutocadSelectionBinding>();
-    builder
-      .ContainerBuilder.RegisterType<AutocadBasicConnectorBinding>()
-      .As<IBinding>()
-      .As<IBasicConnectorBinding>()
-      .SingleInstance();
+    serviceCollection.AddSingleton<IBinding, TestBinding>();
+    serviceCollection.AddSingleton<IBinding, AccountBinding>();
+    serviceCollection.AddSingleton<IBinding, AutocadSelectionBinding>();
+    serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
+    serviceCollection.AddSingleton<IBasicConnectorBinding, AutocadBasicConnectorBinding>();
+    serviceCollection.AddSingleton<IBinding, ConfigBinding>();
 
-    //Top Level ExceptionHandler
-    builder.ContainerBuilder.RegisterType<TopLevelExceptionHandlerBinding>().As<IBinding>().AsSelf().SingleInstance();
-    builder.AddSingleton<ITopLevelExceptionHandler>(c =>
-      c.Resolve<TopLevelExceptionHandlerBinding>().Parent.TopLevelExceptionHandler
-    );
+    serviceCollection.RegisterTopLevelExceptionHandler();
   }
 
-  public static void LoadSend(SpeckleContainerBuilder builder)
+  public static void LoadSend(this IServiceCollection serviceCollection)
   {
     // Operations
-    builder.AddScoped<SendOperation<AutocadRootObject>>();
+    serviceCollection.AddScoped<SendOperation<AutocadRootObject>>();
 
     // Object Builders
-    builder.AddScoped<IRootObjectBuilder<AutocadRootObject>, AutocadRootObjectBuilder>();
+    serviceCollection.AddScoped<IRootObjectBuilder<AutocadRootObject>, AutocadRootObjectBuilder>();
 
     // Register bindings
-    builder.AddSingleton<IBinding, AutocadSendBinding>();
+    serviceCollection.AddSingleton<IBinding, AutocadSendBinding>();
 
     // register send filters
-    builder.AddTransient<ISendFilter, AutocadSelectionFilter>();
+    serviceCollection.AddTransient<ISendFilter, AutocadSelectionFilter>();
 
     // register send conversion cache
-    builder.AddSingleton<ISendConversionCache, SendConversionCache>();
-    builder.AddScoped<
+    serviceCollection.AddSingleton<ISendConversionCache, SendConversionCache>();
+    serviceCollection.AddScoped<
       IInstanceObjectsManager<AutocadRootObject, List<Entity>>,
       InstanceObjectsManager<AutocadRootObject, List<Entity>>
     >();
   }
 
-  public static void LoadReceive(SpeckleContainerBuilder builder)
+  public static void LoadReceive(this IServiceCollection serviceCollection)
   {
     // traversal
-    builder.AddSingleton(DefaultTraversal.CreateTraversalFunc());
+    serviceCollection.AddSingleton(DefaultTraversal.CreateTraversalFunc());
 
     // Object Builders
-    builder.AddScoped<IHostObjectBuilder, AutocadHostObjectBuilder>();
+    serviceCollection.AddScoped<IHostObjectBuilder, AutocadHostObjectBuilder>();
 
     // Register bindings
-    builder.AddSingleton<IBinding, AutocadReceiveBinding>();
+    serviceCollection.AddSingleton<IBinding, AutocadReceiveBinding>();
   }
 }

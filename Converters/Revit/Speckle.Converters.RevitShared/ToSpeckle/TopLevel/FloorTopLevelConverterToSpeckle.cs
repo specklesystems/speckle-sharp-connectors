@@ -19,7 +19,6 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
   private readonly ITypedConverter<DB.CurveArrArray, List<SOG.Polycurve>> _curveArrArrayConverter;
   private readonly ITypedConverter<DB.Level, SOBR.RevitLevel> _levelConverter;
   private readonly ParameterValueExtractor _parameterValueExtractor;
-  private readonly ParameterObjectAssigner _parameterObjectAssigner;
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly ISlopeArrowExtractor _slopeArrowExtractor;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
@@ -28,7 +27,6 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
     ITypedConverter<DB.CurveArrArray, List<SOG.Polycurve>> curveArrArrayConverter,
     ITypedConverter<DB.Level, SOBR.RevitLevel> levelConverter,
     ParameterValueExtractor parameterValueExtractor,
-    ParameterObjectAssigner parameterObjectAssigner,
     DisplayValueExtractor displayValueExtractor,
     ISlopeArrowExtractor slopeArrowExtractor,
     IConverterSettingsStore<RevitConversionSettings> converterSettings
@@ -37,7 +35,6 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
     _curveArrArrayConverter = curveArrArrayConverter;
     _levelConverter = levelConverter;
     _parameterValueExtractor = parameterValueExtractor;
-    _parameterObjectAssigner = parameterObjectAssigner;
     _displayValueExtractor = displayValueExtractor;
     _slopeArrowExtractor = slopeArrowExtractor;
     _converterSettings = converterSettings;
@@ -84,7 +81,6 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
       slopeParam = slope / 100d;
     }
 
-    _parameterObjectAssigner.AssignParametersToBase(target, speckleFloor);
     TryAssignSlopeFromSlopeArrow(target, speckleFloor, slopeParam);
 
     return speckleFloor;

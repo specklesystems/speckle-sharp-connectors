@@ -47,9 +47,9 @@ public class BasicConnectorBindingCommands
   private const string SET_MODEL_ERROR_UI_COMMAND_NAME = "setModelError";
   public const string SET_GLOBAL_NOTIFICATION = "setGlobalNotification";
 
-  protected IBridge Bridge { get; }
+  protected IBrowserBridge Bridge { get; }
 
-  public BasicConnectorBindingCommands(IBridge bridge)
+  public BasicConnectorBindingCommands(IBrowserBridge bridge)
   {
     Bridge = bridge;
   }

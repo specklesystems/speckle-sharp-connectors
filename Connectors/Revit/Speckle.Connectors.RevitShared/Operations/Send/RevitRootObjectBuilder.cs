@@ -1,17 +1,17 @@
-using System.Diagnostics;
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
 using Revit.Async;
+using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Caching;
+using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Extensions;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.Revit.HostApp;
-using Speckle.Connectors.Utils.Builders;
-using Speckle.Connectors.Utils.Caching;
-using Speckle.Connectors.Utils.Conversion;
-using Speckle.Connectors.Utils.Extensions;
-using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Converters.RevitShared.ToSpeckle;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -27,8 +27,9 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ElementUnpacker _elementUnpacker;
   private readonly SendCollectionManager _sendCollectionManager;
-  private readonly RevitMaterialCacheSingleton _revitMaterialCacheSingleton;
+  private readonly RevitToSpeckleCacheSingleton _revitToSpeckleCacheSingleton;
   private readonly ILogger<RevitRootObjectBuilder> _logger;
+  private readonly ParameterDefinitionHandler _parameterDefinitionHandler;
 
   public RevitRootObjectBuilder(
     IRootToSpeckleConverter converter,
@@ -36,8 +37,9 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     ISendConversionCache sendConversionCache,
     ElementUnpacker elementUnpacker,
     SendCollectionManager sendCollectionManager,
-    RevitMaterialCacheSingleton revitMaterialCacheSingleton,
-    ILogger<RevitRootObjectBuilder> logger
+    ILogger<RevitRootObjectBuilder> logger,
+    ParameterDefinitionHandler parameterDefinitionHandler,
+    RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton
   )
   {
     _converter = converter;
@@ -45,13 +47,15 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     _sendConversionCache = sendConversionCache;
     _elementUnpacker = elementUnpacker;
     _sendCollectionManager = sendCollectionManager;
-    _revitMaterialCacheSingleton = revitMaterialCacheSingleton;
+    _revitToSpeckleCacheSingleton = revitToSpeckleCacheSingleton;
     _logger = logger;
+    _parameterDefinitionHandler = parameterDefinitionHandler;
 
     _rootObject = new Collection()
     {
       name = _converterSettings.Current.Document.PathName.Split('\\').Last().Split('.').First()
     };
+    _rootObject["units"] = _converterSettings.Current.SpeckleUnits;
   }
 
   public async Task<RootObjectBuilderResult> Build(
@@ -108,7 +112,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
         }
         else
         {
-          converted = await RevitTask.RunAsync(() => _converter.Convert(revitElement)).ConfigureAwait(false);
+          converted = await RevitTask.RunAsync(() => _converter.Convert(revitElement)).ConfigureAwait(false); // Could we run these batched? Is there maybe a performance penalty for running these to speckle conversions individually in revittask.runasync?
           converted.applicationId = applicationId;
         }
 
@@ -131,12 +135,10 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     }
 
     var idsAndSubElementIds = _elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(atomicObjects);
-    var materialProxies = _revitMaterialCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds);
+    var materialProxies = _revitToSpeckleCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds);
     _rootObject[ProxyKeys.RENDER_MATERIAL] = materialProxies;
-
-    Debug.WriteLine(
-      $"Cache hit count {cacheHitCount} out of {objects.Count} ({(double)cacheHitCount / objects.Count})"
-    );
+    // NOTE: these are currently not used anywhere, so we could even skip them (?).
+    _rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;
 
     return new RootObjectBuilderResult(_rootObject, results);
   }

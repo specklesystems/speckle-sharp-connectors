@@ -1,13 +1,13 @@
 using Microsoft.Extensions.Logging;
 using Rhino.DocObjects;
+using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Caching;
+using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Extensions;
+using Speckle.Connectors.Common.Instances;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.Rhino.HostApp;
-using Speckle.Connectors.Utils.Builders;
-using Speckle.Connectors.Utils.Caching;
-using Speckle.Connectors.Utils.Conversion;
-using Speckle.Connectors.Utils.Extensions;
-using Speckle.Connectors.Utils.Instances;
-using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
@@ -77,6 +77,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     using var activity = _activityFactory.Start("Build");
     // 0 - Init the root
     Collection rootObjectCollection = new() { name = _converterSettings.Current.Document.Name ?? "Unnamed document" };
+    rootObjectCollection["units"] = _converterSettings.Current.SpeckleUnits;
 
     // 1 - Unpack the instances
     UnpackResult<RhinoObject> unpackResults;

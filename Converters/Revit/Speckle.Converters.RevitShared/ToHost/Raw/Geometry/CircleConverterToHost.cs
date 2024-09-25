@@ -17,6 +17,8 @@ public class CircleConverterToHost : ITypedConverter<SOG.Circle, DB.Arc>
   public DB.Arc Convert(SOG.Circle target)
   {
     var plane = _planeConverter.Convert(target.plane);
-    return DB.Arc.Create(plane, _scalingService.ScaleToNative(target.radius, target.units), 0, 2 * Math.PI);
+    var arc = DB.Arc.Create(plane, _scalingService.ScaleToNative(target.radius, target.units), 0, 2 * Math.PI);
+    arc.MakeBound(0, arc.Period);
+    return arc;
   }
 }

@@ -1,5 +1,5 @@
 using Autodesk.Revit.DB;
-using Speckle.Connectors.Utils.Operations.Receive;
+using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk.Models.GraphTraversal;
@@ -46,7 +46,7 @@ public class RevitGroupBaker : TraversalContextUnpacker
       var group = new FakeGroup()
       {
         // POC group names should be unique
-        Name = _revitUtils.RemoveInvalidChars(collection.name),
+        Name = _revitUtils.RemoveInvalidChars(currentLayerName[..^1]),
         Depth = currentDepth++,
         Parent = previousGroup!
       };
