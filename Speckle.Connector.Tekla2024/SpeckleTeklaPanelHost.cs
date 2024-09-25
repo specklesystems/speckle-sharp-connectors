@@ -1,4 +1,5 @@
 ﻿using System.Windows.Forms.Integration;
+using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connector.Tekla2024.Plugin;
 using Speckle.Connectors.DUI.WebView;
 using Tekla.Structures.Dialog;
@@ -14,7 +15,7 @@ public class SpeckleTeklaPanelHost : PluginFormBase
   public SpeckleTeklaPanelHost()
   {
     Model = new Model(); // don't know what is this..
-    var webview = TeklaPlugin.Container.Resolve<DUI3ControlWebView>();
+    var webview = TeklaPlugin.Container.GetRequiredService<DUI3ControlWebView>();
     Host = new() { Child = webview };
     Controls.Add(Host);
   }
