@@ -13,8 +13,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
-    <ProjectReference Include="..\DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
+    <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
+    <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
   </ItemGroup>
 
   <ItemGroup>

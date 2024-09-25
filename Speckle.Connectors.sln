@@ -157,7 +157,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Connectors.Logging"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tekla", "Tekla", "{696086E4-D8CC-4FE0-A9B3-5F10B9089B55}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connector.Tekla2024", "Speckle.Connector.Tekla2024\Speckle.Connector.Tekla2024.csproj", "{2319C00F-B268-4E4C-9F88-6B379E2BBD22}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connector.Tekla2024", "Connectors\Tekla\Speckle.Connector.Tekla2024\Speckle.Connector.Tekla2024.csproj", "{2319C00F-B268-4E4C-9F88-6B379E2BBD22}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Converters.Common.Tests", "Sdk\Speckle.Converters.Common.Tests\Speckle.Converters.Common.Tests.csproj", "{9EF292C6-1333-4502-AD9C-224D99847185}"
 EndProject
