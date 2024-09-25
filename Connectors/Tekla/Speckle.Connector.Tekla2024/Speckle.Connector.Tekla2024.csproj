@@ -4,6 +4,14 @@
     <TargetFramework>net48</TargetFramework>
     <UseWpf>true</UseWpf>
     <DefineConstants>$(DefineConstants);TEKLA2024</DefineConstants>
+    <PostBuildEvent Condition="'$(IsDesktopBuild)' == true AND $([MSBuild]::IsOsPlatform('Windows'))">RD /S /Q "$(TargetDir)arm64\"
+      if EXIST "C:\Program Files\Tekla Structures\2024.0\" (
+      xcopy "$(TargetDir)*.*" "C:\ProgramData\Trimble\Tekla Structures\2024.0\Environments\common\extensions\Speckle3TeklaStructures" /Y /I /E
+      )
+      if EXIST "C:\TeklaStructures\2024.0\" (
+      xcopy "$(TargetDir)*.*" "C:\TeklaStructures\2024.0\Environments\common\extensions\Speckle3TeklaStructures" /Y /I /E
+      )
+    </PostBuildEvent>
   </PropertyGroup>
 
   <ItemGroup>
