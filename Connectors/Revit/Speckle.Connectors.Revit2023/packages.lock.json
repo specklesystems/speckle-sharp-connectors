@@ -288,7 +288,8 @@
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection": "[2.2.0, )",
           "Speckle.Connectors.Logging": "[1.0.0, )",
-          "Speckle.Objects": "[1.0.0, )"
+          "Speckle.Objects": "[1.0.0, )",
+          "Speckle.Sdk": "[1.0.0, )"
         }
       },
       "speckle.connectors.dui": {

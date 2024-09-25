@@ -3,7 +3,6 @@ using Speckle.Sdk.Api;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
-using Speckle.Sdk.Models.Extensions;
 using Speckle.Sdk.Transports;
 
 namespace Speckle.Connectors.Common.Operations;
@@ -126,7 +125,7 @@ public sealed class ReceiveOperation
   )
   {
     using var conversionActivity = _activityFactory.Start("ReceiveOperation.ConvertObjects");
-    conversionActivity?.SetTag("smellsLikeV2Data", commitObject.SmellsLikeV2Data());
+    // conversionActivity?.SetTag("smellsLikeV2Data", commitObject.SmellsLikeV2Data());
     conversionActivity?.SetTag("receiveInfo", receiveInfo);
 
     try
