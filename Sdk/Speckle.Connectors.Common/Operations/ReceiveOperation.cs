@@ -125,7 +125,7 @@ public sealed class ReceiveOperation
     CancellationToken cancellationToken
   )
   {
-    using var conversionActivity = SpeckleActivityFactory.Start("ReceiveOperation.ConvertObjects");
+    using var conversionActivity = _activityFactory.Start("ReceiveOperation.ConvertObjects");
     conversionActivity?.SetTag("smellsLikeV2Data", commitObject.SmellsLikeV2Data());
     conversionActivity?.SetTag("receiveInfo", receiveInfo);
 
@@ -134,13 +134,13 @@ public sealed class ReceiveOperation
       var res = await _hostObjectBuilder
         .Build(commitObject, receiveInfo.ProjectName, receiveInfo.ModelName, onOperationProgressed, cancellationToken)
         .ConfigureAwait(false);
-      conversionActivity?.SetStatus(SpeckleActivityStatusCode.Ok);
+      conversionActivity?.SetStatus(SdkActivityStatusCode.Ok);
       return res;
     }
     catch (Exception ex)
     {
       conversionActivity?.RecordException(ex);
-      conversionActivity?.SetStatus(SpeckleActivityStatusCode.Error);
+      conversionActivity?.SetStatus(SdkActivityStatusCode.Error);
       throw;
     }
   }
