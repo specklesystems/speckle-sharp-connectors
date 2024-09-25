@@ -127,7 +127,11 @@ public sealed class ReceiveOperation
   {
     using var conversionActivity = _activityFactory.Start("ReceiveOperation.ConvertObjects");
     conversionActivity?.SetTag("smellsLikeV2Data", commitObject.SmellsLikeV2Data());
-    conversionActivity?.SetTag("receiveInfo", receiveInfo);
+    conversionActivity?.SetTag("receiveInfo.serverUrl", receiveInfo.ServerUrl);
+    conversionActivity?.SetTag("receiveInfo.projectId", receiveInfo.ProjectId);
+    conversionActivity?.SetTag("receiveInfo.modelId", receiveInfo.ModelId);
+    conversionActivity?.SetTag("receiveInfo.selectedVersionId", receiveInfo.SelectedVersionId);
+    conversionActivity?.SetTag("receiveInfo.sourceApplication", receiveInfo.SourceApplication);
 
     try
     {
