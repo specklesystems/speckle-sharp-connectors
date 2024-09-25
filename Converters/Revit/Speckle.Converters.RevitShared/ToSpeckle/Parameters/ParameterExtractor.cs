@@ -97,9 +97,8 @@ public class ParameterExtractor
           continue;
         }
 
-        var (internalDefinitionName, humanReadableName, groupName) = _parameterDefinitionHandler.HandleDefinition(
-          parameter
-        );
+        var (internalDefinitionName, humanReadableName, groupName, units) =
+          _parameterDefinitionHandler.HandleDefinition(parameter);
 
         var param = new Dictionary<string, object?>()
         {
@@ -107,6 +106,11 @@ public class ParameterExtractor
           ["name"] = humanReadableName,
           ["internalDefinitionName"] = internalDefinitionName
         };
+
+        if (units is string paramUnits)
+        {
+          param["units"] = units;
+        }
 
         if (!dict.TryGetValue(groupName, out Dictionary<string, object?>? paramGroup))
         {
