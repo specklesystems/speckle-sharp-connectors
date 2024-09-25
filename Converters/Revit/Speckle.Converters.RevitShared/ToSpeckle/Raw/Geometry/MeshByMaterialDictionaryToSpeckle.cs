@@ -3,7 +3,6 @@ using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects.Other;
-using Speckle.Objects.Other.Revit;
 using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
@@ -12,21 +11,21 @@ public class MeshByMaterialDictionaryToSpeckle
   : ITypedConverter<(Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId), List<SOG.Mesh>>
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
-  private readonly ITypedConverter<DB.Material, (RevitMaterial, RenderMaterial)> _materialConverter;
+  private readonly ITypedConverter<DB.Material, RenderMaterial> _speckleRenderMaterialConverter;
   private readonly ITypedConverter<List<DB.Mesh>, SOG.Mesh> _meshListConverter;
-  private readonly RevitMaterialCacheSingleton _revitMaterialCacheSingleton;
+  private readonly RevitToSpeckleCacheSingleton _revitToSpeckleCacheSingleton;
 
   public MeshByMaterialDictionaryToSpeckle(
-    ITypedConverter<DB.Material, (RevitMaterial, RenderMaterial)> materialConverter,
     ITypedConverter<List<DB.Mesh>, SOG.Mesh> meshListConverter,
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
-    RevitMaterialCacheSingleton revitMaterialCacheSingleton
+    RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton,
+    ITypedConverter<DB.Material, RenderMaterial> speckleRenderMaterialConverter
   )
   {
-    _materialConverter = materialConverter;
     _meshListConverter = meshListConverter;
     _converterSettings = converterSettings;
-    _revitMaterialCacheSingleton = revitMaterialCacheSingleton;
+    _revitToSpeckleCacheSingleton = revitToSpeckleCacheSingleton;
+    _speckleRenderMaterialConverter = speckleRenderMaterialConverter;
   }
 
   /// <summary>
@@ -46,7 +45,7 @@ public class MeshByMaterialDictionaryToSpeckle
   public List<SOG.Mesh> Convert((Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId) args)
   {
     var result = new List<SOG.Mesh>(args.target.Keys.Count);
-    var objectRenderMaterialProxiesMap = _revitMaterialCacheSingleton.ObjectRenderMaterialProxiesMap;
+    var objectRenderMaterialProxiesMap = _revitToSpeckleCacheSingleton.ObjectRenderMaterialProxiesMap;
 
     var materialProxyMap = new Dictionary<string, RenderMaterialProxy>();
     objectRenderMaterialProxiesMap[args.parentElementId.ToString().NotNull()] = materialProxyMap;
@@ -69,7 +68,7 @@ public class MeshByMaterialDictionaryToSpeckle
       // get the render material if any
       if (_converterSettings.Current.Document.GetElement(materialId) is DB.Material material)
       {
-        (RevitMaterial _, RenderMaterial convertedRenderMaterial) = _materialConverter.Convert(material);
+        RenderMaterial convertedRenderMaterial = _speckleRenderMaterialConverter.Convert(material);
 
         if (!materialProxyMap.TryGetValue(materialIdString, out RenderMaterialProxy? renderMaterialProxy))
         {
