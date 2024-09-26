@@ -11,7 +11,7 @@ public static class Observability
     SpeckleObservability observability
   )
   {
-    var resourceBuilder = ResourceCreator.Create(applicationAndVersion, slug, connectorVersion);
+    var resourceBuilder = ResourceCreator.Create(applicationAndVersion, slug, connectorVersion, "UserId");
     var logging = LogBuilder.Initialize(
       applicationAndVersion,
       connectorVersion,
