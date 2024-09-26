@@ -26,7 +26,7 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
   public IBrowserBridge Parent { get; }
   public string Name => nameof(TopLevelExceptionHandler);
 
-  private const string UNHANDLED_LOGGER_TEMPLATE = "An unhandled Exception occured";
+  private const string UNHANDLED_LOGGER_TEMPLATE = "An unhandled Exception occured from {binding}";
 
   internal TopLevelExceptionHandler(ILogger<TopLevelExceptionHandler> logger, IBrowserBridge bridge)
   {
@@ -52,7 +52,7 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
+        _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE, Parent.FrontendBoundName);
 
         SetGlobalNotification(
           ToastNotificationType.DANGER,
@@ -65,7 +65,7 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
     }
     catch (Exception ex)
     {
-      _logger.LogCritical(ex, UNHANDLED_LOGGER_TEMPLATE);
+      _logger.LogCritical(ex, UNHANDLED_LOGGER_TEMPLATE, Parent.FrontendBoundName);
       throw;
     }
   }
@@ -87,7 +87,7 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
+        _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE, Parent.FrontendBoundName);
         SetGlobalNotification(
           ToastNotificationType.DANGER,
           "Unhandled Exception Occured",
@@ -99,7 +99,7 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
     }
     catch (Exception ex)
     {
-      _logger.LogCritical(ex, UNHANDLED_LOGGER_TEMPLATE);
+      _logger.LogCritical(ex, UNHANDLED_LOGGER_TEMPLATE, Parent.FrontendBoundName);
       throw;
     }
   }
