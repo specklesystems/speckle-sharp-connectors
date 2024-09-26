@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <UseWpf>true</UseWpf>
+    <DefineConstants>$(DefineConstants);TEKLA2024</DefineConstants>
+    <PostBuildEvent>RD /S /Q "$(TargetDir)arm64\"
+      if EXIST "C:\Program Files\Tekla Structures\2024.0\" (
+      xcopy "$(TargetDir)*.*" "C:\ProgramData\Trimble\Tekla Structures\2024.0\Environments\common\extensions\Speckle3TeklaStructures" /Y /I /E
+      )
+      if EXIST "C:\TeklaStructures\2024.0\" (
+      xcopy "$(TargetDir)*.*" "C:\TeklaStructures\2024.0\Environments\common\extensions\Speckle3TeklaStructures" /Y /I /E
+      )
+    </PostBuildEvent>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Tekla.Structures.Dialog" IncludeAssets="compile; build" PrivateAssets="all" />
+    <PackageReference Include="Tekla.Structures.Model" IncludeAssets="compile; build" PrivateAssets="all" />
+    <PackageReference Include="Tekla.Structures.Plugins" IncludeAssets="compile; build" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
+    <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="WindowsFormsIntegration" />
+  </ItemGroup>
+
+</Project>
