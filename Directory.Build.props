@@ -8,7 +8,9 @@
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageVersionOverrideEnabled>true</CentralPackageVersionOverrideEnabled>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting> <!-- windows packs for .net core  -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <AutomaticallyUseReferenceAssemblyPackages>false</AutomaticallyUseReferenceAssemblyPackages> <!-- requires machine to have exact Dev Pack for targeted net framework versions -->
   </PropertyGroup>
   
   <PropertyGroup Label="Analyers">
