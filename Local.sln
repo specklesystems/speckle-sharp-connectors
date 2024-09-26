@@ -160,6 +160,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Common",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Common.Tests", "Sdk\Speckle.Converters.Common.Tests\Speckle.Converters.Common.Tests.csproj", "{13225611-10EE-41BB-9198-C88D6E978DA6}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tekla", "Tekla", "{AB1AD13B-163E-45F8-8F96-52A921501FA0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connector.Tekla2024", "Connectors\Tekla\Speckle.Connector.Tekla2024\Speckle.Connector.Tekla2024.csproj", "{8077B6A7-86BD-4E87-8B23-6D168D0E14D9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Local|Any CPU = Local|Any CPU
@@ -245,6 +249,8 @@ Global
 		{3747C01B-343E-4425-A973-4D9D181BE468}.Local|Any CPU.Build.0 = Local|Any CPU
 		{13225611-10EE-41BB-9198-C88D6E978DA6}.Local|Any CPU.ActiveCfg = Local|Any CPU
 		{13225611-10EE-41BB-9198-C88D6E978DA6}.Local|Any CPU.Build.0 = Local|Any CPU
+		{8077B6A7-86BD-4E87-8B23-6D168D0E14D9}.Local|Any CPU.ActiveCfg = Debug|Any CPU
+		{8077B6A7-86BD-4E87-8B23-6D168D0E14D9}.Local|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -315,6 +321,8 @@ Global
 		{38497468-6B28-4F8F-A9E0-3167E90DDD89} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
 		{3747C01B-343E-4425-A973-4D9D181BE468} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
 		{13225611-10EE-41BB-9198-C88D6E978DA6} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
+		{AB1AD13B-163E-45F8-8F96-52A921501FA0} = {42826721-9A18-4762-8BA9-F1429DD5C5B1}
+		{8077B6A7-86BD-4E87-8B23-6D168D0E14D9} = {AB1AD13B-163E-45F8-8F96-52A921501FA0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}
