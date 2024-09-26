@@ -4,6 +4,12 @@
     <Configurations>Debug;Release;Local</Configurations>
     <RhinoVersion>7</RhinoVersion>
     <DefineConstants>$(DefineConstants);RHINO7;RHINO7_OR_GREATER</DefineConstants>
+    <TargetExt>.rhp</TargetExt>
+    <StartProgram>$(ProgramFiles)\Rhino $(RhinoVersion)\System\Rhino.exe</StartProgram>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <UseWpf>true</UseWpf>
+    <UseWindowsForms>true</UseWindowsForms>
+    <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,5 +23,10 @@
     <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="EmbeddedResources\**\*" />
+    <EmbeddedResource Include="Resources\**\*.ico" />
+  </ItemGroup>
+  
   <Import Project="..\Speckle.Connectors.RhinoShared\Speckle.Connectors.RhinoShared.projitems" Label="Shared" />
 </Project>
