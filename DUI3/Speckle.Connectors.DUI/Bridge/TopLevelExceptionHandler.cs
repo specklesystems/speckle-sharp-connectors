@@ -81,6 +81,8 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
   {
     try
     {
+      Parent.AssertBindingInitialised();
+
       try
       {
         return new(await function.Invoke().ConfigureAwait(false));

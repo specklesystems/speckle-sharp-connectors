@@ -13,41 +13,34 @@ using Speckle.Sdk.Models.Extensions;
 namespace Speckle.Connectors.DUI.Bridge;
 
 /// <summary>
-/// Wraps a binding class, and manages its calls from the Frontend to .NET, and sending events from .NET to the the Frontend.
+/// Wraps a binding class, and manages its calls from the Frontend to .NET, and sending events from .NET to the Frontend.
 /// <para>Initially inspired by: https://github.com/johot/WebView2-better-bridge</para>
 /// </summary>
 [ClassInterface(ClassInterfaceType.AutoDual)]
 [ComVisible(true)]
 public sealed class BrowserBridge : IBrowserBridge
 {
-  /// <summary>
-  /// The name under which we expect the frontend to hoist this bindings class to the global scope.
-  /// e.g., `receiveBindings` should be available as `window.receiveBindings`.
-  /// </summary>
-
   private readonly JsonSerializerSettings _serializerOptions;
   private readonly ConcurrentDictionary<string, string?> _resultsStore = new();
   private readonly SynchronizationContext _mainThreadContext;
-  public ITopLevelExceptionHandler TopLevelExceptionHandler { get; }
-
+  private readonly ILogger _logger;
   private readonly IBrowserScriptExecutor _browserScriptExecutor;
 
-  private IReadOnlyDictionary<string, MethodInfo> _bindingMethodCache = new Dictionary<string, MethodInfo>();
-
+  private IReadOnlyDictionary<string, MethodInfo>? _bindingMethodCache;
   private ActionBlock<RunMethodArgs>? _actionBlock;
   private IBinding? _binding;
-  private Type? _bindingType;
 
-  private readonly ILogger _logger;
-
-  public string FrontendBoundName { get; private set; } = "Unknown";
-
-  public IBinding? Binding
+  [MemberNotNull(nameof(_binding))]
+  public IBinding Binding
   {
-    get => _binding;
+    get
+    {
+      AssertBindingInitialised();
+      return _binding;
+    }
     private set
     {
-      if (_binding != null || this != value?.Parent)
+      if (_binding != null || this != value.Parent)
       {
         throw new ArgumentException($"Binding: {FrontendBoundName} is already bound or does not match bridge");
       }
@@ -56,12 +49,13 @@ public sealed class BrowserBridge : IBrowserBridge
     }
   }
 
-  private struct RunMethodArgs
-  {
-    public string MethodName;
-    public string RequestId;
-    public string MethodArgs;
-  }
+  /// <inheritdoc/>
+  public string FrontendBoundName => Binding.Name;
+  private Type BindingType => Binding.GetType();
+
+  public ITopLevelExceptionHandler TopLevelExceptionHandler { get; }
+
+  private readonly record struct RunMethodArgs(string MethodName, string RequestId, string MethodArgs);
 
   /// <summary>
   /// Initializes a new instance of the <see cref="BrowserBridge"/> class.
@@ -84,18 +78,17 @@ public sealed class BrowserBridge : IBrowserBridge
     _browserScriptExecutor = browserScriptExecutor;
   }
 
+  /// <inheritdoc/>
+  [MemberNotNull(nameof(_binding), nameof(_bindingMethodCache), nameof(_actionBlock))]
   public void AssociateWithBinding(IBinding binding)
   {
     // set via binding property to ensure explosion if already bound
     Binding = binding;
-    FrontendBoundName = binding.Name;
-
-    _bindingType = binding.GetType();
 
     // Note: we need to filter out getter and setter methods here because they are not really nicely
     // supported across browsers, hence the !method.IsSpecialName.
     var bindingMethodCache = new Dictionary<string, MethodInfo>();
-    foreach (var m in _bindingType.GetMethods().Where(method => !method.IsSpecialName))
+    foreach (var m in BindingType.GetMethods().Where(method => !method.IsSpecialName))
     {
       bindingMethodCache[m.Name] = m;
     }
@@ -124,25 +117,22 @@ public sealed class BrowserBridge : IBrowserBridge
     NotifyUIMethodCallResultReady(args.RequestId, resultJson);
   }
 
-  /// <summary>
-  /// Used by the Frontend bridge logic to understand which methods are available.
-  /// </summary>
-  /// <returns></returns>
+  /// <inheritdoc/>
   public string[] GetBindingsMethodNames()
   {
+    AssertBindingInitialised();
     var bindingNames = _bindingMethodCache.Keys.ToArray();
     Debug.WriteLine($"{FrontendBoundName}: " + JsonConvert.SerializeObject(bindingNames, Formatting.Indented));
     return bindingNames;
   }
 
-  /// <summary>
+  /// <inheritdoc/>
+  /// <remarks>
   /// This method posts the requested call to our action block executor.
-  /// </summary>
-  /// <param name="methodName"></param>
-  /// <param name="requestId"></param>
-  /// <param name="args"></param>
+  /// </remarks>
   public void RunMethod(string methodName, string requestId, string args)
   {
+    AssertBindingInitialised();
     TopLevelExceptionHandler.CatchUnhandled(Post);
     return;
 
@@ -165,10 +155,7 @@ public sealed class BrowserBridge : IBrowserBridge
     }
   }
 
-  /// <summary>
-  /// Run actions on main thread.
-  /// </summary>
-  /// <param name="action"> Action to run on main thread.</param>
+  /// <inheritdoc/>
   public void RunOnMainThread(Action action)
   {
     _mainThreadContext.Post(
@@ -182,25 +169,22 @@ public sealed class BrowserBridge : IBrowserBridge
   }
 
   /// <summary>
-  /// Used by the action block to invoke the actual method called by the UI.
+  /// Used by the action block to invoke the .NET binding method called by the UI.
   /// </summary>
-  /// <param name="methodName"></param>
-  /// <param name="args"></param>
-  /// <exception cref="InvalidOperationException">The <see cref="BrowserBridge"/> was not initialized with an <see cref="IBinding"/> (see <see cref="AssociateWithBinding"/>)</exception>
+  /// <param name="methodName">The name of the .NET function to invoke</param>
+  /// <param name="args">A JSON array of args to deserialize and use to invoke the method</param>
+  /// <exception cref="InvalidOperationException"><inheritdoc cref="AssertBindingInitialised"/></exception>
   /// <exception cref="ArgumentException">The <paramref name="methodName"/> was not found or the given <paramref name="args"/> were not valid for the method call</exception>
   /// <exception cref="TargetInvocationException">The invoked method throws an exception</exception>
-  /// <returns>The Json</returns>
+  /// <returns>The JSON serialized result of the invoked method</returns>
   private async Task<object?> ExecuteMethod(string methodName, string args)
   {
-    if (_binding is null)
-    {
-      throw new InvalidOperationException("Bridge was not initialized with a binding");
-    }
+    AssertBindingInitialised();
 
     if (!_bindingMethodCache.TryGetValue(methodName, out MethodInfo method))
     {
       throw new ArgumentException(
-        $"Cannot find method {methodName} in bindings class {_bindingType.NotNull().AssemblyQualifiedName}.",
+        $"Cannot find method {methodName} in bindings class {BindingType.AssemblyQualifiedName}.",
         nameof(methodName)
       );
     }
@@ -252,14 +236,14 @@ public sealed class BrowserBridge : IBrowserBridge
   /// <summary>
   /// Errors that not handled on bindings.
   /// </summary>
-  private string SerializeFormattedException(Exception e)
+  private string SerializeFormattedException(Exception ex)
   {
     //TODO: I'm not sure we still require this... the top level handler is already displaying the toast
     var errorDetails = new
     {
-      Message = e.Message, // Topmost message
-      Error = e.ToFormattedString(), // All messages from exceptions
-      StackTrace = e.ToString(),
+      Message = ex.Message, // Topmost message
+      Error = ex.ToFormattedString(), // All messages from exceptions
+      StackTrace = ex.ToString(),
     };
 
     return JsonConvert.SerializeObject(errorDetails, _serializerOptions);
@@ -310,30 +294,46 @@ public sealed class BrowserBridge : IBrowserBridge
     Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
   }
 
+  /// <summary>
+  /// Sends an event message to the JS browser (via the <see cref="IBrowserScriptExecutor"/>)
+  /// </summary>
+  /// <param name="eventName">the name of the JS event to trigger for the associated <see cref="FrontendBoundName"/></param>
+  /// <exception cref="InvalidOperationException"><inheritdoc cref="AssertBindingInitialised"/></exception>
+  /// <exception cref="InvalidOperationException"><inheritdoc cref="IBrowserScriptExecutor.ExecuteScriptAsyncMethod"/></exception>
   public void Send(string eventName)
   {
-    if (_binding is null)
-    {
-      throw new InvalidOperationException("Bridge was not initialized with a binding");
-    }
+    AssertBindingInitialised();
 
     var script = $"{FrontendBoundName}.emit('{eventName}')";
 
     _browserScriptExecutor.ExecuteScriptAsyncMethod(script);
   }
 
+  /// <inheritdoc cref="Send"/>
+  /// <summary>
+  /// <inheritdoc cref="Send"/>.<br/>
+  /// This overload also serializes and stores <paramref name="data"/> in an internal <see cref="_resultsStore"/> (values exposed through <see cref="GetCallResult"/>)<br/></summary>
+  /// <param name="data">The data to JSON serialize and store</param>
+  /// <typeparam name="T"></typeparam>
   public void Send<T>(string eventName, T data)
     where T : class
   {
-    if (_binding is null)
-    {
-      throw new InvalidOperationException("Bridge was not initialized with a binding");
-    }
+    AssertBindingInitialised();
 
     string payload = JsonConvert.SerializeObject(data, _serializerOptions);
     string requestId = $"{Guid.NewGuid()}_{eventName}";
     _resultsStore[requestId] = payload;
     var script = $"{FrontendBoundName}.emitResponseReady('{eventName}', '{requestId}')";
     _browserScriptExecutor.ExecuteScriptAsyncMethod(script);
+  }
+
+  /// <inheritdoc/>
+  [MemberNotNull(nameof(_binding), nameof(_bindingMethodCache), nameof(_actionBlock))]
+  public void AssertBindingInitialised()
+  {
+    if (_binding is null || _bindingMethodCache is null || _actionBlock is null)
+    {
+      throw new InvalidOperationException("Bridge was not initialized with a binding");
+    }
   }
 }
