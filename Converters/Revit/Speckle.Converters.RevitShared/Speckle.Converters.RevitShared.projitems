@@ -12,7 +12,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\IRevitCategories.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\ISlopeArrowExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\ParameterValueSetter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Helpers\RevitMaterialCacheSingleton.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Helpers\RevitToHostCacheSingleton.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Helpers\RevitToSpeckleCacheSingleton.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\SlopeArrowExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)IReferencePointConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\CategoryExtensions.cs" />
@@ -22,9 +23,9 @@
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\ParameterExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsings.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\DisplayValueExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)RevitRootToHostConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)RevitVersionConversionHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ReferencePointConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)RevitRootToHostConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\ScalingServiceToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\ScalingServiceToSpeckle.cs" />
@@ -32,6 +33,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Settings\RevitConversionSettings.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\ReferencePointType.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\RevitConversionSettingsFactory.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\BaseToHostGeometryObjectConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\ArcConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\CircleConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\CurveConverterToHost.cs" />
@@ -43,14 +45,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\PointConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\PolylineConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\RenderMaterialToHostConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\ToDirectShape\ArcToDirectShapeConverterToHost.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\ToDirectShape\CircleToDirectShapeConverterToHost.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\ToDirectShape\CurveToDirectShapeConverterToHost.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\ToDirectShape\CurveToDirectShapeConverterToHostBase.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\ToDirectShape\EllipseToDirectShapeConverterToHost.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\ToDirectShape\LineToDirectShapeConverterToHost.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\ToDirectShape\PolycurveConverterToHost.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\ToDirectShape\PolylineConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\VectorConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Parameters\ParameterDefinitionHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Parameters\ParameterExtractor.cs" />
@@ -76,7 +70,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\PolylineToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\VectorToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\XyzConversionToPoint.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\MaterialConversionToSpeckle.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\MaterialAsRevitMaterialConversionToSpeckle.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\MaterialAsSpeckleMaterialConversionToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\MaterialQuantitiesToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\GridTopLevelConverterToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\LevelTopLevelConverterToSpeckle.cs" />
@@ -105,5 +100,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)\Helpers\SendSelection.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\RevitToSpeckleUnitConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)RevitRootToSpeckleConverter.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\" />
   </ItemGroup>
 </Project>

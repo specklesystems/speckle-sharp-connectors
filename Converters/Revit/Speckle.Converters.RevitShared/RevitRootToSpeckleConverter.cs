@@ -1,7 +1,9 @@
+using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Converters.RevitShared.ToSpeckle;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
@@ -12,18 +14,23 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
 {
   private readonly IConverterManager<IToSpeckleTopLevelConverter> _toSpeckle;
   private readonly ITypedConverter<DB.Element, List<Dictionary<string, object>>> _materialQuantityConverter;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ParameterExtractor _parameterExtractor;
   private readonly ILogger<RevitRootToSpeckleConverter> _logger;
+
+  private readonly Dictionary<WorksetId, string> _worksetCache = new();
 
   public RevitRootToSpeckleConverter(
     IConverterManager<IToSpeckleTopLevelConverter> toSpeckle,
     ITypedConverter<DB.Element, List<Dictionary<string, object>>> materialQuantityConverter,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ParameterExtractor parameterExtractor,
     ILogger<RevitRootToSpeckleConverter> logger
   )
   {
     _toSpeckle = toSpeckle;
     _materialQuantityConverter = materialQuantityConverter;
+    _converterSettings = converterSettings;
     _parameterExtractor = parameterExtractor;
     _logger = logger;
   }
@@ -75,6 +82,15 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
     {
       _logger.LogWarning(e, $"Failed to extract parameters from element {target.GetType().Name}");
     }
+
+    result["worksetId"] = element.WorksetId.ToString();
+    if (!_worksetCache.TryGetValue(element.WorksetId, out var worksetName))
+    {
+      Workset workset = _converterSettings.Current.Document.GetWorksetTable().GetWorkset(element.WorksetId);
+      worksetName = workset.Name;
+      _worksetCache[element.WorksetId] = worksetName;
+    }
+    result["worksetName"] = worksetName;
 
     return result;
   }

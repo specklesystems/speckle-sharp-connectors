@@ -19,7 +19,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 {
   private readonly IRootToHostConverter _converter;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
-  private readonly RevitMaterialCacheSingleton _revitMaterialCacheSingleton;
+  private readonly RevitToHostCacheSingleton _revitToHostCacheSingleton;
   private readonly ITransactionManager _transactionManager;
   private readonly ILocalToGlobalUnpacker _localToGlobalUnpacker;
   private readonly LocalToGlobalConverterUtils _localToGlobalConverterUtils;
@@ -41,7 +41,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     RevitMaterialBaker materialBaker,
     RootObjectUnpacker rootObjectUnpacker,
     ILogger<RevitHostObjectBuilder> logger,
-    RevitMaterialCacheSingleton revitMaterialCacheSingleton
+    RevitToHostCacheSingleton revitToHostCacheSingleton
   )
   {
     _converter = converter;
@@ -53,7 +53,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     _materialBaker = materialBaker;
     _rootObjectUnpacker = rootObjectUnpacker;
     _logger = logger;
-    _revitMaterialCacheSingleton = revitMaterialCacheSingleton;
+    _revitToHostCacheSingleton = revitToHostCacheSingleton;
     _activityFactory = activityFactory;
   }
 
@@ -118,7 +118,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       var map = _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseGroupName);
       foreach (var kvp in map)
       {
-        _revitMaterialCacheSingleton.ObjectIdAndMaterialIndexMap.Add(kvp.Key, kvp.Value);
+        _revitToHostCacheSingleton.MaterialsByObjectId.Add(kvp.Key, kvp.Value);
       }
     }
 
@@ -149,7 +149,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       createGroupTransaction.Assimilate();
     }
 
-    _revitMaterialCacheSingleton.ObjectIdAndMaterialIndexMap.Clear(); // Massive hack!
+    _revitToHostCacheSingleton.MaterialsByObjectId.Clear(); // Massive hack!
 
     return conversionResults;
   }

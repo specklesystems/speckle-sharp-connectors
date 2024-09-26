@@ -46,7 +46,7 @@ public class RevitGroupBaker : TraversalContextUnpacker
       var group = new FakeGroup()
       {
         // POC group names should be unique
-        Name = _revitUtils.RemoveInvalidChars(collection.name),
+        Name = _revitUtils.RemoveInvalidChars(currentLayerName[..^1]),
         Depth = currentDepth++,
         Parent = previousGroup!
       };
