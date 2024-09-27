@@ -29,11 +29,11 @@ public sealed class AutocadSelectionBinding : ISelectionBinding, IPostInitBindin
     // It is with the case of if binding created with already a document
     // This is valid when user opens acad file directly double clicking
     TryRegisterDocumentForSelection(Application.DocumentManager.MdiActiveDocument);
-    Application.DocumentManager.DocumentActivated += OnDocumentActivated;
+    Application.DocumentManager.DocumentActivated += (_, e) =>
+      _topLevelExceptionHandler.CatchUnhandled(() => OnDocumentChanged(e.Document));
   }
 
-  private void OnDocumentActivated(object? sender, DocumentCollectionEventArgs args) =>
-    _topLevelExceptionHandler.CatchUnhandled(() => TryRegisterDocumentForSelection(args.Document));
+  private void OnDocumentChanged(Document? document) => TryRegisterDocumentForSelection(document);
 
   private void TryRegisterDocumentForSelection(Document? document)
   {
@@ -44,7 +44,6 @@ public sealed class AutocadSelectionBinding : ISelectionBinding, IPostInitBindin
 
     if (!_visitedDocuments.Contains(document))
     {
-      //Should this be un-registered in dispose also?
       document.ImpliedSelectionChanged += (_, _) =>
         _topLevelExceptionHandler.CatchUnhandled(() => Parent.RunOnMainThread(OnSelectionChanged));
 
