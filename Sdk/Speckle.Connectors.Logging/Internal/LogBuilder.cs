@@ -19,7 +19,6 @@ internal static class LogBuilder
       .MinimumLevel.Is(SpeckleLogLevelUtility.GetLevel(speckleLogging?.MinimumLevel ?? SpeckleLogLevel.Warning))
       .Enrich.FromLogContext()
       .Enrich.WithExceptionDetails();
-    
 
     if (speckleLogging?.File is not null)
     {
