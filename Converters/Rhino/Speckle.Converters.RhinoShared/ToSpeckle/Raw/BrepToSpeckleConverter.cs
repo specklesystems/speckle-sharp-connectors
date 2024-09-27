@@ -1,6 +1,4 @@
-﻿using Rhino;
-using Rhino.FileIO;
-using Speckle.Converters.Common;
+﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
 using Speckle.Sdk;
@@ -45,7 +43,7 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.Brep>
   public SOG.Brep Convert(RG.Brep target)
   {
     var tol = _settingsStore.Current.Document.ModelAbsoluteTolerance;
-    target.Repair(tol);
+    //target.Repair(tol);
 
     // POC: CNX-9276 This should come as part of the user settings in the context object.
     // if (PreprocessGeometry)
@@ -103,32 +101,7 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.Brep>
       Trims = new(target.Trims.Count),
       Faces = new(target.Faces.Count)
     };
-
-    var options = new SerializationOptions() { WriteUserData = false };
-    var shallowBrep = target.DuplicateShallow();
-    // var openNurbs = shallowBrep.ToJSON(options);
-
-    var filePath = Path.Combine(Path.GetTempPath(), "Speckle", $"{Guid.NewGuid():N}.3dm");
-    var filePath2 = Path.Combine(Path.GetTempPath(), "Speckle", $"{Guid.NewGuid():N}-doc.3dm");
-    Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "Speckle"));
-
-    using (var doc = RhinoDoc.CreateHeadless(default))
-    {
-      doc.ModelUnitSystem = _settingsStore.Current.Document.ModelUnitSystem;
-      doc.ModelAbsoluteTolerance = _settingsStore.Current.Document.ModelAbsoluteTolerance;
-      doc.ModelAngleToleranceRadians = _settingsStore.Current.Document.ModelAngleToleranceRadians;
-
-      doc.Objects.Add(target);
-      doc.Write3dmFile(filePath2, new FileWriteOptions() { IncludeRenderMeshes = false });
-    }
-
-    var fileBytes = System.Convert.ToBase64String(File.ReadAllBytes(filePath2));
-    speckleBrep["fileBlob"] = fileBytes;
-    // File.Delete(filePath2);
-
-    // var blob = new Blob() { originalPath = filePath2, applicationId = Guid.NewGuid().ToString() };
-
-    // speckleBrep["blob"] = blob;
+    
     // Brep non-geometry types
     ConvertBrepFaces(target, speckleBrep);
     ConvertBrepEdges(target, speckleBrep);

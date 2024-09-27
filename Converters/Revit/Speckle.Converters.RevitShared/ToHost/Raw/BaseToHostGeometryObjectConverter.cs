@@ -1,5 +1,6 @@
 using System.Collections;
 using Speckle.Converters.Common;
+using Speckle.Converters.Common.FileOps;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects;
@@ -46,14 +47,16 @@ public class BaseToHostGeometryObjectConverter : ITypedConverter<Base, List<DB.G
         var meshes = _meshConverter.Convert(mesh).Cast<DB.GeometryObject>();
         result.AddRange(meshes);
         break;
-      case SOG.Brep burp:
-        // should be try caught and default back to mesh
-        var boss = TryImportBrepShape(burp);
-        if (boss != null)
-        {
-          result.AddRange(boss);
-        }
+      case SOG.IRawEncodedObject elon:
         break;
+      // case SOG.BrepX burp:
+      //   // should be try caught and default back to mesh
+      //   var boss = TryImportBrepShape(burp);
+      //   if (boss != null)
+      //   {
+      //     result.AddRange(boss);
+      //   }
+      //   break;
       default:
         var displayValue = target.TryGetDisplayValue<Base>();
         if ((displayValue is IList && !displayValue.Any()) || displayValue is null)
@@ -65,19 +68,18 @@ public class BaseToHostGeometryObjectConverter : ITypedConverter<Base, List<DB.G
         {
           result.AddRange(Convert(display));
         }
-
         break;
     }
 
     return result;
   }
 
-  public IEnumerable<DB.GeometryObject> TryImportBrepShape(SOG.Brep burp)
+  public IEnumerable<DB.GeometryObject> TryImportBrepShape(SOG.BrepX burp)
   {
-    var burpRhinoContents = burp["fileBlob"] as string; // note: temp, this is for now 3dm specific (?)
+    var burpRhinoContents = burp.encodedValue.contents;
     var fileBytes = System.Convert.FromBase64String(burpRhinoContents!);
-    var filePath = Path.Combine(Path.GetTempPath(), "Speckle", "Revit Import", $"{Guid.NewGuid():N}.3dm");
-    Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "Speckle", "Revit Import"));
+    
+    var filePath = TempFileProvider.GetTempFile("RevitX", burp.encodedValue.format);
     File.WriteAllBytes(filePath, fileBytes);
 
     using var importer = new DB.ShapeImporter();
