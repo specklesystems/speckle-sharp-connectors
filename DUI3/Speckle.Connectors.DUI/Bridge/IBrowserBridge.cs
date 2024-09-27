@@ -61,4 +61,6 @@ public interface IBrowserBridge
 
   /// <exception cref="InvalidOperationException">The <see cref="IBrowserBridge"/> was not initialized with an <see cref="IBinding"/> (see <see cref="AssociateWithBinding"/>)</exception>
   public void AssertBindingInitialised();
+
+  public bool IsBindingInitialized { get; }
 }

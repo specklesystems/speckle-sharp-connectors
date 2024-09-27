@@ -26,6 +26,18 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
   public IBrowserBridge Parent { get; }
   public string Name => nameof(TopLevelExceptionHandler);
 
+  /// <summary>
+  /// When <see langword="true"/>, this <see cref="ITopLevelExceptionHandler"/> will not throw exceptions if the <see cref="Parent"/> <see cref="IBrowserBridge"/> is not initialized.
+  /// </summary>
+  /// <remarks>
+  /// Most uses of a <see cref="ITopLevelExceptionHandler"/> are from <see cref="IBinding"/> where we should allways expect an functional <see cref="IBrowserBridge"/> (<see cref="IPostInitBinding"/>)
+  /// However, some usages of a <see cref="ITopLevelExceptionHandler"/> outside of a <see cref="IBinding"/> (e.g. injected into non <see cref="IBinding"/>s via the <see cref="TopLevelExceptionHandlerBinding"/>)
+  /// may want to use the logging capabilities of the <see cref="TopLevelExceptionHandler"/> before the <see cref="IBrowserBridge"/> is fully operational.
+  /// TL;DR: Bindings should use <see cref="IPostInitBinding"/> and <see cref="AllowUseWithoutBrowser"/> <see langword="false"/>
+  /// Any other usages can decide for them selves
+  /// </remarks>
+  public bool AllowUseWithoutBrowser { get; set; }
+
   private const string UNHANDLED_LOGGER_TEMPLATE = "An unhandled Exception occured from {binding}";
 
   internal TopLevelExceptionHandler(ILogger<TopLevelExceptionHandler> logger, IBrowserBridge bridge)
@@ -45,7 +57,10 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
   {
     try
     {
-      Parent.AssertBindingInitialised();
+      if (!AllowUseWithoutBrowser)
+      {
+        Parent.AssertBindingInitialised();
+      }
 
       try
       {
@@ -83,7 +98,10 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
   {
     try
     {
-      Parent.AssertBindingInitialised();
+      if (!AllowUseWithoutBrowser)
+      {
+        Parent.AssertBindingInitialised();
+      }
 
       try
       {
@@ -108,7 +126,13 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
     }
   }
 
-  private void SetGlobalNotification(ToastNotificationType type, string title, string message, bool autoClose) =>
+  private void SetGlobalNotification(ToastNotificationType type, string title, string message, bool autoClose)
+  {
+    if (AllowUseWithoutBrowser && !Parent.IsBindingInitialized)
+    {
+      return;
+    }
+
     Parent.Send(
       BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, //TODO: We could move these constants into a DUI3 constants static class
       new
@@ -119,4 +143,5 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
         autoClose
       }
     );
+  }
 }

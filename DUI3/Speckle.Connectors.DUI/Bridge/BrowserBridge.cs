@@ -88,7 +88,7 @@ public sealed class BrowserBridge : IBrowserBridge
     // Note: we need to filter out getter and setter methods here because they are not really nicely
     // supported across browsers, hence the !method.IsSpecialName.
     var bindingMethodCache = new Dictionary<string, MethodInfo>();
-    foreach (var m in BindingType.GetMethods().Where(method => !method.IsSpecialName))
+    foreach (var m in binding.GetType().GetMethods().Where(method => !method.IsSpecialName))
     {
       bindingMethodCache[m.Name] = m;
     }
@@ -341,4 +341,6 @@ public sealed class BrowserBridge : IBrowserBridge
       throw new InvalidOperationException("Bridge was not initialized with a binding");
     }
   }
+
+  public bool IsBindingInitialized => _binding is null;
 }
