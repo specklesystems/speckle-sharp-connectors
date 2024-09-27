@@ -1,6 +1,7 @@
 using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk.Models;
 
@@ -9,15 +10,18 @@ namespace Speckle.Converters.RevitShared;
 public class RevitRootToHostConverter : IRootToHostConverter
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
+  private readonly RevitToHostCacheSingleton _revitToHostCacheSingleton;
   private readonly ITypedConverter<Base, List<DB.GeometryObject>> _baseToGeometryConverter;
 
   public RevitRootToHostConverter(
     ITypedConverter<Base, List<DB.GeometryObject>> baseToGeometryConverter,
-    IConverterSettingsStore<RevitConversionSettings> converterSettings
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
+    RevitToHostCacheSingleton revitToHostCacheSingleton
   )
   {
     _baseToGeometryConverter = baseToGeometryConverter;
     _converterSettings = converterSettings;
+    _revitToHostCacheSingleton = revitToHostCacheSingleton;
   }
 
   public object Convert(Base target)
@@ -30,12 +34,12 @@ public class RevitRootToHostConverter : IRootToHostConverter
     }
 
     // create direct shape from geometries
-    DB.DirectShape result = CreateDirectShape(geometryObjects, target["category"] as string);
+    DB.DirectShape result = CreateDirectShape(geometryObjects, target, target["category"] as string);
 
     return result;
   }
 
-  private DB.DirectShape CreateDirectShape(List<GeometryObject> geometry, string? category)
+  private DB.DirectShape CreateDirectShape(List<GeometryObject> geometry, Base originalObject, string? category)
   {
     // set ds category
     var dsCategory = BuiltInCategory.OST_GenericModel;
@@ -63,6 +67,27 @@ public class RevitRootToHostConverter : IRootToHostConverter
 
     result.SetShape(geometry);
 
+    if (originalObject is SOG.IRawEncodedObject)
+    {
+      var materialId = DB.ElementId.InvalidElementId;
+      if (
+        _revitToHostCacheSingleton.MaterialsByObjectId.TryGetValue(originalObject.applicationId ?? originalObject.id, out var mappedElementId)
+      )
+      {
+        materialId = mappedElementId;
+      }
+      
+      // if(materialId == DB.ElementId.InvalidElementId) 
+      
+      foreach (var geo in geometry)
+      {
+        if (geo is Face f)
+        {
+          _converterSettings.Current.Document.Paint(result.Id, f, materialId);
+        }
+      }
+    }
+    
     return result;
   }
 }

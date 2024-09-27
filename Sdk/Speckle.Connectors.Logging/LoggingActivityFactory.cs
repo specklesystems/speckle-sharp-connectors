@@ -12,6 +12,7 @@ public sealed class LoggingActivityFactory : IDisposable
 
   public LoggingActivity? Start(string? name = null, [CallerMemberName] string source = "")
   {
+    //If you get a MissingManifestResourceException, Likely source or name is empty string, which is no good.
     var activity = _activitySource?.StartActivity(name ?? source, ActivityKind.Client);
     if (activity is null)
     {

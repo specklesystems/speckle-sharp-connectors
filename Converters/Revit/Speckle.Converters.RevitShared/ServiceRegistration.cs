@@ -26,7 +26,8 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<IRootToHostConverter, RevitRootToHostConverter>();
     serviceCollection.AddSingleton(new RevitContext());
 
-    serviceCollection.AddSingleton(new RevitMaterialCacheSingleton());
+    serviceCollection.AddSingleton(new RevitToHostCacheSingleton());
+    serviceCollection.AddSingleton(new RevitToSpeckleCacheSingleton());
 
     // POC: do we need ToSpeckleScalingService as is, do we need to interface it out?
     serviceCollection.AddScoped<ScalingServiceToSpeckle>();

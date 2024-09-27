@@ -1,17 +1,21 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.FileOps;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Revit2023.ToHost.Raw.Geometry;
 
 public class IRawEncodedObjectConverter : ITypedConverter<SOG.IRawEncodedObject, List<DB.GeometryObject>>
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _settings;
+  private readonly RevitToHostCacheSingleton _revitToHostCacheSingleton;
 
-  public IRawEncodedObjectConverter(IConverterSettingsStore<RevitConversionSettings> settings)
+  public IRawEncodedObjectConverter(IConverterSettingsStore<RevitConversionSettings> settings, RevitToHostCacheSingleton revitToHostCacheSingleton)
   {
     _settings = settings;
+    _revitToHostCacheSingleton = revitToHostCacheSingleton;
   }
   
   public List<DB.GeometryObject> Convert(SOG.IRawEncodedObject target)
@@ -22,12 +26,22 @@ public class IRawEncodedObjectConverter : ITypedConverter<SOG.IRawEncodedObject,
     File.WriteAllBytes(filePath, bytes);
 
     using var importer = new DB.ShapeImporter();
-    var shapeImportResult = importer.Convert(_settings.Current.Document, filePath).OfType<DB.GeometryObject>();
+    var shapeImportResult = importer.Convert(_settings.Current.Document, filePath);
     
     //   // note: scaling is a todo
     //   // DB.SolidUtils.CreateTransformed(shape, DB.Transform.Identity);
     
     // _settings.Document.Paint();
+    
+    
+
+    foreach (var geo in shapeImportResult)
+    {
+      if (geo is DB.Face f)
+      {
+        _settings.Current.Document.Paint(f, f, );
+      }
+    }
     
     return shapeImportResult.ToList();
   }

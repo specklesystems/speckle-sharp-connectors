@@ -14,18 +14,21 @@ public class BaseToHostGeometryObjectConverter : ITypedConverter<Base, List<DB.G
   private readonly ITypedConverter<SOG.Point, DB.XYZ> _pointConverter;
   private readonly ITypedConverter<ICurve, DB.CurveArray> _curveConverter;
   private readonly ITypedConverter<SOG.Mesh, List<DB.GeometryObject>> _meshConverter;
+  private readonly ITypedConverter<SOG.IRawEncodedObject, List<DB.GeometryObject>> _encodedObjectConverter;
   private readonly IConverterSettingsStore<RevitConversionSettings> _settings;
 
   public BaseToHostGeometryObjectConverter(
     ITypedConverter<SOG.Point, DB.XYZ> pointConverter,
     ITypedConverter<ICurve, DB.CurveArray> curveConverter,
     ITypedConverter<SOG.Mesh, List<DB.GeometryObject>> meshConverter,
+    ITypedConverter<SOG.IRawEncodedObject, List<DB.GeometryObject>> encodedObjectConverter,
     IConverterSettingsStore<RevitConversionSettings> settings
   )
   {
     _pointConverter = pointConverter;
     _curveConverter = curveConverter;
     _meshConverter = meshConverter;
+    _encodedObjectConverter = encodedObjectConverter;
     _settings = settings;
   }
 
@@ -48,15 +51,9 @@ public class BaseToHostGeometryObjectConverter : ITypedConverter<Base, List<DB.G
         result.AddRange(meshes);
         break;
       case SOG.IRawEncodedObject elon:
+        var res = _encodedObjectConverter.Convert(elon);
+        result.AddRange(res);
         break;
-      // case SOG.BrepX burp:
-      //   // should be try caught and default back to mesh
-      //   var boss = TryImportBrepShape(burp);
-      //   if (boss != null)
-      //   {
-      //     result.AddRange(boss);
-      //   }
-      //   break;
       default:
         var displayValue = target.TryGetDisplayValue<Base>();
         if ((displayValue is IList && !displayValue.Any()) || displayValue is null)
