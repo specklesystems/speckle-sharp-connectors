@@ -4,13 +4,14 @@ using System.Runtime.InteropServices;
 using OpenTelemetry.Resources;
 using Serilog;
 using Serilog.Exceptions;
+using Serilog.Extensions.Logging;
 using Serilog.Sinks.OpenTelemetry;
 
 namespace Speckle.Connectors.Logging.Internal;
 
 internal static class LogBuilder
 {
-  public static Logger Initialize(
+  public static LoggerProvider Initialize(
     string applicationAndVersion,
     string connectorVersion,
     SpeckleLogging? speckleLogging,
@@ -60,7 +61,9 @@ internal static class LogBuilder
         "Initialized logger inside {hostApplication}/{productVersion}/{version} for user {id}. Path info {userApplicationDataPath} {installApplicationDataPath}."
       );
 
-    return new Logger(logger);
+#pragma warning disable CA2000
+    return new LoggerProvider(new SerilogLoggerProvider(logger));
+#pragma warning restore CA2000
   }
 
   private static FileVersionInfo GetFileVersionInfo()

@@ -144,7 +144,9 @@ public class ParameterExtractor
       case DB.StorageType.Double:
         return _scalingServiceToSpeckle.Scale(parameter.AsDouble(), parameter.GetUnitTypeId());
       case DB.StorageType.Integer:
-        return parameter.AsInteger();
+        return parameter.AsInteger().ToString() == parameter.AsValueString()
+          ? parameter.AsInteger()
+          : parameter.AsValueString();
       case DB.StorageType.ElementId:
         var elId = parameter.AsElementId()!;
         if (_elementNameCache.TryGetValue(elId, out string? value))

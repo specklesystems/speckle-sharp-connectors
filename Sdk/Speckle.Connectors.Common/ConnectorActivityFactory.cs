@@ -1,4 +1,5 @@
-﻿using Speckle.Connectors.Logging;
+﻿using System.Runtime.CompilerServices;
+using Speckle.Connectors.Logging;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Logging;
 
@@ -10,7 +11,7 @@ public sealed class ConnectorActivityFactory : ISdkActivityFactory, IDisposable
 
   public void Dispose() => _loggingActivityFactory.Dispose();
 
-  public ISdkActivity? Start(string? name = default, string source = "")
+  public ISdkActivity? Start(string? name = default, [CallerMemberName] string source = "")
   {
     var activity = _loggingActivityFactory?.Start(name, source);
     if (activity is null)
