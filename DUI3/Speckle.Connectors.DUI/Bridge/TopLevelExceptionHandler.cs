@@ -69,7 +69,7 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE, Parent.FrontendBoundName);
+        _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE, BindingName);
 
         SetGlobalNotification(
           ToastNotificationType.DANGER,
@@ -82,7 +82,7 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
     }
     catch (Exception ex)
     {
-      _logger.LogCritical(ex, UNHANDLED_LOGGER_TEMPLATE, Parent.FrontendBoundName);
+      _logger.LogCritical(ex, UNHANDLED_LOGGER_TEMPLATE, BindingName);
       throw;
     }
   }
@@ -109,7 +109,7 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE, Parent.FrontendBoundName);
+        _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE, BindingName);
         SetGlobalNotification(
           ToastNotificationType.DANGER,
           "Unhandled Exception Occured",
@@ -121,10 +121,12 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
     }
     catch (Exception ex)
     {
-      _logger.LogCritical(ex, UNHANDLED_LOGGER_TEMPLATE, Parent.FrontendBoundName);
+      _logger.LogCritical(ex, UNHANDLED_LOGGER_TEMPLATE, BindingName);
       throw;
     }
   }
+
+  private string? BindingName => Parent.IsBindingInitialized ? Parent.FrontendBoundName : null;
 
   private void SetGlobalNotification(ToastNotificationType type, string title, string message, bool autoClose)
   {
