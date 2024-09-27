@@ -34,12 +34,12 @@ public class RevitRootToHostConverter : IRootToHostConverter
     }
 
     // create direct shape from geometries
-    DB.DirectShape result = CreateDirectShape(geometryObjects, target, target["category"] as string);
+    DB.DirectShape result = CreateDirectShape(geometryObjects, target["category"] as string);
 
     return result;
   }
 
-  private DB.DirectShape CreateDirectShape(List<GeometryObject> geometry, Base originalObject, string? category)
+  private DB.DirectShape CreateDirectShape(List<GeometryObject> geometry, string? category)
   {
     // set ds category
     var dsCategory = BuiltInCategory.OST_GenericModel;
@@ -67,26 +67,29 @@ public class RevitRootToHostConverter : IRootToHostConverter
 
     result.SetShape(geometry);
 
-    if (originalObject is SOG.IRawEncodedObject)
-    {
-      var materialId = DB.ElementId.InvalidElementId;
-      if (
-        _revitToHostCacheSingleton.MaterialsByObjectId.TryGetValue(originalObject.applicationId ?? originalObject.id, out var mappedElementId)
-      )
-      {
-        materialId = mappedElementId;
-      }
-      
-      // if(materialId == DB.ElementId.InvalidElementId) 
-      
-      foreach (var geo in geometry)
-      {
-        if (geo is Face f)
-        {
-          _converterSettings.Current.Document.Paint(result.Id, f, materialId);
-        }
-      }
-    }
+    // if (originalObject is SOG.IRawEncodedObject)
+    // {
+    //   var materialId = DB.ElementId.InvalidElementId;
+    //   if (
+    //     _revitToHostCacheSingleton.MaterialsByObjectId.TryGetValue(originalObject.applicationId ?? originalObject.id, out var mappedElementId)
+    //   )
+    //   {
+    //     materialId = mappedElementId;
+    //   }
+    //   
+    //   // if(materialId == DB.ElementId.InvalidElementId) 
+    //   var elGeometry = result.get_Geometry(new Options() { DetailLevel = ViewDetailLevel.Undefined });
+    //   foreach (var geo in elGeometry)
+    //   {
+    //     if (geo is Solid s)
+    //     {
+    //       foreach (Face face in s.Faces)
+    //       {
+    //         _converterSettings.Current.Document.Paint(result.Id, face, materialId);
+    //       }
+    //     }
+    //   }
+    // }
     
     return result;
   }

@@ -9,6 +9,7 @@ using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Objects.Geometry;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -129,11 +130,34 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       _transactionManager.CommitTransaction();
       transactionGroup.Assimilate();
     }
-
+    
     using TransactionGroup createGroupTransaction = new(_converterSettings.Current.Document, "Creating group");
     createGroupTransaction.Start();
     _transactionManager.StartTransaction(true);
 
+    foreach (var (res, applicationId) in conversionResults.Item2)
+    {
+      var elGeometry = res.get_Geometry(new Options() { DetailLevel = ViewDetailLevel.Undefined });
+      var materialId = ElementId.InvalidElementId;
+      if (
+        _revitToHostCacheSingleton.MaterialsByObjectId.TryGetValue(applicationId, out var mappedElementId)
+      )
+      {
+        materialId = mappedElementId;
+      }
+      // NOTE: some geometries fail to convert as solids, and the api defaults back to meshes (from the shape importer). These cannot be painted, so don't bother.
+      foreach (var geo in elGeometry)
+      {
+        if (geo is Solid s)
+        {
+          foreach (Face face in s.Faces)
+          {
+            _converterSettings.Current.Document.Paint(res.Id, face, materialId);
+          }
+        }
+      }
+    }
+    
     try
     {
       _groupBaker.BakeGroups(baseGroupName);
@@ -151,10 +175,10 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 
     _revitToHostCacheSingleton.MaterialsByObjectId.Clear(); // Massive hack!
 
-    return conversionResults;
+    return conversionResults.Item1;
   }
 
-  private HostObjectBuilderResult BakeObjects(
+  private (HostObjectBuilderResult, List<(DirectShape res, string applicationId)>) BakeObjects(
     List<LocalToGlobalMap> localToGlobalMaps,
     Action<string, double?>? onOperationProgressed,
     CancellationToken cancellationToken
@@ -164,7 +188,9 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     var conversionResults = new List<ReceiveConversionResult>();
     var bakedObjectIds = new List<string>();
     int count = 0;
-
+    
+    var toPaintLater = new List<(DirectShape res, string applicationId)>();
+    
     foreach (LocalToGlobalMap localToGlobalMap in localToGlobalMaps)
     {
       cancellationToken.ThrowIfCancellationRequested();
@@ -183,6 +209,10 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
         {
           bakedObjectIds.Add(ds.UniqueId.ToString());
           _groupBaker.AddToGroupMapping(localToGlobalMap.TraversalContext, ds);
+          if (atomicObject is IRawEncodedObject && atomicObject is Base myBase)
+          {
+            toPaintLater.Add((ds, myBase.applicationId ?? myBase.id));
+          } 
         }
         else
         {
@@ -195,7 +225,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
         conversionResults.Add(new(Status.ERROR, localToGlobalMap.AtomicObject, null, null, ex));
       }
     }
-    return new(bakedObjectIds, conversionResults);
+    return (new(bakedObjectIds, conversionResults), toPaintLater);
   }
 
   private void PreReceiveDeepClean(string baseGroupName)

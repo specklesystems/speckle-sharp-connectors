@@ -3,7 +3,6 @@ using Speckle.Converters.Common.FileOps;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Revit2023.ToHost.Raw.Geometry;
 
@@ -33,15 +32,6 @@ public class IRawEncodedObjectConverter : ITypedConverter<SOG.IRawEncodedObject,
     
     // _settings.Document.Paint();
     
-    
-
-    foreach (var geo in shapeImportResult)
-    {
-      if (geo is DB.Face f)
-      {
-        _settings.Current.Document.Paint(f, f, );
-      }
-    }
     
     return shapeImportResult.ToList();
   }
