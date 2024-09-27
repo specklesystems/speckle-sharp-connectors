@@ -24,7 +24,7 @@ using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.Bindings;
 
-internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
+internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding, IPostInitBinding
 {
   private readonly IRevitIdleManager _idleManager;
   private readonly CancellationManager _cancellationManager;
@@ -72,14 +72,17 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _elementUnpacker = elementUnpacker;
     _revitConversionSettingsFactory = revitConversionSettingsFactory;
     _speckleApplication = speckleApplication;
-    var topLevelExceptionHandler = Parent.TopLevelExceptionHandler;
-
     Commands = new SendBindingUICommands(bridge);
+  }
+
+  public void PostInitialization()
+  {
+    var topLevelExceptionHandler = Parent.TopLevelExceptionHandler;
     // TODO expiry events
     // TODO filters need refresh events
     _idleManager.RunAsync(() =>
     {
-      revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
+      RevitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
         topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
     });
     Store.DocumentChanged += (_, _) => topLevelExceptionHandler.CatchUnhandled(OnDocumentChanged);

@@ -45,6 +45,8 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
   {
     try
     {
+      Parent.AssertBindingInitialised();
+
       try
       {
         function.Invoke();

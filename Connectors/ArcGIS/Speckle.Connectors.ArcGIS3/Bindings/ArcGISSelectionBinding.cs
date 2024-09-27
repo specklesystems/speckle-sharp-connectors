@@ -1,3 +1,4 @@
+using ArcGIS.Core.Events;
 using ArcGIS.Desktop.Mapping;
 using ArcGIS.Desktop.Mapping.Events;
 using Speckle.Connectors.DUI.Bindings;
@@ -5,19 +6,25 @@ using Speckle.Connectors.DUI.Bridge;
 
 namespace Speckle.Connectors.ArcGIS.Bindings;
 
-public class ArcGISSelectionBinding : ISelectionBinding
+public sealed class ArcGISSelectionBinding(IBrowserBridge parent) : ISelectionBinding, IPostInitBinding, IDisposable
 {
   public string Name => "selectionBinding";
-  public IBrowserBridge Parent { get; }
+  public IBrowserBridge Parent { get; } = parent;
 
-  public ArcGISSelectionBinding(IBrowserBridge parent)
+  private SubscriptionToken _subscriptionToken;
+
+  public void PostInitialization()
   {
-    Parent = parent;
-    var topLevelHandler = parent.TopLevelExceptionHandler;
-
     // example: https://github.com/Esri/arcgis-pro-sdk-community-samples/blob/master/Map-Authoring/QueryBuilderControl/DefinitionQueryDockPaneViewModel.cs
-    // MapViewEventArgs args = new(MapView.Active);
-    TOCSelectionChangedEvent.Subscribe(_ => topLevelHandler.CatchUnhandled(OnSelectionChanged), true);
+    _subscriptionToken = TOCSelectionChangedEvent.Subscribe(
+      _ => Parent.TopLevelExceptionHandler.CatchUnhandled(OnSelectionChanged),
+      true
+    );
+  }
+
+  public void Dispose()
+  {
+    TOCSelectionChangedEvent.Unsubscribe(_subscriptionToken);
   }
 
   private void OnSelectionChanged()

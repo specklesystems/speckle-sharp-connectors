@@ -1,3 +1,4 @@
+using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
@@ -6,7 +7,7 @@ using Speckle.Connectors.DUI.Bridge;
 
 namespace Speckle.Connectors.Autocad.Bindings;
 
-public class AutocadSelectionBinding : ISelectionBinding
+public sealed class AutocadSelectionBinding : ISelectionBinding, IPostInitBinding
 {
   private const string SELECTION_EVENT = "setSelection";
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
@@ -20,16 +21,19 @@ public class AutocadSelectionBinding : ISelectionBinding
   {
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
     Parent = parent;
+  }
 
+  public void PostInitialization()
+  {
     // POC: Use here Context for doc. In converters it's OK but we are still lacking to use context into bindings.
     // It is with the case of if binding created with already a document
     // This is valid when user opens acad file directly double clicking
     TryRegisterDocumentForSelection(Application.DocumentManager.MdiActiveDocument);
-    Application.DocumentManager.DocumentActivated += (_, e) =>
-      _topLevelExceptionHandler.CatchUnhandled(() => OnDocumentChanged(e.Document));
+    Application.DocumentManager.DocumentActivated += OnDocumentActivated;
   }
 
-  private void OnDocumentChanged(Document? document) => TryRegisterDocumentForSelection(document);
+  private void OnDocumentActivated(object? sender, DocumentCollectionEventArgs args) =>
+    _topLevelExceptionHandler.CatchUnhandled(() => TryRegisterDocumentForSelection(args.Document));
 
   private void TryRegisterDocumentForSelection(Document? document)
   {
@@ -40,6 +44,7 @@ public class AutocadSelectionBinding : ISelectionBinding
 
     if (!_visitedDocuments.Contains(document))
     {
+      //Should this be un-registered in dispose also?
       document.ImpliedSelectionChanged += (_, _) =>
         _topLevelExceptionHandler.CatchUnhandled(() => Parent.RunOnMainThread(OnSelectionChanged));
 

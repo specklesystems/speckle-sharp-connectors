@@ -101,6 +101,11 @@ public sealed class BrowserBridge : IBrowserBridge
       new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = 1000 }
     );
 
+    if (_binding is IPostInitBinding postInitCallback)
+    {
+      postInitCallback.PostInitialization();
+    }
+
     _logger.LogInformation("Bridge bound to front end name {FrontEndName}", binding.Name);
   }
 

@@ -6,26 +6,32 @@ using Speckle.Connectors.Rhino.HostApp;
 
 namespace Speckle.Connectors.Rhino.Bindings;
 
-public class RhinoSelectionBinding : ISelectionBinding
+public sealed class RhinoSelectionBinding(IRhinoIdleManager idleManager, IBrowserBridge parent)
+  : ISelectionBinding,
+    IPostInitBinding,
+    IDisposable
 {
-  private readonly IRhinoIdleManager _idleManager;
   private const string SELECTION_EVENT = "setSelection";
 
   public string Name => "selectionBinding";
-  public IBrowserBridge Parent { get; }
+  public IBrowserBridge Parent { get; } = parent;
 
-  public RhinoSelectionBinding(IRhinoIdleManager idleManager, IBrowserBridge parent)
+  public void PostInitialization()
   {
-    _idleManager = idleManager;
-    Parent = parent;
-
     RhinoDoc.SelectObjects += OnSelectionChange;
     RhinoDoc.DeselectObjects += OnSelectionChange;
     RhinoDoc.DeselectAllObjects += OnSelectionChange;
   }
 
+  public void Dispose()
+  {
+    RhinoDoc.SelectObjects -= OnSelectionChange;
+    RhinoDoc.DeselectObjects -= OnSelectionChange;
+    RhinoDoc.DeselectAllObjects -= OnSelectionChange;
+  }
+
   private void OnSelectionChange(object? o, EventArgs eventArgs) =>
-    _idleManager.SubscribeToIdle(nameof(RhinoSelectionBinding), UpdateSelection);
+    idleManager.SubscribeToIdle(nameof(RhinoSelectionBinding), UpdateSelection);
 
   private void UpdateSelection()
   {

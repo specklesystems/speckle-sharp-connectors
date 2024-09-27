@@ -56,7 +56,7 @@ public abstract class DocumentModelStore
   // POC: unsure about the PublicAPI annotation, unsure if this changed handle should live here on the store...  :/
   public event EventHandler? DocumentChanged;
 
-  public virtual bool IsDocumentInit { get; set; }
+  public bool IsDocumentInit { get; protected set; }
 
   // TODO: not sure about this, throwing an exception, needs some thought...
   // Further note (dim): If we reach to the stage of throwing an exception here because a model is not found, there's a huge misalignment between the UI's list of model cards and the host app's.

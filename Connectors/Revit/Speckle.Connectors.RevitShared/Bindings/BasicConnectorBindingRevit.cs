@@ -11,7 +11,7 @@ using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
-internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
+internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding, IPostInitBinding
 {
   // POC: name and bridge might be better for them to be protected props?
   public string Name { get; private set; }
@@ -39,7 +39,10 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     _speckleApplication = speckleApplication;
     _logger = logger;
     Commands = new BasicConnectorBindingCommands(parent);
+  }
 
+  public void PostInitialization()
+  {
     // POC: event binding?
     _store.DocumentChanged += (_, _) =>
     {

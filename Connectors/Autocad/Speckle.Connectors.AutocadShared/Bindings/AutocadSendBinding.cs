@@ -23,7 +23,7 @@ using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Autocad.Bindings;
 
-public sealed class AutocadSendBinding : ISendBinding
+public sealed class AutocadSendBinding : ISendBinding, IPostInitBinding
 {
   public string Name => "sendBinding";
   public SendBindingUICommands Commands { get; }
@@ -77,7 +77,10 @@ public sealed class AutocadSendBinding : ISendBinding
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
+  }
 
+  public void PostInitialization()
+  {
     Application.DocumentManager.DocumentActivated += (_, args) =>
       _topLevelExceptionHandler.CatchUnhandled(() => SubscribeToObjectChanges(args.Document));
 

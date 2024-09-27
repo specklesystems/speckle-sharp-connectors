@@ -23,7 +23,7 @@ using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Rhino.Bindings;
 
-public sealed class RhinoSendBinding : ISendBinding
+public sealed class RhinoSendBinding : ISendBinding, IPostInitBinding, IDisposable
 {
   public string Name => "sendBinding";
   public SendBindingUICommands Commands { get; }
@@ -76,76 +76,24 @@ public sealed class RhinoSendBinding : ISendBinding
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler.Parent.TopLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent); // POC: Commands are tightly coupled with their bindings, at least for now, saves us injecting a factory.
-    SubscribeToRhinoEvents();
   }
 
-  private void SubscribeToRhinoEvents()
+  public void PostInitialization()
   {
-    Command.BeginCommand += (_, e) =>
-    {
-      if (e.CommandEnglishName == "BlockEdit")
-      {
-        var selectedObject = RhinoDoc.ActiveDoc.Objects.GetSelectedObjects(false, false).First();
-        ChangedObjectIds[selectedObject.Id.ToString()] = 1;
-      }
-    };
+    Command.BeginCommand += OnRhinoCommandEvent;
+    RhinoDoc.AddRhinoObject += OnRhinoObjectEvent;
+    RhinoDoc.DeleteRhinoObject += OnRhinoObjectEvent;
+    RhinoDoc.ModifyObjectAttributes += OnRhinoModifyObjectAttributesEvent;
+    RhinoDoc.ReplaceRhinoObject += OnRhinoReplaceObjectEvent;
+  }
 
-    RhinoDoc.AddRhinoObject += (_, e) =>
-      _topLevelExceptionHandler.CatchUnhandled(() =>
-      {
-        // NOTE: This does not work if rhino starts and opens a blank doc;
-        if (!_store.IsDocumentInit)
-        {
-          return;
-        }
-
-        ChangedObjectIds[e.ObjectId.ToString()] = 1;
-        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
-      });
-
-    RhinoDoc.DeleteRhinoObject += (_, e) =>
-      _topLevelExceptionHandler.CatchUnhandled(() =>
-      {
-        // NOTE: This does not work if rhino starts and opens a blank doc;
-        if (!_store.IsDocumentInit)
-        {
-          return;
-        }
-
-        ChangedObjectIds[e.ObjectId.ToString()] = 1;
-        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
-      });
-
-    RhinoDoc.ModifyObjectAttributes += (_, e) =>
-      _topLevelExceptionHandler.CatchUnhandled(() =>
-      {
-        // NOTE: This does not work if rhino starts and opens a blank doc;
-        if (!_store.IsDocumentInit)
-        {
-          return;
-        }
-
-        // NOTE: not sure yet we want to track every attribute changes yet. TBD
-        if (e.OldAttributes.LayerIndex != e.NewAttributes.LayerIndex)
-        {
-          ChangedObjectIds[e.RhinoObject.Id.ToString()] = 1;
-          _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
-        }
-      });
-
-    RhinoDoc.ReplaceRhinoObject += (_, e) =>
-      _topLevelExceptionHandler.CatchUnhandled(() =>
-      {
-        // NOTE: This does not work if rhino starts and opens a blank doc;
-        if (!_store.IsDocumentInit)
-        {
-          return;
-        }
-
-        ChangedObjectIds[e.NewRhinoObject.Id.ToString()] = 1;
-        ChangedObjectIds[e.OldRhinoObject.Id.ToString()] = 1;
-        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
-      });
+  public void Dispose()
+  {
+    Command.BeginCommand -= OnRhinoCommandEvent;
+    RhinoDoc.AddRhinoObject -= OnRhinoObjectEvent;
+    RhinoDoc.DeleteRhinoObject -= OnRhinoObjectEvent;
+    RhinoDoc.ModifyObjectAttributes -= OnRhinoModifyObjectAttributesEvent;
+    RhinoDoc.ReplaceRhinoObject -= OnRhinoReplaceObjectEvent;
   }
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
@@ -238,5 +186,60 @@ public sealed class RhinoSendBinding : ISendBinding
 
     Commands.SetModelsExpired(expiredSenderIds);
     ChangedObjectIds = new();
+  }
+
+  private void OnRhinoCommandEvent(object? sender, CommandEventArgs args)
+  {
+    if (args.CommandEnglishName == "BlockEdit")
+    {
+      var selectedObject = RhinoDoc.ActiveDoc.Objects.GetSelectedObjects(false, false).First();
+      ChangedObjectIds[selectedObject.Id.ToString()] = 1;
+    }
+  }
+
+  private void OnRhinoObjectEvent(object? sender, RhinoObjectEventArgs args) =>
+    _topLevelExceptionHandler.CatchUnhandled(() =>
+    {
+      // NOTE: This does not work if rhino starts and opens a blank doc;
+      if (!_store.IsDocumentInit)
+      {
+        return;
+      }
+
+      ChangedObjectIds[args.ObjectId.ToString()] = 1;
+      _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+    });
+
+  private void OnRhinoModifyObjectAttributesEvent(object? sender, RhinoModifyObjectAttributesEventArgs args) =>
+    _topLevelExceptionHandler.CatchUnhandled(() =>
+    {
+      // NOTE: This does not work if rhino starts and opens a blank doc;
+      if (!_store.IsDocumentInit)
+      {
+        return;
+      }
+
+      // NOTE: not sure yet we want to track every attribute changes yet. TBD
+      if (args.OldAttributes.LayerIndex != args.NewAttributes.LayerIndex)
+      {
+        ChangedObjectIds[args.RhinoObject.Id.ToString()] = 1;
+        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+      }
+    });
+
+  private void OnRhinoReplaceObjectEvent(object? sender, RhinoReplaceObjectEventArgs args)
+  {
+    _topLevelExceptionHandler.CatchUnhandled(() =>
+    {
+      // NOTE: This does not work if rhino starts and opens a blank doc;
+      if (!_store.IsDocumentInit)
+      {
+        return;
+      }
+
+      ChangedObjectIds[args.NewRhinoObject.Id.ToString()] = 1;
+      ChangedObjectIds[args.OldRhinoObject.Id.ToString()] = 1;
+      _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+    });
   }
 }
