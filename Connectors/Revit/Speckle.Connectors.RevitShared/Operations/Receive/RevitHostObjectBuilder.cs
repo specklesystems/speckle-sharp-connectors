@@ -13,6 +13,7 @@ using Speckle.Objects.Geometry;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
+using Speckle.DoubleNumerics;
 
 namespace Speckle.Connectors.Revit.Operations.Receive;
 
@@ -197,28 +198,53 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       try
       {
         using var activity = _activityFactory.Start("BakeObject");
-        var atomicObject = _localToGlobalConverterUtils.TransformObjects(
-          localToGlobalMap.AtomicObject,
-          localToGlobalMap.Matrix
-        );
-        var result = _converter.Convert(atomicObject);
+        // var atomicObject = _localToGlobalConverterUtils.TransformObjects(
+        //   localToGlobalMap.AtomicObject,
+        //   localToGlobalMap.Matrix
+        // );
+        var result = _converter.Convert(localToGlobalMap.AtomicObject);
         onOperationProgressed?.Invoke("Converting", (double)++count / localToGlobalMaps.Count);
+
+        if (result is List<GeometryObject>)
+        {
+          Transform combinedTransform = Transform.Identity;
+          
+          foreach (Matrix4x4 matrix in localToGlobalMap.Matrix)
+          {
+            Transform revitTransform = ConvertMatrixToRevitTransform(matrix);
+            combinedTransform = combinedTransform.Multiply(revitTransform);
+          }
+
+          var transformedGeometries = DirectShape.CreateGeometryInstance(_converterSettings.Current.Document,
+            localToGlobalMap.AtomicObject.applicationId ?? localToGlobalMap.AtomicObject.id, combinedTransform);
+          DirectShape directShapes = CreateDirectShape(transformedGeometries, localToGlobalMap.AtomicObject["category"] as string);
+          
+          bakedObjectIds.Add(directShapes.UniqueId.ToString());
+          _groupBaker.AddToGroupMapping(localToGlobalMap.TraversalContext, directShapes);
+          if (localToGlobalMap.AtomicObject is IRawEncodedObject && localToGlobalMap.AtomicObject is Base myBase)
+          {
+            toPaintLater.Add((directShapes, myBase.applicationId ?? myBase.id));
+          } 
+          conversionResults.Add(new(Status.SUCCESS, localToGlobalMap.AtomicObject, directShapes.UniqueId, "Direct Shape"));
+        }
 
         // Note: our current converter always returns a DS for now
         if (result is DirectShape ds)
         {
+          // TODO: here I want to apply transformations (List<Matrix4x4>) to my direct shape, is it possible?
+          
           bakedObjectIds.Add(ds.UniqueId.ToString());
           _groupBaker.AddToGroupMapping(localToGlobalMap.TraversalContext, ds);
-          if (atomicObject is IRawEncodedObject && atomicObject is Base myBase)
+          if (localToGlobalMap.AtomicObject is IRawEncodedObject && localToGlobalMap.AtomicObject is Base myBase)
           {
             toPaintLater.Add((ds, myBase.applicationId ?? myBase.id));
           } 
         }
-        else
-        {
-          throw new SpeckleConversionException($"Failed to cast {result.GetType()} to Direct Shape.");
-        }
-        conversionResults.Add(new(Status.SUCCESS, atomicObject, ds.UniqueId, "Direct Shape"));
+        // else
+        // {
+        //   throw new SpeckleConversionException($"Failed to cast {result.GetType()} to Direct Shape.");
+        // }
+        // conversionResults.Add(new(Status.SUCCESS, localToGlobalMap.AtomicObject, ds.UniqueId, "Direct Shape"));
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
@@ -227,11 +253,83 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     }
     return (new(bakedObjectIds, conversionResults), toPaintLater);
   }
+  
+  private Transform ConvertMatrixToRevitTransform(Matrix4x4 matrix)
+  {
+    // Scale???
+    var translation = new XYZ(matrix.M14, matrix.M24, matrix.M34);
+    var basisX = new XYZ(matrix.M11, matrix.M21, matrix.M31);
+    var basisY = new XYZ(matrix.M12, matrix.M22, matrix.M32);
+    var basisZ = new XYZ(matrix.M13, matrix.M23, matrix.M33);
+    
+    var transform = Transform.Identity;
+    transform.BasisX = basisX;
+    transform.BasisY = basisY;
+    transform.BasisZ = basisZ;
+    transform.Origin = translation;
+    
+    return transform;
+  }
 
   private void PreReceiveDeepClean(string baseGroupName)
   {
     _groupBaker.PurgeGroups(baseGroupName);
     _materialBaker.PurgeMaterials(baseGroupName);
+  }
+  
+  private DirectShape CreateDirectShape(IList<GeometryObject> geometry, string? category)
+  {
+    // set ds category
+    var dsCategory = BuiltInCategory.OST_GenericModel;
+    if (category is string categoryString)
+    {
+      var res = Enum.TryParse($"OST_{categoryString}", out BuiltInCategory cat);
+      if (res)
+      {
+        var c = Category.GetCategory(_converterSettings.Current.Document, cat);
+        if (c is not null && DirectShape.IsValidCategoryId(c.Id, _converterSettings.Current.Document))
+        {
+          dsCategory = cat;
+        }
+      }
+    }
+
+    var result = DirectShape.CreateElement(_converterSettings.Current.Document, new ElementId(dsCategory));
+
+    // check for valid geometry
+    if (!result.IsValidShape(geometry))
+    {
+      _converterSettings.Current.Document.Delete(result.Id);
+      throw new SpeckleConversionException("Invalid geometry (eg unbounded curves) found for creating directshape.");
+    }
+
+    result.SetShape(geometry);
+
+    // if (originalObject is SOG.IRawEncodedObject)
+    // {
+    //   var materialId = DB.ElementId.InvalidElementId;
+    //   if (
+    //     _revitToHostCacheSingleton.MaterialsByObjectId.TryGetValue(originalObject.applicationId ?? originalObject.id, out var mappedElementId)
+    //   )
+    //   {
+    //     materialId = mappedElementId;
+    //   }
+    //   
+    //   // if(materialId == DB.ElementId.InvalidElementId) 
+    //   var elGeometry = result.get_Geometry(new Options() { DetailLevel = ViewDetailLevel.Undefined });
+    //   foreach (var geo in elGeometry)
+    //   {
+    //     if (geo is Solid s)
+    //     {
+    //       foreach (Face face in s.Faces)
+    //       {
+    //         _converterSettings.Current.Document.Paint(result.Id, face, materialId);
+    //       }
+    //     }
+    //   }
+    // }
+    
+    return result;
   }
 
   public void Dispose()
