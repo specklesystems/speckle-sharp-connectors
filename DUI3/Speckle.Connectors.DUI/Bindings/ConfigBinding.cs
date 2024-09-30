@@ -80,6 +80,36 @@ public class ConfigBinding : IBinding
     var str = JsonConvert.SerializeObject(config, _serializerOptions);
     ConfigStorage.UpdateObject(_speckleApplication.HostApplication, str);
   }
+
+  public void SetUserSelectedAccountId(string userSelectedAccountId)
+  {
+    var str = JsonConvert.SerializeObject(new AccountsConfig() {UserSelectedAccountId = userSelectedAccountId}, _serializerOptions);
+    ConfigStorage.UpdateObject("accounts", str);
+  }
+
+  public async Task<AccountsConfig?> GetUserSelectedAccountId()
+  {
+    var rawConfig = await ConfigStorage.GetObject("accounts").ConfigureAwait(false);
+    if (rawConfig is null)
+    {
+      return null;
+    }
+    
+    try
+    {
+      var config = JsonConvert.DeserializeObject<AccountsConfig>(rawConfig, _serializerOptions);
+      if (config is null)
+      {
+        throw new SerializationException("Failed to deserialize accounts config");
+      }
+
+      return config;
+    }
+    catch (SerializationException)
+    {
+      return null;
+    }
+  }
 }
 
 /// <summary>
@@ -88,4 +118,9 @@ public class ConfigBinding : IBinding
 public class ConnectorConfig
 {
   public bool DarkTheme { get; set; } = true;
+}
+
+public class AccountsConfig
+{
+  public string? UserSelectedAccountId { get; set; }
 }
