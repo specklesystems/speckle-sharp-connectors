@@ -34,7 +34,9 @@ public sealed class RootObjectSender : IRootObjectSender
     AccountService accountService,
     IProgressDisplayManager progressDisplayManager,
     IOperations operations,
-    IClientFactory clientFactory, ISdkActivityFactory activityFactory)
+    IClientFactory clientFactory,
+    ISdkActivityFactory activityFactory
+  )
   {
     _transportFactory = transportFactory;
     _sendConversionCache = sendConversionCache;
@@ -61,7 +63,8 @@ public sealed class RootObjectSender : IRootObjectSender
 
     onOperationProgressed?.Invoke("Uploading...", null);
 
-    Account account = _accountService.GetAccountWithServerUrlFallback(sendInfo.AccountId, sendInfo.ServerUrl);;
+    Account account = _accountService.GetAccountWithServerUrlFallback(sendInfo.AccountId, sendInfo.ServerUrl);
+    ;
     _activityFactory.SetTag(Consts.USER_ID, account.GetHashedEmail());
     using var activity = _activityFactory.Start("SendOperation");
 

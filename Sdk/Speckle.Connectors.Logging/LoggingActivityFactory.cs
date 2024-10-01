@@ -9,9 +9,9 @@ public sealed class LoggingActivityFactory : IDisposable
   public const string TRACING_SOURCE = "speckle-connectors";
   private readonly ActivitySource? _activitySource =
     new(TRACING_SOURCE, GetPackageVersion(Assembly.GetExecutingAssembly()));
-  
+
   private readonly Dictionary<string, object?> _tags = new();
-  
+
   public void SetTag(string key, object? value) => _tags[key] = value;
 
   public LoggingActivity? Start(string? name = null, [CallerMemberName] string source = "")

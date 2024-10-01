@@ -9,9 +9,7 @@ public sealed class SendOperation<T>
   private readonly IRootObjectBuilder<T> _rootObjectBuilder;
   private readonly IRootObjectSender _baseObjectSender;
 
-  public SendOperation(
-    IRootObjectBuilder<T> rootObjectBuilder,
-    IRootObjectSender baseObjectSender)
+  public SendOperation(IRootObjectBuilder<T> rootObjectBuilder, IRootObjectSender baseObjectSender)
   {
     _rootObjectBuilder = rootObjectBuilder;
     _baseObjectSender = baseObjectSender;
