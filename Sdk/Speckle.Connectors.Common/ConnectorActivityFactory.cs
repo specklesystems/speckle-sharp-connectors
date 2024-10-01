@@ -9,11 +9,12 @@ public sealed class ConnectorActivityFactory : ISdkActivityFactory, IDisposable
 {
   private readonly LoggingActivityFactory _loggingActivityFactory = new();
 
+  public void SetTag(string key, object? value) => _loggingActivityFactory.SetTag(key, value);
   public void Dispose() => _loggingActivityFactory.Dispose();
 
   public ISdkActivity? Start(string? name = default, [CallerMemberName] string source = "")
   {
-    var activity = _loggingActivityFactory?.Start(name, source);
+    var activity = _loggingActivityFactory.Start(name, source);
     if (activity is null)
     {
       return null;
@@ -23,6 +24,7 @@ public sealed class ConnectorActivityFactory : ISdkActivityFactory, IDisposable
 
   private readonly struct ConnectorActivity(LoggingActivity activity) : ISdkActivity
   {
+    public void SetBaggage(string key, string? value) => activity.SetBaggage(key, value);
     public void Dispose() => activity.Dispose();
 
     public void SetTag(string key, object? value) => activity.SetTag(key, value);

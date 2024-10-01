@@ -1,4 +1,5 @@
 using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Logging;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
@@ -48,6 +49,8 @@ public sealed class ReceiveOperation
     // 2 - Check account exist
     Account account = _accountService.GetAccountWithServerUrlFallback(receiveInfo.AccountId, receiveInfo.ServerUrl);
     using Client apiClient = _clientFactory.Create(account);
+    _activityFactory.SetTag(Consts.USER_ID, account.GetHashedEmail());
+    execute?.SetBaggage(Consts.USER_ID, account.GetHashedEmail());
 
     var version = await apiClient
       .Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ModelId, receiveInfo.ProjectId, cancellationToken)

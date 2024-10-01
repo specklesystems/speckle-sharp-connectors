@@ -9,11 +9,15 @@ public sealed class LoggingActivityFactory : IDisposable
   public const string TRACING_SOURCE = "speckle-connectors";
   private readonly ActivitySource? _activitySource =
     new(TRACING_SOURCE, GetPackageVersion(Assembly.GetExecutingAssembly()));
+  
+  private readonly Dictionary<string, object?> _tags = new();
+  
+  public void SetTag(string key, object? value) => _tags[key] = value;
 
   public LoggingActivity? Start(string? name = null, [CallerMemberName] string source = "")
   {
     //If you get a MissingManifestResourceException, Likely source or name is empty string, which is no good.
-    var activity = _activitySource?.StartActivity(name ?? source, ActivityKind.Client);
+    var activity = _activitySource?.StartActivity(name: name ?? source, kind: ActivityKind.Client, tags: _tags);
     if (activity is null)
     {
       return null;
