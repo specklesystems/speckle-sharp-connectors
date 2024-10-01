@@ -8,6 +8,7 @@ using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk;
@@ -20,6 +21,7 @@ namespace Speckle.Connectors.Revit.Operations.Receive;
 internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 {
   private readonly IRootToHostConverter _converter;
+  private readonly ScalingServiceToHost _scalingService;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly RevitToHostCacheSingleton _revitToHostCacheSingleton;
   private readonly ITransactionManager _transactionManager;
@@ -33,6 +35,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   private readonly ISdkActivityFactory _activityFactory;
 
   public RevitHostObjectBuilder(
+    
     IRootToHostConverter converter,
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ITransactionManager transactionManager,
@@ -43,8 +46,8 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     RevitMaterialBaker materialBaker,
     RootObjectUnpacker rootObjectUnpacker,
     ILogger<RevitHostObjectBuilder> logger,
-    RevitToHostCacheSingleton revitToHostCacheSingleton
-  )
+    RevitToHostCacheSingleton revitToHostCacheSingleton,
+    ScalingServiceToHost scalingService)
   {
     _converter = converter;
     _converterSettings = converterSettings;
@@ -56,6 +59,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     _rootObjectUnpacker = rootObjectUnpacker;
     _logger = logger;
     _revitToHostCacheSingleton = revitToHostCacheSingleton;
+    _scalingService = scalingService;
     _activityFactory = activityFactory;
   }
 
@@ -161,7 +165,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     
     try
     {
-      _groupBaker.BakeGroups(baseGroupName);
+      //_groupBaker.BakeGroups(baseGroupName);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
@@ -226,19 +230,34 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     return (new(bakedObjectIds, conversionResults), toPaintLater);
   }
   
-  private Transform ConvertMatrixToRevitTransform(Matrix4x4 matrix)
+  private Transform ConvertMatrixToRevitTransform(Matrix4x4 matrix, string? units)
   {
-    // Scale???
-    var translation = new XYZ(matrix.M14, matrix.M24, matrix.M34);
-    var basisX = new XYZ(matrix.M11, matrix.M21, matrix.M31);
-    var basisY = new XYZ(matrix.M12, matrix.M22, matrix.M32);
-    var basisZ = new XYZ(matrix.M13, matrix.M23, matrix.M33);
-    
     var transform = Transform.Identity;
-    transform.BasisX = basisX;
-    transform.BasisY = basisY;
-    transform.BasisZ = basisZ;
-    transform.Origin = translation;
+    if (matrix.M44 == 0 || units is null) // TODO: check units nullability?
+    {
+      return transform;
+    }
+    
+    var tX = _scalingService.ScaleToNative(matrix.M14 / matrix.M44, units);
+    var tY = _scalingService.ScaleToNative(matrix.M24 / matrix.M44, units);
+    var tZ = _scalingService.ScaleToNative(matrix.M34 / matrix.M44, units);
+    var t = new XYZ(tX, tY, tZ);
+    
+    // basis vectors
+    XYZ vX = new(matrix.M11, matrix.M21, matrix.M31);
+    XYZ vY = new(matrix.M12, matrix.M22, matrix.M32);
+    XYZ vZ = new(matrix.M13, matrix.M23, matrix.M33);
+
+    // apply to new transform
+    transform.Origin = t;
+    transform.BasisX = vX.Normalize();
+    transform.BasisY = vY.Normalize();
+    transform.BasisZ = vZ.Normalize();
+    
+    // TODO: check below needed?
+    // // apply doc transform
+    // var docTransform = GetDocReferencePointTransform(Doc);
+    // var internalTransform = docTransform.Multiply(_transform);
     
     return transform;
   }
@@ -275,7 +294,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
           
     foreach (Matrix4x4 matrix in localToGlobalMap.Matrix)
     {
-      Transform revitTransform = ConvertMatrixToRevitTransform(matrix);
+      Transform revitTransform = ConvertMatrixToRevitTransform(matrix, localToGlobalMap.AtomicObject["units"] as string);
       combinedTransform = combinedTransform.Multiply(revitTransform);
     }
 
