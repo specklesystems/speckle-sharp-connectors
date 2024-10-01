@@ -10,11 +10,11 @@ using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.DoubleNumerics;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
-using Speckle.DoubleNumerics;
 
 namespace Speckle.Connectors.Revit.Operations.Receive;
 
@@ -35,7 +35,6 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   private readonly ISdkActivityFactory _activityFactory;
 
   public RevitHostObjectBuilder(
-    
     IRootToHostConverter converter,
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ITransactionManager transactionManager,
@@ -47,7 +46,8 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     RootObjectUnpacker rootObjectUnpacker,
     ILogger<RevitHostObjectBuilder> logger,
     RevitToHostCacheSingleton revitToHostCacheSingleton,
-    ScalingServiceToHost scalingService)
+    ScalingServiceToHost scalingService
+  )
   {
     _converter = converter;
     _converterSettings = converterSettings;
@@ -135,7 +135,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       _transactionManager.CommitTransaction();
       transactionGroup.Assimilate();
     }
-    
+
     using TransactionGroup createGroupTransaction = new(_converterSettings.Current.Document, "Creating group");
     createGroupTransaction.Start();
     _transactionManager.StartTransaction(true);
@@ -144,9 +144,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     {
       var elGeometry = res.get_Geometry(new Options() { DetailLevel = ViewDetailLevel.Undefined });
       var materialId = ElementId.InvalidElementId;
-      if (
-        _revitToHostCacheSingleton.MaterialsByObjectId.TryGetValue(applicationId, out var mappedElementId)
-      )
+      if (_revitToHostCacheSingleton.MaterialsByObjectId.TryGetValue(applicationId, out var mappedElementId))
       {
         materialId = mappedElementId;
       }
@@ -162,10 +160,10 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
         }
       }
     }
-    
+
     try
     {
-      //_groupBaker.BakeGroups(baseGroupName);
+      _groupBaker.BakeGroups(baseGroupName);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
@@ -193,9 +191,9 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     var conversionResults = new List<ReceiveConversionResult>();
     var bakedObjectIds = new List<string>();
     int count = 0;
-    
+
     var toPaintLater = new List<(DirectShape res, string applicationId)>();
-    
+
     foreach (LocalToGlobalMap localToGlobalMap in localToGlobalMaps)
     {
       cancellationToken.ThrowIfCancellationRequested();
@@ -208,14 +206,16 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
         if (result is List<GeometryObject>)
         {
           DirectShape directShapes = CreateDirectShape(localToGlobalMap);
-          
+
           bakedObjectIds.Add(directShapes.UniqueId.ToString());
           _groupBaker.AddToGroupMapping(localToGlobalMap.TraversalContext, directShapes);
           if (localToGlobalMap.AtomicObject is IRawEncodedObject && localToGlobalMap.AtomicObject is Base myBase)
           {
             toPaintLater.Add((directShapes, myBase.applicationId ?? myBase.id));
-          } 
-          conversionResults.Add(new(Status.SUCCESS, localToGlobalMap.AtomicObject, directShapes.UniqueId, "Direct Shape"));
+          }
+          conversionResults.Add(
+            new(Status.SUCCESS, localToGlobalMap.AtomicObject, directShapes.UniqueId, "Direct Shape")
+          );
         }
         else
         {
@@ -229,7 +229,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     }
     return (new(bakedObjectIds, conversionResults), toPaintLater);
   }
-  
+
   private Transform ConvertMatrixToRevitTransform(Matrix4x4 matrix, string? units)
   {
     var transform = Transform.Identity;
@@ -237,12 +237,12 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     {
       return transform;
     }
-    
+
     var tX = _scalingService.ScaleToNative(matrix.M14 / matrix.M44, units);
     var tY = _scalingService.ScaleToNative(matrix.M24 / matrix.M44, units);
     var tZ = _scalingService.ScaleToNative(matrix.M34 / matrix.M44, units);
     var t = new XYZ(tX, tY, tZ);
-    
+
     // basis vectors
     XYZ vX = new(matrix.M11, matrix.M21, matrix.M31);
     XYZ vY = new(matrix.M12, matrix.M22, matrix.M32);
@@ -253,12 +253,12 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     transform.BasisX = vX.Normalize();
     transform.BasisY = vY.Normalize();
     transform.BasisZ = vZ.Normalize();
-    
+
     // TODO: check below needed?
     // // apply doc transform
     // var docTransform = GetDocReferencePointTransform(Doc);
     // var internalTransform = docTransform.Multiply(_transform);
-    
+
     return transform;
   }
 
@@ -267,7 +267,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     _groupBaker.PurgeGroups(baseGroupName);
     _materialBaker.PurgeMaterials(baseGroupName);
   }
-  
+
   private DirectShape CreateDirectShape(LocalToGlobalMap localToGlobalMap)
   {
     // 1- set ds category
@@ -291,16 +291,22 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 
     // 3 - Transform the geometries
     Transform combinedTransform = Transform.Identity;
-          
+
     foreach (Matrix4x4 matrix in localToGlobalMap.Matrix)
     {
-      Transform revitTransform = ConvertMatrixToRevitTransform(matrix, localToGlobalMap.AtomicObject["units"] as string);
+      Transform revitTransform = ConvertMatrixToRevitTransform(
+        matrix,
+        localToGlobalMap.AtomicObject["units"] as string
+      );
       combinedTransform = combinedTransform.Multiply(revitTransform);
     }
 
-    var transformedGeometries = DirectShape.CreateGeometryInstance(_converterSettings.Current.Document,
-      localToGlobalMap.AtomicObject.applicationId ?? localToGlobalMap.AtomicObject.id, combinedTransform);
-    
+    var transformedGeometries = DirectShape.CreateGeometryInstance(
+      _converterSettings.Current.Document,
+      localToGlobalMap.AtomicObject.applicationId ?? localToGlobalMap.AtomicObject.id,
+      combinedTransform
+    );
+
     // 4- check for valid geometry
     if (!result.IsValidShape(transformedGeometries))
     {
@@ -310,7 +316,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 
     // 5 - This is where we apply the geometries into direct shape.
     result.SetShape(transformedGeometries);
-    
+
     return result;
   }
 
