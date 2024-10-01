@@ -18,7 +18,7 @@ internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding, ID
     RevitContext revitContext,
     DocumentModelStore store,
     IRevitIdleManager revitIdleManager,
-    IBridge parent
+    IBrowserBridge parent
   )
     : base("selectionBinding", store, parent, revitContext)
   {

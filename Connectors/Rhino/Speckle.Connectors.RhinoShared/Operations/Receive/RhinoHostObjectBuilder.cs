@@ -1,10 +1,13 @@
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
+using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Utils.Builders;
 using Speckle.Connectors.Utils.Conversion;
-using Speckle.Connectors.Utils.Operations;
 using Speckle.Connectors.Utils.Operations.Receive;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;

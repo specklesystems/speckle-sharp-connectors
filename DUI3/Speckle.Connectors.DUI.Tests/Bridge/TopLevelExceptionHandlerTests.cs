@@ -14,7 +14,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
   public void CatchUnhandledAction_Happy()
   {
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
-    var bridge = Create<IBridge>();
+    var bridge = Create<IBrowserBridge>();
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
     sut.CatchUnhandled(() => { });
@@ -24,7 +24,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
   public void CatchUnhandledAction_Exception()
   {
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
-    var bridge = Create<IBridge>();
+    var bridge = Create<IBrowserBridge>();
 
     bridge
       .Setup(x => x.Send(BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, It.IsAny<object>(), default))
@@ -40,7 +40,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
   {
     var val = 2;
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
-    var bridge = Create<IBridge>();
+    var bridge = Create<IBrowserBridge>();
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
     var returnVal = sut.CatchUnhandled(() => val);
@@ -53,7 +53,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
   public void CatchUnhandledFunc_Exception()
   {
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
-    var bridge = Create<IBridge>();
+    var bridge = Create<IBrowserBridge>();
 
     bridge
       .Setup(x => x.Send(BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, It.IsAny<object>(), default))
@@ -71,7 +71,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
   public void CatchUnhandledFunc_Exception_Fatal()
   {
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
-    var bridge = Create<IBridge>();
+    var bridge = Create<IBrowserBridge>();
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
     var exception = Assert.Throws<AggregateException>(
@@ -85,7 +85,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
   {
     var val = 2;
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
-    var bridge = Create<IBridge>();
+    var bridge = Create<IBrowserBridge>();
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
     var returnVal = await sut.CatchUnhandledAsync(() => Task.FromResult(val));
@@ -98,7 +98,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
   public async Task CatchUnhandledFuncAsync_Exception()
   {
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
-    var bridge = Create<IBridge>();
+    var bridge = Create<IBrowserBridge>();
 
     bridge
       .Setup(x => x.Send(BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, It.IsAny<object>(), default))
@@ -116,7 +116,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
   public void CatchUnhandledFuncAsync_Exception_Fatal()
   {
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
-    var bridge = Create<IBridge>();
+    var bridge = Create<IBrowserBridge>();
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
     var exception = Assert.ThrowsAsync<AppDomainUnloadedException>(

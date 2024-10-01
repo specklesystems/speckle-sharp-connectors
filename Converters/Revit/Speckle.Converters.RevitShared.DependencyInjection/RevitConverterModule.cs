@@ -5,6 +5,7 @@ using Speckle.Converters.Common.DependencyInjection;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Converters.RevitShared.ToSpeckle;
 
 namespace Speckle.Converters.RevitShared.DependencyInjection;
 
@@ -23,7 +24,8 @@ public class RevitConverterModule : ISpeckleModule
     builder.AddScoped<IRootToHostConverter, RevitRootToHostConverter>();
     builder.AddSingleton(new RevitContext());
 
-    builder.AddSingleton(new RevitMaterialCacheSingleton());
+    builder.AddSingleton(new RevitToHostCacheSingleton());
+    builder.AddSingleton(new RevitToSpeckleCacheSingleton());
 
     // POC: do we need ToSpeckleScalingService as is, do we need to interface it out?
     builder.AddScoped<ScalingServiceToSpeckle>();
@@ -42,9 +44,11 @@ public class RevitConverterModule : ISpeckleModule
     builder.AddScoped<ParameterValueExtractor>();
     builder.AddScoped<ParameterValueSetter>();
     builder.AddScoped<DisplayValueExtractor>();
-    builder.AddScoped<ParameterObjectAssigner>();
     builder.AddScoped<ISlopeArrowExtractor, SlopeArrowExtractor>();
 
     builder.AddScoped<IRevitCategories, RevitCategories>();
+
+    builder.AddScoped<ParameterDefinitionHandler>();
+    builder.AddScoped<ParameterExtractor>();
   }
 }

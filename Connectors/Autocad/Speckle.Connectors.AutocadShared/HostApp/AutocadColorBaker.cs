@@ -1,6 +1,6 @@
 using Autodesk.AutoCAD.Colors;
 using Microsoft.Extensions.Logging;
-using Speckle.Connectors.Utils.Operations;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Sdk;
 using Speckle.Sdk.Models.Proxies;
 using AutocadColor = Autodesk.AutoCAD.Colors.Color;

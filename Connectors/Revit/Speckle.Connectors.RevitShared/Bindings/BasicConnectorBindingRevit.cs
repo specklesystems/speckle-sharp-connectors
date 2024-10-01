@@ -1,4 +1,3 @@
-using System.Reflection;
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
 using Revit.Async;
@@ -6,7 +5,6 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.RevitShared;
-using Speckle.Connectors.Utils.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
@@ -17,18 +15,20 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 {
   // POC: name and bridge might be better for them to be protected props?
   public string Name { get; private set; }
-  public IBridge Parent { get; private set; }
+  public IBrowserBridge Parent { get; private set; }
 
   public BasicConnectorBindingCommands Commands { get; }
 
   private readonly DocumentModelStore _store;
   private readonly RevitContext _revitContext;
+  private readonly ISpeckleApplication _speckleApplication;
   private readonly ILogger<BasicConnectorBindingRevit> _logger;
 
   public BasicConnectorBindingRevit(
     DocumentModelStore store,
-    IBridge parent,
+    IBrowserBridge parent,
     RevitContext revitContext,
+    ISpeckleApplication speckleApplication,
     ILogger<BasicConnectorBindingRevit> logger
   )
   {
@@ -36,6 +36,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     Parent = parent;
     _store = store;
     _revitContext = revitContext;
+    _speckleApplication = speckleApplication;
     _logger = logger;
     Commands = new BasicConnectorBindingCommands(parent);
 
@@ -47,11 +48,11 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
       });
   }
 
-  public string GetConnectorVersion() => Assembly.GetAssembly(GetType()).NotNull().GetVersion();
+  public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
 
-  public string GetSourceApplicationName() => Speckle.Connectors.Utils.Connector.Slug.ToLower(); // POC: maybe not right place but... // ANOTHER POC: We should align this naming from somewhere in common DUI projects instead old structs. I know there are other POC comments around this
+  public string GetSourceApplicationName() => _speckleApplication.Slug;
 
-  public string GetSourceApplicationVersion() => Speckle.Connectors.Utils.Connector.VersionString; // POC: maybe not right place but...
+  public string GetSourceApplicationVersion() => _speckleApplication.HostApplicationVersion;
 
   public DocumentInfo? GetDocumentInfo()
   {

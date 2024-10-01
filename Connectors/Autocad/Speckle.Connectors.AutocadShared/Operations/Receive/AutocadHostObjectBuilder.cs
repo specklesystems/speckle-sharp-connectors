@@ -1,10 +1,10 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
-using Speckle.Connectors.Utils.Builders;
-using Speckle.Connectors.Utils.Conversion;
-using Speckle.Connectors.Utils.Operations;
-using Speckle.Connectors.Utils.Operations.Receive;
+using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
@@ -208,7 +208,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     return convertedEntities;
   }
 
-  private Entity BakeObject(Entity entity, Base originalObject, string layerName)
+  private Entity BakeObject(Entity entity, Base originalObject, string layerName, Base? parentObject = null)
   {
     var objId = originalObject.applicationId ?? originalObject.id;
     if (_colorBaker.ObjectColorsIdMap.TryGetValue(objId, out AutocadColor? color))
@@ -216,7 +216,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       entity.Color = color;
     }
 
-    if (_materialBaker.ObjectMaterialsIdMap.TryGetValue(objId, out ObjectId matId))
+    if (_materialBaker.TryGetMaterialId(originalObject, parentObject, out ObjectId matId))
     {
       entity.MaterialId = matId;
     }
@@ -227,14 +227,14 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
 
   private List<Entity> BakeObjectsAsGroup(
     IEnumerable<(object, Base)> fallbackConversionResult,
-    Base originatingObject,
+    Base parentObject,
     string layerName,
     string baseLayerName
   )
   {
     var ids = new ObjectIdCollection();
     var entities = new List<Entity>();
-    foreach (var (conversionResult, _) in fallbackConversionResult)
+    foreach (var (conversionResult, originalObject) in fallbackConversionResult)
     {
       if (conversionResult is not Entity entity)
       {
@@ -242,7 +242,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
         continue;
       }
 
-      BakeObject(entity, originatingObject, layerName);
+      BakeObject(entity, originalObject, layerName, parentObject);
       ids.Add(entity.ObjectId);
       entities.Add(entity);
     }
@@ -252,7 +252,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       tr.GetObject(Application.DocumentManager.CurrentDocument.Database.GroupDictionaryId, OpenMode.ForWrite);
 
     var groupName = _autocadContext.RemoveInvalidChars(
-      $@"{originatingObject.speckle_type.Split('.').Last()} - {originatingObject.applicationId ?? originatingObject.id}  ({baseLayerName})"
+      $@"{parentObject.speckle_type.Split('.').Last()} - {parentObject.applicationId ?? parentObject.id}  ({baseLayerName})"
     );
 
     var newGroup = new Group(groupName, true);

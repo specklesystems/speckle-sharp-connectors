@@ -2,7 +2,7 @@ using System.Drawing;
 using ArcGIS.Core.CIM;
 using ArcGIS.Core.Data;
 using ArcGIS.Desktop.Mapping;
-using Speckle.Connectors.Utils.Operations;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Objects;
 using Speckle.Objects.Other;

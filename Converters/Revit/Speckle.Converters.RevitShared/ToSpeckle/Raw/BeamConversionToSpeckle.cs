@@ -17,7 +17,6 @@ public class BeamConversionToSpeckle : ITypedConverter<DB.FamilyInstance, SOBR.R
   private readonly ITypedConverter<DB.Level, SOBR.RevitLevel> _levelConverter;
   private readonly ParameterValueExtractor _parameterValueExtractor;
   private readonly DisplayValueExtractor _displayValueExtractor;
-  private readonly ParameterObjectAssigner _parameterObjectAssigner;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public BeamConversionToSpeckle(
@@ -25,7 +24,6 @@ public class BeamConversionToSpeckle : ITypedConverter<DB.FamilyInstance, SOBR.R
     ITypedConverter<DB.Level, SOBR.RevitLevel> levelConverter,
     ParameterValueExtractor parameterValueExtractor,
     DisplayValueExtractor displayValueExtractor,
-    ParameterObjectAssigner parameterObjectAssigner,
     IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
@@ -33,7 +31,6 @@ public class BeamConversionToSpeckle : ITypedConverter<DB.FamilyInstance, SOBR.R
     _levelConverter = levelConverter;
     _parameterValueExtractor = parameterValueExtractor;
     _displayValueExtractor = displayValueExtractor;
-    _parameterObjectAssigner = parameterObjectAssigner;
     _converterSettings = converterSettings;
   }
 
@@ -63,8 +60,6 @@ public class BeamConversionToSpeckle : ITypedConverter<DB.FamilyInstance, SOBR.R
         displayValue = displayValue,
         units = _converterSettings.Current.SpeckleUnits
       };
-
-    _parameterObjectAssigner.AssignParametersToBase(target, speckleBeam);
 
     return speckleBeam;
   }

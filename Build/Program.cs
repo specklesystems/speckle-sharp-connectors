@@ -16,6 +16,7 @@ const string RESTORE_TOOLS = "restore-tools";
 const string BUILD_SERVER_VERSION = "build-server-version";
 const string CLEAN_LOCKS = "clean-locks";
 const string CHECK_SOLUTIONS = "check-solutions";
+const string DEEP_CLEAN = "deep-clean";
 
 //need to pass arguments
 /*var arguments = new List<string>();
@@ -34,6 +35,33 @@ Target(
     {
       Console.WriteLine("Found and will delete: " + f);
       File.Delete(f);
+    }
+    Console.WriteLine("Running restore now.");
+    Run("dotnet", "restore .\\Speckle.Connectors.sln --no-cache");
+  }
+);
+
+Target(
+  DEEP_CLEAN,
+  () =>
+  {
+    foreach (var f in Glob.Directories(".", "**/bin"))
+    {
+      if (f.StartsWith("Build"))
+      {
+        continue;
+      }
+      Console.WriteLine("Found and will delete: " + f);
+      Directory.Delete(f, true);
+    }
+    foreach (var f in Glob.Directories(".", "**/obj"))
+    {
+      if (f.StartsWith("Build"))
+      {
+        continue;
+      }
+      Console.WriteLine("Found and will delete: " + f);
+      Directory.Delete(f, true);
     }
     Console.WriteLine("Running restore now.");
     Run("dotnet", "restore .\\Speckle.Connectors.sln --no-cache");

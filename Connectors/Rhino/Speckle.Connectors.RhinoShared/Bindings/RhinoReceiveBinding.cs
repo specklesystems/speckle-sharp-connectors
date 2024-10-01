@@ -1,14 +1,14 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Rhino;
-using Speckle.Autofac.DependencyInjection;
+using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Cancellation;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.Utils.Builders;
-using Speckle.Connectors.Utils.Cancellation;
-using Speckle.Connectors.Utils.Operations;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
@@ -18,32 +18,35 @@ namespace Speckle.Connectors.Rhino.Bindings;
 public class RhinoReceiveBinding : IReceiveBinding
 {
   public string Name => "receiveBinding";
-  public IBridge Parent { get; }
+  public IBrowserBridge Parent { get; }
 
   private readonly CancellationManager _cancellationManager;
   private readonly DocumentModelStore _store;
-  private readonly IUnitOfWorkFactory _unitOfWorkFactory;
+  private readonly IServiceProvider _serviceProvider;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<RhinoReceiveBinding> _logger;
   private readonly IRhinoConversionSettingsFactory _rhinoConversionSettingsFactory;
+  private readonly ISpeckleApplication _speckleApplication;
   private ReceiveBindingUICommands Commands { get; }
 
   public RhinoReceiveBinding(
     DocumentModelStore store,
     CancellationManager cancellationManager,
-    IBridge parent,
-    IUnitOfWorkFactory unitOfWorkFactory,
+    IBrowserBridge parent,
     IOperationProgressManager operationProgressManager,
     ILogger<RhinoReceiveBinding> logger,
-    IRhinoConversionSettingsFactory rhinoConversionSettingsFactory
+    IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
+    IServiceProvider serviceProvider,
+    ISpeckleApplication speckleApplication
   )
   {
     Parent = parent;
     _store = store;
-    _unitOfWorkFactory = unitOfWorkFactory;
     _operationProgressManager = operationProgressManager;
     _logger = logger;
     _rhinoConversionSettingsFactory = rhinoConversionSettingsFactory;
+    _serviceProvider = serviceProvider;
+    _speckleApplication = speckleApplication;
     _cancellationManager = cancellationManager;
     Commands = new ReceiveBindingUICommands(parent);
   }
@@ -52,9 +55,9 @@ public class RhinoReceiveBinding : IReceiveBinding
 
   public async Task Receive(string modelCardId)
   {
-    using var unitOfWork = _unitOfWorkFactory.Create();
-    unitOfWork
-      .Resolve<IConverterSettingsStore<RhinoConversionSettings>>()
+    using var scope = _serviceProvider.CreateScope();
+    scope
+      .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
       .Initialize(_rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
     try
     {
@@ -68,10 +71,10 @@ public class RhinoReceiveBinding : IReceiveBinding
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
       // Receive host objects
-      HostObjectBuilderResult conversionResults = await unitOfWork
-        .Resolve<ReceiveOperation>()
+      HostObjectBuilderResult conversionResults = await scope
+        .ServiceProvider.GetRequiredService<ReceiveOperation>()
         .Execute(
-          modelCard.GetReceiveInfo(Utils.Connector.Slug),
+          modelCard.GetReceiveInfo(_speckleApplication.Slug),
           _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
           cancellationToken
         )

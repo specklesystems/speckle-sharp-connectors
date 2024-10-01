@@ -1,7 +1,7 @@
 ﻿using System.Collections.Concurrent;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.Utils.Operations;
 using Speckle.InterfaceGenerator;
 
 namespace Speckle.Connectors.DUI.Bindings;
@@ -19,7 +19,7 @@ public class OperationProgressManager : IOperationProgressManager
   private const int THROTTLE_INTERVAL_MS = 200;
 
   public ProgressAction CreateOperationProgressEventHandler(
-    IBridge bridge,
+    IBrowserBridge bridge,
     string modelCardId,
     CancellationToken cancellationToken
   )
@@ -45,7 +45,7 @@ public class OperationProgressManager : IOperationProgressManager
   private int _numberOfUpdates;
 
   public async Task SetModelProgress(
-    IBridge bridge,
+    IBrowserBridge bridge,
     string modelCardId,
     ModelCardProgress progress,
     CancellationToken cancellationToken
@@ -77,6 +77,6 @@ public class OperationProgressManager : IOperationProgressManager
     await SendProgress(bridge, modelCardId, progress).ConfigureAwait(false);
   }
 
-  private static async Task SendProgress(IBridge bridge, string modelCardId, ModelCardProgress progress) =>
+  private static async Task SendProgress(IBrowserBridge bridge, string modelCardId, ModelCardProgress progress) =>
     await bridge.Send(SET_MODEL_PROGRESS_UI_COMMAND_NAME, new { modelCardId, progress }).ConfigureAwait(false);
 }
