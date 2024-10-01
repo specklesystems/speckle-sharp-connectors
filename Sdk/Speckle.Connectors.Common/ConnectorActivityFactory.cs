@@ -24,7 +24,6 @@ public sealed class ConnectorActivityFactory : ISdkActivityFactory, IDisposable
 
   private readonly struct ConnectorActivity(LoggingActivity activity) : ISdkActivity
   {
-    public void SetBaggage(string key, string? value) => activity.SetBaggage(key, value);
     public void Dispose() => activity.Dispose();
 
     public void SetTag(string key, object? value) => activity.SetTag(key, value);
