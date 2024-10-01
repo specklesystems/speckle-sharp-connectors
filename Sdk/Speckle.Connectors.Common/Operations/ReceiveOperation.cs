@@ -39,8 +39,8 @@ public sealed class ReceiveOperation
 
   public async Task<HostObjectBuilderResult> Execute(
     ReceiveInfo receiveInfo,
-    CancellationToken cancellationToken,
-    Action<string, double?>? onOperationProgressed = null
+    ProgressAction onOperationProgressed,
+    CancellationToken cancellationToken
   )
   {
     using var execute = _activityFactory.Start("Receive Operation");
@@ -78,17 +78,17 @@ public sealed class ReceiveOperation
           }
           switch (args.ProgressEvent)
           {
-            case ProgressEvent.DownloadBytes:
-              onOperationProgressed?.Invoke(
+            case ProgressEvent.DownloadBytes: //TODO: OnOperationProgress is not awaited here.
+              onOperationProgressed.Invoke(
                 $"Downloading ({_progressDisplayManager.CalculateSpeed(args)})",
                 _progressDisplayManager.CalculatePercentage(args)
               );
               break;
             case ProgressEvent.DownloadObject:
-              onOperationProgressed?.Invoke("Downloading Root Object...", null);
+              onOperationProgressed.Invoke("Downloading Root Object...", null);
               break;
             case ProgressEvent.DeserializeObject:
-              onOperationProgressed?.Invoke(
+              onOperationProgressed.Invoke(
                 $"Deserializing ({_progressDisplayManager.CalculateSpeed(args)})",
                 _progressDisplayManager.CalculatePercentage(args)
               );
@@ -121,7 +121,7 @@ public sealed class ReceiveOperation
   private async Task<HostObjectBuilderResult> ConvertObjects(
     Base commitObject,
     ReceiveInfo receiveInfo,
-    Action<string, double?>? onOperationProgressed,
+    ProgressAction onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
@@ -135,7 +135,7 @@ public sealed class ReceiveOperation
 
     try
     {
-      var res = await _hostObjectBuilder
+      HostObjectBuilderResult res = await _hostObjectBuilder
         .Build(commitObject, receiveInfo.ProjectName, receiveInfo.ModelName, onOperationProgressed, cancellationToken)
         .ConfigureAwait(false);
       conversionActivity?.SetStatus(SdkActivityStatusCode.Ok);
