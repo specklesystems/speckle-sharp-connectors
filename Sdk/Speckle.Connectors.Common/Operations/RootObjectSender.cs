@@ -64,8 +64,7 @@ public sealed class RootObjectSender : IRootObjectSender
     onOperationProgressed?.Invoke("Uploading...", null);
 
     Account account = _accountService.GetAccountWithServerUrlFallback(sendInfo.AccountId, sendInfo.ServerUrl);
-    ;
-    _activityFactory.SetTag(Consts.USER_ID, account.GetHashedEmail());
+    using var userScope = ActivityScope.SetTag(Consts.USER_ID, account.GetHashedEmail());
     using var activity = _activityFactory.Start("SendOperation");
 
     using var transport = _transportFactory.Create(account, sendInfo.ProjectId, 60, null);

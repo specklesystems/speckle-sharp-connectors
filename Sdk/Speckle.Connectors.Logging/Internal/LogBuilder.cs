@@ -67,6 +67,9 @@ internal static class LogBuilder
       o.Protocol = OtlpProtocol.HttpProtobuf;
       o.LogsEndpoint = speckleOtelLogging.Endpoint;
       o.Headers = speckleOtelLogging.Headers ?? o.Headers;
-      o.ResourceAttributes = resourceBuilder.Build().Attributes.ToDictionary(x => x.Key, x => x.Value);
+      o.ResourceAttributes = resourceBuilder
+        .Build()
+        .Attributes.Concat(ActivityScope.Tags)
+        .ToDictionary(x => x.Key, x => x.Value);
     });
 }
