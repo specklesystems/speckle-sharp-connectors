@@ -198,26 +198,12 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       try
       {
         using var activity = _activityFactory.Start("BakeObject");
-        // var atomicObject = _localToGlobalConverterUtils.TransformObjects(
-        //   localToGlobalMap.AtomicObject,
-        //   localToGlobalMap.Matrix
-        // );
         var result = _converter.Convert(localToGlobalMap.AtomicObject);
         onOperationProgressed?.Invoke("Converting", (double)++count / localToGlobalMaps.Count);
 
         if (result is List<GeometryObject>)
         {
-          Transform combinedTransform = Transform.Identity;
-          
-          foreach (Matrix4x4 matrix in localToGlobalMap.Matrix)
-          {
-            Transform revitTransform = ConvertMatrixToRevitTransform(matrix);
-            combinedTransform = combinedTransform.Multiply(revitTransform);
-          }
-
-          var transformedGeometries = DirectShape.CreateGeometryInstance(_converterSettings.Current.Document,
-            localToGlobalMap.AtomicObject.applicationId ?? localToGlobalMap.AtomicObject.id, combinedTransform);
-          DirectShape directShapes = CreateDirectShape(transformedGeometries, localToGlobalMap.AtomicObject["category"] as string);
+          DirectShape directShapes = CreateDirectShape(localToGlobalMap);
           
           bakedObjectIds.Add(directShapes.UniqueId.ToString());
           _groupBaker.AddToGroupMapping(localToGlobalMap.TraversalContext, directShapes);
@@ -227,24 +213,10 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
           } 
           conversionResults.Add(new(Status.SUCCESS, localToGlobalMap.AtomicObject, directShapes.UniqueId, "Direct Shape"));
         }
-
-        // Note: our current converter always returns a DS for now
-        if (result is DirectShape ds)
+        else
         {
-          // TODO: here I want to apply transformations (List<Matrix4x4>) to my direct shape, is it possible?
-          
-          bakedObjectIds.Add(ds.UniqueId.ToString());
-          _groupBaker.AddToGroupMapping(localToGlobalMap.TraversalContext, ds);
-          if (localToGlobalMap.AtomicObject is IRawEncodedObject && localToGlobalMap.AtomicObject is Base myBase)
-          {
-            toPaintLater.Add((ds, myBase.applicationId ?? myBase.id));
-          } 
+          throw new SpeckleConversionException($"Failed to cast {result.GetType()} to Direct Shape.");
         }
-        // else
-        // {
-        //   throw new SpeckleConversionException($"Failed to cast {result.GetType()} to Direct Shape.");
-        // }
-        // conversionResults.Add(new(Status.SUCCESS, localToGlobalMap.AtomicObject, ds.UniqueId, "Direct Shape"));
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
@@ -277,9 +249,10 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     _materialBaker.PurgeMaterials(baseGroupName);
   }
   
-  private DirectShape CreateDirectShape(IList<GeometryObject> geometry, string? category)
+  private DirectShape CreateDirectShape(LocalToGlobalMap localToGlobalMap)
   {
-    // set ds category
+    // 1- set ds category
+    var category = localToGlobalMap.AtomicObject["category"] as string;
     var dsCategory = BuiltInCategory.OST_GenericModel;
     if (category is string categoryString)
     {
@@ -294,40 +267,30 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       }
     }
 
+    // 2 - init DirectShape
     var result = DirectShape.CreateElement(_converterSettings.Current.Document, new ElementId(dsCategory));
 
-    // check for valid geometry
-    if (!result.IsValidShape(geometry))
+    // 3 - Transform the geometries
+    Transform combinedTransform = Transform.Identity;
+          
+    foreach (Matrix4x4 matrix in localToGlobalMap.Matrix)
+    {
+      Transform revitTransform = ConvertMatrixToRevitTransform(matrix);
+      combinedTransform = combinedTransform.Multiply(revitTransform);
+    }
+
+    var transformedGeometries = DirectShape.CreateGeometryInstance(_converterSettings.Current.Document,
+      localToGlobalMap.AtomicObject.applicationId ?? localToGlobalMap.AtomicObject.id, combinedTransform);
+    
+    // 4- check for valid geometry
+    if (!result.IsValidShape(transformedGeometries))
     {
       _converterSettings.Current.Document.Delete(result.Id);
       throw new SpeckleConversionException("Invalid geometry (eg unbounded curves) found for creating directshape.");
     }
 
-    result.SetShape(geometry);
-
-    // if (originalObject is SOG.IRawEncodedObject)
-    // {
-    //   var materialId = DB.ElementId.InvalidElementId;
-    //   if (
-    //     _revitToHostCacheSingleton.MaterialsByObjectId.TryGetValue(originalObject.applicationId ?? originalObject.id, out var mappedElementId)
-    //   )
-    //   {
-    //     materialId = mappedElementId;
-    //   }
-    //   
-    //   // if(materialId == DB.ElementId.InvalidElementId) 
-    //   var elGeometry = result.get_Geometry(new Options() { DetailLevel = ViewDetailLevel.Undefined });
-    //   foreach (var geo in elGeometry)
-    //   {
-    //     if (geo is Solid s)
-    //     {
-    //       foreach (Face face in s.Faces)
-    //       {
-    //         _converterSettings.Current.Document.Paint(result.Id, face, materialId);
-    //       }
-    //     }
-    //   }
-    // }
+    // 5 - This is where we apply the geometries into direct shape.
+    result.SetShape(transformedGeometries);
     
     return result;
   }

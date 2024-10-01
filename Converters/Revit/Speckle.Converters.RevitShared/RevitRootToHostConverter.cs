@@ -36,7 +36,7 @@ public class RevitRootToHostConverter : IRootToHostConverter
     DB.DirectShapeLibrary.GetDirectShapeLibrary(_converterSettings.Current.Document).AddDefinition(target.applicationId ?? target.id, geometryObjects);
 
     // create direct shape from geometries
-    //DB.DirectShape result = CreateDirectShape(geometryObjects, target["category"] as string);
+    // DB.DirectShape result = CreateDirectShape(geometryObjects, target["category"] as string);
     
     return geometryObjects;
   }
