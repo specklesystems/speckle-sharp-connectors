@@ -25,22 +25,18 @@ public class OperationProgressManager : IOperationProgressManager
   )
   {
     var progress = new Progress<CardProgress>();
-    progress.ProgressChanged += async (_, args) =>
-      await bridge
-        .TopLevelExceptionHandler.CatchUnhandledAsync(
-          () =>
-            SetModelProgress(
-              bridge,
-              modelCardId,
-              new ModelCardProgress(modelCardId, args.Status, args.Progress),
-              cancellationToken
-            )
-        )
-        .ConfigureAwait(false);
+    progress.ProgressChanged += (_, args) =>
+      bridge.TopLevelExceptionHandler.FireAndForget(
+        () =>
+          SetModelProgress(
+            bridge,
+            modelCardId,
+            new ModelCardProgress(modelCardId, args.Status, args.Progress),
+            cancellationToken
+          )
+      );
     return progress;
   }
-
-  private int _numberOfUpdates;
 
   public async Task SetModelProgress(
     IBrowserBridge bridge,
@@ -70,7 +66,6 @@ public class OperationProgressManager : IOperationProgressManager
     {
       return;
     }
-    _numberOfUpdates++;
     s_lastProgressValues[modelCardId] = (currentTime, progress.Status);
     await SendProgress(bridge, modelCardId, progress).ConfigureAwait(false);
   }
