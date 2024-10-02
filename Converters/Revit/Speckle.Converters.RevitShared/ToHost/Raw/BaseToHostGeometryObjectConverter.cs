@@ -1,7 +1,5 @@
 using System.Collections;
-using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Extensions;
@@ -14,21 +12,18 @@ public class BaseToHostGeometryObjectConverter : ITypedConverter<Base, List<DB.G
   private readonly ITypedConverter<ICurve, DB.CurveArray> _curveConverter;
   private readonly ITypedConverter<SOG.Mesh, List<DB.GeometryObject>> _meshConverter;
   private readonly ITypedConverter<SOG.IRawEncodedObject, List<DB.GeometryObject>> _encodedObjectConverter;
-  private readonly IConverterSettingsStore<RevitConversionSettings> _settings;
 
   public BaseToHostGeometryObjectConverter(
     ITypedConverter<SOG.Point, DB.XYZ> pointConverter,
     ITypedConverter<ICurve, DB.CurveArray> curveConverter,
     ITypedConverter<SOG.Mesh, List<DB.GeometryObject>> meshConverter,
-    ITypedConverter<SOG.IRawEncodedObject, List<DB.GeometryObject>> encodedObjectConverter,
-    IConverterSettingsStore<RevitConversionSettings> settings
+    ITypedConverter<SOG.IRawEncodedObject, List<DB.GeometryObject>> encodedObjectConverter
   )
   {
     _pointConverter = pointConverter;
     _curveConverter = curveConverter;
     _meshConverter = meshConverter;
     _encodedObjectConverter = encodedObjectConverter;
-    _settings = settings;
   }
 
   public List<DB.GeometryObject> Convert(Base target)

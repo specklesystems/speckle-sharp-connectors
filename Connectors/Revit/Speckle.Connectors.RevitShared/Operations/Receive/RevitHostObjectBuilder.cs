@@ -168,7 +168,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 
     try
     {
-      _groupBaker.BakeGroups(baseGroupName);
+      _groupBaker.BakeGroupForTopLevel(baseGroupName);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
@@ -215,7 +215,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
           );
 
           bakedObjectIds.Add(directShapes.UniqueId.ToString());
-          _groupBaker.AddToGroupMapping(localToGlobalMap.TraversalContext, directShapes);
+          _groupBaker.AddToTopLevelGroup(directShapes);
           if (localToGlobalMap.AtomicObject is IRawEncodedObject && localToGlobalMap.AtomicObject is Base myBase)
           {
             toPaintLater.Add((directShapes, myBase.applicationId ?? myBase.id));

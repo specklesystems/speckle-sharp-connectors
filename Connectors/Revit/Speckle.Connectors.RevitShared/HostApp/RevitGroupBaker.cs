@@ -21,6 +21,10 @@ public class RevitGroupBaker : TraversalContextUnpacker
     _revitUtils = revitUtils;
   }
 
+  private readonly List<ElementId> _elementIdsForTopLevelGroup = new();
+
+  public void AddToTopLevelGroup(Element revitElement) => _elementIdsForTopLevelGroup.Add(revitElement.Id);
+
   /// <summary>
   /// Adds the object to the correct group in preparation for <see cref="BakeGroups"/> at the end of the receive operation.
   /// </summary>
@@ -58,6 +62,12 @@ public class RevitGroupBaker : TraversalContextUnpacker
   }
 
   private readonly Dictionary<string, FakeGroup> _groupCache = new();
+
+  public void BakeGroupForTopLevel(string baseGroupName)
+  {
+    var docGroup = _converterSettings.Current.Document.Create.NewGroup(_elementIdsForTopLevelGroup);
+    docGroup.GroupType.Name = baseGroupName;
+  }
 
   /// <summary>
   /// Bakes the accumulated groups in Revit, with their objects.
