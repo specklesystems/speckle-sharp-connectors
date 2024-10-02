@@ -16,19 +16,18 @@ public class TopLevelExceptionHandlerTests : MoqTest
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
     var bridge = Create<IBrowserBridge>();
     bridge.Setup(x => x.AssertBindingInitialised());
-    
+
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
     sut.CatchUnhandled(() => { });
   }
 
-  
   [Test]
   public void CatchUnhandledAction_Exception()
   {
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
     var bridge = Create<IBrowserBridge>();
-    
+
     bridge.Setup(x => x.IsBindingInitialized).Returns(true);
     bridge.Setup(x => x.AssertBindingInitialised());
     bridge.Setup(x => x.FrontendBoundName).Returns("");
@@ -44,12 +43,10 @@ public class TopLevelExceptionHandlerTests : MoqTest
   {
     var val = 2;
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
-    
+
     var bridge = Create<IBrowserBridge>();
-    // bridge.Setup(x => x.IsBindingInitialized).Returns(true);
     bridge.Setup(x => x.AssertBindingInitialised());
-    // bridge.Setup(x => x.FrontendBoundName).Returns("");
-    
+
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
     var returnVal = sut.CatchUnhandled(() => val);
@@ -68,7 +65,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
     bridge.Setup(x => x.AssertBindingInitialised());
     bridge.Setup(x => x.IsBindingInitialized).Returns(true);
     bridge.Setup(x => x.FrontendBoundName).Returns("");
-    
+
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
     var returnVal = sut.CatchUnhandled((Func<string>)(() => throw new InvalidOperationException()));
@@ -86,7 +83,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
     bridge.Setup(x => x.AssertBindingInitialised());
     bridge.Setup(x => x.IsBindingInitialized).Returns(true);
     bridge.Setup(x => x.FrontendBoundName).Returns("");
-    
+
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
     var exception = Assert.Throws<AppDomainUnloadedException>(
@@ -101,9 +98,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
     var val = 2;
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
     var bridge = Create<IBrowserBridge>();
-    // bridge.Setup(x => x.IsBindingInitialized).Returns(true);
     bridge.Setup(x => x.AssertBindingInitialised());
-    // bridge.Setup(x => x.FrontendBoundName).Returns("");
 
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
@@ -141,12 +136,26 @@ public class TopLevelExceptionHandlerTests : MoqTest
     bridge.Setup(x => x.IsBindingInitialized).Returns(true);
     bridge.Setup(x => x.AssertBindingInitialised());
     bridge.Setup(x => x.FrontendBoundName).Returns("");
-    
+
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
     var exception = Assert.ThrowsAsync<AppDomainUnloadedException>(
       async () => await sut.CatchUnhandled(new Func<Task<string>>(() => throw new AppDomainUnloadedException()))
     );
     exception.Should().BeOfType<AppDomainUnloadedException>();
+  }
+
+  [Test]
+  public void CatchUnhandledFunc_AssertBridgeInitialized_False()
+  {
+    var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
+    var bridge = Create<IBrowserBridge>();
+
+    bridge.Setup(x => x.IsBindingInitialized).Returns(false);
+    bridge.Setup(x => x.AssertBindingInitialised()).Throws<InvalidOperationException>();
+
+    var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
+
+    Assert.ThrowsAsync<InvalidOperationException>(async () => await sut.CatchUnhandled(() => Task.FromResult("")));
   }
 }
