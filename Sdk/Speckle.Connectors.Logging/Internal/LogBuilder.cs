@@ -49,7 +49,7 @@ internal static class LogBuilder
       .ForContext("userApplicationDataPath", SpecklePathProvider.UserApplicationDataPath())
       .ForContext("installApplicationDataPath", SpecklePathProvider.InstallApplicationDataPath)
       .Information(
-        "Initialized logger inside {applicationAndVersion}/{connectorVersion} for user {id}. Path info {userApplicationDataPath} {installApplicationDataPath}."
+        "Initialized logger inside {applicationAndVersion}/{connectorVersion}. Path info {userApplicationDataPath} {installApplicationDataPath}."
       );
 
 #pragma warning disable CA2000
