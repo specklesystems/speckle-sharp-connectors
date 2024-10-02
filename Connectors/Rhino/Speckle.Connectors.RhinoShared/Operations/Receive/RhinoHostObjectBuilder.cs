@@ -58,7 +58,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     Base rootObject,
     string projectName,
     string modelName,
-    ProgressAction onOperationProgressed,
+    IProgress<ProgressAction> onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
@@ -90,7 +90,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     }
 
     // 3 - Bake materials and colors, as they are used later down the line by layers and objects
-    await onOperationProgressed.Invoke("Converting materials and colors", null).ConfigureAwait(false);
+     onOperationProgressed.Report(new("Converting materials and colors", null));
     if (unpackedRoot.RenderMaterialProxies != null)
     {
       using var _ = _activityFactory.Start("Render Materials");
@@ -104,7 +104,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
     // 4 - Bake layers
     // See [CNX-325: Rhino: Change receive operation order to increase performance](https://linear.app/speckle/issue/CNX-325/rhino-change-receive-operation-order-to-increase-performance)
-    await onOperationProgressed.Invoke("Baking layers (redraw disabled)", null).ConfigureAwait(false);
+     onOperationProgressed.Report(new("Baking layers (redraw disabled)", null));
     using (var _ = _activityFactory.Start("Pre baking layers"))
     {
       using var layerNoDraw = new DisableRedrawScope(_converterSettings.Current.Document.Views);
@@ -126,9 +126,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       {
         using (var convertActivity = _activityFactory.Start("Converting object"))
         {
-          await onOperationProgressed
-            .Invoke("Converting objects", (double)++count / atomicObjects.Count)
-            .ConfigureAwait(false);
+          onOperationProgressed
+            .Report(new("Converting objects", (double)++count / atomicObjects.Count));
           try
           {
             // 1: get pre-created layer from cache in layer baker

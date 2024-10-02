@@ -52,7 +52,7 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
     IReadOnlyCollection<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
     Dictionary<string, List<Entity>> applicationIdMap,
     string baseLayerName,
-    ProgressAction onOperationProgressed
+    IProgress<ProgressAction> onOperationProgressed
   )
   {
     var sortedInstanceComponents = instanceComponents
@@ -72,9 +72,8 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
     {
       try
       {
-        await onOperationProgressed
-          .Invoke("Converting blocks", (double)++count / sortedInstanceComponents.Count)
-          .ConfigureAwait(false);
+        onOperationProgressed
+          .Report(new("Converting blocks", (double)++count / sortedInstanceComponents.Count));
 
         if (instanceOrDefinition is InstanceDefinitionProxy { applicationId: not null } definitionProxy)
         {
@@ -168,6 +167,7 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
     }
 
     transaction.Commit();
+    await Task.Yield();
     return new(createdObjectIds, consumedObjectIds, conversionResults);
   }
 

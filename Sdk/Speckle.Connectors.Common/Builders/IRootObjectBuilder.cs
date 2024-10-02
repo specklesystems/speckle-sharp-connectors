@@ -9,7 +9,7 @@ public interface IRootObjectBuilder<in T>
   public Task<RootObjectBuilderResult> Build(
     IReadOnlyList<T> objects,
     SendInfo sendInfo,
-    ProgressAction onOperationProgressed,
+    IProgress<ProgressAction> onOperationProgressed,
     CancellationToken ct = default
   );
 }

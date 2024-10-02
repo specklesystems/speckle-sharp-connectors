@@ -61,13 +61,13 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     Base rootObject,
     string projectName,
     string modelName,
-    ProgressAction onOperationProgressed,
+    IProgress<ProgressAction> onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
     var baseGroupName = $"Project {projectName}: Model {modelName}"; // TODO: unify this across connectors!
 
-    await onOperationProgressed.Invoke("Converting", null).ConfigureAwait(true);
+     onOperationProgressed.Report(new("Converting", null));
     using var activity = _activityFactory.Start("Build");
 
     // 0 - Clean then Rock n Roll! 🎸
@@ -148,7 +148,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 
   private async Task<HostObjectBuilderResult> BakeObjects(
     List<LocalToGlobalMap> localToGlobalMaps,
-    ProgressAction onOperationProgressed,
+    IProgress<ProgressAction> onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
@@ -168,9 +168,8 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
           localToGlobalMap.Matrix
         );
         var result = _converter.Convert(atomicObject);
-        await onOperationProgressed
-          .Invoke("Converting", (double)++count / localToGlobalMaps.Count)
-          .ConfigureAwait(false);
+        onOperationProgressed
+          .Report(new("Converting", (double)++count / localToGlobalMaps.Count));
 
         // Note: our current converter always returns a DS for now
         if (result is DirectShape ds)
@@ -189,6 +188,8 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
         conversionResults.Add(new(Status.ERROR, localToGlobalMap.AtomicObject, null, null, ex));
       }
     }
+
+    await Task.Yield();
     return new(bakedObjectIds, conversionResults);
   }
 

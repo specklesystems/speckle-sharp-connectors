@@ -18,28 +18,26 @@ public class OperationProgressManager : IOperationProgressManager
     new();
   private const int THROTTLE_INTERVAL_MS = 200;
 
-  public ProgressAction CreateOperationProgressEventHandler(
+  public IProgress<ProgressAction> CreateOperationProgressEventHandler(
     IBrowserBridge bridge,
     string modelCardId,
     CancellationToken cancellationToken
   )
   {
-    return EventHandler;
-
-    async Task EventHandler(string status, double? progress)
-    {
+    var progress = new Progress<ProgressAction>();
+    progress.ProgressChanged += async (_, args) =>
       await bridge
         .TopLevelExceptionHandler.CatchUnhandledAsync(
           () =>
             SetModelProgress(
               bridge,
               modelCardId,
-              new ModelCardProgress(modelCardId, status, progress),
+              new ModelCardProgress(modelCardId, args.Status, args.Progress),
               cancellationToken
             )
         )
         .ConfigureAwait(false);
-    }
+    return progress;
   }
 
   private int _numberOfUpdates;

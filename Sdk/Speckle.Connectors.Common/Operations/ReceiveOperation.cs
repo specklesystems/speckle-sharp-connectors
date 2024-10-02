@@ -39,7 +39,7 @@ public sealed class ReceiveOperation
 
   public async Task<HostObjectBuilderResult> Execute(
     ReceiveInfo receiveInfo,
-    ProgressAction onOperationProgressed,
+    IProgress<ProgressAction> onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
@@ -53,7 +53,6 @@ public sealed class ReceiveOperation
       .Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ModelId, receiveInfo.ProjectId, cancellationToken)
       .ConfigureAwait(false);
 
-    int totalCount = 1;
 
     using var transport = _serverTransportFactory.Create(account, receiveInfo.ProjectId);
 
@@ -79,23 +78,22 @@ public sealed class ReceiveOperation
           switch (args.ProgressEvent)
           {
             case ProgressEvent.DownloadBytes: //TODO: OnOperationProgress is not awaited here.
-              onOperationProgressed.Invoke(
+              onOperationProgressed.Report(new(
                 $"Downloading ({_progressDisplayManager.CalculateSpeed(args)})",
                 _progressDisplayManager.CalculatePercentage(args)
-              );
+              ));
               break;
             case ProgressEvent.DownloadObject:
-              onOperationProgressed.Invoke("Downloading Root Object...", null);
+              onOperationProgressed.Report(new("Downloading Root Object...", null));
               break;
             case ProgressEvent.DeserializeObject:
-              onOperationProgressed.Invoke(
+              onOperationProgressed.Report(new(
                 $"Deserializing ({_progressDisplayManager.CalculateSpeed(args)})",
                 _progressDisplayManager.CalculatePercentage(args)
-              );
+              ));
               break;
           }
         },
-        onTotalChildrenCountKnown: c => totalCount = c,
         cancellationToken: cancellationToken
       )
       .ConfigureAwait(false);
@@ -121,7 +119,7 @@ public sealed class ReceiveOperation
   private async Task<HostObjectBuilderResult> ConvertObjects(
     Base commitObject,
     ReceiveInfo receiveInfo,
-    ProgressAction onOperationProgressed,
+    IProgress<ProgressAction> onOperationProgressed,
     CancellationToken cancellationToken
   )
   {

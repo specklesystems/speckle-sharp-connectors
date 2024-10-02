@@ -22,7 +22,7 @@ public interface IHostObjectBuilder
     Base rootObject,
     string projectName,
     string modelName,
-    ProgressAction onOperationProgressed,
+    IProgress<ProgressAction> onOperationProgressed,
     CancellationToken cancellationToken
   );
 }

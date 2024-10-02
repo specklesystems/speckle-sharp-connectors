@@ -50,13 +50,13 @@ public sealed class RootObjectSender : IRootObjectSender
   public async Task<(string rootObjId, IReadOnlyDictionary<string, ObjectReference> convertedReferences)> Send(
     Base commitObject,
     SendInfo sendInfo,
-    ProgressAction onOperationProgressed,
+    IProgress<ProgressAction> onOperationProgressed,
     CancellationToken ct = default
   )
   {
     ct.ThrowIfCancellationRequested();
 
-    await onOperationProgressed.Invoke("Uploading...", null).ConfigureAwait(false);
+     onOperationProgressed.Report(new("Uploading...", null));
 
     Account account = _accountService.GetAccountWithServerUrlFallback(sendInfo.AccountId, sendInfo.ServerUrl);
 
@@ -86,19 +86,19 @@ public sealed class RootObjectSender : IRootObjectSender
           switch (args.ProgressEvent)
           {
             case ProgressEvent.UploadBytes: //TODO: These progress calls are not awaited
-              onOperationProgressed.Invoke(
+              onOperationProgressed.Report(new(
                 $"Uploading ({_progressDisplayManager.CalculateSpeed(args)})",
                 _progressDisplayManager.CalculatePercentage(args)
-              );
+              ));
               break;
             case ProgressEvent.UploadObject:
-              onOperationProgressed.Invoke("Uploading Root Object...", null);
+              onOperationProgressed.Report(new("Uploading Root Object...", null));
               break;
             case ProgressEvent.SerializeObject:
-              onOperationProgressed.Invoke(
+              onOperationProgressed.Report(new(
                 $"Serializing ({_progressDisplayManager.CalculateSpeed(args)})",
                 _progressDisplayManager.CalculatePercentage(args)
-              );
+              ));
               break;
           }
         },
@@ -110,7 +110,7 @@ public sealed class RootObjectSender : IRootObjectSender
 
     ct.ThrowIfCancellationRequested();
 
-    await onOperationProgressed.Invoke("Linking version to model...", null).ConfigureAwait(false);
+    onOperationProgressed.Report(new("Linking version to model...", null));
 
     // 8 - Create the version (commit)
     using var apiClient = _clientFactory.Create(account);

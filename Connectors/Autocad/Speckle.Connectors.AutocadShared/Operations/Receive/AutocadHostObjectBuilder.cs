@@ -56,7 +56,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     Base rootObject,
     string projectName,
     string modelName,
-    ProgressAction onOperationProgressed,
+    IProgress<ProgressAction> onOperationProgressed,
     CancellationToken _
   )
   {
@@ -73,11 +73,11 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     Base rootObject,
     string projectName,
     string modelName,
-    ProgressAction onOperationProgressed
+    IProgress<ProgressAction> onOperationProgressed
   )
   {
     // Prompt the UI conversion started. Progress bar will swoosh.
-    await onOperationProgressed.Invoke("Converting", null).ConfigureAwait(true);
+     onOperationProgressed.Report(new("Converting", null));
 
     // Layer filter for received commit with project and model name
     _layerBaker.CreateLayerFilter(projectName, modelName);
@@ -126,9 +126,8 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     foreach (var (layerPath, atomicObject) in atomicObjectsWithPath)
     {
       string objectId = atomicObject.applicationId ?? atomicObject.id;
-      await onOperationProgressed
-        .Invoke("Converting objects", (double)++count / atomicObjects.Count)
-        .ConfigureAwait(false);
+      onOperationProgressed
+        .Report(new("Converting objects", (double)++count / atomicObjects.Count));
       try
       {
         List<Entity> convertedObjects = ConvertObject(atomicObject, layerPath, baseLayerPrefix).ToList();

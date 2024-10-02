@@ -55,10 +55,12 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     _converterSettings = converterSettings;
   }
 
+#pragma warning disable CA1506
   public async Task<RootObjectBuilderResult> Build(
+#pragma warning restore CA1506
     IReadOnlyList<AutocadRootObject> objects,
     SendInfo sendInfo,
-    ProgressAction onOperationProgressed,
+    IProgress<ProgressAction> onOperationProgressed,
     CancellationToken ct = default
   )
   {
@@ -106,7 +108,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
           var result = ConvertAutocadEntity(entity, applicationId, layer, instanceProxies, sendInfo.ProjectId);
           results.Add(result);
 
-          await onOperationProgressed.Invoke("Converting", (double)++count / atomicObjects.Count).ConfigureAwait(true);
+           onOperationProgressed.Report(new("Converting", (double)++count / atomicObjects.Count));
         }
       }
 
@@ -121,6 +123,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
       // 5 - Unpack the color proxies
       root[ProxyKeys.COLOR] = _colorUnpacker.UnpackColors(atomicObjects, usedAcadLayers);
 
+      await Task.Yield();
       return new RootObjectBuilderResult(root, results);
     }
   }

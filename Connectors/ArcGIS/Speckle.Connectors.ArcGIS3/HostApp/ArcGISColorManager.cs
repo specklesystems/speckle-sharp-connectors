@@ -56,16 +56,16 @@ public class ArcGISColorManager
   /// </summary>
   /// <param name="colorProxies"></param>
   /// <param name="onOperationProgressed"></param>
-  public async Task ParseColors(List<ColorProxy> colorProxies, ProgressAction onOperationProgressed)
+  public async Task ParseColors(List<ColorProxy> colorProxies, IProgress<ProgressAction> onOperationProgressed)
   {
     // injected as Singleton, so we need to clean existing proxies first
     ObjectColorsIdMap = new();
     var count = 0;
     foreach (ColorProxy colorProxy in colorProxies)
     {
-      await onOperationProgressed
-        .Invoke("Converting colors", (double)++count / colorProxies.Count)
-        .ConfigureAwait(false);
+      onOperationProgressed
+        .Report(new ("Converting colors", (double)++count / colorProxies.Count));
+      await Task.Yield();
       foreach (string objectId in colorProxy.objects)
       {
         Color convertedColor = Color.FromArgb(colorProxy.value);
@@ -79,21 +79,22 @@ public class ArcGISColorManager
   /// </summary>
   /// <param name="materialProxies"></param>
   /// <param name="onOperationProgressed"></param>
-  public async Task ParseMaterials(List<RenderMaterialProxy> materialProxies, ProgressAction onOperationProgressed)
+  public async Task ParseMaterials(List<RenderMaterialProxy> materialProxies, IProgress<ProgressAction> onOperationProgressed)
   {
     // injected as Singleton, so we need to clean existing proxies first
     ObjectMaterialsIdMap = new();
     var count = 0;
     foreach (RenderMaterialProxy colorProxy in materialProxies)
     {
-      await onOperationProgressed
-        .Invoke("Converting materials", (double)++count / materialProxies.Count)
-        .ConfigureAwait(false);
+      onOperationProgressed
+        .Report(new("Converting materials", (double)++count / materialProxies.Count));
+      await Task.Yield();
       foreach (string objectId in colorProxy.objects)
       {
         Color convertedColor = Color.FromArgb(colorProxy.value.diffuse);
         ObjectMaterialsIdMap.TryAdd(objectId, convertedColor);
       }
+
     }
   }
 

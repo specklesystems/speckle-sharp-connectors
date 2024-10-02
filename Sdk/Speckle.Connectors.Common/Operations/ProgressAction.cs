@@ -1,3 +1,3 @@
 ﻿namespace Speckle.Connectors.Common.Operations;
 
-public delegate Task ProgressAction(string status, double? progress);
+public record ProgressAction(string Status, double? Progress);

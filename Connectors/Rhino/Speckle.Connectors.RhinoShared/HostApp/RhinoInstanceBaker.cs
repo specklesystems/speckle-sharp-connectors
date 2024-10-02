@@ -45,7 +45,7 @@ public class RhinoInstanceBaker : IInstanceBaker<List<string>>
     IReadOnlyCollection<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
     Dictionary<string, List<string>> applicationIdMap,
     string baseLayerName,
-    ProgressAction onOperationProgressed
+    IProgress<ProgressAction> onOperationProgressed
   )
   {
     // var doc = _contextStack.Current.Document;
@@ -63,9 +63,8 @@ public class RhinoInstanceBaker : IInstanceBaker<List<string>>
     var consumedObjectIds = new List<string>();
     foreach (var (layerCollection, instanceOrDefinition) in sortedInstanceComponents)
     {
-      await onOperationProgressed
-        .Invoke("Converting blocks", (double)++count / sortedInstanceComponents.Count)
-        .ConfigureAwait(false);
+      onOperationProgressed
+        .Report(new("Converting blocks", (double)++count / sortedInstanceComponents.Count));
       try
       {
         if (instanceOrDefinition is InstanceDefinitionProxy definitionProxy)
@@ -157,6 +156,7 @@ public class RhinoInstanceBaker : IInstanceBaker<List<string>>
       }
     }
 
+    await Task.Yield();
     return new(createdObjectIds, consumedObjectIds, conversionResults);
   }
 

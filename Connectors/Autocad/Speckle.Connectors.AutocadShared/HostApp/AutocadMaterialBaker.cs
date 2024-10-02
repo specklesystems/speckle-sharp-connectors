@@ -94,7 +94,7 @@ public class AutocadMaterialBaker
   public async Task ParseAndBakeRenderMaterials(
     List<RenderMaterialProxy> materialProxies,
     string baseLayerPrefix,
-    ProgressAction onOperationProgressed
+    IProgress<ProgressAction> onOperationProgressed
   )
   {
     using var transaction = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
@@ -110,9 +110,8 @@ public class AutocadMaterialBaker
     var count = 0;
     foreach (RenderMaterialProxy materialProxy in materialProxies)
     {
-      await onOperationProgressed
-        .Invoke("Converting render materials", (double)++count / materialProxies.Count)
-        .ConfigureAwait(true);
+      onOperationProgressed
+        .Report(new("Converting render materials", (double)++count / materialProxies.Count));
 
       // bake render material
       RenderMaterial renderMaterial = materialProxy.value;
@@ -142,6 +141,7 @@ public class AutocadMaterialBaker
     }
 
     transaction.Commit();
+    await Task.Yield();
   }
 
   private (ObjectId, ReceiveConversionResult) BakeMaterial(

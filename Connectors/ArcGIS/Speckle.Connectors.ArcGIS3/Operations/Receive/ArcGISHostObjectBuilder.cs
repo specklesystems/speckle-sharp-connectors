@@ -62,7 +62,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     Base rootObject,
     string projectName,
     string modelName,
-    ProgressAction onOperationProgressed,
+    IProgress<ProgressAction> onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
@@ -70,7 +70,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     // ATM, GIS commit CRS is stored per layer (in FeatureClass converter), but should be moved to the Root level too
 
     // Prompt the UI conversion started. Progress bar will swoosh.
-    await onOperationProgressed.Invoke("Converting", null).ConfigureAwait(true);
+     onOperationProgressed.Report(new("Converting", null));
 
     // get materials
     List<RenderMaterialProxy>? materials = (rootObject[ProxyKeys.RENDER_MATERIAL] as List<object>)
@@ -125,32 +125,31 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       {
         results.Add(new(Status.ERROR, obj, null, null, ex));
       }
-      await onOperationProgressed.Invoke("Converting", (double)++count / objectsToConvert.Count).ConfigureAwait(false);
+       onOperationProgressed.Report(new("Converting", (double)++count / objectsToConvert.Count));
     }
 
     // 2.1. Group conversionTrackers (to write into datasets)
-    await onOperationProgressed.Invoke("Grouping features into layers", null).ConfigureAwait(false);
+     onOperationProgressed.Report(new("Grouping features into layers", null));
     Dictionary<string, List<(TraversalContext, ObjectConversionTracker)>> convertedGroups = await QueuedTask
       .Run(async () =>
       {
         return await _featureClassUtils
           .GroupConversionTrackers(
             conversionTracker,
-            async (s, progres) => await onOperationProgressed(s, progres).ConfigureAwait(false)
-          )
-          .ConfigureAwait(true);
+            (s, progres) => onOperationProgressed.Report(new(s, progres))
+          ).ConfigureAwait(false);
       })
       .ConfigureAwait(false);
 
     // 2.2. Write groups of objects to Datasets
-    await onOperationProgressed.Invoke("Writing to Database", null).ConfigureAwait(false);
+     onOperationProgressed.Report(new("Writing to Database", null));
     await QueuedTask
       .Run(() =>
       {
         _featureClassUtils.CreateDatasets(
           conversionTracker,
           convertedGroups,
-          async (s, progres) => await onOperationProgressed(s, progres).ConfigureAwait(false)
+           (s, progres) =>  onOperationProgressed.Report(new(s, progres))
         );
       })
       .ConfigureAwait(false);
@@ -162,7 +161,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
 
     int bakeCount = 0;
     Dictionary<string, (MapMember, CIMUniqueValueRenderer?)> bakedMapMembers = new();
-    await onOperationProgressed.Invoke("Adding to Map", bakeCount).ConfigureAwait(false);
+     onOperationProgressed.Report(new("Adding to Map", bakeCount));
 
     foreach (var item in conversionTracker)
     {
@@ -224,9 +223,9 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
         // add report item
         AddResultsFromTracker(trackerItem, results);
       }
-      await onOperationProgressed
-        .Invoke("Adding to Map", (double)++bakeCount / conversionTracker.Count)
-        .ConfigureAwait(false);
+
+      onOperationProgressed
+        .Report(new("Adding to Map", (double)++bakeCount / conversionTracker.Count));
     }
 
     // apply renderers to baked layers

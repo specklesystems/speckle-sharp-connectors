@@ -63,7 +63,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<RhinoObject> rhinoObjects,
     SendInfo sendInfo,
-    ProgressAction onOperationProgressed,
+    IProgress<ProgressAction> onOperationProgressed,
     CancellationToken cancellationToken = default
   )
   {
@@ -107,7 +107,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         results.Add(result);
 
         ++count;
-        await onOperationProgressed.Invoke("Converting", (double)count / atomicObjects.Count).ConfigureAwait(false);
+         onOperationProgressed.Report(new("Converting", (double)count / atomicObjects.Count));
 
         // NOTE: useful for testing ui states, pls keep for now so we can easily uncomment
         // Thread.Sleep(550);
@@ -128,6 +128,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       rootObjectCollection[ProxyKeys.COLOR] = _colorUnpacker.UnpackColors(atomicObjects, versionLayers.ToList());
     }
 
+    await Task.Yield();
     return new RootObjectBuilderResult(rootObjectCollection, results);
   }
 
