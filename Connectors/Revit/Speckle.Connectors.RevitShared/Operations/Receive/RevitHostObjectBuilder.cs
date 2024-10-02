@@ -7,6 +7,7 @@ using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.Common;
+using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
@@ -26,10 +27,13 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   private readonly RevitToHostCacheSingleton _revitToHostCacheSingleton;
   private readonly ITransactionManager _transactionManager;
   private readonly ILocalToGlobalUnpacker _localToGlobalUnpacker;
-  private readonly LocalToGlobalConverterUtils _localToGlobalConverterUtils;
   private readonly RevitGroupBaker _groupBaker;
   private readonly RevitMaterialBaker _materialBaker;
   private readonly ILogger<RevitHostObjectBuilder> _logger;
+  private readonly ITypedConverter<
+    (Base atomicObject, List<Matrix4x4> matrix),
+    DirectShape
+  > _localToGlobalDirectShapeConverter;
 
   private readonly RootObjectUnpacker _rootObjectUnpacker;
   private readonly ISdkActivityFactory _activityFactory;
@@ -40,26 +44,26 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     ITransactionManager transactionManager,
     ISdkActivityFactory activityFactory,
     ILocalToGlobalUnpacker localToGlobalUnpacker,
-    LocalToGlobalConverterUtils localToGlobalConverterUtils,
     RevitGroupBaker groupManager,
     RevitMaterialBaker materialBaker,
     RootObjectUnpacker rootObjectUnpacker,
     ILogger<RevitHostObjectBuilder> logger,
     RevitToHostCacheSingleton revitToHostCacheSingleton,
-    ScalingServiceToHost scalingService
+    ScalingServiceToHost scalingService,
+    ITypedConverter<(Base atomicObject, List<Matrix4x4> matrix), DirectShape> localToGlobalDirectShapeConverter
   )
   {
     _converter = converter;
     _converterSettings = converterSettings;
     _transactionManager = transactionManager;
     _localToGlobalUnpacker = localToGlobalUnpacker;
-    _localToGlobalConverterUtils = localToGlobalConverterUtils;
     _groupBaker = groupManager;
     _materialBaker = materialBaker;
     _rootObjectUnpacker = rootObjectUnpacker;
     _logger = logger;
     _revitToHostCacheSingleton = revitToHostCacheSingleton;
     _scalingService = scalingService;
+    _localToGlobalDirectShapeConverter = localToGlobalDirectShapeConverter;
     _activityFactory = activityFactory;
   }
 
@@ -205,7 +209,9 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 
         if (result is List<GeometryObject>)
         {
-          DirectShape directShapes = CreateDirectShape(localToGlobalMap);
+          DirectShape directShapes = _localToGlobalDirectShapeConverter.Convert(
+            (localToGlobalMap.AtomicObject, localToGlobalMap.Matrix)
+          );
 
           bakedObjectIds.Add(directShapes.UniqueId.ToString());
           _groupBaker.AddToGroupMapping(localToGlobalMap.TraversalContext, directShapes);
@@ -230,94 +236,10 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     return (new(bakedObjectIds, conversionResults), toPaintLater);
   }
 
-  private Transform ConvertMatrixToRevitTransform(Matrix4x4 matrix, string? units)
-  {
-    var transform = Transform.Identity;
-    if (matrix.M44 == 0 || units is null) // TODO: check units nullability?
-    {
-      return transform;
-    }
-
-    var tX = _scalingService.ScaleToNative(matrix.M14 / matrix.M44, units);
-    var tY = _scalingService.ScaleToNative(matrix.M24 / matrix.M44, units);
-    var tZ = _scalingService.ScaleToNative(matrix.M34 / matrix.M44, units);
-    var t = new XYZ(tX, tY, tZ);
-
-    // basis vectors
-    XYZ vX = new(matrix.M11, matrix.M21, matrix.M31);
-    XYZ vY = new(matrix.M12, matrix.M22, matrix.M32);
-    XYZ vZ = new(matrix.M13, matrix.M23, matrix.M33);
-
-    // apply to new transform
-    transform.Origin = t;
-    transform.BasisX = vX.Normalize();
-    transform.BasisY = vY.Normalize();
-    transform.BasisZ = vZ.Normalize();
-
-    // TODO: check below needed?
-    // // apply doc transform
-    // var docTransform = GetDocReferencePointTransform(Doc);
-    // var internalTransform = docTransform.Multiply(_transform);
-
-    return transform;
-  }
-
   private void PreReceiveDeepClean(string baseGroupName)
   {
     _groupBaker.PurgeGroups(baseGroupName);
     _materialBaker.PurgeMaterials(baseGroupName);
-  }
-
-  private DirectShape CreateDirectShape(LocalToGlobalMap localToGlobalMap)
-  {
-    // 1- set ds category
-    var category = localToGlobalMap.AtomicObject["category"] as string;
-    var dsCategory = BuiltInCategory.OST_GenericModel;
-    if (category is string categoryString)
-    {
-      var res = Enum.TryParse($"OST_{categoryString}", out BuiltInCategory cat);
-      if (res)
-      {
-        var c = Category.GetCategory(_converterSettings.Current.Document, cat);
-        if (c is not null && DirectShape.IsValidCategoryId(c.Id, _converterSettings.Current.Document))
-        {
-          dsCategory = cat;
-        }
-      }
-    }
-
-    // 2 - init DirectShape
-    var result = DirectShape.CreateElement(_converterSettings.Current.Document, new ElementId(dsCategory));
-
-    // 3 - Transform the geometries
-    Transform combinedTransform = Transform.Identity;
-
-    foreach (Matrix4x4 matrix in localToGlobalMap.Matrix)
-    {
-      Transform revitTransform = ConvertMatrixToRevitTransform(
-        matrix,
-        localToGlobalMap.AtomicObject["units"] as string
-      );
-      combinedTransform = combinedTransform.Multiply(revitTransform);
-    }
-
-    var transformedGeometries = DirectShape.CreateGeometryInstance(
-      _converterSettings.Current.Document,
-      localToGlobalMap.AtomicObject.applicationId ?? localToGlobalMap.AtomicObject.id,
-      combinedTransform
-    );
-
-    // 4- check for valid geometry
-    if (!result.IsValidShape(transformedGeometries))
-    {
-      _converterSettings.Current.Document.Delete(result.Id);
-      throw new SpeckleConversionException("Invalid geometry (eg unbounded curves) found for creating directshape.");
-    }
-
-    // 5 - This is where we apply the geometries into direct shape.
-    result.SetShape(transformedGeometries);
-
-    return result;
   }
 
   public void Dispose()
