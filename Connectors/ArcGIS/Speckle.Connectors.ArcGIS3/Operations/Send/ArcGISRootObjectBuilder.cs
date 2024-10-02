@@ -79,7 +79,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
       objects
     );
 
-     onOperationProgressed.Report(new("Converting", null));
+    onOperationProgressed.Report(new("Converting", null));
     using (var __ = _activityFactory.Start("Converting objects"))
     {
       foreach ((MapMember mapMember, _) in layersWithDisplayPriority)
@@ -183,7 +183,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
           }
         }
 
-         onOperationProgressed.Report(new("Converting", (double)++count / objects.Count));
+        onOperationProgressed.Report(new("Converting", (double)++count / objects.Count));
       }
     }
 

@@ -56,7 +56,7 @@ public sealed class RootObjectSender : IRootObjectSender
   {
     ct.ThrowIfCancellationRequested();
 
-     onOperationProgressed.Report(new("Uploading...", null));
+    onOperationProgressed.Report(new("Uploading...", null));
 
     Account account = _accountService.GetAccountWithServerUrlFallback(sendInfo.AccountId, sendInfo.ServerUrl);
 
@@ -86,19 +86,23 @@ public sealed class RootObjectSender : IRootObjectSender
           switch (args.ProgressEvent)
           {
             case ProgressEvent.UploadBytes: //TODO: These progress calls are not awaited
-              onOperationProgressed.Report(new(
-                $"Uploading ({_progressDisplayManager.CalculateSpeed(args)})",
-                _progressDisplayManager.CalculatePercentage(args)
-              ));
+              onOperationProgressed.Report(
+                new(
+                  $"Uploading ({_progressDisplayManager.CalculateSpeed(args)})",
+                  _progressDisplayManager.CalculatePercentage(args)
+                )
+              );
               break;
             case ProgressEvent.UploadObject:
               onOperationProgressed.Report(new("Uploading Root Object...", null));
               break;
             case ProgressEvent.SerializeObject:
-              onOperationProgressed.Report(new(
-                $"Serializing ({_progressDisplayManager.CalculateSpeed(args)})",
-                _progressDisplayManager.CalculatePercentage(args)
-              ));
+              onOperationProgressed.Report(
+                new(
+                  $"Serializing ({_progressDisplayManager.CalculateSpeed(args)})",
+                  _progressDisplayManager.CalculatePercentage(args)
+                )
+              );
               break;
           }
         },

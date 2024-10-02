@@ -63,8 +63,7 @@ public class RhinoInstanceBaker : IInstanceBaker<List<string>>
     var consumedObjectIds = new List<string>();
     foreach (var (layerCollection, instanceOrDefinition) in sortedInstanceComponents)
     {
-      onOperationProgressed
-        .Report(new("Converting blocks", (double)++count / sortedInstanceComponents.Count));
+      onOperationProgressed.Report(new("Converting blocks", (double)++count / sortedInstanceComponents.Count));
       try
       {
         if (instanceOrDefinition is InstanceDefinitionProxy definitionProxy)

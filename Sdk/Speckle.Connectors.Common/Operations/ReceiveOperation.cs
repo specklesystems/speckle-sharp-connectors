@@ -53,7 +53,6 @@ public sealed class ReceiveOperation
       .Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ModelId, receiveInfo.ProjectId, cancellationToken)
       .ConfigureAwait(false);
 
-
     using var transport = _serverTransportFactory.Create(account, receiveInfo.ProjectId);
 
     _progressDisplayManager.Begin();
@@ -78,19 +77,23 @@ public sealed class ReceiveOperation
           switch (args.ProgressEvent)
           {
             case ProgressEvent.DownloadBytes: //TODO: OnOperationProgress is not awaited here.
-              onOperationProgressed.Report(new(
-                $"Downloading ({_progressDisplayManager.CalculateSpeed(args)})",
-                _progressDisplayManager.CalculatePercentage(args)
-              ));
+              onOperationProgressed.Report(
+                new(
+                  $"Downloading ({_progressDisplayManager.CalculateSpeed(args)})",
+                  _progressDisplayManager.CalculatePercentage(args)
+                )
+              );
               break;
             case ProgressEvent.DownloadObject:
               onOperationProgressed.Report(new("Downloading Root Object...", null));
               break;
             case ProgressEvent.DeserializeObject:
-              onOperationProgressed.Report(new(
-                $"Deserializing ({_progressDisplayManager.CalculateSpeed(args)})",
-                _progressDisplayManager.CalculatePercentage(args)
-              ));
+              onOperationProgressed.Report(
+                new(
+                  $"Deserializing ({_progressDisplayManager.CalculateSpeed(args)})",
+                  _progressDisplayManager.CalculatePercentage(args)
+                )
+              );
               break;
           }
         },

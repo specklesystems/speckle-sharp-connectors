@@ -63,8 +63,7 @@ public class ArcGISColorManager
     var count = 0;
     foreach (ColorProxy colorProxy in colorProxies)
     {
-      onOperationProgressed
-        .Report(new ("Converting colors", (double)++count / colorProxies.Count));
+      onOperationProgressed.Report(new("Converting colors", (double)++count / colorProxies.Count));
       await Task.Yield();
       foreach (string objectId in colorProxy.objects)
       {
@@ -79,22 +78,23 @@ public class ArcGISColorManager
   /// </summary>
   /// <param name="materialProxies"></param>
   /// <param name="onOperationProgressed"></param>
-  public async Task ParseMaterials(List<RenderMaterialProxy> materialProxies, IProgress<CardProgress> onOperationProgressed)
+  public async Task ParseMaterials(
+    List<RenderMaterialProxy> materialProxies,
+    IProgress<CardProgress> onOperationProgressed
+  )
   {
     // injected as Singleton, so we need to clean existing proxies first
     ObjectMaterialsIdMap = new();
     var count = 0;
     foreach (RenderMaterialProxy colorProxy in materialProxies)
     {
-      onOperationProgressed
-        .Report(new("Converting materials", (double)++count / materialProxies.Count));
+      onOperationProgressed.Report(new("Converting materials", (double)++count / materialProxies.Count));
       await Task.Yield();
       foreach (string objectId in colorProxy.objects)
       {
         Color convertedColor = Color.FromArgb(colorProxy.value.diffuse);
         ObjectMaterialsIdMap.TryAdd(objectId, convertedColor);
       }
-
     }
   }
 

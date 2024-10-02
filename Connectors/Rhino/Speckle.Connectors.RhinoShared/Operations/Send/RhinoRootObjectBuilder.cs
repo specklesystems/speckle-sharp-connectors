@@ -107,7 +107,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         results.Add(result);
 
         ++count;
-         onOperationProgressed.Report(new("Converting", (double)count / atomicObjects.Count));
+        onOperationProgressed.Report(new("Converting", (double)count / atomicObjects.Count));
 
         // NOTE: useful for testing ui states, pls keep for now so we can easily uncomment
         // Thread.Sleep(550);

@@ -110,8 +110,7 @@ public class AutocadMaterialBaker
     var count = 0;
     foreach (RenderMaterialProxy materialProxy in materialProxies)
     {
-      onOperationProgressed
-        .Report(new("Converting render materials", (double)++count / materialProxies.Count));
+      onOperationProgressed.Report(new("Converting render materials", (double)++count / materialProxies.Count));
 
       // bake render material
       RenderMaterial renderMaterial = materialProxy.value;

@@ -126,9 +126,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
         results.Add(new(Status.ERROR, applicationId, sourceType, null, ex));
       }
 
-       onOperationProgressed
-        .Report(new("Converting", (double)++countProgress / atomicObjects.Count)
-        );
+      onOperationProgressed.Report(new("Converting", (double)++countProgress / atomicObjects.Count));
     }
 
     if (results.All(x => x.Status == Status.ERROR))

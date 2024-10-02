@@ -72,8 +72,7 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
     {
       try
       {
-        onOperationProgressed
-          .Report(new("Converting blocks", (double)++count / sortedInstanceComponents.Count));
+        onOperationProgressed.Report(new("Converting blocks", (double)++count / sortedInstanceComponents.Count));
 
         if (instanceOrDefinition is InstanceDefinitionProxy { applicationId: not null } definitionProxy)
         {

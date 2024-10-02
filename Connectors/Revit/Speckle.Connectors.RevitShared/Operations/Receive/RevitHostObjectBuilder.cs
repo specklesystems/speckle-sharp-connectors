@@ -67,7 +67,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   {
     var baseGroupName = $"Project {projectName}: Model {modelName}"; // TODO: unify this across connectors!
 
-     onOperationProgressed.Report(new("Converting", null));
+    onOperationProgressed.Report(new("Converting", null));
     using var activity = _activityFactory.Start("Build");
 
     // 0 - Clean then Rock n Roll! 🎸
@@ -168,8 +168,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
           localToGlobalMap.Matrix
         );
         var result = _converter.Convert(atomicObject);
-        onOperationProgressed
-          .Report(new("Converting", (double)++count / localToGlobalMaps.Count));
+        onOperationProgressed.Report(new("Converting", (double)++count / localToGlobalMaps.Count));
 
         // Note: our current converter always returns a DS for now
         if (result is DirectShape ds)

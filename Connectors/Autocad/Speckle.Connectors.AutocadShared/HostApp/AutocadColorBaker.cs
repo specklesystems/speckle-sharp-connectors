@@ -29,15 +29,17 @@ public class AutocadColorBaker
   /// </summary>
   /// <param name="colorProxies"></param>
   /// <param name="onOperationProgressed"></param>
-  public async Task ParseColors(IReadOnlyCollection<ColorProxy> colorProxies, IProgress<CardProgress> onOperationProgressed)
+  public async Task ParseColors(
+    IReadOnlyCollection<ColorProxy> colorProxies,
+    IProgress<CardProgress> onOperationProgressed
+  )
   {
     var count = 0;
     foreach (ColorProxy colorProxy in colorProxies)
     {
       try
       {
-        onOperationProgressed
-          .Report(new("Converting colors", (double)++count / colorProxies.Count));
+        onOperationProgressed.Report(new("Converting colors", (double)++count / colorProxies.Count));
 
         // skip any colors with source = layer, since object color default source is by layer
         if (colorProxy["source"] is string source && source == "layer")

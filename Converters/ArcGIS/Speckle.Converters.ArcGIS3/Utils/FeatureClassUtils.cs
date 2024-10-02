@@ -130,8 +130,7 @@ public class FeatureClassUtils : IFeatureClassUtils
       geometryGroups[uniqueKey].Add((context, trackerItem));
       ClearExistingDataset(uniqueKey);
 
-      onOperationProgressed
-        .Invoke("Grouping features into layers", count++ / conversionTracker.Count);
+      onOperationProgressed.Invoke("Grouping features into layers", count++ / conversionTracker.Count);
       await Task.Yield();
     }
 
@@ -172,8 +171,7 @@ public class FeatureClassUtils : IFeatureClassUtils
             listOfContextAndTrackers.Select(x => x.Item2).ToList()
           );
 
-           onOperationProgressed
-            .Invoke("Writing to Database", count++ / featureClassElements.Count);
+          onOperationProgressed.Invoke("Writing to Database", count++ / featureClassElements.Count);
           continue;
         }
 
@@ -201,8 +199,7 @@ public class FeatureClassUtils : IFeatureClassUtils
         }
       }
 
-      onOperationProgressed
-        .Invoke("Writing to Database", count++ / featureClassElements.Count);
+      onOperationProgressed.Invoke("Writing to Database", count++ / featureClassElements.Count);
       await Task.Yield();
     }
   }
