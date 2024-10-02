@@ -91,7 +91,7 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
   /// <typeparam name="T"><paramref name="function"/> return type</typeparam>
   /// <returns>A result pattern struct (where exceptions have been handled)</returns>
   public Result<T> CatchUnhandled<T>(Func<T> function) =>
-    CatchUnhandled(() => Task.FromResult(function.Invoke())).Result;
+    CatchUnhandled(() => Task.FromResult(function.Invoke())).GetAwaiter().GetResult();
 
   ///<inheritdoc cref="CatchUnhandled{T}(Func{T})"/>
   public async Task<Result<T>> CatchUnhandled<T>(Func<Task<T>> function)
