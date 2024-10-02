@@ -68,17 +68,9 @@ public sealed class RootObjectSender : IRootObjectSender
         commitObject,
         transport,
         true,
-        onProgressAction: dict =>
+        onProgressAction: new PassthroughProgress(args =>
         {
           if (!_progressDisplayManager.ShouldUpdate())
-          {
-            return;
-          }
-
-          // NOTE: this looks weird for the user, as when deserialization kicks in, the progress bar will go down, and then start progressing again.
-          // This is something we're happy to live with until we refactor the whole receive pipeline.
-          var args = dict.FirstOrDefault();
-          if (args is null)
           {
             return;
           }
@@ -105,7 +97,7 @@ public sealed class RootObjectSender : IRootObjectSender
               );
               break;
           }
-        },
+        }),
         ct
       )
       .ConfigureAwait(false);

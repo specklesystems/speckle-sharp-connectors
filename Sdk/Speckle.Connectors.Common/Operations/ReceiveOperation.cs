@@ -60,20 +60,13 @@ public sealed class ReceiveOperation
       .Receive(
         version.referencedObject,
         transport,
-        onProgressAction: dict =>
+        onProgressAction: new PassthroughProgress(args =>
         {
           if (!_progressDisplayManager.ShouldUpdate())
           {
             return;
           }
 
-          // NOTE: this looks weird for the user, as when deserialization kicks in, the progress bar will go down, and then start progressing again.
-          // This is something we're happy to live with until we refactor the whole receive pipeline.
-          var args = dict.FirstOrDefault();
-          if (args is null)
-          {
-            return;
-          }
           switch (args.ProgressEvent)
           {
             case ProgressEvent.DownloadBytes: //TODO: OnOperationProgress is not awaited here.
@@ -96,7 +89,7 @@ public sealed class ReceiveOperation
               );
               break;
           }
-        },
+        }),
         cancellationToken: cancellationToken
       )
       .ConfigureAwait(false);
