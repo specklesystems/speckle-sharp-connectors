@@ -8,6 +8,7 @@ using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.RevitShared;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
@@ -207,7 +208,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
         var result = _converter.Convert(localToGlobalMap.AtomicObject);
         onOperationProgressed?.Invoke("Converting", (double)++count / localToGlobalMaps.Count);
 
-        if (result is List<GeometryObject>)
+        if (result is FakeDirectShapeDefinition)
         {
           DirectShape directShapes = _localToGlobalDirectShapeConverter.Convert(
             (localToGlobalMap.AtomicObject, localToGlobalMap.Matrix)
