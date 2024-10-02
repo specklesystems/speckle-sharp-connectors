@@ -56,7 +56,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     Base rootObject,
     string projectName,
     string modelName,
-    IProgress<ProgressAction> onOperationProgressed,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken _
   )
   {
@@ -73,7 +73,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     Base rootObject,
     string projectName,
     string modelName,
-    IProgress<ProgressAction> onOperationProgressed
+    IProgress<CardProgress> onOperationProgressed
   )
   {
     // Prompt the UI conversion started. Progress bar will swoosh.

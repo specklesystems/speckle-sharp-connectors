@@ -29,7 +29,7 @@ public class AutocadColorBaker
   /// </summary>
   /// <param name="colorProxies"></param>
   /// <param name="onOperationProgressed"></param>
-  public async Task ParseColors(IReadOnlyCollection<ColorProxy> colorProxies, IProgress<ProgressAction> onOperationProgressed)
+  public async Task ParseColors(IReadOnlyCollection<ColorProxy> colorProxies, IProgress<CardProgress> onOperationProgressed)
   {
     var count = 0;
     foreach (ColorProxy colorProxy in colorProxies)

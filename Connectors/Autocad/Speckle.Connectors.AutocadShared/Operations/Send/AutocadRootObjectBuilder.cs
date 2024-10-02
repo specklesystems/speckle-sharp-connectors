@@ -60,7 +60,7 @@ public class AutocadRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
 #pragma warning restore CA1506
     IReadOnlyList<AutocadRootObject> objects,
     SendInfo sendInfo,
-    IProgress<ProgressAction> onOperationProgressed,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
   )
   {

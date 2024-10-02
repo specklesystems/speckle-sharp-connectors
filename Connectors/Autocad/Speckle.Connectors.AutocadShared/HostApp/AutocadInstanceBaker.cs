@@ -52,7 +52,7 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
     IReadOnlyCollection<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
     Dictionary<string, List<Entity>> applicationIdMap,
     string baseLayerName,
-    IProgress<ProgressAction> onOperationProgressed
+    IProgress<CardProgress> onOperationProgressed
   )
   {
     var sortedInstanceComponents = instanceComponents

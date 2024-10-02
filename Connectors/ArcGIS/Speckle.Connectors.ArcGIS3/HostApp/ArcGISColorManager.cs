@@ -56,7 +56,7 @@ public class ArcGISColorManager
   /// </summary>
   /// <param name="colorProxies"></param>
   /// <param name="onOperationProgressed"></param>
-  public async Task ParseColors(List<ColorProxy> colorProxies, IProgress<ProgressAction> onOperationProgressed)
+  public async Task ParseColors(List<ColorProxy> colorProxies, IProgress<CardProgress> onOperationProgressed)
   {
     // injected as Singleton, so we need to clean existing proxies first
     ObjectColorsIdMap = new();
@@ -79,7 +79,7 @@ public class ArcGISColorManager
   /// </summary>
   /// <param name="materialProxies"></param>
   /// <param name="onOperationProgressed"></param>
-  public async Task ParseMaterials(List<RenderMaterialProxy> materialProxies, IProgress<ProgressAction> onOperationProgressed)
+  public async Task ParseMaterials(List<RenderMaterialProxy> materialProxies, IProgress<CardProgress> onOperationProgressed)
   {
     // injected as Singleton, so we need to clean existing proxies first
     ObjectMaterialsIdMap = new();

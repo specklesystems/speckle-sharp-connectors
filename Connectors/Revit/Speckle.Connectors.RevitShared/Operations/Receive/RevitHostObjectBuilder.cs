@@ -61,7 +61,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     Base rootObject,
     string projectName,
     string modelName,
-    IProgress<ProgressAction> onOperationProgressed,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
@@ -148,7 +148,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 
   private async Task<HostObjectBuilderResult> BakeObjects(
     List<LocalToGlobalMap> localToGlobalMaps,
-    IProgress<ProgressAction> onOperationProgressed,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
   {

@@ -63,7 +63,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<RhinoObject> rhinoObjects,
     SendInfo sendInfo,
-    IProgress<ProgressAction> onOperationProgressed,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken = default
   )
   {

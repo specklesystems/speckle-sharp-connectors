@@ -45,7 +45,7 @@ public class RhinoInstanceBaker : IInstanceBaker<List<string>>
     IReadOnlyCollection<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
     Dictionary<string, List<string>> applicationIdMap,
     string baseLayerName,
-    IProgress<ProgressAction> onOperationProgressed
+    IProgress<CardProgress> onOperationProgressed
   )
   {
     // var doc = _contextStack.Current.Document;

@@ -18,7 +18,7 @@ public interface IInstanceBaker<TAppIdMapValueType>
     IReadOnlyCollection<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
     Dictionary<string, TAppIdMapValueType> applicationIdMap,
     string baseLayerName,
-    IProgress<ProgressAction> onOperationProgressed
+    IProgress<CardProgress> onOperationProgressed
   );
 
   /// <summary>

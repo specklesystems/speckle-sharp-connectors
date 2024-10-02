@@ -39,7 +39,7 @@ public sealed class ReceiveOperation
 
   public async Task<HostObjectBuilderResult> Execute(
     ReceiveInfo receiveInfo,
-    IProgress<ProgressAction> onOperationProgressed,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
@@ -119,7 +119,7 @@ public sealed class ReceiveOperation
   private async Task<HostObjectBuilderResult> ConvertObjects(
     Base commitObject,
     ReceiveInfo receiveInfo,
-    IProgress<ProgressAction> onOperationProgressed,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
   {

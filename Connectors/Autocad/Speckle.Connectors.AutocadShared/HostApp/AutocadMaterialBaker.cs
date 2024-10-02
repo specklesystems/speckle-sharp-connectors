@@ -94,7 +94,7 @@ public class AutocadMaterialBaker
   public async Task ParseAndBakeRenderMaterials(
     List<RenderMaterialProxy> materialProxies,
     string baseLayerPrefix,
-    IProgress<ProgressAction> onOperationProgressed
+    IProgress<CardProgress> onOperationProgressed
   )
   {
     using var transaction = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();

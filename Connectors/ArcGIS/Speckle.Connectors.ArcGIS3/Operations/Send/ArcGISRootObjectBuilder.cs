@@ -57,7 +57,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
 #pragma warning restore CA1506
     IReadOnlyList<MapMember> objects,
     SendInfo sendInfo,
-    IProgress<ProgressAction> onOperationProgressed,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
   )
   {

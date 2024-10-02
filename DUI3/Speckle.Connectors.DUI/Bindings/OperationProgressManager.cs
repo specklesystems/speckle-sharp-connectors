@@ -18,13 +18,13 @@ public class OperationProgressManager : IOperationProgressManager
     new();
   private const int THROTTLE_INTERVAL_MS = 200;
 
-  public IProgress<ProgressAction> CreateOperationProgressEventHandler(
+  public IProgress<CardProgress> CreateOperationProgressEventHandler(
     IBrowserBridge bridge,
     string modelCardId,
     CancellationToken cancellationToken
   )
   {
-    var progress = new Progress<ProgressAction>();
+    var progress = new Progress<CardProgress>();
     progress.ProgressChanged += async (_, args) =>
       await bridge
         .TopLevelExceptionHandler.CatchUnhandledAsync(

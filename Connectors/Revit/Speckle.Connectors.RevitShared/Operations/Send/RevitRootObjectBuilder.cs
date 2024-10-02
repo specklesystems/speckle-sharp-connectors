@@ -61,7 +61,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
   public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<ElementId> objects,
     SendInfo sendInfo,
-    IProgress<ProgressAction> onOperationProgressed,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
   )
   {
