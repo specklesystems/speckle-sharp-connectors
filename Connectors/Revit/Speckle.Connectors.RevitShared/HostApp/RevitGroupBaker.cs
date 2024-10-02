@@ -96,7 +96,7 @@ public class RevitGroupBaker : TraversalContextUnpacker
 
     foreach (var group in groups)
     {
-      List<ElementId> subgroupTypeIds = new List<ElementId>();
+      var subgroupTypeIds = new List<ElementId>() { group.GroupType.Id };
       CollectSubGroupTypeIds(document, group, subgroupTypeIds);
       document.Delete(subgroupTypeIds);
     }
