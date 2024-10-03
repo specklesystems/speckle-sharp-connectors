@@ -1,7 +1,6 @@
+using Rhino;
 using Rhino.Display;
 using Rhino.Geometry;
-using Speckle.Converters.Common;
-using Speckle.Converters.Rhino;
 using Point = Rhino.Geometry.Point;
 
 namespace Speckle.Connectors.Rhino.HostApp;
@@ -12,12 +11,8 @@ namespace Speckle.Connectors.Rhino.HostApp;
 public class RhinoPreviewManager
 {
   private PreviewConduit _preview;
-  private readonly IConverterSettingsStore<RhinoConversionSettings> _converterSettings;
 
-  public RhinoPreviewManager(IConverterSettingsStore<RhinoConversionSettings> converterSettings)
-  {
-    _converterSettings = converterSettings;
-  }
+  public RhinoPreviewManager() { }
 
   public void UpdatePreview(List<GeometryBase> objs)
   {
@@ -26,7 +21,7 @@ public class RhinoPreviewManager
       _preview.Enabled = false;
     }
     _preview = new PreviewConduit(objs) { Enabled = true };
-    _converterSettings.Current.Document.Views.Redraw();
+    RhinoDoc.ActiveDoc.Views.Redraw();
   }
 
   private sealed class PreviewConduit : DisplayConduit

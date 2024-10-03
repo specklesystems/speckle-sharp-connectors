@@ -6,7 +6,6 @@ using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Converters.Common;
-using Speckle.Converters.Rhino;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -22,7 +21,6 @@ namespace Speckle.Connectors.Rhino.Operations.Receive;
 public class RhinoMultiplayerHostObjectBuilder : IMultiplayerHostObjectBuilder
 {
   private readonly IRootToHostConverter _converter;
-  private readonly IConverterSettingsStore<RhinoConversionSettings> _converterSettings;
   private readonly RhinoLayerBaker _layerBaker;
   private readonly RhinoMaterialBaker _materialBaker;
   private readonly RhinoColorBaker _colorBaker;
@@ -32,7 +30,6 @@ public class RhinoMultiplayerHostObjectBuilder : IMultiplayerHostObjectBuilder
 
   public RhinoMultiplayerHostObjectBuilder(
     IRootToHostConverter converter,
-    IConverterSettingsStore<RhinoConversionSettings> converterSettings,
     RhinoLayerBaker layerBaker,
     RootObjectUnpacker rootObjectUnpacker,
     RhinoMaterialBaker materialBaker,
@@ -42,7 +39,6 @@ public class RhinoMultiplayerHostObjectBuilder : IMultiplayerHostObjectBuilder
   )
   {
     _converter = converter;
-    _converterSettings = converterSettings;
     _rootObjectUnpacker = rootObjectUnpacker;
     _materialBaker = materialBaker;
     _colorBaker = colorBaker;
@@ -70,7 +66,7 @@ public class RhinoMultiplayerHostObjectBuilder : IMultiplayerHostObjectBuilder
     // UPDATE VIEW
     UpdateActiveViewCamera(rootObject, index);
 
-    _converterSettings.Current.Document.Views.Redraw();
+    RhinoDoc.ActiveDoc.Views.Redraw();
 
     // 1 - Unpack objects and proxies from root commit object
     var unpackedRoot = _rootObjectUnpacker.Unpack(rootObject);
@@ -143,7 +139,7 @@ public class RhinoMultiplayerHostObjectBuilder : IMultiplayerHostObjectBuilder
       var viewTextDot = new TextDot("Player 2", new Point3d(x, y, z));
 
       ObjectAttributes atts = new() { LayerIndex = layer };
-      _converterSettings.Current.Document.Objects.Add(viewTextDot, atts);
+      RhinoDoc.ActiveDoc.Objects.Add(viewTextDot, atts);
     }
     else
     {
@@ -154,13 +150,9 @@ public class RhinoMultiplayerHostObjectBuilder : IMultiplayerHostObjectBuilder
   private void PreReceiveDeepClean(string baseLayerName)
   {
     // Remove all previously received layers and render materials from the document
-    int rootLayerIndex = _converterSettings.Current.Document.Layers.Find(
-      Guid.Empty,
-      baseLayerName,
-      RhinoMath.UnsetIntIndex
-    );
+    int rootLayerIndex = RhinoDoc.ActiveDoc.Layers.Find(Guid.Empty, baseLayerName, RhinoMath.UnsetIntIndex);
 
-    var doc = _converterSettings.Current.Document;
+    var doc = RhinoDoc.ActiveDoc;
 
     var purgeSuccess = doc.Layers.Purge(rootLayerIndex, true);
     if (!purgeSuccess)
