@@ -21,7 +21,10 @@ public class RhinoPreviewManager
 
   public void UpdatePreview(List<GeometryBase> objs)
   {
-    _preview.Enabled = false;
+    if (_preview is not null)
+    {
+      _preview.Enabled = false;
+    }
     _preview = new PreviewConduit(objs) { Enabled = true };
     _converterSettings.Current.Document.Views.Redraw();
   }
