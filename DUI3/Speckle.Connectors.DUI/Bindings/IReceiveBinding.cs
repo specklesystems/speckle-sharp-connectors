@@ -1,3 +1,5 @@
+using Speckle.Connectors.DUI.Settings;
+
 namespace Speckle.Connectors.DUI.Bindings;
 
 public interface IReceiveBinding : IBinding
@@ -13,4 +15,6 @@ public interface IReceiveBinding : IBinding
   /// </summary>
   /// <param name="modelCardId"></param>
   public void CancelReceive(string modelCardId);
+
+  public List<ICardSetting> GetReceiveSettings();
 }

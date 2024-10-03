@@ -9,6 +9,7 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
+using Speckle.Connectors.DUI.Settings;
 using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
@@ -48,6 +49,10 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
     _logger = logger;
     _arcGISConversionSettingsFactory = arcGisConversionSettingsFactory;
   }
+
+#pragma warning disable CA1024
+  public List<ICardSetting> GetReceiveSettings() => [];
+#pragma warning restore CA1024
 
   public async Task Receive(string modelCardId)
   {

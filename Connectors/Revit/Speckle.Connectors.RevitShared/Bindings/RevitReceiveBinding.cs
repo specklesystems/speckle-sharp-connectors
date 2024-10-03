@@ -8,6 +8,7 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
+using Speckle.Connectors.DUI.Settings;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
@@ -50,6 +51,10 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
 
     Commands = new ReceiveBindingUICommands(parent);
   }
+
+#pragma warning disable CA1024
+  public List<ICardSetting> GetReceiveSettings() => [];
+#pragma warning restore CA1024
 
   public void CancelReceive(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
 
