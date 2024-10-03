@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Rhino.Display;
 using Rhino.DocObjects;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
@@ -136,6 +137,23 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     }
 
     return new RootObjectBuilderResult(rootObjectCollection, results);
+  }
+
+  private void AddCommitView(Collection rootObjectCollection)
+  {
+    // convert current rhino viewport view to Speckle View3D object
+    // retrieve current active viewport
+    RhinoView activeView = _converterSettings.Current.Document.Views.ActiveView;
+    RhinoViewport viewport = activeView.ActiveViewport;
+
+    // attach to rootObjectCollection under "view" property
+    Base currentView = new();
+
+    // attach all important viewport props
+    currentView["CameraLocation"] = viewport.CameraLocation;
+    currentView["up"] = viewport.CameraUp;
+    currentView["forward"] = viewport.CameraDirection;
+    rootObjectCollection["view"] = currentView;
   }
 
   private SendConversionResult ConvertRhinoObject(
