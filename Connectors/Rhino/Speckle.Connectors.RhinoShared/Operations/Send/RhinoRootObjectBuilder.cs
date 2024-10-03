@@ -80,7 +80,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     rootObjectCollection["units"] = _converterSettings.Current.SpeckleUnits;
 
     // MULTIPLAYER!
-    AddCommitView(rootObjectCollection);
+    AddCommitView();
 
     // 1 - Unpack the instances
     UnpackResult<RhinoObject> unpackResults;
@@ -141,7 +141,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     return new RootObjectBuilderResult(rootObjectCollection, results);
   }
 
-  private void AddCommitView(Collection rootObjectCollection)
+  private void AddCommitView()
   {
     // convert current rhino viewport view to Speckle View3D object
 

@@ -148,12 +148,11 @@ public class RhinoMultiplayerHostObjectBuilder : IHostObjectBuilder
   {
     public BoundingBox Bbox;
     private readonly Color _color = Color.FromArgb(200, 59, 130, 246);
-    private readonly DisplayMaterial _material;
+
+    //private readonly DisplayMaterial _material;
 
     public PreviewConduit(List<GeometryBase> preview)
     {
-      _material = new() { Transparency = 0.8, Diffuse = _color };
-
       Bbox = new BoundingBox();
 
       foreach (var previewObj in preview)
@@ -186,7 +185,7 @@ public class RhinoMultiplayerHostObjectBuilder : IHostObjectBuilder
       foreach (var previewobj in Preview)
       {
         var drawColor = _color;
-        var drawMaterial = _material;
+        DisplayMaterial drawMaterial = new() { Transparency = 0.8, Diffuse = _color };
         drawMaterial.Diffuse = drawColor;
 
         switch (previewobj)
