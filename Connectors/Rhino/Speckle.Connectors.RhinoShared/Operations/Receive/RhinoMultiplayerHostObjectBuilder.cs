@@ -12,7 +12,6 @@ using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
-using Layer = Rhino.DocObjects.Layer;
 
 namespace Speckle.Connectors.Rhino.Operations.Receive;
 
@@ -59,13 +58,13 @@ public class RhinoMultiplayerHostObjectBuilder : IMultiplayerHostObjectBuilder
     using var activity = _activityFactory.Start("Build");
     // POC: This is where the top level base-layer name is set. Could be abstracted or injected in the context?
     var baseLayerName = $"Project {projectName}: Model {modelName} - MULTIPLAYER SESSION";
-    var index = RhinoDoc.ActiveDoc.Layers.Add(new Layer { Name = baseLayerName });
+    //var index = RhinoDoc.ActiveDoc.Layers.Add(new Layer { Name = baseLayerName });
 
     // purge current view and preview conduit
-    PreReceiveDeepClean(baseLayerName);
+    //PreReceiveDeepClean(baseLayerName);
 
     // UPDATE VIEW
-    UpdateActiveViewCamera(rootObject, index);
+    UpdatePlayer2ViewCamera(baseLayerName, rootObject);
 
     RhinoDoc.ActiveDoc.Views.Redraw();
 
@@ -127,17 +126,20 @@ public class RhinoMultiplayerHostObjectBuilder : IMultiplayerHostObjectBuilder
     return Task.FromResult(new HostObjectBuilderResult(bakedObjectIds, conversionResults));
   }
 
-  private void UpdateActiveViewCamera(Base rootObject, int layer)
+  private void UpdateActiveViewCamera(string baseLayerName, Base rootObject, int layer)
   {
+    // clean existing views
+    int rootLayerIndex = RhinoDoc.ActiveDoc.Layers.Find(Guid.Empty, baseLayerName, RhinoMath.UnsetIntIndex);
+    RhinoDoc.ActiveDoc.Layers.Purge(rootLayerIndex, true);
+
     if (
       rootObject["view"] is Base view
       && view["locationX"] is double locationX
       && view["locationY"] is double locationY
       && view["locationZ"] is double locationZ
-      //&& view["upX"] is double upX
-      //&& view["upY"] is double upY
-      //&& view["upZ"] is double upZ
-
+      && view["upX"] is double upX
+      && view["upY"] is double upY
+      && view["upZ"] is double upZ
       && view["forwardX"] is double forwardX
       && view["forwardY"] is double forwardY
       && view["forwardZ"] is double forwardZ
@@ -156,6 +158,7 @@ public class RhinoMultiplayerHostObjectBuilder : IMultiplayerHostObjectBuilder
       viewport.SetCameraLocation(new Point3d(locationX, locationY, locationZ), true);
       viewport.SetCameraDirection(new Vector3d(forwardX, forwardY, forwardZ), true);
       viewport.SetCameraTarget(new Point3d(targetX, targetY, targetZ), true);
+      viewport.CameraUp = new Vector3d(upX, upY, upZ);
 
       ObjectAttributes atts = new() { LayerIndex = layer };
       RhinoDoc.ActiveDoc.Objects.Add(viewTextDot, atts);
@@ -166,17 +169,48 @@ public class RhinoMultiplayerHostObjectBuilder : IMultiplayerHostObjectBuilder
     }
   }
 
-  private void PreReceiveDeepClean(string baseLayerName)
+  private void UpdatePlayer2ViewCamera(string baseLayerName, Base rootObject)
   {
-    // Remove all previously received layers and render materials from the document
-    int rootLayerIndex = RhinoDoc.ActiveDoc.Layers.Find(Guid.Empty, baseLayerName, RhinoMath.UnsetIntIndex);
+    // first look for multiplayer viewport
+    RhinoView player2View = RhinoDoc.ActiveDoc.Views.Find(baseLayerName, false);
 
-    var doc = RhinoDoc.ActiveDoc;
-
-    var purgeSuccess = doc.Layers.Purge(rootLayerIndex, true);
-    if (!purgeSuccess)
+    if (player2View is null)
     {
-      Console.WriteLine($"Failed to purge layer: {baseLayerName}");
+      player2View = RhinoDoc.ActiveDoc.Views.Add(
+        baseLayerName,
+        DefinedViewportProjection.Perspective,
+        new Rectangle(),
+        false
+      );
+    }
+
+    if (
+      rootObject["view"] is Base view
+      && view["locationX"] is double locationX
+      && view["locationY"] is double locationY
+      && view["locationZ"] is double locationZ
+      && view["upX"] is double upX
+      && view["upY"] is double upY
+      && view["upZ"] is double upZ
+      && view["forwardX"] is double forwardX
+      && view["forwardY"] is double forwardY
+      && view["forwardZ"] is double forwardZ
+      && view["targetX"] is double targetX
+      && view["targetY"] is double targetY
+      && view["targetZ"] is double targetZ
+    )
+    {
+      // set camera location
+      RhinoViewport viewport = player2View.ActiveViewport;
+
+      viewport.SetCameraLocation(new Point3d(locationX, locationY, locationZ), true);
+      viewport.SetCameraDirection(new Vector3d(forwardX, forwardY, forwardZ), true);
+      viewport.SetCameraTarget(new Point3d(targetX, targetY, targetZ), true);
+      viewport.CameraUp = new Vector3d(upX, upY, upZ);
+    }
+    else
+    {
+      // TODO: throw
     }
   }
 }
