@@ -16,7 +16,7 @@ public class ReceiverModelCard : ModelCard
   public bool HasDismissedUpdateWarning { get; set; }
   public List<string>? BakedObjectIds { get; set; }
 
-  public ReceiveInfo GetReceiveInfo(string sourceApplication) =>
+  public ReceiveInfo GetReceiveInfo(string sourceApplication, bool isLiveSession) =>
     new(
       AccountId.NotNull(),
       new Uri(ServerUrl.NotNull()),
@@ -25,6 +25,7 @@ public class ReceiverModelCard : ModelCard
       ModelId.NotNull(),
       ModelName.NotNull(),
       SelectedVersionId.NotNull(),
-      sourceApplication
+      sourceApplication,
+      isLiveSession
     );
 }

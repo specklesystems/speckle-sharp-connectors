@@ -63,6 +63,7 @@ public static class ServiceRegistration
     // register send filters
     serviceCollection.AddScoped<ISendFilter, RhinoSelectionFilter>();
     serviceCollection.AddScoped<IHostObjectBuilder, RhinoHostObjectBuilder>();
+    serviceCollection.AddScoped<IMultiplayerHostObjectBuilder, RhinoMultiplayerHostObjectBuilder>();
 
     // register send conversion cache
     serviceCollection.AddSingleton<ISendConversionCache, SendConversionCache>();

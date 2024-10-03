@@ -1,4 +1,4 @@
-﻿using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Conversion;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.Common.Builders;
@@ -17,6 +17,17 @@ public interface IHostObjectBuilder
   /// <returns> List of application ids.</returns> // POC: Where we will return these ids will matter later when we target to also cache received application ids.
   /// <remarks>Project and model name are needed for now to construct host app objects into related layers or filters.
   /// POC: we might consider later to have HostObjectBuilderContext? that might hold all possible data we will need.</remarks>
+  Task<HostObjectBuilderResult> Build(
+    Base rootObject,
+    string projectName,
+    string modelName,
+    Action<string, double?>? onOperationProgressed,
+    CancellationToken cancellationToken
+  );
+}
+
+public interface IMultiplayerHostObjectBuilder
+{
   Task<HostObjectBuilderResult> Build(
     Base rootObject,
     string projectName,

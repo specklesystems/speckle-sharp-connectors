@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Rhino;
 using Speckle.Connectors.Common.Builders;
@@ -76,11 +76,17 @@ public class RhinoReceiveBinding : IReceiveBinding
 
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
+      bool isLiveSession = false;
+      if (modelCard.Settings.First().Value is bool liveSetting)
+      {
+        isLiveSession = liveSetting;
+      }
+
       // Receive host objects
       HostObjectBuilderResult conversionResults = await scope
         .ServiceProvider.GetRequiredService<ReceiveOperation>()
         .Execute(
-          modelCard.GetReceiveInfo(_speckleApplication.Slug),
+          modelCard.GetReceiveInfo(_speckleApplication.Slug, isLiveSession),
           cancellationToken,
           (status, progress) =>
             _operationProgressManager.SetModelProgress(

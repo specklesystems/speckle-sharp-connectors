@@ -11,6 +11,7 @@ using Speckle.Converters.Rhino;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
 using Layer = Rhino.DocObjects.Layer;
@@ -21,7 +22,7 @@ namespace Speckle.Connectors.Rhino.Operations.Receive;
 /// <summary>
 /// <para>Expects to be a scoped dependency per receive operation.</para>
 /// </summary>
-public class RhinoMultiplayerHostObjectBuilder : IHostObjectBuilder
+public class RhinoMultiplayerHostObjectBuilder : IMultiplayerHostObjectBuilder
 {
   private readonly IRootToHostConverter _converter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _converterSettings;
@@ -63,10 +64,13 @@ public class RhinoMultiplayerHostObjectBuilder : IHostObjectBuilder
     var baseLayerName = $"Project {projectName}: Model {modelName} - MULTIPLAYER SESSION";
     var index = RhinoDoc.ActiveDoc.Layers.Add(new Layer { Name = baseLayerName });
 
-    // RHINO MULTIPLAYER - this class should be used if setting is turned on!
+    // purge current view and preview conduit
+    PreReceiveDeepClean(baseLayerName);
 
     // UPDATE VIEW
     UpdateActiveViewCamera(rootObject, index);
+
+    _converterSettings.Current.Document.Views.Redraw();
 
     // 1 - Unpack objects and proxies from root commit object
     var unpackedRoot = _rootObjectUnpacker.Unpack(rootObject);
@@ -130,10 +134,15 @@ public class RhinoMultiplayerHostObjectBuilder : IHostObjectBuilder
 
   private void UpdateActiveViewCamera(Base rootObject, int layer)
   {
-    if (rootObject["view"] is Base view && view["CameraLocation"] is Point3d cameraLocation)
+    if (
+      rootObject["view"] is Base view
+      && view["locationX"] is double x
+      && view["locationY"] is double y
+      && view["locationZ"] is double z
+    )
     {
       // convert view to text dot (first pass)
-      var viewTextDot = new TextDot("Player 2", cameraLocation);
+      var viewTextDot = new TextDot("Player 2", new Point3d(x, y, z));
 
       ObjectAttributes atts = new() { LayerIndex = layer };
       _converterSettings.Current.Document.Objects.Add(viewTextDot, atts);
@@ -141,6 +150,24 @@ public class RhinoMultiplayerHostObjectBuilder : IHostObjectBuilder
     else
     {
       // TODO: throw
+    }
+  }
+
+  private void PreReceiveDeepClean(string baseLayerName)
+  {
+    // Remove all previously received layers and render materials from the document
+    int rootLayerIndex = _converterSettings.Current.Document.Layers.Find(
+      Guid.Empty,
+      baseLayerName,
+      RhinoMath.UnsetIntIndex
+    );
+
+    var doc = _converterSettings.Current.Document;
+
+    var purgeSuccess = doc.Layers.Purge(rootLayerIndex, true);
+    if (!purgeSuccess)
+    {
+      Console.WriteLine($"Failed to purge layer: {baseLayerName}");
     }
   }
 

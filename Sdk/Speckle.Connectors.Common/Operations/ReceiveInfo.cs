@@ -1,4 +1,4 @@
-﻿namespace Speckle.Connectors.Common.Operations;
+namespace Speckle.Connectors.Common.Operations;
 
 public record ReceiveInfo(
   string AccountId,
@@ -8,5 +8,6 @@ public record ReceiveInfo(
   string ModelId,
   string ModelName,
   string SelectedVersionId,
-  string SourceApplication
+  string SourceApplication,
+  bool IsLiveSession
 );

@@ -11,6 +11,7 @@ namespace Speckle.Connectors.Common.Operations;
 public sealed class ReceiveOperation
 {
   private readonly IHostObjectBuilder _hostObjectBuilder;
+  private readonly IMultiplayerHostObjectBuilder _multiplayerHostObjectBuilder;
   private readonly AccountService _accountService;
   private readonly IServerTransportFactory _serverTransportFactory;
   private readonly IProgressDisplayManager _progressDisplayManager;
@@ -20,6 +21,7 @@ public sealed class ReceiveOperation
 
   public ReceiveOperation(
     IHostObjectBuilder hostObjectBuilder,
+    IMultiplayerHostObjectBuilder multiplayerHostObjectBuilder,
     AccountService accountService,
     IServerTransportFactory serverTransportFactory,
     IProgressDisplayManager progressDisplayManager,
@@ -29,6 +31,7 @@ public sealed class ReceiveOperation
   )
   {
     _hostObjectBuilder = hostObjectBuilder;
+    _multiplayerHostObjectBuilder = multiplayerHostObjectBuilder;
     _accountService = accountService;
     _serverTransportFactory = serverTransportFactory;
     _progressDisplayManager = progressDisplayManager;
@@ -135,11 +138,22 @@ public sealed class ReceiveOperation
 
     try
     {
-      var res = await _hostObjectBuilder
-        .Build(commitObject, receiveInfo.ProjectName, receiveInfo.ModelName, onOperationProgressed, cancellationToken)
-        .ConfigureAwait(false);
-      conversionActivity?.SetStatus(SdkActivityStatusCode.Ok);
-      return res;
+      if (receiveInfo.IsLiveSession)
+      {
+        var res = await _multiplayerHostObjectBuilder
+          .Build(commitObject, receiveInfo.ProjectName, receiveInfo.ModelName, onOperationProgressed, cancellationToken)
+          .ConfigureAwait(false);
+        conversionActivity?.SetStatus(SdkActivityStatusCode.Ok);
+        return res;
+      }
+      else
+      {
+        var res = await _hostObjectBuilder
+          .Build(commitObject, receiveInfo.ProjectName, receiveInfo.ModelName, onOperationProgressed, cancellationToken)
+          .ConfigureAwait(false);
+        conversionActivity?.SetStatus(SdkActivityStatusCode.Ok);
+        return res;
+      }
     }
     catch (Exception ex)
     {
