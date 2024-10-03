@@ -9,6 +9,8 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
+using Speckle.Connectors.DUI.Settings;
+using Speckle.Connectors.Rhino.Operations.Send.Settings;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
@@ -50,6 +52,10 @@ public class RhinoReceiveBinding : IReceiveBinding
     _cancellationManager = cancellationManager;
     Commands = new ReceiveBindingUICommands(parent);
   }
+
+#pragma warning disable CA1024
+  public List<ICardSetting> GetReceiveSettings() => [new EnableLiveSession(false)];
+#pragma warning restore CA1024
 
   public void CancelReceive(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
 

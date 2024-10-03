@@ -16,6 +16,7 @@ using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Rhino.HostApp;
+using Speckle.Connectors.Rhino.Operations.Send.Settings;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
@@ -150,7 +151,7 @@ public sealed class RhinoSendBinding : ISendBinding
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
 
-  public List<ICardSetting> GetSendSettings() => [];
+  public List<ICardSetting> GetSendSettings() => [new EnableLiveSession(false)];
 
   public async Task Send(string modelCardId)
   {
