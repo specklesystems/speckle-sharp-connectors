@@ -91,6 +91,8 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<RhinoMaterialBaker>();
     serviceCollection.AddScoped<RhinoMaterialUnpacker>();
 
+    serviceCollection.AddSingleton<RhinoPreviewManager>();
+
     serviceCollection.AddScoped<RhinoColorBaker>();
     serviceCollection.AddScoped<RhinoColorUnpacker>();
 

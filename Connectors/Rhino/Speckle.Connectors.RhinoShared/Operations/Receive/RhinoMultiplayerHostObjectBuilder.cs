@@ -1,5 +1,4 @@
 using Rhino;
-using Rhino.Display;
 using Rhino.DocObjects;
 using Rhino.Geometry;
 using Speckle.Connectors.Common.Builders;
@@ -14,7 +13,6 @@ using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
 using Layer = Rhino.DocObjects.Layer;
-using Point = Rhino.Geometry.Point;
 
 namespace Speckle.Connectors.Rhino.Operations.Receive;
 
@@ -30,6 +28,7 @@ public class RhinoMultiplayerHostObjectBuilder : IMultiplayerHostObjectBuilder
   private readonly RhinoColorBaker _colorBaker;
   private readonly RootObjectUnpacker _rootObjectUnpacker;
   private readonly ISdkActivityFactory _activityFactory;
+  private readonly RhinoPreviewManager _previewManager;
 
   public RhinoMultiplayerHostObjectBuilder(
     IRootToHostConverter converter,
@@ -38,7 +37,8 @@ public class RhinoMultiplayerHostObjectBuilder : IMultiplayerHostObjectBuilder
     RootObjectUnpacker rootObjectUnpacker,
     RhinoMaterialBaker materialBaker,
     RhinoColorBaker colorBaker,
-    ISdkActivityFactory activityFactory
+    ISdkActivityFactory activityFactory,
+    RhinoPreviewManager previewManager
   )
   {
     _converter = converter;
@@ -48,6 +48,7 @@ public class RhinoMultiplayerHostObjectBuilder : IMultiplayerHostObjectBuilder
     _colorBaker = colorBaker;
     _layerBaker = layerBaker;
     _activityFactory = activityFactory;
+    _previewManager = previewManager;
   }
 
   public Task<HostObjectBuilderResult> Build(
@@ -124,10 +125,7 @@ public class RhinoMultiplayerHostObjectBuilder : IMultiplayerHostObjectBuilder
     }
 
     // PREVIEW CONDUIT
-    var preview = new PreviewConduit(convertedObjects) { Enabled = true };
-
-    //Doc.Views.ActiveView.ActiveViewport.ZoomBoundingBox(preview.bbox);
-    _converterSettings.Current.Document.Views.Redraw();
+    _previewManager.UpdatePreview(convertedObjects);
 
     return Task.FromResult(new HostObjectBuilderResult(bakedObjectIds, conversionResults));
   }
@@ -168,75 +166,6 @@ public class RhinoMultiplayerHostObjectBuilder : IMultiplayerHostObjectBuilder
     if (!purgeSuccess)
     {
       Console.WriteLine($"Failed to purge layer: {baseLayerName}");
-    }
-  }
-
-  private sealed class PreviewConduit : DisplayConduit
-  {
-    public BoundingBox Bbox;
-    private readonly Color _color = Color.FromArgb(200, 59, 130, 246);
-
-    //private readonly DisplayMaterial _material;
-
-    public PreviewConduit(List<GeometryBase> preview)
-    {
-      Bbox = new BoundingBox();
-
-      foreach (var previewObj in preview)
-      {
-        Bbox.Union(previewObj.GetBoundingBox(false));
-
-        Preview.Add(previewObj);
-      }
-    }
-
-    public List<object> Preview { get; set; } = new();
-
-    // reference: https://developer.rhino3d.com/api/RhinoCommon/html/M_Rhino_Display_DisplayConduit_CalculateBoundingBox.htm
-    protected override void CalculateBoundingBox(CalculateBoundingBoxEventArgs e)
-    {
-      base.CalculateBoundingBox(e);
-      e.IncludeBoundingBox(Bbox);
-    }
-
-    protected override void CalculateBoundingBoxZoomExtents(CalculateBoundingBoxEventArgs e)
-    {
-      CalculateBoundingBox(e);
-    }
-
-    protected override void PreDrawObjects(DrawEventArgs e)
-    {
-      // draw preview objects
-      var display = e.Display;
-
-      foreach (var previewobj in Preview)
-      {
-        var drawColor = _color;
-        DisplayMaterial drawMaterial = new() { Transparency = 0.8, Diffuse = _color };
-        drawMaterial.Diffuse = drawColor;
-
-        switch (previewobj)
-        {
-          case Brep o:
-            display.DrawBrepShaded(o, drawMaterial);
-            break;
-          case Mesh o:
-            display.DrawMeshShaded(o, drawMaterial);
-            break;
-          case Curve o:
-            display.DrawCurve(o, drawColor);
-            break;
-          case Point o:
-            display.DrawPoint(o.Location, drawColor);
-            break;
-          case Point3d o:
-            display.DrawPoint(o, drawColor);
-            break;
-          case PointCloud o:
-            display.DrawPointCloud(o, 5, drawColor);
-            break;
-        }
-      }
     }
   }
 }
