@@ -11,7 +11,6 @@ using Speckle.Converters.Rhino;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
-using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
 using Layer = Rhino.DocObjects.Layer;
@@ -125,8 +124,9 @@ public class RhinoMultiplayerHostObjectBuilder : IMultiplayerHostObjectBuilder
     }
 
     // PREVIEW CONDUIT
-    var preview = new PreviewConduit(convertedObjects);
+    var preview = new PreviewConduit(convertedObjects) { Enabled = true };
 
+    //Doc.Views.ActiveView.ActiveViewport.ZoomBoundingBox(preview.bbox);
     _converterSettings.Current.Document.Views.Redraw();
 
     return Task.FromResult(new HostObjectBuilderResult(bakedObjectIds, conversionResults));
