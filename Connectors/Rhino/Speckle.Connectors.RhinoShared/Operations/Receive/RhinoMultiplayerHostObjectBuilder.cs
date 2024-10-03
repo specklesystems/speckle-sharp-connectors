@@ -144,7 +144,7 @@ public class RhinoMultiplayerHostObjectBuilder : IHostObjectBuilder
     }
   }
 
-  private class PreviewConduit : DisplayConduit
+  private sealed class PreviewConduit : DisplayConduit
   {
     public BoundingBox Bbox;
     private readonly Color _color = Color.FromArgb(200, 59, 130, 246);
