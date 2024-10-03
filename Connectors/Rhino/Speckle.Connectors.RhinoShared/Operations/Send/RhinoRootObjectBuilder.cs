@@ -80,6 +80,10 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     Collection rootObjectCollection = new() { name = _converterSettings.Current.Document.Name ?? "Unnamed document" };
     rootObjectCollection["units"] = _converterSettings.Current.SpeckleUnits;
 
+
+    // MULTIPLAYER!
+    AddCommitView(rootObjectCollection);
+
     // 1 - Unpack the instances
     UnpackResult<RhinoObject> unpackResults;
     using (var _ = _activityFactory.Start("UnpackSelection"))
