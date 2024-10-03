@@ -80,7 +80,6 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     Collection rootObjectCollection = new() { name = _converterSettings.Current.Document.Name ?? "Unnamed document" };
     rootObjectCollection["units"] = _converterSettings.Current.SpeckleUnits;
 
-
     // MULTIPLAYER!
     AddCommitView(rootObjectCollection);
 
@@ -154,9 +153,10 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     Base currentView = new();
 
     // attach all important viewport props
-    currentView["CameraLocation"] = viewport.CameraLocation;
-    currentView["up"] = viewport.CameraUp;
-    currentView["forward"] = viewport.CameraDirection;
+    currentView["locationX"] = viewport.CameraLocation.X;
+    currentView["locationY"] = viewport.CameraLocation.Y;
+    currentView["locationZ"] = viewport.CameraLocation.Z;
+
     rootObjectCollection["view"] = currentView;
   }
 
