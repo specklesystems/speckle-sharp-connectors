@@ -83,7 +83,10 @@ public class ConfigBinding : IBinding
 
   public void SetUserSelectedAccountId(string userSelectedAccountId)
   {
-    var str = JsonConvert.SerializeObject(new AccountsConfig() {UserSelectedAccountId = userSelectedAccountId}, _serializerOptions);
+    var str = JsonConvert.SerializeObject(
+      new AccountsConfig() { UserSelectedAccountId = userSelectedAccountId },
+      _serializerOptions
+    );
     ConfigStorage.UpdateObject("accounts", str);
   }
 
@@ -94,7 +97,7 @@ public class ConfigBinding : IBinding
     {
       return null;
     }
-    
+
     try
     {
       var config = JsonConvert.DeserializeObject<AccountsConfig>(rawConfig, _serializerOptions);
