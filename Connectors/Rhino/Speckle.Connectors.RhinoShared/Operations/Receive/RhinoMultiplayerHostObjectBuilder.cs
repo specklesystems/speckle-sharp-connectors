@@ -57,14 +57,14 @@ public class RhinoMultiplayerHostObjectBuilder : IMultiplayerHostObjectBuilder
   {
     using var activity = _activityFactory.Start("Build");
     // POC: This is where the top level base-layer name is set. Could be abstracted or injected in the context?
-    var baseLayerName = $"Project {projectName}: Model {modelName} - MULTIPLAYER SESSION";
+    var multiplayerString = $"Player 2";
     //var index = RhinoDoc.ActiveDoc.Layers.Add(new Layer { Name = baseLayerName });
 
     // purge current view and preview conduit
     //PreReceiveDeepClean(baseLayerName);
 
     // UPDATE VIEW
-    UpdatePlayer2ViewCamera(baseLayerName, rootObject);
+    UpdatePlayer2ViewCamera(multiplayerString, rootObject);
 
     RhinoDoc.ActiveDoc.Views.Redraw();
 
@@ -174,14 +174,13 @@ public class RhinoMultiplayerHostObjectBuilder : IMultiplayerHostObjectBuilder
     // first look for multiplayer viewport
     RhinoView player2View = RhinoDoc.ActiveDoc.Views.Find(baseLayerName, false);
 
+    // find current active viewport
+    Rectangle current = RhinoDoc.ActiveDoc.Views.ActiveView.ScreenRectangle;
+    Rectangle newWindow = new(current.Location, current.Size);
+
     if (player2View is null)
     {
-      player2View = RhinoDoc.ActiveDoc.Views.Add(
-        baseLayerName,
-        DefinedViewportProjection.Perspective,
-        new Rectangle(),
-        false
-      );
+      player2View = RhinoDoc.ActiveDoc.Views.Add(baseLayerName, DefinedViewportProjection.Perspective, newWindow, true);
     }
 
     if (
@@ -189,9 +188,9 @@ public class RhinoMultiplayerHostObjectBuilder : IMultiplayerHostObjectBuilder
       && view["locationX"] is double locationX
       && view["locationY"] is double locationY
       && view["locationZ"] is double locationZ
-      && view["upX"] is double upX
-      && view["upY"] is double upY
-      && view["upZ"] is double upZ
+      //&& view["upX"] is double upX
+      //&& view["upY"] is double upY
+      //&& view["upZ"] is double upZ
       && view["forwardX"] is double forwardX
       && view["forwardY"] is double forwardY
       && view["forwardZ"] is double forwardZ
@@ -203,10 +202,11 @@ public class RhinoMultiplayerHostObjectBuilder : IMultiplayerHostObjectBuilder
       // set camera location
       RhinoViewport viewport = player2View.ActiveViewport;
 
-      viewport.SetCameraLocation(new Point3d(locationX, locationY, locationZ), true);
+      viewport.SetCameraLocations(new Point3d(targetX, targetY, targetZ), new Point3d(locationX, locationY, locationZ));
       viewport.SetCameraDirection(new Vector3d(forwardX, forwardY, forwardZ), true);
-      viewport.SetCameraTarget(new Point3d(targetX, targetY, targetZ), true);
-      viewport.CameraUp = new Vector3d(upX, upY, upZ);
+
+      player2View.Redraw();
+      //viewport.CameraUp = new Vector3d(upX, upY, upZ);
     }
     else
     {
