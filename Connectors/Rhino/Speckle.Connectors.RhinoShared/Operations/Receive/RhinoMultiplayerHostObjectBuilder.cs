@@ -1,6 +1,7 @@
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
+using Rhino.Display;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations.Receive;
@@ -130,13 +131,33 @@ public class RhinoMultiplayerHostObjectBuilder : IMultiplayerHostObjectBuilder
   {
     if (
       rootObject["view"] is Base view
-      && view["locationX"] is double x
-      && view["locationY"] is double y
-      && view["locationZ"] is double z
+      && view["locationX"] is double locationX
+      && view["locationY"] is double locationY
+      && view["locationZ"] is double locationZ
+
+      //&& view["upX"] is double upX
+      //&& view["upY"] is double upY
+      //&& view["upZ"] is double upZ
+
+      && view["forwardX"] is double forwardX
+      && view["forwardY"] is double forwardY
+      && view["forwardZ"] is double forwardZ
+
+      && view["targetX"] is double targetX
+      && view["targetY"] is double targetY
+      && view["targetZ"] is double targetZ
     )
     {
       // convert view to text dot (first pass)
-      var viewTextDot = new TextDot("Player 2", new Point3d(x, y, z));
+      var viewTextDot = new TextDot("Player 2", new Point3d(locationX, locationY, locationZ));
+
+      // set camera location
+      RhinoView activeView = _converterSettings.Current.Document.Views.ActiveView;
+      RhinoViewport viewport = activeView.ActiveViewport;
+
+      viewport.SetCameraLocation(new Point3d(locationX, locationY, locationZ), true);
+      viewport.SetCameraDirection(new Vector3d(forwardX, forwardY, forwardZ), true);
+      viewport.SetCameraTarget(new Point3d(targetX, targetY, targetZ), true);
 
       ObjectAttributes atts = new() { LayerIndex = layer };
       RhinoDoc.ActiveDoc.Objects.Add(viewTextDot, atts);

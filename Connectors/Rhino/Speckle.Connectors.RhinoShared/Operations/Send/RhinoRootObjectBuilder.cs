@@ -157,6 +157,18 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     currentView["locationY"] = viewport.CameraLocation.Y;
     currentView["locationZ"] = viewport.CameraLocation.Z;
 
+    currentView["upX"] = viewport.CameraUp.X;
+    currentView["upY"] = viewport.CameraUp.Y;
+    currentView["upZ"] = viewport.CameraUp.Z;
+
+    currentView["forwardX"] = viewport.CameraDirection.X;
+    currentView["forwardY"] = viewport.CameraDirection.Y;
+    currentView["forwardZ"] = viewport.CameraDirection.Z;
+
+    currentView["targetX"] = viewport.CameraTarget.X;
+    currentView["targetY"] = viewport.CameraTarget.Y;
+    currentView["targetZ"] = viewport.CameraTarget.Z;
+
     rootObjectCollection["view"] = currentView;
   }
 
