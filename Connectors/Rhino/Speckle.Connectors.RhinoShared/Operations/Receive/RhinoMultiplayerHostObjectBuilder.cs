@@ -57,7 +57,7 @@ public class RhinoMultiplayerHostObjectBuilder : IMultiplayerHostObjectBuilder
   {
     using var activity = _activityFactory.Start("Build");
     // POC: This is where the top level base-layer name is set. Could be abstracted or injected in the context?
-    var multiplayerString = $"Player 2";
+    var multiplayerString = $"dogukan@speckle.systems";
     //var index = RhinoDoc.ActiveDoc.Layers.Add(new Layer { Name = baseLayerName });
 
     // purge current view and preview conduit
