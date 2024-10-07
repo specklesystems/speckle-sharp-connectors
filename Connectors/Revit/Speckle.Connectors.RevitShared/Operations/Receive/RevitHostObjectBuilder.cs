@@ -153,11 +153,18 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       {
         materialId = mappedElementId;
       }
+
+      if (materialId == ElementId.InvalidElementId)
+      {
+        continue;
+      }
+      
       // NOTE: some geometries fail to convert as solids, and the api defaults back to meshes (from the shape importer). These cannot be painted, so don't bother.
       foreach (var geo in elGeometry)
       {
         if (geo is Solid s)
         {
+          // SolidUtils.CreateTransformed();
           foreach (Face face in s.Faces)
           {
             _converterSettings.Current.Document.Paint(res.Id, face, materialId);
@@ -239,6 +246,9 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 
   private void PreReceiveDeepClean(string baseGroupName)
   {
+    DirectShapeLibrary
+      .GetDirectShapeLibrary(_converterSettings.Current.Document).Reset();
+    _revitToHostCacheSingleton.MaterialsByObjectId.Clear();
     _groupBaker.PurgeGroups(baseGroupName);
     _materialBaker.PurgeMaterials(baseGroupName);
   }
