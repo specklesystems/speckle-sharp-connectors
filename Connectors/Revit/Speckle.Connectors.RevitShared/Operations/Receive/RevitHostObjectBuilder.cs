@@ -1,5 +1,6 @@
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
+using Revit.Async;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Instances;
@@ -57,7 +58,16 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     _activityFactory = activityFactory;
   }
 
-  public async Task<HostObjectBuilderResult> Build(
+  public Task<HostObjectBuilderResult> Build(
+    Base rootObject,
+    string projectName,
+    string modelName,
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken
+  ) =>
+    RevitTask.RunAsync(() => BuildSync(rootObject, projectName, modelName, onOperationProgressed, cancellationToken));
+
+  private HostObjectBuilderResult BuildSync(
     Base rootObject,
     string projectName,
     string modelName,
@@ -113,8 +123,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       }
     }
 
-    var conversionResults = await BakeObjects(localToGlobalMaps, onOperationProgressed, cancellationToken)
-      .ConfigureAwait(true);
+    var conversionResults = BakeObjects(localToGlobalMaps, onOperationProgressed, cancellationToken);
 
     using (var _ = _activityFactory.Start("Commit"))
     {
@@ -146,7 +155,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     return conversionResults;
   }
 
-  private async Task<HostObjectBuilderResult> BakeObjects(
+  private HostObjectBuilderResult BakeObjects(
     List<LocalToGlobalMap> localToGlobalMaps,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
@@ -188,7 +197,6 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       }
     }
 
-    await Task.Yield();
     return new(bakedObjectIds, conversionResults);
   }
 
