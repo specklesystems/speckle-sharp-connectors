@@ -47,9 +47,9 @@ internal static class LogBuilder
       serilogLogConfiguration = serilogLogConfiguration.WriteTo.Console();
     }
 
-    if (speckleLogging?.Otel is not null)
+    foreach (var otel in speckleLogging?.Otel ?? [])
     {
-      serilogLogConfiguration = InitializeOtelLogging(serilogLogConfiguration, speckleLogging.Otel, resourceBuilder);
+      serilogLogConfiguration = InitializeOtelLogging(serilogLogConfiguration, otel, resourceBuilder);
     }
     var logger = serilogLogConfiguration.CreateLogger();
 

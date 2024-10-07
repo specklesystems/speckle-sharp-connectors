@@ -12,10 +12,18 @@ namespace Speckle.Connectors.Common;
 
 public static class Connector
 {
+  private sealed record LoggingDisposable(IDisposable Tracing, IDisposable Metrics) : IDisposable
+  {
+    public void Dispose()
+    {
+      Tracing.Dispose();
+      Metrics.Dispose();
+    }
+  } 
   public static readonly string TabName = "Speckle";
   public static readonly string TabTitle = "Speckle (Beta)";
 
-  public static IDisposable? Initialize(
+  public static IDisposable Initialize(
     this IServiceCollection serviceCollection,
     HostApplication application,
     HostAppVersion version
@@ -23,13 +31,13 @@ public static class Connector
   {
     TypeLoader.Initialize(typeof(Base).Assembly, typeof(Point).Assembly);
 
-    var (logging, tracing) = Observability.Initialize(
+    var (logging, tracing, metrics) = Observability.Initialize(
       application.Slug,
       HostApplications.GetVersion(version),
       Assembly.GetExecutingAssembly().GetVersion(),
       new(
 #if DEBUG || LOCAL
-        new SpeckleLogging(Console: true, MinimumLevel: SpeckleLogLevel.Debug), new SpeckleTracing(Console: false)
+        new SpeckleLogging(Console: true, MinimumLevel: SpeckleLogLevel.Debug), new SpeckleTracing(Console: false), new SpeckleMetrics(Console: true)
 #else
         new SpeckleLogging(
           Console: true,
@@ -53,6 +61,6 @@ public static class Connector
     serviceCollection.AddLogging(x => x.AddProvider(new SpeckleLogProvider(logging)));
     serviceCollection.AddSpeckleSdk(application, version, Assembly.GetExecutingAssembly().GetVersion());
     serviceCollection.AddSingleton<Speckle.Sdk.Logging.ISdkActivityFactory, ConnectorActivityFactory>();
-    return tracing;
+    return new LoggingDisposable(tracing, metrics);
   }
 }

@@ -13,7 +13,7 @@ public sealed class ConnectorActivityFactory : ISdkActivityFactory, IDisposable
 
   public ISdkActivity? Start(string? name = default, [CallerMemberName] string source = "")
   {
-    var activity = _loggingActivityFactory?.Start(name, source);
+    var activity = _loggingActivityFactory.Start(name, source);
     if (activity is null)
     {
       return null;

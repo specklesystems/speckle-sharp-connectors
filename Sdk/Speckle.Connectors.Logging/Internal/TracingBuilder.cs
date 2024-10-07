@@ -6,25 +6,18 @@ namespace Speckle.Connectors.Logging.Internal;
 
 internal static class TracingBuilder
 {
-  public static IDisposable? Initialize(SpeckleTracing? logConfiguration, ResourceBuilder resourceBuilder)
+  public static IDisposable Initialize(SpeckleTracing? logConfiguration, ResourceBuilder resourceBuilder)
   {
-    var consoleEnabled = logConfiguration?.Console ?? false;
-    var otelEnabled = logConfiguration?.Otel?.Enabled ?? false;
-    if (!consoleEnabled && !otelEnabled)
-    {
-      return null;
-    }
-
     var tracerProviderBuilder = OpenTelemetry
       .Sdk.CreateTracerProviderBuilder()
-      .AddSource(LoggingActivityFactory.TRACING_SOURCE);
+      .AddSource(Consts.TRACING_SOURCE);
     tracerProviderBuilder = tracerProviderBuilder.AddHttpClientInstrumentation();
-    if (otelEnabled)
+    foreach(var tracing in logConfiguration?.Otel ?? [])
     {
-      tracerProviderBuilder = tracerProviderBuilder.AddOtlpExporter(x => ProcessOptions(logConfiguration!, x));
+      tracerProviderBuilder = tracerProviderBuilder.AddOtlpExporter(x => ProcessOptions(tracing, x));
     }
 
-    if (consoleEnabled)
+    if (logConfiguration?.Console ?? false)
     {
       tracerProviderBuilder = tracerProviderBuilder.AddConsoleExporter();
     }
@@ -34,18 +27,18 @@ internal static class TracingBuilder
     return tracerProviderBuilder.Build();
   }
 
-  private static void ProcessOptions(SpeckleTracing logConfiguration, OtlpExporterOptions options)
+  private static void ProcessOptions(SpeckleOtelTracing tracing, OtlpExporterOptions options)
   {
     options.Protocol = OtlpExportProtocol.HttpProtobuf;
-    var headers = string.Join(",", logConfiguration.Otel?.Headers?.Select(x => x.Key + "=" + x.Value) ?? []);
+    var headers = string.Join(",", tracing.Headers?.Select(x => x.Key + "=" + x.Value) ?? []);
     if (headers.Length != 0)
     {
       options.Headers = headers;
     }
 
-    if (logConfiguration.Otel?.Endpoint is not null)
+    if (tracing.Endpoint is not null)
     {
-      options.Endpoint = new Uri(logConfiguration.Otel.Endpoint);
+      options.Endpoint = new Uri(tracing.Endpoint);
     }
   }
 }
