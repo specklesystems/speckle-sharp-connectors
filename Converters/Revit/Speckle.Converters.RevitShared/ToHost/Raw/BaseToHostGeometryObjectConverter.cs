@@ -1,8 +1,5 @@
 using System.Collections;
-using Speckle.Converters.Common;
-using Speckle.Converters.Common.FileOps;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Extensions;
@@ -15,21 +12,18 @@ public class BaseToHostGeometryObjectConverter : ITypedConverter<Base, List<DB.G
   private readonly ITypedConverter<ICurve, DB.CurveArray> _curveConverter;
   private readonly ITypedConverter<SOG.Mesh, List<DB.GeometryObject>> _meshConverter;
   private readonly ITypedConverter<SOG.IRawEncodedObject, List<DB.GeometryObject>> _encodedObjectConverter;
-  private readonly IConverterSettingsStore<RevitConversionSettings> _settings;
 
   public BaseToHostGeometryObjectConverter(
     ITypedConverter<SOG.Point, DB.XYZ> pointConverter,
     ITypedConverter<ICurve, DB.CurveArray> curveConverter,
     ITypedConverter<SOG.Mesh, List<DB.GeometryObject>> meshConverter,
-    ITypedConverter<SOG.IRawEncodedObject, List<DB.GeometryObject>> encodedObjectConverter,
-    IConverterSettingsStore<RevitConversionSettings> settings
+    ITypedConverter<SOG.IRawEncodedObject, List<DB.GeometryObject>> encodedObjectConverter
   )
   {
     _pointConverter = pointConverter;
     _curveConverter = curveConverter;
     _meshConverter = meshConverter;
     _encodedObjectConverter = encodedObjectConverter;
-    _settings = settings;
   }
 
   public List<DB.GeometryObject> Convert(Base target)
@@ -69,28 +63,5 @@ public class BaseToHostGeometryObjectConverter : ITypedConverter<Base, List<DB.G
     }
 
     return result;
-  }
-
-  public IEnumerable<DB.GeometryObject> TryImportBrepShape(SOG.BrepX burp)
-  {
-    var burpRhinoContents = burp.encodedValue.contents;
-    var fileBytes = System.Convert.FromBase64String(burpRhinoContents!);
-    
-    var filePath = TempFileProvider.GetTempFile("RevitX", burp.encodedValue.format);
-    File.WriteAllBytes(filePath, fileBytes);
-
-    using var importer = new DB.ShapeImporter();
-    var list = importer.Convert(_settings.Current.Document, filePath).OfType<DB.GeometryObject>();
-
-    return list;
-    // Note: we might want to export in the future single breps from rhino as multiple ones to bypass limitations of the geometry kernel here; tbd - but we should not necessarily assume a single shape
-    // if (list.OfType<DB.Solid>().FirstOrDefault() is DB.GeometryObject shape)
-    // {
-    //   // note: scaling is a todo
-    //   // DB.SolidUtils.CreateTransformed(shape, DB.Transform.Identity);
-    //   // _settings.Document.Paint(); // note: we can pain faces post creation with whatever material we want, to make 'em look as needed
-    //   return shape;
-    // }
-    // return null;
   }
 }

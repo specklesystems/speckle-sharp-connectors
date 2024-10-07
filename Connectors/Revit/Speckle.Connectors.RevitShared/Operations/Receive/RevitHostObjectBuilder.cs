@@ -7,8 +7,12 @@ using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.Common;
+using Speckle.Converters.Common.Objects;
+using Speckle.Converters.RevitShared;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.DoubleNumerics;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
@@ -19,14 +23,18 @@ namespace Speckle.Connectors.Revit.Operations.Receive;
 internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 {
   private readonly IRootToHostConverter _converter;
+  private readonly ScalingServiceToHost _scalingService;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly RevitToHostCacheSingleton _revitToHostCacheSingleton;
   private readonly ITransactionManager _transactionManager;
   private readonly ILocalToGlobalUnpacker _localToGlobalUnpacker;
-  private readonly LocalToGlobalConverterUtils _localToGlobalConverterUtils;
   private readonly RevitGroupBaker _groupBaker;
   private readonly RevitMaterialBaker _materialBaker;
   private readonly ILogger<RevitHostObjectBuilder> _logger;
+  private readonly ITypedConverter<
+    (Base atomicObject, List<Matrix4x4> matrix),
+    DirectShape
+  > _localToGlobalDirectShapeConverter;
 
   private readonly RootObjectUnpacker _rootObjectUnpacker;
   private readonly ISdkActivityFactory _activityFactory;
@@ -37,24 +45,26 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     ITransactionManager transactionManager,
     ISdkActivityFactory activityFactory,
     ILocalToGlobalUnpacker localToGlobalUnpacker,
-    LocalToGlobalConverterUtils localToGlobalConverterUtils,
     RevitGroupBaker groupManager,
     RevitMaterialBaker materialBaker,
     RootObjectUnpacker rootObjectUnpacker,
     ILogger<RevitHostObjectBuilder> logger,
-    RevitToHostCacheSingleton revitToHostCacheSingleton
+    RevitToHostCacheSingleton revitToHostCacheSingleton,
+    ScalingServiceToHost scalingService,
+    ITypedConverter<(Base atomicObject, List<Matrix4x4> matrix), DirectShape> localToGlobalDirectShapeConverter
   )
   {
     _converter = converter;
     _converterSettings = converterSettings;
     _transactionManager = transactionManager;
     _localToGlobalUnpacker = localToGlobalUnpacker;
-    _localToGlobalConverterUtils = localToGlobalConverterUtils;
     _groupBaker = groupManager;
     _materialBaker = materialBaker;
     _rootObjectUnpacker = rootObjectUnpacker;
     _logger = logger;
     _revitToHostCacheSingleton = revitToHostCacheSingleton;
+    _scalingService = scalingService;
+    _localToGlobalDirectShapeConverter = localToGlobalDirectShapeConverter;
     _activityFactory = activityFactory;
   }
 
@@ -130,7 +140,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       _transactionManager.CommitTransaction();
       transactionGroup.Assimilate();
     }
-    
+
     using TransactionGroup createGroupTransaction = new(_converterSettings.Current.Document, "Creating group");
     createGroupTransaction.Start();
     _transactionManager.StartTransaction(true);
@@ -139,9 +149,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     {
       var elGeometry = res.get_Geometry(new Options() { DetailLevel = ViewDetailLevel.Undefined });
       var materialId = ElementId.InvalidElementId;
-      if (
-        _revitToHostCacheSingleton.MaterialsByObjectId.TryGetValue(applicationId, out var mappedElementId)
-      )
+      if (_revitToHostCacheSingleton.MaterialsByObjectId.TryGetValue(applicationId, out var mappedElementId))
       {
         materialId = mappedElementId;
       }
@@ -157,10 +165,10 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
         }
       }
     }
-    
+
     try
     {
-      _groupBaker.BakeGroups(baseGroupName);
+      _groupBaker.BakeGroupForTopLevel(baseGroupName);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
@@ -188,37 +196,38 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     var conversionResults = new List<ReceiveConversionResult>();
     var bakedObjectIds = new List<string>();
     int count = 0;
-    
+
     var toPaintLater = new List<(DirectShape res, string applicationId)>();
-    
+
     foreach (LocalToGlobalMap localToGlobalMap in localToGlobalMaps)
     {
       cancellationToken.ThrowIfCancellationRequested();
       try
       {
         using var activity = _activityFactory.Start("BakeObject");
-        var atomicObject = _localToGlobalConverterUtils.TransformObjects(
-          localToGlobalMap.AtomicObject,
-          localToGlobalMap.Matrix
-        );
-        var result = _converter.Convert(atomicObject);
+        var result = _converter.Convert(localToGlobalMap.AtomicObject);
         onOperationProgressed?.Invoke("Converting", (double)++count / localToGlobalMaps.Count);
 
-        // Note: our current converter always returns a DS for now
-        if (result is DirectShape ds)
+        if (result is FakeDirectShapeDefinition)
         {
-          bakedObjectIds.Add(ds.UniqueId.ToString());
-          _groupBaker.AddToGroupMapping(localToGlobalMap.TraversalContext, ds);
-          if (atomicObject is IRawEncodedObject && atomicObject is Base myBase)
+          DirectShape directShapes = _localToGlobalDirectShapeConverter.Convert(
+            (localToGlobalMap.AtomicObject, localToGlobalMap.Matrix)
+          );
+
+          bakedObjectIds.Add(directShapes.UniqueId.ToString());
+          _groupBaker.AddToTopLevelGroup(directShapes);
+          if (localToGlobalMap.AtomicObject is IRawEncodedObject && localToGlobalMap.AtomicObject is Base myBase)
           {
-            toPaintLater.Add((ds, myBase.applicationId ?? myBase.id));
-          } 
+            toPaintLater.Add((directShapes, myBase.applicationId ?? myBase.id));
+          }
+          conversionResults.Add(
+            new(Status.SUCCESS, localToGlobalMap.AtomicObject, directShapes.UniqueId, "Direct Shape")
+          );
         }
         else
         {
           throw new SpeckleConversionException($"Failed to cast {result.GetType()} to Direct Shape.");
         }
-        conversionResults.Add(new(Status.SUCCESS, atomicObject, ds.UniqueId, "Direct Shape"));
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
