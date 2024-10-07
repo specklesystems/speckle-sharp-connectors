@@ -54,6 +54,9 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
       ?? throw new SpeckleConversionException($"Conversion of object with type {target.GetType()} returned null");
 
     result.applicationId = element.UniqueId;
+    
+    // Add ElementID to the converted objects
+    result["elementId"] = element.Id.ToString()!;
 
     // POC DirectShapes have RevitCategory enum as the type or the category property, DS category property is already set in the converter
     // trying to set the category as a string will throw
