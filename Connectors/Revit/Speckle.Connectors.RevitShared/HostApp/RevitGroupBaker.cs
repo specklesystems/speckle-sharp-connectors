@@ -67,6 +67,7 @@ public class RevitGroupBaker : TraversalContextUnpacker
   {
     var docGroup = _converterSettings.Current.Document.Create.NewGroup(_elementIdsForTopLevelGroup);
     docGroup.GroupType.Name = _revitUtils.RemoveInvalidChars(baseGroupName);
+    docGroup.Pinned = true;
   }
 
   /// <summary>
