@@ -129,7 +129,8 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       onOperationProgressed.Report(new("Converting objects", (double)++count / atomicObjects.Count));
       try
       {
-        List<Entity> convertedObjects = ConvertObject(atomicObject, layerPath, baseLayerPrefix).ToList();
+        List<Entity> convertedObjects =
+          await ConvertObject(atomicObject, layerPath, baseLayerPrefix).ConfigureAwait(true);
 
         applicationIdMap[objectId] = convertedObjects;
 
@@ -180,7 +181,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     _materialBaker.PurgeMaterials(baseLayerPrefix);
   }
 
-  private IEnumerable<Entity> ConvertObject(Base obj, Collection[] layerPath, string baseLayerNamePrefix)
+  private async Task<List<Entity>> ConvertObject(Base obj, Collection[] layerPath, string baseLayerNamePrefix)
   {
     string layerName = _layerBaker.CreateLayerForReceive(layerPath, baseLayerNamePrefix);
     var convertedEntities = new List<Entity>();
@@ -203,6 +204,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     }
 
     tr.Commit();
+    await Task.Delay(10).ConfigureAwait(true);
     return convertedEntities;
   }
 
