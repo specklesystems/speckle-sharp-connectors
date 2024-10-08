@@ -2,6 +2,7 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Common.Caching;
@@ -29,7 +30,7 @@ private OperationProgressManager OperationProgressManager { get; }
 public IBrowserBridge Parent { get; }
 
 private readonly DocumentModelStore _store;
-private readonly IAppIdleManager _idleManager;
+private readonly IAutocadIdleManager _idleManager;
 private readonly List<ISendFilter> _sendFilters;
 private readonly CancellationManager _cancellationManager;
 private readonly IServiceProvider _serviceProvider;
@@ -49,7 +50,7 @@ private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new(
 
 protected AutocadSendBaseBinding(
   DocumentModelStore store,
-  IAppIdleManager idleManager,
+  IAutocadIdleManager idleManager,
   IBrowserBridge parent,
   IEnumerable<ISendFilter> sendFilters,
   CancellationManager cancellationManager,
@@ -114,7 +115,7 @@ private void OnChangeChangedObjectIds(DBObject dBObject)
   _idleManager.SubscribeToIdle(nameof(AutocadSendBinding), RunExpirationChecks);
 }
 
-private async Task RunExpirationChecks()
+private void RunExpirationChecks()
 {
   var senders = _store.GetSenders();
   string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
@@ -132,7 +133,7 @@ private async Task RunExpirationChecks()
     }
   }
 
-  await Commands.SetModelsExpired(expiredSenderIds).ConfigureAwait(false);
+  Commands.SetModelsExpired(expiredSenderIds);
   ChangedObjectIds = new();
 }
 
@@ -140,11 +141,10 @@ public List<ISendFilter> GetSendFilters() => _sendFilters;
 
 public List<ICardSetting> GetSendSettings() => [];
 
-public async Task Send(string modelCardId)
+public Task Send(string modelCardId)
 {
-  await Parent
-    .RunOnMainThreadAsync(async () => await SendInternal(modelCardId).ConfigureAwait(false))
-    .ConfigureAwait(false);
+  Parent.RunOnMainThread(async () => await SendInternal(modelCardId).ConfigureAwait(false));
+  return Task.CompletedTask;
 }
 
 protected abstract void InitializeSettings(IServiceProvider serviceProvider);
@@ -185,14 +185,19 @@ private async Task SendInternal(string modelCardId)
       .Execute(
         autocadObjects,
         modelCard.GetSendInfo(_speckleApplication.Slug),
-        _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
+        (status, progress) =>
+          _operationProgressManager.SetModelProgress(
+            Parent,
+            modelCardId,
+            new ModelCardProgress(modelCardId, status, progress),
+            cancellationToken
+          ),
         cancellationToken
       )
       .ConfigureAwait(false);
 
-    await Commands
-      .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
-      .ConfigureAwait(false);
+    Commands
+      .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
   }
   catch (OperationCanceledException)
   {
@@ -204,7 +209,7 @@ private async Task SendInternal(string modelCardId)
   catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
   {
     _logger.LogModelCardHandledError(ex);
-    await Commands.SetModelError(modelCardId, ex).ConfigureAwait(false);
+     Commands.SetModelError(modelCardId, ex);
   }
   finally
   {
