@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>55E65D72-2FE8-4E61-891C-16A4D551CCF7</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>Speckle.Connectors.Civil3dShared</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Civil3dConversionSettingsFactory.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Civil3dConnectorModule.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Civil3dSendBinding.cs" />
+  </ItemGroup>
+</Project>

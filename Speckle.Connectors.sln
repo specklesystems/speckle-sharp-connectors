@@ -161,6 +161,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connector.Tekla2024
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Converters.Common.Tests", "Sdk\Speckle.Converters.Common.Tests\Speckle.Converters.Common.Tests.csproj", "{9EF292C6-1333-4502-AD9C-224D99847185}"
 EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Connectors.Civil3dShared", "Connectors\Autocad\Speckle.Connectors.Civil3dShared\Speckle.Connectors.Civil3dShared.shproj", "{41BC679F-887F-44CF-971D-A5502EE87DB0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -395,6 +397,7 @@ Global
 		{696086E4-D8CC-4FE0-A9B3-5F10B9089B55} = {42826721-9A18-4762-8BA9-F1429DD5C5B1}
 		{2319C00F-B268-4E4C-9F88-6B379E2BBD22} = {696086E4-D8CC-4FE0-A9B3-5F10B9089B55}
 		{9EF292C6-1333-4502-AD9C-224D99847185} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
+		{41BC679F-887F-44CF-971D-A5502EE87DB0} = {91D70DE1-DC8E-4AE1-B100-0671D6263FC5}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}
