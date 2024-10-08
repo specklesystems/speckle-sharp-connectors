@@ -1,13 +1,14 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using Autodesk.AutoCAD.DatabaseServices;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp;
+using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
-using Speckle.Converters.Autocad;
+using Speckle.Converters.Civil3d;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
@@ -15,13 +16,14 @@ using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
 
-namespace Speckle.Connectors.Autocad.Operations.Send;
+namespace Speckle.Connectors.Civil3d2024;
+
 
 public class Civil3dRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
 {
   private readonly IRootToSpeckleConverter _converter;
   private readonly string[] _documentPathSeparator = ["\\"];
-  private readonly IConverterSettingsStore<AutocadConversionSettings> _converterSettings;
+  private readonly IConverterSettingsStore<Civil3dConversionSettings> _converterSettings;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly AutocadInstanceUnpacker _instanceUnpacker;
   private readonly AutocadMaterialUnpacker _materialUnpacker;
@@ -44,7 +46,7 @@ public class Civil3dRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     //CivilPropertySetUnpacker propertySetUnpacker,
     ILogger<AutocadRootObjectBuilder> logger,
     ISdkActivityFactory activityFactory,
-    IConverterSettingsStore<AutocadConversionSettings> converterSettings
+    IConverterSettingsStore<Civil3dConversionSettings> converterSettings
   )
   {
     _converter = converter;
