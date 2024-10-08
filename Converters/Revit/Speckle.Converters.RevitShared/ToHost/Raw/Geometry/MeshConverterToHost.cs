@@ -2,22 +2,22 @@ using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Services;
 using Speckle.DoubleNumerics;
 
 namespace Speckle.Converters.RevitShared.ToHost.TopLevel;
 
 public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObject>>
 {
-  private readonly ITypedConverter<SOG.Point, DB.XYZ> _pointConverter;
   private readonly RevitToHostCacheSingleton _revitToHostCacheSingleton;
+  private readonly ScalingServiceToHost _scalingServiceToHost;
 
   public MeshConverterToHost(
-    ITypedConverter<SOG.Point, XYZ> pointConverter,
-    RevitToHostCacheSingleton revitToHostCacheSingleton
+    RevitToHostCacheSingleton revitToHostCacheSingleton, ScalingServiceToHost scalingServiceToHost
   )
   {
-    _pointConverter = pointConverter;
     _revitToHostCacheSingleton = revitToHostCacheSingleton;
+    _scalingServiceToHost = scalingServiceToHost;
   }
 
   public List<DB.GeometryObject> Convert(SOG.Mesh mesh)
@@ -31,13 +31,11 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObj
       Target = target,
       GraphicsStyleId = ElementId.InvalidElementId
     };
-
-    var valid = tsb.AreTargetAndFallbackCompatible(target, fallback);
+    
     tsb.OpenConnectedFaceSet(false);
     var vertices = ArrayToPoints(mesh.vertices, mesh.units);
 
     ElementId materialId = ElementId.InvalidElementId;
-
     if (
       _revitToHostCacheSingleton.MaterialsByObjectId.TryGetValue(mesh.applicationId ?? mesh.id, out var mappedElementId)
     )
@@ -58,8 +56,8 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObj
 
       if (IsNonPlanarQuad(points))
       {
-        //Non-planar quads will be triangulated as it's more desirable than `TessellatedShapeBuilder.Build`'s attempt to make them planar.
-        //TODO consider triangulating all n > 3 polygons that are non-planar
+        // Non-planar quads will be triangulated as it's more desirable than `TessellatedShapeBuilder.Build`'s attempt to make them planar.
+        // TODO consider triangulating all n > 3 polygons that are non-planar
         var triPoints = new List<XYZ> { points[0], points[1], points[3] };
         var face1 = new TessellatedFace(triPoints, materialId);
         tsb.AddFace(face1);
@@ -122,11 +120,14 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObj
     }
 
     XYZ[] points = new XYZ[arr.Count / 3];
-
+    var fTypeId = _scalingServiceToHost.UnitsToNative(units) ?? UnitTypeId.Meters;
+    
     for (int i = 2, k = 0; i < arr.Count; i += 3)
     {
-      var point = new SOG.Point(arr[i - 2], arr[i - 1], arr[i], units);
-      points[k++] = _pointConverter.Convert(point);
+      points[k++] = new XYZ(
+        _scalingServiceToHost.ScaleToNative(arr[i - 2], fTypeId), 
+        _scalingServiceToHost.ScaleToNative(arr[i - 1], fTypeId),
+        _scalingServiceToHost.ScaleToNative(arr[i], fTypeId)); 
     }
 
     return points;
