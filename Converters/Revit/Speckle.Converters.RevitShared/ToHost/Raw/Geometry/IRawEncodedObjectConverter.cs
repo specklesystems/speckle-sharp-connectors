@@ -3,21 +3,26 @@ using Speckle.Converters.Common.FileOps;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Extensions;
 
 namespace Speckle.Converters.Revit2023.ToHost.Raw.Geometry;
 
 public class IRawEncodedObjectConverter : ITypedConverter<SOG.IRawEncodedObject, List<DB.GeometryObject>>
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _settings;
+  private readonly ITypedConverter<SOG.Mesh, List<DB.GeometryObject>> _meshConverter;
   private readonly RevitToHostCacheSingleton _revitToHostCacheSingleton;
 
   public IRawEncodedObjectConverter(
     IConverterSettingsStore<RevitConversionSettings> settings,
+    ITypedConverter<SOG.Mesh, List<DB.GeometryObject>> meshConverter,
     RevitToHostCacheSingleton revitToHostCacheSingleton
   )
   {
     _settings = settings;
+    _meshConverter = meshConverter;
     _revitToHostCacheSingleton = revitToHostCacheSingleton;
   }
 
@@ -44,55 +49,25 @@ public class IRawEncodedObjectConverter : ITypedConverter<SOG.IRawEncodedObject,
     {
       return shapeImportResult.ToList(); // exit fast if there's no material id associated with this object
     }
-    
-    // check if there's any fallback importer results and recreate the meshes with the correct material result
-    // note: disabled mesh recreation mentioned above as it's very slow. 
-    var returnList = new List<DB.GeometryObject>();
-    foreach (var geometryObject in shapeImportResult)
+
+    // check whether the results have any meshes inside - if yes, it means the shape importer produced a subpar result. 
+    // as we cannot paint meshes later (as you can solid faces), we need to create them now. 
+    // we'll default to using the display value of the original object as it's a better fallback. 
+    // note: if you're tempted to try and re-mesh the shape importer's meshes, don't - they are garbage. 
+    var hasMesh = shapeImportResult.Any(o => o is DB.Mesh);
+    if (!hasMesh)
     {
-      if (geometryObject is DB.Mesh mesh)
-      {
-        // returnList.AddRange(RecreateMeshWithMaterial(mesh, materialId)); // NOTE: disabled mesh recreation mentioned above as it's very slow. 
-        returnList.Add(mesh);
-      }
-      else
-      {
-        returnList.Add(geometryObject);
-      }
+      return shapeImportResult.ToList();
+    }
+    
+    var displayValue = targetAsBase.TryGetDisplayValue<SOG.Mesh>().NotNull();
+    var returnList = new List<DB.GeometryObject>();
+    foreach (var mesh in displayValue)
+    {
+      mesh.applicationId = targetAsBase.applicationId ?? targetAsBase.id; // to properly map materials
+      returnList.AddRange(_meshConverter.Convert(mesh));
     }
     
     return returnList;
-  }
-
-  /// <summary>
-  /// Note: this is not used as it's slow.
-  /// </summary>
-  /// <param name="mesh"></param>
-  /// <param name="materialId"></param>
-  /// <returns></returns>
-  private List<DB.GeometryObject> RecreateMeshWithMaterial(DB.Mesh mesh, DB.ElementId materialId)
-  {
-    using var tsb = new DB.TessellatedShapeBuilder()
-    {
-      Target = DB.TessellatedShapeBuilderTarget.Mesh,
-      Fallback = DB.TessellatedShapeBuilderFallback.Salvage,
-      GraphicsStyleId = DB.ElementId.InvalidElementId
-    };
-    
-    tsb.OpenConnectedFaceSet(false);
-    for (int i = 0; i < mesh.NumTriangles; i++)
-    {
-      var triangle = mesh.get_Triangle(i);
-      var points = new[]
-      {
-        mesh.Vertices[(int)triangle.get_Index(0)],
-        mesh.Vertices[(int)triangle.get_Index(1)],
-        mesh.Vertices[(int)triangle.get_Index(2)]
-      };
-      tsb.AddFace(new DB.TessellatedFace(points, materialId));
-    }
-    tsb.CloseConnectedFaceSet();
-    tsb.Build();
-    return tsb.GetBuildResult().GetGeometricalObjects().ToList();
   }
 }
