@@ -22,4 +22,5 @@
   </ItemGroup>
   
   <Import Project="..\..\Autocad\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems" Label="Shared" />
+  <Import Project="..\..\Autocad\Speckle.Connectors.Civil3dShared\Speckle.Connectors.Civil3dShared.projitems" Label="Shared" />
 </Project>

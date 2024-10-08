@@ -2,14 +2,15 @@ using System.Drawing;
 using Autodesk.AutoCAD.Runtime;
 using Autodesk.AutoCAD.Windows;
 using Microsoft.Extensions.DependencyInjection;
-using Speckle.Connectors.Autocad.DependencyInjection;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.WebView;
 #if AUTOCAD
+using Speckle.Connectors.Autocad.DependencyInjection;
 using Speckle.Converters.Autocad;
 #elif CIVIL3D
 using Speckle.Converters.Civil3d;
+using Speckle.Connectors.Civil3d.DependencyInjection;
 #endif
 namespace Speckle.Connectors.Autocad.Plugin;
 
