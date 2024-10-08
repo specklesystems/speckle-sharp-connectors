@@ -46,12 +46,14 @@ public class IRawEncodedObjectConverter : ITypedConverter<SOG.IRawEncodedObject,
     }
     
     // check if there's any fallback importer results and recreate the meshes with the correct material result
+    // note: disabled mesh recreation mentioned above as it's very slow. 
     var returnList = new List<DB.GeometryObject>();
     foreach (var geometryObject in shapeImportResult)
     {
       if (geometryObject is DB.Mesh mesh)
       {
-        returnList.AddRange(RecreateMeshWithMaterial(mesh, materialId));
+        // returnList.AddRange(RecreateMeshWithMaterial(mesh, materialId)); // NOTE: disabled mesh recreation mentioned above as it's very slow. 
+        returnList.Add(mesh);
       }
       else
       {
@@ -62,14 +64,26 @@ public class IRawEncodedObjectConverter : ITypedConverter<SOG.IRawEncodedObject,
     return returnList;
   }
 
+  /// <summary>
+  /// Note: this is not used as it's slow.
+  /// </summary>
+  /// <param name="mesh"></param>
+  /// <param name="materialId"></param>
+  /// <returns></returns>
   private List<DB.GeometryObject> RecreateMeshWithMaterial(DB.Mesh mesh, DB.ElementId materialId)
   {
-    using var tsb = new DB.TessellatedShapeBuilder();
+    using var tsb = new DB.TessellatedShapeBuilder()
+    {
+      Target = DB.TessellatedShapeBuilderTarget.Mesh,
+      Fallback = DB.TessellatedShapeBuilderFallback.Salvage,
+      GraphicsStyleId = DB.ElementId.InvalidElementId
+    };
+    
     tsb.OpenConnectedFaceSet(false);
     for (int i = 0; i < mesh.NumTriangles; i++)
     {
       var triangle = mesh.get_Triangle(i);
-      var points = new List<DB.XYZ>()
+      var points = new[]
       {
         mesh.Vertices[(int)triangle.get_Index(0)],
         mesh.Vertices[(int)triangle.get_Index(1)],
