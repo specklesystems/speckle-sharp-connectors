@@ -13,6 +13,11 @@ namespace Speckle.Connectors.DUI.Bindings;
 [GenerateAutoInterface]
 public class OperationProgressManager : IOperationProgressManager
 {
+  private class NonUIThreadProgress<T>(Action<T> handler) : IProgress<T>
+  {
+    public void Report(T value) => handler(value);
+  }
+
   private const string SET_MODEL_PROGRESS_UI_COMMAND_NAME = "setModelProgress";
   private static readonly ConcurrentDictionary<string, (DateTime lastCallTime, string status)> s_lastProgressValues =
     new();
@@ -24,8 +29,7 @@ public class OperationProgressManager : IOperationProgressManager
     CancellationToken cancellationToken
   )
   {
-    var progress = new Progress<CardProgress>();
-    progress.ProgressChanged += (_, args) =>
+    var progress = new NonUIThreadProgress<CardProgress>(args =>
       bridge.TopLevelExceptionHandler.FireAndForget(
         () =>
           SetModelProgress(
@@ -34,7 +38,8 @@ public class OperationProgressManager : IOperationProgressManager
             new ModelCardProgress(modelCardId, args.Status, args.Progress),
             cancellationToken
           )
-      );
+      )
+    );
     return progress;
   }
 
