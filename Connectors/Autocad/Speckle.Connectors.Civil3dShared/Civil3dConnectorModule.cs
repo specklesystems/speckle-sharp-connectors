@@ -1,8 +1,10 @@
 ﻿
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Autocad.DependencyInjection;
 using Speckle.Connectors.Civil3d2024;
 using Speckle.Connectors.DUI.Bindings;
+using Speckle.Sdk;
 
 namespace Speckle.Connectors.Civil3d.DependencyInjection;
 
@@ -15,5 +17,6 @@ public static class Civil3dConnectorModule
     
     // Register vertical specific bindings
     serviceCollection.AddSingleton<IBinding, Civil3dSendBinding>();
+    serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
   }
 }
