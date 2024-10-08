@@ -44,7 +44,15 @@ public class LocalToGlobalToDirectShapeConverter
 
     // 2 - init DirectShape
     var result = DB.DirectShape.CreateElement(_converterSettings.Current.Document, new DB.ElementId(dsCategory));
-
+    
+    if (target.matrix.Count == 0)
+    {
+      var def = DB.DirectShapeLibrary.GetDirectShapeLibrary(_converterSettings.Current.Document)
+        .FindDefinition(target.atomicObject.applicationId ?? target.atomicObject.id);
+      result.SetShape(def);
+      return result;
+    }
+    
     // 3 - Transform the geometries
     DB.Transform combinedTransform = DB.Transform.Identity;
 
@@ -57,23 +65,14 @@ public class LocalToGlobalToDirectShapeConverter
         combinedTransform = combinedTransform.Multiply(revitTransform);
       }
     }
-
+    
     var transformedGeometries = DB.DirectShape.CreateGeometryInstance(
       _converterSettings.Current.Document,
       target.atomicObject.applicationId ?? target.atomicObject.id,
       combinedTransform
     );
 
-    // 4- check for valid geometry
-    if (!result.IsValidShape(transformedGeometries))
-    {
-      _converterSettings.Current.Document.Delete(result.Id);
-      throw new SpeckleConversionException("Invalid geometry (eg unbounded curves) found for creating directshape.");
-    }
-
-    // 5 - This is where we apply the geometries into direct shape.
     result.SetShape(transformedGeometries);
-
     return result;
   }
 }

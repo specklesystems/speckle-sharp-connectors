@@ -140,7 +140,6 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     _groupBaker.BakeGroupForTopLevel(baseGroupName);
     _transactionManager.CommitTransaction();
     
-    
     return conversionResults.builderResult;
   }
 
@@ -175,7 +174,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
           bakedObjectIds.Add(directShapes.UniqueId);
           _groupBaker.AddToTopLevelGroup(directShapes);
          
-          if (localToGlobalMap.AtomicObject is IRawEncodedObject && localToGlobalMap.AtomicObject is Base myBase)
+          if (localToGlobalMap.AtomicObject is IRawEncodedObject and Base myBase)
           {
             postBakePaintTargets.Add((directShapes, myBase.applicationId ?? myBase.id));
           }
@@ -237,8 +236,5 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     _materialBaker.PurgeMaterials(baseGroupName);
   }
 
-  public void Dispose()
-  {
-    _transactionManager?.Dispose();
-  }
+  public void Dispose() => _transactionManager?.Dispose();
 }
