@@ -1,9 +1,8 @@
-﻿
-using Speckle.Converters.Civil3d;
-using Speckle.Converters.Common;
+﻿using Speckle.Converters.Common;
 using Speckle.InterfaceGenerator;
 
-namespace Speckle.Connectors.Civil3d2024;
+namespace Speckle.Converters.Civil3d;
+
 
 [GenerateAutoInterface]
 public class Civil3dConversionSettingsFactory(IHostToSpeckleUnitConverter<Autodesk.Aec.BuiltInUnit> unitsConverter)
@@ -27,4 +26,3 @@ public class Civil3dConversionSettingsFactory(IHostToSpeckleUnitConverter<Autode
     return unit;
   }
 }
-
