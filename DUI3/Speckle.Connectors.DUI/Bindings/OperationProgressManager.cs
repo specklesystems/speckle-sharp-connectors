@@ -29,7 +29,7 @@ public class OperationProgressManager : IOperationProgressManager
     CancellationToken cancellationToken
   )
   {
-    var progress = new Progress<CardProgress>(args =>
+    var progress = new NonUIThreadProgress<CardProgress>(args =>
       bridge.TopLevelExceptionHandler.FireAndForget(
         () =>
           SetModelProgress(
