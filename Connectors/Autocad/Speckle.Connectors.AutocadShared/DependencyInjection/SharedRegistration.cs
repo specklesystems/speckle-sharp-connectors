@@ -12,6 +12,7 @@ using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
+using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
@@ -49,7 +50,7 @@ public static class SharedRegistration
     serviceCollection.AddScoped<AutocadMaterialUnpacker>();
     serviceCollection.AddScoped<AutocadMaterialBaker>();
 
-    serviceCollection.AddSingleton<IAutocadIdleManager, AutocadIdleManager>();
+    serviceCollection.AddSingleton<IAppIdleManager, AutocadIdleManager>();
 
     // operation progress manager
     serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();
@@ -69,12 +70,6 @@ public static class SharedRegistration
   {
     // Operations
     serviceCollection.AddScoped<SendOperation<AutocadRootObject>>();
-
-    // Object Builders
-    serviceCollection.AddScoped<IRootObjectBuilder<AutocadRootObject>, AutocadRootObjectBuilder>();
-
-    // Register bindings
-    serviceCollection.AddSingleton<IBinding, AutocadSendBinding>();
 
     // register send filters
     serviceCollection.AddTransient<ISendFilter, AutocadSelectionFilter>();

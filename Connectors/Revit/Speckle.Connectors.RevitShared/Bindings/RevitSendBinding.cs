@@ -82,7 +82,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
         topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
     });
-    Store.DocumentChanged += (_, _) => topLevelExceptionHandler.CatchUnhandled(OnDocumentChanged);
+    Store.DocumentChanged += (_, _) =>
+      topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged().ConfigureAwait(false));
   }
 
   public List<ISendFilter> GetSendFilters()
@@ -101,10 +102,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
   public SendBindingUICommands Commands { get; }
 
-  // yes we know Send function calls many different namespace, we know. But currently I don't see any simplification area we can work on!
-#pragma warning disable CA1506
   public async Task Send(string modelCardId)
-#pragma warning restore CA1506
   {
     // Note: removed top level handling thing as it was confusing me
     try
@@ -148,18 +146,14 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         .Execute(
           revitObjects,
           modelCard.GetSendInfo(_speckleApplication.Slug),
-          (status, progress) =>
-            _operationProgressManager.SetModelProgress(
-              Parent,
-              modelCardId,
-              new ModelCardProgress(modelCardId, status, progress),
-              cancellationToken
-            ),
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
           cancellationToken
         )
         .ConfigureAwait(false);
 
-      Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
+      await Commands
+        .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
+        .ConfigureAwait(false);
     }
     catch (OperationCanceledException)
     {
@@ -170,7 +164,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
       _logger.LogModelCardHandledError(ex);
-      Commands.SetModelError(modelCardId, ex);
+      await Commands.SetModelError(modelCardId, ex).ConfigureAwait(false);
     }
   }
 
@@ -243,7 +237,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     return false;
   }
 
-  private void RunExpirationChecks()
+  private async Task RunExpirationChecks()
   {
     var senders = Store.GetSenders();
     string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
@@ -275,22 +269,24 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       }
     }
 
-    Commands.SetModelsExpired(expiredSenderIds);
+    await Commands.SetModelsExpired(expiredSenderIds).ConfigureAwait(false);
     ChangedObjectIds = new();
   }
 
   // POC: Will be re-addressed later with better UX with host apps that are friendly on async doc operations.
   // That's why don't bother for now how to get rid of from dup logic in other bindings.
-  private void OnDocumentChanged()
+  private async Task OnDocumentChanged()
   {
     if (_cancellationManager.NumberOfOperations > 0)
     {
       _cancellationManager.CancelAllOperations();
-      Commands.SetGlobalNotification(
-        ToastNotificationType.INFO,
-        "Document Switch",
-        "Operations cancelled because of document swap!"
-      );
+      await Commands
+        .SetGlobalNotification(
+          ToastNotificationType.INFO,
+          "Document Switch",
+          "Operations cancelled because of document swap!"
+        )
+        .ConfigureAwait(false);
     }
   }
 }

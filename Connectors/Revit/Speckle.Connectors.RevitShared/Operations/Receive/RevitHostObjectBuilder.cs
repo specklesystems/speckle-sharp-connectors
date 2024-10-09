@@ -4,6 +4,7 @@ using Revit.Async;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Instances;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.Common;
@@ -70,7 +71,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     Base rootObject,
     string projectName,
     string modelName,
-    Action<string, double?>? onOperationProgressed,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   ) =>
     RevitTask.RunAsync(() => BuildSync(rootObject, projectName, modelName, onOperationProgressed, cancellationToken));
@@ -79,14 +80,14 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     Base rootObject,
     string projectName,
     string modelName,
-    Action<string, double?>? onOperationProgressed,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
     var baseGroupName = $"Project {projectName}: Model {modelName}"; // TODO: unify this across connectors!
-
-    onOperationProgressed?.Invoke("Converting", null);
-    _activityFactory.Start("Build");
+    
+    onOperationProgressed.Report(new("Converting", null));
+    using var activity = _activityFactory.Start("Build");
     
     // 0 - Clean then Rock n Roll! 🎸
     {
@@ -156,7 +157,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 
   private (HostObjectBuilderResult builderResult, List<(DirectShape res, string applicationId)> postBakePaintTargets) BakeObjects(
     List<LocalToGlobalMap> localToGlobalMaps,
-    Action<string, double?>? onOperationProgressed,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
@@ -190,8 +191,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
         
         // actual conversion happens here!
         var result = _converter.Convert(localToGlobalMap.AtomicObject);
-        onOperationProgressed?.Invoke("Converting", (double)++count / localToGlobalMaps.Count);
-
+        onOperationProgressed.Report(new("Converting", (double)++count / localToGlobalMaps.Count));
         if (result is DirectShapeDefinitionWrapper)
         {
           // direct shape creation happens here
