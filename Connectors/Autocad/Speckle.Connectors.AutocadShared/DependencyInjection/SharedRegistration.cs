@@ -70,12 +70,6 @@ public static class SharedRegistration
     // Operations
     serviceCollection.AddScoped<SendOperation<AutocadRootObject>>();
 
-    // Object Builders
-    serviceCollection.AddScoped<IRootObjectBuilder<AutocadRootObject>, AutocadRootObjectBuilder>();
-
-    // Register bindings
-    serviceCollection.AddSingleton<IBinding, AutocadSendBinding>();
-
     // register send filters
     serviceCollection.AddTransient<ISendFilter, AutocadSelectionFilter>();
 
