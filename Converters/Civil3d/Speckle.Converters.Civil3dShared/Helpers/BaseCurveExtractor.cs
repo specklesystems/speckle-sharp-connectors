@@ -10,19 +10,20 @@ public sealed class BaseCurveExtractor
   private readonly ILogger<DisplayValueExtractor> _logger;
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _converterSettings;
   private readonly ITypedConverter<AG.LineSegment3d, SOG.Line> _lineConverter;
-  private readonly ITypedConverter<AG.CircularArc2d, SOG.Arc> _arcConverter;
+
+  //private readonly ITypedConverter<AG.CircularArc2d, SOG.Arc> _arcConverter;
   private readonly ITypedConverter<ADB.Curve, Objects.ICurve> _curveConverter;
 
   public BaseCurveExtractor(
     ITypedConverter<AG.LineSegment3d, SOG.Line> lineConverter,
-    ITypedConverter<AG.CircularArc2d, SOG.Arc> arcConverter,
+    //ITypedConverter<AG.CircularArc2d, SOG.Arc> arcConverter,
     ITypedConverter<ADB.Curve, Objects.ICurve> curveConverter,
     ILogger<DisplayValueExtractor> logger,
     IConverterSettingsStore<Civil3dConversionSettings> converterSettings
   )
   {
     _lineConverter = lineConverter;
-    _arcConverter = arcConverter;
+    //_arcConverter = arcConverter;
     _curveConverter = curveConverter;
     _logger = logger;
     _converterSettings = converterSettings;
