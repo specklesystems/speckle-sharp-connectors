@@ -15,7 +15,7 @@ public class IdleCallManagerTests : MoqTest
     var sut = new IdleCallManager(handler.Object);
     var action = Create<Action>();
     var addEvent = Create<Action>();
-    handler.Setup(x => x.CatchUnhandled(It.IsAny<Action>())).Returns(new Result());
+    handler.Setup(x => x.CatchUnhandled(It.IsAny<Action>()));
     sut.SubscribeToIdle("id", action.Object, addEvent.Object);
   }
 
@@ -24,7 +24,7 @@ public class IdleCallManagerTests : MoqTest
   {
     var handler = Create<ITopLevelExceptionHandler>();
     var sut = new IdleCallManager(handler.Object);
-    var action = Create<Action>();
+    var action = Create<Func<Task>>();
     var addEvent = Create<Action>();
     addEvent.Setup(x => x.Invoke());
 
@@ -41,19 +41,22 @@ public class IdleCallManagerTests : MoqTest
     var handler = Create<ITopLevelExceptionHandler>();
     var sut = new IdleCallManager(handler.Object);
     var removeEvent = Create<Action>();
-    handler.Setup(x => x.CatchUnhandled(It.IsAny<Action>())).Returns(new Result());
+    handler.Setup(x => x.FireAndForget(It.IsAny<Func<Task>>()));
     sut.AppOnIdle(removeEvent.Object);
   }
 
   [Test]
-  public void AppOnIdleInternalTest()
+  public async Task AppOnIdleInternalTest()
   {
     var handler = Create<ITopLevelExceptionHandler>();
     var sut = new IdleCallManager(handler.Object);
-    var expectedAction = Create<Action>();
-    expectedAction.Setup(x => x.Invoke());
+    var expectedAction = Create<Func<Task>>();
+    expectedAction.Setup(x => x.Invoke()).Returns(Task.CompletedTask);
 
-    handler.Setup(m => m.CatchUnhandled(It.IsAny<Action>())).Callback<Action>(a => a.Invoke()).Returns(new Result());
+    handler
+      .Setup(m => m.CatchUnhandledAsync(It.IsAny<Func<Task>>()))
+      .Callback<Func<Task>>(a => a.Invoke())
+      .Returns(Task.CompletedTask);
 
     var removeEvent = Create<Action>();
     removeEvent.Setup(x => x.Invoke());
@@ -62,7 +65,7 @@ public class IdleCallManagerTests : MoqTest
     sut.IdleSubscriptionCalled.Should().BeTrue();
     sut.Calls.Count.Should().Be(1);
 
-    sut.AppOnIdleInternal(removeEvent.Object);
+    await sut.AppOnIdleInternal(removeEvent.Object);
     sut.Calls.Count.Should().Be(0);
     sut.IdleSubscriptionCalled.Should().BeFalse();
     expectedAction.Verify(a => a(), Times.Once);

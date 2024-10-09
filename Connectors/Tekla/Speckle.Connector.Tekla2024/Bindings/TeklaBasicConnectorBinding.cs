@@ -40,9 +40,9 @@ public class TeklaBasicConnectorBinding : IBasicConnectorBinding
 
   public void RemoveModel(ModelCard model) => throw new NotImplementedException();
 
-  public void HighlightModel(string modelCardId) => throw new NotImplementedException();
+  public Task HighlightModel(string modelCardId) => throw new NotImplementedException();
 
-  public void HighlightObjects(List<string> objectIds) => throw new NotImplementedException();
+  public Task HighlightObjects(IReadOnlyList<string> objectIds) => throw new NotImplementedException();
 
   public BasicConnectorBindingCommands Commands { get; }
 }

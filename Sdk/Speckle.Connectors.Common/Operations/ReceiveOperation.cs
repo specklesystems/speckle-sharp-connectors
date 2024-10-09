@@ -40,8 +40,8 @@ public sealed class ReceiveOperation
 
   public async Task<HostObjectBuilderResult> Execute(
     ReceiveInfo receiveInfo,
-    CancellationToken cancellationToken,
-    Action<string, double?>? onOperationProgressed = null
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken
   )
   {
     using var execute = _activityFactory.Start("Receive Operation");
@@ -55,8 +55,6 @@ public sealed class ReceiveOperation
       .Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ModelId, receiveInfo.ProjectId, cancellationToken)
       .ConfigureAwait(false);
 
-    int totalCount = 1;
-
     using var transport = _serverTransportFactory.Create(account, receiveInfo.ProjectId);
 
     _progressDisplayManager.Begin();
@@ -64,40 +62,36 @@ public sealed class ReceiveOperation
       .Receive(
         version.referencedObject,
         transport,
-        onProgressAction: dict =>
+        onProgressAction: new PassthroughProgress(args =>
         {
           if (!_progressDisplayManager.ShouldUpdate())
           {
             return;
           }
 
-          // NOTE: this looks weird for the user, as when deserialization kicks in, the progress bar will go down, and then start progressing again.
-          // This is something we're happy to live with until we refactor the whole receive pipeline.
-          var args = dict.FirstOrDefault();
-          if (args is null)
-          {
-            return;
-          }
           switch (args.ProgressEvent)
           {
-            case ProgressEvent.DownloadBytes:
-              onOperationProgressed?.Invoke(
-                $"Downloading ({_progressDisplayManager.CalculateSpeed(args)})",
-                _progressDisplayManager.CalculatePercentage(args)
+            case ProgressEvent.DownloadBytes: //TODO: OnOperationProgress is not awaited here.
+              onOperationProgressed.Report(
+                new(
+                  $"Downloading ({_progressDisplayManager.CalculateSpeed(args)})",
+                  _progressDisplayManager.CalculatePercentage(args)
+                )
               );
               break;
             case ProgressEvent.DownloadObject:
-              onOperationProgressed?.Invoke("Downloading Root Object...", null);
+              onOperationProgressed.Report(new("Downloading Root Object...", null));
               break;
             case ProgressEvent.DeserializeObject:
-              onOperationProgressed?.Invoke(
-                $"Deserializing ({_progressDisplayManager.CalculateSpeed(args)})",
-                _progressDisplayManager.CalculatePercentage(args)
+              onOperationProgressed.Report(
+                new(
+                  $"Deserializing ({_progressDisplayManager.CalculateSpeed(args)})",
+                  _progressDisplayManager.CalculatePercentage(args)
+                )
               );
               break;
           }
-        },
-        onTotalChildrenCountKnown: c => totalCount = c,
+        }),
         cancellationToken: cancellationToken
       )
       .ConfigureAwait(false);
@@ -123,7 +117,7 @@ public sealed class ReceiveOperation
   private async Task<HostObjectBuilderResult> ConvertObjects(
     Base commitObject,
     ReceiveInfo receiveInfo,
-    Action<string, double?>? onOperationProgressed,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
@@ -137,7 +131,7 @@ public sealed class ReceiveOperation
 
     try
     {
-      var res = await _hostObjectBuilder
+      HostObjectBuilderResult res = await _hostObjectBuilder
         .Build(commitObject, receiveInfo.ProjectName, receiveInfo.ModelName, onOperationProgressed, cancellationToken)
         .ConfigureAwait(false);
       conversionActivity?.SetStatus(SdkActivityStatusCode.Ok);

@@ -3,6 +3,7 @@ using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.GraphicsInterface;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
@@ -90,10 +91,10 @@ public class AutocadMaterialBaker
     transaction.Commit();
   }
 
-  public void ParseAndBakeRenderMaterials(
+  public async Task ParseAndBakeRenderMaterials(
     List<RenderMaterialProxy> materialProxies,
     string baseLayerPrefix,
-    Action<string, double?>? onOperationProgressed
+    IProgress<CardProgress> onOperationProgressed
   )
   {
     using var transaction = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
@@ -109,7 +110,7 @@ public class AutocadMaterialBaker
     var count = 0;
     foreach (RenderMaterialProxy materialProxy in materialProxies)
     {
-      onOperationProgressed?.Invoke("Converting render materials", (double)++count / materialProxies.Count);
+      onOperationProgressed.Report(new("Converting render materials", (double)++count / materialProxies.Count));
 
       // bake render material
       RenderMaterial renderMaterial = materialProxy.value;
@@ -139,6 +140,7 @@ public class AutocadMaterialBaker
     }
 
     transaction.Commit();
+    await Task.Yield();
   }
 
   private (ObjectId, ReceiveConversionResult) BakeMaterial(

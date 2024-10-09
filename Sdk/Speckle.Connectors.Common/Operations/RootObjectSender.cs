@@ -55,13 +55,13 @@ public sealed class RootObjectSender : IRootObjectSender
   public async Task<(string rootObjId, IReadOnlyDictionary<string, ObjectReference> convertedReferences)> Send(
     Base commitObject,
     SendInfo sendInfo,
-    Action<string, double?>? onOperationProgressed = null,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
   )
   {
     ct.ThrowIfCancellationRequested();
 
-    onOperationProgressed?.Invoke("Uploading...", null);
+    onOperationProgressed.Report(new("Uploading...", null));
 
     Account account = _accountService.GetAccountWithServerUrlFallback(sendInfo.AccountId, sendInfo.ServerUrl);
     using var userScope = ActivityScope.SetTag(Consts.USER_ID, account.GetHashedEmail());
@@ -75,40 +75,36 @@ public sealed class RootObjectSender : IRootObjectSender
         commitObject,
         transport,
         true,
-        onProgressAction: dict =>
+        onProgressAction: new PassthroughProgress(args =>
         {
           if (!_progressDisplayManager.ShouldUpdate())
           {
             return;
           }
 
-          // NOTE: this looks weird for the user, as when deserialization kicks in, the progress bar will go down, and then start progressing again.
-          // This is something we're happy to live with until we refactor the whole receive pipeline.
-          var args = dict.FirstOrDefault();
-          if (args is null)
-          {
-            return;
-          }
-
           switch (args.ProgressEvent)
           {
-            case ProgressEvent.UploadBytes:
-              onOperationProgressed?.Invoke(
-                $"Uploading ({_progressDisplayManager.CalculateSpeed(args)})",
-                _progressDisplayManager.CalculatePercentage(args)
+            case ProgressEvent.UploadBytes: //TODO: These progress calls are not awaited
+              onOperationProgressed.Report(
+                new(
+                  $"Uploading ({_progressDisplayManager.CalculateSpeed(args)})",
+                  _progressDisplayManager.CalculatePercentage(args)
+                )
               );
               break;
             case ProgressEvent.UploadObject:
-              onOperationProgressed?.Invoke("Uploading Root Object...", null);
+              onOperationProgressed.Report(new("Uploading Root Object...", null));
               break;
             case ProgressEvent.SerializeObject:
-              onOperationProgressed?.Invoke(
-                $"Serializing ({_progressDisplayManager.CalculateSpeed(args)})",
-                _progressDisplayManager.CalculatePercentage(args)
+              onOperationProgressed.Report(
+                new(
+                  $"Serializing ({_progressDisplayManager.CalculateSpeed(args)})",
+                  _progressDisplayManager.CalculatePercentage(args)
+                )
               );
               break;
           }
-        },
+        }),
         ct
       )
       .ConfigureAwait(false);
@@ -117,7 +113,7 @@ public sealed class RootObjectSender : IRootObjectSender
 
     ct.ThrowIfCancellationRequested();
 
-    onOperationProgressed?.Invoke("Linking version to model...", null);
+    onOperationProgressed.Report(new("Linking version to model...", null));
 
     // 8 - Create the version (commit)
     using var apiClient = _clientFactory.Create(account);

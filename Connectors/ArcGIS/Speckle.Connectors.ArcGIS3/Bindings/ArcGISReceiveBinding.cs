@@ -76,23 +76,19 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
         .ServiceProvider.GetRequiredService<ReceiveOperation>()
         .Execute(
           modelCard.GetReceiveInfo("ArcGIS"), // POC: get host app name from settings? same for GetSendInfo
-          cancellationToken,
-          (status, progress) =>
-            _operationProgressManager.SetModelProgress(
-              Parent,
-              modelCardId,
-              new ModelCardProgress(modelCardId, status, progress),
-              cancellationToken
-            )
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
+          cancellationToken
         )
         .ConfigureAwait(false);
 
       modelCard.BakedObjectIds = receiveOperationResults.BakedObjectIds.ToList();
-      Commands.SetModelReceiveResult(
-        modelCardId,
-        receiveOperationResults.BakedObjectIds,
-        receiveOperationResults.ConversionResults
-      );
+      await Commands
+        .SetModelReceiveResult(
+          modelCardId,
+          receiveOperationResults.BakedObjectIds,
+          receiveOperationResults.ConversionResults
+        )
+        .ConfigureAwait(false);
     }
     catch (OperationCanceledException)
     {
@@ -104,7 +100,7 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
     catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
       _logger.LogModelCardHandledError(ex);
-      Commands.SetModelError(modelCardId, ex);
+      await Commands.SetModelError(modelCardId, ex).ConfigureAwait(false);
     }
   }
 

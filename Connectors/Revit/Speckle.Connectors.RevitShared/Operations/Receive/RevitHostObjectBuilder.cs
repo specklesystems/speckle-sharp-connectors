@@ -4,6 +4,7 @@ using Revit.Async;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Instances;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.Common;
@@ -61,7 +62,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     Base rootObject,
     string projectName,
     string modelName,
-    Action<string, double?>? onOperationProgressed,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   ) =>
     RevitTask.RunAsync(() => BuildSync(rootObject, projectName, modelName, onOperationProgressed, cancellationToken));
@@ -70,13 +71,13 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     Base rootObject,
     string projectName,
     string modelName,
-    Action<string, double?>? onOperationProgressed,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
     var baseGroupName = $"Project {projectName}: Model {modelName}"; // TODO: unify this across connectors!
 
-    onOperationProgressed?.Invoke("Converting", null);
+    onOperationProgressed.Report(new("Converting", null));
     using var activity = _activityFactory.Start("Build");
 
     // 0 - Clean then Rock n Roll! 🎸
@@ -156,7 +157,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 
   private HostObjectBuilderResult BakeObjects(
     List<LocalToGlobalMap> localToGlobalMaps,
-    Action<string, double?>? onOperationProgressed,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
@@ -176,7 +177,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
           localToGlobalMap.Matrix
         );
         var result = _converter.Convert(atomicObject);
-        onOperationProgressed?.Invoke("Converting", (double)++count / localToGlobalMaps.Count);
+        onOperationProgressed.Report(new("Converting", (double)++count / localToGlobalMaps.Count));
 
         // Note: our current converter always returns a DS for now
         if (result is DirectShape ds)
@@ -195,6 +196,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
         conversionResults.Add(new(Status.ERROR, localToGlobalMap.AtomicObject, null, null, ex));
       }
     }
+
     return new(bakedObjectIds, conversionResults);
   }
 
