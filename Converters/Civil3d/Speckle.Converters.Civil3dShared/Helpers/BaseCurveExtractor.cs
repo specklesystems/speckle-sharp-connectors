@@ -1,4 +1,3 @@
-using Autodesk.Civil.DatabaseServices;
 using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
@@ -37,11 +36,12 @@ public sealed class BaseCurveExtractor
     {
       // rant: if this is a pipe, the BaseCurve prop is fake news && will return a DB.line with start and endpoints set to [0,0,0] & [0,0,1]
       // do not use basecurve for pipes 😡
+      // currently not handling arc pipes due to lack of CircularArc2D converter, and also way to properly retrieve 2d arc curve
       case CDB.Pipe pipe:
         ICurve pipeCurve =
-          pipe.SubEntityType == PipeSubEntityType.Straight
-            ? _lineConverter.Convert(new AG.LineSegment3d(pipe.StartPoint, pipe.EndPoint))
-            : _arcConverter.Convert(pipe.Curve2d);
+          //pipe.SubEntityType == PipeSubEntityType.Straight ?
+          _lineConverter.Convert(new AG.LineSegment3d(pipe.StartPoint, pipe.EndPoint));
+        //: _arcConverter.Convert(pipe.Curve2d);
         result.Add(pipeCurve);
         break;
       default:
