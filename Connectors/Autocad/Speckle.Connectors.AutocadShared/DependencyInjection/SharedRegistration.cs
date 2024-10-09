@@ -70,7 +70,6 @@ public static class SharedRegistration
     // Operations
     serviceCollection.AddScoped<SendOperation<AutocadRootObject>>();
 
-
     // register send filters
     serviceCollection.AddTransient<ISendFilter, AutocadSelectionFilter>();
 

@@ -21,7 +21,7 @@ public static class AutocadConnectorModule
 
     // Receive
     serviceCollection.LoadReceive();
-    
+
     // Register vertical specific bindings
     serviceCollection.AddSingleton<IBinding, AutocadSendBinding>();
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
