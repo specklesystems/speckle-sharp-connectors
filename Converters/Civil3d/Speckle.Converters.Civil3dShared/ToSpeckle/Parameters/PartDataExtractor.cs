@@ -14,7 +14,7 @@ public class PartDataExtractor
   /// </summary>
   /// <param name="entity"></param>
   /// <returns></returns>
-  public List<Dictionary<string, object?>>? GetPartData(CDB.Entity entity)
+  public Dictionary<string, object?>? GetPartData(CDB.Entity entity)
   {
     if (entity is CDB.Part part)
     {
@@ -24,9 +24,9 @@ public class PartDataExtractor
     return null;
   }
 
-  private List<Dictionary<string, object?>> ParsePartData(CDB.PartDataRecord partData)
+  private Dictionary<string, object?> ParsePartData(CDB.PartDataRecord partData)
   {
-    var result = new List<Dictionary<string, object?>>();
+    var result = new Dictionary<string, object?>();
 
     foreach (CDB.PartDataField field in partData.GetAllDataFields())
     {
@@ -41,7 +41,10 @@ public class PartDataExtractor
         ["units"] = field.Units
       };
 
-      result.Add(fieldDictionary);
+      if (!result.ContainsKey(field.Name))
+      {
+        result.Add(field.Name, fieldDictionary);
+      }
     }
 
     return result;
