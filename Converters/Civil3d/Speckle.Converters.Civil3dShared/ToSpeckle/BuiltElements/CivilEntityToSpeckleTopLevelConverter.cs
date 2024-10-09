@@ -52,7 +52,6 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
 
     // POC: not setting property sets yet, need to determine connector parameter interoperability
     // POC: not setting part data yet, same reason as above
-    // POC: not setting additional pipe properties, probably should scope a CivilPipe class
 
     return civilObject;
   }

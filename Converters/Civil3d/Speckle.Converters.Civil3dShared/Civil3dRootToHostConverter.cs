@@ -30,6 +30,21 @@ public class Civil3dRootToHostConverter : IRootToSpeckleConverter
     }
 
     Type type = dbObject.GetType();
+    object objectToConvert = dbObject;
+
+    // check first for civil type objects
+    if (target is CDB.Entity civilEntity)
+    {
+      type = civilEntity.GetType();
+      objectToConvert = civilEntity;
+    }
+
+    var objectConverter = _toSpeckle.ResolveConverter(type);
+
+    if (objectConverter == null)
+    {
+      throw new SpeckleConversionException($"No conversion found for {target.GetType().Name}");
+    }
 
     try
     {
@@ -37,14 +52,7 @@ public class Civil3dRootToHostConverter : IRootToSpeckleConverter
       {
         using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
         {
-          var objectConverter = _toSpeckle.ResolveConverter(type);
-
-          if (objectConverter == null)
-          {
-            throw new SpeckleConversionException($"No conversion found for {target.GetType().Name}");
-          }
-
-          var convertedObject = objectConverter.Convert(dbObject);
+          var convertedObject = objectConverter.Convert(objectToConvert);
           tr.Commit();
           return convertedObject;
         }

@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using Autodesk.AutoCAD.DatabaseServices;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp;
@@ -16,8 +16,7 @@ using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
 
-namespace Speckle.Connectors.Civil3d2024;
-
+namespace Speckle.Connectors.Civil3d;
 
 public class Civil3dRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
 {
