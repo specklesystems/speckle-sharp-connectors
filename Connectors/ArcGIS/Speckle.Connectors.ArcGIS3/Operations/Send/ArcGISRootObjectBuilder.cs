@@ -57,7 +57,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
 #pragma warning restore CA1506
     IReadOnlyList<MapMember> objects,
     SendInfo sendInfo,
-    Action<string, double?>? onOperationProgressed = null,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
   )
   {
@@ -79,7 +79,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
       objects
     );
 
-    onOperationProgressed?.Invoke("Converting", null);
+    onOperationProgressed.Report(new("Converting", null));
     using (var __ = _activityFactory.Start("Converting objects"))
     {
       foreach ((MapMember mapMember, _) in layersWithDisplayPriority)
@@ -183,7 +183,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
           }
         }
 
-        onOperationProgressed?.Invoke("Converting", (double)++count / objects.Count);
+        onOperationProgressed.Report(new("Converting", (double)++count / objects.Count));
       }
     }
 

@@ -1,14 +1,17 @@
+using System.Diagnostics.CodeAnalysis;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Geometry;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Instances;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.Autocad;
 using Speckle.Converters.Common;
 using Speckle.DoubleNumerics;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
@@ -45,11 +48,12 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
     _converterSettings = converterSettings;
   }
 
-  public BakeResult BakeInstances(
-    List<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
+  [SuppressMessage("Maintainability", "CA1506:Avoid excessive class coupling")]
+  public async Task<BakeResult> BakeInstances(
+    IReadOnlyCollection<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
     Dictionary<string, List<Entity>> applicationIdMap,
     string baseLayerName,
-    Action<string, double?>? onOperationProgressed
+    IProgress<CardProgress> onOperationProgressed
   )
   {
     var sortedInstanceComponents = instanceComponents
@@ -69,7 +73,8 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
     {
       try
       {
-        onOperationProgressed?.Invoke("Converting blocks", (double)++count / sortedInstanceComponents.Count);
+        onOperationProgressed.Report(new("Converting blocks", (double)++count / sortedInstanceComponents.Count));
+
         if (instanceOrDefinition is InstanceDefinitionProxy { applicationId: not null } definitionProxy)
         {
           // TODO: create definition (block table record)
@@ -162,6 +167,7 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
     }
 
     transaction.Commit();
+    await Task.Yield();
     return new(createdObjectIds, consumedObjectIds, conversionResults);
   }
 
