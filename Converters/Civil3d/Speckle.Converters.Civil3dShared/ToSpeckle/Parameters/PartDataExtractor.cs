@@ -1,5 +1,3 @@
-using Speckle.Converters.Common;
-
 namespace Speckle.Converters.Civil3dShared.ToSpeckle;
 
 /// <summary>
@@ -8,12 +6,8 @@ namespace Speckle.Converters.Civil3dShared.ToSpeckle;
 public class PartDataExtractor
 {
   /// POC: Note that we're abusing dictionaries in here because we've yet to have a simple way to serialize non-base derived classes (or structs?)
-  private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
 
-  public PartDataExtractor(IConverterSettingsStore<Civil3dConversionSettings> settingsStore)
-  {
-    _settingsStore = settingsStore;
-  }
+  public PartDataExtractor() { }
 
   /// <summary>
   /// Extracts part data out from an entity. Expects to be scoped per operation.

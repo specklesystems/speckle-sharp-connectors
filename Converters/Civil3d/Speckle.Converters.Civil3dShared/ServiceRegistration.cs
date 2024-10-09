@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Converters.Autocad;
+using Speckle.Converters.Civil3dShared.Helpers;
+using Speckle.Converters.Civil3dShared.ToSpeckle;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Registration;
 using Speckle.Sdk;
@@ -31,5 +33,10 @@ public static class ServiceRegistration
       IConverterSettingsStore<AutocadConversionSettings>,
       ConverterSettingsStore<AutocadConversionSettings>
     >();
+
+    // add other classes
+    serviceCollection.AddScoped<PartDataExtractor>();
+    serviceCollection.AddScoped<DisplayValueExtractor>();
+    serviceCollection.AddScoped<BaseCurveExtractor>();
   }
 }
