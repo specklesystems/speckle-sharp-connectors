@@ -23,7 +23,6 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
   // POC: SendSelection and RevitConversionContextStack should be interfaces, former needs interfaces
   private readonly IRootToSpeckleConverter _converter;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
-  private readonly Collection _rootObject;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ElementUnpacker _elementUnpacker;
   private readonly SendCollectionManager _sendCollectionManager;
@@ -50,12 +49,6 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     _revitToSpeckleCacheSingleton = revitToSpeckleCacheSingleton;
     _logger = logger;
     _parameterDefinitionHandler = parameterDefinitionHandler;
-
-    _rootObject = new Collection()
-    {
-      name = _converterSettings.Current.Document.PathName.Split('\\').Last().Split('.').First()
-    };
-    _rootObject["units"] = _converterSettings.Current.SpeckleUnits;
   }
 
   public async Task<RootObjectBuilderResult> Build(
@@ -71,6 +64,11 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     {
       throw new SpeckleException("Family Environment documents are not supported.");
     }
+
+    // 0 - Init the root
+    Collection rootObject =
+      new() { name = _converterSettings.Current.Document.PathName.Split('\\').Last().Split('.').First() };
+    rootObject["units"] = _converterSettings.Current.SpeckleUnits;
 
     var revitElements = new List<Element>();
 
@@ -116,7 +114,8 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
           converted.applicationId = applicationId;
         }
 
-        var collection = _sendCollectionManager.GetAndCreateObjectHostCollection(revitElement, _rootObject);
+        var collection = _sendCollectionManager.GetAndCreateObjectHostCollection(revitElement, rootObject);
+
         collection.elements.Add(converted);
         results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
       }
@@ -136,10 +135,10 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
 
     var idsAndSubElementIds = _elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(atomicObjects);
     var materialProxies = _revitToSpeckleCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds);
-    _rootObject[ProxyKeys.RENDER_MATERIAL] = materialProxies;
+    rootObject[ProxyKeys.RENDER_MATERIAL] = materialProxies;
     // NOTE: these are currently not used anywhere, so we could even skip them (?).
-    _rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;
+    rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;
 
-    return new RootObjectBuilderResult(_rootObject, results);
+    return new RootObjectBuilderResult(rootObject, results);
   }
 }

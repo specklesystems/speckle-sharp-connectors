@@ -1,18 +1,19 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp;
+using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Converters.Common;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models.Collections;
 
-namespace Speckle.Connectors.Autocad.Operations.Send;
+namespace Speckle.Connectors.Civil3d.Operations.Send;
 
-public sealed class AutocadRootObjectBuilder : AutocadRootObjectBaseBuilder
+public sealed class Civil3dRootObjectBuilder : AutocadRootObjectBaseBuilder
 {
   private readonly AutocadLayerUnpacker _layerUnpacker;
 
-  public AutocadRootObjectBuilder(
+  public Civil3dRootObjectBuilder(
     AutocadLayerUnpacker layerUnpacker,
     IRootToSpeckleConverter converter,
     ISendConversionCache sendConversionCache,

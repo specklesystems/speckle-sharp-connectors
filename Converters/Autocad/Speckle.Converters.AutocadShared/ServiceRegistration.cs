@@ -22,5 +22,6 @@ public static class ServiceRegistration
       IConverterSettingsStore<AutocadConversionSettings>,
       ConverterSettingsStore<AutocadConversionSettings>
     >();
+    serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
   }
 }
