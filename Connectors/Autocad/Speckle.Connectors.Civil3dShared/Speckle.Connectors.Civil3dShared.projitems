@@ -9,8 +9,13 @@
     <Import_RootNamespace>Speckle.Connectors.Civil3dShared</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)Civil3dConnectorModule.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Civil3dRootObjectBuilder.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Civil3dSendBinding.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\Civil3dConnectorModule.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Civil3dRootObjectBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\Civil3dSendBinding.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="$(MSBuildThisFileDirectory)DependencyInjection\" />
+    <Folder Include="$(MSBuildThisFileDirectory)Bindings\" />
+    <Folder Include="$(MSBuildThisFileDirectory)Operations\Send\" />
   </ItemGroup>
 </Project>

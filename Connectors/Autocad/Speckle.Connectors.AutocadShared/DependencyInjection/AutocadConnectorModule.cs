@@ -5,7 +5,8 @@ using Speckle.Connectors.Autocad.Bindings;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.DUI.Bindings;
-using Speckle.Sdk;
+
+//using Speckle.Sdk;
 
 namespace Speckle.Connectors.Autocad.DependencyInjection;
 

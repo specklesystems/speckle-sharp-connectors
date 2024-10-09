@@ -13,7 +13,7 @@ using Speckle.Converters.Civil3d;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
 
-namespace Speckle.Connectors.Civil3d;
+namespace Speckle.Connectors.Civil3d.Bindings;
 
 public sealed class Civil3dSendBinding : AutocadSendBaseBinding
 {

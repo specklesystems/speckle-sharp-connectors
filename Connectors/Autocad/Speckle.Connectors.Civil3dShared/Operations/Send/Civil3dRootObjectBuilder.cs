@@ -8,7 +8,6 @@ using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
-using Speckle.Converters.Civil3d;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
@@ -16,13 +15,12 @@ using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
 
-namespace Speckle.Connectors.Civil3d;
+namespace Speckle.Connectors.Civil3d.Operations.Send;
 
 public class Civil3dRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
 {
   private readonly IRootToSpeckleConverter _converter;
   private readonly string[] _documentPathSeparator = ["\\"];
-  private readonly IConverterSettingsStore<Civil3dConversionSettings> _converterSettings;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly AutocadInstanceUnpacker _instanceUnpacker;
   private readonly AutocadMaterialUnpacker _materialUnpacker;
@@ -44,8 +42,7 @@ public class Civil3dRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     AutocadGroupUnpacker groupUnpacker,
     //CivilPropertySetUnpacker propertySetUnpacker,
     ILogger<AutocadRootObjectBuilder> logger,
-    ISdkActivityFactory activityFactory,
-    IConverterSettingsStore<Civil3dConversionSettings> converterSettings
+    ISdkActivityFactory activityFactory
   )
   {
     _converter = converter;
@@ -58,7 +55,6 @@ public class Civil3dRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
     //_propertySetUnpacker = propertySetUnpacker;
     _logger = logger;
     _activityFactory = activityFactory;
-    _converterSettings = converterSettings;
   }
 
   public Task<RootObjectBuilderResult> Build(
@@ -94,7 +90,6 @@ public class Civil3dRootObjectBuilder : IRootObjectBuilder<AutocadRootObject>
           .Reverse()
           .First()
       };
-    root["units"] = _converterSettings.Current.SpeckleUnits;
 
     // TODO: better handling for document and transactions!!
     Document doc = Application.DocumentManager.CurrentDocument;

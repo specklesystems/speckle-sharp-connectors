@@ -2,6 +2,8 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Autocad.DependencyInjection;
 using Speckle.Connectors.Autocad.Operations.Send;
+using Speckle.Connectors.Civil3d.Bindings;
+using Speckle.Connectors.Civil3d.Operations.Send;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Sdk;
