@@ -6,14 +6,15 @@ namespace Speckle.Connectors.DUI.Bridge;
 public interface IIdleCallManager
 {
   void SubscribeToIdle(string id, Action action, Action addEvent);
+  void SubscribeToIdle(string id, Func<Task> asyncAction, Action addEvent);
   void AppOnIdle(Action removeEvent);
 }
 
 //should be registered as singleton
 [SuppressMessage("ReSharper", "InconsistentlySynchronizedField")]
-public class IdleCallManager : IIdleCallManager
+public sealed class IdleCallManager : IIdleCallManager
 {
-  public ConcurrentDictionary<string, Action> Calls { get; } = new();
+  internal ConcurrentDictionary<string, Func<Task>> Calls { get; } = new();
 
   private readonly object _lock = new();
   public bool IdleSubscriptionCalled { get; private set; }
@@ -26,9 +27,20 @@ public class IdleCallManager : IIdleCallManager
   }
 
   public void SubscribeToIdle(string id, Action action, Action addEvent) =>
-    _topLevelExceptionHandler.CatchUnhandled(() => SubscribeInternal(id, action, addEvent));
+    SubscribeToIdle(
+      id,
+      () =>
+      {
+        action.Invoke();
+        return Task.CompletedTask;
+      },
+      addEvent
+    );
 
-  public void SubscribeInternal(string id, Action action, Action addEvent)
+  public void SubscribeToIdle(string id, Func<Task> asyncAction, Action addEvent) =>
+    _topLevelExceptionHandler.CatchUnhandled(() => SubscribeInternal(id, asyncAction, addEvent));
+
+  internal void SubscribeInternal(string id, Func<Task> action, Action addEvent)
   {
     Calls.TryAdd(id, action);
     if (!IdleSubscriptionCalled)
@@ -45,13 +57,13 @@ public class IdleCallManager : IIdleCallManager
   }
 
   public void AppOnIdle(Action removeEvent) =>
-    _topLevelExceptionHandler.CatchUnhandled(() => AppOnIdleInternal(removeEvent));
+    _topLevelExceptionHandler.FireAndForget(async () => await AppOnIdleInternal(removeEvent).ConfigureAwait(false));
 
-  public void AppOnIdleInternal(Action removeEvent)
+  internal async Task AppOnIdleInternal(Action removeEvent)
   {
-    foreach (KeyValuePair<string, Action> kvp in Calls)
+    foreach (KeyValuePair<string, Func<Task>> kvp in Calls)
     {
-      _topLevelExceptionHandler.CatchUnhandled(() => kvp.Value.Invoke());
+      await _topLevelExceptionHandler.CatchUnhandledAsync(kvp.Value).ConfigureAwait(false);
     }
 
     Calls.Clear();

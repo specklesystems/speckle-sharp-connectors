@@ -52,7 +52,7 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
   public Task<RootObjectBuilderResult> Build(
     IReadOnlyList<AutocadRootObject> objects,
     SendInfo sendInfo,
-    Action<string, double?>? onOperationProgressed = null,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
   ) => Task.FromResult(BuildSync(objects, sendInfo, onOperationProgressed, ct));
 
@@ -68,8 +68,8 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
   private RootObjectBuilderResult BuildSync(
     IReadOnlyList<AutocadRootObject> objects,
     SendInfo sendInfo,
-    Action<string, double?>? onOperationProgressed,
-    CancellationToken ct
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken ct = default
   )
   {
     // 0 - Init the root
@@ -122,7 +122,7 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
           );
           results.Add(result);
 
-          onOperationProgressed?.Invoke("Converting", (double)++count / atomicObjects.Count);
+          onOperationProgressed.Report(new("Converting", (double)++count / atomicObjects.Count));
         }
       }
 
