@@ -19,7 +19,7 @@ public sealed class AutocadSendBinding : AutocadSendBaseBinding
 
   public AutocadSendBinding(
     DocumentModelStore store,
-    IAppIdleManager idleManager,
+    IAutocadIdleManager idleManager,
     IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     CancellationManager cancellationManager,

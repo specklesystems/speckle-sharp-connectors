@@ -140,11 +140,10 @@ public abstract class AutocadSendBaseBinding : ISendBinding
 
   public List<ICardSetting> GetSendSettings() => [];
 
-  public Task Send(string modelCardId)
-  {
-    Parent.RunOnMainThread(async () => await SendInternal(modelCardId).ConfigureAwait(false));
-    return Task.CompletedTask;
-  }
+  public async Task Send(string modelCardId) =>
+    await Parent
+      .RunOnMainThreadAsync(async () => await SendInternal(modelCardId).ConfigureAwait(false))
+      .ConfigureAwait(false);
 
   protected abstract void InitializeSettings(IServiceProvider serviceProvider);
 
@@ -184,18 +183,14 @@ public abstract class AutocadSendBaseBinding : ISendBinding
         .Execute(
           autocadObjects,
           modelCard.GetSendInfo(_speckleApplication.Slug),
-          (status, progress) =>
-            _operationProgressManager.SetModelProgress(
-              Parent,
-              modelCardId,
-              new ModelCardProgress(modelCardId, status, progress),
-              cancellationToken
-            ),
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
           cancellationToken
         )
         .ConfigureAwait(false);
 
-      Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
+      await Commands
+        .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
+        .ConfigureAwait(false);
     }
     catch (OperationCanceledException)
     {
@@ -207,7 +202,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
       _logger.LogModelCardHandledError(ex);
-      Commands.SetModelError(modelCardId, ex);
+      await Commands.SetModelError(modelCardId, ex).ConfigureAwait(false);
     }
     finally
     {
