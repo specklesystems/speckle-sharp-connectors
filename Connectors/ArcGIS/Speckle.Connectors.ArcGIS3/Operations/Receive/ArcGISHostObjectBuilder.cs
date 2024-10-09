@@ -142,13 +142,15 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     // 2.2. Write groups of objects to Datasets
     onOperationProgressed.Report(new("Writing to Database", null));
     await QueuedTask
-      .Run(() =>
+      .Run(async () =>
       {
-        _featureClassUtils.CreateDatasets(
-          conversionTracker,
-          convertedGroups,
-          (s, progres) => onOperationProgressed.Report(new(s, progres))
-        );
+        await _featureClassUtils
+          .CreateDatasets(
+            conversionTracker,
+            convertedGroups,
+            (s, progres) => onOperationProgressed.Report(new(s, progres))
+          )
+          .ConfigureAwait(false);
       })
       .ConfigureAwait(false);
 
