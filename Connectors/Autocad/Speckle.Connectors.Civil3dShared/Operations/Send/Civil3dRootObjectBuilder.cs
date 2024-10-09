@@ -7,7 +7,7 @@ using Speckle.Converters.Common;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models.Collections;
 
-namespace Speckle.Connectors.Civil3d.Operations.Send;
+namespace Speckle.Connectors.Civil3dShared.Operations.Send;
 
 public sealed class Civil3dRootObjectBuilder : AutocadRootObjectBaseBuilder
 {
@@ -44,4 +44,6 @@ public sealed class Civil3dRootObjectBuilder : AutocadRootObjectBaseBuilder
 
     return (layer, autocadLayer);
   }
+
+  // POC: probably will need to add Network definition proxies as well
 }

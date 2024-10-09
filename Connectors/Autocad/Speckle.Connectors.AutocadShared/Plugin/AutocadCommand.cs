@@ -9,8 +9,8 @@ using Speckle.Connectors.DUI.WebView;
 using Speckle.Connectors.Autocad.DependencyInjection;
 using Speckle.Converters.Autocad;
 #elif CIVIL3D
-using Speckle.Converters.Civil3d;
-using Speckle.Connectors.Civil3d.DependencyInjection;
+using Speckle.Converters.Civil3dShared;
+using Speckle.Connectors.Civil3dShared.DependencyInjection;
 #endif
 namespace Speckle.Connectors.Autocad.Plugin;
 
