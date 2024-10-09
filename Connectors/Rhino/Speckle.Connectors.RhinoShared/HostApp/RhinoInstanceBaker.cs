@@ -9,6 +9,7 @@ using Speckle.Connectors.Rhino.Extensions;
 using Speckle.DoubleNumerics;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
