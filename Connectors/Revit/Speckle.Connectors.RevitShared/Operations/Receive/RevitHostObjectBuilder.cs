@@ -85,10 +85,10 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   )
   {
     var baseGroupName = $"Project {projectName}: Model {modelName}"; // TODO: unify this across connectors!
-    
+
     onOperationProgressed.Report(new("Converting", null));
     using var activity = _activityFactory.Start("Build");
-    
+
     // 0 - Clean then Rock n Roll! 🎸
     {
       _activityFactory.Start("Pre receive clean");
@@ -101,7 +101,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       {
         _logger.LogError(ex, "Failed to clean up before receive in Revit");
       }
-      
+
       _transactionManager.CommitTransaction();
     }
 
@@ -111,7 +111,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       unpackedRoot.DefinitionProxies,
       unpackedRoot.ObjectsToConvert.ToList()
     );
-    
+
     // 2 - Bake materials
     if (unpackedRoot.RenderMaterialProxies != null)
     {
@@ -121,20 +121,22 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       foreach (var kvp in map)
       {
         _revitToHostCacheSingleton.MaterialsByObjectId.Add(kvp.Key, kvp.Value);
-      } 
+      }
       _transactionManager.CommitTransaction();
     }
 
     // 3 - Bake objects
-    (HostObjectBuilderResult builderResult, List<(DirectShape res, string applicationId)> postBakePaintTargets)
-      conversionResults;
+    (
+      HostObjectBuilderResult builderResult,
+      List<(DirectShape res, string applicationId)> postBakePaintTargets
+    ) conversionResults;
     {
       _activityFactory.Start("Baking objects");
       _transactionManager.StartTransaction(true, "Baking objects");
       conversionResults = BakeObjects(localToGlobalMaps, onOperationProgressed, cancellationToken);
       _transactionManager.CommitTransaction();
     }
-    
+
     // 4 - Paint solids
     {
       _activityFactory.Start("Painting solids");
@@ -142,20 +144,22 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       PostBakePaint(conversionResults.postBakePaintTargets);
       _transactionManager.CommitTransaction();
     }
-    
+
     // 5 - Create group
     {
       _activityFactory.Start("Grouping");
       _transactionManager.StartTransaction(true, "Grouping");
       _groupBaker.BakeGroupForTopLevel(baseGroupName);
-      _transactionManager.CommitTransaction();  
+      _transactionManager.CommitTransaction();
     }
-    
-    
+
     return conversionResults.builderResult;
   }
 
-  private (HostObjectBuilderResult builderResult, List<(DirectShape res, string applicationId)> postBakePaintTargets) BakeObjects(
+  private (
+    HostObjectBuilderResult builderResult,
+    List<(DirectShape res, string applicationId)> postBakePaintTargets
+  ) BakeObjects(
     List<LocalToGlobalMap> localToGlobalMaps,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
@@ -177,7 +181,11 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 
         // POC hack of the ages: try to pre transform curves before baking
         // we need to bypass the local to global converter as there we don't have access to what we want. that service will/should stop existing.
-        if (localToGlobalMap.AtomicObject is ITransformable transformable and ICurve && localToGlobalMap.Matrix.Count > 0 && localToGlobalMap.AtomicObject["units"] is string units)
+        if (
+          localToGlobalMap.AtomicObject is ITransformable transformable and ICurve
+          && localToGlobalMap.Matrix.Count > 0
+          && localToGlobalMap.AtomicObject["units"] is string units
+        )
         {
           ITransformable? newTransformable = null;
           foreach (var mat in localToGlobalMap.Matrix)
@@ -188,7 +196,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
           localToGlobalMap.AtomicObject = (newTransformable as Base)!;
           localToGlobalMap.Matrix = new(); // flush out the list, as we've applied the transforms already
         }
-        
+
         // actual conversion happens here!
         var result = _converter.Convert(localToGlobalMap.AtomicObject);
         onOperationProgressed.Report(new("Converting", (double)++count / localToGlobalMaps.Count));
@@ -201,19 +209,21 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 
           bakedObjectIds.Add(directShapes.UniqueId);
           _groupBaker.AddToTopLevelGroup(directShapes);
-         
+
           if (localToGlobalMap.AtomicObject is IRawEncodedObject and Base myBase)
           {
             postBakePaintTargets.Add((directShapes, myBase.applicationId ?? myBase.id));
           }
-          
+
           conversionResults.Add(
             new(Status.SUCCESS, localToGlobalMap.AtomicObject, directShapes.UniqueId, "Direct Shape")
           );
         }
         else
         {
-          throw new SpeckleConversionException($"Failed to cast {result.GetType()} to direct shape definition wrapper.");
+          throw new SpeckleConversionException(
+            $"Failed to cast {result.GetType()} to direct shape definition wrapper."
+          );
         }
       }
       catch (Exception ex) when (!ex.IsFatal())
@@ -244,7 +254,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       {
         continue;
       }
-      
+
       // NOTE: some geometries fail to convert as solids, and the api defaults back to meshes (from the shape importer). These cannot be painted, so don't bother.
       foreach (var geo in elGeometry)
       {
@@ -258,12 +268,11 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       }
     }
   }
-  
+
   private void PreReceiveDeepClean(string baseGroupName)
   {
-    DirectShapeLibrary
-      .GetDirectShapeLibrary(_converterSettings.Current.Document).Reset(); // Note: this needs to be cleared, as it is being used in the converter
-    
+    DirectShapeLibrary.GetDirectShapeLibrary(_converterSettings.Current.Document).Reset(); // Note: this needs to be cleared, as it is being used in the converter
+
     _revitToHostCacheSingleton.MaterialsByObjectId.Clear(); // Massive hack!
     _groupBaker.PurgeGroups(baseGroupName);
     _materialBaker.PurgeMaterials(baseGroupName);

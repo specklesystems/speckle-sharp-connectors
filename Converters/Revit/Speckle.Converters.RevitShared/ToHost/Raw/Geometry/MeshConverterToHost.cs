@@ -13,7 +13,8 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObj
   private readonly ScalingServiceToHost _scalingServiceToHost;
 
   public MeshConverterToHost(
-    RevitToHostCacheSingleton revitToHostCacheSingleton, ScalingServiceToHost scalingServiceToHost
+    RevitToHostCacheSingleton revitToHostCacheSingleton,
+    ScalingServiceToHost scalingServiceToHost
   )
   {
     _revitToHostCacheSingleton = revitToHostCacheSingleton;
@@ -31,7 +32,7 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObj
       Target = target,
       GraphicsStyleId = ElementId.InvalidElementId
     };
-    
+
     tsb.OpenConnectedFaceSet(false);
     var vertices = ArrayToPoints(mesh.vertices, mesh.units);
 
@@ -121,13 +122,14 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObj
 
     XYZ[] points = new XYZ[arr.Count / 3];
     var fTypeId = _scalingServiceToHost.UnitsToNative(units) ?? UnitTypeId.Meters;
-    
+
     for (int i = 2, k = 0; i < arr.Count; i += 3)
     {
       points[k++] = new XYZ(
-        _scalingServiceToHost.ScaleToNative(arr[i - 2], fTypeId), 
+        _scalingServiceToHost.ScaleToNative(arr[i - 2], fTypeId),
         _scalingServiceToHost.ScaleToNative(arr[i - 1], fTypeId),
-        _scalingServiceToHost.ScaleToNative(arr[i], fTypeId)); 
+        _scalingServiceToHost.ScaleToNative(arr[i], fTypeId)
+      );
     }
 
     return points;

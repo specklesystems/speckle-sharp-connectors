@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+
 namespace Speckle.Converters.Rhino.ToHost.TopLevel;
 
 [NameAndRankValue(nameof(SOG.BrepX), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
@@ -23,7 +24,8 @@ public class SubDXToHostTopLevelConverter : SpeckleToHostGeometryBaseTopLevelCon
 }
 
 [NameAndRankValue(nameof(SOG.ExtrusionX), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class ExtrusionXToHostTopLevelConverter : SpeckleToHostGeometryBaseTopLevelConverter<SOG.ExtrusionX, List<RG.GeometryBase>>
+public class ExtrusionXToHostTopLevelConverter
+  : SpeckleToHostGeometryBaseTopLevelConverter<SOG.ExtrusionX, List<RG.GeometryBase>>
 {
   public ExtrusionXToHostTopLevelConverter(
     IConverterSettingsStore<RhinoConversionSettings> settingsStore,
@@ -31,4 +33,3 @@ public class ExtrusionXToHostTopLevelConverter : SpeckleToHostGeometryBaseTopLev
   )
     : base(settingsStore, geometryBaseConverter) { }
 }
-

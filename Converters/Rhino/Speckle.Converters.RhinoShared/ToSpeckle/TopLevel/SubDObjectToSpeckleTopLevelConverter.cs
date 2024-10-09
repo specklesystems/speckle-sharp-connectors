@@ -13,9 +13,10 @@ public class SubDObjectToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
   private readonly ITypedConverter<RG.Mesh, SOG.Mesh> _meshConverter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
-  public SubDObjectToSpeckleTopLevelConverter( 
+  public SubDObjectToSpeckleTopLevelConverter(
     ITypedConverter<RG.Mesh, SOG.Mesh> meshConverter,
-    IConverterSettingsStore<RhinoConversionSettings> settingsStore)
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore
+  )
   {
     _meshConverter = meshConverter;
     _settingsStore = settingsStore;

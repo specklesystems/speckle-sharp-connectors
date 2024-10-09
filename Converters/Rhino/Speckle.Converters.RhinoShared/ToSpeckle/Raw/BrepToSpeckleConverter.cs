@@ -101,7 +101,7 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.Brep>
       Trims = new(target.Trims.Count),
       Faces = new(target.Faces.Count)
     };
-    
+
     // Brep non-geometry types
     ConvertBrepFaces(target, speckleBrep);
     ConvertBrepEdges(target, speckleBrep);

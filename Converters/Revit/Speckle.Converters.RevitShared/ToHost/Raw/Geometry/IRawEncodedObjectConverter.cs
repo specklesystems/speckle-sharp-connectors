@@ -39,27 +39,30 @@ public class IRawEncodedObjectConverter : ITypedConverter<SOG.IRawEncodedObject,
 
     DB.ElementId materialId = DB.ElementId.InvalidElementId;
     if (
-      _revitToHostCacheSingleton.MaterialsByObjectId.TryGetValue(targetAsBase.applicationId ?? targetAsBase.id, out var mappedElementId)
+      _revitToHostCacheSingleton.MaterialsByObjectId.TryGetValue(
+        targetAsBase.applicationId ?? targetAsBase.id,
+        out var mappedElementId
+      )
     )
     {
       materialId = mappedElementId;
     }
-    
+
     if (materialId == DB.ElementId.InvalidElementId)
     {
       return shapeImportResult.ToList(); // exit fast if there's no material id associated with this object
     }
 
-    // check whether the results have any meshes inside - if yes, it means the shape importer produced a subpar result. 
-    // as we cannot paint meshes later (as you can solid faces), we need to create them now. 
-    // we'll default to using the display value of the original object as it's a better fallback. 
-    // note: if you're tempted to try and re-mesh the shape importer's meshes, don't - they are garbage. 
+    // check whether the results have any meshes inside - if yes, it means the shape importer produced a subpar result.
+    // as we cannot paint meshes later (as you can solid faces), we need to create them now.
+    // we'll default to using the display value of the original object as it's a better fallback.
+    // note: if you're tempted to try and re-mesh the shape importer's meshes, don't - they are garbage.
     var hasMesh = shapeImportResult.Any(o => o is DB.Mesh);
     if (!hasMesh)
     {
       return shapeImportResult.ToList();
     }
-    
+
     var displayValue = targetAsBase.TryGetDisplayValue<SOG.Mesh>().NotNull();
     var returnList = new List<DB.GeometryObject>();
     foreach (var mesh in displayValue)
@@ -67,7 +70,7 @@ public class IRawEncodedObjectConverter : ITypedConverter<SOG.IRawEncodedObject,
       mesh.applicationId = targetAsBase.applicationId ?? targetAsBase.id; // to properly map materials
       returnList.AddRange(_meshConverter.Convert(mesh));
     }
-    
+
     return returnList;
   }
 }

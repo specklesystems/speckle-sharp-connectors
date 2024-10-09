@@ -1,6 +1,6 @@
 namespace Speckle.Converters.Common.FileOps;
 
-public static class TempFileProvider // note should be in connector, and connector should nuke its folder on startup  
+public static class TempFileProvider // note should be in connector, and connector should nuke its folder on startup
 {
   public static string GetTempFile(string appSlug, string extension)
   {
@@ -9,7 +9,7 @@ public static class TempFileProvider // note should be in connector, and connect
     return filePath;
   }
 
-  public static void CleanTempFolder(string appSlug) // note, not used? 
+  public static void CleanTempFolder(string appSlug) // note, not used?
   {
     var folderPath = GetTempFolderPath(appSlug);
     Directory.Delete(folderPath, true);
@@ -20,5 +20,5 @@ public static class TempFileProvider // note should be in connector, and connect
     var folderPath = Path.Combine(Path.GetTempPath(), "Speckle", appSlug);
     Directory.CreateDirectory(folderPath);
     return folderPath;
-  } 
+  }
 }

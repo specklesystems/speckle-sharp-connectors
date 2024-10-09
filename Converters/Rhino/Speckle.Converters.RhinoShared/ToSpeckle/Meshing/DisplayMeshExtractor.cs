@@ -8,7 +8,7 @@ public static class DisplayMeshExtractor
   public static RG.Mesh GetDisplayMesh(RhinoObject obj)
   {
     // note: unsure this is nice, we get bigger meshes - we should to benchmark (conversion time vs size tradeoffs)
-    var renderMeshes = obj.GetMeshes(RG.MeshType.Render); 
+    var renderMeshes = obj.GetMeshes(RG.MeshType.Render);
     if (renderMeshes.Length == 0)
     {
       switch (obj)
@@ -23,14 +23,15 @@ public static class DisplayMeshExtractor
 #pragma warning disable CA2000
           var mesh = RG.Mesh.CreateFromSubD(subDObject.Geometry as RG.SubD, 0);
 #pragma warning restore CA2000
-          renderMeshes = [ mesh ];
+          renderMeshes = [mesh];
           break;
         default:
           throw new SpeckleConversionException(
-            $"Unsupported object for display mesh generation {obj.GetType().FullName}");
+            $"Unsupported object for display mesh generation {obj.GetType().FullName}"
+          );
       }
     }
-    
+
     var joinedMesh = new RG.Mesh();
     joinedMesh.Append(renderMeshes);
     return joinedMesh;

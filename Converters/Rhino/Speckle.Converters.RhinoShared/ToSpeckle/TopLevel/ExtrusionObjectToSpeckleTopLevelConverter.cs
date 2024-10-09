@@ -13,9 +13,10 @@ public class ExtrusionObjectToSpeckleTopLevelConverter : IToSpeckleTopLevelConve
   private readonly ITypedConverter<RG.Mesh, SOG.Mesh> _meshConverter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
-  public ExtrusionObjectToSpeckleTopLevelConverter( 
+  public ExtrusionObjectToSpeckleTopLevelConverter(
     ITypedConverter<RG.Mesh, SOG.Mesh> meshConverter,
-    IConverterSettingsStore<RhinoConversionSettings> settingsStore)
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore
+  )
   {
     _meshConverter = meshConverter;
     _settingsStore = settingsStore;

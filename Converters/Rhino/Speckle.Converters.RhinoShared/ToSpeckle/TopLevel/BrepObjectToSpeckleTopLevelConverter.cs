@@ -15,7 +15,8 @@ public class BrepObjectToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
 
   public BrepObjectToSpeckleTopLevelConverter(
     ITypedConverter<RG.Mesh, SOG.Mesh> meshConverter,
-    IConverterSettingsStore<RhinoConversionSettings> settingsStore)
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore
+  )
   {
     _meshConverter = meshConverter;
     _settingsStore = settingsStore;
