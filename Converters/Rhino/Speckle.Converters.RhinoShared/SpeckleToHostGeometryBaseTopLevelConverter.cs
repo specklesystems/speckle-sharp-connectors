@@ -28,9 +28,10 @@ public abstract class SpeckleToHostGeometryBaseTopLevelConverter<TIn, TOut> : IT
     if (result is null)
     {
       throw new SpeckleConversionException(
-        $"Geometry base converter returned null for base object of type {target.speckle_type}");
+        $"Geometry base converter returned null for base object of type {target.speckle_type}"
+      );
     }
-    
+
     var units = castedBase["units"] as string;
     if (result is RG.GeometryBase geometryBase && units is not null)
     {
