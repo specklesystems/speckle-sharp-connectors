@@ -1,4 +1,3 @@
-using ArcGIS.Desktop.Internal.Mapping;
 using ArcGIS.Desktop.Mapping;
 
 namespace Speckle.Connectors.ArcGIS.Utils;
@@ -28,20 +27,12 @@ public class MapMembersUtils
     List<MapMember> mapMembers = new();
     foreach (var layer in mapMembersToUnpack)
     {
+      mapMembers.Add(layer);
       switch (layer)
       {
-        case GroupLayer subGroup:
-          mapMembers.Add(layer);
-          var subGroupMapMembers = UnpackMapLayers(subGroup.Layers);
-          mapMembers.AddRange(subGroupMapMembers);
-          break;
-        case ILayerContainerInternal subLayerContainerInternal:
-          mapMembers.Add(layer);
-          var subLayerMapMembers = UnpackMapLayers(subLayerContainerInternal.InternalLayers);
+        case ILayerContainer subGroup:
+          var subLayerMapMembers = UnpackMapLayers(subGroup.Layers);
           mapMembers.AddRange(subLayerMapMembers);
-          break;
-        default:
-          mapMembers.Add(layer);
           break;
       }
     }

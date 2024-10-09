@@ -316,6 +316,10 @@ public class ArcGISColorManager
     int count = 1;
     using (RowCursor rowCursor = layer.Search())
     {
+      if (rowCursor is null)
+      {
+        return;
+      }
       while (rowCursor.MoveNext())
       {
         string elementAppId = $"{layer.URI}_{count}";
@@ -451,6 +455,11 @@ public class ArcGISColorManager
     out int color
   )
   {
+    if (uniqueRenderer.DefaultSymbol is null)
+    {
+      color = RbgToInt(255, 255, 255, 255);
+      return false;
+    }
     if (!TryGetSymbolColor(uniqueRenderer.DefaultSymbol.Symbol, out color)) // get default color
     {
       return false;
