@@ -7,7 +7,9 @@ using Speckle.Sdk.Models;
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 /// <summary>
+/// Converts local to global maps to direct shapes.
 /// Spirit of the LocalToGlobalMap, we can't pass that object directly here bc it lives in Connectors.Common which I (ogu) don't want to bother with it.
+/// All this is  poc that should be burned, once we enable proper block support to revit.
 /// </summary>
 public class LocalToGlobalToDirectShapeConverter
   : ITypedConverter<(Base atomicObject, List<Matrix4x4> matrix), DB.DirectShape>
@@ -29,9 +31,9 @@ public class LocalToGlobalToDirectShapeConverter
     // 1- set ds category
     var category = target.atomicObject["category"] as string;
     var dsCategory = DB.BuiltInCategory.OST_GenericModel;
-    if (category is string categoryString)
+    if (category is not null)
     {
-      var res = Enum.TryParse($"OST_{categoryString}", out DB.BuiltInCategory cat);
+      var res = Enum.TryParse($"OST_{category}", out DB.BuiltInCategory cat);
       if (res)
       {
         var c = DB.Category.GetCategory(_converterSettings.Current.Document, cat);
@@ -45,12 +47,13 @@ public class LocalToGlobalToDirectShapeConverter
     // 2 - init DirectShape
     var result = DB.DirectShape.CreateElement(_converterSettings.Current.Document, new DB.ElementId(dsCategory));
     
+    // If there is no transforms to be applied, use the simple way of creating direct shapes
     if (target.matrix.Count == 0)
     {
       var def = DB.DirectShapeLibrary.GetDirectShapeLibrary(_converterSettings.Current.Document)
         .FindDefinition(target.atomicObject.applicationId ?? target.atomicObject.id);
       result.SetShape(def);
-      return result;
+      return result; // note fast exit here
     }
     
     // 3 - Transform the geometries
