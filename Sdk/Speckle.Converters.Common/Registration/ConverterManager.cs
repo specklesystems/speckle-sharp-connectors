@@ -1,11 +1,9 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
-using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Common.Registration;
 
-[GenerateAutoInterface]
 public class ConverterManager<T>(ConcurrentDictionary<string, Type> converterTypes, IServiceProvider serviceProvider)
   : IConverterManager<T>
 {
