@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
@@ -102,7 +102,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
 
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
-    var returnVal = await sut.CatchUnhandled(() => Task.FromResult(val));
+    var returnVal = await sut.CatchUnhandledAsync(() => Task.FromResult(val));
     returnVal.Value.Should().Be(val);
     returnVal.Exception.Should().BeNull();
     returnVal.IsSuccess.Should().BeTrue();
@@ -121,7 +121,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
 
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
-    var returnVal = await sut.CatchUnhandled(new Func<Task<string>>(() => throw new InvalidOperationException()));
+    var returnVal = await sut.CatchUnhandledAsync(new Func<Task<string>>(() => throw new InvalidOperationException()));
     returnVal.Value.Should().BeNull();
     returnVal.Exception.Should().BeOfType<InvalidOperationException>();
     returnVal.IsSuccess.Should().BeFalse();
@@ -140,7 +140,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
     var exception = Assert.ThrowsAsync<AppDomainUnloadedException>(
-      async () => await sut.CatchUnhandled(new Func<Task<string>>(() => throw new AppDomainUnloadedException()))
+      async () => await sut.CatchUnhandledAsync(new Func<Task<string>>(() => throw new AppDomainUnloadedException()))
     );
     exception.Should().BeOfType<AppDomainUnloadedException>();
   }

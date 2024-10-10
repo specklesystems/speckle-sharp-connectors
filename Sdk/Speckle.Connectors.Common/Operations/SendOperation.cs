@@ -1,6 +1,5 @@
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
-using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.Common.Operations;
@@ -9,27 +8,20 @@ public sealed class SendOperation<T>
 {
   private readonly IRootObjectBuilder<T> _rootObjectBuilder;
   private readonly IRootObjectSender _baseObjectSender;
-  private readonly ISdkActivityFactory _activityFactory;
 
-  public SendOperation(
-    IRootObjectBuilder<T> rootObjectBuilder,
-    IRootObjectSender baseObjectSender,
-    ISdkActivityFactory activityFactory
-  )
+  public SendOperation(IRootObjectBuilder<T> rootObjectBuilder, IRootObjectSender baseObjectSender)
   {
     _rootObjectBuilder = rootObjectBuilder;
     _baseObjectSender = baseObjectSender;
-    _activityFactory = activityFactory;
   }
 
   public async Task<SendOperationResult> Execute(
     IReadOnlyList<T> objects,
     SendInfo sendInfo,
-    Action<string, double?>? onOperationProgressed = null,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
   )
   {
-    using var activity = _activityFactory.Start("SendOperation");
     var buildResult = await _rootObjectBuilder
       .Build(objects, sendInfo, onOperationProgressed, ct)
       .ConfigureAwait(false);

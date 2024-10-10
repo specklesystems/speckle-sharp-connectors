@@ -112,14 +112,14 @@ public sealed class BrowserBridge : IBrowserBridge
   private async Task OnActionBlock(RunMethodArgs args)
   {
     Result<object?> result = await TopLevelExceptionHandler
-      .CatchUnhandled(async () => await ExecuteMethod(args.MethodName, args.MethodArgs).ConfigureAwait(false))
+      .CatchUnhandledAsync(async () => await ExecuteMethod(args.MethodName, args.MethodArgs).ConfigureAwait(false))
       .ConfigureAwait(false);
 
     string resultJson = result.IsSuccess
       ? JsonConvert.SerializeObject(result.Value, _serializerOptions)
       : SerializeFormattedException(result.Exception);
 
-    NotifyUIMethodCallResultReady(args.RequestId, resultJson);
+    await NotifyUIMethodCallResultReady(args.RequestId, resultJson).ConfigureAwait(false);
   }
 
   /// <inheritdoc/>
@@ -171,6 +171,40 @@ public sealed class BrowserBridge : IBrowserBridge
       },
       null
     );
+  }
+
+  public async Task RunOnMainThreadAsync(Func<Task> action)
+  {
+    await RunOnMainThreadAsync<object?>(async () =>
+      {
+        await action.Invoke().ConfigureAwait(false);
+        return null;
+      })
+      .ConfigureAwait(false);
+  }
+
+  [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "TaskCompletionSource")]
+  public Task<T> RunOnMainThreadAsync<T>(Func<Task<T>> action)
+  {
+    TaskCompletionSource<T> tcs = new();
+
+    _mainThreadContext.Post(
+      async _ =>
+      {
+        try
+        {
+          T result = await action.Invoke().ConfigureAwait(false);
+          tcs.SetResult(result);
+        }
+        catch (Exception ex)
+        {
+          tcs.SetException(ex);
+        }
+      },
+      null
+    );
+
+    return tcs.Task;
   }
 
   /// <summary>
@@ -261,11 +295,15 @@ public sealed class BrowserBridge : IBrowserBridge
   /// <param name="requestId"></param>
   /// <param name="serializedData"></param>
   /// <exception cref="InvalidOperationException"><inheritdoc cref="IBrowserScriptExecutor.ExecuteScriptAsyncMethod"/></exception>
-  private void NotifyUIMethodCallResultReady(string requestId, string? serializedData = null)
+  private async Task NotifyUIMethodCallResultReady(
+    string requestId,
+    string? serializedData = null,
+    CancellationToken cancellationToken = default
+  )
   {
     _resultsStore[requestId] = serializedData;
     string script = $"{FrontendBoundName}.responseReady('{requestId}')";
-    _browserScriptExecutor.ExecuteScriptAsyncMethod(script);
+    await _browserScriptExecutor.ExecuteScriptAsyncMethod(script, cancellationToken).ConfigureAwait(false);
   }
 
   /// <summary>
@@ -299,28 +337,16 @@ public sealed class BrowserBridge : IBrowserBridge
     Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
   }
 
-  /// <summary>
-  /// Sends an event message to the JS browser (via the <see cref="IBrowserScriptExecutor"/>)
-  /// </summary>
-  /// <param name="eventName">the name of the JS event to trigger for the associated <see cref="FrontendBoundName"/></param>
-  /// <exception cref="InvalidOperationException"><inheritdoc cref="AssertBindingInitialised"/></exception>
-  /// <exception cref="InvalidOperationException"><inheritdoc cref="IBrowserScriptExecutor.ExecuteScriptAsyncMethod"/></exception>
-  public void Send(string eventName)
+  public async Task Send(string eventName, CancellationToken cancellationToken = default)
   {
     AssertBindingInitialised();
 
     var script = $"{FrontendBoundName}.emit('{eventName}')";
 
-    _browserScriptExecutor.ExecuteScriptAsyncMethod(script);
+    await _browserScriptExecutor.ExecuteScriptAsyncMethod(script, cancellationToken).ConfigureAwait(false);
   }
 
-  /// <inheritdoc cref="Send"/>
-  /// <summary>
-  /// <inheritdoc cref="Send"/>.<br/>
-  /// This overload also serializes and stores <paramref name="data"/> in an internal <see cref="_resultsStore"/> (values exposed through <see cref="GetCallResult"/>)<br/></summary>
-  /// <param name="data">The data to JSON serialize and store</param>
-  /// <typeparam name="T"></typeparam>
-  public void Send<T>(string eventName, T data)
+  public async Task Send<T>(string eventName, T data, CancellationToken cancellationToken = default)
     where T : class
   {
     AssertBindingInitialised();
@@ -329,7 +355,7 @@ public sealed class BrowserBridge : IBrowserBridge
     string requestId = $"{Guid.NewGuid()}_{eventName}";
     _resultsStore[requestId] = payload;
     var script = $"{FrontendBoundName}.emitResponseReady('{eventName}', '{requestId}')";
-    _browserScriptExecutor.ExecuteScriptAsyncMethod(script);
+    await _browserScriptExecutor.ExecuteScriptAsyncMethod(script, cancellationToken).ConfigureAwait(false);
   }
 
   /// <inheritdoc/>

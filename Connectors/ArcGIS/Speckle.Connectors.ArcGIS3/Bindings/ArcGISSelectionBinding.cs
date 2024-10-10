@@ -1,6 +1,7 @@
 using ArcGIS.Core.Events;
 using ArcGIS.Desktop.Mapping;
 using ArcGIS.Desktop.Mapping.Events;
+using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 
@@ -8,6 +9,7 @@ namespace Speckle.Connectors.ArcGIS.Bindings;
 
 public sealed class ArcGISSelectionBinding(IBrowserBridge parent) : ISelectionBinding, IPostInitBinding, IDisposable
 {
+  private readonly MapMembersUtils _mapMemberUtils;
   public string Name => "selectionBinding";
   public IBrowserBridge Parent { get; } = parent;
 
@@ -59,14 +61,8 @@ public sealed class ArcGISSelectionBinding(IBrowserBridge parent) : ISelectionBi
     List<MapMember> allNestedMembers = new();
     foreach (MapMember member in selectedMembers)
     {
-      if (member is GroupLayer group)
-      {
-        GetLayersFromGroup(group, allNestedMembers);
-      }
-      else
-      {
-        allNestedMembers.Add(member);
-      }
+      var layerMapMembers = _mapMemberUtils.UnpackMapLayers(selectedMembers);
+      allNestedMembers.AddRange(layerMapMembers);
     }
 
     List<string> objectTypes = allNestedMembers

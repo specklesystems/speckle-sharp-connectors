@@ -9,11 +9,13 @@ public sealed class ConnectorActivityFactory : ISdkActivityFactory, IDisposable
 {
   private readonly LoggingActivityFactory _loggingActivityFactory = new();
 
+  public void SetTag(string key, object? value) => _loggingActivityFactory.SetTag(key, value);
+
   public void Dispose() => _loggingActivityFactory.Dispose();
 
   public ISdkActivity? Start(string? name = default, [CallerMemberName] string source = "")
   {
-    var activity = _loggingActivityFactory?.Start(name, source);
+    var activity = _loggingActivityFactory.Start(name, source);
     if (activity is null)
     {
       return null;

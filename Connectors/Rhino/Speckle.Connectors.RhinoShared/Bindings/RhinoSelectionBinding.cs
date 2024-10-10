@@ -2,7 +2,6 @@ using Rhino;
 using Rhino.DocObjects;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.Rhino.HostApp;
 
 namespace Speckle.Connectors.Rhino.Bindings;
 

@@ -1,5 +1,5 @@
 using Rhino;
-using Speckle.Connectors.Rhino.HostApp;
+using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.Rhino.Plugin;
 using Speckle.InterfaceGenerator;
 
@@ -8,9 +8,9 @@ namespace Speckle.Connectors.Rhino.DependencyInjection;
 [GenerateAutoInterface]
 public class RhinoPlugin : IRhinoPlugin
 {
-  private readonly IRhinoIdleManager _idleManager;
+  private readonly IAppIdleManager _idleManager;
 
-  public RhinoPlugin(IRhinoIdleManager idleManager)
+  public RhinoPlugin(IAppIdleManager idleManager)
   {
     _idleManager = idleManager;
   }
