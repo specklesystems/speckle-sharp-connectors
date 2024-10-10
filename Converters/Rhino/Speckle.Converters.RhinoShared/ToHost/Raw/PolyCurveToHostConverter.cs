@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
-using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Rhino.ToHost.Raw;
 

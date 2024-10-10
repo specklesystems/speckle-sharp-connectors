@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
@@ -26,7 +26,9 @@ public class TopLevelExceptionHandlerTests : MoqTest
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
     var bridge = Create<IBrowserBridge>();
 
-    bridge.Setup(x => x.Send(BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, It.IsAny<object>()));
+    bridge
+      .Setup(x => x.Send(BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, It.IsAny<object>(), default))
+      .Returns(Task.CompletedTask);
 
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
@@ -53,7 +55,9 @@ public class TopLevelExceptionHandlerTests : MoqTest
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
     var bridge = Create<IBrowserBridge>();
 
-    bridge.Setup(x => x.Send(BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, It.IsAny<object>()));
+    bridge
+      .Setup(x => x.Send(BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, It.IsAny<object>(), default))
+      .Returns(Task.CompletedTask);
 
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
@@ -70,11 +74,9 @@ public class TopLevelExceptionHandlerTests : MoqTest
     var bridge = Create<IBrowserBridge>();
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
-#pragma warning disable CA2201
     var exception = Assert.Throws<AggregateException>(
       () => sut.CatchUnhandled(new Func<string>(() => throw new AppDomainUnloadedException()))
     );
-#pragma warning restore CA2201
     exception.InnerExceptions.Single().Should().BeOfType<AppDomainUnloadedException>();
   }
 
@@ -86,7 +88,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
     var bridge = Create<IBrowserBridge>();
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
-    var returnVal = await sut.CatchUnhandled(() => Task.FromResult(val));
+    var returnVal = await sut.CatchUnhandledAsync(() => Task.FromResult(val));
     returnVal.Value.Should().Be(val);
     returnVal.Exception.Should().BeNull();
     returnVal.IsSuccess.Should().BeTrue();
@@ -98,11 +100,13 @@ public class TopLevelExceptionHandlerTests : MoqTest
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
     var bridge = Create<IBrowserBridge>();
 
-    bridge.Setup(x => x.Send(BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, It.IsAny<object>()));
+    bridge
+      .Setup(x => x.Send(BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, It.IsAny<object>(), default))
+      .Returns(Task.CompletedTask);
 
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
-    var returnVal = await sut.CatchUnhandled(new Func<Task<string>>(() => throw new InvalidOperationException()));
+    var returnVal = await sut.CatchUnhandledAsync(new Func<Task<string>>(() => throw new InvalidOperationException()));
     returnVal.Value.Should().BeNull();
     returnVal.Exception.Should().BeOfType<InvalidOperationException>();
     returnVal.IsSuccess.Should().BeFalse();
@@ -115,11 +119,9 @@ public class TopLevelExceptionHandlerTests : MoqTest
     var bridge = Create<IBrowserBridge>();
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
-#pragma warning disable CA2201
     var exception = Assert.ThrowsAsync<AppDomainUnloadedException>(
-      async () => await sut.CatchUnhandled(new Func<Task<string>>(() => throw new AppDomainUnloadedException()))
+      async () => await sut.CatchUnhandledAsync(new Func<Task<string>>(() => throw new AppDomainUnloadedException()))
     );
-#pragma warning restore CA2201
     exception.Should().BeOfType<AppDomainUnloadedException>();
   }
 }

@@ -54,7 +54,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
   public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<ElementId> objects,
     SendInfo sendInfo,
-    Action<string, double?>? onOperationProgressed = null,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
   )
   {
@@ -125,7 +125,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
         results.Add(new(Status.ERROR, applicationId, sourceType, null, ex));
       }
 
-      onOperationProgressed?.Invoke("Converting", (double)++countProgress / atomicObjects.Count);
+      onOperationProgressed.Report(new("Converting", (double)++countProgress / atomicObjects.Count));
     }
 
     if (results.All(x => x.Status == Status.ERROR))

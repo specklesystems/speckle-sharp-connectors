@@ -4,10 +4,12 @@ using Rhino.DocObjects;
 using Rhino.Geometry;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Instances;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Rhino.Extensions;
 using Speckle.DoubleNumerics;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
@@ -40,11 +42,11 @@ public class RhinoInstanceBaker : IInstanceBaker<List<string>>
   /// <param name="instanceComponents">Instance definitions and instances that need creating.</param>
   /// <param name="applicationIdMap">A dict mapping { original application id -> [resulting application ids post conversion] }</param>
   /// <param name="onOperationProgressed"></param>
-  public BakeResult BakeInstances(
-    List<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
+  public async Task<BakeResult> BakeInstances(
+    IReadOnlyCollection<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
     Dictionary<string, List<string>> applicationIdMap,
     string baseLayerName,
-    Action<string, double?>? onOperationProgressed
+    IProgress<CardProgress> onOperationProgressed
   )
   {
     // var doc = _contextStack.Current.Document;
@@ -62,7 +64,7 @@ public class RhinoInstanceBaker : IInstanceBaker<List<string>>
     var consumedObjectIds = new List<string>();
     foreach (var (layerCollection, instanceOrDefinition) in sortedInstanceComponents)
     {
-      onOperationProgressed?.Invoke("Converting blocks", (double)++count / sortedInstanceComponents.Count);
+      onOperationProgressed.Report(new("Converting blocks", (double)++count / sortedInstanceComponents.Count));
       try
       {
         if (instanceOrDefinition is InstanceDefinitionProxy definitionProxy)
@@ -154,6 +156,7 @@ public class RhinoInstanceBaker : IInstanceBaker<List<string>>
       }
     }
 
+    await Task.Yield();
     return new(createdObjectIds, consumedObjectIds, conversionResults);
   }
 
