@@ -1,3 +1,5 @@
+using Speckle.Sdk;
+
 namespace Speckle.Converters.Civil3dShared.ToSpeckle;
 
 /// <summary>
@@ -27,16 +29,24 @@ public class PropertySetDefinitionHandler
     {
       string propertyName = propertyDefinition.Name;
       propertyDefinitionNames[propertyDefinition.Id] = propertyName;
-      propertyDefinitionsDict[propertyName] = new Dictionary<string, object?>()
+      var propertyDict = new Dictionary<string, object?>()
       {
         ["name"] = propertyName,
         ["description"] = propertyDefinition.Description,
         ["id"] = propertyDefinition.Id,
-        ["units"] = propertyDefinition.UnitType.GetTypeDisplayName(true),
         ["isReadOnly"] = propertyDefinition.IsReadOnly,
-        ["dataType"] = propertyDefinition.DataType,
+        ["dataType"] = propertyDefinition.DataType.ToString(),
         ["defaultValue"] = propertyDefinition.DefaultData
       };
+
+      try
+      {
+        // accessing unit type prop can be expected to throw if it's not applicable to the definition
+        propertyDict["units"] = propertyDefinition.UnitType.GetTypeDisplayName(true);
+      }
+      catch (Exception e) when (!e.IsFatal()) { }
+
+      propertyDefinitionsDict[propertyName] = propertyDict;
     }
 
     var name = setDefinition.Name;

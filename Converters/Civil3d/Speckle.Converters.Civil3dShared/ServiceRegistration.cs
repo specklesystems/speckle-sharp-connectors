@@ -38,5 +38,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<PartDataExtractor>();
     serviceCollection.AddScoped<DisplayValueExtractor>();
     serviceCollection.AddScoped<BaseCurveExtractor>();
+    serviceCollection.AddScoped<PropertySetExtractor>();
+    serviceCollection.AddScoped<PropertySetDefinitionHandler>();
   }
 }

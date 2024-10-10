@@ -91,12 +91,16 @@ public class PropertySetExtractor
 
         var value = GetValue(data);
 
-        properties[dataName] = new Dictionary<string, object?>()
+        var propertyValueDict = new Dictionary<string, object?>() { ["value"] = value, ["name"] = dataName };
+
+        try
         {
-          ["value"] = value,
-          ["name"] = dataName,
-          ["units"] = data.UnitType.GetTypeDisplayName(true)
-        };
+          // accessing unit type prop can be expected to throw if it's not applicable to the definition
+          propertyValueDict["units"] = data.UnitType.GetTypeDisplayName(true);
+        }
+        catch (Exception e) when (!e.IsFatal()) { }
+
+        properties[dataName] = propertyValueDict;
       }
 
       // add property set to dict

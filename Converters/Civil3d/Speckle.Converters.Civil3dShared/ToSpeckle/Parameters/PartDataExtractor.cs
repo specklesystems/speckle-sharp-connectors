@@ -38,6 +38,8 @@ public class PartDataExtractor
         ["value"] = value,
         ["name"] = field.Name,
         ["context"] = field.Context.ToString(),
+        ["isFromRange"] = field.IsFromRange,
+        ["isReadOnly"] = field.IsReadOnly,
         ["units"] = field.Units
       };
 
@@ -100,7 +102,7 @@ public class PartDataExtractor
     return result;
   }
 
-  private (TResult, TResult)? GetValueRangeGeneric<TResult>(CDB.PartDataRange range)
+  private List<TResult>? GetValueRangeGeneric<TResult>(CDB.PartDataRange range)
   {
     if (range == null)
     {
@@ -109,7 +111,7 @@ public class PartDataExtractor
 
     if (range.RangeMin is TResult min && range.RangeMax is TResult max)
     {
-      return (min, max);
+      return new() { min, max };
     }
 
     return default;
