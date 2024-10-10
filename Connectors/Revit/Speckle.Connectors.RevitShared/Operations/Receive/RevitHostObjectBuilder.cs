@@ -117,7 +117,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     {
       _transactionManager.StartTransaction(true, "Baking materials");
       _materialBaker.MapLayersRenderMaterials(unpackedRoot);
-      var map = _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseGroupName); // NOTE: do not set _contextStack.RenderMaterialProxyCache directly, things stop working. Ogu/Dim do not know why :) not a problem as we hopefully will refactor some of these hacks out.
+      var map = _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseGroupName);
       foreach (var kvp in map)
       {
         _revitToHostCacheSingleton.MaterialsByObjectId.Add(kvp.Key, kvp.Value);

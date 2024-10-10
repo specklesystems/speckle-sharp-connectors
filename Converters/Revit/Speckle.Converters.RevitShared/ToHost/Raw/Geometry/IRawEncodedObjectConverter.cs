@@ -7,7 +7,7 @@ using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Extensions;
 
-namespace Speckle.Converters.Revit2023.ToHost.Raw.Geometry;
+namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 public class IRawEncodedObjectConverter : ITypedConverter<SOG.IRawEncodedObject, List<DB.GeometryObject>>
 {
