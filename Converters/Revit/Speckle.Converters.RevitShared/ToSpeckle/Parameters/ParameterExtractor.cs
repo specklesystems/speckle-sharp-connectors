@@ -71,6 +71,12 @@ public class ParameterExtractor
     return CreateParameterDictionary(instanceParameterDictionary, typeParameterDictionary);
   }
 
+  /// <summary>
+  /// Internal utility to create the default parameter structure we expect all elements to have.
+  /// </summary>
+  /// <param name="instanceParams"></param>
+  /// <param name="typeParams"></param>
+  /// <returns></returns>
   private Dictionary<string, object?> CreateParameterDictionary(
     Dictionary<string, Dictionary<string, object?>> instanceParams,
     Dictionary<string, Dictionary<string, object?>>? typeParams
@@ -90,15 +96,23 @@ public class ParameterExtractor
     {
       try
       {
-        var value = GetValue(parameter);
-        var isNullOrEmpty = value == null || (value is string s && string.IsNullOrEmpty(s));
-        if (!_settingsStore.Current.SendParameterNullOrEmptyStrings && isNullOrEmpty)
+        var (internalDefinitionName, humanReadableName, groupName, units) =
+          _parameterDefinitionHandler.HandleDefinition(parameter);
+
+        // NOTE: ids don't really have much meaning; if we discover the opposite, we can bring them back. See [CNX-556: All ID Parameters are send as Name](https://linear.app/speckle/issue/CNX-556/all-id-parameters-are-send-as-name)
+        if (internalDefinitionName.Contains("_ID"))
         {
           continue;
         }
 
-        var (internalDefinitionName, humanReadableName, groupName, units) =
-          _parameterDefinitionHandler.HandleDefinition(parameter);
+        var value = GetValue(parameter);
+
+        var isNullOrEmpty = value == null || (value is string s && string.IsNullOrEmpty(s));
+
+        if (!_settingsStore.Current.SendParameterNullOrEmptyStrings && isNullOrEmpty)
+        {
+          continue;
+        }
 
         var param = new Dictionary<string, object?>()
         {
@@ -107,7 +121,7 @@ public class ParameterExtractor
           ["internalDefinitionName"] = internalDefinitionName
         };
 
-        if (units is string paramUnits)
+        if (units is not null)
         {
           param["units"] = units;
         }
