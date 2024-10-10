@@ -24,8 +24,8 @@ public static class Connector
     TypeLoader.Initialize(typeof(Base).Assembly, typeof(Point).Assembly);
 
     var (logging, tracing) = Observability.Initialize(
+      application.Name + " " + HostApplications.GetVersion(version),
       application.Slug,
-      HostApplications.GetVersion(version),
       Assembly.GetExecutingAssembly().GetVersion(),
       new(
 #if DEBUG || LOCAL

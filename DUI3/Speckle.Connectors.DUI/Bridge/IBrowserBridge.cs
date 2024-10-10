@@ -30,24 +30,30 @@ public interface IBrowserBridge
   public void RunMethod(string methodName, string requestId, string args);
 
   /// <summary>
-  /// Run actions on main thread.
+  /// Posts an <paramref name="action"/> onto the main thread
   /// Some applications might need to run some operations on main thread as deferred actions.
   /// </summary>
-  /// <remarks>
-  /// Exceptions will be caught by <see cref="TopLevelExceptionHandler"/>
-  /// </remarks>
-  /// <param name="action"> Action to run on main thread.</param>
-  public void RunOnMainThread(Action action);
+  /// <returns>An awaitable <see cref="Task{T}"/></returns>
+  /// <param name="action">Action to run on the main thread</param>
+  public Task<T> RunOnMainThreadAsync<T>(Func<Task<T>> action);
+
+  /// <summary>
+  /// Posts an <paramref name="action"/> onto the main thread
+  /// Some applications might need to run some operations on main thread as deferred actions.
+  /// </summary>
+  /// <returns>An awaitable <see cref="Task{T}"/></returns>
+  /// <param name="action">Action to run on the main thread</param>
+  public Task RunOnMainThreadAsync(Func<Task> action);
 
   /// <param name="eventName"></param>
   /// <exception cref="InvalidOperationException">Bridge was not initialized with a binding</exception>
-  public void Send(string eventName);
+  public Task Send(string eventName, CancellationToken cancellationToken = default);
 
-  /// <inheritdoc cref="Send(string)"/>
+  /// <inheritdoc cref="Send(string, CancellationToken)"/>
   /// <param name="data">data to store</param>
   /// <typeparam name="T"></typeparam>
   /// <exception cref="InvalidOperationException">Bridge was not initialized with a binding</exception>
-  public void Send<T>(string eventName, T data)
+  public Task Send<T>(string eventName, T data, CancellationToken cancellationToken = default)
     where T : class;
 
   public ITopLevelExceptionHandler TopLevelExceptionHandler { get; }
