@@ -131,7 +131,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       List<(DirectShape res, string applicationId)> postBakePaintTargets
     ) conversionResults;
     {
-      _activityFactory.Start("Baking objects");
+      using var _ = _activityFactory.Start("Baking objects");
       _transactionManager.StartTransaction(true, "Baking objects");
       conversionResults = BakeObjects(localToGlobalMaps, onOperationProgressed, cancellationToken);
       _transactionManager.CommitTransaction();
@@ -139,7 +139,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 
     // 4 - Paint solids
     {
-      _activityFactory.Start("Painting solids");
+      using var _ = _activityFactory.Start("Painting solids");
       _transactionManager.StartTransaction(true, "Painting solids");
       PostBakePaint(conversionResults.postBakePaintTargets);
       _transactionManager.CommitTransaction();
@@ -147,7 +147,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 
     // 5 - Create group
     {
-      _activityFactory.Start("Grouping");
+      using var _ = _activityFactory.Start("Grouping");
       _transactionManager.StartTransaction(true, "Grouping");
       _groupBaker.BakeGroupForTopLevel(baseGroupName);
       _transactionManager.CommitTransaction();
