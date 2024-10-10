@@ -25,6 +25,10 @@ public class RevitRootToHostConverter : IRootToHostConverter
   {
     List<DB.GeometryObject> geometryObjects = _baseToGeometryConverter.Convert(target);
 
+    if (geometryObjects.Count == 0)
+    {
+      throw new ConversionException($"No supported conversion for {target.speckle_type} found.");
+    }
     // create direct shape from geometries
     DB.DirectShape result = CreateDirectShape(geometryObjects, target["category"] as string);
 
