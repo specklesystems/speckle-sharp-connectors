@@ -18,37 +18,36 @@ internal static class LogBuilder
     ResourceBuilder resourceBuilder
   )
   {
-    Serilog.ILogger? serilogLogger = null;
-    var serviceCollection = new ServiceCollection();
-    if (speckleLogging?.File is not null)
-    {
-      var serilogLogConfiguration = new LoggerConfiguration()
-        .MinimumLevel.Is(SpeckleLogLevelUtility.GetLevel(speckleLogging?.MinimumLevel ?? SpeckleLogLevel.Warning))
-        .Enrich.FromLogContext()
-        .Enrich.WithExceptionDetails();
-
-      // TODO: check if we have write permissions to the file.
-      var logFilePath = SpecklePathProvider.LogFolderPath(applicationAndVersion);
-      logFilePath = Path.Combine(logFilePath, speckleLogging?.File.Path ?? "SpeckleCoreLog.txt");
-      serilogLogConfiguration = serilogLogConfiguration.WriteTo.File(
-        logFilePath,
-        rollingInterval: RollingInterval.Day,
-        retainedFileCountLimit: 10
-      );
-      serilogLogger = serilogLogConfiguration.CreateLogger();
-
-      serilogLogger
-        .ForContext("applicationAndVersion", applicationAndVersion)
-        .ForContext("connectorVersion", connectorVersion)
-        .ForContext("userApplicationDataPath", SpecklePathProvider.UserApplicationDataPath())
-        .ForContext("installApplicationDataPath", SpecklePathProvider.InstallApplicationDataPath)
-        .Information(
-          "Initialized logger inside {applicationAndVersion}/{connectorVersion}. Path info {userApplicationDataPath} {installApplicationDataPath}."
-        );
-    }
-
     var factory = LoggerFactory.Create(loggingBuilder =>
     {
+      if (speckleLogging?.File is not null)
+      {
+        var serilogLogConfiguration = new LoggerConfiguration()
+          .MinimumLevel.Is(SpeckleLogLevelUtility.GetLevel(speckleLogging?.MinimumLevel ?? SpeckleLogLevel.Warning))
+          .Enrich.FromLogContext()
+          .Enrich.WithExceptionDetails();
+
+        // TODO: check if we have write permissions to the file.
+        var logFilePath = SpecklePathProvider.LogFolderPath(applicationAndVersion);
+        logFilePath = Path.Combine(logFilePath, speckleLogging?.File.Path ?? "SpeckleCoreLog.txt");
+        serilogLogConfiguration = serilogLogConfiguration.WriteTo.File(
+          logFilePath,
+          rollingInterval: RollingInterval.Day,
+          retainedFileCountLimit: 10
+        );
+        var serilogLogger = serilogLogConfiguration.CreateLogger();
+
+        serilogLogger
+          .ForContext("applicationAndVersion", applicationAndVersion)
+          .ForContext("connectorVersion", connectorVersion)
+          .ForContext("userApplicationDataPath", SpecklePathProvider.UserApplicationDataPath())
+          .ForContext("installApplicationDataPath", SpecklePathProvider.InstallApplicationDataPath)
+          .Information(
+            "Initialized logger inside {applicationAndVersion}/{connectorVersion}. Path info {userApplicationDataPath} {installApplicationDataPath}."
+          );
+        loggingBuilder.AddSerilog(serilogLogger);
+      }
+
       if (speckleLogging?.Console ?? false)
       {
         loggingBuilder.AddConsole();
