@@ -316,6 +316,7 @@ public class ArcGISColorManager
     int count = 1;
     using (RowCursor rowCursor = layer.Search())
     {
+      // if layer doesn't have a valid data source (and the conversion likely failed), don't create a colorProxy
       if (rowCursor is null)
       {
         return;
