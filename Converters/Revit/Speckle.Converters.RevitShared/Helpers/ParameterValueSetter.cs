@@ -4,7 +4,6 @@ using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
-using ArgumentException = Autodesk.Revit.Exceptions.ArgumentException;
 
 namespace Speckle.Converters.RevitShared.Helpers;
 
