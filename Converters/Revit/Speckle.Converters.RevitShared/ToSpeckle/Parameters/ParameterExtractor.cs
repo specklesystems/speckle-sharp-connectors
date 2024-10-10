@@ -163,10 +163,16 @@ public class ParameterExtractor
           : parameter.AsValueString();
       case DB.StorageType.ElementId:
         var elId = parameter.AsElementId()!;
+        if (elId == DB.ElementId.InvalidElementId)
+        {
+          return null;
+        }
+
         if (_elementNameCache.TryGetValue(elId, out string? value))
         {
           return value;
         }
+
         var docElement = _settingsStore.Current.Document.GetElement(elId);
         var docElementName = docElement?.Name ?? elId.ToString();
         _elementNameCache[parameter.AsElementId()] = docElementName;
