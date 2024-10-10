@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad2023.ToHost.Geometry;
@@ -43,7 +44,7 @@ public class AutocadPolycurveToHostConverter : IToHostTopLevelConverter
         return _polyline3dConverter.Convert(polycurve);
 
       default:
-        throw new SpeckleConversionException("Unknown poly type for AutocadPolycurve");
+        throw new ValidationException("Unknown poly type for AutocadPolycurve");
     }
   }
 }

@@ -1,5 +1,5 @@
 using Autodesk.Revit.DB;
-using Speckle.Converters.Common;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.RevitShared.Services;
 
@@ -12,10 +12,7 @@ public sealed class ScalingServiceToHost
       return value;
     }
 
-    return ScaleToNative(
-      value,
-      UnitsToNative(units) ?? throw new SpeckleConversionException($"The Unit System \"{units}\" is unsupported.")
-    );
+    return ScaleToNative(value, UnitsToNative(units));
   }
 
   public double ScaleToNative(double value, ForgeTypeId typeId)
@@ -23,7 +20,8 @@ public sealed class ScalingServiceToHost
     return UnitUtils.ConvertToInternalUnits(value, typeId);
   }
 
-  public ForgeTypeId? UnitsToNative(string units)
+  /// <exception cref="UnitNotSupportedException">Throws if unit is not supported</exception>
+  public ForgeTypeId UnitsToNative(string units)
   {
     var u = Sdk.Common.Units.GetUnitsFromString(units);
 
@@ -34,7 +32,7 @@ public sealed class ScalingServiceToHost
       Sdk.Common.Units.Meters => UnitTypeId.Meters,
       Sdk.Common.Units.Inches => UnitTypeId.Inches,
       Sdk.Common.Units.Feet => UnitTypeId.Feet,
-      _ => null,
+      _ => throw new UnitNotSupportedException($"The Unit System \"{units}\" is unsupported."),
     };
   }
 }

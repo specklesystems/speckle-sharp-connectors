@@ -1,8 +1,10 @@
 using System.Text.RegularExpressions;
-using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Sdk;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
+using ArgumentException = Autodesk.Revit.Exceptions.ArgumentException;
 
 namespace Speckle.Converters.RevitShared.Helpers;
 
@@ -108,14 +110,18 @@ public class ParameterValueSetter(ScalingServiceToHost scalingService)
         {
           unitTypeId = new(applicationUnit);
         }
-        else if (scalingService.UnitsToNative(units) is DB.ForgeTypeId typeId)
-        {
-          unitTypeId = typeId;
-        }
         else
         {
-          unitTypeId = rp.GetUnitTypeId();
+          try
+          {
+            unitTypeId = scalingService.UnitsToNative(units);
+          }
+          catch (UnitNotSupportedException)
+          {
+            unitTypeId = rp.GetUnitTypeId();
+          }
         }
+
         rp.Set(scalingService.ScaleToNative(Convert.ToDouble(value), unitTypeId));
         break;
 

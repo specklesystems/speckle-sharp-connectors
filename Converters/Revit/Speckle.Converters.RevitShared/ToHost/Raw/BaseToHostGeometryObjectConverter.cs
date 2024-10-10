@@ -1,6 +1,7 @@
 using System.Collections;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Extensions;
 
@@ -45,7 +46,7 @@ public class BaseToHostGeometryObjectConverter : ITypedConverter<Base, List<DB.G
         var displayValue = target.TryGetDisplayValue<Base>();
         if ((displayValue is IList && !displayValue.Any()) || displayValue is null)
         {
-          throw new NotSupportedException($"No display value found for {target.speckle_type}");
+          throw new ValidationException($"No display value found for {target.speckle_type}");
         }
 
         foreach (var display in displayValue)
@@ -54,6 +55,11 @@ public class BaseToHostGeometryObjectConverter : ITypedConverter<Base, List<DB.G
         }
 
         break;
+    }
+
+    if (result.Count == 0)
+    {
+      throw new ConversionException($"No objects could be converted for {target.speckle_type}.");
     }
 
     return result;
