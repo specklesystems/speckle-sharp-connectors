@@ -13,16 +13,19 @@ public class Civil3dRootToSpeckleConverter : IRootToSpeckleConverter
   private readonly IConverterManager<IToSpeckleTopLevelConverter> _toSpeckle;
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
   private readonly PartDataExtractor _partDataExtractor;
+  private readonly PropertySetExtractor _propertySetExtractor;
 
   public Civil3dRootToSpeckleConverter(
     IConverterManager<IToSpeckleTopLevelConverter> toSpeckle,
     IConverterSettingsStore<Civil3dConversionSettings> settingsStore,
-    PartDataExtractor partDataExtractor
+    PartDataExtractor partDataExtractor,
+    PropertySetExtractor propertySetExtractor
   )
   {
     _toSpeckle = toSpeckle;
     _settingsStore = settingsStore;
     _partDataExtractor = partDataExtractor;
+    _propertySetExtractor = propertySetExtractor;
   }
 
   public Base Convert(object target)
@@ -39,15 +42,16 @@ public class Civil3dRootToSpeckleConverter : IRootToSpeckleConverter
     Dictionary<string, object?> properties = new();
 
     // check first for civil type objects
-
     if (target is CDB.Entity civilEntity)
     {
       type = civilEntity.GetType();
       objectToConvert = civilEntity;
 
+      // TODO: refactor this into a property extractor class
+      // get part data
       try
       {
-        List<Dictionary<string, object?>>? partData = _partDataExtractor.GetPartData(civilEntity);
+        Dictionary<string, object?>? partData = _partDataExtractor.GetPartData(civilEntity);
         if (partData is not null)
         {
           properties.Add("Part Data", partData);
@@ -57,6 +61,22 @@ public class Civil3dRootToSpeckleConverter : IRootToSpeckleConverter
       {
         //TODO: logger here
       }
+
+      // get property set data
+      try
+      {
+        Dictionary<string, object?>? propertySets = _propertySetExtractor.GetPropertySets(civilEntity);
+        if (propertySets is not null)
+        {
+          properties.Add("Property Sets", propertySets);
+        }
+      }
+      catch (Exception e) when (!e.IsFatal())
+      {
+        //TODO: logger here
+      }
+
+      // TODO: add XDATA here
     }
 
     var objectConverter = _toSpeckle.ResolveConverter(type, true);

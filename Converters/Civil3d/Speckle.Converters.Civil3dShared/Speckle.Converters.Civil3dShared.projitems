@@ -18,6 +18,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\DisplayValueExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\BuiltElements\CivilEntityToSpeckleTopLevelConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Parameters\PropertySetDefinitionHandler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Parameters\PropertySetExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Parameters\PartDataExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\GridSurfaceToSpeckleMeshRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\TinSurfaceToSpeckleMeshRawConverter.cs" />

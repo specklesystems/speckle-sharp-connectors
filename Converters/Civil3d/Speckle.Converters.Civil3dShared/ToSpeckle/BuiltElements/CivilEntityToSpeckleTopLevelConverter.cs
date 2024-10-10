@@ -37,7 +37,7 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
   public Base Convert(CDB.Entity target)
   {
     Base civilObject = new();
-    civilObject["category"] = target.GetType().ToString();
+    civilObject["type"] = target.GetType().ToString();
     civilObject["name"] = target.Name;
     civilObject["units"] = _settingsStore.Current.SpeckleUnits;
 
@@ -54,10 +54,6 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     {
       civilObject["displayValue"] = display;
     }
-
-    // POC: not setting property sets yet, need to determine connector parameter interoperability
-    // POC: not setting part data yet, same reason as above
-
 
     return civilObject;
   }

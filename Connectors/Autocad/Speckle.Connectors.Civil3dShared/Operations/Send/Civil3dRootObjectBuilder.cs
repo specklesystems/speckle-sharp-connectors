@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Common.Caching;
+using Speckle.Connectors.Common.Operations;
+using Speckle.Converters.Civil3dShared.ToSpeckle;
 using Speckle.Converters.Common;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models.Collections;
@@ -12,9 +14,11 @@ namespace Speckle.Connectors.Civil3dShared.Operations.Send;
 public sealed class Civil3dRootObjectBuilder : AutocadRootObjectBaseBuilder
 {
   private readonly AutocadLayerUnpacker _layerUnpacker;
+  private readonly PropertySetDefinitionHandler _propertySetDefinitionHandler;
 
   public Civil3dRootObjectBuilder(
     AutocadLayerUnpacker layerUnpacker,
+    PropertySetDefinitionHandler propertySetDefinitionHandler,
     IRootToSpeckleConverter converter,
     ISendConversionCache sendConversionCache,
     AutocadInstanceUnpacker instanceObjectManager,
@@ -36,6 +40,7 @@ public sealed class Civil3dRootObjectBuilder : AutocadRootObjectBaseBuilder
     )
   {
     _layerUnpacker = layerUnpacker;
+    _propertySetDefinitionHandler = propertySetDefinitionHandler;
   }
 
   public override (Collection, LayerTableRecord?) CreateObjectCollection(Entity entity, Transaction tr)
@@ -46,4 +51,8 @@ public sealed class Civil3dRootObjectBuilder : AutocadRootObjectBaseBuilder
   }
 
   // POC: probably will need to add Network definition proxies as well
+  public override void AddAdditionalProxiesToRoot(Collection rootObject)
+  {
+    rootObject[ProxyKeys.PROPERTYSET_DEFINITIONS] = _propertySetDefinitionHandler.Definitions;
+  }
 }

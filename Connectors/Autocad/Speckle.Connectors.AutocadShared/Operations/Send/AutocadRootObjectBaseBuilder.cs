@@ -146,6 +146,11 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
     return (new(), null);
   }
 
+  public virtual void AddAdditionalProxiesToRoot(Collection rootCollection)
+  {
+    return;
+  }
+
   private SendConversionResult ConvertAutocadEntity(
     Entity entity,
     string applicationId,
