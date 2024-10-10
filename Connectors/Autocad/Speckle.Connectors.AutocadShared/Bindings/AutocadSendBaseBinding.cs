@@ -25,7 +25,6 @@ public abstract class AutocadSendBaseBinding : ISendBinding
 {
   public string Name => "sendBinding";
   public SendBindingUICommands Commands { get; }
-  private OperationProgressManager OperationProgressManager { get; }
   public IBrowserBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
@@ -46,6 +45,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   /// https://stackoverflow.com/questions/18922985/concurrent-hashsett-in-net-framework
   /// </summary>
   private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
+  private readonly List<string> _docSubsTracker = new();
 
   protected AutocadSendBaseBinding(
     DocumentModelStore store,
@@ -88,8 +88,6 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     };
   }
 
-  private readonly List<string> _docSubsTracker = new();
-
   private void SubscribeToObjectChanges(Document doc)
   {
     if (doc == null || doc.Database == null || _docSubsTracker.Contains(doc.Name))
@@ -103,10 +101,8 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     doc.Database.ObjectModified += (_, e) => OnObjectChanged(e.DBObject);
   }
 
-  private void OnObjectChanged(DBObject dbObject)
-  {
+  private void OnObjectChanged(DBObject dbObject) =>
     _topLevelExceptionHandler.CatchUnhandled(() => OnChangeChangedObjectIds(dbObject));
-  }
 
   private void OnChangeChangedObjectIds(DBObject dBObject)
   {
@@ -114,7 +110,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     _idleManager.SubscribeToIdle(nameof(AutocadSendBinding), RunExpirationChecks);
   }
 
-  private void RunExpirationChecks()
+  private async Task RunExpirationChecks()
   {
     var senders = _store.GetSenders();
     string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
@@ -132,7 +128,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
       }
     }
 
-    Commands.SetModelsExpired(expiredSenderIds);
+    await Commands.SetModelsExpired(expiredSenderIds).ConfigureAwait(false);
     ChangedObjectIds = new();
   }
 
@@ -197,7 +193,6 @@ public abstract class AutocadSendBaseBinding : ISendBinding
       // SWALLOW -> UI handles it immediately, so we do not need to handle anything for now!
       // Idea for later -> when cancel called, create promise from UI to solve it later with this catch block.
       // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
-      return;
     }
     catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
@@ -206,7 +201,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     }
     finally
     {
-      // renable document activation
+      // re-enable document activation
       Application.DocumentManager.DocumentActivationEnabled = true;
     }
   }

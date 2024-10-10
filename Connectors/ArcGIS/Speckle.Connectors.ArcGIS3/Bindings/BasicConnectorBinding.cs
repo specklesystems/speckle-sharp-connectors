@@ -41,7 +41,10 @@ public sealed class BasicConnectorBinding : IBasicConnectorBinding, IPostInitBin
   }
 
   private void OnDocumentChanged(object? sender, EventArgs e) =>
-    Parent.TopLevelExceptionHandler.CatchUnhandled(() => Commands.NotifyDocumentChanged());
+    Parent.TopLevelExceptionHandler.FireAndForget(async () =>
+    {
+      await Commands.NotifyDocumentChanged().ConfigureAwait(false);
+    });
 
   public string GetSourceApplicationName() => _speckleApplication.Slug;
 

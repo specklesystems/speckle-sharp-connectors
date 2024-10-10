@@ -44,10 +44,11 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding, IPostIn
     _store.DocumentChanged -= OnDocumentChange;
   }
 
-  private void OnDocumentChange(object? sender, EventArgs _)
-  {
-    Commands.NotifyDocumentChanged();
-  }
+  private void OnDocumentChange(object? sender, EventArgs _) =>
+    Parent.TopLevelExceptionHandler.FireAndForget(async () =>
+    {
+      await Commands.NotifyDocumentChanged().ConfigureAwait(false);
+    });
 
   public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
 
