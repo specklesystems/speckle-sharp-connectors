@@ -57,7 +57,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
 #pragma warning restore CA1506
     IReadOnlyList<MapMember> objects,
     SendInfo sendInfo,
-    Action<string, double?>? onOperationProgressed = null,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
   )
   {
@@ -71,7 +71,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
 
     List<SendConversionResult> results = new(objects.Count);
     var cacheHitCount = 0;
-    List<(GroupLayer, Collection)> nestedGroups = new();
+    List<(ILayerContainer, Collection)> nestedGroups = new();
 
     // reorder selected layers by Table of Content (TOC) order
     List<(MapMember, int)> layersWithDisplayPriority = _mapMemberUtils.GetLayerDisplayPriority(
@@ -79,7 +79,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
       objects
     );
 
-    onOperationProgressed?.Invoke("Converting", null);
+    onOperationProgressed.Report(new("Converting", null));
     using (var __ = _activityFactory.Start("Converting objects"))
     {
       foreach ((MapMember mapMember, _) in layersWithDisplayPriority)
@@ -112,7 +112,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
 
             // don't use cache for group layers
             if (
-              mapMember is not GroupLayer
+              mapMember is not ILayerContainer
               && _sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value)
             )
             {
@@ -121,7 +121,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
             }
             else
             {
-              if (mapMember is GroupLayer group)
+              if (mapMember is ILayerContainer group)
               {
                 // group layer will always come before it's contained layers
                 // keep active group last in the list
@@ -183,7 +183,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
           }
         }
 
-        onOperationProgressed?.Invoke("Converting", (double)++count / objects.Count);
+        onOperationProgressed.Report(new("Converting", (double)++count / objects.Count));
       }
     }
 

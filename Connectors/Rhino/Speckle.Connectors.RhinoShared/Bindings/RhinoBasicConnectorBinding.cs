@@ -11,7 +11,7 @@ using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Rhino.Bindings;
 
-public class RhinoBasicConnectorBinding : IBasicConnectorBinding
+public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
 {
   public string Name => "baseBinding";
   public IBrowserBridge Parent { get; }
@@ -32,9 +32,10 @@ public class RhinoBasicConnectorBinding : IBasicConnectorBinding
     Commands = new BasicConnectorBindingCommands(parent);
 
     _store.DocumentChanged += (_, _) =>
-    {
-      Commands.NotifyDocumentChanged();
-    };
+      parent.TopLevelExceptionHandler.FireAndForget(async () =>
+      {
+        await Commands.NotifyDocumentChanged().ConfigureAwait(false);
+      });
   }
 
   public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
@@ -60,7 +61,7 @@ public class RhinoBasicConnectorBinding : IBasicConnectorBinding
 
   public void RemoveModel(ModelCard model) => _store.RemoveModel(model);
 
-  public void HighlightObjects(List<string> objectIds)
+  public Task HighlightObjects(IReadOnlyList<string> objectIds)
   {
     var objects = GetObjectsFromIds(objectIds);
 
@@ -73,9 +74,10 @@ public class RhinoBasicConnectorBinding : IBasicConnectorBinding
     }
 
     HighlightObjectsOnView(objects.rhinoObjects, objects.groups);
+    return Task.CompletedTask;
   }
 
-  public void HighlightModel(string modelCardId)
+  public async Task HighlightModel(string modelCardId)
   {
     var objectIds = new List<string>();
     var myModel = _store.GetModelById(modelCardId);
@@ -92,7 +94,9 @@ public class RhinoBasicConnectorBinding : IBasicConnectorBinding
 
     if (objectIds.Count == 0)
     {
-      Commands.SetModelError(modelCardId, new OperationCanceledException("No objects found to highlight."));
+      await Commands
+        .SetModelError(modelCardId, new OperationCanceledException("No objects found to highlight."))
+        .ConfigureAwait(false);
       return;
     }
 
@@ -102,14 +106,16 @@ public class RhinoBasicConnectorBinding : IBasicConnectorBinding
 
     if (objects.rhinoObjects.Count == 0 && objects.groups.Count == 0)
     {
-      Commands.SetModelError(modelCardId, new OperationCanceledException("No objects found to highlight."));
+      await Commands
+        .SetModelError(modelCardId, new OperationCanceledException("No objects found to highlight."))
+        .ConfigureAwait(false);
       return;
     }
 
     HighlightObjectsOnView(objects.rhinoObjects, objects.groups);
   }
 
-  private (List<RhinoObject> rhinoObjects, List<Group> groups) GetObjectsFromIds(List<string> objectIds)
+  private (List<RhinoObject> rhinoObjects, List<Group> groups) GetObjectsFromIds(IReadOnlyList<string> objectIds)
   {
     List<RhinoObject> rhinoObjects = objectIds
       .Select((id) => RhinoDoc.ActiveDoc.Objects.FindId(new Guid(id)))

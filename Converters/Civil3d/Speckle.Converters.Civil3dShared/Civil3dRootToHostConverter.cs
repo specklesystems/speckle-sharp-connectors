@@ -2,7 +2,6 @@ using Autodesk.AutoCAD.DatabaseServices;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
-using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Civil3d;
@@ -25,12 +24,27 @@ public class Civil3dRootToHostConverter : IRootToSpeckleConverter
   {
     if (target is not DBObject dbObject)
     {
-      throw new ConversionNotSupportedException(
+      throw new SpeckleConversionException(
         $"Conversion of {target.GetType().Name} to Speckle is not supported. Only objects that inherit from DBObject are."
       );
     }
 
     Type type = dbObject.GetType();
+    object objectToConvert = dbObject;
+
+    // check first for civil type objects
+    if (target is CDB.Entity civilEntity)
+    {
+      type = civilEntity.GetType();
+      objectToConvert = civilEntity;
+    }
+
+    var objectConverter = _toSpeckle.ResolveConverter(type);
+
+    if (objectConverter == null)
+    {
+      throw new SpeckleConversionException($"No conversion found for {target.GetType().Name}");
+    }
 
     try
     {
@@ -38,14 +52,7 @@ public class Civil3dRootToHostConverter : IRootToSpeckleConverter
       {
         using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
         {
-          var objectConverter = _toSpeckle.ResolveConverter(type);
-
-          if (objectConverter == null)
-          {
-            throw new ConversionNotSupportedException($"No conversion found for {target.GetType().Name}");
-          }
-
-          var convertedObject = objectConverter.Convert(dbObject);
+          var convertedObject = objectConverter.Convert(objectToConvert);
           tr.Commit();
           return convertedObject;
         }

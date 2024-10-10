@@ -2,19 +2,18 @@ using Rhino;
 using Rhino.DocObjects;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.Rhino.HostApp;
 
 namespace Speckle.Connectors.Rhino.Bindings;
 
 public class RhinoSelectionBinding : ISelectionBinding
 {
-  private readonly IRhinoIdleManager _idleManager;
+  private readonly IAppIdleManager _idleManager;
   private const string SELECTION_EVENT = "setSelection";
 
   public string Name => "selectionBinding";
   public IBrowserBridge Parent { get; }
 
-  public RhinoSelectionBinding(IRhinoIdleManager idleManager, IBrowserBridge parent)
+  public RhinoSelectionBinding(IAppIdleManager idleManager, IBrowserBridge parent)
   {
     _idleManager = idleManager;
     Parent = parent;
