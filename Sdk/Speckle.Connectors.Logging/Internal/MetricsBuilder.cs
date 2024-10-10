@@ -20,7 +20,7 @@ internal static class MetricsBuilder
       metricsProviderBuilder = metricsProviderBuilder.AddConsoleExporter();
     }
 
-    metricsProviderBuilder = metricsProviderBuilder.SetResourceBuilder(resourceBuilder);
+    metricsProviderBuilder = metricsProviderBuilder.AddHttpClientInstrumentation().SetResourceBuilder(resourceBuilder);
 
     return metricsProviderBuilder.Build();
   }

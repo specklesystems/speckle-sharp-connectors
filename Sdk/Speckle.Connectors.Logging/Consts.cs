@@ -28,7 +28,7 @@ public static class Consts
       ?.InformationalVersion;
     if (informationalVersion is null)
     {
-      return String.Empty;
+      return string.Empty;
     }
 
     var indexOfPlusSign = informationalVersion.IndexOf('+');
