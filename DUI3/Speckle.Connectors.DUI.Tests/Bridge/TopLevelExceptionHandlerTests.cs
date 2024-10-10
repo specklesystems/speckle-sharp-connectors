@@ -31,7 +31,9 @@ public class TopLevelExceptionHandlerTests : MoqTest
     bridge.Setup(x => x.IsBindingInitialized).Returns(true);
     bridge.Setup(x => x.AssertBindingInitialised());
     bridge.Setup(x => x.FrontendBoundName).Returns("");
-    bridge.Setup(x => x.Send(BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, It.IsAny<object>()));
+    bridge
+      .Setup(x => x.Send(BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, It.IsAny<object>(), default))
+      .Returns(Task.CompletedTask);
 
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
@@ -61,7 +63,9 @@ public class TopLevelExceptionHandlerTests : MoqTest
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
     var bridge = Create<IBrowserBridge>();
 
-    bridge.Setup(x => x.Send(BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, It.IsAny<object>()));
+    bridge
+      .Setup(x => x.Send(BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, It.IsAny<object>(), default))
+      .Returns(Task.CompletedTask);
     bridge.Setup(x => x.AssertBindingInitialised());
     bridge.Setup(x => x.IsBindingInitialized).Returns(true);
     bridge.Setup(x => x.FrontendBoundName).Returns("");
@@ -114,7 +118,9 @@ public class TopLevelExceptionHandlerTests : MoqTest
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
     var bridge = Create<IBrowserBridge>();
 
-    bridge.Setup(x => x.Send(BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, It.IsAny<object>()));
+    bridge
+      .Setup(x => x.Send(BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, It.IsAny<object>(), default))
+      .Returns(Task.CompletedTask);
     bridge.Setup(x => x.IsBindingInitialized).Returns(true);
     bridge.Setup(x => x.AssertBindingInitialised());
     bridge.Setup(x => x.FrontendBoundName).Returns("");
@@ -156,6 +162,6 @@ public class TopLevelExceptionHandlerTests : MoqTest
 
     var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
 
-    Assert.ThrowsAsync<InvalidOperationException>(async () => await sut.CatchUnhandled(() => Task.FromResult("")));
+    Assert.ThrowsAsync<InvalidOperationException>(async () => await sut.CatchUnhandledAsync(() => Task.FromResult("")));
   }
 }

@@ -7,9 +7,11 @@ using Speckle.Connectors.DUI.Bridge;
 
 namespace Speckle.Connectors.ArcGIS.Bindings;
 
-public sealed class ArcGISSelectionBinding(IBrowserBridge parent) : ISelectionBinding, IPostInitBinding, IDisposable
+public sealed class ArcGISSelectionBinding(IBrowserBridge parent, MapMembersUtils mapMembersUtils)
+  : ISelectionBinding,
+    IPostInitBinding,
+    IDisposable
 {
-  private readonly MapMembersUtils _mapMemberUtils;
   public string Name => "selectionBinding";
   public IBrowserBridge Parent { get; } = parent;
 
@@ -61,7 +63,7 @@ public sealed class ArcGISSelectionBinding(IBrowserBridge parent) : ISelectionBi
     List<MapMember> allNestedMembers = new();
     foreach (MapMember member in selectedMembers)
     {
-      var layerMapMembers = _mapMemberUtils.UnpackMapLayers(selectedMembers);
+      var layerMapMembers = mapMembersUtils.UnpackMapLayers(selectedMembers);
       allNestedMembers.AddRange(layerMapMembers);
     }
 

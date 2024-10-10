@@ -5,7 +5,7 @@ using Speckle.Connectors.DUI.Bridge;
 
 namespace Speckle.Connectors.Rhino.Bindings;
 
-public sealed class RhinoSelectionBinding(IRhinoIdleManager idleManager, IBrowserBridge parent)
+public sealed class RhinoSelectionBinding(IAppIdleManager idleManager, IBrowserBridge parent)
   : ISelectionBinding,
     IPostInitBinding,
     IDisposable

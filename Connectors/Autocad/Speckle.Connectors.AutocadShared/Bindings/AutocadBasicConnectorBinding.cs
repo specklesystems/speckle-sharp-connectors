@@ -42,11 +42,10 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding, IPostInitBin
   public void PostInitialization()
   {
     _store.DocumentChanged += (_, _) =>
-      parent.TopLevelExceptionHandler.FireAndForget(async () =>
+      Parent.TopLevelExceptionHandler.FireAndForget(async () =>
       {
         await Commands.NotifyDocumentChanged().ConfigureAwait(false);
       });
-    _logger = logger;
   }
 
   public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;

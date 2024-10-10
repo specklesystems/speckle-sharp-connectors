@@ -45,7 +45,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding, IPost
   {
     // POC: event binding?
     _store.DocumentChanged += (_, _) =>
-      parent.TopLevelExceptionHandler.FireAndForget(async () =>
+      Parent.TopLevelExceptionHandler.FireAndForget(async () =>
       {
         await Commands.NotifyDocumentChanged().ConfigureAwait(false);
       });
