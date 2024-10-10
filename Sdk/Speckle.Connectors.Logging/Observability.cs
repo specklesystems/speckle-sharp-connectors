@@ -4,7 +4,7 @@ namespace Speckle.Connectors.Logging;
 
 public static class Observability
 {
-  public static (LoggerProvider, IDisposable,IDisposable ) Initialize(
+  public static (LoggerProvider, IDisposable, IDisposable) Initialize(
     string applicationAndVersion,
     string slug,
     string connectorVersion,

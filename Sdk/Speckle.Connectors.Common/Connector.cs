@@ -19,7 +19,8 @@ public static class Connector
       Tracing.Dispose();
       Metrics.Dispose();
     }
-  } 
+  }
+
   public static readonly string TabName = "Speckle";
   public static readonly string TabTitle = "Speckle (Beta)";
 
@@ -32,13 +33,14 @@ public static class Connector
     TypeLoader.Initialize(typeof(Base).Assembly, typeof(Point).Assembly);
 
     var (logging, tracing, metrics) = Observability.Initialize(
-    var (logging, tracing) = Observability.Initialize(
       application.Name + " " + HostApplications.GetVersion(version),
       application.Slug,
       Assembly.GetExecutingAssembly().GetVersion(),
       new(
 #if DEBUG || LOCAL
-        new SpeckleLogging(Console: true, MinimumLevel: SpeckleLogLevel.Debug), new SpeckleTracing(Console: false), new SpeckleMetrics(Console: true)
+        new SpeckleLogging(Console: true, MinimumLevel: SpeckleLogLevel.Debug),
+        new SpeckleTracing(Console: false),
+        new SpeckleMetrics(Console: true)
 #else
         new SpeckleLogging(
           Console: true,
