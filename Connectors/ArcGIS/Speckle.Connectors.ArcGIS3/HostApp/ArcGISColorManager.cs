@@ -316,6 +316,11 @@ public class ArcGISColorManager
     int count = 1;
     using (RowCursor rowCursor = layer.Search())
     {
+      // if layer doesn't have a valid data source (and the conversion likely failed), don't create a colorProxy
+      if (rowCursor is null)
+      {
+        return;
+      }
       while (rowCursor.MoveNext())
       {
         string elementAppId = $"{layer.URI}_{count}";
@@ -451,6 +456,11 @@ public class ArcGISColorManager
     out int color
   )
   {
+    if (uniqueRenderer.DefaultSymbol is null)
+    {
+      color = RbgToInt(255, 255, 255, 255);
+      return false;
+    }
     if (!TryGetSymbolColor(uniqueRenderer.DefaultSymbol.Symbol, out color)) // get default color
     {
       return false;
@@ -493,6 +503,11 @@ public class ArcGISColorManager
         // set the group color to class symbol color if conditions are met
         if (groupConditionsMet)
         {
+          if (groupClass.Symbol is null)
+          {
+            color = RbgToInt(255, 255, 255, 255);
+            return false;
+          }
           if (!TryGetSymbolColor(groupClass.Symbol.Symbol, out color))
           {
             return false;
@@ -544,6 +559,11 @@ public class ArcGISColorManager
     out int color
   )
   {
+    if (graduatedRenderer.DefaultSymbol is null)
+    {
+      color = RbgToInt(255, 255, 255, 255);
+      return false;
+    }
     if (!TryGetSymbolColor(graduatedRenderer.DefaultSymbol.Symbol, out color)) // get default color
     {
       return false;

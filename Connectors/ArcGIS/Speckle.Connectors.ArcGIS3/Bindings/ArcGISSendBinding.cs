@@ -9,6 +9,7 @@ using ArcGIS.Desktop.Mapping.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.ArcGIS.Filters;
+using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
@@ -54,6 +55,7 @@ public sealed class ArcGISSendBinding : ISendBinding
 
   private List<FeatureLayer> SubscribedLayers { get; set; } = new();
   private List<StandaloneTable> SubscribedTables { get; set; } = new();
+  private readonly MapMembersUtils _mapMemberUtils;
 
   public ArcGISSendBinding(
     DocumentModelStore store,
@@ -64,7 +66,8 @@ public sealed class ArcGISSendBinding : ISendBinding
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
     ILogger<ArcGISSendBinding> logger,
-    IArcGISConversionSettingsFactory arcGisConversionSettingsFactory
+    IArcGISConversionSettingsFactory arcGisConversionSettingsFactory,
+    MapMembersUtils mapMemberUtils
   )
   {
     _store = store;
@@ -76,6 +79,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     _logger = logger;
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
     _arcGISConversionSettingsFactory = arcGisConversionSettingsFactory;
+    _mapMemberUtils = mapMemberUtils;
 
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
@@ -275,36 +279,14 @@ public sealed class ArcGISSendBinding : ISendBinding
     await RunExpirationChecks(true).ConfigureAwait(false);
   }
 
-  private void AddChangedNestedObjectIds(GroupLayer group)
-  {
-    ChangedObjectIds[group.URI] = 1;
-    foreach (var member in group.Layers)
-    {
-      if (member is GroupLayer subGroup)
-      {
-        AddChangedNestedObjectIds(subGroup);
-      }
-      else
-      {
-        ChangedObjectIds[member.URI] = 1;
-      }
-    }
-  }
-
   private async Task GetIdsForMapPropertyChangedEvent(MapPropertyChangedEventArgs args)
   {
     foreach (Map map in args.Maps)
     {
-      foreach (MapMember member in map.Layers)
+      List<MapMember> allMapMembers = _mapMemberUtils.GetAllMapMembers(map);
+      foreach (MapMember member in allMapMembers)
       {
-        if (member is GroupLayer group)
-        {
-          AddChangedNestedObjectIds(group);
-        }
-        else
-        {
-          ChangedObjectIds[member.URI] = 1;
-        }
+        ChangedObjectIds[member.URI] = 1;
       }
     }
     await RunExpirationChecks(false).ConfigureAwait(false);

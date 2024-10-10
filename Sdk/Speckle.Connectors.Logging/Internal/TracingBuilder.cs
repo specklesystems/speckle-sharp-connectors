@@ -22,7 +22,10 @@ internal static class TracingBuilder
       tracerProviderBuilder = tracerProviderBuilder.AddConsoleExporter();
     }
 
-    tracerProviderBuilder = tracerProviderBuilder.SetResourceBuilder(resourceBuilder).SetSampler<AlwaysOnSampler>();
+    tracerProviderBuilder = tracerProviderBuilder
+      .SetResourceBuilder(resourceBuilder)
+      .SetSampler<AlwaysOnSampler>()
+      .AddProcessor(new ActivityScopeProcessor());
 
     return tracerProviderBuilder.Build();
   }

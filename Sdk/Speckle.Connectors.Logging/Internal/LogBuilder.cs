@@ -1,7 +1,4 @@
-﻿using System.Diagnostics;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using OpenTelemetry.Resources;
+﻿using OpenTelemetry.Resources;
 using Serilog;
 using Serilog.Exceptions;
 using Serilog.Extensions.Logging;
@@ -18,16 +15,9 @@ internal static class LogBuilder
     ResourceBuilder resourceBuilder
   )
   {
-    var fileVersionInfo = GetFileVersionInfo();
     var serilogLogConfiguration = new LoggerConfiguration()
       .MinimumLevel.Is(SpeckleLogLevelUtility.GetLevel(speckleLogging?.MinimumLevel ?? SpeckleLogLevel.Warning))
       .Enrich.FromLogContext()
-      .Enrich.WithProperty("version", fileVersionInfo.FileVersion)
-      .Enrich.WithProperty("productVersion", connectorVersion)
-      .Enrich.WithProperty("hostOs", DetermineHostOsSlug())
-      .Enrich.WithProperty("hostOsVersion", Environment.OSVersion)
-      .Enrich.WithProperty("hostOsArchitecture", RuntimeInformation.ProcessArchitecture.ToString())
-      .Enrich.WithProperty("runtime", RuntimeInformation.FrameworkDescription)
       .Enrich.WithExceptionDetails();
 
     if (speckleLogging?.File is not null)
@@ -54,42 +44,17 @@ internal static class LogBuilder
     var logger = serilogLogConfiguration.CreateLogger();
 
     logger
-      .ForContext("hostApplication", applicationAndVersion)
+      .ForContext("applicationAndVersion", applicationAndVersion)
+      .ForContext("connectorVersion", connectorVersion)
       .ForContext("userApplicationDataPath", SpecklePathProvider.UserApplicationDataPath())
       .ForContext("installApplicationDataPath", SpecklePathProvider.InstallApplicationDataPath)
       .Information(
-        "Initialized logger inside {hostApplication}/{productVersion}/{version} for user {id}. Path info {userApplicationDataPath} {installApplicationDataPath}."
+        "Initialized logger inside {applicationAndVersion}/{connectorVersion}. Path info {userApplicationDataPath} {installApplicationDataPath}."
       );
 
 #pragma warning disable CA2000
     return new LoggerProvider(new SerilogLoggerProvider(logger));
 #pragma warning restore CA2000
-  }
-
-  private static FileVersionInfo GetFileVersionInfo()
-  {
-    var assembly = Assembly.GetExecutingAssembly().Location;
-    return FileVersionInfo.GetVersionInfo(assembly);
-  }
-
-  private static string DetermineHostOsSlug()
-  {
-    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-    {
-      return "Windows";
-    }
-
-    if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-    {
-      return "MacOS";
-    }
-
-    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-    {
-      return "Linux";
-    }
-
-    return RuntimeInformation.OSDescription;
   }
 
   private static LoggerConfiguration InitializeOtelLogging(
@@ -102,6 +67,9 @@ internal static class LogBuilder
       o.Protocol = OtlpProtocol.HttpProtobuf;
       o.LogsEndpoint = speckleOtelLogging.Endpoint;
       o.Headers = speckleOtelLogging.Headers ?? o.Headers;
-      o.ResourceAttributes = resourceBuilder.Build().Attributes.ToDictionary(x => x.Key, x => x.Value);
+      o.ResourceAttributes = resourceBuilder
+        .Build()
+        .Attributes.Concat(ActivityScope.Tags)
+        .ToDictionary(x => x.Key, x => x.Value);
     });
 }
