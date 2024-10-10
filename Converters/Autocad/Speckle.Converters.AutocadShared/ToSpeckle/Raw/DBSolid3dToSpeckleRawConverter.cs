@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
@@ -28,7 +29,7 @@ public class Solid3dToSpeckleRawConverter : ITypedConverter<ADB.Solid3d, SOG.Mes
     using ABR.Brep brep = new(target);
     if (brep.IsNull)
     {
-      throw new SpeckleConversionException("Could not retrieve brep from the solid3d.");
+      throw new ValidationException("Could not retrieve brep from the solid3d.");
     }
 
     var vertices = new List<AG.Point3d>();

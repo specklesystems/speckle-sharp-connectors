@@ -1,6 +1,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Utils;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.Raw;
 
@@ -22,7 +23,7 @@ public class MeshListToHostConverter : ITypedConverter<List<SOG.Mesh>, ACG.Multi
   {
     if (target.Count == 0)
     {
-      throw new SpeckleConversionException("Feature contains no geometries");
+      throw new ValidationException("Feature contains no geometries");
     }
     ACG.MultipatchBuilderEx multipatchPart = new(_settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference);
 

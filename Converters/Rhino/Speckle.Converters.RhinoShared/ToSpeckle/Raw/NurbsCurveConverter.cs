@@ -1,6 +1,7 @@
 using Rhino.Geometry;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
 
@@ -41,12 +42,12 @@ public class NurbsCurveConverter : ITypedConverter<RG.NurbsCurve, SOG.Curve>
 
     if (target.ToPolyline(0, 1, 0, 0, 0, tolerance, 0, 0, true) is not PolylineCurve polylineCurve)
     {
-      throw new SpeckleConversionException($"Failed to extract PolylineCurve from {target}");
+      throw new ConversionException($"Failed to extract PolylineCurve from {target}");
     }
 
     if (!polylineCurve.TryGetPolyline(out Polyline? poly))
     {
-      throw new SpeckleConversionException($"Failed to extract Polyline from {target}");
+      throw new ConversionException($"Failed to extract Polyline from {target}");
     }
 
     if (target.IsClosed)

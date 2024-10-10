@@ -2,6 +2,7 @@ using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared;
@@ -23,11 +24,6 @@ public class RevitRootToHostConverter : IRootToHostConverter
   public object Convert(Base target)
   {
     List<DB.GeometryObject> geometryObjects = _baseToGeometryConverter.Convert(target);
-
-    if (geometryObjects.Count == 0)
-    {
-      throw new SpeckleConversionException($"No supported conversion for {target.speckle_type} found.");
-    }
 
     // create direct shape from geometries
     DB.DirectShape result = CreateDirectShape(geometryObjects, target["category"] as string);
@@ -58,7 +54,7 @@ public class RevitRootToHostConverter : IRootToHostConverter
     if (!result.IsValidShape(geometry))
     {
       _converterSettings.Current.Document.Delete(result.Id);
-      throw new SpeckleConversionException("Invalid geometry (eg unbounded curves) found for creating directshape.");
+      throw new ValidationException("Invalid geometry (eg unbounded curves) found for creating directshape.");
     }
 
     result.SetShape(geometry);

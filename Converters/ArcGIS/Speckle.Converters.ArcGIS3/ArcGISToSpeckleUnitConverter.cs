@@ -1,7 +1,7 @@
 using ArcGIS.Core.Geometry;
 using Speckle.Converters.Common;
-using Speckle.Sdk;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.ArcGIS3;
 
@@ -41,7 +41,6 @@ public class ArcGISToSpeckleUnitConverter : IHostToSpeckleUnitConverter<Unit>
       return value;
     }
 
-    // POC: probably would prefer something more specific
-    throw new SpeckleException($"The Unit System \"{hostUnit}\" is unsupported.");
+    throw new UnitNotSupportedException($"The Unit System \"{hostUnit}\" is unsupported.");
   }
 }

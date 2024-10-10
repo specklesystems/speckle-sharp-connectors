@@ -18,22 +18,11 @@ public class RootToSpeckleConverter : IRootToSpeckleConverter
   public Base Convert(object target)
   {
     Type type = target.GetType();
-    try
-    {
-      var objectConverter = _toSpeckle.ResolveConverter(type); //poc: would be nice to have supertypes resolve
 
-      if (objectConverter == null)
-      {
-        throw new NotSupportedException($"No conversion found for {type.Name}");
-      }
-      var convertedObject = objectConverter.Convert(target);
+    var objectConverter = _toSpeckle.ResolveConverter(type);
 
-      return convertedObject;
-    }
-    catch (SpeckleConversionException e)
-    {
-      Console.WriteLine(e);
-      throw; // Just rethrowing for now, Logs may be needed here.
-    }
+    var convertedObject = objectConverter.Convert(target);
+
+    return convertedObject;
   }
 }

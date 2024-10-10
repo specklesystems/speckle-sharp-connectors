@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 using Speckle.Converters.Common.Registration;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Common.Tests;
 
@@ -29,8 +30,7 @@ public class ConverterManagerTests
   public void Test_Null()
   {
     var sut = SetupManager("Test", typeof(TestConverter));
-    var converter = sut.ResolveConverter(typeof(string), false);
-    converter.Should().BeNull();
+    Assert.Throws<ConversionNotSupportedException>(() => sut.ResolveConverter(typeof(string), false));
   }
 
   [Test]
@@ -53,7 +53,6 @@ public class ConverterManagerTests
   public void Test_Fallback_Null()
   {
     var sut = SetupManager("Object", typeof(TestConverter));
-    var converter = sut.ResolveConverter(typeof(string), false);
-    converter.Should().BeNull();
+    Assert.Throws<ConversionNotSupportedException>(() => sut.ResolveConverter(typeof(string), false));
   }
 }

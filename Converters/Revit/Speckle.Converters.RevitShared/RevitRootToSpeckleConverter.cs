@@ -6,6 +6,7 @@ using Speckle.Converters.Common.Registration;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Converters.RevitShared.ToSpeckle;
 using Speckle.Sdk;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared;
@@ -39,19 +40,12 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
   {
     if (target is not DB.Element element)
     {
-      throw new SpeckleConversionException($"Target object is not a db element, it's a {target.GetType()}");
+      throw new ValidationException($"Target object is not a db element, it's a {target.GetType()}");
     }
 
     var objectConverter = _toSpeckle.ResolveConverter(target.GetType(), true);
 
-    if (objectConverter == null)
-    {
-      throw new SpeckleConversionException($"No conversion found for {target.GetType().Name}");
-    }
-
-    Base result =
-      objectConverter.Convert(target)
-      ?? throw new SpeckleConversionException($"Conversion of object with type {target.GetType()} returned null");
+    Base result = objectConverter.Convert(target);
 
     result.applicationId = element.UniqueId;
 

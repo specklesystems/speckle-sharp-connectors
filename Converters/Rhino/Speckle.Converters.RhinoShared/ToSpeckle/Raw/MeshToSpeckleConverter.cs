@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
 
@@ -26,12 +27,12 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
   /// </summary>
   /// <param name="target">The Rhino Mesh to be converted.</param>
   /// <returns>The converted Speckle Mesh.</returns>
-  /// <exception cref="SpeckleConversionException">Thrown when the Rhino Mesh has 0 vertices or faces.</exception>
+  /// <exception cref="Speckle.Sdk.Common.Exceptions.ValidationException">Thrown when the Rhino Mesh has 0 vertices or faces.</exception>
   public SOG.Mesh Convert(RG.Mesh target)
   {
     if (target.Vertices.Count == 0 || target.Faces.Count == 0)
     {
-      throw new SpeckleConversionException("Cannot convert a mesh with 0 vertices/faces");
+      throw new ValidationException("Cannot convert a mesh with 0 vertices/faces");
     }
 
     List<double> vertexCoordinates = new(target.Vertices.Count * 3);

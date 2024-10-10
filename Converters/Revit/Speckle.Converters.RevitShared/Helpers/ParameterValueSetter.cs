@@ -90,7 +90,7 @@ public class ParameterValueSetter(ScalingServiceToHost scalingService)
     {
       // POC: setting parameters via the above method can throw several different exceptions. We don't want any of these failed parameters to stop conversion of the object because these parameters are typically unimportant. All important parameters have been moved to specific properties in the object model. We should log these to learn more about what specific failures are occuring
     }
-    catch (SpeckleConversionException)
+    catch (SpeckleException)
     {
       // same as above
     }
@@ -137,7 +137,7 @@ public class ParameterValueSetter(ScalingServiceToHost scalingService)
       case DB.StorageType.String:
         string stringValue =
           Convert.ToString(value)
-          ?? throw new SpeckleConversionException(
+          ?? throw new ValidationException(
             $"Expected parameter value storage type to be string, but instead it was {value.GetType()}"
           );
         var temp = Regex.Replace(stringValue, "[^0-9a-zA-Z ]+", "");

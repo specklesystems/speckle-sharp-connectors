@@ -187,7 +187,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
         }
         else
         {
-          throw new SpeckleConversionException($"Failed to cast {result.GetType()} to Direct Shape.");
+          throw new SpeckleException($"Failed to cast {result.GetType()} to Direct Shape.");
         }
         conversionResults.Add(new(Status.SUCCESS, atomicObject, ds.UniqueId, "Direct Shape"));
       }
