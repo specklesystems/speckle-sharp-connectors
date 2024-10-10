@@ -8,4 +8,5 @@ public static class Consts
   public const string OS_TYPE = "os.type";
   public const string OS_SLUG = "os.slug";
   public const string RUNTIME_NAME = "runtime.name";
+  public const string USER_ID = "user.id";
 }

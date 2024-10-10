@@ -123,7 +123,9 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     {
       // 4 - Unpack the render material proxies
       rootObjectCollection[ProxyKeys.RENDER_MATERIAL] = _materialUnpacker.UnpackRenderMaterial(atomicObjects);
-
+    }
+    using (var _ = _activityFactory.Start("UnpackColors"))
+    {
       // 5 - Unpack the color proxies
       rootObjectCollection[ProxyKeys.COLOR] = _colorUnpacker.UnpackColors(atomicObjects, versionLayers.ToList());
     }
