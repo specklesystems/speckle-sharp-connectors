@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
+using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Common.Registration;
