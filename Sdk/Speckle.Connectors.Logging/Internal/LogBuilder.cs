@@ -1,8 +1,11 @@
-﻿using OpenTelemetry.Resources;
+﻿using System.Text;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Resources;
 using Serilog;
 using Serilog.Exceptions;
-using Serilog.Extensions.Logging;
-using Serilog.Sinks.OpenTelemetry;
 
 namespace Speckle.Connectors.Logging.Internal;
 
@@ -15,61 +18,78 @@ internal static class LogBuilder
     ResourceBuilder resourceBuilder
   )
   {
-    var serilogLogConfiguration = new LoggerConfiguration()
-      .MinimumLevel.Is(SpeckleLogLevelUtility.GetLevel(speckleLogging?.MinimumLevel ?? SpeckleLogLevel.Warning))
-      .Enrich.FromLogContext()
-      .Enrich.WithExceptionDetails();
-
+    Serilog.ILogger? serilogLogger = null;
+    var serviceCollection = new ServiceCollection();
     if (speckleLogging?.File is not null)
     {
+      var serilogLogConfiguration = new LoggerConfiguration()
+        .MinimumLevel.Is(SpeckleLogLevelUtility.GetLevel(speckleLogging?.MinimumLevel ?? SpeckleLogLevel.Warning))
+        .Enrich.FromLogContext()
+        .Enrich.WithExceptionDetails();
+
       // TODO: check if we have write permissions to the file.
       var logFilePath = SpecklePathProvider.LogFolderPath(applicationAndVersion);
-      logFilePath = Path.Combine(logFilePath, speckleLogging.File.Path ?? "SpeckleCoreLog.txt");
+      logFilePath = Path.Combine(logFilePath, speckleLogging?.File.Path ?? "SpeckleCoreLog.txt");
       serilogLogConfiguration = serilogLogConfiguration.WriteTo.File(
         logFilePath,
         rollingInterval: RollingInterval.Day,
         retainedFileCountLimit: 10
       );
+      serilogLogger = serilogLogConfiguration.CreateLogger();
+
+      serilogLogger
+        .ForContext("applicationAndVersion", applicationAndVersion)
+        .ForContext("connectorVersion", connectorVersion)
+        .ForContext("userApplicationDataPath", SpecklePathProvider.UserApplicationDataPath())
+        .ForContext("installApplicationDataPath", SpecklePathProvider.InstallApplicationDataPath)
+        .Information(
+          "Initialized logger inside {applicationAndVersion}/{connectorVersion}. Path info {userApplicationDataPath} {installApplicationDataPath}."
+        );
     }
 
-    if (speckleLogging?.Console ?? false)
+    var factory = LoggerFactory.Create(loggingBuilder =>
     {
-      serilogLogConfiguration = serilogLogConfiguration.WriteTo.Console();
-    }
+      if (speckleLogging?.Console ?? false)
+      {
+        loggingBuilder.AddConsole();
+      }
 
-    foreach (var otel in speckleLogging?.Otel ?? [])
-    {
-      serilogLogConfiguration = InitializeOtelLogging(serilogLogConfiguration, otel, resourceBuilder);
-    }
-    var logger = serilogLogConfiguration.CreateLogger();
+      foreach (var otel in speckleLogging?.Otel ?? [])
+      {
+        InitializeOtelLogging(loggingBuilder, otel, resourceBuilder);
+      }
+    });
 
-    logger
-      .ForContext("applicationAndVersion", applicationAndVersion)
-      .ForContext("connectorVersion", connectorVersion)
-      .ForContext("userApplicationDataPath", SpecklePathProvider.UserApplicationDataPath())
-      .ForContext("installApplicationDataPath", SpecklePathProvider.InstallApplicationDataPath)
-      .Information(
-        "Initialized logger inside {applicationAndVersion}/{connectorVersion}. Path info {userApplicationDataPath} {installApplicationDataPath}."
-      );
-
-#pragma warning disable CA2000
-    return new LoggerProvider(new SerilogLoggerProvider(logger));
-#pragma warning restore CA2000
+    return new LoggerProvider(factory);
   }
 
-  private static LoggerConfiguration InitializeOtelLogging(
-    LoggerConfiguration serilogLogConfiguration,
+  private static void InitializeOtelLogging(
+    ILoggingBuilder loggingBuilder,
     SpeckleOtelLogging speckleOtelLogging,
     ResourceBuilder resourceBuilder
   ) =>
-    serilogLogConfiguration.WriteTo.OpenTelemetry(o =>
+    loggingBuilder.AddOpenTelemetry(x =>
     {
-      o.Protocol = OtlpProtocol.HttpProtobuf;
-      o.LogsEndpoint = speckleOtelLogging.Endpoint;
-      o.Headers = speckleOtelLogging.Headers ?? o.Headers;
-      o.ResourceAttributes = resourceBuilder
-        .Build()
-        .Attributes.Concat(ActivityScope.Tags)
-        .ToDictionary(x => x.Key, x => x.Value);
+      x.AddOtlpExporter(y =>
+        {
+          y.Protocol = OtlpExportProtocol.HttpProtobuf;
+          y.Endpoint = new Uri(speckleOtelLogging.Endpoint);
+          var sb = new StringBuilder();
+          bool appendSemicolon = false;
+          foreach (var kvp in speckleOtelLogging.Headers ?? [])
+          {
+            sb.Append(kvp.Key).Append('=').Append(kvp.Value);
+            if (appendSemicolon)
+            {
+              sb.Append(',');
+            }
+            else
+            {
+              appendSemicolon = true;
+            }
+          }
+          y.Headers = sb.ToString();
+        })
+        .SetResourceBuilder(resourceBuilder);
     });
 }
