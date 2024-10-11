@@ -29,5 +29,6 @@ public static class Civil3dConnectorModule
     // additional classes
     serviceCollection.AddScoped<PropertySetDefinitionHandler>();
     serviceCollection.AddScoped<CatchmentGroupHandler>();
+    serviceCollection.AddScoped<PipeNetworkHandler>();
   }
 }

@@ -51,8 +51,6 @@ public class ClassPropertiesExtractor
         return ExtractPipeProperties(pipe);
       case CDB.Structure structure:
         return ExtractStructureProperties(structure);
-      case CDB.Part part:
-        return ExtractPartProperties(part);
 
       default:
         return null;
@@ -105,6 +103,8 @@ public class ClassPropertiesExtractor
       pipeProperties["endStructureId"] = pipe.EndStructureId.GetSpeckleApplicationId();
     }
 
+    ExtractPartProperties(pipe, pipeProperties);
+
     return pipeProperties;
   }
 
@@ -120,7 +120,6 @@ public class ClassPropertiesExtractor
         ["rotation"] = structure.Rotation,
         ["sumpDepth"] = structure.SumpDepth,
         ["sumpElevation"] = structure.SumpElevation,
-
         ["innerDiameterOrWidth"] = structure.InnerDiameterOrWidth
       };
 
@@ -130,28 +129,25 @@ public class ClassPropertiesExtractor
       structureProperties["length"] = structure.Length;
     }
 
+    ExtractPartProperties(structure, structureProperties);
+
     return structureProperties;
   }
 
-  private Dictionary<string, object?> ExtractPartProperties(CDB.Part part)
+  private void ExtractPartProperties(CDB.Part part, Dictionary<string, object?> dict)
   {
     // process the part's pipe network with the pipe network handler
     _pipeNetworkHandler.HandlePipeNetwork(part);
 
-    Dictionary<string, object?> partProperties =
-      new()
-      {
-        ["domain"] = part.Domain.ToString(),
-        ["partFamilyName"] = part.PartFamilyName,
-        ["partType"] = part.PartType.ToString(),
-      };
-
+    dict["domain"] = part.Domain.ToString();
+    dict["partFamilyName"] = part.PartFamilyName;
+    dict["partType"] = part.PartType.ToString();
     if (part.RefSurfaceId != ADB.ObjectId.Null)
     {
-      partProperties["surfaceId"] = part.RefSurfaceId.GetSpeckleApplicationId();
+      dict["surfaceId"] = part.RefSurfaceId.GetSpeckleApplicationId();
     }
 
-    return partProperties;
+    return;
   }
 
   private Dictionary<string, object?> ExtractSiteProperties(CDB.Site site)
