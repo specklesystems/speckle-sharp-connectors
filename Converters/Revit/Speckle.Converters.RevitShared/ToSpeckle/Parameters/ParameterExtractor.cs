@@ -114,6 +114,22 @@ public class ParameterExtractor
           continue;
         }
 
+        if (value is (string typeName, string familyName)) // element type dilemma
+        {
+          if (internalDefinitionName == "ELEM_FAMILY_PARAM")
+          {
+            value = familyName;
+          }
+          else if (internalDefinitionName == "ELEM_TYPE_PARAM")
+          {
+            value = typeName;
+          }
+          else
+          {
+            value = familyName + " " + typeName;
+          }
+        }
+
         var param = new Dictionary<string, object?>()
         {
           ["value"] = value,
@@ -149,7 +165,7 @@ public class ParameterExtractor
     return dict;
   }
 
-  private readonly Dictionary<DB.ElementId, string?> _elementNameCache = new();
+  private readonly Dictionary<DB.ElementId, object?> _elementNameCache = new();
 
   private object? GetValue(DB.Parameter parameter)
   {
@@ -168,13 +184,22 @@ public class ParameterExtractor
           return null;
         }
 
-        if (_elementNameCache.TryGetValue(elId, out string? value))
+        if (_elementNameCache.TryGetValue(elId, out object? value))
         {
           return value;
         }
 
         var docElement = _settingsStore.Current.Document.GetElement(elId);
-        var docElementName = docElement?.Name ?? elId.ToString();
+        object? docElementName;
+        if (docElement is DB.ElementType elementType)
+        {
+          docElementName = (elementType.Name, elementType.FamilyName); // new[] { elementType.Name, elementType.FamilyName };
+        }
+        else
+        {
+          docElementName = docElement?.Name ?? null;
+        }
+
         _elementNameCache[parameter.AsElementId()] = docElementName;
         return docElementName;
       case DB.StorageType.String:
