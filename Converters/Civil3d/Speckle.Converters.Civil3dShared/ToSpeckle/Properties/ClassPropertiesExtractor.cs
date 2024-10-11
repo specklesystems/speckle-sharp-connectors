@@ -43,30 +43,24 @@ public class ClassPropertiesExtractor
 
   private Dictionary<string, object?> ExtractCatchmentProperties(CDB.Site site)
   {
-    List<string> alignmentIds = new();
-    foreach (ADB.ObjectId alignmentId in site.GetAlignmentIds())
+    Dictionary<string, object?> catchmentProperties = new();
+
+    if (site.GetAlignmentIds().Count > 0)
     {
-      alignmentIds.Add(alignmentId.GetSpeckleApplicationId());
+      catchmentProperties["alignmentIds"] = GetSpeckleApplicationIdsFromCollection(site.GetAlignmentIds());
     }
 
-    List<string> featureLineIds = new();
-    foreach (ADB.ObjectId featureLineId in site.GetFeatureLineIds())
+    if (site.GetFeatureLineIds().Count > 0)
     {
-      featureLineIds.Add(featureLineId.GetSpeckleApplicationId());
+      catchmentProperties["featureLineIds"] = GetSpeckleApplicationIdsFromCollection(site.GetFeatureLineIds());
     }
 
-    List<string> parcelIds = new();
-    foreach (ADB.ObjectId parcelId in site.GetParcelIds())
+    if (site.GetParcelIds().Count > 0)
     {
-      parcelIds.Add(parcelId.GetSpeckleApplicationId());
+      catchmentProperties["parcelIds"] = GetSpeckleApplicationIdsFromCollection(site.GetParcelIds());
     }
 
-    return new()
-    {
-      ["alignmentIds"] = alignmentIds,
-      ["featureLineIds"] = featureLineIds,
-      ["parcelIds"] = parcelIds
-    };
+    return catchmentProperties;
   }
 
   private Dictionary<string, object?> ExtractCatchmentProperties(CDB.Catchment catchment)
@@ -88,5 +82,16 @@ public class ClassPropertiesExtractor
       ["runoffCoefficient"] = catchment.RunoffCoefficient,
       ["timeOfConcentration"] = catchment.TimeOfConcentration
     };
+  }
+
+  private List<string> GetSpeckleApplicationIdsFromCollection(ADB.ObjectIdCollection collection)
+  {
+    List<string> speckleAppIds = new(collection.Count);
+    foreach (ADB.ObjectId parcelId in collection)
+    {
+      speckleAppIds.Add(parcelId.GetSpeckleApplicationId());
+    }
+
+    return speckleAppIds;
   }
 }
