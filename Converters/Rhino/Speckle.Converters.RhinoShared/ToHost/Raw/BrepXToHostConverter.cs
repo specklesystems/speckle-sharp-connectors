@@ -7,4 +7,3 @@ public class BrepXToHostConverter : ITypedConverter<SOG.BrepX, List<RG.GeometryB
 {
   public List<RG.GeometryBase> Convert(SOG.BrepX target) => RawEncodingToHost.Convert(target);
 }
-

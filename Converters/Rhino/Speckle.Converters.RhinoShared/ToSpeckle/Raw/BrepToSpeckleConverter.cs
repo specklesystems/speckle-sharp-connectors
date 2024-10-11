@@ -43,7 +43,7 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.Brep>
   public SOG.Brep Convert(RG.Brep target)
   {
     var tol = _settingsStore.Current.Document.ModelAbsoluteTolerance;
-    target.Repair(tol); // NOTE: for objects far-ish (not that far imho) from origin, this call nukes performance and takes ages. 
+    target.Repair(tol); // NOTE: for objects far-ish (not that far imho) from origin, this call nukes performance and takes ages.
 
     // POC: CNX-9276 This should come as part of the user settings in the context object.
     // if (PreprocessGeometry)

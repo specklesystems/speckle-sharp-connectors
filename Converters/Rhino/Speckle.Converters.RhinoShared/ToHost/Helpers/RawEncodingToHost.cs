@@ -28,4 +28,3 @@ public static class RawEncodingToHost
     return brepObject.ToList();
   }
 }
-
