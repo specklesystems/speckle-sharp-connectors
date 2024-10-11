@@ -65,7 +65,31 @@ public class ParameterExtractor
       return CreateParameterDictionary(instanceParameterDictionary, null);
     }
 
-    typeParameterDictionary = ParseParameterSet(type.Parameters);
+    typeParameterDictionary = ParseParameterSet(type.Parameters); // NOTE: type parameters should be ideally proxied out for a better data layout.
+    if (type is DB.HostObjAttributes hostObjectAttr)
+    {
+      var factor = _scalingServiceToSpeckle.ScaleLength(1);
+
+      var structureDictionary = new Dictionary<string, object?>();
+      var structure = hostObjectAttr.GetCompoundStructure();
+      var layers = structure.GetLayers();
+      foreach (var layer in layers)
+      {
+        if (_settingsStore.Current.Document.GetElement(layer.MaterialId) is DB.Material material)
+        {
+          structureDictionary[material.Name] = new Dictionary<string, object>()
+          {
+            ["material"] = material.Name,
+            ["function"] = layer.Function.ToString(),
+            ["thickness"] = layer.Width * factor,
+            ["units"] = _settingsStore.Current.SpeckleUnits
+          };
+        }
+      }
+
+      typeParameterDictionary["Structure"] = structureDictionary;
+    }
+
     _typeParameterCache[typeId] = typeParameterDictionary;
 
     return CreateParameterDictionary(instanceParameterDictionary, typeParameterDictionary);
@@ -114,9 +138,9 @@ public class ParameterExtractor
           continue;
         }
 
-        if (value is (string typeName, string familyName)) // element type dilemma
+        if (value is (string typeName, string familyName)) // element type: same element, different expected values depending on the param definition
         {
-          if (internalDefinitionName == "ELEM_FAMILY_PARAM")
+          if (internalDefinitionName == "ELEM_FAMILY_PARAM") // Probably should be using the BUILTINPARAM whatever
           {
             value = familyName;
           }
@@ -191,9 +215,12 @@ public class ParameterExtractor
 
         var docElement = _settingsStore.Current.Document.GetElement(elId);
         object? docElementName;
+
+        // Note: for element types, different params point at the same element. We're getting the right value out in the parent function
+        // based on what the actual built in param name is.
         if (docElement is DB.ElementType elementType)
         {
-          docElementName = (elementType.Name, elementType.FamilyName); // new[] { elementType.Name, elementType.FamilyName };
+          docElementName = (elementType.Name, elementType.FamilyName);
         }
         else
         {
