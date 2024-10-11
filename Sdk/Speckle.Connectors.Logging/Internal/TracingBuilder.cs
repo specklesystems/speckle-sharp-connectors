@@ -24,7 +24,7 @@ internal static class TracingBuilder
       .AddHttpClientInstrumentation()
       .SetResourceBuilder(resourceBuilder)
       .SetSampler<AlwaysOnSampler>()
-      .AddProcessor(new ActivityScopeProcessor());
+      .AddProcessor(new ActivityScopeActivityProcessor());
 
     return tracerProviderBuilder.Build();
   }

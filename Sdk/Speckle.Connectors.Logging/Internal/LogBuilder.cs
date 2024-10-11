@@ -19,37 +19,44 @@ internal static class LogBuilder
   {
     var factory = LoggerFactory.Create(loggingBuilder =>
     {
-      if (speckleLogging?.File is not null)
+      if (speckleLogging?.File is not null || speckleLogging?.Console is not null)
       {
         var serilogLogConfiguration = new LoggerConfiguration()
-          .MinimumLevel.Is(SpeckleLogLevelUtility.GetLevel(speckleLogging?.MinimumLevel ?? SpeckleLogLevel.Warning))
+          .MinimumLevel.Is(SpeckleLogLevelUtility.GetLevel(speckleLogging.MinimumLevel))
           .Enrich.FromLogContext()
           .Enrich.WithExceptionDetails();
 
-        // TODO: check if we have write permissions to the file.
-        var logFilePath = SpecklePathProvider.LogFolderPath(applicationAndVersion);
-        logFilePath = Path.Combine(logFilePath, speckleLogging?.File.Path ?? "SpeckleCoreLog.txt");
-        serilogLogConfiguration = serilogLogConfiguration.WriteTo.File(
-          logFilePath,
-          rollingInterval: RollingInterval.Day,
-          retainedFileCountLimit: 10
-        );
-        var serilogLogger = serilogLogConfiguration.CreateLogger();
-
-        serilogLogger
-          .ForContext("applicationAndVersion", applicationAndVersion)
-          .ForContext("connectorVersion", connectorVersion)
-          .ForContext("userApplicationDataPath", SpecklePathProvider.UserApplicationDataPath())
-          .ForContext("installApplicationDataPath", SpecklePathProvider.InstallApplicationDataPath)
-          .Information(
-            "Initialized logger inside {applicationAndVersion}/{connectorVersion}. Path info {userApplicationDataPath} {installApplicationDataPath}."
+        if (speckleLogging.File is not null)
+        {
+          // TODO: check if we have write permissions to the file.
+          var logFilePath = SpecklePathProvider.LogFolderPath(applicationAndVersion);
+          logFilePath = Path.Combine(logFilePath, speckleLogging.File.Path ?? "SpeckleCoreLog.txt");
+          serilogLogConfiguration = serilogLogConfiguration.WriteTo.File(
+            logFilePath,
+            rollingInterval: RollingInterval.Day,
+            retainedFileCountLimit: 10
           );
-        loggingBuilder.AddSerilog(serilogLogger);
-      }
+        }
 
-      if (speckleLogging?.Console ?? false)
-      {
-        loggingBuilder.AddConsole();
+        if (speckleLogging.Console)
+        {
+          serilogLogConfiguration.WriteTo.Console();
+        }
+
+        var serilogLogger = serilogLogConfiguration.CreateLogger();
+        if (speckleLogging.File is not null)
+        {
+          serilogLogger
+            .ForContext("applicationAndVersion", applicationAndVersion)
+            .ForContext("connectorVersion", connectorVersion)
+            .ForContext("userApplicationDataPath", SpecklePathProvider.UserApplicationDataPath())
+            .ForContext("installApplicationDataPath", SpecklePathProvider.InstallApplicationDataPath)
+            .Information(
+              "Initialized logger inside {applicationAndVersion}/{connectorVersion}. Path info {userApplicationDataPath} {installApplicationDataPath}."
+            );
+        }
+
+        loggingBuilder.AddSerilog(serilogLogger);
       }
 
       foreach (var otel in speckleLogging?.Otel ?? [])
@@ -88,6 +95,7 @@ internal static class LogBuilder
           }
           y.Headers = sb.ToString();
         })
+        .AddProcessor(new ActivityScopeLogProcessor())
         .SetResourceBuilder(resourceBuilder);
     });
 }

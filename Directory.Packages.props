@@ -12,7 +12,6 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="2.2.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="2.2.0" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="2.2.0" />
     <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.1938.49" />
     <PackageVersion Include="NUnit" Version="4.1.0" />
@@ -30,6 +29,7 @@
     <PackageVersion Include="Serilog" Version="4.0.1" />
     <PackageVersion Include="Serilog.Exceptions" Version="8.4.0" />
     <PackageVersion Include="Serilog.Extensions.Logging" Version="8.0.0" />
+    <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageVersion Include="Serilog.Sinks.File" Version="6.0.0" />
     <PackageVersion Include="Speckle.AutoCAD.API" Version="2023.0.0" />
     <PackageVersion Include="Speckle.Civil3D.API" Version="2024.0.0" />
