@@ -29,6 +29,12 @@ public sealed class CatchmentGroupHandler
   public void HandleCatchmentGroup(CDB.Catchment catchment)
   {
     ADB.ObjectId catchmentGroupId = catchment.ContainingGroupId;
+
+    if (catchmentGroupId == ADB.ObjectId.Null)
+    {
+      return;
+    }
+
     string catchmentApplicationId = catchment.GetSpeckleApplicationId();
     if (CatchmentGroupProxies.TryGetValue(catchmentGroupId, out GroupProxy? value))
     {
