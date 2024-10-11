@@ -9,11 +9,11 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Converters.Autocad;
-using Speckle.Converters.Civil3d;
+using Speckle.Converters.Civil3dShared;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
 
-namespace Speckle.Connectors.Civil3d.Bindings;
+namespace Speckle.Connectors.Civil3dShared.Bindings;
 
 public sealed class Civil3dSendBinding : AutocadSendBaseBinding
 {
