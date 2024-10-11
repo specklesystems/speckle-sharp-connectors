@@ -1,4 +1,5 @@
 using Speckle.Converters.Common;
+using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converters.Civil3dShared.ToSpeckle;
 
@@ -10,9 +11,14 @@ namespace Speckle.Converters.Civil3dShared.ToSpeckle;
 public class ClassPropertiesExtractor
 {
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
+  private readonly ITypedConverter<AG.Point3dCollection, SOG.Polyline> _point3dCollectionConverter;
 
-  public ClassPropertiesExtractor(IConverterSettingsStore<Civil3dConversionSettings> settingsStore)
+  public ClassPropertiesExtractor(
+    IConverterSettingsStore<Civil3dConversionSettings> settingsStore,
+    ITypedConverter<AG.Point3dCollection, SOG.Polyline> point3dCollectionConverter
+  )
   {
+    _point3dCollectionConverter = point3dCollectionConverter;
     _settingsStore = settingsStore;
   }
 
@@ -36,8 +42,15 @@ public class ClassPropertiesExtractor
 
   private Dictionary<string, object?> ExtractCatchmentProperties(CDB.Catchment catchment)
   {
+    // get the bounding curve of the catchment
+    SOG.Polyline boundary = _point3dCollectionConverter.Convert(catchment.BoundaryPolyline3d);
+
     return new()
     {
+      ["antecedentWetness"] = catchment.AntecedentWetness,
+      ["area"] = catchment.Area,
+      ["area2d"] = catchment.Area2d,
+      ["boundary"] = boundary,
       ["hydrologicalSoilGroup"] = catchment.HydrologicalSoilGroup.ToString(),
       ["imperviousArea"] = catchment.ImperviousArea,
       ["manningsCoefficient"] = catchment.ManningsCoefficient,

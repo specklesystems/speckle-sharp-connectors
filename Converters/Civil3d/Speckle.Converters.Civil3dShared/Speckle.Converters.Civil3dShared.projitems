@@ -25,6 +25,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\PartDataExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\GridSurfaceToSpeckleMeshRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\TinSurfaceToSpeckleMeshRawConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\PropertySetToSpeckleRawConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Point3dCollectionToSpeckleRawConverter.cs" />
   </ItemGroup>
 </Project>
