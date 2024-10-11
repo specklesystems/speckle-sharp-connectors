@@ -13,7 +13,9 @@
     <Compile Include="$(MSBuildThisFileDirectory)Civil3dConversionSettingsFactory.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Civil3dRootToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Civil3dToSpeckleUnitConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Extensions\SpeckleApplicationIdExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsings.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Helpers\CatchmentGroupHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\BaseCurveExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\DisplayValueExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
