@@ -1,4 +1,6 @@
+using Autodesk.Civil.DatabaseServices;
 using Speckle.Converters.Civil3dShared.Extensions;
+using Speckle.Converters.Civil3dShared.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
@@ -13,14 +15,23 @@ public class ClassPropertiesExtractor
 {
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
   private readonly ITypedConverter<AG.Point3dCollection, SOG.Polyline> _point3dCollectionConverter;
+  private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
+  private readonly CatchmentGroupHandler _catchmentGroupHandler;
+  private readonly PipeNetworkHandler _pipeNetworkHandler;
 
   public ClassPropertiesExtractor(
     IConverterSettingsStore<Civil3dConversionSettings> settingsStore,
-    ITypedConverter<AG.Point3dCollection, SOG.Polyline> point3dCollectionConverter
+    ITypedConverter<AG.Point3dCollection, SOG.Polyline> point3dCollectionConverter,
+    ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
+    CatchmentGroupHandler catchmentGroupHandler,
+    PipeNetworkHandler pipeNetworkHandler
   )
   {
     _point3dCollectionConverter = point3dCollectionConverter;
+    _pointConverter = pointConverter;
     _settingsStore = settingsStore;
+    _catchmentGroupHandler = catchmentGroupHandler;
+    _pipeNetworkHandler = pipeNetworkHandler;
   }
 
   /// <summary>
@@ -35,7 +46,14 @@ public class ClassPropertiesExtractor
       case CDB.Catchment catchment:
         return ExtractCatchmentProperties(catchment);
       case CDB.Site site:
-        return ExtractCatchmentProperties(site);
+        return ExtractSiteProperties(site);
+      case CDB.Pipe pipe:
+        return ExtractPipeProperties(pipe);
+      case CDB.Structure structure:
+        return ExtractStructureProperties(structure);
+      case CDB.Part part:
+        return ExtractPartProperties(part);
+
       default:
         return null;
     }
@@ -60,7 +78,83 @@ public class ClassPropertiesExtractor
     return pointProperties;
   }
 
-  private Dictionary<string, object?> ExtractCatchmentProperties(CDB.Site site)
+  private Dictionary<string, object?> ExtractPipeProperties(CDB.Pipe pipe)
+  {
+    Dictionary<string, object?> pipeProperties =
+      new()
+      {
+        ["innerDiameterOrWidth"] = pipe.InnerDiameterOrWidth,
+        ["innerHeight"] = pipe.InnerHeight,
+        ["slope"] = pipe.Slope,
+        ["shape"] = pipe.CrossSectionalShape.ToString(),
+        ["length2d"] = pipe.Length2D,
+        ["minimumCover"] = pipe.MinimumCover,
+        ["maximumCover"] = pipe.MaximumCover,
+        ["junctionLoss"] = pipe.JunctionLoss,
+        ["flowDirection"] = pipe.FlowDirection.ToString(),
+        ["flowRate"] = pipe.FlowRate
+      };
+
+    if (pipe.StartStructureId != ADB.ObjectId.Null)
+    {
+      pipeProperties["startStructureId"] = pipe.StartStructureId.GetSpeckleApplicationId();
+    }
+
+    if (pipe.EndStructureId != ADB.ObjectId.Null)
+    {
+      pipeProperties["endStructureId"] = pipe.EndStructureId.GetSpeckleApplicationId();
+    }
+
+    return pipeProperties;
+  }
+
+  private Dictionary<string, object?> ExtractStructureProperties(CDB.Structure structure)
+  {
+    var location = _pointConverter.Convert(structure.Location);
+
+    Dictionary<string, object?> structureProperties =
+      new()
+      {
+        ["location"] = location,
+        ["northing"] = structure.Northing,
+        ["rotation"] = structure.Rotation,
+        ["sumpDepth"] = structure.SumpDepth,
+        ["sumpElevation"] = structure.SumpElevation,
+
+        ["innerDiameterOrWidth"] = structure.InnerDiameterOrWidth
+      };
+
+    if (structure.BoundingShape == BoundingShapeType.Box)
+    {
+      structureProperties["innerLength"] = structure.InnerLength;
+      structureProperties["length"] = structure.Length;
+    }
+
+    return structureProperties;
+  }
+
+  private Dictionary<string, object?> ExtractPartProperties(CDB.Part part)
+  {
+    // process the part's pipe network with the pipe network handler
+    _pipeNetworkHandler.HandlePipeNetwork(part);
+
+    Dictionary<string, object?> partProperties =
+      new()
+      {
+        ["domain"] = part.Domain.ToString(),
+        ["partFamilyName"] = part.PartFamilyName,
+        ["partType"] = part.PartType.ToString(),
+      };
+
+    if (part.RefSurfaceId != ADB.ObjectId.Null)
+    {
+      partProperties["surfaceId"] = part.RefSurfaceId.GetSpeckleApplicationId();
+    }
+
+    return partProperties;
+  }
+
+  private Dictionary<string, object?> ExtractSiteProperties(CDB.Site site)
   {
     Dictionary<string, object?> catchmentProperties = new();
 
@@ -86,6 +180,9 @@ public class ClassPropertiesExtractor
   {
     // get the bounding curve of the catchment
     SOG.Polyline boundary = _point3dCollectionConverter.Convert(catchment.BoundaryPolyline3d);
+
+    // use the catchment group handler to process the catchment's group
+    _catchmentGroupHandler.HandleCatchmentGroup(catchment);
 
     return new()
     {

@@ -43,5 +43,6 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<GeneralPropertiesExtractor>();
     serviceCollection.AddScoped<ClassPropertiesExtractor>();
     serviceCollection.AddScoped<CatchmentGroupHandler>();
+    serviceCollection.AddScoped<PipeNetworkHandler>();
   }
 }
