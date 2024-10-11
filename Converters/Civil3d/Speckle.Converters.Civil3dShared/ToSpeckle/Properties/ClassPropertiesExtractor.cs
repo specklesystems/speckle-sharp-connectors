@@ -1,3 +1,4 @@
+using Speckle.Converters.Civil3dShared.Extensions;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
@@ -29,15 +30,43 @@ public class ClassPropertiesExtractor
   /// <returns></returns>
   public Dictionary<string, object?>? GetClassProperties(CDB.Entity entity)
   {
-    Dictionary<string, object?>? classPropertiesDict = null;
     switch (entity)
     {
       case CDB.Catchment catchment:
-        classPropertiesDict = ExtractCatchmentProperties(catchment);
-        break;
+        return ExtractCatchmentProperties(catchment);
+      case CDB.Site site:
+        return ExtractCatchmentProperties(site);
+      default:
+        return null;
+    }
+  }
+
+  private Dictionary<string, object?> ExtractCatchmentProperties(CDB.Site site)
+  {
+    List<string> alignmentIds = new();
+    foreach (ADB.ObjectId alignmentId in site.GetAlignmentIds())
+    {
+      alignmentIds.Add(alignmentId.GetSpeckleApplicationId());
     }
 
-    return classPropertiesDict;
+    List<string> featureLineIds = new();
+    foreach (ADB.ObjectId featureLineId in site.GetFeatureLineIds())
+    {
+      featureLineIds.Add(featureLineId.GetSpeckleApplicationId());
+    }
+
+    List<string> parcelIds = new();
+    foreach (ADB.ObjectId parcelId in site.GetParcelIds())
+    {
+      parcelIds.Add(parcelId.GetSpeckleApplicationId());
+    }
+
+    return new()
+    {
+      ["alignmentIds"] = alignmentIds,
+      ["featureLineIds"] = featureLineIds,
+      ["parcelIds"] = parcelIds
+    };
   }
 
   private Dictionary<string, object?> ExtractCatchmentProperties(CDB.Catchment catchment)
