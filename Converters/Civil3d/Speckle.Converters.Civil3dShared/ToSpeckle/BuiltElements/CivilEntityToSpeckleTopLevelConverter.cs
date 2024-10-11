@@ -11,21 +11,18 @@ namespace Speckle.Converters.Civil3dShared.ToSpeckle.BuiltElements;
 [NameAndRankValue(nameof(CDB.Entity), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
 {
-  private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
   private readonly ITypedConverter<AECPropDB.PropertySet, List<DataField>> _propertySetConverter;
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly BaseCurveExtractor _baseCurveExtractor;
 
   public CivilEntityToSpeckleTopLevelConverter(
-    ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
     ITypedConverter<AECPropDB.PropertySet, List<DataField>> propertySetConverter,
     IConverterSettingsStore<Civil3dConversionSettings> settingsStore,
     DisplayValueExtractor displayValueExtractor,
     BaseCurveExtractor baseCurveExtractor
   )
   {
-    _pointConverter = pointConverter;
     _propertySetConverter = propertySetConverter;
     _settingsStore = settingsStore;
     _displayValueExtractor = displayValueExtractor;
@@ -42,8 +39,8 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     civilObject["units"] = _settingsStore.Current.SpeckleUnits;
 
     // get basecurve
-    List<ICurve> baseCurves = _baseCurveExtractor.GetBaseCurve(target);
-    if (baseCurves.Count > 0)
+    List<ICurve>? baseCurves = _baseCurveExtractor.GetBaseCurve(target);
+    if (baseCurves is not null)
     {
       civilObject["baseCurves"] = baseCurves;
     }

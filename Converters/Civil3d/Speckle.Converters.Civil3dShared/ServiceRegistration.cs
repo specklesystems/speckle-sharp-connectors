@@ -40,5 +40,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<BaseCurveExtractor>();
     serviceCollection.AddScoped<PropertySetExtractor>();
     serviceCollection.AddScoped<PropertySetDefinitionHandler>();
+    serviceCollection.AddScoped<GeneralPropertiesExtractor>();
+    serviceCollection.AddScoped<ClassPropertiesExtractor>();
   }
 }

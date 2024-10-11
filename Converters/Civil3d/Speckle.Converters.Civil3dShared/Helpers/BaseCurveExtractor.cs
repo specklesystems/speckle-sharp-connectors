@@ -29,10 +29,8 @@ public sealed class BaseCurveExtractor
     _converterSettings = converterSettings;
   }
 
-  public List<Speckle.Objects.ICurve> GetBaseCurve(CDB.Entity entity)
+  public List<Speckle.Objects.ICurve>? GetBaseCurve(CDB.Entity entity)
   {
-    List<Speckle.Objects.ICurve> result = new();
-
     switch (entity)
     {
       // rant: if this is a pipe, the BaseCurve prop is fake news && will return a DB.line with start and endpoints set to [0,0,0] & [0,0,1]
@@ -43,14 +41,15 @@ public sealed class BaseCurveExtractor
           //pipe.SubEntityType == PipeSubEntityType.Straight ?
           _lineConverter.Convert(new AG.LineSegment3d(pipe.StartPoint, pipe.EndPoint));
         //: _arcConverter.Convert(pipe.Curve2d);
-        result.Add(pipeCurve);
-        break;
-      default:
-        ICurve baseCurve = _curveConverter.Convert(entity.BaseCurve);
-        result.Add(baseCurve);
-        break;
-    }
+        return new() { pipeCurve };
 
-    return result;
+      case CDB.Alignment:
+        ICurve baseCurve = _curveConverter.Convert(entity.BaseCurve);
+        return new() { baseCurve };
+
+      // for any entities that don't use their basecurve prop
+      default:
+        return null;
+    }
   }
 }
