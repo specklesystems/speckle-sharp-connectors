@@ -5,7 +5,7 @@ namespace Speckle.Connectors.Logging;
 
 public static class ActivityScope
 {
-  private static readonly AsyncLocal<Dictionary<string, object>> s_tags = new();
+  private static readonly AsyncLocal<Dictionary<string, object>> s_tags = new() { Value = new() };
 
   public static IReadOnlyDictionary<string, object> Tags => s_tags.Value;
 
