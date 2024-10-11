@@ -54,7 +54,7 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
       ?? throw new SpeckleConversionException($"Conversion of object with type {target.GetType()} returned null");
 
     result.applicationId = element.UniqueId;
-    
+
     // Add ElementID to the converted objects
     result["elementId"] = element.Id.ToString()!;
 
