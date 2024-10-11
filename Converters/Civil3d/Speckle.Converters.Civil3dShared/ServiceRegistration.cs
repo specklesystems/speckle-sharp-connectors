@@ -1,10 +1,12 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Speckle.Converters.Autocad;
+using Speckle.Converters.Civil3dShared.Helpers;
+using Speckle.Converters.Civil3dShared.ToSpeckle;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Registration;
 using Speckle.Sdk;
 
-namespace Speckle.Converters.Civil3d;
+namespace Speckle.Converters.Civil3dShared;
 
 public static class ServiceRegistration
 {
@@ -16,7 +18,7 @@ public static class ServiceRegistration
     serviceCollection.AddMatchingInterfacesAsTransient(civil3dAssembly);
     serviceCollection.AddMatchingInterfacesAsTransient(autocadAssembly);
     // Register single root
-    serviceCollection.AddRootCommon<Civil3dRootToHostConverter>(civil3dAssembly);
+    serviceCollection.AddRootCommon<Civil3dRootToSpeckleConverter>(civil3dAssembly);
 
     // register all application converters
     serviceCollection.AddApplicationConverters<Civil3dToSpeckleUnitConverter, Autodesk.Aec.BuiltInUnit>(
@@ -31,5 +33,12 @@ public static class ServiceRegistration
       IConverterSettingsStore<AutocadConversionSettings>,
       ConverterSettingsStore<AutocadConversionSettings>
     >();
+
+    // add other classes
+    serviceCollection.AddScoped<PartDataExtractor>();
+    serviceCollection.AddScoped<DisplayValueExtractor>();
+    serviceCollection.AddScoped<BaseCurveExtractor>();
+    serviceCollection.AddScoped<PropertySetExtractor>();
+    serviceCollection.AddScoped<PropertySetDefinitionHandler>();
   }
 }
