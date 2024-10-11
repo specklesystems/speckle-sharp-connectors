@@ -13,7 +13,7 @@ namespace Speckle.Converters.RevitShared;
 public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
 {
   private readonly IConverterManager<IToSpeckleTopLevelConverter> _toSpeckle;
-  private readonly ITypedConverter<DB.Element, List<Dictionary<string, object>>> _materialQuantityConverter;
+  private readonly ITypedConverter<DB.Element, Dictionary<string, object>> _materialQuantityConverter;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ParameterExtractor _parameterExtractor;
   private readonly ILogger<RevitRootToSpeckleConverter> _logger;
@@ -22,7 +22,7 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
 
   public RevitRootToSpeckleConverter(
     IConverterManager<IToSpeckleTopLevelConverter> toSpeckle,
-    ITypedConverter<DB.Element, List<Dictionary<string, object>>> materialQuantityConverter,
+    ITypedConverter<DB.Element, Dictionary<string, object>> materialQuantityConverter,
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ParameterExtractor parameterExtractor,
     ILogger<RevitRootToSpeckleConverter> logger
