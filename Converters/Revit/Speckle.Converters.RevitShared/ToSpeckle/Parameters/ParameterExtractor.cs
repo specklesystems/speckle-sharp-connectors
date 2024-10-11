@@ -68,8 +68,8 @@ public class ParameterExtractor
     typeParameterDictionary = ParseParameterSet(type.Parameters); // NOTE: type parameters should be ideally proxied out for a better data layout.
     if (type is DB.HostObjAttributes hostObjectAttr)
     {
+      // NOTE: this could be paired up and merged with material quantities - they're pretty much the same :/
       var factor = _scalingServiceToSpeckle.ScaleLength(1);
-
       var structureDictionary = new Dictionary<string, object?>();
       var structure = hostObjectAttr.GetCompoundStructure();
       var layers = structure.GetLayers();
