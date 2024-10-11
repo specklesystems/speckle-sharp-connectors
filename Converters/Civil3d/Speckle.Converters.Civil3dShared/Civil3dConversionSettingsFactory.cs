@@ -1,7 +1,7 @@
 using Speckle.Converters.Common;
 using Speckle.InterfaceGenerator;
 
-namespace Speckle.Converters.Civil3d;
+namespace Speckle.Converters.Civil3dShared;
 
 [GenerateAutoInterface]
 public class Civil3dConversionSettingsFactory(IHostToSpeckleUnitConverter<AAEC.BuiltInUnit> unitsConverter)

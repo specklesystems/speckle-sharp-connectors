@@ -3,7 +3,7 @@ using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Other;
 using AECPropDB = Autodesk.Aec.PropertyData.DatabaseServices;
 
-namespace Speckle.Converters.Civil3d.ToSpeckle.Raw;
+namespace Speckle.Converters.Civil3dShared.ToSpeckle.Raw;
 
 public class PropertySetToSpeckleRawConverter : ITypedConverter<AECPropDB.PropertySet, List<DataField>>
 {
