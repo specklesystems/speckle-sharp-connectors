@@ -36,29 +36,37 @@ public static class Connector
       application.Name + " " + HostApplications.GetVersion(version),
       application.Slug,
       Assembly.GetExecutingAssembly().GetVersion(),
-      new(
 #if DEBUG || LOCAL
+      new(
         new SpeckleLogging(Console: true, MinimumLevel: SpeckleLogLevel.Debug),
         new SpeckleTracing(Console: false),
         new SpeckleMetrics(Console: true)
+      )
 #else
+      new(
         new SpeckleLogging(
           Console: true,
-          Otel: new(
-            Endpoint: "https://seq-dev.speckle.systems/ingest/otlp/v1/logs",
-            Headers: new() { { "X-Seq-ApiKey", "y5YnBp12ZE1Czh4tzZWn" } }
-          ),
+          Otel:
+          [
+            new(
+              Endpoint: "https://seq-dev.speckle.systems/ingest/otlp/v1/logs",
+              Headers: new() { { "X-Seq-ApiKey", "y5YnBp12ZE1Czh4tzZWn" } }
+            )
+          ],
           MinimumLevel: SpeckleLogLevel.Warning
         ),
         new SpeckleTracing(
           Console: false,
-          Otel: new(
-            Endpoint: "https://seq-dev.speckle.systems/ingest/otlp/v1/traces",
-            Headers: new() { { "X-Seq-ApiKey", "y5YnBp12ZE1Czh4tzZWn" } }
-          )
+          Otel:
+          [
+            new(
+              Endpoint: "https://seq-dev.speckle.systems/ingest/otlp/v1/traces",
+              Headers: new() { { "X-Seq-ApiKey", "y5YnBp12ZE1Czh4tzZWn" } }
+            )
+          ]
         )
-#endif
       )
+#endif
     );
 
     serviceCollection.AddLogging(x => x.AddProvider(new SpeckleLogProvider(logging)));
