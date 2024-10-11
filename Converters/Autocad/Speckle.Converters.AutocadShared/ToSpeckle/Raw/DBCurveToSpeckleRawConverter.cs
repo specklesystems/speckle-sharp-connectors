@@ -53,9 +53,9 @@ public class DBCurveToSpeckleRawConverter : ITypedConverter<ADB.Curve, Objects.I
     target switch
     {
       ADB.Line line => _lineConverter.Convert(line),
-      //ADB.Polyline polyline => _polylineConverter.Convert(polyline),
-      //ADB.Polyline2d polyline2d => _polyline2dConverter.Convert(polyline2d),
-      //ADB.Polyline3d polyline3d => _polyline3dConverter.Convert(polyline3d),
+      ADB.Polyline polyline => _polylineConverter.Convert(polyline),
+      ADB.Polyline2d polyline2d => _polyline2dConverter.Convert(polyline2d),
+      ADB.Polyline3d polyline3d => _polyline3dConverter.Convert(polyline3d),
       ADB.Arc arc => _arcConverter.Convert(arc),
       ADB.Circle circle => _circleConverter.Convert(circle),
       ADB.Ellipse ellipse => _ellipseConverter.Convert(ellipse),
