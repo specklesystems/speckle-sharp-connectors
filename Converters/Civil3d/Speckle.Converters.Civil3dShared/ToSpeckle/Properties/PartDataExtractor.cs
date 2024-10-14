@@ -31,21 +31,19 @@ public class PartDataExtractor
     foreach (CDB.PartDataField field in partData.GetAllDataFields())
     {
       var value = GetValue(field);
-      //var isNullOrEmpty = value == null || (value is string s && string.IsNullOrEmpty(s));
+      string fieldName = field.Context.ToString(); // we're using the context for the field name because it is more human-readable than the name prop
 
       var fieldDictionary = new Dictionary<string, object?>()
       {
         ["value"] = value,
         ["name"] = field.Name,
-        ["context"] = field.Context.ToString(),
-        ["isFromRange"] = field.IsFromRange,
-        ["isReadOnly"] = field.IsReadOnly,
+        ["context"] = fieldName,
         ["units"] = field.Units
       };
 
-      if (!result.ContainsKey(field.Name))
+      if (!result.ContainsKey(fieldName))
       {
-        result.Add(field.Name, fieldDictionary);
+        result.Add(fieldName, fieldDictionary);
       }
     }
 
