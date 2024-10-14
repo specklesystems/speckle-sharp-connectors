@@ -11,5 +11,5 @@ public interface ITransactionManager : IDisposable
   void StartSubtransaction();
 
   // POC improve how the error handling behaviour is selected
-  void StartTransaction(bool enableFailurePreprocessor = false);
+  void StartTransaction(bool enableFailurePreprocessor = false, string name = "Speckle Transaction");
 }

@@ -25,6 +25,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Speckle.Revit2024.Fakes" VersionOverride="[0.3.0, 1.0.0)" />
+    <PackageReference Include="Speckle.Revit2024.Fakes" />
   </ItemGroup>
 </Project>
