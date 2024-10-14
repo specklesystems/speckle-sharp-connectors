@@ -37,7 +37,7 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     civilObject["units"] = _settingsStore.Current.SpeckleUnits;
 
     // get basecurve
-    List<ICurve>? baseCurves = _baseCurveExtractor.GetBaseCurve(target);
+    List<ICurve>? baseCurves = _baseCurveExtractor.GetBaseCurves(target);
     if (baseCurves is not null)
     {
       civilObject["baseCurves"] = baseCurves;

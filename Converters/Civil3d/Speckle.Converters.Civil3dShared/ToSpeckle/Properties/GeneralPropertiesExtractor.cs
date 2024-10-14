@@ -1,4 +1,5 @@
 using System.Reflection;
+using Speckle.Converters.Civil3dShared.Extensions;
 
 namespace Speckle.Converters.Civil3dShared.ToSpeckle;
 
@@ -16,15 +17,58 @@ public class GeneralPropertiesExtractor
   /// <returns></returns>
   public Dictionary<string, object?>? GetGeneralProperties(CDB.Entity entity)
   {
-    Dictionary<string, object?>? generalPropertiesDict = null;
     switch (entity)
     {
       // surface -> properties -> statistics -> general, extended, and tin/grid properties
       case CDB.Surface surface:
-        generalPropertiesDict = ExtractSurfaceProperties(surface);
-        break;
+        return ExtractSurfaceProperties(surface);
+
+      // alignment -> properties -> station control -> station equations, station information, reference point
+      // alignment -> properties -> offset parameters -> parent alignment
+      case CDB.Alignment alignment:
+        return ExtractAlignmentProperties(alignment);
+
+      default:
+        return null;
+    }
+  }
+
+  private Dictionary<string, object?> ExtractAlignmentProperties(CDB.Alignment alignment)
+  {
+    Dictionary<string, object?> generalPropertiesDict = new();
+
+    // get station control props
+    Dictionary<string, object?> stationControlDict = new();
+    Dictionary<string, object?> stationEquationsDict = new();
+    int equationCount = 0;
+    foreach (var stationEquation in alignment.StationEquations)
+    {
+      stationEquationsDict[equationCount.ToString()] = new Dictionary<string, object>()
+      {
+        ["rawStationBack"] = stationEquation.RawStationBack,
+        ["stationBack"] = stationEquation.StationBack,
+        ["stationAhead"] = stationEquation.StationAhead
+      };
+    }
+    stationControlDict["Station Equations"] = stationEquationsDict;
+
+    // get offset alignment props
+    if (alignment.IsOffsetAlignment)
+    {
+      var offsetInfo = alignment.OffsetAlignmentInfo;
+      Dictionary<string, object?> offsetAlignmentDict =
+        new()
+        {
+          ["side"] = offsetInfo.Side.ToString(),
+          ["parentAlignmentId"] = offsetInfo.ParentAlignmentId.GetSpeckleApplicationId(),
+          ["nominalOffset"] = offsetInfo.NominalOffset
+        };
+
+      generalPropertiesDict["Offset Alignment"] = offsetAlignmentDict;
     }
 
+    // set all general props
+    generalPropertiesDict["Station Control"] = stationControlDict;
     return generalPropertiesDict;
   }
 
