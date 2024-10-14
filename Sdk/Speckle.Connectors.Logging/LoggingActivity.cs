@@ -30,15 +30,17 @@ public readonly struct LoggingActivity
         _ => throw new ArgumentOutOfRangeException(nameof(code), code, null)
       }
     );
-  
-  
-  
+
   public void InjectHeaders(Action<string, string> header) =>
-    DistributedContextPropagator.Current.Inject(_activity, header, static (carrier, key, value) =>
-    {
-      if (carrier is Action<string, string> request)
+    DistributedContextPropagator.Current.Inject(
+      _activity,
+      header,
+      static (carrier, key, value) =>
       {
-        request.Invoke(key, value);
+        if (carrier is Action<string, string> request)
+        {
+          request.Invoke(key, value);
+        }
       }
-    });
+    );
 }
