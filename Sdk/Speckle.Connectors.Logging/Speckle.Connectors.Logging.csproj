@@ -21,6 +21,5 @@
     <PackageReference Include="Serilog.Extensions.Logging"  PrivateAssets="all"/>
     <PackageReference Include="Serilog.Sinks.Console" PrivateAssets="all"/>
     <PackageReference Include="Serilog.Sinks.File" PrivateAssets="all"/>
-    <PackageReference Include="Serilog.Sinks.OpenTelemetry" PrivateAssets="all"/>
   </ItemGroup>
 </Project>

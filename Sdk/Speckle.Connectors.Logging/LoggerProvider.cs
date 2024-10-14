@@ -1,10 +1,14 @@
-﻿using Serilog.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 
 namespace Speckle.Connectors.Logging;
 
-public sealed class LoggerProvider(SerilogLoggerProvider provider) : IDisposable
+public sealed class LoggerProvider : IDisposable
 {
-  public Logger CreateLogger(string categoryName) => new(provider.CreateLogger(categoryName));
+  private readonly ILoggerFactory _provider;
 
-  public void Dispose() => provider.Dispose();
+  internal LoggerProvider(ILoggerFactory provider) => _provider = provider;
+
+  public Logger CreateLogger(string categoryName) => new(_provider.CreateLogger(categoryName));
+
+  public void Dispose() => _provider.Dispose();
 }
