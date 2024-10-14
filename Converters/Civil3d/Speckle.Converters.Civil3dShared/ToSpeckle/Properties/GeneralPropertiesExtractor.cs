@@ -28,9 +28,126 @@ public class GeneralPropertiesExtractor
       case CDB.Alignment alignment:
         return ExtractAlignmentProperties(alignment);
 
+      // corridor -> properties -> codes, featurelines, surfaces
+      case CDB.Corridor corridor:
+        return ExtractCorridorProperties(corridor);
+
+      //case CDB.Assembly assembly:
+      //return ExtractAssemblyProperties(assembly);
+
+      //case CDB.Subassembly subassembly:
+      //return ExtractSubassemblyProperties(subassembly);
+
       default:
         return null;
     }
+  }
+
+  //private Dictionary<string, object?> ExtractSubassemblyProperties(CDB.Subassembly subassembly) { }
+
+  //private Dictionary<string, object?> ExtractAssemblyProperties(CDB.Assembly assembly) { }
+
+  private void ProcessCorridorFeaturelinePoints(
+    CDB.CorridorFeatureLine featureline,
+    Dictionary<string, Dictionary<string, object?>> featureLinesDict
+  )
+  {
+    if (featureLinesDict.TryGetValue(featureline.CodeName, out Dictionary<string, object?> value))
+    {
+      Dictionary<string, object?> pointsDict = new(featureline.FeatureLinePoints.Count);
+      int pointCount = 0;
+      foreach (CDB.FeatureLinePoint point in featureline.FeatureLinePoints)
+      {
+        pointsDict[pointCount.ToString()] = new Dictionary<string, object?>()
+        {
+          ["station"] = point.Station,
+          ["xyz"] = point.XYZ.ToArray(),
+          ["isBreak"] = point.IsBreak,
+          ["offset"] = point.Offset
+        };
+
+        pointCount++;
+      }
+
+      value["featureLinePoints"] = pointsDict;
+    }
+  }
+
+  private Dictionary<string, object?> ExtractCorridorProperties(CDB.Corridor corridor)
+  {
+    Dictionary<string, object?> generalPropertiesDict = new();
+
+    // get codes props
+    Dictionary<string, object?> codesDict =
+      new()
+      {
+        ["link"] = corridor.GetLinkCodes(),
+        ["point"] = corridor.GetPointCodes(),
+        ["shape"] = corridor.GetShapeCodes()
+      };
+    generalPropertiesDict["codes"] = codesDict;
+
+    // get feature lines props
+    // this is pretty complicated: need to extract featureline points as dicts, but can only do this by iterating through baselines. Need to match the iterated featurelines with the featureline code info.
+    Dictionary<string, Dictionary<string, object?>> featureLinesDict = new();
+    // first build dict from the code info
+    foreach (CDB.FeatureLineCodeInfo featureLineCode in corridor.FeatureLineCodeInfos)
+    {
+      featureLinesDict[featureLineCode.CodeName] = new Dictionary<string, object?>()
+      {
+        ["codeName"] = featureLineCode.CodeName,
+        ["isConnected"] = featureLineCode.IsConnected,
+        ["payItems"] = featureLineCode.PayItems
+      };
+    }
+    // then iterate through baseline featurelines to populate point info
+    foreach (CDB.Baseline baseline in corridor.Baselines)
+    {
+      // main featurelines
+      foreach (
+        CDB.FeatureLineCollection mainFeaturelineCollection in baseline
+          .MainBaselineFeatureLines
+          .FeatureLineCollectionMap
+      )
+      {
+        foreach (CDB.CorridorFeatureLine featureline in mainFeaturelineCollection)
+        {
+          ProcessCorridorFeaturelinePoints(featureline, featureLinesDict);
+        }
+      }
+
+      // offset featurelines
+      foreach (CDB.BaselineFeatureLines offsetFeaturelineCollection in baseline.OffsetBaselineFeatureLinesCol)
+      {
+        foreach (
+          CDB.FeatureLineCollection featurelineCollection in offsetFeaturelineCollection.FeatureLineCollectionMap
+        )
+        {
+          foreach (CDB.CorridorFeatureLine featureline in featurelineCollection)
+          {
+            ProcessCorridorFeaturelinePoints(featureline, featureLinesDict);
+          }
+        }
+      }
+    }
+
+    generalPropertiesDict["Feature Lines"] = featureLinesDict;
+
+    // get surfaces props
+    Dictionary<string, object?> surfacesDict = new();
+    foreach (CDB.CorridorSurface surface in corridor.CorridorSurfaces)
+    {
+      surfacesDict[surface.Name] = new Dictionary<string, object?>()
+      {
+        ["name"] = surface.Name,
+        ["surfaceId"] = surface.SurfaceId.GetSpeckleApplicationId(),
+        ["description"] = surface.Description,
+        ["overhangCorrection"] = surface.OverhangCorrection.ToString()
+      };
+    }
+    generalPropertiesDict["Surfaces"] = surfacesDict;
+
+    return generalPropertiesDict;
   }
 
   private Dictionary<string, object?> ExtractAlignmentProperties(CDB.Alignment alignment)
@@ -51,6 +168,7 @@ public class GeneralPropertiesExtractor
         ["stationAhead"] = stationEquation.StationAhead,
         ["equationType"] = stationEquation.EquationType.ToString()
       };
+      equationCount++;
     }
     stationControlDict["Station Equations"] = stationEquationsDict;
 
@@ -78,6 +196,7 @@ public class GeneralPropertiesExtractor
         ["station"] = designSpeed.Station,
         ["value"] = designSpeed.Value
       };
+      speedsCount++;
     }
     designCriteriaDict["Design Speeds"] = designSpeedsDict;
 

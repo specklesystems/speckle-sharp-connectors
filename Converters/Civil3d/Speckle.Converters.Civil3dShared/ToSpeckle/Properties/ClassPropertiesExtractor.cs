@@ -46,14 +46,19 @@ public class ClassPropertiesExtractor
         return ExtractCatchmentProperties(catchment);
       case CDB.Site site:
         return ExtractSiteProperties(site);
+
+      // pipe networks
       case CDB.Pipe pipe:
         return ExtractPipeProperties(pipe);
       case CDB.Structure structure:
         return ExtractStructureProperties(structure);
+
+      // alignments
       case CDB.Alignment alignment:
         return ExtractAlignmentProperties(alignment);
       case CDB.Profile profile:
         return ExtractProfileProperties(profile);
+
       default:
         return null;
     }

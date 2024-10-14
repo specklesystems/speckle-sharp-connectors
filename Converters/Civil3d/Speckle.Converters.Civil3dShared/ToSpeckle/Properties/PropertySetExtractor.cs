@@ -30,7 +30,7 @@ public class PropertySetExtractor
   /// </summary>
   /// <param name="dbObject"></param>
   /// <returns></returns>
-  public Dictionary<string, object?>? GetPropertySets(ADB.DBObject dbObject)
+  public Dictionary<string, object?>? GetPropertySets(ADB.DBObject dbObject, bool storeDefinition = true)
   {
     ADB.ObjectIdCollection? propertySetIds = null;
 
@@ -56,7 +56,11 @@ public class PropertySetExtractor
         AAECPDB.PropertySet propertySet = (AAECPDB.PropertySet)tr.GetObject(id, ADB.OpenMode.ForRead);
 
         // parse property sets within this transaction, since we'll need it for retrieving the definition as well
-        if (ParsePropertySet(propertySet, tr) is (string propertySetName, Dictionary<string, object?> propertySetValue))
+        if (
+          ParsePropertySet(propertySet, tr, storeDefinition) is
+
+          (string propertySetName, Dictionary<string, object?> propertySetValue)
+        )
         {
           propertySets[propertySetName] = propertySetValue;
         }
@@ -67,27 +71,34 @@ public class PropertySetExtractor
     }
   }
 
-  private (string, Dictionary<string, object?>)? ParsePropertySet(AAECPDB.PropertySet propertySet, ADB.Transaction tr)
+  private (string, Dictionary<string, object?>)? ParsePropertySet(
+    AAECPDB.PropertySet propertySet,
+    ADB.Transaction tr,
+    bool storeDefinition
+  )
   {
     try
     {
       // var isNullOrEmpty = value == null || (value is string s && string.IsNullOrEmpty(s));
       // POC: should add same check as in revit for sending null or empty values
-
       var setDefinition = (AAECPDB.PropertySetDefinition)
         tr.GetObject(propertySet.PropertySetDefinition, ADB.OpenMode.ForRead);
-
-      (Dictionary<int, string> propertyDefinitionNames, string name) = _propertySetDefinitionHandler.HandleDefinition(
-        setDefinition
-      );
+      Dictionary<int, string>? propertyDefinitionNames = null;
+      string name = setDefinition.Name;
+      if (storeDefinition)
+      {
+        propertyDefinitionNames = _propertySetDefinitionHandler.HandleDefinition(setDefinition);
+      }
 
       // get all property values in the propertyset
       Dictionary<string, object?> properties = new();
       foreach (AAECPDB.PropertySetData data in propertySet.PropertySetData)
       {
-        string dataName = propertyDefinitionNames.TryGetValue(data.Id, out string propertyDefinitionName)
-          ? propertyDefinitionName
-          : data.FieldBucketId;
+        string dataName =
+          propertyDefinitionNames is not null
+          && propertyDefinitionNames.TryGetValue(data.Id, out string propertyDefinitionName)
+            ? propertyDefinitionName
+            : data.FieldBucketId;
 
         var value = GetValue(data);
 

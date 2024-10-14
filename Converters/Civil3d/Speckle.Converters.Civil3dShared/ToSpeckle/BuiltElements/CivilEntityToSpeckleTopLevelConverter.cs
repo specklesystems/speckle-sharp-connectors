@@ -14,18 +14,21 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly BaseCurveExtractor _baseCurveExtractor;
   private readonly ClassPropertiesExtractor _classPropertiesExtractor;
+  private readonly CorridorHandler _corridorHandler;
 
   public CivilEntityToSpeckleTopLevelConverter(
     IConverterSettingsStore<Civil3dConversionSettings> settingsStore,
     DisplayValueExtractor displayValueExtractor,
     BaseCurveExtractor baseCurveExtractor,
-    ClassPropertiesExtractor classPropertiesExtractor
+    ClassPropertiesExtractor classPropertiesExtractor,
+    CorridorHandler corridorHandler
   )
   {
     _settingsStore = settingsStore;
     _displayValueExtractor = displayValueExtractor;
     _baseCurveExtractor = baseCurveExtractor;
     _classPropertiesExtractor = classPropertiesExtractor;
+    _corridorHandler = corridorHandler;
   }
 
   public Base Convert(object target) => Convert((CDB.Entity)target);
@@ -72,6 +75,9 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     {
       case CDB.Alignment alignment:
         children = GetAlignmentChildren(alignment);
+        break;
+      case CDB.Corridor corridor:
+        children = _corridorHandler.GetCorridorChildren(corridor);
         break;
     }
     if (children is not null)
