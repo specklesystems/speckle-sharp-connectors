@@ -12,10 +12,19 @@ namespace Speckle.Connectors.Common;
 
 public static class Connector
 {
+  private sealed record LoggingDisposable(IDisposable Tracing, IDisposable Metrics) : IDisposable
+  {
+    public void Dispose()
+    {
+      Tracing.Dispose();
+      Metrics.Dispose();
+    }
+  }
+
   public static readonly string TabName = "Speckle";
   public static readonly string TabTitle = "Speckle (Beta)";
 
-  public static IDisposable? Initialize(
+  public static IDisposable Initialize(
     this IServiceCollection serviceCollection,
     HostApplication application,
     HostAppVersion version
@@ -23,36 +32,47 @@ public static class Connector
   {
     TypeLoader.Initialize(typeof(Base).Assembly, typeof(Point).Assembly);
 
-    var (logging, tracing) = Observability.Initialize(
+    var (logging, tracing, metrics) = Observability.Initialize(
       application.Name + " " + HostApplications.GetVersion(version),
       application.Slug,
       Assembly.GetExecutingAssembly().GetVersion(),
-      new(
 #if DEBUG || LOCAL
-        new SpeckleLogging(Console: true, MinimumLevel: SpeckleLogLevel.Debug), new SpeckleTracing(Console: false)
+      new(
+        new SpeckleLogging(Console: true, File: new(), MinimumLevel: SpeckleLogLevel.Debug),
+        new SpeckleTracing(Console: false),
+        new SpeckleMetrics(Console: false)
+      )
 #else
+      new(
         new SpeckleLogging(
           Console: true,
-          Otel: new(
-            Endpoint: "https://seq-dev.speckle.systems/ingest/otlp/v1/logs",
-            Headers: new() { { "X-Seq-ApiKey", "y5YnBp12ZE1Czh4tzZWn" } }
-          ),
+          File: new(),
+          Otel:
+          [
+            new(
+              Endpoint: "https://seq-dev.speckle.systems/ingest/otlp/v1/logs",
+              Headers: new() { { "X-Seq-ApiKey", "y5YnBp12ZE1Czh4tzZWn" } }
+            )
+          ],
           MinimumLevel: SpeckleLogLevel.Warning
         ),
         new SpeckleTracing(
           Console: false,
-          Otel: new(
-            Endpoint: "https://seq-dev.speckle.systems/ingest/otlp/v1/traces",
-            Headers: new() { { "X-Seq-ApiKey", "y5YnBp12ZE1Czh4tzZWn" } }
-          )
+          Otel:
+          [
+            new(
+              Endpoint: "https://seq-dev.speckle.systems/ingest/otlp/v1/traces",
+              Headers: new() { { "X-Seq-ApiKey", "y5YnBp12ZE1Czh4tzZWn" } }
+            )
+          ]
         )
-#endif
       )
+#endif
     );
 
     serviceCollection.AddLogging(x => x.AddProvider(new SpeckleLogProvider(logging)));
     serviceCollection.AddSpeckleSdk(application, version, Assembly.GetExecutingAssembly().GetVersion());
     serviceCollection.AddSingleton<Speckle.Sdk.Logging.ISdkActivityFactory, ConnectorActivityFactory>();
-    return tracing;
+    return new LoggingDisposable(tracing, metrics);
   }
 }
