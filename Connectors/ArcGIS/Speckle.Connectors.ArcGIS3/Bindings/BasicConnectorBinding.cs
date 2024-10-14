@@ -13,7 +13,7 @@ using ArcProject = ArcGIS.Desktop.Core.Project;
 namespace Speckle.Connectors.ArcGIS.Bindings;
 
 //poc: dupe code between connectors
-public class BasicConnectorBinding : IBasicConnectorBinding
+public sealed class BasicConnectorBinding : IBasicConnectorBinding, IPostInitBinding, IDisposable
 {
   public string Name => "baseBinding";
   public IBrowserBridge Parent { get; }
@@ -28,13 +28,23 @@ public class BasicConnectorBinding : IBasicConnectorBinding
     _speckleApplication = speckleApplication;
     Parent = parent;
     Commands = new BasicConnectorBindingCommands(parent);
-
-    _store.DocumentChanged += (_, _) =>
-      parent.TopLevelExceptionHandler.FireAndForget(async () =>
-      {
-        await Commands.NotifyDocumentChanged().ConfigureAwait(false);
-      });
   }
+
+  public void PostInitialization()
+  {
+    _store.DocumentChanged += OnDocumentChanged;
+  }
+
+  public void Dispose()
+  {
+    _store.DocumentChanged -= OnDocumentChanged;
+  }
+
+  private void OnDocumentChanged(object? sender, EventArgs e) =>
+    Parent.TopLevelExceptionHandler.FireAndForget(async () =>
+    {
+      await Commands.NotifyDocumentChanged().ConfigureAwait(false);
+    });
 
   public string GetSourceApplicationName() => _speckleApplication.Slug;
 

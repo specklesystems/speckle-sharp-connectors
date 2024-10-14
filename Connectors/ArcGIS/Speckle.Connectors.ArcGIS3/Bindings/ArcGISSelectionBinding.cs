@@ -1,3 +1,4 @@
+using ArcGIS.Core.Events;
 using ArcGIS.Desktop.Mapping;
 using ArcGIS.Desktop.Mapping.Events;
 using Speckle.Connectors.ArcGIS.Utils;
@@ -6,21 +7,28 @@ using Speckle.Connectors.DUI.Bridge;
 
 namespace Speckle.Connectors.ArcGIS.Bindings;
 
-public class ArcGISSelectionBinding : ISelectionBinding
+public sealed class ArcGISSelectionBinding(IBrowserBridge parent, MapMembersUtils mapMembersUtils)
+  : ISelectionBinding,
+    IPostInitBinding,
+    IDisposable
 {
-  private readonly MapMembersUtils _mapMemberUtils;
   public string Name => "selectionBinding";
-  public IBrowserBridge Parent { get; }
+  public IBrowserBridge Parent { get; } = parent;
 
-  public ArcGISSelectionBinding(IBrowserBridge parent, MapMembersUtils mapMemberUtils)
+  private SubscriptionToken _subscriptionToken;
+
+  public void PostInitialization()
   {
-    _mapMemberUtils = mapMemberUtils;
-    Parent = parent;
-    var topLevelHandler = parent.TopLevelExceptionHandler;
-
     // example: https://github.com/Esri/arcgis-pro-sdk-community-samples/blob/master/Map-Authoring/QueryBuilderControl/DefinitionQueryDockPaneViewModel.cs
-    // MapViewEventArgs args = new(MapView.Active);
-    TOCSelectionChangedEvent.Subscribe(_ => topLevelHandler.CatchUnhandled(OnSelectionChanged), true);
+    _subscriptionToken = TOCSelectionChangedEvent.Subscribe(
+      _ => Parent.TopLevelExceptionHandler.CatchUnhandled(OnSelectionChanged),
+      true
+    );
+  }
+
+  public void Dispose()
+  {
+    TOCSelectionChangedEvent.Unsubscribe(_subscriptionToken);
   }
 
   private void OnSelectionChanged()
@@ -55,7 +63,7 @@ public class ArcGISSelectionBinding : ISelectionBinding
     List<MapMember> allNestedMembers = new();
     foreach (MapMember member in selectedMembers)
     {
-      var layerMapMembers = _mapMemberUtils.UnpackMapLayers(selectedMembers);
+      var layerMapMembers = mapMembersUtils.UnpackMapLayers(selectedMembers);
       allNestedMembers.AddRange(layerMapMembers);
     }
 

@@ -6,7 +6,7 @@ using Speckle.Connectors.DUI.Bridge;
 
 namespace Speckle.Connectors.Autocad.Bindings;
 
-public class AutocadSelectionBinding : ISelectionBinding
+public sealed class AutocadSelectionBinding : ISelectionBinding, IPostInitBinding
 {
   private const string SELECTION_EVENT = "setSelection";
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
@@ -20,7 +20,10 @@ public class AutocadSelectionBinding : ISelectionBinding
   {
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
     Parent = parent;
+  }
 
+  public void PostInitialization()
+  {
     // POC: Use here Context for doc. In converters it's OK but we are still lacking to use context into bindings.
     // It is with the case of if binding created with already a document
     // This is valid when user opens acad file directly double clicking

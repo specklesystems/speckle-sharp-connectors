@@ -11,7 +11,7 @@ using Speckle.Sdk.Credentials;
 
 namespace Speckle.Connectors.Autocad.Bindings;
 
-public class AutocadBasicConnectorBinding : IBasicConnectorBinding
+public class AutocadBasicConnectorBinding : IBasicConnectorBinding, IPostInitBinding
 {
   private readonly IAccountManager _accountManager;
   public string Name { get; set; } = "baseBinding";
@@ -36,12 +36,16 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
     _accountManager = accountManager;
     _speckleApplication = speckleApplication;
     Commands = new BasicConnectorBindingCommands(parent);
+    _logger = logger;
+  }
+
+  public void PostInitialization()
+  {
     _store.DocumentChanged += (_, _) =>
-      parent.TopLevelExceptionHandler.FireAndForget(async () =>
+      Parent.TopLevelExceptionHandler.FireAndForget(async () =>
       {
         await Commands.NotifyDocumentChanged().ConfigureAwait(false);
       });
-    _logger = logger;
   }
 
   public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;

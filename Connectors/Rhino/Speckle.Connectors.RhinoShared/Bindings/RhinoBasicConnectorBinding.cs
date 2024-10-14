@@ -11,7 +11,7 @@ using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Rhino.Bindings;
 
-public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
+public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding, IPostInitBinding, IDisposable
 {
   public string Name => "baseBinding";
   public IBrowserBridge Parent { get; }
@@ -30,13 +30,25 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
     Parent = parent;
     _speckleApplication = speckleApplication;
     Commands = new BasicConnectorBindingCommands(parent);
-
-    _store.DocumentChanged += (_, _) =>
-      parent.TopLevelExceptionHandler.FireAndForget(async () =>
-      {
-        await Commands.NotifyDocumentChanged().ConfigureAwait(false);
-      });
   }
+
+  public void PostInitialization()
+  {
+    //TODO: proably, we should make the DocumentStore start subscribing only after this post init
+    // Otherwise, it will listen to Rhino events potentially before we're ready for it to.
+    _store.DocumentChanged += OnDocumentChange;
+  }
+
+  public void Dispose()
+  {
+    _store.DocumentChanged -= OnDocumentChange;
+  }
+
+  private void OnDocumentChange(object? sender, EventArgs _) =>
+    Parent.TopLevelExceptionHandler.FireAndForget(async () =>
+    {
+      await Commands.NotifyDocumentChanged().ConfigureAwait(false);
+    });
 
   public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
 

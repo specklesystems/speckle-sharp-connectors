@@ -63,7 +63,7 @@ public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExec
 
   public async Task ExecuteScriptAsyncMethod(string script, CancellationToken cancellationToken)
   {
-    if (!Browser.IsInitialized)
+    if (!IsBrowserInitialized)
     {
       throw new InvalidOperationException("Failed to execute script, Webview2 is not initialized yet.");
     }
