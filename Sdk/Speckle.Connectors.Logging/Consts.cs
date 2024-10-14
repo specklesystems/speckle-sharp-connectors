@@ -11,7 +11,7 @@ public static class Consts
   public const string OS_SLUG = "os.slug";
   public const string RUNTIME_NAME = "runtime.name";
   public const string USER_ID = "user.id";
-  public const string TRACING_SOURCE = "speckle-connectors";
+  public const string TRACING_SOURCE = "speckle";
 
   public static string GetPackageVersion(Assembly assembly)
   {

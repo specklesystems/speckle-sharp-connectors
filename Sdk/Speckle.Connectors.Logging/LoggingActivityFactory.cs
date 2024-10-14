@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 
 namespace Speckle.Connectors.Logging;
 
@@ -13,10 +12,10 @@ public sealed class LoggingActivityFactory : IDisposable
 
   public void SetTag(string key, object? value) => _tags[key] = value;
 
-  public LoggingActivity? Start(string? name = null, [CallerMemberName] string source = "")
+  public LoggingActivity? Start(string name)
   {
     //If you get a MissingManifestResourceException, Likely source or name is empty string, which is no good.
-    var activity = _activitySource?.StartActivity(name: name ?? source, kind: ActivityKind.Client, tags: _tags);
+    var activity = _activitySource.StartActivity(name: name, kind: ActivityKind.Client, tags: _tags);
     if (activity is null)
     {
       return null;

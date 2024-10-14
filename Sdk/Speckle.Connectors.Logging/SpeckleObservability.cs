@@ -28,7 +28,7 @@ public record SpeckleLogging(
 
 public record SpeckleFileLogging(string? Path = null, bool Enabled = true);
 
-public record SpeckleOtelLogging(string Endpoint, bool Enabled = true, Dictionary<string, string>? Headers = null);
+public record SpeckleOtelLogging(string? Endpoint = null, bool Enabled = true, Dictionary<string, string>? Headers = null);
 
 public record SpeckleTracing(bool Console = false, IEnumerable<SpeckleOtelTracing>? Otel = null)
 {

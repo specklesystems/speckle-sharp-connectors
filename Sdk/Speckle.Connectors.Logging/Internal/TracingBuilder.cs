@@ -8,8 +8,9 @@ internal static class TracingBuilder
 {
   public static IDisposable Initialize(SpeckleTracing? logConfiguration, ResourceBuilder resourceBuilder)
   {
-    var tracerProviderBuilder = OpenTelemetry.Sdk.CreateTracerProviderBuilder().AddSource(Consts.TRACING_SOURCE);
-    tracerProviderBuilder = tracerProviderBuilder.AddHttpClientInstrumentation();
+    var tracerProviderBuilder = OpenTelemetry.Sdk.CreateTracerProviderBuilder().
+      AddSource(Consts.TRACING_SOURCE)
+      .AddHttpClientInstrumentation();
     foreach (var tracing in logConfiguration?.Otel ?? [])
     {
       tracerProviderBuilder = tracerProviderBuilder.AddOtlpExporter(x => ProcessOptions(tracing, x));
@@ -21,7 +22,6 @@ internal static class TracingBuilder
     }
 
     tracerProviderBuilder = tracerProviderBuilder
-      .AddHttpClientInstrumentation()
       .SetResourceBuilder(resourceBuilder)
       .SetSampler<AlwaysOnSampler>()
       .AddProcessor(new ActivityScopeActivityProcessor());
