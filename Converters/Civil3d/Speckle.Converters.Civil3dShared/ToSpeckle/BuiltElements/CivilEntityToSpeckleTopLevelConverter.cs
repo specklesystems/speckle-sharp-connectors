@@ -1,3 +1,4 @@
+using Speckle.Converters.Civil3dShared.Extensions;
 using Speckle.Converters.Civil3dShared.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
@@ -31,10 +32,14 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
 
   public Base Convert(CDB.Entity target)
   {
-    Base civilObject = new();
-    civilObject["type"] = target.GetType().ToString().Split('.').Last();
-    civilObject["name"] = target.Name;
-    civilObject["units"] = _settingsStore.Current.SpeckleUnits;
+    Base civilObject =
+      new()
+      {
+        ["type"] = target.GetType().ToString().Split('.').Last(),
+        ["name"] = target.Name,
+        ["units"] = _settingsStore.Current.SpeckleUnits,
+        applicationId = target.GetSpeckleApplicationId()
+      };
 
     // get basecurve
     List<ICurve>? baseCurves = _baseCurveExtractor.GetBaseCurves(target);
@@ -60,6 +65,37 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
       }
     }
 
+    // determine if this entity has any children elements that need to be converted.
+    // this is a bespoke method by class type.
+    List<Base>? children = null;
+    switch (target)
+    {
+      case CDB.Alignment alignment:
+        children = GetAlignmentChildren(alignment);
+        break;
+    }
+    if (children is not null)
+    {
+      civilObject["@elements"] = children;
+    }
+
     return civilObject;
+  }
+
+  private List<Base>? GetAlignmentChildren(CDB.Alignment alignment)
+  {
+    List<Base> profiles = new();
+    using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
+    {
+      foreach (ADB.ObjectId profileId in alignment.GetProfileIds())
+      {
+        var profile = (CDB.Profile)tr.GetObject(profileId, ADB.OpenMode.ForRead);
+        profiles.Add(Convert(profile));
+      }
+
+      tr.Commit();
+    }
+
+    return profiles.Count > 0 ? profiles : null;
   }
 }

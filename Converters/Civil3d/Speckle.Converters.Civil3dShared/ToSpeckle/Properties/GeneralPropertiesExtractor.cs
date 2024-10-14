@@ -39,6 +39,7 @@ public class GeneralPropertiesExtractor
 
     // get station control props
     Dictionary<string, object?> stationControlDict = new();
+
     Dictionary<string, object?> stationEquationsDict = new();
     int equationCount = 0;
     foreach (var stationEquation in alignment.StationEquations)
@@ -47,10 +48,40 @@ public class GeneralPropertiesExtractor
       {
         ["rawStationBack"] = stationEquation.RawStationBack,
         ["stationBack"] = stationEquation.StationBack,
-        ["stationAhead"] = stationEquation.StationAhead
+        ["stationAhead"] = stationEquation.StationAhead,
+        ["equationType"] = stationEquation.EquationType.ToString()
       };
     }
     stationControlDict["Station Equations"] = stationEquationsDict;
+
+    Dictionary<string, object?> referencePointDict =
+      new()
+      {
+        ["x"] = alignment.ReferencePoint.X,
+        ["y"] = alignment.ReferencePoint.Y,
+        ["station"] = alignment.ReferencePointStation
+      };
+    stationControlDict["Reference Point"] = referencePointDict;
+
+    generalPropertiesDict["Station Control"] = stationControlDict;
+
+    // get design criteria props
+    Dictionary<string, object?> designCriteriaDict = new();
+
+    Dictionary<string, object?> designSpeedsDict = new();
+    int speedsCount = 0;
+    foreach (CDB.DesignSpeed designSpeed in alignment.DesignSpeeds)
+    {
+      designSpeedsDict[speedsCount.ToString()] = new Dictionary<string, object>()
+      {
+        ["number"] = designSpeed.SpeedNumber,
+        ["station"] = designSpeed.Station,
+        ["value"] = designSpeed.Value
+      };
+    }
+    designCriteriaDict["Design Speeds"] = designSpeedsDict;
+
+    generalPropertiesDict["Design Critera"] = designCriteriaDict;
 
     // get offset alignment props
     if (alignment.IsOffsetAlignment)
@@ -64,11 +95,9 @@ public class GeneralPropertiesExtractor
           ["nominalOffset"] = offsetInfo.NominalOffset
         };
 
-      generalPropertiesDict["Offset Alignment"] = offsetAlignmentDict;
+      generalPropertiesDict["Offset Parameters"] = offsetAlignmentDict;
     }
 
-    // set all general props
-    generalPropertiesDict["Station Control"] = stationControlDict;
     return generalPropertiesDict;
   }
 

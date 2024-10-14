@@ -52,6 +52,8 @@ public class ClassPropertiesExtractor
         return ExtractStructureProperties(structure);
       case CDB.Alignment alignment:
         return ExtractAlignmentProperties(alignment);
+      case CDB.Profile profile:
+        return ExtractProfileProperties(profile);
       default:
         return null;
     }
@@ -76,12 +78,30 @@ public class ClassPropertiesExtractor
     return pointProperties;
   }
 
+  private Dictionary<string, object?> ExtractProfileProperties(CDB.Profile profile)
+  {
+    return new()
+    {
+      ["offset"] = profile.Offset,
+      ["startingStation"] = profile.StartingStation,
+      ["endingStation"] = profile.EndingStation,
+      ["profileType"] = profile.ProfileType.ToString(),
+      ["elevationMin"] = profile.ElevationMin,
+      ["elevationMax"] = profile.ElevationMax
+    };
+  }
+
   private Dictionary<string, object?> ExtractAlignmentProperties(CDB.Alignment alignment)
   {
     Dictionary<string, object?> alignmentProperties =
-      new() { ["startingStation"] = alignment.StartingStation, ["endingStation"] = alignment.EndingStation };
+      new()
+      {
+        ["startingStation"] = alignment.StartingStation,
+        ["endingStation"] = alignment.EndingStation,
+        ["alignmentType"] = alignment.AlignmentType.ToString()
+      };
 
-    if (alignment.SiteId != ADB.ObjectId.Null)
+    if (!alignment.IsSiteless)
     {
       alignmentProperties["siteId"] = alignment.SiteId.GetSpeckleApplicationId();
     }
