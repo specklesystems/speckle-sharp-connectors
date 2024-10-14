@@ -7,9 +7,8 @@ namespace Speckle.Converters.Rhino;
 
 public abstract class SpeckleToHostGeometryBaseTopLevelConverter<TIn, TOut> : IToHostTopLevelConverter
   where TIn : Base
-  where TOut : RG.GeometryBase
 {
-  protected IConverterSettingsStore<RhinoConversionSettings> SettingsStore { get; private set; }
+  private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
   private readonly ITypedConverter<TIn, TOut> _geometryBaseConverter;
 
   protected SpeckleToHostGeometryBaseTopLevelConverter(
@@ -17,7 +16,7 @@ public abstract class SpeckleToHostGeometryBaseTopLevelConverter<TIn, TOut> : IT
     ITypedConverter<TIn, TOut> geometryBaseConverter
   )
   {
-    SettingsStore = settingsStore;
+    _settingsStore = settingsStore;
     _geometryBaseConverter = geometryBaseConverter;
   }
 
@@ -26,18 +25,38 @@ public abstract class SpeckleToHostGeometryBaseTopLevelConverter<TIn, TOut> : IT
     var castedBase = (TIn)target;
     var result = _geometryBaseConverter.Convert(castedBase);
 
-    /*
-     * POC: CNX-9270 Looking at a simpler, more performant way of doing unit scaling on `ToNative`
-     * by fully relying on the transform capabilities of the HostApp, and only transforming top-level stuff.
-     * This may not hold when adding more complex conversions, but it works for now!
-     */
-    if (castedBase["units"] is string units)
+    if (result is null)
     {
-      var scaleFactor = Units.GetConversionFactor(units, SettingsStore.Current.SpeckleUnits);
-      var scale = RG.Transform.Scale(RG.Point3d.Origin, scaleFactor);
-      result.Transform(scale);
+      throw new SpeckleConversionException(
+        $"Geometry base converter returned null for base object of type {target.speckle_type}"
+      );
+    }
+
+    var units = castedBase["units"] as string;
+    if (result is RG.GeometryBase geometryBase && units is not null)
+    {
+      geometryBase.Transform(GetScaleTransform(units));
+      return geometryBase;
+    }
+
+    if (result is List<RG.GeometryBase> geometryBases && units is not null)
+    {
+      var t = GetScaleTransform(units);
+      foreach (var gb in geometryBases)
+      {
+        gb.Transform(t);
+      }
+
+      return geometryBases;
     }
 
     return result;
+  }
+
+  private RG.Transform GetScaleTransform(string from)
+  {
+    var scaleFactor = Units.GetConversionFactor(from, _settingsStore.Current.SpeckleUnits);
+    var scale = RG.Transform.Scale(RG.Point3d.Origin, scaleFactor);
+    return scale;
   }
 }
