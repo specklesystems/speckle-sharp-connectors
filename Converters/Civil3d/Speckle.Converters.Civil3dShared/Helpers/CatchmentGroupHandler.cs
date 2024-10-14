@@ -12,7 +12,7 @@ public sealed class CatchmentGroupHandler
   /// This should be added to the root commit object post conversion.
   /// </summary>
   /// POC: Using group proxies for now
-  public Dictionary<ADB.ObjectId, GroupProxy> CatchmentGroupProxies { get; } = new();
+  public Dictionary<ADB.ObjectId, GroupProxy> CatchmentGroupProxiesCache { get; } = new();
 
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _converterSettings;
 
@@ -22,7 +22,7 @@ public sealed class CatchmentGroupHandler
   }
 
   /// <summary>
-  /// Extracts the Catchment group from a catchment and stores in <see cref="CatchmentGroupProxies"/> the appId of the catchment.
+  /// Extracts the Catchment group from a catchment and stores in <see cref="CatchmentGroupProxiesCache"/> the appId of the catchment.
   /// </summary>
   /// <param name="catchment"></param>
   /// <returns></returns>
@@ -36,7 +36,7 @@ public sealed class CatchmentGroupHandler
     }
 
     string catchmentApplicationId = catchment.GetSpeckleApplicationId();
-    if (CatchmentGroupProxies.TryGetValue(catchmentGroupId, out GroupProxy? value))
+    if (CatchmentGroupProxiesCache.TryGetValue(catchmentGroupId, out GroupProxy? value))
     {
       value.objects.Add(catchmentApplicationId);
     }
@@ -46,7 +46,7 @@ public sealed class CatchmentGroupHandler
       {
         var catchmentGroup = (CDB.CatchmentGroup)tr.GetObject(catchmentGroupId, ADB.OpenMode.ForRead);
 
-        CatchmentGroupProxies[catchmentGroupId] = new()
+        CatchmentGroupProxiesCache[catchmentGroupId] = new()
         {
           name = catchmentGroup.Name,
           objects = new() { catchmentApplicationId },

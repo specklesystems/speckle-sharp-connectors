@@ -8,7 +8,7 @@ internal static class ResourceCreator
   internal static ResourceBuilder Create(string applicationAndVersion, string slug, string connectorVersion) =>
     ResourceBuilder
       .CreateEmpty()
-      .AddService(serviceName: LoggingActivityFactory.TRACING_SOURCE, serviceVersion: connectorVersion)
+      .AddService(serviceName: Consts.TRACING_SOURCE, serviceVersion: connectorVersion)
       .AddAttributes(
         new List<KeyValuePair<string, object>>
         {

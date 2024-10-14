@@ -12,7 +12,7 @@ public sealed class PipeNetworkHandler
   /// This should be added to the root commit object post conversion.
   /// </summary>
   /// POC: Using group proxies for now
-  public Dictionary<string, GroupProxy> PipeNetworkProxies { get; } = new();
+  public Dictionary<string, GroupProxy> PipeNetworkProxiesCache { get; } = new();
 
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _converterSettings;
 
@@ -22,7 +22,7 @@ public sealed class PipeNetworkHandler
   }
 
   /// <summary>
-  /// Extracts the pipe network from a part and stores in <see cref="PipeNetworkProxies"/> the appId of the part.
+  /// Extracts the pipe network from a part and stores in <see cref="PipeNetworkProxiesCache"/> the appId of the part.
   /// </summary>
   /// <param name="part"></param>
   /// <returns></returns>
@@ -35,7 +35,7 @@ public sealed class PipeNetworkHandler
 
     string networkApplicationId = part.NetworkId.GetSpeckleApplicationId();
     string partApplicationId = part.GetSpeckleApplicationId();
-    if (PipeNetworkProxies.TryGetValue(networkApplicationId, out GroupProxy? value))
+    if (PipeNetworkProxiesCache.TryGetValue(networkApplicationId, out GroupProxy? value))
     {
       value.objects.Add(partApplicationId);
     }
@@ -45,7 +45,7 @@ public sealed class PipeNetworkHandler
       {
         var network = (CDB.Network)tr.GetObject(part.NetworkId, ADB.OpenMode.ForRead);
 
-        PipeNetworkProxies[networkApplicationId] = new()
+        PipeNetworkProxiesCache[networkApplicationId] = new()
         {
           name = network.Name,
           objects = new() { partApplicationId },

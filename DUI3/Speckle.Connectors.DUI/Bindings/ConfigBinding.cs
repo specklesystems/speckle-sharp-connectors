@@ -37,7 +37,7 @@ public class ConfigBinding : IBinding
   public bool GetIsDevMode()
 #pragma warning restore CA1024
   {
-#if DEBUG
+#if DEBUG || LOCAL
     return true;
 #else
     return false;
