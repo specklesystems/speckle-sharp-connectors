@@ -30,7 +30,9 @@ public class DBSubDMeshToSpeckleConverter : IToSpeckleTopLevelConverter
     var vertices = new List<double>(target.Vertices.Count * 3);
     foreach (AG.Point3d vert in target.Vertices)
     {
-      vertices.AddRange(_pointConverter.Convert(vert).ToList());
+      vertices.Add(vert.X);
+      vertices.Add(vert.Y);
+      vertices.Add(vert.Z);
     }
 
     // faces
