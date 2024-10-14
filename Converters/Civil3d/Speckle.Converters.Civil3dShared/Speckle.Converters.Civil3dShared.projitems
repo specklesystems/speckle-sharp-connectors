@@ -13,16 +13,21 @@
     <Compile Include="$(MSBuildThisFileDirectory)Civil3dConversionSettingsFactory.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Civil3dRootToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Civil3dToSpeckleUnitConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Extensions\SpeckleApplicationIdExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsings.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Helpers\PipeNetworkHandler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Helpers\CatchmentGroupHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\BaseCurveExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\DisplayValueExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\BuiltElements\CivilEntityToSpeckleTopLevelConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\ClassPropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\GeneralPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\PropertySetDefinitionHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\PropertySetExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\PartDataExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\GridSurfaceToSpeckleMeshRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\TinSurfaceToSpeckleMeshRawConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\PropertySetToSpeckleRawConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Point3dCollectionToSpeckleRawConverter.cs" />
   </ItemGroup>
 </Project>

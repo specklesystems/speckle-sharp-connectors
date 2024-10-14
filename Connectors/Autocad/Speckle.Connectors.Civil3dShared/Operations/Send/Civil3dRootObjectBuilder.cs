@@ -4,6 +4,7 @@ using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Converters.Civil3dShared.Helpers;
 using Speckle.Converters.Civil3dShared.ToSpeckle;
 using Speckle.Converters.Common;
 using Speckle.Sdk.Logging;
@@ -15,10 +16,14 @@ public sealed class Civil3dRootObjectBuilder : AutocadRootObjectBaseBuilder
 {
   private readonly AutocadLayerUnpacker _layerUnpacker;
   private readonly PropertySetDefinitionHandler _propertySetDefinitionHandler;
+  private readonly CatchmentGroupHandler _catchmentGroupHandler;
+  private readonly PipeNetworkHandler _pipeNetworkHandler;
 
   public Civil3dRootObjectBuilder(
     AutocadLayerUnpacker layerUnpacker,
     PropertySetDefinitionHandler propertySetDefinitionHandler,
+    CatchmentGroupHandler catchmentGroupHandler,
+    PipeNetworkHandler pipeNetworkHandler,
     IRootToSpeckleConverter converter,
     ISendConversionCache sendConversionCache,
     AutocadInstanceUnpacker instanceObjectManager,
@@ -41,6 +46,8 @@ public sealed class Civil3dRootObjectBuilder : AutocadRootObjectBaseBuilder
   {
     _layerUnpacker = layerUnpacker;
     _propertySetDefinitionHandler = propertySetDefinitionHandler;
+    _catchmentGroupHandler = catchmentGroupHandler;
+    _pipeNetworkHandler = pipeNetworkHandler;
   }
 
   public override (Collection, LayerTableRecord?) CreateObjectCollection(Entity entity, Transaction tr)
@@ -50,9 +57,11 @@ public sealed class Civil3dRootObjectBuilder : AutocadRootObjectBaseBuilder
     return (layer, autocadLayer);
   }
 
-  // POC: probably will need to add Network definition proxies as well
+  // POC: probably will need to add Network proxies as well
   public override void AddAdditionalProxiesToRoot(Collection rootObject)
   {
     rootObject[ProxyKeys.PROPERTYSET_DEFINITIONS] = _propertySetDefinitionHandler.Definitions;
+    rootObject["catchmentGroupProxies"] = _catchmentGroupHandler.CatchmentGroupProxiesCache.Values.ToList();
+    rootObject["pipeNetworkProxies"] = _pipeNetworkHandler.PipeNetworkProxiesCache.Values.ToList();
   }
 }
