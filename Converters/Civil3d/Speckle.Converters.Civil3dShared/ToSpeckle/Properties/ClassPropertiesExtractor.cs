@@ -140,7 +140,6 @@ public class ClassPropertiesExtractor
     _pipeNetworkHandler.HandlePipeNetwork(part);
 
     dict["domain"] = part.Domain.ToString();
-    dict["partFamilyName"] = part.PartFamilyName;
     dict["partType"] = part.PartType.ToString();
     if (part.RefSurfaceId != ADB.ObjectId.Null)
     {

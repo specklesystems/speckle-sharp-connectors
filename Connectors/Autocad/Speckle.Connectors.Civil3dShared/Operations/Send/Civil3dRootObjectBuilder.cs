@@ -61,7 +61,7 @@ public sealed class Civil3dRootObjectBuilder : AutocadRootObjectBaseBuilder
   public override void AddAdditionalProxiesToRoot(Collection rootObject)
   {
     rootObject[ProxyKeys.PROPERTYSET_DEFINITIONS] = _propertySetDefinitionHandler.Definitions;
-    rootObject["catchmentGroupProxies"] = _catchmentGroupHandler.CatchmentGroupProxies.Values.ToList();
-    rootObject["pipeNetworkProxies"] = _pipeNetworkHandler.PipeNetworkProxies.Values.ToList();
+    rootObject["catchmentGroupProxies"] = _catchmentGroupHandler.CatchmentGroupProxiesCache.Values.ToList();
+    rootObject["pipeNetworkProxies"] = _pipeNetworkHandler.PipeNetworkProxiesCache.Values.ToList();
   }
 }
