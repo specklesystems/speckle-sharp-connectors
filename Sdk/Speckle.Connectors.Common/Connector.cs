@@ -38,7 +38,7 @@ public static class Connector
       Assembly.GetExecutingAssembly().GetVersion(),
 #if DEBUG || LOCAL
       new(
-        new SpeckleLogging(Console: true, MinimumLevel: SpeckleLogLevel.Debug),
+        new SpeckleLogging(Console: true, File: new(), MinimumLevel: SpeckleLogLevel.Debug),
         new SpeckleTracing(Console: false),
         new SpeckleMetrics(Console: false)
       )
