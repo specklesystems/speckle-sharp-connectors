@@ -40,12 +40,13 @@ public static class Connector
       new(
         new SpeckleLogging(Console: true, MinimumLevel: SpeckleLogLevel.Debug),
         new SpeckleTracing(Console: false),
-        new SpeckleMetrics(Console: true)
+        new SpeckleMetrics(Console: false)
       )
 #else
       new(
         new SpeckleLogging(
           Console: true,
+          File: new(),
           Otel:
           [
             new(
