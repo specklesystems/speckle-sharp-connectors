@@ -18,7 +18,9 @@ public sealed class CorridorHandler
 
   // these ints are used to retrieve the correct values from the exported corridor solids property sets to cache them
   // they were determined via trial and error
-  private readonly int _corridorHandleIndex; // is 0, intialized to 0
+#pragma warning disable CA1805 // Initialized explicitly to 0
+  private readonly int _corridorHandleIndex = 0;
+#pragma warning restore CA1805 // Initialized explicitly to 0
   private readonly int _baselineGuidIndex = 6;
   private readonly int _regionGuidIndex = 7;
   private readonly int _assemblyHandleIndex = 3;
@@ -254,12 +256,12 @@ public sealed class CorridorHandler
 
         return
           corridorData.GetData() is not string corridorHandle
-          || baselineData.GetData() is not string baselineGuid
-          || regionData.GetData() is not string regionGuid
+          || baselineData.GetData() is not string baselineGuid // these will enclose the guid in {} which need to be removed
+          || regionData.GetData() is not string regionGuid // these will enclose the guid in {} which need to be removed
           || assemblyData.GetData() is not string assemblyHandle
           || subassemblyData.GetData() is not string subassemblyHandle
           ? null
-          : (corridorHandle, baselineGuid, regionGuid, assemblyHandle, subassemblyHandle);
+          : (corridorHandle, baselineGuid[1..^1], regionGuid[1..^1], assemblyHandle, subassemblyHandle);
       }
     }
     return null;
