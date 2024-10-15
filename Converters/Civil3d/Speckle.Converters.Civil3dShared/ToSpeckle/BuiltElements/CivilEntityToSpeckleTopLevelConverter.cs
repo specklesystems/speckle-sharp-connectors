@@ -79,6 +79,9 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
       case CDB.Corridor corridor:
         children = _corridorHandler.GetCorridorChildren(corridor);
         break;
+      case CDB.Site site:
+        children = GetSiteChildren(site);
+        break;
     }
     if (children is not null)
     {
@@ -86,6 +89,23 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     }
 
     return civilObject;
+  }
+
+  private List<Base>? GetSiteChildren(CDB.Site site)
+  {
+    List<Base> parcels = new();
+
+    using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
+    {
+      foreach (ADB.ObjectId parcelId in site.GetParcelIds())
+      {
+        var parcel = (CDB.Parcel)tr.GetObject(parcelId, ADB.OpenMode.ForRead);
+        parcels.Add(Convert(parcel));
+      }
+
+      tr.Commit();
+    }
+    return parcels.Count > 0 ? parcels : null;
   }
 
   private List<Base>? GetAlignmentChildren(CDB.Alignment alignment)

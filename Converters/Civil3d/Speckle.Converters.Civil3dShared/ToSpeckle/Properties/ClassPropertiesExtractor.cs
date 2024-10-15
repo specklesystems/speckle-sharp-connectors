@@ -1,3 +1,4 @@
+using Autodesk.Civil.Runtime;
 using Speckle.Converters.Civil3dShared.Extensions;
 using Speckle.Converters.Civil3dShared.Helpers;
 using Speckle.Converters.Common;
@@ -46,6 +47,8 @@ public class ClassPropertiesExtractor
         return ExtractCatchmentProperties(catchment);
       case CDB.Site site:
         return ExtractSiteProperties(site);
+      case CDB.Parcel parcel:
+        return ExtractParcelProperties(parcel);
 
       // pipe networks
       case CDB.Pipe pipe:
@@ -59,9 +62,29 @@ public class ClassPropertiesExtractor
       case CDB.Profile profile:
         return ExtractProfileProperties(profile);
 
+      // assemblies
+      case CDB.Subassembly subassembly:
+        return ExtractSubassemblyProperties(subassembly);
+
       default:
         return null;
     }
+  }
+
+  private Dictionary<string, object?> ExtractParcelProperties(CDB.Parcel parcel)
+  {
+    return new() { ["number"] = parcel.Number, ["taxId"] = parcel.TaxId };
+  }
+
+  private Dictionary<string, object?> ExtractSubassemblyProperties(CDB.Subassembly subassembly)
+  {
+    Dictionary<string, object?> subassemblyProperties = new();
+    if (subassembly.HasSide)
+    {
+      subassemblyProperties["side"] = subassembly.Side;
+    }
+
+    return subassemblyProperties;
   }
 
   private Dictionary<string, object?> ExtractProfileProperties(CDB.Profile profile)
