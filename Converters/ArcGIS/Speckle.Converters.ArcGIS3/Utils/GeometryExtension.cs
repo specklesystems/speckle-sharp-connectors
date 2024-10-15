@@ -72,6 +72,30 @@ public static class GeometryUtils
     return isClockwise;
   }
 
+  public static bool IsClockwisePolygon(this ACG.Polyline polyline)
+  {
+    bool isClockwise;
+    double sum = 0;
+
+    List<ACG.MapPoint> points = polyline.Points.ToList();
+
+    if (points.Count < 3)
+    {
+      throw new ArgumentException("Not enough points for polygon orientation check");
+    }
+    if (points[0] != points[^1])
+    {
+      points.Add(points[0]);
+    }
+
+    for (int i = 0; i < points.Count - 1; i++)
+    {
+      sum += (points[i + 1].X - points[i].X) * (points[i + 1].Y + points[i].Y);
+    }
+    isClockwise = sum > 0;
+    return isClockwise;
+  }
+
   public static SGIS.GisMultipatchGeometry CompleteMultipatchTriangleStrip(
     this ACG.Multipatch target,
     List<List<SOG.Point>> allPoints,
