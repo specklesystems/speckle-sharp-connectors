@@ -1,7 +1,3 @@
-﻿namespace Speckle.Converters.Civil3d;
+namespace Speckle.Converters.Civil3dShared;
 
-public record Civil3dConversionSettings
-{
-  public Document Document { get; init; }
-  public string SpeckleUnits { get; init; }
-}
+public record Civil3dConversionSettings(Document Document, string SpeckleUnits);

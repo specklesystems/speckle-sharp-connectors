@@ -55,10 +55,6 @@ public class FootPrintRoofToSpeckleTopLevelConverter
       out var topLevel
     );
 
-    //POC: CNX-9403 can be null if the sides have different slopes.
-    //We currently don't validate the success or failure of this TryGet as it's not necessary, but will be once we start the above ticket.
-    _parameterValueExtractor.TryGetValueAsDouble(target, DB.BuiltInParameter.ROOF_SLOPE, out var slope);
-
     var elementType = (ElementType)target.Document.GetElement(target.GetTypeId());
     List<Speckle.Objects.Geometry.Mesh> displayValue = _displayValueExtractor.GetDisplayValue(target);
 
@@ -69,7 +65,6 @@ public class FootPrintRoofToSpeckleTopLevelConverter
         family = elementType.FamilyName,
         level = _levelConverter.Convert(baseLevel),
         cutOffLevel = topLevel is not null ? _levelConverter.Convert(topLevel) : null,
-        slope = slope,
         displayValue = displayValue,
         units = _converterSettings.Current.SpeckleUnits
       };

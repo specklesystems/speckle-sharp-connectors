@@ -15,11 +15,11 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
-using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Logging;
 
 namespace Speckle.Connectors.Rhino.Bindings;
 
@@ -30,7 +30,7 @@ public sealed class RhinoSendBinding : ISendBinding
   public IBrowserBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly IRhinoIdleManager _idleManager;
+  private readonly IAppIdleManager _idleManager;
   private readonly IServiceProvider _serviceProvider;
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
@@ -40,6 +40,7 @@ public sealed class RhinoSendBinding : ISendBinding
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IRhinoConversionSettingsFactory _rhinoConversionSettingsFactory;
   private readonly ISpeckleApplication _speckleApplication;
+  private readonly ISdkActivityFactory _activityFactory;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -51,7 +52,7 @@ public sealed class RhinoSendBinding : ISendBinding
 
   public RhinoSendBinding(
     DocumentModelStore store,
-    IRhinoIdleManager idleManager,
+    IAppIdleManager idleManager,
     IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     IServiceProvider serviceProvider,
@@ -60,7 +61,8 @@ public sealed class RhinoSendBinding : ISendBinding
     IOperationProgressManager operationProgressManager,
     ILogger<RhinoSendBinding> logger,
     IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
-    ISpeckleApplication speckleApplication
+    ISpeckleApplication speckleApplication,
+    ISdkActivityFactory activityFactory
   )
   {
     _store = store;
@@ -76,6 +78,7 @@ public sealed class RhinoSendBinding : ISendBinding
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler.Parent.TopLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent); // POC: Commands are tightly coupled with their bindings, at least for now, saves us injecting a factory.
+    _activityFactory = activityFactory;
     SubscribeToRhinoEvents();
   }
 
@@ -154,6 +157,7 @@ public sealed class RhinoSendBinding : ISendBinding
 
   public async Task Send(string modelCardId)
   {
+    using var activity = _activityFactory.Start();
     using var scope = _serviceProvider.CreateScope();
     scope
       .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
@@ -186,18 +190,14 @@ public sealed class RhinoSendBinding : ISendBinding
         .Execute(
           rhinoObjects,
           modelCard.GetSendInfo(_speckleApplication.Slug),
-          (status, progress) =>
-            _operationProgressManager.SetModelProgress(
-              Parent,
-              modelCardId,
-              new ModelCardProgress(modelCardId, status, progress),
-              cancellationToken
-            ),
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
           cancellationToken
         )
         .ConfigureAwait(false);
 
-      Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
+      await Commands
+        .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
+        .ConfigureAwait(false);
     }
     catch (OperationCanceledException)
     {
@@ -209,7 +209,7 @@ public sealed class RhinoSendBinding : ISendBinding
     catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
       _logger.LogModelCardHandledError(ex);
-      Commands.SetModelError(modelCardId, ex);
+      await Commands.SetModelError(modelCardId, ex).ConfigureAwait(false);
     }
   }
 
@@ -218,7 +218,7 @@ public sealed class RhinoSendBinding : ISendBinding
   /// <summary>
   /// Checks if any sender model cards contain any of the changed objects. If so, also updates the changed objects hashset for each model card - this last part is important for on send change detection.
   /// </summary>
-  private void RunExpirationChecks()
+  private async Task RunExpirationChecks()
   {
     var senders = _store.GetSenders();
     string[] objectIdsList = ChangedObjectIds.Keys.ToArray(); // NOTE: could not copy to array happens here
@@ -236,7 +236,7 @@ public sealed class RhinoSendBinding : ISendBinding
       }
     }
 
-    Commands.SetModelsExpired(expiredSenderIds);
+    await Commands.SetModelsExpired(expiredSenderIds).ConfigureAwait(false);
     ChangedObjectIds = new();
   }
 }

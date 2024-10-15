@@ -16,7 +16,7 @@ public class ParameterDefinitionHandler
   /// </summary>
   /// <param name="parameter"></param>
   /// <returns></returns>
-  public (string internalDefinitionName, string humanReadableName, string groupName) HandleDefinition(
+  public (string internalDefinitionName, string humanReadableName, string groupName, string? units) HandleDefinition(
     DB.Parameter parameter
   )
   {
@@ -42,7 +42,12 @@ public class ParameterDefinitionHandler
 #pragma warning restore CA1854
     {
       var def = Definitions[internalDefinitionName];
-      return (internalDefinitionName, humanReadableName, def["group"]! as string ?? "unknown group");
+      return (
+        internalDefinitionName,
+        humanReadableName,
+        def["group"]! as string ?? "unknown group",
+        def["units"]! as string
+      );
     }
 
     string? units = null;
@@ -63,6 +68,6 @@ public class ParameterDefinitionHandler
       ["group"] = group
     };
 
-    return (internalDefinitionName, humanReadableName, group);
+    return (internalDefinitionName, humanReadableName, group, units);
   }
 }

@@ -4,7 +4,7 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
-using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 using Material = Rhino.DocObjects.Material;
 
 namespace Speckle.Connectors.Rhino.HostApp;

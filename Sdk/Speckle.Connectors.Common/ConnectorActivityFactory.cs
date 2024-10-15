@@ -1,18 +1,22 @@
-﻿using Speckle.Connectors.Logging;
+﻿using System.Runtime.CompilerServices;
+using Speckle.Connectors.Logging;
+using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Logging;
 
 namespace Speckle.Connectors.Common;
 
-public sealed class ConnectorActivityFactory : ISdkActivityFactory, IDisposable
+public sealed class ConnectorActivityFactory(ISpeckleApplication application) : ISdkActivityFactory, IDisposable
 {
   private readonly LoggingActivityFactory _loggingActivityFactory = new();
 
+  public void SetTag(string key, object? value) => _loggingActivityFactory.SetTag(key, value);
+
   public void Dispose() => _loggingActivityFactory.Dispose();
 
-  public ISdkActivity? Start(string? name = default, string source = "")
+  public ISdkActivity? Start(string? name = default, [CallerMemberName] string source = "")
   {
-    var activity = _loggingActivityFactory?.Start(name, source);
+    var activity = _loggingActivityFactory.Start(application.ApplicationAndVersion + " " + (name ?? source));
     if (activity is null)
     {
       return null;
@@ -40,5 +44,7 @@ public sealed class ConnectorActivityFactory : ISdkActivityFactory, IDisposable
           _ => throw new ArgumentOutOfRangeException(nameof(code), code, null)
         }
       );
+
+    public void InjectHeaders(Action<string, string> header) => activity.InjectHeaders(header);
   }
 }

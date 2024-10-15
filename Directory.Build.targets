@@ -4,6 +4,7 @@
     <RemoveDir Directories="$(TargetDir);$(ProjectDir)\..\Release\Release$(RevitVersion);$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\Speckle.Connectors.Revit$(RevitVersion);" />
     <Delete Files="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\Speckle.Connectors.Revit$(RevitVersion).addin" />
   </Target>
+  
   <Target AfterTargets="Build"  Name="AfterBuildRevit" Condition="'$(RevitVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
     <ItemGroup>
       <RevitDLLs Include="$(TargetDir)\**\*.*" Exclude="$(TargetDir)*.addin" />
@@ -17,6 +18,7 @@
   <Target AfterTargets="Clean" Name="CleanAddinAutocad" Condition="'$(AutoCADVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
     <RemoveDir Directories="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Autocad$(AutoCADVersion);" />
   </Target>
+  
   <Target AfterTargets="Build"  Name="AfterBuildAutoCAD" Condition="'$(AutoCADVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
     <ItemGroup>
       <AutoCADDLLs Include="$(TargetDir)\**\*.*" />
@@ -24,17 +26,11 @@
     <Message Text="AutoCADVersion $(AutoCADVersion)" Importance="high"/>
     <Copy DestinationFolder="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Autocad$(AutoCADVersion)\%(RecursiveDir)" SourceFiles="@(AutoCADDLLs)" />
   </Target>
-  <PropertyGroup Condition="'$(AutoCADVersion)' != ''">
-    <UseWpf>true</UseWpf>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(AutoCADVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
-    <StartAction>Program</StartAction>
-    <StartProgram>$(ProgramW6432)\Autodesk\AutoCAD $(AutoCADVersion)\acad.exe</StartProgram>
-  </PropertyGroup>
 
   <Target AfterTargets="Clean" Name="CleanAddinCivil3D" Condition="'$(Civil3DVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
     <RemoveDir Directories="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Civil3d$(Civil3DVersion);" />
   </Target>
+  
   <Target AfterTargets="Build"  Name="AfterBuildCivil3D" Condition="'$(Civil3DVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
     <ItemGroup>
       <Civil3DDLLs Include="$(TargetDir)\**\*.*" />
@@ -42,32 +38,14 @@
     <Message Text="Civil3DVersion $(Civil3DVersion)" Importance="high"/>
     <Copy DestinationFolder="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Civil3d$(Civil3DVersion)\%(RecursiveDir)" SourceFiles="@(Civil3DDLLs)" />
   </Target>
-  <PropertyGroup Condition="'$(Civil3DVersion)' != ''">
-    <UseWpf>true</UseWpf>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Civil3DVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
-    <StartAction>Program</StartAction>
-    <StartProgram>$(ProgramW6432)\Autodesk\AutoCAD $(Civil3DVersion)\acad.exe</StartProgram>
-  </PropertyGroup>
+  
+
 
   <Target AfterTargets="Clean" Name="CleanAddinRhino" Condition="'$(RhinoVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
     <RemoveDir Directories="$(AppData)\McNeel\Rhinoceros\$(RhinoVersion).0\Plug-ins\Speckle.Connectors.Rhino$(RhinoVersion) (8dd5f30b-a13d-4a24-abdc-3e05c8c87144)" />
   </Target>
+  
   <Target AfterTargets="Build"  Name="AfterBuildRhino" Condition="'$(RhinoVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
     <Message Text="RhinoVersion $(RhinoVersion)" Importance="high"/>
   </Target>
-  <PropertyGroup Condition="'$(RhinoVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
-    <TargetExt>.rhp</TargetExt>
-    <StartProgram>$(ProgramFiles)\Rhino $(RhinoVersion)\System\Rhino.exe</StartProgram>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(RhinoVersion)' != ''">
-    <TargetExt>.rhp</TargetExt>
-    <UseWpf>true</UseWpf>
-    <UseWindowsForms>true</UseWindowsForms>
-    <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
-  </PropertyGroup>
-  <ItemGroup Condition="'$(RhinoVersion)' != ''">
-    <EmbeddedResource Include="EmbeddedResources\**\*" />
-    <EmbeddedResource Include="Resources\**\*.ico" />
-  </ItemGroup>
 </Project>

@@ -11,7 +11,7 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 /// Lighter converter for material quantities. It basically returns a For each material quantity available on the target element, it will return a dictionary containing: area, volume, units, material name, material class and material category.
 /// POC: we need to validate this with user needs. It currently does not include material parameters or any other more complex props to ensure speedy sending of data and a lighter payload. We're though keen to re-add more data provided we can validate it.
 /// </summary>
-public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, List<Dictionary<string, object>>>
+public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dictionary<string, object>>
 {
   private readonly ScalingServiceToSpeckle _scalingService;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
@@ -30,10 +30,9 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, List<
   /// </summary>
   /// <param name="target"></param>
   /// <returns></returns>
-  public List<Dictionary<string, object>> Convert(DB.Element target)
+  public Dictionary<string, object> Convert(DB.Element target)
   {
-    List<Dictionary<string, object>> quantities = new();
-
+    Dictionary<string, object> quantities = new();
     if (target.Category.HasMaterialQuantities)
     {
       foreach (DB.ElementId matId in target.GetMaterialIds(false))
@@ -55,7 +54,7 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, List<
           materialQuantity["materialName"] = material.Name;
           materialQuantity["materialCategory"] = material.MaterialCategory;
           materialQuantity["materialClass"] = material.MaterialClass;
-          quantities.Add(materialQuantity);
+          quantities[material.Name] = materialQuantity;
         }
       }
     }
@@ -70,19 +69,19 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, List<
 [Obsolete("Creates a rather bloated data structure - 2.0 style. More in the comment above.")]
 public class MaterialQuantitiesToSpeckle : ITypedConverter<DB.Element, List<MaterialQuantity>>
 {
-  private readonly ITypedConverter<DB.Material, (RevitMaterial, RenderMaterial)> _materialConverter;
+  private readonly ITypedConverter<DB.Material, RevitMaterial> _revitMaterialConverter;
   private readonly ScalingServiceToSpeckle _scalingService;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public MaterialQuantitiesToSpeckle(
-    ITypedConverter<DB.Material, (RevitMaterial, RenderMaterial)> materialConverter,
     ScalingServiceToSpeckle scalingService,
-    IConverterSettingsStore<RevitConversionSettings> converterSettings
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
+    ITypedConverter<DB.Material, RevitMaterial> revitMaterialConverter
   )
   {
-    _materialConverter = materialConverter;
     _scalingService = scalingService;
     _converterSettings = converterSettings;
+    _revitMaterialConverter = revitMaterialConverter;
   }
 
   /// <summary>
@@ -117,7 +116,7 @@ public class MaterialQuantitiesToSpeckle : ITypedConverter<DB.Element, List<Mate
 
         if (_converterSettings.Current.Document.GetElement(matId) is DB.Material material)
         {
-          (RevitMaterial convertedMaterial, RenderMaterial _) = _materialConverter.Convert(material);
+          RevitMaterial convertedMaterial = _revitMaterialConverter.Convert(material);
           // NOTE: the RevitMaterial class is semi useless, and it used to extract parameters out too for each material. Overkill.
           quantities.Add(new(convertedMaterial, volume, area, _converterSettings.Current.SpeckleUnits));
         }

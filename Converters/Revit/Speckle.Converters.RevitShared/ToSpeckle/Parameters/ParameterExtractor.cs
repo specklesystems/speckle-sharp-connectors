@@ -65,12 +65,42 @@ public class ParameterExtractor
       return CreateParameterDictionary(instanceParameterDictionary, null);
     }
 
-    typeParameterDictionary = ParseParameterSet(type.Parameters);
+    typeParameterDictionary = ParseParameterSet(type.Parameters); // NOTE: type parameters should be ideally proxied out for a better data layout.
+    if (type is DB.HostObjAttributes hostObjectAttr)
+    {
+      // NOTE: this could be paired up and merged with material quantities - they're pretty much the same :/
+      var factor = _scalingServiceToSpeckle.ScaleLength(1);
+      var structureDictionary = new Dictionary<string, object?>();
+      var structure = hostObjectAttr.GetCompoundStructure();
+      var layers = structure.GetLayers();
+      foreach (var layer in layers)
+      {
+        if (_settingsStore.Current.Document.GetElement(layer.MaterialId) is DB.Material material)
+        {
+          structureDictionary[material.Name] = new Dictionary<string, object>()
+          {
+            ["material"] = material.Name,
+            ["function"] = layer.Function.ToString(),
+            ["thickness"] = layer.Width * factor,
+            ["units"] = _settingsStore.Current.SpeckleUnits
+          };
+        }
+      }
+
+      typeParameterDictionary["Structure"] = structureDictionary;
+    }
+
     _typeParameterCache[typeId] = typeParameterDictionary;
 
     return CreateParameterDictionary(instanceParameterDictionary, typeParameterDictionary);
   }
 
+  /// <summary>
+  /// Internal utility to create the default parameter structure we expect all elements to have.
+  /// </summary>
+  /// <param name="instanceParams"></param>
+  /// <param name="typeParams"></param>
+  /// <returns></returns>
   private Dictionary<string, object?> CreateParameterDictionary(
     Dictionary<string, Dictionary<string, object?>> instanceParams,
     Dictionary<string, Dictionary<string, object?>>? typeParams
@@ -90,16 +120,39 @@ public class ParameterExtractor
     {
       try
       {
+        var (internalDefinitionName, humanReadableName, groupName, units) =
+          _parameterDefinitionHandler.HandleDefinition(parameter);
+
+        // NOTE: ids don't really have much meaning; if we discover the opposite, we can bring them back. See [CNX-556: All ID Parameters are send as Name](https://linear.app/speckle/issue/CNX-556/all-id-parameters-are-send-as-name)
+        if (internalDefinitionName.Contains("_ID"))
+        {
+          continue;
+        }
+
         var value = GetValue(parameter);
+
         var isNullOrEmpty = value == null || (value is string s && string.IsNullOrEmpty(s));
+
         if (!_settingsStore.Current.SendParameterNullOrEmptyStrings && isNullOrEmpty)
         {
           continue;
         }
 
-        var (internalDefinitionName, humanReadableName, groupName) = _parameterDefinitionHandler.HandleDefinition(
-          parameter
-        );
+        if (value is (string typeName, string familyName)) // element type: same element, different expected values depending on the param definition
+        {
+          if (internalDefinitionName == "ELEM_FAMILY_PARAM") // Probably should be using the BUILTINPARAM whatever
+          {
+            value = familyName;
+          }
+          else if (internalDefinitionName == "ELEM_TYPE_PARAM")
+          {
+            value = typeName;
+          }
+          else
+          {
+            value = familyName + " " + typeName;
+          }
+        }
 
         var param = new Dictionary<string, object?>()
         {
@@ -107,6 +160,11 @@ public class ParameterExtractor
           ["name"] = humanReadableName,
           ["internalDefinitionName"] = internalDefinitionName
         };
+
+        if (units is not null)
+        {
+          param["units"] = units;
+        }
 
         if (!dict.TryGetValue(groupName, out Dictionary<string, object?>? paramGroup))
         {
@@ -131,7 +189,7 @@ public class ParameterExtractor
     return dict;
   }
 
-  private readonly Dictionary<DB.ElementId, string?> _elementNameCache = new();
+  private readonly Dictionary<DB.ElementId, object?> _elementNameCache = new();
 
   private object? GetValue(DB.Parameter parameter)
   {
@@ -140,15 +198,35 @@ public class ParameterExtractor
       case DB.StorageType.Double:
         return _scalingServiceToSpeckle.Scale(parameter.AsDouble(), parameter.GetUnitTypeId());
       case DB.StorageType.Integer:
-        return parameter.AsInteger();
+        return parameter.AsInteger().ToString() == parameter.AsValueString()
+          ? parameter.AsInteger()
+          : parameter.AsValueString();
       case DB.StorageType.ElementId:
         var elId = parameter.AsElementId()!;
-        if (_elementNameCache.TryGetValue(elId, out string? value))
+        if (elId == DB.ElementId.InvalidElementId)
+        {
+          return null;
+        }
+
+        if (_elementNameCache.TryGetValue(elId, out object? value))
         {
           return value;
         }
+
         var docElement = _settingsStore.Current.Document.GetElement(elId);
-        var docElementName = docElement?.Name ?? elId.ToString();
+        object? docElementName;
+
+        // Note: for element types, different params point at the same element. We're getting the right value out in the parent function
+        // based on what the actual built in param name is.
+        if (docElement is DB.ElementType elementType)
+        {
+          docElementName = (elementType.Name, elementType.FamilyName);
+        }
+        else
+        {
+          docElementName = docElement?.Name ?? null;
+        }
+
         _elementNameCache[parameter.AsElementId()] = docElementName;
         return docElementName;
       case DB.StorageType.String:

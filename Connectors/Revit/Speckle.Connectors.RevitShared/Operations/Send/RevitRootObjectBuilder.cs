@@ -23,11 +23,10 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
   // POC: SendSelection and RevitConversionContextStack should be interfaces, former needs interfaces
   private readonly IRootToSpeckleConverter _converter;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
-  private readonly Collection _rootObject;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ElementUnpacker _elementUnpacker;
   private readonly SendCollectionManager _sendCollectionManager;
-  private readonly RevitMaterialCacheSingleton _revitMaterialCacheSingleton;
+  private readonly RevitToSpeckleCacheSingleton _revitToSpeckleCacheSingleton;
   private readonly ILogger<RevitRootObjectBuilder> _logger;
   private readonly ParameterDefinitionHandler _parameterDefinitionHandler;
 
@@ -39,7 +38,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     SendCollectionManager sendCollectionManager,
     ILogger<RevitRootObjectBuilder> logger,
     ParameterDefinitionHandler parameterDefinitionHandler,
-    RevitMaterialCacheSingleton revitMaterialCacheSingleton
+    RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton
   )
   {
     _converter = converter;
@@ -47,21 +46,15 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     _sendConversionCache = sendConversionCache;
     _elementUnpacker = elementUnpacker;
     _sendCollectionManager = sendCollectionManager;
-    _revitMaterialCacheSingleton = revitMaterialCacheSingleton;
+    _revitToSpeckleCacheSingleton = revitToSpeckleCacheSingleton;
     _logger = logger;
     _parameterDefinitionHandler = parameterDefinitionHandler;
-
-    _rootObject = new Collection()
-    {
-      name = _converterSettings.Current.Document.PathName.Split('\\').Last().Split('.').First()
-    };
-    _rootObject["units"] = _converterSettings.Current.SpeckleUnits;
   }
 
   public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<ElementId> objects,
     SendInfo sendInfo,
-    Action<string, double?>? onOperationProgressed = null,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
   )
   {
@@ -71,6 +64,11 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     {
       throw new SpeckleException("Family Environment documents are not supported.");
     }
+
+    // 0 - Init the root
+    Collection rootObject =
+      new() { name = _converterSettings.Current.Document.PathName.Split('\\').Last().Split('.').First() };
+    rootObject["units"] = _converterSettings.Current.SpeckleUnits;
 
     var revitElements = new List<Element>();
 
@@ -116,7 +114,8 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
           converted.applicationId = applicationId;
         }
 
-        var collection = _sendCollectionManager.GetAndCreateObjectHostCollection(revitElement, _rootObject);
+        var collection = _sendCollectionManager.GetAndCreateObjectHostCollection(revitElement, rootObject);
+
         collection.elements.Add(converted);
         results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
       }
@@ -126,7 +125,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
         results.Add(new(Status.ERROR, applicationId, sourceType, null, ex));
       }
 
-      onOperationProgressed?.Invoke("Converting", (double)++countProgress / atomicObjects.Count);
+      onOperationProgressed.Report(new("Converting", (double)++countProgress / atomicObjects.Count));
     }
 
     if (results.All(x => x.Status == Status.ERROR))
@@ -135,11 +134,11 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     }
 
     var idsAndSubElementIds = _elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(atomicObjects);
-    var materialProxies = _revitMaterialCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds);
-    _rootObject[ProxyKeys.RENDER_MATERIAL] = materialProxies;
+    var materialProxies = _revitToSpeckleCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds);
+    rootObject[ProxyKeys.RENDER_MATERIAL] = materialProxies;
     // NOTE: these are currently not used anywhere, so we could even skip them (?).
-    _rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;
+    rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;
 
-    return new RootObjectBuilderResult(_rootObject, results);
+    return new RootObjectBuilderResult(rootObject, results);
   }
 }
