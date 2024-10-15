@@ -277,6 +277,9 @@ public class GeneralPropertiesExtractor
         break;
       case CDB.TinVolumeSurface tinVolumeSurface:
         statisticsDict["TIN"] = ExtractPropertiesGeneric<CDB.TinSurfaceProperties>(tinVolumeSurface.GetTinProperties());
+        statisticsDict["Volume"] = ExtractPropertiesGeneric<CDB.VolumeSurfaceProperties>(
+          tinVolumeSurface.GetVolumeProperties()
+        );
         break;
       case CDB.GridSurface gridSurface:
         statisticsDict["Grid"] = ExtractPropertiesGeneric<CDB.GridSurfaceProperties>(gridSurface.GetGridProperties());
@@ -284,6 +287,9 @@ public class GeneralPropertiesExtractor
       case CDB.GridVolumeSurface gridVolumeSurface:
         statisticsDict["Grid"] = ExtractPropertiesGeneric<CDB.GridSurfaceProperties>(
           gridVolumeSurface.GetGridProperties()
+        );
+        statisticsDict["Volume"] = ExtractPropertiesGeneric<CDB.VolumeSurfaceProperties>(
+          gridVolumeSurface.GetVolumeProperties()
         );
         break;
     }
@@ -303,6 +309,11 @@ public class GeneralPropertiesExtractor
     foreach (PropertyInfo? property in properties)
     {
       var value = property.GetValue(obj);
+      if (value is ADB.ObjectId id)
+      {
+        value = id.GetSpeckleApplicationId();
+      }
+
       propertiesDict[property.Name] = value;
     }
 
