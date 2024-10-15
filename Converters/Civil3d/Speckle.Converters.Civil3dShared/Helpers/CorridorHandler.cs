@@ -256,12 +256,18 @@ public sealed class CorridorHandler
 
         return
           corridorData.GetData() is not string corridorHandle
-          || baselineData.GetData() is not string baselineGuid // these will enclose the guid in {} which need to be removed
-          || regionData.GetData() is not string regionGuid // these will enclose the guid in {} which need to be removed
+          || baselineData.GetData() is not string baselineGuid // guid is uppercase and enclosed in {} which need to be removed
+          || regionData.GetData() is not string regionGuid // guid is uppercase and enclosed in {} which need to be removed
           || assemblyData.GetData() is not string assemblyHandle
           || subassemblyData.GetData() is not string subassemblyHandle
           ? null
-          : (corridorHandle, baselineGuid[1..^1], regionGuid[1..^1], assemblyHandle, subassemblyHandle);
+          : (
+            corridorHandle,
+            baselineGuid[1..^1].ToLower(),
+            regionGuid[1..^1].ToLower(),
+            assemblyHandle,
+            subassemblyHandle
+          );
       }
     }
     return null;
