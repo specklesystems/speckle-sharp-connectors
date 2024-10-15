@@ -12,8 +12,17 @@ public sealed class CorridorHandler
   /// <summary>
   /// Keeps track of all corridor solids by their hierarchy of (corridor, baseline, region, applied assembly, applied subassembly) in the current send operation.
   /// This should be added to the display value of the corridor applied subassemblies after they are processed
+  /// Handles should be used instead of Handle.Value (as is typically used for speckle app ids) since the exported solid property sets only stores the handle
   /// </summary>
   public Dictionary<(string, string, string, string, string), SOG.Mesh> CorridorSolidsCache { get; } = new();
+
+  // these ints are used to retrieve the correct values from the exported corridor solids property sets to cache them
+  // they were determined via trial and error
+  private readonly int _corridorHandleIndex; // is 0, intialized to 0
+  private readonly int _baselineGuidIndex = 6;
+  private readonly int _regionGuidIndex = 7;
+  private readonly int _assemblyHandleIndex = 3;
+  private readonly int _subassemblyHandleIndex = 4;
 
   private readonly ITypedConverter<ADB.Solid3d, SOG.Mesh> _solidConverter;
   private readonly PropertySetExtractor _propertySetExtractor;
@@ -40,13 +49,13 @@ public sealed class CorridorHandler
     HandleCorridorSolids(corridor);
 
     // track children hierarchy ids:
-    string corridorId = corridor.GetSpeckleApplicationId();
+    string corridorHandle = corridor.Handle.ToString();
 
     // process baselines
     List<Base> baselines = new(corridor.Baselines.Count);
     foreach (CDB.Baseline baseline in corridor.Baselines)
     {
-      string baselineId = baseline.baselineGUID.ToString();
+      string baselineGuid = baseline.baselineGUID.ToString();
 
       Base convertedBaseline =
         new()
@@ -56,7 +65,7 @@ public sealed class CorridorHandler
           ["startStation"] = baseline.StartStation,
           ["endStation"] = baseline.EndStation,
           ["units"] = _settingsStore.Current.SpeckleUnits,
-          ["applicationId"] = baselineId,
+          ["applicationId"] = baselineGuid,
         };
 
       // get profile and alignment if nonfeaturelinebased
@@ -76,7 +85,7 @@ public sealed class CorridorHandler
       List<Base> regions = new();
       foreach (CDB.BaselineRegion region in baseline.BaselineRegions)
       {
-        string regionId = region.RegionGUID.ToString();
+        string regionGuid = region.RegionGUID.ToString();
 
         Base convertedRegion =
           new()
@@ -87,7 +96,7 @@ public sealed class CorridorHandler
             ["endStation"] = region.EndStation,
             ["assemblyId"] = region.AssemblyId.GetSpeckleApplicationId(),
             ["units"] = _settingsStore.Current.SpeckleUnits,
-            ["applicationId"] = regionId,
+            ["applicationId"] = regionGuid,
           };
 
         // get the region applied assemblies
@@ -98,12 +107,12 @@ public sealed class CorridorHandler
           double station = sortedStations[i];
 
           CDB.AppliedAssembly appliedAssembly = region.AppliedAssemblies[i];
-          string assemblyId = appliedAssembly.AssemblyId.GetSpeckleApplicationId();
+          string assemblyHandle = appliedAssembly.AssemblyId.Handle.ToString();
           Base convertedAppliedAssembly =
             new()
             {
               ["type"] = appliedAssembly.GetType().ToString().Split('.').Last(),
-              ["assemblyId"] = assemblyId,
+              ["assemblyId"] = appliedAssembly.AssemblyId.GetSpeckleApplicationId(),
               ["station"] = station,
               ["units"] = _settingsStore.Current.SpeckleUnits
             };
@@ -122,24 +131,25 @@ public sealed class CorridorHandler
 
           foreach (CDB.AppliedSubassembly appliedSubassembly in appliedAssembly.GetAppliedSubassemblies())
           {
-            string subassemblyId = appliedSubassembly.SubassemblyId.GetSpeckleApplicationId();
+            string subassemblyHandle = appliedSubassembly.SubassemblyId.Handle.ToString();
 
             Base convertedAppliedSubassembly =
               new()
               {
                 ["type"] = appliedSubassembly.GetType().ToString().Split('.').Last(),
-                ["subassemblyId"] = subassemblyId,
+                ["subassemblyId"] = appliedSubassembly.SubassemblyId.GetSpeckleApplicationId(),
                 ["units"] = _settingsStore.Current.SpeckleUnits
               };
 
             // try to get the display value mesh
             (string, string, string, string, string) corridorSolidsKey = (
-              corridorId,
-              baselineId,
-              regionId,
-              assemblyId,
-              subassemblyId
+              corridorHandle,
+              baselineGuid,
+              regionGuid,
+              assemblyHandle,
+              subassemblyHandle
             );
+
             if (CorridorSolidsCache.TryGetValue(corridorSolidsKey, out SOG.Mesh display))
             {
               convertedAppliedSubassembly["displayValue"] = new List<SOG.Mesh> { display };
@@ -186,22 +196,72 @@ public sealed class CorridorHandler
         }
         else if (solid is ADB.Body)
         {
-          // do something with the body - limited api
+          // can't do much with the body - skipping for now
+          continue;
         }
 
-        // get the (corridor id, baseline id, region id, assembly id, subassembly id) of the solid property sets
-        Dictionary<string, object?>? propertySets = _propertySetExtractor.GetPropertySets(solid, false);
-
-        if (propertySets is null)
+        if (mesh is null)
         {
           continue;
         }
 
-        // TODO: add mesh to cahce depending on property set values!!
-        if (mesh is not null) { }
+        // get the (corridor handle, baseline guid, region guid, assembly handle, subassembly handle) of the solid property sets
+        (string corridor, string baseline, string region, string assembly, string subassembly)? solidKey =
+          GetCorridorSolidIdFromPropertySet(solid, tr);
+
+        if (solidKey is (string, string, string, string, string) validSolidKey)
+        {
+          CorridorSolidsCache[validSolidKey] = mesh;
+        }
       }
 
       tr.Commit();
     }
+  }
+
+  private (string, string, string, string, string)? GetCorridorSolidIdFromPropertySet(
+    ADB.DBObject obj,
+    ADB.Transaction tr
+  )
+  {
+    ADB.ObjectIdCollection? propertySetIds;
+
+    try
+    {
+      propertySetIds = AAECPDB.PropertyDataServices.GetPropertySets(obj);
+    }
+    catch (Exception e) when (!e.IsFatal())
+    {
+      return null;
+    }
+
+    if (propertySetIds is null || propertySetIds.Count == 0)
+    {
+      return null;
+    }
+
+    foreach (ADB.ObjectId id in propertySetIds)
+    {
+      AAECPDB.PropertySet propertySet = (AAECPDB.PropertySet)tr.GetObject(id, ADB.OpenMode.ForRead);
+
+      if (propertySet.PropertySetDefinitionName == "Corridor Identity")
+      {
+        AAECPDB.PropertySetData corridorData = propertySet.PropertySetData[_corridorHandleIndex];
+        AAECPDB.PropertySetData baselineData = propertySet.PropertySetData[_baselineGuidIndex];
+        AAECPDB.PropertySetData regionData = propertySet.PropertySetData[_regionGuidIndex];
+        AAECPDB.PropertySetData assemblyData = propertySet.PropertySetData[_assemblyHandleIndex];
+        AAECPDB.PropertySetData subassemblyData = propertySet.PropertySetData[_subassemblyHandleIndex];
+
+        return
+          corridorData.GetData() is not string corridorHandle
+          || baselineData.GetData() is not string baselineGuid
+          || regionData.GetData() is not string regionGuid
+          || assemblyData.GetData() is not string assemblyHandle
+          || subassemblyData.GetData() is not string subassemblyHandle
+          ? null
+          : (corridorHandle, baselineGuid, regionGuid, assemblyHandle, subassemblyHandle);
+      }
+    }
+    return null;
   }
 }

@@ -30,7 +30,7 @@ public class PropertySetExtractor
   /// </summary>
   /// <param name="dbObject"></param>
   /// <returns></returns>
-  public Dictionary<string, object?>? GetPropertySets(ADB.DBObject dbObject, bool storeDefinition = true)
+  public Dictionary<string, object?>? GetPropertySets(ADB.DBObject dbObject)
   {
     ADB.ObjectIdCollection? propertySetIds = null;
 
@@ -56,11 +56,7 @@ public class PropertySetExtractor
         AAECPDB.PropertySet propertySet = (AAECPDB.PropertySet)tr.GetObject(id, ADB.OpenMode.ForRead);
 
         // parse property sets within this transaction, since we'll need it for retrieving the definition as well
-        if (
-          ParsePropertySet(propertySet, tr, storeDefinition) is
-
-          (string propertySetName, Dictionary<string, object?> propertySetValue)
-        )
+        if (ParsePropertySet(propertySet, tr) is (string propertySetName, Dictionary<string, object?> propertySetValue))
         {
           propertySets[propertySetName] = propertySetValue;
         }
@@ -71,11 +67,7 @@ public class PropertySetExtractor
     }
   }
 
-  private (string, Dictionary<string, object?>)? ParsePropertySet(
-    AAECPDB.PropertySet propertySet,
-    ADB.Transaction tr,
-    bool storeDefinition
-  )
+  private (string, Dictionary<string, object?>)? ParsePropertySet(AAECPDB.PropertySet propertySet, ADB.Transaction tr)
   {
     try
     {
@@ -85,10 +77,8 @@ public class PropertySetExtractor
         tr.GetObject(propertySet.PropertySetDefinition, ADB.OpenMode.ForRead);
       Dictionary<int, string>? propertyDefinitionNames = null;
       string name = setDefinition.Name;
-      if (storeDefinition)
-      {
-        propertyDefinitionNames = _propertySetDefinitionHandler.HandleDefinition(setDefinition);
-      }
+
+      propertyDefinitionNames = _propertySetDefinitionHandler.HandleDefinition(setDefinition);
 
       // get all property values in the propertyset
       Dictionary<string, object?> properties = new();
