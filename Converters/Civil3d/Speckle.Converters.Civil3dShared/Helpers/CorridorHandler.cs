@@ -156,23 +156,72 @@ public sealed class CorridorHandler
               convertedAppliedSubassembly["displayValue"] = display;
             }
 
-            // TODO: get the applied subassembly's calculated stuff
+            // get the applied subassembly's calculated stuff
+            AddSubassemblyCalculatedProperties(convertedAppliedSubassembly, appliedSubassembly);
+
             appliedSubassemblies.Add(convertedAppliedSubassembly);
           }
 
-          convertedAppliedAssembly["@elements"] = appliedSubassemblies;
+          convertedAppliedAssembly["elements"] = appliedSubassemblies;
           appliedAssemblies.Add(convertedAppliedAssembly);
         }
 
-        convertedRegion["@elements"] = appliedAssemblies;
+        convertedRegion["elements"] = appliedAssemblies;
         regions.Add(convertedRegion);
       }
 
-      convertedBaseline["@elements"] = regions;
+      convertedBaseline["elements"] = regions;
       baselines.Add(convertedBaseline);
     }
 
     return baselines;
+  }
+
+  // Adds the calculated shapes > calculated links > calculated points as dicts to the applied subassembly
+  private void AddSubassemblyCalculatedProperties(
+    Base speckleAppliedSubassembly,
+    CDB.AppliedSubassembly appliedSubassembly
+  )
+  {
+    Dictionary<string, object?> calculatedShapes = new();
+    int shapeCount = 0;
+    foreach (CDB.CalculatedShape shape in appliedSubassembly.Shapes)
+    {
+      Dictionary<string, object?> calculatedLinks = new();
+      int linkCount = 0;
+      foreach (CDB.CalculatedLink link in shape.CalculatedLinks)
+      {
+        Dictionary<string, object?> calculatedPoints = new();
+        int pointCount = 0;
+        foreach (CDB.CalculatedPoint point in link.CalculatedPoints)
+        {
+          calculatedPoints[pointCount.ToString()] = new Dictionary<string, object?>()
+          {
+            ["xyz"] = point.XYZ.ToArray(),
+            ["corridorCodes"] = point.CorridorCodes.ToList(),
+            ["stationOffsetElevationToBaseline"] = point.StationOffsetElevationToBaseline.ToArray(),
+          };
+          pointCount++;
+        }
+
+        calculatedLinks[linkCount.ToString()] = new Dictionary<string, object?>()
+        {
+          ["corridorCodes"] = link.CorridorCodes.ToList(),
+          ["calculatedPoints"] = calculatedPoints
+        };
+
+        linkCount++;
+      }
+
+      calculatedShapes[shapeCount.ToString()] = new Dictionary<string, object?>()
+      {
+        ["corridorCodes"] = shape.CorridorCodes.ToList(),
+        ["area"] = shape.Area,
+        ["calculatedLinks"] = calculatedLinks
+      };
+    }
+
+    speckleAppliedSubassembly["calculatedShapes"] = calculatedShapes;
   }
 
   /// <summary>

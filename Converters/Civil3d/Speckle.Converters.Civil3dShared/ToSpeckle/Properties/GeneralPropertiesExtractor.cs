@@ -130,8 +130,10 @@ public class GeneralPropertiesExtractor
         }
       }
     }
-
-    generalPropertiesDict["Feature Lines"] = featureLinesDict;
+    if (featureLinesDict.Count > 0)
+    {
+      generalPropertiesDict["Feature Lines"] = featureLinesDict;
+    }
 
     // get surfaces props
     Dictionary<string, object?> surfacesDict = new();
@@ -145,7 +147,10 @@ public class GeneralPropertiesExtractor
         ["overhangCorrection"] = surface.OverhangCorrection.ToString()
       };
     }
-    generalPropertiesDict["Surfaces"] = surfacesDict;
+    if (surfacesDict.Count > 0)
+    {
+      generalPropertiesDict["Surfaces"] = surfacesDict;
+    }
 
     return generalPropertiesDict;
   }
@@ -170,7 +175,10 @@ public class GeneralPropertiesExtractor
       };
       equationCount++;
     }
-    stationControlDict["Station Equations"] = stationEquationsDict;
+    if (stationEquationsDict.Count > 0)
+    {
+      stationControlDict["Station Equations"] = stationEquationsDict;
+    }
 
     Dictionary<string, object?> referencePointDict =
       new()
@@ -181,7 +189,10 @@ public class GeneralPropertiesExtractor
       };
     stationControlDict["Reference Point"] = referencePointDict;
 
-    generalPropertiesDict["Station Control"] = stationControlDict;
+    if (stationControlDict.Count > 0)
+    {
+      generalPropertiesDict["Station Control"] = stationControlDict;
+    }
 
     // get design criteria props
     Dictionary<string, object?> designCriteriaDict = new();
@@ -199,8 +210,15 @@ public class GeneralPropertiesExtractor
       speedsCount++;
     }
     designCriteriaDict["Design Speeds"] = designSpeedsDict;
+    if (designSpeedsDict.Count > 0)
+    {
+      designCriteriaDict["Design Speeds"] = designSpeedsDict;
+    }
 
-    generalPropertiesDict["Design Critera"] = designCriteriaDict;
+    if (designCriteriaDict.Count > 0)
+    {
+      generalPropertiesDict["Design Critera"] = designCriteriaDict;
+    }
 
     // get offset alignment props
     if (alignment.IsOffsetAlignment)
