@@ -1,5 +1,4 @@
 using Speckle.Converters.Civil3dShared.Extensions;
-using Speckle.Converters.Civil3dShared.ToSpeckle;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk;
@@ -14,7 +13,7 @@ public sealed class CorridorHandler
   /// This should be added to the display value of the corridor applied subassemblies after they are processed
   /// Handles should be used instead of Handle.Value (as is typically used for speckle app ids) since the exported solid property sets only stores the handle
   /// </summary>
-  public Dictionary<(string, string, string, string, string), SOG.Mesh> CorridorSolidsCache { get; } = new();
+  public Dictionary<(string, string, string, string, string), List<SOG.Mesh>> CorridorSolidsCache { get; } = new();
 
   // these ints are used to retrieve the correct values from the exported corridor solids property sets to cache them
   // they were determined via trial and error
@@ -27,17 +26,17 @@ public sealed class CorridorHandler
   private readonly int _subassemblyHandleIndex = 4;
 
   private readonly ITypedConverter<ADB.Solid3d, SOG.Mesh> _solidConverter;
-  private readonly PropertySetExtractor _propertySetExtractor;
+  private readonly ITypedConverter<ADB.Body, SOG.Mesh> _bodyConverter;
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
 
   public CorridorHandler(
     ITypedConverter<ADB.Solid3d, SOG.Mesh> solidConverter,
-    PropertySetExtractor propertySetExtractor,
+    ITypedConverter<ADB.Body, SOG.Mesh> bodyConverter,
     IConverterSettingsStore<Civil3dConversionSettings> settingsStore
   )
   {
     _solidConverter = solidConverter;
-    _propertySetExtractor = propertySetExtractor;
+    _bodyConverter = bodyConverter;
     _settingsStore = settingsStore;
   }
 
@@ -152,9 +151,9 @@ public sealed class CorridorHandler
               subassemblyHandle
             );
 
-            if (CorridorSolidsCache.TryGetValue(corridorSolidsKey, out SOG.Mesh display))
+            if (CorridorSolidsCache.TryGetValue(corridorSolidsKey, out List<SOG.Mesh> display))
             {
-              convertedAppliedSubassembly["displayValue"] = new List<SOG.Mesh> { display };
+              convertedAppliedSubassembly["displayValue"] = display;
             }
 
             // TODO: get the applied subassembly's calculated stuff
@@ -196,10 +195,9 @@ public sealed class CorridorHandler
           // get the solid mesh
           mesh = _solidConverter.Convert(solid3d);
         }
-        else if (solid is ADB.Body)
+        else if (solid is ADB.Body body)
         {
-          // can't do much with the body - skipping for now
-          continue;
+          mesh = _bodyConverter.Convert(body);
         }
 
         if (mesh is null)
@@ -213,7 +211,14 @@ public sealed class CorridorHandler
 
         if (solidKey is (string, string, string, string, string) validSolidKey)
         {
-          CorridorSolidsCache[validSolidKey] = mesh;
+          if (CorridorSolidsCache.TryGetValue(validSolidKey, out List<SOG.Mesh> display))
+          {
+            display.Add(mesh);
+          }
+          else
+          {
+            CorridorSolidsCache[validSolidKey] = new() { mesh };
+          }
         }
       }
 
