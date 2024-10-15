@@ -64,25 +64,6 @@ public class ClassPropertiesExtractor
     }
   }
 
-  // For more info on how points are used: https://help.autodesk.com/view/CIV3D/2024/ENU/?guid=GUID-CBABE972-D690-49AE-A7DE-60F2E1B0675D
-  private Dictionary<string, object?> ExtractPointProperties(CDB.Point point)
-  {
-    Dictionary<string, object?> pointProperties =
-      new()
-      {
-        ["elevation"] = point.Elevation,
-        ["station"] = point.Station,
-        ["isLoopPoint"] = point.IsLoopPoint
-      };
-
-    if (point.Codes.Count > 0)
-    {
-      pointProperties["codes"] = point.Codes.ToList();
-    }
-
-    return pointProperties;
-  }
-
   private Dictionary<string, object?> ExtractProfileProperties(CDB.Profile profile)
   {
     return new()

@@ -1,4 +1,5 @@
 using System.Reflection;
+using Autodesk.Civil.Runtime;
 using Speckle.Converters.Civil3dShared.Extensions;
 
 namespace Speckle.Converters.Civil3dShared.ToSpeckle;
@@ -32,20 +33,44 @@ public class GeneralPropertiesExtractor
       case CDB.Corridor corridor:
         return ExtractCorridorProperties(corridor);
 
-      //case CDB.Assembly assembly:
-      //return ExtractAssemblyProperties(assembly);
-
-      //case CDB.Subassembly subassembly:
-      //return ExtractSubassemblyProperties(subassembly);
+      // subassembly -> properties -> parameters, codes
+      case CDB.Subassembly subassembly:
+        return ExtractSubassemblyProperties(subassembly);
 
       default:
         return null;
     }
   }
 
-  //private Dictionary<string, object?> ExtractSubassemblyProperties(CDB.Subassembly subassembly) { }
+  private Dictionary<string, object?> ExtractSubassemblyProperties(CDB.Subassembly subassembly)
+  {
+    Dictionary<string, object?> generalPropertiesDict = new();
 
-  //private Dictionary<string, object?> ExtractAssemblyProperties(CDB.Assembly assembly) { }
+    // get parameters props
+    Dictionary<string, object?> parametersDict = new();
+    foreach (ParamBool p in subassembly.ParamsBool)
+    {
+      parametersDict[p.DisplayName] = p.Value;
+    }
+    foreach (ParamDouble p in subassembly.ParamsDouble)
+    {
+      parametersDict[p.DisplayName] = p.Value;
+    }
+    foreach (ParamString p in subassembly.ParamsString)
+    {
+      parametersDict[p.DisplayName] = p.Value;
+    }
+    foreach (ParamLong p in subassembly.ParamsLong)
+    {
+      parametersDict[p.DisplayName] = p.Value;
+    }
+    if (parametersDict.Count > 0)
+    {
+      generalPropertiesDict["Parameters"] = parametersDict;
+    }
+
+    return generalPropertiesDict;
+  }
 
   private void ProcessCorridorFeaturelinePoints(
     CDB.CorridorFeatureLine featureline,
