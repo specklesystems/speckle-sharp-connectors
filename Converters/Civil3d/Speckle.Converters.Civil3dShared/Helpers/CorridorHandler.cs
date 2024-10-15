@@ -17,19 +17,16 @@ public sealed class CorridorHandler
 
   private readonly ITypedConverter<ADB.Solid3d, SOG.Mesh> _solidConverter;
   private readonly PropertySetExtractor _propertySetExtractor;
-  private readonly ITypedConverter<CDB.Baseline, Base> _baselineConverter;
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
 
   public CorridorHandler(
     ITypedConverter<ADB.Solid3d, SOG.Mesh> solidConverter,
     PropertySetExtractor propertySetExtractor,
-    ITypedConverter<CDB.Baseline, Base> baselineConverter,
     IConverterSettingsStore<Civil3dConversionSettings> settingsStore
   )
   {
     _solidConverter = solidConverter;
     _propertySetExtractor = propertySetExtractor;
-    _baselineConverter = baselineConverter;
     _settingsStore = settingsStore;
   }
 
@@ -174,17 +171,23 @@ public sealed class CorridorHandler
   /// <returns></returns>
   private void HandleCorridorSolids(CDB.Corridor corridor)
   {
-    List<SOG.Mesh> result = new();
     CDB.ExportCorridorSolidsParams param = new();
 
     using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
     {
       foreach (ADB.ObjectId solidId in corridor.ExportSolids(param, corridor.Database))
       {
-        var solid = (ADB.Solid3d)tr.GetObject(solidId, ADB.OpenMode.ForRead);
-
-        // get the solid mesh
-        SOG.Mesh mesh = _solidConverter.Convert(solid);
+        SOG.Mesh? mesh = null;
+        var solid = tr.GetObject(solidId, ADB.OpenMode.ForRead);
+        if (solid is ADB.Solid3d solid3d)
+        {
+          // get the solid mesh
+          mesh = _solidConverter.Convert(solid3d);
+        }
+        else if (solid is ADB.Body)
+        {
+          // do something with the body - limited api
+        }
 
         // get the (corridor id, baseline id, region id, assembly id, subassembly id) of the solid property sets
         Dictionary<string, object?>? propertySets = _propertySetExtractor.GetPropertySets(solid, false);
@@ -195,8 +198,7 @@ public sealed class CorridorHandler
         }
 
         // TODO: add mesh to cahce depending on property set values!!
-
-        result.Add(mesh);
+        if (mesh is not null) { }
       }
 
       tr.Commit();
