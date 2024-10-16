@@ -1,6 +1,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.TopLevel;
@@ -8,8 +9,6 @@ namespace Speckle.Converters.ArcGIS3.ToHost.TopLevel;
 /// <summary>
 /// Converter for <see cref="IGisFeature"/> with geometry.
 /// </summary>
-/// <exception cref="ArgumentException"> Thrown when IGisFeature is <see cref="SGIS.GisNonGeometricFeature"/> because it has no geometry, or when Multipatch geometry contained invalid types.</exception>
-/// <exception cref="NotSupportedException">Thrown for unsupported <see cref="IGisFeature"/> classes.</exception>
 [NameAndRankValue(nameof(SGIS.GisMultipatchFeature), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class GisMultipatchFeatureToHostConverter
   : IToHostTopLevelConverter,
@@ -48,8 +47,9 @@ public class GisMultipatchFeatureToHostConverter
 
     if (multipatch is null)
     {
-      throw new SpeckleConversionException("Multipatch conversion did not return valid geometry");
+      throw new ConversionException("Multipatch conversion did not return valid geometry");
     }
+
     return multipatch;
   }
 }

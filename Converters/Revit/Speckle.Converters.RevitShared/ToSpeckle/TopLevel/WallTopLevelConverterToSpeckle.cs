@@ -4,6 +4,7 @@ using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects;
 using Speckle.Objects.BuiltElements.Revit;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Extensions;
 
@@ -63,7 +64,7 @@ public class WallTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.
   {
     if (target.Location is not DB.LocationCurve locationCurve)
     {
-      throw new SpeckleConversionException(
+      throw new ValidationException(
         "Incorrect assumption was made that all Revit Wall location properties would be of type \"LocationCurve\""
       );
     }

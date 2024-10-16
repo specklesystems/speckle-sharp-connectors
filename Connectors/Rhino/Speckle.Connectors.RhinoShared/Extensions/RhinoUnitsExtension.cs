@@ -1,6 +1,6 @@
 using Rhino;
-using Speckle.Sdk;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Connectors.Rhino.Extensions;
 
@@ -31,7 +31,7 @@ public static class RhinoUnitsExtension
       case UnitSystem.Unset:
         return Units.Meters;
       default:
-        throw new SpeckleException($"The Unit System \"{unitSystem}\" is unsupported.");
+        throw new UnitNotSupportedException($"The Unit System \"{unitSystem}\" is unsupported.");
     }
   }
 }

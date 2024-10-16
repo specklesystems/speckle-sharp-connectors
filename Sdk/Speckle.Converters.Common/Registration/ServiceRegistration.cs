@@ -2,6 +2,7 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.ToHost;
 
 namespace Speckle.Converters.Common.Registration;
 

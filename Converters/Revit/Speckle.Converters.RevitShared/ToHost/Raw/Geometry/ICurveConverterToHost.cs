@@ -1,6 +1,6 @@
-using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -84,7 +84,7 @@ public class ICurveConverterToHost : ITypedConverter<ICurve, DB.CurveArray>
         }
         return curveArray;
       default:
-        throw new SpeckleConversionException($"The provided geometry of type {target.GetType()} is not a supported");
+        throw new ValidationException($"The provided geometry of type {target.GetType()} is not a supported");
     }
   }
 }

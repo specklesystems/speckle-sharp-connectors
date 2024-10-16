@@ -1,5 +1,5 @@
-using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.Raw;
 
@@ -16,7 +16,7 @@ public class PolygonListToHostConverter : ITypedConverter<List<SGIS.PolygonGeome
   {
     if (target.Count == 0)
     {
-      throw new SpeckleConversionException("Feature contains no geometries");
+      throw new ValidationException("Feature contains no geometries");
     }
     List<ACG.Polygon> polyList = new();
     foreach (SGIS.PolygonGeometry poly in target)

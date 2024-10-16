@@ -1,6 +1,7 @@
 ﻿using Rhino.Collections;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Rhino.ToHost.Raw;
 
@@ -23,7 +24,7 @@ public class FlatPointListToHostConverter : ITypedConverter<IReadOnlyList<double
   {
     if (target.Count % 3 != 0)
     {
-      throw new SpeckleException("Array malformed: length%3 != 0.");
+      throw new ValidationException("Array malformed: length%3 != 0.");
     }
 
     var points = new List<RG.Point3d>(target.Count / 3);

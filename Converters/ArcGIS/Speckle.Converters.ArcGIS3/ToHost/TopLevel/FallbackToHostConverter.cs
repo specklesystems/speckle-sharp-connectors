@@ -1,5 +1,6 @@
 ﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.TopLevel;
@@ -28,7 +29,7 @@ public class FallbackToHostConverter : IToHostTopLevelConverter, ITypedConverter
   {
     if (!target.displayValue.Any())
     {
-      throw new NotSupportedException($"Zero fallback values specified");
+      throw new ValidationException($"Zero fallback values specified");
     }
 
     var first = target.displayValue[0];
@@ -38,7 +39,7 @@ public class FallbackToHostConverter : IToHostTopLevelConverter, ITypedConverter
       SOG.Polyline => _polylineListConverter.Convert(target.displayValue.Cast<SOG.Polyline>().ToList()),
       SOG.Mesh => _meshListConverter.Convert(target.displayValue.Cast<SOG.Mesh>().ToList()),
       SOG.Point => _pointListConverter.Convert(target.displayValue.Cast<SOG.Point>().ToList()),
-      _ => throw new NotSupportedException($"Found unsupported fallback geometry: {first.GetType()}")
+      _ => throw new ValidationException($"Found unsupported fallback geometry: {first.GetType()}")
     };
   }
 }

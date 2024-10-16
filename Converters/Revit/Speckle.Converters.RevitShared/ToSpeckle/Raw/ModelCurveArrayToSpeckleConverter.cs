@@ -3,6 +3,7 @@ using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.RevitShared.Raw;
 
@@ -29,7 +30,7 @@ public sealed class ModelCurveArrayToSpeckleConverter : ITypedConverter<DB.Model
 
     if (curves.Length == 0)
     {
-      throw new SpeckleConversionException($"Expected {target} to have at least 1 curve");
+      throw new ValidationException($"Expected {target} to have at least 1 curve");
     }
 
     var start = curves[0].GetEndPoint(0);

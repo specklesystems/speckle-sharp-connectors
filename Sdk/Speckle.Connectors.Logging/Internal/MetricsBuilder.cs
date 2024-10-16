@@ -1,7 +1,6 @@
 ﻿using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
 
 namespace Speckle.Connectors.Logging.Internal;
 
