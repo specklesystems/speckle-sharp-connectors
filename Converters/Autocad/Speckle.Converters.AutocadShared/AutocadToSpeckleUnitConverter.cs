@@ -1,7 +1,7 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Speckle.Converters.Common;
-using Speckle.Sdk;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Autocad;
 
@@ -32,7 +32,6 @@ public class AutocadToSpeckleUnitConverter : IHostToSpeckleUnitConverter<UnitsVa
       return value;
     }
 
-    // POC: probably would prefer something more specific
-    throw new SpeckleException($"The Unit System \"{hostUnit}\" is unsupported.");
+    throw new UnitNotSupportedException($"The Unit System \"{hostUnit}\" is unsupported.");
   }
 }

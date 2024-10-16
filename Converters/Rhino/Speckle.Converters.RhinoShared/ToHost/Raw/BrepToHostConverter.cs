@@ -1,6 +1,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Rhino.ToHost.Raw;
 
@@ -62,7 +63,7 @@ public class BrepToHostConverter : ITypedConverter<SOG.Brep, RG.Brep>
 
     if (!rhinoBrep.IsValidWithLog(out string reason))
     {
-      throw new SpeckleConversionException($"Resulting BREP was invalid: {reason}");
+      throw new ConversionException($"Resulting BREP was invalid: {reason}");
     }
 
     return rhinoBrep;

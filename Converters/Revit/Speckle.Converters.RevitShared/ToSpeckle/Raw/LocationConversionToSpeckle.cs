@@ -1,6 +1,6 @@
-using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
@@ -28,7 +28,7 @@ public class LocationConversionToSpeckle : ITypedConverter<DB.Location, Base>
     {
       DB.LocationCurve curve => (_curveConverter.Convert(curve.Curve) as Base)!, // POC: ICurve and Base are not related but we know they must be, had to soft cast and then !.
       DB.LocationPoint point => _xyzConverter.Convert(point.Point),
-      _ => throw new SpeckleConversionException($"Unexpected location type {target.GetType()}")
+      _ => throw new ValidationException($"Unexpected location type {target.GetType()}")
     };
   }
 }

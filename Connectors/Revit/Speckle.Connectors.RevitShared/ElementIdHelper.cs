@@ -1,5 +1,5 @@
 ﻿using Autodesk.Revit.DB;
-using Speckle.Converters.Common;
+using Speckle.Sdk;
 
 namespace Speckle.Connectors.RevitShared;
 
@@ -10,7 +10,7 @@ public static class ElementIdHelper
     Element element = doc.GetElement(uniqueId);
     if (element == null)
     {
-      throw new SpeckleConversionException($"Cannot find element with UniqueId: {uniqueId}");
+      throw new SpeckleException($"Cannot find element with UniqueId: {uniqueId}");
     }
 
     return element.Id;

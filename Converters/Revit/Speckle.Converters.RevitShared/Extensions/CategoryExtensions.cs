@@ -1,4 +1,5 @@
 using Autodesk.Revit.DB;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.RevitShared.Extensions;
 
@@ -17,7 +18,7 @@ public static class CategoryExtensions
     var res = Enum.TryParse(cleanName, out SOBR.RevitCategory cat);
     if (!res)
     {
-      throw new NotSupportedException($"Built-in category {builtInCategory} is not supported.");
+      throw new ConversionException($"Built-in category {builtInCategory} is not supported.");
     }
 
     return cat;

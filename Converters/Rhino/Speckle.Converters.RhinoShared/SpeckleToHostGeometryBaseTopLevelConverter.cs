@@ -1,6 +1,7 @@
 ﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Rhino;
@@ -27,7 +28,7 @@ public abstract class SpeckleToHostGeometryBaseTopLevelConverter<TIn, TOut> : IT
 
     if (result is null)
     {
-      throw new SpeckleConversionException(
+      throw new ConversionException(
         $"Geometry base converter returned null for base object of type {target.speckle_type}"
       );
     }

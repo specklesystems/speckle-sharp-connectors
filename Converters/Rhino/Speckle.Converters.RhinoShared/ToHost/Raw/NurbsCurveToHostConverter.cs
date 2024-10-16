@@ -1,5 +1,5 @@
-﻿using Speckle.Converters.Common;
-using Speckle.Converters.Common.Objects;
+﻿using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Rhino.ToHost.Raw;
 
@@ -17,7 +17,7 @@ public class NurbsCurveToHostConverter : ITypedConverter<SOG.Curve, RG.NurbsCurv
   /// </summary>
   /// <param name="target">The Speckle NurbsCurve object to be converted.</param>
   /// <returns>The converted Rhino NurbsCurve object.</returns>
-  /// <exception cref="SpeckleConversionException">Thrown when the conversion fails.</exception>
+  /// <exception cref="ValidationException">Thrown when the conversion fails.</exception>
   /// <remarks>⚠️ This conversion does NOT perform scaling.</remarks>
   public RG.NurbsCurve Convert(SOG.Curve target)
   {

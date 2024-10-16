@@ -1,6 +1,7 @@
 ﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Rhino.ToHost.TopLevel;
@@ -44,7 +45,7 @@ public class FallbackToHostTopLevelConverter
         SOG.Polyline polyline => _polylineConverter.Convert(polyline),
         SOG.Mesh mesh => _meshConverter.Convert(mesh),
         SOG.Point point => _pointConverter.Convert(point),
-        _ => throw new NotSupportedException($"Found unsupported fallback geometry: {item.GetType()}")
+        _ => throw new ConversionException($"Found unsupported fallback geometry: {item.GetType()}")
       };
       x.Transform(GetUnitsTransform(item));
       result.Add(x);

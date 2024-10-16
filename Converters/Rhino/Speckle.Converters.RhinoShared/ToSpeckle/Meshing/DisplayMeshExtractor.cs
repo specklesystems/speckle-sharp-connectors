@@ -1,5 +1,5 @@
 using Rhino.DocObjects;
-using Speckle.Converters.Common;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Meshing;
 
@@ -26,9 +26,7 @@ public static class DisplayMeshExtractor
           renderMeshes = [mesh];
           break;
         default:
-          throw new SpeckleConversionException(
-            $"Unsupported object for display mesh generation {obj.GetType().FullName}"
-          );
+          throw new ConversionException($"Unsupported object for display mesh generation {obj.GetType().FullName}");
       }
     }
 

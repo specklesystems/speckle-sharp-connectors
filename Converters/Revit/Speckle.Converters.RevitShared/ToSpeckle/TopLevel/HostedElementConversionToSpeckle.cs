@@ -1,6 +1,7 @@
 using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Sdk;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
@@ -34,9 +35,10 @@ public class HostedElementConversionToSpeckle
       {
         @base = _converter.Convert(element);
       }
-      catch (SpeckleConversionException)
+      catch (SpeckleException)
       {
-        // POC: logging
+        // POC: Handling this correctly should be high priority, as it affects the quality of the report.
+        // POC: we could aggregate all host element exceptions and throw a single one in the end.
         continue;
       }
 

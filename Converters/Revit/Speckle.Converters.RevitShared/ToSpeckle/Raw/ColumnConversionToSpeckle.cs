@@ -6,6 +6,7 @@ using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects;
 using Speckle.Objects.BuiltElements.Revit;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
@@ -97,7 +98,7 @@ public class ColumnConversionToSpeckle : ITypedConverter<DB.FamilyInstance, Revi
 
     speckleColumn.baseLine =
       GetBaseCurve(target, speckleColumn.topLevel?.elevation ?? -1, speckleColumn.topOffset)
-      ?? throw new SpeckleConversionException("Unable to find a valid baseCurve for column");
+      ?? throw new ValidationException("Unable to find a valid baseCurve for column");
 
     if (target.Location is LocationPoint locationPoint)
     {

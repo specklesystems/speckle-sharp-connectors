@@ -162,7 +162,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
             if (conversionIds.Count == 0)
             {
-              throw new SpeckleConversionException($"Failed to convert object.");
+              throw new SpeckleException($"Failed to convert object.");
             }
 
             // 4: log

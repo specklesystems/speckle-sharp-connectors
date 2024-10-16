@@ -1,9 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using Autodesk.Revit.DB;
-using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Sdk;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.RevitShared.Helpers;
 
@@ -36,7 +37,7 @@ public class ParameterValueExtractor
       StorageType.ElementId => GetValueAsElementNameOrId(parameter),
       StorageType.None
       or _
-        => throw new SpeckleConversionException($"Unsupported parameter storage type {parameter.StorageType}")
+        => throw new ValidationException($"Unsupported parameter storage type {parameter.StorageType}")
     };
   }
 
@@ -44,7 +45,7 @@ public class ParameterValueExtractor
   {
     if (!TryGetValueAsDouble(element, builtInParameter, out double? value))
     {
-      throw new SpeckleConversionException($"Failed to get {builtInParameter} as double.");
+      throw new ValidationException($"Failed to get {builtInParameter} as double.");
     }
 
     return value!.Value; // If TryGet returns true, we succeeded in obtaining the value, and it will not be null.
@@ -80,7 +81,7 @@ public class ParameterValueExtractor
   public int GetValueAsInt(Element element, BuiltInParameter builtInParameter)
   {
     return GetValueGeneric<int?>(element, builtInParameter, StorageType.Integer, (parameter) => parameter.AsInteger())
-      ?? throw new SpeckleConversionException(
+      ?? throw new SpeckleException(
         $"Expected int but got null for property {builtInParameter} on element of type {element.GetType()}"
       );
   }
@@ -173,7 +174,7 @@ public class ParameterValueExtractor
   {
     if (!TryGetValueAsDocumentObject<T>(element, builtInParameter, out var value))
     {
-      throw new SpeckleConversionException($"Failed to get {builtInParameter} as an element of type {typeof(T)}");
+      throw new SpeckleException($"Failed to get {builtInParameter} as an element of type {typeof(T)}");
     }
 
     return value;
@@ -209,7 +210,7 @@ public class ParameterValueExtractor
 
     if (parameter.StorageType != expectedStorageType)
     {
-      throw new SpeckleConversionException(
+      throw new SpeckleException(
         $"Expected parameter of storage type {expectedStorageType} but got parameter of storage type {parameter.StorageType}"
       );
     }

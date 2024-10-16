@@ -5,6 +5,7 @@ using ArcGIS.Desktop.Mapping;
 using Speckle.Converters.Common;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.GraphTraversal;
 using FieldDescription = ArcGIS.Core.Data.DDL.FieldDescription;
@@ -289,7 +290,8 @@ public class FeatureClassUtils : IFeatureClassUtils
       var hostAppGeom = listOfContextAndTrackers[0].Item2.HostAppGeom;
       if (hostAppGeom is null) // type check, should not happen
       {
-        throw new SpeckleConversionException("Conversion failed");
+        // TODO: Unsure about the type this exception should be.
+        throw new SpeckleException("Conversion failed");
       }
       geomType = hostAppGeom.GeometryType;
     }
@@ -311,7 +313,7 @@ public class FeatureClassUtils : IFeatureClassUtils
       {
         if (trackerItem.HostAppGeom is not ACG.Geometry shape)
         {
-          throw new SpeckleConversionException("Feature Class element had no converted geometry");
+          throw new ValidationException("Feature Class element had no converted geometry");
         }
 
         // exception for Points: turn into MultiPoint layer

@@ -3,6 +3,7 @@ using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
@@ -39,7 +40,7 @@ public class BeamConversionToSpeckle : ITypedConverter<DB.FamilyInstance, SOBR.R
     var baseGeometry = _locationConverter.Convert(target.Location);
     if (baseGeometry is not ICurve baseCurve)
     {
-      throw new SpeckleConversionException(
+      throw new ValidationException(
         $"Beam location conversion did not yield an ICurve, instead it yielded an object of type {baseGeometry.GetType()}"
       );
     }

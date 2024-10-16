@@ -130,7 +130,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
 
     if (results.All(x => x.Status == Status.ERROR))
     {
-      throw new SpeckleConversionException("Failed to convert all objects.");
+      throw new SpeckleException("Failed to convert all objects.");
     }
 
     var idsAndSubElementIds = _elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(atomicObjects);

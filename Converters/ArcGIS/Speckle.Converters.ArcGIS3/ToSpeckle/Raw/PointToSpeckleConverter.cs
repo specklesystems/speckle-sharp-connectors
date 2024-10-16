@@ -1,6 +1,8 @@
+using System.ComponentModel.DataAnnotations;
 using ArcGIS.Core.Geometry;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Sdk;
 
 namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
 
@@ -23,7 +25,7 @@ public class PointToSpeckleConverter : ITypedConverter<MapPoint, SOG.Point>
         is not MapPoint reprojectedPt
       )
       {
-        throw new SpeckleConversionException(
+        throw new ValidationException(
           $"Conversion to Spatial Reference {_settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference.Name} failed"
         );
       }
@@ -35,7 +37,7 @@ public class PointToSpeckleConverter : ITypedConverter<MapPoint, SOG.Point>
         || Double.IsInfinity(reprojectedPt.Y)
       )
       {
-        throw new SpeckleConversionException(
+        throw new ValidationException(
           $"Conversion to Spatial Reference {_settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference.Name} failed: coordinates undefined"
         );
       }
@@ -51,7 +53,7 @@ public class PointToSpeckleConverter : ITypedConverter<MapPoint, SOG.Point>
     }
     catch (ArgumentException ex)
     {
-      throw new SpeckleConversionException(
+      throw new SpeckleException(
         $"Conversion to Spatial Reference {_settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference.Name} failed",
         ex
       );
