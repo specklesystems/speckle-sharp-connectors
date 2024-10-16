@@ -1,6 +1,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
@@ -29,7 +30,7 @@ public class DBBodyToSpeckleRawConverter : ITypedConverter<ADB.Body, SOG.Mesh>
     using ABR.Brep brep = new(target);
     if (brep.IsNull)
     {
-      throw new SpeckleConversionException("Could not retrieve brep from the body.");
+      throw new ConversionException("Could not retrieve brep from the body.");
     }
 
     var vertices = new List<AG.Point3d>();
