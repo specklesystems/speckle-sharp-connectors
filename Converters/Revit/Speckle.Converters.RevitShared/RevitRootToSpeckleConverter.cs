@@ -14,7 +14,7 @@ namespace Speckle.Converters.RevitShared;
 public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
 {
   private readonly IConverterManager<IToSpeckleTopLevelConverter> _toSpeckle;
-  private readonly ITypedConverter<DB.Element, List<Dictionary<string, object>>> _materialQuantityConverter;
+  private readonly ITypedConverter<DB.Element, Dictionary<string, object>> _materialQuantityConverter;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ParameterExtractor _parameterExtractor;
   private readonly ILogger<RevitRootToSpeckleConverter> _logger;
@@ -23,7 +23,7 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
 
   public RevitRootToSpeckleConverter(
     IConverterManager<IToSpeckleTopLevelConverter> toSpeckle,
-    ITypedConverter<DB.Element, List<Dictionary<string, object>>> materialQuantityConverter,
+    ITypedConverter<DB.Element, Dictionary<string, object>> materialQuantityConverter,
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ParameterExtractor parameterExtractor,
     ILogger<RevitRootToSpeckleConverter> logger
@@ -48,6 +48,9 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
     Base result = objectConverter.Convert(target);
 
     result.applicationId = element.UniqueId;
+
+    // Add ElementID to the converted objects
+    result["elementId"] = element.Id.ToString()!;
 
     // POC DirectShapes have RevitCategory enum as the type or the category property, DS category property is already set in the converter
     // trying to set the category as a string will throw

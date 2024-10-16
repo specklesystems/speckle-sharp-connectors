@@ -19,6 +19,7 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Logging;
 
 namespace Speckle.Connectors.Rhino.Bindings;
 
@@ -39,6 +40,7 @@ public sealed class RhinoSendBinding : ISendBinding
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IRhinoConversionSettingsFactory _rhinoConversionSettingsFactory;
   private readonly ISpeckleApplication _speckleApplication;
+  private readonly ISdkActivityFactory _activityFactory;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -59,7 +61,8 @@ public sealed class RhinoSendBinding : ISendBinding
     IOperationProgressManager operationProgressManager,
     ILogger<RhinoSendBinding> logger,
     IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
-    ISpeckleApplication speckleApplication
+    ISpeckleApplication speckleApplication,
+    ISdkActivityFactory activityFactory
   )
   {
     _store = store;
@@ -75,6 +78,7 @@ public sealed class RhinoSendBinding : ISendBinding
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler.Parent.TopLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent); // POC: Commands are tightly coupled with their bindings, at least for now, saves us injecting a factory.
+    _activityFactory = activityFactory;
     SubscribeToRhinoEvents();
   }
 
@@ -153,6 +157,7 @@ public sealed class RhinoSendBinding : ISendBinding
 
   public async Task Send(string modelCardId)
   {
+    using var activity = _activityFactory.Start();
     using var scope = _serviceProvider.CreateScope();
     scope
       .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()

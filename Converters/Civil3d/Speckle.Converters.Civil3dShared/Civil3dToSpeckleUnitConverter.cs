@@ -2,7 +2,7 @@ using Speckle.Converters.Common;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 
-namespace Speckle.Converters.Civil3d;
+namespace Speckle.Converters.Civil3dShared;
 
 public class Civil3dToSpeckleUnitConverter : IHostToSpeckleUnitConverter<AAEC.BuiltInUnit>
 {

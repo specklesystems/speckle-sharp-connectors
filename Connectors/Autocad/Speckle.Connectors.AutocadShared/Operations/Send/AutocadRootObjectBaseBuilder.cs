@@ -137,6 +137,9 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
       // 5 - Unpack the color proxies
       root[ProxyKeys.COLOR] = _colorUnpacker.UnpackColors(atomicObjects, usedAcadLayers);
 
+      // add any additional properties (most likely from verticals)
+      AddAdditionalProxiesToRoot(root);
+
       return new RootObjectBuilderResult(root, results);
     }
   }
@@ -144,6 +147,11 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
   public virtual (Collection, LayerTableRecord?) CreateObjectCollection(Entity entity, Transaction tr)
   {
     return (new(), null);
+  }
+
+  public virtual void AddAdditionalProxiesToRoot(Collection rootCollection)
+  {
+    return;
   }
 
   private SendConversionResult ConvertAutocadEntity(

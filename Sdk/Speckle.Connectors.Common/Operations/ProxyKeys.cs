@@ -1,4 +1,4 @@
-﻿namespace Speckle.Connectors.Common.Operations;
+namespace Speckle.Connectors.Common.Operations;
 
 public static class ProxyKeys
 {
@@ -7,4 +7,5 @@ public static class ProxyKeys
   public const string INSTANCE_DEFINITION = "instanceDefinitionProxies";
   public const string GROUP = "groupProxies";
   public const string PARAMETER_DEFINITIONS = "parameterDefinitions";
+  public const string PROPERTYSET_DEFINITIONS = "propertySetDefinitions";
 }
