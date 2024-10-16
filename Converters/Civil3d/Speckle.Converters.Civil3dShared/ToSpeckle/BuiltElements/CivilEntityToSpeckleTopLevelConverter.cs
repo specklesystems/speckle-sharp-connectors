@@ -3,6 +3,7 @@ using Speckle.Converters.Civil3dShared.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
+using Speckle.Sdk;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Civil3dShared.ToSpeckle.BuiltElements;
@@ -35,11 +36,18 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
 
   public Base Convert(CDB.Entity target)
   {
+    string name = target.DisplayName;
+    try
+    {
+      name = target.Name; // this will throw for some entities like labels
+    }
+    catch (Exception e) when (!e.IsFatal()) { }
+
     Base civilObject =
       new()
       {
         ["type"] = target.GetType().ToString().Split('.').Last(),
-        ["name"] = target.Name,
+        ["name"] = name,
         ["units"] = _settingsStore.Current.SpeckleUnits,
         applicationId = target.GetSpeckleApplicationId()
       };
@@ -79,13 +87,35 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
       case CDB.Corridor corridor:
         children = _corridorHandler.GetCorridorChildren(corridor);
         break;
+
+      case CDB.Site site:
+        children = GetSiteChildren(site);
+        break;
     }
+
     if (children is not null)
     {
       civilObject["@elements"] = children;
     }
 
     return civilObject;
+  }
+
+  private List<Base>? GetSiteChildren(CDB.Site site)
+  {
+    List<Base> parcels = new();
+
+    using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
+    {
+      foreach (ADB.ObjectId parcelId in site.GetParcelIds())
+      {
+        var parcel = (CDB.Parcel)tr.GetObject(parcelId, ADB.OpenMode.ForRead);
+        parcels.Add(Convert(parcel));
+      }
+
+      tr.Commit();
+    }
+    return parcels.Count > 0 ? parcels : null;
   }
 
   private List<Base>? GetAlignmentChildren(CDB.Alignment alignment)

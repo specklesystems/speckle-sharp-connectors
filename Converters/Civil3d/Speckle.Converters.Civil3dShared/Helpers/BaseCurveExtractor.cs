@@ -52,6 +52,8 @@ public sealed class BaseCurveExtractor
       case CDB.Alignment alignment:
         return GetAlignmentBaseCurves(alignment);
 
+      case CDB.Parcel parcel:
+        return new() { _curveConverter.Convert(parcel.BaseCurve) };
       // for any entities that don't use their basecurve prop
       default:
         return null;

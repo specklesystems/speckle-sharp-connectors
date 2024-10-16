@@ -46,6 +46,8 @@ public class ClassPropertiesExtractor
         return ExtractCatchmentProperties(catchment);
       case CDB.Site site:
         return ExtractSiteProperties(site);
+      case CDB.Parcel parcel:
+        return ExtractParcelProperties(parcel);
 
       // pipe networks
       case CDB.Pipe pipe:
@@ -59,28 +61,29 @@ public class ClassPropertiesExtractor
       case CDB.Profile profile:
         return ExtractProfileProperties(profile);
 
+      // assemblies
+      case CDB.Subassembly subassembly:
+        return ExtractSubassemblyProperties(subassembly);
+
       default:
         return null;
     }
   }
 
-  // For more info on how points are used: https://help.autodesk.com/view/CIV3D/2024/ENU/?guid=GUID-CBABE972-D690-49AE-A7DE-60F2E1B0675D
-  private Dictionary<string, object?> ExtractPointProperties(CDB.Point point)
+  private Dictionary<string, object?> ExtractParcelProperties(CDB.Parcel parcel)
   {
-    Dictionary<string, object?> pointProperties =
-      new()
-      {
-        ["elevation"] = point.Elevation,
-        ["station"] = point.Station,
-        ["isLoopPoint"] = point.IsLoopPoint
-      };
+    return new() { ["number"] = parcel.Number, ["taxId"] = parcel.TaxId };
+  }
 
-    if (point.Codes.Count > 0)
+  private Dictionary<string, object?> ExtractSubassemblyProperties(CDB.Subassembly subassembly)
+  {
+    Dictionary<string, object?> subassemblyProperties = new();
+    if (subassembly.HasSide)
     {
-      pointProperties["codes"] = point.Codes.ToList();
+      subassemblyProperties["side"] = subassembly.Side;
     }
 
-    return pointProperties;
+    return subassemblyProperties;
   }
 
   private Dictionary<string, object?> ExtractProfileProperties(CDB.Profile profile)
@@ -224,12 +227,10 @@ public class ClassPropertiesExtractor
       ["area"] = catchment.Area,
       ["area2d"] = catchment.Area2d,
       ["boundary"] = boundary,
-      ["exclusionary"] = catchment.Exclusionary,
       ["hydrologicalSoilGroup"] = catchment.HydrologicalSoilGroup.ToString(),
       ["imperviousArea"] = catchment.ImperviousArea,
       ["manningsCoefficient"] = catchment.ManningsCoefficient,
       ["perimeter2d"] = catchment.Perimeter2d,
-      ["runoffCoefficient"] = catchment.RunoffCoefficient,
       ["timeOfConcentration"] = catchment.TimeOfConcentration
     };
   }

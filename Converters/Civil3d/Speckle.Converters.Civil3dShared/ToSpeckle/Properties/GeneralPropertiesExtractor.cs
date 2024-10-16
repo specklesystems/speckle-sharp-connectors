@@ -1,4 +1,5 @@
 using System.Reflection;
+using Autodesk.Civil.Runtime;
 using Speckle.Converters.Civil3dShared.Extensions;
 
 namespace Speckle.Converters.Civil3dShared.ToSpeckle;
@@ -19,6 +20,10 @@ public class GeneralPropertiesExtractor
   {
     switch (entity)
     {
+      // catchment -> properties -> Catchment Properties
+      case CDB.Catchment catchment:
+        return ExtractCatchmentProperties(catchment);
+
       // surface -> properties -> statistics -> general, extended, and tin/grid properties
       case CDB.Surface surface:
         return ExtractSurfaceProperties(surface);
@@ -32,20 +37,96 @@ public class GeneralPropertiesExtractor
       case CDB.Corridor corridor:
         return ExtractCorridorProperties(corridor);
 
-      //case CDB.Assembly assembly:
-      //return ExtractAssemblyProperties(assembly);
-
-      //case CDB.Subassembly subassembly:
-      //return ExtractSubassemblyProperties(subassembly);
+      // subassembly -> properties -> parameters, codes
+      case CDB.Subassembly subassembly:
+        return ExtractSubassemblyProperties(subassembly);
 
       default:
         return null;
     }
   }
 
-  //private Dictionary<string, object?> ExtractSubassemblyProperties(CDB.Subassembly subassembly) { }
+  private Dictionary<string, object?> ExtractCatchmentProperties(CDB.Catchment catchment)
+  {
+    Dictionary<string, object?> generalPropertiesDict = new();
 
-  //private Dictionary<string, object?> ExtractAssemblyProperties(CDB.Assembly assembly) { }
+    // get catchment properties props
+    Dictionary<string, object?> catchmentPropertiesDict = new();
+
+    Dictionary<string, object?> hydrologicalProps = new() { ["runoffCoefficient"] = catchment.RunoffCoefficient };
+    catchmentPropertiesDict["Hydrological Properties"] = hydrologicalProps;
+
+    Dictionary<string, object?> sheetFlow =
+      new()
+      {
+        ["sheetFlowSegments"] = catchment.SheetFlowSegments,
+        ["sheetFlowTravelTime"] = catchment.SheetFlowTravelTime
+      };
+    catchmentPropertiesDict["Sheet Flow"] = sheetFlow;
+
+    Dictionary<string, object?> shallowConcentratedFlow =
+      new()
+      {
+        ["shallowFlowSegments"] = catchment.ShallowFlowSegments,
+        ["shallowFlowTravelTime"] = catchment.ShallowFlowTravelTime
+      };
+    catchmentPropertiesDict["Shallow Concentrated Flow"] = shallowConcentratedFlow;
+
+    Dictionary<string, object?> channelFlow =
+      new()
+      {
+        ["channelFlowSegments"] = catchment.ChannelFlowSegments,
+        ["channelFlowTravelTime"] = catchment.ChannelFlowTravelTime
+      };
+    catchmentPropertiesDict["Channel Flow"] = channelFlow;
+
+    Dictionary<string, object?> timeOfConcentration =
+      new()
+      {
+        ["timeOfConcentration"] = catchment.TimeOfConcentration,
+        ["timeOfConcentrationCalculationMethod"] = catchment.TimeOfConcentrationCalculationMethod,
+        ["hydrologicallyMostDistantPoint"] = catchment.HydrologicallyMostDistantPoint.ToArray(),
+        ["hydrologicallyMostDistantLength"] = catchment.HydrologicallyMostDistantLength
+      };
+    catchmentPropertiesDict["Time of Concentration"] = timeOfConcentration;
+
+    if (catchmentPropertiesDict.Count > 0)
+    {
+      generalPropertiesDict["Catchment Properties"] = catchmentPropertiesDict;
+    }
+
+    return generalPropertiesDict;
+  }
+
+  private Dictionary<string, object?> ExtractSubassemblyProperties(CDB.Subassembly subassembly)
+  {
+    Dictionary<string, object?> generalPropertiesDict = new();
+
+    // get parameters props
+    Dictionary<string, object?> parametersDict = new();
+    foreach (ParamBool p in subassembly.ParamsBool)
+    {
+      parametersDict[p.DisplayName] = p.Value;
+    }
+    foreach (ParamDouble p in subassembly.ParamsDouble)
+    {
+      parametersDict[p.DisplayName] = p.Value;
+    }
+    foreach (ParamString p in subassembly.ParamsString)
+    {
+      parametersDict[p.DisplayName] = p.Value;
+    }
+    foreach (ParamLong p in subassembly.ParamsLong)
+    {
+      parametersDict[p.DisplayName] = p.Value;
+    }
+    if (parametersDict.Count > 0)
+    {
+      generalPropertiesDict["Parameters"] = parametersDict;
+    }
+
+    return generalPropertiesDict;
+  }
 
   private void ProcessCorridorFeaturelinePoints(
     CDB.CorridorFeatureLine featureline,
@@ -252,6 +333,9 @@ public class GeneralPropertiesExtractor
         break;
       case CDB.TinVolumeSurface tinVolumeSurface:
         statisticsDict["TIN"] = ExtractPropertiesGeneric<CDB.TinSurfaceProperties>(tinVolumeSurface.GetTinProperties());
+        statisticsDict["Volume"] = ExtractPropertiesGeneric<CDB.VolumeSurfaceProperties>(
+          tinVolumeSurface.GetVolumeProperties()
+        );
         break;
       case CDB.GridSurface gridSurface:
         statisticsDict["Grid"] = ExtractPropertiesGeneric<CDB.GridSurfaceProperties>(gridSurface.GetGridProperties());
@@ -259,6 +343,9 @@ public class GeneralPropertiesExtractor
       case CDB.GridVolumeSurface gridVolumeSurface:
         statisticsDict["Grid"] = ExtractPropertiesGeneric<CDB.GridSurfaceProperties>(
           gridVolumeSurface.GetGridProperties()
+        );
+        statisticsDict["Volume"] = ExtractPropertiesGeneric<CDB.VolumeSurfaceProperties>(
+          gridVolumeSurface.GetVolumeProperties()
         );
         break;
     }
@@ -278,6 +365,11 @@ public class GeneralPropertiesExtractor
     foreach (PropertyInfo? property in properties)
     {
       var value = property.GetValue(obj);
+      if (value is ADB.ObjectId id)
+      {
+        value = id.GetSpeckleApplicationId();
+      }
+
       propertiesDict[property.Name] = value;
     }
 
