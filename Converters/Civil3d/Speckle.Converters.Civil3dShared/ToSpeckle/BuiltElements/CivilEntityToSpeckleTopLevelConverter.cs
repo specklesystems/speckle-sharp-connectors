@@ -85,7 +85,7 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     }
     if (children is not null)
     {
-      civilObject["@elements"] = children;
+      civilObject["elements"] = children;
     }
 
     return civilObject;
