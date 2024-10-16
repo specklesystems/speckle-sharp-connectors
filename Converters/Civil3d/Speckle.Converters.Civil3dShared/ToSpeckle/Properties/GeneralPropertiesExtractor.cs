@@ -42,6 +42,7 @@ public class GeneralPropertiesExtractor
     }
   }
 
+
   private Dictionary<string, object?> ExtractSubassemblyProperties(CDB.Subassembly subassembly)
   {
     Dictionary<string, object?> generalPropertiesDict = new();

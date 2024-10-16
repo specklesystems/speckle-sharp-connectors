@@ -51,7 +51,7 @@ public class PropertySetDefinitionHandler
 
     if (Definitions.ContainsKey(name))
     {
-      return (propertyDefinitionNames);
+      return propertyDefinitionNames;
     }
 
     Definitions[name] = new Dictionary<string, object?>()

@@ -49,6 +49,7 @@ public class ClassPropertiesExtractor
       case CDB.Parcel parcel:
         return ExtractParcelProperties(parcel);
 
+
       // pipe networks
       case CDB.Pipe pipe:
         return ExtractPipeProperties(pipe);
@@ -84,6 +85,37 @@ public class ClassPropertiesExtractor
     }
 
     return subassemblyProperties;
+  }
+
+  private Dictionary<string, object?> ExtractProfileProperties(CDB.Profile profile)
+  {
+    return new()
+    {
+      ["offset"] = profile.Offset,
+      ["startingStation"] = profile.StartingStation,
+      ["endingStation"] = profile.EndingStation,
+      ["profileType"] = profile.ProfileType.ToString(),
+      ["elevationMin"] = profile.ElevationMin,
+      ["elevationMax"] = profile.ElevationMax
+    };
+  }
+
+  private Dictionary<string, object?> ExtractAlignmentProperties(CDB.Alignment alignment)
+  {
+    Dictionary<string, object?> alignmentProperties =
+      new()
+      {
+        ["startingStation"] = alignment.StartingStation,
+        ["endingStation"] = alignment.EndingStation,
+        ["alignmentType"] = alignment.AlignmentType.ToString()
+      };
+
+    if (!alignment.IsSiteless)
+    {
+      alignmentProperties["siteId"] = alignment.SiteId.GetSpeckleApplicationId();
+    }
+
+    return alignmentProperties;
   }
 
   private Dictionary<string, object?> ExtractProfileProperties(CDB.Profile profile)

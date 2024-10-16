@@ -79,13 +79,15 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
       case CDB.Corridor corridor:
         children = _corridorHandler.GetCorridorChildren(corridor);
         break;
+
       case CDB.Site site:
         children = GetSiteChildren(site);
         break;
     }
+    
     if (children is not null)
     {
-      civilObject["elements"] = children;
+      civilObject["@elements"] = children;
     }
 
     return civilObject;
