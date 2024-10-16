@@ -20,6 +20,10 @@ public class GeneralPropertiesExtractor
   {
     switch (entity)
     {
+      // catchment -> properties -> Catchment Properties
+      case CDB.Catchment catchment:
+        return ExtractCatchmentProperties(catchment);
+
       // surface -> properties -> statistics -> general, extended, and tin/grid properties
       case CDB.Surface surface:
         return ExtractSurfaceProperties(surface);
@@ -42,6 +46,57 @@ public class GeneralPropertiesExtractor
     }
   }
 
+  private Dictionary<string, object?> ExtractCatchmentProperties(CDB.Catchment catchment)
+  {
+    Dictionary<string, object?> generalPropertiesDict = new();
+
+    // get catchment properties props
+    Dictionary<string, object?> catchmentPropertiesDict = new();
+
+    Dictionary<string, object?> hydrologicalProps = new() { ["runoffCoefficient"] = catchment.RunoffCoefficient };
+    catchmentPropertiesDict["Hydrological Properties"] = hydrologicalProps;
+
+    Dictionary<string, object?> sheetFlow =
+      new()
+      {
+        ["sheetFlowSegments"] = catchment.SheetFlowSegments,
+        ["sheetFlowTravelTime"] = catchment.SheetFlowTravelTime
+      };
+    catchmentPropertiesDict["Sheet Flow"] = sheetFlow;
+
+    Dictionary<string, object?> shallowConcentratedFlow =
+      new()
+      {
+        ["shallowFlowSegments"] = catchment.ShallowFlowSegments,
+        ["shallowFlowTravelTime"] = catchment.ShallowFlowTravelTime
+      };
+    catchmentPropertiesDict["Shallow Concentrated Flow"] = shallowConcentratedFlow;
+
+    Dictionary<string, object?> channelFlow =
+      new()
+      {
+        ["channelFlowSegments"] = catchment.ChannelFlowSegments,
+        ["channelFlowTravelTime"] = catchment.ChannelFlowTravelTime
+      };
+    catchmentPropertiesDict["Channel Flow"] = channelFlow;
+
+    Dictionary<string, object?> timeOfConcentration =
+      new()
+      {
+        ["timeOfConcentration"] = catchment.TimeOfConcentration,
+        ["timeOfConcentrationCalculationMethod"] = catchment.TimeOfConcentrationCalculationMethod,
+        ["hydrologicallyMostDistantPoint"] = catchment.HydrologicallyMostDistantPoint.ToArray(),
+        ["hydrologicallyMostDistantLength"] = catchment.HydrologicallyMostDistantLength
+      };
+    catchmentPropertiesDict["Time of Concentration"] = timeOfConcentration;
+
+    if (catchmentPropertiesDict.Count > 0)
+    {
+      generalPropertiesDict["Catchment Properties"] = catchmentPropertiesDict;
+    }
+
+    return generalPropertiesDict;
+  }
 
   private Dictionary<string, object?> ExtractSubassemblyProperties(CDB.Subassembly subassembly)
   {

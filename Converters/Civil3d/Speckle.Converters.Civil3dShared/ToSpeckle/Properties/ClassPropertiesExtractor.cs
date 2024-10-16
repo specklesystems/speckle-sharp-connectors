@@ -227,12 +227,10 @@ public class ClassPropertiesExtractor
       ["area"] = catchment.Area,
       ["area2d"] = catchment.Area2d,
       ["boundary"] = boundary,
-      ["exclusionary"] = catchment.Exclusionary,
       ["hydrologicalSoilGroup"] = catchment.HydrologicalSoilGroup.ToString(),
       ["imperviousArea"] = catchment.ImperviousArea,
       ["manningsCoefficient"] = catchment.ManningsCoefficient,
       ["perimeter2d"] = catchment.Perimeter2d,
-      ["runoffCoefficient"] = catchment.RunoffCoefficient,
       ["timeOfConcentration"] = catchment.TimeOfConcentration
     };
   }
