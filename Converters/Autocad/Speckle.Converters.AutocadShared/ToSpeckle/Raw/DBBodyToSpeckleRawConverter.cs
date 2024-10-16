@@ -2,7 +2,6 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk;
 using Speckle.Sdk.Common.Exceptions;
-
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
