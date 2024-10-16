@@ -73,21 +73,22 @@ public class PropertySetExtractor
     {
       // var isNullOrEmpty = value == null || (value is string s && string.IsNullOrEmpty(s));
       // POC: should add same check as in revit for sending null or empty values
-
       var setDefinition = (AAECPDB.PropertySetDefinition)
         tr.GetObject(propertySet.PropertySetDefinition, ADB.OpenMode.ForRead);
+      Dictionary<int, string>? propertyDefinitionNames = null;
+      string name = setDefinition.Name;
 
-      (Dictionary<int, string> propertyDefinitionNames, string name) = _propertySetDefinitionHandler.HandleDefinition(
-        setDefinition
-      );
+      propertyDefinitionNames = _propertySetDefinitionHandler.HandleDefinition(setDefinition);
 
       // get all property values in the propertyset
       Dictionary<string, object?> properties = new();
       foreach (AAECPDB.PropertySetData data in propertySet.PropertySetData)
       {
-        string dataName = propertyDefinitionNames.TryGetValue(data.Id, out string propertyDefinitionName)
-          ? propertyDefinitionName
-          : data.FieldBucketId;
+        string dataName =
+          propertyDefinitionNames is not null
+          && propertyDefinitionNames.TryGetValue(data.Id, out string propertyDefinitionName)
+            ? propertyDefinitionName
+            : data.FieldBucketId;
 
         var value = GetValue(data);
 

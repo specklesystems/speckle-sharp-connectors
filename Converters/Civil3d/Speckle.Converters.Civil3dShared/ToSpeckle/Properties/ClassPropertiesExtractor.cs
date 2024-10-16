@@ -1,4 +1,3 @@
-using Autodesk.Civil.DatabaseServices;
 using Speckle.Converters.Civil3dShared.Extensions;
 using Speckle.Converters.Civil3dShared.Helpers;
 using Speckle.Converters.Common;
@@ -47,10 +46,18 @@ public class ClassPropertiesExtractor
         return ExtractCatchmentProperties(catchment);
       case CDB.Site site:
         return ExtractSiteProperties(site);
+
+      // pipe networks
       case CDB.Pipe pipe:
         return ExtractPipeProperties(pipe);
       case CDB.Structure structure:
         return ExtractStructureProperties(structure);
+
+      // alignments
+      case CDB.Alignment alignment:
+        return ExtractAlignmentProperties(alignment);
+      case CDB.Profile profile:
+        return ExtractProfileProperties(profile);
 
       default:
         return null;
@@ -76,11 +83,43 @@ public class ClassPropertiesExtractor
     return pointProperties;
   }
 
+  private Dictionary<string, object?> ExtractProfileProperties(CDB.Profile profile)
+  {
+    return new()
+    {
+      ["offset"] = profile.Offset,
+      ["startingStation"] = profile.StartingStation,
+      ["endingStation"] = profile.EndingStation,
+      ["profileType"] = profile.ProfileType.ToString(),
+      ["elevationMin"] = profile.ElevationMin,
+      ["elevationMax"] = profile.ElevationMax
+    };
+  }
+
+  private Dictionary<string, object?> ExtractAlignmentProperties(CDB.Alignment alignment)
+  {
+    Dictionary<string, object?> alignmentProperties =
+      new()
+      {
+        ["startingStation"] = alignment.StartingStation,
+        ["endingStation"] = alignment.EndingStation,
+        ["alignmentType"] = alignment.AlignmentType.ToString()
+      };
+
+    if (!alignment.IsSiteless)
+    {
+      alignmentProperties["siteId"] = alignment.SiteId.GetSpeckleApplicationId();
+    }
+
+    return alignmentProperties;
+  }
+
   private Dictionary<string, object?> ExtractPipeProperties(CDB.Pipe pipe)
   {
     Dictionary<string, object?> pipeProperties =
       new()
       {
+        ["bearing"] = pipe.Bearing,
         ["innerDiameterOrWidth"] = pipe.InnerDiameterOrWidth,
         ["innerHeight"] = pipe.InnerHeight,
         ["slope"] = pipe.Slope,
@@ -123,7 +162,7 @@ public class ClassPropertiesExtractor
         ["innerDiameterOrWidth"] = structure.InnerDiameterOrWidth
       };
 
-    if (structure.BoundingShape == BoundingShapeType.Box)
+    if (structure.BoundingShape == CDB.BoundingShapeType.Box)
     {
       structureProperties["innerLength"] = structure.InnerLength;
       structureProperties["length"] = structure.Length;

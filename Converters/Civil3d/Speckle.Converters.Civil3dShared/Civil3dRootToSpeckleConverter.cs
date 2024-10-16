@@ -88,21 +88,21 @@ public class Civil3dRootToSpeckleConverter : IRootToSpeckleConverter
 
     // get general properties
     Dictionary<string, object?>? generalProperties = _generalPropertiesExtractor.GetGeneralProperties(entity);
-    if (generalProperties is not null)
+    if (generalProperties is not null && generalProperties.Count > 0)
     {
       properties.Add("Properties", generalProperties);
     }
 
     // get part data
     Dictionary<string, object?>? partData = _partDataExtractor.GetPartData(entity);
-    if (partData is not null)
+    if (partData is not null && partData.Count > 0)
     {
       properties.Add("Part Data", partData);
     }
 
     // get property set data
     Dictionary<string, object?>? propertySets = _propertySetExtractor.GetPropertySets(entity);
-    if (propertySets is not null)
+    if (propertySets is not null && propertySets.Count > 0)
     {
       properties.Add("Property Sets", propertySets);
     }

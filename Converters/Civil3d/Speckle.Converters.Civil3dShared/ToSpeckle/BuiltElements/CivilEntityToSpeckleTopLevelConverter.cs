@@ -1,3 +1,4 @@
+using Speckle.Converters.Civil3dShared.Extensions;
 using Speckle.Converters.Civil3dShared.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
@@ -13,31 +14,38 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly BaseCurveExtractor _baseCurveExtractor;
   private readonly ClassPropertiesExtractor _classPropertiesExtractor;
+  private readonly CorridorHandler _corridorHandler;
 
   public CivilEntityToSpeckleTopLevelConverter(
     IConverterSettingsStore<Civil3dConversionSettings> settingsStore,
     DisplayValueExtractor displayValueExtractor,
     BaseCurveExtractor baseCurveExtractor,
-    ClassPropertiesExtractor classPropertiesExtractor
+    ClassPropertiesExtractor classPropertiesExtractor,
+    CorridorHandler corridorHandler
   )
   {
     _settingsStore = settingsStore;
     _displayValueExtractor = displayValueExtractor;
     _baseCurveExtractor = baseCurveExtractor;
     _classPropertiesExtractor = classPropertiesExtractor;
+    _corridorHandler = corridorHandler;
   }
 
   public Base Convert(object target) => Convert((CDB.Entity)target);
 
   public Base Convert(CDB.Entity target)
   {
-    Base civilObject = new();
-    civilObject["type"] = target.GetType().ToString().Split('.').Last();
-    civilObject["name"] = target.Name;
-    civilObject["units"] = _settingsStore.Current.SpeckleUnits;
+    Base civilObject =
+      new()
+      {
+        ["type"] = target.GetType().ToString().Split('.').Last(),
+        ["name"] = target.Name,
+        ["units"] = _settingsStore.Current.SpeckleUnits,
+        applicationId = target.GetSpeckleApplicationId()
+      };
 
     // get basecurve
-    List<ICurve>? baseCurves = _baseCurveExtractor.GetBaseCurve(target);
+    List<ICurve>? baseCurves = _baseCurveExtractor.GetBaseCurves(target);
     if (baseCurves is not null)
     {
       civilObject["baseCurves"] = baseCurves;
@@ -60,6 +68,40 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
       }
     }
 
+    // determine if this entity has any children elements that need to be converted.
+    // this is a bespoke method by class type.
+    List<Base>? children = null;
+    switch (target)
+    {
+      case CDB.Alignment alignment:
+        children = GetAlignmentChildren(alignment);
+        break;
+      case CDB.Corridor corridor:
+        children = _corridorHandler.GetCorridorChildren(corridor);
+        break;
+    }
+    if (children is not null)
+    {
+      civilObject["@elements"] = children;
+    }
+
     return civilObject;
+  }
+
+  private List<Base>? GetAlignmentChildren(CDB.Alignment alignment)
+  {
+    List<Base> profiles = new();
+    using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
+    {
+      foreach (ADB.ObjectId profileId in alignment.GetProfileIds())
+      {
+        var profile = (CDB.Profile)tr.GetObject(profileId, ADB.OpenMode.ForRead);
+        profiles.Add(Convert(profile));
+      }
+
+      tr.Commit();
+    }
+
+    return profiles.Count > 0 ? profiles : null;
   }
 }
