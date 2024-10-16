@@ -1,5 +1,6 @@
 ﻿using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.Raw;
 
@@ -34,7 +35,7 @@ public class CurveToHostConverter : ITypedConverter<ICurve, ACG.Polyline>
   /// </summary>
   /// <param name="target">The ICurve object to convert.</param>
   /// <returns>The converted RG.Curve object.</returns>
-  /// <exception cref="NotSupportedException">Thrown when the conversion is not supported for the given type of curve.</exception>
+  /// <exception cref="ValidationException">Thrown when the conversion is not supported for the given type of curve.</exception>
   /// <remarks>⚠️ This conversion does NOT perform scaling.</remarks>
   public ACG.Polyline Convert(ICurve target) =>
     target switch
@@ -47,6 +48,6 @@ public class CurveToHostConverter : ITypedConverter<ICurve, ACG.Polyline>
       SOG.Polyline polyline => _polylineConverter.Convert(polyline),
       SOG.Curve curve => _polylineConverter.Convert(curve.displayValue),
       SOG.Polycurve polyCurve => _polyCurveConverter.Convert(polyCurve),
-      _ => throw new NotSupportedException($"Unable to convert curves of type {target.GetType().Name}")
+      _ => throw new ValidationException($"Converter does not support curves of type '{target.GetType().Name}'")
     };
 }

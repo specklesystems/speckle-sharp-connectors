@@ -1,6 +1,7 @@
 ﻿using Rhino;
 using Speckle.Converters.Common;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Rhino;
 
@@ -30,6 +31,6 @@ public class RhinoToSpeckleUnitConverter : IHostToSpeckleUnitConverter<UnitSyste
       return value;
     }
 
-    throw new SpeckleConversionException($"The Unit System \"{hostUnit}\" is unsupported.");
+    throw new UnitNotSupportedException($"The Unit System \"{hostUnit}\" is unsupported.");
   }
 }

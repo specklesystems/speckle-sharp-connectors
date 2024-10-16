@@ -3,6 +3,7 @@ using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
@@ -190,7 +191,7 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
         };
 
       default:
-        throw new NotSupportedException($"No geometry conversion found for {shape.GetType().Name}");
+        throw new ValidationException($"No geometry conversion found for {shape.GetType().Name}");
     }
   }
 }

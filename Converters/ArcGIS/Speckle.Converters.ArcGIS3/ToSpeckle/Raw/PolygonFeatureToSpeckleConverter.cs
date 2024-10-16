@@ -1,6 +1,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects.GIS;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
 
@@ -26,7 +27,7 @@ public class PolygonFeatureToSpeckleConverter : ITypedConverter<ACG.Polygon, IRe
 
     if (partCount == 0)
     {
-      throw new SpeckleConversionException("ArcGIS Polygon contains no parts");
+      throw new ValidationException("ArcGIS Polygon contains no parts");
     }
 
     PolygonGeometry? polygon = null;
@@ -52,7 +53,7 @@ public class PolygonFeatureToSpeckleConverter : ITypedConverter<ACG.Polygon, IRe
       {
         if (polygon == null)
         {
-          throw new SpeckleConversionException("Invalid ArcGIS Polygon. Interior part preceeding the exterior ring.");
+          throw new ValidationException("Invalid ArcGIS Polygon. Interior part preceeding the exterior ring.");
         }
         polygon.voids.Add(polyline);
       }

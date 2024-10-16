@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Rhino7.ToHost.TopLevel;
@@ -44,7 +45,7 @@ public class SpeckleFallbackToAutocadTopLevelConverter
         SOG.Mesh mesh => _meshConverter.Convert(mesh),
         SOG.Arc arc => _arcConverter.Convert(arc),
         SOG.Point point => _pointConverter.Convert(point),
-        _ => throw new NotSupportedException($"Found unsupported fallback geometry: {item.GetType()}")
+        _ => throw new ConversionException($"Found unsupported fallback geometry: {item.GetType()}")
       };
       result.Add(x);
     }

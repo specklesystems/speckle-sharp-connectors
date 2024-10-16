@@ -1,5 +1,5 @@
-using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
@@ -20,9 +20,7 @@ public abstract class BaseTopLevelConverterToSpeckle<THost, TSpeckle>
     // so it should always BE base?
     if (result is not Base @base)
     {
-      throw new SpeckleConversionException(
-        $"Expected resulting object to be {typeof(Base)} but was {result.GetType()}"
-      );
+      throw new ConversionException($"Expected resulting object to be {typeof(Base)} but was {result.GetType()}");
     }
 
     return @base;
