@@ -72,7 +72,11 @@ public class ClassPropertiesExtractor
 
   private Dictionary<string, object?> ExtractParcelProperties(CDB.Parcel parcel)
   {
+#if CIVIL3D2023_OR_GREATER
     return new() { ["number"] = parcel.Number, ["taxId"] = parcel.TaxId };
+#else
+    return new() { ["number"] = parcel.Number };
+#endif
   }
 
   private Dictionary<string, object?> ExtractSubassemblyProperties(CDB.Subassembly subassembly)
