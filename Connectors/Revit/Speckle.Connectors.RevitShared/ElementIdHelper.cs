@@ -1,5 +1,4 @@
 ﻿using Autodesk.Revit.DB;
-using Speckle.Sdk;
 
 namespace Speckle.Connectors.RevitShared;
 
