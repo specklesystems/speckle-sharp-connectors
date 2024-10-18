@@ -28,7 +28,7 @@ public class Civil3dToSpeckleUnitConverter : IHostToSpeckleUnitConverter<AAEC.Bu
 
   public string ConvertOrThrow(AAEC.BuiltInUnit hostUnit)
   {
-    if (s_unitsMapping.TryGetValue(hostUnit, out string value))
+    if (s_unitsMapping.TryGetValue(hostUnit, out string? value))
     {
       return value;
     }
