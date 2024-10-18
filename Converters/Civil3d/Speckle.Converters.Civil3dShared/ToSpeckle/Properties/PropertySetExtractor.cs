@@ -86,7 +86,7 @@ public class PropertySetExtractor
       {
         string dataName =
           propertyDefinitionNames is not null
-          && propertyDefinitionNames.TryGetValue(data.Id, out string propertyDefinitionName)
+          && propertyDefinitionNames.TryGetValue(data.Id, out string? propertyDefinitionName)
             ? propertyDefinitionName
             : data.FieldBucketId;
 

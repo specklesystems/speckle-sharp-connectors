@@ -36,14 +36,16 @@ public class GridSurfaceToSpeckleMeshRawConverter : ITypedConverter<CDB.GridSurf
 
         foreach (Point3d p in cellVertices)
         {
-          if (!indices.ContainsKey(p))
+          if (indices.ContainsKey(p))
           {
-            vertices.Add(p.X);
-            vertices.Add(p.Y);
-            vertices.Add(p.Z);
-            indices.Add(p, indexCounter);
-            indexCounter++;
+            continue;
           }
+
+          vertices.Add(p.X);
+          vertices.Add(p.Y);
+          vertices.Add(p.Z);
+          indices.Add(p, indexCounter);
+          indexCounter++;
         }
 
         faces.Add(4);

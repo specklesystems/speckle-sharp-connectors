@@ -86,7 +86,11 @@ public sealed class CorridorHandler
       List<Base> regions = new();
       foreach (CDB.BaselineRegion region in baseline.BaselineRegions)
       {
+#if CIVIL3D2023_OR_GREATER
         string regionGuid = region.RegionGUID.ToString();
+#else
+        string regionGuid = "";
+#endif
 
         Base convertedRegion =
           new()
@@ -151,7 +155,7 @@ public sealed class CorridorHandler
               subassemblyHandle
             );
 
-            if (CorridorSolidsCache.TryGetValue(corridorSolidsKey, out List<SOG.Mesh> display))
+            if (CorridorSolidsCache.TryGetValue(corridorSolidsKey, out List<SOG.Mesh>? display))
             {
               convertedAppliedSubassembly["displayValue"] = display;
             }
@@ -226,11 +230,13 @@ public sealed class CorridorHandler
 
   /// <summary>
   /// Extracts the solids from a corridor and stores in <see cref="CorridorSolidsCache"/> according to property sets on the solid.
+  /// NOTE: The Export Solids method is only available for version 2024 or greater
   /// </summary>
   /// <param name="corridor"></param>
   /// <returns></returns>
   private void HandleCorridorSolids(CDB.Corridor corridor)
   {
+#if CIVIL3D2024_OR_GREATER
     CDB.ExportCorridorSolidsParams param = new();
 
     using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
@@ -273,6 +279,7 @@ public sealed class CorridorHandler
 
       tr.Commit();
     }
+#endif
   }
 
   private (string, string, string, string, string)? GetCorridorSolidIdFromPropertySet(
