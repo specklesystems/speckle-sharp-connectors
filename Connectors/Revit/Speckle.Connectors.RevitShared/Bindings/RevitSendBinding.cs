@@ -132,7 +132,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       List<ElementId> revitObjects = modelCard
         .SendFilter.NotNull()
         .GetObjectIds()
-        .Select(uid => activeUIDoc.Document.GetElement(uid).Id)
+        .Select(uid => activeUIDoc.Document.GetElement(uid))
+        .Where(el => el is not null) // NOTE: elements can get deleted from the host app.
+        .Select(el => el.Id)
         .ToList();
 
       if (revitObjects.Count == 0)
