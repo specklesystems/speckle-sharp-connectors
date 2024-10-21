@@ -9,7 +9,6 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
-using Tekla.Structures.Model;
 
 namespace Speckle.Connector.Tekla2024;
 
