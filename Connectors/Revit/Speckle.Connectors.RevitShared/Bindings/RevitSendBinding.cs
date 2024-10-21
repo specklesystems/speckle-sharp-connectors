@@ -44,6 +44,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   /// https://stackoverflow.com/questions/18922985/concurrent-hashsett-in-net-framework
   /// </summary>
   private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
+  private ConcurrentDictionary<string, string> IdMap { get; set; } = new();
 
   public RevitSendBinding(
     IRevitIdleManager idleManager,
@@ -129,15 +130,22 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       var activeUIDoc =
         RevitContext.UIApplication?.ActiveUIDocument
         ?? throw new SpeckleException("Unable to retrieve active UI document");
-      List<ElementId> revitObjects = modelCard
+
+      List<Element> elements = modelCard
         .SendFilter.NotNull()
         .GetObjectIds()
         .Select(uid => activeUIDoc.Document.GetElement(uid))
-        .Where(el => el is not null) // NOTE: elements can get deleted from the host app.
-        .Select(el => el.Id)
+        .Where(el => el is not null)
         .ToList();
 
-      if (revitObjects.Count == 0)
+      foreach (Element element in elements)
+      {
+        IdMap[element.Id.ToString()] = element.UniqueId;
+      }
+
+      List<ElementId> elementIds = elements.Select(el => el.Id).ToList();
+
+      if (elementIds.Count == 0)
       {
         // Handle as CARD ERROR in this function
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
@@ -146,7 +154,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       var sendResult = await scope
         .ServiceProvider.GetRequiredService<SendOperation<ElementId>>()
         .Execute(
-          revitObjects,
+          elementIds,
           modelCard.GetSendInfo(_speckleApplication.Slug),
           _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
           cancellationToken
@@ -242,7 +250,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private async Task RunExpirationChecks()
   {
     var senders = Store.GetSenders();
-    string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
+    // string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
     var doc = RevitContext.UIApplication?.ActiveUIDocument.Document;
 
     if (doc == null)
@@ -250,16 +258,15 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       return;
     }
 
-    // Note: We're using unique ids as application ids in revit, so cache eviction must happen by those.
-    // NOTE: this is currently broken when deleting freestanding elements (e.g. unhosted elements)
-    // To reproduce, draw two unconnected walls, send, delete one wall -> no expiration notice
-    // I do not yet know the solution besides going back to element ids, but it would mean revisiting why we switched to unique ids (conflicting ids)
-    var objUniqueIds = objectIdsList
-      .Select(id => new ElementId(Convert.ToInt32(id)))
-      .Select(doc.GetElement)
-      .Where(el => el is not null)
-      .Select(el => el.UniqueId)
-      .ToList();
+    var objUniqueIds = new List<string>();
+    foreach (string changedElementId in ChangedObjectIds.Keys.ToArray())
+    {
+      if (IdMap.TryGetValue(changedElementId, out var uniqueId))
+      {
+        objUniqueIds.Add(uniqueId);
+      }
+    }
+
     _sendConversionCache.EvictObjects(objUniqueIds);
 
     // Note: we're doing object selection and card expiry management by old school ids
@@ -282,6 +289,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   // That's why don't bother for now how to get rid of from dup logic in other bindings.
   private async Task OnDocumentChanged()
   {
+    _sendConversionCache.ClearCache();
+    IdMap.Clear();
+
     if (_cancellationManager.NumberOfOperations > 0)
     {
       _cancellationManager.CancelAllOperations();
