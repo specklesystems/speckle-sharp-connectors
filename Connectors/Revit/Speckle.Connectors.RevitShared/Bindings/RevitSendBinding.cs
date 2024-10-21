@@ -267,7 +267,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       }
     }
 
-    _sendConversionCache.EvictObjects(objUniqueIds);
+    var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objUniqueIds);
+    _sendConversionCache.EvictObjects(unpackedObjectIds);
 
     // Note: we're doing object selection and card expiry management by old school ids
     List<string> expiredSenderIds = new();
