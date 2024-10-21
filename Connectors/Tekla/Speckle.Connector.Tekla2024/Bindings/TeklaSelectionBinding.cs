@@ -10,19 +10,22 @@ public class TeklaSelectionBinding : ISelectionBinding
   private const string SELECTION_EVENT = "setSelection";
   private readonly Tekla.Structures.Model.Events _events;
   private readonly object _selectionEventHandlerLock = new object();
-  private readonly Model _model;
   private readonly Tekla.Structures.Model.UI.ModelObjectSelector _selector;
 
   public string Name => "selectionBinding";
   public IBrowserBridge Parent { get; }
 
-  public TeklaSelectionBinding(IAppIdleManager idleManager, IBrowserBridge parent)
+  public TeklaSelectionBinding(
+    IAppIdleManager idleManager,
+    IBrowserBridge parent,
+    Events events,
+    Tekla.Structures.Model.UI.ModelObjectSelector selector
+  )
   {
     _idleManager = idleManager;
     Parent = parent;
-    _events = new Tekla.Structures.Model.Events();
-    _model = new Model();
-    _selector = new Tekla.Structures.Model.UI.ModelObjectSelector();
+    _events = events;
+    _selector = selector;
 
     _events.SelectionChange += Events_SelectionChangeEvent;
     _events.Register();
@@ -62,9 +65,8 @@ public class TeklaSelectionBinding : ISelectionBinding
     string typesString = string.Join(", ", objectTypes.Distinct());
 
     return new SelectionInfo(
-        objectIds,
-        objectIds.Count == 0 ? "No objects selected." : $"{objectIds.Count} objects ({typesString})"
-        
+      objectIds,
+      objectIds.Count == 0 ? "No objects selected." : $"{objectIds.Count} objects ({typesString})"
     );
   }
 }

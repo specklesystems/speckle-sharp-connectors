@@ -8,10 +8,11 @@ public sealed class TeklaIdleManager : AppIdleManager
   private readonly IIdleCallManager _idleCallManager;
   private readonly Events _events;
 
-  public TeklaIdleManager(IIdleCallManager idleCallManager) : base(idleCallManager)
+  public TeklaIdleManager(IIdleCallManager idleCallManager, Events events)
+    : base(idleCallManager)
   {
     _idleCallManager = idleCallManager;
-    _events = new Events();
+    _events = events;
   }
 
   protected override void AddEvent()

@@ -9,6 +9,7 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
+using Tekla.Structures.Model;
 
 namespace Speckle.Connector.Tekla2024;
 
@@ -36,5 +37,7 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<IAppIdleManager, TeklaIdleManager>();
 
     serviceCollection.AddScoped<ISendFilter, TeklaSelectionFilter>();
+    serviceCollection.AddSingleton(new Tekla.Structures.Model.Events());
+    serviceCollection.AddSingleton(new Tekla.Structures.Model.UI.ModelObjectSelector());
   }
 }
