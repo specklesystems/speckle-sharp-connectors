@@ -27,16 +27,19 @@ public sealed class CorridorHandler
 
   private readonly ITypedConverter<ADB.Solid3d, SOG.Mesh> _solidConverter;
   private readonly ITypedConverter<ADB.Body, SOG.Mesh> _bodyConverter;
+  private readonly ITypedConverter<AG.Point3dCollection, SOG.Polyline> _pointCollectionConverter;
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
 
   public CorridorHandler(
     ITypedConverter<ADB.Solid3d, SOG.Mesh> solidConverter,
     ITypedConverter<ADB.Body, SOG.Mesh> bodyConverter,
+    ITypedConverter<AG.Point3dCollection, SOG.Polyline> pointCollectionConverter,
     IConverterSettingsStore<Civil3dConversionSettings> settingsStore
   )
   {
     _solidConverter = solidConverter;
     _bodyConverter = bodyConverter;
+    _pointCollectionConverter = pointCollectionConverter;
     _settingsStore = settingsStore;
   }
 
@@ -52,7 +55,7 @@ public sealed class CorridorHandler
     // track children hierarchy ids:
     string corridorHandle = corridor.Handle.ToString();
 
-    // process baselines
+    // process baselines and any featurelines found
     List<Base> baselines = new(corridor.Baselines.Count);
     foreach (CDB.Baseline baseline in corridor.Baselines)
     {
@@ -80,6 +83,42 @@ public sealed class CorridorHandler
       {
         convertedBaseline["alignmentId"] = baseline.AlignmentId.GetSpeckleApplicationId();
         convertedBaseline["profileId"] = baseline.ProfileId.GetSpeckleApplicationId();
+      }
+
+      // get baseline featurelines
+      List<Base> mainFeatureLines = new();
+      foreach (
+        CDB.FeatureLineCollection mainFeaturelineCollection in baseline
+          .MainBaselineFeatureLines
+          .FeatureLineCollectionMap
+      )
+      {
+        foreach (CDB.CorridorFeatureLine featureline in mainFeaturelineCollection)
+        {
+          mainFeatureLines.Add(FeatureLineToSpeckle(featureline));
+        }
+      }
+      if (mainFeatureLines.Count > 0)
+      {
+        convertedBaseline["mainBaselineFeatureLines"] = mainFeatureLines;
+      }
+
+      List<Base> offsetFeatureLines = new();
+      foreach (CDB.BaselineFeatureLines offsetFeaturelineCollection in baseline.OffsetBaselineFeatureLinesCol) // offset featurelines
+      {
+        foreach (
+          CDB.FeatureLineCollection featurelineCollection in offsetFeaturelineCollection.FeatureLineCollectionMap
+        )
+        {
+          foreach (CDB.CorridorFeatureLine featureline in featurelineCollection)
+          {
+            offsetFeatureLines.Add(FeatureLineToSpeckle(featureline));
+          }
+        }
+      }
+      if (offsetFeatureLines.Count > 0)
+      {
+        convertedBaseline["offsetBaselineFeatureLines"] = mainFeatureLines;
       }
 
       // get the baseline regions
@@ -226,6 +265,30 @@ public sealed class CorridorHandler
     }
 
     speckleAppliedSubassembly["calculatedShapes"] = calculatedShapes;
+  }
+
+  private Base FeatureLineToSpeckle(CDB.CorridorFeatureLine featureline)
+  {
+    // get the display polylines
+    var polylines = new List<SOG.Polyline>();
+
+    var polylinePoints = new AG.Point3dCollection();
+    for (int i = 0; i < featureline.FeatureLinePoints.Count; i++)
+    {
+      var point = featureline.FeatureLinePoints[i];
+      if (!point.IsBreak)
+      {
+        polylinePoints.Add(point.XYZ);
+      }
+      if (polylinePoints.Count > 1 && (i == featureline.FeatureLinePoints.Count - 1 || point.IsBreak))
+      {
+        polylines.Add(_pointCollectionConverter.Convert(polylinePoints));
+        polylinePoints.Clear();
+      }
+    }
+
+    // create featureline
+    return new() { ["codeName"] = featureline.CodeName, ["displayValue"] = polylines };
   }
 
   /// <summary>
