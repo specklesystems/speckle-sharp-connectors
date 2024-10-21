@@ -60,7 +60,4 @@ complexity threshold -->
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
   </PropertyGroup>
-  <PropertyGroup>
-    <TeklaVersion Condition="'$(Configuration)' == 'Debug'">2024.0</TeklaVersion>
-  </PropertyGroup>
 </Project>
