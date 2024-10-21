@@ -11,7 +11,6 @@ public class TeklaSendBinding : ISendBinding
   public IBrowserBridge Parent { get; }
   private readonly List<ISendFilter> _sendFilters;
 
-
   public TeklaSendBinding(IBrowserBridge parent, IEnumerable<ISendFilter> sendFilters)
   {
     Parent = parent;
