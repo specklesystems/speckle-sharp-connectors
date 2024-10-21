@@ -1,4 +1,4 @@
-﻿using Tekla.Structures.Plugins;
+using Tekla.Structures.Plugins;
 
 namespace Speckle.Connector.Tekla2024.Plugin;
 
@@ -8,6 +8,9 @@ namespace Speckle.Connector.Tekla2024.Plugin;
 public class TeklaPlugin : PluginBase
 {
 #pragma warning disable IDE1006
+
+  static TeklaPlugin() { }
+
   public override bool Run(List<InputDefinition> Input)
   {
     return true;

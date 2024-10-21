@@ -1,4 +1,4 @@
-﻿using Speckle.Connectors.DUI.Bindings;
+using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
@@ -34,11 +34,11 @@ public class TeklaBasicConnectorBinding : IBasicConnectorBinding
 
   public DocumentModelStore GetDocumentState() => _store;
 
-  public void AddModel(ModelCard model) => throw new NotImplementedException();
+  public void AddModel(ModelCard model) => _store.Models.Add(model);
 
-  public void UpdateModel(ModelCard model) => throw new NotImplementedException();
+  public void UpdateModel(ModelCard model) => _store.UpdateModel(model);
 
-  public void RemoveModel(ModelCard model) => throw new NotImplementedException();
+  public void RemoveModel(ModelCard model) => _store.RemoveModel(model);
 
   public Task HighlightModel(string modelCardId) => throw new NotImplementedException();
 
