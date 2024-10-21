@@ -56,6 +56,7 @@ public class GeneralPropertiesExtractor
     Dictionary<string, object?> hydrologicalProps = new() { ["runoffCoefficient"] = catchment.RunoffCoefficient };
     catchmentPropertiesDict["Hydrological Properties"] = hydrologicalProps;
 
+#if CIVIL3D2024_OR_GREATER
     Dictionary<string, object?> sheetFlow =
       new()
       {
@@ -79,6 +80,7 @@ public class GeneralPropertiesExtractor
         ["channelFlowTravelTime"] = catchment.ChannelFlowTravelTime
       };
     catchmentPropertiesDict["Channel Flow"] = channelFlow;
+#endif
 
     Dictionary<string, object?> timeOfConcentration =
       new()
@@ -133,7 +135,7 @@ public class GeneralPropertiesExtractor
     Dictionary<string, Dictionary<string, object?>> featureLinesDict
   )
   {
-    if (featureLinesDict.TryGetValue(featureline.CodeName, out Dictionary<string, object?> value))
+    if (featureLinesDict.TryGetValue(featureline.CodeName, out Dictionary<string, object?>? value))
     {
       Dictionary<string, object?> pointsDict = new(featureline.FeatureLinePoints.Count);
       int pointCount = 0;

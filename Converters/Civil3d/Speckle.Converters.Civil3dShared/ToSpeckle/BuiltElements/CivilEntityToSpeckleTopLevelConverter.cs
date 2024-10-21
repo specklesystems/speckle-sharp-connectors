@@ -60,7 +60,7 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     }
 
     // extract display value
-    List<SOG.Mesh> display = _displayValueExtractor.GetDisplayValue(target);
+    List<Base> display = _displayValueExtractor.GetDisplayValue(target);
     if (display.Count > 0)
     {
       civilObject["displayValue"] = display;
@@ -95,7 +95,7 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
 
     if (children is not null)
     {
-      civilObject["@elements"] = children;
+      civilObject["elements"] = children;
     }
 
     return civilObject;
