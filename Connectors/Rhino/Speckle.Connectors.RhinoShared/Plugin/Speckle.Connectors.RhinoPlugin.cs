@@ -50,7 +50,7 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
       services.AddRhino();
       services.AddRhinoConverters();
 
-      // but the Rhino connector has `.rhp` as it's extension.
+      // but the Rhino connector has `.rhp` as it is extension.
       Container = services.BuildServiceProvider();
       Container.UseDUI();
 

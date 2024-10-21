@@ -105,6 +105,8 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
         .SendFilter.NotNull()
         .GetObjectIds()
         .Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid))
+        .Where(el => el is not null)
+        .Cast<ElementId>()
         .ToList();
     }
 
@@ -113,6 +115,8 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
       elementIds = receiverModelCard
         .BakedObjectIds.NotNull()
         .Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid))
+        .Where(el => el is not null)
+        .Cast<ElementId>()
         .ToList();
     }
 
@@ -138,7 +142,11 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
       ?? throw new SpeckleException("Unable to retrieve active UI document");
 
     await HighlightObjectsOnView(
-        objectIds.Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid)).ToList()
+        objectIds
+          .Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid))
+          .Where(el => el is not null)
+          .Cast<ElementId>()
+          .ToList()
       )
       .ConfigureAwait(false);
     ;
