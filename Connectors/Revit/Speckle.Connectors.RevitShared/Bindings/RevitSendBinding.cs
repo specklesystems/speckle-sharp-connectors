@@ -44,7 +44,11 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   /// https://stackoverflow.com/questions/18922985/concurrent-hashsett-in-net-framework
   /// </summary>
   private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
-  private ConcurrentDictionary<string, string> IdMap { get; set; } = new();
+
+  /// <summary>
+  /// We need it to get UniqueId whenever it is not available i.e. GetDeletedElementIds returns ElementId and cannot find its Element to get UniqueId. We store them both just before send to remember later.
+  /// </summary>
+  private ConcurrentDictionary<string, string> IdMap { get; } = new();
 
   public RevitSendBinding(
     IRevitIdleManager idleManager,
