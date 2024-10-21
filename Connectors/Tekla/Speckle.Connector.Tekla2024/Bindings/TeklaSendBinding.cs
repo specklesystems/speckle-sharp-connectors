@@ -22,7 +22,7 @@ public class TeklaSendBinding : ISendBinding
 
   public List<ICardSetting> GetSendSettings() => [];
 
-  public Task Send(string modelCardId) => throw new NotImplementedException();
+  public Task Send(string modelCardId) => Task.CompletedTask;
 
   public void CancelSend(string modelCardId) => throw new NotImplementedException();
 
