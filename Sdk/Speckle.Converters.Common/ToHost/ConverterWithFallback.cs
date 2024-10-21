@@ -1,7 +1,6 @@
 using System.Collections;
 using Microsoft.Extensions.Logging;
-using Speckle.Converters.Common.Extensions;
-using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Extensions;
 
@@ -44,24 +43,27 @@ public sealed class ConverterWithFallback : IRootToHostConverter
   {
     Type type = target.GetType();
 
-    // Direct conversion if a converter is found
-    if (_baseConverter.TryGetConverter(type, out IToHostTopLevelConverter? result))
+    try
     {
-      return result.ConvertAndLog(target, _logger); // 1-1 mapping
+      return _baseConverter.Convert(target);
+    }
+    catch (ConversionNotSupportedException e)
+    {
+      _logger.LogInformation(e, "Attempt to find conversion for type {type} failed", type);
     }
 
     // Fallback to display value if it exists.
     var displayValue = target.TryGetDisplayValue<Base>();
-    if (displayValue != null)
+
+    if (displayValue == null || (displayValue is IList && !displayValue.Any()))
     {
-      if (displayValue is IList && !displayValue.Any())
-      {
-        throw new NotSupportedException($"No display value found for {type}");
-      }
-      return FallbackToDisplayValue(displayValue); // 1 - many mapping
+      // TODO: I'm not sure if this should be a ConversionNotSupported instead, but it kinda mixes support + validation so I went for normal conversion exception
+      throw new ConversionException(
+        $"No direct conversion found for type {type} and it's fallback display value was null/empty"
+      );
     }
 
-    throw new NotSupportedException($"No conversion found for {type}");
+    return FallbackToDisplayValue(displayValue); // 1 - many mapping
   }
 
   private object FallbackToDisplayValue(IReadOnlyList<Base> displayValue)

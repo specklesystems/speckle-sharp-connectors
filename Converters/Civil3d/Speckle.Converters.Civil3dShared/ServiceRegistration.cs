@@ -44,5 +44,6 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<ClassPropertiesExtractor>();
     serviceCollection.AddScoped<CatchmentGroupHandler>();
     serviceCollection.AddScoped<PipeNetworkHandler>();
+    serviceCollection.AddScoped<CorridorHandler>();
   }
 }

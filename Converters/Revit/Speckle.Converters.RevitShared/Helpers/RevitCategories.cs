@@ -1,4 +1,5 @@
 using Speckle.Objects.BuiltElements.Revit;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.RevitShared.Helpers;
 
@@ -25,7 +26,7 @@ public class RevitCategories : IRevitCategories
     var res = Enum.TryParse(cleanName, out RevitCategory cat);
     if (!res)
     {
-      throw new NotSupportedException($"Built-in category {builtInCategory} is not supported.");
+      throw new ConversionException($"Built-in category {builtInCategory} is not supported.");
     }
 
     return cat;

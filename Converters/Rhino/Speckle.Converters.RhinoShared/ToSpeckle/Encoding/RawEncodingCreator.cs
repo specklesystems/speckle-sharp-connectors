@@ -1,6 +1,6 @@
 using Rhino;
 using Rhino.FileIO;
-using Speckle.Converters.Common;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Encoding;
 
@@ -35,7 +35,7 @@ internal static class RawEncodingCreator
         file.Objects.AddSubD(d);
         break;
       default:
-        throw new SpeckleConversionException($"Unsupported type for encoding: {target.GetType().FullName}");
+        throw new ConversionException($"Unsupported type for encoding: {target.GetType().FullName}");
     }
 
     file.Settings.ModelUnitSystem = doc.ModelUnitSystem;

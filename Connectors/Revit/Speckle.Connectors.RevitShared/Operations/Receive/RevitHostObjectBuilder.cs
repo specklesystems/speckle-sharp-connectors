@@ -16,6 +16,7 @@ using Speckle.DoubleNumerics;
 using Speckle.Objects;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Transform = Speckle.Objects.Other.Transform;
@@ -221,9 +222,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
         }
         else
         {
-          throw new SpeckleConversionException(
-            $"Failed to cast {result.GetType()} to direct shape definition wrapper."
-          );
+          throw new ConversionException($"Failed to cast {result.GetType()} to direct shape definition wrapper.");
         }
       }
       catch (Exception ex) when (!ex.IsFatal())

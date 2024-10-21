@@ -1,6 +1,6 @@
 using Speckle.Converters.Common;
-using Speckle.Sdk;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.RevitShared.Services;
 
@@ -28,7 +28,6 @@ public sealed class RevitToSpeckleUnitConverter : IHostToSpeckleUnitConverter<DB
       return value;
     }
 
-    // POC: probably would prefer something more specific
-    throw new SpeckleException($"The Unit System \"{hostUnit}\" is unsupported.");
+    throw new UnitNotSupportedException($"The Unit System \"{hostUnit}\" is unsupported.");
   }
 }

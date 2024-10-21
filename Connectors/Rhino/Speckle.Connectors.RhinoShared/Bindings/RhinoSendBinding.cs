@@ -97,10 +97,11 @@ public sealed class RhinoSendBinding : ISendBinding
       _topLevelExceptionHandler.CatchUnhandled(() =>
       {
         // NOTE: This does not work if rhino starts and opens a blank doc;
-        if (!_store.IsDocumentInit)
-        {
-          return;
-        }
+        // These events always happen in a doc. Why guard agains a null doc?
+        // if (!_store.IsDocumentInit)
+        // {
+        //   return;
+        // }
 
         ChangedObjectIds[e.ObjectId.ToString()] = 1;
         _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
@@ -110,10 +111,11 @@ public sealed class RhinoSendBinding : ISendBinding
       _topLevelExceptionHandler.CatchUnhandled(() =>
       {
         // NOTE: This does not work if rhino starts and opens a blank doc;
-        if (!_store.IsDocumentInit)
-        {
-          return;
-        }
+        // These events always happen in a doc. Why guard agains a null doc?
+        // if (!_store.IsDocumentInit)
+        // {
+        //   return;
+        // }
 
         ChangedObjectIds[e.ObjectId.ToString()] = 1;
         _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
@@ -123,10 +125,11 @@ public sealed class RhinoSendBinding : ISendBinding
       _topLevelExceptionHandler.CatchUnhandled(() =>
       {
         // NOTE: This does not work if rhino starts and opens a blank doc;
-        if (!_store.IsDocumentInit)
-        {
-          return;
-        }
+        // These events always happen in a doc. Why guard agains a null doc?
+        // if (!_store.IsDocumentInit)
+        // {
+        //   return;
+        // }
 
         // NOTE: not sure yet we want to track every attribute changes yet. TBD
         if (e.OldAttributes.LayerIndex != e.NewAttributes.LayerIndex)
@@ -140,10 +143,11 @@ public sealed class RhinoSendBinding : ISendBinding
       _topLevelExceptionHandler.CatchUnhandled(() =>
       {
         // NOTE: This does not work if rhino starts and opens a blank doc;
-        if (!_store.IsDocumentInit)
-        {
-          return;
-        }
+        // These events always happen in a doc. Why guard agains a null doc?
+        // if (!_store.IsDocumentInit)
+        // {
+        //   return;
+        // }
 
         ChangedObjectIds[e.NewRhinoObject.Id.ToString()] = 1;
         ChangedObjectIds[e.OldRhinoObject.Id.ToString()] = 1;
@@ -220,6 +224,12 @@ public sealed class RhinoSendBinding : ISendBinding
   /// </summary>
   private async Task RunExpirationChecks()
   {
+    // Note: added here a guard against executing this if there's no active doc present.
+    if (RhinoDoc.ActiveDoc == null)
+    {
+      _logger.LogError("Rhino expiration checks were running without an active doc.");
+      return;
+    }
     var senders = _store.GetSenders();
     string[] objectIdsList = ChangedObjectIds.Keys.ToArray(); // NOTE: could not copy to array happens here
     List<string> expiredSenderIds = new();

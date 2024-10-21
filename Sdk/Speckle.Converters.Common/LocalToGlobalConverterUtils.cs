@@ -1,5 +1,6 @@
 ﻿using Speckle.DoubleNumerics;
 using Speckle.Objects;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Common;
@@ -39,7 +40,7 @@ public class LocalToGlobalConverterUtils
 
       if (c is not Base)
       {
-        throw new SpeckleConversionException(
+        throw new ConversionException(
           $"Blocks transformation of type {atomicObject.speckle_type} did not return a valid object"
         );
       }
@@ -64,7 +65,7 @@ public class LocalToGlobalConverterUtils
       return atomicObject;
     }
 
-    throw new SpeckleConversionException(
+    throw new ConversionException(
       $"{atomicObject.speckle_type} is not supported for local to global coordinate transformation"
     );
   }

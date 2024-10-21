@@ -132,7 +132,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       List<ElementId> revitObjects = modelCard
         .SendFilter.NotNull()
         .GetObjectIds()
-        .Select(uid => activeUIDoc.Document.GetElement(uid).Id)
+        .Select(uid => activeUIDoc.Document.GetElement(uid))
+        .Where(el => el is not null) // NOTE: elements can get deleted from the host app.
+        .Select(el => el.Id)
         .ToList();
 
       if (revitObjects.Count == 0)
@@ -249,6 +251,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     }
 
     // Note: We're using unique ids as application ids in revit, so cache eviction must happen by those.
+    // NOTE: this is currently broken when deleting freestanding elements (e.g. unhosted elements)
+    // To reproduce, draw two unconnected walls, send, delete one wall -> no expiration notice
+    // I do not yet know the solution besides going back to element ids, but it would mean revisiting why we switched to unique ids (conflicting ids)
     var objUniqueIds = objectIdsList
       .Select(id => new ElementId(Convert.ToInt32(id)))
       .Select(doc.GetElement)

@@ -6,6 +6,7 @@ using Speckle.Converters.RevitShared.Raw;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Testing;
 
 namespace Speckle.Converters.Revit2023.Tests;
@@ -26,7 +27,7 @@ public class ModelCurveArrayToSpeckleConverterTests : MoqTest
     );
     var array = Create<DB.ModelCurveArray>();
     array.Setup(x => x.GetEnumerator()).Returns(Enumerable.Empty<object>().GetEnumerator());
-    Assert.Throws<SpeckleConversionException>(() => sut.Convert(array.Object));
+    Assert.Throws<ValidationException>(() => sut.Convert(array.Object));
   }
 
   [Test]

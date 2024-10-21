@@ -93,8 +93,15 @@ public class ElementUnpacker
   private List<Element> PackCurtainWallElements(List<Element> elements)
   {
     var ids = elements.Select(el => el.Id).ToArray();
+    var doc = _revitContext.UIApplication?.ActiveUIDocument.Document!;
     elements.RemoveAll(element =>
-      (element is Mullion m && ids.Contains(m.Host.Id)) || (element is Panel p && ids.Contains(p.Host.Id))
+      (element is Mullion m && ids.Contains(m.Host.Id))
+      || (element is Panel p && ids.Contains(p.Host.Id))
+      || (
+        element is FamilyInstance { Host: not null } f
+        && doc.GetElement(f.Host.Id) is Wall { CurtainGrid: not null }
+        && ids.Contains(f.Host.Id)
+      )
     );
     return elements;
   }

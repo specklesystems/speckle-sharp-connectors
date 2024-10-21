@@ -1,6 +1,7 @@
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
+using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
@@ -18,16 +19,19 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
   public BasicConnectorBindingCommands Commands { get; }
 
   private readonly DocumentModelStore _store;
+  private readonly ISendConversionCache _sendConversionCache;
   private readonly ISpeckleApplication _speckleApplication;
 
   public RhinoBasicConnectorBinding(
     DocumentModelStore store,
     IBrowserBridge parent,
+    ISendConversionCache sendConversionCache,
     ISpeckleApplication speckleApplication
   )
   {
     _store = store;
     Parent = parent;
+    _sendConversionCache = sendConversionCache;
     _speckleApplication = speckleApplication;
     Commands = new BasicConnectorBindingCommands(parent);
 
@@ -35,6 +39,8 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
       parent.TopLevelExceptionHandler.FireAndForget(async () =>
       {
         await Commands.NotifyDocumentChanged().ConfigureAwait(false);
+        // Note: this prevents scaling issues when copy-pasting from one rhino doc to another in the same session.
+        _sendConversionCache.ClearCache();
       });
   }
 

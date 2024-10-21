@@ -1,9 +1,9 @@
 using Autodesk.Revit.DB;
-using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.DoubleNumerics;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.RevitShared.ToHost.TopLevel;
 
@@ -117,7 +117,7 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObj
   {
     if (arr.Count % 3 != 0)
     {
-      throw new SpeckleConversionException("Array malformed: length%3 != 0.");
+      throw new ValidationException("Array malformed: length%3 != 0.");
     }
 
     XYZ[] points = new XYZ[arr.Count / 3];

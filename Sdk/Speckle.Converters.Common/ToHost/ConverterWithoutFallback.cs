@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common.Extensions;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
@@ -29,26 +28,8 @@ public sealed class ConverterWithoutFallback : IRootToHostConverter
 
   public object Convert(Base target)
   {
-    if (!TryGetConverter(target.GetType(), out IToHostTopLevelConverter? converter))
-    {
-      throw new NotSupportedException($"No conversion found for {target.GetType()}");
-    }
-
+    var converter = _toHost.ResolveConverter(target.GetType());
     object result = converter.ConvertAndLog(target, _logger);
     return result;
-  }
-
-  internal bool TryGetConverter(Type target, [NotNullWhen(true)] out IToHostTopLevelConverter? result)
-  {
-    // Direct conversion if a converter is found
-    var objectConverter = _toHost.ResolveConverter(target);
-    if (objectConverter != null)
-    {
-      result = objectConverter;
-      return true;
-    }
-
-    result = null;
-    return false;
   }
 }

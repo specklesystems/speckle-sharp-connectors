@@ -1,6 +1,6 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
-using Speckle.Converters.Common;
+using Speckle.Sdk;
 using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.Autocad.HostApp;
@@ -24,6 +24,7 @@ public class AutocadLayerUnpacker
       layer = autocadLayer;
       return speckleLayer;
     }
-    throw new SpeckleConversionException("Unexpected condition in GetOrCreateSpeckleLayer");
+
+    throw new SpeckleException("Unexpected condition in GetOrCreateSpeckleLayer");
   }
 }

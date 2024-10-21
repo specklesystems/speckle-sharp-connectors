@@ -1,5 +1,5 @@
 using Rhino.FileIO;
-using Speckle.Converters.Common;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Rhino.ToHost.Helpers;
 
@@ -16,7 +16,7 @@ public static class RawEncodingToHost
       case SO.RawEncodingFormats.RHINO_3DM:
         return Handle3dm(target);
       default:
-        throw new SpeckleConversionException($"Unsupported brep encoding format: {target.encodedValue.format}");
+        throw new ConversionException($"Unsupported brep encoding format: {target.encodedValue.format}");
     }
   }
 

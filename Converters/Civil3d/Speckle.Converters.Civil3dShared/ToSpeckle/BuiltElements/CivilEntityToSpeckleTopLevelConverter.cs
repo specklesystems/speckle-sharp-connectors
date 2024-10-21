@@ -1,7 +1,9 @@
+using Speckle.Converters.Civil3dShared.Extensions;
 using Speckle.Converters.Civil3dShared.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
+using Speckle.Sdk;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Civil3dShared.ToSpeckle.BuiltElements;
@@ -13,38 +15,52 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly BaseCurveExtractor _baseCurveExtractor;
   private readonly ClassPropertiesExtractor _classPropertiesExtractor;
+  private readonly CorridorHandler _corridorHandler;
 
   public CivilEntityToSpeckleTopLevelConverter(
     IConverterSettingsStore<Civil3dConversionSettings> settingsStore,
     DisplayValueExtractor displayValueExtractor,
     BaseCurveExtractor baseCurveExtractor,
-    ClassPropertiesExtractor classPropertiesExtractor
+    ClassPropertiesExtractor classPropertiesExtractor,
+    CorridorHandler corridorHandler
   )
   {
     _settingsStore = settingsStore;
     _displayValueExtractor = displayValueExtractor;
     _baseCurveExtractor = baseCurveExtractor;
     _classPropertiesExtractor = classPropertiesExtractor;
+    _corridorHandler = corridorHandler;
   }
 
   public Base Convert(object target) => Convert((CDB.Entity)target);
 
   public Base Convert(CDB.Entity target)
   {
-    Base civilObject = new();
-    civilObject["type"] = target.GetType().ToString().Split('.').Last();
-    civilObject["name"] = target.Name;
-    civilObject["units"] = _settingsStore.Current.SpeckleUnits;
+    string name = target.DisplayName;
+    try
+    {
+      name = target.Name; // this will throw for some entities like labels
+    }
+    catch (Exception e) when (!e.IsFatal()) { }
+
+    Base civilObject =
+      new()
+      {
+        ["type"] = target.GetType().ToString().Split('.').Last(),
+        ["name"] = name,
+        ["units"] = _settingsStore.Current.SpeckleUnits,
+        applicationId = target.GetSpeckleApplicationId()
+      };
 
     // get basecurve
-    List<ICurve>? baseCurves = _baseCurveExtractor.GetBaseCurve(target);
+    List<ICurve>? baseCurves = _baseCurveExtractor.GetBaseCurves(target);
     if (baseCurves is not null)
     {
       civilObject["baseCurves"] = baseCurves;
     }
 
     // extract display value
-    List<SOG.Mesh> display = _displayValueExtractor.GetDisplayValue(target);
+    List<Base> display = _displayValueExtractor.GetDisplayValue(target);
     if (display.Count > 0)
     {
       civilObject["displayValue"] = display;
@@ -60,6 +76,62 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
       }
     }
 
+    // determine if this entity has any children elements that need to be converted.
+    // this is a bespoke method by class type.
+    List<Base>? children = null;
+    switch (target)
+    {
+      case CDB.Alignment alignment:
+        children = GetAlignmentChildren(alignment);
+        break;
+      case CDB.Corridor corridor:
+        children = _corridorHandler.GetCorridorChildren(corridor);
+        break;
+
+      case CDB.Site site:
+        children = GetSiteChildren(site);
+        break;
+    }
+
+    if (children is not null)
+    {
+      civilObject["elements"] = children;
+    }
+
     return civilObject;
+  }
+
+  private List<Base>? GetSiteChildren(CDB.Site site)
+  {
+    List<Base> parcels = new();
+
+    using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
+    {
+      foreach (ADB.ObjectId parcelId in site.GetParcelIds())
+      {
+        var parcel = (CDB.Parcel)tr.GetObject(parcelId, ADB.OpenMode.ForRead);
+        parcels.Add(Convert(parcel));
+      }
+
+      tr.Commit();
+    }
+    return parcels.Count > 0 ? parcels : null;
+  }
+
+  private List<Base>? GetAlignmentChildren(CDB.Alignment alignment)
+  {
+    List<Base> profiles = new();
+    using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
+    {
+      foreach (ADB.ObjectId profileId in alignment.GetProfileIds())
+      {
+        var profile = (CDB.Profile)tr.GetObject(profileId, ADB.OpenMode.ForRead);
+        profiles.Add(Convert(profile));
+      }
+
+      tr.Commit();
+    }
+
+    return profiles.Count > 0 ? profiles : null;
   }
 }

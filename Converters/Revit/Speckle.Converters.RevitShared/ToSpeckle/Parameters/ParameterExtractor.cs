@@ -77,7 +77,8 @@ public class ParameterExtractor
       {
         if (_settingsStore.Current.Document.GetElement(layer.MaterialId) is DB.Material material)
         {
-          structureDictionary[material.Name] = new Dictionary<string, object>()
+          var uniqueLayerName = $"{material.Name} ({layer.LayerId})";
+          structureDictionary[uniqueLayerName] = new Dictionary<string, object>()
           {
             ["material"] = material.Name,
             ["function"] = layer.Function.ToString(),

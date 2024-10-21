@@ -19,9 +19,7 @@ public class PropertySetDefinitionHandler
   /// </summary>
   /// <param name="setDefinition">The property set definition. Assumes this is opened for Read already.</param>
   /// <returns></returns>
-  public (Dictionary<int, string> propertyDefinitionNames, string name) HandleDefinition(
-    AAECPDB.PropertySetDefinition setDefinition
-  )
+  public Dictionary<int, string> HandleDefinition(AAECPDB.PropertySetDefinition setDefinition)
   {
     Dictionary<string, object?> propertyDefinitionsDict = new(); // this is used to store on the property set definition
     Dictionary<int, string> propertyDefinitionNames = new(); // this is used to pass to the instance for property value retrieval
@@ -53,7 +51,7 @@ public class PropertySetDefinitionHandler
 
     if (Definitions.ContainsKey(name))
     {
-      return (propertyDefinitionNames, name);
+      return propertyDefinitionNames;
     }
 
     Definitions[name] = new Dictionary<string, object?>()
@@ -62,6 +60,6 @@ public class PropertySetDefinitionHandler
       ["propertyDefinitions"] = propertyDefinitionsDict
     };
 
-    return (propertyDefinitionNames, name);
+    return propertyDefinitionNames;
   }
 }

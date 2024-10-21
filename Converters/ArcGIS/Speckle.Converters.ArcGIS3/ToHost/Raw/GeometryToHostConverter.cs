@@ -1,5 +1,5 @@
-using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.Raw;
@@ -29,32 +29,19 @@ public class GeometryToHostConverter : ITypedConverter<IReadOnlyList<Base>, ACG.
 
   public ACG.Geometry Convert(IReadOnlyList<Base> target)
   {
-    try
+    if (target.Count == 0)
     {
-      if (target.Count > 0)
-      {
-        switch (target[0])
-        {
-          case SOG.Point point:
-            return _multipointConverter.Convert(target.Cast<SOG.Point>().ToList());
-          case SOG.Polyline polyline:
-            return _polylineConverter.Convert(target.Cast<SOG.Polyline>().ToList());
-          case SGIS.PolygonGeometry3d geometry3d:
-            return _polygon3dConverter.Convert(target.Cast<SGIS.PolygonGeometry3d>().ToList());
-          case SGIS.PolygonGeometry geometry:
-            return _polygonConverter.Convert(target.Cast<SGIS.PolygonGeometry>().ToList());
-          case SGIS.GisMultipatchGeometry mesh:
-            return _multipatchConverter.Convert(target.Cast<SGIS.GisMultipatchGeometry>().ToList());
-          default:
-            throw new NotSupportedException($"No conversion found for type {target[0]}");
-        }
-      }
-      throw new NotSupportedException($"Feature contains no geometry");
+      throw new ValidationException("Feature contains no geometry");
     }
-    catch (SpeckleConversionException e)
+
+    return target[0] switch
     {
-      Console.WriteLine(e);
-      throw; // log errors
-    }
+      SOG.Point => _multipointConverter.Convert(target.Cast<SOG.Point>().ToList()),
+      SOG.Polyline => _polylineConverter.Convert(target.Cast<SOG.Polyline>().ToList()),
+      SGIS.PolygonGeometry3d => _polygon3dConverter.Convert(target.Cast<SGIS.PolygonGeometry3d>().ToList()),
+      SGIS.PolygonGeometry => _polygonConverter.Convert(target.Cast<SGIS.PolygonGeometry>().ToList()),
+      SGIS.GisMultipatchGeometry => _multipatchConverter.Convert(target.Cast<SGIS.GisMultipatchGeometry>().ToList()),
+      _ => throw new ValidationException($"No conversion found for type {target[0]}")
+    };
   }
 }
