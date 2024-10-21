@@ -264,6 +264,7 @@ public class ClassPropertiesExtractor
   {
     // get the bounding curve of the catchment
     SOG.Polyline boundary = _point3dCollectionConverter.Convert(catchment.BoundaryPolyline3d);
+    boundary.closed = true;
 
     // use the catchment group handler to process the catchment's group
     _catchmentGroupHandler.HandleCatchmentGroup(catchment);

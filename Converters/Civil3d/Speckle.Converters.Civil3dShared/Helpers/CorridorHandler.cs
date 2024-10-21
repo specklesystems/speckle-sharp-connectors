@@ -329,7 +329,7 @@ public sealed class CorridorHandler
 
         if (solidKey is (string, string, string, string, string) validSolidKey)
         {
-          if (CorridorSolidsCache.TryGetValue(validSolidKey, out List<SOG.Mesh> display))
+          if (CorridorSolidsCache.TryGetValue(validSolidKey, out List<SOG.Mesh>? display))
           {
             display.Add(mesh);
           }
