@@ -59,7 +59,9 @@ public sealed class ReceiveOperation
 
     _progressDisplayManager.Begin();
     Base? commitObject = await _operations
-      .Receive2(new Uri(account.serverInfo.url), receiveInfo.ProjectId,
+      .Receive2(
+        new Uri(account.serverInfo.url),
+        receiveInfo.ProjectId,
         version.referencedObject,
         account.token,
         onProgressAction: new PassthroughProgress(args =>
@@ -71,25 +73,21 @@ public sealed class ReceiveOperation
 
           switch (args.ProgressEvent)
           {
-            case ProgressEvent.CacheCheck: 
+            case ProgressEvent.CacheCheck:
+              onOperationProgressed.Report(
+                new("Checking local cache", _progressDisplayManager.CalculatePercentage(args))
+              );
+              break;
+            case ProgressEvent.DownloadBytes:
+              onOperationProgressed.Report(new($"Downloading ({_progressDisplayManager.CalculateSpeed(args)})", null));
+              break;
+            case ProgressEvent.DownloadObject:
               onOperationProgressed.Report(
                 new(
-                  "Checking local cache",
+                  $"Downloading Objects ({_progressDisplayManager.CalculateSpeed(args)})",
                   _progressDisplayManager.CalculatePercentage(args)
                 )
               );
-              break;
-            case ProgressEvent.DownloadBytes: 
-              onOperationProgressed.Report(
-                new(
-                  $"Downloading ({_progressDisplayManager.CalculateSpeed(args)})", null
-                )
-              );
-              break;
-            case ProgressEvent.DownloadObject:
-              onOperationProgressed.Report(new(
-                $"Downloading Objects ({_progressDisplayManager.CalculateSpeed(args)})",
-                _progressDisplayManager.CalculatePercentage(args)));
               break;
             case ProgressEvent.DeserializeObject:
               onOperationProgressed.Report(

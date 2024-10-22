@@ -12,7 +12,11 @@ public class ProgressDisplayManager(IStopwatchManager stopwatch) : IProgressDisp
   public void Begin() => stopwatch.Start();
 
   private long _lastCount;
-  public long LastCount { get => _lastCount; set => _lastCount = value; }
+  public long LastCount
+  {
+    get => _lastCount;
+    set => _lastCount = value;
+  }
 
   public bool ShouldUpdate()
   {
@@ -51,8 +55,8 @@ public class ProgressDisplayManager(IStopwatchManager stopwatch) : IProgressDisp
         return $"{ToFileSize(countPerSecond)} / sec";
       case ProgressEvent.DeserializeObject:
       case ProgressEvent.SerializeObject:
-        case ProgressEvent.DownloadObject:
-          case ProgressEvent.UploadObject:
+      case ProgressEvent.DownloadObject:
+      case ProgressEvent.UploadObject:
         return $"{ThreeNonZeroDigits(countPerSecond)} objects / sec";
       default:
         return string.Empty;

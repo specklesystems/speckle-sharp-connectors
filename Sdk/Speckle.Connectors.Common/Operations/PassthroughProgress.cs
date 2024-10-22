@@ -31,7 +31,6 @@ public class PassthroughProgress : IProgress<ProgressArgs>
     }
     else
     {
-      
       _progressCallback(value);
     }
   }
