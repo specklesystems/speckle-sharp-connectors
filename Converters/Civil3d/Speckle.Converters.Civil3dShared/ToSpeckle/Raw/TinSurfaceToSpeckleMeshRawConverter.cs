@@ -34,14 +34,16 @@ public class TinSurfaceToSpeckleMeshRawConverter : ITypedConverter<CDB.TinSurfac
         };
         foreach (Point3d p in triangleVertices)
         {
-          if (!indices.ContainsKey(p))
+          if (indices.ContainsKey(p))
           {
-            vertices.Add(p.X);
-            vertices.Add(p.Y);
-            vertices.Add(p.Z);
-            indices.Add(p, indexCounter);
-            indexCounter++;
+            continue;
           }
+
+          vertices.Add(p.X);
+          vertices.Add(p.Y);
+          vertices.Add(p.Z);
+          indices.Add(p, indexCounter);
+          indexCounter++;
         }
         faces.Add(3);
         faces.Add(indices[triangleVertices[0]]);

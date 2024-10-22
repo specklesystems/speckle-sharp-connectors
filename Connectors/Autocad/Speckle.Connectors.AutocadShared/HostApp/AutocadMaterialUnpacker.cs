@@ -70,7 +70,7 @@ public class AutocadMaterialUnpacker
       }
     }
 
-    // Stage 2: make sure we collect layer colors as well
+    // Stage 2: make sure we collect layer materials as well
     foreach (LayerTableRecord layer in layers)
     {
       try
