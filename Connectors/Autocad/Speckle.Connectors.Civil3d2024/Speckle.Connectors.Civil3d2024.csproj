@@ -4,7 +4,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <UseWpf>true</UseWpf>
     <Civil3DVersion>2024</Civil3DVersion>
-    <DefineConstants>$(DefineConstants);CIVIL3D;CIVIL3D2024;CIVIL3D2024_OR_GREATER</DefineConstants>
+    <DefineConstants>$(DefineConstants);CIVIL3D;CIVIL3D2024;CIVIL3D2022_OR_GREATER;CIVIL3D2023_OR_GREATER;CIVIL3D2024_OR_GREATER</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
     <StartAction>Program</StartAction>
     <StartProgram>$(ProgramW6432)\Autodesk\AutoCAD $(Civil3DVersion)\acad.exe</StartProgram>
