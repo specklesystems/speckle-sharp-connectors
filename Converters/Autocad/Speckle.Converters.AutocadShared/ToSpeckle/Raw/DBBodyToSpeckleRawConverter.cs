@@ -75,20 +75,16 @@ public class DBBodyToSpeckleRawConverter : ITypedConverter<ADB.Body, SOG.Mesh>
       {
         vertices = convertedVertices,
         faces = faces,
+        area = brep.GetSurfaceArea(),
         units = _settingsStore.Current.SpeckleUnits,
         bbox = bbox
       };
 
     try
     {
-      mesh.area = brep.GetSurfaceArea();
-    }
-    catch (Exception e) when (!e.IsFatal()) { }
-    try
-    {
       mesh.volume = brep.GetVolume();
     }
-    catch (Exception e) when (!e.IsFatal()) { }
+    catch (Autodesk.AutoCAD.BoundaryRepresentation.Exception e) when (!e.IsFatal()) { }
 
     return mesh;
   }

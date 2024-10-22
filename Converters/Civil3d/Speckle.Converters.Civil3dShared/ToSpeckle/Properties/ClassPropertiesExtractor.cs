@@ -82,6 +82,49 @@ public class ClassPropertiesExtractor
   private Dictionary<string, object?> ExtractSubassemblyProperties(CDB.Subassembly subassembly)
   {
     Dictionary<string, object?> subassemblyProperties = new();
+
+    subassemblyProperties["origin"] = _pointConverter.Convert(subassembly.Origin);
+
+    // get shapes > links > points info
+    Dictionary<string, object?> shapes = new();
+    int shapeCount = 0;
+    foreach (CDB.Shape shape in subassembly.Shapes)
+    {
+      Dictionary<string, object?> links = new();
+      int linkCount = 0;
+      foreach (CDB.Link link in shape.Links)
+      {
+        Dictionary<string, object?> points = new();
+        int pointCount = 0;
+        foreach (CDB.Point point in link.Points)
+        {
+          points[pointCount.ToString()] = new Dictionary<string, object?>()
+          {
+            ["elevation"] = point.Elevation,
+            ["codes"] = point.Codes.ToList(),
+            ["offset"] = point.Offset,
+          };
+          pointCount++;
+        }
+
+        links[linkCount.ToString()] = new Dictionary<string, object?>()
+        {
+          ["codes"] = link.Codes.ToList(),
+          ["points"] = points
+        };
+
+        linkCount++;
+      }
+
+      shapes[shapeCount.ToString()] = new Dictionary<string, object?>()
+      {
+        ["codes"] = shape.Codes.ToList(),
+        ["links"] = links
+      };
+    }
+
+    subassemblyProperties["shapes"] = shapes;
+
     if (subassembly.HasSide)
     {
       subassemblyProperties["side"] = subassembly.Side;
@@ -221,6 +264,7 @@ public class ClassPropertiesExtractor
   {
     // get the bounding curve of the catchment
     SOG.Polyline boundary = _point3dCollectionConverter.Convert(catchment.BoundaryPolyline3d);
+    boundary.closed = true;
 
     // use the catchment group handler to process the catchment's group
     _catchmentGroupHandler.HandleCatchmentGroup(catchment);

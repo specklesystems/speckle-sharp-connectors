@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
-    <DefineConstants>$(DefineConstants);CIVIL3d2025;CIVIL3D</DefineConstants>
+    <DefineConstants>$(DefineConstants);CIVIL3d2025;CIVIL3D;CIVIL3D2022_OR_GREATER;CIVIL3D2023_OR_GREATER;CIVIL3D2024_OR_GREATER;CIVIL3D2025_OR_GREATER</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
 
