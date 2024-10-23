@@ -4,6 +4,7 @@ namespace Speckle.Connectors.DUI.Models.Card.SendFilter;
 
 public abstract class DirectSelectionSendFilter : DiscriminatedObject, ISendFilter
 {
+  public string Id { get; set; } = "selection";
   public string Name { get; set; } = "Selection";
   public string? Summary { get; set; }
   public bool IsDefault { get; set; }
