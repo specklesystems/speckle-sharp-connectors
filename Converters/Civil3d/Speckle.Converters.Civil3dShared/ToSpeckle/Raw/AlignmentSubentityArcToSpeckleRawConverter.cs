@@ -25,21 +25,22 @@ public class AlignmentSubentityArcToSpeckleRawConverter : ITypedConverter<CDB.Al
     // we're assuming they are always 2d arcs on the xy plane to calculate the midpoint
     string units = _settingsStore.Current.SpeckleUnits;
 
-    // calculate start and end angles from center
-    double startAngle = Math.Atan2(
-      target.StartPoint.Y - target.CenterPoint.Y,
-      target.StartPoint.X - target.CenterPoint.X
-    );
-    double endAngle = Math.Atan2(target.EndPoint.Y - target.CenterPoint.Y, target.EndPoint.X - target.CenterPoint.X);
+    // calculate the mid vector (center to PI point (intersection of tangents)
+    // note: what is the PI point for a perfect half circle?
+    AG.Point2d piPoint = target.PIPoint;
+    double midVectorX = piPoint.X - target.CenterPoint.X;
+    double midVectorY = piPoint.Y - target.CenterPoint.Y;
+    double midVectorMag = Math.Sqrt(Math.Pow(midVectorX, 2.0) + Math.Pow(midVectorY, 2));
+    double midScalingVectorX = target.Radius * midVectorX / midVectorMag;
+    double midScalingVectorY = target.Radius * midVectorY / midVectorMag;
+    if (target.Delta > Math.PI)
+    {
+      midScalingVectorX *= -1;
+      midScalingVectorY *= -1;
+    }
 
-    // calculate midpoint angle
-    double midAngle = !target.Clockwise
-      ? startAngle + ((endAngle - startAngle) / 2)
-      : endAngle - ((endAngle - startAngle) / 2);
-
-    // calculate midpoint coordinates
-    double midX = target.CenterPoint.X + target.Radius * Math.Cos(midAngle);
-    double midY = target.CenterPoint.Y + target.Radius * Math.Sin(midAngle);
+    double midPointX = target.CenterPoint.X + midScalingVectorX;
+    double midPointY = target.CenterPoint.Y + midScalingVectorY;
 
     // find arc plane (normal is in clockwise dir)
     var center3 = new AG.Point3d(target.CenterPoint.X, target.CenterPoint.Y, 0);
@@ -65,13 +66,14 @@ public class AlignmentSubentityArcToSpeckleRawConverter : ITypedConverter<CDB.Al
         },
         midPoint = new()
         {
-          x = midX,
-          y = midY,
+          x = midPointX,
+          y = midPointY,
           z = 0,
           units = units
         },
         plane = _planeConverter.Convert(plane),
         radius = target.Radius,
+        angleRadians = target.Delta,
         length = target.Length,
 
         // additional alignment subentity props
@@ -79,7 +81,6 @@ public class AlignmentSubentityArcToSpeckleRawConverter : ITypedConverter<CDB.Al
         ["endStation"] = target.EndStation,
         ["startDirection"] = target.StartDirection,
         ["endDirection"] = target.EndDirection,
-        ["delta"] = target.Delta,
         ["deflectedAngle"] = target.DeflectedAngle,
         ["minumumRadius"] = target.MinimumRadius
       };
