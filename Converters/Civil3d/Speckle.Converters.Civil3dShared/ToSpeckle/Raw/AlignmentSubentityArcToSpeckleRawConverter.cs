@@ -1,6 +1,5 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Sdk;
 
 namespace Speckle.Converters.Civil3dShared.ToSpeckle.Raw;
 
@@ -22,37 +21,29 @@ public class AlignmentSubentityArcToSpeckleRawConverter : ITypedConverter<CDB.Al
 
   public SOG.Arc Convert(CDB.AlignmentSubEntityArc target)
   {
+    // alignment arcs do not have the same properties as autocad arcs.
+    // we're assuming they are always 2d arcs on the xy plane to calculate the midpoint
     string units = _settingsStore.Current.SpeckleUnits;
 
-    // calculate midpoint of chord as between start and end point
-    AG.Point2d chordMid =
-      new((target.StartPoint.X + target.EndPoint.X) / 2, (target.StartPoint.Y + target.EndPoint.Y) / 2);
+    // calculate start and end angles from center
+    double startAngle = Math.Atan2(
+      target.StartPoint.Y - target.CenterPoint.Y,
+      target.StartPoint.X - target.CenterPoint.X
+    );
+    double endAngle = Math.Atan2(target.EndPoint.Y - target.CenterPoint.Y, target.EndPoint.X - target.CenterPoint.X);
 
-    // calculate sagitta as radius minus distance between arc center and chord midpoint
-    double sagitta = target.Radius - target.CenterPoint.GetDistanceTo(chordMid);
+    // calculate midpoint angle
+    double midAngle = !target.Clockwise
+      ? startAngle + ((endAngle - startAngle) / 2)
+      : endAngle - ((endAngle - startAngle) / 2);
 
-    // get unit vector from arc center to chord mid
-    AG.Vector2d midVector = target.CenterPoint.GetVectorTo(chordMid);
-    AG.Vector2d unitMidVector = midVector.DivideBy(midVector.Length);
-
-    // get midpoint of arc by moving chord mid point the length of the sagitta along mid vector
-    // if greater than 180 >, move in other direction of distance radius + radius - sagitta
-    // in the case of an exactly perfect half circle arc...🤷‍♀️
-    AG.Point2d midPoint = chordMid.Add(unitMidVector.MultiplyBy(sagitta));
-    try
-    {
-      if (target.GreaterThan180) // this can throw : The property gets an invalid value according to the entity's constraint type.
-      {
-        midPoint = chordMid.Add(unitMidVector.Negate().MultiplyBy(2 * target.Radius - sagitta));
-      }
-    }
-    catch (Exception e) when (!e.IsFatal()) { } // continue with original midpoint if GreaterThan180 doesn't apply to this arc
+    // calculate midpoint coordinates
+    double midX = target.CenterPoint.X + target.Radius * Math.Cos(midAngle);
+    double midY = target.CenterPoint.Y + target.Radius * Math.Sin(midAngle);
 
     // find arc plane (normal is in clockwise dir)
     var center3 = new AG.Point3d(target.CenterPoint.X, target.CenterPoint.Y, 0);
-    AG.Plane plane = target.Clockwise
-      ? new AG.Plane(center3, AG.Vector3d.ZAxis.MultiplyBy(-1))
-      : new AG.Plane(center3, AG.Vector3d.ZAxis);
+    AG.Plane plane = new AG.Plane(center3, AG.Vector3d.ZAxis);
 
     // create arc
     SOG.Arc arc =
@@ -74,8 +65,8 @@ public class AlignmentSubentityArcToSpeckleRawConverter : ITypedConverter<CDB.Al
         },
         midPoint = new()
         {
-          x = midPoint.X,
-          y = midPoint.Y,
+          x = midX,
+          y = midY,
           z = 0,
           units = units
         },
