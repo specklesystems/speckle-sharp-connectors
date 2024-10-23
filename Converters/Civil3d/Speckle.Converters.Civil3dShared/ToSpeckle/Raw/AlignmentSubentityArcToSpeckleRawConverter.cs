@@ -75,6 +75,7 @@ public class AlignmentSubentityArcToSpeckleRawConverter : ITypedConverter<CDB.Al
         radius = target.Radius,
         angleRadians = target.Delta,
         length = target.Length,
+        units = units,
 
         // additional alignment subentity props
         ["startStation"] = target.StartStation,
