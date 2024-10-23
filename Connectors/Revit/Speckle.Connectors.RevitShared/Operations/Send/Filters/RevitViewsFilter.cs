@@ -13,11 +13,8 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter
   public string Name { get; set; } = "Views";
   public string? Summary { get; set; }
   public bool IsDefault { get; set; }
-  public string? SelectedViewDiscipline { get; set; }
-  public string? SelectedViewFamily { get; set; }
   public string? SelectedView { get; set; }
-  public List<string>? AvailableDisciplines { get; set; }
-  public Dictionary<string, List<string>>? AvailableViews { get; set; }
+  public List<string>? AvailableViews { get; set; }
 
   public RevitViewsFilter() { }
 
@@ -25,7 +22,6 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter
   {
     _revitContext = revitContext;
     _doc = _revitContext.UIApplication?.ActiveUIDocument.Document;
-    GetAvailableDisciplines();
     GetViews();
   }
 
@@ -37,11 +33,16 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter
       return objectIds;
     }
 
+    // Paşa Bilal wants it like this..
+    string[] result = SelectedView.Split(new string[] { " - " }, 2, StringSplitOptions.None);
+    var viewFamilyString = result[0];
+    var viewString = result[1];
+
     using var collector = new FilteredElementCollector(_doc);
     View? view = collector
       .OfClass(typeof(View))
       .Cast<View>()
-      .FirstOrDefault(v => v.Name.Equals(SelectedView, StringComparison.OrdinalIgnoreCase));
+      .FirstOrDefault(v => v.ViewType.ToString().Equals(viewFamilyString) && v.Name.Equals(viewString));
 
     if (view is null)
     {
@@ -55,8 +56,6 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter
 
   public bool CheckExpiry(string[] changedObjectIds) => GetObjectIds().Intersect(changedObjectIds).Any();
 
-  private void GetAvailableDisciplines() => AvailableDisciplines = Enum.GetNames(typeof(ViewDiscipline)).ToList();
-
   private void GetViews()
   {
     using var collector = new FilteredElementCollector(_doc);
@@ -64,11 +63,8 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter
       .OfClass(typeof(View))
       .Cast<View>()
       .Where(v => !v.IsTemplate)
-      .GroupBy(v => v.ViewType)
-      .ToDictionary(
-        g => g.Key.ToString(), // Key is the view type as a string
-        g => g.Select(v => v.Name).ToList() // Values are the view names as string[]
-      );
+      .Select(v => v.ViewType.ToString() + " - " + v.Name.ToString())
+      .ToList();
     AvailableViews = views;
   }
 

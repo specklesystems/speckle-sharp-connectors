@@ -106,9 +106,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
   public SendBindingUICommands Commands { get; }
 
-#pragma warning disable CA1506
   public async Task Send(string modelCardId)
-#pragma warning restore CA1506
   {
     // Note: removed top level handling thing as it was confusing me
     try

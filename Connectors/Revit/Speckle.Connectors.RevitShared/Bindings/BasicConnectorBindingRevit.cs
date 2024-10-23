@@ -5,6 +5,7 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.RevitShared;
+using Speckle.Connectors.RevitShared.Operations.Send.Filters;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
@@ -101,6 +102,10 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
     if (model is SenderModelCard senderModelCard)
     {
+      if (senderModelCard.SendFilter is RevitViewsFilter revitViewsFilter)
+      {
+        revitViewsFilter.SetContext(_revitContext);
+      }
       elementIds = senderModelCard
         .SendFilter.NotNull()
         .GetObjectIds()
