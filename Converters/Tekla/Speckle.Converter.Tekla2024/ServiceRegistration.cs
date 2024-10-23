@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Registration;
 using Speckle.Sdk;
 using Tekla.Structures.Drawing;
@@ -12,8 +13,14 @@ public static class ServiceRegistration
   {
     var converterAssembly = Assembly.GetExecutingAssembly();
     serviceCollection.AddMatchingInterfacesAsTransient(converterAssembly);
+    serviceCollection.AddRootCommon<RootToSpeckleConverter>(converterAssembly);
 
     serviceCollection.AddApplicationConverters<TeklaToSpeckleUnitConverter, Units>(converterAssembly);
+    serviceCollection.AddApplicationConverters<TeklaToSpeckleUnitConverter, Units>(converterAssembly);
+    serviceCollection.AddScoped<
+      IConverterSettingsStore<TeklaConversionSettings>,
+      ConverterSettingsStore<TeklaConversionSettings>
+    >();
 
     return serviceCollection;
   }

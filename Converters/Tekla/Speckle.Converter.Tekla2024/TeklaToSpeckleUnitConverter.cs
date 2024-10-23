@@ -2,6 +2,7 @@ using Speckle.Converters.Common;
 using Speckle.Sdk.Common.Exceptions;
 using SSC = Speckle.Sdk.Common;
 using TSD = Tekla.Structures.Drawing;
+using System.Collections.Generic;
 
 namespace Speckle.Converter.Tekla2024;
 
