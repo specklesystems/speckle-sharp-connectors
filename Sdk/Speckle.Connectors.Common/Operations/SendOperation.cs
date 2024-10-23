@@ -29,6 +29,7 @@ public sealed class SendOperation<T>
     // POC: Jonathon asks on behalf of willow twin - let's explore how this can work
     // buildResult.RootObject["@report"] = new Report { ConversionResults = buildResult.ConversionResults };
 
+    buildResult.RootObject["version"] = 3;
     // base object handler is separated, so we can do some testing on non-production databases
     // exact interface may want to be tweaked when we implement this
     var (rootObjId, convertedReferences) = await _baseObjectSender
