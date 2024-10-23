@@ -195,11 +195,11 @@ public sealed class CorridorHandler
             {
               ["name"] = assembly.Name,
               ["type"] = assembly.GetType().ToString().Split('.').Last(),
-              ["elements"] = subassemblies,
+              ["subassemblies"] = subassemblies,
               applicationId = assembly.GetSpeckleApplicationId()
             };
 
-          convertedRegion["elements"] = convertedAssembly;
+          convertedRegion["assembly"] = convertedAssembly;
 
           tr.Commit();
         }
