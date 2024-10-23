@@ -16,6 +16,7 @@ using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Converter.Tekla2024;
 using Speckle.Converters.Common;
+using Speckle.Sdk;
 using Speckle.Sdk.Models.GraphTraversal;
 using Tekla.Structures.Model;
 
@@ -25,6 +26,8 @@ public static class ServiceRegistration
 {
   public static IServiceCollection AddTekla(this IServiceCollection services)
   {
+    var converterAssembly = System.Reflection.Assembly.GetExecutingAssembly();
+
     services.AddSingleton<IBrowserBridge, BrowserBridge>();
 
     services.AddConnectorUtils();
@@ -38,11 +41,12 @@ public static class ServiceRegistration
     services.AddSingleton<IBinding, ConfigBinding>();
     services.AddSingleton<IBinding, AccountBinding>();
     services.AddSingleton<IBasicConnectorBinding, TeklaBasicConnectorBinding>();
+
+    services.RegisterTopLevelExceptionHandler();
+
     services.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
     services.AddSingleton<IBinding, TeklaSendBinding>();
     services.AddSingleton<IBinding, TeklaSelectionBinding>();
-
-    services.RegisterTopLevelExceptionHandler();
 
     services.AddSingleton<Model>();
     services.AddSingleton<Events>();
@@ -62,6 +66,9 @@ public static class ServiceRegistration
       IConverterSettingsStore<TeklaConversionSettings>,
       ConverterSettingsStore<TeklaConversionSettings>
     >();
+    services.AddScoped<ITeklaConversionSettingsFactory, TeklaConversionSettingsFactory>();
+
+    services.AddMatchingInterfacesAsTransient(converterAssembly);
 
     return services;
   }

@@ -22,6 +22,8 @@ public static class ServiceRegistration
       ConverterSettingsStore<TeklaConversionSettings>
     >();
 
+    serviceCollection.AddMatchingInterfacesAsTransient(converterAssembly);
+
     return serviceCollection;
   }
 }
