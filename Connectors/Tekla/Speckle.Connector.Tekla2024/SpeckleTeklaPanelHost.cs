@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.WebView;
+using Speckle.Converter.Tekla2024;
 using Speckle.Sdk.Host;
 using Tekla.Structures.Dialog;
 using Tekla.Structures.Model;
@@ -22,9 +23,12 @@ public class SpeckleTeklaPanelHost : PluginFormBase
 
   public SpeckleTeklaPanelHost()
   {
+    Show();
+
     var services = new ServiceCollection();
     services.Initialize(HostApplications.TeklaStructures, GetVersion());
     services.AddTekla();
+    services.AddTeklaConverters();
 
     // TODO: Add Tekla converters
 
@@ -46,9 +50,9 @@ public class SpeckleTeklaPanelHost : PluginFormBase
     Controls.Add(Host);
     Operation.DisplayPrompt("Speckle connector initialized.");
 
-    Show();
+    // below methods are not really needed
     Activate();
-    Focus();
+    //Focus();
   }
 
   private HostAppVersion GetVersion()

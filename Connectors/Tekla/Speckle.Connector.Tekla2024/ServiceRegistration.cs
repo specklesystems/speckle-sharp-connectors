@@ -66,7 +66,6 @@ public static class ServiceRegistration
       IConverterSettingsStore<TeklaConversionSettings>,
       ConverterSettingsStore<TeklaConversionSettings>
     >();
-    services.AddScoped<ITeklaConversionSettingsFactory, TeklaConversionSettingsFactory>();
 
     services.AddMatchingInterfacesAsTransient(converterAssembly);
 

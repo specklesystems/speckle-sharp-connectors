@@ -125,7 +125,7 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
       List<ModelObject> teklaObjects = modelCard
         .SendFilter.NotNull()
         .GetObjectIds()
-        .Select(id => _model.SelectModelObject(new Identifier(Convert.ToInt32(id))))
+        .Select(id => _model.SelectModelObject(new Identifier(new Guid(id))))
         .Where(obj => obj != null)
         .ToList();
 

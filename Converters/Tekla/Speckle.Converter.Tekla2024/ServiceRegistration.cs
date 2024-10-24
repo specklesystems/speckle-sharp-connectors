@@ -16,7 +16,6 @@ public static class ServiceRegistration
     serviceCollection.AddRootCommon<RootToSpeckleConverter>(converterAssembly);
 
     serviceCollection.AddApplicationConverters<TeklaToSpeckleUnitConverter, Units>(converterAssembly);
-    serviceCollection.AddApplicationConverters<TeklaToSpeckleUnitConverter, Units>(converterAssembly);
     serviceCollection.AddScoped<
       IConverterSettingsStore<TeklaConversionSettings>,
       ConverterSettingsStore<TeklaConversionSettings>
