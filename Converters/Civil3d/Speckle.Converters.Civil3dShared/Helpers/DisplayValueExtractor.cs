@@ -55,6 +55,10 @@ public sealed class DisplayValueExtractor
         SOG.Mesh gridSurfaceMesh = _gridSurfaceConverter.Convert(gridSurface);
         return new() { gridSurfaceMesh };
 
+      // Corridors are complicated: their display values are extracted in the CorridorHandler when processing corridor children, since they are attached to the corridor subassemblies.
+      case CDB.Corridor:
+        return new();
+
       default:
         return null;
     }
