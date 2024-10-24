@@ -31,7 +31,7 @@ public sealed class DisplayValueExtractor
     _converterSettings = converterSettings;
   }
 
-  public List<Base> GetDisplayValue(CDB.Entity entity)
+  public List<Base>? GetDisplayValue(CDB.Entity entity)
   {
     switch (entity)
     {
@@ -56,7 +56,7 @@ public sealed class DisplayValueExtractor
         return new() { gridSurfaceMesh };
 
       default:
-        return new();
+        return null;
     }
   }
 }
