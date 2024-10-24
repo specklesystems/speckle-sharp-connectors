@@ -1,4 +1,4 @@
-﻿using Speckle.Converters.Common;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
@@ -14,6 +14,7 @@ public class FallbackToHostTopLevelConverter
   private readonly ITypedConverter<SOG.Point, RG.Point> _pointConverter;
   private readonly ITypedConverter<SOG.Line, RG.LineCurve> _lineConverter;
   private readonly ITypedConverter<SOG.Polyline, RG.PolylineCurve> _polylineConverter;
+  private readonly ITypedConverter<SOG.Arc, RG.ArcCurve> _arcConverter;
   private readonly ITypedConverter<SOG.Mesh, RG.Mesh> _meshConverter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
@@ -21,6 +22,7 @@ public class FallbackToHostTopLevelConverter
     ITypedConverter<SOG.Point, RG.Point> pointConverter,
     ITypedConverter<SOG.Line, RG.LineCurve> lineConverter,
     ITypedConverter<SOG.Polyline, RG.PolylineCurve> polylineConverter,
+    ITypedConverter<SOG.Arc, RG.ArcCurve> arcConverter,
     ITypedConverter<SOG.Mesh, RG.Mesh> meshConverter,
     IConverterSettingsStore<RhinoConversionSettings> settingsStore
   )
@@ -28,6 +30,7 @@ public class FallbackToHostTopLevelConverter
     _pointConverter = pointConverter;
     _lineConverter = lineConverter;
     _polylineConverter = polylineConverter;
+    _arcConverter = arcConverter;
     _meshConverter = meshConverter;
     _settingsStore = settingsStore;
   }
@@ -43,6 +46,7 @@ public class FallbackToHostTopLevelConverter
       {
         SOG.Line line => _lineConverter.Convert(line),
         SOG.Polyline polyline => _polylineConverter.Convert(polyline),
+        SOG.Arc arc => _arcConverter.Convert(arc),
         SOG.Mesh mesh => _meshConverter.Convert(mesh),
         SOG.Point point => _pointConverter.Convert(point),
         _ => throw new ConversionException($"Found unsupported fallback geometry: {item.GetType()}")
