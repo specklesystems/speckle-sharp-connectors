@@ -9,10 +9,15 @@ namespace Speckle.Converter.Tekla2024.ToSpeckle.Raw;
 
 public class BeamRawConverter: ITypedConverter<Beam, Base>
 {
-  private readonly ITypedConverter<TG.Point, SOG.Point> _pointConverter;
   private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
+
+  public BeamRawConverter(IConverterSettingsStore<TeklaConversionSettings> settingsStore)
+  {
+    _settingsStore = settingsStore;
+  }
+
   public Base Convert(Beam target)
   {
-    return new Base() { applicationId = target.Name , properties = target.StartPoint};
+    return new Base() { applicationId = target.Name };
   }
 }
