@@ -104,7 +104,6 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
   private List<Base>? GetSiteChildren(CDB.Site site)
   {
     List<Base> parcels = new();
-
     using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
     {
       foreach (ADB.ObjectId parcelId in site.GetParcelIds())
@@ -115,6 +114,7 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
 
       tr.Commit();
     }
+
     return parcels.Count > 0 ? parcels : null;
   }
 
