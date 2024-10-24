@@ -1,10 +1,10 @@
-using Speckle.Connectors.DUI.Models.Card.SendFilter;
+﻿using Speckle.Connectors.DUI.Models.Card.SendFilter;
 
-namespace Speckle.Connectors.ArcGIS.Filters;
+namespace Speckle.Connectors.RevitShared.Operations.Send.Filters;
 
-public class ArcGISSelectionFilter : DirectSelectionSendFilter
+public class RevitSelectionFilter : DirectSelectionSendFilter
 {
-  public ArcGISSelectionFilter()
+  public RevitSelectionFilter()
   {
     IsDefault = true;
   }

@@ -16,6 +16,7 @@ using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
+using Speckle.Connectors.RevitShared.Operations.Send.Filters;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
@@ -91,10 +92,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged().ConfigureAwait(false));
   }
 
-  public List<ISendFilter> GetSendFilters()
-  {
-    return new List<ISendFilter> { new RevitSelectionFilter() { IsDefault = true } };
-  }
+  public List<ISendFilter> GetSendFilters() =>
+    [new RevitSelectionFilter() { IsDefault = true }, new RevitViewsFilter(RevitContext)];
 
   public List<ICardSetting> GetSendSettings() =>
     [
@@ -134,6 +133,11 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       var activeUIDoc =
         RevitContext.UIApplication?.ActiveUIDocument
         ?? throw new SpeckleException("Unable to retrieve active UI document");
+
+      if (modelCard.SendFilter is RevitViewsFilter viewFilter)
+      {
+        viewFilter.SetContext(RevitContext);
+      }
 
       List<Element> elements = modelCard
         .SendFilter.NotNull()
@@ -278,6 +282,10 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     List<string> expiredSenderIds = new();
     foreach (SenderModelCard modelCard in senders)
     {
+      if (modelCard.SendFilter is RevitViewsFilter viewFilter)
+      {
+        viewFilter.SetContext(RevitContext);
+      }
       var intersection = modelCard.SendFilter.NotNull().GetObjectIds().Intersect(objUniqueIds).ToList();
       bool isExpired = intersection.Count != 0;
       if (isExpired)

@@ -14,7 +14,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\BasicConnectorBindingRevit.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Bindings\Filters.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RevitBaseBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RevitReceiveBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\SelectionBinding.cs" />
@@ -35,6 +34,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\ITransactionManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\RevitHostObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\TransactionManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\RevitSelectionFilter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\RevitViewsFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\RevitRootObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendParameterNullOrEmptyStringsSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ToSpeckleSettingsManager.cs" />
