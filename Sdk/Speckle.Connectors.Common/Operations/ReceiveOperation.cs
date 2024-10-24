@@ -58,7 +58,6 @@ public sealed class ReceiveOperation
     using var transport = _serverTransportFactory.Create(account, receiveInfo.ProjectId);
 
     double? previousPercentage = null;
-    string previousSpeed = string.Empty;
     _progressDisplayManager.Begin();
     Base? commitObject = await _operations
       .Receive2(
@@ -75,9 +74,6 @@ public sealed class ReceiveOperation
               case ProgressEvent.CacheCheck:
                 previousPercentage = _progressDisplayManager.CalculatePercentage(args);
                 break;
-              case ProgressEvent.DownloadBytes:
-                previousSpeed = _progressDisplayManager.CalculateSpeed(args);
-                break;
             }
           }
           if (!_progressDisplayManager.ShouldUpdate())
@@ -89,15 +85,10 @@ public sealed class ReceiveOperation
           {
             case ProgressEvent.CacheCheck:
             case ProgressEvent.DownloadBytes:
-              onOperationProgressed.Report(new($"Checking and Downloading... ({previousSpeed})", previousPercentage));
+              onOperationProgressed.Report(new("Checking and Downloading... ", previousPercentage));
               break;
             case ProgressEvent.DeserializeObject:
-              onOperationProgressed.Report(
-                new(
-                  $"Deserializing ({_progressDisplayManager.CalculateSpeed(args)})",
-                  _progressDisplayManager.CalculatePercentage(args)
-                )
-              );
+              onOperationProgressed.Report(new("Deserializing ...", _progressDisplayManager.CalculatePercentage(args)));
               break;
           }
         }),
