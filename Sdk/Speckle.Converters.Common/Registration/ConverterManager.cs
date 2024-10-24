@@ -9,7 +9,7 @@ public class ConverterManager<T>(ConcurrentDictionary<string, Type> converterTyp
 {
   public string Name => typeof(T).Name;
 
-  public T ResolveConverter(Type type, bool recursive = false)
+  public T ResolveConverter(Type type, bool recursive = true)
   {
     var currentType = type;
     while (true)
