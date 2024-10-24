@@ -18,6 +18,14 @@ public class BeamRawConverter: ITypedConverter<Beam, Base>
 
   public Base Convert(Beam target)
   {
-    return new Base() { applicationId = target.Name };
+    var beamObject = new Base
+    {
+      ["type"] = nameof(Beam),
+      ["units"] = _settingsStore.Current.SpeckleUnits,
+      ["profile"] = target.Profile.ProfileString,
+      ["material"] = target.Material.MaterialString,
+    };
+    
+    return beamObject;
   }
 }
