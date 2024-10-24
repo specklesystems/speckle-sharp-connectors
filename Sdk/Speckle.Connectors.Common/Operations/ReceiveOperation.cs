@@ -57,13 +57,25 @@ public sealed class ReceiveOperation
 
     using var transport = _serverTransportFactory.Create(account, receiveInfo.ProjectId);
 
+    double? previousPercentage = null;
     _progressDisplayManager.Begin();
     Base? commitObject = await _operations
-      .Receive(
+      .Receive2(
+        new Uri(account.serverInfo.url),
+        receiveInfo.ProjectId,
         version.referencedObject,
-        transport,
+        account.token,
         onProgressAction: new PassthroughProgress(args =>
         {
+          if (args.ProgressEvent == ProgressEvent.CacheCheck || args.ProgressEvent == ProgressEvent.DownloadBytes)
+          {
+            switch (args.ProgressEvent)
+            {
+              case ProgressEvent.CacheCheck:
+                previousPercentage = _progressDisplayManager.CalculatePercentage(args);
+                break;
+            }
+          }
           if (!_progressDisplayManager.ShouldUpdate())
           {
             return;
@@ -71,24 +83,12 @@ public sealed class ReceiveOperation
 
           switch (args.ProgressEvent)
           {
-            case ProgressEvent.DownloadBytes: //TODO: OnOperationProgress is not awaited here.
-              onOperationProgressed.Report(
-                new(
-                  $"Downloading ({_progressDisplayManager.CalculateSpeed(args)})",
-                  _progressDisplayManager.CalculatePercentage(args)
-                )
-              );
-              break;
-            case ProgressEvent.DownloadObject:
-              onOperationProgressed.Report(new("Downloading Root Object...", null));
+            case ProgressEvent.CacheCheck:
+            case ProgressEvent.DownloadBytes:
+              onOperationProgressed.Report(new("Checking and Downloading... ", previousPercentage));
               break;
             case ProgressEvent.DeserializeObject:
-              onOperationProgressed.Report(
-                new(
-                  $"Deserializing ({_progressDisplayManager.CalculateSpeed(args)})",
-                  _progressDisplayManager.CalculatePercentage(args)
-                )
-              );
+              onOperationProgressed.Report(new("Deserializing ...", _progressDisplayManager.CalculatePercentage(args)));
               break;
           }
         }),
