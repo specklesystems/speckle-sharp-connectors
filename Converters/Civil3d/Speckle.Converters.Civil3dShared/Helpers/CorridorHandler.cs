@@ -6,54 +6,37 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Civil3dShared.Helpers;
 
+/// <summary>
+/// Processes the children of a corridor. Expects to be a singleton service.
+/// </summary>
 public sealed class CorridorHandler
 {
-  /// <summary>
-  /// Keeps track of all corridor solids by their hierarchy of (corridor, baseline, region, applied assembly, applied subassembly) in the current send operation.
-  /// This should be added to the display value of the corridor applied subassemblies after they are processed
-  /// Handles should be used instead of Handle.Value (as is typically used for speckle app ids) since the exported solid property sets only stores the handle
-  /// </summary>
-  private Dictionary<(string, string, string, string, string), List<SOG.Mesh>> CorridorSolidsCache { get; } = new();
-
-  // these ints are used to retrieve the correct values from the exported corridor solids property sets to cache them
-  // they were determined via trial and error
-#pragma warning disable CA1805 // Initialized explicitly to 0
-  private readonly int _corridorHandleIndex = 0;
-#pragma warning restore CA1805 // Initialized explicitly to 0
-  private readonly int _baselineGuidIndex = 6;
-  private readonly int _regionGuidIndex = 7;
-  private readonly int _assemblyHandleIndex = 3;
-  private readonly int _subassemblyHandleIndex = 4;
-
-  private readonly ITypedConverter<ADB.Solid3d, SOG.Mesh> _solidConverter;
-  private readonly ITypedConverter<ADB.Body, SOG.Mesh> _bodyConverter;
   private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
   private readonly ITypedConverter<AG.Point3dCollection, SOG.Polyline> _pointCollectionConverter;
+  private readonly CorridorDisplayValueExtractor _displayValueExtractor;
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
 
   public CorridorHandler(
-    ITypedConverter<ADB.Solid3d, SOG.Mesh> solidConverter,
-    ITypedConverter<ADB.Body, SOG.Mesh> bodyConverter,
     ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
     ITypedConverter<AG.Point3dCollection, SOG.Polyline> pointCollectionConverter,
+    CorridorDisplayValueExtractor displayValueExtractor,
     IConverterSettingsStore<Civil3dConversionSettings> settingsStore
   )
   {
-    _solidConverter = solidConverter;
-    _bodyConverter = bodyConverter;
     _pointConverter = pointConverter;
     _pointCollectionConverter = pointCollectionConverter;
+    _displayValueExtractor = displayValueExtractor;
     _settingsStore = settingsStore;
   }
 
   // Ok, this is going to be very complicated.
-  // We are building a nested `Base.elements` of corridor subelements in this hierarchy: corridor -> baselines -> baseline regions -> applied assemblies -> applied subassemblies
-  // This is because none of these entities inherit from CDB.Entity, and we need to match the corridor solids with the corresponding applied subassembly.
+  // We are building a nested `Base.elements` of corridor subelements in this hierarchy: corridor -> baselines -> baseline regions -> assembly -> subassemblies.
+  // Corridors will also have a dict of applied assemblies -> applied subassemblies attached to the region.
+  // This handler is in place because none of the corridor children inherit from CDB.Entity
   public List<Base> GetCorridorChildren(CDB.Corridor corridor)
   {
-    // first extract all corridor solids.
-    // this needs to be done before traversing children, so we can match the solid mesh to the appropriate subassembly
-    HandleCorridorSolids(corridor);
+    // extract corridor solids for display value first: this will be used later to attach display values to subassemblies.
+    _displayValueExtractor.ProcessCorridorSolids(corridor);
 
     // track children hierarchy ids:
     string corridorHandle = corridor.Handle.ToString();
@@ -173,15 +156,16 @@ public sealed class CorridorHandler
                   applicationId = subassembly.GetSpeckleApplicationId()
                 };
 
-              // try to get the display value mesh
-              (string, string, string, string, string) corridorSolidsKey = (
-                corridorHandle,
-                baselineGuid,
-                regionGuid,
-                assemblyHandle,
-                subassemblyHandle
-              );
-              if (CorridorSolidsCache.TryGetValue(corridorSolidsKey, out List<SOG.Mesh>? display))
+              // try to get the display value mesh from the corridor display value extractor by subassembly key
+              SubassemblyCorridorKey subassemblyKey =
+                new(corridorHandle, baselineGuid, regionGuid, assemblyHandle, subassemblyHandle);
+
+              if (
+                _displayValueExtractor.CorridorSolidsCache.TryGetValue(
+                  subassemblyKey.ToString(),
+                  out List<SOG.Mesh>? display
+                )
+              )
               {
                 convertedSubassembly["displayValue"] = display;
               }
@@ -330,118 +314,5 @@ public sealed class CorridorHandler
       ["codeName"] = featureline.CodeName,
       ["displayValue"] = polylines
     };
-  }
-
-  /// <summary>
-  /// Extracts the solids from a corridor and stores in <see cref="CorridorSolidsCache"/> according to property sets on the solid.
-  /// NOTE: The Export Solids method is only available for version 2024 or greater
-  /// </summary>
-  /// <param name="corridor"></param>
-  /// <returns></returns>
-  private void HandleCorridorSolids(CDB.Corridor corridor)
-  {
-#if CIVIL3D2024_OR_GREATER
-    CDB.ExportCorridorSolidsParams param = new();
-
-    using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
-    {
-      foreach (ADB.ObjectId solidId in corridor.ExportSolids(param, corridor.Database))
-      {
-        SOG.Mesh? mesh = null;
-        var solid = tr.GetObject(solidId, ADB.OpenMode.ForRead);
-        if (solid is ADB.Solid3d solid3d)
-        {
-          // get the solid mesh
-          mesh = _solidConverter.Convert(solid3d);
-        }
-        else if (solid is ADB.Body body)
-        {
-          mesh = _bodyConverter.Convert(body);
-        }
-
-        if (mesh is null)
-        {
-          continue;
-        }
-
-        // get the (corridor handle, baseline guid, region guid, assembly handle, subassembly handle) of the solid property sets
-        (string, string, string, string, string)? solidKey = GetCorridorSolidIdFromPropertySet(solid, tr);
-
-        if (solidKey is (string, string, string, string assemblyHandle, string subassemblyHandle) validSolidKey)
-        {
-          if (CorridorSolidsCache.TryGetValue(validSolidKey, out List<SOG.Mesh>? display))
-          {
-            display.Add(mesh);
-          }
-          else
-          {
-            CorridorSolidsCache[validSolidKey] = new() { mesh };
-          }
-        }
-      }
-
-      tr.Commit();
-    }
-#endif
-  }
-
-  private (string, string, string, string, string)? GetCorridorSolidIdFromPropertySet(
-    ADB.DBObject obj,
-    ADB.Transaction tr
-  )
-  {
-    ADB.ObjectIdCollection? propertySetIds;
-
-    try
-    {
-      propertySetIds = AAECPDB.PropertyDataServices.GetPropertySets(obj);
-    }
-    catch (Exception e) when (!e.IsFatal())
-    {
-      return null;
-    }
-
-    if (propertySetIds is null || propertySetIds.Count == 0)
-    {
-      return null;
-    }
-
-    foreach (ADB.ObjectId id in propertySetIds)
-    {
-      AAECPDB.PropertySet propertySet = (AAECPDB.PropertySet)tr.GetObject(id, ADB.OpenMode.ForRead);
-
-      if (propertySet.PropertySetDefinitionName == "Corridor Identity")
-      {
-        if (propertySet.PropertySetData[_corridorHandleIndex].GetData() is not string corridorHandle)
-        {
-          return null;
-        }
-        if (propertySet.PropertySetData[_baselineGuidIndex].GetData() is not string baselineGuid)
-        {
-          return null;
-        }
-        if (propertySet.PropertySetData[_regionGuidIndex].GetData() is not string regionGuid)
-        {
-          return null;
-        }
-        if (propertySet.PropertySetData[_assemblyHandleIndex].GetData() is not string assemblyHandle)
-        {
-          return null;
-        }
-        if (propertySet.PropertySetData[_subassemblyHandleIndex].GetData() is not string subassemblyHandle)
-        {
-          return null;
-        }
-
-        return (
-          corridorHandle,
-          baselineGuid[1..^1].ToLower(), // guid is uppercase and enclosed in {} which need to be removed
-          regionGuid[1..^1].ToLower(), // guid is uppercase and enclosed in {} which need to be removed
-          assemblyHandle,
-          subassemblyHandle
-        );
-      }
-    }
-    return null;
   }
 }
