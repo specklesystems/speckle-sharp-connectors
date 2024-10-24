@@ -292,7 +292,7 @@ public class GeneralPropertiesExtractor
       };
       speedsCount++;
     }
-    designCriteriaDict["Design Speeds"] = designSpeedsDict;
+
     if (designSpeedsDict.Count > 0)
     {
       designCriteriaDict["Design Speeds"] = designSpeedsDict;
