@@ -4,6 +4,11 @@ namespace Speckle.Connectors.RevitShared.Operations.Send.Filters;
 
 public class RevitSelectionFilter : DirectSelectionSendFilter
 {
+  public RevitSelectionFilter()
+  {
+    IsDefault = true;
+  }
+
   public override List<string> GetObjectIds() => SelectedObjectIds;
 
   public override bool CheckExpiry(string[] changedObjectIds) => SelectedObjectIds.Intersect(changedObjectIds).Any();
