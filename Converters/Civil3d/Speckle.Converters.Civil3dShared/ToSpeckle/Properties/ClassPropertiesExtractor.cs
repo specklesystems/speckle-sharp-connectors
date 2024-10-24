@@ -252,11 +252,6 @@ public class ClassPropertiesExtractor
       catchmentProperties["featureLineIds"] = GetSpeckleApplicationIdsFromCollection(site.GetFeatureLineIds());
     }
 
-    if (site.GetParcelIds().Count > 0)
-    {
-      catchmentProperties["parcelIds"] = GetSpeckleApplicationIdsFromCollection(site.GetParcelIds());
-    }
-
     return catchmentProperties;
   }
 
