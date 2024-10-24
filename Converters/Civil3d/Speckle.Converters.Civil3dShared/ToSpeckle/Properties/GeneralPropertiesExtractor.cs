@@ -331,7 +331,11 @@ public class GeneralPropertiesExtractor
     switch (surface)
     {
       case CDB.TinSurface tinSurface:
+        statisticsDict["Terrain"] = ExtractPropertiesGeneric<CDB.TerrainSurfaceProperties>(
+          tinSurface.GetTerrainProperties()
+        );
         statisticsDict["TIN"] = ExtractPropertiesGeneric<CDB.TinSurfaceProperties>(tinSurface.GetTinProperties());
+
         break;
       case CDB.TinVolumeSurface tinVolumeSurface:
         statisticsDict["TIN"] = ExtractPropertiesGeneric<CDB.TinSurfaceProperties>(tinVolumeSurface.GetTinProperties());
@@ -340,6 +344,9 @@ public class GeneralPropertiesExtractor
         );
         break;
       case CDB.GridSurface gridSurface:
+        statisticsDict["Terrain"] = ExtractPropertiesGeneric<CDB.TerrainSurfaceProperties>(
+          gridSurface.GetTerrainProperties()
+        );
         statisticsDict["Grid"] = ExtractPropertiesGeneric<CDB.GridSurfaceProperties>(gridSurface.GetGridProperties());
         break;
       case CDB.GridVolumeSurface gridVolumeSurface:
