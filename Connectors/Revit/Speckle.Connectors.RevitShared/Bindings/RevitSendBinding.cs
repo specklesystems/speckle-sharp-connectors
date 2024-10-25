@@ -93,7 +93,11 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   }
 
   public List<ISendFilter> GetSendFilters() =>
-    [new RevitSelectionFilter() { IsDefault = true }, new RevitViewsFilter(RevitContext)];
+    [
+      new RevitSelectionFilter() { IsDefault = true },
+      new RevitViewsFilter(RevitContext),
+      new RevitViewsSelectionFilter()
+    ];
 
   public List<ICardSetting> GetSendSettings() =>
     [
@@ -106,7 +110,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
   public SendBindingUICommands Commands { get; }
 
+#pragma warning disable CA1506
   public async Task Send(string modelCardId)
+#pragma warning restore CA1506
   {
     // Note: removed top level handling thing as it was confusing me
     try
@@ -137,6 +143,10 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       if (modelCard.SendFilter is RevitViewsFilter viewFilter)
       {
         viewFilter.SetContext(RevitContext);
+      }
+      else if (modelCard.SendFilter is RevitViewsSelectionFilter viewsSelectionFilter)
+      {
+        viewsSelectionFilter.SetContext(RevitContext);
       }
 
       List<Element> elements = modelCard
@@ -285,6 +295,10 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       if (modelCard.SendFilter is RevitViewsFilter viewFilter)
       {
         viewFilter.SetContext(RevitContext);
+      }
+      else if (modelCard.SendFilter is RevitViewsSelectionFilter viewsSelectionFilter)
+      {
+        viewsSelectionFilter.SetContext(RevitContext);
       }
       var intersection = modelCard.SendFilter.NotNull().GetObjectIds().Intersect(objUniqueIds).ToList();
       bool isExpired = intersection.Count != 0;
