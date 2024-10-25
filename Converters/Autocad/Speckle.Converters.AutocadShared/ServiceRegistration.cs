@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Registration;
@@ -14,7 +14,7 @@ public static class ServiceRegistration
     //register types by default
     serviceCollection.AddMatchingInterfacesAsTransient(converterAssembly);
     // add single root converter
-    serviceCollection.AddRootCommon<AutocadRootToHostConverter>(converterAssembly);
+    serviceCollection.AddRootCommon<AutocadRootToSpeckleConverter>(converterAssembly);
 
     // add application converters and context stack
     serviceCollection.AddApplicationConverters<AutocadToSpeckleUnitConverter, ADB.UnitsValue>(converterAssembly);
