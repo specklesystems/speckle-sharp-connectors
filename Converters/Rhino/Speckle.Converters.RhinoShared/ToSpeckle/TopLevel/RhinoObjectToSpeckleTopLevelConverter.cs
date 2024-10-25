@@ -1,4 +1,4 @@
-﻿using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Models;
 using RhinoObject = Rhino.DocObjects.RhinoObject;
 
@@ -28,6 +28,10 @@ public abstract class RhinoObjectToSpeckleTopLevelConverter<TTopLevelIn, TInRaw,
 
     // POC: Any common operations for all RhinoObjects should be done here, not on the specific implementer
     // Things like user-dictionaries and other user-defined metadata.
+    if (!string.IsNullOrEmpty(typedTarget.Attributes.Name))
+    {
+      result["name"] = typedTarget.Attributes.Name;
+    }
 
     return result;
   }
