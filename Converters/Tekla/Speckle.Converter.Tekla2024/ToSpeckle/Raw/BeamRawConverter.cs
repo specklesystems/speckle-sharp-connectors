@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Models;
@@ -9,14 +9,14 @@ using TG = Tekla.Structures.Geometry3d;
 
 namespace Speckle.Converter.Tekla2024.ToSpeckle.Raw;
 
-public class BeamRawConverter: ITypedConverter<Beam, Base>
+public class BeamRawConverter : ITypedConverter<Beam, Base>
 {
   private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
   private readonly ITypedConverter<TG.Point, SOG.Point> _pointConverter;
   private readonly ITypedConverter<Solid, SOG.Mesh> _meshConverter;
-  
+
   public BeamRawConverter(
-    IConverterSettingsStore<TeklaConversionSettings> settingsStore, 
+    IConverterSettingsStore<TeklaConversionSettings> settingsStore,
     ITypedConverter<TG.Point, SOG.Point> pointConverter,
     ITypedConverter<Solid, SOG.Mesh> meshConverter
   )
@@ -48,15 +48,15 @@ public class BeamRawConverter: ITypedConverter<Beam, Base>
     int argb = (255 << 24) | (r << 16) | (g << 8) | b;
 
     int vertexCount = mesh.vertices.Count / 3;
-    
+
     mesh.colors = new List<int>(vertexCount);
     for (int i = 0; i < vertexCount; i++)
     {
       mesh.colors.Add(argb);
     }
-        
+
     beamObject["displayValue"] = new List<Base> { mesh };
-    
+
     return beamObject;
   }
 }

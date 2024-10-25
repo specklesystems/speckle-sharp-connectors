@@ -1,4 +1,4 @@
-﻿using Speckle.Converters.Common;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using SOG = Speckle.Objects.Geometry;
 using TG = Tekla.Structures.Geometry3d;
@@ -14,6 +14,6 @@ public class TeklaPointConverter : ITypedConverter<TG.Point, SOG.Point>
     _settingsStore = settingsStore;
   }
 
-  public SOG.Point Convert(TG.Point target) => 
+  public SOG.Point Convert(TG.Point target) =>
     new SOG.Point(target.X, target.Y, target.Z, _settingsStore.Current.SpeckleUnits);
 }

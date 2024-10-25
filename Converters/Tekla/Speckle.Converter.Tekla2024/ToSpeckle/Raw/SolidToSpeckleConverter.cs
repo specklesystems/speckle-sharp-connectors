@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using SOG = Speckle.Objects.Geometry;
@@ -7,7 +7,7 @@ using TSM = Tekla.Structures.Model;
 
 namespace Speckle.Converter.Tekla2024.ToSpeckle.Raw;
 
-public class TeklaMeshConverter : ITypedConverter<TSM.Solid, SOG.Mesh> 
+public class TeklaMeshConverter : ITypedConverter<TSM.Solid, SOG.Mesh>
 {
   private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
 
@@ -27,24 +27,28 @@ public class TeklaMeshConverter : ITypedConverter<TSM.Solid, SOG.Mesh>
     while (faceEnum.MoveNext())
     {
       var face = faceEnum.Current;
-      if (face == null) continue;
+      if (face == null)
+        continue;
 
       var loopEnum = face.GetLoopEnumerator();
-      if (!loopEnum.MoveNext()) continue;
-            
+      if (!loopEnum.MoveNext())
+        continue;
+
       var loop = loopEnum.Current;
-      if (loop == null) continue;
+      if (loop == null)
+        continue;
 
       var corners = new List<int>();
       var vertexEnum = loop.GetVertexEnumerator();
-            
+
       while (vertexEnum.MoveNext())
       {
         var vertex = vertexEnum.Current as TG.Point;
-        if (vertex == null) continue;
+        if (vertex == null)
+          continue;
 
         string vertexKey = $"{vertex.X:F8},{vertex.Y:F8},{vertex.Z:F8}";
-                
+
         if (!uniqueVertices.ContainsKey(vertexKey))
         {
           uniqueVertices[vertexKey] = currentIndex++;
@@ -52,7 +56,7 @@ public class TeklaMeshConverter : ITypedConverter<TSM.Solid, SOG.Mesh>
           vertices.Add(vertex.Y);
           vertices.Add(vertex.Z);
         }
-                
+
         corners.Add(uniqueVertices[vertexKey]);
       }
 
@@ -62,7 +66,7 @@ public class TeklaMeshConverter : ITypedConverter<TSM.Solid, SOG.Mesh>
         faces.Add(corners[0]);
         faces.Add(corners[1]);
         faces.Add(corners[2]);
-        
+
         faces.Add(3);
         faces.Add(corners[0]);
         faces.Add(corners[2]);
