@@ -40,7 +40,7 @@ public class Point3dCollectionToSpeckleRawConverter : ITypedConverter<AG.Point3d
     {
       value = value,
       units = _settingsStore.Current.SpeckleUnits,
-      closed = true,
+      closed = false,
       length = length
     };
   }

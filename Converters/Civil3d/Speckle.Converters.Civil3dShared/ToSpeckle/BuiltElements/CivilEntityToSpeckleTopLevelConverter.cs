@@ -59,9 +59,10 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
       civilObject["baseCurves"] = baseCurves;
     }
 
-    // extract display value
-    List<Base> display = _displayValueExtractor.GetDisplayValue(target);
-    if (display.Count > 0)
+    // extract display value.
+    // If object has no display but has basecurves, use basecurves for display instead (for viewer selection)
+    List<Base>? display = _displayValueExtractor.GetDisplayValue(target) ?? baseCurves?.Select(o => (Base)o).ToList();
+    if (display is not null)
     {
       civilObject["displayValue"] = display;
     }
@@ -104,7 +105,6 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
   private List<Base>? GetSiteChildren(CDB.Site site)
   {
     List<Base> parcels = new();
-
     using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
     {
       foreach (ADB.ObjectId parcelId in site.GetParcelIds())
@@ -115,6 +115,7 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
 
       tr.Commit();
     }
+
     return parcels.Count > 0 ? parcels : null;
   }
 

@@ -31,7 +31,7 @@ public sealed class DisplayValueExtractor
     _converterSettings = converterSettings;
   }
 
-  public List<Base> GetDisplayValue(CDB.Entity entity)
+  public List<Base>? GetDisplayValue(CDB.Entity entity)
   {
     switch (entity)
     {
@@ -55,8 +55,12 @@ public sealed class DisplayValueExtractor
         SOG.Mesh gridSurfaceMesh = _gridSurfaceConverter.Convert(gridSurface);
         return new() { gridSurfaceMesh };
 
-      default:
+      // Corridors are complicated: their display values are extracted in the CorridorHandler when processing corridor children, since they are attached to the corridor subassemblies.
+      case CDB.Corridor:
         return new();
+
+      default:
+        return null;
     }
   }
 }

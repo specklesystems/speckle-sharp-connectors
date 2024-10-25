@@ -27,16 +27,6 @@ public class ArcToHostRowConverter : ITypedConverter<SOG.Arc, AG.CircularArc3d>
     AG.Point3d end = _pointConverter.Convert(target.endPoint);
     AG.Point3d mid = _pointConverter.Convert(target.midPoint);
     AG.CircularArc3d arc = new(start, mid, end);
-
-    AG.Vector3d normal = _vectorConverter.Convert(target.plane.normal);
-    AG.Vector3d xdir = _vectorConverter.Convert(target.plane.xdir);
-    arc.SetAxes(normal, xdir);
-
-    if (target.startAngle is double startAngle && target.endAngle is double endAngle)
-    {
-      arc.SetAngles(startAngle, endAngle);
-    }
-
     return arc;
   }
 }

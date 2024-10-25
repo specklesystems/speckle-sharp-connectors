@@ -7,12 +7,12 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad;
 
-public class AutocadRootToHostConverter : IRootToSpeckleConverter
+public class AutocadRootToSpeckleConverter : IRootToSpeckleConverter
 {
   private readonly IConverterManager<IToSpeckleTopLevelConverter> _toSpeckle;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
-  public AutocadRootToHostConverter(
+  public AutocadRootToSpeckleConverter(
     IConverterManager<IToSpeckleTopLevelConverter> toSpeckle,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
