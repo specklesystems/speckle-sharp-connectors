@@ -48,6 +48,9 @@
     <Compile Include="TeklaRootToSpeckleConverter.cs" />
     <Compile Include="TeklaToSpeckleUnitConverter.cs" />
     <Compile Include="ToSpeckle\Raw\BeamRawConverter.cs" />
+    <Compile Include="ToSpeckle\Raw\LineToSpeckleConverter.cs" />
+    <Compile Include="ToSpeckle\Raw\PointToSpeckleConverter.cs" />
+    <Compile Include="ToSpeckle\Raw\SolidToSpeckleConverter.cs" />
     <Compile Include="ToSpeckle\TopLevel\BeamConverter.cs" />
   </ItemGroup>
   <ItemGroup>
