@@ -39,7 +39,10 @@ public class ArcGISConversionSettingsFactory(IHostToSpeckleUnitConverter<ACG.Uni
         throw new ArgumentException($"Project directory {Project.Current.URI} not found");
       }
       var fGdbPath = new Uri(parentDirectory.FullName);
-      return new Uri($"{fGdbPath}/{FGDB_NAME}");
+      Uri firstDatabasePath = new Uri($"{fGdbPath}/{FGDB_NAME}");
+
+      Uri databasePath = ValidateDatabasePath(firstDatabasePath);
+      return databasePath;
     }
     catch (Exception ex)
       when (ex
@@ -54,8 +57,42 @@ public class ArcGISConversionSettingsFactory(IHostToSpeckleUnitConverter<ACG.Uni
     }
   }
 
-  public Uri AddDatabaseToProject(Uri databasePath)
+  public Uri ValidateDatabasePath(Uri originalGatabasePath)
   {
+    var fGdbName = originalGatabasePath.Segments[^1];
+    var parentFolder = Path.GetDirectoryName(originalGatabasePath.AbsolutePath);
+    if (parentFolder == null)
+    {
+      // POC: customize the exception type
+      throw new ArgumentException($"Invalid path: {originalGatabasePath}");
+    }
+
+    Uri databasePath = originalGatabasePath;
+    Item folderToAdd = ItemFactory.Instance.Create(parentFolder);
+    if (folderToAdd is null)
+    {
+      // ArcGIS API doesn't show it as nullable, but it is
+      // likely the project location is inaccessible  with not enough permissions
+      // create a parent folder inside a Temp folder
+      string tempFolder = Path.GetTempPath();
+      string tempParentFolder = Path.Join(tempFolder, "Speckle_" + Path.GetFileName(originalGatabasePath.ToString()));
+      bool exists = Directory.Exists(tempParentFolder);
+      if (!exists)
+      {
+        Directory.CreateDirectory(tempParentFolder);
+      }
+
+      // repeat: try adding a folder item again
+      folderToAdd = ItemFactory.Instance.Create(tempParentFolder);
+      if (folderToAdd is null)
+      {
+        throw new ArgumentException(
+          $"Project path: '{parentFolder}' and Temp folder: '{tempParentFolder}' likely don't have write permissions."
+        );
+      }
+      databasePath = new Uri(Path.Join(tempParentFolder, fGdbName), UriKind.Absolute);
+    }
+
     // Create a FileGeodatabaseConnectionPath with the name of the file geodatabase you wish to create
     FileGeodatabaseConnectionPath fileGeodatabaseConnectionPath = new(databasePath);
     // Create actual database in the specified Path unless already exists
@@ -69,13 +106,13 @@ public class ArcGISConversionSettingsFactory(IHostToSpeckleUnitConverter<ACG.Uni
       // geodatabase already exists, do nothing
     }
 
+    return databasePath;
+  }
+
+  public Uri AddDatabaseToProject(Uri databasePath)
+  {
     // Add a folder connection to a project
     var parentFolder = Path.GetDirectoryName(databasePath.AbsolutePath);
-    if (parentFolder == null)
-    {
-      // POC: customize the exception type
-      throw new ArgumentException($"Invalid path: {databasePath}");
-    }
     var fGdbName = databasePath.Segments[^1];
     Item folderToAdd = ItemFactory.Instance.Create(parentFolder);
     // POC: QueuedTask
