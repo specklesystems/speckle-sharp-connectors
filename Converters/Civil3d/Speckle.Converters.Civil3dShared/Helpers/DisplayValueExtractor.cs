@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Objects;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Civil3dShared.Helpers;
@@ -62,5 +63,43 @@ public sealed class DisplayValueExtractor
       default:
         return null;
     }
+  }
+
+  /// <summary>
+  /// Processes a list of ICurves for suitable display value curves.
+  /// </summary>
+  /// <param name="iCurves"></param>
+  /// <returns>
+  /// List of simple curves: lines, polylines, and arcs.
+  /// Null if no suitable display curves were found.
+  /// </returns>
+  public List<Base>? ProcessICurvesForDisplay(List<ICurve>? iCurves)
+  {
+    if (iCurves is null)
+    {
+      return null;
+    }
+
+    List<Base> result = new();
+    foreach (ICurve curve in iCurves)
+    {
+      switch (curve)
+      {
+        case SOG.Line:
+        case SOG.Polyline:
+        case SOG.Arc:
+          result.Add((Base)curve);
+          break;
+        case SOG.Polycurve polycurve:
+          List<Base>? processedSegments = ProcessICurvesForDisplay(polycurve.segments);
+          if (processedSegments is not null)
+          {
+            result.AddRange(processedSegments);
+          }
+          break;
+      }
+    }
+
+    return result.Count > 0 ? result : null;
   }
 }
