@@ -10,11 +10,9 @@ public class ProgressDisplayManagerTests : MoqTest
 {
   [Test]
   [TestCase(5, 10, 0.5)]
-  [TestCase(null, 10, null)]
   [TestCase(1, null, null)]
-  [TestCase(null, null, null)]
   [TestCase(10, 10, 1)]
-  public void TestPercentage(long? count, long? total, double? percentage)
+  public void TestPercentage(long count, long? total, double? percentage)
   {
     var stopwatch = Create<IStopwatchManager>();
     var manager = new ProgressDisplayManager(stopwatch.Object);
@@ -26,7 +24,7 @@ public class ProgressDisplayManagerTests : MoqTest
   [TestCase(1, 1, 6, 10, "5.00 bytes / sec")]
   [TestCase(1, 0, 6, 10, "0 bytes / sec")] //infinity
   [TestCase(1 * 1024 * 1024, 1, 6 * 1024 * 1024, 10 * 1024 * 1024, "5.00 MB / sec")]
-  public void TestSpeed(long previousCount, long elapsed, long? count, long? total, string? percentage)
+  public void TestSpeed(long previousCount, long elapsed, long count, long? total, string? percentage)
   {
     var stopwatch = Create<IStopwatchManager>();
     stopwatch.Setup(x => x.ElapsedSeconds).Returns(elapsed);

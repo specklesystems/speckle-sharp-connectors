@@ -54,6 +54,7 @@ public sealed class BaseCurveExtractor
 
       case CDB.FeatureLine:
       case CDB.Parcel:
+      case CDB.ParcelSegment:
         return new() { _curveConverter.Convert(entity.BaseCurve) };
 
       // for any entities where basecurve prop doesn't make sense
