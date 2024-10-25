@@ -36,16 +36,16 @@ public class RevitViewsSelectionFilter : DiscriminatedObject, ISendFilter
     return objectIds;
   }
 
-  private List<string> GetObjectIdsFromView(string viewId)
+  private List<string> GetObjectIdsFromView(string viewUniqueId)
   {
-    using var collector = new FilteredElementCollector(_doc);
-    View? view = collector.OfClass(typeof(View)).Cast<View>().FirstOrDefault(v => v.UniqueId.ToString().Equals(viewId));
-    if (view is null)
+    if (_doc is null)
     {
       return [];
     }
-    using var viewCollector = new FilteredElementCollector(_doc, view.Id);
-    List<Element> elementsInView = viewCollector.WhereElementIsNotElementType().ToList();
+
+    var viewId = ElementIdHelper.GetElementIdFromUniqueId(_doc, viewUniqueId);
+    using var viewCollector = new FilteredElementCollector(_doc, viewId);
+    List<Element> elementsInView = viewCollector.ToElements().ToList(); // NOTE: "Floor Plans > Level 1" in sample model crashing if we use WhereElementIsNotElementType() function for viewCollector..
     return elementsInView.Select(e => e.UniqueId).ToList();
   }
 

@@ -49,7 +49,7 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter
       return objectIds;
     }
     using var viewCollector = new FilteredElementCollector(_doc, view.Id);
-    List<Element> elementsInView = viewCollector.WhereElementIsNotElementType().ToList();
+    List<Element> elementsInView = viewCollector.ToElements().ToList();
 
     return elementsInView.Select(e => e.UniqueId).ToList();
   }
