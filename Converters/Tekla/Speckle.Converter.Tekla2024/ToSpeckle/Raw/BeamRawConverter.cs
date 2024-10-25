@@ -33,18 +33,11 @@ public class BeamRawConverter: ITypedConverter<Beam, Base>
       ["profile"] = target.Profile.ProfileString,
       ["material"] = target.Material.MaterialString,
     };
-    
-    var centerline = new SOG.Line
-    {
-      start = _pointConverter.Convert(target.StartPoint),
-      end = _pointConverter.Convert(target.EndPoint),
-      units = _settingsStore.Current.SpeckleUnits
-    };
 
     var solid = target.GetSolid();
     var mesh = _meshConverter.Convert(solid);
         
-    beamObject["displayValue"] = new List<Base> { centerline, mesh };
+    beamObject["displayValue"] = new List<Base> { mesh };
     
     return beamObject;
   }
