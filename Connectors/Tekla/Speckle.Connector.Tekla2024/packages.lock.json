@@ -442,7 +442,7 @@
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
-          "Speckle.Objects": "[3.1.0-dev.164, )"
+          "Speckle.Objects": "[3.1.0-dev.167, )"
         }
       },
       "Microsoft.Extensions.DependencyInjection": {
