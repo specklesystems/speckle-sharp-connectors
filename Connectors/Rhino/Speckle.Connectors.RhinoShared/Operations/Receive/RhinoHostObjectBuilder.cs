@@ -130,7 +130,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
           try
           {
             // 0: get the name of the incoming obj if any
-            string? name = obj["name"] as string;
+            string name = obj["name"] as string ?? "";
 
             // 1: get pre-created layer from cache in layer baker
             int layerIndex = _layerBaker.GetAndCreateLayerFromPath(path, baseLayerName);
@@ -256,9 +256,9 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _groupBaker.PurgeGroups(baseLayerName);
   }
 
-  private Guid BakeObject(GeometryBase obj, Base originalObject, int layerIndex, string? name = null)
+  private Guid BakeObject(GeometryBase obj, Base originalObject, int layerIndex, string name = "")
   {
-    ObjectAttributes atts = new() { LayerIndex = layerIndex };
+    ObjectAttributes atts = new() { LayerIndex = layerIndex, Name = name };
     var objectId = originalObject.applicationId ?? originalObject.id;
 
     if (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(objectId, out int mIndex))
@@ -273,11 +273,6 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       atts.ColorSource = color.Item2;
     }
 
-    if (name is not null)
-    {
-      atts.Name = name;
-    }
-
     return _converterSettings.Current.Document.Objects.Add(obj, atts);
   }
 
@@ -286,7 +281,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     Base originatingObject,
     int layerIndex,
     string baseLayerName,
-    string? name = null
+    string name = ""
   )
   {
     List<Guid> objectIds = new();
