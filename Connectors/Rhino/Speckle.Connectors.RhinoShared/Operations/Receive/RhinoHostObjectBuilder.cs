@@ -129,6 +129,9 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
           onOperationProgressed.Report(new("Converting objects", (double)++count / atomicObjects.Count));
           try
           {
+            // 0: get the name of the incoming obj if any
+            string? name = obj["name"] as string;
+
             // 1: get pre-created layer from cache in layer baker
             int layerIndex = _layerBaker.GetAndCreateLayerFromPath(path, baseLayerName);
 
@@ -139,7 +142,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
             var conversionIds = new List<string>();
             if (result is GeometryBase geometryBase)
             {
-              var guid = BakeObject(geometryBase, obj, layerIndex);
+              var guid = BakeObject(geometryBase, obj, layerIndex, name);
               conversionIds.Add(guid.ToString());
             }
             else if (result is List<GeometryBase> geometryBases) // one to many raw encoding case
@@ -150,13 +153,13 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
               // EXTRA EXTRA NOTE: TY Ogu, i am no longer than unhappy about it. It's legit "mess".
               foreach (var gb in geometryBases)
               {
-                var guid = BakeObject(gb, obj, layerIndex);
+                var guid = BakeObject(gb, obj, layerIndex, name);
                 conversionIds.Add(guid.ToString());
               }
             }
             else if (result is IEnumerable<(object, Base)> fallbackConversionResult) // one to many fallback conversion
             {
-              var guids = BakeObjectsAsGroup(fallbackConversionResult, obj, layerIndex, baseLayerName);
+              var guids = BakeObjectsAsGroup(fallbackConversionResult, obj, layerIndex, baseLayerName, name);
               conversionIds.AddRange(guids.Select(id => id.ToString()));
             }
 
@@ -253,7 +256,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _groupBaker.PurgeGroups(baseLayerName);
   }
 
-  private Guid BakeObject(GeometryBase obj, Base originalObject, int layerIndex)
+  private Guid BakeObject(GeometryBase obj, Base originalObject, int layerIndex, string? name = null)
   {
     ObjectAttributes atts = new() { LayerIndex = layerIndex };
     var objectId = originalObject.applicationId ?? originalObject.id;
@@ -270,6 +273,11 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       atts.ColorSource = color.Item2;
     }
 
+    if (name is not null)
+    {
+      atts.Name = name;
+    }
+
     return _converterSettings.Current.Document.Objects.Add(obj, atts);
   }
 
@@ -277,7 +285,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     IEnumerable<(object, Base)> fallbackConversionResult,
     Base originatingObject,
     int layerIndex,
-    string baseLayerName
+    string baseLayerName,
+    string? name = null
   )
   {
     List<Guid> objectIds = new();
@@ -289,7 +298,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
         continue;
       }
 
-      var id = BakeObject(geometryBase, originalBaseObject, layerIndex);
+      var id = BakeObject(geometryBase, originalBaseObject, layerIndex, name);
       objectIds.Add(id);
     }
 
@@ -298,6 +307,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       objectIds
     );
     var group = _converterSettings.Current.Document.Groups.FindIndex(groupIndex);
+
     objectIds.Insert(0, group.Id);
     return objectIds;
   }
