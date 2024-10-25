@@ -61,7 +61,8 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
 
     // extract display value.
     // If object has no display but has basecurves, use basecurves for display instead (for viewer selection)
-    List<Base>? display = _displayValueExtractor.GetDisplayValue(target) ?? baseCurves?.Select(o => (Base)o).ToList();
+    List<Base>? display =
+      _displayValueExtractor.GetDisplayValue(target) ?? _displayValueExtractor.ProcessICurvesForDisplay(baseCurves);
     if (display is not null)
     {
       civilObject["displayValue"] = display;

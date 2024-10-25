@@ -43,7 +43,7 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
       throw new ValidationException($"Target object is not a db element, it's a {target.GetType()}");
     }
 
-    var objectConverter = _toSpeckle.ResolveConverter(target.GetType(), true);
+    var objectConverter = _toSpeckle.ResolveConverter(target.GetType());
 
     Base result = objectConverter.Convert(target);
 

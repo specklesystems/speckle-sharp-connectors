@@ -58,7 +58,7 @@ public class Civil3dRootToSpeckleConverter : IRootToSpeckleConverter
       properties = GetCivilEntityProperties(civilEntity);
     }
 
-    var objectConverter = _toSpeckle.ResolveConverter(type, true);
+    var objectConverter = _toSpeckle.ResolveConverter(type);
 
     try
     {
