@@ -35,7 +35,6 @@ public class TeklaMeshConverter : ITypedConverter<TSM.Solid, SOG.Mesh>
       var loop = loopEnum.Current;
       if (loop == null) continue;
 
-      // Get the four corners of each rectangular face
       var corners = new List<int>();
       var vertexEnum = loop.GetVertexEnumerator();
             
@@ -57,21 +56,17 @@ public class TeklaMeshConverter : ITypedConverter<TSM.Solid, SOG.Mesh>
         corners.Add(uniqueVertices[vertexKey]);
       }
 
-      // Only process rectangular faces (4 corners)
       if (corners.Count == 4)
       {
-        // Create two triangles for the rectangle
-        // Triangle 1: 0-1-2
         faces.Add(3);
-        faces.Add(corners[0]); // First corner
-        faces.Add(corners[1]); // Second corner
-        faces.Add(corners[2]); // Third corner
-
-        // Triangle 2: 0-2-3
+        faces.Add(corners[0]);
+        faces.Add(corners[1]);
+        faces.Add(corners[2]);
+        
         faces.Add(3);
-        faces.Add(corners[0]); // First corner
-        faces.Add(corners[2]); // Third corner
-        faces.Add(corners[3]); // Fourth corner
+        faces.Add(corners[0]);
+        faces.Add(corners[2]);
+        faces.Add(corners[3]);
       }
     }
 
