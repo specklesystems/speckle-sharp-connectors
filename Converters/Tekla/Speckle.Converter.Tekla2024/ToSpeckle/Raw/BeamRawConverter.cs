@@ -34,7 +34,10 @@ public class BeamRawConverter : ITypedConverter<TSM.Beam, Base>
 
     var solid = target.GetSolid();
     var mesh = _meshConverter.Convert(solid);
-
+    
+    // poc for argb value fetch from tekla
+    // should be replaced by proxy implementation
+    /*
     var color = new TSMUI.Color();
     TSMUI.ModelObjectVisualization.GetRepresentation(target, ref color);
 
@@ -50,6 +53,7 @@ public class BeamRawConverter : ITypedConverter<TSM.Beam, Base>
     {
       mesh.colors.Add(argb);
     }
+    */
 
     beamObject["displayValue"] = new List<Base> { mesh };
 
