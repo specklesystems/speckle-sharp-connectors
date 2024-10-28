@@ -23,8 +23,6 @@ public class SpeckleTeklaPanelHost : PluginFormBase
 
   public SpeckleTeklaPanelHost()
   {
-    Show();
-
     var services = new ServiceCollection();
     services.Initialize(HostApplications.TeklaStructures, GetVersion());
     services.AddTekla();
@@ -50,9 +48,9 @@ public class SpeckleTeklaPanelHost : PluginFormBase
     Controls.Add(Host);
     Operation.DisplayPrompt("Speckle connector initialized.");
 
-    // below methods are not really needed
+    Show();
     Activate();
-    //Focus();
+    Focus();
   }
 
   private HostAppVersion GetVersion()
