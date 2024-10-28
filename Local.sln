@@ -176,6 +176,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Converters.Civil3d2
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Connectors.Civil3dShared", "Connectors\Autocad\Speckle.Connectors.Civil3dShared\Speckle.Connectors.Civil3dShared.shproj", "{EFD01520-93E8-4CCA-8E03-9CDC635F55F4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converter.Tekla2024", "Converters\Tekla\Speckle.Converter.Tekla2024\Speckle.Converter.Tekla2024.csproj", "{FBE49C59-F69E-4809-BB3A-F150BC408BB4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -465,6 +467,12 @@ Global
 		{AE75B68F-3594-403B-9719-9C36DA0E3F8A}.Local|Any CPU.Build.0 = Local|Any CPU
 		{AE75B68F-3594-403B-9719-9C36DA0E3F8A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AE75B68F-3594-403B-9719-9C36DA0E3F8A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FBE49C59-F69E-4809-BB3A-F150BC408BB4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FBE49C59-F69E-4809-BB3A-F150BC408BB4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FBE49C59-F69E-4809-BB3A-F150BC408BB4}.Local|Any CPU.ActiveCfg = Local|Any CPU
+		{FBE49C59-F69E-4809-BB3A-F150BC408BB4}.Local|Any CPU.Build.0 = Local|Any CPU
+		{FBE49C59-F69E-4809-BB3A-F150BC408BB4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FBE49C59-F69E-4809-BB3A-F150BC408BB4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -543,6 +551,7 @@ Global
 		{1F93164A-42EE-4D72-B7CD-9CA831F60E09} = {B32A4121-C9A1-4098-81CD-D799E1491F54}
 		{AE75B68F-3594-403B-9719-9C36DA0E3F8A} = {48B7AC68-AA4D-4B36-A5DE-7F19607892A6}
 		{EFD01520-93E8-4CCA-8E03-9CDC635F55F4} = {6186EF63-4978-4FA9-9893-7074F9FD0BA4}
+		{FBE49C59-F69E-4809-BB3A-F150BC408BB4} = {AB1AD13B-163E-45F8-8F96-52A921501FA0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}
