@@ -44,7 +44,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   /// As to why a concurrent dictionary, it's because it's the cheapest/easiest way to do so.
   /// https://stackoverflow.com/questions/18922985/concurrent-hashsett-in-net-framework
   /// </summary>
-  private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
+  private ConcurrentDictionary<ElementId, byte> ChangedObjectIds { get; set; } = new();
 
   /// <summary>
   /// We need it to get UniqueId whenever it is not available i.e. GetDeletedElementIds returns ElementId and cannot find its Element to get UniqueId. We store them both just before send to remember later.
@@ -197,23 +197,19 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     ICollection<ElementId> deletedElementIds = e.GetDeletedElementIds();
     ICollection<ElementId> modifiedElementIds = e.GetModifiedElementIds();
 
-    var localSet = new HashSet<ElementId>();
     foreach (ElementId elementId in addedElementIds)
     {
-      localSet.Add(elementId);
-      ChangedObjectIds[elementId.ToString()] = 1;
+      ChangedObjectIds[elementId] = 1;
     }
 
     foreach (ElementId elementId in deletedElementIds)
     {
-      localSet.Add(elementId);
-      ChangedObjectIds[elementId.ToString()] = 1;
+      ChangedObjectIds[elementId] = 1;
     }
 
     foreach (ElementId elementId in modifiedElementIds)
     {
-      localSet.Add(elementId);
-      ChangedObjectIds[elementId.ToString()] = 1;
+      ChangedObjectIds[elementId] = 1;
     }
 
     if (HaveUnitsChanged(e.GetDocument()))
@@ -223,18 +219,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       _sendConversionCache.EvictObjects(unpackedObjectIds);
     }
 
-    _idleManager.SubscribeToIdle(
-      nameof(RevitSendBinding),
-      () =>
-      {
-        if (localSet.Any(e => RevitContext.UIApplication?.ActiveUIDocument.Document.GetElement(e) is View))
-        {
-          Commands.RefreshSendFilters().Wait();
-        }
-      }
-    );
-
-    _idleManager.SubscribeToIdle(nameof(RevitSendBinding), RunExpirationChecks);
+    _idleManager.SubscribeToIdle(nameof(CheckFilterExpiration), CheckFilterExpiration);
+    _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
   }
 
   // Keeps track of doc and current units
@@ -271,6 +257,17 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     return false;
   }
 
+  /// <summary>
+  /// Notifies ui if any filters need refreshing. Currently, this only applies for view filters.
+  /// </summary>
+  private void CheckFilterExpiration()
+  {
+    if (ChangedObjectIds.Keys.Any(e => RevitContext.UIApplication?.ActiveUIDocument.Document.GetElement(e) is View))
+    {
+      Commands.RefreshSendFilters().Wait();
+    }
+  }
+
   private async Task RunExpirationChecks()
   {
     var senders = Store.GetSenders();
@@ -283,9 +280,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     }
 
     var objUniqueIds = new List<string>();
-    foreach (string changedElementId in ChangedObjectIds.Keys.ToArray())
+    foreach (var changedElementId in ChangedObjectIds.Keys.ToArray())
     {
-      if (IdMap.TryGetValue(changedElementId, out var uniqueId))
+      if (IdMap.TryGetValue(changedElementId.ToString(), out var uniqueId))
       {
         objUniqueIds.Add(uniqueId);
       }

@@ -23,6 +23,7 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter
   {
     _revitContext = revitContext;
     _doc = _revitContext.UIApplication?.ActiveUIDocument.Document;
+
     GetViews();
   }
 
@@ -34,7 +35,7 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter
       return objectIds;
     }
 
-    // Paşa Bilal wants it like this..
+    // Paşa Bilal wants it like this... (three dots = important meaning for ogu)
     string[] result = SelectedView.Split(new string[] { " - " }, 2, StringSplitOptions.None);
     var viewFamilyString = result[0];
     var viewString = result[1];
