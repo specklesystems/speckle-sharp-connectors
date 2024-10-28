@@ -207,18 +207,22 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     ICollection<ElementId> deletedElementIds = e.GetDeletedElementIds();
     ICollection<ElementId> modifiedElementIds = e.GetModifiedElementIds();
 
+    var localSet = new HashSet<ElementId>();
     foreach (ElementId elementId in addedElementIds)
     {
+      localSet.Add(elementId);
       ChangedObjectIds[elementId.ToString()] = 1;
     }
 
     foreach (ElementId elementId in deletedElementIds)
     {
+      localSet.Add(elementId);
       ChangedObjectIds[elementId.ToString()] = 1;
     }
 
     foreach (ElementId elementId in modifiedElementIds)
     {
+      localSet.Add(elementId);
       ChangedObjectIds[elementId.ToString()] = 1;
     }
 
@@ -228,6 +232,18 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds.ToList());
       _sendConversionCache.EvictObjects(unpackedObjectIds);
     }
+
+    _idleManager.SubscribeToIdle(
+      nameof(RevitSendBinding),
+      () =>
+      {
+        if (localSet.Any(e => RevitContext.UIApplication?.ActiveUIDocument.Document.GetElement(e) is View))
+        {
+          Commands.RefreshSendFilters().Wait();
+        }
+      }
+    );
+
     _idleManager.SubscribeToIdle(nameof(RevitSendBinding), RunExpirationChecks);
   }
 

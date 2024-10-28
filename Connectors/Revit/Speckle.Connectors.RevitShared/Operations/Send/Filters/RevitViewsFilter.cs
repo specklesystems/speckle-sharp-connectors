@@ -1,4 +1,5 @@
 ﻿using Autodesk.Revit.DB;
+using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Converters.RevitShared.Helpers;
@@ -46,7 +47,7 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter
 
     if (view is null)
     {
-      return objectIds;
+      throw new SpeckleSendFilterException("View not found, please update your model send filter.");
     }
     using var viewCollector = new FilteredElementCollector(_doc, view.Id);
     List<Element> elementsInView = viewCollector.ToElements().ToList();
