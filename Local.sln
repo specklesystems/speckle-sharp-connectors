@@ -110,6 +110,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Converters.Revit202
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2022", "2022", "{0AF38BA3-65A0-481B-8CBB-B82E406E1575}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Objects", "..\speckle-sharp-sdk\src\Speckle.Objects\Speckle.Objects.csproj", "{259A84F0-2D1E-49DE-9137-93BE6858A52C}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Sdk", "..\speckle-sharp-sdk\src\Speckle.Sdk\Speckle.Sdk.csproj", "{347CECE7-99DC-49A6-A508-7DE9907B887B}"
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "7", "7", "{201AF4EA-F049-4332-A746-42D3413DAE08}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "8", "8", "{9714467A-AECB-45B5-82D8-3E7BFF6E37C8}"
@@ -171,8 +175,6 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Converters.Civil3d2025", "Converters\Civil3d\Speckle.Converters.Civil3d2025\Speckle.Converters.Civil3d2025.csproj", "{AE75B68F-3594-403B-9719-9C36DA0E3F8A}"
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Connectors.Civil3dShared", "Connectors\Autocad\Speckle.Connectors.Civil3dShared\Speckle.Connectors.Civil3dShared.shproj", "{EFD01520-93E8-4CCA-8E03-9CDC635F55F4}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converter.Tekla2024", "Converters\Tekla\Speckle.Converter.Tekla2024\Speckle.Converter.Tekla2024.csproj", "{EDC39963-C893-4E3E-8857-F1999301BD1D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -331,6 +333,18 @@ Global
 		{19424B55-058C-4E9C-B86F-700AEF9EAEC3}.Local|Any CPU.Build.0 = Local|Any CPU
 		{19424B55-058C-4E9C-B86F-700AEF9EAEC3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{19424B55-058C-4E9C-B86F-700AEF9EAEC3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{259A84F0-2D1E-49DE-9137-93BE6858A52C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{259A84F0-2D1E-49DE-9137-93BE6858A52C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{259A84F0-2D1E-49DE-9137-93BE6858A52C}.Local|Any CPU.ActiveCfg = Local|Any CPU
+		{259A84F0-2D1E-49DE-9137-93BE6858A52C}.Local|Any CPU.Build.0 = Local|Any CPU
+		{259A84F0-2D1E-49DE-9137-93BE6858A52C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{259A84F0-2D1E-49DE-9137-93BE6858A52C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{347CECE7-99DC-49A6-A508-7DE9907B887B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{347CECE7-99DC-49A6-A508-7DE9907B887B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{347CECE7-99DC-49A6-A508-7DE9907B887B}.Local|Any CPU.ActiveCfg = Local|Any CPU
+		{347CECE7-99DC-49A6-A508-7DE9907B887B}.Local|Any CPU.Build.0 = Local|Any CPU
+		{347CECE7-99DC-49A6-A508-7DE9907B887B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{347CECE7-99DC-49A6-A508-7DE9907B887B}.Release|Any CPU.Build.0 = Release|Any CPU
 		{6F3FD892-6315-4F75-BFBD-843A489F8B94}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{6F3FD892-6315-4F75-BFBD-843A489F8B94}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6F3FD892-6315-4F75-BFBD-843A489F8B94}.Local|Any CPU.ActiveCfg = Local|Any CPU
@@ -451,12 +465,6 @@ Global
 		{AE75B68F-3594-403B-9719-9C36DA0E3F8A}.Local|Any CPU.Build.0 = Local|Any CPU
 		{AE75B68F-3594-403B-9719-9C36DA0E3F8A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AE75B68F-3594-403B-9719-9C36DA0E3F8A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{EDC39963-C893-4E3E-8857-F1999301BD1D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{EDC39963-C893-4E3E-8857-F1999301BD1D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{EDC39963-C893-4E3E-8857-F1999301BD1D}.Local|Any CPU.ActiveCfg = Local|Any CPU
-		{EDC39963-C893-4E3E-8857-F1999301BD1D}.Local|Any CPU.Build.0 = Local|Any CPU
-		{EDC39963-C893-4E3E-8857-F1999301BD1D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{EDC39963-C893-4E3E-8857-F1999301BD1D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -535,7 +543,6 @@ Global
 		{1F93164A-42EE-4D72-B7CD-9CA831F60E09} = {B32A4121-C9A1-4098-81CD-D799E1491F54}
 		{AE75B68F-3594-403B-9719-9C36DA0E3F8A} = {48B7AC68-AA4D-4B36-A5DE-7F19607892A6}
 		{EFD01520-93E8-4CCA-8E03-9CDC635F55F4} = {6186EF63-4978-4FA9-9893-7074F9FD0BA4}
-		{EDC39963-C893-4E3E-8857-F1999301BD1D} = {AB1AD13B-163E-45F8-8F96-52A921501FA0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}
