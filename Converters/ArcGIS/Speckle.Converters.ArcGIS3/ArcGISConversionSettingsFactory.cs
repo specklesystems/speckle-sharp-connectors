@@ -6,6 +6,7 @@ using ArcGIS.Desktop.Mapping;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.InterfaceGenerator;
+using Speckle.Sdk.Logging;
 
 namespace Speckle.Converters.ArcGIS3;
 
@@ -56,6 +57,61 @@ public class ArcGISConversionSettingsFactory(IHostToSpeckleUnitConverter<ACG.Uni
 
   public Uri AddDatabaseToProject(Uri databasePath)
   {
+    var fGdbName = originalGatabasePath.Segments[^1];
+    var parentFolder = Path.GetDirectoryName(originalGatabasePath.AbsolutePath);
+    if (parentFolder == null)
+    {
+      // POC: customize the exception type
+      throw new ArgumentException($"Invalid path: {originalGatabasePath}");
+    }
+
+    Uri databasePath = originalGatabasePath;
+    Item folderToAdd = ItemFactory.Instance.Create(parentFolder);
+    if (folderToAdd is null)
+    {
+      // ArcGIS API doesn't show it as nullable, but it is
+      // Likely the project location is inaccessible  with not enough permissions
+      // Store inside Speckle folder
+
+      string speckleFolder = SpecklePathProvider.UserSpeckleFolderPath; //Path.GetTempPath();
+      // create folder in Speckle repo
+      string speckleArcgisFolder = Path.Join(speckleFolder, $"ArcGIS_gdb");
+      bool existsArcgisFolder = Directory.Exists(speckleArcgisFolder);
+      if (!existsArcgisFolder)
+      {
+        Directory.CreateDirectory(speckleArcgisFolder);
+      }
+
+      // create a project-specific folder
+      string projectFolderName;
+      string? folderContainingProject = Path.GetDirectoryName(parentFolder);
+      if (folderContainingProject == null)
+      {
+        projectFolderName = "default";
+      }
+      else
+      {
+        projectFolderName = Path.GetRelativePath(folderContainingProject, parentFolder);
+      }
+
+      string tempParentFolder = Path.Join(speckleArcgisFolder, $"{projectFolderName}");
+      bool exists = Directory.Exists(tempParentFolder);
+      if (!exists)
+      {
+        Directory.CreateDirectory(tempParentFolder);
+      }
+
+      // repeat: try adding a folder item again
+      folderToAdd = ItemFactory.Instance.Create(tempParentFolder);
+      if (folderToAdd is null)
+      {
+        throw new ArgumentException(
+          $"Project path: '{parentFolder}' and Temp folder: '{tempParentFolder}' likely don't have write permissions."
+        );
+      }
+      databasePath = new Uri(Path.Join(tempParentFolder, fGdbName), UriKind.Absolute);
+    }
+
     // Create a FileGeodatabaseConnectionPath with the name of the file geodatabase you wish to create
     FileGeodatabaseConnectionPath fileGeodatabaseConnectionPath = new(databasePath);
     // Create actual database in the specified Path unless already exists
