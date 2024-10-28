@@ -89,7 +89,7 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
   {
     foreach (var change in changes)
     {
-      if (change.Object is ModelObject modelObj)
+      if (change.Object is { } modelObj)
       {
         ChangedObjectIds[modelObj.Identifier.ID.ToString()] = 1;
       }
@@ -195,10 +195,7 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
   {
     if (!_disposed)
     {
-      if (_events != null)
-      {
-        _events.UnRegister();
-      }
+      _events.UnRegister();
       _disposed = true;
     }
   }
