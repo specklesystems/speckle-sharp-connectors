@@ -11,6 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Speckle.Objects" />
     <PackageReference Include="Tekla.Structures.Model" IncludeAssets="compile" />
     <PackageReference Include="Tekla.Structures.Drawing" IncludeAssets="compile" />
   </ItemGroup>

@@ -15,6 +15,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Speckle.Objects" />
     <PackageReference Include="Tekla.Structures.Dialog" IncludeAssets="compile; build" PrivateAssets="all" />
     <PackageReference Include="Tekla.Structures.Drawing" />
     <PackageReference Include="Tekla.Structures.Model" IncludeAssets="compile; build" PrivateAssets="all" />
