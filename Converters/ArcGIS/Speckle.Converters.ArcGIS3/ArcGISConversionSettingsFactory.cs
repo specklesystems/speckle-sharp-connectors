@@ -6,6 +6,7 @@ using ArcGIS.Desktop.Mapping;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.InterfaceGenerator;
+using Speckle.Sdk.Logging;
 
 namespace Speckle.Converters.ArcGIS3;
 
@@ -72,10 +73,31 @@ public class ArcGISConversionSettingsFactory(IHostToSpeckleUnitConverter<ACG.Uni
     if (folderToAdd is null)
     {
       // ArcGIS API doesn't show it as nullable, but it is
-      // likely the project location is inaccessible  with not enough permissions
-      // create a parent folder inside a Temp folder
-      string tempFolder = Path.GetTempPath();
-      string tempParentFolder = Path.Join(tempFolder, "Speckle_" + Path.GetFileName(originalGatabasePath.ToString()));
+      // Likely the project location is inaccessible  with not enough permissions
+      // Store inside Speckle folder
+
+      string speckleFolder = SpecklePathProvider.UserSpeckleFolderPath; //Path.GetTempPath();
+      // create folder in Speckle repo
+      string speckleArcgisFolder = Path.Join(speckleFolder, $"ArcGIS_gdb");
+      bool existsArcgisFolder = Directory.Exists(speckleArcgisFolder);
+      if (!existsArcgisFolder)
+      {
+        Directory.CreateDirectory(speckleArcgisFolder);
+      }
+
+      // create a project-specific folder
+      string projectFolderName;
+      string? folderContainingProject = Path.GetDirectoryName(parentFolder);
+      if (folderContainingProject == null)
+      {
+        projectFolderName = "default";
+      }
+      else
+      {
+        projectFolderName = Path.GetRelativePath(folderContainingProject, parentFolder);
+      }
+
+      string tempParentFolder = Path.Join(speckleArcgisFolder, $"{projectFolderName}");
       bool exists = Directory.Exists(tempParentFolder);
       if (!exists)
       {
