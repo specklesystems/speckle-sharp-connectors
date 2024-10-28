@@ -6,8 +6,6 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <Configurations>Debug;Release;Local</Configurations>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <RootNamespace>Speckle.Converter.Tekla2024</RootNamespace>
-    <AssemblyName>Speckle.Converter.Tekla2024</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
