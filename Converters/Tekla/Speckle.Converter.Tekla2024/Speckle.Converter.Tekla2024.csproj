@@ -6,8 +6,6 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <Configurations>Debug;Release;Local</Configurations>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <RootNamespace>Speckle.Converter.Tekla2024</RootNamespace>
-    <AssemblyName>Speckle.Converter.Tekla2024</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
+    <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
   </ItemGroup>
 
 </Project>
