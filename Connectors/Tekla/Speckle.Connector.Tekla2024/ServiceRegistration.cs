@@ -1,10 +1,13 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connector.Tekla2024.Bindings;
+using Speckle.Connector.Tekla2024.Filters;
 using Speckle.Connector.Tekla2024.HostApp;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
+using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
+using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
 
 namespace Speckle.Connector.Tekla2024;
@@ -29,5 +32,11 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<IBasicConnectorBinding, TeklaBasicConnectorBinding>();
 
     serviceCollection.AddSingleton<IBinding, TeklaSendBinding>();
+    serviceCollection.AddSingleton<IBinding, TeklaSelectionBinding>();
+    serviceCollection.AddSingleton<IAppIdleManager, TeklaIdleManager>();
+
+    serviceCollection.AddScoped<ISendFilter, TeklaSelectionFilter>();
+    serviceCollection.AddSingleton(new Tekla.Structures.Model.Events());
+    serviceCollection.AddSingleton(new Tekla.Structures.Model.UI.ModelObjectSelector());
   }
 }

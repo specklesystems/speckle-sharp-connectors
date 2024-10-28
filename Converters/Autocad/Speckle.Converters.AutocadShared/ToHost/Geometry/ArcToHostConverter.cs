@@ -31,11 +31,13 @@ public class ArcToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG.
     AG.CircularArc3d circularArc = _arcConverter.Convert(target);
 
     // calculate adjusted start and end angles from circularArc reference
-    AG.Plane plane = _planeConverter.Convert(target.plane);
-    double angle = circularArc.ReferenceVector.AngleOnPlane(plane);
-    double startAngle = circularArc.StartAngle + angle;
-    double endAngle = circularArc.EndAngle + angle;
+    // for some reason, if just the circular arc start and end angle props are used, this moves the endpoints of the created arc
+    // so we need to calculate the adjusted start and end angles from the circularArc reference vector.
+    AG.Plane plane = new(circularArc.Center, circularArc.Normal);
+    double angleOnPlane = circularArc.ReferenceVector.AngleOnPlane(plane);
+    double adjustedStartAngle = circularArc.StartAngle + angleOnPlane;
+    double adjustEndAngle = circularArc.EndAngle + angleOnPlane;
 
-    return new(circularArc.Center, circularArc.Normal, circularArc.Radius, startAngle, endAngle);
+    return new(circularArc.Center, circularArc.Normal, circularArc.Radius, adjustedStartAngle, adjustEndAngle);
   }
 }

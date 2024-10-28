@@ -42,8 +42,10 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<PropertySetDefinitionHandler>();
     serviceCollection.AddScoped<GeneralPropertiesExtractor>();
     serviceCollection.AddScoped<ClassPropertiesExtractor>();
+    serviceCollection.AddScoped<ExtensionDictionaryExtractor>();
     serviceCollection.AddScoped<CatchmentGroupHandler>();
     serviceCollection.AddScoped<PipeNetworkHandler>();
     serviceCollection.AddScoped<CorridorHandler>();
+    serviceCollection.AddScoped<CorridorDisplayValueExtractor>();
   }
 }

@@ -11,7 +11,12 @@ public class ProgressDisplayManager(IStopwatchManager stopwatch) : IProgressDisp
 
   public void Begin() => stopwatch.Start();
 
-  public double LastCount { get; set; }
+  private long _lastCount;
+  public long LastCount
+  {
+    get => _lastCount;
+    set => _lastCount = value;
+  }
 
   public bool ShouldUpdate()
   {
@@ -26,9 +31,9 @@ public class ProgressDisplayManager(IStopwatchManager stopwatch) : IProgressDisp
   public double? CalculatePercentage(ProgressArgs args)
   {
     double? percentage = null;
-    if (args.Count is not null && args.Total is not null)
+    if (args.Total is not null)
     {
-      percentage = (double)args.Count.Value / args.Total.Value;
+      percentage = (double)args.Count / args.Total.Value;
     }
 
     return percentage;
@@ -36,13 +41,12 @@ public class ProgressDisplayManager(IStopwatchManager stopwatch) : IProgressDisp
 
   public string CalculateSpeed(ProgressArgs args)
   {
-    if (args.Count is null)
+    if (args.Count == 0)
     {
       return string.Empty;
     }
-
-    var countPerSecond = (args.Count.Value - LastCount) / stopwatch.ElapsedSeconds;
-    LastCount = args.Count.Value;
+    var countPerSecond = (args.Count - _lastCount) / stopwatch.ElapsedSeconds;
+    Interlocked.Exchange(ref _lastCount, args.Count);
 
     switch (args.ProgressEvent)
     {
@@ -51,6 +55,8 @@ public class ProgressDisplayManager(IStopwatchManager stopwatch) : IProgressDisp
         return $"{ToFileSize(countPerSecond)} / sec";
       case ProgressEvent.DeserializeObject:
       case ProgressEvent.SerializeObject:
+      case ProgressEvent.DownloadObject:
+      case ProgressEvent.UploadObject:
         return $"{ThreeNonZeroDigits(countPerSecond)} objects / sec";
       default:
         return string.Empty;
