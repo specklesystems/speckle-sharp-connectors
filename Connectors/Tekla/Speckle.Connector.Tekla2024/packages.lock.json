@@ -432,7 +432,6 @@
       "speckle.converter.tekla2024": {
         "type": "Project",
         "dependencies": {
-          "Microsoft.Extensions.Logging": "[2.2.0, )",
           "Speckle.Converters.Common": "[1.0.0, )",
           "Tekla.Structures.Drawing": "[2024.0.2, )",
           "Tekla.Structures.Model": "[2024.0.2, )"

@@ -1,7 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using SOG = Speckle.Objects.Geometry;
-using TG = Tekla.Structures.Geometry3d;
 
 namespace Speckle.Converter.Tekla2024.ToSpeckle.Raw;
 

@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Speckle.Converters.Common;
 using Speckle.Sdk.Common.Exceptions;
 using SSC = Speckle.Sdk.Common;
