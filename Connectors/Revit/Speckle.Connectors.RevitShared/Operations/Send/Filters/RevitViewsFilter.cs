@@ -70,6 +70,10 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter
     AvailableViews = views;
   }
 
+  /// <summary>
+  /// NOTE: this is needed since we need doc on `GetObjectIds()` function after it deserialized.
+  /// DI doesn't help here to pass RevitContext from constructor.
+  /// </summary>
   public void SetContext(RevitContext revitContext)
   {
     _revitContext = revitContext;
