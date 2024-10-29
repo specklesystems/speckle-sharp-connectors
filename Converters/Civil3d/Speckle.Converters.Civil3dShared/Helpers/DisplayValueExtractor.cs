@@ -32,7 +32,7 @@ public sealed class DisplayValueExtractor
     _converterSettings = converterSettings;
   }
 
-  public List<Base>? GetDisplayValue(CDB.Entity entity)
+  public IEnumerable<Base> GetDisplayValue(CDB.Entity entity)
   {
     switch (entity)
     {
@@ -40,28 +40,32 @@ public sealed class DisplayValueExtractor
         SOG.Polyline featurelinePolyline = _pointCollectionConverter.Convert(
           featureline.GetPoints(Autodesk.Civil.FeatureLinePointType.PIPoint)
         );
-        return new() { featurelinePolyline };
+        yield return featurelinePolyline;
+        break;
 
       // pipe networks: https://help.autodesk.com/view/CIV3D/2025/ENU/?guid=ade47b62-debf-f899-9b94-5645a620ab4f
       case CDB.Part part:
         SOG.Mesh partMesh = _solidConverter.Convert(part.Solid3dBody);
-        return new() { partMesh };
+        yield return partMesh;
+        break;
 
       // surfaces: https://help.autodesk.com/view/CIV3D/2025/ENU/?guid=d741aa49-e7da-9513-6b0b-226ebe3fa43f
       // POC: volume surfaces not supported
       case CDB.TinSurface tinSurface:
         SOG.Mesh tinSurfaceMesh = _tinSurfaceConverter.Convert(tinSurface);
-        return new() { tinSurfaceMesh };
+        yield return tinSurfaceMesh;
+        break;
       case CDB.GridSurface gridSurface:
         SOG.Mesh gridSurfaceMesh = _gridSurfaceConverter.Convert(gridSurface);
-        return new() { gridSurfaceMesh };
+        yield return gridSurfaceMesh;
+        break;
 
       // Corridors are complicated: their display values are extracted in the CorridorHandler when processing corridor children, since they are attached to the corridor subassemblies.
       case CDB.Corridor:
-        return new();
+        yield break;
 
       default:
-        return null;
+        yield break;
     }
   }
 
@@ -73,14 +77,13 @@ public sealed class DisplayValueExtractor
   /// List of simple curves: lines, polylines, and arcs.
   /// Null if no suitable display curves were found.
   /// </returns>
-  public List<Base>? ProcessICurvesForDisplay(List<ICurve>? iCurves)
+  public IEnumerable<Base> ProcessICurvesForDisplay(List<ICurve>? iCurves)
   {
     if (iCurves is null)
     {
-      return null;
+      yield break;
     }
 
-    List<Base> result = new();
     foreach (ICurve curve in iCurves)
     {
       switch (curve)
@@ -88,18 +91,16 @@ public sealed class DisplayValueExtractor
         case SOG.Line:
         case SOG.Polyline:
         case SOG.Arc:
-          result.Add((Base)curve);
+          yield return (Base)curve;
           break;
         case SOG.Polycurve polycurve:
-          List<Base>? processedSegments = ProcessICurvesForDisplay(polycurve.segments);
-          if (processedSegments is not null)
+          IEnumerable<Base> processedSegments = ProcessICurvesForDisplay(polycurve.segments);
+          foreach (Base processedSegment in processedSegments)
           {
-            result.AddRange(processedSegments);
+            yield return processedSegment;
           }
           break;
       }
     }
-
-    return result.Count > 0 ? result : null;
   }
 }
