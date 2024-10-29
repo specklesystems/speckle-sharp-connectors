@@ -28,6 +28,7 @@ namespace Speckle.Connectors.Revit.Bindings;
 internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 {
   private readonly IRevitIdleManager _idleManager;
+  private readonly APIContext _apiContext;
   private readonly CancellationManager _cancellationManager;
   private readonly IServiceProvider _serviceProvider;
   private readonly ISendConversionCache _sendConversionCache;
@@ -54,6 +55,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   public RevitSendBinding(
     IRevitIdleManager idleManager,
     RevitContext revitContext,
+    APIContext apiContext,
     DocumentModelStore store,
     CancellationManager cancellationManager,
     IBrowserBridge bridge,
@@ -69,6 +71,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     : base("sendBinding", store, bridge, revitContext)
   {
     _idleManager = idleManager;
+    _apiContext = apiContext;
     _cancellationManager = cancellationManager;
     _serviceProvider = serviceProvider;
     _sendConversionCache = sendConversionCache;
@@ -106,7 +109,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
   public SendBindingUICommands Commands { get; }
 
+#pragma warning disable CA1506
   public async Task Send(string modelCardId)
+#pragma warning restore CA1506
   {
     // Note: removed top level handling thing as it was confusing me
     try
@@ -139,9 +144,11 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         viewFilter.SetContext(RevitContext);
       }
 
-      List<Element> elements = modelCard
-        .SendFilter.NotNull()
-        .GetObjectIds()
+      var selectedObjects = await _apiContext
+        .Run(_ => modelCard.SendFilter.NotNull().GetObjectIds())
+        .ConfigureAwait(false);
+
+      List<Element> elements = selectedObjects
         .Select(uid => activeUIDoc.Document.GetElement(uid))
         .Where(el => el is not null)
         .ToList();
@@ -308,7 +315,10 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       {
         viewFilter.SetContext(RevitContext);
       }
-      var intersection = modelCard.SendFilter.NotNull().GetObjectIds().Intersect(objUniqueIds).ToList();
+      var selectedObjects = await _apiContext
+        .Run(_ => modelCard.SendFilter.NotNull().GetObjectIds())
+        .ConfigureAwait(false);
+      var intersection = selectedObjects.Intersect(objUniqueIds).ToList();
       bool isExpired = intersection.Count != 0;
       if (isExpired)
       {

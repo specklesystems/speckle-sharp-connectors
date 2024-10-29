@@ -4,6 +4,7 @@ using Revit.Async;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
+using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.RevitShared.Operations.Send.Filters;
 using Speckle.Converters.RevitShared.Helpers;
@@ -20,12 +21,14 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
   public BasicConnectorBindingCommands Commands { get; }
 
+  private readonly APIContext _apiContext;
   private readonly DocumentModelStore _store;
   private readonly RevitContext _revitContext;
   private readonly ISpeckleApplication _speckleApplication;
   private readonly ILogger<BasicConnectorBindingRevit> _logger;
 
   public BasicConnectorBindingRevit(
+    APIContext apiContext,
     DocumentModelStore store,
     IBrowserBridge parent,
     RevitContext revitContext,
@@ -35,6 +38,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
   {
     Name = "baseBinding";
     Parent = parent;
+    _apiContext = apiContext;
     _store = store;
     _revitContext = revitContext;
     _speckleApplication = speckleApplication;
@@ -106,9 +110,12 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
       {
         revitViewsFilter.SetContext(_revitContext);
       }
-      elementIds = senderModelCard
-        .SendFilter.NotNull()
-        .GetObjectIds()
+
+      var selectedObjects = await _apiContext
+        .Run(_ => senderModelCard.SendFilter.NotNull().GetObjectIds())
+        .ConfigureAwait(false);
+
+      elementIds = selectedObjects
         .Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid))
         .Where(el => el is not null)
         .Cast<ElementId>()
