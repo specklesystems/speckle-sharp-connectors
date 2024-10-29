@@ -262,6 +262,15 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   /// </summary>
   private void CheckFilterExpiration()
   {
+    // NOTE: below code seems like more make sense in terms of performance but it causes unmanaged exception on Revit
+    // using var viewCollector = new FilteredElementCollector(RevitContext.UIApplication?.ActiveUIDocument.Document);
+    // var views = viewCollector.OfClass(typeof(View)).Cast<View>().Select(v => v.Id).ToList();
+    // var intersection = ChangedObjectIds.Keys.Intersect(views).ToList();
+    // if (intersection.Count != 0)
+    // {
+    //   Commands.RefreshSendFilters().Wait();
+    // }
+
     if (ChangedObjectIds.Keys.Any(e => RevitContext.UIApplication?.ActiveUIDocument.Document.GetElement(e) is View))
     {
       Commands.RefreshSendFilters().Wait();
