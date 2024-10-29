@@ -108,7 +108,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     {
       if (senderModelCard.SendFilter is RevitViewsFilter revitViewsFilter)
       {
-        revitViewsFilter.SetContext(_revitContext);
+        revitViewsFilter.SetContext(_revitContext, _apiContext);
       }
 
       var selectedObjects = await _apiContext

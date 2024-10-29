@@ -96,7 +96,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   }
 
   public List<ISendFilter> GetSendFilters() =>
-    [new RevitSelectionFilter() { IsDefault = true }, new RevitViewsFilter(RevitContext)];
+    [new RevitSelectionFilter() { IsDefault = true }, new RevitViewsFilter(RevitContext, _apiContext)];
 
   public List<ICardSetting> GetSendSettings() =>
     [
@@ -141,7 +141,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
       if (modelCard.SendFilter is RevitViewsFilter viewFilter)
       {
-        viewFilter.SetContext(RevitContext);
+        viewFilter.SetContext(RevitContext, _apiContext);
       }
 
       var selectedObjects = await _apiContext
@@ -313,7 +313,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     {
       if (modelCard.SendFilter is RevitViewsFilter viewFilter)
       {
-        viewFilter.SetContext(RevitContext);
+        viewFilter.SetContext(RevitContext, _apiContext);
       }
       var selectedObjects = await _apiContext
         .Run(_ => modelCard.SendFilter.NotNull().GetObjectIds())

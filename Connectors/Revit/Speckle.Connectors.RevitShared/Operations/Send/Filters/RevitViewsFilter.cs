@@ -2,6 +2,7 @@
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Utils;
+using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.RevitShared.Helpers;
 
 namespace Speckle.Connectors.RevitShared.Operations.Send.Filters;
@@ -9,6 +10,7 @@ namespace Speckle.Connectors.RevitShared.Operations.Send.Filters;
 public class RevitViewsFilter : DiscriminatedObject, ISendFilter
 {
   private RevitContext _revitContext;
+  private APIContext _apiContext;
   private Document? _doc;
   public string Id { get; set; } = "revitViews";
   public string Name { get; set; } = "Views";
@@ -19,9 +21,10 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter
 
   public RevitViewsFilter() { }
 
-  public RevitViewsFilter(RevitContext revitContext)
+  public RevitViewsFilter(RevitContext revitContext, APIContext apiContext)
   {
     _revitContext = revitContext;
+    _apiContext = apiContext;
     _doc = _revitContext.UIApplication?.ActiveUIDocument.Document;
 
     GetViews();
@@ -40,20 +43,25 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter
     var viewFamilyString = result[0];
     var viewString = result[1];
 
-    using var collector = new FilteredElementCollector(_doc);
-    View? view = collector
-      .OfClass(typeof(View))
-      .Cast<View>()
-      .FirstOrDefault(v => v.ViewType.ToString().Equals(viewFamilyString) && v.Name.Equals(viewString));
+    _apiContext
+      .Run(() =>
+      {
+        using var collector = new FilteredElementCollector(_doc);
+        View? view = collector
+          .OfClass(typeof(View))
+          .Cast<View>()
+          .FirstOrDefault(v => v.ViewType.ToString().Equals(viewFamilyString) && v.Name.Equals(viewString));
 
-    if (view is null)
-    {
-      throw new SpeckleSendFilterException("View not found, please update your model send filter.");
-    }
-    using var viewCollector = new FilteredElementCollector(_doc, view.Id);
-    List<Element> elementsInView = viewCollector.ToElements().ToList();
-
-    return elementsInView.Select(e => e.UniqueId).ToList();
+        if (view is null)
+        {
+          throw new SpeckleSendFilterException("View not found, please update your model send filter.");
+        }
+        using var viewCollector = new FilteredElementCollector(_doc, view.Id);
+        List<Element> elementsInView = viewCollector.ToElements().ToList();
+        objectIds = elementsInView.Select(e => e.UniqueId).ToList();
+      })
+      .Wait();
+    return objectIds;
   }
 
   public bool CheckExpiry(string[] changedObjectIds) => GetObjectIds().Intersect(changedObjectIds).Any();
@@ -74,9 +82,10 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter
   /// NOTE: this is needed since we need doc on `GetObjectIds()` function after it deserialized.
   /// DI doesn't help here to pass RevitContext from constructor.
   /// </summary>
-  public void SetContext(RevitContext revitContext)
+  public void SetContext(RevitContext revitContext, APIContext apiContext)
   {
     _revitContext = revitContext;
+    _apiContext = apiContext;
     _doc = _revitContext.UIApplication?.ActiveUIDocument.Document;
   }
 }
