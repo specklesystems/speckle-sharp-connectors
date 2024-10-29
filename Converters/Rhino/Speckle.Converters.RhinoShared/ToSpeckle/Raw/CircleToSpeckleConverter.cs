@@ -1,4 +1,4 @@
-﻿using Speckle.Converters.Common;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Models;
 
@@ -34,8 +34,6 @@ public class CircleToSpeckleConverter : ITypedConverter<RG.Circle, SOG.Circle>
       plane = _planeConverter.Convert(target.Plane),
       radius = target.Radius,
       units = _settingsStore.Current.SpeckleUnits,
-      domain = SOP.Interval.UnitInterval,
-      length = 2 * Math.PI * target.Radius,
-      area = Math.PI * Math.Pow(target.Radius, 2),
+      domain = SOP.Interval.UnitInterval
     };
 }
