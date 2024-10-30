@@ -1,7 +1,7 @@
-﻿using Speckle.Converters.Common;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using SOG = Speckle.Objects.Geometry;
 using Speckle.Sdk.Models;
+using SOG = Speckle.Objects.Geometry;
 
 namespace Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
 
@@ -12,7 +12,8 @@ public sealed class DisplayValueExtractor
 
   public DisplayValueExtractor(
     ITypedConverter<TSM.Solid, SOG.Mesh> meshConverter,
-    IConverterSettingsStore<TeklaConversionSettings> settingsStore)
+    IConverterSettingsStore<TeklaConversionSettings> settingsStore
+  )
   {
     _meshConverter = meshConverter;
     _settingsStore = settingsStore;
@@ -39,7 +40,7 @@ public sealed class DisplayValueExtractor
           yield return mesh;
         }
         break;
-            
+
       default:
         yield break;
     }

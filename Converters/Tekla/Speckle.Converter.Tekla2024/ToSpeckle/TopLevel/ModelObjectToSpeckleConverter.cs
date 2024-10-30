@@ -15,7 +15,8 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
   public ModelObjectToSpeckleConverter(
     IConverterSettingsStore<TeklaConversionSettings> settingsStore,
     DisplayValueExtractor displayValueExtractor,
-    PropertyExtractor propertyExtractor)
+    PropertyExtractor propertyExtractor
+  )
   {
     _settingsStore = settingsStore;
     _displayValueExtractor = displayValueExtractor;
