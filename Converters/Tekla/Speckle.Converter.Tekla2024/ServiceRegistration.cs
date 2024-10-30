@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Registration;
 using Speckle.Sdk;
@@ -20,7 +21,9 @@ public static class ServiceRegistration
       IConverterSettingsStore<TeklaConversionSettings>,
       ConverterSettingsStore<TeklaConversionSettings>
     >();
-
+    
+    serviceCollection.AddScoped<DisplayValueExtractor>();
+    
     serviceCollection.AddMatchingInterfacesAsTransient(converterAssembly);
 
     return serviceCollection;
