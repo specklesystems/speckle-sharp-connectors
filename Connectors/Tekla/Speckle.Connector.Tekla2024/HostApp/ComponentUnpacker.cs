@@ -15,12 +15,7 @@ public class ComponentUnpacker
   /// </summary>
   public Dictionary<string, GroupProxy> ComponentProxiesCache { get; }
 
-  private readonly ITypedConverter<TSM.ModelObject, Base> _modelObjectConverter;
-
-  public ComponentUnpacker(ITypedConverter<TSM.ModelObject, Base> modelObjectConverter)
-  {
-    _modelObjectConverter = modelObjectConverter;
-  }
+  public ComponentUnpacker() { }
 
   public IEnumerable<TSM.ModelObject> UnpackComponents(IReadOnlyList<TSM.ModelObject> modelObjects)
   {
