@@ -7,7 +7,7 @@ using Speckle.Converters.RevitShared.Helpers;
 
 namespace Speckle.Connectors.RevitShared.Operations.Send.Filters;
 
-public class RevitViewsFilter : DiscriminatedObject, ISendFilter
+public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilter
 {
   private RevitContext _revitContext;
   private APIContext _apiContext;

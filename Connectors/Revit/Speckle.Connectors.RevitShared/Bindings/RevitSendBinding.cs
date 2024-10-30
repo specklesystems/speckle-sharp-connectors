@@ -96,7 +96,11 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   }
 
   public List<ISendFilter> GetSendFilters() =>
-    [new RevitSelectionFilter() { IsDefault = true }, new RevitViewsFilter(RevitContext, _apiContext)];
+    [
+      new RevitSelectionFilter() { IsDefault = true },
+      new RevitViewsFilter(RevitContext, _apiContext),
+      new RevitCategoriesFilter(RevitContext, _apiContext)
+    ];
 
   public List<ICardSetting> GetSendSettings() =>
     [
@@ -139,7 +143,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         RevitContext.UIApplication?.ActiveUIDocument
         ?? throw new SpeckleException("Unable to retrieve active UI document");
 
-      if (modelCard.SendFilter is RevitViewsFilter viewFilter)
+      if (modelCard.SendFilter is IRevitSendFilter viewFilter)
       {
         viewFilter.SetContext(RevitContext, _apiContext);
       }
@@ -328,7 +332,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     List<string> expiredSenderIds = new();
     foreach (SenderModelCard modelCard in senders)
     {
-      if (modelCard.SendFilter is RevitViewsFilter viewFilter)
+      if (modelCard.SendFilter is IRevitSendFilter viewFilter)
       {
         viewFilter.SetContext(RevitContext, _apiContext);
       }
