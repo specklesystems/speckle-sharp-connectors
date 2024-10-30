@@ -4,7 +4,10 @@ namespace Speckle.Connectors.ArcGIS.Filters;
 
 public class ArcGISSelectionFilter : DirectSelectionSendFilter
 {
-  public override List<string> GetObjectIds() => SelectedObjectIds;
+  public ArcGISSelectionFilter()
+  {
+    IsDefault = true;
+  }
 
-  public override bool CheckExpiry(string[] changedObjectIds) => SelectedObjectIds.Intersect(changedObjectIds).Any();
+  public override List<string> GetObjectIds() => SelectedObjectIds;
 }
