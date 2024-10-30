@@ -11,7 +11,7 @@ public class ComponentUnpacker
   /// Stores processed Base Components as group proxies. These include Components and Connections.
   /// Expects to be scoped per send operation. Should be added to the root collection.
   /// </summary>
-  public Dictionary<string, GroupProxy> ComponentProxiesCache { get; }
+  public Dictionary<string, GroupProxy> ComponentProxiesCache { get; } = new();
 
   public ComponentUnpacker() { }
 
