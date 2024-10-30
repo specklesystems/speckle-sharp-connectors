@@ -313,6 +313,12 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       {
         objUniqueIds.Add(uniqueId);
       }
+      else
+      {
+        var uniqId = doc.GetElement(changedElementId).UniqueId;
+        objUniqueIds.Add(uniqId);
+        IdMap[changedElementId.ToString()] = uniqId;
+      }
     }
 
     var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objUniqueIds);
