@@ -28,15 +28,23 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
             throw new ArgumentException($"Target object is not a ModelObject. It's a {target.GetType()}");
         }
 
+        Base result;
         switch (modelObject)
         {
             case TSM.Beam beam:
-                return _beamConverter.Convert(beam);
+                result =  _beamConverter.Convert(beam);
+                break;
             case TSM.ContourPlate plate:
-              return _plateConverter.Convert(plate);
+              result = _plateConverter.Convert(plate);
+              break;
             default:
               throw new ConversionNotSupportedException(
                 $"Conversion of {target.GetType().Name} to Speckle is not supported.");
         }
+        
+        result["type"] = modelObject.GetType().ToString().Split('.').Last();
+        result["units"] = _settingsStore.Current.SpeckleUnits;
+        
+        return result;
     }
 }

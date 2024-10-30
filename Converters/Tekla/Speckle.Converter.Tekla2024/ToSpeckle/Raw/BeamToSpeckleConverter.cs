@@ -27,8 +27,8 @@ public class BeamToSpeckleConverter : ITypedConverter<TSM.Beam, Base>
   {
     var beamObject = new Base
     {
-      ["type"] = nameof(TSM.Beam),
-      ["units"] = _settingsStore.Current.SpeckleUnits,
+      //["type"] = nameof(TSM.Beam),
+      //["units"] = _settingsStore.Current.SpeckleUnits,
       ["profile"] = target.Profile.ProfileString,
       ["material"] = target.Material.MaterialString,
     };
