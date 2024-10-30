@@ -15,6 +15,7 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Converter.Tekla2024;
+using Speckle.Converter.Tekla2024.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Models.GraphTraversal;
@@ -66,6 +67,7 @@ public static class ServiceRegistration
       IConverterSettingsStore<TeklaConversionSettings>,
       ConverterSettingsStore<TeklaConversionSettings>
     >();
+    services.AddScoped<ComponentUnpacker>();
 
     services.AddMatchingInterfacesAsTransient(converterAssembly);
 
