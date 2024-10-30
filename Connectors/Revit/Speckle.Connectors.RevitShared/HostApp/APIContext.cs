@@ -11,8 +11,8 @@ namespace Speckle.Connectors.Revit.HostApp;
 public sealed class APIContext : IDisposable
 {
   private readonly SemaphoreSlim _semaphore = new(1, 1);
-  private UIControlledApplication _uiApplication;
-  private ExternalEventHandler<IExternalEventHandler, ExternalEvent> _factoryExternalEventHandler;
+  private readonly UIControlledApplication _uiApplication;
+  private readonly ExternalEventHandler<IExternalEventHandler, ExternalEvent> _factoryExternalEventHandler;
 #pragma warning disable CA2213
   private readonly ExternalEvent _factoryExternalEvent;
 #pragma warning restore CA2213
@@ -41,25 +41,21 @@ public sealed class APIContext : IDisposable
     }
   }
 
-  public async Task Run(Action<UIControlledApplication> action)
-  {
+  public async Task Run(Action<UIControlledApplication> action) =>
     await Run<object>(app =>
       {
         action(app);
         return null!;
       })
       .ConfigureAwait(false);
-  }
 
-  public async Task Run(Action action)
-  {
+  public async Task Run(Action action) =>
     await Run<object>(_ =>
       {
         action();
         return null!;
       })
       .ConfigureAwait(false);
-  }
 
   private async Task<TResult> Run<TParameter, TResult>(
     ExternalEventHandler<TParameter, TResult> handler,
@@ -90,7 +86,7 @@ public enum HandlerStatus
 
 internal sealed class ExternalEventHandler<TParameter, TResult> : IExternalEventHandler
 {
-  public TaskCompletionSource<TResult> Result { get; private set; }
+  private TaskCompletionSource<TResult> Result { get; set; }
 
   public Task<TResult> GetTask(TParameter parameter)
   {
@@ -99,7 +95,7 @@ internal sealed class ExternalEventHandler<TParameter, TResult> : IExternalEvent
     return Result.Task;
   }
 
-  private Func<TParameter, TResult> _func;
+  private readonly Func<TParameter, TResult> _func;
 
   public ExternalEventHandler(Func<TParameter, TResult> func)
   {
@@ -107,7 +103,7 @@ internal sealed class ExternalEventHandler<TParameter, TResult> : IExternalEvent
   }
 
   public HandlerStatus Status { get; private set; } = HandlerStatus.NotStarted;
-  public TParameter Parameter { get; private set; }
+  private TParameter Parameter { get; set; }
 
   [System.Diagnostics.CodeAnalysis.SuppressMessage(
     "Design",
