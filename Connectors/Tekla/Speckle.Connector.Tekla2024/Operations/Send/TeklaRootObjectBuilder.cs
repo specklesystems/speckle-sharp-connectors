@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Speckle.Connector.Tekla2024.HostApp;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
@@ -21,13 +22,15 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<ModelObject>
   private readonly IConverterSettingsStore<TeklaConversionSettings> _converterSettings;
   private readonly ILogger<TeklaRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
+  private readonly ComponentUnpacker _componentUnpacker;
 
   public TeklaRootObjectBuilder(
     IRootToSpeckleConverter rootToSpeckleConverter,
     ISendConversionCache sendConversionCache,
     IConverterSettingsStore<TeklaConversionSettings> converterSettings,
     ILogger<TeklaRootObjectBuilder> logger,
-    ISdkActivityFactory activityFactory
+    ISdkActivityFactory activityFactory,
+    ComponentUnpacker componentUnpacker
   )
   {
     _sendConversionCache = sendConversionCache;
@@ -35,6 +38,7 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<ModelObject>
     _rootToSpeckleConverter = rootToSpeckleConverter;
     _logger = logger;
     _activityFactory = activityFactory;
+    _componentUnpacker = componentUnpacker;
   }
 
   public async Task<RootObjectBuilderResult> Build(
@@ -52,12 +56,16 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<ModelObject>
     Collection rootObjectCollection = new() { name = modelName };
     rootObjectCollection["units"] = _converterSettings.Current.SpeckleUnits;
 
+    // Step 0: unpack all component model objects
+    List<TSM.ModelObject> unpackedTeklaObjects = _componentUnpacker.UnpackComponents(teklaObjects).ToList();
+    rootObjectCollection["componentProxies"] = _componentUnpacker.ComponentProxiesCache.Values;
+
     List<SendConversionResult> results = new(teklaObjects.Count);
     int count = 0;
 
     using (var _ = _activityFactory.Start("Convert all"))
     {
-      foreach (ModelObject teklaObject in teklaObjects)
+      foreach (ModelObject teklaObject in unpackedTeklaObjects)
       {
         using var _2 = _activityFactory.Start("Convert");
         cancellationToken.ThrowIfCancellationRequested();
