@@ -10,6 +10,4 @@ public class RevitSelectionFilter : DirectSelectionSendFilter
   }
 
   public override List<string> GetObjectIds() => SelectedObjectIds;
-
-  public override bool CheckExpiry(string[] changedObjectIds) => SelectedObjectIds.Intersect(changedObjectIds).Any();
 }

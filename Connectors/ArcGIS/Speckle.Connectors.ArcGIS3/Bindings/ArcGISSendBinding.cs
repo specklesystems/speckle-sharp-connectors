@@ -456,7 +456,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     {
       var objIds = sender.SendFilter.NotNull().GetObjectIds();
       var intersection = objIds.Intersect(objectIdsList).ToList();
-      bool isExpired = sender.SendFilter.NotNull().CheckExpiry(objectIdsList);
+      bool isExpired = intersection.Count != 0;
       if (isExpired)
       {
         expiredSenderIds.Add(sender.ModelCardId.NotNull());

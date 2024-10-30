@@ -10,5 +10,4 @@ public abstract class DirectSelectionSendFilter : DiscriminatedObject, ISendFilt
   public bool IsDefault { get; set; }
   public List<string> SelectedObjectIds { get; set; } = new();
   public abstract List<string> GetObjectIds();
-  public abstract bool CheckExpiry(string[] changedObjectIds);
 }

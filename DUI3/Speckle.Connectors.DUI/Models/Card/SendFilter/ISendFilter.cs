@@ -12,11 +12,4 @@ public interface ISendFilter
   /// </summary>
   /// <returns></returns>
   public List<string> GetObjectIds();
-
-  /// <summary>
-  /// Checks whether any of the targeted objects are affected by changes from the host application.
-  /// </summary>
-  /// <param name="changedObjectIds"></param>
-  /// <returns></returns>
-  public bool CheckExpiry(string[] changedObjectIds);
 }

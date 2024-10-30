@@ -81,8 +81,6 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter
     return objectIds;
   }
 
-  public bool CheckExpiry(string[] changedObjectIds) => GetObjectIds().Intersect(changedObjectIds).Any();
-
   private void GetViews()
   {
     using var collector = new FilteredElementCollector(_doc);
