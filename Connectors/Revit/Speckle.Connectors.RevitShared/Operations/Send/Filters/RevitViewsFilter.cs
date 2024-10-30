@@ -30,6 +30,28 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter
     GetViews();
   }
 
+  public View? GetView()
+  {
+    if (SelectedView is null)
+    {
+      return null;
+    }
+    string[] result = SelectedView.Split(new string[] { " - " }, 2, StringSplitOptions.None);
+    var viewFamilyString = result[0];
+    var viewString = result[1];
+
+    using var collector = new FilteredElementCollector(_doc);
+    return collector
+      .OfClass(typeof(View))
+      .Cast<View>()
+      .FirstOrDefault(v => v.ViewType.ToString().Equals(viewFamilyString) && v.Name.Equals(viewString));
+  }
+
+  /// <summary>
+  /// Always need to run on Revit UI thread (main) because of FilteredElementCollector.
+  /// Use it with APIContext.Run
+  /// </summary>
+  /// <exception cref="SpeckleSendFilterException">Whenever no view is found.</exception>
   public List<string> GetObjectIds()
   {
     var objectIds = new List<string>();
@@ -43,24 +65,19 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter
     var viewFamilyString = result[0];
     var viewString = result[1];
 
-    _apiContext
-      .Run(() =>
-      {
-        using var collector = new FilteredElementCollector(_doc);
-        View? view = collector
-          .OfClass(typeof(View))
-          .Cast<View>()
-          .FirstOrDefault(v => v.ViewType.ToString().Equals(viewFamilyString) && v.Name.Equals(viewString));
+    using var collector = new FilteredElementCollector(_doc);
+    View? view = collector
+      .OfClass(typeof(View))
+      .Cast<View>()
+      .FirstOrDefault(v => v.ViewType.ToString().Equals(viewFamilyString) && v.Name.Equals(viewString));
 
-        if (view is null)
-        {
-          throw new SpeckleSendFilterException("View not found, please update your model send filter.");
-        }
-        using var viewCollector = new FilteredElementCollector(_doc, view.Id);
-        List<Element> elementsInView = viewCollector.ToElements().ToList();
-        objectIds = elementsInView.Select(e => e.UniqueId).ToList();
-      })
-      .Wait();
+    if (view is null)
+    {
+      throw new SpeckleSendFilterException("View not found, please update your model send filter.");
+    }
+    using var viewCollector = new FilteredElementCollector(_doc, view.Id);
+    List<Element> elementsInView = viewCollector.ToElements().ToList();
+    objectIds = elementsInView.Select(e => e.UniqueId).ToList();
     return objectIds;
   }
 

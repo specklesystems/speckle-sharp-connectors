@@ -129,9 +129,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         .ServiceProvider.GetRequiredService<IConverterSettingsStore<RevitConversionSettings>>()
         .Initialize(
           _revitConversionSettingsFactory.Create(
-            _toSpeckleSettingsManager.GetDetailLevelSetting(modelCard),
-            _toSpeckleSettingsManager.GetReferencePointSetting(modelCard),
-            _toSpeckleSettingsManager.GetSendParameterNullOrEmptyStringsSetting(modelCard)
+            await _toSpeckleSettingsManager.GetDetailLevelSetting(modelCard).ConfigureAwait(false),
+            await _toSpeckleSettingsManager.GetReferencePointSetting(modelCard).ConfigureAwait(false),
+            await _toSpeckleSettingsManager.GetSendParameterNullOrEmptyStringsSetting(modelCard).ConfigureAwait(false)
           )
         );
 
@@ -198,7 +198,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   /// a filter refresh (e.g., views being added).
   /// </summary>
   /// <param name="e"></param>
-  private void DocChangeHandler(Autodesk.Revit.DB.Events.DocumentChangedEventArgs e)
+  private async Task DocChangeHandler(Autodesk.Revit.DB.Events.DocumentChangedEventArgs e)
   {
     ICollection<ElementId> addedElementIds = e.GetAddedElementIds();
     ICollection<ElementId> deletedElementIds = e.GetDeletedElementIds();
@@ -221,7 +221,18 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     if (HaveUnitsChanged(e.GetDocument()))
     {
-      var objectIds = Store.GetSenders().SelectMany(s => s.SendFilter != null ? s.SendFilter.GetObjectIds() : []);
+      var objectIds = new List<string>();
+      foreach (var sender in Store.GetSenders())
+      {
+        if (sender.SendFilter is null)
+        {
+          continue;
+        }
+        var selectedObjects = await _apiContext
+          .Run(_ => sender.SendFilter.NotNull().GetObjectIds())
+          .ConfigureAwait(false);
+        objectIds.AddRange(selectedObjects);
+      }
       var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds.ToList());
       _sendConversionCache.EvictObjects(unpackedObjectIds);
     }
