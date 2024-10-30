@@ -278,7 +278,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   /// <summary>
   /// Notifies ui if any filters need refreshing. Currently, this only applies for view filters.
   /// </summary>
-  private void CheckFilterExpiration()
+  private async Task CheckFilterExpiration()
   {
     // NOTE: below code seems like more make sense in terms of performance but it causes unmanaged exception on Revit
     // using var viewCollector = new FilteredElementCollector(RevitContext.UIApplication?.ActiveUIDocument.Document);
@@ -286,12 +286,12 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     // var intersection = ChangedObjectIds.Keys.Intersect(views).ToList();
     // if (intersection.Count != 0)
     // {
-    //   Commands.RefreshSendFilters().Wait();
+    //    await Commands.RefreshSendFilters().ConfigureAwait(false);
     // }
 
     if (ChangedObjectIds.Keys.Any(e => RevitContext.UIApplication?.ActiveUIDocument.Document.GetElement(e) is View))
     {
-      Commands.RefreshSendFilters().Wait();
+      await Commands.RefreshSendFilters().ConfigureAwait(false);
     }
   }
 
