@@ -31,8 +31,14 @@ public sealed class DisplayValueExtractor
         }
         break;
 
-      // add cases for other model object types that need display values
-      // case TSM.ContourPlate plate:
+      case TSM.ContourPlate plate:
+        var plateSolid = plate.GetSolid();
+        if (plateSolid != null)
+        {
+          var mesh = _meshConverter.Convert(plateSolid);
+          yield return mesh;
+        }
+        break;
             
       default:
         yield break;

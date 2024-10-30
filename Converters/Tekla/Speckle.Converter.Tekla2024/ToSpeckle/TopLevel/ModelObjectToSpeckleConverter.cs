@@ -1,7 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Models;
-using SOG = Speckle.Objects.Geometry;
 
 namespace Speckle.Converter.Tekla2024.ToSpeckle.TopLevel;
 
@@ -10,16 +9,15 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
 {
     private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
     private readonly ITypedConverter<TSM.Beam, Base> _beamConverter;
-    private readonly ITypedConverter<TSM.Solid, SOG.Mesh> _meshConverter;
-
+    private readonly ITypedConverter<TSM.ContourPlate, Base> _plateConverter;
     public ModelObjectToSpeckleConverter(
         IConverterSettingsStore<TeklaConversionSettings> settingsStore,
         ITypedConverter<TSM.Beam, Base> beamConverter,
-        ITypedConverter<TSM.Solid, SOG.Mesh> meshConverter)
+        ITypedConverter<TSM.ContourPlate, Base> plateConverter)
     {
         _settingsStore = settingsStore;
         _beamConverter = beamConverter;
-        _meshConverter = meshConverter;
+        _plateConverter = plateConverter;
     }
 
     public Base Convert(object target)
@@ -33,8 +31,11 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
         {
             case TSM.Beam beam:
                 return _beamConverter.Convert(beam);
+            case TSM.ContourPlate plate:
+              return _plateConverter.Convert(plate);
             default:
                 // handle any ModelObject with basic properties
+                // not sure if its a good practice
                 var baseObject = new Base
                 {
                     ["type"] = modelObject.GetType().ToString().Split('.').Last(),
