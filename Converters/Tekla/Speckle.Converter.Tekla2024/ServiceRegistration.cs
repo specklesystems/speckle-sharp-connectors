@@ -14,7 +14,7 @@ public static class ServiceRegistration
   {
     var converterAssembly = Assembly.GetExecutingAssembly();
     serviceCollection.AddMatchingInterfacesAsTransient(converterAssembly);
-    serviceCollection.AddRootCommon<RootToSpeckleConverter>(converterAssembly);
+    serviceCollection.AddRootCommon<TeklaRootToSpeckleConverter>(converterAssembly);
 
     serviceCollection.AddApplicationConverters<TeklaToSpeckleUnitConverter, Units>(converterAssembly);
     serviceCollection.AddScoped<

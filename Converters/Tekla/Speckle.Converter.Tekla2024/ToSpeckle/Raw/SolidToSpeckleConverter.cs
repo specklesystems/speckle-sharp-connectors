@@ -2,13 +2,13 @@
 using Speckle.Converters.Common.Objects;
 using SOG = Speckle.Objects.Geometry;
 
-namespace Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
+namespace Speckle.Converter.Tekla2024.ToSpeckle.Raw;
 
-public class MeshExtractor : ITypedConverter<TSM.Solid, SOG.Mesh>
+public class SolidToSpeckleConverter : ITypedConverter<TSM.Solid, SOG.Mesh>
 {
     private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
 
-    public MeshExtractor(IConverterSettingsStore<TeklaConversionSettings> settingsStore)
+    public SolidToSpeckleConverter(IConverterSettingsStore<TeklaConversionSettings> settingsStore)
     {
         _settingsStore = settingsStore;
     }

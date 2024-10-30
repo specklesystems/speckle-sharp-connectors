@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converter.Tekla2024.ToSpeckle.TopLevel;
@@ -34,16 +35,8 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
             case TSM.ContourPlate plate:
               return _plateConverter.Convert(plate);
             default:
-                // handle any ModelObject with basic properties
-                // not sure if its a good practice
-                var baseObject = new Base
-                {
-                    ["type"] = modelObject.GetType().ToString().Split('.').Last(),
-                    ["units"] = _settingsStore.Current.SpeckleUnits,
-                    applicationId = modelObject.Identifier.GUID.ToString(),
-                };
-
-                return baseObject;
+              throw new ConversionNotSupportedException(
+                $"Conversion of {target.GetType().Name} to Speckle is not supported.");
         }
     }
 }
