@@ -61,11 +61,14 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
 
     // extract display value.
     // If object has no display but has basecurves, use basecurves for display instead (for viewer selection)
-    List<Base>? display =
-      _displayValueExtractor.GetDisplayValue(target) ?? _displayValueExtractor.ProcessICurvesForDisplay(baseCurves);
-    if (display is not null)
+    List<Base> displayValue = _displayValueExtractor.GetDisplayValue(target).ToList();
+    if (displayValue.Count == 0)
     {
-      civilObject["displayValue"] = display;
+      displayValue = _displayValueExtractor.ProcessICurvesForDisplay(baseCurves).ToList();
+    }
+    if (displayValue.Count > 0)
+    {
+      civilObject["displayValue"] = displayValue;
     }
 
     // add any additional class properties
@@ -80,22 +83,8 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
 
     // determine if this entity has any children elements that need to be converted.
     // this is a bespoke method by class type.
-    List<Base>? children = null;
-    switch (target)
-    {
-      case CDB.Alignment alignment:
-        children = GetAlignmentChildren(alignment);
-        break;
-      case CDB.Corridor corridor:
-        children = _corridorHandler.GetCorridorChildren(corridor);
-        break;
-
-      case CDB.Site site:
-        children = GetSiteChildren(site);
-        break;
-    }
-
-    if (children is not null)
+    var children = GetEntityChildren(target).ToList();
+    if (children.Count > 0)
     {
       civilObject["elements"] = children;
     }
@@ -103,37 +92,60 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     return civilObject;
   }
 
-  private List<Base>? GetSiteChildren(CDB.Site site)
+  private IEnumerable<Base> GetEntityChildren(CDB.Entity entity)
   {
-    List<Base> parcels = new();
+    switch (entity)
+    {
+      case CDB.Alignment alignment:
+        var alignmentChildren = GetAlignmentChildren(alignment);
+        foreach (var child in alignmentChildren)
+        {
+          yield return child;
+        }
+        break;
+      case CDB.Corridor corridor:
+        var corridorChildren = _corridorHandler.GetCorridorChildren(corridor);
+        foreach (var child in corridorChildren)
+        {
+          yield return child;
+        }
+        break;
+
+      case CDB.Site site:
+        var siteChildren = GetSiteChildren(site).ToList();
+        foreach (var child in siteChildren)
+        {
+          yield return child;
+        }
+        break;
+    }
+  }
+
+  private IEnumerable<Base> GetSiteChildren(CDB.Site site)
+  {
     using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
     {
       foreach (ADB.ObjectId parcelId in site.GetParcelIds())
       {
         var parcel = (CDB.Parcel)tr.GetObject(parcelId, ADB.OpenMode.ForRead);
-        parcels.Add(Convert(parcel));
+        yield return Convert(parcel);
       }
 
       tr.Commit();
     }
-
-    return parcels.Count > 0 ? parcels : null;
   }
 
-  private List<Base>? GetAlignmentChildren(CDB.Alignment alignment)
+  private IEnumerable<Base> GetAlignmentChildren(CDB.Alignment alignment)
   {
-    List<Base> profiles = new();
     using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
     {
       foreach (ADB.ObjectId profileId in alignment.GetProfileIds())
       {
         var profile = (CDB.Profile)tr.GetObject(profileId, ADB.OpenMode.ForRead);
-        profiles.Add(Convert(profile));
+        yield return Convert(profile);
       }
 
       tr.Commit();
     }
-
-    return profiles.Count > 0 ? profiles : null;
   }
 }
