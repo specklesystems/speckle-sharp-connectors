@@ -4,23 +4,23 @@ using SOG = Speckle.Objects.Geometry;
 
 namespace Speckle.Converter.Tekla2024.ToSpeckle.Raw;
 
-public class TeklaMeshConverter : ITypedConverter<TSM.Solid, SOG.Mesh>
+public class SolidToSpeckleConverter : ITypedConverter<TSM.Solid, SOG.Mesh>
 {
   private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
 
-  public TeklaMeshConverter(IConverterSettingsStore<TeklaConversionSettings> settingsStore)
+  public SolidToSpeckleConverter(IConverterSettingsStore<TeklaConversionSettings> settingsStore)
   {
     _settingsStore = settingsStore;
   }
 
   public SOG.Mesh Convert(TSM.Solid target)
   {
-    var faceEnum = target.GetFaceEnumerator();
     List<double> vertices = new List<double>();
     List<int> faces = new List<int>();
-    Dictionary<string, int> uniqueVertices = new Dictionary<string, int>();
+    Dictionary<TG.Point, int> vertexIndices = new Dictionary<TG.Point, int>();
     int currentIndex = 0;
 
+    var faceEnum = target.GetFaceEnumerator();
     while (faceEnum.MoveNext())
     {
       var face = faceEnum.Current;
@@ -30,53 +30,42 @@ public class TeklaMeshConverter : ITypedConverter<TSM.Solid, SOG.Mesh>
       }
 
       var loopEnum = face.GetLoopEnumerator();
-      if (!loopEnum.MoveNext())
+      while (loopEnum.MoveNext())
       {
-        continue;
-      }
-
-      var loop = loopEnum.Current;
-      if (loop == null)
-      {
-        continue;
-      }
-
-      var corners = new List<int>();
-      var vertexEnum = loop.GetVertexEnumerator();
-
-      while (vertexEnum.MoveNext())
-      {
-        var vertex = vertexEnum.Current;
-        if (vertex == null)
+        var loop = loopEnum.Current;
+        if (loop == null)
         {
           continue;
         }
 
-        string vertexKey = $"{vertex.X:F8},{vertex.Y:F8},{vertex.Z:F8}";
+        var faceVertices = new List<int>();
+        var vertexEnum = loop.GetVertexEnumerator();
 
-        if (!uniqueVertices.TryGetValue(vertexKey, out int value))
+        while (vertexEnum.MoveNext())
         {
-          value = currentIndex++;
-          uniqueVertices[vertexKey] = value;
-          vertices.Add(vertex.X);
-          vertices.Add(vertex.Y);
-          vertices.Add(vertex.Z);
+          var vertex = vertexEnum.Current;
+          if (vertex == null)
+          {
+            continue;
+          }
+
+          if (!vertexIndices.TryGetValue(vertex, out int value))
+          {
+            value = currentIndex++;
+            vertexIndices[vertex] = value;
+            vertices.Add(vertex.X);
+            vertices.Add(vertex.Y);
+            vertices.Add(vertex.Z);
+          }
+
+          faceVertices.Add(value);
         }
 
-        corners.Add(value);
-      }
-
-      if (corners.Count == 4)
-      {
-        faces.Add(3);
-        faces.Add(corners[0]);
-        faces.Add(corners[1]);
-        faces.Add(corners[2]);
-
-        faces.Add(3);
-        faces.Add(corners[0]);
-        faces.Add(corners[2]);
-        faces.Add(corners[3]);
+        if (faceVertices.Count >= 3)
+        {
+          faces.Add(faceVertices.Count);
+          faces.AddRange(faceVertices);
+        }
       }
     }
 

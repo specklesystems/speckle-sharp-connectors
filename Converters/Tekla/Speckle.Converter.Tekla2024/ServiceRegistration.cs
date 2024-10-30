@@ -1,5 +1,7 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
+using Speckle.Converter.Tekla2024.ToSpeckle.TopLevel;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Registration;
 using Speckle.Sdk;
@@ -12,9 +14,13 @@ public static class ServiceRegistration
   public static IServiceCollection AddTeklaConverters(this IServiceCollection serviceCollection)
   {
     var converterAssembly = Assembly.GetExecutingAssembly();
-    serviceCollection.AddMatchingInterfacesAsTransient(converterAssembly);
-    serviceCollection.AddRootCommon<RootToSpeckleConverter>(converterAssembly);
 
+    serviceCollection.AddTransient<ModelObjectToSpeckleConverter>();
+
+    serviceCollection.AddScoped<DisplayValueExtractor>();
+    serviceCollection.AddScoped<PropertyExtractor>();
+
+    serviceCollection.AddRootCommon<TeklaRootToSpeckleConverter>(converterAssembly);
     serviceCollection.AddApplicationConverters<TeklaToSpeckleUnitConverter, Units>(converterAssembly);
     serviceCollection.AddScoped<
       IConverterSettingsStore<TeklaConversionSettings>,
