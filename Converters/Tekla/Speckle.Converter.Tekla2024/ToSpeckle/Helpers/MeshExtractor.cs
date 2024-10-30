@@ -6,85 +6,74 @@ namespace Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
 
 public class MeshExtractor : ITypedConverter<TSM.Solid, SOG.Mesh>
 {
-  private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
+    private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
 
-  public MeshExtractor(IConverterSettingsStore<TeklaConversionSettings> settingsStore)
-  {
-    _settingsStore = settingsStore;
-  }
-
-  public SOG.Mesh Convert(TSM.Solid target)
-  {
-    var faceEnum = target.GetFaceEnumerator();
-    List<double> vertices = new List<double>();
-    List<int> faces = new List<int>();
-    Dictionary<string, int> uniqueVertices = new Dictionary<string, int>();
-    int currentIndex = 0;
-
-    while (faceEnum.MoveNext())
+    public MeshExtractor(IConverterSettingsStore<TeklaConversionSettings> settingsStore)
     {
-      var face = faceEnum.Current;
-      if (face == null)
-      {
-        continue;
-      }
-
-      var loopEnum = face.GetLoopEnumerator();
-      if (!loopEnum.MoveNext())
-      {
-        continue;
-      }
-
-      var loop = loopEnum.Current;
-      if (loop == null)
-      {
-        continue;
-      }
-
-      var corners = new List<int>();
-      var vertexEnum = loop.GetVertexEnumerator();
-
-      while (vertexEnum.MoveNext())
-      {
-        var vertex = vertexEnum.Current;
-        if (vertex == null)
-        {
-          continue;
-        }
-
-        string vertexKey = $"{vertex.X:F8},{vertex.Y:F8},{vertex.Z:F8}";
-
-        if (!uniqueVertices.TryGetValue(vertexKey, out int value))
-        {
-          value = currentIndex++;
-          uniqueVertices[vertexKey] = value;
-          vertices.Add(vertex.X);
-          vertices.Add(vertex.Y);
-          vertices.Add(vertex.Z);
-        }
-
-        corners.Add(value);
-      }
-
-      if (corners.Count == 4)
-      {
-        faces.Add(3);
-        faces.Add(corners[0]);
-        faces.Add(corners[1]);
-        faces.Add(corners[2]);
-
-        faces.Add(3);
-        faces.Add(corners[0]);
-        faces.Add(corners[2]);
-        faces.Add(corners[3]);
-      }
+        _settingsStore = settingsStore;
     }
 
-    return new SOG.Mesh
+    public SOG.Mesh Convert(TSM.Solid target)
     {
-      vertices = vertices,
-      faces = faces,
-      units = _settingsStore.Current.SpeckleUnits
-    };
-  }
+        List<double> vertices = new List<double>();
+        List<int> faces = new List<int>();
+        Dictionary<TG.Point, int> vertexIndices = new Dictionary<TG.Point, int>();
+        int currentIndex = 0;
+
+        var faceEnum = target.GetFaceEnumerator();
+        while (faceEnum.MoveNext())
+        {
+            var face = faceEnum.Current;
+            if (face == null)
+            {
+              continue;
+            }
+
+            var loopEnum = face.GetLoopEnumerator();
+            while (loopEnum.MoveNext())
+            {
+                var loop = loopEnum.Current;
+                if (loop == null)
+                {
+                  continue;
+                }
+
+                var faceVertices = new List<int>();
+                var vertexEnum = loop.GetVertexEnumerator();
+
+                while (vertexEnum.MoveNext())
+                {
+                    var vertex = vertexEnum.Current;
+                    if (vertex == null)
+                    {
+                      continue;
+                    }
+
+                    if (!vertexIndices.TryGetValue(vertex, out int value))
+                    {
+                      value = currentIndex++;
+                      vertexIndices[vertex] = value;
+                      vertices.Add(vertex.X);
+                      vertices.Add(vertex.Y);
+                      vertices.Add(vertex.Z);
+                    }
+
+                    faceVertices.Add(value);
+                }
+
+                if (faceVertices.Count >= 3)
+                {
+                    faces.Add(faceVertices.Count);
+                    faces.AddRange(faceVertices);
+                }
+            }
+        }
+
+        return new SOG.Mesh
+        {
+            vertices = vertices,
+            faces = faces,
+            units = _settingsStore.Current.SpeckleUnits
+        };
+    }
 }
