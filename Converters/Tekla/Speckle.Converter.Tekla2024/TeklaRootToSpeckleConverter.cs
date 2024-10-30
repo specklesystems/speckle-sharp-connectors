@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Speckle.Converter.Tekla2024.Extensions;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
@@ -38,7 +39,7 @@ public class TeklaRootToSpeckleConverter : IRootToSpeckleConverter
     Base result = objectConverter.Convert(target);
 
     // add tekla specific identifiers
-    result.applicationId = modelObject.Identifier.GUID.ToString();
+    result.applicationId = modelObject.GetSpeckleApplicationId();
     //TODO: attach properties
 
     return result;
