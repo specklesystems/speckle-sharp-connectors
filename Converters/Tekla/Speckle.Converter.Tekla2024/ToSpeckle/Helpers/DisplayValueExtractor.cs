@@ -26,11 +26,16 @@ public sealed class DisplayValueExtractor
       // both beam and contour plate are child classes of part
       // its simpler to use part for common methods
       case TSM.Part part:
-        var solid = part.GetSolid();
-        if (solid != null)
+        if (part.GetSolid() is TSM.Solid partSolid)
         {
-          var mesh = _meshConverter.Convert(solid);
-          yield return mesh;
+          yield return _meshConverter.Convert(partSolid);
+        }
+        break;
+
+      case TSM.BoltGroup boltGroup:
+        if (boltGroup.GetSolid() is TSM.Solid boltSolid)
+        {
+          yield return _meshConverter.Convert(boltSolid);
         }
         break;
 

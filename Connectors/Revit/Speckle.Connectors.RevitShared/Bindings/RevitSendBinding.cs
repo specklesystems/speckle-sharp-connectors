@@ -16,6 +16,7 @@ using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
+using Speckle.Connectors.RevitShared.Operations.Send.Filters;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
@@ -27,6 +28,7 @@ namespace Speckle.Connectors.Revit.Bindings;
 internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 {
   private readonly IRevitIdleManager _idleManager;
+  private readonly APIContext _apiContext;
   private readonly CancellationManager _cancellationManager;
   private readonly IServiceProvider _serviceProvider;
   private readonly ISendConversionCache _sendConversionCache;
@@ -43,7 +45,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   /// As to why a concurrent dictionary, it's because it's the cheapest/easiest way to do so.
   /// https://stackoverflow.com/questions/18922985/concurrent-hashsett-in-net-framework
   /// </summary>
-  private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
+  private ConcurrentDictionary<ElementId, byte> ChangedObjectIds { get; set; } = new();
 
   /// <summary>
   /// We need it to get UniqueId whenever it is not available i.e. GetDeletedElementIds returns ElementId and cannot find its Element to get UniqueId. We store them both just before send to remember later.
@@ -53,6 +55,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   public RevitSendBinding(
     IRevitIdleManager idleManager,
     RevitContext revitContext,
+    APIContext apiContext,
     DocumentModelStore store,
     CancellationManager cancellationManager,
     IBrowserBridge bridge,
@@ -68,6 +71,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     : base("sendBinding", store, bridge, revitContext)
   {
     _idleManager = idleManager;
+    _apiContext = apiContext;
     _cancellationManager = cancellationManager;
     _serviceProvider = serviceProvider;
     _sendConversionCache = sendConversionCache;
@@ -91,10 +95,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged().ConfigureAwait(false));
   }
 
-  public List<ISendFilter> GetSendFilters()
-  {
-    return new List<ISendFilter> { new RevitSelectionFilter() { IsDefault = true } };
-  }
+  public List<ISendFilter> GetSendFilters() =>
+    [new RevitSelectionFilter() { IsDefault = true }, new RevitViewsFilter(RevitContext, _apiContext)];
 
   public List<ICardSetting> GetSendSettings() =>
     [
@@ -107,7 +109,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
   public SendBindingUICommands Commands { get; }
 
+#pragma warning disable CA1506
   public async Task Send(string modelCardId)
+#pragma warning restore CA1506
   {
     // Note: removed top level handling thing as it was confusing me
     try
@@ -125,9 +129,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         .ServiceProvider.GetRequiredService<IConverterSettingsStore<RevitConversionSettings>>()
         .Initialize(
           _revitConversionSettingsFactory.Create(
-            _toSpeckleSettingsManager.GetDetailLevelSetting(modelCard),
-            _toSpeckleSettingsManager.GetReferencePointSetting(modelCard),
-            _toSpeckleSettingsManager.GetSendParameterNullOrEmptyStringsSetting(modelCard)
+            await _toSpeckleSettingsManager.GetDetailLevelSetting(modelCard).ConfigureAwait(false),
+            await _toSpeckleSettingsManager.GetReferencePointSetting(modelCard).ConfigureAwait(false),
+            await _toSpeckleSettingsManager.GetSendParameterNullOrEmptyStringsSetting(modelCard).ConfigureAwait(false)
           )
         );
 
@@ -135,9 +139,16 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         RevitContext.UIApplication?.ActiveUIDocument
         ?? throw new SpeckleException("Unable to retrieve active UI document");
 
-      List<Element> elements = modelCard
-        .SendFilter.NotNull()
-        .GetObjectIds()
+      if (modelCard.SendFilter is RevitViewsFilter viewFilter)
+      {
+        viewFilter.SetContext(RevitContext, _apiContext);
+      }
+
+      var selectedObjects = await _apiContext
+        .Run(_ => modelCard.SendFilter.NotNull().GetObjectIds())
+        .ConfigureAwait(false);
+
+      List<Element> elements = selectedObjects
         .Select(uid => activeUIDoc.Document.GetElement(uid))
         .Where(el => el is not null)
         .ToList();
@@ -187,7 +198,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   /// a filter refresh (e.g., views being added).
   /// </summary>
   /// <param name="e"></param>
-  private void DocChangeHandler(Autodesk.Revit.DB.Events.DocumentChangedEventArgs e)
+  private async Task DocChangeHandler(Autodesk.Revit.DB.Events.DocumentChangedEventArgs e)
   {
     ICollection<ElementId> addedElementIds = e.GetAddedElementIds();
     ICollection<ElementId> deletedElementIds = e.GetDeletedElementIds();
@@ -195,26 +206,39 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     foreach (ElementId elementId in addedElementIds)
     {
-      ChangedObjectIds[elementId.ToString()] = 1;
+      ChangedObjectIds[elementId] = 1;
     }
 
     foreach (ElementId elementId in deletedElementIds)
     {
-      ChangedObjectIds[elementId.ToString()] = 1;
+      ChangedObjectIds[elementId] = 1;
     }
 
     foreach (ElementId elementId in modifiedElementIds)
     {
-      ChangedObjectIds[elementId.ToString()] = 1;
+      ChangedObjectIds[elementId] = 1;
     }
 
     if (HaveUnitsChanged(e.GetDocument()))
     {
-      var objectIds = Store.GetSenders().SelectMany(s => s.SendFilter != null ? s.SendFilter.GetObjectIds() : []);
+      var objectIds = new List<string>();
+      foreach (var sender in Store.GetSenders())
+      {
+        if (sender.SendFilter is null)
+        {
+          continue;
+        }
+        var selectedObjects = await _apiContext
+          .Run(_ => sender.SendFilter.NotNull().GetObjectIds())
+          .ConfigureAwait(false);
+        objectIds.AddRange(selectedObjects);
+      }
       var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds.ToList());
       _sendConversionCache.EvictObjects(unpackedObjectIds);
     }
-    _idleManager.SubscribeToIdle(nameof(RevitSendBinding), RunExpirationChecks);
+
+    _idleManager.SubscribeToIdle(nameof(CheckFilterExpiration), CheckFilterExpiration);
+    _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
   }
 
   // Keeps track of doc and current units
@@ -251,6 +275,26 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     return false;
   }
 
+  /// <summary>
+  /// Notifies ui if any filters need refreshing. Currently, this only applies for view filters.
+  /// </summary>
+  private async Task CheckFilterExpiration()
+  {
+    // NOTE: below code seems like more make sense in terms of performance but it causes unmanaged exception on Revit
+    // using var viewCollector = new FilteredElementCollector(RevitContext.UIApplication?.ActiveUIDocument.Document);
+    // var views = viewCollector.OfClass(typeof(View)).Cast<View>().Select(v => v.Id).ToList();
+    // var intersection = ChangedObjectIds.Keys.Intersect(views).ToList();
+    // if (intersection.Count != 0)
+    // {
+    //    await Commands.RefreshSendFilters().ConfigureAwait(false);
+    // }
+
+    if (ChangedObjectIds.Keys.Any(e => RevitContext.UIApplication?.ActiveUIDocument.Document.GetElement(e) is View))
+    {
+      await Commands.RefreshSendFilters().ConfigureAwait(false);
+    }
+  }
+
   private async Task RunExpirationChecks()
   {
     var senders = Store.GetSenders();
@@ -263,11 +307,17 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     }
 
     var objUniqueIds = new List<string>();
-    foreach (string changedElementId in ChangedObjectIds.Keys.ToArray())
+    foreach (var changedElementId in ChangedObjectIds.Keys.ToArray())
     {
-      if (IdMap.TryGetValue(changedElementId, out var uniqueId))
+      if (IdMap.TryGetValue(changedElementId.ToString(), out var uniqueId))
       {
         objUniqueIds.Add(uniqueId);
+      }
+      else
+      {
+        var uniqId = doc.GetElement(changedElementId).UniqueId;
+        objUniqueIds.Add(uniqId);
+        IdMap[changedElementId.ToString()] = uniqId;
       }
     }
 
@@ -278,7 +328,14 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     List<string> expiredSenderIds = new();
     foreach (SenderModelCard modelCard in senders)
     {
-      var intersection = modelCard.SendFilter.NotNull().GetObjectIds().Intersect(objUniqueIds).ToList();
+      if (modelCard.SendFilter is RevitViewsFilter viewFilter)
+      {
+        viewFilter.SetContext(RevitContext, _apiContext);
+      }
+      var selectedObjects = await _apiContext
+        .Run(_ => modelCard.SendFilter.NotNull().GetObjectIds())
+        .ConfigureAwait(false);
+      var intersection = selectedObjects.Intersect(objUniqueIds).ToList();
       bool isExpired = intersection.Count != 0;
       if (isExpired)
       {
