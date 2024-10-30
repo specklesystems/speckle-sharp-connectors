@@ -1,28 +1,27 @@
 using Microsoft.Extensions.Logging;
-using Speckle.Connector.Tekla2024.HostApp;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Converter.Tekla2024;
+using Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
-using Tekla.Structures.Model;
 using Task = System.Threading.Tasks.Task;
 
 namespace Speckle.Connector.Tekla2024.Operations.Send;
 
-public class TeklaRootObjectBuilder : IRootObjectBuilder<ModelObject>
+public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
 {
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IConverterSettingsStore<TeklaConversionSettings> _converterSettings;
   private readonly ILogger<TeklaRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
-  private readonly ComponentUnpacker _componentUnpacker;
+  private readonly ColorHandler _colorHandler;
 
   public TeklaRootObjectBuilder(
     IRootToSpeckleConverter rootToSpeckleConverter,
@@ -30,7 +29,7 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<ModelObject>
     IConverterSettingsStore<TeklaConversionSettings> converterSettings,
     ILogger<TeklaRootObjectBuilder> logger,
     ISdkActivityFactory activityFactory,
-    ComponentUnpacker componentUnpacker
+    ColorHandler colorHandler
   )
   {
     _sendConversionCache = sendConversionCache;
@@ -38,11 +37,11 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<ModelObject>
     _rootToSpeckleConverter = rootToSpeckleConverter;
     _logger = logger;
     _activityFactory = activityFactory;
-    _componentUnpacker = componentUnpacker;
+    _colorHandler = colorHandler;
   }
 
   public async Task<RootObjectBuilderResult> Build(
-    IReadOnlyList<ModelObject> teklaObjects,
+    IReadOnlyList<TSM.ModelObject> teklaObjects,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken = default
@@ -50,22 +49,18 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<ModelObject>
   {
     using var activity = _activityFactory.Start("Build");
 
-    var model = new Model();
+    var model = new TSM.Model();
     string modelName = model.GetInfo().ModelName ?? "Unnamed model";
 
     Collection rootObjectCollection = new() { name = modelName };
     rootObjectCollection["units"] = _converterSettings.Current.SpeckleUnits;
-
-    // Step 0: unpack all component model objects
-    List<TSM.ModelObject> unpackedTeklaObjects = _componentUnpacker.UnpackComponents(teklaObjects).ToList();
-    rootObjectCollection["componentProxies"] = _componentUnpacker.ComponentProxiesCache.Values;
 
     List<SendConversionResult> results = new(teklaObjects.Count);
     int count = 0;
 
     using (var _ = _activityFactory.Start("Convert all"))
     {
-      foreach (ModelObject teklaObject in unpackedTeklaObjects)
+      foreach (TSM.ModelObject teklaObject in teklaObjects)
       {
         using var _2 = _activityFactory.Start("Convert");
         cancellationToken.ThrowIfCancellationRequested();
@@ -83,11 +78,21 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<ModelObject>
       throw new SpeckleException("Failed to convert all objects.");
     }
 
+    // add colors to root collection
+    if (_colorHandler.ColorProxiesCache.Count > 0)
+    {
+      rootObjectCollection[ProxyKeys.COLOR] = _colorHandler.ColorProxiesCache.Values.ToList();
+    }
+
     await Task.Yield();
     return new RootObjectBuilderResult(rootObjectCollection, results);
   }
 
-  private SendConversionResult ConvertTeklaObject(ModelObject teklaObject, Collection collectionHost, string projectId)
+  private SendConversionResult ConvertTeklaObject(
+    TSM.ModelObject teklaObject,
+    Collection collectionHost,
+    string projectId
+  )
   {
     string applicationId = teklaObject.Identifier.ToString();
     string sourceType = teklaObject.GetType().Name;

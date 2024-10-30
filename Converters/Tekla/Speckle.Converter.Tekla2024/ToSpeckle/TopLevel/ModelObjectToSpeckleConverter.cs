@@ -11,16 +11,19 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
   private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly PropertyExtractor _propertyExtractor;
+  private readonly ColorHandler _colorHandler;
 
   public ModelObjectToSpeckleConverter(
     IConverterSettingsStore<TeklaConversionSettings> settingsStore,
     DisplayValueExtractor displayValueExtractor,
-    PropertyExtractor propertyExtractor
+    PropertyExtractor propertyExtractor,
+    ColorHandler colorHandler
   )
   {
     _settingsStore = settingsStore;
     _displayValueExtractor = displayValueExtractor;
     _propertyExtractor = propertyExtractor;
+    _colorHandler = colorHandler;
   }
 
   public Base Convert(object target)
@@ -50,6 +53,24 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
       result["displayValue"] = displayValue;
     }
 
+    // get children
+    List<Base> children = GetModelObjectChildren(modelObject).ToList();
+    if (children.Count > 0)
+    {
+      result["elements"] = children;
+    }
+
+    // process color
+    _colorHandler.ProcessColor(modelObject);
+
     return result;
+  }
+
+  private IEnumerable<Base> GetModelObjectChildren(TSM.ModelObject modelObject)
+  {
+    foreach (TSM.ModelObject childObject in modelObject.GetChildren())
+    {
+      yield return Convert(childObject);
+    }
   }
 }

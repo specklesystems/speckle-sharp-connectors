@@ -39,6 +39,13 @@ public sealed class DisplayValueExtractor
         }
         break;
 
+      case TSM.Reinforcement reinforcement:
+        if (reinforcement.GetSolid() is TSM.Solid reinforcementSolid)
+        {
+          yield return _meshConverter.Convert(reinforcementSolid);
+        }
+        break;
+
       default:
         yield break;
     }
