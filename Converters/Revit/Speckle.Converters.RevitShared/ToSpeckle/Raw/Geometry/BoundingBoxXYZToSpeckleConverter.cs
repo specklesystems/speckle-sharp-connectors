@@ -41,7 +41,7 @@ public class BoundingBoxXYZToSpeckleConverter : ITypedConverter<DB.BoundingBoxXY
       xSize = new Interval { start = min.x, end = max.x },
       ySize = new Interval { start = min.y, end = max.y },
       zSize = new Interval { start = min.z, end = max.z },
-      basePlane = _planeConverter.Convert(plane),
+      plane = _planeConverter.Convert(plane),
       units = _converterSettings.Current.SpeckleUnits
     };
 

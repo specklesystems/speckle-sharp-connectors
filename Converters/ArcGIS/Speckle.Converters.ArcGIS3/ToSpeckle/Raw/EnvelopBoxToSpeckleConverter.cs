@@ -50,7 +50,7 @@ public class EnvelopToSpeckleConverter : ITypedConverter<Envelope, SOG.Box>
 
     return new SOG.Box()
     {
-      basePlane = plane,
+      plane = plane,
       xSize = new Interval { start = minPtSpeckle.x, end = maxPtSpeckle.x },
       ySize = new Interval { start = minPtSpeckle.y, end = maxPtSpeckle.y },
       zSize = new Interval { start = minPtSpeckle.z, end = maxPtSpeckle.z },
