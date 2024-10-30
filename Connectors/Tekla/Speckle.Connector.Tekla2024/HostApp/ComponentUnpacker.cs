@@ -1,6 +1,4 @@
 using Speckle.Converter.Tekla2024.Extensions;
-using Speckle.Converters.Common.Objects;
-using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Connector.Tekla2024.HostApp;
