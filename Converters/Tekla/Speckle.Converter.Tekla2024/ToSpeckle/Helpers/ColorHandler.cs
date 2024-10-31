@@ -1,5 +1,4 @@
 using Speckle.Converter.Tekla2024.Extensions;
-using Speckle.Converters.Common;
 using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
@@ -8,12 +7,7 @@ public class ColorHandler
 {
   public Dictionary<string, ColorProxy> ColorProxiesCache { get; } = new();
 
-  private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
-
-  public ColorHandler(IConverterSettingsStore<TeklaConversionSettings> settingsStore)
-  {
-    _settingsStore = settingsStore;
-  }
+  public ColorHandler() { }
 
   public void ProcessColor(TSM.ModelObject modelObject)
   {

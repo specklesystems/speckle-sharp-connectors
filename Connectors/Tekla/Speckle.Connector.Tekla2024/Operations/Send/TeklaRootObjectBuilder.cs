@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Speckle.Connector.Tekla2024.Extensions;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
@@ -94,7 +95,7 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
     string projectId
   )
   {
-    string applicationId = teklaObject.Identifier.ToString();
+    string applicationId = teklaObject.GetSpeckleApplicationId();
     string sourceType = teklaObject.GetType().Name;
 
     try
@@ -107,7 +108,6 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
       else
       {
         converted = _rootToSpeckleConverter.Convert(teklaObject);
-        converted.applicationId = applicationId;
       }
 
       // Add to host collection
