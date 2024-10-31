@@ -69,14 +69,13 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
   private List<Base> GetModelObjectChildren(TSM.ModelObject modelObject)
   {
     List<Base> children = new();
-    switch (modelObject)
-    {
-      case TSM.Part:
-        return children;
-    }
-
+    
     foreach (TSM.ModelObject childObject in modelObject.GetChildren())
     {
+      if (childObject is TSM.ControlPoint or TSM.Weld or TSM.Fitting)
+      {
+        continue;
+      }
       children.Add(Convert(childObject));
     }
     return children;
