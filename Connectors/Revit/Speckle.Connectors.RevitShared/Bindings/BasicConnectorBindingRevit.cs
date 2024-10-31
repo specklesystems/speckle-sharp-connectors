@@ -106,9 +106,13 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
     if (model is SenderModelCard senderModelCard)
     {
+      if (senderModelCard.SendFilter is IRevitSendFilter revitFilter)
+      {
+        revitFilter.SetContext(_revitContext, _apiContext);
+      }
+
       if (senderModelCard.SendFilter is RevitViewsFilter revitViewsFilter)
       {
-        revitViewsFilter.SetContext(_revitContext, _apiContext);
         await _apiContext
           .Run(() =>
           {
