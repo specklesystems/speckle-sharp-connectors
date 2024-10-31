@@ -1,11 +1,11 @@
 using Microsoft.Extensions.Logging;
 using Speckle.Connector.Tekla2024.Extensions;
+using Speckle.Connector.Tekla2024.HostApp;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Converter.Tekla2024;
-using Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
@@ -22,7 +22,7 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
   private readonly IConverterSettingsStore<TeklaConversionSettings> _converterSettings;
   private readonly ILogger<TeklaRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
-  private readonly ColorHandler _colorHandler;
+  private readonly TeklaMaterialUnpacker _materialUnpacker;
 
   public TeklaRootObjectBuilder(
     IRootToSpeckleConverter rootToSpeckleConverter,
@@ -30,7 +30,7 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
     IConverterSettingsStore<TeklaConversionSettings> converterSettings,
     ILogger<TeklaRootObjectBuilder> logger,
     ISdkActivityFactory activityFactory,
-    ColorHandler colorHandler
+    TeklaMaterialUnpacker materialUnpacker
   )
   {
     _sendConversionCache = sendConversionCache;
@@ -38,7 +38,7 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
     _rootToSpeckleConverter = rootToSpeckleConverter;
     _logger = logger;
     _activityFactory = activityFactory;
-    _colorHandler = colorHandler;
+    _materialUnpacker = materialUnpacker;
   }
 
   public async Task<RootObjectBuilderResult> Build(
@@ -79,12 +79,7 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
       throw new SpeckleException("Failed to convert all objects.");
     }
 
-    // add colors to root collection
-    if (_colorHandler.RenderMaterialProxiesCache.Count > 0)
-    {
-      rootObjectCollection[ProxyKeys.COLOR] = _colorHandler.ColorProxiesCache.Values.ToList();
-      rootObjectCollection[ProxyKeys.RENDER_MATERIAL] = _colorHandler.RenderMaterialProxiesCache.Values.ToList();
-    }
+    rootObjectCollection[ProxyKeys.RENDER_MATERIAL] = _materialUnpacker.UnpackRenderMaterial(teklaObjects.ToList());
 
     await Task.Yield();
     return new RootObjectBuilderResult(rootObjectCollection, results);
