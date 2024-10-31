@@ -1,4 +1,6 @@
+using System.Drawing;
 using Speckle.Converter.Tekla2024.Extensions;
+using Speckle.Objects.Other;
 using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
@@ -6,6 +8,7 @@ namespace Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
 public class ColorHandler
 {
   public Dictionary<string, ColorProxy> ColorProxiesCache { get; } = new();
+  public Dictionary<string, RenderMaterialProxy> RenderMaterialProxiesCache { get; } = new();
 
   public ColorHandler() { }
 
@@ -18,9 +21,11 @@ public class ColorHandler
     int b = (int)(color.Blue * 255);
     int a = (int)(color.Transparency * 255);
     int argb = (a << 24) | (r << 16) | (g << 8) | b;
+    
+    System.Drawing.Color systemColor = System.Drawing.Color.FromArgb(argb);
 
     MakeAndCacheColorProxy(
-      argb,
+      systemColor,
       color.ToString(),
       color.GetSpeckleApplicationId(),
       modelObject.GetSpeckleApplicationId()
@@ -87,14 +92,15 @@ public class ColorHandler
     }
   */
 
-  private void MakeAndCacheColorProxy(int color, string name, string colorId, string objId)
+  private void MakeAndCacheColorProxy(Color systemColor, string name, string colorId, string objId)
   {
-    if (ColorProxiesCache.TryGetValue(colorId, out ColorProxy colorProxy))
+    if (RenderMaterialProxiesCache.TryGetValue(colorId, out RenderMaterialProxy renderMaterialProxy))
     {
-      colorProxy.objects.Add(objId);
+      renderMaterialProxy.objects.Add(objId);
     }
     else
     {
+      /*
       ColorProxy newColorProxy =
         new()
         {
@@ -103,8 +109,19 @@ public class ColorHandler
           objects = new() { objId },
           applicationId = colorId
         };
+        */
 
-      ColorProxiesCache.Add(colorId, newColorProxy);
+      var renderMaterial = new RenderMaterial() { name = name , diffuseColor = systemColor};
+      RenderMaterialProxy proxyRenderMaterial =
+        new()
+        {
+          value = renderMaterial,
+          objects = new() { objId },
+          applicationId = colorId
+        };
+      
+      RenderMaterialProxiesCache.Add(colorId, proxyRenderMaterial);
+      //ColorProxiesCache.Add(colorId, newColorProxy);
     }
   }
 }

@@ -80,9 +80,10 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
     }
 
     // add colors to root collection
-    if (_colorHandler.ColorProxiesCache.Count > 0)
+    if (_colorHandler.RenderMaterialProxiesCache.Count > 0)
     {
       rootObjectCollection[ProxyKeys.COLOR] = _colorHandler.ColorProxiesCache.Values.ToList();
+      rootObjectCollection[ProxyKeys.RENDER_MATERIAL] = _colorHandler.RenderMaterialProxiesCache.Values.ToList();
     }
 
     await Task.Yield();
