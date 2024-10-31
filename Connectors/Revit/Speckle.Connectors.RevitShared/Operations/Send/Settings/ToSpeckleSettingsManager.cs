@@ -14,6 +14,7 @@ namespace Speckle.Connectors.Revit.Operations.Send.Settings;
 public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 {
   private readonly RevitContext _revitContext;
+  private readonly APIContext _apiContext;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ElementUnpacker _elementUnpacker;
 
@@ -24,16 +25,18 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 
   public ToSpeckleSettingsManager(
     RevitContext revitContext,
+    APIContext apiContext,
     ISendConversionCache sendConversionCache,
     ElementUnpacker elementUnpacker
   )
   {
     _revitContext = revitContext;
+    _apiContext = apiContext;
     _elementUnpacker = elementUnpacker;
     _sendConversionCache = sendConversionCache;
   }
 
-  public DetailLevelType GetDetailLevelSetting(SenderModelCard modelCard)
+  public async Task<DetailLevelType> GetDetailLevelSetting(SenderModelCard modelCard)
   {
     var fidelityString = modelCard.Settings?.First(s => s.Id == "detailLevel").Value as string;
     if (
@@ -45,7 +48,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
       {
         if (previousType != fidelity)
         {
-          EvictCacheForModelCard(modelCard);
+          await EvictCacheForModelCard(modelCard).ConfigureAwait(false);
         }
       }
       _detailLevelCache[modelCard.ModelCardId.NotNull()] = fidelity;
@@ -55,7 +58,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     throw new ArgumentException($"Invalid geometry fidelity value: {fidelityString}");
   }
 
-  public Transform? GetReferencePointSetting(SenderModelCard modelCard)
+  public async Task<Transform?> GetReferencePointSetting(SenderModelCard modelCard)
   {
     var referencePointString = modelCard.Settings?.First(s => s.Id == "referencePoint").Value as string;
     if (
@@ -75,7 +78,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
         // invalidate conversion cache if the transform has changed
         if (previousTransform != currentTransform)
         {
-          EvictCacheForModelCard(modelCard);
+          await EvictCacheForModelCard(modelCard).ConfigureAwait(false);
         }
       }
 
@@ -86,7 +89,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     throw new ArgumentException($"Invalid reference point value: {referencePointString}");
   }
 
-  public bool GetSendParameterNullOrEmptyStringsSetting(SenderModelCard modelCard)
+  public async Task<bool> GetSendParameterNullOrEmptyStringsSetting(SenderModelCard modelCard)
   {
     var value = modelCard.Settings?.First(s => s.Id == "nullemptyparams").Value as bool?;
     var returnValue = value != null && value.NotNull();
@@ -94,7 +97,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     {
       if (previousValue != returnValue)
       {
-        EvictCacheForModelCard(modelCard);
+        await EvictCacheForModelCard(modelCard).ConfigureAwait(false);
       }
     }
 
@@ -102,9 +105,12 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     return returnValue;
   }
 
-  private void EvictCacheForModelCard(SenderModelCard modelCard)
+  private async Task EvictCacheForModelCard(SenderModelCard modelCard)
   {
-    var objectIds = modelCard.SendFilter != null ? modelCard.SendFilter.GetObjectIds() : [];
+    var objectIds =
+      modelCard.SendFilter != null
+        ? await _apiContext.Run(_ => modelCard.SendFilter.NotNull().GetObjectIds()).ConfigureAwait(false)
+        : [];
     var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds);
     _sendConversionCache.EvictObjects(unpackedObjectIds);
   }
