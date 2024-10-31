@@ -1,7 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Models;
-using SOG = Speckle.Objects.Geometry;
 
 namespace Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
 
