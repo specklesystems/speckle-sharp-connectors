@@ -54,7 +54,7 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
     }
 
     // get children
-    List<Base> children = GetModelObjectChildren(modelObject).ToList();
+    List<Base> children = GetModelObjectChildren(modelObject);
     if (children.Count > 0)
     {
       result["elements"] = children;
@@ -66,11 +66,13 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
     return result;
   }
 
-  private IEnumerable<Base> GetModelObjectChildren(TSM.ModelObject modelObject)
+  private List<Base> GetModelObjectChildren(TSM.ModelObject modelObject)
   {
+    List<Base> children = new();
     foreach (TSM.ModelObject childObject in modelObject.GetChildren())
     {
-      yield return Convert(childObject);
+      children.Add(Convert(childObject));
     }
+    return children;
   }
 }
