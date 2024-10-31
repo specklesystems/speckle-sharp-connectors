@@ -18,7 +18,7 @@ public class PassthroughProgress : IProgress<ProgressArgs>
 
   public void Report(ProgressArgs value)
   {
-    if (value.ProgressEvent == ProgressEvent.DownloadBytes)
+    if (value.ProgressEvent == ProgressEvent.DownloadBytes || value.ProgressEvent == ProgressEvent.UploadBytes)
     {
       long totalBytes;
       lock (_totals)

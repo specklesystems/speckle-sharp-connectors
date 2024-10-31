@@ -59,24 +59,39 @@ public sealed class RootObjectSender : IRootObjectSender
     CancellationToken ct = default
   )
   {
+    using var activity = _activityFactory.Start("Send Operation");
     ct.ThrowIfCancellationRequested();
 
     onOperationProgressed.Report(new("Uploading...", null));
 
     Account account = _accountService.GetAccountWithServerUrlFallback(sendInfo.AccountId, sendInfo.ServerUrl);
     using var userScope = ActivityScope.SetTag(Consts.USER_ID, account.GetHashedEmail());
-    using var activity = _activityFactory.Start("SendOperation");
 
     using var transport = _transportFactory.Create(account, sendInfo.ProjectId, 60, null);
 
+    double? previousPercentage = null;
+    string previousSpeed = string.Empty;
     _progressDisplayManager.Begin();
     var sendResult = await _operations
-      .Send(
+      .Send2(
+        new Uri(account.serverInfo.url),
+        sendInfo.ProjectId,
+        account.token,
         commitObject,
-        transport,
-        true,
         onProgressAction: new PassthroughProgress(args =>
         {
+          if (args.ProgressEvent == ProgressEvent.CacheCheck || args.ProgressEvent == ProgressEvent.UploadBytes)
+          {
+            switch (args.ProgressEvent)
+            {
+              case ProgressEvent.CacheCheck:
+                previousPercentage = _progressDisplayManager.CalculatePercentage(args);
+                break;
+              case ProgressEvent.UploadBytes:
+                previousSpeed = _progressDisplayManager.CalculateSpeed(args);
+                break;
+            }
+          }
           if (!_progressDisplayManager.ShouldUpdate())
           {
             return;
@@ -84,24 +99,12 @@ public sealed class RootObjectSender : IRootObjectSender
 
           switch (args.ProgressEvent)
           {
-            case ProgressEvent.UploadBytes: //TODO: These progress calls are not awaited
-              onOperationProgressed.Report(
-                new(
-                  $"Uploading ({_progressDisplayManager.CalculateSpeed(args)})",
-                  _progressDisplayManager.CalculatePercentage(args)
-                )
-              );
-              break;
-            case ProgressEvent.UploadObject:
-              onOperationProgressed.Report(new("Uploading Root Object...", null));
+            case ProgressEvent.CacheCheck:
+            case ProgressEvent.UploadBytes:
+              onOperationProgressed.Report(new($"Checking and Uploading... ({previousSpeed})", previousPercentage));
               break;
             case ProgressEvent.SerializeObject:
-              onOperationProgressed.Report(
-                new(
-                  $"Serializing ({_progressDisplayManager.CalculateSpeed(args)})",
-                  _progressDisplayManager.CalculatePercentage(args)
-                )
-              );
+              onOperationProgressed.Report(new($"Serializing ({_progressDisplayManager.CalculateSpeed(args)})", null));
               break;
           }
         }),

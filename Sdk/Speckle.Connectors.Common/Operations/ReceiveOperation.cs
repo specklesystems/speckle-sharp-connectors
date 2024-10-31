@@ -13,7 +13,6 @@ public sealed class ReceiveOperation
 {
   private readonly IHostObjectBuilder _hostObjectBuilder;
   private readonly AccountService _accountService;
-  private readonly IServerTransportFactory _serverTransportFactory;
   private readonly IProgressDisplayManager _progressDisplayManager;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly IOperations _operations;
@@ -22,7 +21,6 @@ public sealed class ReceiveOperation
   public ReceiveOperation(
     IHostObjectBuilder hostObjectBuilder,
     AccountService accountService,
-    IServerTransportFactory serverTransportFactory,
     IProgressDisplayManager progressDisplayManager,
     ISdkActivityFactory activityFactory,
     IOperations operations,
@@ -31,7 +29,6 @@ public sealed class ReceiveOperation
   {
     _hostObjectBuilder = hostObjectBuilder;
     _accountService = accountService;
-    _serverTransportFactory = serverTransportFactory;
     _progressDisplayManager = progressDisplayManager;
     _activityFactory = activityFactory;
     _operations = operations;
@@ -54,8 +51,6 @@ public sealed class ReceiveOperation
     var version = await apiClient
       .Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ModelId, receiveInfo.ProjectId, cancellationToken)
       .ConfigureAwait(false);
-
-    using var transport = _serverTransportFactory.Create(account, receiveInfo.ProjectId);
 
     double? previousPercentage = null;
     _progressDisplayManager.Begin();

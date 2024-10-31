@@ -178,6 +178,8 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Connectors.Civil3dS
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converter.Tekla2024", "Converters\Tekla\Speckle.Converter.Tekla2024\Speckle.Converter.Tekla2024.csproj", "{FBE49C59-F69E-4809-BB3A-F150BC408BB4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Sdk.Dependencies", "..\speckle-sharp-sdk\src\Speckle.Sdk.Dependencies\Speckle.Sdk.Dependencies.csproj", "{AD39359A-8041-4FE3-9C8B-235524E02CD9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -473,6 +475,12 @@ Global
 		{FBE49C59-F69E-4809-BB3A-F150BC408BB4}.Local|Any CPU.Build.0 = Local|Any CPU
 		{FBE49C59-F69E-4809-BB3A-F150BC408BB4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FBE49C59-F69E-4809-BB3A-F150BC408BB4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AD39359A-8041-4FE3-9C8B-235524E02CD9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AD39359A-8041-4FE3-9C8B-235524E02CD9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AD39359A-8041-4FE3-9C8B-235524E02CD9}.Local|Any CPU.ActiveCfg = Local|Any CPU
+		{AD39359A-8041-4FE3-9C8B-235524E02CD9}.Local|Any CPU.Build.0 = Local|Any CPU
+		{AD39359A-8041-4FE3-9C8B-235524E02CD9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AD39359A-8041-4FE3-9C8B-235524E02CD9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
