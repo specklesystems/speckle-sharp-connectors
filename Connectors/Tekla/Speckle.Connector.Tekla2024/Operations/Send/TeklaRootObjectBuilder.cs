@@ -79,8 +79,12 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
       throw new SpeckleException("Failed to convert all objects.");
     }
 
-    rootObjectCollection[ProxyKeys.RENDER_MATERIAL] = _materialUnpacker.UnpackRenderMaterial(teklaObjects.ToList());
-
+    var renderMaterialProxies = _materialUnpacker.UnpackRenderMaterial(teklaObjects.ToList());
+    if (renderMaterialProxies.Count > 0)
+    {
+      rootObjectCollection[ProxyKeys.RENDER_MATERIAL] = renderMaterialProxies;
+    }
+    
     await Task.Yield();
     return new RootObjectBuilderResult(rootObjectCollection, results);
   }

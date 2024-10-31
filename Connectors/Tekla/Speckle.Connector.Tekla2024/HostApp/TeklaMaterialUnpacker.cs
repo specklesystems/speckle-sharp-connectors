@@ -14,6 +14,7 @@ public class TeklaMaterialUnpacker
 
     foreach (var atomicObject in atomicObjects)
     {
+      flattenedAtomicObjects.Add(atomicObject);
       foreach (TSM.ModelObject child in atomicObject.GetChildren())
       {
         if (child is TSM.ControlPoint or TSM.Weld or TSM.Fitting)
@@ -28,8 +29,13 @@ public class TeklaMaterialUnpacker
     {
       var color = new TSMUI.Color();
       TSMUI.ModelObjectVisualization.GetRepresentation(flattenedAtomicObject, ref color);
+      int r = (int)(color.Red * 255);
+      int g = (int)(color.Green * 255);
+      int b = (int)(color.Blue * 255);
+      int a = (int)(color.Transparency * 255);
+      int argb = (a << 24) | (r << 16) | (g << 8) | b;
 
-      Color systemColor = Color.FromArgb((int)color.Transparency, (int)color.Red, (int)color.Green, (int)color.Blue);
+      Color systemColor = Color.FromArgb(argb);
 
       var colorId = systemColor.ToArgb().ToString();
       var objectId = flattenedAtomicObject.GetSpeckleApplicationId();
