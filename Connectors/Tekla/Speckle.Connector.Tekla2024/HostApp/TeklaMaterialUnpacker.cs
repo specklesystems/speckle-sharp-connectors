@@ -15,14 +15,7 @@ public class TeklaMaterialUnpacker
     foreach (var atomicObject in atomicObjects)
     {
       flattenedAtomicObjects.Add(atomicObject);
-      foreach (TSM.ModelObject child in atomicObject.GetChildren())
-      {
-        if (child is TSM.ControlPoint or TSM.Weld or TSM.Fitting)
-        {
-          continue;
-        }
-        flattenedAtomicObjects.Add(child);
-      }
+      flattenedAtomicObjects.AddRange(atomicObject.GetSupportedChildren().ToList());
     }
 
     foreach (TSM.ModelObject flattenedAtomicObject in flattenedAtomicObjects)
@@ -37,7 +30,7 @@ public class TeklaMaterialUnpacker
 
       Color systemColor = Color.FromArgb(argb);
 
-      var colorId = systemColor.ToArgb().ToString();
+      var colorId = color.GetSpeckleApplicationId();
       var objectId = flattenedAtomicObject.GetSpeckleApplicationId();
       if (renderMaterialProxies.TryGetValue(colorId, out RenderMaterialProxy? value))
       {

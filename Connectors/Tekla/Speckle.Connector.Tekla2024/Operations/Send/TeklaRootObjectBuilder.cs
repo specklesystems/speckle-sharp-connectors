@@ -84,7 +84,7 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
     {
       rootObjectCollection[ProxyKeys.RENDER_MATERIAL] = renderMaterialProxies;
     }
-    
+
     await Task.Yield();
     return new RootObjectBuilderResult(rootObjectCollection, results);
   }

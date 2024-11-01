@@ -22,6 +22,10 @@ public class SpeckleTeklaPanelHost : PluginFormBase
 
   public SpeckleTeklaPanelHost()
   {
+    this.Text = "Speckle";
+    this.Name = "Speckle";
+    //TODO: Add Speckle icon
+    // TODO: Add thumbnail to connector
     var services = new ServiceCollection();
     services.Initialize(HostApplications.TeklaStructures, GetVersion());
     services.AddTekla();

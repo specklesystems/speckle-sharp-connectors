@@ -19,7 +19,6 @@ public static class ServiceRegistration
 
     serviceCollection.AddScoped<DisplayValueExtractor>();
     serviceCollection.AddScoped<PropertyExtractor>();
-    serviceCollection.AddScoped<ColorHandler>();
 
     serviceCollection.AddRootCommon<TeklaRootToSpeckleConverter>(converterAssembly);
     serviceCollection.AddApplicationConverters<TeklaToSpeckleUnitConverter, Units>(converterAssembly);

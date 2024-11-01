@@ -15,7 +15,6 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Converter.Tekla2024;
-using Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Models.GraphTraversal;
@@ -70,8 +69,6 @@ public static class ServiceRegistration
 
     // Register unpackers and bakers
     services.AddScoped<TeklaMaterialUnpacker>();
-
-    services.AddScoped<ColorHandler>();
 
     services.AddMatchingInterfacesAsTransient(converterAssembly);
 

@@ -1,3 +1,4 @@
+using Speckle.Converter.Tekla2024.Extensions;
 using Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
@@ -11,19 +12,16 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
   private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly PropertyExtractor _propertyExtractor;
-  private readonly ColorHandler _colorHandler;
 
   public ModelObjectToSpeckleConverter(
     IConverterSettingsStore<TeklaConversionSettings> settingsStore,
     DisplayValueExtractor displayValueExtractor,
-    PropertyExtractor propertyExtractor,
-    ColorHandler colorHandler
+    PropertyExtractor propertyExtractor
   )
   {
     _settingsStore = settingsStore;
     _displayValueExtractor = displayValueExtractor;
     _propertyExtractor = propertyExtractor;
-    _colorHandler = colorHandler;
   }
 
   public Base Convert(object target)
@@ -36,7 +34,7 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
     var result = new Base
     {
       ["type"] = modelObject.GetType().ToString().Split('.').Last(),
-      ["units"] = _settingsStore.Current.SpeckleUnits
+      ["units"] = _settingsStore.Current.SpeckleUnits,
     };
 
     // get properties
@@ -54,30 +52,20 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
     }
 
     // get children
-    List<Base> children = GetModelObjectChildren(modelObject);
+    // POC: This logic should be same in the material unpacker in connector
+    List<Base> children = new();
+    foreach (TSM.ModelObject childObject in modelObject.GetSupportedChildren())
+    {
+      var child = Convert(childObject);
+      child.applicationId = childObject.GetSpeckleApplicationId();
+      children.Add(child);
+    }
+
     if (children.Count > 0)
     {
       result["elements"] = children;
     }
 
-    // process color
-    _colorHandler.ProcessColor(modelObject);
-
     return result;
-  }
-
-  private List<Base> GetModelObjectChildren(TSM.ModelObject modelObject)
-  {
-    List<Base> children = new();
-    
-    foreach (TSM.ModelObject childObject in modelObject.GetChildren())
-    {
-      if (childObject is TSM.ControlPoint or TSM.Weld or TSM.Fitting)
-      {
-        continue;
-      }
-      children.Add(Convert(childObject));
-    }
-    return children;
   }
 }
