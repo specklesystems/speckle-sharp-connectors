@@ -16,7 +16,6 @@ public class SolidToSpeckleConverter : ITypedConverter<TSM.Solid, SOG.Mesh>
   {
     List<double> vertices = new List<double>();
     List<int> faces = new List<int>();
-    Dictionary<TG.Point, int> vertexIndices = new Dictionary<TG.Point, int>();
     int currentIndex = 0;
 
     var faceEnum = target.GetFaceEnumerator();
@@ -48,16 +47,11 @@ public class SolidToSpeckleConverter : ITypedConverter<TSM.Solid, SOG.Mesh>
             continue;
           }
 
-          if (!vertexIndices.TryGetValue(vertex, out int value))
-          {
-            value = currentIndex++;
-            vertexIndices[vertex] = value;
-            vertices.Add(vertex.X);
-            vertices.Add(vertex.Y);
-            vertices.Add(vertex.Z);
-          }
-
-          faceVertices.Add(value);
+          int index = currentIndex++;
+          vertices.Add(vertex.X);
+          vertices.Add(vertex.Y);
+          vertices.Add(vertex.Z);
+          faceVertices.Add(index);
         }
 
         if (faceVertices.Count >= 3)
