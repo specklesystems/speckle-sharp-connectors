@@ -1,11 +1,11 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
-using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
+// Converts model curves to regurlar speckle curves, since we aren't receiving them and the only property used in V2 was the linestyle (not element ids or parameters). Don't see a need to handle these differently from regular geometry.
 [NameAndRankValue(nameof(DB.ModelCurve), 0)]
 public class ModelCurveToSpeckleTopLevelConverter : BaseTopLevelConverterToSpeckle<DB.ModelCurve, Base>
 {
@@ -16,25 +16,5 @@ public class ModelCurveToSpeckleTopLevelConverter : BaseTopLevelConverterToSpeck
     _curveConverter = curveConverter;
   }
 
-  public override Base Convert(DB.ModelCurve target)
-  {
-    ICurve? iCurve = _curveConverter.Convert(target.GeometryCurve);
-
-    switch (iCurve)
-    {
-      case SOG.Line line:
-        return new SOG.Revit.RevitLine(line);
-      case SOG.Ellipse ellipse:
-        return new SOG.Revit.RevitEllipse(ellipse);
-      case SOG.Curve curve:
-        return new SOG.Revit.RevitCurve(curve);
-      case SOG.Arc arc:
-        return new SOG.Revit.RevitArc(arc);
-
-      default:
-        throw new ConversionException(
-          $"No Revit class available for ModelCurve of type {target.GeometryCurve.GetType()}"
-        );
-    }
-  }
+  public override Base Convert(DB.ModelCurve target) => (Base)_curveConverter.Convert(target.GeometryCurve);
 }
