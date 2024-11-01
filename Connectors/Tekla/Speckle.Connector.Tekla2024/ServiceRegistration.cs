@@ -66,7 +66,9 @@ public static class ServiceRegistration
       IConverterSettingsStore<TeklaConversionSettings>,
       ConverterSettingsStore<TeklaConversionSettings>
     >();
-    services.AddScoped<ComponentUnpacker>();
+
+    // Register unpackers and bakers
+    services.AddScoped<TeklaMaterialUnpacker>();
 
     services.AddMatchingInterfacesAsTransient(converterAssembly);
 

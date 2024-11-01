@@ -38,9 +38,7 @@ public class TeklaRootToSpeckleConverter : IRootToSpeckleConverter
 
     Base result = objectConverter.Convert(target);
 
-    // add tekla specific identifiers
     result.applicationId = modelObject.GetSpeckleApplicationId();
-    //TODO: attach properties
 
     return result;
   }
