@@ -11,32 +11,37 @@ public interface IRevitIdleManager : IAppIdleManager
   public void RunAsync(Action action);
 }
 
-public sealed class RevitIdleManager(
-  RevitContext revitContext,
-  IIdleCallManager idleCallManager,
-  ITopLevelExceptionHandler topLevelExceptionHandler
-) : AppIdleManager(idleCallManager), IRevitIdleManager
+public sealed class RevitIdleManager : AppIdleManager, IRevitIdleManager
 {
-  private readonly UIApplication _uiApplication = revitContext.UIApplication.NotNull();
-  private readonly IIdleCallManager _idleCallManager = idleCallManager;
+  private readonly UIApplication _uiApplication;
+  private readonly IIdleCallManager _idleCallManager;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+
+  private event EventHandler<IdlingEventArgs>? OnIdle;
+
+  public RevitIdleManager(
+    RevitContext revitContext,
+    IIdleCallManager idleCallManager,
+    ITopLevelExceptionHandler topLevelExceptionHandler
+  )
+    : base(idleCallManager)
+  {
+    _topLevelExceptionHandler = topLevelExceptionHandler;
+    _uiApplication = revitContext.UIApplication.NotNull();
+    _idleCallManager = idleCallManager;
+    _uiApplication.Idling += (s, e) => OnIdle?.Invoke(s, e); // will be called on the main thread always and fixing the Revit exceptions on subscribing/unsubscribing Idle events
+  }
 
   protected override void AddEvent()
   {
-    topLevelExceptionHandler.CatchUnhandled(() =>
+    _topLevelExceptionHandler.CatchUnhandled(() =>
     {
-      try
-      {
-        _uiApplication.Idling += RevitAppOnIdle;
-      }
-      catch (Autodesk.Revit.Exceptions.InvalidOperationException)
-      {
-        // This happens very rarely, see previous report [CNX-125: Autodesk.Revit.Exceptions.InvalidOperationException: Can not subscribe to an event during execution of that event!](https://linear.app/speckle/issue/CNX-125/autodeskrevitexceptionsinvalidoperationexception-can-not-subscribe-to)
-      }
+      OnIdle += RevitAppOnIdle;
     });
   }
 
   private void RevitAppOnIdle(object? sender, IdlingEventArgs e) =>
-    _idleCallManager.AppOnIdle(() => _uiApplication.Idling -= RevitAppOnIdle);
+    _idleCallManager.AppOnIdle(() => OnIdle -= RevitAppOnIdle);
 
   public void RunAsync(Action action)
   {
