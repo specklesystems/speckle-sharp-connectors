@@ -132,7 +132,7 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
     foreach (var baseObj in target)
     {
       // get all members by default, but only Dynamic ones from the basic geometry
-      Dictionary<string, object?> members = new();
+      Dictionary<string, object?> members = baseObj.GetMembers(DynamicBaseMemberType.Dynamic);
       members["Speckle_ID"] = baseObj.id; // to use for unique color values
 
       // leave out until we decide which properties to support on Receive
@@ -190,6 +190,33 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
       // This is the same for attributes from other applications. No Speckle objects should have attributes of type `Base`.
       // Currently we are not sending any rhino user strings.
       // TODO: add support for attributes of type `Dictionary<string,object?>`
+    }
+    else if (field.Value is Dictionary<string, object?> attributeDict)
+    {
+      // only traverse Base if it's Rhino userStrings, or Revit parameter, or Base containing Revit parameters
+      if (field.Key == "parameters")
+      {
+        foreach (KeyValuePair<string, object?> attributField in attributeDict)
+        {
+          // only iterate through elements if they are actually Revit Parameters or parameter IDs
+          if (
+            attributField.Value is Objects.BuiltElements.Revit.Parameter
+            || attributField.Value is Dictionary<string, object?>
+            || attributField.Key == "applicationId"
+            || attributField.Key == "id"
+          )
+          {
+            KeyValuePair<string, object?> newAttributField =
+              new($"{field.Key}.{attributField.Key}", attributField.Value);
+            Func<Base, object?> functionAdded = x => (function(x) as KeyValuePair<string, object?>?)?.Value;
+            TraverseAttributes(newAttributField, functionAdded, fieldsAndFunctions, fieldAdded);
+          }
+        }
+      }
+      else
+      {
+        // for now, ignore all other properties of Dictionnary type
+      }
     }
     else if (field.Value is IList attributeList)
     {
