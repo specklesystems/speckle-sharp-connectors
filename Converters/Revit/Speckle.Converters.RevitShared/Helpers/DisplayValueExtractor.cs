@@ -10,7 +10,7 @@ namespace Speckle.Converters.RevitShared.Helpers;
 public sealed class DisplayValueExtractor
 {
   private readonly ITypedConverter<
-    (Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId),
+    (Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId, bool makeTransparent),
     List<SOG.Mesh>
   > _meshByMaterialConverter;
   private readonly ILogger<DisplayValueExtractor> _logger;
@@ -18,7 +18,7 @@ public sealed class DisplayValueExtractor
 
   public DisplayValueExtractor(
     ITypedConverter<
-      (Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId),
+      (Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId, bool makeTransparent),
       List<SOG.Mesh>
     > meshByMaterialConverter,
     ILogger<DisplayValueExtractor> logger,
@@ -36,11 +36,9 @@ public sealed class DisplayValueExtractor
 
     var meshesByMaterial = GetMeshesByMaterial(meshes, solids);
 
-    List<SOG.Mesh> displayMeshes = _meshByMaterialConverter.Convert((meshesByMaterial, element.Id));
-    if (SetElementDisplayToTransparent(element))
-    {
-      MakeTransparent(displayMeshes);
-    }
+    List<SOG.Mesh> displayMeshes = _meshByMaterialConverter.Convert(
+      (meshesByMaterial, element.Id, SetElementDisplayToTransparent(element))
+    );
 
     return displayMeshes;
   }
@@ -220,7 +218,7 @@ public sealed class DisplayValueExtractor
   private bool SetElementDisplayToTransparent(DB.Element element)
   {
 #if REVIT2023_OR_GREATER
-    switch (element.Category.BuiltInCategory)
+    switch (element.Category?.BuiltInCategory)
     {
       case DB.BuiltInCategory.OST_Rooms:
         return true;
@@ -231,14 +229,5 @@ public sealed class DisplayValueExtractor
 #else
     return false;
 #endif
-  }
-
-  // sets meshes to have transparent vertex colors
-  private void MakeTransparent(List<SOG.Mesh> meshes)
-  {
-    foreach (var mesh in meshes)
-    {
-      mesh.colors = Enumerable.Repeat(System.Drawing.Color.Transparent.ToArgb(), mesh.VerticesCount).ToList();
-    }
   }
 }
