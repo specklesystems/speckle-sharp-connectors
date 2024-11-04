@@ -36,7 +36,13 @@ public sealed class DisplayValueExtractor
 
     var meshesByMaterial = GetMeshesByMaterial(meshes, solids);
 
-    return _meshByMaterialConverter.Convert((meshesByMaterial, element.Id));
+    List<SOG.Mesh> displayMeshes = _meshByMaterialConverter.Convert((meshesByMaterial, element.Id));
+    if (SetElementDisplayToTransparent(element))
+    {
+      MakeTransparent(displayMeshes);
+    }
+
+    return displayMeshes;
   }
 
   private static Dictionary<DB.ElementId, List<DB.Mesh>> GetMeshesByMaterial(
@@ -208,5 +214,31 @@ public sealed class DisplayValueExtractor
 #endif
 
     return false;
+  }
+
+  // Determines if an element should be sent with invisible display values
+  private bool SetElementDisplayToTransparent(DB.Element element)
+  {
+#if REVIT2023_OR_GREATER
+    switch (element.Category.BuiltInCategory)
+    {
+      case DB.BuiltInCategory.OST_Rooms:
+        return true;
+
+      default:
+        return false;
+    }
+#else
+    return false;
+#endif
+  }
+
+  // sets meshes to have transparent vertex colors
+  private void MakeTransparent(List<SOG.Mesh> meshes)
+  {
+    foreach (var mesh in meshes)
+    {
+      mesh.colors = Enumerable.Repeat(System.Drawing.Color.Transparent.ToArgb(), mesh.VerticesCount).ToList();
+    }
   }
 }
