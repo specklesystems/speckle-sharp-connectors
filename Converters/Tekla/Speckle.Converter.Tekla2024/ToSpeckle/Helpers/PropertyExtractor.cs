@@ -1,22 +1,8 @@
-using Speckle.Converters.Common;
-using Speckle.Converters.Common.Objects;
-using SOG = Speckle.Objects.Geometry;
-
 namespace Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
 
 public class PropertyExtractor
 {
-  private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
-  private readonly ITypedConverter<TG.Point, SOG.Point> _pointConverter;
-
-  public PropertyExtractor(
-    IConverterSettingsStore<TeklaConversionSettings> settingsStore,
-    ITypedConverter<TG.Point, SOG.Point> pointConverter
-  )
-  {
-    _settingsStore = settingsStore;
-    _pointConverter = pointConverter;
-  }
+  public PropertyExtractor() { }
 
   public Dictionary<string, object?> GetProperties(TSM.ModelObject modelObject)
   {
@@ -30,6 +16,9 @@ public class PropertyExtractor
       case TSM.ContourPlate plate:
         AddContourPlateProperties(plate, properties);
         break;
+      case TSM.BoltGroup boltGroup:
+        AddBoltGroupProperties(boltGroup, properties);
+        break;
     }
 
     return properties;
@@ -39,8 +28,6 @@ public class PropertyExtractor
   {
     properties["profile"] = beam.Profile.ProfileString;
     properties["material"] = beam.Material.MaterialString;
-    properties["startPoint"] = _pointConverter.Convert(beam.StartPoint);
-    properties["endPoint"] = _pointConverter.Convert(beam.EndPoint);
     properties["class"] = beam.Class;
   }
 
@@ -49,5 +36,11 @@ public class PropertyExtractor
     properties["profile"] = plate.Profile.ProfileString;
     properties["material"] = plate.Material.MaterialString;
     properties["class"] = plate.Class;
+  }
+
+  private void AddBoltGroupProperties(TSM.BoltGroup boltGroup, Dictionary<string, object?> properties)
+  {
+    properties["boltSize"] = boltGroup.BoltSize;
+    properties["bolt"] = boltGroup.Bolt;
   }
 }
