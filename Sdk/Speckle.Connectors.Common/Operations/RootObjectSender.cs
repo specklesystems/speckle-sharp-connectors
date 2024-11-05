@@ -69,7 +69,6 @@ public sealed class RootObjectSender : IRootObjectSender
 
     using var transport = _transportFactory.Create(account, sendInfo.ProjectId, 60, null);
 
-    double? previousPercentage = null;
     string previousSpeed = string.Empty;
     _progressDisplayManager.Begin();
     var sendResult = await _operations
@@ -80,13 +79,10 @@ public sealed class RootObjectSender : IRootObjectSender
         commitObject,
         onProgressAction: new PassthroughProgress(args =>
         {
-          if (args.ProgressEvent == ProgressEvent.CacheCheck || args.ProgressEvent == ProgressEvent.UploadBytes)
+          if (args.ProgressEvent == ProgressEvent.UploadBytes)
           {
             switch (args.ProgressEvent)
             {
-              case ProgressEvent.CacheCheck:
-                previousPercentage = _progressDisplayManager.CalculatePercentage(args);
-                break;
               case ProgressEvent.UploadBytes:
                 previousSpeed = _progressDisplayManager.CalculateSpeed(args);
                 break;
@@ -99,12 +95,14 @@ public sealed class RootObjectSender : IRootObjectSender
 
           switch (args.ProgressEvent)
           {
-            case ProgressEvent.CacheCheck:
-            case ProgressEvent.UploadBytes:
-              onOperationProgressed.Report(new($"Checking and Uploading... ({previousSpeed})", previousPercentage));
+            case ProgressEvent.CachedToLocal:
+              onOperationProgressed.Report(new($"Checking... ({args.ProgressEvent})", null));
               break;
-            case ProgressEvent.SerializeObject:
-              onOperationProgressed.Report(new($"Serializing ({_progressDisplayManager.CalculateSpeed(args)})", null));
+            case ProgressEvent.UploadBytes:
+              onOperationProgressed.Report(new($"Uploading... ({previousSpeed})", null));
+              break;
+            case ProgressEvent.FromCacheOrSerialized:
+              onOperationProgressed.Report(new($"Loading cache and Serializing... ({_progressDisplayManager.CalculateSpeed(args)})", null));
               break;
           }
         }),

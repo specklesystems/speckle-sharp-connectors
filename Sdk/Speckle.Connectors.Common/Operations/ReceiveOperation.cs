@@ -49,7 +49,7 @@ public sealed class ReceiveOperation
     using var userScope = ActivityScope.SetTag(Consts.USER_ID, account.GetHashedEmail());
 
     var version = await apiClient
-      .Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ModelId, receiveInfo.ProjectId, cancellationToken)
+      .Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ProjectId, cancellationToken)
       .ConfigureAwait(false);
 
     _progressDisplayManager.Begin();
