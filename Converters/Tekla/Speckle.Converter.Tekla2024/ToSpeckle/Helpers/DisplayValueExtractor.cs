@@ -7,14 +7,20 @@ namespace Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
 public sealed class DisplayValueExtractor
 {
   private readonly ITypedConverter<TSM.Solid, SOG.Mesh> _meshConverter;
+  private readonly ITypedConverter<TG.Point, SOG.Point> _pointConverter;
+  private readonly ITypedConverter<TG.LineSegment, SOG.Line> _lineConverter;
   private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
 
   public DisplayValueExtractor(
     ITypedConverter<TSM.Solid, SOG.Mesh> meshConverter,
+    ITypedConverter<TG.Point, SOG.Point> pointConverter,
+    ITypedConverter<TG.LineSegment, SOG.Line> lineConverter,
     IConverterSettingsStore<TeklaConversionSettings> settingsStore
   )
   {
     _meshConverter = meshConverter;
+    _pointConverter = pointConverter;
+    _lineConverter = lineConverter;
     _settingsStore = settingsStore;
   }
 
@@ -38,11 +44,23 @@ public sealed class DisplayValueExtractor
         }
         break;
 
-      case TSM.Reinforcement reinforcement:
-        if (reinforcement.GetSolid() is TSM.Solid reinforcementSolid)
+      case TSM.SingleRebar singleRebar:
+        if (singleRebar.Polygon is TSM.Polygon rebarPolygon)
         {
-          yield return _meshConverter.Convert(reinforcementSolid);
+          for (int i = 0; i < rebarPolygon.Points.Count - 1; i++)
+          {
+            var startPoint = (TG.Point)rebarPolygon.Points[i];
+            var endPoint = (TG.Point)rebarPolygon.Points[i + 1];
+            var line = new TG.LineSegment(startPoint, endPoint);
+
+            var speckleLine = _lineConverter.Convert(line);
+            speckleLine.start = _pointConverter.Convert(startPoint);
+            speckleLine.end = _pointConverter.Convert(endPoint);
+
+            yield return speckleLine;
+          }
         }
+
         break;
 
       default:
