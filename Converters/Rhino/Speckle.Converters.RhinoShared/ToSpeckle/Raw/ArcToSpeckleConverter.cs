@@ -1,4 +1,4 @@
-﻿using Speckle.Converters.Common;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
@@ -9,7 +9,6 @@ public class ArcToSpeckleConverter : ITypedConverter<RG.Arc, SOG.Arc>
   private readonly ITypedConverter<RG.Plane, SOG.Plane> _planeConverter;
   private readonly ITypedConverter<RG.Box, SOG.Box> _boxConverter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
-
   private readonly IBoxFactory _boxFactory;
 
   public ArcToSpeckleConverter(
@@ -36,20 +35,14 @@ public class ArcToSpeckleConverter : ITypedConverter<RG.Arc, SOG.Arc>
   /// This method assumes the domain of the arc is (0,1) as Arc types in Rhino do not have domain. You may want to request a conversion from ArcCurve instead.
   /// </remarks>
   public SOG.Arc Convert(RG.Arc target) =>
-    new(
-      _planeConverter.Convert(target.Plane),
-      target.Radius,
-      target.StartAngle,
-      target.EndAngle,
-      target.Angle,
-      _settingsStore.Current.SpeckleUnits
-    )
+    new()
     {
+      plane = _planeConverter.Convert(target.Plane), // POC: need to validate if this follows the Speckle arc plane handedness convention
       startPoint = _pointConverter.Convert(target.StartPoint),
       midPoint = _pointConverter.Convert(target.MidPoint),
       endPoint = _pointConverter.Convert(target.EndPoint),
       domain = SOP.Interval.UnitInterval,
-      length = target.Length,
-      bbox = _boxConverter.Convert(_boxFactory.Create(target.BoundingBox()))
+      bbox = _boxConverter.Convert(_boxFactory.Create(target.BoundingBox())),
+      units = _settingsStore.Current.SpeckleUnits,
     };
 }

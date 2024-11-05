@@ -52,14 +52,19 @@ public class RoomTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DBA
     var outline = profiles.First();
     var voids = profiles.Skip(1).ToList();
 
-    var speckleRoom = new SOBE.Room(name ?? "-", number, level, basePoint)
-    {
-      displayValue = displayValue,
-      area = area,
-      outline = outline,
-      voids = voids,
-      units = _converterSettings.Current.SpeckleUnits
-    };
+    SOBE.Room speckleRoom =
+      new()
+      {
+        name = name ?? "-",
+        number = number,
+        level = level,
+        basePoint = basePoint,
+        displayValue = displayValue,
+        area = area,
+        outline = outline,
+        voids = voids,
+        units = _converterSettings.Current.SpeckleUnits
+      };
 
     // POC: Removed dynamic property `phaseCreated` as it seems the info is included in the parameters already
 
