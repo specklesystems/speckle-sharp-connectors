@@ -4,7 +4,10 @@ namespace Speckle.Connector.Tekla2024.Filters;
 
 public class TeklaSelectionFilter : DirectSelectionSendFilter
 {
-  public override List<string> GetObjectIds() => SelectedObjectIds;
+  public TeklaSelectionFilter()
+  {
+    IsDefault = true;
+  }
 
-  public override bool CheckExpiry(string[] changedObjectIds) => SelectedObjectIds.Intersect(changedObjectIds).Any();
+  public override List<string> GetObjectIds() => SelectedObjectIds;
 }

@@ -42,9 +42,11 @@ public class AlignmentSubentityArcToSpeckleRawConverter : ITypedConverter<CDB.Al
     double midPointX = target.CenterPoint.X + midScalingVectorX;
     double midPointY = target.CenterPoint.Y + midScalingVectorY;
 
-    // find arc plane (normal is in clockwise dir)
+    // find arc plane (normal is in counterclockwise dir)
     var center3 = new AG.Point3d(target.CenterPoint.X, target.CenterPoint.Y, 0);
-    AG.Plane plane = new AG.Plane(center3, AG.Vector3d.ZAxis);
+    AG.Plane plane = target.Clockwise
+      ? new AG.Plane(center3, AG.Vector3d.ZAxis.MultiplyBy(-1))
+      : new AG.Plane(center3, AG.Vector3d.ZAxis);
 
     // create arc
     SOG.Arc arc =
@@ -72,9 +74,6 @@ public class AlignmentSubentityArcToSpeckleRawConverter : ITypedConverter<CDB.Al
           units = units
         },
         plane = _planeConverter.Convert(plane),
-        radius = target.Radius,
-        angleRadians = target.Delta,
-        length = target.Length,
         units = units,
 
         // additional alignment subentity props

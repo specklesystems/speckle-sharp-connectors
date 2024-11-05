@@ -16,13 +16,15 @@ public class Civil3dRootToSpeckleConverter : IRootToSpeckleConverter
   private readonly PartDataExtractor _partDataExtractor;
   private readonly PropertySetExtractor _propertySetExtractor;
   private readonly GeneralPropertiesExtractor _generalPropertiesExtractor;
+  private readonly ExtensionDictionaryExtractor _extensionDictionaryExtractor;
 
   public Civil3dRootToSpeckleConverter(
     IConverterManager<IToSpeckleTopLevelConverter> toSpeckle,
     IConverterSettingsStore<Civil3dConversionSettings> settingsStore,
     PartDataExtractor partDataExtractor,
     PropertySetExtractor propertySetExtractor,
-    GeneralPropertiesExtractor generalPropertiesExtractor
+    GeneralPropertiesExtractor generalPropertiesExtractor,
+    ExtensionDictionaryExtractor extensionDictionaryExtractor
   )
   {
     _toSpeckle = toSpeckle;
@@ -30,6 +32,7 @@ public class Civil3dRootToSpeckleConverter : IRootToSpeckleConverter
     _partDataExtractor = partDataExtractor;
     _propertySetExtractor = propertySetExtractor;
     _generalPropertiesExtractor = generalPropertiesExtractor;
+    _extensionDictionaryExtractor = extensionDictionaryExtractor;
   }
 
   public Base Convert(object target)
@@ -86,29 +89,31 @@ public class Civil3dRootToSpeckleConverter : IRootToSpeckleConverter
   {
     Dictionary<string, object?> properties = new();
 
-    // get general properties
-    Dictionary<string, object?>? generalProperties = _generalPropertiesExtractor.GetGeneralProperties(entity);
-    if (generalProperties is not null && generalProperties.Count > 0)
-    {
-      properties.Add("Properties", generalProperties);
-    }
-
-    // get part data
-    Dictionary<string, object?>? partData = _partDataExtractor.GetPartData(entity);
-    if (partData is not null && partData.Count > 0)
-    {
-      properties.Add("Part Data", partData);
-    }
-
-    // get property set data
-    Dictionary<string, object?>? propertySets = _propertySetExtractor.GetPropertySets(entity);
-    if (propertySets is not null && propertySets.Count > 0)
-    {
-      properties.Add("Property Sets", propertySets);
-    }
-
-    // TODO: add XDATA here
+    AddDictionaryToPropertyDictionary(
+      _generalPropertiesExtractor.GetGeneralProperties(entity),
+      "General Properties",
+      properties
+    );
+    AddDictionaryToPropertyDictionary(_partDataExtractor.GetPartData(entity), "Part Data", properties);
+    AddDictionaryToPropertyDictionary(_propertySetExtractor.GetPropertySets(entity), "Property Sets", properties);
+    AddDictionaryToPropertyDictionary(
+      _extensionDictionaryExtractor.GetExtensionDictionary(entity),
+      "Extension Dictionary",
+      properties
+    );
 
     return properties;
+  }
+
+  private void AddDictionaryToPropertyDictionary(
+    Dictionary<string, object?>? entryDictionary,
+    string entryName,
+    Dictionary<string, object?> propertyDictionary
+  )
+  {
+    if (entryDictionary is not null && entryDictionary.Count > 0)
+    {
+      propertyDictionary.Add(entryName, entryDictionary);
+    }
   }
 }

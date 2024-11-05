@@ -1,6 +1,5 @@
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Services;
-using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.ToHost.Raw.Geometry;
 
@@ -23,31 +22,11 @@ public class ArcConverterToHost : ITypedConverter<SOG.Arc, DB.Arc>
 
   public DB.Arc Convert(SOG.Arc target)
   {
-    double startAngle;
-    double endAngle;
-
-    if (target.startAngle > target.endAngle)
-    {
-      startAngle = (double)target.endAngle;
-      endAngle = (double)target.startAngle;
-    }
-    else
-    {
-      startAngle = (double)target.startAngle.NotNull();
-      endAngle = (double)target.endAngle.NotNull();
-    }
-
-    var plane = _planeConverter.Convert(target.plane);
-
+    // Endpoints coincide, it's a circle.
     if (SOG.Point.Distance(target.startPoint, target.endPoint) < 1E-6)
     {
-      // Endpoints coincide, it's a circle.
-      return DB.Arc.Create(
-        plane,
-        _scalingService.ScaleToNative(target.radius ?? 0, target.units),
-        startAngle,
-        endAngle
-      );
+      var plane = _planeConverter.Convert(target.plane);
+      return DB.Arc.Create(plane, _scalingService.ScaleToNative(target.radius, target.units), 0, Math.PI * 2);
     }
 
     return DB.Arc.Create(

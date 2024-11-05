@@ -2,8 +2,8 @@ using System.Windows.Forms;
 using System.Windows.Forms.Integration;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common;
-using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.WebView;
+using Speckle.Converter.Tekla2024;
 using Speckle.Sdk.Host;
 using Tekla.Structures.Dialog;
 using Tekla.Structures.Model;
@@ -22,16 +22,18 @@ public class SpeckleTeklaPanelHost : PluginFormBase
 
   public SpeckleTeklaPanelHost()
   {
+    this.Text = "Speckle Beta";
+    this.Name = "Speckle Beta";
+    //TODO: Add Speckle icon
+    // TODO: Add thumbnail to connector
     var services = new ServiceCollection();
     services.Initialize(HostApplications.TeklaStructures, GetVersion());
     services.AddTekla();
-
-    // TODO: Add Tekla converters
+    services.AddTeklaConverters();
 
     Container = services.BuildServiceProvider();
-    Container.UseDUI(); // TODO: this might not needed? ISyncToThread?
 
-    Model = new Model(); // don't know what is this..
+    Model = new Model();
     if (!Model.GetConnectionStatus())
     {
       MessageBox.Show(
