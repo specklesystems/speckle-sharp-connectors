@@ -40,7 +40,10 @@ public class ArcGISConversionSettingsFactory(IHostToSpeckleUnitConverter<ACG.Uni
         throw new ArgumentException($"Project directory {Project.Current.URI} not found");
       }
       var fGdbPath = new Uri(parentDirectory.FullName);
-      return new Uri($"{fGdbPath}/{FGDB_NAME}");
+      Uri firstDatabasePath = new Uri($"{fGdbPath}/{FGDB_NAME}");
+
+      Uri databasePath = ValidateDatabasePath(firstDatabasePath);
+      return databasePath;
     }
     catch (Exception ex)
       when (ex
@@ -55,7 +58,7 @@ public class ArcGISConversionSettingsFactory(IHostToSpeckleUnitConverter<ACG.Uni
     }
   }
 
-  public Uri AddDatabaseToProject(Uri databasePath)
+  public Uri ValidateDatabasePath(Uri originalGatabasePath)
   {
     var fGdbName = originalGatabasePath.Segments[^1];
     var parentFolder = Path.GetDirectoryName(originalGatabasePath.AbsolutePath);
@@ -125,13 +128,13 @@ public class ArcGISConversionSettingsFactory(IHostToSpeckleUnitConverter<ACG.Uni
       // geodatabase already exists, do nothing
     }
 
+    return databasePath;
+  }
+
+  public Uri AddDatabaseToProject(Uri databasePath)
+  {
     // Add a folder connection to a project
     var parentFolder = Path.GetDirectoryName(databasePath.AbsolutePath);
-    if (parentFolder == null)
-    {
-      // POC: customize the exception type
-      throw new ArgumentException($"Invalid path: {databasePath}");
-    }
     var fGdbName = databasePath.Segments[^1];
     Item folderToAdd = ItemFactory.Instance.Create(parentFolder);
     // POC: QueuedTask
