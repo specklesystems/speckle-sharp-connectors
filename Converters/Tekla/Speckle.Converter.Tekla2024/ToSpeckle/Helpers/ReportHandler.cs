@@ -84,9 +84,5 @@ public class ReportPropertyHandler
     {
       properties[propertyName] = stringValue;
     }
-    else
-    {
-      properties[propertyName] = null;
-    }
   }
 }
