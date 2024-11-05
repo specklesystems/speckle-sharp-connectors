@@ -1,7 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Models;
-using SOG = Speckle.Objects.Geometry;
 
 namespace Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
 
@@ -36,6 +35,13 @@ public sealed class DisplayValueExtractor
         if (boltGroup.GetSolid() is TSM.Solid boltSolid)
         {
           yield return _meshConverter.Convert(boltSolid);
+        }
+        break;
+
+      case TSM.Reinforcement reinforcement:
+        if (reinforcement.GetSolid() is TSM.Solid reinforcementSolid)
+        {
+          yield return _meshConverter.Convert(reinforcementSolid);
         }
         break;
 

@@ -1,3 +1,4 @@
+using Speckle.Converter.Tekla2024.Extensions;
 using Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
@@ -33,7 +34,7 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
     var result = new Base
     {
       ["type"] = modelObject.GetType().ToString().Split('.').Last(),
-      ["units"] = _settingsStore.Current.SpeckleUnits
+      ["units"] = _settingsStore.Current.SpeckleUnits,
     };
 
     // get properties
@@ -48,6 +49,21 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
     if (displayValue.Count > 0)
     {
       result["displayValue"] = displayValue;
+    }
+
+    // get children
+    // POC: This logic should be same in the material unpacker in connector
+    List<Base> children = new();
+    foreach (TSM.ModelObject childObject in modelObject.GetSupportedChildren())
+    {
+      var child = Convert(childObject);
+      child.applicationId = childObject.GetSpeckleApplicationId();
+      children.Add(child);
+    }
+
+    if (children.Count > 0)
+    {
+      result["elements"] = children;
     }
 
     return result;

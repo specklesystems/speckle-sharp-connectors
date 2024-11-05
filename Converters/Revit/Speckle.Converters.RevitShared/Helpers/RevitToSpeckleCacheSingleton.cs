@@ -1,5 +1,4 @@
-﻿using Speckle.Objects.Other;
-using Speckle.Objects.Other.Revit;
+using Speckle.Objects.Other;
 
 namespace Speckle.Converters.RevitShared.Helpers;
 
@@ -14,11 +13,6 @@ namespace Speckle.Converters.RevitShared.Helpers;
 /// </summary>
 public class RevitToSpeckleCacheSingleton
 {
-  /// <summary>
-  /// (DB.Material id, RevitMaterial). This can be generated from converting render materials or material quantities.
-  /// </summary>
-  public Dictionary<string, RevitMaterial> RevitMaterialCache { get; } = new();
-
   /// <summary>
   /// (DB.Material id, RenderMaterial). This can be generated from converting render materials or material quantities.
   /// </summary>
