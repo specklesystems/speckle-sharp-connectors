@@ -120,6 +120,9 @@ public class Polyline3dToSpeckleConverter
       new()
       {
         segments = segments,
+        bulges = null,
+        tangents = null,
+        normal = null,
         value = value,
         polyType = polyType,
         closed = target.Closed,

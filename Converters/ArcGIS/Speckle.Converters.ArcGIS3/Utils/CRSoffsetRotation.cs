@@ -1,8 +1,6 @@
 using System.Xml.Linq;
 using ArcGIS.Desktop.Mapping;
-using Speckle.Objects.BuiltElements.Revit;
 using Speckle.Sdk.Common;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.Utils;
 
@@ -68,35 +66,6 @@ public struct CRSoffsetRotation
     {
       TrueNorthRadians %= 2 * Math.PI;
     }
-  }
-
-  public static double? RotationFromRevitData(Base rootObject)
-  {
-    // rewrite function to take into account Local reference point in Revit, and Transformation matrix
-    foreach (KeyValuePair<string, object?> prop in rootObject.GetMembers(DynamicBaseMemberType.Dynamic))
-    {
-      if (prop.Key == "info")
-      {
-        ProjectInfo? revitProjInfo = (ProjectInfo?)rootObject[prop.Key];
-        if (revitProjInfo != null)
-        {
-          try
-          {
-            if (revitProjInfo["locations"] is List<Base> locationList && locationList.Count > 0)
-            {
-              Base location = locationList[0];
-              return Convert.ToDouble(location["trueNorth"]);
-            }
-          }
-          catch (Exception ex) when (ex is FormatException || ex is InvalidCastException || ex is OverflowException)
-          {
-            // origin not found, do nothing
-          }
-          break;
-        }
-      }
-    }
-    return null;
   }
 
   /// <summary>

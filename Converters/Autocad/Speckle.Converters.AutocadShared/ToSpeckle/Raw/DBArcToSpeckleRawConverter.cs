@@ -28,7 +28,7 @@ public class DBArcToSpeckleRawConverter : ITypedConverter<ADB.Arc, SOG.Arc>
 
   public SOG.Arc Convert(ADB.Arc target)
   {
-    SOG.Plane plane = _planeConverter.Convert(target.GetPlane());
+    SOG.Plane plane = _planeConverter.Convert(new(target.Center, target.Normal));
     SOG.Point start = _pointConverter.Convert(target.StartPoint);
     SOG.Point end = _pointConverter.Convert(target.EndPoint);
     SOG.Point mid = _pointConverter.Convert(target.GetPointAtDist(target.Length / 2.0));
@@ -36,21 +36,15 @@ public class DBArcToSpeckleRawConverter : ITypedConverter<ADB.Arc, SOG.Arc>
     SOG.Box bbox = _boxConverter.Convert(target.GeometricExtents);
 
     SOG.Arc arc =
-      new(
-        plane,
-        target.Radius,
-        target.StartAngle,
-        target.EndAngle,
-        target.TotalAngle,
-        _settingsStore.Current.SpeckleUnits
-      )
+      new()
       {
+        plane = plane,
         startPoint = start,
         endPoint = end,
         midPoint = mid,
         domain = domain,
-        length = target.Length,
-        bbox = bbox
+        bbox = bbox,
+        units = _settingsStore.Current.SpeckleUnits
       };
 
     return arc;

@@ -191,7 +191,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
           ITransformable? newTransformable = null;
           foreach (var mat in localToGlobalMap.Matrix)
           {
-            transformable.TransformTo(new Transform(mat, units), out newTransformable);
+            transformable.TransformTo(new Transform() { matrix = mat, units = units }, out newTransformable);
           }
 
           localToGlobalMap.AtomicObject = (newTransformable as Base)!;

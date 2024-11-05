@@ -80,6 +80,7 @@ public class PolylineToSpeckleConverter
         value = value,
         bulges = bulges,
         normal = normal,
+        tangents = null,
         elevation = target.Elevation,
         polyType = SOG.Autocad.AutocadPolyType.Light,
         closed = target.Closed,
