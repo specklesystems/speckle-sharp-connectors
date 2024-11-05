@@ -11,7 +11,6 @@
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\IRevitCategories.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\ISlopeArrowExtractor.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Helpers\ParameterValueSetter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\RevitToHostCacheSingleton.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\RevitToSpeckleCacheSingleton.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\SlopeArrowExtractor.cs" />
@@ -73,7 +72,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\PolylineToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\VectorToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\XyzConversionToPoint.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\MaterialAsRevitMaterialConversionToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\MaterialAsSpeckleMaterialConversionToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\MaterialQuantitiesToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\GridTopLevelConverterToSpeckle.cs" />
@@ -81,7 +79,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\LocationConversionToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\ModelCurveArrArrayToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\ModelCurveArrayToSpeckleConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\ParameterConversionToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\BaseTopLevelConverterToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\CeilingTopLevelConverterToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\DirectShapeTopLevelConverterToSpeckle.cs" />

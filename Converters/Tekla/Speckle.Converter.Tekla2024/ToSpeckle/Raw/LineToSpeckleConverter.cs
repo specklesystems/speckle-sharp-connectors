@@ -1,6 +1,5 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using SOG = Speckle.Objects.Geometry;
 
 namespace Speckle.Converter.Tekla2024.ToSpeckle.Raw;
 
@@ -15,7 +14,7 @@ public class TeklaLineConverter : ITypedConverter<TG.LineSegment, SOG.Line>
   )
   {
     _settingsStore = settingsStore;
-    this._pointConverter = pointConverter;
+    _pointConverter = pointConverter;
   }
 
   public SOG.Line Convert(TG.LineSegment target) =>

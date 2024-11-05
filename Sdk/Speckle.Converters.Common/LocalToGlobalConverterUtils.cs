@@ -1,5 +1,6 @@
-﻿using Speckle.DoubleNumerics;
+using Speckle.DoubleNumerics;
 using Speckle.Objects;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
@@ -27,7 +28,7 @@ public class LocalToGlobalConverterUtils
     }
 
     List<Speckle.Objects.Other.Transform> transforms = matrix
-      .Select(x => new Speckle.Objects.Other.Transform(x, "none"))
+      .Select(x => new Speckle.Objects.Other.Transform() { matrix = x, units = Units.None })
       .ToList();
 
     if (atomicObject is ITransformable c)
