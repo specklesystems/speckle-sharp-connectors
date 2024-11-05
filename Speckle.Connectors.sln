@@ -175,6 +175,20 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Converters.Civil3d2
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converter.Tekla2024", "Converters\Tekla\Speckle.Converter.Tekla2024\Speckle.Converter.Tekla2024.csproj", "{ACF75860-7FCE-4AE9-8C45-68AD1043550B}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Navisworks", "Navisworks", "{9DF902C4-A6CA-447E-B1FA-CFE99EC70DCE}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shared", "Shared", "{633F7669-11D7-4217-9AED-F16BCEB452B9}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2024", "2024", "{7658869E-E371-4955-94FA-5C23B6311516}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Connectors.NavisworksShared", "Connectors\Navisworks\Speckle.Connectors.NavisworksShared\Speckle.Connectors.NavisworksShared.shproj", "{62813838-52F7-43CB-9062-BB2611C00C79}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connector.Navisworks2024", "Connectors\Navisworks\Speckle.Connector.Navisworks2024\Speckle.Connector.Navisworks2024.csproj", "{7FC65FF7-86A7-450C-A3A1-25F36A28F026}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converter.Navisworks2024", "Converters\Navisworks\Speckle.Converter.Navisworks2024\Speckle.Converter.Navisworks2024.csproj", "{2BAE7603-E21A-42FB-A24F-07FF45BA1A7C}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Converters.NavisworksShared", "Converters\Navisworks\Speckle.Converters.NavisworksShared\Speckle.Converters.NavisworksShared.shproj", "{23830613-87F8-4655-B523-72189A597962}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -458,6 +472,14 @@ Global
 		{ACF75860-7FCE-4AE9-8C45-68AD1043550B}.Local|Any CPU.Build.0 = Debug|Any CPU
 		{ACF75860-7FCE-4AE9-8C45-68AD1043550B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ACF75860-7FCE-4AE9-8C45-68AD1043550B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2BAE7603-E21A-42FB-A24F-07FF45BA1A7C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2BAE7603-E21A-42FB-A24F-07FF45BA1A7C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2BAE7603-E21A-42FB-A24F-07FF45BA1A7C}.Local|Any CPU.ActiveCfg = Local|Any CPU
+		{2BAE7603-E21A-42FB-A24F-07FF45BA1A7C}.Local|Any CPU.Build.0 = Local|Any CPU
+		{2BAE7603-E21A-42FB-A24F-07FF45BA1A7C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2BAE7603-E21A-42FB-A24F-07FF45BA1A7C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7FC65FF7-86A7-450C-A3A1-25F36A28F026}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7FC65FF7-86A7-450C-A3A1-25F36A28F026}.Debug|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -537,6 +559,12 @@ Global
 		{4459F2B1-A340-488E-A856-EB2AE9C72AD4} = {B2BF1FAE-D0F4-4961-84CB-A00D3CABD236}
 		{DB31E57B-60FC-49BE-91E0-1374290BCF03} = {B2BF1FAE-D0F4-4961-84CB-A00D3CABD236}
 		{ACF75860-7FCE-4AE9-8C45-68AD1043550B} = {696086E4-D8CC-4FE0-A9B3-5F10B9089B55}
+		{9DF902C4-A6CA-447E-B1FA-CFE99EC70DCE} = {42826721-9A18-4762-8BA9-F1429DD5C5B1}
+		{633F7669-11D7-4217-9AED-F16BCEB452B9} = {9DF902C4-A6CA-447E-B1FA-CFE99EC70DCE}
+		{7658869E-E371-4955-94FA-5C23B6311516} = {9DF902C4-A6CA-447E-B1FA-CFE99EC70DCE}
+		{62813838-52F7-43CB-9062-BB2611C00C79} = {633F7669-11D7-4217-9AED-F16BCEB452B9}
+		{7FC65FF7-86A7-450C-A3A1-25F36A28F026} = {7658869E-E371-4955-94FA-5C23B6311516}
+		{2BAE7603-E21A-42FB-A24F-07FF45BA1A7C} = {7658869E-E371-4955-94FA-5C23B6311516}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}
