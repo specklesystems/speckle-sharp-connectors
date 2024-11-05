@@ -1,4 +1,4 @@
-namespace Speckle.Converter.Tekla2024.Extensions;
+namespace Speckle.Connector.Tekla2024.Extensions;
 
 public static class SpeckleApplicationIdExtensions
 {
