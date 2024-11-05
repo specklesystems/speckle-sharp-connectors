@@ -1,8 +1,8 @@
 namespace Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
 
-public class PropertyExtractor
+public class ClassPropertyExtractor
 {
-  public PropertyExtractor() { }
+  public ClassPropertyExtractor() { }
 
   public Dictionary<string, object?> GetProperties(TSM.ModelObject modelObject)
   {
