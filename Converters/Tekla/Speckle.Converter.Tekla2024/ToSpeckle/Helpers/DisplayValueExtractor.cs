@@ -44,24 +44,34 @@ public sealed class DisplayValueExtractor
         }
         break;
 
-      case TSM.SingleRebar singleRebar:
-        if (singleRebar.Polygon is TSM.Polygon rebarPolygon)
+      // this section visualizes the rebars as solid
+      case TSM.Reinforcement reinforcement:
+        if (reinforcement.GetSolid() is TSM.Solid reinforcementSolid)
         {
-          for (int i = 0; i < rebarPolygon.Points.Count - 1; i++)
-          {
-            var startPoint = (TG.Point)rebarPolygon.Points[i];
-            var endPoint = (TG.Point)rebarPolygon.Points[i + 1];
-            var line = new TG.LineSegment(startPoint, endPoint);
-
-            var speckleLine = _lineConverter.Convert(line);
-            speckleLine.start = _pointConverter.Convert(startPoint);
-            speckleLine.end = _pointConverter.Convert(endPoint);
-
-            yield return speckleLine;
-          }
+          yield return _meshConverter.Convert(reinforcementSolid);
         }
 
         break;
+
+      // use this section to visualize rebars as lines
+      // case TSM.SingleRebar singleRebar:
+      //   if (singleRebar.Polygon is TSM.Polygon rebarPolygon)
+      //   {
+      //     for (int i = 0; i < rebarPolygon.Points.Count - 1; i++)
+      //     {
+      //       var startPoint = (TG.Point)rebarPolygon.Points[i];
+      //       var endPoint = (TG.Point)rebarPolygon.Points[i + 1];
+      //       var line = new TG.LineSegment(startPoint, endPoint);
+      //
+      //       var speckleLine = _lineConverter.Convert(line);
+      //       speckleLine.start = _pointConverter.Convert(startPoint);
+      //       speckleLine.end = _pointConverter.Convert(endPoint);
+      //
+      //       yield return speckleLine;
+      //     }
+      //   }
+
+      //break;
 
       default:
         yield break;
