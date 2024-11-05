@@ -4,13 +4,15 @@ using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
-public class PointCloudToSpeckleConverter : ITypedConverter<DB.PointCloudInstance, SOG.Pointcloud>
+[NameAndRankValue(nameof(DB.PointCloudInstance), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+public sealed class PointcloudTopLevelConverterToSpeckle
+  : BaseTopLevelConverterToSpeckle<DB.PointCloudInstance, SOG.Pointcloud>
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<DB.XYZ, SOG.Point> _xyzToPointConverter;
   private readonly ITypedConverter<DB.BoundingBoxXYZ, SOG.Box> _boundingBoxConverter;
 
-  public PointCloudToSpeckleConverter(
+  public PointcloudTopLevelConverterToSpeckle(
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ITypedConverter<DB.XYZ, SOG.Point> xyzToPointConverter,
     ITypedConverter<DB.BoundingBoxXYZ, SOG.Box> boundingBoxConverter
@@ -21,7 +23,7 @@ public class PointCloudToSpeckleConverter : ITypedConverter<DB.PointCloudInstanc
     _boundingBoxConverter = boundingBoxConverter;
   }
 
-  public SOG.Pointcloud Convert(DB.PointCloudInstance target)
+  public override SOG.Pointcloud Convert(DB.PointCloudInstance target)
   {
     var boundingBox = target.get_BoundingBox(null!);
     using DB.Transform transform = target.GetTransform();
