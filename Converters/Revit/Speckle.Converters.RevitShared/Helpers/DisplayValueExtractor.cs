@@ -37,7 +37,7 @@ public sealed class DisplayValueExtractor
     var meshesByMaterial = GetMeshesByMaterial(meshes, solids);
 
     List<SOG.Mesh> displayMeshes = _meshByMaterialConverter.Convert(
-      (meshesByMaterial, element.Id, SetElementDisplayToTransparent(element))
+      (meshesByMaterial, element.Id, ShouldSetElementDisplayToTransparent(element))
     );
 
     return displayMeshes;
@@ -215,7 +215,7 @@ public sealed class DisplayValueExtractor
   }
 
   // Determines if an element should be sent with invisible display values
-  private bool SetElementDisplayToTransparent(DB.Element element)
+  private bool ShouldSetElementDisplayToTransparent(DB.Element element)
   {
 #if REVIT2023_OR_GREATER
     switch (element.Category?.BuiltInCategory)
