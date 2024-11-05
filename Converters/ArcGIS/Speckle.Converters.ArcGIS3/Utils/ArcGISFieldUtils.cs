@@ -194,14 +194,12 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
     else if (field.Value is Dictionary<string, object?> attributeDict)
     {
       // only traverse Base if it's Rhino userStrings, or Revit parameter, or Base containing Revit parameters
-      if (field.Key == "parameters")
+      if (field.Key == "properties")
       {
         foreach (KeyValuePair<string, object?> attributField in attributeDict)
         {
-          // only iterate through elements if they are actually Revit Parameters or parameter IDs
           if (
-            attributField.Value is Objects.BuiltElements.Revit.Parameter
-            || attributField.Value is Dictionary<string, object?>
+            attributField.Value is Dictionary<string, object?>
             || attributField.Key == "applicationId"
             || attributField.Key == "id"
           )
@@ -210,6 +208,18 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
               new($"{field.Key}.{attributField.Key}", attributField.Value);
             Func<Base, object?> functionAdded = x => (function(x) as KeyValuePair<string, object?>?)?.Value;
             TraverseAttributes(newAttributField, functionAdded, fieldsAndFunctions, fieldAdded);
+          }
+
+          if (attributField.Value is IList attributeDictList)
+          {
+            int count = 0;
+            foreach (var attributeDictField in attributeDictList)
+            {
+              KeyValuePair<string, object?> newAttributeField = new($"{field.Key}[{count}]", attributeDictField);
+              Func<Base, object?> functionAdded = x => (function(x) as List<object?>)?[count];
+              TraverseAttributes(newAttributeField, functionAdded, fieldsAndFunctions, fieldAdded);
+              count += 1;
+            }
           }
         }
       }
@@ -221,11 +231,11 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
     else if (field.Value is IList attributeList)
     {
       int count = 0;
-      foreach (var attributField in attributeList)
+      foreach (var attributeField in attributeList)
       {
-        KeyValuePair<string, object?> newAttributField = new($"{field.Key}[{count}]", attributField);
+        KeyValuePair<string, object?> newAttributeField = new($"{field.Key}[{count}]", attributeField);
         Func<Base, object?> functionAdded = x => (function(x) as List<object?>)?[count];
-        TraverseAttributes(newAttributField, functionAdded, fieldsAndFunctions, fieldAdded);
+        TraverseAttributes(newAttributeField, functionAdded, fieldsAndFunctions, fieldAdded);
         count += 1;
       }
     }
