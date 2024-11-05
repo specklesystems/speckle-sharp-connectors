@@ -22,11 +22,10 @@ public class ArcConverterToHost : ITypedConverter<SOG.Arc, DB.Arc>
 
   public DB.Arc Convert(SOG.Arc target)
   {
-    var plane = _planeConverter.Convert(target.plane);
-
+    // Endpoints coincide, it's a circle.
     if (SOG.Point.Distance(target.startPoint, target.endPoint) < 1E-6)
     {
-      // Endpoints coincide, it's a circle.
+      var plane = _planeConverter.Convert(target.plane);
       return DB.Arc.Create(plane, _scalingService.ScaleToNative(target.radius, target.units), 0, Math.PI * 2);
     }
 
