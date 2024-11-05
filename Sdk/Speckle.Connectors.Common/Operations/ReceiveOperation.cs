@@ -52,7 +52,6 @@ public sealed class ReceiveOperation
       .Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ModelId, receiveInfo.ProjectId, cancellationToken)
       .ConfigureAwait(false);
 
-    double? previousPercentage = null;
     _progressDisplayManager.Begin();
     Base? commitObject = await _operations
       .Receive2(
@@ -62,15 +61,6 @@ public sealed class ReceiveOperation
         account.token,
         onProgressAction: new PassthroughProgress(args =>
         {
-          if (args.ProgressEvent == ProgressEvent.CacheCheck || args.ProgressEvent == ProgressEvent.DownloadBytes)
-          {
-            switch (args.ProgressEvent)
-            {
-              case ProgressEvent.CacheCheck:
-                previousPercentage = _progressDisplayManager.CalculatePercentage(args);
-                break;
-            }
-          }
           if (!_progressDisplayManager.ShouldUpdate())
           {
             return;
@@ -78,9 +68,8 @@ public sealed class ReceiveOperation
 
           switch (args.ProgressEvent)
           {
-            case ProgressEvent.CacheCheck:
-            case ProgressEvent.DownloadBytes:
-              onOperationProgressed.Report(new("Checking and Downloading... ", previousPercentage));
+            case ProgressEvent.CachedToLocal:
+              onOperationProgressed.Report(new("Checking and Downloading... ", _progressDisplayManager.CalculatePercentage(args)));
               break;
             case ProgressEvent.DeserializeObject:
               onOperationProgressed.Report(new("Deserializing ...", _progressDisplayManager.CalculatePercentage(args)));
