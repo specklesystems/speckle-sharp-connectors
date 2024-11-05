@@ -12,16 +12,19 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
   private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly PropertyExtractor _propertyExtractor;
+  private readonly ReportPropertyHandler _reportPropertyHandler;
 
   public ModelObjectToSpeckleConverter(
     IConverterSettingsStore<TeklaConversionSettings> settingsStore,
     DisplayValueExtractor displayValueExtractor,
-    PropertyExtractor propertyExtractor
+    PropertyExtractor propertyExtractor,
+    ReportPropertyHandler reportPropertyHandler
   )
   {
     _settingsStore = settingsStore;
     _displayValueExtractor = displayValueExtractor;
     _propertyExtractor = propertyExtractor;
+    _reportPropertyHandler = reportPropertyHandler;
   }
 
   public Base Convert(object target)
@@ -43,6 +46,10 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
     {
       result[prop.Key] = prop.Value;
     }
+
+    // get report properties
+    var reportProperties = _reportPropertyHandler.GetProperties(modelObject);
+    result["ReportProperties"] = reportProperties;
 
     // get display value
     var displayValue = _displayValueExtractor.GetDisplayValue(modelObject).ToList();

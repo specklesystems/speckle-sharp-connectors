@@ -35,36 +35,16 @@ public class PropertyExtractor
 
   private void AddBeamProperties(TSM.Beam beam, Dictionary<string, object?> properties)
   {
+    properties["Name"] = beam.Name;
     properties["profile"] = beam.Profile.ProfileString;
     properties["material"] = beam.Material.MaterialString;
-
-    double volume = 0.0;
-    beam.GetReportProperty("VOLUME", ref volume);
-    double volumeCubic = volume / 1000000000.0; // converting to m3 from mm3
-
-    properties["volume(m3)"] = String.Format("{0:0.0000}", volumeCubic);
-
-    double weight = 0.0;
-    beam.GetReportProperty("WEIGHT", ref weight);
-
-    properties["weight(kg)"] = String.Format("{0:0.0000}", weight);
   }
 
   private void AddContourPlateProperties(TSM.ContourPlate plate, Dictionary<string, object?> properties)
   {
+    properties["Name"] = plate.Name;
     properties["profile"] = plate.Profile.ProfileString;
     properties["material"] = plate.Material.MaterialString;
-
-    double volume = 0.0;
-    plate.GetReportProperty("VOLUME", ref volume);
-    double volumeCubic = volume / 1000000000.0; // converting to m3 from mm3
-
-    properties["volume(m3)"] = String.Format("{0:0.0000}", volumeCubic);
-
-    double weight = 0.0;
-    plate.GetReportProperty("WEIGHT", ref weight);
-
-    properties["weight(kg)"] = String.Format("{0:0.0000}", weight);
   }
 
   private void AddBoltArrayProperties(TSM.BoltArray boltArray, Dictionary<string, object?> properties)
@@ -76,41 +56,21 @@ public class PropertyExtractor
 
   private void AddSingleRebarProperties(TSM.SingleRebar singleRebar, Dictionary<string, object?> properties)
   {
+    properties["name"] = singleRebar.Name;
     properties["grade"] = singleRebar.Grade;
     properties["size"] = singleRebar.Size;
-
-    double volume = 0.0;
-    singleRebar.GetReportProperty("VOLUME", ref volume);
-    properties["volume(m3)"] = String.Format("{0:0.0000}", volume);
-
-    double weight = 0.0;
-    singleRebar.GetReportProperty("WEIGHT", ref weight);
-    properties["weight(kg)"] = String.Format("{0:0.0000}", weight);
   }
 
   private void AddRebarMeshProperties(TSM.RebarMesh rebarMesh, Dictionary<string, object?> properties)
   {
+    properties["name"] = rebarMesh.Name;
     properties["grade"] = rebarMesh.Grade;
-
-    double area = (rebarMesh.Width * rebarMesh.Length) / 100.0; // converting to cm2
-    properties["area(cm2)"] = String.Format("{0:0.0000}", area);
-
-    double weight = 0.0;
-    rebarMesh.GetReportProperty("WEIGHT", ref weight);
-    properties["weight(kg)"] = String.Format("{0:0.0000}", weight);
   }
 
   private void AddRebarGroupProperties(TSM.RebarGroup rebarGroup, Dictionary<string, object?> properties)
   {
+    properties["name"] = rebarGroup.Name;
     properties["grade"] = rebarGroup.Grade;
     properties["size"] = rebarGroup.Size;
-
-    double volume = 0.0;
-    rebarGroup.GetReportProperty("VOLUME", ref volume);
-    properties["volume(m3)"] = String.Format("{0:0.0000}", volume);
-
-    double weight = 0.0;
-    rebarGroup.GetReportProperty("WEIGHT", ref weight);
-    properties["weight(kg)"] = String.Format("{0:0.0000}", weight);
   }
 }
