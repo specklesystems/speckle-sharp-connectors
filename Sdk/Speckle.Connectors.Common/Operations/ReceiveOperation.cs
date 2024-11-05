@@ -69,7 +69,9 @@ public sealed class ReceiveOperation
           switch (args.ProgressEvent)
           {
             case ProgressEvent.CachedToLocal:
-              onOperationProgressed.Report(new("Checking and Downloading... ", _progressDisplayManager.CalculatePercentage(args)));
+              onOperationProgressed.Report(
+                new("Checking and Downloading... ", _progressDisplayManager.CalculatePercentage(args))
+              );
               break;
             case ProgressEvent.DeserializeObject:
               onOperationProgressed.Report(new("Deserializing ...", _progressDisplayManager.CalculatePercentage(args)));

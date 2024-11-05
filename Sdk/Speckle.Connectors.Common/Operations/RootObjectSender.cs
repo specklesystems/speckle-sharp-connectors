@@ -102,7 +102,9 @@ public sealed class RootObjectSender : IRootObjectSender
               onOperationProgressed.Report(new($"Uploading... ({previousSpeed})", null));
               break;
             case ProgressEvent.FromCacheOrSerialized:
-              onOperationProgressed.Report(new($"Loading cache and Serializing... ({_progressDisplayManager.CalculateSpeed(args)})", null));
+              onOperationProgressed.Report(
+                new($"Loading cache and Serializing... ({_progressDisplayManager.CalculateSpeed(args)})", null)
+              );
               break;
           }
         }),
