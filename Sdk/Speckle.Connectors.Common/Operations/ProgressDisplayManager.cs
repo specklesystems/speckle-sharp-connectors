@@ -55,8 +55,6 @@ public class ProgressDisplayManager(IStopwatchManager stopwatch) : IProgressDisp
         return $"{ToFileSize(countPerSecond)} / sec";
       case ProgressEvent.DeserializeObject:
       case ProgressEvent.SerializeObject:
-      case ProgressEvent.DownloadObject:
-      case ProgressEvent.UploadObject:
         return $"{ThreeNonZeroDigits(countPerSecond)} objects / sec";
       default:
         return string.Empty;
