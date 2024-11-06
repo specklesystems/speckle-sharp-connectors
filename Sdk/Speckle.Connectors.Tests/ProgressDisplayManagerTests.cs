@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using NUnit.Framework;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Sdk.Transports;
@@ -21,6 +21,7 @@ public class ProgressDisplayManagerTests : MoqTest
   }
 
   [Test]
+  [SetCulture("en-GB")]
   [TestCase(1, 1, 6, 10, "5.00 bytes / sec")]
   [TestCase(1, 0, 6, 10, "0 bytes / sec")] //infinity
   [TestCase(1 * 1024 * 1024, 1, 6 * 1024 * 1024, 10 * 1024 * 1024, "5.00 MB / sec")]

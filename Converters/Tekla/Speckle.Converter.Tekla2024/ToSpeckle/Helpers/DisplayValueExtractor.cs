@@ -10,11 +10,16 @@ public sealed class DisplayValueExtractor
   private readonly ITypedConverter<TG.Point, SOG.Point> _pointConverter;
   private readonly ITypedConverter<TG.LineSegment, SOG.Line> _lineConverter;
   private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
+  private readonly ITypedConverter<TG.LineSegment, SOG.Line> _lineConverter;
+  private readonly ITypedConverter<TG.Arc, SOG.Arc> _arcConverter;
+  private readonly ITypedConverter<TSM.Grid, IEnumerable<Base>> _gridConverter;
 
   public DisplayValueExtractor(
     ITypedConverter<TSM.Solid, SOG.Mesh> meshConverter,
     ITypedConverter<TG.Point, SOG.Point> pointConverter,
     ITypedConverter<TG.LineSegment, SOG.Line> lineConverter,
+    ITypedConverter<TG.Arc, SOG.Arc> arcConverter,
+    ITypedConverter<TSM.Grid, IEnumerable<Base>> gridConverter,
     IConverterSettingsStore<TeklaConversionSettings> settingsStore
   )
   {
@@ -22,14 +27,15 @@ public sealed class DisplayValueExtractor
     _pointConverter = pointConverter;
     _lineConverter = lineConverter;
     _settingsStore = settingsStore;
+    _lineConverter = lineConverter;
+    _arcConverter = arcConverter;
+    _gridConverter = gridConverter;
   }
 
   public IEnumerable<Base> GetDisplayValue(TSM.ModelObject modelObject)
   {
     switch (modelObject)
     {
-      // both beam and contour plate are child classes of part
-      // its simpler to use part for common methods
       case TSM.Part part:
         if (part.GetSolid() is TSM.Solid partSolid)
         {
@@ -46,9 +52,33 @@ public sealed class DisplayValueExtractor
 
       // this section visualizes the rebars as solid
       case TSM.Reinforcement reinforcement:
-        if (reinforcement.GetSolid() is TSM.Solid reinforcementSolid)
+        var rebarGeometries = reinforcement.GetRebarComplexGeometries(
+          withHooks: true,
+          withoutClashes: true,
+          lengthAdjustments: true,
+          TSM.Reinforcement.RebarGeometrySimplificationTypeEnum.RATIONALIZED
+        );
+
+        foreach (TSM.RebarComplexGeometry barGeometry in rebarGeometries)
         {
-          yield return _meshConverter.Convert(reinforcementSolid);
+          foreach (var leg in barGeometry.Legs)
+          {
+            if (leg.Curve is TG.LineSegment legLine)
+            {
+              yield return _lineConverter.Convert(legLine);
+            }
+            else if (leg.Curve is TG.Arc legArc)
+            {
+              yield return _arcConverter.Convert(legArc);
+            }
+          }
+        }
+        break;
+
+      case TSM.Grid grid:
+        foreach (var gridLine in _gridConverter.Convert(grid))
+        {
+          yield return gridLine;
         }
 
         break;
