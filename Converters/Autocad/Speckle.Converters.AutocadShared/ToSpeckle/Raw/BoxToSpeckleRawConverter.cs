@@ -26,7 +26,6 @@ public class BoxToSpeckleRawConverter : ITypedConverter<ADB.Extents3d, SOG.Box>
     SOP.Interval xSize = new() { start = target.MinPoint.X, end = target.MaxPoint.X };
     SOP.Interval ySize = new() { start = target.MinPoint.Y, end = target.MaxPoint.Y };
     SOP.Interval zSize = new() { start = target.MinPoint.Z, end = target.MaxPoint.Z };
-    double volume = xSize.Length * ySize.Length * zSize.Length;
 
     // get the base plane of the bounding box from extents and current UCS
     var ucs = _settingsStore.Current.Document.Editor.CurrentUserCoordinateSystem.CoordinateSystem3d;
@@ -36,12 +35,11 @@ public class BoxToSpeckleRawConverter : ITypedConverter<ADB.Extents3d, SOG.Box>
     SOG.Box box =
       new()
       {
-        basePlane = plane,
+        plane = plane,
         xSize = xSize,
         ySize = ySize,
         zSize = zSize,
-        units = _settingsStore.Current.SpeckleUnits,
-        volume = volume,
+        units = _settingsStore.Current.SpeckleUnits
       };
 
     return box;

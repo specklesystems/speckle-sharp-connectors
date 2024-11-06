@@ -10,7 +10,7 @@ namespace Speckle.Converters.RevitShared.Helpers;
 public sealed class DisplayValueExtractor
 {
   private readonly ITypedConverter<
-    (Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId),
+    (Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId, bool makeTransparent),
     List<SOG.Mesh>
   > _meshByMaterialConverter;
   private readonly ILogger<DisplayValueExtractor> _logger;
@@ -18,7 +18,7 @@ public sealed class DisplayValueExtractor
 
   public DisplayValueExtractor(
     ITypedConverter<
-      (Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId),
+      (Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId, bool makeTransparent),
       List<SOG.Mesh>
     > meshByMaterialConverter,
     ILogger<DisplayValueExtractor> logger,
@@ -36,7 +36,11 @@ public sealed class DisplayValueExtractor
 
     var meshesByMaterial = GetMeshesByMaterial(meshes, solids);
 
-    return _meshByMaterialConverter.Convert((meshesByMaterial, element.Id));
+    List<SOG.Mesh> displayMeshes = _meshByMaterialConverter.Convert(
+      (meshesByMaterial, element.Id, ShouldSetElementDisplayToTransparent(element))
+    );
+
+    return displayMeshes;
   }
 
   private static Dictionary<DB.ElementId, List<DB.Mesh>> GetMeshesByMaterial(
@@ -208,5 +212,22 @@ public sealed class DisplayValueExtractor
 #endif
 
     return false;
+  }
+
+  // Determines if an element should be sent with invisible display values
+  private bool ShouldSetElementDisplayToTransparent(DB.Element element)
+  {
+#if REVIT2023_OR_GREATER
+    switch (element.Category?.BuiltInCategory)
+    {
+      case DB.BuiltInCategory.OST_Rooms:
+        return true;
+
+      default:
+        return false;
+    }
+#else
+    return false;
+#endif
   }
 }
