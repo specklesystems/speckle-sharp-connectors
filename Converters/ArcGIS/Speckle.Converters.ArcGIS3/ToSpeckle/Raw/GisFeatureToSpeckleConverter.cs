@@ -147,7 +147,8 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
         return new SGIS.GisPointFeature()
         {
           geometry = new() { specklePoint },
-          attributes = attributes
+          attributes = attributes,
+          applicationId = appId
         };
 
       case ACG.Multipoint multipoint:
