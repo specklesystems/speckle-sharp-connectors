@@ -21,6 +21,7 @@
 
         <PluginBundleTarget>$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connector.Navisworks.bundle</PluginBundleTarget>
         <PluginVersionContentTarget>$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connector.Navisworks.bundle\Contents\$(NavisworksBuildNumber)</PluginVersionContentTarget>
+        <RootNamespace>Speckle.Connector.Navisworks2024</RootNamespace>
 
     </PropertyGroup>
 
@@ -62,7 +63,7 @@
 
   <!-- NUGETS -->
   <ItemGroup>
-    <PackageReference Include="Speckle.Navisworks.API" VersionOverride="2024.0.0"/>
+    <PackageReference Include="Speckle.Navisworks.API" VersionOverride="2024.0.0" />
   </ItemGroup>
 
 </Project>
