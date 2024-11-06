@@ -4,7 +4,6 @@ using Speckle.Converters.RevitShared.Settings;
 using Speckle.Converters.RevitShared.ToSpeckle;
 using Speckle.Objects;
 using Speckle.Objects.BuiltElements.Revit;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Common;
 
@@ -108,6 +107,7 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
       units = _converterSettings.Current.SpeckleUnits
     };
 
+    /* The parameters refactor no longer uses the `Parameter` class and now we are only sending parameters as dictionaries in the `properties` field
     if (
       speckleFloor["parameters"] is Base parameters
       && parameters["FLOOR_HEIGHTABOVELEVEL_PARAM"] is SOBR.Parameter offsetParam
@@ -116,5 +116,6 @@ public class FloorTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB
     {
       offsetParam.value = offset + tailOffset;
     }
+    */
   }
 }

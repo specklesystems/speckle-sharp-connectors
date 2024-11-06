@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Render;
@@ -180,9 +180,14 @@ public class RhinoMaterialUnpacker
       : pbRenderMaterial.Emission.AsSystemColor(); // pbRenderMaterial.emission gives wrong color for emission materials, and material.emissioncolor gives the wrong value for most others *shrug*
 
     SpeckleRenderMaterial speckleRenderMaterial =
-      new(opacity, pbRenderMaterial.Metallic, pbRenderMaterial.Roughness, diffuse, emissive)
+      new()
       {
         name = renderMaterialName,
+        opacity = opacity,
+        metalness = pbRenderMaterial.Metallic,
+        roughness = pbRenderMaterial.Roughness,
+        diffuse = diffuse.ToArgb(),
+        emissive = emissive.ToArgb(),
         applicationId = renderMaterial.Id.ToString()
       };
 

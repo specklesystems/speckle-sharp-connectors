@@ -1,4 +1,4 @@
-﻿using Speckle.Converters.Common;
+using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
@@ -31,8 +31,11 @@ public class DirectShapeTopLevelConverterToSpeckle : BaseTopLevelConverterToSpec
     var geometries = _displayValueExtractor.GetDisplayValue(target).Cast<Base>().ToList();
 
     SOBR.DirectShape result =
-      new(target.Name, category, geometries)
+      new()
       {
+        name = target.Name,
+        category = category,
+        baseGeometries = geometries,
         displayValue = geometries,
         units = _converterSettings.Current.SpeckleUnits,
         elementId = target.Id.ToString().NotNull()

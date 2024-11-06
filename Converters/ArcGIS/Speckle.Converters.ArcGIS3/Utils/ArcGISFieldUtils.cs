@@ -186,49 +186,10 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
   {
     if (field.Value is Base attributeBase)
     {
-      // only traverse Base if it's Rhino userStrings, or Revit parameter, or Base containing Revit parameters
-      if (field.Key == "parameters")
-      {
-        foreach (KeyValuePair<string, object?> attributField in attributeBase.GetMembers(DynamicBaseMemberType.Dynamic))
-        {
-          // only iterate through elements if they are actually Revit Parameters or parameter IDs
-          if (
-            attributField.Value is Objects.BuiltElements.Revit.Parameter
-            || attributField.Key == "applicationId"
-            || attributField.Key == "id"
-          )
-          {
-            KeyValuePair<string, object?> newAttributField =
-              new($"{field.Key}.{attributField.Key}", attributField.Value);
-            Func<Base, object?> functionAdded = x => (function(x) as Base)?[attributField.Key];
-            TraverseAttributes(newAttributField, functionAdded, fieldsAndFunctions, fieldAdded);
-          }
-        }
-      }
-      else if (field.Key == "userStrings")
-      {
-        foreach (KeyValuePair<string, object?> attributField in attributeBase.GetMembers(DynamicBaseMemberType.Dynamic))
-        {
-          KeyValuePair<string, object?> newAttributField = new($"{field.Key}.{attributField.Key}", attributField.Value);
-          Func<Base, object?> functionAdded = x => (function(x) as Base)?[attributField.Key];
-          TraverseAttributes(newAttributField, functionAdded, fieldsAndFunctions, fieldAdded);
-        }
-      }
-      else if (field.Value is Objects.BuiltElements.Revit.Parameter)
-      {
-        foreach (
-          KeyValuePair<string, object?> attributField in attributeBase.GetMembers(DynamicBaseMemberType.Instance)
-        )
-        {
-          KeyValuePair<string, object?> newAttributField = new($"{field.Key}.{attributField.Key}", attributField.Value);
-          Func<Base, object?> functionAdded = x => (function(x) as Base)?[attributField.Key];
-          TraverseAttributes(newAttributField, functionAdded, fieldsAndFunctions, fieldAdded);
-        }
-      }
-      else
-      {
-        // for now, ignore all other properties of Base type
-      }
+      // Revit parameters are sent under the `properties` field as a `Dictionary<string,object?>`.
+      // This is the same for attributes from other applications. No Speckle objects should have attributes of type `Base`.
+      // Currently we are not sending any rhino user strings.
+      // TODO: add support for attributes of type `Dictionary<string,object?>`
     }
     else if (field.Value is IList attributeList)
     {

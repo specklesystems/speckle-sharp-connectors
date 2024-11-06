@@ -25,6 +25,12 @@ public class RevitGroupBaker : TraversalContextUnpacker
 
   public void BakeGroupForTopLevel(string baseGroupName)
   {
+    if (_elementIdsForTopLevelGroup.Count == 0)
+    // if no elements were successfully converted, instead of throwing when creating a new group, we should just return and let object conversion exceptions bubble up.
+    {
+      return;
+    }
+
     var docGroup = _converterSettings.Current.Document.Create.NewGroup(_elementIdsForTopLevelGroup);
     docGroup.GroupType.Name = _revitUtils.RemoveInvalidChars(baseGroupName);
     docGroup.Pinned = true;

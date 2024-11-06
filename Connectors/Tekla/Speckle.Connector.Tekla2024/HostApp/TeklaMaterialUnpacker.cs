@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using Speckle.Connector.Tekla2024.Extensions;
 using Speckle.Objects.Other;
 
@@ -38,7 +38,7 @@ public class TeklaMaterialUnpacker
       }
       else
       {
-        var renderMaterial = new RenderMaterial() { name = colorId, diffuseColor = systemColor };
+        var renderMaterial = new RenderMaterial() { name = colorId, diffuse = systemColor.ToArgb() };
         RenderMaterialProxy proxyRenderMaterial =
           new()
           {
