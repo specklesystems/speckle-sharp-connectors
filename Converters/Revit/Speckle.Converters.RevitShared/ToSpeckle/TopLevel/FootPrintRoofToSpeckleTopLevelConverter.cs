@@ -13,7 +13,7 @@ using Speckle.Sdk.Models.Extensions;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
-[NameAndRankValue(nameof(DB.FootPrintRoof), 0)]
+[NameAndRankValue(nameof(FootPrintRoof), 0)]
 public class FootPrintRoofToSpeckleTopLevelConverter
   : BaseTopLevelConverterToSpeckle<DB.FootPrintRoof, RevitFootprintRoof>
 {
@@ -45,13 +45,13 @@ public class FootPrintRoofToSpeckleTopLevelConverter
   {
     var baseLevel = _parameterValueExtractor.GetValueAsDocumentObject<DB.Level>(
       target,
-      DB.BuiltInParameter.ROOF_BASE_LEVEL_PARAM
+      BuiltInParameter.ROOF_BASE_LEVEL_PARAM
     );
 
     // We don't currently validate the success of this TryGet, it is assumed some Roofs don't have a top-level.
     _parameterValueExtractor.TryGetValueAsDocumentObject<DB.Level>(
       target,
-      DB.BuiltInParameter.ROOF_UPTO_LEVEL_PARAM,
+      BuiltInParameter.ROOF_UPTO_LEVEL_PARAM,
       out var topLevel
     );
 

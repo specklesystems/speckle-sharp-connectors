@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Registration;
@@ -44,7 +44,6 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<IRevitVersionConversionHelper, RevitVersionConversionHelper>();
 
     serviceCollection.AddScoped<ParameterValueExtractor>();
-    serviceCollection.AddScoped<ParameterValueSetter>();
     serviceCollection.AddScoped<DisplayValueExtractor>();
     serviceCollection.AddScoped<ISlopeArrowExtractor, SlopeArrowExtractor>();
 

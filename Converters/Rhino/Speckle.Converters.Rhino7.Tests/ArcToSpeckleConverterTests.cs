@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using Moq;
 using NUnit.Framework;
 using Speckle.Converters.Common;
@@ -15,7 +15,6 @@ public class ArcToSpeckleConverterTests : MoqTest
   public void Convert_ShouldConvertArcCorrectly()
   {
     // Arrange
-    var radius = 1.1d;
     var mockPointConverter = Create<ITypedConverter<RG.Point3d, SOG.Point>>();
     var mockPlaneConverter = Create<ITypedConverter<RG.Plane, SOG.Plane>>();
     var mockBoxConverter = Create<ITypedConverter<RG.Box, SOG.Box>>();
@@ -33,11 +32,6 @@ public class ArcToSpeckleConverterTests : MoqTest
     var boundbox = Create<RG.BoundingBox>();
 
     targetArc.Setup(x => x.Plane).Returns(targetPlane.Object);
-    targetArc.Setup(x => x.Radius).Returns(radius);
-    targetArc.Setup(x => x.StartAngle).Returns(radius);
-    targetArc.Setup(x => x.EndAngle).Returns(radius);
-    targetArc.Setup(x => x.Angle).Returns(radius);
-    targetArc.Setup(x => x.Length).Returns(radius);
     targetArc.Setup(x => x.StartPoint).Returns(point3d.Object);
     targetArc.Setup(x => x.MidPoint).Returns(point3d.Object);
     targetArc.Setup(x => x.EndPoint).Returns(point3d.Object);

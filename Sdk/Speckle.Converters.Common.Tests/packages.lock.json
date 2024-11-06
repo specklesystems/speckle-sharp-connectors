@@ -332,7 +332,7 @@
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
-          "Speckle.Objects": "[3.1.0-dev.170, )"
+          "Speckle.Objects": "[3.1.0-dev.174, )"
         }
       },
       "speckle.testing": {
@@ -362,18 +362,18 @@
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.170, )",
-        "resolved": "3.1.0-dev.170",
-        "contentHash": "T5p8Ra9NuliEsdfkInjtX0y5tsLzCLeCuAI/HMkJwGalcUuB6tY1wIAsKmE5slDrhOfwaMJ+DcBgoeOap6sj1A==",
+        "requested": "[3.1.0-dev.174, )",
+        "resolved": "3.1.0-dev.174",
+        "contentHash": "9SCFVbVle2+fPxx2l0sIiWQMLxw1S++V7DrDPnq/0fq5jKJNzaeT7w4VwLX7AzhTvnplpY/fhi9qUCR27nO9VA==",
         "dependencies": {
-          "Speckle.Sdk": "3.1.0-dev.170"
+          "Speckle.Sdk": "3.1.0-dev.174"
         }
       },
       "Speckle.Sdk": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.170, )",
-        "resolved": "3.1.0-dev.170",
-        "contentHash": "y9trGxWi/np52nKTufe9YMCboj5zCTzlP1yA99RVm+fVJUXKpibvWMG0LYaL8wxYryB/iJ7YLSy7wNbLkuZkQQ==",
+        "requested": "[3.1.0-dev.174, )",
+        "resolved": "3.1.0-dev.174",
+        "contentHash": "sj0RdxcORCNxT7KdXtUYV1E+dsNfdAnNQElTv77DN5O9p4grFxkV1Wymu3XH5nkQ5HrwqBWbfRU9ycK7QruIYg==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.CSharp": "4.7.0",
@@ -382,14 +382,14 @@
           "Microsoft.Extensions.Logging": "2.2.0",
           "Speckle.DoubleNumerics": "4.0.1",
           "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Dependencies": "3.1.0-dev.170"
+          "Speckle.Sdk.Dependencies": "3.1.0-dev.174"
         }
       },
       "Speckle.Sdk.Dependencies": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.170, )",
-        "resolved": "3.1.0-dev.170",
-        "contentHash": "HIRsT/tC20vGp+5YRRv8iQEd5ICRDl475H+cGdIa2/aOCwAv6OJ1KHEYRa+E1Kk9rn8nI/ltCsU14r6JkleQSw=="
+        "requested": "[3.1.0-dev.174, )",
+        "resolved": "3.1.0-dev.174",
+        "contentHash": "I3a1XHewuT+QUTYWHiTcDy5KtKBlpztWFbA+rKplBq6pj/sBdOu/QLEDkhSK4tKhYkFrGh/3LrDeYq4TpOIGUw=="
       }
     }
   }
