@@ -3,11 +3,11 @@ using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converter.Tekla2024.ToSpeckle.Raw;
 
-public class VectorToSpeckleRawConverter : ITypedConverter<TG.Vector, SOG.Vector>
+public class VectorToSpeckleConverter : ITypedConverter<TG.Vector, SOG.Vector>
 {
   private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
 
-  public VectorToSpeckleRawConverter(IConverterSettingsStore<TeklaConversionSettings> settingsStore)
+  public VectorToSpeckleConverter(IConverterSettingsStore<TeklaConversionSettings> settingsStore)
   {
     _settingsStore = settingsStore;
   }
