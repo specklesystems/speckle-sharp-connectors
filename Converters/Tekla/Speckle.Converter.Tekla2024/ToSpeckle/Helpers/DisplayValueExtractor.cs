@@ -10,7 +10,6 @@ public sealed class DisplayValueExtractor
   private readonly ITypedConverter<TG.Point, SOG.Point> _pointConverter;
   private readonly ITypedConverter<TG.LineSegment, SOG.Line> _lineConverter;
   private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
-  private readonly ITypedConverter<TG.LineSegment, SOG.Line> _lineConverter;
   private readonly ITypedConverter<TG.Arc, SOG.Arc> _arcConverter;
   private readonly ITypedConverter<TSM.Grid, IEnumerable<Base>> _gridConverter;
 
