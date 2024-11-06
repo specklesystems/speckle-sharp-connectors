@@ -56,8 +56,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
-  ) =>
-    await RevitTask.RunAsync(() => BuildSync(objects, sendInfo, onOperationProgressed, ct)).ConfigureAwait(false);
+  ) => await RevitTask.RunAsync(() => BuildSync(objects, sendInfo, onOperationProgressed, ct)).ConfigureAwait(false);
 
   private RootObjectBuilderResult BuildSync(
     IReadOnlyList<ElementId> objects,
@@ -66,8 +65,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     CancellationToken ct = default
   )
   {
-
-  var doc = _converterSettings.Current.Document;
+    var doc = _converterSettings.Current.Document;
 
     if (doc.IsFamilyDocument)
     {
