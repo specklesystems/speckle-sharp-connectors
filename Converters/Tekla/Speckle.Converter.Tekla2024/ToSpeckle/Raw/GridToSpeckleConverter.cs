@@ -1,14 +1,20 @@
-﻿using Speckle.Converters.Common.Objects;
+﻿using Speckle.Converters.Common;
+using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Models;
 
-namespace Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
+namespace Speckle.Converter.Tekla2024.ToSpeckle.Raw;
 
-public class GridHandler
+public class GridToSpeckleConverter : ITypedConverter<TSM.Grid, IEnumerable<Base>>
 {
+  private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
   private readonly ITypedConverter<TG.LineSegment, SOG.Line> _lineConverter;
 
-  public GridHandler(ITypedConverter<TG.LineSegment, SOG.Line> lineConverter)
+  public GridToSpeckleConverter(
+    IConverterSettingsStore<TeklaConversionSettings> settingsStore,
+    ITypedConverter<TG.LineSegment, SOG.Line> lineConverter
+  )
   {
+    _settingsStore = settingsStore;
     _lineConverter = lineConverter;
   }
 
@@ -53,26 +59,26 @@ public class GridHandler
     }
   }
 
-  public IEnumerable<Base> GetGridLines(TSM.Grid grid)
+  public IEnumerable<Base> Convert(TSM.Grid target)
   {
-    var coordinateSystem = grid.GetCoordinateSystem();
+    var coordinateSystem = target.GetCoordinateSystem();
     if (coordinateSystem == null)
     {
       yield break;
     }
 
-    var xCoordinates = ParseCoordinateString(grid.CoordinateX).ToList();
-    var yCoordinates = ParseCoordinateString(grid.CoordinateY).ToList();
+    var xCoordinates = ParseCoordinateString(target.CoordinateX).ToList();
+    var yCoordinates = ParseCoordinateString(target.CoordinateY).ToList();
 
     double minX = xCoordinates.Min();
     double maxX = xCoordinates.Max();
     double minY = yCoordinates.Min();
     double maxY = yCoordinates.Max();
 
-    double extendedMinX = minX - grid.ExtensionLeftX;
-    double extendedMaxX = maxX + grid.ExtensionRightX;
-    double extendedMinY = minY - grid.ExtensionLeftY;
-    double extendedMaxY = maxY + grid.ExtensionRightY;
+    double extendedMinX = minX - target.ExtensionLeftX;
+    double extendedMaxX = maxX + target.ExtensionRightX;
+    double extendedMinY = minY - target.ExtensionLeftY;
+    double extendedMaxY = maxY + target.ExtensionRightY;
 
     foreach (var x in xCoordinates)
     {
