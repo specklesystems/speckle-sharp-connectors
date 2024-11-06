@@ -465,7 +465,7 @@ public sealed class ArcGISSendBinding : ISendBinding
         if (idsDeleted && sender.SendFilter is ArcGISSelectionFilter filter)
         {
           List<string> remainingObjIds = objIds.SkipWhile(x => intersection.Contains(x)).ToList();
-          filter.SelectedObjectIds = remainingObjIds;
+          filter.ObjectIds = remainingObjIds;
         }
       }
     }

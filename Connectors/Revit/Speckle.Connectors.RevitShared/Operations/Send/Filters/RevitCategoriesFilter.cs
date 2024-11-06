@@ -18,6 +18,7 @@ public class RevitCategoriesFilter : DiscriminatedObject, ISendFilter, IRevitSen
   public string Name { get; set; } = "Categories";
   public string? Summary { get; set; }
   public bool IsDefault { get; set; }
+  public List<string> ObjectIds { get; set; } = new();
   public List<string>? SelectedCategories { get; set; }
   public List<CategoryData>? AvailableCategories { get; set; }
 
@@ -37,7 +38,7 @@ public class RevitCategoriesFilter : DiscriminatedObject, ISendFilter, IRevitSen
   /// Use it with APIContext.Run
   /// </summary>
   /// <exception cref="SpeckleSendFilterException">Whenever no view is found.</exception>
-  public List<string> GetObjectIds()
+  public List<string> SetObjectIds()
   {
     var objectIds = new List<string>();
     if (SelectedCategories is null)
@@ -45,7 +46,7 @@ public class RevitCategoriesFilter : DiscriminatedObject, ISendFilter, IRevitSen
       return objectIds;
     }
 
-    var elementIds = SelectedCategories.Select(c => ElementId.Parse(c)).Where(e => e is not null).ToList();
+    var elementIds = SelectedCategories.Select(c => ElementIdHelper.GetElementId(c)).Where(e => e is not null).ToList();
 
     using var categoryFilter = new ElementMulticategoryFilter(elementIds);
     using var collector = new FilteredElementCollector(_doc);
@@ -54,8 +55,9 @@ public class RevitCategoriesFilter : DiscriminatedObject, ISendFilter, IRevitSen
       .WhereElementIsViewIndependent()
       .WherePasses(categoryFilter)
       .ToList();
-
-    return elements.Select(e => e.UniqueId).ToList();
+    objectIds = elements.Select(e => e.UniqueId).ToList();
+    ObjectIds = objectIds;
+    return objectIds;
   }
 
   private void GetCategories()

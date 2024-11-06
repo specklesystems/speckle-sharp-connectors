@@ -90,7 +90,7 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
 
     if (myModel is SenderModelCard sender)
     {
-      objectIds = sender.SendFilter.NotNull().GetObjectIds();
+      objectIds = sender.SendFilter.NotNull().ObjectIds;
     }
 
     if (myModel is ReceiverModelCard receiver && receiver.BakedObjectIds != null)

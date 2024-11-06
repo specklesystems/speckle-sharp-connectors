@@ -133,9 +133,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         .ServiceProvider.GetRequiredService<IConverterSettingsStore<RevitConversionSettings>>()
         .Initialize(
           _revitConversionSettingsFactory.Create(
-            await _toSpeckleSettingsManager.GetDetailLevelSetting(modelCard).ConfigureAwait(false),
-            await _toSpeckleSettingsManager.GetReferencePointSetting(modelCard).ConfigureAwait(false),
-            await _toSpeckleSettingsManager.GetSendParameterNullOrEmptyStringsSetting(modelCard).ConfigureAwait(false)
+            _toSpeckleSettingsManager.GetDetailLevelSetting(modelCard),
+            _toSpeckleSettingsManager.GetReferencePointSetting(modelCard),
+            _toSpeckleSettingsManager.GetSendParameterNullOrEmptyStringsSetting(modelCard)
           )
         );
 
@@ -149,9 +149,10 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       }
 
       var selectedObjects = await _apiContext
-        .Run(_ => modelCard.SendFilter.NotNull().GetObjectIds())
+        .Run(_ => modelCard.SendFilter.NotNull().SetObjectIds())
         .ConfigureAwait(false);
 
+      await Commands.SetFilterObjectIds(modelCardId, selectedObjects).ConfigureAwait(false);
       List<Element> elements = selectedObjects
         .Select(uid => activeUIDoc.Document.GetElement(uid))
         .Where(el => el is not null)
@@ -223,6 +224,18 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       ChangedObjectIds[elementId] = 1;
     }
 
+    if (addedElementIds.Count > 0)
+    {
+      foreach (var sender in Store.GetSenders())
+      {
+        if (sender.SendFilter is ISendFilter sendFilter)
+        {
+          var objectIds = sendFilter.SetObjectIds();
+          await Commands.SetFilterObjectIds(sender.ModelCardId.NotNull(), objectIds).ConfigureAwait(false);
+        }
+      }
+    }
+
     if (HaveUnitsChanged(e.GetDocument()))
     {
       var objectIds = new List<string>();
@@ -232,9 +245,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         {
           continue;
         }
-        var selectedObjects = await _apiContext
-          .Run(_ => sender.SendFilter.NotNull().GetObjectIds())
-          .ConfigureAwait(false);
+
+        var selectedObjects = sender.SendFilter.NotNull().ObjectIds;
         objectIds.AddRange(selectedObjects);
       }
       var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds.ToList());
@@ -336,9 +348,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       {
         viewFilter.SetContext(RevitContext, _apiContext);
       }
-      var selectedObjects = await _apiContext
-        .Run(_ => modelCard.SendFilter.NotNull().GetObjectIds())
-        .ConfigureAwait(false);
+
+      var selectedObjects = modelCard.SendFilter.NotNull().ObjectIds;
       var intersection = selectedObjects.Intersect(objUniqueIds).ToList();
       bool isExpired = intersection.Count != 0;
       if (isExpired)

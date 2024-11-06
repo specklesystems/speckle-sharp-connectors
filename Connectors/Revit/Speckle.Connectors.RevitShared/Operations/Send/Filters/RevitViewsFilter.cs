@@ -17,6 +17,7 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
   public string? Summary { get; set; }
   public bool IsDefault { get; set; }
   public string? SelectedView { get; set; }
+  public List<string> ObjectIds { get; set; } = new();
   public List<string>? AvailableViews { get; set; }
 
   public RevitViewsFilter() { }
@@ -52,7 +53,7 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
   /// Use it with APIContext.Run
   /// </summary>
   /// <exception cref="SpeckleSendFilterException">Whenever no view is found.</exception>
-  public List<string> GetObjectIds()
+  public List<string> SetObjectIds()
   {
     var objectIds = new List<string>();
     if (SelectedView is null)
@@ -78,6 +79,7 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
     using var viewCollector = new FilteredElementCollector(_doc, view.Id);
     List<Element> elementsInView = viewCollector.ToElements().ToList();
     objectIds = elementsInView.Select(e => e.UniqueId).ToList();
+    ObjectIds = objectIds;
     return objectIds;
   }
 

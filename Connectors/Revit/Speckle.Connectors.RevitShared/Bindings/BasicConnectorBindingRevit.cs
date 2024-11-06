@@ -126,9 +126,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
         return;
       }
 
-      var selectedObjects = await _apiContext
-        .Run(_ => senderModelCard.SendFilter.NotNull().GetObjectIds())
-        .ConfigureAwait(false);
+      var selectedObjects = senderModelCard.SendFilter.NotNull().ObjectIds;
 
       elementIds = selectedObjects
         .Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid))
