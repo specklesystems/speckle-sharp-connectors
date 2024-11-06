@@ -3,13 +3,13 @@ using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converter.Tekla2024.ToSpeckle.Raw;
 
-public class PolycurveToSpeckleRawConverter : ITypedConverter<TG.Polycurve, SOG.Polycurve>
+public class PolycurveToSpeckleConverter : ITypedConverter<TG.Polycurve, SOG.Polycurve>
 {
   private readonly ITypedConverter<TG.LineSegment, SOG.Line> _lineConverter;
   private readonly ITypedConverter<TG.Arc, SOG.Arc> _arcConverter;
   private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
 
-  public PolycurveToSpeckleRawConverter(
+  public PolycurveToSpeckleConverter(
     ITypedConverter<TG.LineSegment, SOG.Line> lineConverter,
     ITypedConverter<TG.Arc, SOG.Arc> arcConverter,
     IConverterSettingsStore<TeklaConversionSettings> settingsStore
