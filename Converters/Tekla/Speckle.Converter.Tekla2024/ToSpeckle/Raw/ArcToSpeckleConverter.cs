@@ -3,13 +3,13 @@ using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converter.Tekla2024.ToSpeckle.Raw;
 
-public class ArcToSpeckleRawConverter : ITypedConverter<TG.Arc, SOG.Arc>
+public class ArcToSpeckleConverter : ITypedConverter<TG.Arc, SOG.Arc>
 {
   private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
   private readonly ITypedConverter<TG.Point, SOG.Point> _pointConverter;
   private readonly ITypedConverter<TG.Vector, SOG.Vector> _vectorConverter;
 
-  public ArcToSpeckleRawConverter(
+  public ArcToSpeckleConverter(
     IConverterSettingsStore<TeklaConversionSettings> settingsStore,
     ITypedConverter<TG.Point, SOG.Point> pointConverter,
     ITypedConverter<TG.Vector, SOG.Vector> vectorConverter
