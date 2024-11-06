@@ -203,7 +203,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   /// a filter refresh (e.g., views being added).
   /// </summary>
   /// <param name="e"></param>
-  private async Task DocChangeHandler(Autodesk.Revit.DB.Events.DocumentChangedEventArgs e)
+  private void DocChangeHandler(Autodesk.Revit.DB.Events.DocumentChangedEventArgs e)
   {
     ICollection<ElementId> addedElementIds = e.GetAddedElementIds();
     ICollection<ElementId> deletedElementIds = e.GetDeletedElementIds();
@@ -226,14 +226,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     if (addedElementIds.Count > 0)
     {
-      foreach (var sender in Store.GetSenders())
-      {
-        if (sender.SendFilter is ISendFilter sendFilter)
-        {
-          var objectIds = sendFilter.SetObjectIds();
-          await Commands.SetFilterObjectIds(sender.ModelCardId.NotNull(), objectIds).ConfigureAwait(false);
-        }
-      }
+      _idleManager.SubscribeToIdle(nameof(PostSetObjectIds), PostSetObjectIds);
     }
 
     if (HaveUnitsChanged(e.GetDocument()))
@@ -289,6 +282,22 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     _docUnitCache[docId] = units;
     return false;
+  }
+
+  private async Task PostSetObjectIds()
+  {
+    foreach (var sender in Store.GetSenders().ToList())
+    {
+      if (sender.SendFilter is ISendFilter sendFilter)
+      {
+        if (sendFilter is IRevitSendFilter revitSendFilter)
+        {
+          revitSendFilter.SetContext(RevitContext, _apiContext);
+        }
+        var objectIds = await _apiContext.Run(_ => sendFilter.NotNull().SetObjectIds()).ConfigureAwait(true);
+        await Commands.SetFilterObjectIds(sender.ModelCardId.NotNull(), objectIds).ConfigureAwait(true);
+      }
+    }
   }
 
   /// <summary>
