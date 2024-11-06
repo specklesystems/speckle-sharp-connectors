@@ -7,14 +7,17 @@ namespace Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
 public sealed class DisplayValueExtractor
 {
   private readonly ITypedConverter<TSM.Solid, SOG.Mesh> _meshConverter;
+  private readonly GridHandler _gridHandler;
   private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
 
   public DisplayValueExtractor(
     ITypedConverter<TSM.Solid, SOG.Mesh> meshConverter,
+    ITypedConverter<TG.LineSegment, SOG.Line> lineConverter,
     IConverterSettingsStore<TeklaConversionSettings> settingsStore
   )
   {
     _meshConverter = meshConverter;
+    _gridHandler = new GridHandler(lineConverter);
     _settingsStore = settingsStore;
   }
 
@@ -22,8 +25,6 @@ public sealed class DisplayValueExtractor
   {
     switch (modelObject)
     {
-      // both beam and contour plate are child classes of part
-      // its simpler to use part for common methods
       case TSM.Part part:
         if (part.GetSolid() is TSM.Solid partSolid)
         {
@@ -38,10 +39,18 @@ public sealed class DisplayValueExtractor
         }
         break;
 
+      // logic to send reinforcement as solid
       case TSM.Reinforcement reinforcement:
         if (reinforcement.GetSolid() is TSM.Solid reinforcementSolid)
         {
           yield return _meshConverter.Convert(reinforcementSolid);
+        }
+        break;
+
+      case TSM.Grid grid:
+        foreach (var gridLine in _gridHandler.GetGridLines(grid))
+        {
+          yield return gridLine;
         }
         break;
 
