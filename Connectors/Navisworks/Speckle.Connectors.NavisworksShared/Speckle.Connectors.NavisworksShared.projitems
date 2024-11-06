@@ -8,4 +8,29 @@
   <PropertyGroup Label="Configuration">
     <Import_RootNamespace>Speckle.Connectors.NavisworksShared</Import_RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <Folder Include="$(MSBuildThisFileDirectory)Filters\" />
+    <Folder Include="$(MSBuildThisFileDirectory)Operations\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\BasicConnectorBinding.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\ServiceRegistration.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)GlobalUsings.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksDocumentStore.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\AppUtils.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\BrowserPane.xaml.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\Commands.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\DockableConnectorPane.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\NavisworksRibbon.xaml.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="$(MSBuildThisFileDirectory)Plugin\BrowserPane.xaml" />
+    <Content Include="$(MSBuildThisFileDirectory)Plugin\PackageContents.xml" />
+    <Content Include="$(MSBuildThisFileDirectory)Plugin\NavisworksRibbon.name" />
+    <Content Include="$(MSBuildThisFileDirectory)Resources\s2logo16.png" />
+    <Content Include="$(MSBuildThisFileDirectory)Resources\s2logo32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="$(MSBuildThisFileDirectory)Plugin\NavisworksRibbon.xaml" />
+  </ItemGroup>
 </Project>

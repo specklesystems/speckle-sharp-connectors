@@ -20,6 +20,5 @@
   </ItemGroup>
 
   <!-- Includes -->
-  <Import Project="..\Speckle.Converters.NavisworksShared\Speckle.Converters.NavisworksShared.projitems" Label="Shared"/>
 
 </Project>

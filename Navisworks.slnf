@@ -1,0 +1,28 @@
+﻿{
+  "solution": {
+    "path": "Speckle.Connectors.sln",
+    "projects": [
+      "Build\\Build.csproj",
+      "Connectors\\Autocad\\Speckle.Connectors.Autocad2024\\Speckle.Connectors.Autocad2024.shproj",
+      "Connectors\\Autocad\\Speckle.Connectors.AutocadShared\\Speckle.Connectors.AutocadShared.shproj",
+      "Connectors\\Autocad\\Speckle.Connectors.Civil3dShared\\Speckle.Connectors.Civil3dShared.shproj",
+      "Connectors\\Navisworks\\Speckle.Connectors.Navisworks2024\\Speckle.Connectors.Navisworks2024.csproj",
+      "Connectors\\Navisworks\\Speckle.Connectors.NavisworksShared\\Speckle.Connectors.NavisworksShared.shproj",
+      "Connectors\\Tekla\\Speckle.Connector.Tekla2024\\Speckle.Connector.Tekla2024.csproj",
+      "Converters\\Autocad\\Speckle.Converters.AutocadShared\\Speckle.Converters.AutocadShared.shproj",
+      "Converters\\Civil3d\\Speckle.Converters.Civil3dShared\\Speckle.Converters.Civil3dShared.shproj",
+      "Converters\\Navisworks\\Speckle.Converters.Navisworks2024\\Speckle.Converters.Navisworks2024.csproj",
+      "Converters\\Navisworks\\Speckle.Converters.NavisworksShared\\Speckle.Converters.NavisworksShared.shproj",
+      "Converters\\Tekla\\Speckle.Converter.Tekla2024\\Speckle.Converter.Tekla2024.csproj",
+      "DUI3\\Speckle.Connectors.DUI.Tests\\Speckle.Connectors.DUI.Tests.csproj",
+      "DUI3\\Speckle.Connectors.DUI.WebView\\Speckle.Connectors.DUI.WebView.csproj",
+      "DUI3\\Speckle.Connectors.DUI\\Speckle.Connectors.DUI.csproj",
+      "Sdk\\Speckle.Connectors.Common\\Speckle.Connectors.Common.csproj",
+      "Sdk\\Speckle.Connectors.Logging\\Speckle.Connectors.Logging.csproj",
+      "Sdk\\Speckle.Connectors.Tests\\Speckle.Connectors.Tests.csproj",
+      "Sdk\\Speckle.Converters.Common.Tests\\Speckle.Converters.Common.Tests.csproj",
+      "Sdk\\Speckle.Converters.Common\\Speckle.Converters.Common.csproj",
+      "Sdk\\Speckle.Testing\\Speckle.Testing.csproj"
+    ]
+  }
+}

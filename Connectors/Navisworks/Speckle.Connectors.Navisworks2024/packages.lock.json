@@ -2,6 +2,15 @@
   "version": 2,
   "dependencies": {
     ".NETFramework,Version=v4.8": {
+      "Microsoft.Extensions.DependencyInjection": {
+        "type": "Direct",
+        "requested": "[2.2.0, )",
+        "resolved": "2.2.0",
+        "contentHash": "MZtBIwfDFork5vfjpJdG5g8wuJFt7d/y3LOSVVtDK/76wlbtz6cjltfKHqLx2TKVqTj5/c41t77m1+h20zqtPA==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "2.2.0"
+        }
+      },
       "Microsoft.NETFramework.ReferenceAssemblies": {
         "type": "Direct",
         "requested": "[1.0.3, )",
@@ -268,6 +277,36 @@
           "System.Runtime.CompilerServices.Unsafe": "4.5.3"
         }
       },
+      "speckle.connectors.common": {
+        "type": "Project",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection": "[2.2.0, )",
+          "Speckle.Connectors.Logging": "[1.0.0, )",
+          "Speckle.Objects": "[3.1.0-dev.174, )",
+          "Speckle.Sdk": "[3.1.0-dev.174, )",
+          "Speckle.Sdk.Dependencies": "[3.1.0-dev.174, )"
+        }
+      },
+      "speckle.connectors.dui": {
+        "type": "Project",
+        "dependencies": {
+          "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
+          "Speckle.Connectors.Common": "[1.0.0, )",
+          "Speckle.Sdk": "[3.1.0-dev.174, )",
+          "Speckle.Sdk.Dependencies": "[3.1.0-dev.174, )",
+          "System.Threading.Tasks.Dataflow": "[6.0.0, )"
+        }
+      },
+      "speckle.connectors.dui.webview": {
+        "type": "Project",
+        "dependencies": {
+          "Microsoft.Web.WebView2": "[1.0.1938.49, )",
+          "Speckle.Connectors.DUI": "[1.0.0, )"
+        }
+      },
+      "speckle.connectors.logging": {
+        "type": "Project"
+      },
       "Microsoft.Extensions.Logging": {
         "type": "CentralTransitive",
         "requested": "[2.2.0, )",
@@ -285,6 +324,12 @@
         "requested": "[2.2.0, )",
         "resolved": "2.2.0",
         "contentHash": "B2WqEox8o+4KUOpL7rZPyh6qYjik8tHi2tN8Z9jZkHzED8ElYgZa/h6K+xliB435SqUcWT290Fr2aa8BtZjn8A=="
+      },
+      "Microsoft.Web.WebView2": {
+        "type": "CentralTransitive",
+        "requested": "[1.0.1938.49, )",
+        "resolved": "1.0.1938.49",
+        "contentHash": "z8KnFnaTYzhA/ZnyRX0qGfS1NU5ZBJeClAH64F0fVDvdDJTvME7xl6zTJ0Jlfe1BtL3C0NH9xTy64shg2baKdw=="
       },
       "Speckle.Sdk": {
         "type": "CentralTransitive",
@@ -308,6 +353,12 @@
         "requested": "[3.1.0-dev.174, )",
         "resolved": "3.1.0-dev.174",
         "contentHash": "I3a1XHewuT+QUTYWHiTcDy5KtKBlpztWFbA+rKplBq6pj/sBdOu/QLEDkhSK4tKhYkFrGh/3LrDeYq4TpOIGUw=="
+      },
+      "System.Threading.Tasks.Dataflow": {
+        "type": "CentralTransitive",
+        "requested": "[6.0.0, )",
+        "resolved": "6.0.0",
+        "contentHash": "+tyDCU3/B1lDdOOAJywHQoFwyXIUghIaP2BxG79uvhfTnO+D9qIgjVlL/JV2NTliYbMHpd6eKDmHp2VHpij7MA=="
       }
     },
     ".NETFramework,Version=v4.8/win-x64": {
@@ -315,6 +366,12 @@
         "type": "Transitive",
         "resolved": "2.1.4",
         "contentHash": "2C9Q9eX7CPLveJA0rIhf9RXAvu+7nWZu1A2MdG6SD/NOu26TakGgL1nsbc0JAspGijFOo3HoN79xrx8a368fBg=="
+      },
+      "Microsoft.Web.WebView2": {
+        "type": "CentralTransitive",
+        "requested": "[1.0.1938.49, )",
+        "resolved": "1.0.1938.49",
+        "contentHash": "z8KnFnaTYzhA/ZnyRX0qGfS1NU5ZBJeClAH64F0fVDvdDJTvME7xl6zTJ0Jlfe1BtL3C0NH9xTy64shg2baKdw=="
       }
     }
   }
