@@ -1,18 +1,17 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
-using Speckle.Objects.BuiltElements.Revit;
+using Speckle.Converters.RevitShared.ToSpeckle;
 
-namespace Speckle.Converters.RevitShared.ToSpeckle;
+namespace Speckle.Converters.Revit2023.ToSpeckle.TopLevel;
 
-// POC: used as placeholder for revit instances
-[NameAndRankValue(nameof(DB.Element), 0)]
-public class ElementTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.Element, RevitElement>
+[NameAndRankValue(nameof(DBA.Railing), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+public class RailingTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DBA.Railing, SOBR.RevitElement>
 {
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
-  public ElementTopLevelConverterToSpeckle(
+  public RailingTopLevelConverterToSpeckle(
     DisplayValueExtractor displayValueExtractor,
     IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
@@ -21,15 +20,20 @@ public class ElementTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<
     _converterSettings = converterSettings;
   }
 
-  public override RevitElement Convert(DB.Element target)
+  public override SOBR.RevitElement Convert(DBA.Railing target)
   {
     string family = target.Document.GetElement(target.GetTypeId()) is DB.FamilySymbol symbol
       ? symbol.FamilyName
       : "no family";
     string category = target.Category?.Name ?? "no category";
-    List<Objects.Geometry.Mesh> displayValue = _displayValueExtractor.GetDisplayValue(target);
+    var displayValue = _displayValueExtractor.GetDisplayValue(target);
 
-    RevitElement speckleElement =
+    var topRail = _converterSettings.Current.Document.GetElement(target.TopRail);
+    var topRailDisplayValue = _displayValueExtractor.GetDisplayValue(topRail);
+
+    displayValue.AddRange(topRailDisplayValue);
+
+    SOBR.RevitElement speckleElement =
       new()
       {
         type = target.Name,
