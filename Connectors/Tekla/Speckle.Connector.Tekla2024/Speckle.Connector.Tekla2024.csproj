@@ -13,9 +13,20 @@
       <TeklaBmp Include="$(TargetDir)\Assets\et_element_Speckle.bmp"/>
     </ItemGroup>
 
-    <Message Text="TeklaVersion $(TeklaVersion), Program Data $(ProgramData)" Importance="high"/>
-    <Copy DestinationFolder="$(ProgramData)\Trimble\Tekla Structures\$(TeklaVersion).0\Environments\common\extensions\Speckle3TeklaStructures\%(RecursiveDir)" SourceFiles="@(TeklaDlls)" />
-    <Copy DestinationFolder="$(ProgramData)\Tekla Structures\$(TeklaVersion).0\bitmaps\" SourceFiles="@(TeklaBmp)" />
+    <Message Text="TeklaVersion $(TeklaVersion)" Importance="high"/>
+    <Copy Condition="Exists('$(ProgramData)\Trimble\Tekla Structures\$(TeklaVersion).0')" 
+          DestinationFolder="$(ProgramData)\Trimble\Tekla Structures\$(TeklaVersion).0\Environments\common\extensions\Speckle3TeklaStructures\%(RecursiveDir)" 
+          SourceFiles="@(TeklaDlls)" />
+    <Copy Condition="Exists('$(ProgramData)\Trimble\Tekla Structures\$(TeklaVersion).0')" 
+          DestinationFolder="$(ProgramData)\Trimble\Tekla Structures\$(TeklaVersion).0\Bitmaps" 
+          SourceFiles="@(TeklaBmp)" />
+    
+    <Copy Condition="Exists('C:\TeklaStructures\2024.0')" 
+          DestinationFolder="C:\TeklaStructures\2024.0\Environments\common\extensions\Speckle3TeklaStructures\%(RecursiveDir)" 
+          SourceFiles="@(TeklaDlls)" />
+    <Copy Condition="Exists('C:\TeklaStructures\2024.0')" 
+          DestinationFolder="$(ProgramFiles)\TeklaStructures\2024.0\bin\Env\Bitmaps" 
+          SourceFiles="@(TeklaBmp)" />
   </Target>
   
   <ItemGroup>
