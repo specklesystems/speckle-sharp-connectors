@@ -9,5 +9,9 @@ public class RevitSelectionFilter : DirectSelectionSendFilter
     IsDefault = true;
   }
 
-  public override List<string> SetObjectIds() => SelectedObjectIds;
+  public override List<string> SetObjectIds()
+  {
+    ObjectIds = SelectedObjectIds; // We know it is bad, it is for backward compatibility!
+    return ObjectIds;
+  }
 }
