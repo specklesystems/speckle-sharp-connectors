@@ -8,7 +8,7 @@
     <PackageVersion Include="Glob" Version="1.1.9" />
     <PackageVersion Include="ILRepack.FullAuto" Version="1.6.0" />
     <PackageVersion Include="Moq" Version="4.20.70" />    
-    <PackageVersion Include="Microsoft.Build" Version="17.12.6" />
+    <PackageVersion Include="Microsoft.Build" Version="17.11.4" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="2.2.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="2.2.0" />
