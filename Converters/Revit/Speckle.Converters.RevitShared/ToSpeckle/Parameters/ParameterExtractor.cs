@@ -125,7 +125,7 @@ public class ParameterExtractor
           _parameterDefinitionHandler.HandleDefinition(parameter);
 
         // NOTE: ids don't really have much meaning; if we discover the opposite, we can bring them back. See [CNX-556: All ID Parameters are send as Name](https://linear.app/speckle/issue/CNX-556/all-id-parameters-are-send-as-name)
-        if (internalDefinitionName.Contains("_ID"))
+        if (internalDefinitionName.EndsWith("_ID") || internalDefinitionName.EndsWith("_PARAM_ID"))
         {
           continue;
         }
@@ -199,9 +199,17 @@ public class ParameterExtractor
       case DB.StorageType.Double:
         return _scalingServiceToSpeckle.Scale(parameter.AsDouble(), parameter.GetUnitTypeId());
       case DB.StorageType.Integer:
-        return parameter.AsInteger().ToString() == parameter.AsValueString()
-          ? parameter.AsInteger()
-          : parameter.AsValueString();
+        var integer = parameter.AsInteger();
+        var valueString = parameter.AsValueString();
+        if (integer.ToString() == valueString)
+        {
+          return integer;
+        }
+        else
+        {
+          return valueString;
+        }
+
       case DB.StorageType.ElementId:
         var elId = parameter.AsElementId()!;
         if (elId == DB.ElementId.InvalidElementId)
