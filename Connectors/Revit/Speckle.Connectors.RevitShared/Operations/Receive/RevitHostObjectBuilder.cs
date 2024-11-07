@@ -183,7 +183,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
         // POC hack of the ages: try to pre transform curves before baking
         // we need to bypass the local to global converter as there we don't have access to what we want. that service will/should stop existing.
         if (
-          localToGlobalMap.AtomicObject is ITransformable transformable and ICurve
+          localToGlobalMap.AtomicObject is ITransformable transformable // and ICurve
           && localToGlobalMap.Matrix.Count > 0
           && localToGlobalMap.AtomicObject["units"] is string units
         )
