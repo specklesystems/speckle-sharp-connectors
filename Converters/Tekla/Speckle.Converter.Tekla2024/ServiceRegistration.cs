@@ -18,7 +18,8 @@ public static class ServiceRegistration
     serviceCollection.AddTransient<ModelObjectToSpeckleConverter>();
 
     serviceCollection.AddScoped<DisplayValueExtractor>();
-    serviceCollection.AddScoped<PropertyExtractor>();
+    serviceCollection.AddScoped<ClassPropertyExtractor>();
+    serviceCollection.AddScoped<ReportPropertyExtractor>();
 
     serviceCollection.AddRootCommon<TeklaRootToSpeckleConverter>(converterAssembly);
     serviceCollection.AddApplicationConverters<TeklaToSpeckleUnitConverter, Units>(converterAssembly);

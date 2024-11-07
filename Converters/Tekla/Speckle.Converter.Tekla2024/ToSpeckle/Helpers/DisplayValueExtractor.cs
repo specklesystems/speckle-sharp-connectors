@@ -7,13 +7,15 @@ namespace Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
 public sealed class DisplayValueExtractor
 {
   private readonly ITypedConverter<TSM.Solid, SOG.Mesh> _meshConverter;
-  private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
+  private readonly ITypedConverter<TG.Point, SOG.Point> _pointConverter;
   private readonly ITypedConverter<TG.LineSegment, SOG.Line> _lineConverter;
+  private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
   private readonly ITypedConverter<TG.Arc, SOG.Arc> _arcConverter;
   private readonly ITypedConverter<TSM.Grid, IEnumerable<Base>> _gridConverter;
 
   public DisplayValueExtractor(
     ITypedConverter<TSM.Solid, SOG.Mesh> meshConverter,
+    ITypedConverter<TG.Point, SOG.Point> pointConverter,
     ITypedConverter<TG.LineSegment, SOG.Line> lineConverter,
     ITypedConverter<TG.Arc, SOG.Arc> arcConverter,
     ITypedConverter<TSM.Grid, IEnumerable<Base>> gridConverter,
@@ -21,6 +23,8 @@ public sealed class DisplayValueExtractor
   )
   {
     _meshConverter = meshConverter;
+    _pointConverter = pointConverter;
+    _lineConverter = lineConverter;
     _settingsStore = settingsStore;
     _lineConverter = lineConverter;
     _arcConverter = arcConverter;
@@ -45,6 +49,7 @@ public sealed class DisplayValueExtractor
         }
         break;
 
+      // this section visualizes the rebars as lines
       case TSM.Reinforcement reinforcement:
         var rebarGeometries = reinforcement.GetRebarComplexGeometries(
           withHooks: true,
@@ -74,7 +79,17 @@ public sealed class DisplayValueExtractor
         {
           yield return gridLine;
         }
+
         break;
+
+      // use this section to visualize rebars as solid
+      // case TSM.Reinforcement reinforcement:
+      //   if (reinforcement.GetSolid() is TSM.Solid reinforcementSolid)
+      //   {
+      //     yield return _meshConverter.Convert(reinforcementSolid);
+      //   }
+      //   break;
+
 
       default:
         yield break;
