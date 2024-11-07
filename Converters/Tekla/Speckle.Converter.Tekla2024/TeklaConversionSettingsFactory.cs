@@ -14,6 +14,6 @@ public class TeklaConversionSettingsFactory(
   public TeklaConversionSettings Current => settingsStore.Current;
 
   // only handles automatic rn
-  public TeklaConversionSettings Create(Model document) =>
-    new(document, unitsConverter.ConvertOrThrow(TSD.Units.Automatic));
+  public TeklaConversionSettings Create(Model document, bool sendRebarsAsSolid) =>
+    new(document, sendRebarsAsSolid, unitsConverter.ConvertOrThrow(TSD.Units.Automatic));
 }
