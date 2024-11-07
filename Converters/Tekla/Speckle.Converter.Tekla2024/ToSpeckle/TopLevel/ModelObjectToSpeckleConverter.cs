@@ -11,17 +11,20 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
 {
   private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
   private readonly DisplayValueExtractor _displayValueExtractor;
-  private readonly PropertyExtractor _propertyExtractor;
+  private readonly ClassPropertyExtractor _propertyExtractor;
+  private readonly ReportPropertyExtractor _reportPropertyExtractor;
 
   public ModelObjectToSpeckleConverter(
     IConverterSettingsStore<TeklaConversionSettings> settingsStore,
     DisplayValueExtractor displayValueExtractor,
-    PropertyExtractor propertyExtractor
+    ClassPropertyExtractor propertyExtractor,
+    ReportPropertyExtractor reportPropertyExtractor
   )
   {
     _settingsStore = settingsStore;
     _displayValueExtractor = displayValueExtractor;
     _propertyExtractor = propertyExtractor;
+    _reportPropertyExtractor = reportPropertyExtractor;
   }
 
   public Base Convert(object target)
@@ -44,11 +47,35 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
       result[prop.Key] = prop.Value;
     }
 
+    // get report properties
+    var reportProperties = GetObjectReportProperties(modelObject);
+    if (reportProperties.Count > 0)
+    {
+      result["properties"] = reportProperties;
+    }
+
     // get display value
     var displayValue = _displayValueExtractor.GetDisplayValue(modelObject).ToList();
     if (displayValue.Count > 0)
     {
       result["displayValue"] = displayValue;
+    }
+
+    // get report properties
+    Dictionary<string, object?> GetObjectReportProperties(TSM.ModelObject modelObject)
+    {
+      Dictionary<string, object?> properties = new();
+
+      // get report properties
+      var reportProperties = _reportPropertyExtractor.GetProperties(modelObject);
+      if (reportProperties.Count > 0)
+      {
+        properties["report"] = reportProperties;
+      }
+
+      // POC: might add user defined properties here
+
+      return properties;
     }
 
     // get children
