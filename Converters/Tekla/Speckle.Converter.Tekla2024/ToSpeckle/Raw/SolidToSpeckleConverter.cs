@@ -57,7 +57,10 @@ public class SolidToSpeckleConverter : ITypedConverter<TSM.Solid, SOG.Mesh>
         if (faceVertices.Count >= 3)
         {
           faces.Add(faceVertices.Count);
-          faces.AddRange(faceVertices);
+          for (int i = faceVertices.Count - 1; i >= 0; i--)
+          {
+            faces.Add(faceVertices[i]);
+          }
         }
       }
     }
