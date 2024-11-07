@@ -57,6 +57,8 @@ public class SolidToSpeckleConverter : ITypedConverter<TSM.Solid, SOG.Mesh>
         if (faceVertices.Count >= 3)
         {
           faces.Add(faceVertices.Count);
+          // NOTE: normals were flipped in tekla logic
+          // we changed the order of the vertices here
           for (int i = faceVertices.Count - 1; i >= 0; i--)
           {
             faces.Add(faceVertices[i]);
