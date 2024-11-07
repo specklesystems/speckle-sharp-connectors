@@ -3,6 +3,7 @@ using Speckle.Connector.Tekla2024.Bindings;
 using Speckle.Connector.Tekla2024.Filters;
 using Speckle.Connector.Tekla2024.HostApp;
 using Speckle.Connector.Tekla2024.Operations.Send;
+using Speckle.Connector.Tekla2024.Operations.Send.Settings;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
@@ -57,6 +58,8 @@ public static class ServiceRegistration
     services.AddSingleton(DefaultTraversal.CreateTraversalFunc());
     services.AddScoped<IRootObjectBuilder<ModelObject>, TeklaRootObjectBuilder>();
     services.AddScoped<SendOperation<ModelObject>>();
+
+    services.AddSingleton<ToSpeckleSettingsManager>();
 
     services.AddTransient<CancellationManager>();
     services.AddSingleton<IOperationProgressManager, OperationProgressManager>();

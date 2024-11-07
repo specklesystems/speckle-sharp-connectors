@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
@@ -49,29 +50,43 @@ public sealed class DisplayValueExtractor
         }
         break;
 
-      // this section visualizes the rebars as lines
       case TSM.Reinforcement reinforcement:
-        var rebarGeometries = reinforcement.GetRebarComplexGeometries(
-          withHooks: true,
-          withoutClashes: true,
-          lengthAdjustments: true,
-          TSM.Reinforcement.RebarGeometrySimplificationTypeEnum.RATIONALIZED
-        );
-
-        foreach (TSM.RebarComplexGeometry barGeometry in rebarGeometries)
+        if (_settingsStore.Current.SendRebarsAsSolid)
         {
-          foreach (var leg in barGeometry.Legs)
+          if (reinforcement.GetSolid() is TSM.Solid reinforcementSolid)
           {
-            if (leg.Curve is TG.LineSegment legLine)
+            yield return _meshConverter.Convert(reinforcementSolid);
+          }
+          else
+          {
+            throw new ConversionException("The type has no solid.");
+          }
+        }
+        else
+        {
+          var rebarGeometries = reinforcement.GetRebarComplexGeometries(
+            withHooks: true,
+            withoutClashes: true,
+            lengthAdjustments: true,
+            TSM.Reinforcement.RebarGeometrySimplificationTypeEnum.RATIONALIZED
+          );
+
+          foreach (TSM.RebarComplexGeometry barGeometry in rebarGeometries)
+          {
+            foreach (var leg in barGeometry.Legs)
             {
-              yield return _lineConverter.Convert(legLine);
-            }
-            else if (leg.Curve is TG.Arc legArc)
-            {
-              yield return _arcConverter.Convert(legArc);
+              if (leg.Curve is TG.LineSegment legLine)
+              {
+                yield return _lineConverter.Convert(legLine);
+              }
+              else if (leg.Curve is TG.Arc legArc)
+              {
+                yield return _arcConverter.Convert(legArc);
+              }
             }
           }
         }
+
         break;
 
       case TSM.Grid grid:
@@ -81,15 +96,6 @@ public sealed class DisplayValueExtractor
         }
 
         break;
-
-      // use this section to visualize rebars as solid
-      // case TSM.Reinforcement reinforcement:
-      //   if (reinforcement.GetSolid() is TSM.Solid reinforcementSolid)
-      //   {
-      //     yield return _meshConverter.Convert(reinforcementSolid);
-      //   }
-      //   break;
-
 
       default:
         yield break;
