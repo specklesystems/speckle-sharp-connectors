@@ -1,6 +1,6 @@
 ﻿namespace Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
 
-public class ReportPropertyHandler
+public class ReportPropertyExtractor
 {
   private static readonly Dictionary<Type, string[]> s_typeSpecificProperties =
     new()
