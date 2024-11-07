@@ -1,0 +1,57 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <TeklaVersion>2023</TeklaVersion>
+    <UseWpf>true</UseWpf>
+    <DefineConstants>$(DefineConstants);TEKLA2023</DefineConstants>
+  </PropertyGroup>
+
+  <Target AfterTargets="Build"  Name="AfterBuildTekla" Condition="'$(TeklaVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
+    <ItemGroup>
+      <TeklaDlls Include="$(TargetDir)\**\*.*" Exclude="$(TargetDir)*.bmp" />
+      <TeklaBmp Include="$(TargetDir)\Assets\et_element_Speckle.bmp"/>
+    </ItemGroup>
+
+    <Message Text="TeklaVersion $(TeklaVersion)" Importance="high"/>
+    <Copy Condition="Exists('$(ProgramData)\Trimble\Tekla Structures\$(TeklaVersion).0')" 
+          DestinationFolder="$(ProgramData)\Trimble\Tekla Structures\$(TeklaVersion).0\Environments\common\extensions\Speckle3TeklaStructures\%(RecursiveDir)" 
+          SourceFiles="@(TeklaDlls)" />
+<!--    <Copy Condition="Exists('$(ProgramData)\Trimble\Tekla Structures\$(TeklaVersion).0')" -->
+<!--          DestinationFolder="$(ProgramData)\Trimble\Tekla Structures\$(TeklaVersion).0\Bitmaps" -->
+<!--          SourceFiles="@(TeklaBmp)" />-->
+    
+    <Copy Condition="Exists('C:\TeklaStructures\2023.0')" 
+          DestinationFolder="C:\TeklaStructures\2023.0\Environments\common\extensions\Speckle3TeklaStructures\%(RecursiveDir)" 
+          SourceFiles="@(TeklaDlls)" />
+<!--    <Copy Condition="Exists('C:\TeklaStructures\2023.0')" -->
+<!--          DestinationFolder="$(ProgramFiles)\TeklaStructures\2023.0\bin\Env\Bitmaps" -->
+<!--          SourceFiles="@(TeklaBmp)" />-->
+  </Target>
+  
+  <ItemGroup>
+    <PackageReference Include="Speckle.Objects" />
+    <PackageReference Include="Tekla.Structures.Dialog" IncludeAssets="compile; build" VersionOverride =" 2023.0.0" />
+    <PackageReference Include="Tekla.Structures.Drawing" IncludeAssets="compile; build" VersionOverride =" 2023.0.0"/>
+    <PackageReference Include="Tekla.Structures.Model" IncludeAssets="compile; build" VersionOverride =" 2023.0.0" />
+    <PackageReference Include="Tekla.Structures.Plugins" IncludeAssets="compile; build" VersionOverride =" 2023.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Converters\Tekla\Speckle.Converter.Tekla2023\Speckle.Converter.Tekla2023.csproj" />
+    <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="WindowsFormsIntegration" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Assets\et_element_Speckle.bmp">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <Import Project="..\Speckle.Connector.TeklaShared\Speckle.Connectors.TeklaShared.projitems" Label="Shared" />
+
+</Project>
