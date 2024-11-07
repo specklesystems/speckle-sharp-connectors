@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 using Speckle.Newtonsoft.Json;
 using Speckle.Newtonsoft.Json.Linq;
 using Speckle.Newtonsoft.Json.Serialization;
@@ -11,8 +12,7 @@ namespace Speckle.Connectors.DUI.Utils;
 /// This converter ensures we can do polymorphic deserialization to concrete types. This converter is intended
 /// for use only with UI bound types, not Speckle Bases.
 /// </summary>
-// POC: automatic registration of compatible objects
-public class DiscriminatedObjectConverter : JsonConverter<DiscriminatedObject>
+public class DiscriminatedObjectConverter(IServiceProvider serviceProvider) : JsonConverter<DiscriminatedObject>
 {
   private readonly JsonSerializer _localSerializer =
     new()
@@ -52,7 +52,7 @@ public class DiscriminatedObjectConverter : JsonConverter<DiscriminatedObject>
       ?? throw new SpeckleDeserializeException(
         "DUI3 Discriminator converter deserialization failed, type not found: " + typeName
       );
-    var obj = Activator.CreateInstance(type, true);
+    var obj = ActivatorUtilities.CreateInstance(serviceProvider, type);
     serializer.Populate(jsonObject.CreateReader(), obj);
 
     // Store the JSON property names in the object for later comparison

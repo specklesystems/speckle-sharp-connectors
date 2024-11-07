@@ -31,7 +31,7 @@ public static class ContainerRegistration
     serviceCollection.AddSingleton<ISyncToThread, SyncToUIThread>();
     serviceCollection.AddSingleton<IRootObjectSender, RootObjectSender>();
     serviceCollection.AddTransient<IBrowserBridge, BrowserBridge>(); // POC: Each binding should have it's own bridge instance
-    serviceCollection.AddSingleton(GetJsonSerializerSettings());
+    serviceCollection.AddSingleton(sp => sp.GetRequiredService<IJsonSerializerSettingsFactory>().Create());
 
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetAssembly(typeof(IdleCallManager)));
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetAssembly(typeof(IServerTransportFactory)));
@@ -40,26 +40,6 @@ public static class ContainerRegistration
   public static void UseDUI(this IServiceProvider serviceProvider)
   {
     serviceProvider.GetRequiredService<ISyncToThread>();
-  }
-
-  private static JsonSerializerSettings GetJsonSerializerSettings()
-  {
-    // Register WebView2 panel stuff
-    JsonSerializerSettings settings =
-      new()
-      {
-        Error = (_, args) =>
-        {
-          // POC: we should probably do a bit more than just swallowing this!
-          Console.WriteLine("*** JSON ERROR: " + args.ErrorContext);
-        },
-        ContractResolver = new CamelCasePropertyNamesContractResolver(),
-        NullValueHandling = NullValueHandling.Ignore,
-        ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-        DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate,
-        Converters = { new DiscriminatedObjectConverter(), new AbstractConverter<DiscriminatedObject, ISendFilter>() }
-      };
-    return settings;
   }
 
   public static void RegisterTopLevelExceptionHandler(this IServiceCollection serviceCollection)
