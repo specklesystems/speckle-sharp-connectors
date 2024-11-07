@@ -111,10 +111,13 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   private void OnChangeChangedObjectIds(DBObject dBObject)
   {
     ChangedObjectIds[dBObject.GetSpeckleApplicationId()] = 1;
-    _idleManager.SubscribeToIdle(nameof(AutocadSendBinding), RunExpirationChecks);
+    _idleManager.SubscribeToIdle(
+      nameof(AutocadSendBinding),
+      async () => await RunExpirationChecks().ConfigureAwait(false)
+    );
   }
 
-  private void RunExpirationChecks()
+  private async Task RunExpirationChecks()
   {
     var senders = _store.GetSenders();
     string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
@@ -132,7 +135,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
       }
     }
 
-    Commands.SetModelsExpired(expiredSenderIds);
+    await Commands.SetModelsExpired(expiredSenderIds).ConfigureAwait(false);
     ChangedObjectIds = new();
   }
 
