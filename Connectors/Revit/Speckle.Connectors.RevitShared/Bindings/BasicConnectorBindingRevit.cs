@@ -6,6 +6,7 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.RevitShared;
+using Speckle.Connectors.RevitShared.DUI;
 using Speckle.Connectors.RevitShared.Operations.Send.Filters;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
@@ -104,7 +105,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
     var elementIds = new List<ElementId>();
 
-    if (model is SenderModelCard senderModelCard)
+    if (model is RevitSenderModelCard senderModelCard)
     {
       if (senderModelCard.SendFilter is IRevitSendFilter revitFilter)
       {
@@ -126,7 +127,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
         return;
       }
 
-      var selectedObjects = senderModelCard.SendFilter.NotNull().ObjectIds;
+      var selectedObjects = senderModelCard.SendFilterObjectIdentifiers.Select(o => o.Value.UniqueId).ToList();
 
       elementIds = selectedObjects
         .Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid))
