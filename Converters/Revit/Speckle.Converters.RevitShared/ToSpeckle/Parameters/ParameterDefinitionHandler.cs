@@ -22,19 +22,21 @@ public class ParameterDefinitionHandler
   {
     var definition = parameter.Definition;
     var internalDefinitionName = definition.Name; // aka real, internal name
-    var humanReadableName = definition.Name;
+    var humanReadableName = internalDefinitionName;
+    var isShared = parameter.IsShared;
 
-    if (parameter.IsShared)
+    if (isShared)
     {
       internalDefinitionName = parameter.GUID.ToString(); // Note: unsure it's needed
     }
 
-    if (
-      definition is DB.InternalDefinition internalDefinition
-      && internalDefinition.BuiltInParameter != DB.BuiltInParameter.INVALID
-    )
+    if (definition is DB.InternalDefinition internalDefinition)
     {
-      internalDefinitionName = internalDefinition.BuiltInParameter.ToString();
+      var builtInParameter = internalDefinition.BuiltInParameter;
+      if (builtInParameter != DB.BuiltInParameter.INVALID)
+      {
+        internalDefinitionName = builtInParameter.ToString();
+      }
     }
 
     if (Definitions.TryGetValue(internalDefinitionName, out var def))
@@ -42,8 +44,8 @@ public class ParameterDefinitionHandler
       return (
         internalDefinitionName,
         humanReadableName,
-        def["group"]! as string ?? "unknown group",
-        def["units"]! as string
+        def["group"] as string ?? "unknown group",
+        def["units"] as string
       );
     }
 
@@ -53,14 +55,14 @@ public class ParameterDefinitionHandler
       units = DB.LabelUtils.GetLabelForUnit(parameter.GetUnitTypeId());
     }
 
-    var group = DB.LabelUtils.GetLabelForGroup(parameter.Definition.GetGroupTypeId());
+    var group = DB.LabelUtils.GetLabelForGroup(definition.GetGroupTypeId());
 
     Definitions[internalDefinitionName] = new Dictionary<string, object?>()
     {
       ["definitionName"] = internalDefinitionName,
       ["name"] = humanReadableName,
       ["units"] = units,
-      ["isShared"] = parameter.IsShared,
+      ["isShared"] = isShared,
       ["isReadOnly"] = parameter.IsReadOnly,
       ["group"] = group
     };

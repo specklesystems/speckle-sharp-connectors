@@ -151,11 +151,6 @@ public sealed class DisplayValueExtractor
       switch (geomObj)
       {
         case DB.Solid solid:
-          // skip invalid solid
-          if (solid.Faces.Size == 0 || Math.Abs(solid.SurfaceArea) == 0)
-          {
-            continue;
-          }
 
           solids.Add(solid);
           break;

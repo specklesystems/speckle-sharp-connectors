@@ -143,8 +143,9 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     var idsAndSubElementIds = _elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(atomicObjects);
     var materialProxies = _revitToSpeckleCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds);
     rootObject[ProxyKeys.RENDER_MATERIAL] = materialProxies;
-    // NOTE: these are currently not used anywhere, so we could even skip them (?).
-    rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;
+
+    // NOTE: these are currently not used anywhere, we'll skip them until someone calls for it back
+    // rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;
 
     return new RootObjectBuilderResult(rootObject, results);
   }
