@@ -152,7 +152,7 @@ public sealed class DisplayValueExtractor
       {
         case DB.Solid solid:
           // skip invalid solid
-          if (solid.Faces.Size == 0 || Math.Abs(solid.SurfaceArea) == 0)
+          if (solid.Faces.Size == 0)
           {
             continue;
           }
