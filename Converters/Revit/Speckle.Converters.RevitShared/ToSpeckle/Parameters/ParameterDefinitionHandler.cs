@@ -37,11 +37,8 @@ public class ParameterDefinitionHandler
       internalDefinitionName = internalDefinition.BuiltInParameter.ToString();
     }
 
-#pragma warning disable CA1854 // swapping leads to nullability errors; should be resolved once we type this more strongly.
-    if (Definitions.ContainsKey(internalDefinitionName))
-#pragma warning restore CA1854
+    if (Definitions.TryGetValue(internalDefinitionName, out var def))
     {
-      var def = Definitions[internalDefinitionName];
       return (
         internalDefinitionName,
         humanReadableName,
