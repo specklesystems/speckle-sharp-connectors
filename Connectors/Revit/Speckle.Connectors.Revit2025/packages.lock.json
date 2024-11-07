@@ -48,6 +48,12 @@
         "resolved": "0.9.6",
         "contentHash": "HKH7tYrYYlCK1ct483hgxERAdVdMtl7gUKW9ijWXxA1UsYR4Z+TrRHYmzZ9qmpu1NnTycSrp005NYM78GDKV1w=="
       },
+      "Speckle.Revit.API": {
+        "type": "Direct",
+        "requested": "[2025.0.0, )",
+        "resolved": "2025.0.0",
+        "contentHash": "Hwf/3Ydc7KxvjgD9pSZKLSJRsFTsxYg95YyTm6f43hcsGjmk49GsLFQt921Z9OcvUVewOggQHcmBgti+P2EPHw=="
+      },
       "CefSharp.Common.NETCore": {
         "type": "Transitive",
         "resolved": "119.4.30",
@@ -277,8 +283,7 @@
       "speckle.converters.revit2025": {
         "type": "Project",
         "dependencies": {
-          "Speckle.Converters.Common": "[1.0.0, )",
-          "Speckle.Revit.API": "[2025.0.0, )"
+          "Speckle.Converters.Common": "[1.0.0, )"
         }
       },
       "Microsoft.Extensions.DependencyInjection": {
@@ -322,12 +327,6 @@
         "dependencies": {
           "Speckle.Sdk": "3.1.0-dev.174"
         }
-      },
-      "Speckle.Revit.API": {
-        "type": "CentralTransitive",
-        "requested": "[2023.0.0, )",
-        "resolved": "2025.0.0",
-        "contentHash": "Hwf/3Ydc7KxvjgD9pSZKLSJRsFTsxYg95YyTm6f43hcsGjmk49GsLFQt921Z9OcvUVewOggQHcmBgti+P2EPHw=="
       },
       "Speckle.Sdk": {
         "type": "CentralTransitive",

@@ -132,7 +132,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
       }
     }
 
-    Commands.SetModelsExpired(expiredSenderIds);
+    Commands.SetModelsExpired(expiredSenderIds).Wait();
     ChangedObjectIds = new();
   }
 

@@ -31,10 +31,10 @@
   
   <ItemGroup>
     <PackageReference Include="Speckle.Objects" />
-    <PackageReference Include="Tekla.Structures.Dialog" IncludeAssets="compile; build" PrivateAssets="all" />
-    <PackageReference Include="Tekla.Structures.Drawing" IncludeAssets="compile; build" PrivateAssets="all"/>
-    <PackageReference Include="Tekla.Structures.Model" IncludeAssets="compile; build" PrivateAssets="all" />
-    <PackageReference Include="Tekla.Structures.Plugins" IncludeAssets="compile; build" PrivateAssets="all" />
+    <PackageReference Include="Tekla.Structures.Dialog" IncludeAssets="compile; build" />
+    <PackageReference Include="Tekla.Structures.Drawing" IncludeAssets="compile; build" />
+    <PackageReference Include="Tekla.Structures.Model" IncludeAssets="compile; build" />
+    <PackageReference Include="Tekla.Structures.Plugins" IncludeAssets="compile; build" />
   </ItemGroup>
 
   <ItemGroup>

@@ -11,8 +11,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Speckle.AutoCAD.API" VersionOverride="2024.0.0" />
-    <PackageReference Include="Speckle.Civil3D.API" VersionOverride="2024.0.0" />
+    <PackageReference Include="Speckle.AutoCAD.API" VersionOverride="2024.0.0" IncludeAssets="compile; build" PrivateAssets="all"/>
+    <PackageReference Include="Speckle.Civil3D.API" VersionOverride="2024.0.0" IncludeAssets="compile; build" PrivateAssets="all"/>
   </ItemGroup>
   
   <ItemGroup>

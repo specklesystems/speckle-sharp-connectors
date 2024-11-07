@@ -10,8 +10,8 @@
     <StartProgram>$(ProgramW6432)\Autodesk\AutoCAD $(Civil3DVersion)\acad.exe</StartProgram>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Speckle.AutoCAD.API" />
-    <PackageReference Include="Speckle.Civil3D.API" />
+    <PackageReference Include="Speckle.AutoCAD.API" IncludeAssets="compile; build" PrivateAssets="all"/>
+    <PackageReference Include="Speckle.Civil3D.API" IncludeAssets="compile; build" PrivateAssets="all"/>
   </ItemGroup>
   
   <ItemGroup>

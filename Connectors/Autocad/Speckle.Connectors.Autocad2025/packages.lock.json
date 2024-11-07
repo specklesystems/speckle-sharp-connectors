@@ -248,7 +248,6 @@
       "speckle.converters.autocad2025": {
         "type": "Project",
         "dependencies": {
-          "Speckle.AutoCAD.API": "[2025.0.0, )",
           "Speckle.Connectors.DUI.WebView": "[1.0.0, )",
           "Speckle.Converters.Common": "[1.0.0, )"
         }

@@ -257,8 +257,6 @@
       "speckle.converters.civil3d2025": {
         "type": "Project",
         "dependencies": {
-          "Speckle.AutoCAD.API": "[2025.0.0, )",
-          "Speckle.Civil3d.API": "[2025.0.0, )",
           "Speckle.Connectors.DUI.WebView": "[1.0.0, )",
           "Speckle.Converters.Common": "[1.0.0, )"
         }

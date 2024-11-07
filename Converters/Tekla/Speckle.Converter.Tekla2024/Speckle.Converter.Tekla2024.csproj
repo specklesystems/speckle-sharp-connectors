@@ -9,8 +9,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Tekla.Structures.Model" IncludeAssets="compile" />
-    <PackageReference Include="Tekla.Structures.Drawing" IncludeAssets="compile" />
+    <PackageReference Include="Tekla.Structures.Model" IncludeAssets="compile; build"/>
+    <PackageReference Include="Tekla.Structures.Drawing" IncludeAssets="compile; build" />
   </ItemGroup>
 
   <ItemGroup>

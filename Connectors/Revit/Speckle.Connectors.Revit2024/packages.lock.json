@@ -48,6 +48,12 @@
         "resolved": "0.9.6",
         "contentHash": "HKH7tYrYYlCK1ct483hgxERAdVdMtl7gUKW9ijWXxA1UsYR4Z+TrRHYmzZ9qmpu1NnTycSrp005NYM78GDKV1w=="
       },
+      "Speckle.Revit.API": {
+        "type": "Direct",
+        "requested": "[2024.0.0, )",
+        "resolved": "2024.0.0",
+        "contentHash": "a4dsvZ00ocvzTgCD6dUdydf0jIZDVcDhs6dUX9cv+y3aTDbU8rmzhYXWt8sThedIG+IPSVa0vHmAH9pKiJL3SQ=="
+      },
       "cef.redist.x64": {
         "type": "Transitive",
         "resolved": "105.3.39",
@@ -320,8 +326,7 @@
       "speckle.converters.revit2024": {
         "type": "Project",
         "dependencies": {
-          "Speckle.Converters.Common": "[1.0.0, )",
-          "Speckle.Revit.API": "[2024.0.0, )"
+          "Speckle.Converters.Common": "[1.0.0, )"
         }
       },
       "Microsoft.Extensions.DependencyInjection": {
@@ -359,12 +364,6 @@
         "dependencies": {
           "Speckle.Sdk": "3.1.0-dev.174"
         }
-      },
-      "Speckle.Revit.API": {
-        "type": "CentralTransitive",
-        "requested": "[2023.0.0, )",
-        "resolved": "2024.0.0",
-        "contentHash": "a4dsvZ00ocvzTgCD6dUdydf0jIZDVcDhs6dUX9cv+y3aTDbU8rmzhYXWt8sThedIG+IPSVa0vHmAH9pKiJL3SQ=="
       },
       "Speckle.Sdk": {
         "type": "CentralTransitive",

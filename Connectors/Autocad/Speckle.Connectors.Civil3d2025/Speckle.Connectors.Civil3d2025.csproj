@@ -13,8 +13,8 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="Speckle.AutoCAD.API" VersionOverride="2025.0.0" />
-    <PackageReference Include="Speckle.Civil3d.API" VersionOverride="2025.0.0" />
+    <PackageReference Include="Speckle.AutoCAD.API" VersionOverride="2025.0.0" IncludeAssets="compile; build" PrivateAssets="all"/>
+    <PackageReference Include="Speckle.Civil3d.API" VersionOverride="2025.0.0" IncludeAssets="compile; build" PrivateAssets="all"/>
     <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
   </ItemGroup>  
   

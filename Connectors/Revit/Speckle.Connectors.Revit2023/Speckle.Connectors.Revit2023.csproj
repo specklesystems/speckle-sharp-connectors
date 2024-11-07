@@ -32,6 +32,7 @@
   <ItemGroup>
     <PackageReference Include="CefSharp.Wpf" IncludeAssets="compile" NoWarn="NU1903" />
     <PackageReference Include="Revit.Async" />
+    <PackageReference Include="Speckle.Revit.API" VersionOverride="2023.0.0" IncludeAssets="compile"/>
   </ItemGroup>
 
   <ItemGroup>
