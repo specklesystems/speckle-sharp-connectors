@@ -339,9 +339,14 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     var objUniqueIds = new List<string>();
 
-    foreach (var changedElementId in ChangedObjectIds.Keys.ToArray())
+    foreach (var sender in senders)
     {
-      foreach (var sender in senders)
+      // if (sender.SendFilter is null) // NOTE: RunExpirationChecks sometimes triggered unnecessarily before send and, we didn't set up yet IdMap, if so we do not need to deal with it
+      // {
+      //   continue;
+      // }
+
+      foreach (var changedElementId in ChangedObjectIds.Keys.ToArray())
       {
         if (sender.SendFilter.NotNull().IdMap.NotNull().ContainsKey(changedElementId.ToString()))
         {
@@ -349,6 +354,21 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         }
       }
     }
+
+    // foreach (var changedElementId in ChangedObjectIds.Keys.ToArray())
+    // {
+    //   foreach (var sender in senders)
+    //   {
+    //     if (sender.SendFilter.NotNull().IdMap is null)
+    //     {
+    //       continue;
+    //     }
+    //     if (sender.SendFilter.NotNull().IdMap.NotNull().ContainsKey(changedElementId.ToString()))
+    //     {
+    //       objUniqueIds.Add(sender.SendFilter.NotNull().IdMap.NotNull()[changedElementId.ToString()]);
+    //     }
+    //   }
+    // }
 
     var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objUniqueIds);
     _sendConversionCache.EvictObjects(unpackedObjectIds);

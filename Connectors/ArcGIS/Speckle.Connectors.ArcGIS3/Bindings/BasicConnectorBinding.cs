@@ -76,7 +76,7 @@ public class BasicConnectorBinding : IBasicConnectorBinding
 
     if (model is SenderModelCard senderModelCard)
     {
-      objectIds = senderModelCard.SendFilter.NotNull().GetObjectIds().Select(x => new ObjectID(x)).ToList();
+      objectIds = senderModelCard.SendFilter.NotNull().SetObjectIds().Select(x => new ObjectID(x)).ToList();
     }
 
     if (model is ReceiverModelCard receiverModelCard)

@@ -230,7 +230,7 @@ public sealed class RhinoSendBinding : ISendBinding
       _logger.LogError("Rhino expiration checks were running without an active doc.");
       return;
     }
-    var senders = _store.GetSenders<SenderModelCard>();
+    var senders = _store.GetSenders();
     string[] objectIdsList = ChangedObjectIds.Keys.ToArray(); // NOTE: could not copy to array happens here
     List<string> expiredSenderIds = new();
 

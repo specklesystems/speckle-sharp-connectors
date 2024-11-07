@@ -114,7 +114,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     _idleManager.SubscribeToIdle(nameof(AutocadSendBinding), RunExpirationChecks);
   }
 
-  private void RunExpirationChecks()
+  private async Task RunExpirationChecks()
   {
     var senders = _store.GetSenders();
     string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
@@ -124,7 +124,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
 
     foreach (SenderModelCard modelCard in senders)
     {
-      var intersection = modelCard.SendFilter.NotNull().GetObjectIds().Intersect(objectIdsList).ToList();
+      var intersection = modelCard.SendFilter.NotNull().SetObjectIds().Intersect(objectIdsList).ToList();
       bool isExpired = intersection.Count != 0;
       if (isExpired)
       {
@@ -132,7 +132,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
       }
     }
 
-    Commands.SetModelsExpired(expiredSenderIds);
+    await Commands.SetModelsExpired(expiredSenderIds).ConfigureAwait(false);
     ChangedObjectIds = new();
   }
 
@@ -169,7 +169,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
 
       // Get elements to convert
       List<AutocadRootObject> autocadObjects = Application.DocumentManager.CurrentDocument.GetObjects(
-        modelCard.SendFilter.NotNull().GetObjectIds()
+        modelCard.SendFilter.NotNull().SetObjectIds()
       );
 
       if (autocadObjects.Count == 0)

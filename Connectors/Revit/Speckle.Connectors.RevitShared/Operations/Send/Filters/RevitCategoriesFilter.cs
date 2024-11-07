@@ -19,7 +19,7 @@ public class RevitCategoriesFilter : DiscriminatedObject, ISendFilter, IRevitSen
   public string? Summary { get; set; }
   public bool IsDefault { get; set; }
   public List<string> ObjectIds { get; set; } = new();
-  public Dictionary<string, string>? IdMap { get; set; } = new();
+  public Dictionary<string, string>? IdMap { get; set; }
   public List<string>? SelectedCategories { get; set; }
   public List<CategoryData>? AvailableCategories { get; set; }
 

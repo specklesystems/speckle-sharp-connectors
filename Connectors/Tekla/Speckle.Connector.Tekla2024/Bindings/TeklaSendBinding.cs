@@ -124,7 +124,7 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
 
       List<ModelObject> teklaObjects = modelCard
         .SendFilter.NotNull()
-        .GetObjectIds()
+        .SetObjectIds()
         .Select(id => _model.SelectModelObject(new Identifier(new Guid(id))))
         .Where(obj => obj != null)
         .ToList();
@@ -177,7 +177,7 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
 
     foreach (SenderModelCard modelCard in senders)
     {
-      var intersection = modelCard.SendFilter.NotNull().GetObjectIds().Intersect(objectIdsList).ToList();
+      var intersection = modelCard.SendFilter.NotNull().SetObjectIds().Intersect(objectIdsList).ToList();
       var isExpired = intersection.Count != 0;
       if (isExpired)
       {
