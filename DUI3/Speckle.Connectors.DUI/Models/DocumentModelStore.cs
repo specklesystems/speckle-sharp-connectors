@@ -81,7 +81,8 @@ public abstract class DocumentModelStore
 
   protected void OnDocumentChanged() => DocumentChanged?.Invoke(this, EventArgs.Empty);
 
-  public IEnumerable<T> GetSenders<T>() => Models.Where(model => model.TypeDiscriminator == typeof(T).Name).Cast<T>();
+  public IEnumerable<SenderModelCard> GetSenders() =>
+    Models.Where(model => model.TypeDiscriminator == nameof(SenderModelCard)).Cast<SenderModelCard>();
 
   public IEnumerable<ReceiverModelCard> GetReceivers() =>
     Models.Where(model => model.TypeDiscriminator == nameof(ReceiverModelCard)).Cast<ReceiverModelCard>();

@@ -16,7 +16,6 @@ using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
-using Speckle.Connectors.RevitShared.DUI;
 using Speckle.Connectors.RevitShared.Operations.Send.Filters;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
@@ -133,20 +132,15 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
           )
         );
 
-      List<Element> elements = await RefreshElementsOnSender((modelCard as RevitSenderModelCard).NotNull())
-        .ConfigureAwait(false);
+      List<Element> elements = await RefreshElementsOnSender(modelCard.NotNull()).ConfigureAwait(false);
 
-      if (modelCard is RevitSenderModelCard senderModel)
+      if (modelCard is SenderModelCard senderModel)
       {
         foreach (Element element in elements)
         {
-          senderModel.SendFilterObjectIdentifiers[element.Id.ToString()] = new SendFilterObjectIdentifier()
-          {
-            UniqueId = element.UniqueId,
-            CategoryId = element.Category?.Id.ToString()
-          };
+          senderModel.SendFilter.NotNull().IdMap.NotNull()[element.Id.ToString()] = element.UniqueId;
         }
-        await Commands.SetFilterObjectIds(modelCardId, senderModel.SendFilterObjectIdentifiers).ConfigureAwait(false);
+        await Commands.SetFilterObjectIds(modelCardId, senderModel.SendFilter.NotNull().IdMap).ConfigureAwait(false);
       }
 
       List<ElementId> elementIds = elements.Select(el => el.Id).ToList();
@@ -184,7 +178,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     }
   }
 
-  private async Task<List<Element>> RefreshElementsOnSender(RevitSenderModelCard modelCard)
+  private async Task<List<Element>> RefreshElementsOnSender(SenderModelCard modelCard)
   {
     var activeUIDoc =
       RevitContext.UIApplication?.ActiveUIDocument
@@ -204,17 +198,16 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       .Where(el => el is not null)
       .ToList();
 
-    foreach (Element element in elements)
+    if (modelCard.SendFilter is not null && modelCard.SendFilter.IdMap is not null)
     {
-      modelCard.SendFilterObjectIdentifiers[element.Id.ToString()] = new SendFilterObjectIdentifier()
+      foreach (Element element in elements)
       {
-        UniqueId = element.UniqueId,
-        CategoryId = element.Category?.Id.ToString()
-      };
+        modelCard.SendFilter.IdMap[element.Id.ToString()] = element.UniqueId;
+      }
+      await Commands
+        .SetFilterObjectIds(modelCard.ModelCardId.NotNull(), modelCard.SendFilter.IdMap)
+        .ConfigureAwait(false);
     }
-    await Commands
-      .SetFilterObjectIds(modelCard.ModelCardId.NotNull(), modelCard.SendFilterObjectIdentifiers)
-      .ConfigureAwait(false);
 
     return elements;
   }
@@ -253,7 +246,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     if (HaveUnitsChanged(e.GetDocument()))
     {
       var objectIds = new List<string>();
-      foreach (var sender in Store.GetSenders<RevitSenderModelCard>())
+      foreach (var sender in Store.GetSenders().ToList())
       {
         if (sender.SendFilter is null)
         {
@@ -307,7 +300,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
   private async Task PostSetObjectIds()
   {
-    foreach (var sender in Store.GetSenders<RevitSenderModelCard>().ToList())
+    foreach (var sender in Store.GetSenders().ToList())
     {
       await RefreshElementsOnSender(sender).ConfigureAwait(false);
     }
@@ -335,7 +328,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
   private async Task RunExpirationChecks()
   {
-    var senders = Store.GetSenders<RevitSenderModelCard>().ToList();
+    var senders = Store.GetSenders().ToList();
     // string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
     var doc = RevitContext.UIApplication?.ActiveUIDocument.Document;
 
@@ -350,9 +343,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     {
       foreach (var sender in senders)
       {
-        if (sender.SendFilterObjectIdentifiers.ContainsKey(changedElementId.ToString()))
+        if (sender.SendFilter.NotNull().IdMap.NotNull().ContainsKey(changedElementId.ToString()))
         {
-          objUniqueIds.Add(sender.SendFilterObjectIdentifiers[changedElementId.ToString()].UniqueId);
+          objUniqueIds.Add(sender.SendFilter.NotNull().IdMap.NotNull()[changedElementId.ToString()]);
         }
       }
     }
@@ -362,14 +355,14 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     // Note: we're doing object selection and card expiry management by old school ids
     List<string> expiredSenderIds = new();
-    foreach (RevitSenderModelCard modelCard in senders)
+    foreach (SenderModelCard modelCard in senders)
     {
       if (modelCard.SendFilter is IRevitSendFilter viewFilter)
       {
         viewFilter.SetContext(RevitContext, _apiContext);
       }
 
-      var selectedObjects = modelCard.SendFilterObjectIdentifiers.Select(id => id.Value.UniqueId).ToList();
+      var selectedObjects = modelCard.SendFilter.NotNull().IdMap.NotNull().Values;
       var intersection = selectedObjects.Intersect(objUniqueIds).ToList();
       bool isExpired = intersection.Count != 0;
       if (isExpired)

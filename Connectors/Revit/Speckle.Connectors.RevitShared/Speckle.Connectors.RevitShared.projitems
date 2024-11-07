@@ -18,7 +18,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RevitReceiveBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\SelectionBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RevitSendBinding.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)DUI\RevitSenderModelCard.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ElementIdHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\APIContext.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\DocumentModelStorageSchema.cs" />
