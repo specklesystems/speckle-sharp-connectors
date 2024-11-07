@@ -24,9 +24,9 @@
     <Copy Condition="Exists('C:\TeklaStructures\2024.0')" 
           DestinationFolder="C:\TeklaStructures\2024.0\Environments\common\extensions\Speckle3TeklaStructures\%(RecursiveDir)" 
           SourceFiles="@(TeklaDlls)" />
-<!--    <Copy Condition="Exists('C:\TeklaStructures\2024.0')" -->
-<!--          DestinationFolder="$(ProgramFiles)\TeklaStructures\2024.0\bin\Env\Bitmaps" -->
-<!--          SourceFiles="@(TeklaBmp)" />-->
+    <Copy Condition="Exists('C:\TeklaStructures\2024.0')" 
+          DestinationFolder="$(ProgramFiles)\TeklaStructures\2024.0\bin\Env\Bitmaps" 
+          SourceFiles="@(TeklaBmp)" />
   </Target>
   
   <ItemGroup>
