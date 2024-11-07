@@ -69,6 +69,7 @@ public sealed class RootObjectSender : IRootObjectSender
 
     using var transport = _transportFactory.Create(account, sendInfo.ProjectId, 60, null);
 
+    string previousSpeed = string.Empty;
     _progressDisplayManager.Begin();
     var sendResult = await _operations
       .Send(
@@ -77,6 +78,15 @@ public sealed class RootObjectSender : IRootObjectSender
         true,
         onProgressAction: new PassthroughProgress(args =>
         {
+          if (args.ProgressEvent == ProgressEvent.UploadBytes)
+          {
+            switch (args.ProgressEvent)
+            {
+              case ProgressEvent.UploadBytes:
+                previousSpeed = _progressDisplayManager.CalculateSpeed(args);
+                break;
+            }
+          }
           if (!_progressDisplayManager.ShouldUpdate())
           {
             return;
@@ -84,23 +94,15 @@ public sealed class RootObjectSender : IRootObjectSender
 
           switch (args.ProgressEvent)
           {
-            case ProgressEvent.UploadBytes: //TODO: These progress calls are not awaited
-              onOperationProgressed.Report(
-                new(
-                  $"Uploading ({_progressDisplayManager.CalculateSpeed(args)})",
-                  _progressDisplayManager.CalculatePercentage(args)
-                )
-              );
+            case ProgressEvent.CachedToLocal:
+              onOperationProgressed.Report(new($"Checking... ({args.ProgressEvent})", null));
               break;
-            case ProgressEvent.UploadObject:
-              onOperationProgressed.Report(new("Uploading Root Object...", null));
+            case ProgressEvent.UploadBytes:
+              onOperationProgressed.Report(new($"Uploading... ({previousSpeed})", null));
               break;
-            case ProgressEvent.SerializeObject:
+            case ProgressEvent.FromCacheOrSerialized:
               onOperationProgressed.Report(
-                new(
-                  $"Serializing ({_progressDisplayManager.CalculateSpeed(args)})",
-                  _progressDisplayManager.CalculatePercentage(args)
-                )
+                new($"Loading cache and Serializing... ({_progressDisplayManager.CalculateSpeed(args)})", null)
               );
               break;
           }
