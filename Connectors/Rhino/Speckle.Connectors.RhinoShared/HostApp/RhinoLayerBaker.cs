@@ -1,6 +1,7 @@
 using Rhino;
 using Rhino.DocObjects;
 using Speckle.Connectors.Common.Operations.Receive;
+using Speckle.Sdk;
 using Speckle.Sdk.Models.Collections;
 using Layer = Rhino.DocObjects.Layer;
 
@@ -28,15 +29,32 @@ public class RhinoLayerBaker : TraversalContextUnpacker
   public void CreateBaseLayer(string baseLayerName)
   {
     var index = RhinoDoc.ActiveDoc.Layers.Add(new Layer { Name = baseLayerName }); // POC: too much effort right now to wrap around the interfaced layers and doc
-    _hostLayerCache.Add(baseLayerName, index);
+    _hostLayerCache[baseLayerName] = index;
   }
 
-  /// <summary>
-  /// <para>For receive: Use this method to construct layers in the host app when receiving. It progressively caches layers while creating them, so a second call to get the same layer will be fast.</para>
-  /// </summary>
-  public int GetAndCreateLayerFromPath(Collection[] collectionPath, string baseLayerName)
+  public void CreateAllLayersForReceive(IEnumerable<Collection[]> paths, string baseLayerName)
   {
-    var layerPath = collectionPath.Select(o => string.IsNullOrWhiteSpace(o.name) ? "unnamed" : o.name);
+    CreateBaseLayer(baseLayerName);
+    var uniquePaths = new Dictionary<string, Collection[]>();
+    foreach (var path in paths)
+    {
+      var names = path.Select(o => string.IsNullOrWhiteSpace(o.name) ? "unnamed" : o.name);
+      var key = string.Join(",", names!);
+      uniquePaths[key] = path;
+    }
+
+    foreach (var uniquePath in uniquePaths)
+    {
+      var layerIndex = CreateLayerFromPath(uniquePath.Value, baseLayerName);
+    }
+  }
+
+  public int GetLayerIndex(Collection[] collectionPath, string baseLayerName)
+  {
+    var layerPath = collectionPath
+      .Select(o => string.IsNullOrWhiteSpace(o.name) ? "unnamed" : o.name)
+      .Prepend(baseLayerName);
+
     var layerFullName = string.Join(Layer.PathSeparator, layerPath);
 
     if (_hostLayerCache.TryGetValue(layerFullName, out int existingLayerIndex))
@@ -44,6 +62,14 @@ public class RhinoLayerBaker : TraversalContextUnpacker
       return existingLayerIndex;
     }
 
+    throw new SpeckleNonUserFacingException("Did not find a layer in the cache.");
+  }
+
+  /// <summary>
+  /// <para>For receive: Use this method to construct layers in the host app when receiving. It progressively caches layers while creating them, so a second call to get the same layer will be fast.</para>
+  /// </summary>
+  private int CreateLayerFromPath(Collection[] collectionPath, string baseLayerName)
+  {
     var currentLayerName = baseLayerName;
     var currentDocument = RhinoDoc.ActiveDoc; // POC: too much effort right now to wrap around the interfaced layers
     Layer? previousLayer = currentDocument.Layers.FindName(currentLayerName);
