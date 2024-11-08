@@ -9,9 +9,5 @@ public class AutocadSelectionFilter : DirectSelectionSendFilter
     IsDefault = true;
   }
 
-  public override List<string> RefreshObjectIds()
-  {
-    SelectedObjectIds = SelectedObjectIds; // We know it is bad, it is for backward compatibility!
-    return SelectedObjectIds;
-  }
+  public override List<string> RefreshObjectIds() => SelectedObjectIds;
 }
