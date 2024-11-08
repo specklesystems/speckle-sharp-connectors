@@ -52,6 +52,7 @@ public class SpeckleTeklaPanelHost : PluginFormBase
     Activate();
     Focus();
   }
+
   private HostAppVersion GetVersion()
   {
 #if TEKLA2024
@@ -61,5 +62,5 @@ public class SpeckleTeklaPanelHost : PluginFormBase
 #else
     throw new NotImplementedException();
 #endif
-  } 
+  }
 }
