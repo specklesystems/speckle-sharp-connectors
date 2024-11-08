@@ -29,11 +29,11 @@ public class LocalToGlobalToDirectShapeConverter
   public DB.DirectShape Convert((Base atomicObject, List<Matrix4x4> matrix) target)
   {
     // 1- set ds category
-    var category = target.atomicObject["category"] as string;
+    var category = target.atomicObject["builtinCategory"] as string;
     var dsCategory = DB.BuiltInCategory.OST_GenericModel;
     if (category is not null)
     {
-      var res = Enum.TryParse($"OST_{category}", out DB.BuiltInCategory cat);
+      var res = Enum.TryParse(category, out DB.BuiltInCategory cat);
       if (res)
       {
         var c = DB.Category.GetCategory(_converterSettings.Current.Document, cat);

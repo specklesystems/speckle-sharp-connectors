@@ -20,3 +20,4 @@ tools
 *.snupkg
 coverage.xml
 output/
+Images/Thumbs.db

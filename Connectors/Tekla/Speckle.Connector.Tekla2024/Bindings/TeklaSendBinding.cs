@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Speckle.Connector.Tekla2024.Operations.Send.Settings;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
@@ -42,6 +43,7 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
   private readonly ISdkActivityFactory _activityFactory;
   private readonly Model _model;
   private readonly Events _events;
+  private readonly ToSpeckleSettingsManager _toSpeckleSettingsManager;
 
   private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
 
@@ -57,7 +59,8 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
     ILogger<TeklaSendBinding> logger,
     ITeklaConversionSettingsFactory teklaConversionSettingsFactory,
     ISpeckleApplication speckleApplication,
-    ISdkActivityFactory activityFactory
+    ISdkActivityFactory activityFactory,
+    ToSpeckleSettingsManager toSpeckleSettingsManager
   )
   {
     _store = store;
@@ -73,6 +76,7 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
     _activityFactory = activityFactory;
+    _toSpeckleSettingsManager = toSpeckleSettingsManager;
 
     _model = new Model();
     _events = new Events();
@@ -103,15 +107,11 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
 
-  public List<ICardSetting> GetSendSettings() => [];
+  public List<ICardSetting> GetSendSettings() => [new SendRebarsAsSolidSetting(false)];
 
   public async Task Send(string modelCardId)
   {
     using var activity = _activityFactory.Start();
-    using var scope = _serviceProvider.CreateScope();
-    scope
-      .ServiceProvider.GetRequiredService<IConverterSettingsStore<TeklaConversionSettings>>()
-      .Initialize(_teklaConversionSettingsFactory.Create(_model));
 
     try
     {
@@ -119,6 +119,12 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
       {
         throw new InvalidOperationException("No publish model card was found.");
       }
+      using var scope = _serviceProvider.CreateScope();
+      scope
+        .ServiceProvider.GetRequiredService<IConverterSettingsStore<TeklaConversionSettings>>()
+        .Initialize(
+          _teklaConversionSettingsFactory.Create(_model, _toSpeckleSettingsManager.GetSendRebarsAsSolid(modelCard))
+        );
 
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
