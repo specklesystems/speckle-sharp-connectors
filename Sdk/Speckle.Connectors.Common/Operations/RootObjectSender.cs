@@ -94,10 +94,10 @@ public sealed class RootObjectSender : IRootObjectSender
           switch (args.ProgressEvent)
           {
             case ProgressEvent.CachedToLocal:
-              onOperationProgressed.Report(new($"Checking... ({_progressDisplayManager.CalculateSpeed(args)})", null));
+              onOperationProgressed.Report(new($"Caching... ({args.Count})", null));
               break;
             case ProgressEvent.UploadBytes:
-              onOperationProgressed.Report(new($"Uploading... ({previousSpeed})", null));
+              onOperationProgressed.Report(new($"Uploading... ({previousSpeed}) {args.Count}", null));
               break;
             case ProgressEvent.FromCacheOrSerialized:
               onOperationProgressed.Report(
