@@ -55,7 +55,11 @@ public class PolylineToHostConverter
   RG.PolylineCurve ITypedConverter<SOG.Polyline, RG.PolylineCurve>.Convert(SOG.Polyline target)
   {
     var poly = Convert(target).ToPolylineCurve();
-    poly.Domain = _intervalConverter.Convert(target.domain);
+    if (target.domain is not null) // note it can be null
+    {
+      poly.Domain = _intervalConverter.Convert(target.domain);
+    }
+
     return poly;
   }
 }
