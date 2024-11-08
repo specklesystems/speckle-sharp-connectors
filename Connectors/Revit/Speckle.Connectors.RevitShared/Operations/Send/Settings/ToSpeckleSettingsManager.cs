@@ -36,7 +36,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     _sendConversionCache = sendConversionCache;
   }
 
-  public async Task<DetailLevelType> GetDetailLevelSetting(SenderModelCard modelCard)
+  public DetailLevelType GetDetailLevelSetting(SenderModelCard modelCard)
   {
     var fidelityString = modelCard.Settings?.First(s => s.Id == "detailLevel").Value as string;
     if (
@@ -48,7 +48,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
       {
         if (previousType != fidelity)
         {
-          await EvictCacheForModelCard(modelCard).ConfigureAwait(false);
+          EvictCacheForModelCard(modelCard);
         }
       }
       _detailLevelCache[modelCard.ModelCardId.NotNull()] = fidelity;
@@ -58,7 +58,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     throw new ArgumentException($"Invalid geometry fidelity value: {fidelityString}");
   }
 
-  public async Task<Transform?> GetReferencePointSetting(SenderModelCard modelCard)
+  public Transform? GetReferencePointSetting(SenderModelCard modelCard)
   {
     var referencePointString = modelCard.Settings?.First(s => s.Id == "referencePoint").Value as string;
     if (
@@ -78,7 +78,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
         // invalidate conversion cache if the transform has changed
         if (previousTransform != currentTransform)
         {
-          await EvictCacheForModelCard(modelCard).ConfigureAwait(false);
+          EvictCacheForModelCard(modelCard);
         }
       }
 
@@ -89,7 +89,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     throw new ArgumentException($"Invalid reference point value: {referencePointString}");
   }
 
-  public async Task<bool> GetSendParameterNullOrEmptyStringsSetting(SenderModelCard modelCard)
+  public bool GetSendParameterNullOrEmptyStringsSetting(SenderModelCard modelCard)
   {
     var value = modelCard.Settings?.First(s => s.Id == "nullemptyparams").Value as bool?;
     var returnValue = value != null && value.NotNull();
@@ -97,7 +97,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     {
       if (previousValue != returnValue)
       {
-        await EvictCacheForModelCard(modelCard).ConfigureAwait(false);
+        EvictCacheForModelCard(modelCard);
       }
     }
 
@@ -105,12 +105,9 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     return returnValue;
   }
 
-  private async Task EvictCacheForModelCard(SenderModelCard modelCard)
+  private void EvictCacheForModelCard(SenderModelCard modelCard)
   {
-    var objectIds =
-      modelCard.SendFilter != null
-        ? await _apiContext.Run(_ => modelCard.SendFilter.NotNull().GetObjectIds()).ConfigureAwait(false)
-        : [];
+    var objectIds = modelCard.SendFilter != null ? modelCard.SendFilter.NotNull().SelectedObjectIds : [];
     var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds);
     _sendConversionCache.EvictObjects(unpackedObjectIds);
   }
