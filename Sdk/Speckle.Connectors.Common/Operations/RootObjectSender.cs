@@ -66,16 +66,15 @@ public sealed class RootObjectSender : IRootObjectSender
     Account account = _accountService.GetAccountWithServerUrlFallback(sendInfo.AccountId, sendInfo.ServerUrl);
     using var userScope = ActivityScope.SetTag(Consts.USER_ID, account.GetHashedEmail());
     using var activity = _activityFactory.Start("SendOperation");
-
-    using var transport = _transportFactory.Create(account, sendInfo.ProjectId, 60, null);
-
+    
     string previousSpeed = string.Empty;
     _progressDisplayManager.Begin();
     var sendResult = await _operations
-      .Send(
+      .Send2(
+        sendInfo.ServerUrl,
+        sendInfo.ProjectId,
+        account.token,
         commitObject,
-        transport,
-        true,
         onProgressAction: new PassthroughProgress(args =>
         {
           if (args.ProgressEvent == ProgressEvent.UploadBytes)
@@ -95,14 +94,14 @@ public sealed class RootObjectSender : IRootObjectSender
           switch (args.ProgressEvent)
           {
             case ProgressEvent.CachedToLocal:
-              onOperationProgressed.Report(new($"Checking... ({args.ProgressEvent})", null));
+              onOperationProgressed.Report(new($"Checking... ({_progressDisplayManager.CalculateSpeed(args)})", null));
               break;
             case ProgressEvent.UploadBytes:
               onOperationProgressed.Report(new($"Uploading... ({previousSpeed})", null));
               break;
             case ProgressEvent.FromCacheOrSerialized:
               onOperationProgressed.Report(
-                new($"Loading cache and Serializing... ({_progressDisplayManager.CalculateSpeed(args)})", null)
+                new($"Loading cache and Serializing... ({_progressDisplayManager.CalculateSpeed(args)})", _progressDisplayManager.CalculatePercentage(args))
               );
               break;
           }
