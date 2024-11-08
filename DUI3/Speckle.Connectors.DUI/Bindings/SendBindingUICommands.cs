@@ -9,6 +9,7 @@ public class SendBindingUICommands(IBrowserBridge bridge) : BasicConnectorBindin
   private const string REFRESH_SEND_FILTERS_UI_COMMAND_NAME = "refreshSendFilters";
   private const string SET_MODELS_EXPIRED_UI_COMMAND_NAME = "setModelsExpired";
   private const string SET_MODEL_SEND_RESULT_UI_COMMAND_NAME = "setModelSendResult";
+  private const string SET_ID_MAP_COMMAND_NAME = "setIdMap";
 
   // POC.. the only reasons this needs the bridge is to send? realtionship to these messages and the bridge is unclear
   public async Task RefreshSendFilters() =>
@@ -16,6 +17,9 @@ public class SendBindingUICommands(IBrowserBridge bridge) : BasicConnectorBindin
 
   public async Task SetModelsExpired(IEnumerable<string> expiredModelIds) =>
     await Bridge.Send(SET_MODELS_EXPIRED_UI_COMMAND_NAME, expiredModelIds).ConfigureAwait(false);
+
+  public async Task SetFilterObjectIds(string modelCardId, Dictionary<string, string> idMap) =>
+    await Bridge.Send(SET_ID_MAP_COMMAND_NAME, new { modelCardId, idMap }).ConfigureAwait(false);
 
   public async Task SetModelSendResult(
     string modelCardId,
