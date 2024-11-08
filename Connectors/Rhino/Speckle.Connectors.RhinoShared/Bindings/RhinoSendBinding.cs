@@ -238,7 +238,7 @@ public sealed class RhinoSendBinding : ISendBinding
 
     foreach (SenderModelCard modelCard in senders)
     {
-      var intersection = modelCard.SendFilter.NotNull().ObjectIds.Intersect(objectIdsList).ToList();
+      var intersection = modelCard.SendFilter.NotNull().SelectedObjectIds.Intersect(objectIdsList).ToList();
       var isExpired = intersection.Count != 0;
       if (isExpired)
       {

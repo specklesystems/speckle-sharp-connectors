@@ -17,7 +17,7 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
   public string? Summary { get; set; }
   public bool IsDefault { get; set; }
   public string? SelectedView { get; set; }
-  public List<string> ObjectIds { get; set; }
+  public List<string> SelectedObjectIds { get; set; }
   public Dictionary<string, string>? IdMap { get; set; } = new();
   public List<string>? AvailableViews { get; set; }
 
@@ -80,7 +80,7 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
     using var viewCollector = new FilteredElementCollector(_doc, view.Id);
     List<Element> elementsInView = viewCollector.ToElements().ToList();
     objectIds = elementsInView.Select(e => e.UniqueId).ToList();
-    ObjectIds = objectIds;
+    SelectedObjectIds = objectIds;
     return objectIds;
   }
 

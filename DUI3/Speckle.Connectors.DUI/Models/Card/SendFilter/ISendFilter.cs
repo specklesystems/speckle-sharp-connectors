@@ -6,7 +6,7 @@ public interface ISendFilter
   public string Name { get; set; }
   public string? Summary { get; set; }
   public bool IsDefault { get; set; }
-  public List<string> ObjectIds { get; set; }
+  public List<string> SelectedObjectIds { get; set; }
   public Dictionary<string, string>? IdMap { get; set; }
 
   /// <summary>

@@ -140,7 +140,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         {
           senderModel.SendFilter.NotNull().IdMap.NotNull()[element.Id.ToString()] = element.UniqueId;
         }
-        await Commands.SetFilterObjectIds(modelCardId, senderModel.SendFilter.NotNull().IdMap).ConfigureAwait(false);
+        await Commands
+          .SetFilterObjectIds(modelCardId, senderModel.SendFilter.NotNull().IdMap.NotNull())
+          .ConfigureAwait(false);
       }
 
       List<ElementId> elementIds = elements.Select(el => el.Id).ToList();
@@ -255,7 +257,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
           continue;
         }
 
-        var selectedObjects = sender.SendFilter.NotNull().ObjectIds;
+        var selectedObjects = sender.SendFilter.NotNull().SelectedObjectIds;
         objectIds.AddRange(selectedObjects);
       }
       var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds.ToList());

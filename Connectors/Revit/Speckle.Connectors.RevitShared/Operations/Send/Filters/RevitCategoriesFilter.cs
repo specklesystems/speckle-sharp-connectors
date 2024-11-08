@@ -18,7 +18,7 @@ public class RevitCategoriesFilter : DiscriminatedObject, ISendFilter, IRevitSen
   public string Name { get; set; } = "Categories";
   public string? Summary { get; set; }
   public bool IsDefault { get; set; }
-  public List<string> ObjectIds { get; set; } = new();
+  public List<string> SelectedObjectIds { get; set; } = new();
   public Dictionary<string, string>? IdMap { get; set; }
   public List<string>? SelectedCategories { get; set; }
   public List<CategoryData>? AvailableCategories { get; set; }
@@ -57,7 +57,7 @@ public class RevitCategoriesFilter : DiscriminatedObject, ISendFilter, IRevitSen
       .WherePasses(categoryFilter)
       .ToList();
     objectIds = elements.Select(e => e.UniqueId).ToList();
-    ObjectIds = objectIds;
+    SelectedObjectIds = objectIds;
     return objectIds;
   }
 
