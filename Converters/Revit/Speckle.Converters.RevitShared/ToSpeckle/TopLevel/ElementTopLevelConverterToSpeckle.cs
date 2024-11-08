@@ -27,7 +27,7 @@ public class ElementTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<
       ? symbol.FamilyName
       : "no family";
     string category = target.Category?.Name ?? "no category";
-    List<Speckle.Objects.Geometry.Mesh> displayValue = _displayValueExtractor.GetDisplayValue(target);
+    List<Objects.Geometry.Mesh> displayValue = _displayValueExtractor.GetDisplayValue(target);
 
     RevitElement speckleElement =
       new()

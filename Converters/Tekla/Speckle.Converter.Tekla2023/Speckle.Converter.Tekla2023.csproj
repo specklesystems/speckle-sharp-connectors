@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Configurations>Debug;Release;Local</Configurations>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Tekla.Structures.Model" IncludeAssets="compile" VersionOverride =" 2023.0.0" />
+    <PackageReference Include="Tekla.Structures.Drawing" IncludeAssets="compile" VersionOverride =" 2023.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
+  </ItemGroup>
+
+  <Import Project="..\Speckle.Converters.TeklaShared\Speckle.Converters.TeklaShared.projitems" Label="Shared" />
+
+</Project>

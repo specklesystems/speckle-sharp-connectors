@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
+using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Converters.RevitShared.ToSpeckle;
 using Speckle.Sdk;
@@ -58,6 +59,7 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
     if (target is not DB.DirectShape)
     {
       result["category"] = element.Category?.Name;
+      result["builtinCategory"] = element.Category?.GetBuiltInCategory().ToString();
     }
 
     try

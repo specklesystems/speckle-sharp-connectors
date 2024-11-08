@@ -31,7 +31,7 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
   public Dictionary<string, object> Convert(DB.Element target)
   {
     Dictionary<string, object> quantities = new();
-    if (target.Category.HasMaterialQuantities)
+    if (target.Category?.HasMaterialQuantities ?? false) //category can be null
     {
       foreach (DB.ElementId matId in target.GetMaterialIds(false))
       {

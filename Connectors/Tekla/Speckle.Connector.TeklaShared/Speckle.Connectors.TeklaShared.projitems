@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>{3AB9028B-B2D2-464B-9BA3-39C192441E50}</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>Speckle.Connectors.Tekla</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\et_element_Speckle.bmp">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\TeklaBasicConnectorBinding.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\TeklaSelectionBinding.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\TeklaSendBinding.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Extensions\ModelObjectExtension.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Extensions\SpeckleApplicationIdExtensions.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Filters\TeklaSelectionFilter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\TeklaDocumentModelStore.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\TeklaIdleManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\TeklaMaterialUnpacker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendRebarsAsSolidSetting.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ToSpeckleSettingsManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\TeklaRootObjectBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\TeklaPlugin.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)SpeckleTeklaPanelHost.cs" />
+
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)app.config" />
+  </ItemGroup>
+</Project>

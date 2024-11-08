@@ -178,7 +178,7 @@ public sealed class RhinoSendBinding : ISendBinding
 
       List<RhinoObject> rhinoObjects = modelCard
         .SendFilter.NotNull()
-        .GetObjectIds()
+        .RefreshObjectIds()
         .Select(id => RhinoDoc.ActiveDoc.Objects.FindId(new Guid(id)))
         .Where(obj => obj != null)
         .ToList();
@@ -238,7 +238,7 @@ public sealed class RhinoSendBinding : ISendBinding
 
     foreach (SenderModelCard modelCard in senders)
     {
-      var intersection = modelCard.SendFilter.NotNull().GetObjectIds().Intersect(objectIdsList).ToList();
+      var intersection = modelCard.SendFilter.NotNull().SelectedObjectIds.Intersect(objectIdsList).ToList();
       var isExpired = intersection.Count != 0;
       if (isExpired)
       {
