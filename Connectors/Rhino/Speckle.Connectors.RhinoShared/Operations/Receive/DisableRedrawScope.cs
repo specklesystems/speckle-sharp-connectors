@@ -21,5 +21,6 @@ public sealed class DisableRedrawScope : IDisposable
   public void Dispose()
   {
     _viewTable.RedrawEnabled = _returnToStatus;
+    _viewTable.Redraw();
   }
 }
