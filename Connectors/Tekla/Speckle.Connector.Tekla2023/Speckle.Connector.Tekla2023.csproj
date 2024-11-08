@@ -17,18 +17,20 @@
     <Copy Condition="Exists('$(ProgramData)\Trimble\Tekla Structures\$(TeklaVersion).0')" 
           DestinationFolder="$(ProgramData)\Trimble\Tekla Structures\$(TeklaVersion).0\Environments\common\extensions\Speckle3TeklaStructures\%(RecursiveDir)" 
           SourceFiles="@(TeklaDlls)" />
-<!--    <Copy Condition="Exists('$(ProgramData)\Trimble\Tekla Structures\$(TeklaVersion).0')" -->
-<!--          DestinationFolder="$(ProgramData)\Trimble\Tekla Structures\$(TeklaVersion).0\Bitmaps" -->
-<!--          SourceFiles="@(TeklaBmp)" />-->
-    
+    <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+          <Copy Condition="Exists('$(ProgramData)\Trimble\Tekla Structures\$(TeklaVersion).0')" 
+                DestinationFolder="$(ProgramData)\Trimble\Tekla Structures\$(TeklaVersion).0\Bitmaps" 
+                SourceFiles="@(TeklaBmp)" />
+    </ItemGroup>
     <Copy Condition="Exists('C:\TeklaStructures\2023.0')" 
           DestinationFolder="C:\TeklaStructures\2023.0\Environments\common\extensions\Speckle3TeklaStructures\%(RecursiveDir)" 
           SourceFiles="@(TeklaDlls)" />
-<!--    <Copy Condition="Exists('C:\TeklaStructures\2023.0')" -->
-<!--          DestinationFolder="$(ProgramFiles)\TeklaStructures\2023.0\bin\Env\Bitmaps" -->
-<!--          SourceFiles="@(TeklaBmp)" />-->
+    <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+          <Copy Condition="Exists('C:\TeklaStructures\2023.0')" 
+                DestinationFolder="$(ProgramFiles)\TeklaStructures\2023.0\bin\Env\Bitmaps" 
+                SourceFiles="@(TeklaBmp)" />
+    </ItemGroup>
   </Target>
-  
   <ItemGroup>
     <PackageReference Include="Speckle.Objects" />
     <PackageReference Include="Tekla.Structures.Dialog" IncludeAssets="compile; build" VersionOverride =" 2023.0.0" />
