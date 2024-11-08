@@ -1,6 +1,4 @@
 using ArcGIS.Core.Geometry;
-using Speckle.Objects.BuiltElements.Revit;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.Utils;
 
@@ -21,39 +19,6 @@ public readonly struct CRSorigin
   {
     LatDegrees = latDegrees;
     LonDegrees = lonDegrees;
-  }
-
-  public static CRSorigin? FromRevitData(Base rootObject)
-  {
-    // rewrite function to take into account Local reference point in Revit, and Transformation matrix
-    foreach (KeyValuePair<string, object?> prop in rootObject.GetMembers(DynamicBaseMemberType.Dynamic))
-    {
-      if (prop.Key == "info")
-      {
-        ProjectInfo? revitProjInfo = (ProjectInfo?)rootObject[prop.Key];
-        if (revitProjInfo != null)
-        {
-          try
-          {
-            double lat = Convert.ToDouble(revitProjInfo["latitude"]);
-            double lon = Convert.ToDouble(revitProjInfo["longitude"]);
-            double trueNorth;
-            if (revitProjInfo["locations"] is List<Base> locationList && locationList.Count > 0)
-            {
-              Base location = locationList[0];
-              trueNorth = Convert.ToDouble(location["trueNorth"]);
-            }
-            return new CRSorigin(lat * 180 / Math.PI, lon * 180 / Math.PI);
-          }
-          catch (Exception ex) when (ex is FormatException || ex is InvalidCastException || ex is OverflowException)
-          {
-            // origin not found, do nothing
-          }
-          break;
-        }
-      }
-    }
-    return null;
   }
 
   public SpatialReference CreateCustomCRS()

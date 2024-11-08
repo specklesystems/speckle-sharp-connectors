@@ -111,7 +111,10 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   private void OnChangeChangedObjectIds(DBObject dBObject)
   {
     ChangedObjectIds[dBObject.GetSpeckleApplicationId()] = 1;
-    _idleManager.SubscribeToIdle(nameof(AutocadSendBinding), RunExpirationChecks);
+    _idleManager.SubscribeToIdle(
+      nameof(AutocadSendBinding),
+      async () => await RunExpirationChecks().ConfigureAwait(false)
+    );
   }
 
   private async Task RunExpirationChecks()

@@ -180,10 +180,10 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
       {
         using var activity = _activityFactory.Start("BakeObject");
 
-        // POC hack of the ages: try to pre transform curves before baking
+        // POC hack of the ages: try to pre transform curves, points and meshes before baking
         // we need to bypass the local to global converter as there we don't have access to what we want. that service will/should stop existing.
         if (
-          localToGlobalMap.AtomicObject is ITransformable transformable and ICurve
+          localToGlobalMap.AtomicObject is ITransformable transformable // and ICurve
           && localToGlobalMap.Matrix.Count > 0
           && localToGlobalMap.AtomicObject["units"] is string units
         )
@@ -191,7 +191,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
           ITransformable? newTransformable = null;
           foreach (var mat in localToGlobalMap.Matrix)
           {
-            transformable.TransformTo(new Transform(mat, units), out newTransformable);
+            transformable.TransformTo(new Transform() { matrix = mat, units = units }, out newTransformable);
           }
 
           localToGlobalMap.AtomicObject = (newTransformable as Base)!;

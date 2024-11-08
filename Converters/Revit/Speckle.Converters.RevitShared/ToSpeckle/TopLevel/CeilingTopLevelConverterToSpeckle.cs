@@ -38,7 +38,7 @@ internal sealed class CeilingTopLevelConverterToSpeckle : BaseTopLevelConverterT
     var elementType = (ElementType)target.Document.GetElement(target.GetTypeId());
     // POC: our existing receive operation is checking the "slopeDirection" prop,
     // but it is never being set. We should be setting it
-    var level = _parameterValueExtractor.GetValueAsDocumentObject<DB.Level>(target, DB.BuiltInParameter.LEVEL_PARAM);
+    var level = _parameterValueExtractor.GetValueAsDocumentObject<DB.Level>(target, BuiltInParameter.LEVEL_PARAM);
     RevitLevel speckleLevel = _levelConverter.Convert(level);
     List<SOG.Mesh> displayValue = _displayValueExtractor.GetDisplayValue(target);
 
