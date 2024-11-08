@@ -178,7 +178,7 @@ public sealed class RhinoSendBinding : ISendBinding
 
       List<RhinoObject> rhinoObjects = modelCard
         .SendFilter.NotNull()
-        .SetObjectIds()
+        .RefreshObjectIds()
         .Select(id => RhinoDoc.ActiveDoc.Objects.FindId(new Guid(id)))
         .Where(obj => obj != null)
         .ToList();

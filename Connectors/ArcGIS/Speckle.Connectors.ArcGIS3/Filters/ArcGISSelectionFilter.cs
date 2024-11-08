@@ -9,7 +9,7 @@ public class ArcGISSelectionFilter : DirectSelectionSendFilter
     IsDefault = true;
   }
 
-  public override List<string> SetObjectIds()
+  public override List<string> RefreshObjectIds()
   {
     ObjectIds = SelectedObjectIds; // We know it is bad, it is for backward compatibility!
     return ObjectIds;

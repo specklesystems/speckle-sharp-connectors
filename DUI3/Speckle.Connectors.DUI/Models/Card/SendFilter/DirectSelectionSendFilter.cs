@@ -11,5 +11,5 @@ public abstract class DirectSelectionSendFilter : DiscriminatedObject, ISendFilt
   public List<string> ObjectIds { get; set; } = new();
   public Dictionary<string, string>? IdMap { get; set; }
   public List<string> SelectedObjectIds { get; set; } = new();
-  public abstract List<string> SetObjectIds();
+  public abstract List<string> RefreshObjectIds();
 }

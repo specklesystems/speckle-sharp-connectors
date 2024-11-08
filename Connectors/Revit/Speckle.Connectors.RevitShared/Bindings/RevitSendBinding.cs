@@ -190,7 +190,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     }
 
     var selectedObjects = await _apiContext
-      .Run(_ => modelCard.SendFilter.NotNull().SetObjectIds())
+      .Run(_ => modelCard.SendFilter.NotNull().RefreshObjectIds())
       .ConfigureAwait(false);
 
     List<Element> elements = selectedObjects
@@ -204,6 +204,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       {
         modelCard.SendFilter.IdMap[element.Id.ToString()] = element.UniqueId;
       }
+
+      // We update the state on the UI SenderModelCard to prevent potential inconsistencies between hostApp IdMap in sendfilters.
       await Commands
         .SetFilterObjectIds(modelCard.ModelCardId.NotNull(), modelCard.SendFilter.IdMap)
         .ConfigureAwait(false);

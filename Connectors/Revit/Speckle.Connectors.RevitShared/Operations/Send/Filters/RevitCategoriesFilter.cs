@@ -39,7 +39,7 @@ public class RevitCategoriesFilter : DiscriminatedObject, ISendFilter, IRevitSen
   /// Use it with APIContext.Run
   /// </summary>
   /// <exception cref="SpeckleSendFilterException">Whenever no view is found.</exception>
-  public List<string> SetObjectIds()
+  public List<string> RefreshObjectIds()
   {
     var objectIds = new List<string>();
     if (SelectedCategories is null)

@@ -10,8 +10,11 @@ public interface ISendFilter
   public Dictionary<string, string>? IdMap { get; set; }
 
   /// <summary>
-  /// Gets the ids of the objects targeted by the filter from the host application.
+  /// Refreshes the ids of the objects from the filter.
+  /// In Revit we re-fetch the new objects before send or whenever new element added into specific type of filter.
+  /// i.e. we have category filter with "Walls" selected, whenever user added new wall we need to update the ObjectIds before
+  /// running expiration checks to be able to catch the model card is not up-to-date anymore
   /// </summary>
   /// <returns></returns>
-  public List<string> SetObjectIds();
+  public List<string> RefreshObjectIds();
 }
