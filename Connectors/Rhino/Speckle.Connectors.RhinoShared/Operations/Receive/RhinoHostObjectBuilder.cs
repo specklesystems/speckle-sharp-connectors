@@ -54,7 +54,9 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _activityFactory = activityFactory;
   }
 
+#pragma warning disable CA1506
   public async Task<HostObjectBuilderResult> Build(
+#pragma warning restore CA1506
     Base rootObject,
     string projectName,
     string modelName,
@@ -68,9 +70,9 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
     // 0 - Clean then Rock n Roll!
     PreReceiveDeepClean(baseLayerName);
-    _layerBaker.CreateBaseLayer(baseLayerName);
 
     // 1 - Unpack objects and proxies from root commit object
+
     var unpackedRoot = _rootObjectUnpacker.Unpack(rootObject);
 
     // 2 - Split atomic objects and instance components with their path
@@ -107,11 +109,11 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     onOperationProgressed.Report(new("Baking layers (redraw disabled)", null));
     using (var _ = _activityFactory.Start("Pre baking layers"))
     {
-      using var layerNoDraw = new DisableRedrawScope(_converterSettings.Current.Document.Views);
-      foreach (var (path, _) in atomicObjectsWithPath)
+      RhinoApp.InvokeAndWait(() =>
       {
-        _layerBaker.GetAndCreateLayerFromPath(path, baseLayerName);
-      }
+        using var layerNoDraw = new DisableRedrawScope(_converterSettings.Current.Document.Views);
+        _layerBaker.CreateAllLayersForReceive(atomicObjectsWithPath.Select(t => t.path), baseLayerName);
+      });
     }
 
     // 5 - Convert atomic objects
@@ -130,7 +132,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
           try
           {
             // 0: get pre-created layer from cache in layer baker
-            int layerIndex = _layerBaker.GetAndCreateLayerFromPath(path, baseLayerName);
+            int layerIndex = _layerBaker.GetLayerIndex(path, baseLayerName);
 
             // 1: create object attributes for baking
             string name = obj["name"] as string ?? "";
@@ -217,7 +219,6 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     }
 
     _converterSettings.Current.Document.Views.Redraw();
-
     return new HostObjectBuilderResult(bakedObjectIds, conversionResults);
   }
 
@@ -230,31 +231,35 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       RhinoMath.UnsetIntIndex
     );
 
-    _instanceBaker.PurgeInstances(baseLayerName);
-    _materialBaker.PurgeMaterials(baseLayerName);
-
-    var doc = _converterSettings.Current.Document;
-    // Cleans up any previously received objects
-    if (rootLayerIndex != RhinoMath.UnsetIntIndex)
+    RhinoApp.InvokeAndWait(() =>
     {
-      var documentLayer = doc.Layers[rootLayerIndex];
-      var childLayers = documentLayer.GetChildren();
-      if (childLayers != null)
+      _instanceBaker.PurgeInstances(baseLayerName);
+      _materialBaker.PurgeMaterials(baseLayerName);
+
+      var doc = _converterSettings.Current.Document;
+      // Cleans up any previously received objects
+      if (rootLayerIndex != RhinoMath.UnsetIntIndex)
       {
-        using var layerNoDraw = new DisableRedrawScope(doc.Views);
-        foreach (var layer in childLayers)
+        var documentLayer = doc.Layers[rootLayerIndex];
+        var childLayers = documentLayer.GetChildren();
+        if (childLayers != null)
         {
-          var purgeSuccess = doc.Layers.Purge(layer.Index, true);
-          if (!purgeSuccess)
+          using var layerNoDraw = new DisableRedrawScope(doc.Views);
+          foreach (var layer in childLayers)
           {
-            Console.WriteLine($"Failed to purge layer: {layer}");
+            var purgeSuccess = doc.Layers.Purge(layer.Index, true);
+            if (!purgeSuccess)
+            {
+              Console.WriteLine($"Failed to purge layer: {layer}");
+            }
           }
         }
+        doc.Layers.Purge(documentLayer.Index, true);
       }
-    }
 
-    // Cleans up any previously received group
-    _groupBaker.PurgeGroups(baseLayerName);
+      // Cleans up any previously received group
+      _groupBaker.PurgeGroups(baseLayerName);
+    });
   }
 
   /// <summary>
