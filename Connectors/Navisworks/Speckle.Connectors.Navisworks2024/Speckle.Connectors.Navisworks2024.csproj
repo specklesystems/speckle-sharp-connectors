@@ -2,36 +2,36 @@
 
 <Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
 
-    <PropertyGroup>
-        <TargetFramework>net48</TargetFramework>
-        <PlatformTarget>x64</PlatformTarget>
-        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-        <FileAlignment>512</FileAlignment>
-        <Deterministic>true</Deterministic>
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
 
-        <NavisworksBuildNumber>v21</NavisworksBuildNumber>
-        <NavisworksVersion>2024</NavisworksVersion>
+    <NavisworksBuildNumber>v21</NavisworksBuildNumber>
+    <NavisworksVersion>2024</NavisworksVersion>
 
-        <UseWpf>true</UseWpf>
-        <DefineConstants>$(DefineConstants);NAVIS2024;NAVIS</DefineConstants>
-  
-        <Description>NextGen Speckle Connector for Autodesk Navisworks Manage</Description>
-        <Authors>$(Authors) jonathon@speckle.systems</Authors>
-        <PackageTags>$(PackageTags) connector nwd nwc nwf navisworks manage</PackageTags>
+    <UseWpf>true</UseWpf>
+    <DefineConstants>$(DefineConstants);NAVIS2024;NAVIS</DefineConstants>
 
-        <PluginBundleTarget>$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connector.Navisworks.bundle</PluginBundleTarget>
-        <PluginVersionContentTarget>$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connector.Navisworks.bundle\Contents\$(NavisworksBuildNumber)</PluginVersionContentTarget>
-        <RootNamespace>Speckle.Connector.Navisworks2024</RootNamespace>
+    <Description>NextGen Speckle Connector for Autodesk Navisworks Manage</Description>
+    <Authors>$(Authors) jonathon@speckle.systems</Authors>
+    <PackageTags>$(PackageTags) connector nwd nwc nwf navisworks manage</PackageTags>
 
-    </PropertyGroup>
+    <PluginBundleTarget>$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Navisworksv3.bundle</PluginBundleTarget>
+    <PluginVersionContentTarget>$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Navisworksv3.bundle\Contents\$(NavisworksVersion)</PluginVersionContentTarget>
+    <RootNamespace>Speckle.Connector.Navisworks2024</RootNamespace>
 
-    <ItemGroup>
-      <PackageReference Include="Speckle.Objects" />
-    </ItemGroup>
-  
-    <ItemGroup>
-      <Reference Include="WindowsFormsIntegration" />
-    </ItemGroup>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Speckle.Objects"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="WindowsFormsIntegration"/>
+  </ItemGroup>
 
   <!-- Configurations -->
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -43,7 +43,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
-  
+
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <OutputPath>bin\x64\Release\</OutputPath>
     <DefineConstants>TRACE;NAVIS2024;</DefineConstants>
@@ -58,14 +58,32 @@
 
   <!-- NUGETS -->
   <ItemGroup>
-    <PackageReference Include="Speckle.Navisworks.API" VersionOverride="2024.0.0" />
+    <PackageReference Include="Speckle.Navisworks.API" VersionOverride="2024.0.0"/>
   </ItemGroup>
-  
+
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj"/>
 
-      <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
+    <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj"/>
 
   </ItemGroup>
+
+  <!-- Post Builds -->
+  <ItemGroup>
+    <RibbonFiles Include="$(OutDir)Plugin\NavisworksRibbon.*"/>
+    <ResourceFiles Include="$(OutDir)Resources\**\*.png"/>
+    <ResourceFiles Include="$(OutDir)Resources\**\*.ico"/>
+    <AllFiles Include="$(OutDir)*"/>
+  </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="Build">
+    <RemoveDir Directories="$(PluginVersionContentTarget)" Condition="Exists('$(PluginVersionContentTarget)')"/>
+
+    <Copy SourceFiles="$(OutDir)Plugin\PackageContents.xml" DestinationFolder="$(PluginBundleTarget)\"/>
+    <Copy SourceFiles="@(RibbonFiles)" DestinationFolder="$(PluginVersionContentTarget)\en-US\"/>
+    <Copy SourceFiles="@(ResourceFiles)" DestinationFolder="$(PluginVersionContentTarget)\Resources\"/>
+
+    <Copy SourceFiles="@(AllFiles)" DestinationFolder="$(PluginVersionContentTarget)\" />
+  </Target>
 
 </Project>

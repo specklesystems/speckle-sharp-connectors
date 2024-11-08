@@ -9,12 +9,14 @@
     <Import_RootNamespace>Speckle.Connectors.NavisworksShared</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Folder Include="$(MSBuildThisFileDirectory)Filters\" />
     <Folder Include="$(MSBuildThisFileDirectory)Operations\" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\BasicConnectorBinding.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\NavisworksSelectionBinding.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\NavisworksSendBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\ServiceRegistration.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Filters\NavisworksSelectionFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsings.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksDocumentStore.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\AppUtils.cs" />
@@ -25,12 +27,22 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="$(MSBuildThisFileDirectory)Plugin\BrowserPane.xaml" />
-    <Content Include="$(MSBuildThisFileDirectory)Plugin\PackageContents.xml" />
-    <Content Include="$(MSBuildThisFileDirectory)Plugin\NavisworksRibbon.name" />
-    <Content Include="$(MSBuildThisFileDirectory)Resources\s2logo16.png" />
-    <Content Include="$(MSBuildThisFileDirectory)Resources\s2logo32.png" />
+    <Content Include="$(MSBuildThisFileDirectory)Plugin\PackageContents.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(MSBuildThisFileDirectory)Plugin\NavisworksRibbon.name">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(MSBuildThisFileDirectory)Resources\s2logo16.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(MSBuildThisFileDirectory)Resources\s2logo32.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
-    <Page Include="$(MSBuildThisFileDirectory)Plugin\NavisworksRibbon.xaml" />
+    <Content Include="$(MSBuildThisFileDirectory)Plugin\NavisworksRibbon.xaml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 </Project>
