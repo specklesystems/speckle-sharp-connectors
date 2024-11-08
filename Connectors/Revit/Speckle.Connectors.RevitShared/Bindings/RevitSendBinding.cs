@@ -133,18 +133,6 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         );
 
       List<Element> elements = await RefreshElementsOnSender(modelCard.NotNull()).ConfigureAwait(false);
-
-      if (modelCard is SenderModelCard senderModel)
-      {
-        foreach (Element element in elements)
-        {
-          senderModel.SendFilter.NotNull().IdMap.NotNull()[element.Id.ToString()] = element.UniqueId;
-        }
-        await Commands
-          .SetFilterObjectIds(modelCardId, senderModel.SendFilter.NotNull().IdMap.NotNull())
-          .ConfigureAwait(false);
-      }
-
       List<ElementId> elementIds = elements.Select(el => el.Id).ToList();
 
       if (elementIds.Count == 0)
