@@ -247,14 +247,14 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
           using var layerNoDraw = new DisableRedrawScope(doc.Views);
           foreach (var layer in childLayers)
           {
-            var purgeSuccess = doc.Layers.Purge(layer.Index, false);
+            var purgeSuccess = doc.Layers.Purge(layer.Index, true);
             if (!purgeSuccess)
             {
               Console.WriteLine($"Failed to purge layer: {layer}");
             }
           }
         }
-        doc.Layers.Purge(documentLayer.Index, false);
+        doc.Layers.Purge(documentLayer.Index, true);
       }
 
       // Cleans up any previously received group
