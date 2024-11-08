@@ -26,12 +26,18 @@ public class RhinoLayerBaker : TraversalContextUnpacker
   /// Creates the base layer and adds it to the cache.
   /// </summary>
   /// <param name="baseLayerName"></param>
-  public void CreateBaseLayer(string baseLayerName)
+  private void CreateBaseLayer(string baseLayerName)
   {
     var index = RhinoDoc.ActiveDoc.Layers.Add(new Layer { Name = baseLayerName }); // POC: too much effort right now to wrap around the interfaced layers and doc
     _hostLayerCache[baseLayerName] = index;
   }
 
+  /// <summary>
+  /// Creates all layers needed for receiving data.
+  /// </summary>
+  /// <param name="paths">Collections of paths</param>
+  /// <param name="baseLayerName">Name of the base layer</param>
+  /// <remarks>Make sure this is executing on the main thread, using e.g RhinoApp.InvokeAndWait.</remarks>
   public void CreateAllLayersForReceive(IEnumerable<Collection[]> paths, string baseLayerName)
   {
     CreateBaseLayer(baseLayerName);
@@ -49,6 +55,13 @@ public class RhinoLayerBaker : TraversalContextUnpacker
     }
   }
 
+  /// <summary>
+  /// Retrieves the index of a layer based on the given collection path and base layer name.
+  /// </summary>
+  /// <param name="collectionPath">The array containing the collection path to the layer.</param>
+  /// <param name="baseLayerName">The name of the base layer.</param>
+  /// <returns>The index of the layer in the cache.</returns>
+  /// <exception cref="SpeckleException">Thrown when the layer is not found in the cache. This can happen if you didn't call previously <see cref="CreateAllLayersForReceive"/></exception>
   public int GetLayerIndex(Collection[] collectionPath, string baseLayerName)
   {
     var layerPath = collectionPath
@@ -62,12 +75,15 @@ public class RhinoLayerBaker : TraversalContextUnpacker
       return existingLayerIndex;
     }
 
-    throw new SpeckleNonUserFacingException("Did not find a layer in the cache.");
+    throw new SpeckleException("Did not find a layer in the cache.");
   }
 
   /// <summary>
-  /// <para>For receive: Use this method to construct layers in the host app when receiving. It progressively caches layers while creating them, so a second call to get the same layer will be fast.</para>
+  /// Creates a layer based on the given collection path and adds it to the Rhino document.
   /// </summary>
+  /// <param name="collectionPath">An array of Collection objects representing the path to create the layer.</param>
+  /// <param name="baseLayerName">The base layer name to start creating the new layer.</param>
+  /// <returns>The index of the last created layer.</returns>
   private int CreateLayerFromPath(Collection[] collectionPath, string baseLayerName)
   {
     var currentLayerName = baseLayerName;
