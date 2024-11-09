@@ -2,6 +2,10 @@ using Rhino;
 using Speckle.Sdk.Models.Collections;
 using Layer = Rhino.DocObjects.Layer;
 using SpeckleLayer = Speckle.Sdk.Models.Collections.Layer;
+#if RHINO8_OR_GREATER
+using Rhino.DocObjects;
+#endif
+
 
 namespace Speckle.Connectors.Rhino.HostApp;
 
@@ -11,6 +15,14 @@ namespace Speckle.Connectors.Rhino.HostApp;
 public class RhinoLayerUnpacker
 {
   private readonly Dictionary<int, Collection> _layerCollectionCache = new();
+
+  private static readonly string s_pathSeparator =
+#if RHINO8_OR_GREATER
+  ModelComponent.NamePathSeparator;
+#else
+  Layer.PathSeparator;
+#endif
+  private static readonly string[] s_pathSeparatorSplit = [s_pathSeparator];
 
   /// <summary>
   /// <para>Use this method to construct the root commit object while converting objects.</para>
@@ -26,7 +38,7 @@ public class RhinoLayerUnpacker
       return value;
     }
 
-    var names = layer.FullPath.Split(new[] { Layer.PathSeparator }, StringSplitOptions.None);
+    var names = layer.FullPath.Split(s_pathSeparatorSplit, StringSplitOptions.None);
     var path = names[0];
     var index = 0;
     var previousCollection = rootObjectCollection;
@@ -53,7 +65,7 @@ public class RhinoLayerUnpacker
 
       if (index < names.Length - 1)
       {
-        path += Layer.PathSeparator + names[index + 1];
+        path += s_pathSeparator + names[index + 1];
       }
 
       index++;
