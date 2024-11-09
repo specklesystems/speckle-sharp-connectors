@@ -6,7 +6,6 @@ using SpeckleLayer = Speckle.Sdk.Models.Collections.Layer;
 using Rhino.DocObjects;
 #endif
 
-
 namespace Speckle.Connectors.Rhino.HostApp;
 
 /// <summary>
