@@ -33,10 +33,10 @@
   </Target>
   <ItemGroup>
     <PackageReference Include="Speckle.Objects" />
-    <PackageReference Include="Tekla.Structures.Dialog" IncludeAssets="compile; build" VersionOverride =" 2023.0.0" />
-    <PackageReference Include="Tekla.Structures.Drawing" IncludeAssets="compile; build" VersionOverride =" 2023.0.0"/>
-    <PackageReference Include="Tekla.Structures.Model" IncludeAssets="compile; build" VersionOverride =" 2023.0.0" />
-    <PackageReference Include="Tekla.Structures.Plugins" IncludeAssets="compile; build" VersionOverride =" 2023.0.0" />
+    <PackageReference Include="Tekla.Structures.Dialog" IncludeAssets="compile; build" VersionOverride =" 2023.0.1" />
+    <PackageReference Include="Tekla.Structures.Drawing" IncludeAssets="compile; build" VersionOverride =" 2023.0.1"/>
+    <PackageReference Include="Tekla.Structures.Model" IncludeAssets="compile; build" VersionOverride =" 2023.0.1" />
+    <PackageReference Include="Tekla.Structures.Plugins" IncludeAssets="compile; build" VersionOverride =" 2023.0.1" />
   </ItemGroup>
 
   <ItemGroup>
