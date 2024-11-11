@@ -1,3 +1,4 @@
+using System.Drawing;
 using System.Windows.Forms;
 using System.Windows.Forms.Integration;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +23,16 @@ public class SpeckleTeklaPanelHost : PluginFormBase
   {
     this.Text = "Speckle (Beta)";
     this.Name = "Speckle (Beta)";
+
+    using (
+      Bitmap bmp = new Bitmap(
+        GetType().Assembly.GetManifestResourceStream("Speckle.Connector.Tekla2024.Resources.et_element_Speckle.bmp")
+          ?? throw new InvalidOperationException()
+      )
+    )
+    {
+      this.Icon = Icon.FromHandle(bmp.GetHicon());
+    }
 
     // adds instances to tracking list
     s_instances.Add(this);
