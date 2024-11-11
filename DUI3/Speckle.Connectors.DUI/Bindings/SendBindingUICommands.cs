@@ -18,8 +18,22 @@ public class SendBindingUICommands(IBrowserBridge bridge) : BasicConnectorBindin
   public async Task SetModelsExpired(IEnumerable<string> expiredModelIds) =>
     await Bridge.Send(SET_MODELS_EXPIRED_UI_COMMAND_NAME, expiredModelIds).ConfigureAwait(false);
 
-  public async Task SetFilterObjectIds(string modelCardId, Dictionary<string, string> idMap, List<string> newSelectedObjectIds) =>
-    await Bridge.Send(SET_ID_MAP_COMMAND_NAME, new { modelCardId, idMap, newSelectedObjectIds }).ConfigureAwait(false);
+  public async Task SetFilterObjectIds(
+    string modelCardId,
+    Dictionary<string, string> idMap,
+    List<string> newSelectedObjectIds
+  ) =>
+    await Bridge
+      .Send(
+        SET_ID_MAP_COMMAND_NAME,
+        new
+        {
+          modelCardId,
+          idMap,
+          newSelectedObjectIds
+        }
+      )
+      .ConfigureAwait(false);
 
   public async Task SetModelSendResult(
     string modelCardId,
