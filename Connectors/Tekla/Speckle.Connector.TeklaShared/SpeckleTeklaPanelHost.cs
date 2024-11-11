@@ -1,3 +1,4 @@
+using System.Drawing;
 using System.Windows.Forms;
 using System.Windows.Forms.Integration;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,17 +16,35 @@ public class SpeckleTeklaPanelHost : PluginFormBase
 {
   private ElementHost Host { get; }
   public Model Model { get; private set; }
-
   public static new ServiceProvider? Container { get; private set; }
-
-  // TODO: private IDisposable? _disposableLogger;
+  private static readonly List<SpeckleTeklaPanelHost> s_instances = new();
 
   public SpeckleTeklaPanelHost()
   {
     this.Text = "Speckle (Beta)";
     this.Name = "Speckle (Beta)";
-    //TODO: Add Speckle icon
-    // TODO: Add thumbnail to connector
+
+    using (
+      Bitmap bmp = new Bitmap(
+        GetType().Assembly.GetManifestResourceStream("Speckle.Connector.Tekla2024.Resources.et_element_Speckle.bmp")
+          ?? throw new InvalidOperationException()
+      )
+    )
+    {
+      this.Icon = Icon.FromHandle(bmp.GetHicon());
+    }
+
+    // adds instances to tracking list
+    s_instances.Add(this);
+
+    if (s_instances.Count > 1)
+    {
+      var firstInstance = s_instances[0];
+      s_instances.RemoveAt(0);
+      // hides the first instance if there is more than one
+      firstInstance.Hide();
+    }
+
     var services = new ServiceCollection();
     services.Initialize(HostApplications.TeklaStructures, GetVersion());
     services.AddTekla();
