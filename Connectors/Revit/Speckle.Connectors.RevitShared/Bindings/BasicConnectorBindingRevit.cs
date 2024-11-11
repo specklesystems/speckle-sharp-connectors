@@ -126,7 +126,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
         return;
       }
 
-      var selectedObjects = senderModelCard.SendFilter.NotNull().IdMap.NotNull().Values;
+      var selectedObjects = senderModelCard.SendFilter.NotNull().SelectedObjectIds;
 
       elementIds = selectedObjects
         .Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid))
