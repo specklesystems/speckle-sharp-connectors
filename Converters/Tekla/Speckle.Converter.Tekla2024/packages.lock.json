@@ -35,28 +35,28 @@
       },
       "Tekla.Structures.Drawing": {
         "type": "Direct",
-        "requested": "[2024.0.2, )",
-        "resolved": "2024.0.2",
-        "contentHash": "1/rlqkt/Wy9sdMvGXm8GH6fUm9fEASnRPCftvAn0nrtV5qinKbbwEpcxfWrlDneoSVAZY8qL/V8UsXztqO2YRQ==",
+        "requested": "[2024.0.4, )",
+        "resolved": "2024.0.4",
+        "contentHash": "66xsZ+WTNlKgFEh2oa2+cc+F2XK/UrbiwUnp4vgEgTVbxMwquAKIVvnW/PYaGs55393FiS3fIGSfG/lHUp7qHA==",
         "dependencies": {
           "Tekla.Common.Geometry": "4.6.2",
-          "Tekla.Structures": "2024.0.2",
-          "Tekla.Structures.Datatype": "2024.0.2",
-          "Tekla.Structures.Model": "2024.0.2",
-          "Tekla.Structures.Plugins": "2024.0.2",
+          "Tekla.Structures": "2024.0.4",
+          "Tekla.Structures.Datatype": "2024.0.4",
+          "Tekla.Structures.Model": "2024.0.4",
+          "Tekla.Structures.Plugins": "2024.0.4",
           "Tekla.Technology.Serialization": "4.1.1",
           "Trimble.Remoting": "1.0.2"
         }
       },
       "Tekla.Structures.Model": {
         "type": "Direct",
-        "requested": "[2024.0.2, )",
-        "resolved": "2024.0.2",
-        "contentHash": "GV7mqc3TX7h3QeCLmjCI8GlnbhAMYOvLMEED1TY+hpdeWtMuHxGS7GwfLgG10iUdjumqy5Qmn2VE3PIRhw5hWg==",
+        "requested": "[2024.0.4, )",
+        "resolved": "2024.0.4",
+        "contentHash": "cjSNpSEtz6kB9SwMry/t5m7xrgYHsL5G5JhLqcpBW0W9Id9GnC0hn6rEfJIld2y4dHuA2UvVDvjIX9RBSfZg3A==",
         "dependencies": {
           "Tekla.Common.Geometry": "4.6.2",
-          "Tekla.Structures": "2024.0.2",
-          "Tekla.Structures.Datatype": "2024.0.2",
+          "Tekla.Structures": "2024.0.4",
+          "Tekla.Structures.Datatype": "2024.0.4",
           "Tekla.Technology.Serialization": "4.1.1",
           "Trimble.Remoting": "1.0.2"
         }
@@ -298,8 +298,8 @@
       },
       "Tekla.Structures": {
         "type": "Transitive",
-        "resolved": "2024.0.2",
-        "contentHash": "m7URRYK7sEzumr/+TJRNd4q2nutF9qMUbIIPmbr36cbaKiBGW0xxAgveTL8+7kkDqodhAGyUTVai5gOtvYi2SQ==",
+        "resolved": "2024.0.4",
+        "contentHash": "Y55enG2I2C0drdHubnAavjzUjEPyTRjOMfoce63F4cM7Oqb5KS8j4v9/iE1bENmJ0Yyt5f7z3o7a8Bv9dWE1Pw==",
         "dependencies": {
           "Tekla.Common.Geometry": "4.6.2",
           "Tekla.Technology.Serialization": "4.1.1",
@@ -308,8 +308,8 @@
       },
       "Tekla.Structures.Datatype": {
         "type": "Transitive",
-        "resolved": "2024.0.2",
-        "contentHash": "LtLUtkYuni+R1F0UAPXWmgjAPBZORabG+/2YVOhJBj6+0x6Fg0PxgDtABNMNniN7A7BFXaYQRI/fuP35VL8BFQ=="
+        "resolved": "2024.0.4",
+        "contentHash": "mtJQmPBQ4d+LnJdpgjljGeNmnFTkZoZhYJhRmU3I4nCo6vzvuKb+eIAlzBQ6QJnHnTdpyUT7Hr/Xph5YZbCKVw=="
       },
       "Tekla.Technology.Scripting.Plugins": {
         "type": "Transitive",
@@ -396,11 +396,11 @@
       },
       "Tekla.Structures.Plugins": {
         "type": "CentralTransitive",
-        "requested": "[2024.0.2, )",
-        "resolved": "2024.0.2",
-        "contentHash": "40Dn4sAcfLJc1Gi6sK95tVz8BwmB4vvRjcZcFJ55F3HMr2mwtcJhvDQED0exlZuU3pbibjhUZaNz0/I16Mms/w==",
+        "requested": "[2024.0.4, )",
+        "resolved": "2024.0.4",
+        "contentHash": "GUzN5Vs/PwgusrTMRFDnfoW+LNmbjquqCFRIuslbswMSJDA1kLUs8pJAFHGBl6ZuarQ37O4Wb2n8hudQ+lluGg==",
         "dependencies": {
-          "Tekla.Structures": "2024.0.2",
+          "Tekla.Structures": "2024.0.4",
           "Tekla.Technology.Scripting.Plugins": "5.5.0",
           "Tekla.Technology.Serialization": "4.1.1",
           "Trimble.Remoting": "1.0.2"

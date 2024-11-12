@@ -106,9 +106,13 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
     if (model is SenderModelCard senderModelCard)
     {
+      if (senderModelCard.SendFilter is IRevitSendFilter revitFilter)
+      {
+        revitFilter.SetContext(_revitContext, _apiContext);
+      }
+
       if (senderModelCard.SendFilter is RevitViewsFilter revitViewsFilter)
       {
-        revitViewsFilter.SetContext(_revitContext, _apiContext);
         await _apiContext
           .Run(() =>
           {
@@ -122,9 +126,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
         return;
       }
 
-      var selectedObjects = await _apiContext
-        .Run(_ => senderModelCard.SendFilter.NotNull().GetObjectIds())
-        .ConfigureAwait(false);
+      var selectedObjects = senderModelCard.SendFilter.NotNull().SelectedObjectIds;
 
       elementIds = selectedObjects
         .Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid))

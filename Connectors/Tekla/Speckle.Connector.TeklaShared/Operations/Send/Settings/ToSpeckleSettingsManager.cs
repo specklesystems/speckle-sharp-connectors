@@ -33,7 +33,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 
   private void EvictCacheForModelCard(SenderModelCard modelCard)
   {
-    var objectIds = modelCard.SendFilter != null ? modelCard.SendFilter.NotNull().GetObjectIds() : [];
+    var objectIds = modelCard.SendFilter != null ? modelCard.SendFilter.NotNull().RefreshObjectIds() : [];
     _sendConversionCache.EvictObjects(objectIds);
   }
 }
