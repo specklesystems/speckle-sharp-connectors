@@ -66,7 +66,7 @@ public sealed class RootObjectSender : IRootObjectSender
     Account account = _accountService.GetAccountWithServerUrlFallback(sendInfo.AccountId, sendInfo.ServerUrl);
     using var userScope = ActivityScope.SetTag(Consts.USER_ID, account.GetHashedEmail());
     using var activity = _activityFactory.Start("SendOperation");
-    
+
     string previousSpeed = string.Empty;
     _progressDisplayManager.Begin();
     var sendResult = await _operations
@@ -101,7 +101,10 @@ public sealed class RootObjectSender : IRootObjectSender
               break;
             case ProgressEvent.FromCacheOrSerialized:
               onOperationProgressed.Report(
-                new($"Loading cache and Serializing... ({_progressDisplayManager.CalculateSpeed(args)})", _progressDisplayManager.CalculatePercentage(args))
+                new(
+                  $"Loading cache and Serializing... ({_progressDisplayManager.CalculateSpeed(args)})",
+                  _progressDisplayManager.CalculatePercentage(args)
+                )
               );
               break;
           }
