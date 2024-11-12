@@ -2,9 +2,9 @@ using Tekla.Structures.Plugins;
 
 namespace Speckle.Connector.Tekla2024.Plugin;
 
-[Plugin("Speckle (Beta)")]
+[Plugin("Speckle")]
 [PluginUserInterface("Speckle.Connector.Tekla2024.SpeckleTeklaPanelHost")]
-[InputObjectDependency(InputObjectDependency.NOT_DEPENDENT)] // See DevDocs/InputObjectDependency.NOT_DEPENDENT.png
+[InputObjectDependency(InputObjectDependency.NOT_DEPENDENT)]
 public class TeklaPlugin : PluginBase
 {
 #pragma warning disable IDE1006
