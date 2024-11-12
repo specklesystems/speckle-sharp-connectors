@@ -10,6 +10,7 @@ namespace Speckle.Connectors.DUI.Models;
 /// </summary>
 public abstract class DocumentModelStore
 {
+  private readonly object _modelsLock = new object();
   private ObservableCollection<ModelCard> _models = new();
 
   /// <summary>
@@ -17,11 +18,20 @@ public abstract class DocumentModelStore
   /// </summary>
   public ObservableCollection<ModelCard> Models
   {
-    get => _models;
+    get
+    {
+      lock (_modelsLock)
+      {
+        return _models;
+      }
+    }
     protected set
     {
-      _models = value;
-      RegisterWriteOnChangeEvent();
+      lock (_modelsLock)
+      {
+        _models = value;
+        RegisterWriteOnChangeEvent();
+      }
     }
   }
 
