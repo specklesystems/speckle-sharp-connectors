@@ -47,12 +47,6 @@
     <Reference Include="WindowsFormsIntegration" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Update="Assets\et_element_Speckle.bmp">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
   <Import Project="..\Speckle.Connector.TeklaShared\Speckle.Connectors.TeklaShared.projitems" Label="Shared" />
 
 </Project>
