@@ -24,6 +24,7 @@ public class SpeckleTeklaPanelHost : PluginFormBase
     this.Text = "Speckle (Beta)";
     this.Name = "Speckle (Beta)";
 
+    // CNX-790: Needs to be solved
     string version = GetVersion().ToString()[1..]; // removes the 'v' from version
     string resourcePath = $"Speckle.Connector.Tekla{version}.Resources.et_element_Speckle.bmp";
     using (
