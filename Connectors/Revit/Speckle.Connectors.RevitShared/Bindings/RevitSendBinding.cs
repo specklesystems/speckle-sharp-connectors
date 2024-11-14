@@ -190,14 +190,16 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     if (modelCard.SendFilter is not null && modelCard.SendFilter.IdMap is not null)
     {
+      var newSelectedObjectIds = new List<string>();
       foreach (Element element in elements)
       {
         modelCard.SendFilter.IdMap[element.Id.ToString()] = element.UniqueId;
+        newSelectedObjectIds.Add(element.UniqueId);
       }
 
       // We update the state on the UI SenderModelCard to prevent potential inconsistencies between hostApp IdMap in sendfilters.
       await Commands
-        .SetFilterObjectIds(modelCard.ModelCardId.NotNull(), modelCard.SendFilter.IdMap)
+        .SetFilterObjectIds(modelCard.ModelCardId.NotNull(), modelCard.SendFilter.IdMap, newSelectedObjectIds)
         .ConfigureAwait(false);
     }
 

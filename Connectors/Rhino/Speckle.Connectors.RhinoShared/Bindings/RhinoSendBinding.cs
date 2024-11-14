@@ -50,6 +50,8 @@ public sealed class RhinoSendBinding : ISendBinding
   /// </summary>
   private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
 
+  private UnitSystem PreviousUnitSystem { get; set; }
+
   public RhinoSendBinding(
     DocumentModelStore store,
     IAppIdleManager idleManager,
@@ -79,6 +81,7 @@ public sealed class RhinoSendBinding : ISendBinding
     Parent = parent;
     Commands = new SendBindingUICommands(parent); // POC: Commands are tightly coupled with their bindings, at least for now, saves us injecting a factory.
     _activityFactory = activityFactory;
+    PreviousUnitSystem = RhinoDoc.ActiveDoc.ModelUnitSystem;
     SubscribeToRhinoEvents();
   }
 
@@ -90,6 +93,23 @@ public sealed class RhinoSendBinding : ISendBinding
       {
         var selectedObject = RhinoDoc.ActiveDoc.Objects.GetSelectedObjects(false, false).First();
         ChangedObjectIds[selectedObject.Id.ToString()] = 1;
+      }
+    };
+
+    RhinoDoc.ActiveDocumentChanged += (_, e) =>
+    {
+      PreviousUnitSystem = e.Document.ModelUnitSystem;
+    };
+
+    // NOTE: BE CAREFUL handling things in this event handler since it is triggered whenever we save something into file!
+    RhinoDoc.DocumentPropertiesChanged += async (_, e) =>
+    {
+      var newUnit = e.Document.ModelUnitSystem;
+      if (newUnit != PreviousUnitSystem)
+      {
+        PreviousUnitSystem = newUnit;
+
+        await InvalidateAllSender().ConfigureAwait(false);
       }
     };
 
@@ -248,5 +268,12 @@ public sealed class RhinoSendBinding : ISendBinding
 
     await Commands.SetModelsExpired(expiredSenderIds).ConfigureAwait(false);
     ChangedObjectIds = new();
+  }
+
+  private async Task InvalidateAllSender()
+  {
+    _sendConversionCache.ClearCache();
+    var senderModelCardIds = _store.GetSenders().Select(s => s.ModelCardId.NotNull());
+    await Commands.SetModelsExpired(senderModelCardIds).ConfigureAwait(false);
   }
 }
