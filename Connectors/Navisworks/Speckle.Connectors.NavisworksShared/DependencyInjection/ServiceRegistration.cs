@@ -30,13 +30,15 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<IBinding, ConfigBinding>();
     serviceCollection.AddSingleton<IBinding, AccountBinding>();
 
-    serviceCollection.AddSingleton<IBasicConnectorBinding, BasicConnectorBinding>();
-
     // Register Navisworks specific bindings
     serviceCollection.AddSingleton<DocumentModelStore, NavisworksDocumentStore>();
+    serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
+    serviceCollection.AddSingleton<IBasicConnectorBinding, BasicConnectorBinding>();
     serviceCollection.AddSingleton<IBinding, NavisworksSelectionBinding>();
     serviceCollection.AddSingleton<IBinding, NavisworksSendBinding>();
     serviceCollection.AddScoped<ISendFilter, NavisworksSelectionFilter>();
+
+    serviceCollection.RegisterTopLevelExceptionHandler();
 
     // binding dependencies
     serviceCollection.AddTransient<CancellationManager>();
