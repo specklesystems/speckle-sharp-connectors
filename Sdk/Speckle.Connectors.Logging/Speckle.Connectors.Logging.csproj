@@ -5,6 +5,7 @@
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
   <PropertyGroup>
+    <PolySharpExcludeGeneratedTypes>System.Range;System.Index</PolySharpExcludeGeneratedTypes>
     <ILRepackTargetConfigurations>Debug;Release;Local</ILRepackTargetConfigurations>
     <ILRepackRenameInternalized>true</ILRepackRenameInternalized>
   </PropertyGroup>
@@ -14,7 +15,6 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" PrivateAssets="all"/>
-    <PackageReference Include="OpenTelemetry.Exporter.Console" PrivateAssets="all"/>
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" PrivateAssets="all"/>
     <PackageReference Include="Serilog" PrivateAssets="all"/>
     <PackageReference Include="Serilog.Exceptions" PrivateAssets="all"/>

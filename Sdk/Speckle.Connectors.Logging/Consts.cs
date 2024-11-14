@@ -32,6 +32,6 @@ public static class Consts
     }
 
     var indexOfPlusSign = informationalVersion.IndexOf('+');
-    return indexOfPlusSign > 0 ? informationalVersion[..indexOfPlusSign] : informationalVersion;
+    return indexOfPlusSign > 0 ? informationalVersion.Substring(0, indexOfPlusSign) : informationalVersion;
   }
 }

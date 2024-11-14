@@ -16,7 +16,10 @@ internal static class MetricsBuilder
 
     if (metricsConfiguration?.Console ?? false)
     {
-      metricsProviderBuilder = metricsProviderBuilder.AddConsoleExporter();
+      throw new NotImplementedException(
+        "Dependency on Console logging has been removed as it is not used, and causes a ILRepack warning"
+      );
+      // metricsProviderBuilder = metricsProviderBuilder.AddConsoleExporter();
     }
 
     metricsProviderBuilder = metricsProviderBuilder.AddHttpClientInstrumentation().SetResourceBuilder(resourceBuilder);
