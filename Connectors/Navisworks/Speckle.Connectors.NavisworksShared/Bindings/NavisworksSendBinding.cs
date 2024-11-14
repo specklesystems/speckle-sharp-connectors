@@ -1,3 +1,4 @@
+using Speckle.Connector.Navisworks.Filters;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
@@ -10,7 +11,12 @@ public class NavisworksSendBinding : ISendBinding
   public string Name => "sendBinding";
   public IBrowserBridge Parent { get; }
 
-  public List<ISendFilter> GetSendFilters() => [];
+  public NavisworksSendBinding(IBrowserBridge parent)
+  {
+    Parent = parent;
+  }
+
+  public List<ISendFilter> GetSendFilters() => [new NavisworksSelectionFilter()];
 
   public List<ICardSetting> GetSendSettings() => [];
 

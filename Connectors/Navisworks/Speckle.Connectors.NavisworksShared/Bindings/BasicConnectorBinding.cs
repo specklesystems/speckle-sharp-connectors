@@ -11,6 +11,11 @@ public class BasicConnectorBinding : IBasicConnectorBinding
   public string Name => "baseBinding";
   public IBrowserBridge Parent { get; }
 
+  public BasicConnectorBinding(IBrowserBridge parent)
+  {
+    Parent = parent;
+  }
+
   public string GetSourceApplicationName() => _speckleApplication.Slug;
 
   public string GetSourceApplicationVersion() => _speckleApplication.HostApplicationVersion;

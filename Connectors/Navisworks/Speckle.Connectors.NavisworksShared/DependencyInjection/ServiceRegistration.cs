@@ -25,17 +25,19 @@ public static class ServiceRegistration
     serviceCollection.RegisterTopLevelExceptionHandler();
     serviceCollection.AddTransient<CancellationManager>();
 
+    serviceCollection.AddSingleton<DocumentModelStore, NavisworksDocumentStore>();
+
     // Register bindings
     serviceCollection.AddSingleton<IBinding, TestBinding>();
     serviceCollection.AddSingleton<IBinding, ConfigBinding>();
     serviceCollection.AddSingleton<IBinding, AccountBinding>();
-
-    // Register Navisworks specific bindings
-    serviceCollection.AddSingleton<DocumentModelStore, NavisworksDocumentStore>();
-    serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
-    serviceCollection.AddSingleton<IBasicConnectorBinding, BasicConnectorBinding>();
     serviceCollection.AddSingleton<IBinding, NavisworksSelectionBinding>();
     serviceCollection.AddSingleton<IBinding, NavisworksSendBinding>();
+
+    // Register Navisworks specific binding
+    serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
+    serviceCollection.AddSingleton<IBasicConnectorBinding, BasicConnectorBinding>();
+
     serviceCollection.AddScoped<ISendFilter, NavisworksSelectionFilter>();
 
     serviceCollection.RegisterTopLevelExceptionHandler();
