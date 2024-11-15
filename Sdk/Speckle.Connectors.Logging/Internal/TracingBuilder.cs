@@ -19,7 +19,10 @@ internal static class TracingBuilder
 
     if (logConfiguration?.Console ?? false)
     {
-      tracerProviderBuilder = tracerProviderBuilder.AddConsoleExporter();
+      throw new NotImplementedException(
+        "Dependency on Console logging has been removed as it is not used, and causes a ILRepack warning"
+      );
+      // tracerProviderBuilder = tracerProviderBuilder.AddConsoleExporter();
     }
 
     tracerProviderBuilder = tracerProviderBuilder

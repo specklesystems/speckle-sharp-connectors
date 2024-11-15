@@ -19,7 +19,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.2xx # Align with global.json (including roll forward rules)
+          dotnet-version: 8.0.4xx # Align with global.json (including roll forward rules)
 
       - name: Cache Nuget
         uses: actions/cache@v4
@@ -79,7 +79,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.2xx # Align with global.json (including roll forward rules)
+          dotnet-version: 8.0.4xx # Align with global.json (including roll forward rules)
 
       - name: Cache Nuget
         uses: actions/cache@v4
