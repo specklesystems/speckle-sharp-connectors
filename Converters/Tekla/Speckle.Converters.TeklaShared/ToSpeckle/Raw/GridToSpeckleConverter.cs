@@ -1,7 +1,7 @@
-﻿using Speckle.Converters.Common;
+﻿using System.Globalization;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Models;
-using System.Globalization;
 
 namespace Speckle.Converter.Tekla2024.ToSpeckle.Raw;
 
@@ -78,12 +78,8 @@ public class GridToSpeckleConverter : ITypedConverter<TSM.Grid, IEnumerable<Base
 
     var scale = GetScaleFactor(coordinateSystem);
 
-    var xCoordinates = ParseCoordinateString(target.CoordinateX)
-        .Select(x => x / scale)
-        .ToList();
-    var yCoordinates = ParseCoordinateString(target.CoordinateY)
-        .Select(y => y / scale)
-        .ToList();
+    var xCoordinates = ParseCoordinateString(target.CoordinateX).Select(x => x / scale).ToList();
+    var yCoordinates = ParseCoordinateString(target.CoordinateY).Select(y => y / scale).ToList();
 
     double minX = xCoordinates.Min();
     double maxX = xCoordinates.Max();
