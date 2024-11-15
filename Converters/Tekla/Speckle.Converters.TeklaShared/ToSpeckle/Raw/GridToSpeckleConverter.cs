@@ -19,6 +19,8 @@ public class GridToSpeckleConverter : ITypedConverter<TSM.Grid, IEnumerable<Base
     _lineConverter = lineConverter;
   }
 
+  // this function is to check system global seperator
+  // helps us to avoid conflicts between "," and "."
   private double GetScaleFactor(TG.CoordinateSystem coordinateSystem)
   {
     return coordinateSystem.AxisX.X / 1000.0;
