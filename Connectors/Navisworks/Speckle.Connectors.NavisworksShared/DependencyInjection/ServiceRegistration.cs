@@ -40,8 +40,6 @@ public static class ServiceRegistration
 
     serviceCollection.AddScoped<ISendFilter, NavisworksSelectionFilter>();
 
-    serviceCollection.RegisterTopLevelExceptionHandler();
-
     // binding dependencies
     serviceCollection.AddTransient<CancellationManager>();
 
