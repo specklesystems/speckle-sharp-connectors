@@ -1,36 +1,31 @@
 using Speckle.Converters.Common;
 using Speckle.Sdk.Common.Exceptions;
 using SSC = Speckle.Sdk.Common;
-using TSD = Tekla.Structures.Drawing;
+using TSDT = Tekla.Structures.Datatype;
 
 namespace Speckle.Converter.Tekla2024;
 
-public class TeklaToSpeckleUnitConverter : IHostToSpeckleUnitConverter<TSD.Units>
+public class TeklaToSpeckleUnitConverter : IHostToSpeckleUnitConverter<TSDT.Distance.UnitType>
 {
-  private readonly Dictionary<TSD.Units, string> _unitMapping = new();
+  private readonly Dictionary<TSDT.Distance.UnitType, string> _unitMapping = new();
 
-  public TeklaToSpeckleUnitConverter()
+  public TeklaToSpeckleUnitConverter() // NOTE: This was changed to use Datatype and not Drawing. To discuss.
   {
-    _unitMapping[TSD.Units.Automatic] = SSC.Units.Millimeters;
-    _unitMapping[TSD.Units.Millimeters] = SSC.Units.Millimeters;
-    _unitMapping[TSD.Units.Centimeters] = SSC.Units.Centimeters;
-    _unitMapping[TSD.Units.Meters] = SSC.Units.Meters;
-    _unitMapping[TSD.Units.Inches] = SSC.Units.Inches;
-    _unitMapping[TSD.Units.Feet] = SSC.Units.Feet;
+    _unitMapping[TSDT.Distance.UnitType.Millimeter] = SSC.Units.Millimeters;
+    _unitMapping[TSDT.Distance.UnitType.Centimeter] = SSC.Units.Centimeters;
+    _unitMapping[TSDT.Distance.UnitType.Meter] = SSC.Units.Meters;
+    _unitMapping[TSDT.Distance.UnitType.Inch] = SSC.Units.Inches;
+    _unitMapping[TSDT.Distance.UnitType.Foot] = SSC.Units.Feet;
 
-    // there are also other units in tekla, not sure how to handle them in speckle
+    // There are other units in tekla, not sure how to handle them in speckle
     // auto unit option in tekla is based on the selected environment
     //_unitMapping[TSD.Units.FeetAndInches]
     //_unitMapping[TSD.Units.CentimetersOrMeters]
   }
 
-  public string ConvertOrThrow(TSD.Units hostUnit)
-  {
-    if (_unitMapping.TryGetValue(hostUnit, out string? value))
-    {
-      return value;
-    }
-
-    throw new UnitNotSupportedException($"The Unit System \"{hostUnit}\" is unsupported.");
-  }
+  // NOTE: This works and reflects what is defined in the Setting > Options > Units and decimals ... but API always returns internal units?
+  public string ConvertOrThrow(TSDT.Distance.UnitType hostUnit) =>
+    _unitMapping.TryGetValue(hostUnit, out string? value)
+      ? value
+      : throw new UnitNotSupportedException($"The Unit System \"{hostUnit}\" is unsupported.");
 }

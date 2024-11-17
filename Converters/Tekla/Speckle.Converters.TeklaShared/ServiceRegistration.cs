@@ -5,7 +5,7 @@ using Speckle.Converter.Tekla2024.ToSpeckle.TopLevel;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Registration;
 using Speckle.Sdk;
-using Tekla.Structures.Drawing;
+using Tekla.Structures.Datatype;
 
 namespace Speckle.Converter.Tekla2024;
 
@@ -22,7 +22,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<ReportPropertyExtractor>();
 
     serviceCollection.AddRootCommon<TeklaRootToSpeckleConverter>(converterAssembly);
-    serviceCollection.AddApplicationConverters<TeklaToSpeckleUnitConverter, Units>(converterAssembly);
+    serviceCollection.AddApplicationConverters<TeklaToSpeckleUnitConverter, Distance.UnitType>(converterAssembly);
     serviceCollection.AddScoped<
       IConverterSettingsStore<TeklaConversionSettings>,
       ConverterSettingsStore<TeklaConversionSettings>

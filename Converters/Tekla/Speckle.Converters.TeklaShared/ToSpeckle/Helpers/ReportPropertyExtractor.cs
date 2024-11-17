@@ -1,4 +1,6 @@
-﻿namespace Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
+﻿using TSDT = Tekla.Structures.Datatype;
+
+namespace Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
 
 public class ReportPropertyExtractor
 {
@@ -44,45 +46,62 @@ public class ReportPropertyExtractor
       { typeof(TSM.BoltArray), new[] { "BOLT_SIZE", "NUMBER_OF_BOLTS", "BOLT_STANDARD", "BOLT_TYPE", "LENGTH" } }
     };
 
-  public Dictionary<string, object?> GetProperties(TSM.ModelObject modelObject)
+  public Dictionary<string, Dictionary<string, object?>> GetReportProperties(TSM.ModelObject modelObject)
   {
-    var properties = new Dictionary<string, object?>();
+    var reportProperties = new Dictionary<string, Dictionary<string, object?>>();
 
     if (!s_typeSpecificProperties.TryGetValue(modelObject.GetType(), out var propertyNames))
     {
-      // if no specific properties defined, return empty dictionary
-      return properties;
+      // NOTE: Return empty dictionary if no specific properties defined
+      return reportProperties;
     }
 
     foreach (string propertyName in propertyNames)
     {
-      TryGetReportProperty(modelObject, propertyName, properties);
+      TryGetReportProperty(modelObject, propertyName, reportProperties);
     }
 
-    return properties;
+    return reportProperties;
   }
 
   private void TryGetReportProperty(
     TSM.ModelObject modelObject,
     string propertyName,
-    Dictionary<string, object?> properties
+    Dictionary<string, Dictionary<string, object?>> properties
   )
   {
+    var reportProperty = new Dictionary<string, object?> { ["name"] = propertyName };
+
+    // NOTE: ModelObject.GetReportProperty has specific overloads (not generic), we need to try each overload
     double doubleValue = 0.0;
     int intValue = 0;
-    string stringValue = "";
+    string stringValue = string.Empty;
 
     if (modelObject.GetReportProperty(propertyName, ref doubleValue))
     {
-      properties[propertyName] = doubleValue;
+      // NOTE: It seems default is millimeter https://developer.tekla.com/doc/tekla-structures/2023/millimeters-property-12484#
+      reportProperty["value"] = doubleValue;
+      reportProperty["units"] = propertyName switch
+      {
+        "LENGTH" or "WIDTH" or "HEIGHT" => TSDT.Distance.MILLIMETERS, // NOTE: This is horrible, I know! Waiting on response from Tekla
+        "VOLUME" => $"Cubic {TSDT.Distance.MILLIMETERS.ToString().ToLower()}",
+        "AREA" => $"Square {TSDT.Distance.MILLIMETERS.ToString().ToLower()}",
+        _ => null // NOTE: No units appended for other parameters
+      };
     }
     else if (modelObject.GetReportProperty(propertyName, ref intValue))
     {
-      properties[propertyName] = intValue;
+      reportProperty["value"] = intValue;
     }
     else if (modelObject.GetReportProperty(propertyName, ref stringValue) && !string.IsNullOrEmpty(stringValue))
     {
-      properties[propertyName] = stringValue;
+      reportProperty["value"] = stringValue;
+    }
+
+    // NOTE: Only assign if it actually contains a value
+    if (reportProperty.ContainsKey("value"))
+    {
+      properties[propertyName] = reportProperty;
     }
   }
 }
