@@ -1,4 +1,4 @@
-﻿using Tekla.Structures.Datatype;
+using Tekla.Structures.Datatype;
 
 namespace Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
 
