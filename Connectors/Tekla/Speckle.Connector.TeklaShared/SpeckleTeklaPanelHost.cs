@@ -24,16 +24,16 @@ public class SpeckleTeklaPanelHost : PluginFormBase
     this.Text = "Speckle (Beta)";
     this.Name = "Speckle (Beta)";
 
-    // CNX-790: Needs to be solved
-    string version = GetVersion().ToString()[1..]; // removes the 'v' from version
-    string resourcePath = $"Speckle.Connector.Tekla{version}.Resources.et_element_Speckle.bmp";
-    using (
-      Bitmap bmp = new Bitmap(
-        GetType().Assembly.GetManifestResourceStream(resourcePath)
-          ?? throw new InvalidOperationException($"Could not find resource: {resourcePath}")
-      )
-    )
+    string assemblyName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
+    string resourcePath = $"{assemblyName}.Resources.et_element_Speckle.bmp";
+    using (var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream(resourcePath))
     {
+      if (stream == null)
+      {
+        throw new InvalidOperationException($"Could not find resource: {resourcePath}");
+      }
+
+      using var bmp = new Bitmap(stream);
       this.Icon = Icon.FromHandle(bmp.GetHicon());
     }
 
