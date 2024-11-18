@@ -6,7 +6,6 @@ using ArcGIS.Desktop.Mapping.Events;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Newtonsoft.Json;
-using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.ArcGIS.Utils;
 
@@ -120,12 +119,12 @@ public class ArcGISDocumentStore : DocumentModelStore
       var element = root?.Element("SpeckleModelCards");
       if (element is null)
       {
-        Models = new();
+        Clear();
         return;
       }
 
       string modelsString = element.Value;
-      Models = Deserialize(modelsString).NotNull();
+      LoadFromString(modelsString);
     });
   }
 }

@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.ExtensibleStorage;
 using Autodesk.Revit.UI;
@@ -9,7 +8,6 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Newtonsoft.Json;
-using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.HostApp;
@@ -118,23 +116,15 @@ internal sealed class RevitDocumentStore : DocumentModelStore
 
   public override void ReadFromFile()
   {
-    try
+    var stateEntity = GetSpeckleEntity(_revitContext.UIApplication?.ActiveUIDocument?.Document);
+    if (stateEntity == null || !stateEntity.IsValid())
     {
-      var stateEntity = GetSpeckleEntity(_revitContext.UIApplication?.ActiveUIDocument?.Document);
-      if (stateEntity == null || !stateEntity.IsValid())
-      {
-        Models = new();
-        return;
-      }
+      Clear();
+      return;
+    }
 
-      string modelsString = stateEntity.Get<string>("contents");
-      Models = Deserialize(modelsString).NotNull();
-    }
-    catch (Exception ex) when (!ex.IsFatal())
-    {
-      Models = new();
-      Debug.WriteLine(ex.Message); // POC: Log here error and notify UI that cards not read succesfully
-    }
+    string modelsString = stateEntity.Get<string>("contents");
+    LoadFromString(modelsString);
   }
 
   private DataStorage? GetSettingsDataStorage(Document doc)

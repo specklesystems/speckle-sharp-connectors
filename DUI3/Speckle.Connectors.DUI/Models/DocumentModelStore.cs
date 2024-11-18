@@ -1,7 +1,10 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Newtonsoft.Json;
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.DUI.Models;
 
@@ -10,20 +13,12 @@ namespace Speckle.Connectors.DUI.Models;
 /// </summary>
 public abstract class DocumentModelStore
 {
-  private ObservableCollection<ModelCard> _models = new();
+  private readonly SuspendingObservableCollection<ModelCard> _models = new();
 
   /// <summary>
   /// Stores all the model cards in the current document/file.
   /// </summary>
-  public ObservableCollection<ModelCard> Models
-  {
-    get => _models;
-    protected set
-    {
-      _models = value;
-      RegisterWriteOnChangeEvent();
-    }
-  }
+  public ObservableCollection<ModelCard> Models => _models;
 
   private readonly JsonSerializerSettings _serializerOptions;
 
@@ -67,6 +62,21 @@ public abstract class DocumentModelStore
     return model;
   }
 
+  public void AddRange(IEnumerable<ModelCard> models)
+  {
+    using var sus = _models.SuspendNotifications();
+    foreach (var model in models)
+    {
+      _models.Add(model);
+    }
+  }
+
+  public void Clear()
+  {
+    using var sus = _models.SuspendNotifications();
+    _models.Clear();
+  }
+
   public void UpdateModel(ModelCard model)
   {
     int idx = Models.ToList().FindIndex(m => model.ModelCardId == m.ModelCardId);
@@ -107,4 +117,22 @@ public abstract class DocumentModelStore
   /// Implement this method according to the host app's specific ways of reading custom data from its file.
   /// </summary>
   public abstract void ReadFromFile();
+
+  protected void LoadFromString(string? models)
+  {
+    try
+    {
+      if (string.IsNullOrEmpty(models))
+      {
+        Clear();
+        return;
+      }
+      AddRange(Deserialize(models.NotNull()).NotNull());
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      Clear();
+      Debug.WriteLine(ex.Message); // POC: Log here error and notify UI that cards not read succesfully
+    }
+  }
 }

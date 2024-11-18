@@ -1,7 +1,6 @@
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Newtonsoft.Json;
-using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Autocad.HostApp;
 
@@ -54,23 +53,17 @@ public class AutocadDocumentStore : DocumentModelStore
 
   public override void ReadFromFile()
   {
-    Models = new();
-
     // POC: Will be addressed to move it into AutocadContext!
     Document? doc = Application.DocumentManager.MdiActiveDocument;
 
     if (doc == null)
     {
+      Clear();
       return;
     }
 
     string? serializedModelCards = _autocadDocumentManager.ReadModelCards(doc);
-    if (serializedModelCards == null)
-    {
-      return;
-    }
-
-    Models = Deserialize(serializedModelCards).NotNull();
+    LoadFromString(serializedModelCards);
   }
 
   public override void WriteToFile()

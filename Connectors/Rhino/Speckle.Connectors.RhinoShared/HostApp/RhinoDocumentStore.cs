@@ -52,11 +52,6 @@ public class RhinoDocumentStore : DocumentModelStore
   public override void ReadFromFile()
   {
     string stateString = RhinoDoc.ActiveDoc.Strings.GetValue(SPECKLE_KEY, SPECKLE_KEY);
-    if (stateString == null)
-    {
-      Models = new();
-      return;
-    }
-    Models = Deserialize(stateString) ?? new();
+    LoadFromString(stateString);
   }
 }
