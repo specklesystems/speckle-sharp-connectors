@@ -17,42 +17,25 @@ public class SendCollectionManager
   public Collection GetAndCreateObjectHostCollection(TSM.ModelObject teklaObject, Collection rootObject)
   {
     // Tekla Data Structure: rootObject > objectType > name
-    // Very high-level at this stage. Would be good to have sub-groups in future releases
+    // Very high-level, would be good to have sub-groups in future releases
     // TODO: Refine further according to section types (for beams), constituent elements (for components) etc. at later stage
-    var path = new List<string>();
-    path.Add(teklaObject.GetType().ToString().Split('.').Last());
+    var path = teklaObject.GetType().ToString().Split('.').Last();
 
     // NOTE: First pass at seeing if a collection key already exists
-    string fullPathName = string.Concat(path);
-    if (_collectionCache.TryGetValue(fullPathName, out Collection? value))
+    if (_collectionCache.TryGetValue(path, out Collection? value))
     {
       return value;
     }
 
     // NOTE: As this point, we need to create a suitable collection
-    // This would be using a recursive approach to see where to add collection
-    // However, since data structure is flat, this returns quick (shoutout to Revit at this stage ;) )
-    string flatPathName = "";
-    Collection previousCollection = rootObject;
+    // This would be done using a recursive approach to see where to add collection
+    // However, since data structure is flat, this returns quick (Ref: Revit ;) )
+    Collection childCollection = new(path);
+    rootObject.elements.Add(childCollection);
+    _collectionCache[path] = childCollection;
 
-    foreach (var pathItem in path)
-    {
-      flatPathName += pathItem;
-      Collection childCollection;
-      if (_collectionCache.TryGetValue(flatPathName, out Collection? collection))
-      {
-        childCollection = collection;
-      }
-      else
-      {
-        childCollection = new Collection(pathItem);
-        previousCollection.elements.Add(childCollection);
-        _collectionCache[flatPathName] = childCollection;
-      }
+    rootObject = childCollection;
 
-      previousCollection = childCollection;
-    }
-
-    return previousCollection;
+    return rootObject;
   }
 }
