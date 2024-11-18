@@ -85,7 +85,7 @@ public class ReportPropertyExtractor
       {
         "LENGTH" or "WIDTH" or "HEIGHT" => Distance.MILLIMETERS, // NOTE: This is horrible, I know! Waiting on response from Tekla
         "VOLUME" => $"Cubic {Distance.MILLIMETERS.ToString().ToLower()}",
-        "AREA" => $"Square {Distance.MILLIMETERS.ToString().ToLower()}",
+        "AREA" => $"Square {Distance.MILLIMETERS.ToString().ToLower()}", // NOTE: Weird number, but corresponds with generated report
         "WEIGHT" => "Kilograms",
         _ => null // NOTE: No units appended for other parameters
       };
