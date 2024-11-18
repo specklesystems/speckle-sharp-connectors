@@ -1,18 +1,20 @@
 using Speckle.Converters.Common;
 using Speckle.InterfaceGenerator;
+using Tekla.Structures.Datatype;
 using Tekla.Structures.Model;
-using TSDT = Tekla.Structures.Datatype;
 
 namespace Speckle.Converter.Tekla2024;
 
 [GenerateAutoInterface]
 public class TeklaConversionSettingsFactory(
-  IHostToSpeckleUnitConverter<TSDT.Distance.UnitType> unitsConverter,
+  IHostToSpeckleUnitConverter<string> unitsConverter,
   IConverterSettingsStore<TeklaConversionSettings> settingsStore
 ) : ITeklaConversionSettingsFactory
 {
   public TeklaConversionSettings Current => settingsStore.Current;
 
+  // NOTE: Distance.CurrentUnitType reflects Settings > Options > Units and decimals, but internal units always returns mm
+  // Therefore, hard-coding Distance.MILLIMETERS (for now)
   public TeklaConversionSettings Create(Model document, bool sendRebarsAsSolid) =>
-    new(document, sendRebarsAsSolid, unitsConverter.ConvertOrThrow(TSDT.Distance.CurrentUnitType));
+    new(document, sendRebarsAsSolid, unitsConverter.ConvertOrThrow(Distance.MILLIMETERS));
 }

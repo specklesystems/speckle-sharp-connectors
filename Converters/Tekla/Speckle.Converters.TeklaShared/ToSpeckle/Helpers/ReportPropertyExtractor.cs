@@ -1,4 +1,4 @@
-﻿using TSDT = Tekla.Structures.Datatype;
+﻿using Tekla.Structures.Datatype;
 
 namespace Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
 
@@ -83,9 +83,10 @@ public class ReportPropertyExtractor
       reportProperty["value"] = doubleValue;
       reportProperty["units"] = propertyName switch
       {
-        "LENGTH" or "WIDTH" or "HEIGHT" => TSDT.Distance.MILLIMETERS, // NOTE: This is horrible, I know! Waiting on response from Tekla
-        "VOLUME" => $"Cubic {TSDT.Distance.MILLIMETERS.ToString().ToLower()}",
-        "AREA" => $"Square {TSDT.Distance.MILLIMETERS.ToString().ToLower()}",
+        "LENGTH" or "WIDTH" or "HEIGHT" => Distance.MILLIMETERS, // NOTE: This is horrible, I know! Waiting on response from Tekla
+        "VOLUME" => $"Cubic {Distance.MILLIMETERS.ToString().ToLower()}",
+        "AREA" => $"Square {Distance.MILLIMETERS.ToString().ToLower()}",
+        "WEIGHT" => "Kilograms",
         _ => null // NOTE: No units appended for other parameters
       };
     }
