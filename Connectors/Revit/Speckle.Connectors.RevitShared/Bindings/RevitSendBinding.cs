@@ -331,7 +331,36 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       return;
     }
 
+    List<Element> elementsUsingMaterial = new List<Element>();
+
+    foreach (var changedElementId in ChangedObjectIds.Keys.ToArray())
+    {
+      var o = doc.GetElement(changedElementId);
+      if (o is Material)
+      {
+        // Get all elements that might use materials (such as walls, floors, roofs, etc.)
+        using var collector = new FilteredElementCollector(doc);
+        var elements = collector
+          .WhereElementIsNotElementType()
+          .Where(e => e is FamilyInstance || e.Category != null && e.Category.Material != null);
+
+        foreach (var element in elements)
+        {
+          var materialIds = element.GetMaterialIds(false);
+          if (materialIds.Contains(o.Id))
+          {
+            elementsUsingMaterial.Add(element);
+          }
+        }
+      }
+    }
+
     var objUniqueIds = new List<string>();
+
+    foreach (var element in elementsUsingMaterial)
+    {
+      ChangedObjectIds[element.Id] = 1;
+    }
 
     foreach (var sender in senders)
     {
