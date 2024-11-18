@@ -83,7 +83,7 @@ public class SuspendingObservableCollection<T> : ObservableCollection<T>
   /// Adds the range.
   /// </summary>
   /// <param name = "items">The items.</param>
-  public virtual void AddRange(IEnumerable<T> items)
+  public void AddRange(IEnumerable<T> items)
   {
     var previousNotificationSetting = IsNotifying;
     IsNotifying = false;
@@ -94,17 +94,14 @@ public class SuspendingObservableCollection<T> : ObservableCollection<T>
       index++;
     }
     IsNotifying = previousNotificationSetting;
-
-    OnPropertyChanged(new PropertyChangedEventArgs("Count"));
-    OnPropertyChanged(new PropertyChangedEventArgs("Item[]"));
-    OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+    Refresh();
   }
 
   /// <summary>
   /// Removes the range.
   /// </summary>
   /// <param name = "items">The items.</param>
-  public virtual void RemoveRange(IEnumerable<T> items)
+  public void RemoveRange(IEnumerable<T> items)
   {
     var previousNotificationSetting = IsNotifying;
     IsNotifying = false;
@@ -117,9 +114,6 @@ public class SuspendingObservableCollection<T> : ObservableCollection<T>
       }
     }
     IsNotifying = previousNotificationSetting;
-
-    OnPropertyChanged(new PropertyChangedEventArgs("Count"));
-    OnPropertyChanged(new PropertyChangedEventArgs("Item[]"));
-    OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+    Refresh();
   }
 }

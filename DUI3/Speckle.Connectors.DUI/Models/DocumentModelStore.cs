@@ -64,11 +64,7 @@ public abstract class DocumentModelStore
 
   public void AddRange(IEnumerable<ModelCard> models)
   {
-    using var sus = _models.SuspendNotifications();
-    foreach (var model in models)
-    {
-      _models.Add(model);
-    }
+    _models.AddRange(models);
   }
 
   public void Clear()
