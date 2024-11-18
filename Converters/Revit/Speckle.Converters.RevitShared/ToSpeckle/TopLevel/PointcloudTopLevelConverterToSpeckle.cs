@@ -1,12 +1,12 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 [NameAndRankValue(nameof(DB.PointCloudInstance), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public sealed class PointcloudTopLevelConverterToSpeckle
-  : BaseTopLevelConverterToSpeckle<DB.PointCloudInstance, SOG.Pointcloud>
+public sealed class PointcloudTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<DB.XYZ, SOG.Point> _xyzToPointConverter;
@@ -23,7 +23,9 @@ public sealed class PointcloudTopLevelConverterToSpeckle
     _boundingBoxConverter = boundingBoxConverter;
   }
 
-  public override SOG.Pointcloud Convert(DB.PointCloudInstance target)
+  public Base Convert(object target) => Convert((DB.PointCloudInstance)target);
+
+  public SOG.Pointcloud Convert(DB.PointCloudInstance target)
   {
     var boundingBox = target.get_BoundingBox(null!);
     using DB.Transform transform = target.GetTransform();

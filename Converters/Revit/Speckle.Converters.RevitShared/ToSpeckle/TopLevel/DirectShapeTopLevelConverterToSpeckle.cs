@@ -1,15 +1,15 @@
 using Speckle.Converters.Common;
+using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
-using Speckle.Converters.RevitShared.ToSpeckle;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Revit2023.ToSpeckle;
 
 [NameAndRankValue(nameof(DB.DirectShape), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class DirectShapeTopLevelConverterToSpeckle : BaseTopLevelConverterToSpeckle<DB.DirectShape, SOBR.DirectShape>
+public class DirectShapeTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly DisplayValueExtractor _displayValueExtractor;
@@ -23,7 +23,9 @@ public class DirectShapeTopLevelConverterToSpeckle : BaseTopLevelConverterToSpec
     _displayValueExtractor = displayValueExtractor;
   }
 
-  public override SOBR.DirectShape Convert(DB.DirectShape target)
+  public Base Convert(object target) => Convert((DB.DirectShape)target);
+
+  public SOBR.DirectShape Convert(DB.DirectShape target)
   {
     var category = target.Category.GetBuiltInCategory().GetSchemaBuilderCategoryFromBuiltIn();
 

@@ -1,16 +1,16 @@
 using Speckle.Converters.Common;
+using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
-[NameAndRankValue(nameof(DB.Level), 0)]
-public class LevelConversionToSpeckle : BaseTopLevelConverterToSpeckle<DB.Level, SOBR.RevitLevel>
+public class LevelToSpeckleConverter : ITypedConverter<DB.Level, SOBR.RevitLevel>
 {
   private readonly ScalingServiceToSpeckle _scalingService;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
-  public LevelConversionToSpeckle(
+  public LevelToSpeckleConverter(
     ScalingServiceToSpeckle scalingService,
     IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
@@ -19,7 +19,7 @@ public class LevelConversionToSpeckle : BaseTopLevelConverterToSpeckle<DB.Level,
     _converterSettings = converterSettings;
   }
 
-  public override SOBR.RevitLevel Convert(DB.Level target)
+  public SOBR.RevitLevel Convert(DB.Level target)
   {
     SOBR.RevitLevel level =
       new()

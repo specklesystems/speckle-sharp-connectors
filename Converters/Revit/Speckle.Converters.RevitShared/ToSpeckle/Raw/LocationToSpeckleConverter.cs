@@ -5,15 +5,12 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
-public class LocationConversionToSpeckle : ITypedConverter<DB.Location, Base>
+public class LocationToSpeckleConverter : ITypedConverter<DB.Location, Base>
 {
   private readonly ITypedConverter<DB.Curve, ICurve> _curveConverter;
   private readonly ITypedConverter<DB.XYZ, SOG.Point> _xyzConverter;
 
-  // POC: review IRawConversion<TIn> which always returns a Base, this is ToSpeckle, so... this breaks
-  // the meaning of IRawConversion, it could be IToSpeckleRawConversion
-  // also a factory type
-  public LocationConversionToSpeckle(
+  public LocationToSpeckleConverter(
     ITypedConverter<DB.Curve, ICurve> curveConverter,
     ITypedConverter<DB.XYZ, SOG.Point> xyzConverter
   )
