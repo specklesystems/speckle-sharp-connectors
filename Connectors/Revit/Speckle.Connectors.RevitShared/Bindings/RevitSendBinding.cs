@@ -332,6 +332,24 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     }
 
     var objUniqueIds = new List<string>();
+    var changedIds = ChangedObjectIds.Keys.ToList();
+    var elementTypeIdsList = new List<ElementId>();
+    foreach (var id in changedIds)
+    {
+      var obj = doc.GetElement(id) as ElementType;
+      if (obj is null)
+      {
+        continue;
+      }
+      elementTypeIdsList.Add(obj.Id);
+    }
+
+    using var fcoll = new FilteredElementCollector(doc);
+    var els = fcoll.WhereElementIsNotElementType().Where(e => elementTypeIdsList.Contains(e.GetTypeId()));
+    foreach (var elm in els)
+    {
+      changedIds.Add(elm.Id);
+    }
 
     foreach (var sender in senders)
     {
@@ -340,7 +358,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       //   continue;
       // }
 
-      foreach (var changedElementId in ChangedObjectIds.Keys.ToArray())
+      foreach (var changedElementId in changedIds)
       {
         if (sender.SendFilter.NotNull().IdMap.NotNull().ContainsKey(changedElementId.ToString()))
         {
