@@ -333,22 +333,21 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     var objUniqueIds = new List<string>();
     var changedIds = ChangedObjectIds.Keys.ToList();
-    var elementTypeIdsList = new List<ElementId>();
-    foreach (var id in changedIds)
-    {
-      var obj = doc.GetElement(id) as ElementType;
-      if (obj is null)
-      {
-        continue;
-      }
-      elementTypeIdsList.Add(obj.Id);
-    }
+    var elementTypeIdsList = changedIds
+      .Select(e => doc.GetElement(e))
+      .Where(el => el is ElementType)
+      .Cast<ElementType>()
+      .Select(el => el.Id)
+      .ToArray();
 
-    using var fcoll = new FilteredElementCollector(doc);
-    var els = fcoll.WhereElementIsNotElementType().Where(e => elementTypeIdsList.Contains(e.GetTypeId()));
-    foreach (var elm in els)
+    if (elementTypeIdsList.Length != 0)
     {
-      changedIds.Add(elm.Id);
+      using var fcoll = new FilteredElementCollector(doc);
+      var els = fcoll.WhereElementIsNotElementType().Where(e => elementTypeIdsList.Contains(e.GetTypeId()));
+      foreach (var elm in els)
+      {
+        changedIds.Add(elm.Id);
+      }
     }
 
     foreach (var sender in senders)
