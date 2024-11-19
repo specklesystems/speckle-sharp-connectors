@@ -1,4 +1,6 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.Windows.Forms.Integration;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,6 +22,13 @@ public class SpeckleTeklaPanelHost : PluginFormBase
   public static new ServiceProvider? Container { get; private set; }
   public static bool IsFirst { get; private set; } = true;
   public static bool IsInitialized { get; private set; }
+
+  //window owner call
+  [DllImport("user32.dll", SetLastError = true)]
+  [SuppressMessage("Security", "CA5392:Use DefaultDllImportSearchPaths attribute for P/Invokes")]
+  private static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr value);
+
+  private const int GWL_HWNDPARENT = -8;
 
   public SpeckleTeklaPanelHost()
   {
@@ -92,6 +101,7 @@ public class SpeckleTeklaPanelHost : PluginFormBase
     Operation.DisplayPrompt("Speckle connector initialized.");
 
     this.TopLevel = true;
+    SetWindowLongPtr(Handle, GWL_HWNDPARENT, MainWindow.Frame.Handle);
     Show();
     Activate();
     Focus();
