@@ -4,13 +4,21 @@ using System.ComponentModel;
 
 namespace Speckle.Connectors.DUI.Models;
 
-public class SuspendingObservableCollection<T> : ObservableCollection<T>
-{
-  private class ObservableCollectionExSuspension : IDisposable
-  {
-    private readonly SuspendingObservableCollection<T> _collection;
+public interface INotifyCollection<T> : ICollection<T>, INotifyCollectionChanged;
 
-    public ObservableCollectionExSuspension(SuspendingObservableCollection<T> collection)
+//want readonly-ness because ObservableCollection isn't thread-safe and ReadOnlyObservableCollection doesn't expose events for whatever reason
+public interface IReadOnlyNotifyCollection<out T> : IReadOnlyCollection<T>, INotifyCollectionChanged;
+
+public class NotifyCollection<T> : ObservableCollection<T>, INotifyCollection<T>, IReadOnlyNotifyCollection<T>;
+
+//needed suspension for AddRange/RemoveRange
+public class SuspendingNotifyCollection<T> : NotifyCollection<T>
+{
+  private class SuspendingNotifyCollectionSuspension : IDisposable
+  {
+    private readonly SuspendingNotifyCollection<T> _collection;
+
+    public SuspendingNotifyCollectionSuspension(SuspendingNotifyCollection<T> collection)
     {
       _collection = collection;
       collection.IsNotifying = true;
@@ -19,35 +27,12 @@ public class SuspendingObservableCollection<T> : ObservableCollection<T>
     public void Dispose() => _collection.IsNotifying = false;
   }
 
-  public SuspendingObservableCollection()
-  {
-    IsNotifying = true;
-  }
-
-  public SuspendingObservableCollection(IEnumerable<T> collection)
-    : base(collection)
-  {
-    IsNotifying = true;
-  }
-
   /// <summary>
   /// Enables/Disables property change notification.
   /// </summary>
-  public bool IsNotifying { get; private set; }
+  public bool IsNotifying { get; private set; } = true;
 
-  public IDisposable SuspendNotifications() => new ObservableCollectionExSuspension(this);
-
-  /// <summary>
-  /// Notifies subscribers of the property change.
-  /// </summary>
-  /// <param name = "propertyName">Name of the property.</param>
-  public virtual void NotifyOfPropertyChange(string propertyName)
-  {
-    if (IsNotifying)
-    {
-      OnPropertyChanged(new PropertyChangedEventArgs(propertyName));
-    }
-  }
+  public IDisposable SuspendNotifications() => new SuspendingNotifyCollectionSuspension(this);
 
   /// <summary>
   /// Raises a change notification indicating that all bindings should be refreshed.

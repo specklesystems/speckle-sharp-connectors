@@ -13,12 +13,12 @@ namespace Speckle.Connectors.DUI.Models;
 /// </summary>
 public abstract class DocumentModelStore
 {
-  private readonly SuspendingObservableCollection<ModelCard> _models = new();
+  private readonly SuspendingNotifyCollection<ModelCard> _models = new();
 
   /// <summary>
   /// Stores all the model cards in the current document/file.
   /// </summary>
-  public ObservableCollection<ModelCard> Models => _models;
+  public IReadOnlyNotifyCollection<ModelCard> Models => _models;
 
   private readonly JsonSerializerSettings _serializerOptions;
 
@@ -41,7 +41,10 @@ public abstract class DocumentModelStore
   {
     if (_writeToFileOnChange)
     {
-      _models.CollectionChanged += (_, _) => WriteToFile();
+      lock (_models)
+      {
+        _models.CollectionChanged += (_, _) => WriteToFile();
+      }
     }
   }
 
@@ -62,27 +65,46 @@ public abstract class DocumentModelStore
     return model;
   }
 
+  public void AddModel(ModelCard model)
+  {
+    lock (_models)
+    {
+      _models.Add(model);
+    }
+  }
+
   public void AddRange(IEnumerable<ModelCard> models)
   {
-    _models.AddRange(models);
+    lock (_models)
+    {
+      _models.AddRange(models);
+    }
   }
 
   public void Clear()
   {
-    using var sus = _models.SuspendNotifications();
-    _models.Clear();
+    lock (_models)
+    {
+      using var sus = _models.SuspendNotifications();
+      _models.Clear();
+    }
   }
 
   public void UpdateModel(ModelCard model)
   {
-    int idx = Models.ToList().FindIndex(m => model.ModelCardId == m.ModelCardId);
-    Models[idx] = model;
+    lock (_models)
+    {
+      int idx = Models.ToList().FindIndex(m => model.ModelCardId == m.ModelCardId);
+      _models[idx] = model;
+    }
   }
 
   public void RemoveModel(ModelCard model)
   {
-    int index = Models.ToList().FindIndex(m => m.ModelCardId == model.ModelCardId);
-    Models.RemoveAt(index);
+    lock (_models)
+    {
+      _models.Remove(model);
+    }
   }
 
   protected void OnDocumentChanged() => DocumentChanged?.Invoke(this, EventArgs.Empty);
@@ -93,16 +115,11 @@ public abstract class DocumentModelStore
   public IEnumerable<ReceiverModelCard> GetReceivers() =>
     Models.Where(model => model.TypeDiscriminator == nameof(ReceiverModelCard)).Cast<ReceiverModelCard>();
 
-  protected string Serialize()
-  {
-    return JsonConvert.SerializeObject(Models, _serializerOptions);
-  }
+  protected string Serialize() => JsonConvert.SerializeObject(Models, _serializerOptions);
 
   // POC: this seemms more like a IModelsDeserializer?, seems disconnected from this class
-  protected ObservableCollection<ModelCard>? Deserialize(string models)
-  {
-    return JsonConvert.DeserializeObject<ObservableCollection<ModelCard>>(models, _serializerOptions);
-  }
+  private ObservableCollection<ModelCard>? Deserialize(string models) =>
+    JsonConvert.DeserializeObject<ObservableCollection<ModelCard>>(models, _serializerOptions);
 
   /// <summary>
   /// Implement this method according to the host app's specific ways of storing custom data in its file.
