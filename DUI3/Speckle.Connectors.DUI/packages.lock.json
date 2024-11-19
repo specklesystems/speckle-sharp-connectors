@@ -50,9 +50,9 @@
       },
       "Speckle.Sdk": {
         "type": "Direct",
-        "requested": "[3.1.0-dev.181, )",
-        "resolved": "3.1.0-dev.181",
-        "contentHash": "VmRRphUJm+qfcjtdzxkTstAD0opaIP57tP6GJ2YnalyRj3wBTGBQuy7gwhGjWyAvsMnkugpKFEfAVuNm/zHQ2A==",
+        "requested": "[3.1.0-dev.182, )",
+        "resolved": "3.1.0-dev.182",
+        "contentHash": "zSx4WGweeDUYLfIEWMiYautd2AYHx0nMRFEu7s9E5bNNY3oXIaGGez3LJaHMP14walrGq22d2WhDfjJKdw+4ug==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.Bcl.AsyncInterfaces": "5.0.0",
@@ -62,14 +62,14 @@
           "Microsoft.Extensions.Logging": "2.2.0",
           "Speckle.DoubleNumerics": "4.0.1",
           "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Dependencies": "3.1.0-dev.181"
+          "Speckle.Sdk.Dependencies": "3.1.0-dev.182"
         }
       },
       "Speckle.Sdk.Dependencies": {
         "type": "Direct",
-        "requested": "[3.1.0-dev.181, )",
-        "resolved": "3.1.0-dev.181",
-        "contentHash": "W7Nb3hAPlLXGZmEFWdf9vyhXKGZk3M+lypEKB+IWQVwr3NL+bzPgfw2130kTuMr/9zGx8jUbSfx2ulTql9mZxw=="
+        "requested": "[3.1.0-dev.182, )",
+        "resolved": "3.1.0-dev.182",
+        "contentHash": "65aBMrKZTa4MXLFZS4xIsqXsTjJRAXDpUNEKcV73c+VAxQZXTuwpMdv6KTbOAFxRA3DrSf2rCx1ZHHNK7aLRzA=="
       },
       "System.Threading.Tasks.Dataflow": {
         "type": "Direct",
@@ -320,9 +320,9 @@
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection": "[2.2.0, )",
           "Speckle.Connectors.Logging": "[1.0.0, )",
-          "Speckle.Objects": "[3.1.0-dev.181, )",
-          "Speckle.Sdk": "[3.1.0-dev.181, )",
-          "Speckle.Sdk.Dependencies": "[3.1.0-dev.181, )"
+          "Speckle.Objects": "[3.1.0-dev.182, )",
+          "Speckle.Sdk": "[3.1.0-dev.182, )",
+          "Speckle.Sdk.Dependencies": "[3.1.0-dev.182, )"
         }
       },
       "speckle.connectors.logging": {
@@ -351,11 +351,11 @@
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.181, )",
-        "resolved": "3.1.0-dev.181",
-        "contentHash": "r6GGA7Pq4CPGYOu6OmmLW/hhhREo/l44RUFhsoYmpHNGpOg1UjF45dwyfLgaU38wrNxQoURjLUQDkxGfhb8liA==",
+        "requested": "[3.1.0-dev.182, )",
+        "resolved": "3.1.0-dev.182",
+        "contentHash": "4jjZ4vBEjvINkY33lpGhg9hc27LY0PNOEzB4n5EXyuTo1YlSO2KHMsLWHtR44cO64vDtFxhICkNaSoup+S8hvA==",
         "dependencies": {
-          "Speckle.Sdk": "3.1.0-dev.181"
+          "Speckle.Sdk": "3.1.0-dev.182"
         }
       }
     }
