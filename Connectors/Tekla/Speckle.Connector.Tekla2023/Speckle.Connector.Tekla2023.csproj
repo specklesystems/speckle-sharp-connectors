@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
     <TeklaVersion>2023</TeklaVersion>
     <UseWpf>true</UseWpf>
     <DefineConstants>$(DefineConstants);TEKLA2023</DefineConstants>
@@ -33,10 +34,10 @@
   </Target>
   <ItemGroup>
     <PackageReference Include="Speckle.Objects" />
-    <PackageReference Include="Tekla.Structures.Dialog" IncludeAssets="compile; build" VersionOverride =" 2023.0.0" />
-    <PackageReference Include="Tekla.Structures.Drawing" IncludeAssets="compile; build" VersionOverride =" 2023.0.0"/>
-    <PackageReference Include="Tekla.Structures.Model" IncludeAssets="compile; build" VersionOverride =" 2023.0.0" />
-    <PackageReference Include="Tekla.Structures.Plugins" IncludeAssets="compile; build" VersionOverride =" 2023.0.0" />
+    <PackageReference Include="Tekla.Structures.Dialog" IncludeAssets="compile; build" VersionOverride =" 2023.0.1" />
+    <PackageReference Include="Tekla.Structures.Drawing" IncludeAssets="compile; build" VersionOverride =" 2023.0.1"/>
+    <PackageReference Include="Tekla.Structures.Model" IncludeAssets="compile; build" VersionOverride =" 2023.0.1" />
+    <PackageReference Include="Tekla.Structures.Plugins" IncludeAssets="compile; build" VersionOverride =" 2023.0.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -46,12 +47,6 @@
 
   <ItemGroup>
     <Reference Include="WindowsFormsIntegration" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="Assets\et_element_Speckle.bmp">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 
   <Import Project="..\Speckle.Connector.TeklaShared\Speckle.Connectors.TeklaShared.projitems" Label="Shared" />

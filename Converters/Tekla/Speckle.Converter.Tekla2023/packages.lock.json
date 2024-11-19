@@ -35,35 +35,26 @@
       },
       "Tekla.Structures.Drawing": {
         "type": "Direct",
-        "requested": "[2023.0.0, )",
-        "resolved": "2023.0.0",
-        "contentHash": "22WqaO0GKxFOOEctU92ZmNCSzNJGjFwzDC/Px0+4Iimh6A3WL5Z7lvYSUhyCeF64YA7QbvK5PZKrtdhrB7Illg==",
+        "requested": "[2023.0.1, )",
+        "resolved": "2023.0.1",
+        "contentHash": "YAOYc0L1Tvjls1tFlpUTmLE2K3urq4XSxtxa2UtX6hC7XDiblRmwJTXAcBeiQ/mbB67k//WH8wh7QR/2h5nBAQ==",
         "dependencies": {
-          "DotNetZip": "1.13.7",
-          "Newtonsoft.Json": "13.0.1",
-          "Tekla.Structures": "2023.0.0",
-          "Tekla.Structures.Datatype": "2023.0.0",
-          "Tekla.Structures.Dialog": "2023.0.0",
-          "Tekla.Structures.Model": "2023.0.0",
-          "Tekla.Structures.Plugins": "2023.0.0",
-          "Tekla.Technology.Akit5": "5.8.17235.1",
-          "Tekla.Technology.Scripting": "5.0.20041"
+          "Tekla.Structures": "2023.0.1",
+          "Tekla.Structures.Datatype": "2023.0.1",
+          "Tekla.Structures.Dialog": "2023.0.1",
+          "Tekla.Structures.Model": "2023.0.1",
+          "Tekla.Structures.Plugins": "2023.0.1"
         }
       },
       "Tekla.Structures.Model": {
         "type": "Direct",
-        "requested": "[2023.0.0, )",
-        "resolved": "2023.0.0",
-        "contentHash": "dkw8cA4kqE/Jc6WAq8Zrzcn49Vs7kh0YNXuEBpcx6J76lv6jSl4n+EsIvxE8NEBJnEHsGoG67uLTaTkiKAmuXQ==",
+        "requested": "[2023.0.1, )",
+        "resolved": "2023.0.1",
+        "contentHash": "99e9lyTcW+Me4c4wUKqLbXoxHusPGSeBJGf01Upzg2lzXzaw5pUmVxEikNvievoN9Qt3Y09NTvhuL87UML7OIQ==",
         "dependencies": {
-          "Tekla.Structures": "2023.0.0",
-          "Tekla.Structures.Datatype": "2023.0.0"
+          "Tekla.Structures": "2023.0.1",
+          "Tekla.Structures.Datatype": "2023.0.1"
         }
-      },
-      "DotNetZip": {
-        "type": "Transitive",
-        "resolved": "1.13.7",
-        "contentHash": "MGXK1jFJlxCWId2xcXnEdUov7M1oSMk+Gc/rF1psLOoqWNhCkfCqAIhIk1rSxeRCAGRt7JztQRMLC+DTapxc6g=="
       },
       "GraphQL.Client": {
         "type": "Transitive",
@@ -190,16 +181,6 @@
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
       },
-      "Mono.Cecil": {
-        "type": "Transitive",
-        "resolved": "0.9.6.1",
-        "contentHash": "yMsurNaOxxKIjyW9pEB+tRrR1S3DFnN1+iBgKvYvXG8kW0Y6yknJeMAe/tl3+P78/2C6304TgF7aVqpqXgEQ9Q=="
-      },
-      "Newtonsoft.Json": {
-        "type": "Transitive",
-        "resolved": "13.0.1",
-        "contentHash": "ppPFpBcvxdsfUonNcvITKqLl3bqxWbDCZIzDWHzjpdAHRFfZe0Dw9HmA0+za13IdyrgJwpkDTDA9fHaxOrt20A=="
-      },
       "Speckle.DoubleNumerics": {
         "type": "Transitive",
         "resolved": "4.0.1",
@@ -297,47 +278,29 @@
       },
       "Tekla.Structures": {
         "type": "Transitive",
-        "resolved": "2023.0.0",
-        "contentHash": "tSO+SQZMoxA25t0a0SZj4U3Nw44nUdS/XetSZGUky1j0OYiHUOuA6EGMq+NMUapRJlWfL9lmlPOPPmVvVVHluQ=="
+        "resolved": "2023.0.1",
+        "contentHash": "M+3JfeWQsgYH3Lukhkfb/7nDOuANymde1HBYeyv+qG98vuIsgiU6u66vJv3XXiYM2islRodCBn7+ZI3vaJ1Tug=="
       },
       "Tekla.Structures.Catalogs": {
         "type": "Transitive",
-        "resolved": "2023.0.0",
-        "contentHash": "CMzgDBTeVOYGCQfpzJxjnkSZ7h64PWR/CcIQCC5W3vU8xokV4vR4XFp7ecU/ckz7olex9IZE1xmSGaC0LCXYQA==",
+        "resolved": "2023.0.1",
+        "contentHash": "jrsQDTiy/Xy72rI/s+olNzgN98WEDAcAj4TPT5opM0dvcnqMlf3uEGrEOKciO4tjSTmKfL9EJ8GZODsARKgKpw==",
         "dependencies": {
-          "Tekla.Structures": "2023.0.0",
-          "Tekla.Structures.Datatype": "2023.0.0",
-          "Tekla.Structures.Model": "2023.0.0"
+          "Tekla.Structures": "2023.0.1",
+          "Tekla.Structures.Datatype": "2023.0.1",
+          "Tekla.Structures.Model": "2023.0.1"
         }
       },
       "Tekla.Structures.Datatype": {
         "type": "Transitive",
-        "resolved": "2023.0.0",
-        "contentHash": "5q/7OvUTFgJrXfkcUrrRzF5yJqxHuVyFZvf1M5smC/RgF5zFqJsfUXxxFlhk03pc0pu+f6cD/QjRTVopAMU9Aw=="
-      },
-      "Tekla.Technology.Akit5": {
-        "type": "Transitive",
-        "resolved": "5.8.17235.1",
-        "contentHash": "MVvgt7lcJDYj9xqyZfVIfXXCUKodIL+F3y3Rvp7rc/46ukTzEtwuiW+IIlId1IQqtO3/WCZBPBQmBxfwhx9sFA=="
-      },
-      "Tekla.Technology.Scripting": {
-        "type": "Transitive",
-        "resolved": "5.0.20041",
-        "contentHash": "PXD4j7++eEWxmL7K7JxqEcwLmIfjDgbM4DsA1m9iw9NcSWj3DAx4V/luWRfEcUTYvV0cRgD6/nGoiCQQTVbiZQ=="
-      },
-      "Tekla.Technology.Scripting.Plugins": {
-        "type": "Transitive",
-        "resolved": "5.3.17206",
-        "contentHash": "GbdMWQjGufzB637bzfoQiP5N+MCbuTs5WqBEyOLvY7dA22zkKlwnwoPnW3Hy2hXPGhywNlcKmWCn4oKOcj22Uw==",
-        "dependencies": {
-          "Mono.Cecil": "0.9.6.1"
-        }
+        "resolved": "2023.0.1",
+        "contentHash": "24KbR++C2WYEIyDymIHX/AVuHYcgwyQrvgExMKDnMobQPNM+AmMNnwdyYxBbw4AvYXd8QHoi+lmmavhTCL8E3w=="
       },
       "speckle.converters.common": {
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
-          "Speckle.Objects": "[3.1.0-dev.181, )"
+          "Speckle.Objects": "[3.1.0-dev.182, )"
         }
       },
       "Microsoft.Extensions.Logging": {
@@ -360,18 +323,18 @@
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.181, )",
-        "resolved": "3.1.0-dev.181",
-        "contentHash": "r6GGA7Pq4CPGYOu6OmmLW/hhhREo/l44RUFhsoYmpHNGpOg1UjF45dwyfLgaU38wrNxQoURjLUQDkxGfhb8liA==",
+        "requested": "[3.1.0-dev.182, )",
+        "resolved": "3.1.0-dev.182",
+        "contentHash": "4jjZ4vBEjvINkY33lpGhg9hc27LY0PNOEzB4n5EXyuTo1YlSO2KHMsLWHtR44cO64vDtFxhICkNaSoup+S8hvA==",
         "dependencies": {
-          "Speckle.Sdk": "3.1.0-dev.181"
+          "Speckle.Sdk": "3.1.0-dev.182"
         }
       },
       "Speckle.Sdk": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.181, )",
-        "resolved": "3.1.0-dev.181",
-        "contentHash": "VmRRphUJm+qfcjtdzxkTstAD0opaIP57tP6GJ2YnalyRj3wBTGBQuy7gwhGjWyAvsMnkugpKFEfAVuNm/zHQ2A==",
+        "requested": "[3.1.0-dev.182, )",
+        "resolved": "3.1.0-dev.182",
+        "contentHash": "zSx4WGweeDUYLfIEWMiYautd2AYHx0nMRFEu7s9E5bNNY3oXIaGGez3LJaHMP14walrGq22d2WhDfjJKdw+4ug==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.Bcl.AsyncInterfaces": "5.0.0",
@@ -381,38 +344,35 @@
           "Microsoft.Extensions.Logging": "2.2.0",
           "Speckle.DoubleNumerics": "4.0.1",
           "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Dependencies": "3.1.0-dev.181"
+          "Speckle.Sdk.Dependencies": "3.1.0-dev.182"
         }
       },
       "Speckle.Sdk.Dependencies": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.181, )",
-        "resolved": "3.1.0-dev.181",
-        "contentHash": "W7Nb3hAPlLXGZmEFWdf9vyhXKGZk3M+lypEKB+IWQVwr3NL+bzPgfw2130kTuMr/9zGx8jUbSfx2ulTql9mZxw=="
+        "requested": "[3.1.0-dev.182, )",
+        "resolved": "3.1.0-dev.182",
+        "contentHash": "65aBMrKZTa4MXLFZS4xIsqXsTjJRAXDpUNEKcV73c+VAxQZXTuwpMdv6KTbOAFxRA3DrSf2rCx1ZHHNK7aLRzA=="
       },
       "Tekla.Structures.Dialog": {
         "type": "CentralTransitive",
         "requested": "[2024.0.4, )",
-        "resolved": "2023.0.0",
-        "contentHash": "DPwrFnmhnaQJT0HmuormXow/b0jgyUSJ6llW1If8Vp8EQJlk/+VyelwqTFGCE3kNQrw0BPGvZ/fgUYaxjHcfdw==",
+        "resolved": "2023.0.1",
+        "contentHash": "gtU7dwMvnGe1+JnERp4ve6vHAIX55zNDg4VpoPKNMH75s8eV8qVPYD3ThFj9mhAylFPaQWVohXIqHXpNaDSJ5A==",
         "dependencies": {
-          "Tekla.Structures": "2023.0.0",
-          "Tekla.Structures.Catalogs": "2023.0.0",
-          "Tekla.Structures.Datatype": "2023.0.0",
-          "Tekla.Structures.Model": "2023.0.0",
-          "Tekla.Structures.Plugins": "2023.0.0"
+          "Tekla.Structures": "2023.0.1",
+          "Tekla.Structures.Catalogs": "2023.0.1",
+          "Tekla.Structures.Datatype": "2023.0.1",
+          "Tekla.Structures.Model": "2023.0.1",
+          "Tekla.Structures.Plugins": "2023.0.1"
         }
       },
       "Tekla.Structures.Plugins": {
         "type": "CentralTransitive",
         "requested": "[2024.0.4, )",
-        "resolved": "2023.0.0",
-        "contentHash": "8mD7XoH03QnHTTkHHICjdXJk8MrvhMNt74LmwtiYgYm/bF7TErGIzDEyl/MFgBPjji9m2I+mUJmCUvOde+A6NQ==",
+        "resolved": "2023.0.1",
+        "contentHash": "Wap1V8Fri3VAirfX51tqaQk6yPqPGj9Y9Y2FGPdyXg+7wZy+S1H+3DxtzEmh7ZuCHqCv5gIP0r+1yLE9fcjHdw==",
         "dependencies": {
-          "Tekla.Structures": "2023.0.0",
-          "Tekla.Technology.Akit5": "5.8.17235.1",
-          "Tekla.Technology.Scripting": "5.0.20041",
-          "Tekla.Technology.Scripting.Plugins": "5.3.17206"
+          "Tekla.Structures": "2023.0.1"
         }
       }
     }
