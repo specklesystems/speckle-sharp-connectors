@@ -35,14 +35,14 @@ public class ClassPropertyExtractor
 
   private void AddBeamProperties(TSM.Beam beam, Dictionary<string, object?> properties)
   {
-    properties["Name"] = beam.Name;
+    properties["name"] = beam.Name;
     properties["profile"] = beam.Profile.ProfileString;
     properties["material"] = beam.Material.MaterialString;
   }
 
   private void AddContourPlateProperties(TSM.ContourPlate plate, Dictionary<string, object?> properties)
   {
-    properties["Name"] = plate.Name;
+    properties["name"] = plate.Name;
     properties["profile"] = plate.Profile.ProfileString;
     properties["material"] = plate.Material.MaterialString;
   }

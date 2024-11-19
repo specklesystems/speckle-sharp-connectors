@@ -20,6 +20,7 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IConverterSettingsStore<TeklaConversionSettings> _converterSettings;
+  private readonly SendCollectionManager _sendCollectionManager;
   private readonly ILogger<TeklaRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly TeklaMaterialUnpacker _materialUnpacker;
@@ -28,6 +29,7 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
     IRootToSpeckleConverter rootToSpeckleConverter,
     ISendConversionCache sendConversionCache,
     IConverterSettingsStore<TeklaConversionSettings> converterSettings,
+    SendCollectionManager sendCollectionManager,
     ILogger<TeklaRootObjectBuilder> logger,
     ISdkActivityFactory activityFactory,
     TeklaMaterialUnpacker materialUnpacker
@@ -35,6 +37,7 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
   {
     _sendConversionCache = sendConversionCache;
     _converterSettings = converterSettings;
+    _sendCollectionManager = sendCollectionManager;
     _rootToSpeckleConverter = rootToSpeckleConverter;
     _logger = logger;
     _activityFactory = activityFactory;
@@ -110,8 +113,10 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
         converted = _rootToSpeckleConverter.Convert(teklaObject);
       }
 
+      var collection = _sendCollectionManager.GetAndCreateObjectHostCollection(teklaObject, collectionHost);
+
       // Add to host collection
-      collectionHost.elements.Add(converted);
+      collection.elements.Add(converted);
 
       return new(Status.SUCCESS, applicationId, sourceType, converted);
     }
