@@ -6,6 +6,7 @@ using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
+using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
@@ -24,6 +25,7 @@ public static class ServiceRegistration
     // Register Intercom/interop
     serviceCollection.RegisterTopLevelExceptionHandler();
     serviceCollection.AddTransient<CancellationManager>();
+    serviceCollection.AddSingleton<IAppIdleManager, NavisworksIdleManager>();
 
     serviceCollection.AddSingleton<DocumentModelStore, NavisworksDocumentStore>();
 

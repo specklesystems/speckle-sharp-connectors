@@ -19,6 +19,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Filters\NavisworksSelectionFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsings.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksDocumentStore.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\AppUtils.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\BrowserPane.xaml.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\Commands.cs" />

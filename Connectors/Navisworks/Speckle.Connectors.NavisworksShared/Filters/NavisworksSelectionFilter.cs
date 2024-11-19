@@ -4,5 +4,10 @@ namespace Speckle.Connector.Navisworks.Filters;
 
 public class NavisworksSelectionFilter : DirectSelectionSendFilter
 {
+  public NavisworksSelectionFilter()
+  {
+    IsDefault = true;
+  }
+
   public override List<string> GetObjectIds() => [];
 }
