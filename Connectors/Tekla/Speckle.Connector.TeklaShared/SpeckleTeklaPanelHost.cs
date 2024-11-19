@@ -14,13 +14,44 @@ namespace Speckle.Connector.Tekla2024;
 
 public class SpeckleTeklaPanelHost : PluginFormBase
 {
-  private ElementHost Host { get; }
+  private static SpeckleTeklaPanelHost? s_instance;
+  private ElementHost Host { get; set; }
   public Model Model { get; private set; }
   public static new ServiceProvider? Container { get; private set; }
-  private static readonly List<SpeckleTeklaPanelHost> s_instances = new();
+  public static bool IsFirst { get; private set; } = true;
+  public static bool IsInitialized { get; private set; }
 
   public SpeckleTeklaPanelHost()
   {
+    if (IsFirst)
+    {
+      IsFirst = false;
+      Close();
+    }
+    else
+    {
+      if (IsInitialized)
+      {
+        s_instance?.BringToFront();
+        Close();
+        return;
+      }
+      IsInitialized = true;
+      InitializeInstance();
+      s_instance?.BringToFront();
+    }
+  }
+
+  protected override void OnClosed(EventArgs e)
+  {
+    s_instance?.Dispose();
+    IsInitialized = false;
+  }
+
+  private void InitializeInstance()
+  {
+    s_instance = this; // Assign the current instance to the static field
+
     this.Text = "Speckle (Beta)";
     this.Name = "Speckle (Beta)";
 
@@ -35,17 +66,6 @@ public class SpeckleTeklaPanelHost : PluginFormBase
 
       using var bmp = new Bitmap(stream);
       this.Icon = Icon.FromHandle(bmp.GetHicon());
-    }
-
-    // adds instances to tracking list
-    s_instances.Add(this);
-
-    if (s_instances.Count > 1)
-    {
-      var firstInstance = s_instances[0];
-      s_instances.RemoveAt(0);
-      // hides the first instance if there is more than one
-      firstInstance.Hide();
     }
 
     var services = new ServiceCollection();
@@ -66,10 +86,12 @@ public class SpeckleTeklaPanelHost : PluginFormBase
       );
     }
     var webview = Container.GetRequiredService<DUI3ControlWebView>();
+    webview.RenderSize = new System.Windows.Size(800, 600);
     Host = new() { Child = webview, Dock = DockStyle.Fill };
     Controls.Add(Host);
     Operation.DisplayPrompt("Speckle connector initialized.");
 
+    this.TopLevel = true;
     Show();
     Activate();
     Focus();
