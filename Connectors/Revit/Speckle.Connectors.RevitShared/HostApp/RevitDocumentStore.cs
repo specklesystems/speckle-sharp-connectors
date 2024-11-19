@@ -88,8 +88,8 @@ internal sealed class RevitDocumentStore : DocumentModelStore
 
   public override void WriteToFile()
   {
-    var doc = _revitContext.UIApplication?.ActiveUIDocument.Document;
-    // POC: this can happen? A: Not really, imho (dim)
+    var doc = _revitContext.UIApplication?.ActiveUIDocument?.Document;
+    // POC: this can happen? A: Not really, imho (dim) (Adam seyz yes it can if loading also triggers a save)
     if (doc == null)
     {
       return;
