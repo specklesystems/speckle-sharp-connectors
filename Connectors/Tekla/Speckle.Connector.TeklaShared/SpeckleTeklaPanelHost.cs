@@ -20,7 +20,13 @@ public class SpeckleTeklaPanelHost : PluginFormBase
   private ElementHost Host { get; set; }
   public Model Model { get; private set; }
   public static new ServiceProvider? Container { get; private set; }
-  public static bool IsFirst { get; private set; } = true;
+
+  // NOTE: Somehow tekla triggers this class twice at the beginning and on first dialog our webview appears
+  // with small size of render in Host even if we set it as Dock.Fill. But on second trigger dialog initializes as expected.
+  // So, we do not init our plugin at first attempt, we just close it at first.
+  // On second, we init plugin and mark plugin as 'Initialized' to handle later init attempts nicely.
+  // We make 'IsInitialized' as 'false' only whenever our main dialog is closed explicitly by user.
+  private static bool IsFirst { get; set; } = true;
   public static bool IsInitialized { get; private set; }
 
   //window owner call
