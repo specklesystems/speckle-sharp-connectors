@@ -6,7 +6,7 @@ public static class AppUtils
 {
   public static HostApplication App =>
 #if NAVIS
-    HostApplications.Civil3D;
+    HostApplications.Navisworks;
 #else
     throw new NotSupportedException();
 #endif

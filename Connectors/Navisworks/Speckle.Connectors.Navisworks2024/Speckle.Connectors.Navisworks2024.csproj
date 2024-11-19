@@ -13,7 +13,7 @@
     <NavisworksVersion>2024</NavisworksVersion>
 
     <UseWpf>true</UseWpf>
-    <DefineConstants>$(DefineConstants);NAVIS2024;NAVIS</DefineConstants>
+    <DefineConstants>$(DefineConstants);TRACE;NAVIS2024;NAVIS</DefineConstants>
 
     <Description>NextGen Speckle Connector for Autodesk Navisworks Manage</Description>
     <Authors>$(Authors) jonathon@speckle.systems</Authors>
@@ -21,7 +21,7 @@
 
     <PluginBundleTarget>$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Navisworksv3.bundle</PluginBundleTarget>
     <PluginVersionContentTarget>$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Navisworksv3.bundle\Contents\$(NavisworksVersion)</PluginVersionContentTarget>
-    <RootNamespace>Speckle.Connector.Navisworks2024</RootNamespace>
+    <RootNamespace>Speckle.Connector.Navisworks</RootNamespace>
 
   </PropertyGroup>
 
@@ -36,7 +36,6 @@
   <!-- Configurations -->
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <OutputPath>bin\x64\Debug\</OutputPath>
-    <DefineConstants>TRACE;NAVIS2024;</DefineConstants>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -46,7 +45,6 @@
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <OutputPath>bin\x64\Release\</OutputPath>
-    <DefineConstants>TRACE;NAVIS2024;</DefineConstants>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <ErrorReport>prompt</ErrorReport>
