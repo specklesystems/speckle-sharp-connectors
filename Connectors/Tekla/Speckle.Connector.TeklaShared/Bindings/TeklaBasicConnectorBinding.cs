@@ -1,3 +1,4 @@
+using System.Collections;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
@@ -96,6 +97,11 @@ public class TeklaBasicConnectorBinding : IBasicConnectorBinding
             .Select(id => _model.SelectModelObject(new Identifier(new Guid(id))))
             .Where(obj => obj != null)
             .ToList();
+
+          // clearing the highlights first by passing an empty list
+          var selector = new TSMUI.ModelObjectSelector();
+          selector.Select(new ArrayList());
+          _model.CommitChanges();
 
           TSM.Operations.Operation.Highlight(modelObjects);
         })
