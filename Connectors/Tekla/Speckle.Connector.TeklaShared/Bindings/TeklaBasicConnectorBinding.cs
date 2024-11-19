@@ -6,6 +6,7 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Sdk;
 using Tekla.Structures;
+using Tekla.Structures.Geometry3d;
 
 namespace Speckle.Connector.Tekla2024.Bindings;
 
@@ -93,17 +94,45 @@ public class TeklaBasicConnectorBinding : IBasicConnectorBinding
     {
       await Task.Run(() =>
         {
-          var modelObjects = objectIds
-            .Select(id => _model.SelectModelObject(new Identifier(new Guid(id))))
-            .Where(obj => obj != null)
-            .ToList();
-
-          // clearing the highlights first by passing an empty list
+          // passing an empty list to create current selection
           var selector = new TSMUI.ModelObjectSelector();
           selector.Select(new ArrayList());
-          _model.CommitChanges();
 
-          TSM.Operations.Operation.Highlight(modelObjects);
+          if (objectIds.Count > 0)
+          {
+            var modelObjects = objectIds
+              .Select(id => _model.SelectModelObject(new Identifier(new Guid(id))))
+              .Where(obj => obj != null)
+              .ToList();
+
+            selector.Select(new ArrayList(modelObjects));
+
+            // to find the min and max coordinates of the selected objects
+            // with that we can create a bounding box and zoom selected
+            var points = new List<Point>();
+            foreach (var obj in modelObjects)
+            {
+              points.Add(obj.GetCoordinateSystem().Origin);
+              foreach (TSM.ModelObject child in obj.GetChildren())
+              {
+                points.Add(child.GetCoordinateSystem().Origin);
+              }
+            }
+
+            var minX = points.Min(p => p.X);
+            var minY = points.Min(p => p.Y);
+            var minZ = points.Min(p => p.Z);
+            var maxX = points.Max(p => p.X);
+            var maxY = points.Max(p => p.Y);
+            var maxZ = points.Max(p => p.Z);
+
+            // create the bounding box
+            var bounds = new AABB { MinPoint = new Point(minX, minY, minZ), MaxPoint = new Point(maxX, maxY, maxZ) };
+
+            // zoom in to bounding box
+            TSMUI.ViewHandler.ZoomToBoundingBox(bounds);
+          }
+          _model.CommitChanges();
         })
         .ConfigureAwait(false);
     }
