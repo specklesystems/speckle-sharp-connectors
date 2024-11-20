@@ -17,14 +17,16 @@ public class SuspendingNotifyCollection<T> : NotifyCollection<T>
   private class SuspendingNotifyCollectionSuspension : IDisposable
   {
     private readonly SuspendingNotifyCollection<T> _collection;
+    private readonly bool _previousNotificationSetting;
 
     public SuspendingNotifyCollectionSuspension(SuspendingNotifyCollection<T> collection)
     {
       _collection = collection;
-      collection.IsNotifying = true;
+      _previousNotificationSetting = collection.IsNotifying;
+      collection.IsNotifying = false;
     }
 
-    public void Dispose() => _collection.IsNotifying = false;
+    public void Dispose() => _collection.IsNotifying = _previousNotificationSetting;
   }
 
   /// <summary>
