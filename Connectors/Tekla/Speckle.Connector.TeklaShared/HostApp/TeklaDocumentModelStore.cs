@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using Microsoft.Extensions.Logging;
+using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Newtonsoft.Json;
 using Speckle.Sdk;
