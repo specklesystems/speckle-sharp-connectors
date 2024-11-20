@@ -340,11 +340,11 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       //   continue;
       // }
 
-      foreach (var changedElementId in ChangedObjectIds.Keys.ToArray())
+      foreach (var changedElementId in ChangedObjectIds.Keys)
       {
-        if (sender.SendFilter.NotNull().IdMap.NotNull().ContainsKey(changedElementId.ToString()))
+        if (sender.SendFilter?.IdMap?.TryGetValue(changedElementId.ToString(), out var id) ?? false)
         {
-          objUniqueIds.Add(sender.SendFilter.NotNull().IdMap.NotNull()[changedElementId.ToString()]);
+          objUniqueIds.Add(id);
         }
       }
     }
