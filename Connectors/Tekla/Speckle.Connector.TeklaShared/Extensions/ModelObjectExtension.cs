@@ -6,7 +6,8 @@ public static class ModelObjectExtensions
   {
     typeof(TSM.ControlPoint),
     typeof(TSM.Weld),
-    typeof(TSM.Fitting)
+    typeof(TSM.Fitting),
+    typeof(TSM.BooleanPart)
   };
 
   public static IEnumerable<TSM.ModelObject> GetSupportedChildren(this TSM.ModelObject modelObject)
