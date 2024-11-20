@@ -1,4 +1,5 @@
 using System.Drawing;
+using Microsoft.Extensions.Logging;
 using Speckle.Connector.Tekla2024.Extensions;
 using Speckle.Objects.Other;
 
@@ -6,36 +7,41 @@ namespace Speckle.Connector.Tekla2024.HostApp;
 
 public class TeklaMaterialUnpacker
 {
+  private readonly ILogger<TeklaMaterialUnpacker> _logger;
+
+  public TeklaMaterialUnpacker(ILogger<TeklaMaterialUnpacker> logger)
+  {
+    _logger = logger;
+  }
+
   public List<RenderMaterialProxy> UnpackRenderMaterial(List<TSM.ModelObject> atomicObjects)
   {
-    int counter = 0;
     var renderMaterialProxies = new Dictionary<string, RenderMaterialProxy>();
     var processedObjects = new HashSet<string>();
 
     foreach (var atomicObject in atomicObjects)
     {
-      ProcessModelObject(atomicObject, renderMaterialProxies, processedObjects, ref counter);
+      ProcessModelObject(atomicObject, renderMaterialProxies, processedObjects);
     }
 
     return renderMaterialProxies.Values.ToList();
   }
 
-  // NOTE: Why this function? Previously, if multiple atomicObjects had the same color, the RenderMaterialProxy was overwritten
   private void ProcessModelObject(
     TSM.ModelObject modelObject,
     Dictionary<string, RenderMaterialProxy> renderMaterialProxies,
-    HashSet<string> processedObjects,
-    ref int duplicateCounter
+    HashSet<string> processedObjects
   )
   {
-    // Prevent processing the same object multiple times
     var objectId = modelObject.GetSpeckleApplicationId();
-    Type teklaType = modelObject.GetType();
-    Console.WriteLine($"Processing model object: {teklaType}");
+
+    // NOTE: Related to CNX 798, processing of BooleanPart led to renderMaterial overwrites. Hence, it was excluded
+    // If duplicate objectIds are still appearing, there is another type causing issues.
     if (processedObjects.Contains(objectId))
     {
-      duplicateCounter++;
-      return;
+      _logger.LogError(
+        $"The objectId {objectId} had already been processed. Check ModelObjectExtension.cs for nested object circular references."
+      );
     }
 
     processedObjects.Add(objectId);
@@ -65,10 +71,10 @@ public class TeklaMaterialUnpacker
 
     renderMaterialProxy.objects.Add(objectId);
 
-    // Recursively process children
+    // Recursively process children (not included in s_excludedTypes)
     foreach (var child in modelObject.GetSupportedChildren())
     {
-      ProcessModelObject(child, renderMaterialProxies, processedObjects, ref duplicateCounter);
+      ProcessModelObject(child, renderMaterialProxies, processedObjects);
     }
   }
 }
