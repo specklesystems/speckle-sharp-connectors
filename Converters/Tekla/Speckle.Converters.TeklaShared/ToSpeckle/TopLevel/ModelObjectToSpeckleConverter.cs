@@ -73,7 +73,7 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
       Dictionary<string, object?> properties = new();
 
       // get report properties
-      var reportProperties = _reportPropertyExtractor.GetProperties(modelObject);
+      var reportProperties = _reportPropertyExtractor.GetReportProperties(modelObject);
       if (reportProperties.Count > 0)
       {
         properties["report"] = reportProperties;
