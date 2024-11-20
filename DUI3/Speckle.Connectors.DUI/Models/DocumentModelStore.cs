@@ -28,8 +28,10 @@ public abstract class DocumentModelStore
   /// Base host app state class that controls the storage of the models in the file.
   /// </summary>
   /// <param name="serializerOptions">our custom serialiser that should be globally DI'ed in.</param>
-  protected DocumentModelStore(JsonSerializerSettings serializerOptions,
-    ITopLevelExceptionHandler topLevelExceptionHandler)
+  protected DocumentModelStore(
+    JsonSerializerSettings serializerOptions,
+    ITopLevelExceptionHandler topLevelExceptionHandler
+  )
   {
     _serializerOptions = serializerOptions;
     _topLevelExceptionHandler = topLevelExceptionHandler;
@@ -41,7 +43,6 @@ public abstract class DocumentModelStore
   {
     lock (_models)
     {
-
       _models.CollectionChanged += (_, _) => _topLevelExceptionHandler.CatchUnhandled(WriteToFile);
     }
   }
@@ -133,12 +134,16 @@ public abstract class DocumentModelStore
   {
     try
     {
-      if (string.IsNullOrEmpty(models))
+      lock (_models)
       {
-        Clear();
-        return;
+        using var sus = _models.SuspendNotifications();
+        if (string.IsNullOrEmpty(models))
+        {
+          Clear();
+          return;
+        }
+        AddRange(Deserialize(models.NotNull()).NotNull());
       }
-      AddRange(Deserialize(models.NotNull()).NotNull());
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
