@@ -34,9 +34,17 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
 
   public Base Convert(DB.Element target)
   {
-    string family = target.Document.GetElement(target.GetTypeId()) is DB.FamilySymbol symbol
-      ? symbol.FamilyName
-      : "none";
+    string family = "none";
+    switch (target.Document.GetElement(target.GetTypeId()))
+    {
+      case DB.FamilySymbol symbol:
+        family = symbol.FamilyName;
+        break;
+      case DB.ElementType type:
+        family = type.FamilyName;
+        break;
+    }
+
     string category = target.Category?.Name ?? "none";
 
     Base revitObject =
