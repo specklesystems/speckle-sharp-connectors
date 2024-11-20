@@ -31,7 +31,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     IdStorageSchema idStorageSchema,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
-    : base(serializerSettings)
+    : base(serializerSettings, topLevelExceptionHandler)
   {
     _idleManager = idleManager;
     _revitContext = revitContext;
@@ -50,8 +50,6 @@ internal sealed class RevitDocumentStore : DocumentModelStore
       uiApplication.Application.DocumentOpened += (_, _) =>
         topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
     });
-
-    Models.CollectionChanged += (_, _) => topLevelExceptionHandler.CatchUnhandled(WriteToFile);
 
     // There is no event that we can hook here for double-click file open...
     // It is kind of harmless since we create this object as "SingleInstance".

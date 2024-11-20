@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Newtonsoft.Json;
@@ -21,14 +22,17 @@ public abstract class DocumentModelStore
   public IReadOnlyNotifyCollection<ModelCard> Models => _models;
 
   private readonly JsonSerializerSettings _serializerOptions;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   /// <summary>
   /// Base host app state class that controls the storage of the models in the file.
   /// </summary>
   /// <param name="serializerOptions">our custom serialiser that should be globally DI'ed in.</param>
-  protected DocumentModelStore(JsonSerializerSettings serializerOptions)
+  protected DocumentModelStore(JsonSerializerSettings serializerOptions,
+    ITopLevelExceptionHandler topLevelExceptionHandler)
   {
     _serializerOptions = serializerOptions;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
 
     RegisterWriteOnChangeEvent();
   }
@@ -37,7 +41,8 @@ public abstract class DocumentModelStore
   {
     lock (_models)
     {
-      _models.CollectionChanged += (_, _) => WriteToFile();
+
+      _models.CollectionChanged += (_, _) => _topLevelExceptionHandler.CatchUnhandled(WriteToFile);
     }
   }
 

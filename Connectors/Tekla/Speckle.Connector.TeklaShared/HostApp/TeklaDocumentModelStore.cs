@@ -21,9 +21,10 @@ public class TeklaDocumentModelStore : DocumentModelStore
   public TeklaDocumentModelStore(
     JsonSerializerSettings jsonSerializerSettings,
     ISpeckleApplication speckleApplication,
-    ILogger<TeklaDocumentModelStore> logger
+    ILogger<TeklaDocumentModelStore> logger,
+    ITopLevelExceptionHandler topLevelExceptionHandler
   )
-    : base(jsonSerializerSettings)
+    : base(jsonSerializerSettings, topLevelExceptionHandler)
   {
     _speckleApplication = speckleApplication;
     _logger = logger;

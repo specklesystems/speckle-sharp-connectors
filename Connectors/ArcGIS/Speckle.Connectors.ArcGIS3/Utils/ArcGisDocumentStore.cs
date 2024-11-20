@@ -15,7 +15,7 @@ public class ArcGISDocumentStore : DocumentModelStore
     JsonSerializerSettings serializerOption,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
-    : base(serializerOption)
+    : base(serializerOption, topLevelExceptionHandler)
   {
     ActiveMapViewChangedEvent.Subscribe(a => topLevelExceptionHandler.CatchUnhandled(() => OnMapViewChanged(a)), true);
     ProjectSavingEvent.Subscribe(
