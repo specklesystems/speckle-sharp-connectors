@@ -74,27 +74,19 @@ public class TeklaDocumentModelStore : DocumentModelStore
 
   public override void ReadFromFile()
   {
-    try
+    if (!Directory.Exists(HostAppUserDataPath))
     {
-      if (!Directory.Exists(HostAppUserDataPath))
-      {
-        Models = new();
-        return;
-      }
-
-      if (!File.Exists(DocumentStateFile))
-      {
-        Models = new();
-        return;
-      }
-
-      string serializedState = File.ReadAllText(DocumentStateFile);
-      Models = Deserialize(serializedState) ?? new();
+      Clear();
+      return;
     }
-    catch (Exception ex) when (!ex.IsFatal())
+
+    if (!File.Exists(DocumentStateFile))
     {
-      Models = new();
-      _logger.LogError(ex.Message);
+      Clear();
+      return;
     }
+
+    string serializedState = File.ReadAllText(DocumentStateFile);
+    LoadFromString(serializedState);
   }
 }
