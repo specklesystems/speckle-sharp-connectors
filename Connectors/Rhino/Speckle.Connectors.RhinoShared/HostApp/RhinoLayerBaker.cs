@@ -16,6 +16,13 @@ public class RhinoLayerBaker : TraversalContextUnpacker
   private readonly RhinoColorBaker _colorBaker;
   private readonly Dictionary<string, int> _hostLayerCache = new();
 
+  private static readonly string s_pathSeparator =
+#if RHINO8_OR_GREATER
+  ModelComponent.NamePathSeparator;
+#else
+  Layer.PathSeparator;
+#endif
+
   public RhinoLayerBaker(RhinoMaterialBaker materialBaker, RhinoColorBaker colorBaker)
   {
     _materialBaker = materialBaker;
@@ -68,7 +75,7 @@ public class RhinoLayerBaker : TraversalContextUnpacker
       .Select(o => string.IsNullOrWhiteSpace(o.name) ? "unnamed" : o.name)
       .Prepend(baseLayerName);
 
-    var layerFullName = string.Join(Layer.PathSeparator, layerPath);
+    var layerFullName = string.Join(s_pathSeparator, layerPath);
 
     if (_hostLayerCache.TryGetValue(layerFullName, out int existingLayerIndex))
     {
@@ -91,7 +98,7 @@ public class RhinoLayerBaker : TraversalContextUnpacker
     Layer? previousLayer = currentDocument.Layers.FindName(currentLayerName);
     foreach (Collection collection in collectionPath)
     {
-      currentLayerName += Layer.PathSeparator + collection.name;
+      currentLayerName += s_pathSeparator + collection.name;
       currentLayerName = currentLayerName.Replace("{", "").Replace("}", ""); // Rhino specific cleanup for gh (see RemoveInvalidRhinoChars)
       if (_hostLayerCache.TryGetValue(currentLayerName, out int value))
       {
