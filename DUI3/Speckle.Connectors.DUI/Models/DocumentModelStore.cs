@@ -22,29 +22,22 @@ public abstract class DocumentModelStore
 
   private readonly JsonSerializerSettings _serializerOptions;
 
-  private readonly bool _writeToFileOnChange;
-
   /// <summary>
   /// Base host app state class that controls the storage of the models in the file.
   /// </summary>
   /// <param name="serializerOptions">our custom serialiser that should be globally DI'ed in.</param>
-  /// <param name="writeToFileOnChange">Whether to store the models state in the file on any change. Defaults to false out of caution, but it's recommended to set to true, unless severe host app limitations.</param>
-  protected DocumentModelStore(JsonSerializerSettings serializerOptions, bool writeToFileOnChange)
+  protected DocumentModelStore(JsonSerializerSettings serializerOptions)
   {
     _serializerOptions = serializerOptions;
-    _writeToFileOnChange = writeToFileOnChange;
 
     RegisterWriteOnChangeEvent();
   }
 
   private void RegisterWriteOnChangeEvent()
   {
-    if (_writeToFileOnChange)
+    lock (_models)
     {
-      lock (_models)
-      {
-        _models.CollectionChanged += (_, _) => WriteToFile();
-      }
+      _models.CollectionChanged += (_, _) => WriteToFile();
     }
   }
 

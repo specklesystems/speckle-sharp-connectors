@@ -14,7 +14,7 @@ public class RhinoDocumentStore : DocumentModelStore
     JsonSerializerSettings jsonSerializerSettings,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
-    : base(jsonSerializerSettings, true)
+    : base(jsonSerializerSettings)
   {
     RhinoDoc.BeginOpenDocument += (_, _) => topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
     RhinoDoc.EndOpenDocument += (_, e) =>

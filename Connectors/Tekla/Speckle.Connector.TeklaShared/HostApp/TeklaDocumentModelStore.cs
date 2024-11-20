@@ -23,7 +23,7 @@ public class TeklaDocumentModelStore : DocumentModelStore
     ISpeckleApplication speckleApplication,
     ILogger<TeklaDocumentModelStore> logger
   )
-    : base(jsonSerializerSettings, true)
+    : base(jsonSerializerSettings)
   {
     _speckleApplication = speckleApplication;
     _logger = logger;

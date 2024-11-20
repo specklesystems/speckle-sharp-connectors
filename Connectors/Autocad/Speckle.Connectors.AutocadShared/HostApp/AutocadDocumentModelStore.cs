@@ -15,7 +15,7 @@ public class AutocadDocumentStore : DocumentModelStore
     AutocadDocumentManager autocadDocumentManager,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
-    : base(jsonSerializerSettings, true)
+    : base(jsonSerializerSettings)
   {
     _autocadDocumentManager = autocadDocumentManager;
     _previousDocName = _nullDocumentName;

@@ -31,7 +31,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     IdStorageSchema idStorageSchema,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
-    : base(serializerSettings, true)
+    : base(serializerSettings)
   {
     _idleManager = idleManager;
     _revitContext = revitContext;
