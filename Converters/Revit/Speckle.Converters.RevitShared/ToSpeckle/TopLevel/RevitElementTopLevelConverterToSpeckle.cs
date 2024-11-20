@@ -34,14 +34,17 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
 
   public Base Convert(DB.Element target)
   {
-    string family = "none";
+    string familyName = "none";
+    string typeName = "none";
     switch (target.Document.GetElement(target.GetTypeId()))
     {
       case DB.FamilySymbol symbol:
-        family = symbol.FamilyName;
+        familyName = symbol.FamilyName;
+        typeName = symbol.Name;
         break;
       case DB.ElementType type:
-        family = type.FamilyName;
+        familyName = type.FamilyName;
+        typeName = type.Name;
         break;
     }
 
@@ -51,8 +54,9 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
       new()
       {
         ["name"] = target.Name,
+        ["type"] = typeName,
+        ["family"] = familyName,
         ["category"] = category,
-        ["family"] = family,
         ["units"] = _converterSettings.Current.SpeckleUnits
       };
 

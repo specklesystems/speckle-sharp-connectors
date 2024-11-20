@@ -185,8 +185,7 @@ public class ClassPropertiesExtractor
 
   private Dictionary<string, object?> ExtractFamilyInstanceProperties(DB.FamilyInstance familyInstance)
   {
-    Dictionary<string, object?> familyInstanceProperties =
-      new() { ["type"] = familyInstance.Document.GetElement(familyInstance.GetTypeId()).Name };
+    Dictionary<string, object?> familyInstanceProperties = new();
 
     if (
       _parameterValueExtractor.TryGetValueAsDocumentObject<DB.Level>(
