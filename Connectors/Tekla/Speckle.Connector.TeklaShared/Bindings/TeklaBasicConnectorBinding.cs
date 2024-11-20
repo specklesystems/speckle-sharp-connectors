@@ -12,6 +12,7 @@ namespace Speckle.Connector.Tekla2024.Bindings;
 
 public class TeklaBasicConnectorBinding : IBasicConnectorBinding
 {
+  public BasicConnectorBindingCommands Commands { get; }
   private readonly ISpeckleApplication _speckleApplication;
   private readonly DocumentModelStore _store;
   public string Name => "baseBinding";
@@ -32,6 +33,12 @@ public class TeklaBasicConnectorBinding : IBasicConnectorBinding
     Parent = parent;
     _logger = logger;
     _model = model;
+    Commands = new BasicConnectorBindingCommands(parent);
+    _store.DocumentChanged += (_, _) =>
+      parent.TopLevelExceptionHandler.FireAndForget(async () =>
+      {
+        await Commands.NotifyDocumentChanged().ConfigureAwait(false);
+      });
   }
 
   public string GetSourceApplicationName() => _speckleApplication.Slug;
@@ -141,6 +148,4 @@ public class TeklaBasicConnectorBinding : IBasicConnectorBinding
       _logger.LogError(ex, "Failed to highlight objects");
     }
   }
-
-  public BasicConnectorBindingCommands Commands { get; }
 }
