@@ -185,23 +185,25 @@ public class ClassPropertiesExtractor
 
   private Dictionary<string, object?> ExtractFamilyInstanceProperties(DB.FamilyInstance familyInstance)
   {
-    var level = _parameterValueExtractor.GetValueAsDocumentObject<DB.Level>(
-      familyInstance,
-      DB.BuiltInParameter.INSTANCE_REFERENCE_LEVEL_PARAM
-    );
-
     Dictionary<string, object?> familyInstanceProperties =
-      new()
-      {
-        ["type"] = familyInstance.Document.GetElement(familyInstance.GetTypeId()).Name,
-        ["@level"] = _levelConverter.Convert(level)
-      };
+      new() { ["type"] = familyInstance.Document.GetElement(familyInstance.GetTypeId()).Name };
+
+    if (
+      _parameterValueExtractor.TryGetValueAsDocumentObject<DB.Level>(
+        familyInstance,
+        DB.BuiltInParameter.INSTANCE_REFERENCE_LEVEL_PARAM,
+        out DB.Level? level
+      )
+    )
+    {
+      familyInstanceProperties["@level"] = _levelConverter.Convert(level);
+    }
 
     if (
       _parameterValueExtractor.TryGetValueAsDocumentObject<DB.Level>(
         familyInstance,
         DB.BuiltInParameter.FAMILY_TOP_LEVEL_PARAM,
-        out var topLevel
+        out DB.Level? topLevel
       )
     )
     {

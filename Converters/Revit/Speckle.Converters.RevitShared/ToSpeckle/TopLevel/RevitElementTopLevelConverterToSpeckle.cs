@@ -3,6 +3,7 @@ using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Converters.RevitShared.ToSpeckle.Properties;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Extensions;
 
@@ -38,18 +39,27 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
       : "none";
     string category = target.Category?.Name ?? "none";
 
-    // get location
-    Base location = _locationConverter.Convert(target.Location);
-
     Base revitObject =
       new()
       {
         ["name"] = target.Name,
         ["category"] = category,
         ["family"] = family,
-        ["location"] = location,
         ["units"] = _converterSettings.Current.SpeckleUnits
       };
+
+    // get location if any
+    if (target.Location is DB.Location location) // location can be null
+    {
+      try
+      {
+        revitObject["location"] = _locationConverter.Convert(location);
+      }
+      catch (ValidationException)
+      {
+        // location was not a supported, do not attach to base element
+      }
+    }
 
     // get the display value
     List<Objects.Geometry.Mesh> displayValue = GetDisplayValue(target);
@@ -92,8 +102,11 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
 
       case DBA.Railing railing:
         var railingDisplay = _displayValueExtractor.GetDisplayValue(railing);
-        var topRail = _converterSettings.Current.Document.GetElement(railing.TopRail);
-        railingDisplay.AddRange(_displayValueExtractor.GetDisplayValue(topRail));
+        if (railing.TopRail != DB.ElementId.InvalidElementId)
+        {
+          var topRail = _converterSettings.Current.Document.GetElement(railing.TopRail);
+          railingDisplay.AddRange(_displayValueExtractor.GetDisplayValue(topRail));
+        }
         return railingDisplay;
 
       // POC: footprint roofs can have curtain walls in them. Need to check if they can also have non-curtain wall parts, bc currently not skipping anything.

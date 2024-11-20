@@ -1,4 +1,3 @@
-using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
@@ -20,7 +19,7 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
   private readonly ParameterExtractor _parameterExtractor;
   private readonly ILogger<RevitRootToSpeckleConverter> _logger;
 
-  private readonly Dictionary<WorksetId, string> _worksetCache = new();
+  private readonly Dictionary<DB.WorksetId, string> _worksetCache = new();
 
   public RevitRootToSpeckleConverter(
     IConverterManager<IToSpeckleTopLevelConverter> toSpeckle,
@@ -85,7 +84,7 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
     result["worksetId"] = element.WorksetId.ToString();
     if (!_worksetCache.TryGetValue(element.WorksetId, out var worksetName))
     {
-      Workset workset = _converterSettings.Current.Document.GetWorksetTable().GetWorkset(element.WorksetId);
+      DB.Workset workset = _converterSettings.Current.Document.GetWorksetTable().GetWorkset(element.WorksetId);
       worksetName = workset.Name;
       _worksetCache[element.WorksetId] = worksetName;
     }
