@@ -360,9 +360,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     {
       foreach (var changedElementId in changedIds)
       {
-        if (sender.SendFilter.NotNull().IdMap.NotNull().ContainsKey(changedElementId.ToString()))
+        if (sender.SendFilter?.IdMap?.TryGetValue(changedElementId.ToString(), out var id) ?? false)
         {
-          objUniqueIds.Add(sender.SendFilter.NotNull().IdMap.NotNull()[changedElementId.ToString()]);
+          objUniqueIds.Add(id);
         }
       }
     }

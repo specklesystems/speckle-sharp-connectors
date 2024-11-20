@@ -3,6 +3,7 @@ using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -72,8 +73,8 @@ public class ParameterExtractor
       var factor = _scalingServiceToSpeckle.ScaleLength(1);
       var structureDictionary = new Dictionary<string, object?>();
       var structure = hostObjectAttr.GetCompoundStructure();
-      var layers = structure.GetLayers();
-      foreach (var layer in layers)
+      var layers = structure?.GetLayers();
+      foreach (var layer in layers.Empty())
       {
         if (_settingsStore.Current.Document.GetElement(layer.MaterialId) is DB.Material material)
         {
