@@ -9,5 +9,5 @@ public class RhinoSelectionFilter : DirectSelectionSendFilter
     IsDefault = true;
   }
 
-  public override List<string> GetObjectIds() => SelectedObjectIds;
+  public override List<string> RefreshObjectIds() => SelectedObjectIds;
 }

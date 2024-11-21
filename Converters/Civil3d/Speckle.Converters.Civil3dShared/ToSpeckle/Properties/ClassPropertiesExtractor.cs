@@ -174,7 +174,9 @@ public class ClassPropertiesExtractor
         ["innerHeight"] = pipe.InnerHeight,
         ["slope"] = pipe.Slope,
         ["shape"] = pipe.CrossSectionalShape.ToString(),
-        ["length2d"] = pipe.Length2D,
+#pragma warning disable CS0618 // Type or member is obsolete
+        ["length2d"] = pipe.Length2D, //Length2D was un-obsoleted in 2023, but is still marked obsolete in 2022
+#pragma warning restore CS0618 // Type or member is obsolete
         ["minimumCover"] = pipe.MinimumCover,
         ["maximumCover"] = pipe.MaximumCover,
         ["junctionLoss"] = pipe.JunctionLoss,

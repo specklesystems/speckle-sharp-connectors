@@ -1,0 +1,9 @@
+﻿{
+  "profiles": {
+    "Tekla2023": {
+      "commandName": "Executable",
+      "executablePath": "C:\\TeklaStructures\\2023.0\\bin\\TeklaStructures.exe"
+    }
+  }
+}
+ 

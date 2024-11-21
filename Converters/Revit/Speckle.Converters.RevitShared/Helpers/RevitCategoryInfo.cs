@@ -29,7 +29,11 @@ public class RevitCategoryInfo
 
   public bool ContainsRevitCategory(Category category)
   {
+#if REVIT2024_OR_GREATER
+    return BuiltInCategories.Select(x => (long)x).Contains(category.Id.Value);
+#else
     return BuiltInCategories.Select(x => (int)x).Contains(category.Id.IntegerValue);
+#endif
   }
 
   public List<ElementType> GetElementTypes(Document document)

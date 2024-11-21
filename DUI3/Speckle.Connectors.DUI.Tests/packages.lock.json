@@ -4,27 +4,27 @@
     "net8.0": {
       "altcover": {
         "type": "Direct",
-        "requested": "[8.8.173, )",
-        "resolved": "8.8.173",
-        "contentHash": "iejmqWdC9H9ShTtsT7vSLpZ74RG4sDhheW7wllczXWl6WZAaCqGXMFGRRHi8TZGCzV/7Ah5gjXZ4GRlfAef4Eg=="
+        "requested": "[8.9.3, )",
+        "resolved": "8.9.3",
+        "contentHash": "auKC+pDCkLjfhFkSRaAUBu25BOmlLSqucR7YBs/Lkbdc0XRuJoklWafs1KKp+M+VoJ1f0TeMS6B/FO5IeIcu7w=="
       },
       "FluentAssertions": {
         "type": "Direct",
-        "requested": "[6.12.0, )",
-        "resolved": "6.12.0",
-        "contentHash": "ZXhHT2YwP9lajrwSKbLlFqsmCCvFJMoRSK9t7sImfnCyd0OB3MhgxdoMcVqxbq1iyxD6mD2fiackWmBb7ayiXQ==",
+        "requested": "[6.12.1, )",
+        "resolved": "6.12.1",
+        "contentHash": "hciWwryyLw3eonfqhFpOMTXyM1/auJChYslEBA+iGJyuBs5O3t/kA8YaeH4iRo/2Fe3ElSYL86C0miivtZ0f3g==",
         "dependencies": {
           "System.Configuration.ConfigurationManager": "4.4.0"
         }
       },
       "Microsoft.NET.Test.Sdk": {
         "type": "Direct",
-        "requested": "[17.10.0, )",
-        "resolved": "17.10.0",
-        "contentHash": "0/2HeACkaHEYU3wc83YlcD2Fi4LMtECJjqrtvw0lPi9DCEa35zSPt1j4fuvM8NagjDqJuh1Ja35WcRtn1Um6/A==",
+        "requested": "[17.11.1, )",
+        "resolved": "17.11.1",
+        "contentHash": "U3Ty4BaGoEu+T2bwSko9tWqWUOU16WzSFkq6U8zve75oRBMSLTBdMAZrVNNz1Tq12aCdDom9fcOcM9QZaFHqFg==",
         "dependencies": {
-          "Microsoft.CodeCoverage": "17.10.0",
-          "Microsoft.TestPlatform.TestHost": "17.10.0"
+          "Microsoft.CodeCoverage": "17.11.1",
+          "Microsoft.TestPlatform.TestHost": "17.11.1"
         }
       },
       "Microsoft.NETFramework.ReferenceAssemblies": {
@@ -131,8 +131,8 @@
       },
       "Microsoft.CodeCoverage": {
         "type": "Transitive",
-        "resolved": "17.10.0",
-        "contentHash": "yC7oSlnR54XO5kOuHlVOKtxomNNN1BWXX8lK1G2jaPXT9sUok7kCOoA4Pgs0qyFaCtMrNsprztYMeoEGqCm4uA=="
+        "resolved": "17.11.1",
+        "contentHash": "nPJqrcA5iX+Y0kqoT3a+pD/8lrW/V7ayqnEJQsTonSoPz59J8bmoQhcSN4G8+UJ64Hkuf0zuxnfuj2lkHOq4cA=="
       },
       "Microsoft.CSharp": {
         "type": "Transitive",
@@ -216,18 +216,18 @@
       },
       "Microsoft.TestPlatform.ObjectModel": {
         "type": "Transitive",
-        "resolved": "17.10.0",
-        "contentHash": "KkwhjQevuDj0aBRoPLY6OLAhGqbPUEBuKLbaCs0kUVw29qiOYncdORd4mLVJbn9vGZ7/iFGQ/+AoJl0Tu5Umdg==",
+        "resolved": "17.11.1",
+        "contentHash": "E2jZqAU6JeWEVsyOEOrSW1o1bpHLgb25ypvKNB/moBXPVsFYBPd/Jwi7OrYahG50J83LfHzezYI+GaEkpAotiA==",
         "dependencies": {
           "System.Reflection.Metadata": "1.6.0"
         }
       },
       "Microsoft.TestPlatform.TestHost": {
         "type": "Transitive",
-        "resolved": "17.10.0",
-        "contentHash": "LWpMdfqhHvcUkeMCvNYJO8QlPLlYz9XPPb+ZbaXIKhdmjAV0wqTSrTiW5FLaf7RRZT50AQADDOYMOe0HxDxNgA==",
+        "resolved": "17.11.1",
+        "contentHash": "DnG+GOqJXO/CkoqlJWeDFTgPhqD/V6VqUIL3vINizCWZ3X+HshCtbbyDdSHQQEjrc2Sl/K3yaxX6s+5LFEdYuw==",
         "dependencies": {
-          "Microsoft.TestPlatform.ObjectModel": "17.10.0",
+          "Microsoft.TestPlatform.ObjectModel": "17.11.1",
           "Newtonsoft.Json": "13.0.1"
         }
       },
@@ -324,9 +324,9 @@
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection": "[2.2.0, )",
           "Speckle.Connectors.Logging": "[1.0.0, )",
-          "Speckle.Objects": "[3.1.0-dev.174, )",
-          "Speckle.Sdk": "[3.1.0-dev.174, )",
-          "Speckle.Sdk.Dependencies": "[3.1.0-dev.174, )"
+          "Speckle.Objects": "[3.1.0-dev.190, )",
+          "Speckle.Sdk": "[3.1.0-dev.190, )",
+          "Speckle.Sdk.Dependencies": "[3.1.0-dev.190, )"
         }
       },
       "speckle.connectors.dui": {
@@ -334,8 +334,8 @@
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
           "Speckle.Connectors.Common": "[1.0.0, )",
-          "Speckle.Sdk": "[3.1.0-dev.174, )",
-          "Speckle.Sdk.Dependencies": "[3.1.0-dev.174, )",
+          "Speckle.Sdk": "[3.1.0-dev.190, )",
+          "Speckle.Sdk.Dependencies": "[3.1.0-dev.190, )",
           "System.Threading.Tasks.Dataflow": "[6.0.0, )"
         }
       },
@@ -378,18 +378,18 @@
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.174, )",
-        "resolved": "3.1.0-dev.174",
-        "contentHash": "9SCFVbVle2+fPxx2l0sIiWQMLxw1S++V7DrDPnq/0fq5jKJNzaeT7w4VwLX7AzhTvnplpY/fhi9qUCR27nO9VA==",
+        "requested": "[3.1.0-dev.190, )",
+        "resolved": "3.1.0-dev.190",
+        "contentHash": "DwDPrWP0DMQh9inBnT9RmS8sF95ihYst+YZgGUoe6x7Rzbh6YJcjPgz5LJyBK3ZymTJI6/dE663ti3n+tudsfQ==",
         "dependencies": {
-          "Speckle.Sdk": "3.1.0-dev.174"
+          "Speckle.Sdk": "3.1.0-dev.190"
         }
       },
       "Speckle.Sdk": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.174, )",
-        "resolved": "3.1.0-dev.174",
-        "contentHash": "sj0RdxcORCNxT7KdXtUYV1E+dsNfdAnNQElTv77DN5O9p4grFxkV1Wymu3XH5nkQ5HrwqBWbfRU9ycK7QruIYg==",
+        "requested": "[3.1.0-dev.190, )",
+        "resolved": "3.1.0-dev.190",
+        "contentHash": "cm/uiYW70zB99QIPNtmv/rDJBaWu5doLFzFNxkuTERXZcn7hAGuLzcsjV4G+xx/tZvVEUjiyQ5MH18SQerxsIA==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.CSharp": "4.7.0",
@@ -398,14 +398,14 @@
           "Microsoft.Extensions.Logging": "2.2.0",
           "Speckle.DoubleNumerics": "4.0.1",
           "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Dependencies": "3.1.0-dev.174"
+          "Speckle.Sdk.Dependencies": "3.1.0-dev.190"
         }
       },
       "Speckle.Sdk.Dependencies": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.174, )",
-        "resolved": "3.1.0-dev.174",
-        "contentHash": "I3a1XHewuT+QUTYWHiTcDy5KtKBlpztWFbA+rKplBq6pj/sBdOu/QLEDkhSK4tKhYkFrGh/3LrDeYq4TpOIGUw=="
+        "requested": "[3.1.0-dev.190, )",
+        "resolved": "3.1.0-dev.190",
+        "contentHash": "XMGAV/+82xWCyFneE1UN9hwItVUMTKvziG7A7b4iZSCQZKPnziB+oTwotD8HecBeA6fQlfteDDyfYz0+UJV+Kg=="
       },
       "System.Threading.Tasks.Dataflow": {
         "type": "CentralTransitive",

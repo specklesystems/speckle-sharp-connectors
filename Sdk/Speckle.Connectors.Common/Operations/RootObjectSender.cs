@@ -67,16 +67,25 @@ public sealed class RootObjectSender : IRootObjectSender
     using var userScope = ActivityScope.SetTag(Consts.USER_ID, account.GetHashedEmail());
     using var activity = _activityFactory.Start("SendOperation");
 
-    using var transport = _transportFactory.Create(account, sendInfo.ProjectId, 60, null);
-
+    string previousSpeed = string.Empty;
     _progressDisplayManager.Begin();
     var sendResult = await _operations
-      .Send(
+      .Send2(
+        sendInfo.ServerUrl,
+        sendInfo.ProjectId,
+        account.token,
         commitObject,
-        transport,
-        true,
         onProgressAction: new PassthroughProgress(args =>
         {
+          if (args.ProgressEvent == ProgressEvent.UploadBytes)
+          {
+            switch (args.ProgressEvent)
+            {
+              case ProgressEvent.UploadBytes:
+                previousSpeed = _progressDisplayManager.CalculateSpeed(args);
+                break;
+            }
+          }
           if (!_progressDisplayManager.ShouldUpdate())
           {
             return;
@@ -84,21 +93,16 @@ public sealed class RootObjectSender : IRootObjectSender
 
           switch (args.ProgressEvent)
           {
-            case ProgressEvent.UploadBytes: //TODO: These progress calls are not awaited
+            case ProgressEvent.CachedToLocal:
+              onOperationProgressed.Report(new($"Caching... ({args.Count})", null));
+              break;
+            case ProgressEvent.UploadBytes:
+              onOperationProgressed.Report(new($"Uploading... ({previousSpeed}) {args.Count}", null));
+              break;
+            case ProgressEvent.FromCacheOrSerialized:
               onOperationProgressed.Report(
                 new(
-                  $"Uploading ({_progressDisplayManager.CalculateSpeed(args)})",
-                  _progressDisplayManager.CalculatePercentage(args)
-                )
-              );
-              break;
-            case ProgressEvent.UploadObject:
-              onOperationProgressed.Report(new("Uploading Root Object...", null));
-              break;
-            case ProgressEvent.SerializeObject:
-              onOperationProgressed.Report(
-                new(
-                  $"Serializing ({_progressDisplayManager.CalculateSpeed(args)})",
+                  $"Loading cache and Serializing... ({_progressDisplayManager.CalculateSpeed(args)})",
                   _progressDisplayManager.CalculatePercentage(args)
                 )
               );

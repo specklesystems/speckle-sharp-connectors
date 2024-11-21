@@ -56,6 +56,13 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
+  ) => await RevitTask.RunAsync(() => BuildSync(objects, sendInfo, onOperationProgressed, ct)).ConfigureAwait(false);
+
+  private RootObjectBuilderResult BuildSync(
+    IReadOnlyList<ElementId> objects,
+    SendInfo sendInfo,
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken ct = default
   )
   {
     var doc = _converterSettings.Current.Document;
@@ -110,7 +117,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
         }
         else
         {
-          converted = await RevitTask.RunAsync(() => _converter.Convert(revitElement)).ConfigureAwait(false); // Could we run these batched? Is there maybe a performance penalty for running these to speckle conversions individually in revittask.runasync?
+          converted = _converter.Convert(revitElement);
           converted.applicationId = applicationId;
         }
 
@@ -136,8 +143,9 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
     var idsAndSubElementIds = _elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(atomicObjects);
     var materialProxies = _revitToSpeckleCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds);
     rootObject[ProxyKeys.RENDER_MATERIAL] = materialProxies;
-    // NOTE: these are currently not used anywhere, so we could even skip them (?).
-    rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;
+
+    // NOTE: these are currently not used anywhere, we'll skip them until someone calls for it back
+    // rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;
 
     return new RootObjectBuilderResult(rootObject, results);
   }

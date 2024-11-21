@@ -17,4 +17,6 @@
     <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
   </ItemGroup>
 
+  <Import Project="..\Speckle.Converters.TeklaShared\Speckle.Converters.TeklaShared.projitems" Label="Shared" />
+
 </Project>
