@@ -15,7 +15,7 @@ public class AutocadDocumentStore : DocumentModelStore
     AutocadDocumentManager autocadDocumentManager,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
-    : base(jsonSerializerSettings, topLevelExceptionHandler)
+    : base(jsonSerializerSettings)
   {
     _autocadDocumentManager = autocadDocumentManager;
     _previousDocName = _nullDocumentName;
@@ -51,7 +51,7 @@ public class AutocadDocumentStore : DocumentModelStore
     OnDocumentChanged();
   }
 
-  public override void LoadState()
+  protected override void LoadState()
   {
     // POC: Will be addressed to move it into AutocadContext!
     Document? doc = Application.DocumentManager.MdiActiveDocument;
@@ -66,7 +66,7 @@ public class AutocadDocumentStore : DocumentModelStore
     LoadFromString(serializedModelCards);
   }
 
-  public override void SaveState()
+  protected override void HostAppSaveState(string modelCardState)
   {
     // POC: Will be addressed to move it into AutocadContext!
     Document doc = Application.DocumentManager.MdiActiveDocument;
@@ -76,12 +76,6 @@ public class AutocadDocumentStore : DocumentModelStore
       return;
     }
 
-    TriggerSaveState();
-  }
-
-  protected override void HostAppSaveState(string modelCardState)
-  {
-    Document doc = Application.DocumentManager.MdiActiveDocument;
     _autocadDocumentManager.WriteModelCards(doc, modelCardState);
   }
 }

@@ -1,6 +1,5 @@
 ﻿using System.IO;
 using Microsoft.Extensions.Logging;
-using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Newtonsoft.Json;
 using Speckle.Sdk;
@@ -22,10 +21,9 @@ public class TeklaDocumentModelStore : DocumentModelStore
   public TeklaDocumentModelStore(
     JsonSerializerSettings jsonSerializerSettings,
     ISpeckleApplication speckleApplication,
-    ILogger<TeklaDocumentModelStore> logger,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    ILogger<TeklaDocumentModelStore> logger
   )
-    : base(jsonSerializerSettings, topLevelExceptionHandler)
+    : base(jsonSerializerSettings)
   {
     _speckleApplication = speckleApplication;
     _logger = logger;
@@ -57,8 +55,6 @@ public class TeklaDocumentModelStore : DocumentModelStore
     DocumentStateFile = Path.Combine(HostAppUserDataPath, $"{ModelPathHash}.json");
   }
 
-  public override void SaveState() => TriggerSaveState();
-
   protected override void HostAppSaveState(string modelCardState)
   {
     try
@@ -75,7 +71,7 @@ public class TeklaDocumentModelStore : DocumentModelStore
     }
   }
 
-  public override void LoadState()
+  protected override void LoadState()
   {
     if (!Directory.Exists(HostAppUserDataPath))
     {

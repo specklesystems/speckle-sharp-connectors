@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Newtonsoft.Json;
@@ -14,32 +13,17 @@ namespace Speckle.Connectors.DUI.Models;
 /// </summary>
 public abstract class DocumentModelStore
 {
-  private readonly SuspendingNotifyCollection<ModelCard> _models = new();
+  private readonly List<ModelCard> _models = new();
 
   private readonly JsonSerializerSettings _serializerOptions;
-  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   /// <summary>
   /// Base host app state class that controls the storage of the models in the file.
   /// </summary>
   /// <param name="serializerOptions">our custom serialiser that should be globally DI'ed in.</param>
-  protected DocumentModelStore(
-    JsonSerializerSettings serializerOptions,
-    ITopLevelExceptionHandler topLevelExceptionHandler
-  )
+  protected DocumentModelStore(JsonSerializerSettings serializerOptions)
   {
     _serializerOptions = serializerOptions;
-    _topLevelExceptionHandler = topLevelExceptionHandler;
-
-    RegisterWriteOnChangeEvent();
-  }
-
-  private void RegisterWriteOnChangeEvent()
-  {
-    lock (_models)
-    {
-      _models.CollectionChanged += (_, _) => _topLevelExceptionHandler.CatchUnhandled(SaveState);
-    }
   }
 
   /// <summary>
@@ -64,14 +48,7 @@ public abstract class DocumentModelStore
     lock (_models)
     {
       _models.Add(model);
-    }
-  }
-
-  public void AddRange(IEnumerable<ModelCard> models)
-  {
-    lock (_models)
-    {
-      _models.AddRange(models);
+      SaveState();
     }
   }
 
@@ -79,8 +56,8 @@ public abstract class DocumentModelStore
   {
     lock (_models)
     {
-      using var sus = _models.SuspendNotifications();
       _models.Clear();
+      SaveState();
     }
   }
 
@@ -91,6 +68,7 @@ public abstract class DocumentModelStore
       var m = _models.First(m => model.ModelCardId == m.ModelCardId);
       var idx = _models.IndexOf(m);
       _models[idx] = model;
+      SaveState();
     }
   }
 
@@ -99,16 +77,22 @@ public abstract class DocumentModelStore
     lock (_models)
     {
       _models.Remove(model);
+      SaveState();
     }
   }
 
   protected void OnDocumentChanged() => DocumentChanged?.Invoke(this, EventArgs.Empty);
 
-  public IEnumerable<SenderModelCard> GetSenders() =>
-    _models.Where(model => model.TypeDiscriminator == nameof(SenderModelCard)).Cast<SenderModelCard>();
-
-  public IEnumerable<ReceiverModelCard> GetReceivers() =>
-    _models.Where(model => model.TypeDiscriminator == nameof(ReceiverModelCard)).Cast<ReceiverModelCard>();
+  public IEnumerable<SenderModelCard> GetSenders()
+  {
+    lock (_models)
+    {
+      return _models
+        .Where(model => model.TypeDiscriminator == nameof(SenderModelCard))
+        .Cast<SenderModelCard>()
+        .ToList();
+    }
+  }
 
   private string Serialize() => JsonConvert.SerializeObject(_models, _serializerOptions);
 
@@ -116,17 +100,7 @@ public abstract class DocumentModelStore
   private ObservableCollection<ModelCard>? Deserialize(string models) =>
     JsonConvert.DeserializeObject<ObservableCollection<ModelCard>>(models, _serializerOptions);
 
-  /// <summary>
-  /// Implement this method according to the host app's specific ways of storing custom data in its file.
-  /// </summary>
-  public abstract void SaveState();
-
-  /// <summary>
-  /// Implement this method according to the host app's specific ways of reading custom data from its file.
-  /// </summary>
-  public abstract void LoadState();
-
-  protected void TriggerSaveState()
+  protected void SaveState()
   {
     lock (_models)
     {
@@ -135,7 +109,12 @@ public abstract class DocumentModelStore
     }
   }
 
+  /// <summary>
+  /// Implement this method according to the host app's specific ways of reading custom data from its file.
+  /// </summary>
   protected abstract void HostAppSaveState(string modelCardState);
+
+  protected abstract void LoadState();
 
   protected void LoadFromString(string? models)
   {
@@ -143,13 +122,12 @@ public abstract class DocumentModelStore
     {
       lock (_models)
       {
-        using var sus = _models.SuspendNotifications();
         if (string.IsNullOrEmpty(models))
         {
-          Clear();
+          _models.Clear();
           return;
         }
-        AddRange(Deserialize(models.NotNull()).NotNull());
+        _models.AddRange(Deserialize(models.NotNull()).NotNull());
       }
     }
     catch (Exception ex) when (!ex.IsFatal())

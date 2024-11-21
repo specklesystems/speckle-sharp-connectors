@@ -15,7 +15,7 @@ public class ArcGISDocumentStore : DocumentModelStore
     JsonSerializerSettings serializerOption,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
-    : base(serializerOption, topLevelExceptionHandler)
+    : base(serializerOption)
   {
     ActiveMapViewChangedEvent.Subscribe(a => topLevelExceptionHandler.CatchUnhandled(() => OnMapViewChanged(a)), true);
     ProjectSavingEvent.Subscribe(
@@ -77,8 +77,6 @@ public class ArcGISDocumentStore : DocumentModelStore
     OnDocumentChanged();
   }
 
-  public override void SaveState() => QueuedTask.Run(TriggerSaveState);
-
   protected override void HostAppSaveState(string modelCardState)
   {
     Map map = MapView.Active.Map;
@@ -106,7 +104,7 @@ public class ArcGISDocumentStore : DocumentModelStore
     map.SetMetadata(existingXmlDocument.ToString());
   }
 
-  public override void LoadState()
+  protected override void LoadState()
   {
     Map map = MapView.Active.Map;
     QueuedTask.Run(() =>

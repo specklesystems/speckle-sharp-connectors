@@ -31,7 +31,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     IdStorageSchema idStorageSchema,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
-    : base(serializerSettings, topLevelExceptionHandler)
+    : base(serializerSettings)
   {
     _idleManager = idleManager;
     _revitContext = revitContext;
@@ -84,7 +84,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     );
   }
 
-  public override void SaveState()
+  protected override void HostAppSaveState(string modelCardState)
   {
     var doc = _revitContext.UIApplication?.ActiveUIDocument?.Document;
     // POC: this can happen? A: Not really, imho (dim) (Adam seyz yes it can if loading also triggers a save)
@@ -92,32 +92,26 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     {
       return;
     }
-
     RevitTask.RunAsync(() =>
     {
-      TriggerSaveState();
+      var doc = (_revitContext.UIApplication?.ActiveUIDocument?.Document).NotNull();
+      using Transaction t = new(doc, "Speckle Write State");
+      t.Start();
+      using DataStorage ds = GetSettingsDataStorage(doc) ?? DataStorage.Create(doc);
+
+      using Entity stateEntity = new(_documentModelStorageSchema.GetSchema());
+      stateEntity.Set("contents", modelCardState);
+
+      using Entity idEntity = new(_idStorageSchema.GetSchema());
+      idEntity.Set("Id", s_revitDocumentStoreId);
+
+      ds.SetEntity(idEntity);
+      ds.SetEntity(stateEntity);
+      t.Commit();
     });
   }
 
-  protected override void HostAppSaveState(string modelCardState)
-  {
-    var doc = (_revitContext.UIApplication?.ActiveUIDocument?.Document).NotNull();
-    using Transaction t = new(doc, "Speckle Write State");
-    t.Start();
-    using DataStorage ds = GetSettingsDataStorage(doc) ?? DataStorage.Create(doc);
-
-    using Entity stateEntity = new(_documentModelStorageSchema.GetSchema());
-    stateEntity.Set("contents", modelCardState);
-
-    using Entity idEntity = new(_idStorageSchema.GetSchema());
-    idEntity.Set("Id", s_revitDocumentStoreId);
-
-    ds.SetEntity(idEntity);
-    ds.SetEntity(stateEntity);
-    t.Commit();
-  }
-
-  public override void LoadState()
+  protected override void LoadState()
   {
     var stateEntity = GetSpeckleEntity(_revitContext.UIApplication?.ActiveUIDocument?.Document);
     if (stateEntity == null || !stateEntity.IsValid())

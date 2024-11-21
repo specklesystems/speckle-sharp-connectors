@@ -14,7 +14,7 @@ public class RhinoDocumentStore : DocumentModelStore
     JsonSerializerSettings jsonSerializerSettings,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
-    : base(jsonSerializerSettings, topLevelExceptionHandler)
+    : base(jsonSerializerSettings)
   {
     RhinoDoc.BeginOpenDocument += (_, _) => topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
     RhinoDoc.EndOpenDocument += (_, e) =>
@@ -36,22 +36,17 @@ public class RhinoDocumentStore : DocumentModelStore
       });
   }
 
-  public override void SaveState()
+  protected override void HostAppSaveState(string modelCardState)
   {
     if (RhinoDoc.ActiveDoc == null)
     {
       return; // Should throw
     }
-    TriggerSaveState();
-  }
-
-  protected override void HostAppSaveState(string modelCardState)
-  {
     RhinoDoc.ActiveDoc.Strings.Delete(SPECKLE_KEY);
     RhinoDoc.ActiveDoc.Strings.SetString(SPECKLE_KEY, SPECKLE_KEY, modelCardState);
   }
 
-  public override void LoadState()
+  protected override void LoadState()
   {
     string stateString = RhinoDoc.ActiveDoc.Strings.GetValue(SPECKLE_KEY, SPECKLE_KEY);
     LoadFromString(stateString);
