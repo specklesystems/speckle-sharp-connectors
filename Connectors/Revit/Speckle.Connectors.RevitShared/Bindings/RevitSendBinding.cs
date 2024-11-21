@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Autodesk.Revit.DB;
+using Autodesk.Revit.DB.ExtensibleStorage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Caching;
@@ -213,9 +214,22 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   /// <param name="e"></param>
   private void DocChangeHandler(Autodesk.Revit.DB.Events.DocumentChangedEventArgs e)
   {
+    ICollection<ElementId> modifiedElementIds = e.GetModifiedElementIds();
+
+    // NOTE: Whenever we save data into file this event also trigger changes on its DataStorage.
+    // On every add/remove/update model attempt triggers this handler and was causing unnecessary calls on `RunExpirationChecks`
+    // Re-check it once we implement Linked Documents
+    if (modifiedElementIds.Count == 1)
+    {
+      var doc = e.GetDocument();
+      if (modifiedElementIds.All(el => doc.GetElement(el) is DataStorage))
+      {
+        return;
+      }
+    }
+
     ICollection<ElementId> addedElementIds = e.GetAddedElementIds();
     ICollection<ElementId> deletedElementIds = e.GetDeletedElementIds();
-    ICollection<ElementId> modifiedElementIds = e.GetModifiedElementIds();
 
     foreach (ElementId elementId in addedElementIds)
     {
