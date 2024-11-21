@@ -53,7 +53,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
 
     // There is no event that we can hook here for double-click file open...
     // It is kind of harmless since we create this object as "SingleInstance".
-    ReadFromFile();
+    LoadState();
     OnDocumentChanged();
   }
 
@@ -78,13 +78,13 @@ internal sealed class RevitDocumentStore : DocumentModelStore
       nameof(RevitDocumentStore),
       () =>
       {
-        ReadFromFile();
+        LoadState();
         OnDocumentChanged();
       }
     );
   }
 
-  public override void WriteToFile()
+  public override void SaveState()
   {
     var doc = _revitContext.UIApplication?.ActiveUIDocument?.Document;
     // POC: this can happen? A: Not really, imho (dim) (Adam seyz yes it can if loading also triggers a save)
@@ -95,24 +95,29 @@ internal sealed class RevitDocumentStore : DocumentModelStore
 
     RevitTask.RunAsync(() =>
     {
-      using Transaction t = new(doc, "Speckle Write State");
-      t.Start();
-      using DataStorage ds = GetSettingsDataStorage(doc) ?? DataStorage.Create(doc);
-
-      using Entity stateEntity = new(_documentModelStorageSchema.GetSchema());
-      string serializedModels = Serialize();
-      stateEntity.Set("contents", serializedModels);
-
-      using Entity idEntity = new(_idStorageSchema.GetSchema());
-      idEntity.Set("Id", s_revitDocumentStoreId);
-
-      ds.SetEntity(idEntity);
-      ds.SetEntity(stateEntity);
-      t.Commit();
+      TriggerSaveState();
     });
   }
 
-  public override void ReadFromFile()
+  protected override void HostAppSaveState(string modelCardState)
+  {
+    var doc = (_revitContext.UIApplication?.ActiveUIDocument?.Document).NotNull();
+    using Transaction t = new(doc, "Speckle Write State");
+    t.Start();
+    using DataStorage ds = GetSettingsDataStorage(doc) ?? DataStorage.Create(doc);
+
+    using Entity stateEntity = new(_documentModelStorageSchema.GetSchema());
+    stateEntity.Set("contents", modelCardState);
+
+    using Entity idEntity = new(_idStorageSchema.GetSchema());
+    idEntity.Set("Id", s_revitDocumentStoreId);
+
+    ds.SetEntity(idEntity);
+    ds.SetEntity(stateEntity);
+    t.Commit();
+  }
+
+  public override void LoadState()
   {
     var stateEntity = GetSpeckleEntity(_revitContext.UIApplication?.ActiveUIDocument?.Document);
     if (stateEntity == null || !stateEntity.IsValid())

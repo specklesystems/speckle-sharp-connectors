@@ -31,25 +31,27 @@ public class RhinoDocumentStore : DocumentModelStore
         }
 
         IsDocumentInit = true;
-        ReadFromFile();
+        LoadState();
         OnDocumentChanged();
       });
   }
 
-  public override void WriteToFile()
+  public override void SaveState()
   {
     if (RhinoDoc.ActiveDoc == null)
     {
       return; // Should throw
     }
-
-    RhinoDoc.ActiveDoc.Strings.Delete(SPECKLE_KEY);
-
-    string serializedState = Serialize();
-    RhinoDoc.ActiveDoc.Strings.SetString(SPECKLE_KEY, SPECKLE_KEY, serializedState);
+    TriggerSaveState();
   }
 
-  public override void ReadFromFile()
+  protected override void HostAppSaveState(string modelCardState)
+  {
+    RhinoDoc.ActiveDoc.Strings.Delete(SPECKLE_KEY);
+    RhinoDoc.ActiveDoc.Strings.SetString(SPECKLE_KEY, SPECKLE_KEY, modelCardState);
+  }
+
+  public override void LoadState()
   {
     string stateString = RhinoDoc.ActiveDoc.Strings.GetValue(SPECKLE_KEY, SPECKLE_KEY);
     LoadFromString(stateString);

@@ -35,13 +35,13 @@ public class TeklaDocumentModelStore : DocumentModelStore
     _events.ModelLoad += () =>
     {
       SetPaths();
-      ReadFromFile();
+      LoadState();
       OnDocumentChanged();
     };
     _events.Register();
     if (SpeckleTeklaPanelHost.IsInitialized)
     {
-      ReadFromFile();
+      LoadState();
       OnDocumentChanged();
     }
   }
@@ -57,16 +57,17 @@ public class TeklaDocumentModelStore : DocumentModelStore
     DocumentStateFile = Path.Combine(HostAppUserDataPath, $"{ModelPathHash}.json");
   }
 
-  public override void WriteToFile()
+  public override void SaveState() => TriggerSaveState();
+
+  protected override void HostAppSaveState(string modelCardState)
   {
-    string serializedState = Serialize();
     try
     {
       if (!Directory.Exists(HostAppUserDataPath))
       {
         Directory.CreateDirectory(HostAppUserDataPath);
       }
-      File.WriteAllText(DocumentStateFile, serializedState);
+      File.WriteAllText(DocumentStateFile, modelCardState);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
@@ -74,7 +75,7 @@ public class TeklaDocumentModelStore : DocumentModelStore
     }
   }
 
-  public override void ReadFromFile()
+  public override void LoadState()
   {
     if (!Directory.Exists(HostAppUserDataPath))
     {

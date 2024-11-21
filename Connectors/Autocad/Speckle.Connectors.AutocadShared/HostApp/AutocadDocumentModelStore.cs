@@ -47,11 +47,11 @@ public class AutocadDocumentStore : DocumentModelStore
     }
 
     _previousDocName = currentDocName;
-    ReadFromFile();
+    LoadState();
     OnDocumentChanged();
   }
 
-  public override void ReadFromFile()
+  public override void LoadState()
   {
     // POC: Will be addressed to move it into AutocadContext!
     Document? doc = Application.DocumentManager.MdiActiveDocument;
@@ -66,7 +66,7 @@ public class AutocadDocumentStore : DocumentModelStore
     LoadFromString(serializedModelCards);
   }
 
-  public override void WriteToFile()
+  public override void SaveState()
   {
     // POC: Will be addressed to move it into AutocadContext!
     Document doc = Application.DocumentManager.MdiActiveDocument;
@@ -76,7 +76,12 @@ public class AutocadDocumentStore : DocumentModelStore
       return;
     }
 
-    string modelCardsString = Serialize();
-    _autocadDocumentManager.WriteModelCards(doc, modelCardsString);
+    TriggerSaveState();
+  }
+
+  protected override void HostAppSaveState(string modelCardState)
+  {
+    Document doc = Application.DocumentManager.MdiActiveDocument;
+    _autocadDocumentManager.WriteModelCards(doc, modelCardState);
   }
 }

@@ -43,7 +43,7 @@ public abstract class DocumentModelStore
   {
     lock (_models)
     {
-      _models.CollectionChanged += (_, _) => _topLevelExceptionHandler.CatchUnhandled(WriteToFile);
+      _models.CollectionChanged += (_, _) => _topLevelExceptionHandler.CatchUnhandled(SaveState);
     }
   }
 
@@ -114,7 +114,7 @@ public abstract class DocumentModelStore
   public IEnumerable<ReceiverModelCard> GetReceivers() =>
     Models.Where(model => model.TypeDiscriminator == nameof(ReceiverModelCard)).Cast<ReceiverModelCard>();
 
-  protected string Serialize() => JsonConvert.SerializeObject(Models, _serializerOptions);
+  private string Serialize() => JsonConvert.SerializeObject(Models, _serializerOptions);
 
   // POC: this seemms more like a IModelsDeserializer?, seems disconnected from this class
   private ObservableCollection<ModelCard>? Deserialize(string models) =>
@@ -123,12 +123,23 @@ public abstract class DocumentModelStore
   /// <summary>
   /// Implement this method according to the host app's specific ways of storing custom data in its file.
   /// </summary>
-  public abstract void WriteToFile();
+  public abstract void SaveState();
 
   /// <summary>
   /// Implement this method according to the host app's specific ways of reading custom data from its file.
   /// </summary>
-  public abstract void ReadFromFile();
+  public abstract void LoadState();
+
+  protected void TriggerSaveState()
+  {
+    lock (_models)
+    {
+      var state = Serialize();
+      HostAppSaveState(state);
+    }
+  }
+
+  protected abstract void HostAppSaveState(string modelCardState);
 
   protected void LoadFromString(string? models)
   {
