@@ -78,7 +78,7 @@ public class ClassPropertiesExtractor
       new()
       {
         ["level"] = _levelConverter.Convert(level),
-        ["@topLevel"] = _levelConverter.Convert(topLevel),
+        ["topLevel"] = _levelConverter.Convert(topLevel),
         ["isStructural"] =
           _parameterValueExtractor.GetValueAsBool(wall, DB.BuiltInParameter.WALL_STRUCTURAL_SIGNIFICANT) ?? false,
         ["flipped"] = wall.Flipped
@@ -176,7 +176,7 @@ public class ClassPropertiesExtractor
       )
     )
     {
-      extrusionRoofProperties["@topLevel"] = _levelConverter.Convert(topLevel);
+      extrusionRoofProperties["topLevel"] = _levelConverter.Convert(topLevel);
     }
 
     return extrusionRoofProperties;
@@ -205,7 +205,7 @@ public class ClassPropertiesExtractor
       )
     )
     {
-      familyInstanceProperties["@topLevel"] = _levelConverter.Convert(topLevel);
+      familyInstanceProperties["topLevel"] = _levelConverter.Convert(topLevel);
     }
 
     if (familyInstance.StructuralType == DB.Structure.StructuralType.Column)
