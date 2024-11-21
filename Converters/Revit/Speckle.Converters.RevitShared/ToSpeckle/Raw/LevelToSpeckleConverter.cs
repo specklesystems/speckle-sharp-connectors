@@ -5,10 +5,12 @@ using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
-public class LevelToSpeckleConverter : ITypedConverter<DB.Level, SOBR.RevitLevel>
+public class LevelToSpeckleConverter : ITypedConverter<DB.Level, Dictionary<string, object>>
 {
   private readonly ScalingServiceToSpeckle _scalingService;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
+
+  private readonly Dictionary<DB.ElementId, Dictionary<string, object>> _cache = new();
 
   public LevelToSpeckleConverter(
     ScalingServiceToSpeckle scalingService,
@@ -19,16 +21,18 @@ public class LevelToSpeckleConverter : ITypedConverter<DB.Level, SOBR.RevitLevel
     _converterSettings = converterSettings;
   }
 
-  public SOBR.RevitLevel Convert(DB.Level target)
+  public Dictionary<string, object> Convert(DB.Level target)
   {
-    SOBR.RevitLevel level =
-      new()
+    if (!_cache.TryGetValue(target.Id, out Dictionary<string, object>? level))
+    {
+      level = new()
       {
-        elevation = _scalingService.ScaleLength(target.Elevation),
-        name = target.Name,
-        createView = true,
-        units = _converterSettings.Current.SpeckleUnits
+        ["elevation"] = _scalingService.ScaleLength(target.Elevation),
+        ["name"] = target.Name,
+        ["units"] = _converterSettings.Current.SpeckleUnits
       };
+      _cache[target.Id] = level;
+    }
 
     return level;
   }

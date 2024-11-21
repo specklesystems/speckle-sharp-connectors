@@ -1,6 +1,5 @@
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Objects.BuiltElements.Revit;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle.Properties;
 
@@ -14,7 +13,7 @@ public class ClassPropertiesExtractor
 
   // POC: for now, we are still converting and attaching levels to every single object
   // This should probably be changed to level proxies
-  private readonly ITypedConverter<DB.Level, RevitLevel> _levelConverter;
+  private readonly ITypedConverter<DB.Level, Dictionary<string, object>> _levelConverter;
 
   public ClassPropertiesExtractor(
     ParameterValueExtractor parameterValueExtractor,
@@ -22,7 +21,7 @@ public class ClassPropertiesExtractor
     ITypedConverter<DB.ModelCurveArray, SOG.Polycurve> modelCurveArrayConverter,
     ITypedConverter<DB.ModelCurveArrArray, SOG.Polycurve[]> modelCurveArrArrayConverter,
     ITypedConverter<IList<DB.BoundarySegment>, SOG.Polycurve> boundarySegmentConverter,
-    ITypedConverter<DB.Level, RevitLevel> levelConverter
+    ITypedConverter<DB.Level, Dictionary<string, object>> levelConverter
   )
   {
     _parameterValueExtractor = parameterValueExtractor;
@@ -65,11 +64,6 @@ public class ClassPropertiesExtractor
 
   private Dictionary<string, object?> ExtractWallProperties(DB.Wall wall)
   {
-    var level = _parameterValueExtractor.GetValueAsDocumentObject<DB.Level>(
-      wall,
-      DB.BuiltInParameter.WALL_BASE_CONSTRAINT
-    );
-
     var topLevel = _parameterValueExtractor.GetValueAsDocumentObject<DB.Level>(
       wall,
       DB.BuiltInParameter.WALL_BASE_CONSTRAINT
@@ -78,8 +72,7 @@ public class ClassPropertiesExtractor
     Dictionary<string, object?> wallProperties =
       new()
       {
-        ["@level"] = _levelConverter.Convert(level),
-        ["@topLevel"] = _levelConverter.Convert(topLevel),
+        ["topLevel"] = _levelConverter.Convert(topLevel),
         ["isStructural"] =
           _parameterValueExtractor.GetValueAsBool(wall, DB.BuiltInParameter.WALL_STRUCTURAL_SIGNIFICANT) ?? false,
         ["flipped"] = wall.Flipped
@@ -97,12 +90,10 @@ public class ClassPropertiesExtractor
 
   private Dictionary<string, object?> ExtractFloorProperties(DB.Floor floor)
   {
-    var level = _parameterValueExtractor.GetValueAsDocumentObject<DB.Level>(floor, DB.BuiltInParameter.LEVEL_PARAM);
-
+    // Dubious whether it's actually needed, since it's avail inside the props
     Dictionary<string, object?> floorProperties =
       new()
       {
-        ["@level"] = _levelConverter.Convert(level),
         ["isStructural"] =
           _parameterValueExtractor.GetValueAsBool(floor, DB.BuiltInParameter.FLOOR_PARAM_IS_STRUCTURAL) ?? false,
       };
@@ -119,9 +110,7 @@ public class ClassPropertiesExtractor
 
   private Dictionary<string, object?> ExtractCeilingProperties(DB.Ceiling ceiling)
   {
-    var level = _parameterValueExtractor.GetValueAsDocumentObject<DB.Level>(ceiling, DB.BuiltInParameter.LEVEL_PARAM);
-
-    Dictionary<string, object?> ceilingProperties = new() { ["@level"] = _levelConverter.Convert(level) };
+    Dictionary<string, object?> ceilingProperties = new();
 
     // get profile curves, which includes voids
     List<SOG.Polycurve> profile = GetSketchProfile(ceiling.Document, ceiling.SketchId);
@@ -135,18 +124,12 @@ public class ClassPropertiesExtractor
 
   private Dictionary<string, object?> ExtractExtrusionRoofProperties(DB.ExtrusionRoof extrusionRoof)
   {
-    var level = _parameterValueExtractor.GetValueAsDocumentObject<DB.Level>(
-      extrusionRoof,
-      DB.BuiltInParameter.ROOF_CONSTRAINT_LEVEL_PARAM
-    );
-
     // get profile curve, which is outline
     SOG.Polycurve profile = _modelCurveArrayConverter.Convert(extrusionRoof.GetProfile());
 
     Dictionary<string, object?> extrusionRoofProperties =
       new()
       {
-        ["@level"] = _levelConverter.Convert(level),
         ["start"] = _parameterValueExtractor.GetValueAsDouble(extrusionRoof, DB.BuiltInParameter.EXTRUSION_START_PARAM),
         ["end"] = _parameterValueExtractor.GetValueAsDouble(extrusionRoof, DB.BuiltInParameter.EXTRUSION_END_PARAM),
         ["profile"] = new List<SOG.Polycurve>() { profile }
@@ -157,16 +140,10 @@ public class ClassPropertiesExtractor
 
   private Dictionary<string, object?> ExtractFootPrintRoofProperties(DB.FootPrintRoof footPrintRoof)
   {
-    var level = _parameterValueExtractor.GetValueAsDocumentObject<DB.Level>(
-      footPrintRoof,
-      DB.BuiltInParameter.ROOF_BASE_LEVEL_PARAM
-    );
-
     // get profile curve, which is outline
     SOG.Polycurve[] profile = _modelCurveArrArrayConverter.Convert(footPrintRoof.GetProfiles());
 
-    Dictionary<string, object?> extrusionRoofProperties =
-      new() { ["@level"] = _levelConverter.Convert(level), ["profile"] = profile.ToList() };
+    Dictionary<string, object?> extrusionRoofProperties = new() { ["profile"] = profile.ToList() };
 
     // We don't currently validate the success of this TryGet, it is assumed some Roofs don't have a top-level.
     if (
@@ -177,7 +154,7 @@ public class ClassPropertiesExtractor
       )
     )
     {
-      extrusionRoofProperties["@topLevel"] = _levelConverter.Convert(topLevel);
+      extrusionRoofProperties["topLevel"] = _levelConverter.Convert(topLevel);
     }
 
     return extrusionRoofProperties;
@@ -190,23 +167,12 @@ public class ClassPropertiesExtractor
     if (
       _parameterValueExtractor.TryGetValueAsDocumentObject<DB.Level>(
         familyInstance,
-        DB.BuiltInParameter.INSTANCE_REFERENCE_LEVEL_PARAM,
-        out DB.Level? level
-      )
-    )
-    {
-      familyInstanceProperties["@level"] = _levelConverter.Convert(level);
-    }
-
-    if (
-      _parameterValueExtractor.TryGetValueAsDocumentObject<DB.Level>(
-        familyInstance,
         DB.BuiltInParameter.FAMILY_TOP_LEVEL_PARAM,
         out DB.Level? topLevel
       )
     )
     {
-      familyInstanceProperties["@topLevel"] = _levelConverter.Convert(topLevel);
+      familyInstanceProperties["topLevel"] = _levelConverter.Convert(topLevel);
     }
 
     if (familyInstance.StructuralType == DB.Structure.StructuralType.Column)
@@ -232,7 +198,6 @@ public class ClassPropertiesExtractor
         ["number"] = room.Number,
         ["roomName"] = _parameterValueExtractor.GetValueAsString(room, DB.BuiltInParameter.ROOM_NAME) ?? "-",
         ["area"] = _parameterValueExtractor.GetValueAsDouble(room, DB.BuiltInParameter.ROOM_AREA),
-        ["@level"] = _levelConverter.Convert(room.Level),
         ["profile"] = profiles
       };
 
