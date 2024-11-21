@@ -16,18 +16,21 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
   private readonly ClassPropertiesExtractor _classPropertiesExtractor;
   private readonly ITypedConverter<DB.Location, Base> _locationConverter;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
+  private readonly ITypedConverter<DB.Level, Dictionary<string, object>> _levelConverter;
 
   public ElementTopLevelConverterToSpeckle(
     DisplayValueExtractor displayValueExtractor,
     ClassPropertiesExtractor classPropertiesExtractor,
     ITypedConverter<DB.Location, Base> locationConverter,
-    IConverterSettingsStore<RevitConversionSettings> converterSettings
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
+    ITypedConverter<DB.Level, Dictionary<string, object>> levelConverter
   )
   {
     _displayValueExtractor = displayValueExtractor;
     _classPropertiesExtractor = classPropertiesExtractor;
     _locationConverter = locationConverter;
     _converterSettings = converterSettings;
+    _levelConverter = levelConverter;
   }
 
   public Base Convert(object target) => Convert((DB.Element)target);
@@ -49,16 +52,23 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
     }
 
     string category = target.Category?.Name ?? "none";
+    string name = $"{category} - {target.Name}"; // Note: I find this looks better in the frontend.
 
     Base revitObject =
       new()
       {
-        ["name"] = target.Name,
+        ["name"] = name,
         ["type"] = typeName,
         ["family"] = familyName,
         ["category"] = category,
         ["units"] = _converterSettings.Current.SpeckleUnits
       };
+
+    // get level, if any. note removed all mentions of level (but not top level) in the ClassPropertiesExtractor.
+    if (target.LevelId != DB.ElementId.InvalidElementId && target.Document.GetElement(target.LevelId) is DB.Level lev)
+    {
+      revitObject["level"] = _levelConverter.Convert(lev);
+    }
 
     // get location if any
     if (target.Location is DB.Location location) // location can be null
