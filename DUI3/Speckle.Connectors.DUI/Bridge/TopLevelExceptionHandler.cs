@@ -64,8 +64,8 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
     {
       try
       {
-          await function().ConfigureAwait(false);
-          return new Result();
+        await function().ConfigureAwait(false);
+        return new Result();
       }
       catch (Exception ex) when (!ex.IsFatal())
       {

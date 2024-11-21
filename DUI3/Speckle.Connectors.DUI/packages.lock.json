@@ -71,12 +71,6 @@
         "resolved": "3.1.0-dev.190",
         "contentHash": "XMGAV/+82xWCyFneE1UN9hwItVUMTKvziG7A7b4iZSCQZKPnziB+oTwotD8HecBeA6fQlfteDDyfYz0+UJV+Kg=="
       },
-      "System.Threading.Tasks.Dataflow": {
-        "type": "Direct",
-        "requested": "[6.0.0, )",
-        "resolved": "6.0.0",
-        "contentHash": "+tyDCU3/B1lDdOOAJywHQoFwyXIUghIaP2BxG79uvhfTnO+D9qIgjVlL/JV2NTliYbMHpd6eKDmHp2VHpij7MA=="
-      },
       "GraphQL.Client": {
         "type": "Transitive",
         "resolved": "6.0.0",

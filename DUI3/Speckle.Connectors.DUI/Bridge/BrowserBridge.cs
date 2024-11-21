@@ -99,7 +99,7 @@ public sealed class BrowserBridge : IBrowserBridge
     _bindingMethodCache = bindingMethodCache;
     _logger.LogInformation("Bridge bound to front end name {FrontEndName}", binding.Name);
   }
-  
+
   /// <summary>
   /// Used by the Frontend bridge logic to understand which methods are available.
   /// </summary>
@@ -118,22 +118,32 @@ public sealed class BrowserBridge : IBrowserBridge
   /// <param name="requestId"></param>
   /// <param name="args"></param>
   public void RunMethod(string methodName, string requestId, string args) =>
-    _mainThreadContext.Post(async x =>
-    {
-      var runMethodArgs = (RunMethodArgs)x;
-      var task = await TopLevelExceptionHandler.CatchUnhandledAsync(async () =>
+    _mainThreadContext.Post(
+      async x =>
       {
-        var result = await ExecuteMethod(runMethodArgs.MethodName, runMethodArgs.MethodArgs).ConfigureAwait(false);
+        var runMethodArgs = (RunMethodArgs)x;
+        var task = await TopLevelExceptionHandler
+          .CatchUnhandledAsync(async () =>
+          {
+            var result = await ExecuteMethod(runMethodArgs.MethodName, runMethodArgs.MethodArgs).ConfigureAwait(false);
 
-        string resultJson = JsonConvert.SerializeObject(result, _serializerOptions);
-        await NotifyUIMethodCallResultReady(runMethodArgs.RequestId, resultJson).ConfigureAwait(false);
-      }).ConfigureAwait(false);
-      if (task.Exception is not null)
+            string resultJson = JsonConvert.SerializeObject(result, _serializerOptions);
+            await NotifyUIMethodCallResultReady(runMethodArgs.RequestId, resultJson).ConfigureAwait(false);
+          })
+          .ConfigureAwait(false);
+        if (task.Exception is not null)
+        {
+          string resultJson = SerializeFormattedException(task.Exception);
+          await NotifyUIMethodCallResultReady(runMethodArgs.RequestId, resultJson).ConfigureAwait(false);
+        }
+      },
+      new RunMethodArgs
       {
-        string resultJson = SerializeFormattedException(task.Exception);
-        await NotifyUIMethodCallResultReady(runMethodArgs.RequestId, resultJson).ConfigureAwait(false);
+        MethodName = methodName,
+        RequestId = requestId,
+        MethodArgs = args
       }
-    }, new RunMethodArgs { MethodName = methodName, RequestId = requestId, MethodArgs = args });
+    );
 
   public void RunOnMainThread(Action action) =>
     _mainThreadContext.Post(
