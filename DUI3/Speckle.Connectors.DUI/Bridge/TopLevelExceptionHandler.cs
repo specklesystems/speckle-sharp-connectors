@@ -58,14 +58,33 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
 
   /// <inheritdoc cref="CatchUnhandled(Action)"/>
   /// <returns>A result pattern struct (where exceptions have been handled)</returns>
-  public async Task CatchUnhandledAsync(Func<Task> function)
+  public async Task<Result> CatchUnhandledAsync(Func<Task> function)
   {
-    _ = await CatchUnhandledAsync<object?>(async () =>
+    try
+    {
+      try
       {
-        await function().ConfigureAwait(false);
-        return null;
-      })
-      .ConfigureAwait(false);
+          await function().ConfigureAwait(false);
+          return new Result();
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
+        await SetGlobalNotification(
+            ToastNotificationType.DANGER,
+            "Unhandled Exception Occured",
+            ex.ToFormattedString(),
+            false
+          )
+          .ConfigureAwait(false);
+        return new(ex);
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogCritical(ex, UNHANDLED_LOGGER_TEMPLATE);
+      throw;
+    }
   }
 
   ///<inheritdoc cref="CatchUnhandled{T}(Func{T})"/>

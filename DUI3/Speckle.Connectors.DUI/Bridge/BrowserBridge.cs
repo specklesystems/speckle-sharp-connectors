@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks.Dataflow;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Newtonsoft.Json;
@@ -33,8 +32,6 @@ public sealed class BrowserBridge : IBrowserBridge
   private readonly IBrowserScriptExecutor _browserScriptExecutor;
 
   private IReadOnlyDictionary<string, MethodInfo> _bindingMethodCache = new Dictionary<string, MethodInfo>();
-
-  private ActionBlock<RunMethodArgs>? _actionBlock;
   private IBinding? _binding;
   private Type? _bindingType;
 
@@ -100,30 +97,9 @@ public sealed class BrowserBridge : IBrowserBridge
       bindingMethodCache[m.Name] = m;
     }
     _bindingMethodCache = bindingMethodCache;
-
-    // Whenever the ui will call run method inside .net, it will post a message to this action block.
-    // This conveniently executes the code outside the UI thread and does not block during long operations (such as sending).
-    _actionBlock = new ActionBlock<RunMethodArgs>(
-      OnActionBlock,
-      new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = 1000 }
-    );
-
     _logger.LogInformation("Bridge bound to front end name {FrontEndName}", binding.Name);
   }
-
-  private async Task OnActionBlock(RunMethodArgs args)
-  {
-    Result<object?> result = await TopLevelExceptionHandler
-      .CatchUnhandledAsync(async () => await ExecuteMethod(args.MethodName, args.MethodArgs).ConfigureAwait(false))
-      .ConfigureAwait(false);
-
-    string resultJson = result.IsSuccess
-      ? JsonConvert.SerializeObject(result.Value, _serializerOptions)
-      : SerializeFormattedException(result.Exception);
-
-    await NotifyUIMethodCallResultReady(args.RequestId, resultJson).ConfigureAwait(false);
-  }
-
+  
   /// <summary>
   /// Used by the Frontend bridge logic to understand which methods are available.
   /// </summary>
@@ -141,32 +117,25 @@ public sealed class BrowserBridge : IBrowserBridge
   /// <param name="methodName"></param>
   /// <param name="requestId"></param>
   /// <param name="args"></param>
-  public void RunMethod(string methodName, string requestId, string args)
-  {
-    TopLevelExceptionHandler.CatchUnhandled(Post);
-    return;
-
-    void Post()
+  public void RunMethod(string methodName, string requestId, string args) =>
+    _mainThreadContext.Post(async x =>
     {
-      bool wasAccepted = _actionBlock
-        .NotNull()
-        .Post(
-          new RunMethodArgs
-          {
-            MethodName = methodName,
-            RequestId = requestId,
-            MethodArgs = args
-          }
-        );
-      if (!wasAccepted)
+      var runMethodArgs = (RunMethodArgs)x;
+      var task = await TopLevelExceptionHandler.CatchUnhandledAsync(async () =>
       {
-        throw new InvalidOperationException($"Action block declined to Post ({methodName} {requestId} {args})");
-      }
-    }
-  }
+        var result = await ExecuteMethod(runMethodArgs.MethodName, runMethodArgs.MethodArgs).ConfigureAwait(false);
 
-  public void RunOnMainThread(Action action)
-  {
+        string resultJson = JsonConvert.SerializeObject(result, _serializerOptions);
+        await NotifyUIMethodCallResultReady(runMethodArgs.RequestId, resultJson).ConfigureAwait(false);
+      }).ConfigureAwait(false);
+      if (task.Exception is not null)
+      {
+        string resultJson = SerializeFormattedException(task.Exception);
+        await NotifyUIMethodCallResultReady(runMethodArgs.RequestId, resultJson).ConfigureAwait(false);
+      }
+    }, new RunMethodArgs { MethodName = methodName, RequestId = requestId, MethodArgs = args });
+
+  public void RunOnMainThread(Action action) =>
     _mainThreadContext.Post(
       _ =>
       {
@@ -175,17 +144,14 @@ public sealed class BrowserBridge : IBrowserBridge
       },
       null
     );
-  }
 
-  public async Task RunOnMainThreadAsync(Func<Task> action)
-  {
+  public async Task RunOnMainThreadAsync(Func<Task> action) =>
     await RunOnMainThreadAsync<object?>(async () =>
       {
         await action.Invoke().ConfigureAwait(false);
         return null;
       })
       .ConfigureAwait(false);
-  }
 
   [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "TaskCompletionSource")]
   public Task<T> RunOnMainThreadAsync<T>(Func<Task<T>> action)
