@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Utils;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.DUI.Models;
 
@@ -85,7 +86,7 @@ public abstract class DocumentModelStore
 
   // POC: this seemms more like a IModelsDeserializer?, seems disconnected from this class
   protected ObservableCollection<ModelCard> Deserialize(string models) =>
-    _serializer.Deserialize<ObservableCollection<ModelCard>>(models);
+    _serializer.Deserialize<ObservableCollection<ModelCard>>(models).NotNull();
 
   /// <summary>
   /// Implement this method according to the host app's specific ways of storing custom data in its file.
