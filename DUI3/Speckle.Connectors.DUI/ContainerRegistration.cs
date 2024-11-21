@@ -28,7 +28,7 @@ public static class ContainerRegistration
     serviceCollection.AddSingleton<ISyncToThread, SyncToUIThread>();
     serviceCollection.AddSingleton<IRootObjectSender, RootObjectSender>();
     serviceCollection.AddTransient<IBrowserBridge, BrowserBridge>(); // POC: Each binding should have it's own bridge instance
-    serviceCollection.AddSingleton(sp => sp.GetRequiredService<IJsonSerializerSettingsFactory>().Create());
+    serviceCollection.AddSingleton<IJsonSerializerSettingsFactory, JsonSerializerSettingsFactory>();
 
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetAssembly(typeof(IdleCallManager)));
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetAssembly(typeof(IServerTransportFactory)));
