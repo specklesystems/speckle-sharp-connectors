@@ -16,11 +16,6 @@ public abstract class DocumentModelStore
 {
   private readonly SuspendingNotifyCollection<ModelCard> _models = new();
 
-  /// <summary>
-  /// Stores all the model cards in the current document/file.
-  /// </summary>
-  public IReadOnlyNotifyCollection<ModelCard> Models => _models;
-
   private readonly JsonSerializerSettings _serializerOptions;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
@@ -60,7 +55,7 @@ public abstract class DocumentModelStore
   // In theory this should never really happen, but if it does
   public ModelCard GetModelById(string id)
   {
-    var model = Models.First(model => model.ModelCardId == id) ?? throw new ModelNotFoundException();
+    var model = _models.First(model => model.ModelCardId == id) ?? throw new ModelNotFoundException();
     return model;
   }
 
@@ -93,7 +88,8 @@ public abstract class DocumentModelStore
   {
     lock (_models)
     {
-      int idx = Models.ToList().FindIndex(m => model.ModelCardId == m.ModelCardId);
+      var m = _models.First(m => model.ModelCardId == m.ModelCardId);
+      var idx = _models.IndexOf(m);
       _models[idx] = model;
     }
   }
@@ -109,12 +105,12 @@ public abstract class DocumentModelStore
   protected void OnDocumentChanged() => DocumentChanged?.Invoke(this, EventArgs.Empty);
 
   public IEnumerable<SenderModelCard> GetSenders() =>
-    Models.Where(model => model.TypeDiscriminator == nameof(SenderModelCard)).Cast<SenderModelCard>();
+    _models.Where(model => model.TypeDiscriminator == nameof(SenderModelCard)).Cast<SenderModelCard>();
 
   public IEnumerable<ReceiverModelCard> GetReceivers() =>
-    Models.Where(model => model.TypeDiscriminator == nameof(ReceiverModelCard)).Cast<ReceiverModelCard>();
+    _models.Where(model => model.TypeDiscriminator == nameof(ReceiverModelCard)).Cast<ReceiverModelCard>();
 
-  private string Serialize() => JsonConvert.SerializeObject(Models, _serializerOptions);
+  private string Serialize() => JsonConvert.SerializeObject(_models, _serializerOptions);
 
   // POC: this seemms more like a IModelsDeserializer?, seems disconnected from this class
   private ObservableCollection<ModelCard>? Deserialize(string models) =>
