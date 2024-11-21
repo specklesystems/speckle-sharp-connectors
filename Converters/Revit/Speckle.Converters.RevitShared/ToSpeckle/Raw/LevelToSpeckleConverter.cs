@@ -10,7 +10,7 @@ public class LevelToSpeckleConverter : ITypedConverter<DB.Level, Dictionary<stri
   private readonly ScalingServiceToSpeckle _scalingService;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
-  private Dictionary<DB.ElementId, Dictionary<string, object>> _cache = new();
+  private readonly Dictionary<DB.ElementId, Dictionary<string, object>> _cache = new();
 
   public LevelToSpeckleConverter(
     ScalingServiceToSpeckle scalingService,
