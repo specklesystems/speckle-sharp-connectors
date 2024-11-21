@@ -1,6 +1,6 @@
 using System.Runtime.Serialization;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Newtonsoft.Json;
+using Speckle.Connectors.DUI.Utils;
 using Speckle.Sdk;
 using Speckle.Sdk.Transports;
 
@@ -19,18 +19,18 @@ public class ConfigBinding : IBinding
   public IBrowserBridge Parent { get; }
   private SQLiteTransport ConfigStorage { get; }
   private readonly ISpeckleApplication _speckleApplication;
-  private readonly JsonSerializerSettings _serializerOptions;
+  private readonly IJsonSerializer _serializer;
 
   public ConfigBinding(
+    IJsonSerializer serializer,
     ISpeckleApplication speckleApplication,
-    IBrowserBridge bridge,
-    JsonSerializerSettings serializerOptions
+    IBrowserBridge bridge
   )
   {
     Parent = bridge;
     ConfigStorage = new SQLiteTransport(scope: "DUI3Config"); // POC: maybe inject? (if we ever want to use a different storage for configs later down the line)
     _speckleApplication = speckleApplication;
-    _serializerOptions = serializerOptions;
+    _serializer = serializer;
   }
 
 #pragma warning disable CA1024
@@ -54,7 +54,7 @@ public class ConfigBinding : IBinding
 
     try
     {
-      var config = JsonConvert.DeserializeObject<ConnectorConfig>(rawConfig, _serializerOptions);
+      var config = _serializer.Deserialize<ConnectorConfig>(rawConfig);
       if (config is null)
       {
         throw new SerializationException("Failed to deserialize config");
@@ -77,15 +77,14 @@ public class ConfigBinding : IBinding
 
   public void UpdateConfig(ConnectorConfig config)
   {
-    var str = JsonConvert.SerializeObject(config, _serializerOptions);
+    var str = _serializer.Serialize(config);
     ConfigStorage.UpdateObject(_speckleApplication.HostApplication, str);
   }
 
   public void SetUserSelectedAccountId(string userSelectedAccountId)
   {
-    var str = JsonConvert.SerializeObject(
-      new AccountsConfig() { UserSelectedAccountId = userSelectedAccountId },
-      _serializerOptions
+    var str = _serializer.Serialize(
+      new AccountsConfig() { UserSelectedAccountId = userSelectedAccountId }
     );
     ConfigStorage.UpdateObject("accounts", str);
   }
@@ -100,7 +99,7 @@ public class ConfigBinding : IBinding
 
     try
     {
-      var config = JsonConvert.DeserializeObject<AccountsConfig>(rawConfig, _serializerOptions);
+      var config = _serializer.Deserialize<AccountsConfig>(rawConfig);
       if (config is null)
       {
         throw new SerializationException("Failed to deserialize accounts config");

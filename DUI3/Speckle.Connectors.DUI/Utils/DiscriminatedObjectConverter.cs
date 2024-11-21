@@ -14,7 +14,7 @@ namespace Speckle.Connectors.DUI.Utils;
 /// </summary>
 public class DiscriminatedObjectConverter(IServiceProvider serviceProvider) : JsonConverter<DiscriminatedObject>
 {
-  private readonly JsonSerializer _localSerializer =
+  private readonly Speckle.Newtonsoft.Json.JsonSerializer _localSerializer =
     new()
     {
       DefaultValueHandling = DefaultValueHandling.Ignore,
@@ -22,7 +22,7 @@ public class DiscriminatedObjectConverter(IServiceProvider serviceProvider) : Js
       NullValueHandling = NullValueHandling.Ignore
     };
 
-  public override void WriteJson(JsonWriter writer, DiscriminatedObject? value, JsonSerializer serializer)
+  public override void WriteJson(JsonWriter writer, DiscriminatedObject? value, Speckle.Newtonsoft.Json.JsonSerializer serializer)
   {
     if (value is null)
     {
@@ -37,7 +37,7 @@ public class DiscriminatedObjectConverter(IServiceProvider serviceProvider) : Js
     Type objectType,
     DiscriminatedObject? existingValue,
     bool hasExistingValue,
-    JsonSerializer serializer
+    Speckle.Newtonsoft.Json.JsonSerializer serializer
   )
   {
     JObject jsonObject = JObject.Load(reader);
@@ -122,9 +122,9 @@ public class AbstractConverter<TReal, TAbstract> : JsonConverter
     JsonReader reader,
     Type objectType,
     object? existingValue,
-    JsonSerializer serializer
+    Speckle.Newtonsoft.Json.JsonSerializer serializer
   ) => serializer.Deserialize<TReal>(reader);
 
-  public override void WriteJson(JsonWriter writer, object? value, JsonSerializer serializer) =>
+  public override void WriteJson(JsonWriter writer, object? value, Speckle.Newtonsoft.Json.JsonSerializer serializer) =>
     serializer.Serialize(writer, value);
 }

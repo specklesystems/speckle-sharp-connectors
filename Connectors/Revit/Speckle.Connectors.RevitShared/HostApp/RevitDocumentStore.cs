@@ -6,9 +6,9 @@ using Autodesk.Revit.UI.Events;
 using Revit.Async;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
+using Speckle.Connectors.DUI.Utils;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Newtonsoft.Json;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
@@ -28,12 +28,12 @@ internal sealed class RevitDocumentStore : DocumentModelStore
   public RevitDocumentStore(
     IRevitIdleManager idleManager,
     RevitContext revitContext,
-    JsonSerializerSettings serializerSettings,
+    IJsonSerializer jsonSerializer,
     DocumentModelStorageSchema documentModelStorageSchema,
     IdStorageSchema idStorageSchema,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
-    : base(serializerSettings, true)
+    : base(jsonSerializer, true)
   {
     _idleManager = idleManager;
     _revitContext = revitContext;

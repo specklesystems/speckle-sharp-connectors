@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Models;
-using Speckle.Newtonsoft.Json;
+using Speckle.Connectors.DUI.Utils;
 using Speckle.Sdk;
 using Speckle.Sdk.Helpers;
 using Speckle.Sdk.Logging;
@@ -19,11 +19,11 @@ public class TeklaDocumentModelStore : DocumentModelStore
   private string ModelPathHash { get; set; }
 
   public TeklaDocumentModelStore(
-    JsonSerializerSettings jsonSerializerSettings,
+    IJsonSerializer jsonSerializer,
     ISpeckleApplication speckleApplication,
     ILogger<TeklaDocumentModelStore> logger
   )
-    : base(jsonSerializerSettings, true)
+    : base(jsonSerializer, true)
   {
     _speckleApplication = speckleApplication;
     _logger = logger;

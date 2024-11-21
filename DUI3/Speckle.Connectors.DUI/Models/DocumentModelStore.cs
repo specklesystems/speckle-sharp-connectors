@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Utils;
-using Speckle.Newtonsoft.Json;
 
 namespace Speckle.Connectors.DUI.Models;
 
@@ -25,18 +24,13 @@ public abstract class DocumentModelStore
     }
   }
 
-  private readonly JsonSerializerSettings _serializerOptions;
+  private readonly IJsonSerializer _serializer;
 
   private readonly bool _writeToFileOnChange;
 
-  /// <summary>
-  /// Base host app state class that controls the storage of the models in the file.
-  /// </summary>
-  /// <param name="serializerOptions">our custom serialiser that should be globally DI'ed in.</param>
-  /// <param name="writeToFileOnChange">Whether to store the models state in the file on any change. Defaults to false out of caution, but it's recommended to set to true, unless severe host app limitations.</param>
-  protected DocumentModelStore(JsonSerializerSettings serializerOptions, bool writeToFileOnChange)
+    protected DocumentModelStore(IJsonSerializer jsonSerializer, bool writeToFileOnChange)
   {
-    _serializerOptions = serializerOptions;
+    _serializer = jsonSerializer;
     _writeToFileOnChange = writeToFileOnChange;
 
     RegisterWriteOnChangeEvent();
@@ -87,16 +81,10 @@ public abstract class DocumentModelStore
   public IEnumerable<ReceiverModelCard> GetReceivers() =>
     Models.Where(model => model.TypeDiscriminator == nameof(ReceiverModelCard)).Cast<ReceiverModelCard>();
 
-  protected string Serialize()
-  {
-    return JsonConvert.SerializeObject(Models, _serializerOptions);
-  }
+  protected string Serialize() => _serializer.Serialize(Models);
 
   // POC: this seemms more like a IModelsDeserializer?, seems disconnected from this class
-  protected ObservableCollection<ModelCard>? Deserialize(string models)
-  {
-    return JsonConvert.DeserializeObject<ObservableCollection<ModelCard>>(models, _serializerOptions);
-  }
+  protected ObservableCollection<ModelCard> Deserialize(string models) => _serializer.Deserialize<ObservableCollection<ModelCard>>(models);
 
   /// <summary>
   /// Implement this method according to the host app's specific ways of storing custom data in its file.
