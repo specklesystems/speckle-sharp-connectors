@@ -218,7 +218,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     // NOTE: Whenever we save data into file this event also trigger changes on its DataStorage.
     // On every add/remove/update model attempt triggers this handler and was causing unnecessary calls on `RunExpirationChecks`
-    if (modifiedElementIds.Count > 0)
+    // Re-check it once we implement Linked Documents
+    if (modifiedElementIds.Count == 1)
     {
       var doc = e.GetDocument();
       if (modifiedElementIds.All(el => doc.GetElement(el) is DataStorage))
