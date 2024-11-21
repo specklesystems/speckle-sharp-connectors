@@ -22,7 +22,11 @@ public class DiscriminatedObjectConverter(IServiceProvider serviceProvider) : Js
       NullValueHandling = NullValueHandling.Ignore
     };
 
-  public override void WriteJson(JsonWriter writer, DiscriminatedObject? value, Speckle.Newtonsoft.Json.JsonSerializer serializer)
+  public override void WriteJson(
+    JsonWriter writer,
+    DiscriminatedObject? value,
+    Speckle.Newtonsoft.Json.JsonSerializer serializer
+  )
   {
     if (value is null)
     {

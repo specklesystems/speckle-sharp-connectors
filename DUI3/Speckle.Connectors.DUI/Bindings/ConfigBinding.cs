@@ -21,11 +21,7 @@ public class ConfigBinding : IBinding
   private readonly ISpeckleApplication _speckleApplication;
   private readonly IJsonSerializer _serializer;
 
-  public ConfigBinding(
-    IJsonSerializer serializer,
-    ISpeckleApplication speckleApplication,
-    IBrowserBridge bridge
-  )
+  public ConfigBinding(IJsonSerializer serializer, ISpeckleApplication speckleApplication, IBrowserBridge bridge)
   {
     Parent = bridge;
     ConfigStorage = new SQLiteTransport(scope: "DUI3Config"); // POC: maybe inject? (if we ever want to use a different storage for configs later down the line)
@@ -83,9 +79,7 @@ public class ConfigBinding : IBinding
 
   public void SetUserSelectedAccountId(string userSelectedAccountId)
   {
-    var str = _serializer.Serialize(
-      new AccountsConfig() { UserSelectedAccountId = userSelectedAccountId }
-    );
+    var str = _serializer.Serialize(new AccountsConfig() { UserSelectedAccountId = userSelectedAccountId });
     ConfigStorage.UpdateObject("accounts", str);
   }
 

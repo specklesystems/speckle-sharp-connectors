@@ -28,7 +28,7 @@ public abstract class DocumentModelStore
 
   private readonly bool _writeToFileOnChange;
 
-    protected DocumentModelStore(IJsonSerializer jsonSerializer, bool writeToFileOnChange)
+  protected DocumentModelStore(IJsonSerializer jsonSerializer, bool writeToFileOnChange)
   {
     _serializer = jsonSerializer;
     _writeToFileOnChange = writeToFileOnChange;
@@ -84,7 +84,8 @@ public abstract class DocumentModelStore
   protected string Serialize() => _serializer.Serialize(Models);
 
   // POC: this seemms more like a IModelsDeserializer?, seems disconnected from this class
-  protected ObservableCollection<ModelCard> Deserialize(string models) => _serializer.Deserialize<ObservableCollection<ModelCard>>(models);
+  protected ObservableCollection<ModelCard> Deserialize(string models) =>
+    _serializer.Deserialize<ObservableCollection<ModelCard>>(models);
 
   /// <summary>
   /// Implement this method according to the host app's specific ways of storing custom data in its file.
