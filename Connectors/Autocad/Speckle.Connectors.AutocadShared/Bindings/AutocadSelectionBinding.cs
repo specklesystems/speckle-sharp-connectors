@@ -3,6 +3,7 @@ using Autodesk.AutoCAD.EditorInput;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Threading;
 
 namespace Speckle.Connectors.Autocad.Bindings;
 
@@ -10,16 +11,18 @@ public class AutocadSelectionBinding : ISelectionBinding
 {
   private const string SELECTION_EVENT = "setSelection";
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly IMainThreadContext _mainThreadContext;
   private readonly HashSet<Document> _visitedDocuments = new();
 
   public string Name => "selectionBinding";
 
   public IBrowserBridge Parent { get; }
 
-  public AutocadSelectionBinding(IBrowserBridge parent)
+  public AutocadSelectionBinding(IBrowserBridge parent, IMainThreadContext mainThreadContext)
   {
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
     Parent = parent;
+    _mainThreadContext = mainThreadContext;
 
     // POC: Use here Context for doc. In converters it's OK but we are still lacking to use context into bindings.
     // It is with the case of if binding created with already a document
@@ -42,7 +45,7 @@ public class AutocadSelectionBinding : ISelectionBinding
     {
       document.ImpliedSelectionChanged += (_, _) =>
         _topLevelExceptionHandler.FireAndForget(
-          async () => await Parent.RunOnMainThreadAsync(OnSelectionChanged).ConfigureAwait(false)
+          async () => await _mainThreadContext.RunOnMainThreadAsync(OnSelectionChanged).ConfigureAwait(false)
         );
 
       _visitedDocuments.Add(document);

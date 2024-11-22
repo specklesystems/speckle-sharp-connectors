@@ -29,21 +29,6 @@ public interface IBrowserBridge
   /// <returns></returns>
   public void RunMethod(string methodName, string requestId, string args);
 
-  /// <summary>
-  /// Posts an <paramref name="action"/> onto the main thread
-  /// Some applications might need to run some operations on main thread as deferred actions.
-  /// </summary>
-  /// <returns>An awaitable <see cref="Task{T}"/></returns>
-  /// <param name="action">Action to run on the main thread</param>
-  public Task<T> RunOnMainThreadAsync<T>(Func<Task<T>> action);
-
-  /// <summary>
-  /// Posts an <paramref name="action"/> onto the main thread
-  /// Some applications might need to run some operations on main thread as deferred actions.
-  /// </summary>
-  /// <returns>An awaitable <see cref="Task{T}"/></returns>
-  /// <param name="action">Action to run on the main thread</param>
-  public Task RunOnMainThreadAsync(Func<Task> action);
 
   /// <param name="eventName"></param>
   /// <exception cref="InvalidOperationException">Bridge was not initialized with a binding</exception>

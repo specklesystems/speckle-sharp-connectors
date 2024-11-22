@@ -8,6 +8,7 @@ using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
+using Speckle.Connectors.DUI.Threading;
 using Speckle.Converters.Autocad;
 using Speckle.Converters.Civil3dShared;
 using Speckle.Converters.Common;
@@ -32,7 +33,7 @@ public sealed class Civil3dSendBinding : AutocadSendBaseBinding
     ILogger<AutocadSendBinding> logger,
     ICivil3dConversionSettingsFactory civil3dConversionSettingsFactory,
     IAutocadConversionSettingsFactory autocadConversionSettingsFactory,
-    ISpeckleApplication speckleApplication
+    ISpeckleApplication speckleApplication, IMainThreadContext mainThreadContext
   )
     : base(
       store,
@@ -44,7 +45,7 @@ public sealed class Civil3dSendBinding : AutocadSendBaseBinding
       sendConversionCache,
       operationProgressManager,
       logger,
-      speckleApplication
+      speckleApplication, mainThreadContext
     )
   {
     _civil3dConversionSettingsFactory = civil3dConversionSettingsFactory;

@@ -5,6 +5,7 @@ using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
+using Speckle.Connectors.DUI.Threading;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Credentials;
@@ -19,6 +20,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
 
   private readonly DocumentModelStore _store;
   private readonly ISpeckleApplication _speckleApplication;
+  private readonly IMainThreadContext _mainThreadContext;
   private readonly ILogger<AutocadBasicConnectorBinding> _logger;
 
   public BasicConnectorBindingCommands Commands { get; }
@@ -28,8 +30,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
     IBrowserBridge parent,
     IAccountManager accountManager,
     ISpeckleApplication speckleApplication,
-    ILogger<AutocadBasicConnectorBinding> logger
-  )
+    ILogger<AutocadBasicConnectorBinding> logger, IMainThreadContext mainThreadContext)
   {
     _store = store;
     Parent = parent;
@@ -42,6 +43,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
         await Commands.NotifyDocumentChanged().ConfigureAwait(false);
       });
     _logger = logger;
+    _mainThreadContext = mainThreadContext;
   }
 
   public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
@@ -129,12 +131,12 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
   {
     var doc = Application.DocumentManager.MdiActiveDocument;
 
-    await Parent
+    await _mainThreadContext
       .RunOnMainThreadAsync(async () =>
       {
         try
         {
-          doc.Editor.SetImpliedSelection(Array.Empty<ObjectId>()); // Deselects
+          doc.Editor.SetImpliedSelection([]); // Deselects
           try
           {
             doc.Editor.SetImpliedSelection(objectIds);

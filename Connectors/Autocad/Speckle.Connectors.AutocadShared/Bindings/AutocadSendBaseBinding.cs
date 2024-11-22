@@ -16,6 +16,7 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
+using Speckle.Connectors.DUI.Threading;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
@@ -38,6 +39,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   private readonly ILogger<AutocadSendBinding> _logger;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly ISpeckleApplication _speckleApplication;
+  private readonly IMainThreadContext _mainThreadContext;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -57,8 +59,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
     ILogger<AutocadSendBinding> logger,
-    ISpeckleApplication speckleApplication
-  )
+    ISpeckleApplication speckleApplication, IMainThreadContext mainThreadContext)
   {
     _store = store;
     _idleManager = idleManager;
@@ -69,6 +70,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     _operationProgressManager = operationProgressManager;
     _logger = logger;
     _speckleApplication = speckleApplication;
+    _mainThreadContext = mainThreadContext;
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
@@ -144,7 +146,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   public List<ICardSetting> GetSendSettings() => [];
 
   public async Task Send(string modelCardId) =>
-    await Parent
+    await _mainThreadContext
       .RunOnMainThreadAsync(async () => await SendInternal(modelCardId).ConfigureAwait(false))
       .ConfigureAwait(false);
 

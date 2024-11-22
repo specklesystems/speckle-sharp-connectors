@@ -7,6 +7,7 @@ using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
+using Speckle.Connectors.DUI.Threading;
 using Speckle.Converters.Autocad;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
@@ -28,7 +29,7 @@ public sealed class AutocadSendBinding : AutocadSendBaseBinding
     IOperationProgressManager operationProgressManager,
     ILogger<AutocadSendBinding> logger,
     IAutocadConversionSettingsFactory autocadConversionSettingsFactory,
-    ISpeckleApplication speckleApplication
+    ISpeckleApplication speckleApplication, IMainThreadContext mainThreadContext
   )
     : base(
       store,
@@ -40,7 +41,7 @@ public sealed class AutocadSendBinding : AutocadSendBaseBinding
       sendConversionCache,
       operationProgressManager,
       logger,
-      speckleApplication
+      speckleApplication, mainThreadContext
     )
   {
     _autocadConversionSettingsFactory = autocadConversionSettingsFactory;
