@@ -22,7 +22,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\BaseCurveExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\DisplayValueExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\BuiltElements\CivilEntityToSpeckleTopLevelConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\CivilEntityToSpeckleTopLevelConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\ClassPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\GeneralPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\ExtensionDictionaryExtractor.cs" />

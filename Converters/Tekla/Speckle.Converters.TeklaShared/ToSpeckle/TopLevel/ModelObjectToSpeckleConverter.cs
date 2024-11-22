@@ -40,18 +40,19 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
       ["units"] = _settingsStore.Current.SpeckleUnits,
     };
 
+    // get report properties
+    var reportProperties = _reportPropertyExtractor.GetReportProperties(modelObject);
+    if (reportProperties.Count > 0)
+    {
+      var propertiesDict = new Dictionary<string, object?> { { "report", reportProperties } };
+      result["properties"] = propertiesDict;
+    }
+
     // get properties
     var properties = _propertyExtractor.GetProperties(modelObject);
     foreach (var prop in properties)
     {
       result[prop.Key] = prop.Value;
-    }
-
-    // get report properties
-    var reportProperties = GetObjectReportProperties(modelObject);
-    if (reportProperties.Count > 0)
-    {
-      result["properties"] = reportProperties;
     }
 
     // get display value
@@ -65,23 +66,6 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
         displayValueObject.applicationId = modelObject.GetSpeckleApplicationId();
       }
       result["displayValue"] = displayValue;
-    }
-
-    // get report properties
-    Dictionary<string, object?> GetObjectReportProperties(TSM.ModelObject modelObject)
-    {
-      Dictionary<string, object?> properties = new();
-
-      // get report properties
-      var reportProperties = _reportPropertyExtractor.GetReportProperties(modelObject);
-      if (reportProperties.Count > 0)
-      {
-        properties["report"] = reportProperties;
-      }
-
-      // POC: might add user defined properties here
-
-      return properties;
     }
 
     // get children
