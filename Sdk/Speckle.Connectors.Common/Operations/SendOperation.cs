@@ -17,7 +17,8 @@ public sealed class SendOperation<T>(
   ISendProgress sendProgress,
   IOperations operations,
   IClientFactory clientFactory,
-  ISdkActivityFactory activityFactory)
+  ISdkActivityFactory activityFactory
+)
 {
   public async Task<SendOperationResult> Execute(
     IReadOnlyList<T> objects,
@@ -26,9 +27,7 @@ public sealed class SendOperation<T>(
     CancellationToken ct = default
   )
   {
-    var buildResult = await rootObjectBuilder
-      .Build(objects, sendInfo, onOperationProgressed, ct)
-      .ConfigureAwait(false);
+    var buildResult = await rootObjectBuilder.Build(objects, sendInfo, onOperationProgressed, ct).ConfigureAwait(false);
 
     // POC: Jonathon asks on behalf of willow twin - let's explore how this can work
     // buildResult.RootObject["@report"] = new Report { ConversionResults = buildResult.ConversionResults };
@@ -36,14 +35,13 @@ public sealed class SendOperation<T>(
     buildResult.RootObject["version"] = 3;
     // base object handler is separated, so we can do some testing on non-production databases
     // exact interface may want to be tweaked when we implement this
-    var (rootObjId, convertedReferences) = await 
-      Send(buildResult.RootObject, sendInfo, onOperationProgressed, ct)
+    var (rootObjId, convertedReferences) = await Send(buildResult.RootObject, sendInfo, onOperationProgressed, ct)
       .ConfigureAwait(false);
 
     return new(rootObjId, convertedReferences, buildResult.ConversionResults);
   }
-  
-   public async Task<(string rootObjId, IReadOnlyDictionary<string, ObjectReference> convertedReferences)> Send(
+
+  public async Task<(string rootObjId, IReadOnlyDictionary<string, ObjectReference> convertedReferences)> Send(
     Base commitObject,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,

@@ -8,9 +8,9 @@ public sealed class ReceiveProgress(IProgressDisplayManager progressDisplayManag
 {
   private double? _previousPercentage;
   private string? _previousSpeed;
-  
+
   public void Begin() => progressDisplayManager.Begin();
-  
+
   public void Report(IProgress<CardProgress> onOperationProgressed, ProgressArgs args)
   {
     {

@@ -7,7 +7,7 @@ namespace Speckle.Connectors.Common.Operations;
 public class SendProgress(IProgressDisplayManager progressDisplayManager) : ISendProgress
 {
   private string? _previousSpeed;
-  
+
   public void Begin() => progressDisplayManager.Begin();
 
   public void Report(IProgress<CardProgress> onOperationProgressed, ProgressArgs args)

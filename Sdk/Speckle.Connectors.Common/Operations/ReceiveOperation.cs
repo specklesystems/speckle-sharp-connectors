@@ -14,7 +14,8 @@ public sealed class ReceiveOperation(
   IReceiveProgress receiveProgress,
   ISdkActivityFactory activityFactory,
   IOperations operations,
-  IClientFactory clientFactory)
+  IClientFactory clientFactory
+)
 {
   public async Task<HostObjectBuilderResult> Execute(
     ReceiveInfo receiveInfo,
@@ -40,9 +41,8 @@ public sealed class ReceiveOperation(
         receiveInfo.ProjectId,
         version.referencedObject,
         account.token,
-        onProgressAction: new PassthroughProgress(args => 
-          receiveProgress.Report(onOperationProgressed, args)),
-  cancellationToken: cancellationToken
+        onProgressAction: new PassthroughProgress(args => receiveProgress.Report(onOperationProgressed, args)),
+        cancellationToken: cancellationToken
       )
       .ConfigureAwait(false);
 
