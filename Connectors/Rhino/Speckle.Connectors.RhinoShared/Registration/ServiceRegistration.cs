@@ -13,6 +13,7 @@ using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
+using Speckle.Connectors.DUI.Threading;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Connectors.Rhino.Bindings;
 using Speckle.Connectors.Rhino.Filters;
@@ -33,7 +34,7 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<Command>(SpeckleConnectorsRhinoCommand.Instance);
 
     serviceCollection.AddConnectorUtils();
-    serviceCollection.AddDUI();
+    serviceCollection.AddDUI<MainThreadContext>();
     serviceCollection.AddDUIView();
 
     // POC: Overwriting the SyncToMainThread to SyncToCurrentThread for Rhino!

@@ -45,7 +45,7 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<IBinding, SelectionBinding>();
     serviceCollection.AddSingleton<IBinding, RevitSendBinding>();
     serviceCollection.AddSingleton<IBinding, RevitReceiveBinding>();
-    serviceCollection.AddSingleton<IRevitIdleManager, RevitIdleManager>();
+    serviceCollection.AddSingleton<IAppIdleManager, RevitIdleManager>();
 
     serviceCollection.RegisterTopLevelExceptionHandler();
 

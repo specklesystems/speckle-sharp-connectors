@@ -16,7 +16,6 @@ using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
-using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.RevitShared.Operations.Send.Filters;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
@@ -28,7 +27,7 @@ namespace Speckle.Connectors.Revit.Bindings;
 
 internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 {
-  private readonly IRevitIdleManager _idleManager;
+  private readonly IAppIdleManager _idleManager;
   private readonly APIContext _apiContext;
   private readonly CancellationManager _cancellationManager;
   private readonly IServiceProvider _serviceProvider;
@@ -49,7 +48,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private ConcurrentDictionary<ElementId, byte> ChangedObjectIds { get; set; } = new();
 
   public RevitSendBinding(
-    IRevitIdleManager idleManager,
+    IAppIdleManager idleManager,
     RevitContext revitContext,
     APIContext apiContext,
     DocumentModelStore store,
@@ -82,11 +81,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     Commands = new SendBindingUICommands(bridge);
     // TODO expiry events
     // TODO filters need refresh events
-    _idleManager.RunAsync(() =>
-    {
+
       revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
         topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
-    });
     Store.DocumentChanged += (_, _) =>
       topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged().ConfigureAwait(false));
   }

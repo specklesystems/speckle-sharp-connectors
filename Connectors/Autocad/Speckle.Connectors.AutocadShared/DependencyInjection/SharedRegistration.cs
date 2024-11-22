@@ -15,6 +15,7 @@ using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
+using Speckle.Connectors.DUI.Threading;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Sdk.Models.GraphTraversal;
 
@@ -25,7 +26,7 @@ public static class SharedRegistration
   public static void AddAutocadBase(this IServiceCollection serviceCollection)
   {
     serviceCollection.AddConnectorUtils();
-    serviceCollection.AddDUI();
+    serviceCollection.AddDUI<MainThreadContext>();
     serviceCollection.AddDUIView();
 
     // Register other connector specific types

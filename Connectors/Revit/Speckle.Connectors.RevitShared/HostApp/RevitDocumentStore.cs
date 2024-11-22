@@ -6,7 +6,6 @@ using Autodesk.Revit.UI.Events;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
-using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
@@ -20,12 +19,12 @@ internal sealed class RevitDocumentStore : DocumentModelStore
   private static readonly Guid s_revitDocumentStoreId = new("D35B3695-EDC9-4E15-B62A-D3FC2CB83FA3");
 
   private readonly RevitContext _revitContext;
-  private readonly IRevitIdleManager _idleManager;
+  private readonly IAppIdleManager _idleManager;
   private readonly DocumentModelStorageSchema _documentModelStorageSchema;
   private readonly IdStorageSchema _idStorageSchema;
 
   public RevitDocumentStore(
-    IRevitIdleManager idleManager,
+    IAppIdleManager idleManager,
     RevitContext revitContext,
     IJsonSerializer jsonSerializer,
     DocumentModelStorageSchema documentModelStorageSchema,
@@ -39,8 +38,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     _documentModelStorageSchema = documentModelStorageSchema;
     _idStorageSchema = idStorageSchema;
 
-    _idleManager.RunAsync(() =>
-    {
+
       UIApplication uiApplication = _revitContext.UIApplication.NotNull();
 
       uiApplication.ViewActivated += (s, e) => topLevelExceptionHandler.CatchUnhandled(() => OnViewActivated(s, e));
@@ -50,7 +48,6 @@ internal sealed class RevitDocumentStore : DocumentModelStore
 
       uiApplication.Application.DocumentOpened += (_, _) =>
         topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
-    });
 
     Models.CollectionChanged += (_, _) => topLevelExceptionHandler.CatchUnhandled(WriteToFile);
 

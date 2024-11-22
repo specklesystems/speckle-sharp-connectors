@@ -1,10 +1,8 @@
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
-using Revit.Async;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.DUI.Threading;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.RevitShared.Operations.Send.Filters;
@@ -154,49 +152,37 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
       return;
     }
 
-    await HighlightObjectsOnView(elementIds).ConfigureAwait(false);
+    HighlightObjectsOnView(elementIds);
   }
 
   /// <summary>
   /// Highlights the objects from the given ids.
   /// </summary>
   /// <param name="objectIds"> UniqueId's of the DB.Elements.</param>
-  public async Task HighlightObjects(IReadOnlyList<string> objectIds)
+  public Task HighlightObjects(IReadOnlyList<string> objectIds)
   {
     var activeUIDoc =
       _revitContext.UIApplication?.ActiveUIDocument
       ?? throw new SpeckleException("Unable to retrieve active UI document");
 
-    await HighlightObjectsOnView(
-        objectIds
-          .Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid))
-          .Where(el => el is not null)
-          .Cast<ElementId>()
-          .ToList()
-      )
-      .ConfigureAwait(false);
-    ;
+    HighlightObjectsOnView(
+      objectIds
+        .Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid))
+        .Where(el => el is not null)
+        .Cast<ElementId>()
+        .ToList());
+    return Task.CompletedTask;
   }
 
-  private async Task HighlightObjectsOnView(List<ElementId> objectIds)
+  private void HighlightObjectsOnView(List<ElementId> objectIds)
   {
     // POC: don't know if we can rely on storing the ActiveUIDocument, hence getting it each time
     var activeUIDoc =
       _revitContext.UIApplication?.ActiveUIDocument
       ?? throw new SpeckleException("Unable to retrieve active UI document");
 
-    if (!MainThreadContext.IsMainThread)
-    {
-      Console.WriteLine("Running async on a non-main thread!");
-    }
-    // UiDocument operations should be wrapped into RevitTask, otherwise doesn't work on other tasks.
-    await RevitTask
-      .RunAsync(() =>
-      {
         activeUIDoc.Selection.SetElementIds(objectIds);
         activeUIDoc.ShowElements(objectIds);
-      })
-      .ConfigureAwait(false);
     ;
   }
 }

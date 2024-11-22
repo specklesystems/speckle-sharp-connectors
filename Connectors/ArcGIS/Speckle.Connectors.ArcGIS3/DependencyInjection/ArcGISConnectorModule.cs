@@ -14,6 +14,7 @@ using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
+using Speckle.Connectors.DUI.Threading;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Converters.Common;
 using Speckle.Sdk.Models.GraphTraversal;
@@ -28,7 +29,7 @@ public static class ArcGISConnectorModule
   public static void AddArcGIS(this IServiceCollection serviceCollection)
   {
     serviceCollection.AddConnectorUtils();
-    serviceCollection.AddDUI();
+    serviceCollection.AddDUI<MainThreadContext>();
     serviceCollection.AddDUIView();
 
     serviceCollection.AddSingleton<DocumentModelStore, ArcGISDocumentStore>();

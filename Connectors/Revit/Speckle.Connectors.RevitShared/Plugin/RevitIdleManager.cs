@@ -1,27 +1,13 @@
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
-using Revit.Async;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Threading;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
-public class RevitMainThreadContext : MainThreadContext
-{
-  public override void RunContext(Action action) => 
-    RevitTask.RunAsync(action);
 
-  public override Task<T> RunContext<T>(Func<Task<T>> action) =>
-    RevitTask.RunAsync(action);
-}
-public interface IRevitIdleManager : IAppIdleManager
-{
-  public void RunAsync(Action action);
-}
-
-public sealed class RevitIdleManager : AppIdleManager, IRevitIdleManager
+public sealed class RevitIdleManager : AppIdleManager
 {
   private readonly UIApplication _uiApplication;
   private readonly IIdleCallManager _idleCallManager;
@@ -52,17 +38,4 @@ public sealed class RevitIdleManager : AppIdleManager, IRevitIdleManager
 
   private void RevitAppOnIdle(object? sender, IdlingEventArgs e) =>
     _idleCallManager.AppOnIdle(() => OnIdle -= RevitAppOnIdle);
-
-  public void RunAsync(Action action)
-  {
-    if (!MainThreadContext.IsMainThread)
-    {
-      Console.WriteLine("Running async on a non-main thread!");
-    }
-#if REVIT2025
-    global::Revit.Async.RevitTask.RunAsync(action);
-#else
-    action();
-#endif
-  }
 }

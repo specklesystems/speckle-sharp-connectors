@@ -14,6 +14,7 @@ using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
+using Speckle.Connectors.DUI.Threading;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Converter.Tekla2024;
 using Speckle.Converters.Common;
@@ -32,7 +33,7 @@ public static class ServiceRegistration
     services.AddSingleton<IBrowserBridge, BrowserBridge>();
 
     services.AddConnectorUtils();
-    services.AddDUI();
+    services.AddDUI<MainThreadContext>();
     services.AddDUIView();
 
     services.AddSingleton<DocumentModelStore, TeklaDocumentModelStore>();
