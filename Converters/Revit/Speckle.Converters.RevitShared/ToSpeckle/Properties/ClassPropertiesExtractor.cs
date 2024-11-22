@@ -10,6 +10,7 @@ public class ClassPropertiesExtractor
   private readonly ITypedConverter<DB.ModelCurveArray, SOG.Polycurve> _modelCurveArrayConverter;
   private readonly ITypedConverter<DB.ModelCurveArrArray, SOG.Polycurve[]> _modelCurveArrArrayConverter;
   private readonly ITypedConverter<IList<DB.BoundarySegment>, SOG.Polycurve> _boundarySegmentConverter;
+  private readonly ITypedConverter<DB.Curve, Speckle.Objects.ICurve> _curveConverter;
 
   // POC: for now, we are still converting and attaching levels to every single object
   // This should probably be changed to level proxies
@@ -21,7 +22,8 @@ public class ClassPropertiesExtractor
     ITypedConverter<DB.ModelCurveArray, SOG.Polycurve> modelCurveArrayConverter,
     ITypedConverter<DB.ModelCurveArrArray, SOG.Polycurve[]> modelCurveArrArrayConverter,
     ITypedConverter<IList<DB.BoundarySegment>, SOG.Polycurve> boundarySegmentConverter,
-    ITypedConverter<DB.Level, Dictionary<string, object>> levelConverter
+    ITypedConverter<DB.Level, Dictionary<string, object>> levelConverter,
+    ITypedConverter<DB.Curve, Speckle.Objects.ICurve> curveConverter
   )
   {
     _parameterValueExtractor = parameterValueExtractor;
@@ -30,6 +32,7 @@ public class ClassPropertiesExtractor
     _modelCurveArrArrayConverter = modelCurveArrArrayConverter;
     _boundarySegmentConverter = boundarySegmentConverter;
     _levelConverter = levelConverter;
+    _curveConverter = curveConverter;
   }
 
   public Dictionary<string, object?>? GetClassProperties(DB.Element element)
@@ -56,6 +59,9 @@ public class ClassPropertiesExtractor
 
       case DBA.Room room:
         return ExtractRoomProperties(room);
+
+      case DB.Grid grid:
+        return ExtractGridProperties(grid);
 
       default:
         return null;
@@ -202,6 +208,11 @@ public class ClassPropertiesExtractor
       };
 
     return roomProperties;
+  }
+
+  private Dictionary<string, object?> ExtractGridProperties(DB.Grid grid)
+  {
+    return new() { ["curve"] = _curveConverter.Convert(grid.Curve) };
   }
 
   // gets all sketch profile curves
