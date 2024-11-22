@@ -4,6 +4,7 @@ using Revit.Async;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
+using Speckle.Connectors.DUI.Threading;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.RevitShared.Operations.Send.Filters;
@@ -184,6 +185,10 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
       _revitContext.UIApplication?.ActiveUIDocument
       ?? throw new SpeckleException("Unable to retrieve active UI document");
 
+    if (!MainThreadContext.IsMainThread)
+    {
+      Console.WriteLine("Running async on a non-main thread!");
+    }
     // UiDocument operations should be wrapped into RevitTask, otherwise doesn't work on other tasks.
     await RevitTask
       .RunAsync(() =>

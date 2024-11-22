@@ -1,6 +1,7 @@
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Threading;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk.Common;
 
@@ -45,6 +46,10 @@ public sealed class RevitIdleManager : AppIdleManager, IRevitIdleManager
 
   public void RunAsync(Action action)
   {
+    if (!MainThreadContext.IsMainThread)
+    {
+      Console.WriteLine("Running async on a non-main thread!");
+    }
 #if REVIT2025
     global::Revit.Async.RevitTask.RunAsync(action);
 #else

@@ -6,6 +6,7 @@ using Autodesk.Revit.UI.Events;
 using Revit.Async;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
+using Speckle.Connectors.DUI.Threading;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.RevitShared.Helpers;
@@ -97,8 +98,16 @@ internal sealed class RevitDocumentStore : DocumentModelStore
       return;
     }
 
+    if (!MainThreadContext.IsMainThread)
+    {
+      Console.WriteLine("Running async on a non-main thread!");
+    }
     RevitTask.RunAsync(() =>
     {
+      if (!MainThreadContext.IsMainThread)
+      {
+        Console.WriteLine("Running async on a non-main thread!");
+      }
       using Transaction t = new(doc, "Speckle Write State");
       t.Start();
       using DataStorage ds = GetSettingsDataStorage(doc) ?? DataStorage.Create(doc);

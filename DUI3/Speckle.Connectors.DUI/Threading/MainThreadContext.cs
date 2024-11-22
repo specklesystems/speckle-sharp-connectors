@@ -9,10 +9,16 @@ public class MainThreadContext: IMainThreadContext
 {
   private readonly SynchronizationContext _mainThreadContext;
 
+  // Do this when you start your application
+  private static int s_mainThreadId;
+
   public MainThreadContext( )
   {
     _mainThreadContext = SynchronizationContext.Current.NotNull("No UI thread to capture?");
+    s_mainThreadId = Environment.CurrentManagedThreadId;
   }
+  
+  public static bool IsMainThread => Environment.CurrentManagedThreadId == s_mainThreadId;
   
   public void RunOnMainThread(Action action) =>
     _mainThreadContext.Post(
