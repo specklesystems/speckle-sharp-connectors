@@ -6,12 +6,12 @@ using Speckle.Sdk;
 
 namespace Speckle.Connector.Navisworks.Bindings;
 
-public class BasicConnectorBinding : IBasicConnectorBinding
+public class NavisworksBasicConnectorBinding : IBasicConnectorBinding
 {
   public string Name => "baseBinding";
   public IBrowserBridge Parent { get; }
 
-  public BasicConnectorBinding(IBrowserBridge parent)
+  public NavisworksBasicConnectorBinding(IBrowserBridge parent)
   {
     Parent = parent;
   }
@@ -22,15 +22,14 @@ public class BasicConnectorBinding : IBasicConnectorBinding
 
   public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
 
-  public DocumentInfo? GetDocumentInfo()
-  {
-    if (NavisworksApp.ActiveDocument is null)
-    {
-      return null;
-    }
-
-    return new DocumentInfo(NavisworksApp.ActiveDocument.Title, "", "3");
-  }
+  public DocumentInfo? GetDocumentInfo() =>
+    NavisworksApp.ActiveDocument is null || NavisworksApp.ActiveDocument.Models.Count == 0
+      ? null
+      : new DocumentInfo(
+        NavisworksApp.ActiveDocument.CurrentFileName,
+        NavisworksApp.ActiveDocument.Title,
+        NavisworksApp.ActiveDocument.GetHashCode().ToString()
+      );
 
   public DocumentModelStore GetDocumentState() => _store;
 
@@ -55,7 +54,11 @@ public class BasicConnectorBinding : IBasicConnectorBinding
   private readonly ISpeckleApplication _speckleApplication;
   private readonly DocumentModelStore _store;
 
-  public BasicConnectorBinding(IBrowserBridge parent, ISpeckleApplication speckleApplication, DocumentModelStore store)
+  public NavisworksBasicConnectorBinding(
+    IBrowserBridge parent,
+    ISpeckleApplication speckleApplication,
+    DocumentModelStore store
+  )
   {
     Parent = parent;
     Commands = new BasicConnectorBindingCommands(parent);

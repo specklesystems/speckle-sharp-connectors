@@ -12,12 +12,13 @@
     <Folder Include="$(MSBuildThisFileDirectory)Operations\" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)Bindings\BasicConnectorBinding.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\NavisworksBasicConnectorBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\NavisworksSelectionBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\NavisworksSendBinding.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\ServiceRegistration.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\NavisworksServiceRegistration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Filters\NavisworksSelectionFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsings.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksDocumentEvents.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksDocumentStore.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\AppUtils.cs" />

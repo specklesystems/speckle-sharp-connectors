@@ -13,7 +13,7 @@ using Speckle.Connectors.DUI.WebView;
 
 namespace Speckle.Connector.Navisworks.DependencyInjection;
 
-public static class ServiceRegistration
+public static class NavisworksServiceRegistration
 {
   public static void AddNavisworks(this IServiceCollection serviceCollection)
   {
@@ -28,6 +28,7 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<IAppIdleManager, NavisworksIdleManager>();
 
     serviceCollection.AddSingleton<DocumentModelStore, NavisworksDocumentStore>();
+    serviceCollection.AddSingleton<NavisworksDocumentEvents>();
 
     // Register bindings
     serviceCollection.AddSingleton<IBinding, TestBinding>();
@@ -38,7 +39,7 @@ public static class ServiceRegistration
 
     // Register Navisworks specific binding
     serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
-    serviceCollection.AddSingleton<IBasicConnectorBinding, BasicConnectorBinding>();
+    serviceCollection.AddSingleton<IBasicConnectorBinding, NavisworksBasicConnectorBinding>();
 
     serviceCollection.AddScoped<ISendFilter, NavisworksSelectionFilter>();
 
