@@ -11,9 +11,17 @@ public class NavisworksBasicConnectorBinding : IBasicConnectorBinding
   public string Name => "baseBinding";
   public IBrowserBridge Parent { get; }
 
-  public NavisworksBasicConnectorBinding(IBrowserBridge parent)
+  public NavisworksBasicConnectorBinding(
+    IBrowserBridge parent,
+    BasicConnectorBindingCommands commands,
+    ISpeckleApplication speckleApplication,
+    DocumentModelStore store
+  )
   {
     Parent = parent;
+    Commands = commands;
+    _speckleApplication = speckleApplication;
+    _store = store;
   }
 
   public string GetSourceApplicationName() => _speckleApplication.Slug;
@@ -39,30 +47,12 @@ public class NavisworksBasicConnectorBinding : IBasicConnectorBinding
 
   public void RemoveModel(ModelCard model) => _store.RemoveModel(model);
 
-  public Task HighlightModel(string modelCardId)
-  {
-    return Task.CompletedTask;
-  }
+  public Task HighlightModel(string modelCardId) => Task.CompletedTask;
 
-  public Task HighlightObjects(IReadOnlyList<string> objectIds)
-  {
-    return Task.CompletedTask;
-  }
+  public Task HighlightObjects(IReadOnlyList<string> objectIds) => Task.CompletedTask;
 
   public BasicConnectorBindingCommands Commands { get; }
 
   private readonly ISpeckleApplication _speckleApplication;
   private readonly DocumentModelStore _store;
-
-  public NavisworksBasicConnectorBinding(
-    IBrowserBridge parent,
-    ISpeckleApplication speckleApplication,
-    DocumentModelStore store
-  )
-  {
-    Parent = parent;
-    Commands = new BasicConnectorBindingCommands(parent);
-    _speckleApplication = speckleApplication;
-    _store = store;
-  }
 }
