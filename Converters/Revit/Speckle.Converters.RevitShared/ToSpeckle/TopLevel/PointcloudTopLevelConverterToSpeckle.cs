@@ -46,6 +46,8 @@ public sealed class PointcloudTopLevelConverterToSpeckle : IToSpeckleTopLevelCon
         bbox = _boundingBoxConverter.Convert(boundingBox)
       };
 
+      specklePointCloud["category"] = target.Category?.Name;
+
       return specklePointCloud;
     }
   }

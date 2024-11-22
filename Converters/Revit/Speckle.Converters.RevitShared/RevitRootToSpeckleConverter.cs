@@ -53,12 +53,8 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
     result["elementId"] = element.Id.ToString()!;
 
     // POC DirectShapes have RevitCategory enum as the type or the category property, DS category property is already set in the converter
-    // POC: we are setting categories in revitelementtoplevelconverter, need to validate if they apply to grids, model curves, and pointclouds
-    // trying to set the category as a string will throw
-    // the category should be moved to be set in each converter instead of the root to speckle converter
     if (target is not DB.DirectShape)
     {
-      result["category"] = element.Category?.Name;
       result["builtinCategory"] = element.Category?.GetBuiltInCategory().ToString();
     }
 
