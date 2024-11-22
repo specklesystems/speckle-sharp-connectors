@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Serialisation;
 
 namespace Speckle.Connectors.Common.Caching;
 
@@ -12,7 +13,7 @@ namespace Speckle.Connectors.Common.Caching;
 /// </summary>
 public interface ISendConversionCache
 {
-  void StoreSendResult(string projectId, IReadOnlyDictionary<string, ObjectReference> convertedReferences);
+  void StoreSendResult(string projectId, IReadOnlyDictionary<Id, ObjectReference> convertedReferences);
 
   /// <summary>
   /// <para>Call this method whenever you need to invalidate a set of objects that have changed in the host app.</para>

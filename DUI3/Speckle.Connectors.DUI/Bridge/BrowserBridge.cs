@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Bindings;
+using Speckle.Connectors.DUI.Utils;
 using Speckle.Newtonsoft.Json;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models.Extensions;
@@ -24,12 +25,12 @@ public sealed class BrowserBridge : IBrowserBridge
   /// e.g., `receiveBindings` should be available as `window.receiveBindings`.
   /// </summary>
 
-  private readonly JsonSerializerSettings _serializerOptions;
   private readonly ConcurrentDictionary<string, string?> _resultsStore = new();
   private readonly SynchronizationContext _mainThreadContext;
   public ITopLevelExceptionHandler TopLevelExceptionHandler { get; }
 
   private readonly IBrowserScriptExecutor _browserScriptExecutor;
+  private readonly IJsonSerializer _jsonSerializer;
 
   private IReadOnlyDictionary<string, MethodInfo> _bindingMethodCache = new Dictionary<string, MethodInfo>();
   private IBinding? _binding;
@@ -60,20 +61,14 @@ public sealed class BrowserBridge : IBrowserBridge
     public string MethodArgs;
   }
 
-  /// <summary>
-  /// Initializes a new instance of the <see cref="BrowserBridge"/> class.
-  /// </summary>
-  /// <param name="jsonSerializerSettings">The settings to use for JSON serialization and deserialization.</param>
-  /// <param name="logger"></param>
-  /// <param name="topLogger"></param>
   public BrowserBridge(
-    JsonSerializerSettings jsonSerializerSettings,
+    IJsonSerializer jsonSerializer,
     ILogger<BrowserBridge> logger,
     ILogger<TopLevelExceptionHandler> topLogger,
     IBrowserScriptExecutor browserScriptExecutor
   )
   {
-    _serializerOptions = jsonSerializerSettings;
+    _jsonSerializer = jsonSerializer;
     _logger = logger;
     TopLevelExceptionHandler = new TopLevelExceptionHandler(topLogger, this);
     // Capture the main thread's SynchronizationContext
@@ -98,6 +93,19 @@ public sealed class BrowserBridge : IBrowserBridge
     }
     _bindingMethodCache = bindingMethodCache;
     _logger.LogInformation("Bridge bound to front end name {FrontEndName}", binding.Name);
+  }
+
+  private async Task OnActionBlock(RunMethodArgs args)
+  {
+    Result<object?> result = await TopLevelExceptionHandler
+      .CatchUnhandledAsync(async () => await ExecuteMethod(args.MethodName, args.MethodArgs).ConfigureAwait(false))
+      .ConfigureAwait(false);
+
+    string resultJson = result.IsSuccess
+      ? _jsonSerializer.Serialize(result.Value)
+      : SerializeFormattedException(result.Exception);
+
+    await NotifyUIMethodCallResultReady(args.RequestId, resultJson).ConfigureAwait(false);
   }
 
   /// <summary>
@@ -225,7 +233,7 @@ public sealed class BrowserBridge : IBrowserBridge
 
     for (int i = 0; i < typedArgs.Length; i++)
     {
-      var ccc = JsonConvert.DeserializeObject(jsonArgsArray[i], parameters[i].ParameterType, _serializerOptions);
+      var ccc = _jsonSerializer.Deserialize(jsonArgsArray[i], parameters[i].ParameterType);
       typedArgs[i] = ccc;
     }
 
@@ -268,7 +276,7 @@ public sealed class BrowserBridge : IBrowserBridge
       StackTrace = e.ToString(),
     };
 
-    return JsonConvert.SerializeObject(errorDetails, _serializerOptions);
+    return _jsonSerializer.Serialize(errorDetails);
   }
 
   /// <summary>
@@ -340,7 +348,7 @@ public sealed class BrowserBridge : IBrowserBridge
       throw new InvalidOperationException("Bridge was not initialized with a binding");
     }
 
-    string payload = JsonConvert.SerializeObject(data, _serializerOptions);
+    string payload = _jsonSerializer.Serialize(data);
     string requestId = $"{Guid.NewGuid()}_{eventName}";
     _resultsStore[requestId] = payload;
     var script = $"{FrontendBoundName}.emitResponseReady('{eventName}', '{requestId}')";
