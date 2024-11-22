@@ -2,7 +2,6 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Utils;
-using Speckle.Newtonsoft.Json;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
@@ -11,20 +10,9 @@ namespace Speckle.Connectors.DUI.Models;
 /// <summary>
 /// Encapsulates the state Speckle needs to persist in the host app's document.
 /// </summary>
-public abstract class DocumentModelStore
+public abstract class DocumentModelStore(IJsonSerializer serializer)
 {
   private readonly List<ModelCard> _models = new();
-
-  private readonly JsonSerializerSettings _serializerOptions;
-
-  /// <summary>
-  /// Base host app state class that controls the storage of the models in the file.
-  /// </summary>
-  /// <param name="serializerOptions">our custom serialiser that should be globally DI'ed in.</param>
-  protected DocumentModelStore(JsonSerializerSettings serializerOptions)
-  {
-    _serializerOptions = serializerOptions;
-  }
 
   /// <summary>
   /// This event is triggered by each specific host app implementation of the document model store.
@@ -106,11 +94,11 @@ public abstract class DocumentModelStore
     }
   }
 
-  private string Serialize() => JsonConvert.SerializeObject(_models, _serializerOptions);
+  protected string Serialize() => serializer.Serialize(Models);
 
   // POC: this seemms more like a IModelsDeserializer?, seems disconnected from this class
-  private ObservableCollection<ModelCard>? Deserialize(string models) =>
-    JsonConvert.DeserializeObject<ObservableCollection<ModelCard>>(models, _serializerOptions);
+  protected ObservableCollection<ModelCard> Deserialize(string models) =>
+    serializer.Deserialize<ObservableCollection<ModelCard>>(models).NotNull();
 
   protected void SaveState()
   {

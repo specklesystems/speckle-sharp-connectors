@@ -7,6 +7,7 @@ using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Serialisation;
 
 namespace Speckle.Connectors.Common.Operations;
 
@@ -94,6 +95,6 @@ public sealed class SendOperation<T>(
 
 public record SendOperationResult(
   string RootObjId,
-  IReadOnlyDictionary<string, ObjectReference> ConvertedReferences,
+  IReadOnlyDictionary<Id, ObjectReference> ConvertedReferences,
   IEnumerable<SendConversionResult> ConversionResults
 );

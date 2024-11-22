@@ -1,6 +1,6 @@
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
-using Speckle.Newtonsoft.Json;
+using Speckle.Connectors.DUI.Utils;
 
 namespace Speckle.Connectors.Autocad.HostApp;
 
@@ -11,11 +11,11 @@ public class AutocadDocumentStore : DocumentModelStore
   private readonly AutocadDocumentManager _autocadDocumentManager;
 
   public AutocadDocumentStore(
-    JsonSerializerSettings jsonSerializerSettings,
+    IJsonSerializer jsonSerializer,
     AutocadDocumentManager autocadDocumentManager,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
-    : base(jsonSerializerSettings)
+    : base(jsonSerializer)
   {
     _autocadDocumentManager = autocadDocumentManager;
     _previousDocName = _nullDocumentName;
@@ -63,6 +63,10 @@ public class AutocadDocumentStore : DocumentModelStore
     }
 
     string? serializedModelCards = _autocadDocumentManager.ReadModelCards(doc);
+    if (serializedModelCards == null)
+    {
+      return;
+    }
     LoadFromString(serializedModelCards);
   }
 
