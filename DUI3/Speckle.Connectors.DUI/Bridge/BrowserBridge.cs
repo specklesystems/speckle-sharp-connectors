@@ -113,7 +113,7 @@ public sealed class BrowserBridge : IBrowserBridge
       .ConfigureAwait(false);
 
     string resultJson = result.IsSuccess
-      ? _jsonSerializer.Serialize(result.Value.NotNull())
+      ? _jsonSerializer.Serialize(result.Value)
       : SerializeFormattedException(result.Exception);
 
     await NotifyUIMethodCallResultReady(args.RequestId, resultJson).ConfigureAwait(false);
