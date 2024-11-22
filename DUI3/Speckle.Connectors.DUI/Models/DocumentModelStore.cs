@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Utils;
@@ -97,8 +96,8 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
   protected string Serialize() => serializer.Serialize(Models);
 
   // POC: this seemms more like a IModelsDeserializer?, seems disconnected from this class
-  protected ObservableCollection<ModelCard> Deserialize(string models) =>
-    serializer.Deserialize<ObservableCollection<ModelCard>>(models).NotNull();
+  protected List<ModelCard> Deserialize(string models) =>
+    serializer.Deserialize<List<ModelCard>>(models).NotNull();
 
   protected void SaveState()
   {
