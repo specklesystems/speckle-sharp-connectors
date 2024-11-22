@@ -91,6 +91,16 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
     {
       var child = Convert(childObject);
       child.applicationId = childObject.GetSpeckleApplicationId();
+
+      // NOTE: Only assigning applicationIds to result and not children resulted in greyed components in the viewer
+      if (child["displayValue"] is List<Base> displayValues)
+      {
+        foreach (var displayValueObject in displayValues)
+        {
+          displayValueObject.applicationId = childObject.GetSpeckleApplicationId();
+        }
+      }
+
       children.Add(child);
     }
 
