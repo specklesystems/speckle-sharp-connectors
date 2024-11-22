@@ -31,6 +31,19 @@ public abstract class DocumentModelStore
   /// </summary>
   // POC: unsure about the PublicAPI annotation, unsure if this changed handle should live here on the store...  :/
   public event EventHandler? DocumentChanged;
+  
+  //needed for javascript UI
+  public IReadOnlyList<ModelCard> Models
+  {
+    get
+    {
+      lock (_models)
+      {
+        return _models.AsReadOnly();
+      }
+    }
+  }
+
 
   public virtual bool IsDocumentInit { get; set; }
 
