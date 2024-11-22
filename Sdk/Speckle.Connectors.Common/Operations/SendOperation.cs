@@ -8,6 +8,7 @@ using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Serialisation;
+using Speckle.Sdk.Serialisation.V2.Send;
 
 namespace Speckle.Connectors.Common.Operations;
 
@@ -42,7 +43,7 @@ public sealed class SendOperation<T>(
     return new(rootObjId, convertedReferences, buildResult.ConversionResults);
   }
 
-  public async Task<(string rootObjId, IReadOnlyDictionary<string, ObjectReference> convertedReferences)> Send(
+  public async Task<SerializeProcessResults> Send(
     Base commitObject,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
@@ -69,7 +70,7 @@ public sealed class SendOperation<T>(
       )
       .ConfigureAwait(false);
 
-    sendConversionCache.StoreSendResult(sendInfo.ProjectId, sendResult.convertedReferences);
+    sendConversionCache.StoreSendResult(sendInfo.ProjectId, sendResult.ConvertedReferences);
 
     ct.ThrowIfCancellationRequested();
 
@@ -80,7 +81,7 @@ public sealed class SendOperation<T>(
     _ = await apiClient
       .Version.Create(
         new CreateVersionInput(
-          sendResult.rootObjId,
+          sendResult.RootId,
           sendInfo.ModelId,
           sendInfo.ProjectId,
           sourceApplication: sendInfo.SourceApplication
