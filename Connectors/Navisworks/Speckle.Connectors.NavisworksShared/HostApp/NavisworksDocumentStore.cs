@@ -4,7 +4,7 @@ using Autodesk.Navisworks.Api.Data;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Newtonsoft.Json;
+using Speckle.Connectors.DUI.Utils;
 
 namespace Speckle.Connector.Navisworks.HostApp;
 
@@ -25,13 +25,10 @@ public class NavisworksDocumentStore : DocumentModelStore
   /// <summary>
   /// Initialises a new instance of the NavisworksDocumentStore class
   /// </summary>
-  /// <param name="jsonSerializerSettings">JSON serializer settings</param>
+  /// <param name="jsonSerializer">JSON serializer</param>
   /// <param name="topLevelExceptionHandler">Exception handler</param>
-  public NavisworksDocumentStore(
-    JsonSerializerSettings jsonSerializerSettings,
-    ITopLevelExceptionHandler topLevelExceptionHandler
-  )
-    : base(jsonSerializerSettings, true)
+  public NavisworksDocumentStore(IJsonSerializer jsonSerializer, ITopLevelExceptionHandler topLevelExceptionHandler)
+    : base(jsonSerializer, true)
   {
     _topLevelExceptionHandler = topLevelExceptionHandler;
     ReadFromFile();
