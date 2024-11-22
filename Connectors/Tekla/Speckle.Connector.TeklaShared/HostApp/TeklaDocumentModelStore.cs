@@ -75,13 +75,13 @@ public class TeklaDocumentModelStore : DocumentModelStore
   {
     if (!Directory.Exists(HostAppUserDataPath))
     {
-      Clear();
+      ClearAndSave();
       return;
     }
 
     if (!File.Exists(DocumentStateFile))
     {
-      Clear();
+      ClearAndSave();
       return;
     }
 

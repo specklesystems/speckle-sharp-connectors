@@ -114,7 +114,7 @@ public class ArcGISDocumentStore : DocumentModelStore
       var element = root?.Element("SpeckleModelCards");
       if (element is null)
       {
-        Clear();
+        ClearAndSave();
         return;
       }
 

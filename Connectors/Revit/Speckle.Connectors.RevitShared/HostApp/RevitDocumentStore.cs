@@ -116,7 +116,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     var stateEntity = GetSpeckleEntity(_revitContext.UIApplication?.ActiveUIDocument?.Document);
     if (stateEntity == null || !stateEntity.IsValid())
     {
-      Clear();
+      ClearAndSave();
       return;
     }
 

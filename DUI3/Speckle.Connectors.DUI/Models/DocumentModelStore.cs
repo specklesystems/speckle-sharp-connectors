@@ -51,7 +51,7 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
     }
   }
 
-  public void Clear()
+  public void ClearAndSave()
   {
     lock (_models)
     {
@@ -131,7 +131,7 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      Clear();
+      ClearAndSave();
       Debug.WriteLine(ex.Message); // POC: Log here error and notify UI that cards not read succesfully
     }
   }

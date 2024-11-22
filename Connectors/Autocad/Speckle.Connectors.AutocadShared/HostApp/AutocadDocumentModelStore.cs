@@ -58,14 +58,14 @@ public class AutocadDocumentStore : DocumentModelStore
 
     if (doc == null)
     {
-      Clear();
+      ClearAndSave();
       return;
     }
 
     string? serializedModelCards = _autocadDocumentManager.ReadModelCards(doc);
     if (serializedModelCards == null)
     {
-      Clear();
+      ClearAndSave();
       return;
     }
     LoadFromString(serializedModelCards);
