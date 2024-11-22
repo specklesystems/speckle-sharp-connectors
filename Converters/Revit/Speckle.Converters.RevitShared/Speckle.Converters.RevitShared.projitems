@@ -70,7 +70,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\MaterialAsSpeckleMaterialConversionToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\MaterialQuantitiesToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\PointcloudTopLevelConverterToSpeckle.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\GridTopLevelConverterToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\LevelToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\LocationToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\ModelCurveArrArrayToSpeckleConverter.cs" />
