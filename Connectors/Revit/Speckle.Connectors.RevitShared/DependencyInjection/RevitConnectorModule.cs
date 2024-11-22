@@ -26,7 +26,7 @@ public static class ServiceRegistration
   public static void AddRevit(this IServiceCollection serviceCollection)
   {
     serviceCollection.AddConnectorUtils();
-    serviceCollection.AddDUI();
+    serviceCollection.AddDUI<RevitMainThreadContext>();
     RegisterUiDependencies(serviceCollection);
 
     // register

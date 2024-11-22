@@ -1,5 +1,6 @@
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
+using Revit.Async;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Threading;
 using Speckle.Converters.RevitShared.Helpers;
@@ -7,6 +8,14 @@ using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
+public class RevitMainThreadContext : MainThreadContext
+{
+  public override void RunContext(Action action) => 
+    RevitTask.RunAsync(action);
+
+  public override Task<T> RunContext<T>(Func<Task<T>> action) =>
+    RevitTask.RunAsync(action);
+}
 public interface IRevitIdleManager : IAppIdleManager
 {
   public void RunAsync(Action action);

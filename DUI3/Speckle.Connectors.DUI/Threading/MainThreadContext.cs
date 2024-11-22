@@ -20,14 +20,23 @@ public class MainThreadContext: IMainThreadContext
   
   public static bool IsMainThread => Environment.CurrentManagedThreadId == s_mainThreadId;
   
-  public void RunOnMainThread(Action action) =>
+  public virtual void RunContext(Action action) => action();
+
+  public void RunOnMainThread(Action action)
+  {
+    if (IsMainThread)
+    {
+      RunContext(action);
+      return;
+    }
     _mainThreadContext.Post(
       _ =>
       {
-        action();
+        RunContext(action);
       },
       null
     );
+  }
 
   public async Task RunOnMainThreadAsync(Func<Task> action) =>
     await RunOnMainThreadAsync<object?>(async () =>
@@ -37,9 +46,14 @@ public class MainThreadContext: IMainThreadContext
       })
       .ConfigureAwait(false);
   
+  public virtual Task<T> RunContext<T>(Func<Task<T>> action) => action();
   [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "TaskCompletionSource")]
   public Task<T> RunOnMainThreadAsync<T>(Func<Task<T>> action)
   {
+    if (IsMainThread)
+    {
+      return RunContext(action);
+    }
     TaskCompletionSource<T> tcs = new();
 
     _mainThreadContext.Post(
@@ -47,7 +61,7 @@ public class MainThreadContext: IMainThreadContext
       {
         try
         {
-          T result = await action.Invoke().ConfigureAwait(false);
+          T result = await RunContext(action).ConfigureAwait(false);
           tcs.SetResult(result);
         }
         catch (Exception ex)
