@@ -32,14 +32,11 @@ public class SendProgress(IProgressDisplayManager progressDisplayManager) : ISen
         onOperationProgressed.Report(new($"Caching... ({args.Count} total objects)", null));
         break;
       case ProgressEvent.UploadBytes:
-        onOperationProgressed.Report(new($"Uploading... ({_previousSpeed}) {args.Count}", null));
+        onOperationProgressed.Report(new($"Uploading... ({_previousSpeed})", null));
         break;
       case ProgressEvent.FromCacheOrSerialized:
         onOperationProgressed.Report(
-          new(
-            $"Loading cache and Serializing... ({args.Count} total objects)",
-            progressDisplayManager.CalculatePercentage(args)
-          )
+          new("Loading cache and Serializing...", progressDisplayManager.CalculatePercentage(args))
         );
         break;
     }
