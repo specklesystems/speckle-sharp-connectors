@@ -127,7 +127,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
 
     foreach (SenderModelCard modelCard in senders)
     {
-      var intersection = modelCard.SendFilter.NotNull().GetObjectIds().Intersect(objectIdsList).ToList();
+      var intersection = modelCard.SendFilter.NotNull().RefreshObjectIds().Intersect(objectIdsList).ToList();
       bool isExpired = intersection.Count != 0;
       if (isExpired)
       {
@@ -172,7 +172,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
 
       // Get elements to convert
       List<AutocadRootObject> autocadObjects = Application.DocumentManager.CurrentDocument.GetObjects(
-        modelCard.SendFilter.NotNull().GetObjectIds()
+        modelCard.SendFilter.NotNull().RefreshObjectIds()
       );
 
       if (autocadObjects.Count == 0)

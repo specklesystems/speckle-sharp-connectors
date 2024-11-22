@@ -9,5 +9,6 @@ public abstract class DirectSelectionSendFilter : DiscriminatedObject, ISendFilt
   public string? Summary { get; set; }
   public bool IsDefault { get; set; }
   public List<string> SelectedObjectIds { get; set; } = new();
-  public abstract List<string> GetObjectIds();
+  public Dictionary<string, string>? IdMap { get; set; }
+  public abstract List<string> RefreshObjectIds();
 }

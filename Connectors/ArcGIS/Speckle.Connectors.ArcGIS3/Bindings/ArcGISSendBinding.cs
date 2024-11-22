@@ -381,7 +381,7 @@ public sealed class ArcGISSendBinding : ISendBinding
             );
           List<MapMember> mapMembers = modelCard
             .SendFilter.NotNull()
-            .GetObjectIds()
+            .RefreshObjectIds()
             .Select(id => (MapMember)MapView.Active.Map.FindLayer(id) ?? MapView.Active.Map.FindStandaloneTable(id))
             .Where(obj => obj != null)
             .ToList();
@@ -454,7 +454,7 @@ public sealed class ArcGISSendBinding : ISendBinding
 
     foreach (SenderModelCard sender in senders)
     {
-      var objIds = sender.SendFilter.NotNull().GetObjectIds();
+      var objIds = sender.SendFilter.NotNull().RefreshObjectIds();
       var intersection = objIds.Intersect(objectIdsList).ToList();
       bool isExpired = intersection.Count != 0;
       if (isExpired)

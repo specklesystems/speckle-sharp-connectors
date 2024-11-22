@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 using Speckle.Newtonsoft.Json;
 using Speckle.Newtonsoft.Json.Linq;
 using Speckle.Newtonsoft.Json.Serialization;
@@ -11,10 +12,9 @@ namespace Speckle.Connectors.DUI.Utils;
 /// This converter ensures we can do polymorphic deserialization to concrete types. This converter is intended
 /// for use only with UI bound types, not Speckle Bases.
 /// </summary>
-// POC: automatic registration of compatible objects
-public class DiscriminatedObjectConverter : JsonConverter<DiscriminatedObject>
+public class DiscriminatedObjectConverter(IServiceProvider serviceProvider) : JsonConverter<DiscriminatedObject>
 {
-  private readonly JsonSerializer _localSerializer =
+  private readonly Speckle.Newtonsoft.Json.JsonSerializer _localSerializer =
     new()
     {
       DefaultValueHandling = DefaultValueHandling.Ignore,
@@ -22,7 +22,11 @@ public class DiscriminatedObjectConverter : JsonConverter<DiscriminatedObject>
       NullValueHandling = NullValueHandling.Ignore
     };
 
-  public override void WriteJson(JsonWriter writer, DiscriminatedObject? value, JsonSerializer serializer)
+  public override void WriteJson(
+    JsonWriter writer,
+    DiscriminatedObject? value,
+    Speckle.Newtonsoft.Json.JsonSerializer serializer
+  )
   {
     if (value is null)
     {
@@ -37,7 +41,7 @@ public class DiscriminatedObjectConverter : JsonConverter<DiscriminatedObject>
     Type objectType,
     DiscriminatedObject? existingValue,
     bool hasExistingValue,
-    JsonSerializer serializer
+    Speckle.Newtonsoft.Json.JsonSerializer serializer
   )
   {
     JObject jsonObject = JObject.Load(reader);
@@ -52,7 +56,7 @@ public class DiscriminatedObjectConverter : JsonConverter<DiscriminatedObject>
       ?? throw new SpeckleDeserializeException(
         "DUI3 Discriminator converter deserialization failed, type not found: " + typeName
       );
-    var obj = Activator.CreateInstance(type, true);
+    var obj = ActivatorUtilities.CreateInstance(serviceProvider, type);
     serializer.Populate(jsonObject.CreateReader(), obj);
 
     // Store the JSON property names in the object for later comparison
@@ -122,9 +126,9 @@ public class AbstractConverter<TReal, TAbstract> : JsonConverter
     JsonReader reader,
     Type objectType,
     object? existingValue,
-    JsonSerializer serializer
+    Speckle.Newtonsoft.Json.JsonSerializer serializer
   ) => serializer.Deserialize<TReal>(reader);
 
-  public override void WriteJson(JsonWriter writer, object? value, JsonSerializer serializer) =>
+  public override void WriteJson(JsonWriter writer, object? value, Speckle.Newtonsoft.Json.JsonSerializer serializer) =>
     serializer.Serialize(writer, value);
 }

@@ -118,10 +118,7 @@ public class RhinoInstanceBaker : IInstanceBaker<List<string>>
         )
         {
           var transform = MatrixToTransform(instanceProxy.transform, instanceProxy.units);
-
-          // POC: having layer creation during instance bake means no render materials!!
-          int layerIndex = _layerBaker.GetAndCreateLayerFromPath(layerCollection, baseLayerName);
-
+          int layerIndex = _layerBaker.GetLayerIndex(layerCollection, baseLayerName);
           string instanceProxyId = instanceProxy.applicationId ?? instanceProxy.id;
 
           ObjectAttributes atts = new() { LayerIndex = layerIndex };

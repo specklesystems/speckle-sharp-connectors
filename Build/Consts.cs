@@ -41,7 +41,13 @@ public static class Consts
         new("Connectors/Autocad/Speckle.Connectors.Civil3d2025", "net8.0-windows")
       ]
     ),
-    new("tekla-structures", [new("Connectors/Tekla/Speckle.Connector.Tekla2024", "net48")])
+    new(
+      "tekla-structures",
+      [
+        new("Connectors/Tekla/Speckle.Connector.Tekla2023", "net48"),
+        new("Connectors/Tekla/Speckle.Connector.Tekla2024", "net48")
+      ]
+    )
   };
 }
 
