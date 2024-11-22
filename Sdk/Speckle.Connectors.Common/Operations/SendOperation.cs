@@ -1,6 +1,7 @@
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Serialisation;
 
 namespace Speckle.Connectors.Common.Operations;
 
@@ -42,6 +43,6 @@ public sealed class SendOperation<T>
 
 public record SendOperationResult(
   string RootObjId,
-  IReadOnlyDictionary<string, ObjectReference> ConvertedReferences,
+  IReadOnlyDictionary<Id, ObjectReference> ConvertedReferences,
   IEnumerable<SendConversionResult> ConversionResults
 );
