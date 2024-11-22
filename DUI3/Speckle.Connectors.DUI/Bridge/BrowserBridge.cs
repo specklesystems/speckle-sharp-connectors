@@ -134,8 +134,7 @@ public sealed class BrowserBridge : IBrowserBridge
           .CatchUnhandledAsync(async () =>
           {
             var result = await ExecuteMethod(runMethodArgs.MethodName, runMethodArgs.MethodArgs).ConfigureAwait(false);
-
-            string resultJson = JsonConvert.SerializeObject(result, _serializerOptions);
+            string resultJson = _jsonSerializer.Serialize(result);
             await NotifyUIMethodCallResultReady(runMethodArgs.RequestId, resultJson).ConfigureAwait(false);
           })
           .ConfigureAwait(false);
