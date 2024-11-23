@@ -19,6 +19,9 @@ public sealed class NavisworksDocumentEvents : IDisposable
   private bool _isSubscribed;
   private readonly object _subscriptionLock = new();
   private bool _disposed;
+  private bool _isProcessing;
+  private int _priorModelCount;
+  private int _finalModelCount;
 
   /// <summary>
   /// Initializes event handling for document and model changes.
@@ -58,12 +61,22 @@ public sealed class NavisworksDocumentEvents : IDisposable
     }
   }
 
-  private void SubscribeToModelEvents(Document document) => document.Models.CollectionChanged += OnDocumentEvent;
+  private void SubscribeToModelEvents(Document document)
+  {
+    document.Models.CollectionChanging += OnDocumentModelCountChanging;
+    document.Models.CollectionChanged += OnDocumentModelCountChanged;
+  }
+
+  private void OnDocumentModelCountChanging(object sender, EventArgs e) =>
+    _priorModelCount = ((Document)sender).Models.Count;
 
   /// <summary>
   /// Queues a document change notification to be processed during idle time.
   /// </summary>
-  private void OnDocumentEvent(object sender, EventArgs e) =>
+  private void OnDocumentModelCountChanged(object sender, EventArgs e)
+  {
+    _finalModelCount = ((Document)sender).Models.Count;
+
     _topLevelExceptionHandler.CatchUnhandled(
       () =>
         _idleManager.SubscribeToIdle(
@@ -71,23 +84,44 @@ public sealed class NavisworksDocumentEvents : IDisposable
           async () => await NotifyDocumentChanged().ConfigureAwait(false)
         )
     );
+  }
 
   private async Task NotifyDocumentChanged()
   {
-    var store = _serviceProvider.GetRequiredService<DocumentModelStore>();
-    var basicBinding = _serviceProvider.GetRequiredService<IBasicConnectorBinding>();
-    var commands = (basicBinding as NavisworksBasicConnectorBinding)?.Commands;
-
-    // Check if we have a blank document state (no models)
-    if (NavisworksApp.ActiveDocument.Models.Count == 0)
+    if (_isProcessing)
     {
-      // Clear the store when there are no models
-      store.Models.Clear();
+      return;
     }
 
-    if (commands != null)
+    _isProcessing = true;
+
+    try
     {
-      await commands.NotifyDocumentChanged().ConfigureAwait(false);
+      var store = _serviceProvider.GetRequiredService<DocumentModelStore>();
+      var basicBinding = _serviceProvider.GetRequiredService<IBasicConnectorBinding>();
+      var commands = (basicBinding as NavisworksBasicConnectorBinding)?.Commands;
+
+      switch (_finalModelCount)
+      {
+        // Check if we have a blank document state (no models)
+        case 0 when _priorModelCount > 0:
+          // Clear the store when there are no models
+          store.Models.Clear();
+          break;
+        case > 0 when _priorModelCount == 0:
+          // Read the current state from the active document
+          store.ReadFromFile();
+          break;
+      }
+
+      if (commands != null)
+      {
+        await commands.NotifyDocumentChanged().ConfigureAwait(false);
+      }
+    }
+    finally
+    {
+      _isProcessing = false; // Reset the flag
     }
   }
 
@@ -101,7 +135,8 @@ public sealed class NavisworksDocumentEvents : IDisposable
 
   private void UnsubscribeFromModelEvents(Document document)
   {
-    document.Models.CollectionChanged -= OnDocumentEvent;
+    document.Models.CollectionChanged -= OnDocumentModelCountChanged;
+    document.Models.CollectionChanging -= OnDocumentModelCountChanging;
 
     var sendBinding = _serviceProvider.GetRequiredService<NavisworksSendBinding>();
     sendBinding.CancelAllSendOperations();
