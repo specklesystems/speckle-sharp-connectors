@@ -76,7 +76,7 @@ public class NavisworksDocumentStore : DocumentModelStore
     // Return empty model list if document is invalid
     if (!IsDocumentValid())
     {
-      Models = [];
+      Models.Clear();
       return;
     }
 
@@ -93,7 +93,7 @@ public class NavisworksDocumentStore : DocumentModelStore
         // Handle final attempt failure
         if (attempt == MAX_RETRIES)
         {
-          Models = new();
+          Models = [];
           _topLevelExceptionHandler.CatchUnhandled(
             () => throw new InvalidOperationException("Failed to read Speckle state from database", ex)
           );
@@ -107,17 +107,45 @@ public class NavisworksDocumentStore : DocumentModelStore
   /// <summary>
   /// Validates that the Navisworks document and database are accessible
   /// </summary>
-  private static bool IsDocumentValid() =>
-    NavisworksApp.ActiveDocument?.Database != null && NavisworksApp.ActiveDocument.ActiveSheet != null;
+  private static bool IsDocumentValid()
+  {
+    try
+    {
+      var activeDoc = NavisworksApp.ActiveDocument;
+      if (activeDoc == null)
+      {
+        return false;
+      }
+
+      // Check if we can access critical document properties
+      return activeDoc.Database != null && activeDoc.Models.Count > 0 && activeDoc.ActiveSheet != null;
+    }
+    catch (ArgumentException)
+    {
+      // Handle case where document is disposed
+      return false;
+    }
+    catch (ObjectDisposedException)
+    {
+      // Handle case where document is disposed
+      return false;
+    }
+  }
 
   /// <summary>
   /// Serializes and writes the current model state to the database
   /// </summary>
   private void WriteStateToDatabase()
   {
+    var activeDoc = NavisworksApp.ActiveDocument;
+    if (activeDoc?.Database == null)
+    {
+      return;
+    }
+
     // Serialize model state
     string serializedState = Serialize();
-    var database = NavisworksApp.ActiveDocument!.Database;
+    var database = activeDoc.Database;
 
     // Ensure the database table exists
     using (var transaction = database.BeginTransaction(DatabaseChangedAction.Reset))
@@ -198,6 +226,6 @@ public class NavisworksDocumentStore : DocumentModelStore
     }
 
     string? stateString = table.Rows[0]["value"] as string;
-    return !string.IsNullOrEmpty(stateString) ? Deserialize(stateString!) ?? [] : [];
+    return !string.IsNullOrEmpty(stateString) ? Deserialize(stateString!) : [];
   }
 }
