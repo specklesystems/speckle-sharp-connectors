@@ -2,6 +2,7 @@ using Speckle.Connector.Navisworks.Filters;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
 
@@ -26,7 +27,7 @@ public class NavisworksSendBinding : ISendBinding
 
   public List<ICardSetting> GetSendSettings() => [];
 
-  public Task Send(string modelCardId) => throw new NotImplementedException();
+  public Task Send(string modelCardId) => Task.CompletedTask;
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
 
