@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+      <TargetFramework>net8.0-windows</TargetFramework>
+      <ImplicitUsings>enable</ImplicitUsings>
+      <Nullable>enable</Nullable>
+      <Platforms>AnyCPU;x64</Platforms>
+      <UseWindowsForms>true</UseWindowsForms>
+      <UseWPF>true</UseWPF>
+      <EnableDynamicLoading>true</EnableDynamicLoading>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <Reference Include="CSiAPIv1">
+        <HintPath>..\..\..\..\..\..\..\..\Program Files\Computers and Structures\ETABS 22\CSiAPIv1.dll</HintPath>
+        <Private>false</Private>
+        <ExcludeAssets>runtime</ExcludeAssets>
+      </Reference>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="Form1.cs">
+        <SubType>Form</SubType>
+      </Compile>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
+      <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="HostApp\" />
+    </ItemGroup>
+</Project>
