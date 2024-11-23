@@ -1,3 +1,4 @@
+using Speckle.Connector.Navisworks.Extensions;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 
@@ -29,6 +30,24 @@ public class NavisworksSelectionBinding : ISelectionBinding
 
   public SelectionInfo GetSelection()
   {
-    return new SelectionInfo([], "No selection available");
+    // Ensure there is an active document and a valid selection
+    var activeDocument = NavisworksApp.ActiveDocument;
+    if (activeDocument == null || activeDocument.CurrentSelection.SelectedItems.IsEmpty)
+    {
+      // Return an empty list if no valid selection exists
+      return new SelectionInfo([], "No selection available");
+    }
+
+    // Ensure only visible elements are processed by filtering using IsElementVisible
+    var selectedObjectsIds = new HashSet<string>(
+      activeDocument
+        .CurrentSelection.SelectedItems.Where(ElementSelectionExtension.IsElementVisible) // Exclude hidden elements
+        .Select(ElementSelectionExtension.ResolveModelItemToIndexPath) // Resolve to index paths
+    );
+
+    return new SelectionInfo(
+      [.. selectedObjectsIds],
+      $"{selectedObjectsIds.Count} object{(selectedObjectsIds.Count != 1 ? "s" : "")}"
+    );
   }
 }
