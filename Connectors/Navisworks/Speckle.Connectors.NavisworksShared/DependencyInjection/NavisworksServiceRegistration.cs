@@ -22,14 +22,6 @@ public static class NavisworksServiceRegistration
     serviceCollection.AddDUI();
     serviceCollection.AddDUIView();
 
-    // Register Intercom/interop
-    serviceCollection.RegisterTopLevelExceptionHandler();
-    serviceCollection.AddTransient<CancellationManager>();
-    serviceCollection.AddSingleton<IAppIdleManager, NavisworksIdleManager>();
-
-    serviceCollection.AddSingleton<DocumentModelStore, NavisworksDocumentStore>();
-    serviceCollection.AddSingleton<NavisworksDocumentEvents>();
-
     // Register bindings
     serviceCollection.AddSingleton<IBinding, TestBinding>();
     serviceCollection.AddSingleton<IBinding, ConfigBinding>();
@@ -41,12 +33,14 @@ public static class NavisworksServiceRegistration
     serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
     serviceCollection.AddSingleton<IBasicConnectorBinding, NavisworksBasicConnectorBinding>();
 
-    serviceCollection.AddScoped<ISendFilter, NavisworksSelectionFilter>();
-
-    // binding dependencies
+    // Register Intercom/interop
+    serviceCollection.RegisterTopLevelExceptionHandler();
     serviceCollection.AddTransient<CancellationManager>();
+    serviceCollection.AddSingleton<IAppIdleManager, NavisworksIdleManager>();
+    serviceCollection.AddSingleton<DocumentModelStore, NavisworksDocumentStore>();
+    serviceCollection.AddSingleton<NavisworksDocumentEvents>();
 
-    // register send filters
+    // register filters
     serviceCollection.AddScoped<ISendFilter, NavisworksSelectionFilter>();
   }
 }
