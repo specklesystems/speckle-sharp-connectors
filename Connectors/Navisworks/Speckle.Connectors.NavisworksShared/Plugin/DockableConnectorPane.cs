@@ -29,7 +29,7 @@ namespace Speckle.Connector.Navisworks.NavisPlugin;
 )]
 internal sealed class Connector : DockPanePlugin
 {
-  public ServiceProvider? Container { get; private set; }
+  private ServiceProvider? Container { get; set; }
 
   public override Control CreateControlPane()
   {
