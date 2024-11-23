@@ -1,7 +1,9 @@
 ﻿using Autodesk.Navisworks.Api;
+using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connector.Navisworks.Bindings;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Models;
 
 namespace Speckle.Connector.Navisworks.HostApp;
 
@@ -11,7 +13,7 @@ namespace Speckle.Connector.Navisworks.HostApp;
 /// </summary>
 public sealed class NavisworksDocumentEvents : IDisposable
 {
-  private readonly IBasicConnectorBinding _basicBinding;
+  private readonly IServiceProvider _serviceProvider;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IAppIdleManager _idleManager;
   private bool _isSubscribed;
@@ -22,16 +24,18 @@ public sealed class NavisworksDocumentEvents : IDisposable
   /// Initializes event handling for document and model changes.
   /// </summary>
   public NavisworksDocumentEvents(
-    IBasicConnectorBinding basicBinding,
+    IServiceProvider serviceProvider,
     ITopLevelExceptionHandler topLevelExceptionHandler,
     IAppIdleManager idleManager
   )
   {
-    _basicBinding = basicBinding;
+    _serviceProvider = serviceProvider;
     _topLevelExceptionHandler = topLevelExceptionHandler;
     _idleManager = idleManager;
     SubscribeToEvents();
   }
+
+  // public void Initialize() => SubscribeToEvents();
 
   /// <summary>
   /// Subscribes to document-level events and model collection changes.
@@ -45,11 +49,7 @@ public sealed class NavisworksDocumentEvents : IDisposable
         return;
       }
 
-      NavisworksApp.ActiveDocumentChanged += OnDocumentEvent;
-      NavisworksApp.DocumentAdded += OnDocumentEvent;
-      NavisworksApp.DocumentRemoved += OnDocumentEvent;
-
-      if (NavisworksApp.ActiveDocument != null && NavisworksApp.ActiveDocument.Models.Count > 0)
+      if (NavisworksApp.ActiveDocument != null)
       {
         SubscribeToModelEvents(NavisworksApp.ActiveDocument);
       }
@@ -74,8 +74,17 @@ public sealed class NavisworksDocumentEvents : IDisposable
 
   private async Task NotifyDocumentChanged()
   {
-    // Just notify through the binding's commands
-    var commands = (_basicBinding as NavisworksBasicConnectorBinding)?.Commands;
+    var store = _serviceProvider.GetRequiredService<DocumentModelStore>();
+    var basicBinding = _serviceProvider.GetRequiredService<IBasicConnectorBinding>();
+    var commands = (basicBinding as NavisworksBasicConnectorBinding)?.Commands;
+
+    // Check if we have a blank document state (no models)
+    if (NavisworksApp.ActiveDocument.Models.Count == 0)
+    {
+      // Clear the store when there are no models
+      store.Models.Clear();
+    }
+
     if (commands != null)
     {
       await commands.NotifyDocumentChanged().ConfigureAwait(false);
@@ -84,17 +93,19 @@ public sealed class NavisworksDocumentEvents : IDisposable
 
   private void UnsubscribeFromEvents()
   {
-    NavisworksApp.ActiveDocumentChanged -= OnDocumentEvent;
-    NavisworksApp.DocumentAdded -= OnDocumentEvent;
-    NavisworksApp.DocumentRemoved -= OnDocumentEvent;
-
-    if (NavisworksApp.ActiveDocument != null && NavisworksApp.ActiveDocument.Models.Count > 0)
+    if (NavisworksApp.ActiveDocument != null)
     {
       UnsubscribeFromModelEvents(NavisworksApp.ActiveDocument);
     }
   }
 
-  private void UnsubscribeFromModelEvents(Document document) => document.Models.CollectionChanged -= OnDocumentEvent;
+  private void UnsubscribeFromModelEvents(Document document)
+  {
+    document.Models.CollectionChanged -= OnDocumentEvent;
+
+    var sendBinding = _serviceProvider.GetRequiredService<NavisworksSendBinding>();
+    sendBinding.CancelAllSendOperations();
+  }
 
   public void Dispose()
   {
