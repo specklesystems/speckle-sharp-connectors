@@ -16,6 +16,8 @@ public class Form1 : Form
 
   public Form1()
   {
+    this.Text = "Speckle (Beta)";
+
     var services = new ServiceCollection();
     services.Initialize(HostApplications.ETABS, GetVersion());
     services.AddETABS();

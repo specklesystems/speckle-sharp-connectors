@@ -1,6 +1,6 @@
 ﻿using Speckle.Connectors.DUI.Bridge;
 
-namespace Speckle.Connector.ETABS22.Bindings;
+namespace Speckle.Connector.ETABS22.HostApp;
 
 public sealed class EtabsIdleManager : AppIdleManager
 {
