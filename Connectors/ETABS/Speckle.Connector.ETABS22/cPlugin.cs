@@ -14,7 +14,6 @@ public class cPlugin : cPluginContract, IDisposable
     _panel = new Form1();
     _panel.SetSapModel(ref sapModel, ref pluginCallback);
 
-    // Subscribe to form closed event to handle disposal
     _panel.FormClosed += (s, e) => Dispose();
 
     if (string.Equals(s_modality, "Non-Modal", StringComparison.OrdinalIgnoreCase))

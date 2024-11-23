@@ -19,13 +19,13 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Compile Update="Form1.cs">
-        <SubType>Form</SubType>
-      </Compile>
+      <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
+      <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
-      <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+      <Compile Update="Form1.cs">
+        <SubType>Form</SubType>
+      </Compile>
     </ItemGroup>
 </Project>
