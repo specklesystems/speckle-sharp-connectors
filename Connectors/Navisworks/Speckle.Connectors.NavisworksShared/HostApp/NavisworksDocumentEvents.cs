@@ -9,7 +9,7 @@ namespace Speckle.Connector.Navisworks.HostApp;
 /// Manages document state change notifications for the Navisworks connector.
 /// Coalesces various document events into batched UI updates using the idle manager.
 /// </summary>
-public class NavisworksDocumentEvents : IDisposable
+public sealed class NavisworksDocumentEvents : IDisposable
 {
   private readonly IBasicConnectorBinding _basicBinding;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
@@ -74,6 +74,7 @@ public class NavisworksDocumentEvents : IDisposable
 
   private async Task NotifyDocumentChanged()
   {
+    // Just notify through the binding's commands
     var commands = (_basicBinding as NavisworksBasicConnectorBinding)?.Commands;
     if (commands != null)
     {
@@ -101,7 +102,7 @@ public class NavisworksDocumentEvents : IDisposable
     GC.SuppressFinalize(this);
   }
 
-  protected virtual void Dispose(bool disposing)
+  private void Dispose(bool disposing)
   {
     if (_disposed)
     {
