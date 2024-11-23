@@ -9,5 +9,5 @@ public class NavisworksSelectionFilter : DirectSelectionSendFilter
     IsDefault = true;
   }
 
-  public override List<string> RefreshObjectIds() => [];
+  public override List<string> RefreshObjectIds() => SelectedObjectIds;
 }

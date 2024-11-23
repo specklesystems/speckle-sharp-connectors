@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
@@ -9,13 +9,11 @@
     <Import_RootNamespace>Speckle.Connectors.NavisworksShared</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Folder Include="$(MSBuildThisFileDirectory)Operations\" />
-  </ItemGroup>
-  <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\NavisworksBasicConnectorBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\NavisworksSelectionBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\NavisworksSendBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\NavisworksServiceRegistration.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Extensions\ElementSelectionExtension.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Filters\NavisworksSelectionFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsings.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksDocumentEvents.cs" />
