@@ -1,5 +1,4 @@
-﻿using Autodesk.Navisworks.Api;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connector.Navisworks.Bindings;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
@@ -70,17 +69,15 @@ public sealed class NavisworksDocumentEvents : IDisposable
   /// <summary>
   /// Tracks the current model count before changes occur.
   /// </summary>
-  private void HandleDocumentModelCountChanging(object sender, EventArgs e)
-  {
-    _priorModelCount = ((Document)sender).Models.Count;
-  }
+  private void HandleDocumentModelCountChanging(object sender, EventArgs e) =>
+    _priorModelCount = ((NAV.Document)sender).Models.Count;
 
   /// <summary>
   /// Schedules processing of model count changes during idle time.
   /// </summary>
   private void HandleDocumentModelCountChanged(object sender, EventArgs e)
   {
-    _finalModelCount = ((Document)sender).Models.Count;
+    _finalModelCount = ((NAV.Document)sender).Models.Count;
 
     _topLevelExceptionHandler.CatchUnhandled(
       () =>
@@ -143,7 +140,7 @@ public sealed class NavisworksDocumentEvents : IDisposable
     _isSubscribed = false;
   }
 
-  private void UnsubscribeFromModelEvents(Document document)
+  private void UnsubscribeFromModelEvents(NAV.Document document)
   {
     document.Models.CollectionChanged -= HandleDocumentModelCountChanged;
     document.Models.CollectionChanging -= HandleDocumentModelCountChanging;

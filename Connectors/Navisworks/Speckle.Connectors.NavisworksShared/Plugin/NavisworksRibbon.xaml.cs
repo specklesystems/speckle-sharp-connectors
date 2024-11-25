@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Windows.Forms;
-using Autodesk.Navisworks.Api.Plugins;
 #if DEBUG
 using System.Text;
 #endif
@@ -8,11 +7,11 @@ using System.Text;
 namespace Speckle.Connector.Navisworks.NavisPlugin;
 
 [
-  Plugin("SpeckleNavisworksNextGen", "Speckle", DisplayName = "Speckle Next Gen"),
-  Strings("NavisworksRibbon.name"),
-  RibbonLayout("NavisworksRibbon.xaml"),
-  RibbonTab("Speckle", DisplayName = "Speckle Next Gen", LoadForCanExecute = true),
-  Command(
+  NAV.Plugins.Plugin("SpeckleNavisworksNextGen", "Speckle", DisplayName = "Speckle Next Gen"),
+  NAV.Plugins.Strings("NavisworksRibbon.name"),
+  NAV.Plugins.RibbonLayout("NavisworksRibbon.xaml"),
+  NAV.Plugins.RibbonTab("Speckle", DisplayName = "Speckle Next Gen", LoadForCanExecute = true),
+  NAV.Plugins.Command(
     LaunchSpeckleConnector.COMMAND,
     LoadForCanExecute = true,
     Icon = "Resources/s2logo16.png",
@@ -27,17 +26,20 @@ namespace Speckle.Connector.Navisworks.NavisPlugin;
   "CA1812:Avoid uninstantiated internal classes",
   Justification = "Instantiated by Navisworks"
 )]
-internal sealed class RibbonHandler : CommandHandlerPlugin
+internal sealed class RibbonHandler : NAV.Plugins.CommandHandlerPlugin
 {
-  private static readonly Dictionary<Plugin, bool> s_loadedPlugins = [];
+  // ReSharper disable once CollectionNeverQueried.Local
+  private static readonly Dictionary<NAV.Plugins.Plugin, bool> s_loadedPlugins = [];
 
   /// <summary>
   /// Determines the state of a command in Navisworks.
   /// </summary>
   /// <param name="commandId">The ID of the command to check.</param>
   /// <returns>The state of the command.</returns>
-  public override CommandState CanExecuteCommand(string commandId) =>
-    commandId == LaunchSpeckleConnector.COMMAND ? new CommandState(true) : new CommandState(false);
+  public override NAV.Plugins.CommandState CanExecuteCommand(string commandId) =>
+    commandId == LaunchSpeckleConnector.COMMAND
+      ? new NAV.Plugins.CommandState(true)
+      : new NAV.Plugins.CommandState(false);
 
   /// <summary>
   /// Loads a plugin in Navisworks.
@@ -90,11 +92,11 @@ internal sealed class RibbonHandler : CommandHandlerPlugin
   /// <param name="pluginRecord">The plugin record.</param>
   /// <param name="loadedPlugin">The loaded plugin instance.</param>
   /// <param name="command">The command associated with the plugin.</param>
-  private static void ActivatePluginPane(PluginRecord pluginRecord, object loadedPlugin, string command)
+  private static void ActivatePluginPane(NAV.Plugins.PluginRecord pluginRecord, object loadedPlugin, string command)
   {
     if (ShouldActivatePluginPane(pluginRecord))
     {
-      var dockPanePlugin = (DockPanePlugin)loadedPlugin;
+      var dockPanePlugin = (NAV.Plugins.DockPanePlugin)loadedPlugin;
       dockPanePlugin.ActivatePane();
 
       s_loadedPlugins[dockPanePlugin] = true;
@@ -113,8 +115,8 @@ internal sealed class RibbonHandler : CommandHandlerPlugin
   /// </summary>
   /// <param name="pluginRecord">The plugin record.</param>
   /// <returns>True if the plugin's pane should be activated, False otherwise.</returns>
-  private static bool ShouldActivatePluginPane(PluginRecord pluginRecord) =>
-    pluginRecord.IsLoaded && pluginRecord is DockPanePluginRecord && pluginRecord.IsEnabled;
+  private static bool ShouldActivatePluginPane(NAV.Plugins.PluginRecord pluginRecord) =>
+    pluginRecord.IsLoaded && pluginRecord is NAV.Plugins.DockPanePluginRecord && pluginRecord.IsEnabled;
 
   public override int ExecuteCommand(string commandId, params string[] parameters)
   {

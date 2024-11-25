@@ -15,7 +15,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\NavisworksServiceRegistration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\ElementSelectionExtension.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Filters\NavisworksSelectionFilter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)GlobalUsings.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksDocumentEvents.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksDocumentStore.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksIdleManager.cs" />

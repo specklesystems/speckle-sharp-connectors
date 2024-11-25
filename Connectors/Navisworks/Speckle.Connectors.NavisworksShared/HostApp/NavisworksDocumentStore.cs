@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Data;
-using Autodesk.Navisworks.Api.Data;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
@@ -37,7 +36,7 @@ public class NavisworksDocumentStore : DocumentModelStore
     {
       SaveStateToDatabase();
     }
-    catch (DatabaseException ex)
+    catch (NAV.Data.DatabaseException ex)
     {
       _topLevelExceptionHandler.CatchUnhandled(
         () => throw new InvalidOperationException("Failed to write Speckle state to database", ex)
@@ -57,7 +56,7 @@ public class NavisworksDocumentStore : DocumentModelStore
     {
       Models = RetrieveStateFromDatabase();
     }
-    catch (DatabaseException ex)
+    catch (NAV.Data.DatabaseException ex)
     {
       Models = []; // Clear models on failure to avoid stale data
       _topLevelExceptionHandler.CatchUnhandled(
@@ -94,12 +93,12 @@ public class NavisworksDocumentStore : DocumentModelStore
     string serializedState = Serialize();
     var database = activeDoc.Database;
 
-    using (var transaction = database.BeginTransaction(DatabaseChangedAction.Reset))
+    using (var transaction = database.BeginTransaction(NAV.Data.DatabaseChangedAction.Reset))
     {
       EnsureDatabaseTableExists(transaction);
     }
 
-    using (var transaction = database.BeginTransaction(DatabaseChangedAction.Edited))
+    using (var transaction = database.BeginTransaction(NAV.Data.DatabaseChangedAction.Edited))
     {
       try
       {
@@ -114,7 +113,7 @@ public class NavisworksDocumentStore : DocumentModelStore
     }
   }
 
-  private static void EnsureDatabaseTableExists(NavisworksTransaction transaction)
+  private static void EnsureDatabaseTableExists(NAV.Data.NavisworksTransaction transaction)
   {
     var command = transaction.Connection.CreateCommand();
     command.CommandText = $"CREATE TABLE IF NOT EXISTS {TABLE_NAME}(key TEXT PRIMARY KEY, value TEXT)";
@@ -122,7 +121,7 @@ public class NavisworksDocumentStore : DocumentModelStore
     transaction.Commit(); // Ensure table exists before proceeding
   }
 
-  private static void ReplaceStateInDatabase(NavisworksTransaction transaction, string serializedState)
+  private static void ReplaceStateInDatabase(NAV.Data.NavisworksTransaction transaction, string serializedState)
   {
     var command = transaction.Connection.CreateCommand();
 
@@ -141,7 +140,7 @@ public class NavisworksDocumentStore : DocumentModelStore
     var database = NavisworksApp.ActiveDocument!.Database;
     using var table = new DataTable();
 
-    using var dataAdapter = new NavisworksDataAdapter(
+    using var dataAdapter = new NAV.Data.NavisworksDataAdapter(
       $"SELECT value FROM {TABLE_NAME} WHERE key = @key",
       database.Value
     );

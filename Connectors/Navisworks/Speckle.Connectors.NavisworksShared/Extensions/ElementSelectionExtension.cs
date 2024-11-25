@@ -1,5 +1,3 @@
-﻿using Autodesk.Navisworks.Api;
-
 namespace Speckle.Connector.Navisworks.Extensions;
 
 /// <summary>
@@ -10,7 +8,7 @@ public static class ElementSelectionExtension
   private const char DEFAULT_SEPARATOR = '.';
 
   /// <summary>
-  /// Resolves a Navisworks <see cref="ModelItem"/> to its unique index path representation.
+  /// Resolves a Navisworks <see cref="NAV.ModelItem"/> to its unique index path representation.
   /// </summary>
   /// <param name="modelItem">The model item to resolve.</param>
   /// <returns>
@@ -19,14 +17,14 @@ public static class ElementSelectionExtension
   /// For root-level model items, only the model index is included.
   /// </returns>
   /// <exception cref="ArgumentNullException">Thrown if <paramref name="modelItem"/> is null.</exception>
-  internal static string ResolveModelItemToIndexPath(ModelItem modelItem)
+  internal static string ResolveModelItemToIndexPath(NAV.ModelItem modelItem)
   {
     if (modelItem == null)
     {
       throw new ArgumentNullException(nameof(modelItem));
     }
 
-    var modelItemPathId = Application.ActiveDocument.Models.CreatePathId(modelItem);
+    var modelItemPathId = NavisworksApp.ActiveDocument.Models.CreatePathId(modelItem);
 
     return modelItemPathId.PathId == "a"
       ? $"{modelItemPathId.ModelIndex}" // Root-level model item
@@ -34,12 +32,12 @@ public static class ElementSelectionExtension
   }
 
   /// <summary>
-  /// Determines whether a Navisworks <see cref="ModelItem"/> and all its ancestors are visible.
+  /// Determines whether a Navisworks <see cref="NAV.ModelItem"/> and all its ancestors are visible.
   /// </summary>
   /// <param name="modelItem">The model item to check for visibility.</param>
   /// <returns>True if the item and all ancestors are visible; otherwise, false.</returns>
   /// <exception cref="ArgumentNullException">Thrown if <paramref name="modelItem"/> is null.</exception>
-  internal static bool IsElementVisible(ModelItem modelItem)
+  internal static bool IsElementVisible(NAV.ModelItem modelItem)
   {
     if (modelItem == null)
     {
