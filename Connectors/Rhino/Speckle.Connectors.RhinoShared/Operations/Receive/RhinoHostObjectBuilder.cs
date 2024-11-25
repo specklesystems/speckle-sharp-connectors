@@ -145,7 +145,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
             var conversionIds = new List<string>();
             if (result is GeometryBase geometryBase)
             {
-              var guid = BakeObject(geometryBase, obj, atts);
+              var guid = BakeObject(geometryBase, obj, obj, atts);
               conversionIds.Add(guid.ToString());
             }
             else if (result is List<GeometryBase> geometryBases) // one to many raw encoding case
@@ -156,7 +156,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
               // EXTRA EXTRA NOTE: TY Ogu, i am no longer than unhappy about it. It's legit "mess".
               foreach (var gb in geometryBases)
               {
-                var guid = BakeObject(gb, obj, atts);
+                var guid = BakeObject(gb, obj, obj, atts);
                 conversionIds.Add(guid.ToString());
               }
             }
@@ -273,9 +273,10 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   /// Material and Color attributes are processed here due to those properties existing sometimes on fallback geometry (instead of parent).
   /// and this method is called by <see cref="BakeObjectsAsFallbackGroup(IEnumerable{ValueTuple{object, Base}}, Base, ObjectAttributes, string)"/>
   /// </remarks>
-  private Guid BakeObject(GeometryBase obj, Base originalObject, ObjectAttributes atts)
+  private Guid BakeObject(GeometryBase obj, Base originalObject, Base originatingSpeckleObject, ObjectAttributes atts)
   {
     var objectId = originalObject.applicationId ?? originalObject.id;
+    var speckleObjectId = originatingSpeckleObject.applicationId ?? originatingSpeckleObject.id;
 
     if (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(objectId, out int mIndex))
     {
@@ -287,6 +288,11 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     {
       atts.ObjectColor = color.Item1;
       atts.ColorSource = color.Item2;
+    }
+    else if (_colorBaker.ObjectColorsIdMap.TryGetValue(speckleObjectId, out (Color, ObjectColorSource) colorSpeckleObj))
+    {
+      atts.ObjectColor = colorSpeckleObj.Item1;
+      atts.ColorSource = colorSpeckleObj.Item2;
     }
 
     return _converterSettings.Current.Document.Objects.Add(obj, atts);
@@ -308,7 +314,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
         continue;
       }
 
-      var id = BakeObject(geometryBase, originalBaseObject, atts);
+      var id = BakeObject(geometryBase, originalBaseObject, originatingObject, atts);
       objectIds.Add(id);
     }
 
