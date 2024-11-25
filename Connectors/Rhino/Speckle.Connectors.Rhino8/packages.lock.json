@@ -295,6 +295,9 @@
           "Speckle.Connectors.DUI": "[1.0.0, )"
         }
       },
+      "speckle.connectors.grasshopper8": {
+        "type": "Project"
+      },
       "speckle.connectors.logging": {
         "type": "Project"
       },

@@ -189,6 +189,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Connector.Tekla2023
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Converter.Tekla2023", "Converters\Tekla\Speckle.Converter.Tekla2023\Speckle.Converter.Tekla2023.csproj", "{8F9181C2-1808-44C0-A33A-5BAE40C49E63}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Grasshopper8", "Connectors\Rhino\Speckle.Connectors.Grasshopper8\Speckle.Connectors.Grasshopper8.csproj", "{8F6AD59B-FE43-41AE-8F47-7B9752BA0085}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -484,6 +486,12 @@ Global
 		{8F9181C2-1808-44C0-A33A-5BAE40C49E63}.Local|Any CPU.Build.0 = Local|Any CPU
 		{8F9181C2-1808-44C0-A33A-5BAE40C49E63}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8F9181C2-1808-44C0-A33A-5BAE40C49E63}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8F6AD59B-FE43-41AE-8F47-7B9752BA0085}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8F6AD59B-FE43-41AE-8F47-7B9752BA0085}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8F6AD59B-FE43-41AE-8F47-7B9752BA0085}.Local|Any CPU.ActiveCfg = Debug|Any CPU
+		{8F6AD59B-FE43-41AE-8F47-7B9752BA0085}.Local|Any CPU.Build.0 = Debug|Any CPU
+		{8F6AD59B-FE43-41AE-8F47-7B9752BA0085}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8F6AD59B-FE43-41AE-8F47-7B9752BA0085}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -570,6 +578,7 @@ Global
 		{C552C165-5023-47AB-9EE1-1EA61819D2B1} = {696086E4-D8CC-4FE0-A9B3-5F10B9089B55}
 		{025C85F8-F741-4600-BC46-5FEAD754B65D} = {C552C165-5023-47AB-9EE1-1EA61819D2B1}
 		{8F9181C2-1808-44C0-A33A-5BAE40C49E63} = {C552C165-5023-47AB-9EE1-1EA61819D2B1}
+		{8F6AD59B-FE43-41AE-8F47-7B9752BA0085} = {5929C9C7-F971-449E-BC5B-4486016BD11F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}
