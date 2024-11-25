@@ -9,8 +9,8 @@
     <DefineConstants>$(DefineConstants);NAVIS2024</DefineConstants>
     <TargetFramework>net48</TargetFramework>
     <Configurations>Debug;Release;Local</Configurations>
+    <RootNamespace>Speckle.Converter.Navisworks</RootNamespace>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Speckle.Navisworks.API" VersionOverride="2024.0.0" />
   </ItemGroup>
@@ -20,5 +20,6 @@
   </ItemGroup>
 
   <!-- Includes -->
+  <Import Project="..\Speckle.Converters.NavisworksShared\Speckle.Converters.NavisworksShared.projitems" Label="Shared"/>
 
 </Project>

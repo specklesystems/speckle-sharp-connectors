@@ -1,4 +1,4 @@
-global using SOG = Speckle.Objects.Geometry;
-global using TG = Tekla.Structures.Geometry3d;
-global using TSM = Tekla.Structures.Model;
-global using TSMUI = Tekla.Structures.Model.UI;
+global using NAV = Autodesk.Navisworks.Api;
+global using NavisworksApp = Autodesk.Navisworks.Api.Application;
+// global using SOG = Speckle.Objects.Geometry;
+global using SSC = Speckle.Sdk.Common;
