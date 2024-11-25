@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Common;
 
@@ -38,13 +38,20 @@ public class MainThreadContext : IMainThreadContext
     );
   }
 
-  public async Task RunOnMainThreadAsync(Func<Task> action) =>
+  public async Task RunOnMainThreadAsync(Func<Task> action)
+  {
+    if (IsMainThread)
+    {
+      await action.Invoke().ConfigureAwait(false);
+      return;
+    }
     await RunOnMainThreadAsync<object?>(async () =>
       {
         await action.Invoke().ConfigureAwait(false);
         return null;
       })
       .ConfigureAwait(false);
+  }
 
   public virtual Task<T> RunContext<T>(Func<Task<T>> action) => action();
 
