@@ -1,4 +1,4 @@
-namespace Speckle.Connector.Navisworks.Extensions;
+﻿namespace Speckle.Connector.Navisworks.Extensions;
 
 /// <summary>
 /// Provides extension methods for working with Navisworks ModelItem selections.
@@ -31,6 +31,20 @@ public static class ElementSelectionExtension
       : $"{modelItemPathId.ModelIndex}{DEFAULT_SEPARATOR}{modelItemPathId.PathId}"; // Nested model item
   }
 
+  internal static NAV.ModelItem ResolveIndexPathToModelItem(string indexPath)
+  {
+    var indexPathParts = indexPath.Split(DEFAULT_SEPARATOR);
+
+    var modelIndex = int.Parse(indexPathParts[0]);
+    var pathId = string.Join(DEFAULT_SEPARATOR.ToString(), indexPathParts.Skip(1));
+
+    // assign the first part of indexPathParts to modelIndex and parse it to int, the second part to pathId string
+    NAV.DocumentParts.ModelItemPathId modelItemPathId = new() { ModelIndex = modelIndex, PathId = pathId };
+
+    var modelItem = NavisworksApp.ActiveDocument.Models.ResolvePathId(modelItemPathId);
+    return modelItem;
+  }
+
   /// <summary>
   /// Determines whether a Navisworks <see cref="NAV.ModelItem"/> and all its ancestors are visible.
   /// </summary>
@@ -47,4 +61,7 @@ public static class ElementSelectionExtension
     // Check visibility status for the item and its ancestors
     return modelItem.AncestorsAndSelf.All(item => !item.IsHidden);
   }
+
+  internal static List<NAV.ModelItem> ResolveGeometryLeafNodes(NAV.ModelItem modelItem) =>
+    modelItem.DescendantsAndSelf.Where(x => x.HasGeometry).ToList();
 }

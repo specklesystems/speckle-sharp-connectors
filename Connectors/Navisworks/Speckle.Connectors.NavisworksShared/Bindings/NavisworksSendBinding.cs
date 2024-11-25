@@ -1,10 +1,19 @@
-using Speckle.Connector.Navisworks.Filters;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Cancellation;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Exceptions;
+using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
+using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Logging;
+using static Speckle.Connector.Navisworks.Extensions.ElementSelectionExtension;
 
 namespace Speckle.Connector.Navisworks.Bindings;
 
@@ -13,25 +22,112 @@ public class NavisworksSendBinding : ISendBinding
   public string Name => "sendBinding";
   public IBrowserBridge Parent { get; }
 
-  private readonly DocumentModelStore _store;
-  private readonly CancellationManager _cancellationManager;
+  public SendBindingUICommands Commands { get; }
 
-  public NavisworksSendBinding(IBrowserBridge parent, DocumentModelStore store, CancellationManager cancellationManager)
+  private readonly DocumentModelStore _store;
+  private readonly IServiceProvider _serviceProvider;
+  private readonly List<ISendFilter> _sendFilters;
+  private readonly CancellationManager _cancellationManager;
+  private readonly IOperationProgressManager _operationProgressManager;
+  private readonly ILogger<NavisworksSendBinding> _logger;
+  private readonly ISpeckleApplication _speckleApplication;
+  private readonly ISdkActivityFactory _activityFactory;
+
+  public NavisworksSendBinding(
+    DocumentModelStore store,
+    IBrowserBridge parent,
+    IEnumerable<ISendFilter> sendFilters,
+    IServiceProvider serviceProvider,
+    CancellationManager cancellationManager,
+    IOperationProgressManager operationProgressManager,
+    ILogger<NavisworksSendBinding> logger,
+    ISpeckleApplication speckleApplication,
+    ISdkActivityFactory activityFactory
+  )
   {
-    Parent = parent;
     _store = store;
+    _serviceProvider = serviceProvider;
+    _sendFilters = sendFilters.ToList();
     _cancellationManager = cancellationManager;
+    _operationProgressManager = operationProgressManager;
+    _logger = logger;
+    _speckleApplication = speckleApplication;
+    Parent = parent;
+    Commands = new SendBindingUICommands(parent);
+    _activityFactory = activityFactory;
+    SubscribeToNavisworksEvents();
   }
 
-  public List<ISendFilter> GetSendFilters() => [new NavisworksSelectionFilter()];
+  private static void SubscribeToNavisworksEvents() { }
+
+  public List<ISendFilter> GetSendFilters() => _sendFilters;
 
   public List<ICardSetting> GetSendSettings() => [];
 
-  public Task Send(string modelCardId) => Task.CompletedTask;
+  public async Task Send(string modelCardId)
+  {
+    using var activity = _activityFactory.Start();
+
+    try
+    {
+      if (_store.GetModelById(modelCardId) is not SenderModelCard modelCard)
+      {
+        throw new InvalidOperationException("No publish model card was found.");
+      }
+
+      using var scope = _serviceProvider.CreateScope();
+
+      CancellationToken token = _cancellationManager.InitCancellationTokenSource(modelCardId);
+
+      // Get the selected paths from the filter
+      var selectedPaths = modelCard.SendFilter.NotNull().RefreshObjectIds();
+      if (selectedPaths.Count == 0)
+      {
+        throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
+      }
+
+      List<NAV.ModelItem> navisworksModelItems = modelCard
+        .SendFilter.NotNull()
+        .RefreshObjectIds()
+        .Select(ResolveIndexPathToModelItem)
+        .SelectMany(ResolveGeometryLeafNodes)
+        .Where(IsElementVisible)
+        .ToList();
+
+      if (navisworksModelItems.Count == 0)
+      {
+        // Handle as CARD ERROR in this function
+        throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
+      }
+
+      var sendResult = await scope
+        .ServiceProvider.GetRequiredService<SendOperation<NAV.ModelItem>>()
+        .Execute(
+          navisworksModelItems,
+          modelCard.GetSendInfo(_speckleApplication.Slug),
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, token),
+          token
+        )
+        .ConfigureAwait(false);
+
+      await Commands
+        .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
+        .ConfigureAwait(false);
+    }
+    catch (OperationCanceledException)
+    {
+      // SWALLOW -> UI handles it immediately, so we do not need to handle anything for now!
+      // Idea for later -> when cancel called, create promise from UI to solve it later with this catch block.
+      // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
+    }
+    catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
+    {
+      _logger.LogModelCardHandledError(ex);
+      await Commands.SetModelError(modelCardId, ex).ConfigureAwait(false);
+    }
+  }
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
-
-  public SendBindingUICommands Commands { get; }
 
   /// <summary>
   /// Cancels all outstanding send operations for the current document.
