@@ -56,6 +56,7 @@ public static class ServiceRegistration
     services.AddScoped<ISendFilter, TeklaSelectionFilter>();
     services.AddSingleton<ISendConversionCache, SendConversionCache>();
     services.AddSingleton(DefaultTraversal.CreateTraversalFunc());
+    services.AddScoped<SendCollectionManager>();
     services.AddScoped<IRootObjectBuilder<ModelObject>, TeklaRootObjectBuilder>();
     services.AddScoped<SendOperation<ModelObject>>();
 

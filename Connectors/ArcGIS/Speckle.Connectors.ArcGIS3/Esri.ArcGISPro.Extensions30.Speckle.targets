@@ -154,7 +154,6 @@
         Log.LogErrorFromException(ex);
         return false;
       }
-      return Success;
     ]]>
       </Code>
     </Task>
@@ -190,7 +189,7 @@
             {
                 Log.LogMessage(MessageImportance.Low, "RelativePaths: " + i.ToString());
             }
-            return true;
+            Success = true;
 			 ]]>
       </Code>
     </Task>
@@ -266,7 +265,6 @@
         CleanInfo = AssemblyName + extension;
       }
       Success = true;
-      return Success;
 	]]>
       </Code>
     </Task>

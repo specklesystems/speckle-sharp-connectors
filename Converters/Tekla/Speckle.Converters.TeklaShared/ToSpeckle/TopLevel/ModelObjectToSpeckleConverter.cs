@@ -58,6 +58,12 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
     var displayValue = _displayValueExtractor.GetDisplayValue(modelObject).ToList();
     if (displayValue.Count > 0)
     {
+      foreach (var displayValueObject in displayValue)
+      {
+        // NOTE: since we put ModelObject applicationIds into proxies, we should also mutate the same application id for its displayValue objects.
+        // otherwise we will have anonymous objects on receive for other host apps
+        displayValueObject.applicationId = modelObject.GetSpeckleApplicationId();
+      }
       result["displayValue"] = displayValue;
     }
 
@@ -67,7 +73,7 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
       Dictionary<string, object?> properties = new();
 
       // get report properties
-      var reportProperties = _reportPropertyExtractor.GetProperties(modelObject);
+      var reportProperties = _reportPropertyExtractor.GetReportProperties(modelObject);
       if (reportProperties.Count > 0)
       {
         properties["report"] = reportProperties;

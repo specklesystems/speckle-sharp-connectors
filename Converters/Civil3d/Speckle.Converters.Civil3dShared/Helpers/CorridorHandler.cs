@@ -45,7 +45,12 @@ public sealed class CorridorHandler
     List<Base> baselines = new(corridor.Baselines.Count);
     foreach (CDB.Baseline baseline in corridor.Baselines)
     {
+#if CIVIL3D2025_OR_GREATER
+      string baselineGuid = baseline.BaselineGuid.ToString();
+#else
       string baselineGuid = baseline.baselineGUID.ToString();
+
+#endif
 
       Base convertedBaseline =
         new()

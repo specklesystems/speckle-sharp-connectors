@@ -89,19 +89,22 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
     _events.Register();
   }
 
+  // subscribes the all changes in a modelobject
   private void ModelHandler_OnChange(List<ChangeData> changes)
   {
     foreach (var change in changes)
     {
       if (change.Object is { } modelObj)
       {
-        ChangedObjectIds[modelObj.Identifier.ID.ToString()] = 1;
+        ChangedObjectIds[modelObj.Identifier.GUID.ToString()] = 1;
       }
     }
 
     if (changes.Count > 0)
     {
-      _idleManager.SubscribeToIdle(nameof(TeklaSendBinding), () => RunExpirationChecks());
+      // directly calling the RunExpirationChecks, not triggering the idle
+      // TODO: Figure out how idleing works in Tekla
+      Task.FromResult(RunExpirationChecks());
     }
   }
 
@@ -183,7 +186,7 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
 
     foreach (SenderModelCard modelCard in senders)
     {
-      var intersection = modelCard.SendFilter.NotNull().RefreshObjectIds().Intersect(objectIdsList).ToList();
+      var intersection = modelCard.SendFilter.NotNull().SelectedObjectIds.Intersect(objectIdsList).ToList();
       var isExpired = intersection.Count != 0;
       if (isExpired)
       {
@@ -192,7 +195,8 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
     }
 
     await Commands.SetModelsExpired(expiredSenderIds).ConfigureAwait(false);
-    ChangedObjectIds = new();
+
+    ChangedObjectIds = new ConcurrentDictionary<string, byte>();
   }
 
   private bool _disposed;

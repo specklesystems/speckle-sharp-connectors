@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Serialisation;
 
 namespace Speckle.Connectors.Common.Caching;
 
@@ -10,11 +11,11 @@ public class SendConversionCache : ISendConversionCache
 
   private Dictionary<(string applicationId, string projectId), ObjectReference> Cache { get; set; } = new(); // NOTE: as this dude's accessed from potentially more operations at the same time, it might be safer to bless him as a concurrent dictionary.
 
-  public void StoreSendResult(string projectId, IReadOnlyDictionary<string, ObjectReference> convertedReferences)
+  public void StoreSendResult(string projectId, IReadOnlyDictionary<Id, ObjectReference> convertedReferences)
   {
     foreach (var kvp in convertedReferences)
     {
-      Cache[(kvp.Key, projectId)] = kvp.Value;
+      Cache[(kvp.Key.Value, projectId)] = kvp.Value;
     }
   }
 

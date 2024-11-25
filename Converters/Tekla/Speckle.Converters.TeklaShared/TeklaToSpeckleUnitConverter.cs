@@ -1,36 +1,25 @@
 using Speckle.Converters.Common;
 using Speckle.Sdk.Common.Exceptions;
+using Tekla.Structures.Datatype;
 using SSC = Speckle.Sdk.Common;
-using TSD = Tekla.Structures.Drawing;
 
 namespace Speckle.Converter.Tekla2024;
 
-public class TeklaToSpeckleUnitConverter : IHostToSpeckleUnitConverter<TSD.Units>
+public class TeklaToSpeckleUnitConverter : IHostToSpeckleUnitConverter<Distance.UnitType>
 {
-  private readonly Dictionary<TSD.Units, string> _unitMapping = new();
+  private readonly Dictionary<Distance.UnitType, string> _unitMapping = new();
 
   public TeklaToSpeckleUnitConverter()
   {
-    _unitMapping[TSD.Units.Automatic] = SSC.Units.Millimeters;
-    _unitMapping[TSD.Units.Millimeters] = SSC.Units.Millimeters;
-    _unitMapping[TSD.Units.Centimeters] = SSC.Units.Centimeters;
-    _unitMapping[TSD.Units.Meters] = SSC.Units.Meters;
-    _unitMapping[TSD.Units.Inches] = SSC.Units.Inches;
-    _unitMapping[TSD.Units.Feet] = SSC.Units.Feet;
-
-    // there are also other units in tekla, not sure how to handle them in speckle
-    // auto unit option in tekla is based on the selected environment
-    //_unitMapping[TSD.Units.FeetAndInches]
-    //_unitMapping[TSD.Units.CentimetersOrMeters]
+    _unitMapping[Distance.UnitType.Millimeter] = SSC.Units.Millimeters;
+    _unitMapping[Distance.UnitType.Centimeter] = SSC.Units.Centimeters;
+    _unitMapping[Distance.UnitType.Meter] = SSC.Units.Meters;
+    _unitMapping[Distance.UnitType.Inch] = SSC.Units.Inches;
+    _unitMapping[Distance.UnitType.Foot] = SSC.Units.Feet;
   }
 
-  public string ConvertOrThrow(TSD.Units hostUnit)
-  {
-    if (_unitMapping.TryGetValue(hostUnit, out string? value))
-    {
-      return value;
-    }
-
-    throw new UnitNotSupportedException($"The Unit System \"{hostUnit}\" is unsupported.");
-  }
+  public string ConvertOrThrow(Distance.UnitType hostUnit) =>
+    _unitMapping.TryGetValue(hostUnit, out string? value)
+      ? value
+      : throw new UnitNotSupportedException($"The Unit System \"{hostUnit}\" is unsupported.");
 }

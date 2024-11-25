@@ -1,4 +1,6 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.Windows.Forms.Integration;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,38 +16,71 @@ namespace Speckle.Connector.Tekla2024;
 
 public class SpeckleTeklaPanelHost : PluginFormBase
 {
-  private ElementHost Host { get; }
+  private static SpeckleTeklaPanelHost? s_instance;
+  private ElementHost Host { get; set; }
   public Model Model { get; private set; }
   public static new ServiceProvider? Container { get; private set; }
-  private static readonly List<SpeckleTeklaPanelHost> s_instances = new();
+
+  // NOTE: Somehow tekla triggers this class twice at the beginning and on first dialog our webview appears
+  // with small size of render in Host even if we set it as Dock.Fill. But on second trigger dialog initializes as expected.
+  // So, we do not init our plugin at first attempt, we just close it at first.
+  // On second, we init plugin and mark plugin as 'Initialized' to handle later init attempts nicely.
+  // We make 'IsInitialized' as 'false' only whenever our main dialog is closed explicitly by user.
+  private static bool IsFirst { get; set; } = true;
+  public static bool IsInitialized { get; private set; }
+
+  //window owner call
+  [DllImport("user32.dll", SetLastError = true)]
+  [SuppressMessage("Security", "CA5392:Use DefaultDllImportSearchPaths attribute for P/Invokes")]
+  private static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr value);
+
+  private const int GWL_HWNDPARENT = -8;
 
   public SpeckleTeklaPanelHost()
   {
+    if (IsFirst)
+    {
+      IsFirst = false;
+      Close();
+    }
+    else
+    {
+      if (IsInitialized)
+      {
+        s_instance?.BringToFront();
+        Close();
+        return;
+      }
+      IsInitialized = true;
+      InitializeInstance();
+      s_instance?.BringToFront();
+    }
+  }
+
+  protected override void OnClosed(EventArgs e)
+  {
+    s_instance?.Dispose();
+    IsInitialized = false;
+  }
+
+  private void InitializeInstance()
+  {
+    s_instance = this; // Assign the current instance to the static field
+
     this.Text = "Speckle (Beta)";
     this.Name = "Speckle (Beta)";
 
-    // CNX-790: Needs to be solved
-    string version = GetVersion().ToString()[1..]; // removes the 'v' from version
-    string resourcePath = $"Speckle.Connector.Tekla{version}.Resources.et_element_Speckle.bmp";
-    using (
-      Bitmap bmp = new Bitmap(
-        GetType().Assembly.GetManifestResourceStream(resourcePath)
-          ?? throw new InvalidOperationException($"Could not find resource: {resourcePath}")
-      )
-    )
+    string assemblyName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
+    string resourcePath = $"{assemblyName}.Resources.et_element_Speckle.bmp";
+    using (var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream(resourcePath))
     {
+      if (stream == null)
+      {
+        throw new InvalidOperationException($"Could not find resource: {resourcePath}");
+      }
+
+      using var bmp = new Bitmap(stream);
       this.Icon = Icon.FromHandle(bmp.GetHicon());
-    }
-
-    // adds instances to tracking list
-    s_instances.Add(this);
-
-    if (s_instances.Count > 1)
-    {
-      var firstInstance = s_instances[0];
-      s_instances.RemoveAt(0);
-      // hides the first instance if there is more than one
-      firstInstance.Hide();
     }
 
     var services = new ServiceCollection();
@@ -66,10 +101,13 @@ public class SpeckleTeklaPanelHost : PluginFormBase
       );
     }
     var webview = Container.GetRequiredService<DUI3ControlWebView>();
+    webview.RenderSize = new System.Windows.Size(800, 600);
     Host = new() { Child = webview, Dock = DockStyle.Fill };
     Controls.Add(Host);
     Operation.DisplayPrompt("Speckle connector initialized.");
 
+    this.TopLevel = true;
+    SetWindowLongPtr(Handle, GWL_HWNDPARENT, MainWindow.Frame.Handle);
     Show();
     Activate();
     Focus();
