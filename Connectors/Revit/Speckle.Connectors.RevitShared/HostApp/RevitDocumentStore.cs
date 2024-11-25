@@ -38,16 +38,15 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     _documentModelStorageSchema = documentModelStorageSchema;
     _idStorageSchema = idStorageSchema;
 
+    UIApplication uiApplication = _revitContext.UIApplication.NotNull();
 
-      UIApplication uiApplication = _revitContext.UIApplication.NotNull();
+    uiApplication.ViewActivated += (s, e) => topLevelExceptionHandler.CatchUnhandled(() => OnViewActivated(s, e));
 
-      uiApplication.ViewActivated += (s, e) => topLevelExceptionHandler.CatchUnhandled(() => OnViewActivated(s, e));
+    uiApplication.Application.DocumentOpening += (_, _) =>
+      topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
 
-      uiApplication.Application.DocumentOpening += (_, _) =>
-        topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
-
-      uiApplication.Application.DocumentOpened += (_, _) =>
-        topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
+    uiApplication.Application.DocumentOpened += (_, _) =>
+      topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
 
     Models.CollectionChanged += (_, _) => topLevelExceptionHandler.CatchUnhandled(WriteToFile);
 

@@ -10,9 +10,9 @@ using Speckle.Sdk.Transports;
 namespace Speckle.Connectors.DUI;
 
 public static class ContainerRegistration
-{ 
+{
   public static void AddDUI<TMainThreadContext>(this IServiceCollection serviceCollection)
-  where TMainThreadContext : IMainThreadContext, new()
+    where TMainThreadContext : IMainThreadContext, new()
   {
     // send operation and dependencies
     serviceCollection.AddSingleton<IMainThreadContext>(new TMainThreadContext());
@@ -22,7 +22,7 @@ public static class ContainerRegistration
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetAssembly(typeof(IdleCallManager)));
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetAssembly(typeof(IServerTransportFactory)));
   }
-  
+
   public static void RegisterTopLevelExceptionHandler(this IServiceCollection serviceCollection)
   {
     serviceCollection.AddSingleton<IBinding, TopLevelExceptionHandlerBinding>(sp =>

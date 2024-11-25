@@ -29,7 +29,8 @@ public sealed class AutocadSendBinding : AutocadSendBaseBinding
     IOperationProgressManager operationProgressManager,
     ILogger<AutocadSendBinding> logger,
     IAutocadConversionSettingsFactory autocadConversionSettingsFactory,
-    ISpeckleApplication speckleApplication, IMainThreadContext mainThreadContext
+    ISpeckleApplication speckleApplication,
+    IMainThreadContext mainThreadContext
   )
     : base(
       store,
@@ -41,7 +42,8 @@ public sealed class AutocadSendBinding : AutocadSendBaseBinding
       sendConversionCache,
       operationProgressManager,
       logger,
-      speckleApplication, mainThreadContext
+      speckleApplication,
+      mainThreadContext
     )
   {
     _autocadConversionSettingsFactory = autocadConversionSettingsFactory;

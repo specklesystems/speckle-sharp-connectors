@@ -30,7 +30,9 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
     IBrowserBridge parent,
     IAccountManager accountManager,
     ISpeckleApplication speckleApplication,
-    ILogger<AutocadBasicConnectorBinding> logger, IMainThreadContext mainThreadContext)
+    ILogger<AutocadBasicConnectorBinding> logger,
+    IMainThreadContext mainThreadContext
+  )
   {
     _store = store;
     Parent = parent;

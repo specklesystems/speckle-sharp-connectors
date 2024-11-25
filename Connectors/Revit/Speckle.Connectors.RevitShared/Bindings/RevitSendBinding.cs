@@ -82,8 +82,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     // TODO expiry events
     // TODO filters need refresh events
 
-      revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
-        topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
+    revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
+      topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
     Store.DocumentChanged += (_, _) =>
       topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged().ConfigureAwait(false));
   }

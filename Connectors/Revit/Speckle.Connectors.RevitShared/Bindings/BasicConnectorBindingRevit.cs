@@ -170,7 +170,8 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
         .Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid))
         .Where(el => el is not null)
         .Cast<ElementId>()
-        .ToList());
+        .ToList()
+    );
     return Task.CompletedTask;
   }
 
@@ -181,8 +182,8 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
       _revitContext.UIApplication?.ActiveUIDocument
       ?? throw new SpeckleException("Unable to retrieve active UI document");
 
-        activeUIDoc.Selection.SetElementIds(objectIds);
-        activeUIDoc.ShowElements(objectIds);
+    activeUIDoc.Selection.SetElementIds(objectIds);
+    activeUIDoc.ShowElements(objectIds);
     ;
   }
 }

@@ -28,8 +28,8 @@ internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding, ID
     _selectionTimer.Start();
 #else
 
-      RevitContext.UIApplication.NotNull().SelectionChanged += (_, _) =>
-        revitIdleManager.SubscribeToIdle(nameof(SelectionBinding), OnSelectionChanged);
+    RevitContext.UIApplication.NotNull().SelectionChanged += (_, _) =>
+      revitIdleManager.SubscribeToIdle(nameof(SelectionBinding), OnSelectionChanged);
 #endif
   }
 

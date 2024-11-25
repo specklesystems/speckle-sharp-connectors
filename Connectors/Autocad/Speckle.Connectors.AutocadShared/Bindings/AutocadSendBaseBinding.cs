@@ -59,7 +59,9 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
     ILogger<AutocadSendBinding> logger,
-    ISpeckleApplication speckleApplication, IMainThreadContext mainThreadContext)
+    ISpeckleApplication speckleApplication,
+    IMainThreadContext mainThreadContext
+  )
   {
     _store = store;
     _idleManager = idleManager;

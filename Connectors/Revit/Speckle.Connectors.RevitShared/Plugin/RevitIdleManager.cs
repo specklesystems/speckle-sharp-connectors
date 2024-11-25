@@ -6,7 +6,6 @@ using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
-
 public sealed class RevitIdleManager : AppIdleManager
 {
   private readonly UIApplication _uiApplication;

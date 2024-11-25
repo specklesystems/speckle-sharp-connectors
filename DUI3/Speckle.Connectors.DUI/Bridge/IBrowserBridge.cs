@@ -29,7 +29,6 @@ public interface IBrowserBridge
   /// <returns></returns>
   public void RunMethod(string methodName, string requestId, string args);
 
-
   /// <param name="eventName"></param>
   /// <exception cref="InvalidOperationException">Bridge was not initialized with a binding</exception>
   public Task Send(string eventName, CancellationToken cancellationToken = default);
