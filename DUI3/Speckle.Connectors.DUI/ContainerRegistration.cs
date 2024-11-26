@@ -11,11 +11,11 @@ namespace Speckle.Connectors.DUI;
 
 public static class ContainerRegistration
 {
-  public static void AddDUI<TMainThreadContext>(this IServiceCollection serviceCollection)
-    where TMainThreadContext : IMainThreadContext, new()
+  public static void AddDUI<TThreadContext>(this IServiceCollection serviceCollection)
+    where TThreadContext : IThreadContext, new()
   {
     // send operation and dependencies
-    serviceCollection.AddSingleton<IMainThreadContext>(new TMainThreadContext());
+    serviceCollection.AddSingleton<IThreadContext>(new TThreadContext());
     serviceCollection.AddSingleton<IRootObjectSender, RootObjectSender>();
     serviceCollection.AddTransient<IBrowserBridge, BrowserBridge>(); // POC: Each binding should have it's own bridge instance
 

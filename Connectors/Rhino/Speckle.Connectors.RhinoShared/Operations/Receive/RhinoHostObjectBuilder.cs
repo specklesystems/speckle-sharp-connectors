@@ -31,7 +31,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private readonly RhinoGroupBaker _groupBaker;
   private readonly RootObjectUnpacker _rootObjectUnpacker;
   private readonly ISdkActivityFactory _activityFactory;
-  private readonly IMainThreadContext _mainThreadContext;
+  private readonly IThreadContext _threadContext;
 
   public RhinoHostObjectBuilder(
     IRootToHostConverter converter,
@@ -43,7 +43,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     RhinoColorBaker colorBaker,
     RhinoGroupBaker groupBaker,
     ISdkActivityFactory activityFactory,
-    IMainThreadContext mainThreadContext
+    IThreadContext threadContext
   )
   {
     _converter = converter;
@@ -55,7 +55,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _layerBaker = layerBaker;
     _groupBaker = groupBaker;
     _activityFactory = activityFactory;
-    _mainThreadContext = mainThreadContext;
+    _threadContext = threadContext;
   }
 
 #pragma warning disable CA1506
@@ -68,16 +68,13 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     CancellationToken cancellationToken
   )
   {
-    return await _mainThreadContext
-      .RunOnThreadAsync(
-        async () =>
-        {
-          var ret = BuildSync(rootObject, projectName, modelName, onOperationProgressed);
-          await Task.Delay(100, cancellationToken).ConfigureAwait(false);
-          return ret;
-        },
-        false
-      )
+    return await _threadContext
+      .RunOnWorkerAsync(async () =>
+      {
+        var ret = BuildSync(rootObject, projectName, modelName, onOperationProgressed);
+        await Task.Delay(100, cancellationToken).ConfigureAwait(false);
+        return ret;
+      })
       .ConfigureAwait(false);
   }
 

@@ -27,7 +27,7 @@ public class AutocadHostObjectBuilder(
   IAutocadColorBaker colorBaker,
   AutocadContext autocadContext,
   RootObjectUnpacker rootObjectUnpacker,
-  IMainThreadContext mainThreadContext
+  IThreadContext threadContext
 ) : IHostObjectBuilder
 {
   public async Task<HostObjectBuilderResult> Build(
@@ -38,8 +38,8 @@ public class AutocadHostObjectBuilder(
     CancellationToken ct
   )
   {
-    return await mainThreadContext
-      .RunOnMainThreadAsync(async () =>
+    return await threadContext
+      .RunOnWorkerAsync(async () =>
       {
         var ret = BuildImpl(rootObject, projectName, modelName, onOperationProgressed);
         await Task.Delay(100, ct).ConfigureAwait(false);

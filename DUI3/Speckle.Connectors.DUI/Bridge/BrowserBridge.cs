@@ -28,7 +28,7 @@ public sealed class BrowserBridge : IBrowserBridge
 
   private readonly ConcurrentDictionary<string, string?> _resultsStore = new();
   public ITopLevelExceptionHandler TopLevelExceptionHandler { get; }
-  private readonly IMainThreadContext _mainThreadContext;
+  private readonly IThreadContext _threadContext;
 
   private readonly IBrowserScriptExecutor _browserScriptExecutor;
   private readonly IJsonSerializer _jsonSerializer;
@@ -56,14 +56,14 @@ public sealed class BrowserBridge : IBrowserBridge
   }
 
   public BrowserBridge(
-    IMainThreadContext mainThreadContext,
+    IThreadContext threadContext,
     IJsonSerializer jsonSerializer,
     ILogger<BrowserBridge> logger,
     ILogger<TopLevelExceptionHandler> topLogger,
     IBrowserScriptExecutor browserScriptExecutor
   )
   {
-    _mainThreadContext = mainThreadContext;
+    _threadContext = threadContext;
     _jsonSerializer = jsonSerializer;
     _logger = logger;
     TopLevelExceptionHandler = new TopLevelExceptionHandler(topLogger, this);
@@ -102,25 +102,22 @@ public sealed class BrowserBridge : IBrowserBridge
   }
 
   public void RunMethod(string methodName, string requestId, string methodArgs) =>
-    _mainThreadContext.RunOnThreadAsync(
-      async () =>
-      {
-        var task = await TopLevelExceptionHandler
-          .CatchUnhandledAsync(async () =>
-          {
-            var result = await ExecuteMethod(methodName, methodArgs).ConfigureAwait(false);
-            string resultJson = _jsonSerializer.Serialize(result);
-            await NotifyUIMethodCallResultReady(requestId, resultJson).ConfigureAwait(false);
-          })
-          .ConfigureAwait(false);
-        if (task.Exception is not null)
+    _threadContext.RunOnMainAsync(async () =>
+    {
+      var task = await TopLevelExceptionHandler
+        .CatchUnhandledAsync(async () =>
         {
-          string resultJson = SerializeFormattedException(task.Exception);
+          var result = await ExecuteMethod(methodName, methodArgs).ConfigureAwait(false);
+          string resultJson = _jsonSerializer.Serialize(result);
           await NotifyUIMethodCallResultReady(requestId, resultJson).ConfigureAwait(false);
-        }
-      },
-      true
-    );
+        })
+        .ConfigureAwait(false);
+      if (task.Exception is not null)
+      {
+        string resultJson = SerializeFormattedException(task.Exception);
+        await NotifyUIMethodCallResultReady(requestId, resultJson).ConfigureAwait(false);
+      }
+    });
 
   /// <summary>
   /// Used by the action block to invoke the actual method called by the UI.

@@ -5,22 +5,26 @@ using Speckle.Sdk.Common;
 namespace Speckle.Connectors.DUI.Threading;
 
 [GenerateAutoInterface]
-public class MainThreadContext : IMainThreadContext
+public class ThreadContext : IThreadContext
 {
-  private readonly SynchronizationContext _mainThreadContext;
+  private readonly SynchronizationContext _threadContext;
 
   // Do this when you start your application
   private static int s_mainThreadId;
 
-  public MainThreadContext()
+  public ThreadContext()
   {
-    _mainThreadContext = SynchronizationContext.Current.NotNull("No UI thread to capture?");
+    _threadContext = SynchronizationContext.Current.NotNull("No UI thread to capture?");
     s_mainThreadId = Environment.CurrentManagedThreadId;
   }
 
   public static bool IsMainThread => Environment.CurrentManagedThreadId == s_mainThreadId;
 
   public virtual void RunContext(Action action) => action();
+
+  public virtual Task RunContext(Func<Task> action) => action();
+
+  public virtual Task<T> RunContext<T>(Func<Task<T>> action) => action();
 
   public void RunOnThread(Action action, bool useMain)
   {
@@ -32,7 +36,7 @@ public class MainThreadContext : IMainThreadContext
       }
       else
       {
-        _mainThreadContext.Post(
+        _threadContext.Post(
           _ =>
           {
             RunContext(action);
@@ -92,10 +96,6 @@ public class MainThreadContext : IMainThreadContext
     }
   }
 
-  public virtual Task RunContext(Func<Task> action) => action();
-
-  public virtual Task<T> RunContext<T>(Func<Task<T>> action) => action();
-
   [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "TaskCompletionSource")]
   public Task<T> RunOnThreadAsync<T>(Func<Task<T>> action, bool useMain)
   {
@@ -106,7 +106,7 @@ public class MainThreadContext : IMainThreadContext
         return RunContext(action.Invoke);
       }
       TaskCompletionSource<T> tcs = new();
-      _mainThreadContext.Post(
+      _threadContext.Post(
         async _ =>
         {
           try

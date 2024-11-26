@@ -26,7 +26,7 @@ public static class SharedRegistration
   public static void AddAutocadBase(this IServiceCollection serviceCollection)
   {
     serviceCollection.AddConnectorUtils();
-    serviceCollection.AddDUI<MainThreadContext>();
+    serviceCollection.AddDUI<ThreadContext>();
     serviceCollection.AddDUIView();
 
     // Register other connector specific types

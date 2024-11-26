@@ -20,7 +20,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
 
   private readonly DocumentModelStore _store;
   private readonly ISpeckleApplication _speckleApplication;
-  private readonly IMainThreadContext _mainThreadContext;
+  private readonly IThreadContext _threadContext;
   private readonly ILogger<AutocadBasicConnectorBinding> _logger;
 
   public BasicConnectorBindingCommands Commands { get; }
@@ -31,7 +31,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
     IAccountManager accountManager,
     ISpeckleApplication speckleApplication,
     ILogger<AutocadBasicConnectorBinding> logger,
-    IMainThreadContext mainThreadContext
+    IThreadContext threadContext
   )
   {
     _store = store;
@@ -45,7 +45,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
         await Commands.NotifyDocumentChanged().ConfigureAwait(false);
       });
     _logger = logger;
-    _mainThreadContext = mainThreadContext;
+    _threadContext = threadContext;
   }
 
   public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
@@ -133,8 +133,8 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
   {
     var doc = Application.DocumentManager.MdiActiveDocument;
 
-    await _mainThreadContext
-      .RunOnMainThreadAsync(async () =>
+    await _threadContext
+      .RunOnMainAsync(async () =>
       {
         try
         {

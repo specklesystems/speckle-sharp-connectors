@@ -39,7 +39,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   private readonly ILogger<AutocadSendBinding> _logger;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly ISpeckleApplication _speckleApplication;
-  private readonly IMainThreadContext _mainThreadContext;
+  private readonly IThreadContext _threadContext;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -60,7 +60,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     IOperationProgressManager operationProgressManager,
     ILogger<AutocadSendBinding> logger,
     ISpeckleApplication speckleApplication,
-    IMainThreadContext mainThreadContext
+    IThreadContext threadContext
   )
   {
     _store = store;
@@ -72,7 +72,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     _operationProgressManager = operationProgressManager;
     _logger = logger;
     _speckleApplication = speckleApplication;
-    _mainThreadContext = mainThreadContext;
+    _threadContext = threadContext;
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
@@ -148,8 +148,8 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   public List<ICardSetting> GetSendSettings() => [];
 
   public async Task Send(string modelCardId) =>
-    await _mainThreadContext
-      .RunOnMainThreadAsync(async () => await SendInternal(modelCardId).ConfigureAwait(false))
+    await _threadContext
+      .RunOnWorkerAsync(async () => await SendInternal(modelCardId).ConfigureAwait(false))
       .ConfigureAwait(false);
 
   protected abstract void InitializeSettings(IServiceProvider serviceProvider);

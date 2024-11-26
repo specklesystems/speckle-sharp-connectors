@@ -3,7 +3,7 @@ using Speckle.Connectors.DUI.Threading;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
-public class RevitMainThreadContext : MainThreadContext
+public class RevitThreadContext : ThreadContext
 {
   public override void RunContext(Action action) => RevitTask.RunAsync(action);
 

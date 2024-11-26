@@ -35,7 +35,7 @@ internal sealed class RevitHostObjectBuilder(
   ILogger<RevitHostObjectBuilder> logger,
   RevitToHostCacheSingleton revitToHostCacheSingleton,
   ITypedConverter<(Base atomicObject, List<Matrix4x4> matrix), DirectShape> localToGlobalDirectShapeConverter,
-  IMainThreadContext mainThreadContext
+  IThreadContext threadContext
 ) : IHostObjectBuilder, IDisposable
 {
   public Task<HostObjectBuilderResult> Build(
@@ -45,7 +45,7 @@ internal sealed class RevitHostObjectBuilder(
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   ) =>
-    mainThreadContext.RunOnMainThreadAsync(async () =>
+    threadContext.RunOnWorkerAsync(async () =>
     {
       var ret = BuildSync(rootObject, projectName, modelName, onOperationProgressed, cancellationToken);
       await Task.Delay(100, cancellationToken).ConfigureAwait(false);

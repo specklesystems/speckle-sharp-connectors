@@ -34,7 +34,7 @@ public sealed class Civil3dSendBinding : AutocadSendBaseBinding
     ICivil3dConversionSettingsFactory civil3dConversionSettingsFactory,
     IAutocadConversionSettingsFactory autocadConversionSettingsFactory,
     ISpeckleApplication speckleApplication,
-    IMainThreadContext mainThreadContext
+    IThreadContext threadContext
   )
     : base(
       store,
@@ -47,7 +47,7 @@ public sealed class Civil3dSendBinding : AutocadSendBaseBinding
       operationProgressManager,
       logger,
       speckleApplication,
-      mainThreadContext
+      threadContext
     )
   {
     _civil3dConversionSettingsFactory = civil3dConversionSettingsFactory;
