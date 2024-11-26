@@ -2,13 +2,13 @@ using ArcGIS.Core.Data;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Objects;
+using Speckle.Objects.Data;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
 
-public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisFeature>
+public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), GisObject>
 {
   private readonly ITypedConverter<ACG.MapPoint, SOG.Point> _pointConverter;
   private readonly ITypedConverter<ACG.Multipoint, IReadOnlyList<SOG.Point>> _multiPointConverter;
@@ -110,16 +110,13 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
     return displayValue;
   }
 
-  public IGisFeature Convert((Row, string) target)
+  public GisObject Convert((Row, string) target)
   {
     Row row = target.Item1;
     string appId = target.Item2;
 
-    // get attributes
-    Base attributes = new();
-
     bool hasGeometry = false;
-    string geometryField = "Shape";
+    string geometryField = "Shape"; // placeholder, assigned in the loop below
     foreach (Field field in row.GetFields())
     {
       // POC: check for all possible reserved Shape names
@@ -133,7 +130,13 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
     // return GisFeatures that don't have geometry
     if (!hasGeometry)
     {
-      return new SGIS.GisNonGeometricFeature() { attributes = attributes, applicationId = appId };
+      return new GisObject()
+      {
+        type = "", // no geometry
+        name = "Table Row",
+        applicationId = appId,
+        displayValue = new List<Base>()
+      };
     }
 
     var shape = (ACG.Geometry)row[geometryField];
@@ -141,51 +144,54 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
     {
       case ACG.MapPoint point:
         SOG.Point specklePoint = _pointConverter.Convert(point);
-        return new SGIS.GisPointFeature()
+        return new GisObject()
         {
-          geometry = new() { specklePoint },
-          attributes = attributes,
-          applicationId = appId
+          type = "Point",
+          name = "Point Feature",
+          applicationId = appId,
+          displayValue = new List<Base>() { specklePoint },
         };
 
       case ACG.Multipoint multipoint:
         List<SOG.Point> specklePoints = _multiPointConverter.Convert(multipoint).ToList();
-        return new SGIS.GisPointFeature()
+        return new GisObject()
         {
-          geometry = specklePoints,
-          attributes = attributes,
-          applicationId = appId
+          type = "Point",
+          name = "Point Feature",
+          applicationId = appId,
+          displayValue = specklePoints,
         };
 
       case ACG.Polyline polyline:
         List<SOG.Polyline> polylines = _polylineConverter.Convert(polyline).ToList();
-        return new SGIS.GisPolylineFeature()
+        return new GisObject()
         {
-          geometry = polylines,
-          attributes = attributes,
-          applicationId = appId
+          type = "Line",
+          name = "Line Feature",
+          applicationId = appId,
+          displayValue = polylines,
         };
 
       case ACG.Polygon polygon:
         List<SGIS.PolygonGeometry> polygons = _polygonConverter.Convert(polygon).ToList();
         List<SOG.Mesh> meshes = GetPolygonDisplayMeshes(polygons);
-        return new SGIS.GisPolygonFeature()
+        return new GisObject()
         {
-          geometry = polygons,
+          type = "Polygon",
+          name = "Polygon Feature",
+          applicationId = appId,
           displayValue = meshes,
-          attributes = attributes,
-          applicationId = appId
         };
 
       case ACG.Multipatch multipatch:
         List<Base> geometry = _multipatchConverter.Convert(multipatch).ToList();
         List<SOG.Mesh> display = GetDisplayMeshes(geometry);
-        return new SGIS.GisMultipatchFeature()
+        return new GisObject()
         {
-          geometry = geometry,
+          type = "Multipatch",
+          name = "Multipatch Feature",
+          applicationId = appId,
           displayValue = display,
-          attributes = attributes,
-          applicationId = appId
         };
 
       default:

@@ -14,7 +14,7 @@ using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Objects;
+using Speckle.Objects.Data;
 using Speckle.Objects.GIS;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
@@ -37,7 +37,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
   private readonly MapMembersUtils _mapMemberUtils;
   private readonly ILogger<ArcGISRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
-  private readonly ITypedConverter<(Row, string), IGisFeature> _gisFeatureConverter;
+  private readonly ITypedConverter<(Row, string), GisObject> _gisFeatureConverter;
   private readonly ITypedConverter<(Row, IReadOnlyCollection<string>), Base> _attributeConverter;
 
   public ArcGISRootObjectBuilder(
@@ -49,7 +49,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     MapMembersUtils mapMemberUtils,
     ILogger<ArcGISRootObjectBuilder> logger,
     ISdkActivityFactory activityFactory,
-    ITypedConverter<(Row, string), IGisFeature> gisFeatureConverter,
+    ITypedConverter<(Row, string), GisObject> gisFeatureConverter,
     ITypedConverter<(Row, IReadOnlyCollection<string>), Base> attributeConverter
   )
   {
@@ -153,11 +153,11 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
                         string appId = $"{featureLayer.URI}_{count}";
                         using (Row row = rowCursor.Current)
                         {
-                          IGisFeature element = _gisFeatureConverter.Convert((row, appId));
-                          element.attributes = _attributeConverter.Convert((row, visibleAttributes));
+                          GisObject element = _gisFeatureConverter.Convert((row, appId));
+                          element["properties"] = _attributeConverter.Convert((row, visibleAttributes));
 
                           // add converted feature to converted layer
-                          convertedVector.elements.Add((Base)element);
+                          convertedVector.elements.Add(element);
                         }
 
                         count++;
