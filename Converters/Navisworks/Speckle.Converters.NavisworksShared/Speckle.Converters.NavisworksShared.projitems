@@ -9,7 +9,7 @@
     <Import_RootNamespace>Speckle.Converters.NavisworksShared</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)Extensions\ElementSelectionExtension.cs" />
+    <Folder Include="$(MSBuildThisFileDirectory)Extensions\" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\NavisworksConversionSettingsFactory.cs" />
