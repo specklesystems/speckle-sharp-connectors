@@ -1,4 +1,3 @@
-using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
@@ -20,7 +19,7 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
   private readonly ParameterExtractor _parameterExtractor;
   private readonly ILogger<RevitRootToSpeckleConverter> _logger;
 
-  private readonly Dictionary<WorksetId, string> _worksetCache = new();
+  private readonly Dictionary<DB.WorksetId, string> _worksetCache = new();
 
   public RevitRootToSpeckleConverter(
     IConverterManager<IToSpeckleTopLevelConverter> toSpeckle,
@@ -54,11 +53,8 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
     result["elementId"] = element.Id.ToString()!;
 
     // POC DirectShapes have RevitCategory enum as the type or the category property, DS category property is already set in the converter
-    // trying to set the category as a string will throw
-    // the category should be moved to be set in each converter instead of the root to speckle converter
     if (target is not DB.DirectShape)
     {
-      result["category"] = element.Category?.Name;
       result["builtinCategory"] = element.Category?.GetBuiltInCategory().ToString();
     }
 
@@ -85,7 +81,7 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
     result["worksetId"] = element.WorksetId.ToString();
     if (!_worksetCache.TryGetValue(element.WorksetId, out var worksetName))
     {
-      Workset workset = _converterSettings.Current.Document.GetWorksetTable().GetWorkset(element.WorksetId);
+      DB.Workset workset = _converterSettings.Current.Document.GetWorksetTable().GetWorkset(element.WorksetId);
       worksetName = workset.Name;
       _worksetCache[element.WorksetId] = worksetName;
     }
