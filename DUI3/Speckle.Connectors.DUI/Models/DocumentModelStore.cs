@@ -120,11 +120,11 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
     {
       lock (_models)
       {
+        _models.Clear();
         if (string.IsNullOrEmpty(models))
         {
           return;
         }
-        _models.Clear();
         _models.AddRange(Deserialize(models.NotNull()).NotNull());
       }
     }
