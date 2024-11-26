@@ -46,7 +46,6 @@ public static class SharedRegistration
     serviceCollection.AddScoped<AutocadColorUnpacker>();
 
     serviceCollection.AddScoped<AutocadMaterialUnpacker>();
-    serviceCollection.AddScoped<AutocadMaterialBaker>();
 
     serviceCollection.AddSingleton<IAppIdleManager, AutocadIdleManager>();
 

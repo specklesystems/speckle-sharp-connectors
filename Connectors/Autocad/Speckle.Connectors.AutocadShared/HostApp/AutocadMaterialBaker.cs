@@ -4,6 +4,7 @@ using Autodesk.AutoCAD.GraphicsInterface;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
+using Speckle.InterfaceGenerator;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
@@ -15,7 +16,8 @@ namespace Speckle.Connectors.Autocad.HostApp;
 /// <summary>
 /// Expects to be a scoped dependency for a given operation and helps with layer creation and cleanup.
 /// </summary>
-public class AutocadMaterialBaker
+[GenerateAutoInterface]
+public class AutocadMaterialBaker : IAutocadMaterialBaker
 {
   private readonly ILogger<AutocadMaterialBaker> _logger;
   private readonly AutocadContext _autocadContext;

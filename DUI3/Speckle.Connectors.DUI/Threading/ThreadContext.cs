@@ -20,11 +20,13 @@ public class ThreadContext : IThreadContext
 
   public static bool IsMainThread => Environment.CurrentManagedThreadId == s_mainThreadId;
 
-  public virtual void RunContext(Action action) => action();
+  protected virtual void RunContext(Action action) => action();
 
-  public virtual Task RunContext(Func<Task> action) => action();
+  protected virtual Task<T> RunContext<T>(Func<T> action) => Task.FromResult(action());
 
-  public virtual Task<T> RunContext<T>(Func<Task<T>> action) => action();
+  protected virtual Task RunContext(Func<Task> action) => action();
+
+  protected virtual Task<T> RunContext<T>(Func<Task<T>> action) => action();
 
   public void RunOnThread(Action action, bool useMain)
   {
@@ -58,6 +60,42 @@ public class ThreadContext : IThreadContext
         RunContext(action);
       }
     }
+  }
+
+  [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "TaskCompletionSource")]
+  public Task<T> RunOnThread<T>(Func<T> action, bool useMain)
+  {
+    if (useMain)
+    {
+      if (IsMainThread)
+      {
+        return RunContext(action.Invoke);
+      }
+      TaskCompletionSource<T> tcs = new();
+      _threadContext.Post(
+        async _ =>
+        {
+          try
+          {
+            T result = await RunContext(action).ConfigureAwait(false);
+            tcs.SetResult(result);
+          }
+          catch (Exception ex)
+          {
+            tcs.SetException(ex);
+          }
+        },
+        null
+      );
+      return tcs.Task;
+    }
+    if (IsMainThread)
+    {
+      Task<T> f = Task.Factory.StartNew(action, default, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+      return f;
+    }
+
+    return RunContext(action.Invoke);
   }
 
   public async Task RunOnThreadAsync(Func<Task> action, bool useMain)
