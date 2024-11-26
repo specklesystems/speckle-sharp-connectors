@@ -38,6 +38,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
   private readonly ILogger<ArcGISRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly ITypedConverter<(Row, string), IGisFeature> _gisFeatureConverter;
+  private readonly ITypedConverter<(Row, IReadOnlyCollection<string>), Base> _attributeConverter;
 
   public ArcGISRootObjectBuilder(
     ISendConversionCache sendConversionCache,
@@ -48,7 +49,8 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     MapMembersUtils mapMemberUtils,
     ILogger<ArcGISRootObjectBuilder> logger,
     ISdkActivityFactory activityFactory,
-    ITypedConverter<(Row, string), IGisFeature> gisFeatureConverter
+    ITypedConverter<(Row, string), IGisFeature> gisFeatureConverter,
+    ITypedConverter<(Row, IReadOnlyCollection<string>), Base> attributeConverter
   )
   {
     _sendConversionCache = sendConversionCache;
@@ -60,6 +62,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     _logger = logger;
     _activityFactory = activityFactory;
     _gisFeatureConverter = gisFeatureConverter;
+    _attributeConverter = attributeConverter;
   }
 
 #pragma warning disable CA1506
@@ -134,6 +137,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
 
               if (mapMember is FeatureLayer featureLayer && converted is VectorLayer convertedVector)
               {
+                IReadOnlyCollection<string> visibleAttributes = convertedVector.attributes.DynamicPropertyKeys;
                 await QueuedTask
                   .Run(() =>
                   {
@@ -146,22 +150,12 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
                       while (rowCursor.MoveNext())
                       {
                         // Same IDisposable issue appears to happen on Row class too. Docs say it should always be disposed of manually by the caller.
+                        string appId = $"{featureLayer.URI}_{count}";
                         using (Row row = rowCursor.Current)
                         {
-                          string appId = $"{featureLayer.URI}_{count}";
                           IGisFeature element = _gisFeatureConverter.Convert((row, appId));
+                          element.attributes = _attributeConverter.Convert((row, visibleAttributes));
 
-                          // create new element attributes from the existing attributes, based on the vector layer visible fields
-                          // POC: this should be refactored to store the feature layer properties in the context stack, so this logic can be done in the gisFeatureConverter
-                          Base elementAttributes = new();
-                          foreach (string elementAtt in element.attributes.DynamicPropertyKeys)
-                          {
-                            if (convertedVector.attributes.DynamicPropertyKeys.Contains(elementAtt))
-                            {
-                              elementAttributes[elementAtt] = element.attributes[elementAtt];
-                            }
-                          }
-                          element.attributes = elementAttributes;
                           // add converted feature to converted layer
                           convertedVector.elements.Add((Base)element);
                         }

@@ -15,7 +15,6 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
   private readonly ITypedConverter<ACG.Polyline, IReadOnlyList<SOG.Polyline>> _polylineConverter;
   private readonly ITypedConverter<ACG.Polygon, IReadOnlyList<SGIS.PolygonGeometry>> _polygonConverter;
   private readonly ITypedConverter<ACG.Multipatch, IReadOnlyList<Base>> _multipatchConverter;
-  private readonly ITypedConverter<Row, Base> _attributeConverter;
   private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
 
   public GisFeatureToSpeckleConverter(
@@ -24,7 +23,6 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
     ITypedConverter<ACG.Polyline, IReadOnlyList<SOG.Polyline>> polylineConverter,
     ITypedConverter<ACG.Polygon, IReadOnlyList<SGIS.PolygonGeometry>> polygonConverter,
     ITypedConverter<ACG.Multipatch, IReadOnlyList<Base>> multipatchConverter,
-    ITypedConverter<Row, Base> attributeConverter,
     IConverterSettingsStore<ArcGISConversionSettings> settingsStore
   )
   {
@@ -33,7 +31,6 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
     _polylineConverter = polylineConverter;
     _polygonConverter = polygonConverter;
     _multipatchConverter = multipatchConverter;
-    _attributeConverter = attributeConverter;
     _settingsStore = settingsStore;
   }
 
@@ -119,7 +116,7 @@ public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), IGisF
     string appId = target.Item2;
 
     // get attributes
-    Base attributes = _attributeConverter.Convert(row);
+    Base attributes = new();
 
     bool hasGeometry = false;
     string geometryField = "Shape";

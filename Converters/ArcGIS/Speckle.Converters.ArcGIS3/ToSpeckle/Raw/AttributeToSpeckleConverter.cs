@@ -4,14 +4,14 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
 
-public class AttributesToSpeckleConverter : ITypedConverter<Row, Base>
+public class AttributesToSpeckleConverter : ITypedConverter<(Row, IReadOnlyCollection<string>), Base>
 {
   public AttributesToSpeckleConverter() { }
 
-  public Base Convert(Row target)
+  public Base Convert((Row, IReadOnlyCollection<string>) target)
   {
     Base attributes = new();
-    IReadOnlyList<Field> fields = target.GetFields();
+    IReadOnlyList<Field> fields = target.Item1.GetFields();
     foreach (Field field in fields)
     {
       if (field.FieldType == FieldType.Geometry)
@@ -20,8 +20,11 @@ public class AttributesToSpeckleConverter : ITypedConverter<Row, Base>
       }
       else
       {
-        // TODO: currently we are setting raster, blob, and xml fields to null with this logic. Why are these sent as null and not skipped over?
-        attributes[field.Name] = FieldValueToSpeckle(target, field);
+        if (target.Item2.Contains(field.Name))
+        {
+          // TODO: currently we are setting raster, blob, and xml fields to null with this logic. Why are these sent as null and not skipped over?
+          attributes[field.Name] = FieldValueToSpeckle(target.Item1, field);
+        }
       }
     }
 
