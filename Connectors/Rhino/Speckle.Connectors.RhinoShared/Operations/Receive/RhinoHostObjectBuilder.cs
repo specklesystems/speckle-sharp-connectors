@@ -273,10 +273,9 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   /// Material and Color attributes are processed here due to those properties existing sometimes on fallback geometry (instead of parent).
   /// and this method is called by <see cref="BakeObjectsAsFallbackGroup(IEnumerable{ValueTuple{object, Base}}, Base, ObjectAttributes, string)"/>
   /// </remarks>
-  private Guid BakeObject(GeometryBase obj, Base originalObject, Base? originatingSpeckleObject, ObjectAttributes atts)
+  private Guid BakeObject(GeometryBase obj, Base originalObject, string? speckleObjectId, ObjectAttributes atts)
   {
     var objectId = originalObject.applicationId ?? originalObject.id;
-    var speckleObjectId = originatingSpeckleObject?.applicationId ?? originatingSpeckleObject?.id;
 
     if (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(objectId, out int mIndex))
     {
@@ -317,6 +316,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   )
   {
     List<Guid> objectIds = new();
+    string parentId = originatingObject.applicationId ?? originatingObject.id;
+
     foreach (var (conversionResult, originalBaseObject) in fallbackConversionResult)
     {
       if (conversionResult is not GeometryBase geometryBase)
@@ -325,12 +326,12 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
         continue;
       }
 
-      var id = BakeObject(geometryBase, originalBaseObject, originatingObject, atts);
+      var id = BakeObject(geometryBase, originalBaseObject, parentId, atts);
       objectIds.Add(id);
     }
 
     var groupIndex = _converterSettings.Current.Document.Groups.Add(
-      $@"{originatingObject.speckle_type.Split('.').Last()} - {originatingObject.applicationId ?? originatingObject.id}  ({baseLayerName})",
+      $@"{originatingObject.speckle_type.Split('.').Last()} - {parentId}  ({baseLayerName})",
       objectIds
     );
 
