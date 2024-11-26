@@ -33,11 +33,7 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<Command>(SpeckleConnectorsRhinoCommand.Instance);
 
     serviceCollection.AddConnectorUtils();
-<<<<<<< HEAD
-    serviceCollection.AddDUI<ThreadContext>();
-=======
-    serviceCollection.AddDUI<RhinoDocumentStore>();
->>>>>>> dev
+    serviceCollection.AddDUI<ThreadContext, RhinoDocumentStore>();
     serviceCollection.AddDUIView();
 
     // Register other connector specific types

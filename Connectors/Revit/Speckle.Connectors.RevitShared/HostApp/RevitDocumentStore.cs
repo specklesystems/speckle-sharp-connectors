@@ -87,7 +87,6 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     {
       return;
     }
-<<<<<<< HEAD
 
     using Transaction t = new(doc, "Speckle Write State");
     t.Start();
@@ -96,17 +95,6 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     using Entity stateEntity = new(_documentModelStorageSchema.GetSchema());
     string serializedModels = Serialize();
     stateEntity.Set("contents", serializedModels);
-=======
-    RevitTask.RunAsync(() =>
-    {
-      var doc = (_revitContext.UIApplication?.ActiveUIDocument?.Document).NotNull();
-      using Transaction t = new(doc, "Speckle Write State");
-      t.Start();
-      using DataStorage ds = GetSettingsDataStorage(doc) ?? DataStorage.Create(doc);
-
-      using Entity stateEntity = new(_documentModelStorageSchema.GetSchema());
-      stateEntity.Set("contents", modelCardState);
->>>>>>> dev
 
     using Entity idEntity = new(_idStorageSchema.GetSchema());
     idEntity.Set("Id", s_revitDocumentStoreId);

@@ -1,6 +1,4 @@
 using Autodesk.Revit.DB;
-using Microsoft.Extensions.Logging;
-using Revit.Async;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;

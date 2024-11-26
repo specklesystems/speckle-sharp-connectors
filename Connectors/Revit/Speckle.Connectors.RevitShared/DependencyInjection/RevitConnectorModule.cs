@@ -25,8 +25,7 @@ public static class ServiceRegistration
   public static void AddRevit(this IServiceCollection serviceCollection)
   {
     serviceCollection.AddConnectorUtils();
-    serviceCollection.AddDUI<RevitThreadContext>();
-    serviceCollection.AddDUI<RevitDocumentStore>();
+    serviceCollection.AddDUI<RevitThreadContext, RevitDocumentStore>();
     RegisterUiDependencies(serviceCollection);
 
     // Storage Schema
