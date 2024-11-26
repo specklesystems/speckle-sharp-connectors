@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using ArcGIS.Core.Data;
+using ArcGIS.Core.Data.Raster;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Microsoft.Extensions.Logging;
@@ -21,6 +22,7 @@ using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Proxies;
+using RasterLayer = ArcGIS.Desktop.Mapping.RasterLayer;
 
 namespace Speckle.Connectors.ArcGis.Operations.Send;
 
@@ -37,8 +39,10 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
   private readonly MapMembersUtils _mapMemberUtils;
   private readonly ILogger<ArcGISRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
-  private readonly ITypedConverter<(Row, string), GisObject> _gisFeatureConverter;
+  private readonly ITypedConverter<(Row, string), GisObject> _gisObjectConverter;
   private readonly ITypedConverter<(Row, IReadOnlyCollection<string>), Base> _attributeConverter;
+  private readonly ITypedConverter<Raster, RasterElement> _gisRasterConverter;
+  private readonly ITypedConverter<LasDatasetLayer, Speckle.Objects.Geometry.Pointcloud> _pointcloudConverter;
 
   public ArcGISRootObjectBuilder(
     ISendConversionCache sendConversionCache,
@@ -49,8 +53,10 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     MapMembersUtils mapMemberUtils,
     ILogger<ArcGISRootObjectBuilder> logger,
     ISdkActivityFactory activityFactory,
-    ITypedConverter<(Row, string), GisObject> gisFeatureConverter,
-    ITypedConverter<(Row, IReadOnlyCollection<string>), Base> attributeConverter
+    ITypedConverter<(Row, string), GisObject> gisObjectConverter,
+    ITypedConverter<(Row, IReadOnlyCollection<string>), Base> attributeConverter,
+    ITypedConverter<Raster, RasterElement> gisRasterConverter,
+    ITypedConverter<LasDatasetLayer, Speckle.Objects.Geometry.Pointcloud> pointcloudConverter
   )
   {
     _sendConversionCache = sendConversionCache;
@@ -61,8 +67,10 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     _mapMemberUtils = mapMemberUtils;
     _logger = logger;
     _activityFactory = activityFactory;
-    _gisFeatureConverter = gisFeatureConverter;
+    _gisObjectConverter = gisObjectConverter;
     _attributeConverter = attributeConverter;
+    _gisRasterConverter = gisRasterConverter;
+    _pointcloudConverter = pointcloudConverter;
   }
 
 #pragma warning disable CA1506
@@ -153,7 +161,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
                         string appId = $"{featureLayer.URI}_{count}";
                         using (Row row = rowCursor.Current)
                         {
-                          GisObject element = _gisFeatureConverter.Convert((row, appId));
+                          GisObject element = _gisObjectConverter.Convert((row, appId));
                           element["properties"] = _attributeConverter.Convert((row, visibleAttributes));
 
                           // add converted feature to converted layer
@@ -167,6 +175,28 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
                   .ConfigureAwait(false);
 
                 converted = convertedVector;
+              }
+              else if (mapMember is RasterLayer arcGisRasterLayer && converted is Collection convertedRasterLayer)
+              {
+                await QueuedTask
+                  .Run(() =>
+                  {
+                    RasterElement element = _gisRasterConverter.Convert(arcGisRasterLayer.GetRaster());
+                    element.applicationId = $"{arcGisRasterLayer.URI}_0";
+                    convertedRasterLayer.elements.Add(element);
+                  })
+                  .ConfigureAwait(false);
+
+                converted = convertedRasterLayer;
+              }
+              else if (mapMember is LasDatasetLayer pointcloudLayer && converted is Collection convertedPointcloudLayer)
+              {
+                Speckle.Objects.Geometry.Pointcloud cloud = await QueuedTask
+                  .Run(() => _pointcloudConverter.Convert(pointcloudLayer))
+                  .ConfigureAwait(false);
+                convertedPointcloudLayer.elements.Add(cloud);
+
+                converted = convertedPointcloudLayer;
               }
             }
 

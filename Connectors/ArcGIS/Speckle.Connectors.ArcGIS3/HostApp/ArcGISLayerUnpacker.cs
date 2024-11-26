@@ -1,9 +1,12 @@
 using ArcGIS.Core.Data;
+using ArcGIS.Core.Geometry;
+using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Objects.GIS;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
+using RasterLayer = ArcGIS.Desktop.Mapping.RasterLayer;
 
 namespace Speckle.Connectors.ArcGIS.HostApp;
 
@@ -65,42 +68,78 @@ public class ArcGISLayerUnpacker
     }
   }
 
-  public VectorLayer ConvertVectorLayer(FeatureLayer featureLayer)
+  private Objects.GIS.RasterLayer ConvertRasterLayer(
+    SpatialReference spatialRefGlobal,
+    SpatialReference? spatialRefRaster
+  )
+  {
+    Objects.GIS.RasterLayer convertedRasterLayer = new();
+    // get active map CRS if layer CRS is empty
+    if (spatialRefRaster?.Unit is null)
+    {
+      spatialRefRaster = spatialRefGlobal;
+    }
+    convertedRasterLayer.rasterCrs = new CRS
+    {
+      wkt = spatialRefRaster.Wkt,
+      name = spatialRefRaster.Name,
+      units_native = spatialRefRaster.Unit.ToString(),
+    };
+    return convertedRasterLayer;
+  }
+
+  private VectorLayer ConvertVectorLayer(MapMember mapMember)
   {
     VectorLayer convertedVectorLayer = new();
 
     // get feature class fields
     var allLayerAttributes = new Base();
-    var dispayTable = featureLayer as IDisplayTable;
-
-    // POC: this should be refactored into a stored method of supported/unsupported field types, since this logic is duplicated in GisFeature converter
-    foreach (FieldDescription field in dispayTable.GetFieldDescriptions())
+    var dispayTable = mapMember as IDisplayTable;
+    if (dispayTable is not null)
     {
-      if (field.IsVisible)
+      foreach (FieldDescription field in dispayTable.GetFieldDescriptions())
       {
-        string name = field.Name;
-        if (
-          field.Type == FieldType.Geometry
-          || field.Type == FieldType.Raster
-          || field.Type == FieldType.XML
-          || field.Type == FieldType.Blob
-        )
+        if (field.IsVisible)
         {
-          continue;
-        }
+          string name = field.Name;
+          if (
+            field.Type == FieldType.Geometry
+            || field.Type == FieldType.Raster
+            || field.Type == FieldType.XML
+            || field.Type == FieldType.Blob
+          )
+          {
+            continue;
+          }
 
-        allLayerAttributes[name] = GISAttributeFieldType.FieldTypeToSpeckle(field.Type);
+          allLayerAttributes[name] = GISAttributeFieldType.FieldTypeToSpeckle(field.Type);
+        }
       }
     }
     convertedVectorLayer.attributes = allLayerAttributes;
 
     // get a simple geometry type
-    string speckleGeometryType = GISLayerGeometryType.LayerGeometryTypeToSpeckle(featureLayer.ShapeType);
-    convertedVectorLayer.geomType = speckleGeometryType;
+    if (mapMember is FeatureLayer arcGisFeatureLayer)
+    {
+      convertedVectorLayer.geomType = GISLayerGeometryType.LayerGeometryTypeToSpeckle(arcGisFeatureLayer.ShapeType);
+    }
+    else if (mapMember is StandaloneTable)
+    {
+      convertedVectorLayer.geomType = GISLayerGeometryType.NONE;
+    }
+
     return convertedVectorLayer;
   }
 
-  public Collection AddLayerWithProps(
+  private VectorLayer ConvertPointCloudLayer(LasDatasetLayer pointcloudLayer)
+  {
+    VectorLayer speckleLayer =
+      new() { nativeGeomType = pointcloudLayer.MapLayerType.ToString(), geomType = GISLayerGeometryType.POINTCLOUD };
+
+    return speckleLayer;
+  }
+
+  public async Task<Collection> AddLayerWithProps(
     string applicationId,
     MapMember mapMember,
     string globalUnits,
@@ -108,16 +147,33 @@ public class ArcGISLayerUnpacker
   )
   {
     Collection converted = new();
+    var spatialRef = activeCRS.SpatialReference;
 
     if (mapMember is FeatureLayer featureLayer)
     {
       converted = ConvertVectorLayer(featureLayer);
     }
+    else if (mapMember is StandaloneTable tableLayer)
+    {
+      converted = ConvertVectorLayer(tableLayer);
+    }
+    else if (mapMember is RasterLayer arcGisRasterLayer)
+    {
+      // layer native crs (for writing properties e.g. resolution, origin etc.)
+      SpatialReference? spatialRefRaster = await QueuedTask
+        .Run(() => arcGisRasterLayer.GetSpatialReference())
+        .ConfigureAwait(false);
+
+      converted = ConvertRasterLayer(spatialRef, spatialRefRaster);
+    }
+    else if (mapMember is LasDatasetLayer pointcloudLayer)
+    {
+      converted = ConvertPointCloudLayer(pointcloudLayer);
+    }
 
     // get common attributes for any type of layer
     // get units & Active CRS (for writing geometry coords)
     converted["units"] = globalUnits;
-    var spatialRef = activeCRS.SpatialReference;
     converted["crs"] = new CRS
     {
       wkt = spatialRef.Wkt,

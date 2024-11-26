@@ -6,7 +6,7 @@ using Speckle.Objects.Data;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
-namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
+namespace Speckle.Converters.ArcGIS3.ToSpeckle.TopLevel;
 
 public class GisFeatureToSpeckleConverter : ITypedConverter<(Row, string), GisObject>
 {
