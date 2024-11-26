@@ -13,7 +13,6 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Sdk.Models.GraphTraversal;
@@ -25,13 +24,12 @@ public static class SharedRegistration
   public static void AddAutocadBase(this IServiceCollection serviceCollection)
   {
     serviceCollection.AddConnectorUtils();
-    serviceCollection.AddDUI();
+    serviceCollection.AddDUI<AutocadDocumentStore>();
     serviceCollection.AddDUIView();
 
     // Register other connector specific types
     serviceCollection.AddTransient<TransactionContext>();
     serviceCollection.AddSingleton(new AutocadDocumentManager()); // TODO: Dependent to TransactionContext, can be moved to AutocadContext
-    serviceCollection.AddSingleton<DocumentModelStore, AutocadDocumentStore>();
     serviceCollection.AddSingleton<AutocadContext>();
 
     // Unpackers and builders

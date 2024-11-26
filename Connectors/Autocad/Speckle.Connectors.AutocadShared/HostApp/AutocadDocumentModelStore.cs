@@ -1,7 +1,6 @@
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
-using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Autocad.HostApp;
 
@@ -16,7 +15,7 @@ public class AutocadDocumentStore : DocumentModelStore
     AutocadDocumentManager autocadDocumentManager,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
-    : base(jsonSerializer, true)
+    : base(jsonSerializer)
   {
     _autocadDocumentManager = autocadDocumentManager;
     _previousDocName = _nullDocumentName;
@@ -48,32 +47,31 @@ public class AutocadDocumentStore : DocumentModelStore
     }
 
     _previousDocName = currentDocName;
-    ReadFromFile();
+    LoadState();
     OnDocumentChanged();
   }
 
-  public override void ReadFromFile()
+  protected override void LoadState()
   {
-    Models = new();
-
     // POC: Will be addressed to move it into AutocadContext!
     Document? doc = Application.DocumentManager.MdiActiveDocument;
 
     if (doc == null)
     {
+      ClearAndSave();
       return;
     }
 
     string? serializedModelCards = _autocadDocumentManager.ReadModelCards(doc);
     if (serializedModelCards == null)
     {
+      ClearAndSave();
       return;
     }
-
-    Models = Deserialize(serializedModelCards).NotNull();
+    LoadFromString(serializedModelCards);
   }
 
-  public override void WriteToFile()
+  protected override void HostAppSaveState(string modelCardState)
   {
     // POC: Will be addressed to move it into AutocadContext!
     Document doc = Application.DocumentManager.MdiActiveDocument;
@@ -83,7 +81,6 @@ public class AutocadDocumentStore : DocumentModelStore
       return;
     }
 
-    string modelCardsString = Serialize();
-    _autocadDocumentManager.WriteModelCards(doc, modelCardsString);
+    _autocadDocumentManager.WriteModelCards(doc, modelCardState);
   }
 }
