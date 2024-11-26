@@ -35,8 +35,8 @@ internal sealed class RevitHostObjectBuilder(
   ILogger<RevitHostObjectBuilder> logger,
   RevitToHostCacheSingleton revitToHostCacheSingleton,
   ITypedConverter<(Base atomicObject, List<Matrix4x4> matrix), DirectShape> localToGlobalDirectShapeConverter,
-  IMainThreadContext mainThreadContext)
-  : IHostObjectBuilder, IDisposable
+  IMainThreadContext mainThreadContext
+) : IHostObjectBuilder, IDisposable
 {
   public Task<HostObjectBuilderResult> Build(
     Base rootObject,

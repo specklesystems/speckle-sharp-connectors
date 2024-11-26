@@ -1,6 +1,7 @@
 using Autodesk.AutoCAD.Colors;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Operations;
+using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
 using Speckle.Sdk.Models.Proxies;
 using AutocadColor = Autodesk.AutoCAD.Colors.Color;
@@ -10,15 +11,9 @@ namespace Speckle.Connectors.Autocad.HostApp;
 /// <summary>
 /// Expects to be a scoped dependency for a given operation and helps with layer creation and cleanup.
 /// </summary>
-public class AutocadColorBaker
+[GenerateAutoInterface]
+public class AutocadColorBaker(ILogger<AutocadColorBaker> logger) : IAutocadColorBaker
 {
-  private readonly ILogger<AutocadColorBaker> _logger;
-
-  public AutocadColorBaker(ILogger<AutocadColorBaker> logger)
-  {
-    _logger = logger;
-  }
-
   /// <summary>
   /// For receive operations
   /// </summary>
@@ -29,10 +24,7 @@ public class AutocadColorBaker
   /// </summary>
   /// <param name="colorProxies"></param>
   /// <param name="onOperationProgressed"></param>
-  public async Task ParseColors(
-    IReadOnlyCollection<ColorProxy> colorProxies,
-    IProgress<CardProgress> onOperationProgressed
-  )
+  public void ParseColors(IReadOnlyCollection<ColorProxy> colorProxies, IProgress<CardProgress> onOperationProgressed)
   {
     var count = 0;
     foreach (ColorProxy colorProxy in colorProxies)
@@ -62,10 +54,8 @@ public class AutocadColorBaker
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(ex, "Failed parsing color proxy");
+        logger.LogError(ex, "Failed parsing color proxy");
       }
-
-      await Task.Yield();
     }
   }
 

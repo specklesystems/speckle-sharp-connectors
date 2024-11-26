@@ -5,6 +5,7 @@ using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
+using Speckle.Connectors.DUI.Threading;
 using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
@@ -30,6 +31,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private readonly RhinoGroupBaker _groupBaker;
   private readonly RootObjectUnpacker _rootObjectUnpacker;
   private readonly ISdkActivityFactory _activityFactory;
+  private readonly IMainThreadContext _mainThreadContext;
 
   public RhinoHostObjectBuilder(
     IRootToHostConverter converter,
@@ -40,7 +42,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     RhinoMaterialBaker materialBaker,
     RhinoColorBaker colorBaker,
     RhinoGroupBaker groupBaker,
-    ISdkActivityFactory activityFactory
+    ISdkActivityFactory activityFactory,
+    IMainThreadContext mainThreadContext
   )
   {
     _converter = converter;
@@ -52,6 +55,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _layerBaker = layerBaker;
     _groupBaker = groupBaker;
     _activityFactory = activityFactory;
+    _mainThreadContext = mainThreadContext;
   }
 
 #pragma warning disable CA1506
@@ -62,6 +66,26 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     string modelName,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
+  )
+  {
+    return await _mainThreadContext
+      .RunOnThreadAsync(
+        async () =>
+        {
+          var ret = BuildSync(rootObject, projectName, modelName, onOperationProgressed);
+          await Task.Delay(100, cancellationToken).ConfigureAwait(false);
+          return ret;
+        },
+        false
+      )
+      .ConfigureAwait(false);
+  }
+
+  public HostObjectBuilderResult BuildSync(
+    Base rootObject,
+    string projectName,
+    string modelName,
+    IProgress<CardProgress> onOperationProgressed
   )
   {
     using var activity = _activityFactory.Start("Build");
@@ -202,9 +226,12 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     // 6 - Convert instances
     using (var _ = _activityFactory.Start("Converting instances"))
     {
-      var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = await _instanceBaker
-        .BakeInstances(instanceComponentsWithPath, applicationIdMap, baseLayerName, onOperationProgressed)
-        .ConfigureAwait(false);
+      var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = _instanceBaker.BakeInstances(
+        instanceComponentsWithPath,
+        applicationIdMap,
+        baseLayerName,
+        onOperationProgressed
+      );
 
       bakedObjectIds.RemoveAll(id => consumedObjectIds.Contains(id)); // remove all objects that have been "consumed"
       bakedObjectIds.AddRange(createdInstanceIds); // add instance ids

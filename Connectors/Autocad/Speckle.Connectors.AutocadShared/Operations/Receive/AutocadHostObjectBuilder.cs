@@ -24,7 +24,7 @@ public class AutocadHostObjectBuilder(
   AutocadGroupBaker groupBaker,
   AutocadInstanceBaker instanceBaker,
   AutocadMaterialBaker materialBaker,
-  AutocadColorBaker colorBaker,
+  IAutocadColorBaker colorBaker,
   AutocadContext autocadContext,
   RootObjectUnpacker rootObjectUnpacker,
   IMainThreadContext mainThreadContext
@@ -35,19 +35,20 @@ public class AutocadHostObjectBuilder(
     string projectName,
     string modelName,
     IProgress<CardProgress> onOperationProgressed,
-    CancellationToken _
+    CancellationToken ct
   )
   {
-    // NOTE: This is the only place we apply ISyncToThread across connectors. We need to sync up with main thread here
-    //  after GetObject and Deserialization. It is anti-pattern now. Happiness level 3/10 but works.
     return await mainThreadContext
-      .RunOnMainThreadAsync(
-        async () => await BuildImpl(rootObject, projectName, modelName, onOperationProgressed).ConfigureAwait(false)
-      )
+      .RunOnMainThreadAsync(async () =>
+      {
+        var ret = BuildImpl(rootObject, projectName, modelName, onOperationProgressed);
+        await Task.Delay(100, ct).ConfigureAwait(false);
+        return ret;
+      })
       .ConfigureAwait(false);
   }
 
-  private async Task<HostObjectBuilderResult> BuildImpl(
+  private HostObjectBuilderResult BuildImpl(
     Base rootObject,
     string projectName,
     string modelName,
@@ -86,14 +87,16 @@ public class AutocadHostObjectBuilder(
     // 3 - Bake materials and colors, as they are used later down the line by layers and objects
     if (unpackedRoot.RenderMaterialProxies != null)
     {
-      await materialBaker
-        .ParseAndBakeRenderMaterials(unpackedRoot.RenderMaterialProxies, baseLayerPrefix, onOperationProgressed)
-        .ConfigureAwait(true);
+      materialBaker.ParseAndBakeRenderMaterials(
+        unpackedRoot.RenderMaterialProxies,
+        baseLayerPrefix,
+        onOperationProgressed
+      );
     }
 
     if (unpackedRoot.ColorProxies != null)
     {
-      await colorBaker.ParseColors(unpackedRoot.ColorProxies, onOperationProgressed).ConfigureAwait(true);
+      colorBaker.ParseColors(unpackedRoot.ColorProxies, onOperationProgressed);
     }
 
     // 5 - Convert atomic objects
@@ -107,8 +110,7 @@ public class AutocadHostObjectBuilder(
       onOperationProgressed.Report(new("Converting objects", (double)++count / atomicObjects.Count));
       try
       {
-        List<Entity> convertedObjects = await ConvertObject(atomicObject, layerPath, baseLayerPrefix)
-          .ConfigureAwait(true);
+        List<Entity> convertedObjects = ConvertObject(atomicObject, layerPath, baseLayerPrefix);
 
         applicationIdMap[objectId] = convertedObjects;
 
@@ -130,9 +132,12 @@ public class AutocadHostObjectBuilder(
     }
 
     // 6 - Convert instances
-    var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = await instanceBaker
-      .BakeInstances(instanceComponentsWithPath, applicationIdMap, baseLayerPrefix, onOperationProgressed)
-      .ConfigureAwait(true);
+    var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = instanceBaker.BakeInstances(
+      instanceComponentsWithPath,
+      applicationIdMap,
+      baseLayerPrefix,
+      onOperationProgressed
+    );
 
     bakedObjectIds.RemoveAll(id => consumedObjectIds.Contains(id));
     bakedObjectIds.AddRange(createdInstanceIds);
@@ -156,7 +161,7 @@ public class AutocadHostObjectBuilder(
     materialBaker.PurgeMaterials(baseLayerPrefix);
   }
 
-  private async Task<List<Entity>> ConvertObject(Base obj, Collection[] layerPath, string baseLayerNamePrefix)
+  private List<Entity> ConvertObject(Base obj, Collection[] layerPath, string baseLayerNamePrefix)
   {
     string layerName = layerBaker.CreateLayerForReceive(layerPath, baseLayerNamePrefix);
     var convertedEntities = new List<Entity>();
@@ -179,7 +184,6 @@ public class AutocadHostObjectBuilder(
     }
 
     tr.Commit();
-    await Task.Delay(10).ConfigureAwait(true);
     return convertedEntities;
   }
 

@@ -22,64 +22,112 @@ public class MainThreadContext : IMainThreadContext
 
   public virtual void RunContext(Action action) => action();
 
-  public void RunOnMainThread(Action action)
+  public void RunOnThread(Action action, bool useMain)
   {
-    if (IsMainThread)
+    if (useMain)
     {
-      RunContext(action);
-      return;
-    }
-    _mainThreadContext.Post(
-      _ =>
+      if (IsMainThread)
       {
         RunContext(action);
-      },
-      null
-    );
+      }
+      else
+      {
+        _mainThreadContext.Post(
+          _ =>
+          {
+            RunContext(action);
+          },
+          null
+        );
+      }
+    }
+    else
+    {
+      if (IsMainThread)
+      {
+        Task.Factory.StartNew(action, default, TaskCreationOptions.LongRunning, TaskScheduler.Default)
+          .GetAwaiter()
+          .GetResult();
+      }
+      else
+      {
+        RunContext(action);
+      }
+    }
   }
 
-  public async Task RunOnMainThreadAsync(Func<Task> action)
+  public async Task RunOnThreadAsync(Func<Task> action, bool useMain)
   {
-    if (IsMainThread)
+    if (useMain)
     {
-      await action.Invoke().ConfigureAwait(false);
-      return;
-    }
-    await RunOnMainThreadAsync<object?>(async () =>
+      if (IsMainThread)
       {
         await action.Invoke().ConfigureAwait(false);
-        return null;
-      })
-      .ConfigureAwait(false);
+      }
+      else
+      {
+        await RunOnThreadAsync<object?>(
+            async () =>
+            {
+              await RunContext(action.Invoke).ConfigureAwait(false);
+              return null;
+            },
+            useMain
+          )
+          .ConfigureAwait(false);
+      }
+    }
+    else
+    {
+      if (IsMainThread)
+      {
+        await Task
+          .Factory.StartNew(action, default, TaskCreationOptions.LongRunning, TaskScheduler.Default)
+          .ConfigureAwait(false);
+      }
+      else
+      {
+        await RunContext(action.Invoke).ConfigureAwait(false);
+      }
+    }
   }
+
+  public virtual Task RunContext(Func<Task> action) => action();
 
   public virtual Task<T> RunContext<T>(Func<Task<T>> action) => action();
 
   [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "TaskCompletionSource")]
-  public Task<T> RunOnMainThreadAsync<T>(Func<Task<T>> action)
+  public Task<T> RunOnThreadAsync<T>(Func<Task<T>> action, bool useMain)
   {
+    if (useMain)
+    {
+      if (IsMainThread)
+      {
+        return RunContext(action.Invoke);
+      }
+      TaskCompletionSource<T> tcs = new();
+      _mainThreadContext.Post(
+        async _ =>
+        {
+          try
+          {
+            T result = await RunContext(action).ConfigureAwait(false);
+            tcs.SetResult(result);
+          }
+          catch (Exception ex)
+          {
+            tcs.SetException(ex);
+          }
+        },
+        null
+      );
+      return tcs.Task;
+    }
     if (IsMainThread)
     {
-      return RunContext(action);
+      Task<Task<T>> f = Task.Factory.StartNew(action, default, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+      return f.Unwrap();
     }
-    TaskCompletionSource<T> tcs = new();
-
-    _mainThreadContext.Post(
-      async _ =>
-      {
-        try
-        {
-          T result = await RunContext(action).ConfigureAwait(false);
-          tcs.SetResult(result);
-        }
-        catch (Exception ex)
-        {
-          tcs.SetException(ex);
-        }
-      },
-      null
-    );
-
-    return tcs.Task;
+    return RunContext(action.Invoke);
   }
 }

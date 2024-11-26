@@ -37,9 +37,6 @@ public static class ServiceRegistration
     serviceCollection.AddDUI<MainThreadContext>();
     serviceCollection.AddDUIView();
 
-    // POC: Overwriting the SyncToMainThread to SyncToCurrentThread for Rhino!
-    // builder.AddSingletonInstance<ISyncToThread, SyncToCurrentThread>();
-
     // Register other connector specific types
     serviceCollection.AddSingleton<IRhinoPlugin, RhinoPlugin>();
     serviceCollection.AddSingleton<DocumentModelStore, RhinoDocumentStore>();

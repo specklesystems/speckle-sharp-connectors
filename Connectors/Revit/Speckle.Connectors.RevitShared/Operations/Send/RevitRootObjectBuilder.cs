@@ -25,8 +25,8 @@ public class RevitRootObjectBuilder(
   SendCollectionManager sendCollectionManager,
   ILogger<RevitRootObjectBuilder> logger,
   RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton,
-  IMainThreadContext mainThreadContext)
-  : IRootObjectBuilder<ElementId>
+  IMainThreadContext mainThreadContext
+) : IRootObjectBuilder<ElementId>
 {
   // POC: SendSelection and RevitConversionContextStack should be interfaces, former needs interfaces
 
@@ -35,12 +35,13 @@ public class RevitRootObjectBuilder(
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
-  ) => mainThreadContext.RunOnMainThreadAsync(async () =>
-  {
-    var ret = BuildSync(objects, sendInfo, onOperationProgressed, ct);
-    await Task.Delay(100, ct).ConfigureAwait(false);
-    return ret;
-  });
+  ) =>
+    mainThreadContext.RunOnMainThreadAsync(async () =>
+    {
+      var ret = BuildSync(objects, sendInfo, onOperationProgressed, ct);
+      await Task.Delay(100, ct).ConfigureAwait(false);
+      return ret;
+    });
 
   private RootObjectBuilderResult BuildSync(
     IReadOnlyList<ElementId> objects,
