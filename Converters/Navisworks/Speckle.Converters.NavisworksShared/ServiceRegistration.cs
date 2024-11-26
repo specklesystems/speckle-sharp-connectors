@@ -7,7 +7,7 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Common.Registration;
 using Speckle.Sdk;
 
-namespace Speckle.Converters.Navisworks;
+namespace Speckle.Converter.Navisworks;
 
 public static class ServiceRegistration
 {
