@@ -283,6 +283,14 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       atts.MaterialIndex = mIndex;
       atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
     }
+    else if (
+      speckleObjectId is not null
+      && (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(speckleObjectId, out int mIndexSpeckleObj))
+    )
+    {
+      atts.MaterialIndex = mIndexSpeckleObj;
+      atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+    }
 
     if (_colorBaker.ObjectColorsIdMap.TryGetValue(objectId, out (Color, ObjectColorSource) color))
     {
