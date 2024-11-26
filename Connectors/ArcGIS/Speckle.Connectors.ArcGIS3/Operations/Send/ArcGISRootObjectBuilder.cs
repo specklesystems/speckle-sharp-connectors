@@ -10,8 +10,8 @@ using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.ArcGIS3;
+using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
-using Speckle.Objects.GIS;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -70,7 +70,10 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     int count = 0;
 
     Collection rootObjectCollection = new() { name = MapView.Active.Map.Name }; //TODO: Collections
-    rootObjectCollection["units"] = _converterSettings.Current.SpeckleUnits;
+    string globalUnits = _converterSettings.Current.SpeckleUnits;
+    CRSoffsetRotation activeCRS = _converterSettings.Current.ActiveCRSoffsetRotation;
+
+    rootObjectCollection["units"] = globalUnits;
 
     List<SendConversionResult> results = new(objects.Count);
     var cacheHitCount = 0;
@@ -91,89 +94,40 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
 
         using (var convertingActivity = _activityFactory.Start("Converting object"))
         {
-          var collectionHost = rootObjectCollection;
           string applicationId = mapMember.URI;
           string sourceType = mapMember.GetType().Name;
 
-          Base converted;
           try
           {
-            int groupCount = nestedGroups.Count; // bake here, because count will change in the loop
-            // if the layer is not a part of the group, reset groups
-            for (int i = 0; i < groupCount; i++)
-            {
-              if (nestedGroups.Count > 0 && !nestedGroups[0].Item1.Layers.Select(x => x.URI).Contains(applicationId))
-              {
-                nestedGroups.RemoveAt(0);
-              }
-              else
-              {
-                // break at the first group, which contains current layer
-                break;
-              }
-            }
+            Base converted;
+            _layerUnpacker.ResetNestedGroups(applicationId, nestedGroups);
 
-            // don't use cache for group layers
-            if (
-              mapMember is not ILayerContainer
-              && _sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value)
-            )
+            // check if the converted layer is cached
+            bool cached = _sendConversionCache.TryGetValue(
+              sendInfo.ProjectId,
+              applicationId,
+              out ObjectReference? value
+            );
+
+            if (mapMember is ILayerContainer layerContainer) // for group layers
+            {
+              converted = _layerUnpacker.InsertNestedGroup(layerContainer, applicationId, nestedGroups);
+            }
+            else if (cached && value is not null) // for actual layers which are cached
             {
               converted = value;
-              cacheHitCount++;
+              cacheHitCount++; // is it actually used?
             }
-            else
+            else // for actual layers, not yet converted
             {
-              if (mapMember is ILayerContainer group)
-              {
-                // group layer will always come before it's contained layers
-                // keep active group last in the list
-                converted = new Collection();
-                nestedGroups.Insert(0, (group, (Collection)converted));
-              }
-              else
-              {
-                converted = await QueuedTask
-                  .Run(() => (Collection)_rootToSpeckleConverter.Convert(mapMember))
-                  .ConfigureAwait(false);
+              converted = await QueuedTask
+                .Run(() => (Collection)_rootToSpeckleConverter.Convert(mapMember))
+                .ConfigureAwait(false);
 
-                // get units & Active CRS (for writing geometry coords)
-                converted["units"] = _converterSettings.Current.SpeckleUnits;
-
-                var spatialRef = _converterSettings.Current.ActiveCRSoffsetRotation.SpatialReference;
-                converted["crs"] = new CRS
-                {
-                  wkt = spatialRef.Wkt,
-                  name = spatialRef.Name,
-                  offset_y = Convert.ToSingle(_converterSettings.Current.ActiveCRSoffsetRotation.LatOffset),
-                  offset_x = Convert.ToSingle(_converterSettings.Current.ActiveCRSoffsetRotation.LonOffset),
-                  rotation = Convert.ToSingle(_converterSettings.Current.ActiveCRSoffsetRotation.TrueNorthRadians),
-                  units_native = _converterSettings.Current.SpeckleUnits
-                };
-              }
-
-              // other common properties for layers and groups
-              converted["name"] = mapMember.Name;
-              converted.applicationId = applicationId;
+              _layerUnpacker.AddLayerProps(applicationId, mapMember, converted, globalUnits, activeCRS);
             }
 
-            if (
-              nestedGroups.Count == 0
-              || nestedGroups.Count == 1 && nestedGroups[0].Item2.applicationId == applicationId
-            )
-            {
-              // add to host if no groups, or current root group
-              collectionHost.elements.Add(converted);
-            }
-            else
-            {
-              // if we are adding a layer inside the group
-              var parentCollection = nestedGroups.FirstOrDefault(x =>
-                x.Item1.Layers.Select(y => y.URI).Contains(applicationId)
-              );
-              parentCollection.Item2.elements.Add(converted);
-            }
-            _layerUnpacker.GetHostObjectCollection(mapMember, converted, rootObjectCollection, nestedGroups);
+            _layerUnpacker.AddConvertedToRoot(applicationId, converted, rootObjectCollection, nestedGroups);
 
             results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
             convertingActivity?.SetStatus(SdkActivityStatusCode.Ok);
