@@ -49,7 +49,7 @@ public class TeklaDocumentModelStore : DocumentModelStore
     ModelPathHash = Crypt.Md5(_model.GetInfo().ModelPath, length: 32);
     HostAppUserDataPath = Path.Combine(
       SpecklePathProvider.UserSpeckleFolderPath,
-      "Connectors",
+      "ConnectorsFileData",
       _speckleApplication.Slug
     );
     DocumentStateFile = Path.Combine(HostAppUserDataPath, $"{ModelPathHash}.json");
