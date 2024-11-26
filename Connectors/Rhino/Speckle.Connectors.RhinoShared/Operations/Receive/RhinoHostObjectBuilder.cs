@@ -5,7 +5,6 @@ using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
-using Speckle.Connectors.DUI.Threading;
 using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
@@ -31,7 +30,6 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private readonly RhinoGroupBaker _groupBaker;
   private readonly RootObjectUnpacker _rootObjectUnpacker;
   private readonly ISdkActivityFactory _activityFactory;
-  private readonly IThreadContext _threadContext;
 
   public RhinoHostObjectBuilder(
     IRootToHostConverter converter,
@@ -42,8 +40,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     RhinoMaterialBaker materialBaker,
     RhinoColorBaker colorBaker,
     RhinoGroupBaker groupBaker,
-    ISdkActivityFactory activityFactory,
-    IThreadContext threadContext
+    ISdkActivityFactory activityFactory
   )
   {
     _converter = converter;
@@ -55,7 +52,6 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _layerBaker = layerBaker;
     _groupBaker = groupBaker;
     _activityFactory = activityFactory;
-    _threadContext = threadContext;
   }
 
 #pragma warning disable CA1506
@@ -68,14 +64,9 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     CancellationToken cancellationToken
   )
   {
-    return await _threadContext
-      .RunOnWorkerAsync(async () =>
-      {
-        var ret = BuildSync(rootObject, projectName, modelName, onOperationProgressed);
-        await Task.Delay(100, cancellationToken).ConfigureAwait(false);
-        return ret;
-      })
-      .ConfigureAwait(false);
+    var ret = BuildSync(rootObject, projectName, modelName, onOperationProgressed);
+    await Task.Delay(100, cancellationToken).ConfigureAwait(false);
+    return ret;
   }
 
   public HostObjectBuilderResult BuildSync(

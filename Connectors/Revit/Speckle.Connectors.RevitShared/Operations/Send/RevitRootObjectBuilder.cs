@@ -6,7 +6,6 @@ using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Exceptions;
-using Speckle.Connectors.DUI.Threading;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
@@ -24,24 +23,22 @@ public class RevitRootObjectBuilder(
   ElementUnpacker elementUnpacker,
   SendCollectionManager sendCollectionManager,
   ILogger<RevitRootObjectBuilder> logger,
-  RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton,
-  IThreadContext threadContext
+  RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton
 ) : IRootObjectBuilder<ElementId>
 {
   // POC: SendSelection and RevitConversionContextStack should be interfaces, former needs interfaces
 
-  public Task<RootObjectBuilderResult> Build(
+  public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<ElementId> objects,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
-  ) =>
-    threadContext.RunOnWorkerAsync(async () =>
-    {
-      var ret = BuildSync(objects, sendInfo, onOperationProgressed, ct);
-      await Task.Delay(100, ct).ConfigureAwait(false);
-      return ret;
-    });
+  )
+  {
+    var ret = BuildSync(objects, sendInfo, onOperationProgressed, ct);
+    await Task.Delay(100, ct).ConfigureAwait(false);
+    return ret;
+  }
 
   private RootObjectBuilderResult BuildSync(
     IReadOnlyList<ElementId> objects,

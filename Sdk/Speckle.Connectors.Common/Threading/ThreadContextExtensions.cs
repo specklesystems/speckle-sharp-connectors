@@ -1,4 +1,4 @@
-﻿namespace Speckle.Connectors.DUI.Threading;
+﻿namespace Speckle.Connectors.Common.Threading;
 
 public static class ThreadContextExtensions
 {

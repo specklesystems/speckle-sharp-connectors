@@ -1,5 +1,5 @@
 ﻿using Revit.Async;
-using Speckle.Connectors.DUI.Threading;
+using Speckle.Connectors.Common.Threading;
 
 namespace Speckle.Connectors.Revit.Plugin;
 

@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Common;
 
-namespace Speckle.Connectors.DUI.Threading;
+namespace Speckle.Connectors.Common.Threading;
 
 [GenerateAutoInterface]
 public class ThreadContext : IThreadContext

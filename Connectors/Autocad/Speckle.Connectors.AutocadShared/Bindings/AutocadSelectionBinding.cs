@@ -1,9 +1,9 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Threading;
 
 namespace Speckle.Connectors.Autocad.Bindings;
 

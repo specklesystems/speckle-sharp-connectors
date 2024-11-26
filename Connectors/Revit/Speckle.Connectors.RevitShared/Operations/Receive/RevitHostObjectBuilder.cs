@@ -5,7 +5,6 @@ using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
-using Speckle.Connectors.DUI.Threading;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
@@ -34,23 +33,21 @@ internal sealed class RevitHostObjectBuilder(
   RootObjectUnpacker rootObjectUnpacker,
   ILogger<RevitHostObjectBuilder> logger,
   RevitToHostCacheSingleton revitToHostCacheSingleton,
-  ITypedConverter<(Base atomicObject, List<Matrix4x4> matrix), DirectShape> localToGlobalDirectShapeConverter,
-  IThreadContext threadContext
+  ITypedConverter<(Base atomicObject, List<Matrix4x4> matrix), DirectShape> localToGlobalDirectShapeConverter
 ) : IHostObjectBuilder, IDisposable
 {
-  public Task<HostObjectBuilderResult> Build(
+  public async Task<HostObjectBuilderResult> Build(
     Base rootObject,
     string projectName,
     string modelName,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
-  ) =>
-    threadContext.RunOnWorkerAsync(async () =>
-    {
-      var ret = BuildSync(rootObject, projectName, modelName, onOperationProgressed, cancellationToken);
-      await Task.Delay(100, cancellationToken).ConfigureAwait(false);
-      return ret;
-    });
+  )
+  {
+    var ret = BuildSync(rootObject, projectName, modelName, onOperationProgressed, cancellationToken);
+    await Task.Delay(100, cancellationToken).ConfigureAwait(false);
+    return ret;
+  }
 
   private HostObjectBuilderResult BuildSync(
     Base rootObject,
