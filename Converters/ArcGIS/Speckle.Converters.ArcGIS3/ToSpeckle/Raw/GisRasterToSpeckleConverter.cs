@@ -1,12 +1,11 @@
 using ArcGIS.Core.Data.Raster;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Objects.GIS;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
 
-public class GisRasterToSpeckleConverter : ITypedConverter<Raster, RasterElement>
+public class GisRasterToSpeckleConverter : ITypedConverter<Raster, SOG.Mesh>
 {
   private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
 
@@ -16,6 +15,98 @@ public class GisRasterToSpeckleConverter : ITypedConverter<Raster, RasterElement
   }
 
   public Base Convert(object target) => Convert((Raster)target);
+
+  public SOG.Mesh Convert(Raster target)
+  {
+    // assisting variables
+    var extent = target.GetExtent();
+    var cellSize = target.GetMeanCellSize();
+
+    // variables to assign
+    int bandCount = target.GetBandCount();
+    float xOrigin = (float)extent.XMin;
+    float yOrigin = (float)extent.YMax;
+    int xSize = target.GetWidth();
+    int ySize = target.GetHeight();
+    float xResolution = (float)cellSize.Item1;
+    float yResolution = -1 * (float)cellSize.Item2;
+
+    var pixelType = target.GetPixelType(); // e.g. UCHAR
+    var xyOrigin = target.PixelToMap(0, 0);
+
+    //RasterElement rasterElement =
+    //  new(bandCount, new List<string>(), xOrigin, yOrigin, xSize, ySize, xResolution, yResolution, new List<float?>());
+
+    // prepare to construct a mesh
+    List<double> newCoords = new();
+    List<int> newFaces = new();
+    List<int> newColors = new();
+
+    // store band values for renderer
+    List<List<byte>> pixelValsPerBand = new();
+
+    for (int i = 0; i < bandCount; i++)
+    {
+      // Get a pixel block for quicker reading and read from pixel top left pixel
+      PixelBlock block = target.CreatePixelBlock(target.GetWidth(), target.GetHeight());
+      target.Read(0, 0, block);
+
+      //RasterBandDefinition bandDef = target.GetBand(i).GetDefinition();
+      //string bandName = bandDef.GetName();
+      //rasterElement.band_names.Add(bandName);
+
+      // Read 2-dimensional pixel values into 1-dimensional byte array
+      // TODO: format to list of float
+      Array pixels2D = block.GetPixelData(i, false);
+      List<byte> pixelsList = pixels2D.Cast<byte>().ToList();
+      pixelValsPerBand.Add(pixelsList);
+
+      /* ignoring for now, only needed for interop
+      // transpose to match QGIS data structure
+      var transposedPixelList = Enumerable
+        .Range(0, ySize)
+        .SelectMany((_, ind) => Enumerable.Range(0, xSize).Select(x => pixels2D.GetValue(x, ind)))
+        .ToArray();
+
+      rasterElement[$"@(10000){bandName}_values"] = transposedPixelList;
+
+      // null or float for noDataValue
+      float? noDataVal = null;
+      var noDataValOriginal = bandDef.GetNoDataValue();
+      if (noDataValOriginal != null)
+      {
+        noDataVal = (float)noDataValOriginal;
+      }
+      rasterElement.noDataValue.Add(noDataVal);
+      */
+
+      // construct mesh
+      newFaces = pixelsList
+        .SelectMany((_, ind) => new List<int>() { 4, 4 * ind, 4 * ind + 1, 4 * ind + 2, 4 * ind + 3 })
+        .ToList();
+
+      newCoords = GetRasterMeshCoords(target, pixelValsPerBand);
+
+      // Construct colors only once, when i=last band index
+      // ATM, RGB for 3 or 4 bands, greyscale from 1st band for anything else
+      if (i == bandCount - 1)
+      {
+        newColors = GetRasterColors(bandCount, pixelValsPerBand);
+      }
+    }
+
+    SOG.Mesh mesh =
+      new()
+      {
+        vertices = newCoords,
+        faces = newFaces,
+        colors = newColors,
+        units = _settingsStore.Current.SpeckleUnits
+      };
+    //rasterElement.displayValue = new List<SOG.Mesh>() { mesh };
+
+    return mesh;
+  }
 
   private List<double> GetRasterMeshCoords(Raster target, List<List<byte>> pixelValsPerBand)
   {
@@ -93,95 +184,5 @@ public class GisRasterToSpeckleConverter : ITypedConverter<Raster, RasterElement
         .ToList();
     }
     return newColors;
-  }
-
-  public RasterElement Convert(Raster target)
-  {
-    // assisting variables
-    var extent = target.GetExtent();
-    var cellSize = target.GetMeanCellSize();
-
-    // variables to assign
-    int bandCount = target.GetBandCount();
-    float xOrigin = (float)extent.XMin;
-    float yOrigin = (float)extent.YMax;
-    int xSize = target.GetWidth();
-    int ySize = target.GetHeight();
-    float xResolution = (float)cellSize.Item1;
-    float yResolution = -1 * (float)cellSize.Item2;
-
-    var pixelType = target.GetPixelType(); // e.g. UCHAR
-    var xyOrigin = target.PixelToMap(0, 0);
-
-    RasterElement rasterElement =
-      new(bandCount, new List<string>(), xOrigin, yOrigin, xSize, ySize, xResolution, yResolution, new List<float?>());
-
-    // prepare to construct a mesh
-    List<double> newCoords = new();
-    List<int> newFaces = new();
-    List<int> newColors = new();
-
-    // store band values for renderer
-    List<List<byte>> pixelValsPerBand = new();
-
-    for (int i = 0; i < bandCount; i++)
-    {
-      // Get a pixel block for quicker reading and read from pixel top left pixel
-      PixelBlock block = target.CreatePixelBlock(target.GetWidth(), target.GetHeight());
-      target.Read(0, 0, block);
-
-      RasterBandDefinition bandDef = target.GetBand(i).GetDefinition();
-      string bandName = bandDef.GetName();
-      rasterElement.band_names.Add(bandName);
-
-      // Read 2-dimensional pixel values into 1-dimensional byte array
-      // TODO: format to list of float
-      Array pixels2D = block.GetPixelData(i, false);
-      List<byte> pixelsList = pixels2D.Cast<byte>().ToList();
-      pixelValsPerBand.Add(pixelsList);
-
-      // transpose to match QGIS data structure
-      var transposedPixelList = Enumerable
-        .Range(0, ySize)
-        .SelectMany((_, ind) => Enumerable.Range(0, xSize).Select(x => pixels2D.GetValue(x, ind)))
-        .ToArray();
-
-      rasterElement[$"@(10000){bandName}_values"] = transposedPixelList;
-
-      // null or float for noDataValue
-      float? noDataVal = null;
-      var noDataValOriginal = bandDef.GetNoDataValue();
-      if (noDataValOriginal != null)
-      {
-        noDataVal = (float)noDataValOriginal;
-      }
-      rasterElement.noDataValue.Add(noDataVal);
-
-      // construct mesh
-      newFaces = pixelsList
-        .SelectMany((_, ind) => new List<int>() { 4, 4 * ind, 4 * ind + 1, 4 * ind + 2, 4 * ind + 3 })
-        .ToList();
-
-      newCoords = GetRasterMeshCoords(target, pixelValsPerBand);
-
-      // Construct colors only once, when i=last band index
-      // ATM, RGB for 3 or 4 bands, greyscale from 1st band for anything else
-      if (i == bandCount - 1)
-      {
-        newColors = GetRasterColors(bandCount, pixelValsPerBand);
-      }
-    }
-
-    SOG.Mesh mesh =
-      new()
-      {
-        vertices = newCoords,
-        faces = newFaces,
-        colors = newColors,
-        units = _settingsStore.Current.SpeckleUnits
-      };
-    rasterElement.displayValue = new List<SOG.Mesh>() { mesh };
-
-    return rasterElement;
   }
 }

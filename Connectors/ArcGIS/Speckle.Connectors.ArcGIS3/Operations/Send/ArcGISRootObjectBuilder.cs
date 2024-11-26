@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using ArcGIS.Core.Data;
-using ArcGIS.Core.Data.Raster;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Microsoft.Extensions.Logging;
@@ -39,10 +38,8 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
   private readonly MapMembersUtils _mapMemberUtils;
   private readonly ILogger<ArcGISRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
-  private readonly ITypedConverter<(Row, string), GisObject> _gisObjectConverter;
+  private readonly ITypedConverter<object, GisObject> _gisObjectConverter;
   private readonly ITypedConverter<(Row, IReadOnlyCollection<string>), Base> _attributeConverter;
-  private readonly ITypedConverter<Raster, RasterElement> _gisRasterConverter;
-  private readonly ITypedConverter<LasDatasetLayer, Speckle.Objects.Geometry.Pointcloud> _pointcloudConverter;
 
   public ArcGISRootObjectBuilder(
     ISendConversionCache sendConversionCache,
@@ -53,10 +50,8 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     MapMembersUtils mapMemberUtils,
     ILogger<ArcGISRootObjectBuilder> logger,
     ISdkActivityFactory activityFactory,
-    ITypedConverter<(Row, string), GisObject> gisObjectConverter,
-    ITypedConverter<(Row, IReadOnlyCollection<string>), Base> attributeConverter,
-    ITypedConverter<Raster, RasterElement> gisRasterConverter,
-    ITypedConverter<LasDatasetLayer, Speckle.Objects.Geometry.Pointcloud> pointcloudConverter
+    ITypedConverter<object, GisObject> gisObjectConverter,
+    ITypedConverter<(Row, IReadOnlyCollection<string>), Base> attributeConverter
   )
   {
     _sendConversionCache = sendConversionCache;
@@ -69,8 +64,6 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     _activityFactory = activityFactory;
     _gisObjectConverter = gisObjectConverter;
     _attributeConverter = attributeConverter;
-    _gisRasterConverter = gisRasterConverter;
-    _pointcloudConverter = pointcloudConverter;
   }
 
 #pragma warning disable CA1506
@@ -161,7 +154,15 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
                         string appId = $"{featureLayer.URI}_{count}";
                         using (Row row = rowCursor.Current)
                         {
-                          GisObject element = _gisObjectConverter.Convert((row, appId));
+                          GisObject elementNoId = _gisObjectConverter.Convert(row);
+                          GisObject element =
+                            new()
+                            {
+                              type = elementNoId.type,
+                              name = elementNoId.name,
+                              applicationId = appId,
+                              displayValue = elementNoId.displayValue,
+                            };
                           element["properties"] = _attributeConverter.Convert((row, visibleAttributes));
 
                           // add converted feature to converted layer
@@ -178,11 +179,19 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
               }
               else if (mapMember is RasterLayer arcGisRasterLayer && converted is Collection convertedRasterLayer)
               {
+                string appId = $"{arcGisRasterLayer.URI}_0";
                 await QueuedTask
                   .Run(() =>
                   {
-                    RasterElement element = _gisRasterConverter.Convert(arcGisRasterLayer.GetRaster());
-                    element.applicationId = $"{arcGisRasterLayer.URI}_0";
+                    GisObject elementNoId = _gisObjectConverter.Convert(arcGisRasterLayer.GetRaster());
+                    GisObject element =
+                      new()
+                      {
+                        type = elementNoId.type,
+                        name = elementNoId.name,
+                        applicationId = appId,
+                        displayValue = elementNoId.displayValue,
+                      };
                     convertedRasterLayer.elements.Add(element);
                   })
                   .ConfigureAwait(false);
@@ -191,10 +200,17 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
               }
               else if (mapMember is LasDatasetLayer pointcloudLayer && converted is Collection convertedPointcloudLayer)
               {
-                Speckle.Objects.Geometry.Pointcloud cloud = await QueuedTask
-                  .Run(() => _pointcloudConverter.Convert(pointcloudLayer))
-                  .ConfigureAwait(false);
-                convertedPointcloudLayer.elements.Add(cloud);
+                string appId = $"{pointcloudLayer.URI}_0";
+                GisObject elementNoId = _gisObjectConverter.Convert(pointcloudLayer);
+                GisObject element =
+                  new()
+                  {
+                    type = elementNoId.type,
+                    name = elementNoId.name,
+                    applicationId = appId,
+                    displayValue = elementNoId.displayValue,
+                  };
+                convertedPointcloudLayer.elements.Add(element);
 
                 converted = convertedPointcloudLayer;
               }
