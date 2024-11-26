@@ -6,7 +6,6 @@ using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
-using Speckle.Sdk.Serialisation;
 using Speckle.Sdk.Serialisation.V2.Send;
 using Speckle.Sdk.Transports;
 
@@ -21,7 +20,6 @@ namespace Speckle.Connectors.Common.Operations;
 [GenerateAutoInterface]
 public sealed class RootObjectSender : IRootObjectSender
 {
-  private readonly IServerTransportFactory _transportFactory;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly AccountService _accountService;
   private readonly IProgressDisplayManager _progressDisplayManager;
@@ -35,8 +33,7 @@ public sealed class RootObjectSender : IRootObjectSender
     IProgressDisplayManager progressDisplayManager,
     IOperations operations,
     IClientFactory clientFactory,
-    ISdkActivityFactory activityFactory,
-    IServerTransportFactory transportFactory
+    ISdkActivityFactory activityFactory
   )
   {
     _sendConversionCache = sendConversionCache;
@@ -45,7 +42,6 @@ public sealed class RootObjectSender : IRootObjectSender
     _operations = operations;
     _clientFactory = clientFactory;
     _activityFactory = activityFactory;
-    _transportFactory = transportFactory;
   }
 
   /// <summary>
@@ -69,13 +65,13 @@ public sealed class RootObjectSender : IRootObjectSender
     using var activity = _activityFactory.Start("SendOperation");
 
     string previousSpeed = string.Empty;
-    using var transport = _transportFactory.Create(account, sendInfo.ProjectId, 60, null);
     _progressDisplayManager.Begin();
-    var send1Results = await _operations
-      .Send(
+    var sendResult = await _operations
+      .Send2(
+        sendInfo.ServerUrl,
+        sendInfo.ProjectId,
+        account.token,
         commitObject,
-        transport,
-        true,
         onProgressAction: new PassthroughProgress(args =>
         {
           if (args.ProgressEvent == ProgressEvent.UploadBytes)
@@ -114,10 +110,6 @@ public sealed class RootObjectSender : IRootObjectSender
       )
       .ConfigureAwait(false);
 
-    var sendResult = new SerializeProcessResults(
-      send1Results.rootObjId,
-      send1Results.convertedReferences.ToDictionary(x => new Id(x.Key), x => x.Value)
-    );
     _sendConversionCache.StoreSendResult(sendInfo.ProjectId, sendResult.ConvertedReferences);
 
     ct.ThrowIfCancellationRequested();

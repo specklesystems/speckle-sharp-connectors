@@ -45,8 +45,8 @@ public class ClassPropertiesExtractor
       case DB.Floor floor:
         return ExtractFloorProperties(floor);
 
-      case DB.Ceiling ceiling:
-        return ExtractCeilingProperties(ceiling);
+      //case DB.Ceiling ceiling:
+      //return ExtractCeilingProperties(ceiling);
 
       case DB.ExtrusionRoof extrusionRoof:
         return ExtractExtrusionRoofProperties(extrusionRoof);
@@ -84,12 +84,14 @@ public class ClassPropertiesExtractor
         ["flipped"] = wall.Flipped
       };
 
+    /* POC: Profile polycurves were resulting in serialization issues that need to be resolved first. commenting these out for now.
     // get profile curves, which includes voids
     List<SOG.Polycurve> profile = GetSketchProfile(wall.Document, wall.SketchId);
     if (profile.Count > 0)
     {
       wallProperties["profile"] = profile;
     }
+    */
 
     return wallProperties;
   }
@@ -104,16 +106,19 @@ public class ClassPropertiesExtractor
           _parameterValueExtractor.GetValueAsBool(floor, DB.BuiltInParameter.FLOOR_PARAM_IS_STRUCTURAL) ?? false,
       };
 
+    /*
     // get profile curves, which includes voids
     List<SOG.Polycurve> profile = GetSketchProfile(floor.Document, floor.SketchId);
     if (profile.Count > 0)
     {
       floorProperties["profile"] = profile;
     }
+    */
 
     return floorProperties;
   }
 
+  /*
   private Dictionary<string, object?> ExtractCeilingProperties(DB.Ceiling ceiling)
   {
     Dictionary<string, object?> ceilingProperties = new();
@@ -127,29 +132,29 @@ public class ClassPropertiesExtractor
 
     return ceilingProperties;
   }
+  */
 
   private Dictionary<string, object?> ExtractExtrusionRoofProperties(DB.ExtrusionRoof extrusionRoof)
   {
-    // get profile curve, which is outline
-    SOG.Polycurve profile = _modelCurveArrayConverter.Convert(extrusionRoof.GetProfile());
-
     Dictionary<string, object?> extrusionRoofProperties =
       new()
       {
         ["start"] = _parameterValueExtractor.GetValueAsDouble(extrusionRoof, DB.BuiltInParameter.EXTRUSION_START_PARAM),
         ["end"] = _parameterValueExtractor.GetValueAsDouble(extrusionRoof, DB.BuiltInParameter.EXTRUSION_END_PARAM),
-        ["profile"] = new List<SOG.Polycurve>() { profile }
       };
+
+    /*
+    // get profile curve, which is outline
+    SOG.Polycurve profile = _modelCurveArrayConverter.Convert(extrusionRoof.GetProfile());
+    extrusionRoofProperties["profile"] = new List<SOG.Polycurve>() { profile };
+    */
 
     return extrusionRoofProperties;
   }
 
   private Dictionary<string, object?> ExtractFootPrintRoofProperties(DB.FootPrintRoof footPrintRoof)
   {
-    // get profile curve, which is outline
-    SOG.Polycurve[] profile = _modelCurveArrArrayConverter.Convert(footPrintRoof.GetProfiles());
-
-    Dictionary<string, object?> extrusionRoofProperties = new() { ["profile"] = profile.ToList() };
+    Dictionary<string, object?> extrusionRoofProperties = new();
 
     // We don't currently validate the success of this TryGet, it is assumed some Roofs don't have a top-level.
     if (
@@ -162,6 +167,15 @@ public class ClassPropertiesExtractor
     {
       extrusionRoofProperties["topLevel"] = _levelConverter.Convert(topLevel);
     }
+
+    /*
+    // get profile curve, which is outline
+    SOG.Polycurve[] profile = _modelCurveArrArrayConverter.Convert(footPrintRoof.GetProfiles());
+    if (profile.Length > 0)
+    {
+      extrusionRoofProperties["profile"] = profile.ToList();
+    }
+    */
 
     return extrusionRoofProperties;
   }
