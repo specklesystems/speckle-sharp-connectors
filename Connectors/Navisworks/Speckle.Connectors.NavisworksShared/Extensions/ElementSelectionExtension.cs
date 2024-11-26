@@ -5,7 +5,7 @@
 /// </summary>
 public static class ElementSelectionExtension
 {
-  private const char DEFAULT_SEPARATOR = '.';
+  private const char DEFAULT_SEPARATOR = '/';
 
   /// <summary>
   /// Resolves a Navisworks <see cref="NAV.ModelItem"/> to its unique index path representation.
@@ -26,9 +26,12 @@ public static class ElementSelectionExtension
 
     var modelItemPathId = NavisworksApp.ActiveDocument.Models.CreatePathId(modelItem);
 
-    return modelItemPathId.PathId == "a"
-      ? $"{modelItemPathId.ModelIndex}" // Root-level model item
-      : $"{modelItemPathId.ModelIndex}{DEFAULT_SEPARATOR}{modelItemPathId.PathId}"; // Nested model item
+    var pathIndex =
+      modelItemPathId.PathId == "a"
+        ? $"{modelItemPathId.ModelIndex}" // Root-level model item
+        : $"{modelItemPathId.ModelIndex}{DEFAULT_SEPARATOR}{modelItemPathId.PathId}"; // Nested model item
+
+    return pathIndex;
   }
 
   internal static NAV.ModelItem ResolveIndexPathToModelItem(string indexPath)
