@@ -8,7 +8,6 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.Revit.Bindings;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Revit.Operations.Receive;
@@ -27,10 +26,8 @@ public static class ServiceRegistration
   {
     serviceCollection.AddConnectorUtils();
     serviceCollection.AddDUI<RevitThreadContext>();
+    serviceCollection.AddDUI<RevitDocumentStore>();
     RegisterUiDependencies(serviceCollection);
-
-    // register
-    serviceCollection.AddSingleton<DocumentModelStore, RevitDocumentStore>();
 
     // Storage Schema
     serviceCollection.AddScoped<DocumentModelStorageSchema>();

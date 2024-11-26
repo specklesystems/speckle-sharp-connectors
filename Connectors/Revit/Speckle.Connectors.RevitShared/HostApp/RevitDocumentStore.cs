@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.ExtensibleStorage;
 using Autodesk.Revit.UI;
@@ -7,7 +6,6 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.HostApp;
@@ -31,7 +29,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     IdStorageSchema idStorageSchema,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
-    : base(jsonSerializer, true)
+    : base(jsonSerializer)
   {
     _idleManager = idleManager;
     _revitContext = revitContext;
@@ -48,11 +46,9 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     uiApplication.Application.DocumentOpened += (_, _) =>
       topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
 
-    Models.CollectionChanged += (_, _) => topLevelExceptionHandler.CatchUnhandled(WriteToFile);
-
     // There is no event that we can hook here for double-click file open...
     // It is kind of harmless since we create this object as "SingleInstance".
-    ReadFromFile();
+    LoadState();
     OnDocumentChanged();
   }
 
@@ -77,20 +73,21 @@ internal sealed class RevitDocumentStore : DocumentModelStore
       nameof(RevitDocumentStore),
       () =>
       {
-        ReadFromFile();
+        LoadState();
         OnDocumentChanged();
       }
     );
   }
 
-  public override void WriteToFile()
+  protected override void HostAppSaveState(string modelCardState)
   {
-    var doc = _revitContext.UIApplication?.ActiveUIDocument.Document;
-    // POC: this can happen? A: Not really, imho (dim)
+    var doc = _revitContext.UIApplication?.ActiveUIDocument?.Document;
+    // POC: this can happen? A: Not really, imho (dim) (Adam seyz yes it can if loading also triggers a save)
     if (doc == null)
     {
       return;
     }
+<<<<<<< HEAD
 
     using Transaction t = new(doc, "Speckle Write State");
     t.Start();
@@ -99,6 +96,17 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     using Entity stateEntity = new(_documentModelStorageSchema.GetSchema());
     string serializedModels = Serialize();
     stateEntity.Set("contents", serializedModels);
+=======
+    RevitTask.RunAsync(() =>
+    {
+      var doc = (_revitContext.UIApplication?.ActiveUIDocument?.Document).NotNull();
+      using Transaction t = new(doc, "Speckle Write State");
+      t.Start();
+      using DataStorage ds = GetSettingsDataStorage(doc) ?? DataStorage.Create(doc);
+
+      using Entity stateEntity = new(_documentModelStorageSchema.GetSchema());
+      stateEntity.Set("contents", modelCardState);
+>>>>>>> dev
 
     using Entity idEntity = new(_idStorageSchema.GetSchema());
     idEntity.Set("Id", s_revitDocumentStoreId);
@@ -108,25 +116,17 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     t.Commit();
   }
 
-  public override void ReadFromFile()
+  protected override void LoadState()
   {
-    try
+    var stateEntity = GetSpeckleEntity(_revitContext.UIApplication?.ActiveUIDocument?.Document);
+    if (stateEntity == null || !stateEntity.IsValid())
     {
-      var stateEntity = GetSpeckleEntity(_revitContext.UIApplication?.ActiveUIDocument?.Document);
-      if (stateEntity == null || !stateEntity.IsValid())
-      {
-        Models = new();
-        return;
-      }
+      ClearAndSave();
+      return;
+    }
 
-      string modelsString = stateEntity.Get<string>("contents");
-      Models = Deserialize(modelsString).NotNull();
-    }
-    catch (Exception ex) when (!ex.IsFatal())
-    {
-      Models = new();
-      Debug.WriteLine(ex.Message); // POC: Log here error and notify UI that cards not read succesfully
-    }
+    string modelsString = stateEntity.Get<string>("contents");
+    LoadFromString(modelsString);
   }
 
   private DataStorage? GetSettingsDataStorage(Document doc)

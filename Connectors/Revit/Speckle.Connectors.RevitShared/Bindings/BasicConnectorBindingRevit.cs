@@ -1,5 +1,6 @@
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
+using Revit.Async;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
@@ -24,15 +25,13 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
   private readonly DocumentModelStore _store;
   private readonly RevitContext _revitContext;
   private readonly ISpeckleApplication _speckleApplication;
-  private readonly ILogger<BasicConnectorBindingRevit> _logger;
 
   public BasicConnectorBindingRevit(
     APIContext apiContext,
     DocumentModelStore store,
     IBrowserBridge parent,
     RevitContext revitContext,
-    ISpeckleApplication speckleApplication,
-    ILogger<BasicConnectorBindingRevit> logger
+    ISpeckleApplication speckleApplication
   )
   {
     Name = "baseBinding";
@@ -41,7 +40,6 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     _store = store;
     _revitContext = revitContext;
     _speckleApplication = speckleApplication;
-    _logger = logger;
     Commands = new BasicConnectorBindingCommands(parent);
 
     // POC: event binding?
@@ -81,7 +79,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
   public DocumentModelStore GetDocumentState() => _store;
 
-  public void AddModel(ModelCard model) => _store.Models.Add(model);
+  public void AddModel(ModelCard model) => _store.AddModel(model);
 
   public void UpdateModel(ModelCard model) => _store.UpdateModel(model);
 
@@ -90,13 +88,6 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
   public async Task HighlightModel(string modelCardId)
   {
     var model = _store.GetModelById(modelCardId);
-
-    if (model is null)
-    {
-      _logger.LogError("Model was null when highlighting received model");
-      return;
-    }
-
     var activeUIDoc =
       _revitContext.UIApplication?.ActiveUIDocument
       ?? throw new SpeckleException("Unable to retrieve active UI document");

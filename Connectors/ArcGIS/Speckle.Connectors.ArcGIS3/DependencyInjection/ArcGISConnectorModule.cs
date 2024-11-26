@@ -12,7 +12,6 @@ using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
-using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Threading;
 using Speckle.Connectors.DUI.WebView;
@@ -30,9 +29,8 @@ public static class ArcGISConnectorModule
   {
     serviceCollection.AddConnectorUtils();
     serviceCollection.AddDUI<ThreadContext>();
+    serviceCollection.AddDUI<ArcGISDocumentStore>();
     serviceCollection.AddDUIView();
-
-    serviceCollection.AddSingleton<DocumentModelStore, ArcGISDocumentStore>();
     // Register bindings
     serviceCollection.AddSingleton<IBinding, TestBinding>();
     serviceCollection.AddSingleton<IBinding, ConfigBinding>();

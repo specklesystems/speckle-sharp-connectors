@@ -4,6 +4,7 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Threading;
+using Speckle.Connectors.DUI.Models;
 using Speckle.Sdk;
 using Speckle.Sdk.Transports;
 
@@ -13,7 +14,12 @@ public static class ContainerRegistration
 {
   public static void AddDUI<TThreadContext>(this IServiceCollection serviceCollection)
     where TThreadContext : IThreadContext, new()
+{
+  public static void AddDUI<TDocumentStore>(this IServiceCollection serviceCollection)
+    where TDocumentStore : DocumentModelStore
   {
+    serviceCollection.AddSingleton<DocumentModelStore, TDocumentStore>();
+
     // send operation and dependencies
     serviceCollection.AddSingleton<IThreadContext>(new TThreadContext());
     serviceCollection.AddSingleton<IRootObjectSender, RootObjectSender>();
