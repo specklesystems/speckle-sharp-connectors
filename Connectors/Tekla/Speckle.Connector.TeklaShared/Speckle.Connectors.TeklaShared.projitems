@@ -24,7 +24,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SendCollectionManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\TeklaDocumentModelStore.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\TeklaIdleManager.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)HostApp\TeklaMaterialCache.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\TeklaMaterialUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendRebarsAsSolidSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ToSpeckleSettingsManager.cs" />
