@@ -4,7 +4,7 @@ using System.Windows.Forms;
 using System.Text;
 #endif
 
-namespace Speckle.Connector.Navisworks.NavisPlugin;
+namespace Speckle.Connector.Navisworks.Plugin;
 
 [
   NAV.Plugins.Plugin("SpeckleNavisworksNextGen", "Speckle", DisplayName = "Speckle Next Gen"),

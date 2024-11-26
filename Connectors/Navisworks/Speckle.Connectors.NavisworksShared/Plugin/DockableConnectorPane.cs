@@ -8,7 +8,7 @@ using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Sdk.Host;
 
-namespace Speckle.Connector.Navisworks.NavisPlugin;
+namespace Speckle.Connector.Navisworks.Plugin;
 
 [
   NAV.Plugins.DockPanePlugin(450, 750, FixedSize = false, AutoScroll = true, MinimumHeight = 410, MinimumWidth = 250),

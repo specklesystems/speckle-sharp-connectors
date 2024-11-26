@@ -1,4 +1,4 @@
-namespace Speckle.Connector.Navisworks.NavisPlugin;
+namespace Speckle.Connector.Navisworks.Plugin;
 
 public abstract class LaunchSpeckleConnector
 {
