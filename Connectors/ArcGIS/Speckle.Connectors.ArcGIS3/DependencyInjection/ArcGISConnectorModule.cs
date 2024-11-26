@@ -52,6 +52,8 @@ public static class ArcGISConnectorModule
     serviceCollection.AddScoped<ArcGISRootObjectBuilder>();
     serviceCollection.AddScoped<IRootObjectBuilder<MapMember>, ArcGISRootObjectBuilder>();
 
+    serviceCollection.AddScoped<ArcGISLayerUnpacker>();
+
     serviceCollection.AddScoped<LocalToGlobalConverterUtils>();
 
     serviceCollection.AddScoped<ArcGISColorManager>();

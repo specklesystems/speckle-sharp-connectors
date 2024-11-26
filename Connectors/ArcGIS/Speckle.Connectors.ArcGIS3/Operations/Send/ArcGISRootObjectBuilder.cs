@@ -27,6 +27,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
 {
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;
+  private readonly ArcGISLayerUnpacker _layerUnpacker;
   private readonly ArcGISColorManager _colorManager;
   private readonly IConverterSettingsStore<ArcGISConversionSettings> _converterSettings;
   private readonly MapMembersUtils _mapMemberUtils;
@@ -35,6 +36,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
 
   public ArcGISRootObjectBuilder(
     ISendConversionCache sendConversionCache,
+    ArcGISLayerUnpacker layerUnpacker,
     ArcGISColorManager colorManager,
     IConverterSettingsStore<ArcGISConversionSettings> converterSettings,
     IRootToSpeckleConverter rootToSpeckleConverter,
@@ -44,6 +46,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
   )
   {
     _sendConversionCache = sendConversionCache;
+    _layerUnpacker = layerUnpacker;
     _colorManager = colorManager;
     _converterSettings = converterSettings;
     _rootToSpeckleConverter = rootToSpeckleConverter;
@@ -170,6 +173,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
               );
               parentCollection.Item2.elements.Add(converted);
             }
+            _layerUnpacker.GetHostObjectCollection(mapMember, converted, rootObjectCollection, nestedGroups);
 
             results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
             convertingActivity?.SetStatus(SdkActivityStatusCode.Ok);
