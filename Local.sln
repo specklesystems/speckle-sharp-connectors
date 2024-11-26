@@ -194,6 +194,20 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Connectors.TeklaSha
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Converters.TeklaShared", "Converters\Tekla\Speckle.Converters.TeklaShared\Speckle.Converters.TeklaShared.shproj", "{52666479-5401-47D6-B7BA-D554784439EA}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Navisworks", "Navisworks", "{BAAB254D-7AD0-4E78-A5C9-F975DD090AF2}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2024", "2024", "{A91E99F9-66BD-4F33-9362-50C1CE78D3B1}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shared", "Shared", "{7CF2A930-E1B5-4A04-8FAD-E268B6B91BC3}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Connectors.NavisworksShared", "Connectors\Navisworks\Speckle.Connectors.NavisworksShared\Speckle.Connectors.NavisworksShared.shproj", "{62813838-52F7-43CB-9062-BB2611C00C79}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Converters.NavisworksShared", "Converters\Navisworks\Speckle.Converters.NavisworksShared\Speckle.Converters.NavisworksShared.shproj", "{23830613-87F8-4655-B523-72189A597962}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Navisworks2024", "Connectors\Navisworks\Speckle.Connectors.Navisworks2024\Speckle.Connectors.Navisworks2024.csproj", "{C032C662-A2E1-4F77-97A1-4D9E88245C9B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Navisworks2024", "Converters\Navisworks\Speckle.Converters.Navisworks2024\Speckle.Converters.Navisworks2024.csproj", "{A18C48DB-ED64-4CA6-BE90-1A91DAF3F818}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -507,6 +521,18 @@ Global
 		{4C373FD0-E3F3-478B-AD32-CDBF340D21A9}.Local|Any CPU.Build.0 = Local|Any CPU
 		{4C373FD0-E3F3-478B-AD32-CDBF340D21A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4C373FD0-E3F3-478B-AD32-CDBF340D21A9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C032C662-A2E1-4F77-97A1-4D9E88245C9B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C032C662-A2E1-4F77-97A1-4D9E88245C9B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C032C662-A2E1-4F77-97A1-4D9E88245C9B}.Local|Any CPU.ActiveCfg = Debug|Any CPU
+		{C032C662-A2E1-4F77-97A1-4D9E88245C9B}.Local|Any CPU.Build.0 = Debug|Any CPU
+		{C032C662-A2E1-4F77-97A1-4D9E88245C9B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C032C662-A2E1-4F77-97A1-4D9E88245C9B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A18C48DB-ED64-4CA6-BE90-1A91DAF3F818}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A18C48DB-ED64-4CA6-BE90-1A91DAF3F818}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A18C48DB-ED64-4CA6-BE90-1A91DAF3F818}.Local|Any CPU.ActiveCfg = Local|Any CPU
+		{A18C48DB-ED64-4CA6-BE90-1A91DAF3F818}.Local|Any CPU.Build.0 = Local|Any CPU
+		{A18C48DB-ED64-4CA6-BE90-1A91DAF3F818}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A18C48DB-ED64-4CA6-BE90-1A91DAF3F818}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -593,6 +619,13 @@ Global
 		{4C373FD0-E3F3-478B-AD32-CDBF340D21A9} = {474752C4-3D2A-4A7D-B8E0-B7A43FC3694C}
 		{3AB9028B-B2D2-464B-9BA3-39C192441E50} = {0B47C151-3B4E-4EB5-AB21-02FD096A2024}
 		{52666479-5401-47D6-B7BA-D554784439EA} = {0B47C151-3B4E-4EB5-AB21-02FD096A2024}
+		{BAAB254D-7AD0-4E78-A5C9-F975DD090AF2} = {42826721-9A18-4762-8BA9-F1429DD5C5B1}
+		{A91E99F9-66BD-4F33-9362-50C1CE78D3B1} = {BAAB254D-7AD0-4E78-A5C9-F975DD090AF2}
+		{7CF2A930-E1B5-4A04-8FAD-E268B6B91BC3} = {BAAB254D-7AD0-4E78-A5C9-F975DD090AF2}
+		{62813838-52F7-43CB-9062-BB2611C00C79} = {7CF2A930-E1B5-4A04-8FAD-E268B6B91BC3}
+		{23830613-87F8-4655-B523-72189A597962} = {7CF2A930-E1B5-4A04-8FAD-E268B6B91BC3}
+		{C032C662-A2E1-4F77-97A1-4D9E88245C9B} = {A91E99F9-66BD-4F33-9362-50C1CE78D3B1}
+		{A18C48DB-ED64-4CA6-BE90-1A91DAF3F818} = {A91E99F9-66BD-4F33-9362-50C1CE78D3B1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}
