@@ -11,6 +11,7 @@ public static class GISLayerGeometryType
   public const string POLYGON3D = "Polygon3d";
   public const string MULTIPATCH = "Multipatch";
   public const string POINTCLOUD = "Pointcloud";
+  public const string RASTER = "Raster";
 
   public static string LayerGeometryTypeToSpeckle(esriGeometryType nativeGeometryType)
   {

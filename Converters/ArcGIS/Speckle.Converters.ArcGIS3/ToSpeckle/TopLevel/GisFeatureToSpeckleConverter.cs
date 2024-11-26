@@ -77,7 +77,7 @@ public class GisObjectToSpeckleConverter : ITypedConverter<object, GisObject>
           SOG.Point specklePoint = _pointConverter.Convert(point);
           return new GisObject()
           {
-            type = "Point",
+            type = GISLayerGeometryType.POINT,
             name = "Point Feature",
             applicationId = "",
             displayValue = new List<Base>() { specklePoint },
@@ -87,7 +87,7 @@ public class GisObjectToSpeckleConverter : ITypedConverter<object, GisObject>
           List<SOG.Point> specklePoints = _multiPointConverter.Convert(multipoint).ToList();
           return new GisObject()
           {
-            type = "Point",
+            type = GISLayerGeometryType.POINT,
             name = "Point Feature",
             applicationId = "",
             displayValue = specklePoints,
@@ -97,7 +97,7 @@ public class GisObjectToSpeckleConverter : ITypedConverter<object, GisObject>
           List<SOG.Polyline> polylines = _polylineConverter.Convert(polyline).ToList();
           return new GisObject()
           {
-            type = "Line",
+            type = GISLayerGeometryType.POLYLINE,
             name = "Line Feature",
             applicationId = "",
             displayValue = polylines,
@@ -108,7 +108,7 @@ public class GisObjectToSpeckleConverter : ITypedConverter<object, GisObject>
           List<SOG.Mesh> meshes = GetPolygonDisplayMeshes(polygons);
           return new GisObject()
           {
-            type = "Polygon",
+            type = GISLayerGeometryType.POLYGON,
             name = "Polygon Feature",
             applicationId = "",
             displayValue = meshes,
@@ -119,7 +119,7 @@ public class GisObjectToSpeckleConverter : ITypedConverter<object, GisObject>
           List<SOG.Mesh> display = GetDisplayMeshes(geometry);
           return new GisObject()
           {
-            type = "Multipatch",
+            type = GISLayerGeometryType.MULTIPATCH,
             name = "Multipatch Feature",
             applicationId = "",
             displayValue = display,
@@ -135,7 +135,7 @@ public class GisObjectToSpeckleConverter : ITypedConverter<object, GisObject>
       SOG.Mesh displayMesh = _gisRasterConverter.Convert(raster);
       return new GisObject()
       {
-        type = "Raster",
+        type = GISLayerGeometryType.RASTER,
         name = "Raster",
         applicationId = "",
         displayValue = new List<Base>() { displayMesh },
@@ -147,7 +147,7 @@ public class GisObjectToSpeckleConverter : ITypedConverter<object, GisObject>
       Speckle.Objects.Geometry.Pointcloud cloud = _pointcloudConverter.Convert(pointcloudLayer);
       return new GisObject()
       {
-        type = "Pointcloud",
+        type = GISLayerGeometryType.POINTCLOUD,
         name = "Pointcloud",
         applicationId = "",
         displayValue = new List<Base>() { cloud },
