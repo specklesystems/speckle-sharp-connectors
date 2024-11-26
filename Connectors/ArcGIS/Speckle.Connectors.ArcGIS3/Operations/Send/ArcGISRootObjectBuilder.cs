@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using ArcGIS.Core.Data;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Microsoft.Extensions.Logging;
@@ -12,6 +13,9 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
+using Speckle.Converters.Common.Objects;
+using Speckle.Objects;
+using Speckle.Objects.GIS;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -33,6 +37,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
   private readonly MapMembersUtils _mapMemberUtils;
   private readonly ILogger<ArcGISRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
+  private readonly ITypedConverter<(Row, string), IGisFeature> _gisFeatureConverter;
 
   public ArcGISRootObjectBuilder(
     ISendConversionCache sendConversionCache,
@@ -42,7 +47,8 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     IRootToSpeckleConverter rootToSpeckleConverter,
     MapMembersUtils mapMemberUtils,
     ILogger<ArcGISRootObjectBuilder> logger,
-    ISdkActivityFactory activityFactory
+    ISdkActivityFactory activityFactory,
+    ITypedConverter<(Row, string), IGisFeature> gisFeatureConverter
   )
   {
     _sendConversionCache = sendConversionCache;
@@ -53,6 +59,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     _mapMemberUtils = mapMemberUtils;
     _logger = logger;
     _activityFactory = activityFactory;
+    _gisFeatureConverter = gisFeatureConverter;
   }
 
 #pragma warning disable CA1506
@@ -118,13 +125,55 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
               converted = value;
               cacheHitCount++; // is it actually used?
             }
-            else // for actual layers, not yet converted
+            else // for actual layers, TO CONVERT
             {
               converted = await QueuedTask
-                .Run(() => (Collection)_rootToSpeckleConverter.Convert(mapMember))
+                .Run(() => _layerUnpacker.AddLayerWithProps(applicationId, mapMember, globalUnits, activeCRS))
                 .ConfigureAwait(false);
+              // 'converted' is now VectorLayer or RasterLayer Collection
 
-              _layerUnpacker.AddLayerProps(applicationId, mapMember, converted, globalUnits, activeCRS);
+              if (mapMember is FeatureLayer featureLayer && converted is VectorLayer convertedVector)
+              {
+                await QueuedTask
+                  .Run(() =>
+                  {
+                    // search the rows of the layer, where each row = GisFeature
+                    // RowCursor is IDisposable but is not being correctly picked up by IDE warnings.
+                    // This means we need to be carefully adding using statements based on the API documentation coming from each method/class
+                    int count = 1;
+                    using (RowCursor rowCursor = featureLayer.Search())
+                    {
+                      while (rowCursor.MoveNext())
+                      {
+                        // Same IDisposable issue appears to happen on Row class too. Docs say it should always be disposed of manually by the caller.
+                        using (Row row = rowCursor.Current)
+                        {
+                          string appId = $"{featureLayer.URI}_{count}";
+                          IGisFeature element = _gisFeatureConverter.Convert((row, appId));
+
+                          // create new element attributes from the existing attributes, based on the vector layer visible fields
+                          // POC: this should be refactored to store the feature layer properties in the context stack, so this logic can be done in the gisFeatureConverter
+                          Base elementAttributes = new();
+                          foreach (string elementAtt in element.attributes.DynamicPropertyKeys)
+                          {
+                            if (convertedVector.attributes.DynamicPropertyKeys.Contains(elementAtt))
+                            {
+                              elementAttributes[elementAtt] = element.attributes[elementAtt];
+                            }
+                          }
+                          element.attributes = elementAttributes;
+                          // add converted feature to converted layer
+                          convertedVector.elements.Add((Base)element);
+                        }
+
+                        count++;
+                      }
+                    }
+                  })
+                  .ConfigureAwait(false);
+
+                converted = convertedVector;
+              }
             }
 
             _layerUnpacker.AddConvertedToRoot(applicationId, converted, rootObjectCollection, nestedGroups);

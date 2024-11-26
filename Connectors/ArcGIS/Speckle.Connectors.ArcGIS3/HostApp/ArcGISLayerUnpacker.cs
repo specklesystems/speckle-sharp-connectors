@@ -1,3 +1,4 @@
+using ArcGIS.Core.Data;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Objects.GIS;
@@ -64,17 +65,58 @@ public class ArcGISLayerUnpacker
     }
   }
 
-  public void AddLayerProps(
+  public VectorLayer ConvertVectorLayer(FeatureLayer featureLayer)
+  {
+    VectorLayer convertedVectorLayer = new();
+
+    // get feature class fields
+    var allLayerAttributes = new Base();
+    var dispayTable = featureLayer as IDisplayTable;
+
+    // POC: this should be refactored into a stored method of supported/unsupported field types, since this logic is duplicated in GisFeature converter
+    foreach (FieldDescription field in dispayTable.GetFieldDescriptions())
+    {
+      if (field.IsVisible)
+      {
+        string name = field.Name;
+        if (
+          field.Type == FieldType.Geometry
+          || field.Type == FieldType.Raster
+          || field.Type == FieldType.XML
+          || field.Type == FieldType.Blob
+        )
+        {
+          continue;
+        }
+
+        allLayerAttributes[name] = GISAttributeFieldType.FieldTypeToSpeckle(field.Type);
+      }
+    }
+    convertedVectorLayer.attributes = allLayerAttributes;
+
+    // get a simple geometry type
+    string speckleGeometryType = GISLayerGeometryType.LayerGeometryTypeToSpeckle(featureLayer.ShapeType);
+    convertedVectorLayer.geomType = speckleGeometryType;
+    return convertedVectorLayer;
+  }
+
+  public Collection AddLayerWithProps(
     string applicationId,
     MapMember mapMember,
-    Base converted,
     string globalUnits,
     CRSoffsetRotation activeCRS
   )
   {
+    Collection converted = new();
+
+    if (mapMember is FeatureLayer featureLayer)
+    {
+      converted = ConvertVectorLayer(featureLayer);
+    }
+
+    // get common attributes for any type of layer
     // get units & Active CRS (for writing geometry coords)
     converted["units"] = globalUnits;
-
     var spatialRef = activeCRS.SpatialReference;
     converted["crs"] = new CRS
     {
@@ -88,5 +130,7 @@ public class ArcGISLayerUnpacker
     // other common properties for layers and groups
     converted["name"] = mapMember.Name;
     converted.applicationId = applicationId;
+
+    return converted;
   }
 }
