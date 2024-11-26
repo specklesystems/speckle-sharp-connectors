@@ -13,6 +13,9 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
+using Speckle.Converter.Navisworks.Settings;
+using Speckle.Converters.Common;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connector.Navisworks.DependencyInjection;
@@ -36,6 +39,13 @@ public static class NavisworksServiceRegistration
     // Register Navisworks specific binding
     serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
     serviceCollection.AddSingleton<IBasicConnectorBinding, NavisworksBasicConnectorBinding>();
+    serviceCollection.AddSingleton<INavisworksConversionSettingsFactory, NavisworksConversionSettingsFactory>();
+
+    // Conversion settings
+    serviceCollection.AddScoped<
+      IConverterSettingsStore<NavisworksConversionSettings>,
+      ConverterSettingsStore<NavisworksConversionSettings>
+    >();
 
     // Sending operations
     serviceCollection.AddScoped<IRootObjectBuilder<NAV.ModelItem>, NavisworksRootObjectBuilder>();

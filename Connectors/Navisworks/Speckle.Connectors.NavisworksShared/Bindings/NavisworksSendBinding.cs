@@ -10,6 +10,9 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
+using Speckle.Converter.Navisworks.Settings;
+using Speckle.Converters.Common;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Logging;
@@ -32,6 +35,7 @@ public class NavisworksSendBinding : ISendBinding
   private readonly ILogger<NavisworksSendBinding> _logger;
   private readonly ISpeckleApplication _speckleApplication;
   private readonly ISdkActivityFactory _activityFactory;
+  private readonly INavisworksConversionSettingsFactory _conversionSettingsFactory;
 
   public NavisworksSendBinding(
     DocumentModelStore store,
@@ -42,7 +46,8 @@ public class NavisworksSendBinding : ISendBinding
     IOperationProgressManager operationProgressManager,
     ILogger<NavisworksSendBinding> logger,
     ISpeckleApplication speckleApplication,
-    ISdkActivityFactory activityFactory
+    ISdkActivityFactory activityFactory,
+    INavisworksConversionSettingsFactory conversionSettingsFactory
   )
   {
     _store = store;
@@ -56,6 +61,7 @@ public class NavisworksSendBinding : ISendBinding
     Commands = new SendBindingUICommands(parent);
     _activityFactory = activityFactory;
     SubscribeToNavisworksEvents();
+    _conversionSettingsFactory = conversionSettingsFactory;
   }
 
   private static void SubscribeToNavisworksEvents() { }
@@ -76,6 +82,9 @@ public class NavisworksSendBinding : ISendBinding
       }
 
       using var scope = _serviceProvider.CreateScope();
+      scope
+        .ServiceProvider.GetRequiredService<IConverterSettingsStore<NavisworksConversionSettings>>()
+        .Initialize(_conversionSettingsFactory.Create(NavisworksApp.ActiveDocument));
 
       CancellationToken token = _cancellationManager.InitCancellationTokenSource(modelCardId);
 

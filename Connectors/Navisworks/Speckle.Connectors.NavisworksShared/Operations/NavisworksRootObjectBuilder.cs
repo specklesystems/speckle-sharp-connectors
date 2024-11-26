@@ -46,12 +46,10 @@ public class NavisworksRootObjectBuilder : IRootObjectBuilder<NAV.ModelItem>
     using var activity = _activityFactory.Start("Build");
 
     // Initialize root collection
-    Collection rootObjectCollection =
-      new()
-      {
-        name = NavisworksApp.ActiveDocument.Title ?? "Unnamed model",
-        ["units"] = _converterSettings.Current.SpeckleUnits
-      };
+    var name = NavisworksApp.ActiveDocument.Title ?? "Unnamed model";
+
+    var rootObjectCollection = new Collection { name = name };
+    rootObjectCollection["units"] = _converterSettings.Current.SpeckleUnits;
 
     if (!navisworksModelItems.Any())
     {
