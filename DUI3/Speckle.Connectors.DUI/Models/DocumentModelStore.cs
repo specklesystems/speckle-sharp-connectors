@@ -64,13 +64,12 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
   {
     lock (_models)
     {
-      var m = _models.FirstOrDefault(m => model.ModelCardId == m.ModelCardId);
-      if (m is null)
+      var index = _models.FindIndex(m => m.ModelCardId == model.ModelCardId);
+      if (index == -1)
       {
         throw new ModelNotFoundException("Model card not found to update.");
       }
-      var idx = _models.IndexOf(m);
-      _models[idx] = model;
+      _models[index] = model;
       SaveState();
     }
   }
@@ -79,13 +78,12 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
   {
     lock (_models)
     {
-      var m = _models.FirstOrDefault(m => model.ModelCardId == m.ModelCardId);
-      if (m is null)
+      var index = _models.FindIndex(m => m.ModelCardId == model.ModelCardId);
+      if (index == -1)
       {
-        throw new ModelNotFoundException("Model card not found to remove.");
+        throw new ModelNotFoundException("Model card not found to update.");
       }
-      var idx = _models.IndexOf(m);
-      _models.RemoveAt(idx);
+      _models.RemoveAt(index);
       SaveState();
     }
   }
