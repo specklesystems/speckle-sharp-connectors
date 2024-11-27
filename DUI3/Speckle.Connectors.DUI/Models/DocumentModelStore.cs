@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Utils;
@@ -52,7 +51,7 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
     }
   }
 
-  public void Clear()
+  public void ClearAndSave()
   {
     lock (_models)
     {
@@ -65,9 +64,12 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
   {
     lock (_models)
     {
-      var m = _models.First(m => model.ModelCardId == m.ModelCardId);
-      var idx = _models.IndexOf(m);
-      _models[idx] = model;
+      var index = _models.FindIndex(m => m.ModelCardId == model.ModelCardId);
+      if (index == -1)
+      {
+        throw new ModelNotFoundException("Model card not found to update.");
+      }
+      _models[index] = model;
       SaveState();
     }
   }
@@ -76,7 +78,12 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
   {
     lock (_models)
     {
-      _models.Remove(model);
+      var index = _models.FindIndex(m => m.ModelCardId == model.ModelCardId);
+      if (index == -1)
+      {
+        throw new ModelNotFoundException("Model card not found to update.");
+      }
+      _models.RemoveAt(index);
       SaveState();
     }
   }
@@ -97,8 +104,7 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
   protected string Serialize() => serializer.Serialize(Models);
 
   // POC: this seemms more like a IModelsDeserializer?, seems disconnected from this class
-  protected ObservableCollection<ModelCard> Deserialize(string models) =>
-    serializer.Deserialize<ObservableCollection<ModelCard>>(models).NotNull();
+  protected List<ModelCard> Deserialize(string models) => serializer.Deserialize<List<ModelCard>>(models).NotNull();
 
   protected void SaveState()
   {
@@ -122,9 +128,9 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
     {
       lock (_models)
       {
+        _models.Clear();
         if (string.IsNullOrEmpty(models))
         {
-          _models.Clear();
           return;
         }
         _models.AddRange(Deserialize(models.NotNull()).NotNull());
@@ -132,7 +138,7 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      Clear();
+      ClearAndSave();
       Debug.WriteLine(ex.Message); // POC: Log here error and notify UI that cards not read succesfully
     }
   }
