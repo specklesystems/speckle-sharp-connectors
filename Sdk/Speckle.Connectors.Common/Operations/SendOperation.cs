@@ -20,7 +20,7 @@ public sealed class SendOperation<T>(
   )
   {
     var buildResult = await threadContext
-      .RunOnMainAsync(() => rootObjectBuilder.Build(objects, sendInfo, onOperationProgressed, ct))
+      .RunOnMain(() => rootObjectBuilder.Build(objects, sendInfo, onOperationProgressed))
       .ConfigureAwait(false);
 
     // POC: Jonathon asks on behalf of willow twin - let's explore how this can work

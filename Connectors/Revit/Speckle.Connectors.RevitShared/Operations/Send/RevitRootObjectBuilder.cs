@@ -28,19 +28,7 @@ public class RevitRootObjectBuilder(
 {
   // POC: SendSelection and RevitConversionContextStack should be interfaces, former needs interfaces
 
-  public async Task<RootObjectBuilderResult> Build(
-    IReadOnlyList<ElementId> objects,
-    SendInfo sendInfo,
-    IProgress<CardProgress> onOperationProgressed,
-    CancellationToken ct = default
-  )
-  {
-    var ret = BuildSync(objects, sendInfo, onOperationProgressed, ct);
-    await Task.Delay(100, ct).ConfigureAwait(false);
-    return ret;
-  }
-
-  private RootObjectBuilderResult BuildSync(
+  public RootObjectBuilderResult Build(
     IReadOnlyList<ElementId> objects,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,

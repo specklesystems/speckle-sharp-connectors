@@ -55,21 +55,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   }
 
 #pragma warning disable CA1506
-  public async Task<HostObjectBuilderResult> Build(
+  public HostObjectBuilderResult Build(
 #pragma warning restore CA1506
-    Base rootObject,
-    string projectName,
-    string modelName,
-    IProgress<CardProgress> onOperationProgressed,
-    CancellationToken cancellationToken
-  )
-  {
-    var ret = BuildSync(rootObject, projectName, modelName, onOperationProgressed);
-    await Task.Delay(100, cancellationToken).ConfigureAwait(false);
-    return ret;
-  }
-
-  public HostObjectBuilderResult BuildSync(
     Base rootObject,
     string projectName,
     string modelName,
