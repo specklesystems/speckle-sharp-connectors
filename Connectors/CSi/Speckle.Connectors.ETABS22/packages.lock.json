@@ -27,6 +27,12 @@
         "resolved": "1.14.1",
         "contentHash": "mOOmFYwad3MIOL14VCjj02LljyF1GNw1wP0YVlxtcPvqdxjGGMNdNJJxHptlry3MOd8b40Flm8RPOM8JOlN2sQ=="
       },
+      "Speckle.CSI.API": {
+        "type": "Direct",
+        "requested": "[2.4.0, )",
+        "resolved": "2.4.0",
+        "contentHash": "/n3qIBeamiYlWm77/2+dDPYExm/MoDEtnu5IPB2G9Dei06wMgkdBefaSDKWnh3u4iuyha6TvrBZgVGosUylRDg=="
+      },
       "Speckle.InterfaceGenerator": {
         "type": "Direct",
         "requested": "[0.9.6, )",

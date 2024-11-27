@@ -4,9 +4,9 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Sdk;
 
-namespace Speckle.Connector.ETABS22.Bindings;
+namespace Speckle.Connectors.CSiShared.Bindings;
 
-public class EtabsBasicConnectorBinding : IBasicConnectorBinding
+public class CSiSharedBasicConnectorBinding : IBasicConnectorBinding
 {
   private readonly ISpeckleApplication _speckleApplication;
   private readonly DocumentModelStore _store;
@@ -15,7 +15,7 @@ public class EtabsBasicConnectorBinding : IBasicConnectorBinding
   public IBrowserBridge Parent { get; }
   public BasicConnectorBindingCommands Commands { get; }
 
-  public EtabsBasicConnectorBinding(
+  public CSiSharedBasicConnectorBinding(
     IBrowserBridge parent,
     ISpeckleApplication speckleApplication,
     DocumentModelStore store

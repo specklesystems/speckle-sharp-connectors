@@ -1,11 +1,11 @@
 ﻿using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
 
-namespace Speckle.Connector.ETABS22.HostApp;
+namespace Speckle.Connectors.CSiShared.HostApp;
 
-public class ETABSDocumentModelStore : DocumentModelStore
+public class CSiSharedDocumentModelStore : DocumentModelStore
 {
-  public ETABSDocumentModelStore(IJsonSerializer jsonSerializerSettings)
+  public CSiSharedDocumentModelStore(IJsonSerializer jsonSerializerSettings)
     : base(jsonSerializerSettings, true) { }
 
   public override void WriteToFile() { }

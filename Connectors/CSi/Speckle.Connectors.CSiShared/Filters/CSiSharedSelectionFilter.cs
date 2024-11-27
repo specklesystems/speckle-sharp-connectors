@@ -1,10 +1,10 @@
 ﻿using Speckle.Connectors.DUI.Models.Card.SendFilter;
 
-namespace Speckle.Connector.ETABS22.Filters;
+namespace Speckle.Connectors.CSiShared.Filters;
 
-public class ETABSSelectionFilter : DirectSelectionSendFilter
+public class CSiSharedSelectionFilter : DirectSelectionSendFilter
 {
-  public ETABSSelectionFilter()
+  public CSiSharedSelectionFilter()
   {
     IsDefault = true;
   }

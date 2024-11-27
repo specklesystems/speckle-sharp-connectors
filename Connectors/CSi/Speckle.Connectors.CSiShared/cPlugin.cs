@@ -1,6 +1,6 @@
-using CSiAPIv1;
-
-namespace Speckle.Connector.ETABS22;
+// NOTE: Plugin entry point must match the assembly name, otherwise hits you with a "Not found" error when loading plugin
+// TODO: Move ETABS implementation to csproj as part of CNX-835 and/or CNX-828
+namespace Speckle.Connectors.ETABS22;
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
 public class cPlugin : cPluginContract, IDisposable

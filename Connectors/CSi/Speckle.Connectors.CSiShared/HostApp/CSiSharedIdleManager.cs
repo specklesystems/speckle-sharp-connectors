@@ -1,12 +1,12 @@
 ﻿using Speckle.Connectors.DUI.Bridge;
 
-namespace Speckle.Connector.ETABS22.HostApp;
+namespace Speckle.Connectors.CSiShared.HostApp;
 
-public sealed class EtabsIdleManager : AppIdleManager
+public sealed class CSiSharedIdleManager : AppIdleManager
 {
   private readonly IIdleCallManager _idleCallManager;
 
-  public EtabsIdleManager(IIdleCallManager idleCallManager)
+  public CSiSharedIdleManager(IIdleCallManager idleCallManager)
     : base(idleCallManager)
   {
     _idleCallManager = idleCallManager;

@@ -4,19 +4,13 @@
       <TargetFramework>net8.0-windows</TargetFramework>
       <ImplicitUsings>enable</ImplicitUsings>
       <Nullable>enable</Nullable>
-      <Platforms>AnyCPU;x64</Platforms>
+      <Platforms>AnyCPU</Platforms>
       <UseWindowsForms>true</UseWindowsForms>
       <UseWPF>true</UseWPF>
+      <ETABSVersion>22</ETABSVersion>
+      <DefineConstants>$(DefineConstants);ETABS22;ETABS22_OR_GREATER</DefineConstants>
       <EnableDynamicLoading>true</EnableDynamicLoading>
     </PropertyGroup>
-
-    <ItemGroup>
-      <Reference Include="CSiAPIv1">
-        <HintPath>..\..\..\..\..\..\..\..\Program Files\Computers and Structures\ETABS 22\CSiAPIv1.dll</HintPath>
-        <Private>false</Private>
-        <ExcludeAssets>runtime</ExcludeAssets>
-      </Reference>
-    </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
@@ -24,8 +18,9 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Compile Update="Form1.cs">
-        <SubType>Form</SubType>
-      </Compile>
+      <PackageReference Include="Speckle.CSI.API" PrivateAssets="all" IncludeAssets="compile; build" />
     </ItemGroup>
+
+    <Import Project="..\Speckle.Connectors.CSiShared\Speckle.Connectors.CSiShared.projitems" Label="Shared" />
+
 </Project>

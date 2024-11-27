@@ -1,11 +1,14 @@
 ﻿using System.Windows.Forms.Integration;
-using CSiAPIv1;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common;
+using Speckle.Connectors.CSiShared;
+using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Sdk.Host;
 
-namespace Speckle.Connector.ETABS22;
+// NOTE: Plugin entry point must match the assembly name, otherwise hits you with a "Not found" error when loading plugin
+// TODO: Move ETABS implementation to csproj as part of CNX-835 and/or CNX-828
+namespace Speckle.Connectors.ETABS22;
 
 public class Form1 : Form
 {
@@ -34,6 +37,11 @@ public class Form1 : Form
   {
     _sapModel = sapModel;
     _pluginCallback = pluginCallback;
+
+    // NOTE: Update the form to initialize the CSiSharedApplicationService when we receive "sapModel"
+    // Ensures service ready to use by other components
+    var csiService = Container!.GetRequiredService<ICSiApplicationService>();
+    csiService.Initialize(sapModel, pluginCallback);
   }
 
   public void Form1Closing(object? sender, FormClosingEventArgs e)

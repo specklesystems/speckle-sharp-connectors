@@ -6,9 +6,9 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
 
-namespace Speckle.Connector.ETABS22.Bindings;
+namespace Speckle.Connectors.CSiShared.Bindings;
 
-public sealed class ETABSSendBinding : ISendBinding
+public sealed class CSiSharedSendBinding : ISendBinding
 {
   public string Name => "sendBinding";
   public SendBindingUICommands Commands { get; }
@@ -20,9 +20,9 @@ public sealed class ETABSSendBinding : ISendBinding
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
   private readonly IOperationProgressManager _operationProgressManager;
-  private readonly ILogger<ETABSSendBinding> _logger;
+  private readonly ILogger<CSiSharedSendBinding> _logger;
 
-  public ETABSSendBinding(
+  public CSiSharedSendBinding(
     DocumentModelStore store,
     IAppIdleManager idleManager,
     IBrowserBridge parent,
@@ -30,7 +30,7 @@ public sealed class ETABSSendBinding : ISendBinding
     IServiceProvider serviceProvider,
     CancellationManager cancellationManager,
     IOperationProgressManager operationProgressManager,
-    ILogger<ETABSSendBinding> logger
+    ILogger<CSiSharedSendBinding> logger
   )
   {
     _store = store;
