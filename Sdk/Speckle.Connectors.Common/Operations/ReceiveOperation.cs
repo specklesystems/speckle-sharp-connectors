@@ -6,39 +6,20 @@ using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Extensions;
-using Speckle.Sdk.Transports;
 
 namespace Speckle.Connectors.Common.Operations;
 
-public sealed class ReceiveOperation
+public sealed class ReceiveOperation(
+  IHostObjectBuilder hostObjectBuilder,
+  AccountService accountService,
+  IReceiveProgress receiveProgress,
+  ISdkActivityFactory activityFactory,
+  IOperations operations,
+  IClientFactory clientFactory,
+  IThreadContext threadContext,
+  IThreadOptions threadOptions
+)
 {
-  private readonly IHostObjectBuilder _hostObjectBuilder;
-  private readonly AccountService _accountService;
-  private readonly IProgressDisplayManager _progressDisplayManager;
-  private readonly ISdkActivityFactory _activityFactory;
-  private readonly IOperations _operations;
-  private readonly IClientFactory _clientFactory;
-  private readonly IThreadContext _threadContext;
-  private readonly IThreadOptions _threadOptions;
-
-  public ReceiveOperation(
-    IHostObjectBuilder hostObjectBuilder,
-    AccountService accountService,
-    IProgressDisplayManager progressDisplayManager,
-    ISdkActivityFactory activityFactory,
-    IOperations operations,
-    IClientFactory clientFactory,
-    IThreadContext threadContext, IThreadOptions threadOptions)
-  {
-    _hostObjectBuilder = hostObjectBuilder;
-    _accountService = accountService;
-    _progressDisplayManager = progressDisplayManager;
-    _activityFactory = activityFactory;
-    _operations = operations;
-    _clientFactory = clientFactory;
-    _threadContext = threadContext;
-    _threadOptions = threadOptions;
-  }
 
   public async Task<HostObjectBuilderResult> Execute(
     ReceiveInfo receiveInfo,
@@ -46,29 +27,30 @@ public sealed class ReceiveOperation
     CancellationToken cancellationToken
   )
   {
-    using var execute = _activityFactory.Start("Receive Operation");
+    using var execute = activityFactory.Start("Receive Operation");
     execute?.SetTag("receiveInfo", receiveInfo);
     // 2 - Check account exist
-    Account account = _accountService.GetAccountWithServerUrlFallback(receiveInfo.AccountId, receiveInfo.ServerUrl);
-    using Client apiClient = _clientFactory.Create(account);
+    Account account = accountService.GetAccountWithServerUrlFallback(receiveInfo.AccountId, receiveInfo.ServerUrl);
+    using Client apiClient = clientFactory.Create(account);
     using var userScope = ActivityScope.SetTag(Consts.USER_ID, account.GetHashedEmail());
 
     var version = await apiClient
       .Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ProjectId, cancellationToken)
-      .ConfigureAwait(false);
+      .BackToAny();
 
-    var commitObject = await _threadContext
+    var commitObject = await threadContext
       .RunOnWorkerAsync(() => ReceiveData(account, version, receiveInfo, onOperationProgressed, cancellationToken))
-      .ConfigureAwait(false);
+      .BackToAny();
 
     // 4 - Convert objects
-    HostObjectBuilderResult res = await _threadContext
-      .RunOnThreadAsync(() => ConvertObjects(commitObject, receiveInfo, onOperationProgressed, cancellationToken), _threadOptions.RunReceiveBuildOnMainThread)
-      .ConfigureAwait(false);
+    HostObjectBuilderResult res = await threadContext
+      .RunOnThreadAsync(() => ConvertObjects(commitObject, receiveInfo, onOperationProgressed, cancellationToken),
+        threadOptions.RunReceiveBuildOnMainThread)
+      .BackToAny();
 
     await apiClient
       .Version.Received(new(version.id, receiveInfo.ProjectId, receiveInfo.SourceApplication), cancellationToken)
-      .ConfigureAwait(false);
+      .BackToAny();
 
     return res;
   }
@@ -81,44 +63,17 @@ public sealed class ReceiveOperation
     CancellationToken cancellationToken
   )
   {
-    double? previousPercentage = null;
-    _progressDisplayManager.Begin();
-    Base? commitObject = await _operations
+    receiveProgress.Begin();
+    Base? commitObject = await operations
       .Receive2(
         new Uri(account.serverInfo.url),
         receiveInfo.ProjectId,
         version.referencedObject,
         account.token,
-        onProgressAction: new PassthroughProgress(args =>
-        {
-          if (args.ProgressEvent == ProgressEvent.CacheCheck || args.ProgressEvent == ProgressEvent.DownloadBytes)
-          {
-            switch (args.ProgressEvent)
-            {
-              case ProgressEvent.CacheCheck:
-                previousPercentage = _progressDisplayManager.CalculatePercentage(args);
-                break;
-            }
-          }
-          if (!_progressDisplayManager.ShouldUpdate())
-          {
-            return;
-          }
-
-          switch (args.ProgressEvent)
-          {
-            case ProgressEvent.CacheCheck:
-            case ProgressEvent.DownloadBytes:
-              onOperationProgressed.Report(new("Checking and Downloading... ", previousPercentage));
-              break;
-            case ProgressEvent.DeserializeObject:
-              onOperationProgressed.Report(new("Deserializing ...", _progressDisplayManager.CalculatePercentage(args)));
-              break;
-          }
-        }),
+        onProgressAction: new PassthroughProgress(args => receiveProgress.Report(onOperationProgressed, args)),
         cancellationToken: cancellationToken
       )
-      .ConfigureAwait(false);
+      .BackToAny();
 
     cancellationToken.ThrowIfCancellationRequested();
     return commitObject;
@@ -131,7 +86,7 @@ public sealed class ReceiveOperation
     CancellationToken cancellationToken
   )
   {
-    using var conversionActivity = _activityFactory.Start("ReceiveOperation.ConvertObjects");
+    using var conversionActivity = activityFactory.Start("ReceiveOperation.ConvertObjects");
     conversionActivity?.SetTag("smellsLikeV2Data", commitObject.SmellsLikeV2Data());
     conversionActivity?.SetTag("receiveInfo.serverUrl", receiveInfo.ServerUrl);
     conversionActivity?.SetTag("receiveInfo.projectId", receiveInfo.ProjectId);
@@ -141,8 +96,8 @@ public sealed class ReceiveOperation
 
     try
     {
-      HostObjectBuilderResult res =  await _hostObjectBuilder
-        .Build(commitObject, receiveInfo.ProjectName, receiveInfo.ModelName, onOperationProgressed, cancellationToken).ConfigureAwait(false);
+      HostObjectBuilderResult res =  await hostObjectBuilder
+        .Build(commitObject, receiveInfo.ProjectName, receiveInfo.ModelName, onOperationProgressed, cancellationToken).BackToAny();
       conversionActivity?.SetStatus(SdkActivityStatusCode.Ok);
       return res;
     }

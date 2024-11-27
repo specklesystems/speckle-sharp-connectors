@@ -1,9 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using Speckle.Connector.Tekla2024.Bindings;
-using Speckle.Connector.Tekla2024.Filters;
-using Speckle.Connector.Tekla2024.HostApp;
-using Speckle.Connector.Tekla2024.Operations.Send;
-using Speckle.Connector.Tekla2024.Operations.Send.Settings;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
@@ -15,13 +10,18 @@ using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
-using Speckle.Converter.Tekla2024;
+using Speckle.Connectors.TeklaShared.Bindings;
+using Speckle.Connectors.TeklaShared.Filters;
+using Speckle.Connectors.TeklaShared.HostApp;
+using Speckle.Connectors.TeklaShared.Operations.Send;
+using Speckle.Connectors.TeklaShared.Operations.Send.Settings;
 using Speckle.Converters.Common;
+using Speckle.Converters.TeklaShared;
 using Speckle.Sdk;
 using Speckle.Sdk.Models.GraphTraversal;
 using Tekla.Structures.Model;
 
-namespace Speckle.Connector.Tekla2024;
+namespace Speckle.Connectors.TeklaShared;
 
 public static class ServiceRegistration
 {

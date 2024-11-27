@@ -1,10 +1,10 @@
-using Speckle.Converter.Tekla2024.Extensions;
-using Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.TeklaShared.Extensions;
+using Speckle.Converters.TeklaShared.ToSpeckle.Helpers;
 using Speckle.Sdk.Models;
 
-namespace Speckle.Converter.Tekla2024.ToSpeckle.TopLevel;
+namespace Speckle.Converters.TeklaShared.ToSpeckle.TopLevel;
 
 [NameAndRankValue(nameof(TSM.ModelObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
@@ -59,12 +59,6 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
     var displayValue = _displayValueExtractor.GetDisplayValue(modelObject).ToList();
     if (displayValue.Count > 0)
     {
-      foreach (var displayValueObject in displayValue)
-      {
-        // NOTE: since we put ModelObject applicationIds into proxies, we should also mutate the same application id for its displayValue objects.
-        // otherwise we will have anonymous objects on receive for other host apps
-        displayValueObject.applicationId = modelObject.GetSpeckleApplicationId();
-      }
       result["displayValue"] = displayValue;
     }
 

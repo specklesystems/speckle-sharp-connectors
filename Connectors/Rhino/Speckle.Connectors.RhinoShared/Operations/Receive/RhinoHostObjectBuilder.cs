@@ -144,7 +144,7 @@ public class RhinoHostObjectBuilder : HostObjectBuilder
             var conversionIds = new List<string>();
             if (result is GeometryBase geometryBase)
             {
-              var guid = BakeObject(geometryBase, obj, atts);
+              var guid = BakeObject(geometryBase, obj, null, atts);
               conversionIds.Add(guid.ToString());
             }
             else if (result is List<GeometryBase> geometryBases) // one to many raw encoding case
@@ -155,7 +155,7 @@ public class RhinoHostObjectBuilder : HostObjectBuilder
               // EXTRA EXTRA NOTE: TY Ogu, i am no longer than unhappy about it. It's legit "mess".
               foreach (var gb in geometryBases)
               {
-                var guid = BakeObject(gb, obj, atts);
+                var guid = BakeObject(gb, obj, null, atts);
                 conversionIds.Add(guid.ToString());
               }
             }
@@ -269,13 +269,14 @@ public class RhinoHostObjectBuilder : HostObjectBuilder
   /// </summary>
   /// <param name="obj"></param>
   /// <param name="originalObject"></param>
+  /// <param name="parentObjectId">Parent object ID for color and material proxies search (if fallback conversion was used)</param>
   /// <param name="atts"></param>
   /// <returns></returns>
   /// <remarks>
   /// Material and Color attributes are processed here due to those properties existing sometimes on fallback geometry (instead of parent).
   /// and this method is called by <see cref="BakeObjectsAsFallbackGroup(IEnumerable{ValueTuple{object, Base}}, Base, ObjectAttributes, string)"/>
   /// </remarks>
-  private Guid BakeObject(GeometryBase obj, Base originalObject, ObjectAttributes atts)
+  private Guid BakeObject(GeometryBase obj, Base originalObject, string? parentObjectId, ObjectAttributes atts)
   {
     var objectId = originalObject.applicationId ?? originalObject.id;
 
@@ -284,11 +285,27 @@ public class RhinoHostObjectBuilder : HostObjectBuilder
       atts.MaterialIndex = mIndex;
       atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
     }
+    else if (
+      parentObjectId is not null
+      && (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(parentObjectId, out int mIndexSpeckleObj))
+    )
+    {
+      atts.MaterialIndex = mIndexSpeckleObj;
+      atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+    }
 
     if (_colorBaker.ObjectColorsIdMap.TryGetValue(objectId, out (Color, ObjectColorSource) color))
     {
       atts.ObjectColor = color.Item1;
       atts.ColorSource = color.Item2;
+    }
+    else if (
+      parentObjectId is not null
+      && (_colorBaker.ObjectColorsIdMap.TryGetValue(parentObjectId, out (Color, ObjectColorSource) colorSpeckleObj))
+    )
+    {
+      atts.ObjectColor = colorSpeckleObj.Item1;
+      atts.ColorSource = colorSpeckleObj.Item2;
     }
 
     return _converterSettings.Current.Document.Objects.Add(obj, atts);
@@ -302,6 +319,8 @@ public class RhinoHostObjectBuilder : HostObjectBuilder
   )
   {
     List<Guid> objectIds = new();
+    string parentId = originatingObject.applicationId ?? originatingObject.id;
+
     foreach (var (conversionResult, originalBaseObject) in fallbackConversionResult)
     {
       if (conversionResult is not GeometryBase geometryBase)
@@ -310,12 +329,12 @@ public class RhinoHostObjectBuilder : HostObjectBuilder
         continue;
       }
 
-      var id = BakeObject(geometryBase, originalBaseObject, atts);
+      var id = BakeObject(geometryBase, originalBaseObject, parentId, atts);
       objectIds.Add(id);
     }
 
     var groupIndex = _converterSettings.Current.Document.Groups.Add(
-      $@"{originatingObject.speckle_type.Split('.').Last()} - {originatingObject.applicationId ?? originatingObject.id}  ({baseLayerName})",
+      $@"{originatingObject.speckle_type.Split('.').Last()} - {parentId}  ({baseLayerName})",
       objectIds
     );
 

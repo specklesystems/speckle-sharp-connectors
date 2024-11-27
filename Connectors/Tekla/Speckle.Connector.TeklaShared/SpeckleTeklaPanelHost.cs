@@ -6,13 +6,13 @@ using System.Windows.Forms.Integration;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI.WebView;
-using Speckle.Converter.Tekla2024;
+using Speckle.Converters.TeklaShared;
 using Speckle.Sdk.Host;
 using Tekla.Structures.Dialog;
 using Tekla.Structures.Model;
 using Tekla.Structures.Model.Operations;
 
-namespace Speckle.Connector.Tekla2024;
+namespace Speckle.Connectors.TeklaShared;
 
 public class SpeckleTeklaPanelHost : PluginFormBase
 {
