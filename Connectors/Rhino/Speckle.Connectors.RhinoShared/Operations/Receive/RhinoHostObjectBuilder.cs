@@ -267,13 +267,14 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   /// </summary>
   /// <param name="obj"></param>
   /// <param name="originalObject"></param>
+  /// <param name="parentObjectId">Parent object for color&material proxies search (if fallback conversion was used)</param>
   /// <param name="atts"></param>
   /// <returns></returns>
   /// <remarks>
   /// Material and Color attributes are processed here due to those properties existing sometimes on fallback geometry (instead of parent).
   /// and this method is called by <see cref="BakeObjectsAsFallbackGroup(IEnumerable{ValueTuple{object, Base}}, Base, ObjectAttributes, string)"/>
   /// </remarks>
-  private Guid BakeObject(GeometryBase obj, Base originalObject, string? speckleObjectId, ObjectAttributes atts)
+  private Guid BakeObject(GeometryBase obj, Base originalObject, string? parentObjectId, ObjectAttributes atts)
   {
     var objectId = originalObject.applicationId ?? originalObject.id;
 
@@ -283,8 +284,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
     }
     else if (
-      speckleObjectId is not null
-      && (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(speckleObjectId, out int mIndexSpeckleObj))
+      parentObjectId is not null
+      && (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(parentObjectId, out int mIndexSpeckleObj))
     )
     {
       atts.MaterialIndex = mIndexSpeckleObj;
@@ -297,8 +298,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       atts.ColorSource = color.Item2;
     }
     else if (
-      speckleObjectId is not null
-      && (_colorBaker.ObjectColorsIdMap.TryGetValue(speckleObjectId, out (Color, ObjectColorSource) colorSpeckleObj))
+      parentObjectId is not null
+      && (_colorBaker.ObjectColorsIdMap.TryGetValue(parentObjectId, out (Color, ObjectColorSource) colorSpeckleObj))
     )
     {
       atts.ObjectColor = colorSpeckleObj.Item1;
