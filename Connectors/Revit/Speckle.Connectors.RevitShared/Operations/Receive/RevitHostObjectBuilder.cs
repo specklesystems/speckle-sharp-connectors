@@ -22,7 +22,7 @@ using Transform = Speckle.Objects.Other.Transform;
 
 namespace Speckle.Connectors.Revit.Operations.Receive;
 
-internal sealed class RevitHostObjectBuilder(
+public sealed class RevitHostObjectBuilder(
   IRootToHostConverter converter,
   IConverterSettingsStore<RevitConversionSettings> converterSettings,
   ITransactionManager transactionManager,
@@ -34,9 +34,9 @@ internal sealed class RevitHostObjectBuilder(
   ILogger<RevitHostObjectBuilder> logger,
   RevitToHostCacheSingleton revitToHostCacheSingleton,
   ITypedConverter<(Base atomicObject, List<Matrix4x4> matrix), DirectShape> localToGlobalDirectShapeConverter
-) : IHostObjectBuilder, IDisposable
+) : HostObjectBuilder, IDisposable
 {
-  public  HostObjectBuilderResult Build(
+  protected override HostObjectBuilderResult Build(
     Base rootObject,
     string projectName,
     string modelName,

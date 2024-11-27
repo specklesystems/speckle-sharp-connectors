@@ -39,7 +39,7 @@ public class AutocadHostObjectBuilder(
   {
     // Prompt the UI conversion started. Progress bar will swoosh.
     onOperationProgressed.Report(new("Converting", null));
-    await Yield.Force().ConfigureAwait(true);
+    await Yield.Force().BackToThread();
 
     // Layer filter for received commit with project and model name
     layerBaker.CreateLayerFilter(projectName, modelName);
@@ -91,7 +91,7 @@ public class AutocadHostObjectBuilder(
     {
       string objectId = atomicObject.applicationId ?? atomicObject.id;
       onOperationProgressed.Report(new("Converting objects", (double)++count / atomicObjects.Count));
-      await Yield.Force().ConfigureAwait(true);
+      await Yield.Force().BackToThread();
       try
       {
         List<Entity> convertedObjects = ConvertObject(atomicObject, layerPath, baseLayerPrefix);

@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+
 namespace Speckle.Connectors.Common.Threading;
 
 public static class Yield
@@ -22,4 +24,9 @@ public static class Yield
       await Task.Yield();
     }
   }
+
+  public static ConfiguredValueTaskAwaitable BackToThread(this ValueTask valueTask) => valueTask.ConfigureAwait(true);
+  public static ConfiguredValueTaskAwaitable BackToAny(this ValueTask valueTask) => valueTask.ConfigureAwait(false);
+  public static ConfiguredTaskAwaitable BackToThread(this Task task) => task.ConfigureAwait(true);
+  public static ConfiguredTaskAwaitable BackToAny(this Task task) => task.ConfigureAwait(false);
 }
