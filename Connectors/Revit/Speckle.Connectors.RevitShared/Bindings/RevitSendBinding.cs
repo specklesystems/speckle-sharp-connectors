@@ -28,7 +28,6 @@ namespace Speckle.Connectors.Revit.Bindings;
 internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 {
   private readonly IAppIdleManager _idleManager;
-  private readonly APIContext _apiContext;
   private readonly CancellationManager _cancellationManager;
   private readonly IServiceProvider _serviceProvider;
   private readonly ISendConversionCache _sendConversionCache;
@@ -50,7 +49,6 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   public RevitSendBinding(
     IAppIdleManager idleManager,
     RevitContext revitContext,
-    APIContext apiContext,
     DocumentModelStore store,
     CancellationManager cancellationManager,
     IBrowserBridge bridge,
@@ -66,7 +64,6 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     : base("sendBinding", store, bridge, revitContext)
   {
     _idleManager = idleManager;
-    _apiContext = apiContext;
     _cancellationManager = cancellationManager;
     _serviceProvider = serviceProvider;
     _sendConversionCache = sendConversionCache;
@@ -91,8 +88,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   public List<ISendFilter> GetSendFilters() =>
     [
       new RevitSelectionFilter() { IsDefault = true },
-      new RevitViewsFilter(RevitContext, _apiContext),
-      new RevitCategoriesFilter(RevitContext, _apiContext)
+      new RevitViewsFilter(RevitContext),
+      new RevitCategoriesFilter(RevitContext)
     ];
 
   public List<ICardSetting> GetSendSettings() =>
@@ -174,12 +171,10 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     if (modelCard.SendFilter is IRevitSendFilter viewFilter)
     {
-      viewFilter.SetContext(RevitContext, _apiContext);
+      viewFilter.SetContext(RevitContext);
     }
 
-    var selectedObjects = await _apiContext
-      .Run(_ => modelCard.SendFilter.NotNull().RefreshObjectIds())
-      .ConfigureAwait(false);
+    var selectedObjects = modelCard.SendFilter.NotNull().RefreshObjectIds();
 
     List<Element> elements = selectedObjects
       .Select(uid => activeUIDoc.Document.GetElement(uid))
@@ -384,7 +379,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     {
       if (modelCard.SendFilter is IRevitSendFilter viewFilter)
       {
-        viewFilter.SetContext(RevitContext, _apiContext);
+        viewFilter.SetContext(RevitContext);
       }
 
       var selectedObjects = modelCard.SendFilter.NotNull().IdMap.NotNull().Values;

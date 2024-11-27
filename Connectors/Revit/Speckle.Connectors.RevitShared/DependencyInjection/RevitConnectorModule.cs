@@ -69,9 +69,6 @@ public static class ServiceRegistration
 
     // operation progress manager
     serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();
-
-    // API context helps us to run functions on Revit UI Thread (main)
-    serviceCollection.AddSingleton<APIContext>();
   }
 
   public static void RegisterUiDependencies(IServiceCollection serviceCollection)

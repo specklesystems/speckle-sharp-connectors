@@ -2,7 +2,6 @@ using Autodesk.Revit.DB;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.RevitShared.Operations.Send.Filters;
 using Speckle.Converters.RevitShared.Helpers;
@@ -19,13 +18,11 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
   public BasicConnectorBindingCommands Commands { get; }
 
-  private readonly APIContext _apiContext;
   private readonly DocumentModelStore _store;
   private readonly RevitContext _revitContext;
   private readonly ISpeckleApplication _speckleApplication;
 
   public BasicConnectorBindingRevit(
-    APIContext apiContext,
     DocumentModelStore store,
     IBrowserBridge parent,
     RevitContext revitContext,
@@ -34,7 +31,6 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
   {
     Name = "baseBinding";
     Parent = parent;
-    _apiContext = apiContext;
     _store = store;
     _revitContext = revitContext;
     _speckleApplication = speckleApplication;
@@ -96,21 +92,16 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     {
       if (senderModelCard.SendFilter is IRevitSendFilter revitFilter)
       {
-        revitFilter.SetContext(_revitContext, _apiContext);
+        revitFilter.SetContext(_revitContext);
       }
 
       if (senderModelCard.SendFilter is RevitViewsFilter revitViewsFilter)
       {
-        await _apiContext
-          .Run(() =>
-          {
             var view = revitViewsFilter.GetView();
             if (view is not null)
             {
               _revitContext.UIApplication.ActiveUIDocument.ActiveView = view;
             }
-          })
-          .ConfigureAwait(false);
         return;
       }
 
