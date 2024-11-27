@@ -1,60 +1,35 @@
-using System.Collections.ObjectModel;
+using System.Diagnostics;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Utils;
-using Speckle.Newtonsoft.Json;
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.DUI.Models;
 
 /// <summary>
 /// Encapsulates the state Speckle needs to persist in the host app's document.
 /// </summary>
-public abstract class DocumentModelStore
+public abstract class DocumentModelStore(IJsonSerializer serializer)
 {
-  private ObservableCollection<ModelCard> _models = new();
-
-  /// <summary>
-  /// Stores all the model cards in the current document/file.
-  /// </summary>
-  public ObservableCollection<ModelCard> Models
-  {
-    get => _models;
-    protected set
-    {
-      _models = value;
-      RegisterWriteOnChangeEvent();
-    }
-  }
-
-  private readonly JsonSerializerSettings _serializerOptions;
-
-  private readonly bool _writeToFileOnChange;
-
-  /// <summary>
-  /// Base host app state class that controls the storage of the models in the file.
-  /// </summary>
-  /// <param name="serializerOptions">our custom serialiser that should be globally DI'ed in.</param>
-  /// <param name="writeToFileOnChange">Whether to store the models state in the file on any change. Defaults to false out of caution, but it's recommended to set to true, unless severe host app limitations.</param>
-  protected DocumentModelStore(JsonSerializerSettings serializerOptions, bool writeToFileOnChange)
-  {
-    _serializerOptions = serializerOptions;
-    _writeToFileOnChange = writeToFileOnChange;
-
-    RegisterWriteOnChangeEvent();
-  }
-
-  private void RegisterWriteOnChangeEvent()
-  {
-    if (_writeToFileOnChange)
-    {
-      _models.CollectionChanged += (_, _) => WriteToFile();
-    }
-  }
+  private readonly List<ModelCard> _models = new();
 
   /// <summary>
   /// This event is triggered by each specific host app implementation of the document model store.
   /// </summary>
   // POC: unsure about the PublicAPI annotation, unsure if this changed handle should live here on the store...  :/
   public event EventHandler? DocumentChanged;
+
+  //needed for javascript UI
+  public IReadOnlyList<ModelCard> Models
+  {
+    get
+    {
+      lock (_models)
+      {
+        return _models.AsReadOnly();
+      }
+    }
+  }
 
   public virtual bool IsDocumentInit { get; set; }
 
@@ -63,48 +38,108 @@ public abstract class DocumentModelStore
   // In theory this should never really happen, but if it does
   public ModelCard GetModelById(string id)
   {
-    var model = Models.First(model => model.ModelCardId == id) ?? throw new ModelNotFoundException();
+    var model = _models.First(model => model.ModelCardId == id) ?? throw new ModelNotFoundException();
     return model;
+  }
+
+  public void AddModel(ModelCard model)
+  {
+    lock (_models)
+    {
+      _models.Add(model);
+      SaveState();
+    }
+  }
+
+  public void ClearAndSave()
+  {
+    lock (_models)
+    {
+      _models.Clear();
+      SaveState();
+    }
   }
 
   public void UpdateModel(ModelCard model)
   {
-    int idx = Models.ToList().FindIndex(m => model.ModelCardId == m.ModelCardId);
-    Models[idx] = model;
+    lock (_models)
+    {
+      var index = _models.FindIndex(m => m.ModelCardId == model.ModelCardId);
+      if (index == -1)
+      {
+        throw new ModelNotFoundException("Model card not found to update.");
+      }
+      _models[index] = model;
+      SaveState();
+    }
   }
 
   public void RemoveModel(ModelCard model)
   {
-    int index = Models.ToList().FindIndex(m => m.ModelCardId == model.ModelCardId);
-    Models.RemoveAt(index);
+    lock (_models)
+    {
+      var index = _models.FindIndex(m => m.ModelCardId == model.ModelCardId);
+      if (index == -1)
+      {
+        throw new ModelNotFoundException("Model card not found to update.");
+      }
+      _models.RemoveAt(index);
+      SaveState();
+    }
   }
 
   protected void OnDocumentChanged() => DocumentChanged?.Invoke(this, EventArgs.Empty);
 
-  public IEnumerable<SenderModelCard> GetSenders() =>
-    Models.Where(model => model.TypeDiscriminator == nameof(SenderModelCard)).Cast<SenderModelCard>();
-
-  public IEnumerable<ReceiverModelCard> GetReceivers() =>
-    Models.Where(model => model.TypeDiscriminator == nameof(ReceiverModelCard)).Cast<ReceiverModelCard>();
-
-  protected string Serialize()
+  public IEnumerable<SenderModelCard> GetSenders()
   {
-    return JsonConvert.SerializeObject(Models, _serializerOptions);
+    lock (_models)
+    {
+      return _models
+        .Where(model => model.TypeDiscriminator == nameof(SenderModelCard))
+        .Cast<SenderModelCard>()
+        .ToList();
+    }
   }
+
+  protected string Serialize() => serializer.Serialize(Models);
 
   // POC: this seemms more like a IModelsDeserializer?, seems disconnected from this class
-  protected ObservableCollection<ModelCard>? Deserialize(string models)
-  {
-    return JsonConvert.DeserializeObject<ObservableCollection<ModelCard>>(models, _serializerOptions);
-  }
+  protected List<ModelCard> Deserialize(string models) => serializer.Deserialize<List<ModelCard>>(models).NotNull();
 
-  /// <summary>
-  /// Implement this method according to the host app's specific ways of storing custom data in its file.
-  /// </summary>
-  public abstract void WriteToFile();
+  protected void SaveState()
+  {
+    lock (_models)
+    {
+      var state = Serialize();
+      HostAppSaveState(state);
+    }
+  }
 
   /// <summary>
   /// Implement this method according to the host app's specific ways of reading custom data from its file.
   /// </summary>
-  public abstract void ReadFromFile();
+  protected abstract void HostAppSaveState(string modelCardState);
+
+  protected abstract void LoadState();
+
+  protected void LoadFromString(string? models)
+  {
+    try
+    {
+      lock (_models)
+      {
+        _models.Clear();
+        if (string.IsNullOrEmpty(models))
+        {
+          return;
+        }
+        _models.AddRange(Deserialize(models.NotNull()).NotNull());
+      }
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      ClearAndSave();
+      Debug.WriteLine(ex.Message); // POC: Log here error and notify UI that cards not read succesfully
+    }
+  }
 }

@@ -70,25 +70,26 @@ public class ParameterExtractor
     {
       // NOTE: this could be paired up and merged with material quantities - they're pretty much the same :/
       var factor = _scalingServiceToSpeckle.ScaleLength(1);
-      var structureDictionary = new Dictionary<string, object?>();
-      var structure = hostObjectAttr.GetCompoundStructure();
-      var layers = structure.GetLayers();
-      foreach (var layer in layers)
+      if (hostObjectAttr.GetCompoundStructure() is DB.CompoundStructure structure) // GetCompoundStructure can return null
       {
-        if (_settingsStore.Current.Document.GetElement(layer.MaterialId) is DB.Material material)
+        Dictionary<string, object?> structureDictionary = new();
+        foreach (var layer in structure.GetLayers())
         {
-          var uniqueLayerName = $"{material.Name} ({layer.LayerId})";
-          structureDictionary[uniqueLayerName] = new Dictionary<string, object>()
+          if (_settingsStore.Current.Document.GetElement(layer.MaterialId) is DB.Material material)
           {
-            ["material"] = material.Name,
-            ["function"] = layer.Function.ToString(),
-            ["thickness"] = layer.Width * factor,
-            ["units"] = _settingsStore.Current.SpeckleUnits
-          };
+            var uniqueLayerName = $"{material.Name} ({layer.LayerId})";
+            structureDictionary[uniqueLayerName] = new Dictionary<string, object>()
+            {
+              ["material"] = material.Name,
+              ["function"] = layer.Function.ToString(),
+              ["thickness"] = layer.Width * factor,
+              ["units"] = _settingsStore.Current.SpeckleUnits
+            };
+          }
         }
-      }
 
-      typeParameterDictionary["Structure"] = structureDictionary;
+        typeParameterDictionary["Structure"] = structureDictionary;
+      }
     }
 
     _typeParameterCache[typeId] = typeParameterDictionary;

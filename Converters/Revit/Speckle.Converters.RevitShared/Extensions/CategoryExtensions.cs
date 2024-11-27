@@ -26,7 +26,11 @@ public static class CategoryExtensions
 
   public static BuiltInCategory GetBuiltInCategory(this Category category)
   {
+#if REVIT2024_OR_GREATER
+    return (BuiltInCategory)category.Id.Value;
+#else
     return (BuiltInCategory)category.Id.IntegerValue;
+#endif
   }
 
   public static string GetBuiltInFromSchemaBuilderCategory(this SOBR.RevitCategory c)

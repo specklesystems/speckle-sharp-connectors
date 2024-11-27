@@ -12,7 +12,6 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Converter.Tekla2024;
@@ -32,10 +31,9 @@ public static class ServiceRegistration
     services.AddSingleton<IBrowserBridge, BrowserBridge>();
 
     services.AddConnectorUtils();
-    services.AddDUI();
+    services.AddDUI<TeklaDocumentModelStore>();
     services.AddDUIView();
 
-    services.AddSingleton<DocumentModelStore, TeklaDocumentModelStore>();
     services.AddSingleton<IAppIdleManager, TeklaIdleManager>();
 
     services.AddSingleton<IBinding, TestBinding>();
@@ -56,6 +54,7 @@ public static class ServiceRegistration
     services.AddScoped<ISendFilter, TeklaSelectionFilter>();
     services.AddSingleton<ISendConversionCache, SendConversionCache>();
     services.AddSingleton(DefaultTraversal.CreateTraversalFunc());
+    services.AddScoped<SendCollectionManager>();
     services.AddScoped<IRootObjectBuilder<ModelObject>, TeklaRootObjectBuilder>();
     services.AddScoped<SendOperation<ModelObject>>();
 

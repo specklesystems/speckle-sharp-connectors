@@ -45,7 +45,6 @@ public sealed class BaseCurveExtractor
     {
       // rant: if this is a pipe, the BaseCurve prop is fake news && will return a DB.line with start and endpoints set to [0,0,0] & [0,0,1]
       // do not use basecurve for pipes 😡
-      // currently not handling arc pipes due to lack of CircularArc2D converter, and also way to properly retrieve 2d arc curve
       case CDB.Pipe pipe:
         return GetPipeBaseCurves(pipe);
 
