@@ -49,28 +49,20 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
     _activityFactory = activityFactory;
   }
 
-  public Task<RootObjectBuilderResult> Build(
-    IReadOnlyList<AutocadRootObject> objects,
-    SendInfo sendInfo,
-    IProgress<CardProgress> onOperationProgressed,
-    CancellationToken ct = default
-  ) => Task.FromResult(BuildSync(objects, sendInfo, onOperationProgressed, ct));
-
   [SuppressMessage(
     "Maintainability",
     "CA1506:Avoid excessive class coupling",
     Justification = """
-      It is already simplified but has many different references since it is a builder. Do not know can we simplify it now.
-      Later we might consider to refactor proxies from one proxy manager? but we do not know the shape of it all potential
-      proxy classes yet. So I'm supressing this one now!!!
-      """
+                    It is already simplified but has many different references since it is a builder. Do not know can we simplify it now.
+                    Later we might consider to refactor proxies from one proxy manager? but we do not know the shape of it all potential
+                    proxy classes yet. So I'm supressing this one now!!!
+                    """
   )]
-  private RootObjectBuilderResult BuildSync(
+  public RootObjectBuilderResult Build(
     IReadOnlyList<AutocadRootObject> objects,
     SendInfo sendInfo,
-    IProgress<CardProgress> onOperationProgressed,
-    CancellationToken ct = default
-  )
+    IProgress<CardProgress> onOperationProgressed
+  ) 
   {
     // 0 - Init the root
     Collection root =
@@ -101,7 +93,6 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
       int count = 0;
       foreach (var (entity, applicationId) in atomicObjects)
       {
-        ct.ThrowIfCancellationRequested();
         using (var convertActivity = _activityFactory.Start("Converting object"))
         {
           // Create and add a collection for this entity if not done so already.

@@ -22,26 +22,13 @@ public class AutocadHostObjectBuilder(
   AutocadLayerBaker layerBaker,
   AutocadGroupBaker groupBaker,
   AutocadInstanceBaker instanceBaker,
-  AutocadMaterialBaker materialBaker,
+  IAutocadMaterialBaker materialBaker,
   IAutocadColorBaker colorBaker,
   AutocadContext autocadContext,
   RootObjectUnpacker rootObjectUnpacker
 ) : IHostObjectBuilder
 {
-  public async Task<HostObjectBuilderResult> Build(
-    Base rootObject,
-    string projectName,
-    string modelName,
-    IProgress<CardProgress> onOperationProgressed,
-    CancellationToken ct
-  )
-  {
-    var ret = BuildImpl(rootObject, projectName, modelName, onOperationProgressed);
-    await Task.Delay(100, ct).ConfigureAwait(false);
-    return ret;
-  }
-
-  private HostObjectBuilderResult BuildImpl(
+  public HostObjectBuilderResult Build(
     Base rootObject,
     string projectName,
     string modelName,
