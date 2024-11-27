@@ -1,15 +1,16 @@
 using ArcGIS.Core.Data.Raster;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
 
-public class GisRasterToSpeckleConverter : ITypedConverter<Raster, SOG.Mesh>
+public class RasterToSpeckleConverter : ITypedConverter<Raster, SOG.Mesh>
 {
   private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
 
-  public GisRasterToSpeckleConverter(IConverterSettingsStore<ArcGISConversionSettings> settingsStore)
+  public RasterToSpeckleConverter(IConverterSettingsStore<ArcGISConversionSettings> settingsStore)
   {
     _settingsStore = settingsStore;
   }
@@ -114,13 +115,40 @@ public class GisRasterToSpeckleConverter : ITypedConverter<Raster, SOG.Mesh>
     var extent = target.GetExtent();
     var cellSize = target.GetMeanCellSize();
 
-    int bandCount = target.GetBandCount();
-    float xOrigin = (float)extent.XMin;
-    float yOrigin = (float)extent.YMax;
+    // reproject raster origin to Active CRS
+    var originMin = new ACG.MapPointBuilderEx(
+      (float)extent.XMin,
+      (float)extent.YMax,
+      0,
+      target.GetSpatialReference()
+    ).ToGeometry();
+
+    var originMax = new ACG.MapPointBuilderEx(
+      (float)extent.XMax,
+      (float)extent.YMin,
+      0,
+      target.GetSpatialReference()
+    ).ToGeometry();
+
+    if (
+      ACG.GeometryEngine.Instance.Project(originMin, _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference)
+        is not ACG.MapPoint originMinProjected
+      || ACG.GeometryEngine.Instance.Project(originMax, _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference)
+        is not ACG.MapPoint originMaxProjected
+    )
+    {
+      throw new ValidationException(
+        $"Conversion to Spatial Reference {_settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference.Name} failed"
+      );
+    }
+
+    // int bandCount = target.GetBandCount();
+    double xOrigin = originMinProjected.X;
+    double yOrigin = originMinProjected.Y;
     int xSize = target.GetWidth();
     int ySize = target.GetHeight();
-    float xResolution = (float)cellSize.Item1;
-    float yResolution = -1 * (float)cellSize.Item2;
+    double xResolution = (originMaxProjected.X - originMinProjected.X) / xSize; // (float)cellSize.Item1;
+    double yResolution = (originMaxProjected.Y - originMinProjected.Y) / ySize; // -1 * (float)cellSize.Item2;
 
     List<double> newCoords = pixelsList
       .SelectMany(
