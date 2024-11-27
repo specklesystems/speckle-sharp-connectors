@@ -3,7 +3,6 @@ using System.Diagnostics.CodeAnalysis;
 using ArcGIS.Core.Data;
 using ArcGIS.Desktop.Core;
 using ArcGIS.Desktop.Editing.Events;
-using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using ArcGIS.Desktop.Mapping.Events;
 using Microsoft.Extensions.DependencyInjection;
@@ -139,8 +138,6 @@ public sealed class ArcGISSendBinding : ISendBinding
 
   private void SubscribeToMapMembersDataSourceChange()
   {
-    var task = QueuedTask.Run(() =>
-    {
       if (MapView.Active == null)
       {
         return;
@@ -159,8 +156,6 @@ public sealed class ArcGISSendBinding : ISendBinding
       {
         SubscribeToTableDataSourceChange(table);
       }
-    });
-    task.Wait();
   }
 
   private void SubscribeToFeatureLayerDataSourceChange(FeatureLayer layer)
@@ -366,9 +361,6 @@ public sealed class ArcGISSendBinding : ISendBinding
 
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
-      var sendResult = await QueuedTask
-        .Run(async () =>
-        {
           using var scope = _serviceProvider.CreateScope();
           scope
             .ServiceProvider.GetRequiredService<IConverterSettingsStore<ArcGISConversionSettings>>()
@@ -407,7 +399,7 @@ public sealed class ArcGISSendBinding : ISendBinding
             }
           }
 
-          var result = await scope
+          var sendResult = await scope
             .ServiceProvider.GetRequiredService<SendOperation<MapMember>>()
             .Execute(
               mapMembers,
@@ -417,9 +409,6 @@ public sealed class ArcGISSendBinding : ISendBinding
             )
             .ConfigureAwait(false);
 
-          return result;
-        })
-        .ConfigureAwait(false);
 
       await Commands
         .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)

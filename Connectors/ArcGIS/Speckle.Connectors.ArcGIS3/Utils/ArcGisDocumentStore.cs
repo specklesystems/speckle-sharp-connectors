@@ -1,8 +1,8 @@
 using System.Xml.Linq;
 using ArcGIS.Desktop.Core.Events;
-using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using ArcGIS.Desktop.Mapping.Events;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
@@ -11,9 +11,11 @@ namespace Speckle.Connectors.ArcGIS.Utils;
 
 public class ArcGISDocumentStore : DocumentModelStore
 {
-  public ArcGISDocumentStore(IJsonSerializer jsonSerializer, ITopLevelExceptionHandler topLevelExceptionHandler)
+  private readonly IThreadContext _threadContext;
+  public ArcGISDocumentStore(IJsonSerializer jsonSerializer, ITopLevelExceptionHandler topLevelExceptionHandler, IThreadContext threadContext)
     : base(jsonSerializer)
   {
+    _threadContext = threadContext;
     ActiveMapViewChangedEvent.Subscribe(a => topLevelExceptionHandler.CatchUnhandled(() => OnMapViewChanged(a)), true);
     ProjectSavingEvent.Subscribe(
       _ =>
@@ -77,8 +79,6 @@ public class ArcGISDocumentStore : DocumentModelStore
   protected override void HostAppSaveState(string modelCardState)
   {
     Map map = MapView.Active.Map;
-    QueuedTask.Run(() =>
-    {
       // Read existing metadata - To prevent messing existing metadata. 🤞 Hope other add-in developers will do same :D
       var existingMetadata = map.GetMetadata();
 
@@ -101,14 +101,12 @@ public class ArcGISDocumentStore : DocumentModelStore
       }
 
       map.SetMetadata(existingXmlDocument.ToString());
-    });
   }
 
-  protected override void LoadState()
-  {
-    Map map = MapView.Active.Map;
-    QueuedTask.Run(() =>
+  protected override void LoadState() =>
+    _threadContext.RunOnWorker(() =>
     {
+      Map map = MapView.Active.Map;
       var metadata = map.GetMetadata();
       var root = XDocument.Parse(metadata).Root;
       var element = root?.Element("SpeckleModelCards");
@@ -121,5 +119,4 @@ public class ArcGISDocumentStore : DocumentModelStore
       string modelsString = element.Value;
       LoadFromString(modelsString);
     });
-  }
 }

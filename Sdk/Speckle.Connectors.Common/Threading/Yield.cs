@@ -29,4 +29,6 @@ public static class Yield
   public static ConfiguredValueTaskAwaitable BackToAny(this ValueTask valueTask) => valueTask.ConfigureAwait(false);
   public static ConfiguredTaskAwaitable BackToThread(this Task task) => task.ConfigureAwait(true);
   public static ConfiguredTaskAwaitable BackToAny(this Task task) => task.ConfigureAwait(false);
+  public static ConfiguredTaskAwaitable<T> BackToThread<T>(this Task<T> task) => task.ConfigureAwait(true);
+  public static ConfiguredTaskAwaitable<T> BackToAny<T>(this Task<T> task) => task.ConfigureAwait(false);
 }

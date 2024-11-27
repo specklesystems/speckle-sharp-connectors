@@ -73,7 +73,7 @@ public class FeatureClassUtils : IFeatureClassUtils
     return geodatabase;
   }
 
-  public async Task<Dictionary<string, List<(TraversalContext, ObjectConversionTracker)>>> GroupConversionTrackers(
+  public Dictionary<string, List<(TraversalContext, ObjectConversionTracker)>> GroupConversionTrackers(
     Dictionary<TraversalContext, ObjectConversionTracker> conversionTracker,
     Action<string, double?> onOperationProgressed
   )
@@ -132,13 +132,12 @@ public class FeatureClassUtils : IFeatureClassUtils
       ClearExistingDataset(uniqueKey);
 
       onOperationProgressed.Invoke("Grouping features into layers", count++ / conversionTracker.Count);
-      await Task.Yield();
     }
 
     return geometryGroups;
   }
 
-  public async Task CreateDatasets(
+  public void CreateDatasets(
     Dictionary<TraversalContext, ObjectConversionTracker> conversionTracker,
     Dictionary<string, List<(TraversalContext, ObjectConversionTracker)>> featureClassElements,
     Action<string, double?> onOperationProgressed
@@ -201,7 +200,6 @@ public class FeatureClassUtils : IFeatureClassUtils
       }
 
       onOperationProgressed.Invoke("Writing to Database", count++ / featureClassElements.Count);
-      await Task.Yield();
     }
   }
 

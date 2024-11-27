@@ -28,7 +28,7 @@ public class ThreadContext : IThreadContext
 
   protected virtual Task<T> RunContext<T>(Func<Task<T>> action) => action();
 
-  public void RunOnThread(Action action, bool useMain)
+  public virtual void RunOnThread(Action action, bool useMain)
   {
     if (useMain)
     {
@@ -63,7 +63,7 @@ public class ThreadContext : IThreadContext
   }
 
   [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "TaskCompletionSource")]
-  public Task<T> RunOnThread<T>(Func<T> action, bool useMain)
+  public virtual Task<T> RunOnThread<T>(Func<T> action, bool useMain)
   {
     if (useMain)
     {
@@ -98,7 +98,7 @@ public class ThreadContext : IThreadContext
     return RunContext(action.Invoke);
   }
 
-  public async Task RunOnThreadAsync(Func<Task> action, bool useMain)
+  public virtual async Task RunOnThreadAsync(Func<Task> action, bool useMain)
   {
     if (useMain)
     {
@@ -135,7 +135,7 @@ public class ThreadContext : IThreadContext
   }
 
   [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "TaskCompletionSource")]
-  public Task<T> RunOnThreadAsync<T>(Func<Task<T>> action, bool useMain)
+  public virtual Task<T> RunOnThreadAsync<T>(Func<Task<T>> action, bool useMain)
   {
     if (useMain)
     {

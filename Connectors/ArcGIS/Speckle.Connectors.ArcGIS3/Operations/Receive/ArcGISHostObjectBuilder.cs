@@ -1,7 +1,6 @@
 using System.Diagnostics.Contracts;
 using ArcGIS.Core.CIM;
 using ArcGIS.Core.Geometry;
-using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Connectors.ArcGIS.HostApp;
 using Speckle.Connectors.ArcGIS.Utils;
@@ -9,6 +8,7 @@ using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
@@ -78,14 +78,14 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       .ToList();
     if (materials != null)
     {
-      await _colorManager.ParseMaterials(materials, onOperationProgressed).ConfigureAwait(false);
+      await _colorManager.ParseMaterials(materials, onOperationProgressed).BackToThread();
     }
 
     // get colors
     List<ColorProxy>? colors = (rootObject[ProxyKeys.COLOR] as List<object>)?.Cast<ColorProxy>().ToList();
     if (colors != null)
     {
-      await _colorManager.ParseColors(colors, onOperationProgressed).ConfigureAwait(false);
+      await _colorManager.ParseColors(colors, onOperationProgressed).BackToThread();
     }
 
     int count = 0;
@@ -107,7 +107,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
         object? conversionResult =
           obj is GisNonGeometricFeature
             ? null
-            : await QueuedTask.Run(() => _converter.Convert(obj)).ConfigureAwait(false);
+            : _converter.Convert(obj);
 
         string nestedLayerPath = $"{string.Join("\\", path)}";
         if (objectToConvert.TraversalContext.Parent?.Current is not VectorLayer)
@@ -130,29 +130,20 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
 
     // 2.1. Group conversionTrackers (to write into datasets)
     onOperationProgressed.Report(new("Grouping features into layers", null));
-    Dictionary<string, List<(TraversalContext, ObjectConversionTracker)>> convertedGroups = await QueuedTask
-      .Run(async () =>
-      {
-        return await _featureClassUtils
-          .GroupConversionTrackers(conversionTracker, (s, progres) => onOperationProgressed.Report(new(s, progres)))
-          .ConfigureAwait(false);
-      })
-      .ConfigureAwait(false);
+    Dictionary<string, List<(TraversalContext, ObjectConversionTracker)>> convertedGroups =
+      _featureClassUtils
+        .GroupConversionTrackers(conversionTracker, (s, progres) => onOperationProgressed.Report(new(s, progres)));
+    
 
     // 2.2. Write groups of objects to Datasets
     onOperationProgressed.Report(new("Writing to Database", null));
-    await QueuedTask
-      .Run(async () =>
-      {
-        await _featureClassUtils
-          .CreateDatasets(
-            conversionTracker,
-            convertedGroups,
-            (s, progres) => onOperationProgressed.Report(new(s, progres))
-          )
-          .ConfigureAwait(false);
-      })
-      .ConfigureAwait(false);
+
+    _featureClassUtils
+      .CreateDatasets(
+        conversionTracker,
+        convertedGroups,
+        (s, progres) => onOperationProgressed.Report(new(s, progres))
+      );
 
     // 3. add layer and tables to the Map and Table Of Content
 
@@ -204,8 +195,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       else
       {
         // no layer yet, create and add layer to Map
-        MapMember mapMember = await AddDatasetsToMap(trackerItem, createdLayerGroups, projectName, modelName)
-          .ConfigureAwait(false);
+        MapMember mapMember = AddDatasetsToMap(trackerItem, createdLayerGroups, projectName, modelName);
 
         // add layer and layer URI to tracker
         trackerItem.AddConvertedMapMember(mapMember);
@@ -233,7 +223,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       if (bakedMember.Value.Item1 is FeatureLayer fLayer)
       {
         // Set the feature layer's renderer.
-        await QueuedTask.Run(() => fLayer.SetRenderer(bakedMember.Value.Item2)).ConfigureAwait(false);
+        fLayer.SetRenderer(bakedMember.Value.Item2);
       }
     }
     bakedObjectIds.AddRange(createdLayerGroups.Values.Select(x => x.URI));
@@ -304,16 +294,13 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     }
   }
 
-  private async Task<MapMember> AddDatasetsToMap(
+  private MapMember AddDatasetsToMap(
     ObjectConversionTracker trackerItem,
     Dictionary<string, GroupLayer> createdLayerGroups,
     string projectName,
     string modelName
   )
   {
-    return await QueuedTask
-      .Run(() =>
-      {
         // get layer details
         string? datasetId = trackerItem.DatasetId; // should not be null here
         Uri uri = new($"{_settingsStore.Current.SpeckleDatabasePath.AbsolutePath.Replace('/', '\\')}\\{datasetId}");
@@ -365,7 +352,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
             }
           }
 
-          return (MapMember)layer;
+          return layer;
         }
         catch (ArgumentException)
         {
@@ -376,8 +363,6 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
           );
           return table;
         }
-      })
-      .ConfigureAwait(false);
   }
 
   private GroupLayer CreateNestedGroupLayer(string nestedLayerPath, Dictionary<string, GroupLayer> createdLayerGroups)

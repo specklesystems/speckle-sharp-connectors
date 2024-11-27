@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.ArcGIS.HostApp;
@@ -53,12 +52,11 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
   }
 
 #pragma warning disable CA1506
-  public async Task<RootObjectBuilderResult> Build(
+  public RootObjectBuilderResult Build(
 #pragma warning restore CA1506
     IReadOnlyList<MapMember> objects,
     SendInfo sendInfo,
-    IProgress<CardProgress> onOperationProgressed,
-    CancellationToken ct = default
+    IProgress<CardProgress> onOperationProgressed
   )
   {
     // TODO: add a warning if Geographic CRS is set
@@ -84,8 +82,6 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
     {
       foreach ((MapMember mapMember, _) in layersWithDisplayPriority)
       {
-        ct.ThrowIfCancellationRequested();
-
         using (var convertingActivity = _activityFactory.Start("Converting object"))
         {
           var collectionHost = rootObjectCollection;
@@ -130,9 +126,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
               }
               else
               {
-                converted = await QueuedTask
-                  .Run(() => (Collection)_rootToSpeckleConverter.Convert(mapMember))
-                  .ConfigureAwait(false);
+                converted = (Collection)_rootToSpeckleConverter.Convert(mapMember);
 
                 // get units & Active CRS (for writing geometry coords)
                 converted["units"] = _converterSettings.Current.SpeckleUnits;

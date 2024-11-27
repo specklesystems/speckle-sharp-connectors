@@ -29,6 +29,7 @@ public sealed class BrowserBridge : IBrowserBridge
   private readonly ConcurrentDictionary<string, string?> _resultsStore = new();
   public ITopLevelExceptionHandler TopLevelExceptionHandler { get; }
   private readonly IThreadContext _threadContext;
+  private readonly IThreadOptions _threadOptions;
 
   private readonly IBrowserScriptExecutor _browserScriptExecutor;
   private readonly IJsonSerializer _jsonSerializer;
@@ -60,8 +61,7 @@ public sealed class BrowserBridge : IBrowserBridge
     IJsonSerializer jsonSerializer,
     ILogger<BrowserBridge> logger,
     ILogger<TopLevelExceptionHandler> topLogger,
-    IBrowserScriptExecutor browserScriptExecutor
-  )
+    IBrowserScriptExecutor browserScriptExecutor, IThreadOptions threadOptions)
   {
     _threadContext = threadContext;
     _jsonSerializer = jsonSerializer;
@@ -69,6 +69,7 @@ public sealed class BrowserBridge : IBrowserBridge
     TopLevelExceptionHandler = new TopLevelExceptionHandler(topLogger, this);
     // Capture the main thread's SynchronizationContext
     _browserScriptExecutor = browserScriptExecutor;
+    _threadOptions = threadOptions;
   }
 
   public void AssociateWithBinding(IBinding binding)
@@ -102,7 +103,7 @@ public sealed class BrowserBridge : IBrowserBridge
   }
 
   public void RunMethod(string methodName, string requestId, string methodArgs) =>
-    _threadContext.RunOnMainAsync(async () =>
+    _threadContext.RunOnThreadAsync(async () =>
     {
       var task = await TopLevelExceptionHandler
         .CatchUnhandledAsync(async () =>
@@ -117,7 +118,7 @@ public sealed class BrowserBridge : IBrowserBridge
         string resultJson = SerializeFormattedException(task.Exception);
         await NotifyUIMethodCallResultReady(requestId, resultJson).ConfigureAwait(false);
       }
-    });
+    }, _threadOptions.RunCommandsOnMainThread);
 
   /// <summary>
   /// Used by the action block to invoke the actual method called by the UI.
