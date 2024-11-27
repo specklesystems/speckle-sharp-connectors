@@ -194,9 +194,9 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Connectors.TeklaSha
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Converters.TeklaShared", "Converters\Tekla\Speckle.Converters.TeklaShared\Speckle.Converters.TeklaShared.shproj", "{52666479-5401-47D6-B7BA-D554784439EA}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ETABS", "ETABS", "{1F11635B-410A-4B16-A909-99CE3CCEF52E}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CSi", "CSi", "{1F11635B-410A-4B16-A909-99CE3CCEF52E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connector.ETABS22", "Connectors\ETABS\Speckle.Connector.ETABS22\Speckle.Connector.ETABS22.csproj", "{CAF10E70-EB0A-4D52-920A-524AA7783FD2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.ETABS22", "Connectors\CSi\ETABS22\Speckle.Connectors.ETABS22\Speckle.Connectors.ETABS22.csproj", "{CAF10E70-EB0A-4D52-920A-524AA7783FD2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
