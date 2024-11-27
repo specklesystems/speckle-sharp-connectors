@@ -3,7 +3,7 @@ using Speckle.Sdk.Common.Exceptions;
 using Tekla.Structures.Datatype;
 using SSC = Speckle.Sdk.Common;
 
-namespace Speckle.Converter.Tekla2024;
+namespace Speckle.Converters.TeklaShared;
 
 public class TeklaToSpeckleUnitConverter : IHostToSpeckleUnitConverter<Distance.UnitType>
 {
