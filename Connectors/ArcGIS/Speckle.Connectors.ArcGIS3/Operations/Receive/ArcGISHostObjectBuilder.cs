@@ -12,6 +12,7 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
+using Speckle.Objects.Data;
 using Speckle.Objects.GIS;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
@@ -112,7 +113,14 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
         string nestedLayerPath = $"{string.Join("\\", path)}";
         if (objectToConvert.TraversalContext.Parent?.Current is not VectorLayer)
         {
-          nestedLayerPath += $"\\{obj.speckle_type.Split(".")[^1]}"; // add sub-layer by speckleType, for non-GIS objects
+          if (obj is GisObject gisObj)
+          {
+            nestedLayerPath += $"\\{gisObj.name}";
+          }
+          else
+          {
+            nestedLayerPath += $"\\{obj.speckle_type.Split(".")[^1]}"; // add sub-layer by speckleType, for non-GIS objects
+          }
         }
 
         conversionTracker[objectToConvert.TraversalContext] = new ObjectConversionTracker(
