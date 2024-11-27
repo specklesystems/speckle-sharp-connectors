@@ -19,6 +19,7 @@ public sealed class ReceiveOperation
   private readonly IOperations _operations;
   private readonly IClientFactory _clientFactory;
   private readonly IThreadContext _threadContext;
+  private readonly IThreadOptions _threadOptions;
 
   public ReceiveOperation(
     IHostObjectBuilder hostObjectBuilder,
@@ -27,8 +28,7 @@ public sealed class ReceiveOperation
     ISdkActivityFactory activityFactory,
     IOperations operations,
     IClientFactory clientFactory,
-    IThreadContext threadContext
-  )
+    IThreadContext threadContext, IThreadOptions threadOptions)
   {
     _hostObjectBuilder = hostObjectBuilder;
     _accountService = accountService;
@@ -37,6 +37,7 @@ public sealed class ReceiveOperation
     _operations = operations;
     _clientFactory = clientFactory;
     _threadContext = threadContext;
+    _threadOptions = threadOptions;
   }
 
   public async Task<HostObjectBuilderResult> Execute(
@@ -62,7 +63,7 @@ public sealed class ReceiveOperation
 
     // 4 - Convert objects
     HostObjectBuilderResult res = await _threadContext
-      .RunOnMainAsync(() => ConvertObjects(commitObject, receiveInfo, onOperationProgressed, cancellationToken))
+      .RunOnThread(() => ConvertObjects(commitObject, receiveInfo, onOperationProgressed), _threadOptions.RunReceiveBuildOnMainThread)
       .ConfigureAwait(false);
 
     await apiClient
@@ -123,11 +124,10 @@ public sealed class ReceiveOperation
     return commitObject;
   }
 
-  private async Task<HostObjectBuilderResult> ConvertObjects(
+  private HostObjectBuilderResult ConvertObjects(
     Base commitObject,
     ReceiveInfo receiveInfo,
-    IProgress<CardProgress> onOperationProgressed,
-    CancellationToken cancellationToken
+    IProgress<CardProgress> onOperationProgressed
   )
   {
     using var conversionActivity = _activityFactory.Start("ReceiveOperation.ConvertObjects");
@@ -140,9 +140,8 @@ public sealed class ReceiveOperation
 
     try
     {
-      HostObjectBuilderResult res = await _hostObjectBuilder
-        .Build(commitObject, receiveInfo.ProjectName, receiveInfo.ModelName, onOperationProgressed, cancellationToken)
-        .ConfigureAwait(false);
+      HostObjectBuilderResult res =  _hostObjectBuilder
+        .Build(commitObject, receiveInfo.ProjectName, receiveInfo.ModelName, onOperationProgressed);
       conversionActivity?.SetStatus(SdkActivityStatusCode.Ok);
       return res;
     }

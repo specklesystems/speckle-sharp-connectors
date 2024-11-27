@@ -31,8 +31,7 @@ public class RevitRootObjectBuilder(
   public RootObjectBuilderResult Build(
     IReadOnlyList<ElementId> objects,
     SendInfo sendInfo,
-    IProgress<CardProgress> onOperationProgressed,
-    CancellationToken ct = default
+    IProgress<CardProgress> onOperationProgressed
   )
   {
     var doc = converterSettings.Current.Document;
@@ -74,7 +73,6 @@ public class RevitRootObjectBuilder(
 
     foreach (Element revitElement in atomicObjects)
     {
-      ct.ThrowIfCancellationRequested();
       string applicationId = revitElement.UniqueId;
       string sourceType = revitElement.GetType().Name;
       try

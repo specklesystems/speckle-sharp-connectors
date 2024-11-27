@@ -1,6 +1,11 @@
-﻿namespace Speckle.Connectors.Common.Threading;
+﻿using Speckle.InterfaceGenerator;
+using Speckle.Sdk;
+using Speckle.Sdk.Host;
 
-public class ThreadOptions
+namespace Speckle.Connectors.Common.Threading;
+
+[GenerateAutoInterface]
+public class ThreadOptions(ISpeckleApplication speckleApplication) : IThreadOptions
 {
-  
+  public bool RunReceiveBuildOnMainThread => speckleApplication.HostApplication != HostApplications.Rhino.Name;
 }

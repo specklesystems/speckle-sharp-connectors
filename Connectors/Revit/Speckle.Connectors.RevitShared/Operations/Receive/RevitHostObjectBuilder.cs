@@ -36,25 +36,11 @@ internal sealed class RevitHostObjectBuilder(
   ITypedConverter<(Base atomicObject, List<Matrix4x4> matrix), DirectShape> localToGlobalDirectShapeConverter
 ) : IHostObjectBuilder, IDisposable
 {
-  public async Task<HostObjectBuilderResult> Build(
+  public  HostObjectBuilderResult Build(
     Base rootObject,
     string projectName,
     string modelName,
-    IProgress<CardProgress> onOperationProgressed,
-    CancellationToken cancellationToken
-  )
-  {
-    var ret = BuildSync(rootObject, projectName, modelName, onOperationProgressed, cancellationToken);
-    await Task.Delay(100, cancellationToken).ConfigureAwait(false);
-    return ret;
-  }
-
-  private HostObjectBuilderResult BuildSync(
-    Base rootObject,
-    string projectName,
-    string modelName,
-    IProgress<CardProgress> onOperationProgressed,
-    CancellationToken cancellationToken
+    IProgress<CardProgress> onOperationProgressed
   )
   {
     var baseGroupName = $"Project {projectName}: Model {modelName}"; // TODO: unify this across connectors!
@@ -106,7 +92,7 @@ internal sealed class RevitHostObjectBuilder(
     {
       using var _ = activityFactory.Start("Baking objects");
       transactionManager.StartTransaction(true, "Baking objects");
-      conversionResults = BakeObjects(localToGlobalMaps, onOperationProgressed, cancellationToken);
+      conversionResults = BakeObjects(localToGlobalMaps, onOperationProgressed);
       transactionManager.CommitTransaction();
     }
 
@@ -134,8 +120,7 @@ internal sealed class RevitHostObjectBuilder(
     List<(DirectShape res, string applicationId)> postBakePaintTargets
   ) BakeObjects(
     List<LocalToGlobalMap> localToGlobalMaps,
-    IProgress<CardProgress> onOperationProgressed,
-    CancellationToken cancellationToken
+    IProgress<CardProgress> onOperationProgressed
   )
   {
     using var _ = activityFactory.Start("BakeObjects");
@@ -147,7 +132,6 @@ internal sealed class RevitHostObjectBuilder(
 
     foreach (LocalToGlobalMap localToGlobalMap in localToGlobalMaps)
     {
-      cancellationToken.ThrowIfCancellationRequested();
       try
       {
         using var activity = activityFactory.Start("BakeObject");
