@@ -1,6 +1,6 @@
 using Tekla.Structures.Datatype;
 
-namespace Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
+namespace Speckle.Converters.TeklaShared.ToSpeckle.Helpers;
 
 public class ReportPropertyExtractor
 {

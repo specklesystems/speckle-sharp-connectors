@@ -1,8 +1,8 @@
 using System.Drawing;
-using Speckle.Connector.Tekla2024.Extensions;
+using Speckle.Connectors.TeklaShared.Extensions;
 using Speckle.Objects.Other;
 
-namespace Speckle.Connector.Tekla2024.HostApp;
+namespace Speckle.Connectors.TeklaShared.HostApp;
 
 public class TeklaMaterialUnpacker
 {
