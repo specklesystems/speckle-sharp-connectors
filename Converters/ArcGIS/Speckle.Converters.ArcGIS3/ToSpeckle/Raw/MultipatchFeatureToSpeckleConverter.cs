@@ -1,6 +1,7 @@
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Objects;
 using Speckle.Sdk.Models;
 using ValidationException = System.ComponentModel.DataAnnotations.ValidationException;
 
@@ -27,7 +28,7 @@ public class MultipatchFeatureToSpeckleConverter : ITypedConverter<ACG.Multipatc
   {
     List<Base> converted = new();
     // placeholder, needs to be declared in order to be used in the Ring patch type
-    SGIS.PolygonGeometry3d polygonGeom = new() { units = _settingsStore.Current.SpeckleUnits };
+    SOG.Polygon polygonGeom = new() { units = _settingsStore.Current.SpeckleUnits };
 
     // convert and store all multipatch points per Part
     List<List<SOG.Point>> allPoints = new();
@@ -52,19 +53,19 @@ public class MultipatchFeatureToSpeckleConverter : ITypedConverter<ACG.Multipatc
 
       if (patchType == ACG.PatchType.TriangleStrip)
       {
-        SGIS.GisMultipatchGeometry multipatch = target.CompleteMultipatchTriangleStrip(allPoints, idx);
+        SOG.Mesh multipatch = target.CompleteMultipatchTriangleStrip(allPoints, idx);
         multipatch.units = _settingsStore.Current.SpeckleUnits;
         converted.Add(multipatch);
       }
       else if (patchType == ACG.PatchType.Triangles)
       {
-        SGIS.GisMultipatchGeometry multipatch = target.CompleteMultipatchTriangles(allPoints, idx);
+        SOG.Mesh multipatch = target.CompleteMultipatchTriangles(allPoints, idx);
         multipatch.units = _settingsStore.Current.SpeckleUnits;
         converted.Add(multipatch);
       }
       else if (patchType == ACG.PatchType.TriangleFan)
       {
-        SGIS.GisMultipatchGeometry multipatch = target.CompleteMultipatchTriangleFan(allPoints, idx);
+        SOG.Mesh multipatch = target.CompleteMultipatchTriangleFan(allPoints, idx);
         multipatch.units = _settingsStore.Current.SpeckleUnits;
         converted.Add(multipatch);
       }
@@ -79,7 +80,7 @@ public class MultipatchFeatureToSpeckleConverter : ITypedConverter<ACG.Multipatc
         }
 
         // first ring means a start of a new PolygonGeometry3d
-        polygonGeom = new() { voids = new List<SOG.Polyline>(), units = _settingsStore.Current.SpeckleUnits };
+        polygonGeom = new() { voids = new List<ICurve>(), units = _settingsStore.Current.SpeckleUnits };
         List<double> pointCoords = allPoints[idx].SelectMany(x => new List<double>() { x.x, x.y, x.z }).ToList();
 
         SOG.Polyline polyline = new() { value = pointCoords, units = _settingsStore.Current.SpeckleUnits };
@@ -109,7 +110,7 @@ public class MultipatchFeatureToSpeckleConverter : ITypedConverter<ACG.Multipatc
           converted.Add(polygonGeom);
           polygonGeom = new()
           {
-            voids = new List<SOG.Polyline>(),
+            voids = new List<ICurve>(),
             boundary = polyline,
             units = _settingsStore.Current.SpeckleUnits
           };

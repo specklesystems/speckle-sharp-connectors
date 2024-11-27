@@ -1,11 +1,11 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Objects.GIS;
+using Speckle.Objects;
 using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
 
-public class PolygonFeatureToSpeckleConverter : ITypedConverter<ACG.Polygon, IReadOnlyList<PolygonGeometry>>
+public class PolygonFeatureToSpeckleConverter : ITypedConverter<ACG.Polygon, IReadOnlyList<SOG.Polygon>>
 {
   private readonly ITypedConverter<ACG.ReadOnlySegmentCollection, SOG.Polyline> _segmentConverter;
   private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
@@ -19,10 +19,10 @@ public class PolygonFeatureToSpeckleConverter : ITypedConverter<ACG.Polygon, IRe
     _settingsStore = settingsStore;
   }
 
-  public IReadOnlyList<PolygonGeometry> Convert(ACG.Polygon target)
+  public IReadOnlyList<SOG.Polygon> Convert(ACG.Polygon target)
   {
     // https://pro.arcgis.com/en/pro-app/latest/sdk/api-reference/topic30235.html
-    List<PolygonGeometry> polygonList = new();
+    List<SOG.Polygon> polygonList = new();
     int partCount = target.PartCount;
 
     if (partCount == 0)
@@ -30,7 +30,7 @@ public class PolygonFeatureToSpeckleConverter : ITypedConverter<ACG.Polygon, IRe
       throw new ValidationException("ArcGIS Polygon contains no parts");
     }
 
-    PolygonGeometry? polygon = null;
+    SOG.Polygon? polygon = null;
 
     // test each part for "exterior ring"
     for (int idx = 0; idx < partCount; idx++)
@@ -44,7 +44,7 @@ public class PolygonFeatureToSpeckleConverter : ITypedConverter<ACG.Polygon, IRe
         polygon = new()
         {
           boundary = polyline,
-          voids = new List<SOG.Polyline>(),
+          voids = new List<ICurve>(),
           units = _settingsStore.Current.SpeckleUnits
         };
         polygonList.Add(polygon);

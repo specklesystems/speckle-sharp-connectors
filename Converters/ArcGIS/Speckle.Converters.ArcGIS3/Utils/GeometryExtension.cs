@@ -72,14 +72,15 @@ public static class GeometryUtils
     return isClockwise;
   }
 
-  public static SGIS.GisMultipatchGeometry CompleteMultipatchTriangleStrip(
+  public static SOG.Mesh CompleteMultipatchTriangleStrip(
     this ACG.Multipatch target,
     List<List<SOG.Point>> allPoints,
     int idx
   )
   {
-    SGIS.GisMultipatchGeometry multipatch = new();
     List<double> pointCoords = allPoints[idx].SelectMany(x => new List<double>() { x.x, x.y, x.z }).ToList();
+    List<int> faces = new();
+    List<double> vertices = new();
 
     // get data for this multipatch part
     int ptCount = target.GetPatchPointCount(idx);
@@ -88,21 +89,29 @@ public static class GeometryUtils
     {
       if (ptIdx >= 2) // every new point adds a triangle
       {
-        multipatch.faces.AddRange(new List<int>() { 3, ptIdx - 2, ptIdx - 1, ptIdx });
-        multipatch.vertices.AddRange(pointCoords.GetRange(3 * (ptIdx - 2), 9).ToList());
+        faces.AddRange(new List<int>() { 3, ptIdx - 2, ptIdx - 1, ptIdx });
+        vertices.AddRange(pointCoords.GetRange(3 * (ptIdx - 2), 9).ToList());
       }
     }
+    SOG.Mesh multipatch =
+      new()
+      {
+        faces = faces,
+        vertices = vertices,
+        units = allPoints[idx][0].units
+      };
     return multipatch;
   }
 
-  public static SGIS.GisMultipatchGeometry CompleteMultipatchTriangles(
+  public static SOG.Mesh CompleteMultipatchTriangles(
     this ACG.Multipatch target,
     List<List<SOG.Point>> allPoints,
     int idx
   )
   {
-    SGIS.GisMultipatchGeometry multipatch = new();
     List<double> pointCoords = allPoints[idx].SelectMany(x => new List<double>() { x.x, x.y, x.z }).ToList();
+    List<int> faces = new();
+    List<double> vertices = new();
 
     // get data for this multipatch part
     int ptCount = target.GetPatchPointCount(idx);
@@ -111,21 +120,29 @@ public static class GeometryUtils
       var convertedPt = allPoints[idx][ptIdx];
       if (ptIdx >= 2 && (ptIdx + 1) % 3 == 0) // every 3 new points is a new triangle
       {
-        multipatch.faces.AddRange(new List<int>() { 3, ptIdx - 2, ptIdx - 1, ptIdx });
-        multipatch.vertices.AddRange(pointCoords.GetRange(3 * (ptIdx - 2), 9).ToList());
+        faces.AddRange(new List<int>() { 3, ptIdx - 2, ptIdx - 1, ptIdx });
+        vertices.AddRange(pointCoords.GetRange(3 * (ptIdx - 2), 9).ToList());
       }
     }
+    SOG.Mesh multipatch =
+      new()
+      {
+        faces = faces,
+        vertices = vertices,
+        units = allPoints[idx][0].units
+      };
     return multipatch;
   }
 
-  public static SGIS.GisMultipatchGeometry CompleteMultipatchTriangleFan(
+  public static SOG.Mesh CompleteMultipatchTriangleFan(
     this ACG.Multipatch target,
     List<List<SOG.Point>> allPoints,
     int idx
   )
   {
-    SGIS.GisMultipatchGeometry multipatch = new();
     List<double> pointCoords = allPoints[idx].SelectMany(x => new List<double>() { x.x, x.y, x.z }).ToList();
+    List<int> faces = new();
+    List<double> vertices = new();
 
     // get data for this multipatch part
     int ptCount = target.GetPatchPointCount(idx);
@@ -135,10 +152,17 @@ public static class GeometryUtils
       var convertedPt = allPoints[idx][ptIdx];
       if (ptIdx >= 2) // every new point adds a triangle (originates from 0)
       {
-        multipatch.faces.AddRange(new List<int>() { 3, 0, ptIdx - 1, ptIdx });
-        multipatch.vertices.AddRange(pointCoords.GetRange(2 * (ptIdx - 2), 6).ToList());
+        faces.AddRange(new List<int>() { 3, 0, ptIdx - 1, ptIdx });
+        vertices.AddRange(pointCoords.GetRange(2 * (ptIdx - 2), 6).ToList());
       }
     }
+    SOG.Mesh multipatch =
+      new()
+      {
+        faces = faces,
+        vertices = vertices,
+        units = allPoints[idx][0].units
+      };
     return multipatch;
   }
 }

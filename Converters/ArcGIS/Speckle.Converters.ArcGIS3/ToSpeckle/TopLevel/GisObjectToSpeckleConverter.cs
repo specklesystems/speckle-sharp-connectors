@@ -15,7 +15,7 @@ public class GisObjectToSpeckleConverter : ITypedConverter<object, GisObject>
   private readonly ITypedConverter<ACG.MapPoint, SOG.Point> _pointConverter;
   private readonly ITypedConverter<ACG.Multipoint, IReadOnlyList<SOG.Point>> _multiPointConverter;
   private readonly ITypedConverter<ACG.Polyline, IReadOnlyList<SOG.Polyline>> _polylineConverter;
-  private readonly ITypedConverter<ACG.Polygon, IReadOnlyList<SGIS.PolygonGeometry>> _polygonConverter;
+  private readonly ITypedConverter<ACG.Polygon, IReadOnlyList<SOG.Polygon>> _polygonConverter;
   private readonly ITypedConverter<ACG.Multipatch, IReadOnlyList<Base>> _multipatchConverter;
   private readonly ITypedConverter<Raster, SOG.Mesh> _gisRasterConverter;
   private readonly ITypedConverter<LasDatasetLayer, Speckle.Objects.Geometry.Pointcloud> _pointcloudConverter;
@@ -25,7 +25,7 @@ public class GisObjectToSpeckleConverter : ITypedConverter<object, GisObject>
     ITypedConverter<ACG.MapPoint, SOG.Point> pointConverter,
     ITypedConverter<ACG.Multipoint, IReadOnlyList<SOG.Point>> multiPointConverter,
     ITypedConverter<ACG.Polyline, IReadOnlyList<SOG.Polyline>> polylineConverter,
-    ITypedConverter<ACG.Polygon, IReadOnlyList<SGIS.PolygonGeometry>> polygonConverter,
+    ITypedConverter<ACG.Polygon, IReadOnlyList<SOG.Polygon>> polygonConverter,
     ITypedConverter<ACG.Multipatch, IReadOnlyList<Base>> multipatchConverter,
     ITypedConverter<Raster, SOG.Mesh> gisRasterConverter,
     ITypedConverter<LasDatasetLayer, Speckle.Objects.Geometry.Pointcloud> pointcloudConverter,
@@ -104,7 +104,7 @@ public class GisObjectToSpeckleConverter : ITypedConverter<object, GisObject>
           };
 
         case ACG.Polygon polygon:
-          List<SGIS.PolygonGeometry> polygons = _polygonConverter.Convert(polygon).ToList();
+          List<SOG.Polygon> polygons = _polygonConverter.Convert(polygon).ToList();
           List<SOG.Mesh> meshes = GetPolygonDisplayMeshes(polygons);
           return new GisObject()
           {
@@ -157,10 +157,10 @@ public class GisObjectToSpeckleConverter : ITypedConverter<object, GisObject>
     throw new NotImplementedException($"Conversion of object type {target.GetType()} is not supported");
   }
 
-  private List<SOG.Mesh> GetPolygonDisplayMeshes(List<SGIS.PolygonGeometry> polygons)
+  private List<SOG.Mesh> GetPolygonDisplayMeshes(List<SOG.Polygon> polygons)
   {
     List<SOG.Mesh> displayVal = new();
-    foreach (SGIS.PolygonGeometry polygon in polygons)
+    foreach (SOG.Polygon polygon in polygons)
     {
       // POC: check for voids, we cannot generate display value correctly if any of the polygons have voids
       // Return meshed boundary for now, ignore voids
@@ -170,33 +170,37 @@ public class GisObjectToSpeckleConverter : ITypedConverter<object, GisObject>
       // }
 
       // ensure counter-clockwise orientation for up-facing mesh faces
-      bool isClockwise = polygon.boundary.IsClockwisePolygon();
-      List<SOG.Point> boundaryPts = polygon.boundary.GetPoints();
-      if (isClockwise)
+      // TODO: implement for ICurves too
+      if (polygon.boundary is SOG.Polyline boundaryPolyline)
       {
-        boundaryPts.Reverse();
-      }
-
-      // generate Mesh
-      List<int> faces = new() { boundaryPts.Count };
-      faces.AddRange(Enumerable.Range(0, boundaryPts.Count).ToList());
-      SOG.Mesh mesh =
-        new()
+        bool isClockwise = boundaryPolyline.IsClockwisePolygon();
+        List<SOG.Point> boundaryPts = boundaryPolyline.GetPoints();
+        if (isClockwise)
         {
-          vertices = boundaryPts.SelectMany(x => new List<double> { x.x, x.y, x.z }).ToList(),
-          faces = faces,
-          units = _settingsStore.Current.SpeckleUnits
-        };
-      displayVal.Add(mesh);
+          boundaryPts.Reverse();
+        }
+
+        // generate Mesh
+        List<int> faces = new() { boundaryPts.Count };
+        faces.AddRange(Enumerable.Range(0, boundaryPts.Count).ToList());
+        SOG.Mesh mesh =
+          new()
+          {
+            vertices = boundaryPts.SelectMany(x => new List<double> { x.x, x.y, x.z }).ToList(),
+            faces = faces,
+            units = _settingsStore.Current.SpeckleUnits
+          };
+        displayVal.Add(mesh);
+      }
     }
 
     return displayVal;
   }
 
-  private List<SOG.Mesh> GetMultipatchDisplayMeshes(List<SGIS.GisMultipatchGeometry> multipatch)
+  private List<SOG.Mesh> GetMultipatchDisplayMeshes(List<SOG.Mesh> multipatch)
   {
     List<SOG.Mesh> displayVal = new();
-    foreach (SGIS.GisMultipatchGeometry geo in multipatch)
+    foreach (SOG.Mesh geo in multipatch)
     {
       SOG.Mesh displayMesh =
         new()
@@ -214,15 +218,15 @@ public class GisObjectToSpeckleConverter : ITypedConverter<object, GisObject>
   private List<SOG.Mesh> GetDisplayMeshes(List<Base> geometry)
   {
     List<SOG.Mesh> displayValue = new();
-    List<SGIS.PolygonGeometry> polygons = new();
-    List<SGIS.GisMultipatchGeometry> multipatches = new();
+    List<SOG.Polygon> polygons = new();
+    List<SOG.Mesh> multipatches = new();
     foreach (Base geo in geometry)
     {
-      if (geo is SGIS.GisMultipatchGeometry multipatch)
+      if (geo is SOG.Mesh multipatch)
       {
         multipatches.Add(multipatch);
       }
-      else if (geo is SGIS.PolygonGeometry polygon)
+      else if (geo is SOG.Polygon polygon)
       {
         polygons.Add(polygon);
       }
