@@ -267,7 +267,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   /// </summary>
   /// <param name="obj"></param>
   /// <param name="originalObject"></param>
-  /// <param name="parentObjectId">Parent object ID for color&material proxies search (if fallback conversion was used)</param>
+  /// <param name="parentObjectId">Parent object ID for color & material proxies search (if fallback conversion was used)</param>
   /// <param name="atts"></param>
   /// <returns></returns>
   /// <remarks>
