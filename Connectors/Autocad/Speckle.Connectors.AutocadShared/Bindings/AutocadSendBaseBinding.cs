@@ -74,7 +74,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     _logger = logger;
     _speckleApplication = speckleApplication;
     _threadContext = threadContext;
-    _topLevelExceptionHandler =topLevelExceptionHandler;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
 

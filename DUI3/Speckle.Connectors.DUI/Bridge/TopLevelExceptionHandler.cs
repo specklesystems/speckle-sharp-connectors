@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Speckle.Connectors.Common.Threading;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
 
@@ -27,7 +26,7 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
 
   private const string UNHANDLED_LOGGER_TEMPLATE = "An unhandled Exception occured";
 
-  internal TopLevelExceptionHandler(ILogger<TopLevelExceptionHandler> logger, ISpeckleEventAggregator eventAggregator)
+  public TopLevelExceptionHandler(ILogger<TopLevelExceptionHandler> logger, ISpeckleEventAggregator eventAggregator)
   {
     _logger = logger;
     _eventAggregator = eventAggregator;
@@ -113,76 +112,4 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
   /// </remarks>
   /// <param name="function"><inheritdoc cref="CatchUnhandled{T}(Func{T})"/></param>
   public async void FireAndForget(Func<Task> function) => await CatchUnhandledAsync(function).ConfigureAwait(false);
-}
-
-public interface ISpeckleEventAggregator
-{
-  TEventType GetEvent<TEventType>() where TEventType : EventBase;
-}
-public class SpeckleEventAggregator : ISpeckleEventAggregator
-{
-  private readonly IServiceProvider _serviceProvider;
-  
-
-  private readonly Dictionary<Type, EventBase> _events = new();
-
-  public SpeckleEventAggregator(IServiceProvider serviceProvider)
-  {
-    _serviceProvider = serviceProvider;
-  }
-
-  public TEventType GetEvent<TEventType>() where TEventType : EventBase
-  {
-    lock (_events)
-    {
-      if (!_events.TryGetValue(typeof(TEventType), out var existingEvent))
-      {
-        existingEvent = (TEventType)_serviceProvider.GetService(typeof(TEventType));
-        _events[typeof(TEventType)] = existingEvent;
-      }
-      return (TEventType)existingEvent;
-    }
-  }
-}
-
-public class ExceptionEvent(IThreadContext threadContext) : SpeckleEvent<Exception>(threadContext);
-
-public class SpeckleEvent<T>(IThreadContext threadContext) : PubSubEvent<T>
-{
-  public override SubscriptionToken Subscribe(Action<T> action, ThreadOption threadOption, bool keepSubscriberReferenceAlive,
-    Predicate<T> filter) 
-  {
-    IDelegateReference actionReference = new DelegateReference(action, keepSubscriberReferenceAlive);
-
-    EventSubscription subscription;
-    switch (threadOption)
-    {
-      case ThreadOption.PublisherThread:
-        subscription = new EventSubscription(actionReference);
-        break;
-      case ThreadOption.BackgroundThread:
-        subscription = new BackgroundEventSubscription(actionReference);
-        break;
-      case ThreadOption.UIThread:
-        subscription = new ThreadContextEventSubscription(actionReference, threadContext);
-        break;
-      default:
-        subscription = new EventSubscription(actionReference);
-        break;
-    }
-
-    return InternalSubscribe(subscription);
-    
-  }
-}
-
-public class ThreadContextEventSubscription : EventSubscription
-{
-  private readonly IThreadContext _threadContext;
-  public ThreadContextEventSubscription(IDelegateReference actionReference, IThreadContext threadContext) : base(actionReference)
-  {
-    _threadContext = threadContext;
-  }
-
-  public override void InvokeAction(Action action) => _threadContext.RunOnMain(action);
 }

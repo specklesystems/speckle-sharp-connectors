@@ -26,7 +26,8 @@ public class TopLevelExceptionHandlerTests : MoqTest
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
     var eventAggregator = Create<ISpeckleEventAggregator>();
 
-    eventAggregator.Setup(x => x.GetEvent<ExceptionEvent>())
+    eventAggregator
+      .Setup(x => x.GetEvent<ExceptionEvent>())
       .Returns(new ExceptionEvent(Create<IThreadContext>().Object));
 
     var sut = new TopLevelExceptionHandler(logger.Object, eventAggregator.Object);
@@ -54,7 +55,8 @@ public class TopLevelExceptionHandlerTests : MoqTest
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
     var eventAggregator = Create<ISpeckleEventAggregator>();
 
-    eventAggregator.Setup(x => x.GetEvent<ExceptionEvent>())
+    eventAggregator
+      .Setup(x => x.GetEvent<ExceptionEvent>())
       .Returns(new ExceptionEvent(Create<IThreadContext>().Object));
 
     var sut = new TopLevelExceptionHandler(logger.Object, eventAggregator.Object);
@@ -98,7 +100,8 @@ public class TopLevelExceptionHandlerTests : MoqTest
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
     var eventAggregator = Create<ISpeckleEventAggregator>();
 
-    eventAggregator.Setup(x => x.GetEvent<ExceptionEvent>())
+    eventAggregator
+      .Setup(x => x.GetEvent<ExceptionEvent>())
       .Returns(new ExceptionEvent(Create<IThreadContext>().Object));
 
     var sut = new TopLevelExceptionHandler(logger.Object, eventAggregator.Object);

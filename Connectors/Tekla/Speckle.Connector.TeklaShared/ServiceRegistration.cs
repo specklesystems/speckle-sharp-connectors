@@ -42,8 +42,6 @@ public static class ServiceRegistration
     services.AddSingleton<IBinding, AccountBinding>();
     services.AddSingleton<IBasicConnectorBinding, TeklaBasicConnectorBinding>();
 
-    services.RegisterTopLevelExceptionHandler();
-
     services.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
     services.AddSingleton<IBinding, TeklaSendBinding>();
     services.AddSingleton<IBinding, TeklaSelectionBinding>();

@@ -59,8 +59,6 @@ public static class SharedRegistration
     serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
     serviceCollection.AddSingleton<IBasicConnectorBinding, AutocadBasicConnectorBinding>();
     serviceCollection.AddSingleton<IBinding, ConfigBinding>();
-
-    serviceCollection.RegisterTopLevelExceptionHandler();
   }
 
   public static void LoadSend(this IServiceCollection serviceCollection)

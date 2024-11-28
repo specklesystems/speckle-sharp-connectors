@@ -12,7 +12,11 @@ public class ArcGISSelectionBinding : ISelectionBinding
   public string Name => "selectionBinding";
   public IBrowserBridge Parent { get; }
 
-  public ArcGISSelectionBinding(IBrowserBridge parent, MapMembersUtils mapMemberUtils, ITopLevelExceptionHandler topLevelExceptionHandler)
+  public ArcGISSelectionBinding(
+    IBrowserBridge parent,
+    MapMembersUtils mapMemberUtils,
+    ITopLevelExceptionHandler topLevelExceptionHandler
+  )
   {
     _mapMemberUtils = mapMemberUtils;
     Parent = parent;

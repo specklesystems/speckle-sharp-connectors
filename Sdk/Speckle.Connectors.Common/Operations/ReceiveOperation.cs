@@ -1,11 +1,11 @@
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Threading;
-using Speckle.Connectors.Logging;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Extensions;
+#pragma warning disable CS9113 // Parameter is unread.
 
 namespace Speckle.Connectors.Common.Operations;
 
@@ -20,40 +20,13 @@ public sealed class ReceiveOperation(
   IThreadOptions threadOptions
 )
 {
-  public async Task<HostObjectBuilderResult> Execute(
+  public Task<HostObjectBuilderResult> Execute(
     ReceiveInfo receiveInfo,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
-    using var execute = activityFactory.Start("Receive Operation");
-    execute?.SetTag("receiveInfo", receiveInfo);
-    // 2 - Check account exist
-    Account account = accountService.GetAccountWithServerUrlFallback(receiveInfo.AccountId, receiveInfo.ServerUrl);
-    using Client apiClient = clientFactory.Create(account);
-    using var userScope = ActivityScope.SetTag(Consts.USER_ID, account.GetHashedEmail());
-
-    var version = await apiClient
-      .Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ProjectId, cancellationToken)
-      .BackToAny();
-
-    var commitObject = await threadContext
-      .RunOnWorkerAsync(() => ReceiveData(account, version, receiveInfo, onOperationProgressed, cancellationToken))
-      .BackToAny();
-
-    // 4 - Convert objects
-    HostObjectBuilderResult res = await threadContext
-      .RunOnThreadAsync(
-        () => ConvertObjects(commitObject, receiveInfo, onOperationProgressed, cancellationToken),
-        threadOptions.RunReceiveBuildOnMainThread
-      )
-      .BackToAny();
-
-    await apiClient
-      .Version.Received(new(version.id, receiveInfo.ProjectId, receiveInfo.SourceApplication), cancellationToken)
-      .BackToAny();
-
-    return res;
+    throw new NotImplementedException("This is a placeholder for now.");
   }
 
   private async Task<Base> ReceiveData(

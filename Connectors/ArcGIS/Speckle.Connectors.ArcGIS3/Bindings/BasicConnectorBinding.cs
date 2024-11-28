@@ -21,7 +21,12 @@ public class BasicConnectorBinding : IBasicConnectorBinding
   private readonly DocumentModelStore _store;
   private readonly ISpeckleApplication _speckleApplication;
 
-  public BasicConnectorBinding(DocumentModelStore store, IBrowserBridge parent, ISpeckleApplication speckleApplication, ITopLevelExceptionHandler topLevelExceptionHandler)
+  public BasicConnectorBinding(
+    DocumentModelStore store,
+    IBrowserBridge parent,
+    ISpeckleApplication speckleApplication,
+    ITopLevelExceptionHandler topLevelExceptionHandler
+  )
   {
     _store = store;
     _speckleApplication = speckleApplication;

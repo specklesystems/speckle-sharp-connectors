@@ -63,7 +63,10 @@ public sealed class BrowserBridge : IBrowserBridge
     IJsonSerializer jsonSerializer,
     ILogger<BrowserBridge> logger,
     IBrowserScriptExecutor browserScriptExecutor,
-    IThreadOptions threadOptions, ISpeckleEventAggregator eventAggregator, ITopLevelExceptionHandler topLevelExceptionHandler)
+    IThreadOptions threadOptions,
+    ISpeckleEventAggregator eventAggregator,
+    ITopLevelExceptionHandler topLevelExceptionHandler
+  )
   {
     _threadContext = threadContext;
     _jsonSerializer = jsonSerializer;
@@ -73,13 +76,25 @@ public sealed class BrowserBridge : IBrowserBridge
     _threadOptions = threadOptions;
     _eventAggregator = eventAggregator;
     _topLevelExceptionHandler = topLevelExceptionHandler;
-    eventAggregator.GetEvent<ExceptionEvent>().Subscribe(ex =>
-    {
-      Send(BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION,
-          new { type = ToastNotificationType.DANGER, title = "Unhandled Exception Occurred", description = ex.ToFormattedString(), autoClose = false }
-        )
-        .ConfigureAwait(false);
-    }, ThreadOption.UIThread);
+    eventAggregator
+      .GetEvent<ExceptionEvent>()
+      .Subscribe(
+        ex =>
+        {
+          Send(
+              BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION,
+              new
+              {
+                type = ToastNotificationType.DANGER,
+                title = "Unhandled Exception Occurred",
+                description = ex.ToFormattedString(),
+                autoClose = false
+              }
+            )
+            .ConfigureAwait(false);
+        },
+        ThreadOption.UIThread
+      );
   }
 
   public void AssociateWithBinding(IBinding binding)

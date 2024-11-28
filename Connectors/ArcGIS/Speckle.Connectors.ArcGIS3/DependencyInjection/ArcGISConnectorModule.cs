@@ -34,8 +34,6 @@ public static class ArcGISConnectorModule
     serviceCollection.AddSingleton<IBinding, ConfigBinding>();
     serviceCollection.AddSingleton<IBinding, AccountBinding>();
 
-    serviceCollection.RegisterTopLevelExceptionHandler();
-
     serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
     serviceCollection.AddSingleton<IBasicConnectorBinding, BasicConnectorBinding>();
 
