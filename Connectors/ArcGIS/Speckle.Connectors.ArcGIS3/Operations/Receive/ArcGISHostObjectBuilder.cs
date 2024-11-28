@@ -21,7 +21,6 @@ using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
 using Speckle.Sdk.Models.Proxies;
-using RasterLayer = Speckle.Objects.GIS.RasterLayer;
 
 namespace Speckle.Connectors.ArcGIS.Operations.Receive;
 
@@ -111,7 +110,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
           await QueuedTask.Run(() => _converter.Convert(obj)).ConfigureAwait(false);
 
         string nestedLayerPath = $"{string.Join("\\", path)}";
-        if (objectToConvert.TraversalContext.Parent?.Current is not VectorLayer)
+        if (objectToConvert.TraversalContext.Parent?.Current is not GisLayer)
         {
           if (obj is GisObject gisObj)
           {
@@ -255,8 +254,8 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     // keep GISlayers in the list, because they are still needed to extract CRS of the commit (code below)
     List<TraversalContext> objectsToConvertTc = _traverseFunction.Traverse(rootObject).ToList();
 
-    // get CRS from any present VectorLayer
-    Base? vLayer = objectsToConvertTc.FirstOrDefault(x => x.Current is VectorLayer)?.Current;
+    // get CRS from any present GisLayer
+    Base? vLayer = objectsToConvertTc.FirstOrDefault(x => x.Current is GisLayer)?.Current;
     using var crs = _crsUtils.FindSetCrsDataOnReceive(vLayer); // TODO help
 
     // now filter the objects
@@ -438,6 +437,6 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
   [Pure]
   private static bool IsGISType(Base obj)
   {
-    return obj is RasterLayer or VectorLayer;
+    return obj is GisLayer;
   }
 }

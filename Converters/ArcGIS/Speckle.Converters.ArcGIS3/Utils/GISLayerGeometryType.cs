@@ -27,9 +27,9 @@ public static class GISLayerGeometryType
     };
   }
 
-  public static ACG.GeometryType GetNativeLayerGeometryType(Objects.GIS.VectorLayer target)
+  public static ACG.GeometryType GetNativeLayerGeometryType(Objects.GIS.GisLayer target)
   {
-    string? originalGeomType = target.geomType != null ? target.geomType : target.nativeGeomType;
+    string? originalGeomType = target["geomType"]?.ToString();
     return originalGeomType switch
     {
       GISLayerGeometryType.NONE => ACG.GeometryType.Unknown,

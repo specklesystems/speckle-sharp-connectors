@@ -136,9 +136,13 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
                 .ConfigureAwait(false);
               // 'converted' is now VectorLayer or RasterLayer Collection
 
-              if (mapMember is FeatureLayer featureLayer && converted is VectorLayer convertedVector)
+              if (
+                mapMember is FeatureLayer featureLayer
+                && converted is GisLayer convertedVector
+                && convertedVector["attributes"] is Base attributes
+              )
               {
-                IReadOnlyCollection<string> visibleAttributes = convertedVector.attributes.DynamicPropertyKeys;
+                IReadOnlyCollection<string> visibleAttributes = attributes.DynamicPropertyKeys;
                 await QueuedTask
                   .Run(() =>
                   {

@@ -68,18 +68,15 @@ public class ArcGISLayerUnpacker
     }
   }
 
-  private Objects.GIS.RasterLayer ConvertRasterLayer(
-    SpatialReference spatialRefGlobal,
-    SpatialReference? spatialRefRaster
-  )
+  private Collection ConvertRasterLayer(SpatialReference spatialRefGlobal, SpatialReference? spatialRefRaster)
   {
-    Objects.GIS.RasterLayer convertedRasterLayer = new();
+    Collection convertedRasterLayer = new();
     // get active map CRS if layer CRS is empty
     if (spatialRefRaster?.Unit is null)
     {
       spatialRefRaster = spatialRefGlobal;
     }
-    convertedRasterLayer.rasterCrs = new CRS
+    convertedRasterLayer["rasterCrs"] = new CRS
     {
       wkt = spatialRefRaster.Wkt,
       name = spatialRefRaster.Name,
@@ -88,9 +85,9 @@ public class ArcGISLayerUnpacker
     return convertedRasterLayer;
   }
 
-  private VectorLayer ConvertVectorLayer(MapMember mapMember)
+  private Collection ConvertVectorLayer(MapMember mapMember)
   {
-    VectorLayer convertedVectorLayer = new();
+    Collection convertedVectorLayer = new();
 
     // get feature class fields
     var allLayerAttributes = new Base();
@@ -116,30 +113,31 @@ public class ArcGISLayerUnpacker
         }
       }
     }
-    convertedVectorLayer.attributes = allLayerAttributes;
+    convertedVectorLayer["attributes"] = allLayerAttributes;
 
     // get a simple geometry type
     if (mapMember is FeatureLayer arcGisFeatureLayer)
     {
-      convertedVectorLayer.geomType = GISLayerGeometryType.LayerGeometryTypeToSpeckle(arcGisFeatureLayer.ShapeType);
+      convertedVectorLayer["geomType"] = GISLayerGeometryType.LayerGeometryTypeToSpeckle(arcGisFeatureLayer.ShapeType);
     }
     else if (mapMember is StandaloneTable)
     {
-      convertedVectorLayer.geomType = GISLayerGeometryType.NONE;
+      convertedVectorLayer["geomType"] = GISLayerGeometryType.NONE;
     }
 
     return convertedVectorLayer;
   }
 
-  private VectorLayer ConvertPointCloudLayer(LasDatasetLayer pointcloudLayer)
+  private Collection ConvertPointCloudLayer(LasDatasetLayer pointcloudLayer)
   {
-    VectorLayer speckleLayer =
-      new() { nativeGeomType = pointcloudLayer.MapLayerType.ToString(), geomType = GISLayerGeometryType.POINTCLOUD };
+    Collection speckleLayer = new();
+    speckleLayer["nativeGeomType"] = pointcloudLayer.MapLayerType.ToString();
+    speckleLayer["geomType"] = GISLayerGeometryType.POINTCLOUD;
 
     return speckleLayer;
   }
 
-  public async Task<Collection> AddLayerWithProps(
+  public async Task<GisLayer> AddLayerWithProps(
     string applicationId,
     MapMember mapMember,
     string globalUnits,
@@ -147,6 +145,8 @@ public class ArcGISLayerUnpacker
   )
   {
     Collection converted = new();
+    string layerType = "GisVectorLayer";
+
     var spatialRef = activeCRS.SpatialReference;
 
     if (mapMember is FeatureLayer featureLayer)
@@ -156,6 +156,7 @@ public class ArcGISLayerUnpacker
     else if (mapMember is StandaloneTable tableLayer)
     {
       converted = ConvertVectorLayer(tableLayer);
+      layerType = "GisTableLayer";
     }
     else if (mapMember is RasterLayer arcGisRasterLayer)
     {
@@ -165,28 +166,42 @@ public class ArcGISLayerUnpacker
         .ConfigureAwait(false);
 
       converted = ConvertRasterLayer(spatialRef, spatialRefRaster);
+      layerType = "GisRasterLayer";
     }
     else if (mapMember is LasDatasetLayer pointcloudLayer)
     {
       converted = ConvertPointCloudLayer(pointcloudLayer);
+      layerType = "GisPointcloudLayer";
     }
 
     // get common attributes for any type of layer
     // get units & Active CRS (for writing geometry coords)
-    converted["units"] = globalUnits;
-    converted["crs"] = new CRS
-    {
-      wkt = spatialRef.Wkt,
-      name = spatialRef.Name,
-      offset_y = Convert.ToSingle(activeCRS.LatOffset),
-      offset_x = Convert.ToSingle(activeCRS.LonOffset),
-      rotation = Convert.ToSingle(activeCRS.TrueNorthRadians),
-      units_native = globalUnits // not 'units', because might need to potentially support 'degrees'
-    };
-    // other common properties for layers and groups
-    converted["name"] = mapMember.Name;
-    converted.applicationId = applicationId;
+    CRS crs =
+      new()
+      {
+        wkt = spatialRef.Wkt,
+        name = spatialRef.Name,
+        offset_y = Convert.ToSingle(activeCRS.LatOffset),
+        offset_x = Convert.ToSingle(activeCRS.LonOffset),
+        rotation = Convert.ToSingle(activeCRS.TrueNorthRadians),
+        units_native = globalUnits // not 'units', because might need to potentially support 'degrees'
+      };
 
-    return converted;
+    GisLayer gisLayer =
+      new()
+      {
+        applicationId = applicationId,
+        name = mapMember.Name,
+        type = layerType,
+        crs = crs,
+        units = globalUnits
+      };
+
+    foreach (var key in converted.DynamicPropertyKeys)
+    {
+      gisLayer[key] = converted[key];
+    }
+
+    return gisLayer;
   }
 }

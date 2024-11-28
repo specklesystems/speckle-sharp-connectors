@@ -9,7 +9,7 @@ public class CrsUtils(IConverterSettingsStore<ArcGISConversionSettings> settings
 {
   public IDisposable? FindSetCrsDataOnReceive(Base? rootObj)
   {
-    if (rootObj is SGIS.VectorLayer vLayer)
+    if (rootObj is SGIS.GisLayer vLayer)
     {
       // create Spatial Reference (i.e. Coordinate Reference System - CRS)
       string wktString = string.Empty;
