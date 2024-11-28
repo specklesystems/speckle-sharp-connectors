@@ -2,7 +2,6 @@ using System.Collections;
 using ArcGIS.Core.Data;
 using ArcGIS.Core.Data.Exceptions;
 using Speckle.InterfaceGenerator;
-using Speckle.Objects;
 using Speckle.Objects.GIS;
 using Speckle.Sdk;
 using Speckle.Sdk.Common.Exceptions;
