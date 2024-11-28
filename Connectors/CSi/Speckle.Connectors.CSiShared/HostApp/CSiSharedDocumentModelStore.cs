@@ -6,9 +6,9 @@ namespace Speckle.Connectors.CSiShared.HostApp;
 public class CSiSharedDocumentModelStore : DocumentModelStore
 {
   public CSiSharedDocumentModelStore(IJsonSerializer jsonSerializerSettings)
-    : base(jsonSerializerSettings, true) { }
+    : base(jsonSerializerSettings) { }
 
-  public override void WriteToFile() { }
+  protected override void HostAppSaveState(string modelCardState) => throw new NotImplementedException();
 
-  public override void ReadFromFile() { }
+  protected override void LoadState() => throw new NotImplementedException();
 }
