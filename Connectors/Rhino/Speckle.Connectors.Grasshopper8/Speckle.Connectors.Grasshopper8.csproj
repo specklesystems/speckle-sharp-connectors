@@ -13,6 +13,7 @@
     <NoWarn>$(NoWarn);NU1701;NETSDK1086</NoWarn>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <UseWindowsForms>true</UseWindowsForms>
+    <DefineConstants>$(DefineConstants);GRASSHOPPER;RHINO8;RHINO7_OR_GREATER;RHINO8_OR_GREATER</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -23,5 +24,14 @@
   <ItemGroup>
     <PackageReference Include="RhinoCommon" IncludeAssets="compile; build" PrivateAssets="all" />
     <PackageReference Include="Grasshopper" IncludeAssets="compile; build" PrivateAssets="all"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Converters\Rhino\Speckle.Converters.Rhino8\Speckle.Converters.Rhino8.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="HostApp\" />
   </ItemGroup>
 </Project>

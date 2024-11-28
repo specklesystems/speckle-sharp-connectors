@@ -1,0 +1,52 @@
+﻿using Grasshopper.Kernel;
+using Microsoft.Extensions.DependencyInjection;
+using Speckle.Connectors.Common;
+using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Operations.Receive;
+using Speckle.Connectors.Grasshopper8.Operations.Receive;
+using Speckle.Converters.Rhino;
+using Speckle.Sdk;
+using Speckle.Sdk.Credentials;
+using Speckle.Sdk.Host;
+using Speckle.Sdk.Models.GraphTraversal;
+
+namespace Speckle.Connectors.Grasshopper8;
+
+public class PriorityLoader : GH_AssemblyPriority
+{
+  private IDisposable? _disposableLogger;
+  public static ServiceProvider? Container { get; set; }
+
+  public override GH_LoadingInstruction PriorityLoad()
+  {
+    try
+    {
+      var services = new ServiceCollection();
+      _disposableLogger = services.Initialize(HostApplications.Grasshopper, GetVersion());
+      services.AddRhinoConverters().AddConnectorUtils();
+
+      services.AddTransient<IHostObjectBuilder, GrasshopperHostObjectBuilder>();
+      services.AddSingleton(DefaultTraversal.CreateTraversalFunc());
+      services.AddTransient<TraversalContextUnpacker>();
+      services.AddTransient<AccountManager>();
+      Container = services.BuildServiceProvider();
+      return GH_LoadingInstruction.Proceed;
+    }
+    catch (Exception e) when (!e.IsFatal())
+    {
+      // TODO: Top level exception handling here
+      return GH_LoadingInstruction.Abort;
+    }
+  }
+
+  private HostAppVersion GetVersion()
+  {
+#if RHINO7
+    return HostAppVersion.v7;
+#elif RHINO8
+    return HostAppVersion.v8;
+#else
+    throw new NotImplementedException();
+#endif
+  }
+}

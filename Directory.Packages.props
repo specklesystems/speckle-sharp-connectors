@@ -7,6 +7,7 @@
     <PackageVersion Include="FluentAssertions" Version="6.12.1" />
     <PackageVersion Include="Glob" Version="1.1.9" />
     <PackageVersion Include="ILRepack.FullAuto" Version="1.6.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
     <PackageVersion Include="Moq" Version="4.20.70" />
     <PackageVersion Include="Microsoft.Build" Version="17.11.4" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
