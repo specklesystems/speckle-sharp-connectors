@@ -294,7 +294,7 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
     {
       fields = GetFieldsFromSpeckleLayer(vLayer);
       fieldsAndFunctions = fields
-        .Select(x => (x, (Func<Base, object?>)(y => (y?["attributes"] as Base)?[x.Name])))
+        .Select(x => (x, (Func<Base, object?>)(y => (y?["properties"] as Base)?[x.Name])))
         .ToList();
     }
     else // non-GIS
