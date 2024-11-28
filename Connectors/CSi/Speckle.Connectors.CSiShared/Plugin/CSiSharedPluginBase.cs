@@ -1,8 +1,9 @@
 namespace Speckle.Connectors.CSiShared;
 
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
 public abstract class CSiSharedPluginBase : cPluginContract, IDisposable
 {
-  private static string s_modality = "Non-Modal";
+  private const string s_modality = "Non-Modal";
   private SpeckleFormBase? _panel;
   private bool _disposed;
 
