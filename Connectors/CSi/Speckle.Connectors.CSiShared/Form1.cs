@@ -40,7 +40,7 @@ public class Form1 : Form
 
     // NOTE: Update the form to initialize the CSiSharedApplicationService when we receive "sapModel"
     // Ensures service ready to use by other components
-    var csiService = Container!.GetRequiredService<ICSiApplicationService>();
+    var csiService = Container.GetRequiredService<ICSiApplicationService>();
     csiService.Initialize(sapModel, pluginCallback);
   }
 
