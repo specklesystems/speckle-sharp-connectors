@@ -8,7 +8,7 @@ using Speckle.Sdk;
 using Tekla.Structures;
 using Tekla.Structures.Geometry3d;
 
-namespace Speckle.Connector.Tekla2024.Bindings;
+namespace Speckle.Connectors.TeklaShared.Bindings;
 
 public class TeklaBasicConnectorBinding : IBasicConnectorBinding
 {
@@ -51,7 +51,7 @@ public class TeklaBasicConnectorBinding : IBasicConnectorBinding
 
   public DocumentModelStore GetDocumentState() => _store;
 
-  public void AddModel(ModelCard model) => _store.Models.Add(model);
+  public void AddModel(ModelCard model) => _store.AddModel(model);
 
   public void UpdateModel(ModelCard model) => _store.UpdateModel(model);
 
