@@ -1,13 +1,13 @@
 using Microsoft.Extensions.Logging;
-using Speckle.Converter.Tekla2024.Extensions;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
+using Speckle.Converters.TeklaShared.Extensions;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 using Tekla.Structures.Model;
 
-namespace Speckle.Converter.Tekla2024;
+namespace Speckle.Converters.TeklaShared;
 
 public class TeklaRootToSpeckleConverter : IRootToSpeckleConverter
 {

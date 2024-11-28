@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Speckle.Connector.Tekla2024.Operations.Send.Settings;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
@@ -13,8 +12,9 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
-using Speckle.Converter.Tekla2024;
+using Speckle.Connectors.TeklaShared.Operations.Send.Settings;
 using Speckle.Converters.Common;
+using Speckle.Converters.TeklaShared;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Logging;
@@ -22,7 +22,7 @@ using Tekla.Structures;
 using Tekla.Structures.Model;
 using Task = System.Threading.Tasks.Task;
 
-namespace Speckle.Connector.Tekla2024.Bindings;
+namespace Speckle.Connectors.TeklaShared.Bindings;
 
 public sealed class TeklaSendBinding : ISendBinding, IDisposable
 {

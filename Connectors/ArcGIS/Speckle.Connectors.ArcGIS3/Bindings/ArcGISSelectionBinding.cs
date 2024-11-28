@@ -53,11 +53,8 @@ public class ArcGISSelectionBinding : ISelectionBinding
     selectedMembers.AddRange(mapView.GetSelectedStandaloneTables());
 
     List<MapMember> allNestedMembers = new();
-    foreach (MapMember member in selectedMembers)
-    {
-      var layerMapMembers = _mapMemberUtils.UnpackMapLayers(selectedMembers);
-      allNestedMembers.AddRange(layerMapMembers);
-    }
+    var layerMapMembers = _mapMemberUtils.UnpackMapLayers(selectedMembers);
+    allNestedMembers.AddRange(layerMapMembers);
 
     List<string> objectTypes = allNestedMembers
       .Select(o => o.GetType().ToString().Split(".").Last())

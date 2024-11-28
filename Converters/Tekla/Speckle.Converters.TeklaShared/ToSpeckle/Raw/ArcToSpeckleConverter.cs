@@ -1,7 +1,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
-namespace Speckle.Converter.Tekla2024.ToSpeckle.Raw;
+namespace Speckle.Converters.TeklaShared.ToSpeckle.Raw;
 
 public class ArcToSpeckleConverter : ITypedConverter<TG.Arc, SOG.Arc>
 {

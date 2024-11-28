@@ -3,7 +3,7 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Models;
 
-namespace Speckle.Converter.Tekla2024.ToSpeckle.Raw;
+namespace Speckle.Converters.TeklaShared.ToSpeckle.Raw;
 
 public class GridToSpeckleConverter : ITypedConverter<TSM.Grid, IEnumerable<Base>>
 {

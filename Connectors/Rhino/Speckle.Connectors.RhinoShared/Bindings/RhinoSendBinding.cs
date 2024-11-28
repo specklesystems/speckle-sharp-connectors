@@ -141,6 +141,17 @@ public sealed class RhinoSendBinding : ISendBinding
         _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
       });
 
+    // NOTE: Catches an object's material change from one user defined doc material to another. Does not catch (as the top event is not triggered) swapping material sources for an object or moving to/from the default material (this is handled below)!
+    RhinoDoc.RenderMaterialsTableEvent += (_, args) =>
+      _topLevelExceptionHandler.CatchUnhandled(() =>
+      {
+        if (args is RhinoDoc.RenderMaterialAssignmentChangedEventArgs changedEventArgs)
+        {
+          ChangedObjectIds[changedEventArgs.ObjectId.ToString()] = 1;
+          _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        }
+      });
+
     RhinoDoc.ModifyObjectAttributes += (_, e) =>
       _topLevelExceptionHandler.CatchUnhandled(() =>
       {
@@ -152,7 +163,12 @@ public sealed class RhinoSendBinding : ISendBinding
         // }
 
         // NOTE: not sure yet we want to track every attribute changes yet. TBD
-        if (e.OldAttributes.LayerIndex != e.NewAttributes.LayerIndex)
+        // NOTE: we might want to track here user strings too (once we send them out), and more!
+        if (
+          e.OldAttributes.LayerIndex != e.NewAttributes.LayerIndex
+          || e.OldAttributes.MaterialSource != e.NewAttributes.MaterialSource
+          || e.OldAttributes.MaterialIndex != e.NewAttributes.MaterialIndex // NOTE: this does not work when swapping around from custom doc materials, it works when you swap TO/FROM default material
+        )
         {
           ChangedObjectIds[e.RhinoObject.Id.ToString()] = 1;
           _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
