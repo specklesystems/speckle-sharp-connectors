@@ -13,9 +13,24 @@ using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.Grasshopper8.Operations.Receive;
 
-/// <summary>
-/// <para>Expects to be a scoped dependency per receive operation.</para>
-/// </summary>
+public sealed class GrasshopperReceiveConversionResult : ReceiveConversionResult
+{
+  public object? Result { get; set; }
+
+  public GrasshopperReceiveConversionResult(
+    Status status,
+    Base source,
+    object? result,
+    string? resultId = null,
+    string? resultType = null,
+    Exception? exception = null
+  )
+    : base(status, source, resultId, resultType, exception)
+  {
+    Result = result;
+  }
+}
+
 public class GrasshopperHostObjectBuilder : IHostObjectBuilder
 {
   private readonly IRootToHostConverter _converter;
@@ -128,14 +143,15 @@ public class GrasshopperHostObjectBuilder : IHostObjectBuilder
             }
 
             // 4: log
-            // TODO: NO conversion report yet
-            conversionResults.Add(new(Status.SUCCESS, obj, null, result.GetType().ToString()));
+            conversionResults.Add(
+              new GrasshopperReceiveConversionResult(Status.SUCCESS, obj, result, null, result.GetType().ToString())
+            );
             convertActivity?.SetStatus(SdkActivityStatusCode.Ok);
           }
           catch (Exception ex) when (!ex.IsFatal())
           {
             // TODO: No conversion report yet
-            conversionResults.Add(new(Status.ERROR, obj, null, null, ex));
+            conversionResults.Add(new GrasshopperReceiveConversionResult(Status.ERROR, obj, null, null, null, ex));
             convertActivity?.SetStatus(SdkActivityStatusCode.Error);
             convertActivity?.RecordException(ex);
           }
