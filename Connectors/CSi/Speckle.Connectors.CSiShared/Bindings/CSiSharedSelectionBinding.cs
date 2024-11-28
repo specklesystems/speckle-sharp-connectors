@@ -45,7 +45,7 @@ public class CSiSharedSelectionBinding : ISelectionBinding
       var typeName = objectTypeMap.TryGetValue(typeKey, out var name) ? name : $"Unknown ({typeKey})";
 
       encodedIds.Add(EncodeObjectIdentifier(typeKey, objectName[i]));
-      typeCounts[typeName] = typeCounts.GetValueOrDefault(typeName) + 1;
+      typeCounts[typeName] = (typeCounts.TryGetValue(typeName, out var count) ? count : 0) + 1; // NOTE: Cross-framework compatibility
     }
 
     var summary =

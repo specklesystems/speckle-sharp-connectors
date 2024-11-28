@@ -204,6 +204,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shared", "Shared", "{D2638A
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Connectors.CSiShared", "Connectors\CSi\Speckle.Connectors.CSiShared\Speckle.Connectors.CSiShared.shproj", "{A8E949B8-AA55-4909-99F0-8B551791A1F8}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ETABS21", "ETABS21", "{FCCE9A47-05D8-41CB-A8EE-586FC5B69545}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Connectors.ETABS21", "Connectors\CSi\Speckle.Connectors.ETABS21\Speckle.Connectors.ETABS21.csproj", "{1696F113-7F6B-49D6-A4EF-15751C7600F9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -523,6 +527,12 @@ Global
 		{AFB47B71-4185-4135-98BB-EEDFFA8AA194}.Local|Any CPU.Build.0 = Debug|Any CPU
 		{AFB47B71-4185-4135-98BB-EEDFFA8AA194}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AFB47B71-4185-4135-98BB-EEDFFA8AA194}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1696F113-7F6B-49D6-A4EF-15751C7600F9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1696F113-7F6B-49D6-A4EF-15751C7600F9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1696F113-7F6B-49D6-A4EF-15751C7600F9}.Local|Any CPU.ActiveCfg = Debug|Any CPU
+		{1696F113-7F6B-49D6-A4EF-15751C7600F9}.Local|Any CPU.Build.0 = Debug|Any CPU
+		{1696F113-7F6B-49D6-A4EF-15751C7600F9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1696F113-7F6B-49D6-A4EF-15751C7600F9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -614,6 +624,8 @@ Global
 		{F2A1E5FC-CFEF-4590-BF0D-BE7B9F74E567} = {1F11635B-410A-4B16-A909-99CE3CCEF52E}
 		{D2638AC8-28B2-4667-A47B-3FAB9F900E6F} = {1F11635B-410A-4B16-A909-99CE3CCEF52E}
 		{A8E949B8-AA55-4909-99F0-8B551791A1F8} = {D2638AC8-28B2-4667-A47B-3FAB9F900E6F}
+		{FCCE9A47-05D8-41CB-A8EE-586FC5B69545} = {1F11635B-410A-4B16-A909-99CE3CCEF52E}
+		{1696F113-7F6B-49D6-A4EF-15751C7600F9} = {FCCE9A47-05D8-41CB-A8EE-586FC5B69545}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}
@@ -621,6 +633,7 @@ Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		Connectors\Revit\Speckle.Connectors.RevitShared.Cef\Speckle.Connectors.RevitShared.Cef.projitems*{01f98733-7352-47ad-a594-537d979de3de}*SharedItemsImports = 5
 		Connectors\Revit\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems*{01f98733-7352-47ad-a594-537d979de3de}*SharedItemsImports = 5
+		Connectors\CSi\Speckle.Connectors.CSiShared\Speckle.Connectors.CSiShared.projitems*{1696f113-7f6b-49d6-a4ef-15751c7600f9}*SharedItemsImports = 5
 		Converters\Revit\Speckle.Converters.RevitShared\Speckle.Converters.RevitShared.projitems*{19424b55-058c-4e9c-b86f-700aef9eaec3}*SharedItemsImports = 5
 		Connectors\Autocad\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems*{1b1f674c-cfd5-4eac-adfd-f29a70b9d229}*SharedItemsImports = 5
 		Connectors\Rhino\Speckle.Connectors.RhinoShared\Speckle.Connectors.RhinoShared.projitems*{1e2644a9-6b31-4350-8772-ceaad6ee0b21}*SharedItemsImports = 5

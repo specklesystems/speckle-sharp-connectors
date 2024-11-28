@@ -9,12 +9,6 @@
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\CodeSharing\Microsoft.CodeSharing.Common.props" />
   <PropertyGroup />
   
-  <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)Form1.cs">
-      <SubType>Form</SubType>
-    </Compile>
-  </ItemGroup>
-  
   <Import Project="Speckle.Connectors.CSiShared.projitems" Label="Shared" />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\CodeSharing\Microsoft.CodeSharing.CSharp.targets" />
 </Project>
