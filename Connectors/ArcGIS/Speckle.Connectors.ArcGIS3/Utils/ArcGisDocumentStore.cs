@@ -76,9 +76,10 @@ public class ArcGISDocumentStore : DocumentModelStore
     OnDocumentChanged();
   }
 
-  protected override void HostAppSaveState(string modelCardState)
-  {
-    Map map = MapView.Active.Map;
+  protected override void HostAppSaveState(string modelCardState) =>
+    _threadContext.RunOnWorker(() =>
+    {
+      Map map = MapView.Active.Map;
       // Read existing metadata - To prevent messing existing metadata. 🤞 Hope other add-in developers will do same :D
       var existingMetadata = map.GetMetadata();
 
@@ -101,7 +102,7 @@ public class ArcGISDocumentStore : DocumentModelStore
       }
 
       map.SetMetadata(existingXmlDocument.ToString());
-  }
+    });
 
   protected override void LoadState() =>
     _threadContext.RunOnWorker(() =>

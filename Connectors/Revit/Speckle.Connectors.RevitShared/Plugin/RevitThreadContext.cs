@@ -3,7 +3,7 @@ using Speckle.Connectors.Common.Threading;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
-public class RevitThreadContext : ThreadContext
+public class RevitThreadContext : DefaultThreadContext
 {
   protected override Task<T> RunContext<T>(Func<T> action) => RevitTask.RunAsync(action);
 

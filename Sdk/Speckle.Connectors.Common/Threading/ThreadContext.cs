@@ -1,24 +1,13 @@
-using System.Diagnostics.CodeAnalysis;
 using Speckle.InterfaceGenerator;
-using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Common.Threading;
 
 [GenerateAutoInterface]
-public class ThreadContext : IThreadContext
+public abstract class ThreadContext : IThreadContext
 {
-  private readonly SynchronizationContext _threadContext;
+  private static readonly Task<object?> s_completedTask = Task.FromResult<object?>(null);
 
-  // Do this when you start your application
-  private static int s_mainThreadId;
-
-  public ThreadContext()
-  {
-    _threadContext = SynchronizationContext.Current.NotNull("No UI thread to capture?");
-    s_mainThreadId = Environment.CurrentManagedThreadId;
-  }
-
-  public static bool IsMainThread => Environment.CurrentManagedThreadId == s_mainThreadId;
+  public static bool IsMainThread => Environment.CurrentManagedThreadId == 1 && !Thread.CurrentThread.IsBackground;
 
   protected virtual void RunContext(Action action) => action();
 
@@ -28,7 +17,7 @@ public class ThreadContext : IThreadContext
 
   protected virtual Task<T> RunContext<T>(Func<Task<T>> action) => action();
 
-  public virtual void RunOnThread(Action action, bool useMain)
+  public async Task RunOnThread(Action action, bool useMain)
   {
     if (useMain)
     {
@@ -38,83 +27,12 @@ public class ThreadContext : IThreadContext
       }
       else
       {
-        _threadContext.Post(
-          _ =>
-          {
-            RunContext(action);
-          },
-          null
-        );
-      }
-    }
-    else
-    {
-      if (IsMainThread)
-      {
-        Task.Factory.StartNew(action, default, TaskCreationOptions.LongRunning, TaskScheduler.Default)
-          .GetAwaiter()
-          .GetResult();
-      }
-      else
-      {
-        RunContext(action);
-      }
-    }
-  }
-
-  [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "TaskCompletionSource")]
-  public virtual Task<T> RunOnThread<T>(Func<T> action, bool useMain)
-  {
-    if (useMain)
-    {
-      if (IsMainThread)
-      {
-        return RunContext(action.Invoke);
-      }
-      TaskCompletionSource<T> tcs = new();
-      _threadContext.Post(
-        async _ =>
-        {
-          try
-          {
-            T result = await RunContext(action).ConfigureAwait(false);
-            tcs.SetResult(result);
-          }
-          catch (Exception ex)
-          {
-            tcs.SetException(ex);
-          }
-        },
-        null
-      );
-      return tcs.Task;
-    }
-    if (IsMainThread)
-    {
-      Task<T> f = Task.Factory.StartNew(action, default, TaskCreationOptions.LongRunning, TaskScheduler.Default);
-      return f;
-    }
-
-    return RunContext(action.Invoke);
-  }
-
-  public virtual async Task RunOnThreadAsync(Func<Task> action, bool useMain)
-  {
-    if (useMain)
-    {
-      if (IsMainThread)
-      {
-        await action.Invoke().ConfigureAwait(false);
-      }
-      else
-      {
-        await RunOnThreadAsync<object?>(
-            async () =>
+        await WorkerToMainAsync(
+            () =>
             {
-              await RunContext(action.Invoke).ConfigureAwait(false);
-              return null;
-            },
-            useMain
+              RunContext(action);
+              return s_completedTask;
+            }
           )
           .ConfigureAwait(false);
       }
@@ -123,9 +41,67 @@ public class ThreadContext : IThreadContext
     {
       if (IsMainThread)
       {
-        await Task
-          .Factory.StartNew(action, default, TaskCreationOptions.LongRunning, TaskScheduler.Default)
+        await MainToWorkerAsync(() =>
+        {
+          action();
+          return s_completedTask;
+        }).BackToAny();
+      }
+      else
+      {
+        RunContext(action);
+      }
+    }
+  }
+
+  public virtual Task<T> RunOnThread<T>(Func<T> action, bool useMain)
+  {
+    if (useMain)
+    {
+      if (IsMainThread)
+      {
+        return RunContext(action);
+      }
+
+      return WorkerToMain(action);
+    }
+    if (IsMainThread)
+    {
+      return MainToWorker(action);
+    }
+
+    return RunContext(action);
+  }
+
+  public async Task RunOnThreadAsync(Func<Task> action, bool useMain)
+  {
+    if (useMain)
+    {
+      if (IsMainThread)
+      {
+        await RunContext(action).ConfigureAwait(false);
+      }
+      else
+      {
+        await WorkerToMainAsync<object?>(
+            async () =>
+            {
+              await RunContext(action.Invoke).ConfigureAwait(false);
+              return null;
+            }
+          )
           .ConfigureAwait(false);
+      }
+    }
+    else
+    {
+      if (IsMainThread)
+      {
+        await MainToWorkerAsync<object?>(async () =>
+        {
+          await action().BackToAny();
+          return null;
+        }).BackToAny();
       }
       else
       {
@@ -134,8 +110,7 @@ public class ThreadContext : IThreadContext
     }
   }
 
-  [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "TaskCompletionSource")]
-  public virtual Task<T> RunOnThreadAsync<T>(Func<Task<T>> action, bool useMain)
+  public Task<T> RunOnThreadAsync<T>(Func<Task<T>> action, bool useMain)
   {
     if (useMain)
     {
@@ -143,29 +118,21 @@ public class ThreadContext : IThreadContext
       {
         return RunContext(action.Invoke);
       }
-      TaskCompletionSource<T> tcs = new();
-      _threadContext.Post(
-        async _ =>
-        {
-          try
-          {
-            T result = await RunContext(action).ConfigureAwait(false);
-            tcs.SetResult(result);
-          }
-          catch (Exception ex)
-          {
-            tcs.SetException(ex);
-          }
-        },
-        null
-      );
-      return tcs.Task;
+
+      return WorkerToMainAsync(action);
     }
     if (IsMainThread)
     {
-      Task<Task<T>> f = Task.Factory.StartNew(action, default, TaskCreationOptions.LongRunning, TaskScheduler.Default);
-      return f.Unwrap();
+      return MainToWorkerAsync(action);
     }
     return RunContext(action.Invoke);
   }
+
+  protected abstract Task<T> WorkerToMainAsync<T>(Func<Task<T>> action);
+
+  protected abstract Task<T> MainToWorkerAsync<T>(Func<Task<T>> action);
+  protected abstract Task<T> WorkerToMain<T>(Func<T> action);
+
+  protected abstract Task<T> MainToWorker<T>(Func<T> action);
 }
+
