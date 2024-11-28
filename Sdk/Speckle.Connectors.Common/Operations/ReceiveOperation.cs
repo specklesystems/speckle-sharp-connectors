@@ -20,7 +20,6 @@ public sealed class ReceiveOperation(
   IThreadOptions threadOptions
 )
 {
-
   public async Task<HostObjectBuilderResult> Execute(
     ReceiveInfo receiveInfo,
     IProgress<CardProgress> onOperationProgressed,
@@ -44,8 +43,10 @@ public sealed class ReceiveOperation(
 
     // 4 - Convert objects
     HostObjectBuilderResult res = await threadContext
-      .RunOnThreadAsync(() => ConvertObjects(commitObject, receiveInfo, onOperationProgressed, cancellationToken),
-        threadOptions.RunReceiveBuildOnMainThread)
+      .RunOnThreadAsync(
+        () => ConvertObjects(commitObject, receiveInfo, onOperationProgressed, cancellationToken),
+        threadOptions.RunReceiveBuildOnMainThread
+      )
       .BackToAny();
 
     await apiClient
@@ -96,8 +97,9 @@ public sealed class ReceiveOperation(
 
     try
     {
-      HostObjectBuilderResult res =  await hostObjectBuilder
-        .Build(commitObject, receiveInfo.ProjectName, receiveInfo.ModelName, onOperationProgressed, cancellationToken).BackToAny();
+      HostObjectBuilderResult res = await hostObjectBuilder
+        .Build(commitObject, receiveInfo.ProjectName, receiveInfo.ModelName, onOperationProgressed, cancellationToken)
+        .BackToAny();
       conversionActivity?.SetStatus(SdkActivityStatusCode.Ok);
       return res;
     }

@@ -118,10 +118,7 @@ public sealed class RevitHostObjectBuilder(
   private (
     HostObjectBuilderResult builderResult,
     List<(DirectShape res, string applicationId)> postBakePaintTargets
-  ) BakeObjects(
-    List<LocalToGlobalMap> localToGlobalMaps,
-    IProgress<CardProgress> onOperationProgressed
-  )
+  ) BakeObjects(List<LocalToGlobalMap> localToGlobalMaps, IProgress<CardProgress> onOperationProgressed)
   {
     using var _ = activityFactory.Start("BakeObjects");
     var conversionResults = new List<ReceiveConversionResult>();

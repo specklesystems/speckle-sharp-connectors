@@ -6,13 +6,22 @@ namespace Speckle.Connectors.Common.Builders;
 
 public abstract class HostObjectBuilder : IHostObjectBuilder
 {
-   Task<HostObjectBuilderResult> IHostObjectBuilder.Build(Base rootObject, string projectName, string modelName, IProgress<CardProgress> onOperationProgressed,
-    CancellationToken cancellationToken) =>
-    Task.FromResult(Build(rootObject, projectName, modelName, onOperationProgressed));
+  Task<HostObjectBuilderResult> IHostObjectBuilder.Build(
+    Base rootObject,
+    string projectName,
+    string modelName,
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken
+  ) => Task.FromResult(Build(rootObject, projectName, modelName, onOperationProgressed));
 
-   protected abstract HostObjectBuilderResult Build(Base rootObject, string projectName, string modelName,
-     IProgress<CardProgress> onOperationProgressed);
+  protected abstract HostObjectBuilderResult Build(
+    Base rootObject,
+    string projectName,
+    string modelName,
+    IProgress<CardProgress> onOperationProgressed
+  );
 }
+
 // POC: We might consider to put also IRootObjectBuilder interface here in same folder and create concrete classes from it in per connector.
 public interface IHostObjectBuilder
 {

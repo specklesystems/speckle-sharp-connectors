@@ -27,13 +27,11 @@ public abstract class ThreadContext : IThreadContext
       }
       else
       {
-        await WorkerToMainAsync(
-            () =>
-            {
-              RunContext(action);
-              return s_completedTask;
-            }
-          )
+        await WorkerToMainAsync(() =>
+          {
+            RunContext(action);
+            return s_completedTask;
+          })
           .ConfigureAwait(false);
       }
     }
@@ -42,10 +40,11 @@ public abstract class ThreadContext : IThreadContext
       if (IsMainThread)
       {
         await MainToWorkerAsync(() =>
-        {
-          action();
-          return s_completedTask;
-        }).BackToAny();
+          {
+            action();
+            return s_completedTask;
+          })
+          .BackToAny();
       }
       else
       {
@@ -83,13 +82,11 @@ public abstract class ThreadContext : IThreadContext
       }
       else
       {
-        await WorkerToMainAsync<object?>(
-            async () =>
-            {
-              await RunContext(action.Invoke).ConfigureAwait(false);
-              return null;
-            }
-          )
+        await WorkerToMainAsync<object?>(async () =>
+          {
+            await RunContext(action.Invoke).ConfigureAwait(false);
+            return null;
+          })
           .ConfigureAwait(false);
       }
     }
@@ -98,10 +95,11 @@ public abstract class ThreadContext : IThreadContext
       if (IsMainThread)
       {
         await MainToWorkerAsync<object?>(async () =>
-        {
-          await action().BackToAny();
-          return null;
-        }).BackToAny();
+          {
+            await action().BackToAny();
+            return null;
+          })
+          .BackToAny();
       }
       else
       {
@@ -135,4 +133,3 @@ public abstract class ThreadContext : IThreadContext
 
   protected abstract Task<T> MainToWorker<T>(Func<T> action);
 }
-

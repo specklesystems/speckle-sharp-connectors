@@ -90,20 +90,20 @@ public class BasicConnectorBinding : IBasicConnectorBinding
     {
       return Task.CompletedTask;
     }
-     HighlightObjectsOnView(objectIds);
-     return Task.CompletedTask;
+    HighlightObjectsOnView(objectIds);
+    return Task.CompletedTask;
   }
 
   private void HighlightObjectsOnView(IReadOnlyList<ObjectID> objectIds)
   {
     MapView mapView = MapView.Active;
 
-        List<MapMemberFeature> mapMembersFeatures = GetMapMembers(objectIds, mapView);
-        ClearSelectionInTOC();
-        ClearSelection();
-        SelectMapMembersInTOC(mapMembersFeatures);
-        SelectMapMembersAndFeatures(mapMembersFeatures);
-        mapView.ZoomToSelected();
+    List<MapMemberFeature> mapMembersFeatures = GetMapMembers(objectIds, mapView);
+    ClearSelectionInTOC();
+    ClearSelection();
+    SelectMapMembersInTOC(mapMembersFeatures);
+    SelectMapMembersAndFeatures(mapMembersFeatures);
+    mapView.ZoomToSelected();
   }
 
   private List<MapMemberFeature> GetMapMembers(IReadOnlyList<ObjectID> objectIds, MapView mapView)

@@ -147,7 +147,7 @@ public class ArcGISConversionSettingsFactory(IHostToSpeckleUnitConverter<ACG.Uni
 
       if (gdbToAdd is not null)
       {
-        var addedGeodatabase =  Project.Current.AddItem(gdbToAdd as IProjectItem);
+        var addedGeodatabase = Project.Current.AddItem(gdbToAdd as IProjectItem);
       }
     }
     catch (NullReferenceException ex)

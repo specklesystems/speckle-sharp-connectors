@@ -97,11 +97,11 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
       if (senderModelCard.SendFilter is RevitViewsFilter revitViewsFilter)
       {
-            var view = revitViewsFilter.GetView();
-            if (view is not null)
-            {
-              _revitContext.UIApplication.ActiveUIDocument.ActiveView = view;
-            }
+        var view = revitViewsFilter.GetView();
+        if (view is not null)
+        {
+          _revitContext.UIApplication.ActiveUIDocument.ActiveView = view;
+        }
         return;
       }
 

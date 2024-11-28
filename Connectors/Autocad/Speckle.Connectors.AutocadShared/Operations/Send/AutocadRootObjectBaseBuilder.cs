@@ -53,16 +53,16 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
     "Maintainability",
     "CA1506:Avoid excessive class coupling",
     Justification = """
-                    It is already simplified but has many different references since it is a builder. Do not know can we simplify it now.
-                    Later we might consider to refactor proxies from one proxy manager? but we do not know the shape of it all potential
-                    proxy classes yet. So I'm supressing this one now!!!
-                    """
+      It is already simplified but has many different references since it is a builder. Do not know can we simplify it now.
+      Later we might consider to refactor proxies from one proxy manager? but we do not know the shape of it all potential
+      proxy classes yet. So I'm supressing this one now!!!
+      """
   )]
   public RootObjectBuilderResult Build(
     IReadOnlyList<AutocadRootObject> objects,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed
-  ) 
+  )
   {
     // 0 - Init the root
     Collection root =

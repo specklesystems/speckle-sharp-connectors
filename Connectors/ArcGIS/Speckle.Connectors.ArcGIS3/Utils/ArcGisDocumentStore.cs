@@ -12,7 +12,12 @@ namespace Speckle.Connectors.ArcGIS.Utils;
 public class ArcGISDocumentStore : DocumentModelStore
 {
   private readonly IThreadContext _threadContext;
-  public ArcGISDocumentStore(IJsonSerializer jsonSerializer, ITopLevelExceptionHandler topLevelExceptionHandler, IThreadContext threadContext)
+
+  public ArcGISDocumentStore(
+    IJsonSerializer jsonSerializer,
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    IThreadContext threadContext
+  )
     : base(jsonSerializer)
   {
     _threadContext = threadContext;

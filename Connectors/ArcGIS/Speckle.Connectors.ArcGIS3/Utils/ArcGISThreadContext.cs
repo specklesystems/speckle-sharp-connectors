@@ -20,7 +20,7 @@ public class ArcGISThreadContext : ThreadContext
 
   protected override Task<T> WorkerToMainAsync<T>(Func<Task<T>> action) => QueuedTask.Run(action);
 
-  protected override Task<T> MainToWorker<T>(Func<T> action)   
+  protected override Task<T> MainToWorker<T>(Func<T> action)
   {
     if (QueuedTask.OnWorker)
     {
@@ -32,5 +32,5 @@ public class ArcGISThreadContext : ThreadContext
     }
   }
 
-  protected override Task<T> WorkerToMain<T>(Func<T> action)   => QueuedTask.Run(action);
+  protected override Task<T> WorkerToMain<T>(Func<T> action) => QueuedTask.Run(action);
 }

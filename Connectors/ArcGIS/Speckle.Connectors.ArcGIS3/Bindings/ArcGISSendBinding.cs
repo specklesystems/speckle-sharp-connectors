@@ -138,24 +138,24 @@ public sealed class ArcGISSendBinding : ISendBinding
 
   private void SubscribeToMapMembersDataSourceChange()
   {
-      if (MapView.Active == null)
-      {
-        return;
-      }
+    if (MapView.Active == null)
+    {
+      return;
+    }
 
-      // subscribe to layers
-      foreach (Layer layer in MapView.Active.Map.Layers)
+    // subscribe to layers
+    foreach (Layer layer in MapView.Active.Map.Layers)
+    {
+      if (layer is FeatureLayer featureLayer)
       {
-        if (layer is FeatureLayer featureLayer)
-        {
-          SubscribeToFeatureLayerDataSourceChange(featureLayer);
-        }
+        SubscribeToFeatureLayerDataSourceChange(featureLayer);
       }
-      // subscribe to tables
-      foreach (StandaloneTable table in MapView.Active.Map.StandaloneTables)
-      {
-        SubscribeToTableDataSourceChange(table);
-      }
+    }
+    // subscribe to tables
+    foreach (StandaloneTable table in MapView.Active.Map.StandaloneTables)
+    {
+      SubscribeToTableDataSourceChange(table);
+    }
   }
 
   private void SubscribeToFeatureLayerDataSourceChange(FeatureLayer layer)
@@ -361,54 +361,51 @@ public sealed class ArcGISSendBinding : ISendBinding
 
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
-          using var scope = _serviceProvider.CreateScope();
-          scope
-            .ServiceProvider.GetRequiredService<IConverterSettingsStore<ArcGISConversionSettings>>()
-            .Initialize(
-              _arcGISConversionSettingsFactory.Create(
-                Project.Current,
-                MapView.Active.Map,
-                new CRSoffsetRotation(MapView.Active.Map)
-              )
-            );
-          List<MapMember> mapMembers = modelCard
-            .SendFilter.NotNull()
-            .RefreshObjectIds()
-            .Select(id => (MapMember)MapView.Active.Map.FindLayer(id) ?? MapView.Active.Map.FindStandaloneTable(id))
-            .Where(obj => obj != null)
-            .ToList();
+      using var scope = _serviceProvider.CreateScope();
+      scope
+        .ServiceProvider.GetRequiredService<IConverterSettingsStore<ArcGISConversionSettings>>()
+        .Initialize(
+          _arcGISConversionSettingsFactory.Create(
+            Project.Current,
+            MapView.Active.Map,
+            new CRSoffsetRotation(MapView.Active.Map)
+          )
+        );
+      List<MapMember> mapMembers = modelCard
+        .SendFilter.NotNull()
+        .RefreshObjectIds()
+        .Select(id => (MapMember)MapView.Active.Map.FindLayer(id) ?? MapView.Active.Map.FindStandaloneTable(id))
+        .Where(obj => obj != null)
+        .ToList();
 
-          if (mapMembers.Count == 0)
-          {
-            // Handle as CARD ERROR in this function
-            throw new SpeckleSendFilterException(
-              "No objects were found to convert. Please update your publish filter!"
-            );
-          }
+      if (mapMembers.Count == 0)
+      {
+        // Handle as CARD ERROR in this function
+        throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
+      }
 
-          // subscribe to the selected layer events
-          foreach (MapMember mapMember in mapMembers)
-          {
-            if (mapMember is FeatureLayer featureLayer)
-            {
-              SubscribeToFeatureLayerDataSourceChange(featureLayer);
-            }
-            else if (mapMember is StandaloneTable table)
-            {
-              SubscribeToTableDataSourceChange(table);
-            }
-          }
+      // subscribe to the selected layer events
+      foreach (MapMember mapMember in mapMembers)
+      {
+        if (mapMember is FeatureLayer featureLayer)
+        {
+          SubscribeToFeatureLayerDataSourceChange(featureLayer);
+        }
+        else if (mapMember is StandaloneTable table)
+        {
+          SubscribeToTableDataSourceChange(table);
+        }
+      }
 
-          var sendResult = await scope
-            .ServiceProvider.GetRequiredService<SendOperation<MapMember>>()
-            .Execute(
-              mapMembers,
-              modelCard.GetSendInfo("ArcGIS"), // POC: get host app name from settings? same for GetReceiveInfo
-              _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
-              cancellationToken
-            )
-            .ConfigureAwait(false);
-
+      var sendResult = await scope
+        .ServiceProvider.GetRequiredService<SendOperation<MapMember>>()
+        .Execute(
+          mapMembers,
+          modelCard.GetSendInfo("ArcGIS"), // POC: get host app name from settings? same for GetReceiveInfo
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
+          cancellationToken
+        )
+        .ConfigureAwait(false);
 
       await Commands
         .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
