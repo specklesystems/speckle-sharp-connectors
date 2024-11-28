@@ -96,6 +96,16 @@ public sealed class RhinoSendBinding : ISendBinding
       }
     };
 
+    RhinoDoc.RenderMaterialsTableEvent += (sender, args) =>
+    {
+      var test = args;
+      if (args is RhinoDoc.RenderMaterialAssignmentChangedEventArgs changedEventArgs)
+      {
+        ChangedObjectIds[changedEventArgs.ObjectId.ToString()] = 1;
+        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+      }
+    };
+
     RhinoDoc.ActiveDocumentChanged += (_, e) =>
     {
       PreviousUnitSystem = e.Document.ModelUnitSystem;
@@ -152,7 +162,11 @@ public sealed class RhinoSendBinding : ISendBinding
         // }
 
         // NOTE: not sure yet we want to track every attribute changes yet. TBD
-        if (e.OldAttributes.LayerIndex != e.NewAttributes.LayerIndex)
+        if (
+          e.OldAttributes.LayerIndex != e.NewAttributes.LayerIndex
+          || e.OldAttributes.MaterialSource != e.NewAttributes.MaterialSource
+          || e.OldAttributes.MaterialIndex != e.NewAttributes.MaterialIndex // NOTE: this does not work when swapping around from custom doc materials, it works when you swap TO/FROM default material
+        )
         {
           ChangedObjectIds[e.RhinoObject.Id.ToString()] = 1;
           _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
