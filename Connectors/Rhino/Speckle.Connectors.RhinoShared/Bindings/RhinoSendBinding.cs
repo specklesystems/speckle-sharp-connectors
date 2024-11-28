@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.Commands;
 using Rhino.DocObjects;
+using Rhino.DocObjects.Tables;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
@@ -49,6 +50,7 @@ public sealed class RhinoSendBinding : ISendBinding
   /// https://stackoverflow.com/questions/18922985/concurrent-hashsett-in-net-framework
   /// </summary>
   private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
+  private ConcurrentDictionary<int, byte> ChangedMaterialIndexes { get; set; } = new();
 
   private UnitSystem PreviousUnitSystem { get; set; }
 
@@ -151,6 +153,15 @@ public sealed class RhinoSendBinding : ISendBinding
           _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
         }
       });
+
+    RhinoDoc.MaterialTableEvent += (_, args) =>
+    {
+      if (args.EventType == MaterialTableEventType.Modified)
+      {
+        ChangedMaterialIndexes[args.Index] = 1;
+        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+      }
+    };
 
     RhinoDoc.ModifyObjectAttributes += (_, e) =>
       _topLevelExceptionHandler.CatchUnhandled(() =>
@@ -266,11 +277,21 @@ public sealed class RhinoSendBinding : ISendBinding
       _logger.LogError("Rhino expiration checks were running without an active doc.");
       return;
     }
-    var senders = _store.GetSenders();
-    string[] objectIdsList = ChangedObjectIds.Keys.ToArray(); // NOTE: could not copy to array happens here
-    List<string> expiredSenderIds = new();
 
+    // Invalidate any objects whose materials have changed
+    var changedMaterialIndexes = ChangedMaterialIndexes.Keys.ToArray();
+    foreach (var rhinoObject in RhinoDoc.ActiveDoc.Objects)
+    {
+      if (changedMaterialIndexes.Contains(rhinoObject.Attributes.MaterialIndex))
+      {
+        ChangedObjectIds[rhinoObject.Id.ToString()] = 1;
+      }
+    }
+
+    string[] objectIdsList = ChangedObjectIds.Keys.ToArray(); // NOTE: could not copy to array happens here
     _sendConversionCache.EvictObjects(objectIdsList);
+    var senders = _store.GetSenders();
+    List<string> expiredSenderIds = new();
 
     foreach (SenderModelCard modelCard in senders)
     {
