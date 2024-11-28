@@ -23,4 +23,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\CSiSharedIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="$(MSBuildThisFileDirectory)Operations\" />
+  </ItemGroup>
 </Project>
