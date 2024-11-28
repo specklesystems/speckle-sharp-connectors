@@ -60,6 +60,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     IOperationProgressManager operationProgressManager,
     ILogger<AutocadSendBinding> logger,
     ISpeckleApplication speckleApplication,
+    ITopLevelExceptionHandler topLevelExceptionHandler,
     IThreadContext threadContext
   )
   {
@@ -73,7 +74,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     _logger = logger;
     _speckleApplication = speckleApplication;
     _threadContext = threadContext;
-    _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
+    _topLevelExceptionHandler =topLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
 

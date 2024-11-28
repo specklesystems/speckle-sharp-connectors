@@ -34,6 +34,7 @@ public sealed class Civil3dSendBinding : AutocadSendBaseBinding
     ICivil3dConversionSettingsFactory civil3dConversionSettingsFactory,
     IAutocadConversionSettingsFactory autocadConversionSettingsFactory,
     ISpeckleApplication speckleApplication,
+    ITopLevelExceptionHandler topLevelExceptionHandler,
     IThreadContext threadContext
   )
     : base(
@@ -47,6 +48,7 @@ public sealed class Civil3dSendBinding : AutocadSendBaseBinding
       operationProgressManager,
       logger,
       speckleApplication,
+      topLevelExceptionHandler,
       threadContext
     )
   {

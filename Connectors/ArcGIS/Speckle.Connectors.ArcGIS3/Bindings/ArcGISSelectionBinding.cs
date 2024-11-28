@@ -12,15 +12,14 @@ public class ArcGISSelectionBinding : ISelectionBinding
   public string Name => "selectionBinding";
   public IBrowserBridge Parent { get; }
 
-  public ArcGISSelectionBinding(IBrowserBridge parent, MapMembersUtils mapMemberUtils)
+  public ArcGISSelectionBinding(IBrowserBridge parent, MapMembersUtils mapMemberUtils, ITopLevelExceptionHandler topLevelExceptionHandler)
   {
     _mapMemberUtils = mapMemberUtils;
     Parent = parent;
-    var topLevelHandler = parent.TopLevelExceptionHandler;
 
     // example: https://github.com/Esri/arcgis-pro-sdk-community-samples/blob/master/Map-Authoring/QueryBuilderControl/DefinitionQueryDockPaneViewModel.cs
     // MapViewEventArgs args = new(MapView.Active);
-    TOCSelectionChangedEvent.Subscribe(_ => topLevelHandler.CatchUnhandled(OnSelectionChanged), true);
+    TOCSelectionChangedEvent.Subscribe(_ => topLevelExceptionHandler.CatchUnhandled(OnSelectionChanged), true);
   }
 
   private void OnSelectionChanged()

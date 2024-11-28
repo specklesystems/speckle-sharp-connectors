@@ -30,6 +30,7 @@ public sealed class AutocadSendBinding : AutocadSendBaseBinding
     ILogger<AutocadSendBinding> logger,
     IAutocadConversionSettingsFactory autocadConversionSettingsFactory,
     ISpeckleApplication speckleApplication,
+    ITopLevelExceptionHandler topLevelExceptionHandler,
     IThreadContext threadContext
   )
     : base(
@@ -43,6 +44,7 @@ public sealed class AutocadSendBinding : AutocadSendBaseBinding
       operationProgressManager,
       logger,
       speckleApplication,
+      topLevelExceptionHandler,
       threadContext
     )
   {

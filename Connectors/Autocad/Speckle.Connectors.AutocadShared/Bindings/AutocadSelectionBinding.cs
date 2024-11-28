@@ -18,9 +18,9 @@ public class AutocadSelectionBinding : ISelectionBinding
 
   public IBrowserBridge Parent { get; }
 
-  public AutocadSelectionBinding(IBrowserBridge parent, IThreadContext threadContext)
+  public AutocadSelectionBinding(IBrowserBridge parent, IThreadContext threadContext, ITopLevelExceptionHandler topLevelExceptionHandler)
   {
-    _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
     Parent = parent;
     _threadContext = threadContext;
 

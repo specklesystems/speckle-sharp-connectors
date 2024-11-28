@@ -59,7 +59,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     ILogger<RevitSendBinding> logger,
     ElementUnpacker elementUnpacker,
     IRevitConversionSettingsFactory revitConversionSettingsFactory,
-    ISpeckleApplication speckleApplication
+    ISpeckleApplication speckleApplication,
+    ITopLevelExceptionHandler topLevelExceptionHandler
   )
     : base("sendBinding", store, bridge, revitContext)
   {
@@ -73,7 +74,6 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _elementUnpacker = elementUnpacker;
     _revitConversionSettingsFactory = revitConversionSettingsFactory;
     _speckleApplication = speckleApplication;
-    var topLevelExceptionHandler = Parent.TopLevelExceptionHandler;
 
     Commands = new SendBindingUICommands(bridge);
     // TODO expiry events

@@ -66,6 +66,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     IOperationProgressManager operationProgressManager,
     ILogger<ArcGISSendBinding> logger,
     IArcGISConversionSettingsFactory arcGisConversionSettingsFactory,
+    ITopLevelExceptionHandler topLevelExceptionHandler,
     MapMembersUtils mapMemberUtils
   )
   {
@@ -76,7 +77,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     _sendConversionCache = sendConversionCache;
     _operationProgressManager = operationProgressManager;
     _logger = logger;
-    _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
     _arcGISConversionSettingsFactory = arcGisConversionSettingsFactory;
     _mapMemberUtils = mapMemberUtils;
 
@@ -190,7 +191,7 @@ public sealed class ArcGISSendBinding : ISendBinding
   {
     RowCreatedEvent.Subscribe(
       (args) =>
-        Parent.TopLevelExceptionHandler.FireAndForget(async () =>
+        _topLevelExceptionHandler.FireAndForget(async () =>
         {
           await OnRowChanged(args).ConfigureAwait(false);
         }),
@@ -198,7 +199,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     );
     RowChangedEvent.Subscribe(
       (args) =>
-        Parent.TopLevelExceptionHandler.FireAndForget(async () =>
+        _topLevelExceptionHandler.FireAndForget(async () =>
         {
           await OnRowChanged(args).ConfigureAwait(false);
         }),
@@ -206,7 +207,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     );
     RowDeletedEvent.Subscribe(
       (args) =>
-        Parent.TopLevelExceptionHandler.FireAndForget(async () =>
+        _topLevelExceptionHandler.FireAndForget(async () =>
         {
           await OnRowChanged(args).ConfigureAwait(false);
         }),

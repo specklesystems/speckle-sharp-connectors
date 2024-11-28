@@ -31,6 +31,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
     IAccountManager accountManager,
     ISpeckleApplication speckleApplication,
     ILogger<AutocadBasicConnectorBinding> logger,
+    ITopLevelExceptionHandler topLevelExceptionHandler,
     IThreadContext threadContext
   )
   {
@@ -40,7 +41,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
     _speckleApplication = speckleApplication;
     Commands = new BasicConnectorBindingCommands(parent);
     _store.DocumentChanged += (_, _) =>
-      parent.TopLevelExceptionHandler.FireAndForget(async () =>
+      topLevelExceptionHandler.FireAndForget(async () =>
       {
         await Commands.NotifyDocumentChanged().ConfigureAwait(false);
       });

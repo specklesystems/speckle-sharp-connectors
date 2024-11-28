@@ -23,6 +23,7 @@ public static class ContainerRegistration
 
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetAssembly(typeof(IdleCallManager)));
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetAssembly(typeof(IServerTransportFactory)));
+    serviceCollection.AddSingleton<ISpeckleEventAggregator>(sp => new SpeckleEventAggregator(sp));
   }
 
   public static void RegisterTopLevelExceptionHandler(this IServiceCollection serviceCollection)
@@ -31,8 +32,6 @@ public static class ContainerRegistration
       sp.GetRequiredService<TopLevelExceptionHandlerBinding>()
     );
     serviceCollection.AddSingleton<TopLevelExceptionHandlerBinding>();
-    serviceCollection.AddSingleton<ITopLevelExceptionHandler>(c =>
-      c.GetRequiredService<TopLevelExceptionHandlerBinding>().Parent.TopLevelExceptionHandler
-    );
+    serviceCollection.AddSingleton<ITopLevelExceptionHandler>();
   }
 }

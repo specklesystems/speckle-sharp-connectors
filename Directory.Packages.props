@@ -17,6 +17,7 @@
     <PackageVersion Include="NUnit" Version="4.1.0" />
     <PackageVersion Include="NUnit.Analyzers" Version="4.2.0" />
     <PackageVersion Include="NUnit3TestAdapter" version="4.6.0" />
+    <PackageVersion Include="Prism.Events" Version="9.0.537" />
     <PackageVersion Include="Revit.Async" Version="2.1.1" />
     <PackageVersion Include="RhinoCommon" Version="8.9.24194.18121" />
     <PackageVersion Include="RhinoWindows" Version="8.9.24194.18121" />

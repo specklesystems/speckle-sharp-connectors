@@ -64,7 +64,8 @@ public sealed class RhinoSendBinding : ISendBinding
     ILogger<RhinoSendBinding> logger,
     IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
     ISpeckleApplication speckleApplication,
-    ISdkActivityFactory activityFactory
+    ISdkActivityFactory activityFactory,
+    ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
     _store = store;
@@ -77,7 +78,7 @@ public sealed class RhinoSendBinding : ISendBinding
     _logger = logger;
     _rhinoConversionSettingsFactory = rhinoConversionSettingsFactory;
     _speckleApplication = speckleApplication;
-    _topLevelExceptionHandler = parent.TopLevelExceptionHandler.Parent.TopLevelExceptionHandler;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent); // POC: Commands are tightly coupled with their bindings, at least for now, saves us injecting a factory.
     _activityFactory = activityFactory;

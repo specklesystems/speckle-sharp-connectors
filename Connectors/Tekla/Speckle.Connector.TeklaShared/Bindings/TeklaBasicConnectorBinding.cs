@@ -25,6 +25,7 @@ public class TeklaBasicConnectorBinding : IBasicConnectorBinding
     ISpeckleApplication speckleApplication,
     DocumentModelStore store,
     ILogger<TeklaBasicConnectorBinding> logger,
+    ITopLevelExceptionHandler topLevelExceptionHandler,
     TSM.Model model
   )
   {
@@ -35,7 +36,7 @@ public class TeklaBasicConnectorBinding : IBasicConnectorBinding
     _model = model;
     Commands = new BasicConnectorBindingCommands(parent);
     _store.DocumentChanged += (_, _) =>
-      parent.TopLevelExceptionHandler.FireAndForget(async () =>
+      topLevelExceptionHandler.FireAndForget(async () =>
       {
         await Commands.NotifyDocumentChanged().ConfigureAwait(false);
       });

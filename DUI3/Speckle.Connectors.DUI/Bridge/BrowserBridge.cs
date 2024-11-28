@@ -27,7 +27,9 @@ public sealed class BrowserBridge : IBrowserBridge
   /// </summary>
 
   private readonly ConcurrentDictionary<string, string?> _resultsStore = new();
-  public ITopLevelExceptionHandler TopLevelExceptionHandler { get; }
+
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly ISpeckleEventAggregator _eventAggregator;
   private readonly IThreadContext _threadContext;
   private readonly IThreadOptions _threadOptions;
 
@@ -60,18 +62,24 @@ public sealed class BrowserBridge : IBrowserBridge
     IThreadContext threadContext,
     IJsonSerializer jsonSerializer,
     ILogger<BrowserBridge> logger,
-    ILogger<TopLevelExceptionHandler> topLogger,
     IBrowserScriptExecutor browserScriptExecutor,
-    IThreadOptions threadOptions
-  )
+    IThreadOptions threadOptions, ISpeckleEventAggregator eventAggregator, ITopLevelExceptionHandler topLevelExceptionHandler)
   {
     _threadContext = threadContext;
     _jsonSerializer = jsonSerializer;
     _logger = logger;
-    TopLevelExceptionHandler = new TopLevelExceptionHandler(topLogger, this);
     // Capture the main thread's SynchronizationContext
     _browserScriptExecutor = browserScriptExecutor;
     _threadOptions = threadOptions;
+    _eventAggregator = eventAggregator;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
+    eventAggregator.GetEvent<ExceptionEvent>().Subscribe(ex =>
+    {
+      Send(BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION,
+          new { type = ToastNotificationType.DANGER, title = "Unhandled Exception Occurred", description = ex.ToFormattedString(), autoClose = false }
+        )
+        .ConfigureAwait(false);
+    }, ThreadOption.UIThread);
   }
 
   public void AssociateWithBinding(IBinding binding)
@@ -108,7 +116,7 @@ public sealed class BrowserBridge : IBrowserBridge
     _threadContext.RunOnThreadAsync(
       async () =>
       {
-        var task = await TopLevelExceptionHandler
+        var task = await _topLevelExceptionHandler
           .CatchUnhandledAsync(async () =>
           {
             var result = await ExecuteMethod(methodName, methodArgs).ConfigureAwait(false);

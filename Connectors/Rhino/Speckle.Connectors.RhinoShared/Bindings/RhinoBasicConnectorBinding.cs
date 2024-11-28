@@ -26,7 +26,8 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
     DocumentModelStore store,
     IBrowserBridge parent,
     ISendConversionCache sendConversionCache,
-    ISpeckleApplication speckleApplication
+    ISpeckleApplication speckleApplication,
+    ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
     _store = store;
@@ -36,7 +37,7 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
     Commands = new BasicConnectorBindingCommands(parent);
 
     _store.DocumentChanged += (_, _) =>
-      parent.TopLevelExceptionHandler.FireAndForget(async () =>
+      topLevelExceptionHandler.FireAndForget(async () =>
       {
         await Commands.NotifyDocumentChanged().ConfigureAwait(false);
         // Note: this prevents scaling issues when copy-pasting from one rhino doc to another in the same session.

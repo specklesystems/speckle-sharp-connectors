@@ -236,6 +236,11 @@
         "resolved": "13.0.1",
         "contentHash": "ppPFpBcvxdsfUonNcvITKqLl3bqxWbDCZIzDWHzjpdAHRFfZe0Dw9HmA0+za13IdyrgJwpkDTDA9fHaxOrt20A=="
       },
+      "Prism.Events": {
+        "type": "Transitive",
+        "resolved": "9.0.537",
+        "contentHash": "Pzp5MGUuhAyKXZUbHVYNWLGF/eA3sScqDN6VrzbWlKj85R0IS0q+JXe99umynso2xhXAe+1jrQCCkgqmEFCBng=="
+      },
       "Speckle.DoubleNumerics": {
         "type": "Transitive",
         "resolved": "4.0.1",
@@ -333,6 +338,7 @@
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
+          "Prism.Events": "[9.0.537, )",
           "Speckle.Connectors.Common": "[1.0.0, )",
           "Speckle.Sdk": "[3.1.0-dev.200, )",
           "Speckle.Sdk.Dependencies": "[3.1.0-dev.200, )"

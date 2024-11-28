@@ -26,7 +26,8 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     DocumentModelStore store,
     IBrowserBridge parent,
     RevitContext revitContext,
-    ISpeckleApplication speckleApplication
+    ISpeckleApplication speckleApplication,
+    ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
     Name = "baseBinding";
@@ -38,7 +39,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
     // POC: event binding?
     _store.DocumentChanged += (_, _) =>
-      parent.TopLevelExceptionHandler.FireAndForget(async () =>
+      topLevelExceptionHandler.FireAndForget(async () =>
       {
         await Commands.NotifyDocumentChanged().ConfigureAwait(false);
       });
