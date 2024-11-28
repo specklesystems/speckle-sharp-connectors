@@ -1,24 +1,25 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-      <TargetFramework>net8.0-windows</TargetFramework>
+      <TargetFramework>net48</TargetFramework>
       <ImplicitUsings>enable</ImplicitUsings>
       <Nullable>enable</Nullable>
       <Platforms>AnyCPU</Platforms>
       <UseWindowsForms>true</UseWindowsForms>
       <UseWPF>true</UseWPF>
-      <ETABSVersion>22</ETABSVersion>
-      <DefineConstants>$(DefineConstants);ETABS22;ETABS22_OR_GREATER</DefineConstants>
+      <ETABSVersion>21</ETABSVersion>
+      <DefineConstants>$(DefineConstants);ETABS21</DefineConstants>
       <EnableDynamicLoading>true</EnableDynamicLoading>
     </PropertyGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
       <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Speckle.CSI.API" PrivateAssets="all" IncludeAssets="compile; build" />
+      <PackageReference Include="Speckle.CSI.API" PrivateAssets="all" IncludeAssets="compile; build" VersionOverride="1.30.0"/>
     </ItemGroup>
 
     <ItemGroup>
