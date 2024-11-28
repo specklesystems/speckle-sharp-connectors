@@ -155,13 +155,14 @@ public sealed class RhinoSendBinding : ISendBinding
       });
 
     RhinoDoc.MaterialTableEvent += (_, args) =>
-    {
-      if (args.EventType == MaterialTableEventType.Modified)
+      _topLevelExceptionHandler.CatchUnhandled(() =>
       {
-        ChangedMaterialIndexes[args.Index] = 1;
-        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
-      }
-    };
+        if (args.EventType == MaterialTableEventType.Modified)
+        {
+          ChangedMaterialIndexes[args.Index] = 1;
+          _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        }
+      });
 
     RhinoDoc.ModifyObjectAttributes += (_, e) =>
       _topLevelExceptionHandler.CatchUnhandled(() =>
@@ -305,6 +306,7 @@ public sealed class RhinoSendBinding : ISendBinding
 
     await Commands.SetModelsExpired(expiredSenderIds).ConfigureAwait(false);
     ChangedObjectIds = new();
+    ChangedMaterialIndexes = new();
   }
 
   private async Task InvalidateAllSender()
