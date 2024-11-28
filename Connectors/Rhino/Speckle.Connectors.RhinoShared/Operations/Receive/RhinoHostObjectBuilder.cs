@@ -72,14 +72,15 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     PreReceiveDeepClean(baseLayerName);
 
     // 1 - Unpack objects and proxies from root commit object
-
     var unpackedRoot = _rootObjectUnpacker.Unpack(rootObject);
 
     // 2 - Split atomic objects and instance components with their path
-    var (atomicObjects, instanceComponents) = _rootObjectUnpacker.SplitAtomicObjectsAndInstances(
-      unpackedRoot.ObjectsToConvert
+    var (atomicObjectsWithoutInstanceComponentsForConverter, instanceComponents) =
+      _rootObjectUnpacker.SplitAtomicObjectsAndInstances(unpackedRoot.ObjectsToConvert);
+
+    var atomicObjectsWithoutInstanceComponentsWithPath = _layerBaker.GetAtomicObjectsWithPath(
+      atomicObjectsWithoutInstanceComponentsForConverter
     );
-    var atomicObjectsWithPath = _layerBaker.GetAtomicObjectsWithPath(atomicObjects);
     var instanceComponentsWithPath = _layerBaker.GetInstanceComponentsWithPath(instanceComponents);
 
     // 2.1 - these are not captured by traversal, so we need to re-add them here
@@ -112,7 +113,9 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       RhinoApp.InvokeAndWait(() =>
       {
         using var layerNoDraw = new DisableRedrawScope(_converterSettings.Current.Document.Views);
-        _layerBaker.CreateAllLayersForReceive(atomicObjectsWithPath.Select(t => t.path), baseLayerName);
+        var paths = atomicObjectsWithoutInstanceComponentsWithPath.Select(t => t.path).ToList();
+        paths.AddRange(instanceComponentsWithPath.Select(t => t.path));
+        _layerBaker.CreateAllLayersForReceive(paths, baseLayerName);
       });
     }
 
@@ -124,11 +127,13 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     int count = 0;
     using (var _ = _activityFactory.Start("Converting objects"))
     {
-      foreach (var (path, obj) in atomicObjectsWithPath)
+      foreach (var (path, obj) in atomicObjectsWithoutInstanceComponentsWithPath)
       {
         using (var convertActivity = _activityFactory.Start("Converting object"))
         {
-          onOperationProgressed.Report(new("Converting objects", (double)++count / atomicObjects.Count));
+          onOperationProgressed.Report(
+            new("Converting objects", (double)++count / atomicObjectsWithoutInstanceComponentsForConverter.Count)
+          );
           try
           {
             // 0: get pre-created layer from cache in layer baker
