@@ -154,6 +154,7 @@ public sealed class RhinoSendBinding : ISendBinding
         }
       });
 
+    // Catches and stores changed material ids. These are then used in the expiry checks to invalidate all objects that have assigned any of those material ids.
     RhinoDoc.MaterialTableEvent += (_, args) =>
       _topLevelExceptionHandler.CatchUnhandled(() =>
       {
@@ -289,6 +290,7 @@ public sealed class RhinoSendBinding : ISendBinding
       }
     }
 
+    // Actual model card invalidation
     string[] objectIdsList = ChangedObjectIds.Keys.ToArray(); // NOTE: could not copy to array happens here
     _sendConversionCache.EvictObjects(objectIdsList);
     var senders = _store.GetSenders();
