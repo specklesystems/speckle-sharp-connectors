@@ -5,7 +5,7 @@ namespace Speckle.Connectors.ETABS22;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
 public class cPlugin : cPluginContract, IDisposable
 {
-  private static string s_modality = "Non-Modal";
+  private const string s_modality = "Non-Modal";
   private Form1? _panel;
   private bool _disposed;
 
