@@ -7,6 +7,7 @@ using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Objects;
 using Speckle.Objects.Other;
 using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.Extensions;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Proxies;
 
@@ -111,6 +112,7 @@ public class ArcGISColorManager
   {
     // declare default white color
     Color color = Color.FromArgb(255, 255, 255, 255);
+    bool colorFound = false;
 
     // get color moving upwards from the object
     foreach (var parent in tc.GetAscendants())
@@ -120,12 +122,39 @@ public class ArcGISColorManager
         if (ObjectMaterialsIdMap.TryGetValue(appId, out Color objColorMaterial))
         {
           color = objColorMaterial;
+          colorFound = true;
           break;
         }
         if (ObjectColorsIdMap.TryGetValue(appId, out Color objColor))
         {
           color = objColor;
+          colorFound = true;
           break;
+        }
+      }
+    }
+
+    // handling Revit case, where child objects have separate colors/materials
+    if (!colorFound && tc.Current is IDataObject)
+    {
+      var displayable = tc.Current.TryGetDisplayValue();
+      if (displayable != null)
+      {
+        foreach (var childObj in displayable)
+        {
+          if (childObj.applicationId is string appId)
+          {
+            if (ObjectMaterialsIdMap.TryGetValue(appId, out Color objColorMaterial))
+            {
+              color = objColorMaterial;
+              break;
+            }
+            if (ObjectColorsIdMap.TryGetValue(appId, out Color objColor))
+            {
+              color = objColor;
+              break;
+            }
+          }
         }
       }
     }
@@ -228,6 +257,9 @@ public class ArcGISColorManager
     {
       // get unique label
       string uniqueLabel = tContext.Current.id;
+
+      // remove any GIS-specific classes for now
+      /*
       if (tContext.Current is IGisFeature gisFeat)
       {
         var existingLabel = gisFeat.attributes["Speckle_ID"];
@@ -235,7 +267,7 @@ public class ArcGISColorManager
         {
           uniqueLabel = stringLabel;
         }
-      }
+      }*/
 
       if (!listUniqueValueClasses.Select(x => x.Label).Contains(uniqueLabel))
       {
