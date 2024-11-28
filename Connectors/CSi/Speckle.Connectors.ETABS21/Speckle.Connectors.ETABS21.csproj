@@ -22,6 +22,12 @@
       <PackageReference Include="Speckle.CSI.API" PrivateAssets="all" IncludeAssets="compile; build" VersionOverride="1.30.0"/>
     </ItemGroup>
 
+    <ItemGroup>
+      <Compile Update="Form1.cs">
+        <SubType>Form</SubType>
+      </Compile>
+    </ItemGroup>
+
     <Import Project="..\Speckle.Connectors.CSiShared\Speckle.Connectors.CSiShared.projitems" Label="Shared" />
 
 </Project>
