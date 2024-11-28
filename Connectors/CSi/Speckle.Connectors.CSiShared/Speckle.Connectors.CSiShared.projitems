@@ -14,7 +14,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\CSiSharedSendBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)cPlugin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Filters\CSiSharedSelectionFilter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Form1.cs">
+    <Compile Include="$(MSBuildThisFileDirectory)SpeckleForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />

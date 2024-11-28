@@ -23,7 +23,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Compile Update="Form1.cs">
+      <Compile Update="SpeckleForm.cs">
         <SubType>Form</SubType>
       </Compile>
     </ItemGroup>

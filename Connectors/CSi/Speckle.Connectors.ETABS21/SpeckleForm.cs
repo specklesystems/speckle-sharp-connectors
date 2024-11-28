@@ -10,14 +10,14 @@ using Speckle.Sdk.Host;
 // TODO: Move ETABS implementation to csproj as part of CNX-835 and/or CNX-828
 namespace Speckle.Connectors.ETABS21;
 
-public class Form1 : Form, IForm1
+public class SpeckleForm : Form, IForm1
 {
   private ElementHost Host { get; set; }
   public static new ServiceProvider? Container { get; set; }
   private cSapModel _sapModel;
   private cPluginCallback _pluginCallback;
 
-  public Form1()
+  public SpeckleForm()
   {
     this.Text = "Speckle (Beta)";
 

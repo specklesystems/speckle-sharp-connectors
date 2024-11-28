@@ -13,7 +13,7 @@ public class cPlugin : cPluginContract, ICSiPlugin
 
   public void Main(ref cSapModel sapModel, ref cPluginCallback pluginCallback)
   {
-    _panel = new Form1();
+    _panel = new SpeckleForm();
     _panel.SetSapModel(ref sapModel, ref pluginCallback);
     _panel.FormClosed += (s, e) => Dispose();
 
