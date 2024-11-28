@@ -14,7 +14,6 @@ namespace Speckle.Connectors.CSiShared;
 
 public static class ServiceRegistration
 {
-  // TODO: AddCSi and AddETABS for shared and specific implementations respectively. To do with CNX-828
   public static IServiceCollection AddCSi(this IServiceCollection services)
   {
     services.AddSingleton<IBrowserBridge, BrowserBridge>();

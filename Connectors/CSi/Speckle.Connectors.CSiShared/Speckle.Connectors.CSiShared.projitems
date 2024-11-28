@@ -12,9 +12,9 @@
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\CSiSharedBasicConnectorBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\CSiSharedSelectionBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\CSiSharedSendBinding.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)cPlugin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Filters\CSiSharedSelectionFilter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)SpeckleForm.cs">
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\CSiSharedPluginBase.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\SpeckleFormBase.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />

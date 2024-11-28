@@ -1,25 +1,22 @@
-using System.Windows.Forms.Integration;
+﻿using System.Windows.Forms.Integration;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common;
-using Speckle.Connectors.CSiShared;
 using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Sdk.Host;
 
-// NOTE: Plugin entry point must match the assembly name, otherwise hits you with a "Not found" error when loading plugin
-// TODO: Move ETABS implementation to csproj as part of CNX-835 and/or CNX-828
-namespace Speckle.Connectors.ETABS22;
+namespace Speckle.Connectors.CSiShared;
 
-public class SpeckleForm : Form, IForm1
+public abstract class SpeckleFormBase : Form
 {
-  private ElementHost Host { get; set; }
+  protected ElementHost Host { get; set; }
   public static new ServiceProvider? Container { get; set; }
   private cSapModel _sapModel;
   private cPluginCallback _pluginCallback;
 
-  public SpeckleForm()
+  protected SpeckleFormBase()
   {
-    this.Text = "Speckle (Beta)";
+    Text = "Speckle (Beta)";
 
     var services = new ServiceCollection();
     services.Initialize(HostApplications.ETABS, GetVersion());
@@ -42,16 +39,13 @@ public class SpeckleForm : Form, IForm1
     csiService.Initialize(sapModel, pluginCallback);
   }
 
-  public void Form1Closing(object? sender, FormClosingEventArgs e)
+  protected void Form1Closing(object? sender, FormClosingEventArgs e)
   {
     Host.Dispose();
     _pluginCallback.Finish(0);
   }
 
-  private static HostAppVersion GetVersion()
-  {
-    return HostAppVersion.v2022;
-  }
+  protected abstract HostAppVersion GetVersion();
 
   public new void ShowDialog()
   {

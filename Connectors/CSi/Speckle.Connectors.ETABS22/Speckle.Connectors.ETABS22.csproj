@@ -22,7 +22,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Compile Update="SpeckleForm.cs">
+      <Compile Update="Plugin\SpeckleForm.cs">
         <SubType>Form</SubType>
       </Compile>
     </ItemGroup>
