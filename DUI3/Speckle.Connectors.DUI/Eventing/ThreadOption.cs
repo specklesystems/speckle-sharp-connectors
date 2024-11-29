@@ -3,6 +3,6 @@
 public enum ThreadOption
 {
   PublisherThread,
-  UIThread,
-  BackgroundThread
+  MainThread,
+  WorkerThread
 }

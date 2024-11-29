@@ -22,12 +22,12 @@ namespace Speckle.Connectors.DUI.Bridge;
 public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
 {
   private readonly ILogger<TopLevelExceptionHandler> _logger;
-  private readonly ISpeckleEventAggregator _eventAggregator;
+  private readonly IEventAggregator _eventAggregator;
   public string Name => nameof(TopLevelExceptionHandler);
 
   private const string UNHANDLED_LOGGER_TEMPLATE = "An unhandled Exception occured";
 
-  public TopLevelExceptionHandler(ILogger<TopLevelExceptionHandler> logger, ISpeckleEventAggregator eventAggregator)
+  public TopLevelExceptionHandler(ILogger<TopLevelExceptionHandler> logger, IEventAggregator eventAggregator)
   {
     _logger = logger;
     _eventAggregator = eventAggregator;

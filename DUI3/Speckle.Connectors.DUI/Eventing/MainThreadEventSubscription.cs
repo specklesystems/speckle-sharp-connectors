@@ -2,7 +2,7 @@
 
 namespace Speckle.Connectors.DUI.Eventing;
 
-public class ThreadContextEventSubscription<T>(
+public class MainThreadEventSubscription<T>(
   IDelegateReference actionReference,
   IDelegateReference filterReference,
   IThreadContext threadContext

@@ -2,7 +2,7 @@
 
 namespace Speckle.Connectors.DUI.Eventing;
 
-public class BackgroundEventSubscription<TPayload>(
+public class WorkerEventSubscription<TPayload>(
   IDelegateReference actionReference,
   IDelegateReference filterReference,
   IThreadContext threadContext

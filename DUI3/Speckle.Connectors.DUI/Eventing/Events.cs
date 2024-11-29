@@ -2,4 +2,4 @@
 
 namespace Speckle.Connectors.DUI.Eventing;
 
-public class ExceptionEvent(IThreadContext threadContext) : SpeckleEvent<Exception>(threadContext);
+public class ExceptionEvent(IThreadContext threadContext) : ThreadedEvent<Exception>(threadContext);

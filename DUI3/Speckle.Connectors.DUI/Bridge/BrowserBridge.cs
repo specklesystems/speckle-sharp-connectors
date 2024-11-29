@@ -30,7 +30,7 @@ public sealed class BrowserBridge : IBrowserBridge
   private readonly ConcurrentDictionary<string, string?> _resultsStore = new();
 
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
-  private readonly ISpeckleEventAggregator _eventAggregator;
+  private readonly IEventAggregator _eventAggregator;
   private readonly IThreadContext _threadContext;
   private readonly IThreadOptions _threadOptions;
 
@@ -65,7 +65,7 @@ public sealed class BrowserBridge : IBrowserBridge
     ILogger<BrowserBridge> logger,
     IBrowserScriptExecutor browserScriptExecutor,
     IThreadOptions threadOptions,
-    ISpeckleEventAggregator eventAggregator,
+    IEventAggregator eventAggregator,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
@@ -94,7 +94,7 @@ public sealed class BrowserBridge : IBrowserBridge
             )
             .ConfigureAwait(false);
         },
-        ThreadOption.UIThread
+        ThreadOption.MainThread
       );
   }
 

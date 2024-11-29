@@ -15,7 +15,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
   public void CatchUnhandledAction_Happy()
   {
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
-    var eventAggregator = Create<ISpeckleEventAggregator>();
+    var eventAggregator = Create<IEventAggregator>();
     var sut = new TopLevelExceptionHandler(logger.Object, eventAggregator.Object);
 
     sut.CatchUnhandled(() => { });
@@ -25,7 +25,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
   public void CatchUnhandledAction_Exception()
   {
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
-    var eventAggregator = Create<ISpeckleEventAggregator>();
+    var eventAggregator = Create<IEventAggregator>();
 
     eventAggregator
       .Setup(x => x.GetEvent<ExceptionEvent>())
@@ -41,7 +41,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
   {
     var val = 2;
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
-    var eventAggregator = Create<ISpeckleEventAggregator>();
+    var eventAggregator = Create<IEventAggregator>();
     var sut = new TopLevelExceptionHandler(logger.Object, eventAggregator.Object);
 
     var returnVal = sut.CatchUnhandled(() => val);
@@ -54,7 +54,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
   public void CatchUnhandledFunc_Exception()
   {
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
-    var eventAggregator = Create<ISpeckleEventAggregator>();
+    var eventAggregator = Create<IEventAggregator>();
 
     eventAggregator
       .Setup(x => x.GetEvent<ExceptionEvent>())
@@ -72,7 +72,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
   public void CatchUnhandledFunc_Exception_Fatal()
   {
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
-    var eventAggregator = Create<ISpeckleEventAggregator>();
+    var eventAggregator = Create<IEventAggregator>();
     var sut = new TopLevelExceptionHandler(logger.Object, eventAggregator.Object);
 
     var exception = Assert.Throws<AggregateException>(
@@ -86,7 +86,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
   {
     var val = 2;
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
-    var eventAggregator = Create<ISpeckleEventAggregator>();
+    var eventAggregator = Create<IEventAggregator>();
     var sut = new TopLevelExceptionHandler(logger.Object, eventAggregator.Object);
 
     var returnVal = await sut.CatchUnhandledAsync(() => Task.FromResult(val));
@@ -99,7 +99,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
   public async Task CatchUnhandledFuncAsync_Exception()
   {
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
-    var eventAggregator = Create<ISpeckleEventAggregator>();
+    var eventAggregator = Create<IEventAggregator>();
 
     eventAggregator
       .Setup(x => x.GetEvent<ExceptionEvent>())
@@ -117,7 +117,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
   public void CatchUnhandledFuncAsync_Exception_Fatal()
   {
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
-    var eventAggregator = Create<ISpeckleEventAggregator>();
+    var eventAggregator = Create<IEventAggregator>();
     var sut = new TopLevelExceptionHandler(logger.Object, eventAggregator.Object);
 
     var exception = Assert.ThrowsAsync<AppDomainUnloadedException>(

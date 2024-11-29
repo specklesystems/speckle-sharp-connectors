@@ -24,7 +24,7 @@ public static class ContainerRegistration
 
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetAssembly(typeof(IdleCallManager)));
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetAssembly(typeof(IServerTransportFactory)));
-    serviceCollection.AddSingleton<ISpeckleEventAggregator>(sp => new SpeckleEventAggregator(sp));
+    serviceCollection.AddSingleton<IEventAggregator, EventAggregator>();
 
     serviceCollection.AddSingleton<IBinding, TopLevelExceptionHandlerBinding>(sp =>
       sp.GetRequiredService<TopLevelExceptionHandlerBinding>()

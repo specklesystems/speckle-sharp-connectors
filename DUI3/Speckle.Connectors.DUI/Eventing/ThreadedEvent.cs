@@ -2,7 +2,7 @@
 
 namespace Speckle.Connectors.DUI.Eventing;
 
-public class SpeckleEvent<T>(IThreadContext threadContext) : PubSubEvent<T>
+public class ThreadedEvent<T>(IThreadContext threadContext) : PubSubEvent<T>
   where T : notnull
 {
   public override SubscriptionToken Subscribe(
@@ -33,11 +33,11 @@ public class SpeckleEvent<T>(IThreadContext threadContext) : PubSubEvent<T>
     EventSubscription<T> subscription;
     switch (threadOption)
     {
-      case ThreadOption.BackgroundThread:
-        subscription = new BackgroundEventSubscription<T>(actionReference, filterReference, threadContext);
+      case ThreadOption.WorkerThread:
+        subscription = new WorkerEventSubscription<T>(actionReference, filterReference, threadContext);
         break;
-      case ThreadOption.UIThread:
-        subscription = new ThreadContextEventSubscription<T>(actionReference, filterReference, threadContext);
+      case ThreadOption.MainThread:
+        subscription = new MainThreadEventSubscription<T>(actionReference, filterReference, threadContext);
         break;
       case ThreadOption.PublisherThread:
       default:
