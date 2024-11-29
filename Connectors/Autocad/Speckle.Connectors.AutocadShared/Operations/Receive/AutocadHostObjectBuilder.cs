@@ -127,10 +127,13 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     {
       string objectId = atomicObject.applicationId ?? atomicObject.id;
       onOperationProgressed.Report(new("Converting objects", (double)++count / atomicObjects.Count));
+      if (count % 50 == 0)
+      {
+        await Task.Delay(10).ConfigureAwait(true);
+      }
       try
       {
-        List<Entity> convertedObjects = await ConvertObject(atomicObject, layerPath, baseLayerPrefix)
-          .ConfigureAwait(true);
+        List<Entity> convertedObjects = ConvertObject(atomicObject, layerPath, baseLayerPrefix);
 
         applicationIdMap[objectId] = convertedObjects;
 
@@ -181,7 +184,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     _materialBaker.PurgeMaterials(baseLayerPrefix);
   }
 
-  private async Task<List<Entity>> ConvertObject(Base obj, Collection[] layerPath, string baseLayerNamePrefix)
+  private List<Entity> ConvertObject(Base obj, Collection[] layerPath, string baseLayerNamePrefix)
   {
     string layerName = _layerBaker.CreateLayerForReceive(layerPath, baseLayerNamePrefix);
     var convertedEntities = new List<Entity>();
@@ -204,7 +207,6 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     }
 
     tr.Commit();
-    await Task.Delay(10).ConfigureAwait(true);
     return convertedEntities;
   }
 
