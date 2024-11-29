@@ -14,12 +14,10 @@
     <Compile Include="$(MSBuildThisFileDirectory)CSiObject.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)CSiWrappers.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\AreaToSpeckleConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\CSiPointToSpeckleCSiObjectConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\DisplayValueExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\FrameToSpeckleConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\LinkToSpeckleConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\PointToSpeckleConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\TendonToSpeckleConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\JointToSpeckleConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\ShellToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\CSiObjectToSpeckleConverter.cs" />
   </ItemGroup>
 </Project>

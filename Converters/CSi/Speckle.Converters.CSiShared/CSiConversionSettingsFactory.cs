@@ -1,20 +1,16 @@
 using Speckle.Converters.Common;
-using Speckle.Converters.CSiShared;
 using Speckle.InterfaceGenerator;
 
-namespace Speckle.Converters.TeklaShared;
+namespace Speckle.Converters.CSiShared;
 
 [GenerateAutoInterface]
-public class TeklaConversionSettingsFactory(
+public class CSiConversionSettingsFactory(
   IHostToSpeckleUnitConverter<string> unitsConverter,
   IConverterSettingsStore<CSiConversionSettings> settingsStore
-) : ITeklaConversionSettingsFactory
+) : ICSiConversionSettingsFactory
 {
   public CSiConversionSettings Current => settingsStore.Current;
 
-  // NOTE: Distance.CurrentUnitType reflects Settings > Options > Units and decimals
-  // Internal units (mm) are, however, always returned.
-  // If model units != internal units, user can rely on units appended to each report parameter
-  public CSiConversionSettings Create(Model document, bool sendRebarsAsSolid) =>
-    new(document, sendRebarsAsSolid, unitsConverter.ConvertOrThrow(Distance.CurrentUnitType));
+  // TODO: Units currently hard-coded
+  public CSiConversionSettings Create(cSapModel document) => new(document, unitsConverter.ConvertOrThrow("mm"));
 }

@@ -1,4 +1,5 @@
 ﻿using Speckle.Connectors.CSiShared.HostApp;
+using Speckle.Connectors.CSiShared.Utils;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 
@@ -44,7 +45,7 @@ public class CSiSharedSelectionBinding : ISelectionBinding
       var typeKey = objectType[i];
       var typeName = objectTypeMap.TryGetValue(typeKey, out var name) ? name : $"Unknown ({typeKey})";
 
-      encodedIds.Add(EncodeObjectIdentifier(typeKey, objectName[i]));
+      encodedIds.Add(ObjectIdentifier.Encode(typeKey, objectName[i]));
       typeCounts[typeName] = (typeCounts.TryGetValue(typeName, out var count) ? count : 0) + 1; // NOTE: Cross-framework compatibility
     }
 
@@ -55,22 +56,5 @@ public class CSiSharedSelectionBinding : ISelectionBinding
             typeCounts.Select(kv => $"{kv.Value} {kv.Key}"))})";
 
     return new SelectionInfo(encodedIds, summary);
-  }
-
-  // NOTE: All API methods are based on the objectType and objectName, not the GUID
-  // We will obviously manage the GUIDs but for all method calls we need a concatenated version of the objectType and objectName
-  // Since objectType >= 1 and <= 7, we know first index will always be the objectType
-  // Remaining string represents objectName and since the user can add any string (provided it is unique), this is safer
-  // than using a delimiting character (which could clash with user string)
-  private string EncodeObjectIdentifier(int objectType, string objectName)
-  {
-    // Just in case some weird objectType pops up
-    if (objectType < 1 || objectType > 7)
-    {
-      throw new ArgumentException($"Invalid object type: {objectType}. Must be between 1 and 7.");
-    }
-
-    // Simply prepend the object type as a single character
-    return $"{objectType}{objectName}";
   }
 }
