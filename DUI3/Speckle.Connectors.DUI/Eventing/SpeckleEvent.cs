@@ -2,10 +2,8 @@
 
 namespace Speckle.Connectors.DUI.Eventing;
 
-public class ExceptionEvent(IThreadContext threadContext) : SpeckleEvent<Exception>(threadContext);
-
 public class SpeckleEvent<T>(IThreadContext threadContext) : PubSubEvent<T>
-where T : notnull
+  where T : notnull
 {
   public override SubscriptionToken Subscribe(
     Action<T> action,

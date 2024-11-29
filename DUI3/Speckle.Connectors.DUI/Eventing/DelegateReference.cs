@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 
 namespace Speckle.Connectors.DUI.Eventing;
+
 public interface IDelegateReference
 {
   /// <summary>
@@ -9,6 +10,7 @@ public interface IDelegateReference
   /// <value>A <see cref="Delegate"/> instance if the target is valid; otherwise <see langword="null"/>.</value>
   Delegate? Target { get; }
 }
+
 public class DelegateReference : IDelegateReference
 {
   private readonly Delegate? _delegate;
@@ -31,7 +33,7 @@ public class DelegateReference : IDelegateReference
 
     if (keepReferenceAlive)
     {
-      this._delegate = @delegate;
+      _delegate = @delegate;
     }
     else
     {
@@ -66,7 +68,7 @@ public class DelegateReference : IDelegateReference
   /// </summary>
   /// <param name="delegate">The other delegate to compare with.</param>
   /// <returns>True if the target referenced by the current object are equal to <paramref name="delegate"/>.</returns>
-  public bool TargetEquals(Delegate @delegate)
+  public bool TargetEquals(Delegate? @delegate)
   {
     if (_delegate != null)
     {

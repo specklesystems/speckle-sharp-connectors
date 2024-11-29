@@ -5,7 +5,7 @@
 /// </summary>
 /// <typeparam name="TPayload">The type of message that will be passed to the subscribers.</typeparam>
 public abstract class PubSubEvent<TPayload> : EventBase
-where TPayload : notnull
+  where TPayload : notnull
 {
   /// <summary>
   /// Subscribes a delegate to an event that will be published on the <see cref="ThreadOption.PublisherThread"/>.
@@ -16,10 +16,7 @@ where TPayload : notnull
   /// <remarks>
   /// The PubSubEvent collection is thread-safe.
   /// </remarks>
-  public SubscriptionToken Subscribe(Action<TPayload> action)
-  {
-    return Subscribe(action, ThreadOption.PublisherThread);
-  }
+  public SubscriptionToken Subscribe(Action<TPayload> action) => Subscribe(action, ThreadOption.PublisherThread);
 
   /// <summary>
   /// Subscribes a delegate to an event that will be published on the <see cref="ThreadOption.PublisherThread"/>
@@ -27,10 +24,8 @@ where TPayload : notnull
   /// <param name="action">The delegate that gets executed when the event is raised.</param>
   /// <param name="filter">Filter to evaluate if the subscriber should receive the event.</param>
   /// <returns>A <see cref="SubscriptionToken"/> that uniquely identifies the added subscription.</returns>
-  public virtual SubscriptionToken Subscribe(Action<TPayload> action, Predicate<TPayload> filter)
-  {
-    return Subscribe(action, ThreadOption.PublisherThread, false, filter);
-  }
+  public virtual SubscriptionToken Subscribe(Action<TPayload> action, Predicate<TPayload> filter) =>
+    Subscribe(action, ThreadOption.PublisherThread, false, filter);
 
   /// <summary>
   /// Subscribes a delegate to an event.
@@ -42,10 +37,8 @@ where TPayload : notnull
   /// <remarks>
   /// The PubSubEvent collection is thread-safe.
   /// </remarks>
-  public SubscriptionToken Subscribe(Action<TPayload> action, ThreadOption threadOption)
-  {
-    return Subscribe(action, threadOption, false);
-  }
+  public SubscriptionToken Subscribe(Action<TPayload> action, ThreadOption threadOption) =>
+    Subscribe(action, threadOption, false);
 
   /// <summary>
   /// Subscribes a delegate to an event that will be published on the <see cref="ThreadOption.PublisherThread"/>.
@@ -59,10 +52,8 @@ where TPayload : notnull
   /// <para/>
   /// The PubSubEvent collection is thread-safe.
   /// </remarks>
-  public SubscriptionToken Subscribe(Action<TPayload> action, bool keepSubscriberReferenceAlive)
-  {
-    return Subscribe(action, ThreadOption.PublisherThread, keepSubscriberReferenceAlive);
-  }
+  public SubscriptionToken Subscribe(Action<TPayload> action, bool keepSubscriberReferenceAlive) =>
+    Subscribe(action, ThreadOption.PublisherThread, keepSubscriberReferenceAlive);
 
   /// <summary>
   /// Subscribes a delegate to an event.
@@ -77,10 +68,11 @@ where TPayload : notnull
   /// <para/>
   /// The PubSubEvent collection is thread-safe.
   /// </remarks>
-  public SubscriptionToken Subscribe(Action<TPayload> action, ThreadOption threadOption, bool keepSubscriberReferenceAlive)
-  {
-    return Subscribe(action, threadOption, keepSubscriberReferenceAlive, null);
-  }
+  public SubscriptionToken Subscribe(
+    Action<TPayload> action,
+    ThreadOption threadOption,
+    bool keepSubscriberReferenceAlive
+  ) => Subscribe(action, threadOption, keepSubscriberReferenceAlive, null);
 
   /// <summary>
   /// Subscribes a delegate to an event.
@@ -96,17 +88,18 @@ where TPayload : notnull
   ///
   /// The PubSubEvent collection is thread-safe.
   /// </remarks>
-  public abstract SubscriptionToken Subscribe(Action<TPayload> action, ThreadOption threadOption,
-    bool keepSubscriberReferenceAlive, Predicate<TPayload>? filter);
+  public abstract SubscriptionToken Subscribe(
+    Action<TPayload> action,
+    ThreadOption threadOption,
+    bool keepSubscriberReferenceAlive,
+    Predicate<TPayload>? filter
+  );
 
   /// <summary>
   /// Publishes the <see cref="PubSubEvent{TPayload}"/>.
   /// </summary>
   /// <param name="payload">Message to pass to the subscribers.</param>
-  public virtual void Publish(TPayload payload)
-  {
-    InternalPublish(payload);
-  }
+  public virtual void Publish(TPayload payload) => InternalPublish(payload);
 
   /// <summary>
   /// Removes the first subscriber matching <see cref="Action{TPayload}"/> from the subscribers' list.
@@ -116,7 +109,9 @@ where TPayload : notnull
   {
     lock (Subscriptions)
     {
-      IEventSubscription eventSubscription = Subscriptions.Cast<EventSubscription<TPayload>>().FirstOrDefault(evt => evt.Action == subscriber);
+      IEventSubscription eventSubscription = Subscriptions
+        .Cast<EventSubscription<TPayload>>()
+        .FirstOrDefault(evt => evt.Action == subscriber);
       if (eventSubscription != null)
       {
         Subscriptions.Remove(eventSubscription);
@@ -134,7 +129,9 @@ where TPayload : notnull
     IEventSubscription eventSubscription;
     lock (Subscriptions)
     {
-      eventSubscription = Subscriptions.Cast<EventSubscription<TPayload>>().FirstOrDefault(evt => evt.Action == subscriber);
+      eventSubscription = Subscriptions
+        .Cast<EventSubscription<TPayload>>()
+        .FirstOrDefault(evt => evt.Action == subscriber);
     }
     return eventSubscription != null;
   }

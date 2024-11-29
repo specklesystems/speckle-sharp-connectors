@@ -5,17 +5,7 @@
 ///</summary>
 public abstract class EventBase
 {
-  private readonly List<IEventSubscription> _subscriptions = new List<IEventSubscription>();
-
-  /// <summary>
-  /// Allows the SynchronizationContext to be set by the EventAggregator for UI Thread Dispatching
-  /// </summary>
-  public SynchronizationContext SynchronizationContext { get; set; }
-
-  /// <summary>
-  /// Gets the list of current subscriptions.
-  /// </summary>
-  /// <value>The current subscribers.</value>
+  private readonly List<IEventSubscription> _subscriptions = new();
   protected ICollection<IEventSubscription> Subscriptions => _subscriptions;
 
   /// <summary>
@@ -90,14 +80,13 @@ public abstract class EventBase
 
   private List<Action<object[]>> PruneAndReturnStrategies()
   {
-    List<Action<object[]>> returnList = new List<Action<object[]>>();
+    List<Action<object[]>> returnList = new();
 
     lock (Subscriptions)
     {
       for (var i = Subscriptions.Count - 1; i >= 0; i--)
       {
-        Action<object[]>? listItem =
-          _subscriptions[i].GetExecutionStrategy();
+        Action<object[]>? listItem = _subscriptions[i].GetExecutionStrategy();
 
         if (listItem == null)
         {
@@ -131,82 +120,3 @@ public abstract class EventBase
     }
   }
 }
-
-   public sealed class SubscriptionToken : IEquatable<SubscriptionToken>, IDisposable
-    {
-        private readonly Guid _token;
-        private Action<SubscriptionToken>? _unsubscribeAction;
-
-        /// <summary>
-        /// Initializes a new instance of <see cref="SubscriptionToken"/>.
-        /// </summary>
-        public SubscriptionToken(Action<SubscriptionToken> unsubscribeAction)
-        {
-            _unsubscribeAction = unsubscribeAction;
-            _token = Guid.NewGuid();
-        }
-
-        ///<summary>
-        ///Indicates whether the current object is equal to another object of the same type.
-        ///</summary>
-        ///<returns>
-        ///<see langword="true"/> if the current object is equal to the <paramref name="other" /> parameter; otherwise, <see langword="false"/>.
-        ///</returns>
-        ///<param name="other">An object to compare with this object.</param>
-        public bool Equals(SubscriptionToken? other)
-        {
-            if (other == null)
-            {
-              return false;
-            }
-
-            return Equals(_token, other._token);
-        }
-
-        public override bool Equals(object? obj)
-        {
-            if (ReferenceEquals(this, obj))
-            {
-              return true;
-            }
-
-            return Equals(obj as SubscriptionToken);
-        }
-
-        public override int GetHashCode()
-        {
-            return _token.GetHashCode();
-        }
-
-        /// <summary>
-        /// Disposes the SubscriptionToken, removing the subscription from the corresponding <see cref="EventBase"/>.
-        /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1063:ImplementIDisposableCorrectly", Justification = "Should never have need for a finalizer, hence no need for Dispose(bool).")]
-        public void Dispose()
-        {
-            // While the SubscriptionToken class implements IDisposable, in the case of weak subscriptions 
-            // (i.e. keepSubscriberReferenceAlive set to false in the Subscribe method) it's not necessary to unsubscribe,
-            // as no resources should be kept alive by the event subscription. 
-            // In such cases, if a warning is issued, it could be suppressed.
-
-            if (this._unsubscribeAction != null)
-            {
-                this._unsubscribeAction(this);
-                this._unsubscribeAction = null;
-            }
-        }
-    }
-   public enum ThreadOption
-   {
-     PublisherThread,
-
-     /// <summary>
-     /// The call is done on the UI thread.
-     /// </summary>
-     UIThread,
-
-     /// <summary>
-     /// The call is done asynchronously on a background thread.
-     /// </summary>
-     BackgroundThread
-   }
