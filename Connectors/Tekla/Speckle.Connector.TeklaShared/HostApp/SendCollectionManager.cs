@@ -1,8 +1,8 @@
-using Speckle.Converter.Tekla2024;
 using Speckle.Converters.Common;
+using Speckle.Converters.TeklaShared;
 using Speckle.Sdk.Models.Collections;
 
-namespace Speckle.Connector.Tekla2024.HostApp;
+namespace Speckle.Connectors.TeklaShared.HostApp;
 
 public class SendCollectionManager
 {

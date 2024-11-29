@@ -18,7 +18,6 @@ public static class ContainerRegistration
 
     // send operation and dependencies
     serviceCollection.AddSingleton<ISyncToThread, SyncToUIThread>();
-    serviceCollection.AddSingleton<IRootObjectSender, RootObjectSender>();
     serviceCollection.AddTransient<IBrowserBridge, BrowserBridge>(); // POC: Each binding should have it's own bridge instance
 
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetAssembly(typeof(IdleCallManager)));

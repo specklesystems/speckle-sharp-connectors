@@ -8,7 +8,7 @@ using Speckle.Sdk;
 using Tekla.Structures;
 using Tekla.Structures.Geometry3d;
 
-namespace Speckle.Connector.Tekla2024.Bindings;
+namespace Speckle.Connectors.TeklaShared.Bindings;
 
 public class TeklaBasicConnectorBinding : IBasicConnectorBinding
 {

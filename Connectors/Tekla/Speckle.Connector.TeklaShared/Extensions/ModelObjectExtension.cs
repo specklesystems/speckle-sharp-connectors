@@ -1,4 +1,4 @@
-﻿namespace Speckle.Connector.Tekla2024.Extensions;
+﻿namespace Speckle.Connectors.TeklaShared.Extensions;
 
 public static class ModelObjectExtensions
 {

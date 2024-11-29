@@ -6,7 +6,7 @@ using Speckle.Sdk;
 using Speckle.Sdk.Helpers;
 using Speckle.Sdk.Logging;
 
-namespace Speckle.Connector.Tekla2024.HostApp;
+namespace Speckle.Connectors.TeklaShared.HostApp;
 
 public class TeklaDocumentModelStore : DocumentModelStore
 {

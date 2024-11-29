@@ -3,7 +3,7 @@ using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
-namespace Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
+namespace Speckle.Converters.TeklaShared.ToSpeckle.Helpers;
 
 public sealed class DisplayValueExtractor
 {
