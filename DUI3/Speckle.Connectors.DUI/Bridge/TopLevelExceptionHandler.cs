@@ -98,14 +98,7 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
-        await SetGlobalNotification(
-            ToastNotificationType.DANGER,
-            "Unhandled Exception Occured",
-            ex.ToFormattedString(),
-            false
-          )
-          .ConfigureAwait(false);
+        await HandleException(ex).ConfigureAwait(false);
         return new(ex);
       }
     }
@@ -113,6 +106,33 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
     {
       _logger.LogCritical(ex, UNHANDLED_LOGGER_TEMPLATE);
       throw;
+    }
+  }
+
+  private async Task HandleException(Exception ex)
+  {
+    _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
+
+    try
+    {
+      await SetGlobalNotification(
+          ToastNotificationType.DANGER,
+          "Unhandled Exception Occured",
+          ex.ToFormattedString(),
+          false
+        )
+        .ConfigureAwait(false);
+    }
+    catch (Exception toastEx)
+    {
+      // Not only was a top level exception caught, but our attempt to display a toast failed!
+      // Toasts can fail if the BrowserBridge is not yet associated with a binding
+      // For this reason, binding authors should avoid doing anything in
+      // the constructors of bindings that may try and use the bridge!
+      AggregateException aggregateException =
+        new("An Unhandled top level exception was caught, and the toast failed to display it!", [toastEx, ex]);
+
+      throw aggregateException;
     }
   }
 

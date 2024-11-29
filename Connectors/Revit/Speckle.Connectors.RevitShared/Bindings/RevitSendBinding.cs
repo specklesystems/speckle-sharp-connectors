@@ -161,6 +161,11 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       _logger.LogModelCardHandledError(ex);
       await Commands.SetModelError(modelCardId, ex).ConfigureAwait(false);
     }
+    finally
+    {
+      // otherwise the id of the operation persists on the cancellation manager and triggers 'Operations cancelled because of document swap!' message to UI.
+      _cancellationManager.CancelOperation(modelCardId);
+    }
   }
 
   private async Task<List<Element>> RefreshElementsOnSender(SenderModelCard modelCard)
