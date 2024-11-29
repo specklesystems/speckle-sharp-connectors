@@ -49,11 +49,16 @@ public interface IBrowserBridge
   /// <exception cref="InvalidOperationException">Bridge was not initialized with a binding</exception>
   public Task Send(string eventName, CancellationToken cancellationToken = default);
 
+  public void SendSync(string eventName, CancellationToken cancellationToken = default);
+
   /// <inheritdoc cref="Send(string, CancellationToken)"/>
   /// <param name="data">data to store</param>
   /// <typeparam name="T"></typeparam>
   /// <exception cref="InvalidOperationException">Bridge was not initialized with a binding</exception>
   public Task Send<T>(string eventName, T data, CancellationToken cancellationToken = default)
+    where T : class;
+
+  public void SendSync<T>(string eventName, T data, CancellationToken cancellationToken = default)
     where T : class;
 
   public ITopLevelExceptionHandler TopLevelExceptionHandler { get; }

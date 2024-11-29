@@ -30,15 +30,16 @@ public class OperationProgressManager : IOperationProgressManager
   )
   {
     var progress = new NonUIThreadProgress<CardProgress>(args =>
-      bridge.TopLevelExceptionHandler.FireAndForget(
-        () =>
-          SetModelProgress(
-            bridge,
-            modelCardId,
-            new ModelCardProgress(modelCardId, args.Status, args.Progress),
-            cancellationToken
-          )
-      )
+      bridge.TopLevelExceptionHandler.FireAndForget(() =>
+      {
+        SetModelProgressSync(
+          bridge,
+          modelCardId,
+          new ModelCardProgress(modelCardId, args.Status, args.Progress),
+          cancellationToken
+        );
+        return Task.CompletedTask;
+      })
     );
     return progress;
   }
@@ -75,6 +76,41 @@ public class OperationProgressManager : IOperationProgressManager
     await SendProgress(bridge, modelCardId, progress).ConfigureAwait(false);
   }
 
+  public void SetModelProgressSync(
+    IBrowserBridge bridge,
+    string modelCardId,
+    ModelCardProgress progress,
+    CancellationToken cancellationToken
+  )
+  {
+    if (cancellationToken.IsCancellationRequested)
+    {
+      return;
+    }
+
+    if (!s_lastProgressValues.TryGetValue(modelCardId, out (DateTime, string) t))
+    {
+      t.Item1 = DateTime.Now;
+      s_lastProgressValues[modelCardId] = (t.Item1, progress.Status);
+      // Since it's the first time we get a call for this model card, we should send it out
+      SendProgressSync(bridge, modelCardId, progress);
+      return;
+    }
+
+    var currentTime = DateTime.Now;
+    var elapsedMs = (currentTime - t.Item1).Milliseconds;
+
+    if (elapsedMs < THROTTLE_INTERVAL_MS && t.Item2 == progress.Status)
+    {
+      return;
+    }
+    s_lastProgressValues[modelCardId] = (currentTime, progress.Status);
+    SendProgressSync(bridge, modelCardId, progress);
+  }
+
   private static async Task SendProgress(IBrowserBridge bridge, string modelCardId, ModelCardProgress progress) =>
     await bridge.Send(SET_MODEL_PROGRESS_UI_COMMAND_NAME, new { modelCardId, progress }).ConfigureAwait(false);
+
+  private static void SendProgressSync(IBrowserBridge bridge, string modelCardId, ModelCardProgress progress) =>
+    bridge.SendSync(SET_MODEL_PROGRESS_UI_COMMAND_NAME, new { modelCardId, progress });
 }

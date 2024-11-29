@@ -365,4 +365,30 @@ public sealed class BrowserBridge : IBrowserBridge
     var script = $"{FrontendBoundName}.emitResponseReady('{eventName}', '{requestId}')";
     await _browserScriptExecutor.ExecuteScriptAsyncMethod(script, cancellationToken).ConfigureAwait(false);
   }
+
+  public void SendSync(string eventName, CancellationToken cancellationToken = default)
+  {
+    if (_binding is null)
+    {
+      throw new InvalidOperationException("Bridge was not initialized with a binding");
+    }
+
+    var script = $"{FrontendBoundName}.emit('{eventName}')";
+    _browserScriptExecutor.ExecuteScriptSyncMethod(script, cancellationToken);
+  }
+
+  public void SendSync<T>(string eventName, T data, CancellationToken cancellationToken = default)
+    where T : class
+  {
+    if (_binding is null)
+    {
+      throw new InvalidOperationException("Bridge was not initialized with a binding");
+    }
+
+    string payload = _jsonSerializer.Serialize(data);
+    string requestId = $"{Guid.NewGuid()}_{eventName}";
+    _resultsStore[requestId] = payload;
+    var script = $"{FrontendBoundName}.emitResponseReady('{eventName}', '{requestId}')";
+    _browserScriptExecutor.ExecuteScriptSyncMethod(script, cancellationToken);
+  }
 }
