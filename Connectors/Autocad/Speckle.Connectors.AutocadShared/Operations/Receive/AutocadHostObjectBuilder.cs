@@ -75,11 +75,13 @@ public class AutocadHostObjectBuilder(
         baseLayerPrefix,
         onOperationProgressed
       );
+      await Yield.Force().BackToThread();
     }
 
     if (unpackedRoot.ColorProxies != null)
     {
       colorBaker.ParseColors(unpackedRoot.ColorProxies, onOperationProgressed);
+      await Yield.Force().BackToThread();
     }
 
     // 5 - Convert atomic objects
@@ -91,7 +93,11 @@ public class AutocadHostObjectBuilder(
     {
       string objectId = atomicObject.applicationId ?? atomicObject.id;
       onOperationProgressed.Report(new("Converting objects", (double)++count / atomicObjects.Count));
-      await Yield.Force().BackToThread();
+      if (count % 50 == 0)
+      {
+        await Yield.Force().BackToThread();
+      }
+
       try
       {
         List<Entity> convertedObjects = ConvertObject(atomicObject, layerPath, baseLayerPrefix);
