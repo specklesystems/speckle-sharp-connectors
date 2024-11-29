@@ -301,7 +301,6 @@
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
-          "Prism.Events": "[9.0.537, )",
           "Speckle.Connectors.Common": "[1.0.0, )",
           "Speckle.Sdk": "[3.1.0-dev.200, )",
           "Speckle.Sdk.Dependencies": "[3.1.0-dev.200, )"
@@ -350,12 +349,6 @@
         "requested": "[2.2.0, )",
         "resolved": "2.2.0",
         "contentHash": "B2WqEox8o+4KUOpL7rZPyh6qYjik8tHi2tN8Z9jZkHzED8ElYgZa/h6K+xliB435SqUcWT290Fr2aa8BtZjn8A=="
-      },
-      "Prism.Events": {
-        "type": "CentralTransitive",
-        "requested": "[9.0.537, )",
-        "resolved": "9.0.537",
-        "contentHash": "Pzp5MGUuhAyKXZUbHVYNWLGF/eA3sScqDN6VrzbWlKj85R0IS0q+JXe99umynso2xhXAe+1jrQCCkgqmEFCBng=="
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",

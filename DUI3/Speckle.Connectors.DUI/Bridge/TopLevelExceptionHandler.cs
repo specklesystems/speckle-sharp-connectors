@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
 

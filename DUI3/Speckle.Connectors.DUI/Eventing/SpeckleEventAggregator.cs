@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 
-namespace Speckle.Connectors.DUI.Bridge;
+namespace Speckle.Connectors.DUI.Eventing;
 
 public interface ISpeckleEventAggregator
 {
@@ -8,16 +8,10 @@ public interface ISpeckleEventAggregator
     where TEventType : EventBase;
 }
 
-public class SpeckleEventAggregator : ISpeckleEventAggregator
+//based on Prism.Events
+public class SpeckleEventAggregator(IServiceProvider serviceProvider) : ISpeckleEventAggregator
 {
-  private readonly IServiceProvider _serviceProvider;
-
   private readonly Dictionary<Type, EventBase> _events = new();
-
-  public SpeckleEventAggregator(IServiceProvider serviceProvider)
-  {
-    _serviceProvider = serviceProvider;
-  }
 
   public TEventType GetEvent<TEventType>()
     where TEventType : EventBase
@@ -26,7 +20,7 @@ public class SpeckleEventAggregator : ISpeckleEventAggregator
     {
       if (!_events.TryGetValue(typeof(TEventType), out var existingEvent))
       {
-        existingEvent = (TEventType)_serviceProvider.GetRequiredService(typeof(TEventType));
+        existingEvent = (TEventType)serviceProvider.GetRequiredService(typeof(TEventType));
         _events[typeof(TEventType)] = existingEvent;
       }
       return (TEventType)existingEvent;

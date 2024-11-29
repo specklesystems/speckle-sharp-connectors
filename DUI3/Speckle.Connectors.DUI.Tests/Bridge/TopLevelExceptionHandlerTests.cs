@@ -4,6 +4,7 @@ using Moq;
 using NUnit.Framework;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Testing;
 
 namespace Speckle.Connectors.DUI.Tests.Bridge;

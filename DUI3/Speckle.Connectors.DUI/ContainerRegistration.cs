@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Sdk;
 using Speckle.Sdk.Transports;

@@ -1,20 +1,11 @@
 ﻿using Speckle.Connectors.Common.Threading;
 
-namespace Speckle.Connectors.DUI.Bridge;
+namespace Speckle.Connectors.DUI.Eventing;
 
 public class ExceptionEvent(IThreadContext threadContext) : SpeckleEvent<Exception>(threadContext);
 
-public class ThreadContextEventSubscription<T>(
-  IDelegateReference actionReference,
-  IDelegateReference filterReference,
-  IThreadContext threadContext
-) : EventSubscription<T>(actionReference, filterReference)
-{
-  public override void InvokeAction(Action<T> action, T payload) =>
-    threadContext.RunOnMain(() => action.Invoke(payload));
-}
-
 public class SpeckleEvent<T>(IThreadContext threadContext) : PubSubEvent<T>
+where T : notnull
 {
   public override SubscriptionToken Subscribe(
     Action<T> action,
