@@ -12,6 +12,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)CSiConversionSettings.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)CSiConversionSettingsFactory.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)CSiObject.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)CSiRootToSpeckleConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)CSiToSpeckleUnitConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)CSiWrappers.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />

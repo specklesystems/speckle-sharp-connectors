@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Converters.Common;
+using Speckle.Converters.Common.Registration;
 using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 using Speckle.Converters.CSiShared.ToSpeckle.TopLevel;
 using Speckle.Sdk;
@@ -14,11 +15,11 @@ public static class ServiceRegistration
     var converterAssembly = Assembly.GetExecutingAssembly();
 
     serviceCollection.AddTransient<CSiObjectToSpeckleConverter>();
-
     serviceCollection.AddScoped<DisplayValueExtractor>();
     // TODO: Property extractor
 
-    // TODO: Root
+    serviceCollection.AddRootCommon<CSiRootToSpeckleConverter>(converterAssembly);
+    serviceCollection.AddApplicationConverters<CSiToSpeckleUnitConverter, string>(converterAssembly);
     serviceCollection.AddScoped<
       IConverterSettingsStore<CSiConversionSettings>,
       ConverterSettingsStore<CSiConversionSettings>

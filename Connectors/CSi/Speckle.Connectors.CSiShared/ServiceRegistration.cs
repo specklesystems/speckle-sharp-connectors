@@ -1,6 +1,9 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common;
+using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.CSiShared.Bindings;
+using Speckle.Connectors.CSiShared.Builders;
 using Speckle.Connectors.CSiShared.Filters;
 using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.DUI;
@@ -9,6 +12,7 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
+using Speckle.Converters.CSiShared;
 
 namespace Speckle.Connectors.CSiShared;
 
@@ -37,6 +41,8 @@ public static class ServiceRegistration
     services.AddSingleton<IBinding, CSiSharedSendBinding>();
 
     services.AddScoped<ISendFilter, CSiSharedSelectionFilter>();
+    services.AddScoped<IRootObjectBuilder<ICSiWrapper>, CSiRootObjectBuilder>();
+    services.AddScoped<SendOperation<ICSiWrapper>>();
 
     services.RegisterTopLevelExceptionHandler();
 

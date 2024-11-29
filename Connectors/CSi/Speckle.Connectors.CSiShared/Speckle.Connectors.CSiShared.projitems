@@ -13,6 +13,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\CSiSharedSelectionBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\CSiSharedSendBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Filters\CSiSharedSelectionFilter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\CSiRootObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\CSiSharedPluginBase.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\SpeckleFormBase.cs">
       <SubType>Form</SubType>
@@ -23,8 +24,5 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\CSiSharedIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Utils\ObjectIdentifiers.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="$(MSBuildThisFileDirectory)Operations\" />
   </ItemGroup>
 </Project>
