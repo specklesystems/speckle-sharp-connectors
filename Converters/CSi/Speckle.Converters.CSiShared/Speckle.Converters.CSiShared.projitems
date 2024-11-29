@@ -10,8 +10,12 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)CSiConversionSettings.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)CSiConversionSettingsFactory.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)CSiObject.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)CSiWrappers.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\AreaToSpeckleConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\CSiPointToSpeckleCSiObjectConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\FrameToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\LinkToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\PointToSpeckleConverter.cs" />
