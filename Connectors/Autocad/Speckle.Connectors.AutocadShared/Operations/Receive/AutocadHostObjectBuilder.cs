@@ -127,10 +127,6 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     {
       string objectId = atomicObject.applicationId ?? atomicObject.id;
       onOperationProgressed.Report(new("Converting objects", (double)++count / atomicObjects.Count));
-      if (count % 50 == 0)
-      {
-        await Task.Delay(10).ConfigureAwait(true);
-      }
       try
       {
         List<Entity> convertedObjects = ConvertObject(atomicObject, layerPath, baseLayerPrefix);

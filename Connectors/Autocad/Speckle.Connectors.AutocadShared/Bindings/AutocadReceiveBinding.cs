@@ -52,7 +52,12 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
 
   public void CancelReceive(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
 
-  public async Task Receive(string modelCardId)
+  public async Task Receive(string modelCardId) =>
+    await Parent
+      .RunOnMainThreadAsync(async () => await ReceiveInternal(modelCardId).ConfigureAwait(false))
+      .ConfigureAwait(false);
+
+  public async Task ReceiveInternal(string modelCardId)
   {
     using var scope = _serviceProvider.CreateScope();
     scope
