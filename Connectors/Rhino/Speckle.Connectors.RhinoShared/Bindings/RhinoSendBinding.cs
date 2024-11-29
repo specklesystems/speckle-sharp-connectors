@@ -281,13 +281,21 @@ public sealed class RhinoSendBinding : ISendBinding
     }
 
     // Invalidate any objects whose materials have changed
-    var changedMaterialIndexes = ChangedMaterialIndexes.Keys.ToArray();
-    foreach (var rhinoObject in RhinoDoc.ActiveDoc.Objects)
+    if (!ChangedMaterialIndexes.IsEmpty)
     {
-      if (changedMaterialIndexes.Contains(rhinoObject.Attributes.MaterialIndex))
+      var changedMaterialIndexes = ChangedMaterialIndexes.Keys.ToArray();
+      foreach (var rhinoObject in RhinoDoc.ActiveDoc.Objects)
       {
-        ChangedObjectIds[rhinoObject.Id.ToString()] = 1;
+        if (changedMaterialIndexes.Contains(rhinoObject.Attributes.MaterialIndex))
+        {
+          ChangedObjectIds[rhinoObject.Id.ToString()] = 1;
+        }
       }
+    }
+
+    if (ChangedObjectIds.IsEmpty)
+    {
+      return;
     }
 
     // Actual model card invalidation
