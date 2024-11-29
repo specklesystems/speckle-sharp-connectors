@@ -80,6 +80,7 @@ public class ArcGISLayerUnpacker
     {
       wkt = spatialRefRaster.Wkt,
       name = spatialRefRaster.Name,
+      authority_id = null,
       units_native = spatialRefRaster.Unit.ToString(),
     };
     return convertedRasterLayer;
@@ -181,6 +182,7 @@ public class ArcGISLayerUnpacker
       {
         wkt = spatialRef.Wkt,
         name = spatialRef.Name,
+        authority_id = spatialRef.Wkid.ToString(),
         offset_y = Convert.ToSingle(activeCRS.LatOffset),
         offset_x = Convert.ToSingle(activeCRS.LonOffset),
         rotation = Convert.ToSingle(activeCRS.TrueNorthRadians),
