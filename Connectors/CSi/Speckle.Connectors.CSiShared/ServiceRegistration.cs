@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.CSiShared.Bindings;
 using Speckle.Connectors.CSiShared.Filters;
 using Speckle.Connectors.CSiShared.HostApp;
@@ -20,7 +21,7 @@ public static class ServiceRegistration
     services.AddSingleton<ICSiApplicationService, CSiApplicationService>();
 
     services.AddConnectorUtils();
-    services.AddDUI<CSiSharedDocumentModelStore>();
+    services.AddDUI<DefaultThreadContext, CSiSharedDocumentModelStore>();
     services.AddDUIView();
 
     services.AddSingleton<DocumentModelStore, CSiSharedDocumentModelStore>();
