@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.InterfaceGenerator;
@@ -70,11 +69,6 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
   }
 
   ///<inheritdoc cref="CatchUnhandled{T}(Func{T})"/>
-  [SuppressMessage(
-    "Design",
-    "CA1031:Do not catch general exception types",
-    Justification = "Top level exception handler"
-  )]
   public async Task<Result<T>> CatchUnhandledAsync<T>(Func<Task<T>> function)
   {
     try
