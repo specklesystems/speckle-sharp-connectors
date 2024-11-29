@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.Commands;
 using Rhino.DocObjects;
+using Rhino.DocObjects.Tables;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
@@ -49,6 +50,7 @@ public sealed class RhinoSendBinding : ISendBinding
   /// https://stackoverflow.com/questions/18922985/concurrent-hashsett-in-net-framework
   /// </summary>
   private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
+  private ConcurrentDictionary<int, byte> ChangedMaterialIndexes { get; set; } = new();
 
   private UnitSystem PreviousUnitSystem { get; set; }
 
@@ -142,6 +144,28 @@ public sealed class RhinoSendBinding : ISendBinding
         _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
       });
 
+    // NOTE: Catches an object's material change from one user defined doc material to another. Does not catch (as the top event is not triggered) swapping material sources for an object or moving to/from the default material (this is handled below)!
+    RhinoDoc.RenderMaterialsTableEvent += (_, args) =>
+      _topLevelExceptionHandler.CatchUnhandled(() =>
+      {
+        if (args is RhinoDoc.RenderMaterialAssignmentChangedEventArgs changedEventArgs)
+        {
+          ChangedObjectIds[changedEventArgs.ObjectId.ToString()] = 1;
+          _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        }
+      });
+
+    // Catches and stores changed material ids. These are then used in the expiry checks to invalidate all objects that have assigned any of those material ids.
+    RhinoDoc.MaterialTableEvent += (_, args) =>
+      _topLevelExceptionHandler.CatchUnhandled(() =>
+      {
+        if (args.EventType == MaterialTableEventType.Modified)
+        {
+          ChangedMaterialIndexes[args.Index] = 1;
+          _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        }
+      });
+
     RhinoDoc.ModifyObjectAttributes += (_, e) =>
       _topLevelExceptionHandler.CatchUnhandled(() =>
       {
@@ -153,7 +177,12 @@ public sealed class RhinoSendBinding : ISendBinding
         // }
 
         // NOTE: not sure yet we want to track every attribute changes yet. TBD
-        if (e.OldAttributes.LayerIndex != e.NewAttributes.LayerIndex)
+        // NOTE: we might want to track here user strings too (once we send them out), and more!
+        if (
+          e.OldAttributes.LayerIndex != e.NewAttributes.LayerIndex
+          || e.OldAttributes.MaterialSource != e.NewAttributes.MaterialSource
+          || e.OldAttributes.MaterialIndex != e.NewAttributes.MaterialIndex // NOTE: this does not work when swapping around from custom doc materials, it works when you swap TO/FROM default material
+        )
         {
           ChangedObjectIds[e.RhinoObject.Id.ToString()] = 1;
           _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
@@ -251,11 +280,30 @@ public sealed class RhinoSendBinding : ISendBinding
       _logger.LogError("Rhino expiration checks were running without an active doc.");
       return;
     }
-    var senders = _store.GetSenders();
-    string[] objectIdsList = ChangedObjectIds.Keys.ToArray(); // NOTE: could not copy to array happens here
-    List<string> expiredSenderIds = new();
 
+    // Invalidate any objects whose materials have changed
+    if (!ChangedMaterialIndexes.IsEmpty)
+    {
+      var changedMaterialIndexes = ChangedMaterialIndexes.Keys.ToArray();
+      foreach (var rhinoObject in RhinoDoc.ActiveDoc.Objects)
+      {
+        if (changedMaterialIndexes.Contains(rhinoObject.Attributes.MaterialIndex))
+        {
+          ChangedObjectIds[rhinoObject.Id.ToString()] = 1;
+        }
+      }
+    }
+
+    if (ChangedObjectIds.IsEmpty)
+    {
+      return;
+    }
+
+    // Actual model card invalidation
+    string[] objectIdsList = ChangedObjectIds.Keys.ToArray(); // NOTE: could not copy to array happens here
     _sendConversionCache.EvictObjects(objectIdsList);
+    var senders = _store.GetSenders();
+    List<string> expiredSenderIds = new();
 
     foreach (SenderModelCard modelCard in senders)
     {
@@ -269,6 +317,7 @@ public sealed class RhinoSendBinding : ISendBinding
 
     await Commands.SetModelsExpired(expiredSenderIds).ConfigureAwait(false);
     ChangedObjectIds = new();
+    ChangedMaterialIndexes = new();
   }
 
   private async Task InvalidateAllSender()
