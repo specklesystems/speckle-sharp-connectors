@@ -34,7 +34,7 @@ public class SpeckleEvent<T>(IThreadContext threadContext) : PubSubEvent<T>
     switch (threadOption)
     {
       case ThreadOption.BackgroundThread:
-        subscription = new BackgroundEventSubscription<T>(actionReference, filterReference);
+        subscription = new BackgroundEventSubscription<T>(actionReference, filterReference, threadContext);
         break;
       case ThreadOption.UIThread:
         subscription = new ThreadContextEventSubscription<T>(actionReference, filterReference, threadContext);
