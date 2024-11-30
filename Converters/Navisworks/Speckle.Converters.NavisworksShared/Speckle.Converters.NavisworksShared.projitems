@@ -11,6 +11,7 @@
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\ClassPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\DisplayValueExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\ModelPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\PropertySetsExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\ArrayExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Geometries\Primitives.cs" />

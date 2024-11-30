@@ -14,6 +14,7 @@ public class ModelItemTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly ClassPropertiesExtractor _classPropertiesExtractor;
   private readonly PropertySetsExtractor _propertySetsExtractor;
+  private readonly ModelPropertiesExtractor _modelPropertiesExtractor;
   private readonly IConverterSettingsStore<NavisworksConversionSettings> _settingsStore;
 
   /// <summary>
@@ -22,18 +23,21 @@ public class ModelItemTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
   /// <param name="displayValueExtractor">Extractor for geometric display values.</param>
   /// <param name="classPropertiesExtractor">Extractor for class-specific properties.</param>
   /// <param name="propertySetsExtractor">Extractor for property sets.</param>
+  /// <param name="modelPropertiesExtractor">Extractor for model properties.</param>
   /// <param name="settingsStore">Converter settings store.</param>
 
   public ModelItemTopLevelConverterToSpeckle(
     DisplayValueExtractor displayValueExtractor,
     ClassPropertiesExtractor classPropertiesExtractor,
     PropertySetsExtractor propertySetsExtractor,
+    ModelPropertiesExtractor modelPropertiesExtractor,
     IConverterSettingsStore<NavisworksConversionSettings> settingsStore
   )
   {
     _displayValueExtractor = displayValueExtractor;
     _classPropertiesExtractor = classPropertiesExtractor;
     _propertySetsExtractor = propertySetsExtractor;
+    _modelPropertiesExtractor = modelPropertiesExtractor;
     _settingsStore = settingsStore;
   }
 
@@ -87,6 +91,14 @@ public class ModelItemTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
 
     // Add property sets
     var propertySets = _propertySetsExtractor.GetPropertySets(target);
+
+    // If the node is a Model
+    if (target.HasModel)
+    {
+      var modelProperties = _modelPropertiesExtractor.GetModelProperties(target.Model);
+
+      propertySets?.Add("Model", modelProperties);
+    }
 
     if (propertySets != null)
     {
