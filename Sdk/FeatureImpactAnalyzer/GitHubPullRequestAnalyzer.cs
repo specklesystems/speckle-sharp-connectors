@@ -133,15 +133,49 @@ public class GitHubPullRequestAnalyzer
   {
     var impactedFeatures = new List<string>();
 
-    // Load all assemblies in the current AppDomain
-    var assemblies = AppDomain
-      .CurrentDomain.GetAssemblies()
-      .Where(a => a.FullName != null && a.FullName.StartsWith("Speckle"))
-      .ToList();
+    var assemblies = new List<Assembly>();
 
+    // Load all assemblies in the current AppDomain
     string? solutionDirectory = Path.GetFullPath(
       Path.Combine(Assembly.GetExecutingAssembly().Location, "..", "..", "..")
     );
+    Console.WriteLine($"Solution Directory: {solutionDirectory}");
+    if (!string.IsNullOrEmpty(solutionDirectory))
+    {
+      // Search for all DLLs in the parent directory and subdirectories
+      var dllFiles = Directory
+        .GetFiles(solutionDirectory, "*.dll", SearchOption.AllDirectories)
+        .Where(dll =>
+          (
+            Path.GetFileName(dll).StartsWith("Speckle.Connectors.", StringComparison.OrdinalIgnoreCase)
+            || Path.GetFileName(dll).StartsWith("Speckle.Converters.", StringComparison.OrdinalIgnoreCase)
+          ) && !Path.GetFileName(dll).Contains("Test", StringComparison.OrdinalIgnoreCase) // Exclude test assemblies
+        );
+
+      foreach (var dll in dllFiles)
+      {
+        try
+        {
+          var assemblyName = AssemblyName.GetAssemblyName(dll);
+          if (!assemblies.Any(a => a.FullName == assemblyName.FullName))
+          {
+            var loadedAssembly = Assembly.LoadFrom(dll);
+            assemblies.Add(loadedAssembly);
+            Console.WriteLine($"Loaded assembly: {loadedAssembly.FullName}");
+          }
+        }
+        catch (BadImageFormatException)
+        {
+          Console.WriteLine($"Skipping invalid assembly: {dll}");
+        }
+        catch (Exception ex) when (!ex.IsFatal())
+        {
+          Console.WriteLine($"Failed to load assembly: {dll}. Error: {ex.Message}");
+        }
+      }
+    }
+
+    Console.WriteLine($"Solution directory {solutionDirectory}");
 
     // Dynamically load assemblies from the solution directory
     // string? solutionDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
