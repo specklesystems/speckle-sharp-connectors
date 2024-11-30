@@ -171,23 +171,34 @@ public class GitHubPullRequestAnalyzer
     // Process each assembly
     foreach (var assembly in assemblies)
     {
-      foreach (var type in assembly.GetTypes())
+      try
       {
-        foreach (
-          var method in type.GetMethods(
-            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static
-          )
-        )
+        foreach (var type in assembly.GetTypes())
         {
-          if (method.Name == methodName)
+          foreach (
+            var method in type.GetMethods(
+              BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static
+            )
+          )
           {
-            // Find custom attributes of type FeatureImpactAttribute
-            var attributes = method.GetCustomAttributes(typeof(FeatureImpactAttribute), true);
-            foreach (FeatureImpactAttribute attribute in attributes.Cast<FeatureImpactAttribute>())
+            if (method.Name == methodName)
             {
-              impactedFeatures.AddRange(attribute.Features);
+              // Find custom attributes of type FeatureImpactAttribute
+              var attributes = method.GetCustomAttributes(typeof(FeatureImpactAttribute), true);
+              foreach (FeatureImpactAttribute attribute in attributes.Cast<FeatureImpactAttribute>())
+              {
+                impactedFeatures.AddRange(attribute.Features);
+              }
             }
           }
+        }
+      }
+      catch (ReflectionTypeLoadException ex) // .net standard problem?
+      {
+        Console.WriteLine($"Skipping problematic assembly: {assembly.FullName}");
+        foreach (var loaderException in ex.LoaderExceptions)
+        {
+          Console.WriteLine($"Loader Exception: {loaderException?.Message}");
         }
       }
     }
