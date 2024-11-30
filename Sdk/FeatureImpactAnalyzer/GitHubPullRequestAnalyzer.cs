@@ -52,7 +52,8 @@ public class GitHubPullRequestAnalyzer
     var modifiedLines = ExtractModifiedLines(filePatch);
     var syntaxTree = CSharpSyntaxTree.ParseText(filePatch);
     var root = syntaxTree.GetRoot();
-    var methods = root.DescendantNodes().OfType<MethodDeclarationSyntax>();
+    var methods = root.DescendantNodes().OfType<MethodDeclarationSyntax>().ToList();
+    Console.WriteLine($"Found {methods.Count} methods");
 
     foreach (var method in methods)
     {
@@ -175,6 +176,7 @@ public class GitHubPullRequestAnalyzer
       {
         foreach (var type in assembly.GetTypes())
         {
+          Console.WriteLine($"Checking type: {type.FullName}");
           foreach (
             var method in type.GetMethods(
               BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static
