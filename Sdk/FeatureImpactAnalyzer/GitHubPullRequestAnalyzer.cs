@@ -141,7 +141,10 @@ public class GitHubPullRequestAnalyzer
     {
       var dllFiles = Directory
         .GetFiles(solutionDirectory, "*.dll", SearchOption.AllDirectories)
-        .Where(dll => Path.GetFileName(dll).StartsWith("Speckle"));
+        .Where(dll =>
+          Path.GetFileName(dll).StartsWith("Speckle")
+          && !Path.GetFileName(dll).Equals("Speckle.Connectors.Logging.dll", StringComparison.OrdinalIgnoreCase)
+        );
 
       foreach (var dll in dllFiles)
       {
