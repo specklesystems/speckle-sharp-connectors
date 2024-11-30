@@ -68,7 +68,7 @@ jobs:
           dotnet-version: '7.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore Sdk/FeatureImpactAnalyzer/FeatureImpactAnalyzer.csproj
 
       - name: Build project
         run: dotnet build --no-restore
