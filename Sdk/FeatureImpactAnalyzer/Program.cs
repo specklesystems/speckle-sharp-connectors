@@ -23,6 +23,9 @@ public static class Program
         {
           var (owner, name) = ParseRepository(repo);
           var analyzer = new GitHubPullRequestAnalyzer(token);
+          Console.WriteLine($"Name: {name}");
+          Console.WriteLine($"Owner: {owner}");
+          Console.WriteLine($"Analyzing PR {prNumber}");
 
           var sideEffects = await analyzer.AnalyzePullRequestChangesAsync(owner, name, prNumber).ConfigureAwait(true);
 

@@ -32,6 +32,7 @@ public class GitHubPullRequestAnalyzer
     var changedFiles = await _client
       .PullRequest.Files(repositoryOwner, repositoryName, pullRequestNumber)
       .ConfigureAwait(true);
+    Console.WriteLine($"Changed Files:\n {changedFiles}");
 
     var sideEffectReports = new List<FeatureImpactReport>();
 
@@ -133,6 +134,7 @@ public class GitHubPullRequestAnalyzer
     List<FeatureImpactReport> sideEffects
   )
   {
+    Console.WriteLine($"Side effect count: {sideEffects.Count}");
     if (sideEffects.Count == 0)
     {
       return;
