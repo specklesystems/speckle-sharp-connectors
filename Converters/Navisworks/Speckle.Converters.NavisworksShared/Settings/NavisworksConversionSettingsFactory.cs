@@ -35,6 +35,7 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
   private bool _coalescePropertiesFromFirstObjectAncestor;
   private RepresentationMode _visualRepresentationMode;
   private OriginMode _originMode;
+  private bool _excludeProperties;
 
   private static readonly NAV.Vector3D s_canonicalUp = new(0, 0, 1);
 
@@ -52,6 +53,7 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
     _coalescePropertiesFromFirstObjectAncestor = true;
     _visualRepresentationMode = ACTIVE;
     _originMode = MODEL_ORIGIN;
+    _excludeProperties = false;
 
     // Derived settings from the active document
     _document = NavisworksApp.ActiveDocument ?? throw new InvalidOperationException("No active document found.");
@@ -81,7 +83,8 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
       CoalescePropertiesFromFirstObjectAncestor: _coalescePropertiesFromFirstObjectAncestor,
       TransformVector: transformVector,
       IsUpright: isUpright,
-      ModelBoundingBox: _modelBoundingBox
+      ModelBoundingBox: _modelBoundingBox,
+      ExcludeProperties: _excludeProperties
     );
   }
 

@@ -13,5 +13,6 @@ public record NavisworksConversionSettings(
   bool CoalescePropertiesFromFirstObjectAncestor, // Whether to merge properties from the first object ancestor.
   NAV.Vector3D TransformVector, // Transformation vector applied to the model.
   bool IsUpright, // Indicates if the model's orientation is upright relative to canonical up.
-  NAV.BoundingBox3D ModelBoundingBox // The bounding box of the model.
+  NAV.BoundingBox3D ModelBoundingBox, // The bounding box of the model.
+  bool ExcludeProperties // Whether to exclude properties from the output.
 );
