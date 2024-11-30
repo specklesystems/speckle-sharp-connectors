@@ -14,7 +14,7 @@ public class GitHubPullRequestAnalyzer
 
   public GitHubPullRequestAnalyzer(string githubToken)
   {
-    _client = new GitHubClient(new ProductHeaderValue("SideEffectAnalyzer"))
+    _client = new GitHubClient(new ProductHeaderValue("FeatureImpactAnalyzer"))
     {
       Credentials = new Credentials(githubToken)
     };
