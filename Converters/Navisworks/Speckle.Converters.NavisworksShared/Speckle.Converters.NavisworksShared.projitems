@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
@@ -13,9 +13,9 @@
     <Folder Include="$(MSBuildThisFileDirectory)Extensions\" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Services\NavisworksConversionSettingsFactory.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\NavisworksToSpeckleUnitConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Settings\ConversionModes.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\NavisworksConversionSettings.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\NavisworksRootToSpeckleConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Settings\NavisworksConversionSettingsFactory.cs" />
   </ItemGroup>
 </Project>
