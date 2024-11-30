@@ -24,5 +24,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Settings\ConversionModes.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\NavisworksConversionSettings.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\NavisworksConversionSettingsFactory.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\ModelItemTopLevelConverterToSpeckle.cs" />
   </ItemGroup>
 </Project>

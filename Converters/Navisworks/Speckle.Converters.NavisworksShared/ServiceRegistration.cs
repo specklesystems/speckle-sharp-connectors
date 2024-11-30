@@ -17,7 +17,7 @@ public static class ServiceRegistration
     //register types by default
     serviceCollection.AddMatchingInterfacesAsTransient(converterAssembly);
     // Register single root
-    serviceCollection.AddRootCommon<NavisworksRootToSpeckleConverter>(converterAssembly);
+    serviceCollection.AddRootCommon<ModelItemTopLevelConverterToSpeckle>(converterAssembly);
 
     // register all application converters and context stacks
     serviceCollection.AddApplicationConverters<NavisworksToSpeckleUnitConverter, NAV.Units>(converterAssembly);
