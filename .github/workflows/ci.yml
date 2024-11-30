@@ -71,7 +71,7 @@ jobs:
         run: dotnet restore Speckle.Connectors.sln
 
       - name: Build project
-        run: dotnet build --no-restore Sdk/FeatureImpactAnalyzer/FeatureImpactAnalyzer.csproj
+        run: dotnet build Speckle.Connectors.sln
 
       - name: Run Feature Impact Analyzer
         env:
