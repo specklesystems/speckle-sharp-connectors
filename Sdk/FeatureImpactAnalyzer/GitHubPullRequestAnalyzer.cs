@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Octokit;
 using Speckle.Connectors.Common;
+using Speckle.Sdk;
 
 namespace FeatureImpactAnalyzer;
 
@@ -26,13 +27,13 @@ public class GitHubPullRequestAnalyzer
     int pullRequestNumber
   )
   {
-    var pullRequest = await _client
-      .PullRequest.Get(repositoryOwner, repositoryName, pullRequestNumber)
-      .ConfigureAwait(true);
+    // var pullRequest = await _client
+    //   .PullRequest.Get(repositoryOwner, repositoryName, pullRequestNumber)
+    //   .ConfigureAwait(true);
     var changedFiles = await _client
       .PullRequest.Files(repositoryOwner, repositoryName, pullRequestNumber)
       .ConfigureAwait(true);
-    Console.WriteLine($"Changed Files:\n {changedFiles}");
+    Console.WriteLine($"Changed Files Count:\n {changedFiles.Count}");
 
     var sideEffectReports = new List<FeatureImpactReport>();
 
@@ -98,7 +99,7 @@ public class GitHubPullRequestAnalyzer
     return modifiedLines;
   }
 
-  private List<string> GetFeatureImpactAttributes(string methodName)
+  private List<string> GetFeatureImpactAttributesOld(string methodName)
   {
     var impactedFeatures = new List<string>();
 
@@ -119,6 +120,63 @@ public class GitHubPullRequestAnalyzer
           foreach (FeatureImpactAttribute attribute in attributes.Cast<FeatureImpactAttribute>())
           {
             impactedFeatures.AddRange(attribute.Features);
+          }
+        }
+      }
+    }
+
+    return impactedFeatures;
+  }
+
+  private List<string> GetFeatureImpactAttributes(string methodName)
+  {
+    var impactedFeatures = new List<string>();
+
+    // Load all assemblies in the current AppDomain
+    var assemblies = AppDomain.CurrentDomain.GetAssemblies().ToList();
+
+    // Dynamically load assemblies from the solution directory
+    string? solutionDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+    if (!string.IsNullOrEmpty(solutionDirectory))
+    {
+      var dllFiles = Directory.GetFiles(solutionDirectory, "*.dll", SearchOption.AllDirectories);
+      foreach (var dll in dllFiles)
+      {
+        try
+        {
+          var loadedAssembly = Assembly.LoadFrom(dll);
+          if (!assemblies.Contains(loadedAssembly))
+          {
+            assemblies.Add(loadedAssembly);
+          }
+        }
+        catch (Exception ex) when (!ex.IsFatal())
+        {
+          // Log or handle exceptions when loading assemblies
+          Console.WriteLine($"Failed to load assembly: {dll}. Error: {ex.Message}");
+        }
+      }
+    }
+
+    // Process each assembly
+    foreach (var assembly in assemblies)
+    {
+      foreach (var type in assembly.GetTypes())
+      {
+        foreach (
+          var method in type.GetMethods(
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static
+          )
+        )
+        {
+          if (method.Name == methodName)
+          {
+            // Find custom attributes of type FeatureImpactAttribute
+            var attributes = method.GetCustomAttributes(typeof(FeatureImpactAttribute), true);
+            foreach (FeatureImpactAttribute attribute in attributes.Cast<FeatureImpactAttribute>())
+            {
+              impactedFeatures.AddRange(attribute.Features);
+            }
           }
         }
       }
