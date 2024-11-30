@@ -139,20 +139,27 @@ public class GitHubPullRequestAnalyzer
     string? solutionDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
     if (!string.IsNullOrEmpty(solutionDirectory))
     {
-      var dllFiles = Directory.GetFiles(solutionDirectory, "*.dll", SearchOption.AllDirectories);
+      var dllFiles = Directory
+        .GetFiles(solutionDirectory, "*.dll", SearchOption.AllDirectories)
+        .Where(dll => Path.GetFileName(dll).StartsWith("Speckle"));
+
       foreach (var dll in dllFiles)
       {
         try
         {
-          var loadedAssembly = Assembly.LoadFrom(dll);
-          if (!assemblies.Contains(loadedAssembly))
+          var assemblyName = AssemblyName.GetAssemblyName(dll);
+          if (!assemblies.Any(a => a.FullName == assemblyName.FullName))
           {
+            var loadedAssembly = Assembly.LoadFrom(dll);
             assemblies.Add(loadedAssembly);
           }
         }
+        catch (BadImageFormatException)
+        {
+          Console.WriteLine($"Skipping invalid assembly: {dll}");
+        }
         catch (Exception ex) when (!ex.IsFatal())
         {
-          // Log or handle exceptions when loading assemblies
           Console.WriteLine($"Failed to load assembly: {dll}. Error: {ex.Message}");
         }
       }
