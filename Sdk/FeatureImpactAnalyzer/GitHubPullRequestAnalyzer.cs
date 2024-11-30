@@ -134,7 +134,10 @@ public class GitHubPullRequestAnalyzer
     var impactedFeatures = new List<string>();
 
     // Load all assemblies in the current AppDomain
-    var assemblies = AppDomain.CurrentDomain.GetAssemblies().ToList();
+    var assemblies = AppDomain
+      .CurrentDomain.GetAssemblies()
+      .Where(a => a.FullName != null && a.FullName.StartsWith("Speckle"))
+      .ToList();
 
     // Dynamically load assemblies from the solution directory
     string? solutionDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
