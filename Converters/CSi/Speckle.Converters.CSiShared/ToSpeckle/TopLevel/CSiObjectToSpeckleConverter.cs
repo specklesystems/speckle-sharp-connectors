@@ -5,7 +5,7 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.CSiShared.ToSpeckle.TopLevel;
 
-[NameAndRankValue(nameof(ICSiWrapper), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(nameof(CSiWrapperBase), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class CSiObjectToSpeckleConverter : IToSpeckleTopLevelConverter
 {
   private readonly IConverterSettingsStore<CSiConversionSettings> _settingsStore;
