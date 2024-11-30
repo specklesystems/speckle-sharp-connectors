@@ -68,7 +68,7 @@ jobs:
           dotnet-version: '7.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore Sdk/FeatureImpactAnalyzer/FeatureImpactAnalyzer.csproj
+        run: dotnet restore SpeckleConnectors.sln
 
       - name: Build project
         run: dotnet build --no-restore Sdk/FeatureImpactAnalyzer/FeatureImpactAnalyzer.csproj
