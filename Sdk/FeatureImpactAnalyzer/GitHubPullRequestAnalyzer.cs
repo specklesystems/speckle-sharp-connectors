@@ -139,8 +139,12 @@ public class GitHubPullRequestAnalyzer
       .Where(a => a.FullName != null && a.FullName.StartsWith("Speckle"))
       .ToList();
 
+    string? solutionDirectory = Path.GetFullPath(
+      Path.Combine(Assembly.GetExecutingAssembly().Location, "..", "..", "..")
+    );
+
     // Dynamically load assemblies from the solution directory
-    string? solutionDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+    // string? solutionDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
     if (!string.IsNullOrEmpty(solutionDirectory))
     {
       var dllFiles = Directory
