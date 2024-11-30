@@ -80,7 +80,7 @@ jobs:
 
       - name: Run Feature Impact Analyzer
         env:
-          GITHUB_TOKEN: ${{ secrets.CONNECTORS_GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: |
           # Compile and run your side effects analyzer
           dotnet run --project Sdk/FeatureImpactAnalyzer \
