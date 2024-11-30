@@ -2,7 +2,7 @@ using System.Reflection;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Octokit;
-using Speckle.Connectors.Common.Tools;
+using Speckle.Connectors.Common;
 
 namespace FeatureImpactAnalyzer;
 
