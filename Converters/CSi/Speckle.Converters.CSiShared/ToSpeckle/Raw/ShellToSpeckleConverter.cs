@@ -1,3 +1,3 @@
-namespace Speckle.Converters.ETABS22.ToSpeckle.Raw;
+namespace Speckle.Converters.CSiShared.ToSpeckle.Raw;
 
 public class ShellToSpeckleConverter { }
