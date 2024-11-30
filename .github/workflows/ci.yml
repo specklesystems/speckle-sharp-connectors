@@ -57,15 +57,20 @@ jobs:
   feature-impact:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
-          # NOTE: Fetch full git history for proper analysis???
           fetch-depth: 0
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '7.0.x'
+          dotnet-version: 8.0.4xx # Align with global.json (including roll forward rules)
+
+      - name: Cache Nuget
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
 
       - name: Restore dependencies
         run: dotnet restore Speckle.Connectors.sln
