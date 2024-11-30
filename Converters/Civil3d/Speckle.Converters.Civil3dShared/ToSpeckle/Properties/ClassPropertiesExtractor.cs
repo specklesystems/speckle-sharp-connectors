@@ -17,13 +17,15 @@ public class ClassPropertiesExtractor
   private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
   private readonly CatchmentGroupHandler _catchmentGroupHandler;
   private readonly PipeNetworkHandler _pipeNetworkHandler;
+  private readonly CorridorHandler _corridorHandler;
 
   public ClassPropertiesExtractor(
     IConverterSettingsStore<Civil3dConversionSettings> settingsStore,
     ITypedConverter<AG.Point3dCollection, SOG.Polyline> point3dCollectionConverter,
     ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
     CatchmentGroupHandler catchmentGroupHandler,
-    PipeNetworkHandler pipeNetworkHandler
+    PipeNetworkHandler pipeNetworkHandler,
+    CorridorHandler corridorHandler
   )
   {
     _point3dCollectionConverter = point3dCollectionConverter;
@@ -31,6 +33,7 @@ public class ClassPropertiesExtractor
     _settingsStore = settingsStore;
     _catchmentGroupHandler = catchmentGroupHandler;
     _pipeNetworkHandler = pipeNetworkHandler;
+    _corridorHandler = corridorHandler;
   }
 
   /// <summary>
@@ -60,6 +63,10 @@ public class ClassPropertiesExtractor
         return ExtractAlignmentProperties(alignment);
       case CDB.Profile profile:
         return ExtractProfileProperties(profile);
+
+      // corridors
+      case CDB.Corridor corridor:
+        return ExtractCorridorProperties(corridor);
 
       // assemblies
       case CDB.Subassembly subassembly:
@@ -162,6 +169,14 @@ public class ClassPropertiesExtractor
     }
 
     return alignmentProperties;
+  }
+
+  private Dictionary<string, object?> ExtractCorridorProperties(CDB.Corridor corridor)
+  {
+    Dictionary<string, object?> corridorProperties =
+      new() { ["@baselines"] = _corridorHandler.GetCorridorChildren(corridor) };
+
+    return corridorProperties;
   }
 
   private Dictionary<string, object?> ExtractPipeProperties(CDB.Pipe pipe)

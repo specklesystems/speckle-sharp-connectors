@@ -3,6 +3,7 @@ using Speckle.Converters.Civil3dShared.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
+using Speckle.Objects.Data;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 
@@ -15,26 +16,23 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly BaseCurveExtractor _baseCurveExtractor;
   private readonly ClassPropertiesExtractor _classPropertiesExtractor;
-  private readonly CorridorHandler _corridorHandler;
 
   public CivilEntityToSpeckleTopLevelConverter(
     IConverterSettingsStore<Civil3dConversionSettings> settingsStore,
     DisplayValueExtractor displayValueExtractor,
     BaseCurveExtractor baseCurveExtractor,
-    ClassPropertiesExtractor classPropertiesExtractor,
-    CorridorHandler corridorHandler
+    ClassPropertiesExtractor classPropertiesExtractor
   )
   {
     _settingsStore = settingsStore;
     _displayValueExtractor = displayValueExtractor;
     _baseCurveExtractor = baseCurveExtractor;
     _classPropertiesExtractor = classPropertiesExtractor;
-    _corridorHandler = corridorHandler;
   }
 
   public Base Convert(object target) => Convert((CDB.Entity)target);
 
-  public Base Convert(CDB.Entity target)
+  public CivilObject Convert(CDB.Entity target)
   {
     string name = target.DisplayName;
     try
@@ -43,21 +41,8 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     }
     catch (Exception e) when (!e.IsFatal()) { }
 
-    Base civilObject =
-      new()
-      {
-        ["type"] = target.GetType().ToString().Split('.').Last(),
-        ["name"] = name,
-        ["units"] = _settingsStore.Current.SpeckleUnits,
-        applicationId = target.GetSpeckleApplicationId()
-      };
-
     // get basecurve
     List<ICurve>? baseCurves = _baseCurveExtractor.GetBaseCurves(target);
-    if (baseCurves is not null)
-    {
-      civilObject["baseCurves"] = baseCurves;
-    }
 
     // extract display value.
     // If object has no display but has basecurves, use basecurves for display instead (for viewer selection)
@@ -66,10 +51,22 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     {
       displayValue = _displayValueExtractor.ProcessICurvesForDisplay(baseCurves).ToList();
     }
-    if (displayValue.Count > 0)
-    {
-      civilObject["displayValue"] = displayValue;
-    }
+
+    // determine if this entity has any children elements that need to be converted.
+    // this is a bespoke method by class type.
+    var children = GetEntityChildren(target).ToList();
+
+    CivilObject civilObject =
+      new()
+      {
+        name = name,
+        type = target.GetType().ToString().Split('.').Last(),
+        baseCurves = baseCurves,
+        elements = children,
+        displayValue = displayValue,
+        units = _settingsStore.Current.SpeckleUnits,
+        applicationId = target.GetSpeckleApplicationId()
+      };
 
     // add any additional class properties
     Dictionary<string, object?>? classProperties = _classPropertiesExtractor.GetClassProperties(target);
@@ -81,31 +78,16 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
       }
     }
 
-    // determine if this entity has any children elements that need to be converted.
-    // this is a bespoke method by class type.
-    var children = GetEntityChildren(target).ToList();
-    if (children.Count > 0)
-    {
-      civilObject["elements"] = children;
-    }
-
     return civilObject;
   }
 
-  private IEnumerable<Base> GetEntityChildren(CDB.Entity entity)
+  private IEnumerable<CivilObject> GetEntityChildren(CDB.Entity entity)
   {
     switch (entity)
     {
       case CDB.Alignment alignment:
         var alignmentChildren = GetAlignmentChildren(alignment);
         foreach (var child in alignmentChildren)
-        {
-          yield return child;
-        }
-        break;
-      case CDB.Corridor corridor:
-        var corridorChildren = _corridorHandler.GetCorridorChildren(corridor);
-        foreach (var child in corridorChildren)
         {
           yield return child;
         }
@@ -121,7 +103,7 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     }
   }
 
-  private IEnumerable<Base> GetSiteChildren(CDB.Site site)
+  private IEnumerable<CivilObject> GetSiteChildren(CDB.Site site)
   {
     using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
     {
@@ -135,7 +117,7 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     }
   }
 
-  private IEnumerable<Base> GetAlignmentChildren(CDB.Alignment alignment)
+  private IEnumerable<CivilObject> GetAlignmentChildren(CDB.Alignment alignment)
   {
     using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
     {
