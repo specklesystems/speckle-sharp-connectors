@@ -203,6 +203,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ETABS21", "ETABS21", "{DA6A
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Connectors.ETABS21", "Connectors\CSi\Speckle.Connectors.ETABS21\Speckle.Connectors.ETABS21.csproj", "{115D6106-1801-484A-B4E5-BCC94B6E5C7F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FeatureImpactAnalyzer", "Sdk\FeatureImpactAnalyzer\FeatureImpactAnalyzer.csproj", "{6537DFE8-5EA5-460C-8A25-3A8018B6DF3F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -510,6 +512,12 @@ Global
 		{115D6106-1801-484A-B4E5-BCC94B6E5C7F}.Local|Any CPU.Build.0 = Debug|Any CPU
 		{115D6106-1801-484A-B4E5-BCC94B6E5C7F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{115D6106-1801-484A-B4E5-BCC94B6E5C7F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6537DFE8-5EA5-460C-8A25-3A8018B6DF3F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6537DFE8-5EA5-460C-8A25-3A8018B6DF3F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6537DFE8-5EA5-460C-8A25-3A8018B6DF3F}.Local|Any CPU.ActiveCfg = Debug|Any CPU
+		{6537DFE8-5EA5-460C-8A25-3A8018B6DF3F}.Local|Any CPU.Build.0 = Debug|Any CPU
+		{6537DFE8-5EA5-460C-8A25-3A8018B6DF3F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6537DFE8-5EA5-460C-8A25-3A8018B6DF3F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -603,6 +611,7 @@ Global
 		{A8E949B8-AA55-4909-99F0-8B551791A1F8} = {181F0468-B7A7-4CD7-ABD1-7F32B3ABB991}
 		{DA6A607B-C267-4B2E-9C8A-F50B2F1BBFE0} = {073F40A8-6C95-41C1-A2F3-369FFFCB9520}
 		{115D6106-1801-484A-B4E5-BCC94B6E5C7F} = {DA6A607B-C267-4B2E-9C8A-F50B2F1BBFE0}
+		{6537DFE8-5EA5-460C-8A25-3A8018B6DF3F} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}

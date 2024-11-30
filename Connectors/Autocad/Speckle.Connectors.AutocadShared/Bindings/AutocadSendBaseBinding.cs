@@ -8,6 +8,7 @@ using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Tools;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Exceptions;
@@ -90,12 +91,15 @@ public abstract class AutocadSendBaseBinding : ISendBinding
 
   private readonly List<string> _docSubsTracker = new();
 
+  [FeatureImpact("Object Tracking", "Autocad")]
   private void SubscribeToObjectChanges(Document doc)
   {
     if (doc == null || doc.Database == null || _docSubsTracker.Contains(doc.Name))
     {
       return;
     }
+
+    // test to trigger
 
     _docSubsTracker.Add(doc.Name);
     doc.Database.ObjectAppended += (_, e) => OnObjectChanged(e.DBObject);
@@ -106,6 +110,8 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   private void OnObjectChanged(DBObject dbObject)
   {
     _topLevelExceptionHandler.CatchUnhandled(() => OnChangeChangedObjectIds(dbObject));
+
+    // test to trigger
   }
 
   private void OnChangeChangedObjectIds(DBObject dBObject)
@@ -117,11 +123,14 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     );
   }
 
+  [FeatureImpact("Object Invalidation", "Autocad")]
   private async Task RunExpirationChecks()
   {
     var senders = _store.GetSenders();
     string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
     List<string> expiredSenderIds = new();
+
+    // test to trigger
 
     _sendConversionCache.EvictObjects(objectIdsList);
 
@@ -139,8 +148,10 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     ChangedObjectIds = new();
   }
 
+  [FeatureImpact("Send Filter", "Autocad")]
   public List<ISendFilter> GetSendFilters() => _sendFilters;
 
+  [FeatureImpact("Send Settings", "Autocad")]
   public List<ICardSetting> GetSendSettings() => [];
 
   public async Task Send(string modelCardId) =>
