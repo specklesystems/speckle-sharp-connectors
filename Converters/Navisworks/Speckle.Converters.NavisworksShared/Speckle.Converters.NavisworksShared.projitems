@@ -9,13 +9,16 @@
     <Import_RootNamespace>Speckle.Converters.NavisworksShared</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\ModelItemToSpeckleConverter.cs" />
-    <Folder Include="$(MSBuildThisFileDirectory)Extensions\" />
+    <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\ClassPropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\DisplayValueExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\PropertySetsExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\ArrayExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Geometries\Primitives.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Geometries\TransformMatrix.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\PropertyHelpers.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Helpers\GeometryHelpers.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Models\NavisworksObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\NavisworksToSpeckleUnitConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\ConversionModes.cs" />
