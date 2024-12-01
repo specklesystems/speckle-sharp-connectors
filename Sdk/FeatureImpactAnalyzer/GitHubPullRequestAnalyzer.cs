@@ -137,7 +137,7 @@ public class GitHubPullRequestAnalyzer
 
     // Load all assemblies in the current AppDomain
     string? solutionDirectory = Path.GetFullPath(
-      Path.Combine(Assembly.GetExecutingAssembly().Location, "..", "..", "..")
+      Path.Combine(Assembly.GetExecutingAssembly().Location, "..", "..", "..", "..", "..", "..")
     );
     Console.WriteLine($"Solution Directory: {solutionDirectory}");
     if (!string.IsNullOrEmpty(solutionDirectory))
@@ -259,6 +259,10 @@ public class GitHubPullRequestAnalyzer
     Console.WriteLine($"Side effect count: {sideEffects.Count}");
     if (sideEffects.Count == 0)
     {
+      var commentAllGoodBody = "✅ All good!\n\n";
+      await _client
+        .Issue.Comment.Create(repositoryOwner, repositoryName, pullRequestNumber, commentAllGoodBody)
+        .ConfigureAwait(true);
       return;
     }
 
