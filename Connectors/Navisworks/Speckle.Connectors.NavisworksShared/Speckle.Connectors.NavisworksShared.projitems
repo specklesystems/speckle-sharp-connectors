@@ -19,7 +19,12 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksDocumentEvents.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksDocumentModelStore.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksIdleManager.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Operations\NavisworksRootObjectBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\NavisworksRootObjectBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ConvertHiddenEleementsSetting.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\IncludeInternalPropertiesSetting.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\OriginModeSetting.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ToSpeckleSettingsManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\VisualRepresentationSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\AppUtils.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\BrowserPane.xaml.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\Commands.cs" />
@@ -45,5 +50,8 @@
     <Content Include="$(MSBuildThisFileDirectory)Plugin\NavisworksRibbon.xaml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="$(MSBuildThisFileDirectory)Operations\_Receive\" />
   </ItemGroup>
 </Project>

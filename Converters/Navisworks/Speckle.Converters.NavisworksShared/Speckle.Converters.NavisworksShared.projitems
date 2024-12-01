@@ -25,10 +25,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)Models\NavisworksObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\NavisworksToSpeckleUnitConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\ConversionModes.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Settings\ConversionSettings.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\NavisworksConversionSettings.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\NavisworksConversionSettingsFactory.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Settings\ToSpeckleSettingsManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\ModelItemTopLevelConverterToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\BoundingBoxToSpeckleRawConverter.cs" />
   </ItemGroup>
