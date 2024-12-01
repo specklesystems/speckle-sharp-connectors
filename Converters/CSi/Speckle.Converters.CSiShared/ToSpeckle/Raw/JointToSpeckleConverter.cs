@@ -13,7 +13,7 @@ public class JointToSpeckleConverter : ITypedConverter<CSiJointWrapper, Point>
     _settingStore = settingStore;
   }
 
-  public Point Convert(CSiJointWrapper target) // NOTE: This is just a tempoarary POC
+  public Point Convert(CSiJointWrapper target) // NOTE: This is just a temporary POC
   {
     string applicationId = "";
 

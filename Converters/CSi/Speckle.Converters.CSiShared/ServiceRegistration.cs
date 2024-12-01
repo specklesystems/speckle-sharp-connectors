@@ -16,10 +16,11 @@ public static class ServiceRegistration
 
     serviceCollection.AddTransient<CSiObjectToSpeckleConverter>();
     serviceCollection.AddScoped<DisplayValueExtractor>();
+
     // TODO: Property extractor
 
     serviceCollection.AddRootCommon<CSiRootToSpeckleConverter>(converterAssembly);
-    serviceCollection.AddApplicationConverters<CSiToSpeckleUnitConverter, string>(converterAssembly);
+    serviceCollection.AddApplicationConverters<CSiToSpeckleUnitConverter, eUnits>(converterAssembly);
     serviceCollection.AddScoped<
       IConverterSettingsStore<CSiConversionSettings>,
       ConverterSettingsStore<CSiConversionSettings>
