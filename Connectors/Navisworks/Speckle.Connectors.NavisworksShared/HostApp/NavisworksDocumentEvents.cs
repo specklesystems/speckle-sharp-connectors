@@ -110,11 +110,11 @@ public sealed class NavisworksDocumentEvents : IDisposable
       {
         case 0 when _priorModelCount > 0:
           // Clear the store when models are removed
-          store.Models.Clear();
+          store.ClearAndSave();
           break;
         case > 0 when _priorModelCount == 0:
           // Load state when models are added
-          store.ReadFromFile();
+          store.LoadState();
           break;
       }
 

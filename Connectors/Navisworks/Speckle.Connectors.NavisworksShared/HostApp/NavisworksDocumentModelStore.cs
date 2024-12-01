@@ -1,8 +1,6 @@
-using System.Collections.ObjectModel;
 using System.Data;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
-using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Utils;
 
 namespace Speckle.Connector.Navisworks.HostApp;
@@ -11,7 +9,7 @@ namespace Speckle.Connector.Navisworks.HostApp;
 /// Manages persistence of Speckle model states within Navisworks' embedded SQLite database.
 /// Provides mechanisms for reliable read/write operations with retry handling and validation.
 /// </summary>
-public class NavisworksDocumentModelStore : DocumentModelStore
+public sealed class NavisworksDocumentModelStore : DocumentModelStore
 {
   private const string TABLE_NAME = "speckle";
   private const string KEY_NAME = "Speckle_DUI3";
@@ -22,13 +20,13 @@ public class NavisworksDocumentModelStore : DocumentModelStore
     IJsonSerializer jsonSerializer,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
-    : base(jsonSerializer, true)
+    : base(jsonSerializer)
   {
     _topLevelExceptionHandler = topLevelExceptionHandler;
-    ReadFromFile();
+    LoadState();
   }
 
-  public override void WriteToFile()
+  public override void HostAppSaveState(string modelCardState)
   {
     if (!IsActiveDocumentValid())
     {
@@ -37,7 +35,7 @@ public class NavisworksDocumentModelStore : DocumentModelStore
 
     try
     {
-      SaveStateToDatabase();
+      SaveStateToDatabase(modelCardState);
     }
     catch (NAV.Data.DatabaseException ex)
     {
@@ -47,21 +45,22 @@ public class NavisworksDocumentModelStore : DocumentModelStore
     }
   }
 
-  public sealed override void ReadFromFile()
+  public override void LoadState()
   {
     if (!IsActiveDocumentValid())
     {
-      Models.Clear();
+      ClearAndSave();
       return;
     }
 
     try
     {
-      Models = RetrieveStateFromDatabase();
+      string serializedState = RetrieveStateFromDatabase();
+      LoadFromString(serializedState);
     }
     catch (NAV.Data.DatabaseException ex)
     {
-      Models = []; // Clear models on failure to avoid stale data
+      ClearAndSave(); // Clear models on failure to avoid stale data
       _topLevelExceptionHandler.CatchUnhandled(
         () => throw new InvalidOperationException("Failed to read Speckle state from database", ex)
       );
@@ -85,7 +84,7 @@ public class NavisworksDocumentModelStore : DocumentModelStore
     }
   }
 
-  private void SaveStateToDatabase()
+  private static void SaveStateToDatabase(string modelCardState)
   {
     var activeDoc = NavisworksApp.ActiveDocument;
     if (activeDoc?.Database == null)
@@ -93,7 +92,6 @@ public class NavisworksDocumentModelStore : DocumentModelStore
       return;
     }
 
-    string serializedState = Serialize();
     var database = activeDoc.Database;
 
     using (var transaction = database.BeginTransaction(NAV.Data.DatabaseChangedAction.Reset))
@@ -105,7 +103,7 @@ public class NavisworksDocumentModelStore : DocumentModelStore
     {
       try
       {
-        ReplaceStateInDatabase(transaction, serializedState);
+        ReplaceStateInDatabase(transaction, modelCardState);
         transaction.Commit();
       }
       catch
@@ -138,7 +136,7 @@ public class NavisworksDocumentModelStore : DocumentModelStore
     command.ExecuteNonQuery();
   }
 
-  private ObservableCollection<ModelCard> RetrieveStateFromDatabase()
+  private static string RetrieveStateFromDatabase()
   {
     var database = NavisworksApp.ActiveDocument!.Database;
     using var table = new DataTable();
@@ -152,10 +150,11 @@ public class NavisworksDocumentModelStore : DocumentModelStore
 
     if (table.Rows.Count <= 0)
     {
-      return []; // Return an empty collection if no state is found
+      return string.Empty; // Return an empty collection if no state is found
     }
 
-    string? stateString = table.Rows[0]["value"] as string;
-    return !string.IsNullOrEmpty(stateString) ? Deserialize(stateString!) : [];
+    string stateString = table.Rows[0]["value"] as string ?? string.Empty;
+
+    return stateString;
   }
 }
