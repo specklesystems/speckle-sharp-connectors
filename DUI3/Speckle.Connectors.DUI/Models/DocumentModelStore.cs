@@ -118,9 +118,9 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
   /// <summary>
   /// Implement this method according to the host app's specific ways of reading custom data from its file.
   /// </summary>
-  protected abstract void HostAppSaveState(string modelCardState);
+  public abstract void HostAppSaveState(string modelCardState);
 
-  protected abstract void LoadState();
+  public abstract void LoadState();
 
   protected void LoadFromString(string? models)
   {
