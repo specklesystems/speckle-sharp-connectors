@@ -12,7 +12,6 @@ using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
-using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Logging;
@@ -84,7 +83,7 @@ public class NavisworksSendBinding : ISendBinding
       using var scope = _serviceProvider.CreateScope();
       scope
         .ServiceProvider.GetRequiredService<IConverterSettingsStore<NavisworksConversionSettings>>()
-        .Initialize(_conversionSettingsFactory.Create(NavisworksApp.ActiveDocument));
+        .Initialize(_conversionSettingsFactory.Create());
 
       CancellationToken token = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
