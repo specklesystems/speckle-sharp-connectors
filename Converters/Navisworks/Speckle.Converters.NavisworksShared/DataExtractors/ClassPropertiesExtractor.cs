@@ -1,5 +1,6 @@
 ﻿using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
+using static Speckle.Converter.Navisworks.Helpers.PropertyHelpers;
 
 namespace Speckle.Converter.Navisworks.ToSpeckle;
 
@@ -12,7 +13,7 @@ public class ClassPropertiesExtractor
     _settingsStore = settingsStore;
   }
 
-  public Dictionary<string, object?>? GetClassProperties(NAV.ModelItem modelItem)
+  internal Dictionary<string, object?>? GetClassProperties(NAV.ModelItem modelItem)
   {
     if (_settingsStore.Current.ExcludeProperties)
     {
@@ -52,7 +53,7 @@ public class ClassPropertiesExtractor
     {
       if (value != null)
       {
-        Helpers.PropertyHelpers.AddPropertyIfNotNullOrEmpty(propertyDictionary, propertyName, value);
+        AddPropertyIfNotNullOrEmpty(propertyDictionary, propertyName, value);
       }
     }
 

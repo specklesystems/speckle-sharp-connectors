@@ -13,7 +13,7 @@ public class PropertySetsExtractor
     _settingsStore = settingsStore;
   }
 
-  public Dictionary<string, object?>? GetPropertySets(NAV.ModelItem modelItem)
+  internal Dictionary<string, object?>? GetPropertySets(NAV.ModelItem modelItem)
   {
     if (_settingsStore.Current.ExcludeProperties)
     {

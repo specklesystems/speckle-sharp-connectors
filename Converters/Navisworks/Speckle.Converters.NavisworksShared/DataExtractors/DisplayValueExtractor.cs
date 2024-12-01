@@ -1,8 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
-using Speckle.Objects.Geometry;
-using Speckle.Sdk;
 
 namespace Speckle.Converter.Navisworks.ToSpeckle;
 
@@ -20,5 +18,5 @@ public class DisplayValueExtractor
     _logger = logger;
   }
 
-  public List<SSM.Base> GetDisplayValue(NAV.ModelItem _) => [];
+  internal static List<SSM.Base> GetDisplayValue(NAV.ModelItem _) => [];
 }
