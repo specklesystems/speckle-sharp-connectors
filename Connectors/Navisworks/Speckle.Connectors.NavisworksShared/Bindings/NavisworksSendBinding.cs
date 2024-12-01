@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Speckle.Connector.Navisworks.Operations.Send.Settings;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Bindings;
@@ -67,7 +68,13 @@ public class NavisworksSendBinding : ISendBinding
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
 
-  public List<ICardSetting> GetSendSettings() => [];
+  public List<ICardSetting> GetSendSettings() =>
+    [
+      new VisualRepresentationSetting(RepresentationMode.Active),
+      new OriginModeSetting(OriginMode.ModelOrigin),
+      new IncludeInternalPropertiesSetting(false),
+      new ConvertHiddenElementsSetting(false),
+    ];
 
   public async Task Send(string modelCardId)
   {
