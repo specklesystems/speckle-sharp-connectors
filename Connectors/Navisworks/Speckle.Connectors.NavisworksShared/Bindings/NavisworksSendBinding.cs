@@ -34,7 +34,7 @@ public class NavisworksSendBinding : ISendBinding
   private readonly ILogger<NavisworksSendBinding> _logger;
   private readonly ISpeckleApplication _speckleApplication;
   private readonly ISdkActivityFactory _activityFactory;
-  private readonly NavisworksConversionSettingsFactory _conversionSettingsFactory;
+  private readonly INavisworksConversionSettingsFactory _conversionSettingsFactory;
 
   public NavisworksSendBinding(
     DocumentModelStore store,
@@ -46,7 +46,7 @@ public class NavisworksSendBinding : ISendBinding
     ILogger<NavisworksSendBinding> logger,
     ISpeckleApplication speckleApplication,
     ISdkActivityFactory activityFactory,
-    NavisworksConversionSettingsFactory conversionSettingsFactory
+    INavisworksConversionSettingsFactory conversionSettingsFactory
   )
   {
     Parent = parent;
