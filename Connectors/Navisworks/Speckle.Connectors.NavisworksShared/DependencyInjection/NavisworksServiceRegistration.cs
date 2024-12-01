@@ -15,7 +15,6 @@ using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
-using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connector.Navisworks.DependencyInjection;
@@ -26,7 +25,7 @@ public static class NavisworksServiceRegistration
   {
     // Register Core functionality
     serviceCollection.AddConnectorUtils();
-    serviceCollection.AddDUI();
+    serviceCollection.AddDUI<NavisworksDocumentModelStore>();
     serviceCollection.AddDUIView();
 
     // Register bindings
@@ -56,7 +55,7 @@ public static class NavisworksServiceRegistration
     serviceCollection.RegisterTopLevelExceptionHandler();
     serviceCollection.AddTransient<CancellationManager>();
     serviceCollection.AddSingleton<IAppIdleManager, NavisworksIdleManager>();
-    serviceCollection.AddSingleton<DocumentModelStore, NavisworksDocumentStore>();
+    serviceCollection.AddSingleton<DocumentModelStore, NavisworksDocumentModelStore>();
     serviceCollection.AddSingleton<NavisworksDocumentEvents>();
 
     // register filters
