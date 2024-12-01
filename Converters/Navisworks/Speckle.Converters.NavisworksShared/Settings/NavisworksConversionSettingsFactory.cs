@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using Speckle.Connector.Navisworks.Settings;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Converters.Common;
 using Speckle.InterfaceGenerator;
@@ -102,9 +101,9 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
   private NAV.Vector3D CalculateTransformVector() =>
     _originMode switch
     {
-      PROJECTBASEORIGIN => CalculateProjectBasePointTransform(),
-      BOUNDINGBOXORIGIN => CalculateBoundingBoxTransform(),
-      MODELORIGIN => new NAV.Vector3D(0, 0, 0), // Default identity transform
+      ProjectBasePoint => CalculateProjectBasePointTransform(),
+      BoundingBoxCenter => CalculateBoundingBoxTransform(),
+      ModelOrigin => new NAV.Vector3D(0, 0, 0), // Default identity transform
       _ => throw new NotSupportedException($"OriginMode {_originMode} is not supported.")
     };
 

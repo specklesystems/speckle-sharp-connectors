@@ -5,22 +5,23 @@ namespace Speckle.Converter.Navisworks.Settings;
 /// <summary>
 /// Defines the representation mode to be used during conversion.
 /// </summary>
+[SuppressMessage("ReSharper", "InconsistentNaming")]
 public enum RepresentationMode
 {
   /// <summary>
   /// Uses the current active representation (e.g., overrides or temporary settings).
   /// </summary>
-  ACTIVE,
+  Active,
 
   /// <summary>
   /// Preserves the original representation as defined in the source data.
   /// </summary>
-  ORIGINAL,
+  Original,
 
   /// <summary>
   /// Applies a fixed or user-defined representation, overriding others.
   /// </summary>
-  PERMANENT
+  Permanent
 }
 
 /// <summary>
@@ -28,7 +29,7 @@ public enum RepresentationMode
 /// applied to the model before conversion. The transformation aligns
 /// the model's origin point to a base point.
 /// </summary>
-[SuppressMessage("ReSharper", "IdentifierTypo")]
+[SuppressMessage("ReSharper", "InconsistentNaming")]
 public enum OriginMode
 {
   /// <summary>
@@ -36,15 +37,15 @@ public enum OriginMode
   /// No transformation is applied other than converting from the local
   /// coordinate system to the world coordinate system.
   /// </summary>
-  MODELORIGIN,
+  ModelOrigin,
 
   /// <summary>
   /// Uses a user-defined project base point as the base point for the transformation.
   /// </summary>
-  PROJECTBASEORIGIN,
+  ProjectBasePoint,
 
   /// <summary>
   /// Uses the center of the model's bounding box as the base point for the transformation.
   /// </summary>
-  BOUNDINGBOXORIGIN
+  BoundingBoxCenter
 }
