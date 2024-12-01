@@ -9,7 +9,7 @@ namespace Speckle.Converter.Navisworks.ToSpeckle;
 /// <summary>
 /// Converts Navisworks ModelItem objects to Speckle Base objects.
 /// </summary>
-public class ModelItemTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
+public class ModelItemTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter, IRootToSpeckleConverter
 {
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly ClassPropertiesExtractor _classPropertiesExtractor;
@@ -46,7 +46,7 @@ public class ModelItemTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
   /// </summary>
   /// <param name="target">The object to convert.</param>
   /// <returns>The converted Speckle Base object.</returns>
-  public Base Convert(object target) => Convert((NAV.ModelItem)target);
+  public Base Convert(object target) => Convert(target as NAV.ModelItem ?? throw new InvalidOperationException());
 
   // Converts a Navisworks ModelItem into a Speckle Base object
   private Base Convert(NAV.ModelItem target)
@@ -55,7 +55,9 @@ public class ModelItemTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
 
     INavisworksObject navisworksObject = target.HasGeometry
       ? CreateGeometryObject(target, name) // Create a NavisworksGeometryObject
-      : CreateNonGeometryObject(name); // Create a NavisworksObject
+      : global::Speckle.Converter.Navisworks.ToSpeckle.ModelItemTopLevelConverterToSpeckle.CreateNonGeometryObject(
+        name
+      ); // Create a NavisworksObject
 
     AddProperties(navisworksObject, target);
 
@@ -65,10 +67,10 @@ public class ModelItemTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
   private NavisworksGeometryObject CreateGeometryObject(NAV.ModelItem target, string name) =>
     new(name: name, displayValue: _displayValueExtractor.GetDisplayValue(target).ToList());
 
-  private NavisworksObject CreateNonGeometryObject(string name) =>
+  private static NavisworksObject CreateNonGeometryObject(string name) =>
     new(name) { elements = new List<NavisworksObject>() };
 
-  private string GetObjectName(NAV.ModelItem target) =>
+  private static string GetObjectName(NAV.ModelItem target) =>
     target.ClassDisplayName ?? target.FindFirstObjectAncestor()?.ClassDisplayName ?? "Unnamed model";
 
   // Adds class and property set data to the object
