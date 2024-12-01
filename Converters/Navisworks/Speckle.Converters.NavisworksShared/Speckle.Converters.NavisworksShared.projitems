@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
@@ -12,10 +12,12 @@
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\ClassPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\DisplayValueExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\ModelPropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\NavisworksPrimitiveProcessor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\PropertySetsExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\ArrayExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Geometries\Primitives.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Geometries\TransformMatrix.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Helpers\PrimitiveProcessor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\PropertyHelpers.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\GeometryHelpers.cs" />
@@ -26,5 +28,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Settings\NavisworksConversionSettings.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\NavisworksConversionSettingsFactory.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\ModelItemTopLevelConverterToSpeckle.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\BoundingBoxToSpeckleRawConverter.cs" />
   </ItemGroup>
 </Project>
