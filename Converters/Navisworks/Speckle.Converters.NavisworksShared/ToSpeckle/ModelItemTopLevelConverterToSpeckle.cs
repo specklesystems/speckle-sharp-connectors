@@ -64,8 +64,8 @@ public class ModelItemTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter, 
     return (Base)navisworksObject;
   }
 
-  private NavisworksGeometryObject CreateGeometryObject(NAV.ModelItem target, string name) =>
-    new(name: name, displayValue: _displayValueExtractor.GetDisplayValue(target).ToList());
+  private static NavisworksGeometryObject CreateGeometryObject(NAV.ModelItem target, string name) =>
+    new(name: name, displayValue: DisplayValueExtractor.GetDisplayValue(target).ToList());
 
   private static NavisworksObject CreateNonGeometryObject(string name) =>
     new(name) { elements = new List<NavisworksObject>() };

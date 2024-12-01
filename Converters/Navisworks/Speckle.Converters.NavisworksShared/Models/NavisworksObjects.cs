@@ -26,7 +26,7 @@ public interface INavisworksObject : IDataObject
 /// <summary>
 /// Represents a non-geometry Speckle object.
 /// </summary>
-internal class NavisworksObject(string name) : SSM.Base, INavisworksObject
+internal sealed class NavisworksObject(string name) : SSM.Base, INavisworksObject
 {
   public string name { get; init; } = name;
 
@@ -49,7 +49,9 @@ internal class NavisworksObject(string name) : SSM.Base, INavisworksObject
 /// <summary>
 /// Represents a geometry-based Speckle object.
 /// </summary>
-internal class NavisworksGeometryObject(IReadOnlyList<SSM.Base> displayValue, string name) : SSM.Base, INavisworksObject
+internal sealed class NavisworksGeometryObject(IReadOnlyList<SSM.Base> displayValue, string name)
+  : SSM.Base,
+    INavisworksObject
 {
   IReadOnlyList<SSM.Base> IDataObject.displayValue => displayValue;
   public string name { get; init; } = name;
