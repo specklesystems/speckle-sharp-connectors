@@ -51,7 +51,7 @@ public class NavisworksRootObjectBuilder : IRootObjectBuilder<NAV.ModelItem>
     var rootObjectCollection = new Collection { name = name };
     rootObjectCollection["units"] = _converterSettings.Current.SpeckleUnits;
 
-    if (!navisworksModelItems.Any())
+    if (!navisworksModelItems.Any() || navisworksModelItems == null)
     {
       throw new SpeckleException("No objects to convert");
     }
@@ -66,11 +66,16 @@ public class NavisworksRootObjectBuilder : IRootObjectBuilder<NAV.ModelItem>
         using var _2 = _activityFactory.Start("Convert");
         cancellationToken.ThrowIfCancellationRequested();
 
+        if (sendInfo == null)
+        {
+          continue;
+        }
+
         var result = ConvertNavisworksItem(navisworksItem, rootObjectCollection, sendInfo.ProjectId);
         results.Add(result);
 
         ++count;
-        onOperationProgressed.Report(new("Converting", (double)count / navisworksModelItems.Count));
+        onOperationProgressed?.Report(new CardProgress("Converting", (double)count / navisworksModelItems.Count));
       }
     }
 
