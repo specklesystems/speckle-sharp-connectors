@@ -15,7 +15,7 @@ public class PropertySetsExtractor
 
   internal Dictionary<string, object?>? GetPropertySets(NAV.ModelItem modelItem)
   {
-    if (_settingsStore.Current.ExcludeProperties)
+    if (_settingsStore.Current.User.ExcludeProperties)
     {
       return null;
     }
@@ -48,7 +48,7 @@ public class PropertySetsExtractor
       foreach (var property in propertyCategory.Properties)
       {
         string sanitizedName = SanitizePropertyName(property.DisplayName);
-        var propertyValue = ConvertPropertyValue(property.Value, _settingsStore.Current.SpeckleUnits);
+        var propertyValue = ConvertPropertyValue(property.Value, _settingsStore.Current.Derived.SpeckleUnits);
 
         if (propertyValue != null)
         {

@@ -19,34 +19,34 @@ public class BoundingBoxToSpeckleRawConverter : ITypedConverter<NAV.BoundingBox3
 
   public Box Convert(NAV.BoundingBox3D? target)
   {
-    if (target != null)
+    if (target == null)
     {
-      var min = target.Min;
-      var max = target.Max;
-
-      var basePlane = new Plane
-      {
-        origin = new Point(min.X, min.Y, min.Z, _settingsStore.Current.SpeckleUnits),
-        normal = new Vector(0, 0, 1, _settingsStore.Current.SpeckleUnits),
-        xdir = new Vector(1, 0, 0, _settingsStore.Current.SpeckleUnits),
-        ydir = new Vector(0, 1, 0, _settingsStore.Current.SpeckleUnits),
-        units = _settingsStore.Current.SpeckleUnits
-      };
-
-      var boundingBox = new Box
-      {
-        units = _settingsStore.Current.SpeckleUnits,
-        plane = basePlane,
-        xSize = new Interval() { start = min.X, end = max.X },
-        ySize = new Interval() { start = min.Y, end = max.Y },
-        zSize = new Interval() { start = min.Z, end = max.Z }
-      };
-
-      return boundingBox;
+      return default!; // returns null for reference types (Box is a reference type)
     }
-    else
+
+    var minPoint = target.Min;
+    var maxPoint = target.Max;
+
+    var units = _settingsStore.Current.Derived.SpeckleUnits;
+
+    var basePlane = new Plane
     {
-      return null!;
-    }
+      origin = new Point(minPoint.X, minPoint.Y, minPoint.Z, units),
+      normal = new Vector(0, 0, 1, units),
+      xdir = new Vector(1, 0, 0, units),
+      ydir = new Vector(0, 1, 0, units),
+      units = units
+    };
+
+    var boundingBox = new Box
+    {
+      units = units,
+      plane = basePlane,
+      xSize = new Interval() { start = minPoint.X, end = maxPoint.X },
+      ySize = new Interval() { start = minPoint.Y, end = maxPoint.Y },
+      zSize = new Interval() { start = minPoint.Z, end = maxPoint.Z }
+    };
+
+    return boundingBox;
   }
 }

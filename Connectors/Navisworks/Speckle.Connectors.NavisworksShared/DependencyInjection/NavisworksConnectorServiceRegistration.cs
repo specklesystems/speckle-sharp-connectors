@@ -3,6 +3,7 @@ using Speckle.Connector.Navisworks.Bindings;
 using Speckle.Connector.Navisworks.Filters;
 using Speckle.Connector.Navisworks.HostApp;
 using Speckle.Connector.Navisworks.Operations.Send;
+using Speckle.Connector.Navisworks.Settings;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Cancellation;
@@ -41,6 +42,7 @@ public static class NavisworksConnectorServiceRegistration
     serviceCollection.AddSingleton<INavisworksConversionSettingsFactory, NavisworksConversionSettingsFactory>();
 
     // Conversion settings
+    serviceCollection.AddSingleton<ToSpeckleSettingsManager>();
     serviceCollection.AddScoped<
       IConverterSettingsStore<NavisworksConversionSettings>,
       ConverterSettingsStore<NavisworksConversionSettings>
@@ -50,6 +52,7 @@ public static class NavisworksConnectorServiceRegistration
     serviceCollection.AddScoped<IRootObjectBuilder<NAV.ModelItem>, NavisworksRootObjectBuilder>();
     serviceCollection.AddScoped<SendOperation<NAV.ModelItem>>();
     serviceCollection.AddSingleton(DefaultTraversal.CreateTraversalFunc());
+    serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();
 
     // Register Intercom/interop
     serviceCollection.RegisterTopLevelExceptionHandler();

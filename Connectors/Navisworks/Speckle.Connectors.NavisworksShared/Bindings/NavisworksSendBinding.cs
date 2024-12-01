@@ -34,7 +34,7 @@ public class NavisworksSendBinding : ISendBinding
   private readonly ILogger<NavisworksSendBinding> _logger;
   private readonly ISpeckleApplication _speckleApplication;
   private readonly ISdkActivityFactory _activityFactory;
-  private readonly INavisworksConversionSettingsFactory _conversionSettingsFactory;
+  private readonly NavisworksConversionSettingsFactory _conversionSettingsFactory;
 
   public NavisworksSendBinding(
     DocumentModelStore store,
@@ -46,9 +46,11 @@ public class NavisworksSendBinding : ISendBinding
     ILogger<NavisworksSendBinding> logger,
     ISpeckleApplication speckleApplication,
     ISdkActivityFactory activityFactory,
-    INavisworksConversionSettingsFactory conversionSettingsFactory
+    NavisworksConversionSettingsFactory conversionSettingsFactory
   )
   {
+    Parent = parent;
+    Commands = new SendBindingUICommands(parent);
     _store = store;
     _serviceProvider = serviceProvider;
     _sendFilters = sendFilters.ToList();
@@ -56,11 +58,9 @@ public class NavisworksSendBinding : ISendBinding
     _operationProgressManager = operationProgressManager;
     _logger = logger;
     _speckleApplication = speckleApplication;
-    Parent = parent;
-    Commands = new SendBindingUICommands(parent);
     _activityFactory = activityFactory;
-    SubscribeToNavisworksEvents();
     _conversionSettingsFactory = conversionSettingsFactory;
+    SubscribeToNavisworksEvents();
   }
 
   private static void SubscribeToNavisworksEvents() { }
@@ -81,9 +81,10 @@ public class NavisworksSendBinding : ISendBinding
       }
 
       using var scope = _serviceProvider.CreateScope();
+
       scope
         .ServiceProvider.GetRequiredService<IConverterSettingsStore<NavisworksConversionSettings>>()
-        .Initialize(_conversionSettingsFactory.Create());
+        .Initialize(_conversionSettingsFactory.Create(modelCard));
 
       CancellationToken token = _cancellationManager.InitCancellationTokenSource(modelCardId);
 

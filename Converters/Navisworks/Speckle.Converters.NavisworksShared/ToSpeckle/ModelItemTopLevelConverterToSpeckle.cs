@@ -76,7 +76,7 @@ public class ModelItemTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter, 
   // Adds class and property set data to the object
   private void AddProperties(INavisworksObject navisworksObject, NAV.ModelItem target)
   {
-    if (_settingsStore.Current.ExcludeProperties)
+    if (_settingsStore.Current.User.ExcludeProperties)
     {
       return;
     }

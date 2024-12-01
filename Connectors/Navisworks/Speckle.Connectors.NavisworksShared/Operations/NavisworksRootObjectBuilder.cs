@@ -49,7 +49,7 @@ public class NavisworksRootObjectBuilder : IRootObjectBuilder<NAV.ModelItem>
     var name = NavisworksApp.ActiveDocument.Title ?? "Unnamed model";
 
     var rootObjectCollection = new Collection { name = name };
-    rootObjectCollection["units"] = _converterSettings.Current.SpeckleUnits;
+    rootObjectCollection["units"] = _converterSettings.Current.Derived.SpeckleUnits;
 
     if (!navisworksModelItems.Any() || navisworksModelItems == null)
     {

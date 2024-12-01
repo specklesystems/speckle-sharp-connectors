@@ -14,7 +14,7 @@ public class ModelPropertiesExtractor
 
   internal Dictionary<string, object?>? GetModelProperties(NAV.Model model)
   {
-    if (_settingsStore.Current.ExcludeProperties)
+    if (_settingsStore.Current.User.ExcludeProperties)
     {
       return null;
     }

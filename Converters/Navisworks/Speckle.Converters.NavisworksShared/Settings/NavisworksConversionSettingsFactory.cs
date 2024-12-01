@@ -1,9 +1,10 @@
 ﻿using Microsoft.Extensions.Logging;
+using Speckle.Connector.Navisworks.Settings;
+using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Converters.Common;
 using Speckle.InterfaceGenerator;
 using static Speckle.Converter.Navisworks.Helpers.GeometryHelpers;
 using static Speckle.Converter.Navisworks.Settings.OriginMode;
-using static Speckle.Converter.Navisworks.Settings.RepresentationMode;
 
 namespace Speckle.Converter.Navisworks.Settings;
 
@@ -13,31 +14,30 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
   private readonly IConverterSettingsStore<NavisworksConversionSettings> _settingsStore;
   private readonly ILogger<NavisworksConversionSettingsFactory> _logger;
   private readonly IHostToSpeckleUnitConverter<NAV.Units> _unitsConverter;
+  private readonly IToSpeckleSettingsManager _toSpeckleSettingsManager;
 
-  private NAV.Document _document;
-  private NAV.BoundingBox3D _modelBoundingBox;
+  private NAV.Document? _document;
+  private NAV.BoundingBox3D? _modelBoundingBox;
   private bool _convertHiddenElements;
 
   public NavisworksConversionSettingsFactory(
     IHostToSpeckleUnitConverter<NAV.Units> unitsConverter,
     IConverterSettingsStore<NavisworksConversionSettings> settingsStore,
-    ILogger<NavisworksConversionSettingsFactory> logger
+    ILogger<NavisworksConversionSettingsFactory> logger,
+    IToSpeckleSettingsManager toSpeckleSettingsManager
   )
   {
     _logger = logger;
     _settingsStore = settingsStore;
     _unitsConverter = unitsConverter;
+    _toSpeckleSettingsManager = toSpeckleSettingsManager;
   }
 
   public NavisworksConversionSettings Current => _settingsStore.Current;
 
-  private bool _includeInternalProperties;
-  private bool _coalescePropertiesFromFirstObjectAncestor;
-  private RepresentationMode _visualRepresentationMode;
-  private OriginMode _originMode;
-  private bool _excludeProperties;
-
   private static readonly NAV.Vector3D s_canonicalUp = new(0, 0, 1);
+
+  private OriginMode _originMode;
 
   /// <summary>
   /// Creates a new instance of NavisworksConversionSettings with calculated values.
@@ -45,23 +45,18 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
   /// <exception cref="InvalidOperationException">
   /// Thrown when no active document is found or document units cannot be converted.
   /// </exception>
-  public NavisworksConversionSettings Create()
+  public NavisworksConversionSettings Create(SenderModelCard modelCard)
   {
-    // Default settings until overriding them in UI is implemented
-    _convertHiddenElements = false;
-    _includeInternalProperties = false;
-    _coalescePropertiesFromFirstObjectAncestor = true;
-    _visualRepresentationMode = ACTIVE;
-    _originMode = MODELORIGIN;
-    _excludeProperties = false;
+    _convertHiddenElements = _toSpeckleSettingsManager.GetConvertHiddenElements(modelCard);
+    _originMode = _toSpeckleSettingsManager.GetOriginMode(modelCard);
 
-    // Derived settings from the active document
-    _document = NavisworksApp.ActiveDocument ?? throw new InvalidOperationException("No active document found.");
-    _logger.LogInformation("Creating settings for document: {DocumentName}", _document.Title);
+    // Initialize document and validate
+    InitializeDocument();
 
-    _modelBoundingBox =
-      _document.GetBoundingBox(_convertHiddenElements)
-      ?? throw new InvalidOperationException("Bounding box could not be determined.");
+    if (_document == null)
+    {
+      throw new InvalidOperationException("No active document found.");
+    }
 
     var units = _unitsConverter.ConvertOrThrow(_document.Units);
     if (string.IsNullOrEmpty(units))
@@ -70,22 +65,38 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
     }
 
     // Calculate the transformation vector based on the origin mode
-    using var transformVector = CalculateTransformVector();
+    var transformVector =
+      CalculateTransformVector() ?? throw new InvalidOperationException("Failed to calculate transform vector");
     var isUpright = VectorMatch(_document.UpVector, s_canonicalUp);
 
     return new NavisworksConversionSettings(
-      Document: _document,
-      SpeckleUnits: units,
-      OriginMode: _originMode,
-      IncludeInternalProperties: _includeInternalProperties,
-      ConvertHiddenElements: _convertHiddenElements,
-      VisualRepresentationMode: _visualRepresentationMode,
-      CoalescePropertiesFromFirstObjectAncestor: _coalescePropertiesFromFirstObjectAncestor,
-      TransformVector: transformVector,
-      IsUpright: isUpright,
-      ModelBoundingBox: _modelBoundingBox,
-      ExcludeProperties: _excludeProperties
+      // Derived from Navisworks Application
+      new Derived(
+        Document: _document,
+        ModelBoundingBox: _modelBoundingBox
+          ?? throw new InvalidOperationException("Bounding box could not be determined, which is weird."),
+        TransformVector: transformVector,
+        IsUpright: isUpright,
+        SpeckleUnits: units
+      ),
+      // Optional settings for conversion to be offered in UI
+      new User(
+        OriginMode: _originMode,
+        IncludeInternalProperties: _toSpeckleSettingsManager.GetIncludeInternalProperties(modelCard),
+        ConvertHiddenElements: _convertHiddenElements,
+        VisualRepresentationMode: _toSpeckleSettingsManager.GetVisualRepresentationMode(modelCard),
+        CoalescePropertiesFromFirstObjectAncestor: false, // Not yet exposed in the UI
+        ExcludeProperties: false // Not yet exposed in the UI
+      )
     );
+  }
+
+  private void InitializeDocument()
+  {
+    _document = NavisworksApp.ActiveDocument ?? throw new InvalidOperationException("No active document found.");
+    _logger.LogInformation("Creating settings for document: {DocumentName}", _document.Title);
+
+    _modelBoundingBox = _document.GetBoundingBox(_convertHiddenElements);
   }
 
   private NAV.Vector3D CalculateTransformVector() =>
@@ -109,9 +120,10 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
   {
     // TODO: Replace with actual logic to fetch project base point and units from UI or settings
     using var projectBasePoint = new NAV.Vector3D(10, 20, 0);
+    // ReSharper disable once ConvertToConstant.Local
     var projectBasePointUnits = NAV.Units.Meters;
 
-    var scale = NAV.UnitConversion.ScaleFactor(projectBasePointUnits, _document.Units);
+    var scale = NAV.UnitConversion.ScaleFactor(projectBasePointUnits, _document!.Units);
 
     // The transformation vector is the negative of the project base point, scaled to the source units.
     // These units are independent of the Speckle units, and because they are from user input.
@@ -126,5 +138,6 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
   /// This uses the document active model bounding box center as the base point for the transformation.
   /// </remarks>
   private NAV.Vector3D CalculateBoundingBoxTransform() =>
-    new(-_modelBoundingBox.Center.X, -_modelBoundingBox.Center.Y, 0);
+    (_modelBoundingBox != null ? new NAV.Vector3D(-_modelBoundingBox.Center.X, -_modelBoundingBox.Center.Y, 0) : null)
+    ?? throw new InvalidOperationException("Bounding box could not be determined.");
 }
