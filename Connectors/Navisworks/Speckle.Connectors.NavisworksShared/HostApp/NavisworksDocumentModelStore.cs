@@ -141,6 +141,11 @@ public sealed class NavisworksDocumentModelStore : DocumentModelStore
     var database = NavisworksApp.ActiveDocument!.Database;
     using var table = new DataTable();
 
+    using (var transaction = database.BeginTransaction(NAV.Data.DatabaseChangedAction.Reset))
+    {
+      EnsureDatabaseTableExists(transaction);
+    }
+
     using var dataAdapter = new NAV.Data.NavisworksDataAdapter(
       $"SELECT value FROM {TABLE_NAME} WHERE key = @key",
       database.Value
