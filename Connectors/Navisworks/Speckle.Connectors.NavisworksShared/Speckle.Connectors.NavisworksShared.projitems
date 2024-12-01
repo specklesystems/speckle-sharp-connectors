@@ -12,7 +12,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\NavisworksBasicConnectorBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\NavisworksSelectionBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\NavisworksSendBinding.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\NavisworksServiceRegistration.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\NavisworksConnectorServiceRegistration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\ElementSelectionExtension.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Filters\NavisworksSelectionFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />

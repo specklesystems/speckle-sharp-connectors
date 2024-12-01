@@ -19,7 +19,7 @@ using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connector.Navisworks.DependencyInjection;
 
-public static class NavisworksServiceRegistration
+public static class NavisworksConnectorServiceRegistration
 {
   public static void AddNavisworks(this IServiceCollection serviceCollection)
   {

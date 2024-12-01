@@ -9,7 +9,7 @@ using Speckle.Sdk;
 
 namespace Speckle.Converter.Navisworks;
 
-public static class ServiceRegistration
+public static class NavisworksConverterServiceRegistration
 {
   public static IServiceCollection AddNavisworksConverters(this IServiceCollection serviceCollection)
   {
