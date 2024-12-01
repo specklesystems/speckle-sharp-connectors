@@ -11,14 +11,17 @@ namespace Speckle.Connector.Navisworks.HostApp;
 /// Manages persistence of Speckle model states within Navisworks' embedded SQLite database.
 /// Provides mechanisms for reliable read/write operations with retry handling and validation.
 /// </summary>
-public class NavisworksDocumentStore : DocumentModelStore
+public class NavisworksDocumentModelStore : DocumentModelStore
 {
   private const string TABLE_NAME = "speckle";
   private const string KEY_NAME = "Speckle_DUI3";
 
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
-  public NavisworksDocumentStore(IJsonSerializer jsonSerializer, ITopLevelExceptionHandler topLevelExceptionHandler)
+  public NavisworksDocumentModelStore(
+    IJsonSerializer jsonSerializer,
+    ITopLevelExceptionHandler topLevelExceptionHandler
+  )
     : base(jsonSerializer, true)
   {
     _topLevelExceptionHandler = topLevelExceptionHandler;
