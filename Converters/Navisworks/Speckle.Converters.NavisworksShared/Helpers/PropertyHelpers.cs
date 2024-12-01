@@ -1,66 +1,51 @@
 ﻿using System.Globalization;
+using System.Text.RegularExpressions;
 using Speckle.Objects.Geometry;
 
 namespace Speckle.Converter.Navisworks.Helpers;
 
-public class PropertyHelpers
+public static class PropertyHelpers
 {
-  private static dynamic ConvertPropertyValue(NAV.VariantData value)
-  {
-    dynamic propertyValue = null;
+  private static readonly HashSet<string> s_excludedCategories = ["Geometry", "Metadata"];
 
-    NAV.VariantDataType type = value.DataType;
-
-    switch (type)
+  private static readonly Dictionary<NAV.VariantDataType, Func<NAV.VariantData, string, dynamic?>> s_typeHandlers =
+    new()
     {
-      case NAV.VariantDataType.Boolean:
-        propertyValue = value.ToBoolean();
-        break;
-      case NAV.VariantDataType.DisplayString:
-        propertyValue = value.ToDisplayString();
-        break;
-      case NAV.VariantDataType.IdentifierString:
-        propertyValue = value.ToIdentifierString();
-        break;
-      case NAV.VariantDataType.Int32:
-        propertyValue = value.ToInt32();
-        break;
-      case NAV.VariantDataType.Double:
-        propertyValue = value.ToDouble();
-        break;
-      case NAV.VariantDataType.DoubleAngle:
-        propertyValue = value.ToDoubleAngle();
-        break;
-      case NAV.VariantDataType.DoubleArea:
-        propertyValue = value.ToDoubleArea();
-        break;
-      case NAV.VariantDataType.DoubleLength:
-        propertyValue = value.ToDoubleLength();
-        break;
-      case NAV.VariantDataType.DoubleVolume:
-        propertyValue = value.ToDoubleVolume();
-        break;
-      case NAV.VariantDataType.DateTime:
-        propertyValue = value.ToDateTime().ToString(CultureInfo.InvariantCulture);
-        break;
-      case NAV.VariantDataType.NamedConstant:
-        propertyValue = value.ToNamedConstant().DisplayName;
-        break;
-      case NAV.VariantDataType.Point3D:
-        NAV.Point3D point = value.ToPoint3D();
-        Point pointProperty = new(point.X, point.Y, point.Z);
-        propertyValue = pointProperty.ToString();
-        break;
-      case NAV.VariantDataType.None:
-        break;
-      case NAV.VariantDataType.Point2D:
-        break;
-      default:
-        propertyValue = value.ToString();
-        break;
+      { NAV.VariantDataType.Boolean, (value, _) => value.ToBoolean() },
+      { NAV.VariantDataType.DisplayString, (value, _) => value.ToDisplayString() },
+      { NAV.VariantDataType.IdentifierString, (value, _) => value.ToIdentifierString() },
+      { NAV.VariantDataType.Int32, (value, _) => value.ToInt32() },
+      { NAV.VariantDataType.Double, (value, _) => value.ToDouble() },
+      { NAV.VariantDataType.DoubleAngle, (value, _) => value.ToDoubleAngle() },
+      { NAV.VariantDataType.DoubleArea, (value, _) => value.ToDoubleArea() },
+      { NAV.VariantDataType.DoubleLength, (value, _) => value.ToDoubleLength() },
+      { NAV.VariantDataType.DoubleVolume, (value, _) => value.ToDoubleVolume() },
+      { NAV.VariantDataType.DateTime, (value, _) => value.ToDateTime().ToString(CultureInfo.InvariantCulture) },
+      { NAV.VariantDataType.NamedConstant, (value, _) => value.ToNamedConstant().DisplayName },
+      { NAV.VariantDataType.None, (_, _) => null },
+      { NAV.VariantDataType.Point2D, (_, _) => null },
+      {
+        NAV.VariantDataType.Point3D,
+        (value, units) =>
+        {
+          var point = value.ToPoint3D();
+          var pointProperty = new Point(point.X, point.Y, point.Z, units);
+          return pointProperty.ToString();
+        }
+      }
+    };
+
+  internal static dynamic? ConvertPropertyValue(NAV.VariantData value, string units)
+  {
+    if (s_typeHandlers.TryGetValue(value.DataType, out var handler))
+    {
+      return handler(value, units);
     }
 
-    return propertyValue;
+    // Default case for unsupported types
+    return value.DataType == NAV.VariantDataType.None || value.DataType == NAV.VariantDataType.Point2D
+      ? null
+      : value.ToString();
   }
 
   /// <summary>
@@ -105,4 +90,17 @@ public class PropertyHelpers
         throw new ArgumentException("Unsupported object type", nameof(baseObject));
     }
   }
+
+  /// <summary>
+  /// Sanitizes property names by replacing invalid characters with underscores.
+  /// </summary>
+  internal static string SanitizePropertyName(string name) =>
+    // Regex pattern from speckle-sharp/Core/Core/Models/DynamicBase.cs IsPropNameValid
+    name == "Item"
+      // Item is a reserved term for Indexed Properties: https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/indexers/using-indexers
+      ? "Item_"
+      : Regex.Replace(name, @"[\.\/]", "_");
+
+  internal static bool IsCategoryToBeSkipped(NAV.PropertyCategory propertyCategory) =>
+    s_excludedCategories.Contains(propertyCategory.DisplayName);
 }
