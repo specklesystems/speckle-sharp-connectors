@@ -666,6 +666,7 @@ Global
 		Connectors\Autocad\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems*{c70ebb84-ba5b-4f2f-819e-25e0985ba13c}*SharedItemsImports = 5
 		Connectors\Autocad\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems*{ca8eae01-ab9f-4ec1-b6f3-73721487e9e1}*SharedItemsImports = 5
 		Connectors\Autocad\Speckle.Connectors.Civil3dShared\Speckle.Connectors.Civil3dShared.projitems*{ca8eae01-ab9f-4ec1-b6f3-73721487e9e1}*SharedItemsImports = 5
+		Converters\CSi\Speckle.Converters.CSiShared\Speckle.Converters.CSiShared.projitems*{d096fab7-af65-40fa-a41c-8c45c74400f3}*SharedItemsImports = 13
 		Converters\Revit\Speckle.Converters.RevitShared.Tests\Speckle.Converters.RevitShared.Tests.projitems*{d8069a23-ad2e-4c9e-8574-7e8c45296a46}*SharedItemsImports = 5
 		Converters\Revit\Speckle.Converters.RevitShared\Speckle.Converters.RevitShared.projitems*{d8069a23-ad2e-4c9e-8574-7e8c45296a46}*SharedItemsImports = 5
 		Converters\Autocad\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.projitems*{db31e57b-60fc-49be-91e0-1374290bcf03}*SharedItemsImports = 5
