@@ -1,25 +1,46 @@
+using Speckle.Converters.Common.Objects;
+using Speckle.Objects.Geometry;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 
 public class DisplayValueExtractor
 {
-  public DisplayValueExtractor() { }
+  private readonly ITypedConverter<CSiJointWrapper, Point> _jointConverter;
+  private readonly ITypedConverter<CSiFrameWrapper, Line> _frameConverter;
+  private readonly ITypedConverter<CSiShellWrapper, Mesh> _shellConverter;
+
+  public DisplayValueExtractor(
+    ITypedConverter<CSiJointWrapper, Point> jointConverter,
+    ITypedConverter<CSiFrameWrapper, Line> frameConverter,
+    ITypedConverter<CSiShellWrapper, Mesh> shellConverter
+  )
+  {
+    _jointConverter = jointConverter;
+    _frameConverter = frameConverter;
+    _shellConverter = shellConverter;
+  }
 
   public IEnumerable<Base> GetDisplayValue(ICSiWrapper wrapper)
   {
     return wrapper switch
     {
-      CSiJointWrapper joint => ExtractJoint(joint.Name),
-      CSiFrameWrapper frame => ExtractFrame(frame.Name),
-      CSiShellWrapper shell => ExtractShell(shell.Name),
+      CSiJointWrapper joint => ExtractJoint(joint),
+      CSiFrameWrapper frame => ExtractFrame(frame),
+      CSiShellWrapper shell => ExtractShell(shell),
       _ => Enumerable.Empty<Base>()
     };
   }
 
-  private IEnumerable<Base> ExtractJoint(string name) => throw new NotImplementedException();
+  private IEnumerable<Base> ExtractJoint(CSiJointWrapper target)
+  {
+    yield return _jointConverter.Convert(target);
+  }
 
-  private IEnumerable<Base> ExtractFrame(string name) => throw new NotImplementedException();
+  private IEnumerable<Base> ExtractFrame(CSiFrameWrapper target)
+  {
+    yield return _frameConverter.Convert(target);
+  }
 
-  private IEnumerable<Base> ExtractShell(string name) => throw new NotImplementedException();
+  private IEnumerable<Base> ExtractShell(CSiShellWrapper target) => throw new NotImplementedException();
 }
