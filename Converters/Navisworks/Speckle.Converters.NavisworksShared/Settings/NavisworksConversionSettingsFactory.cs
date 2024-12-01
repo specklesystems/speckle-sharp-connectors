@@ -52,7 +52,7 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
     _includeInternalProperties = false;
     _coalescePropertiesFromFirstObjectAncestor = true;
     _visualRepresentationMode = ACTIVE;
-    _originMode = MODEL_ORIGIN;
+    _originMode = MODELORIGIN;
     _excludeProperties = false;
 
     // Derived settings from the active document
@@ -70,7 +70,7 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
     }
 
     // Calculate the transformation vector based on the origin mode
-    var transformVector = CalculateTransformVector();
+    using var transformVector = CalculateTransformVector();
     var isUpright = VectorMatch(_document.UpVector, s_canonicalUp);
 
     return new NavisworksConversionSettings(
@@ -91,9 +91,9 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
   private NAV.Vector3D CalculateTransformVector() =>
     _originMode switch
     {
-      PROJECT_BASE_ORIGIN => CalculateProjectBasePointTransform(),
-      BOUNDING_BOX_ORIGIN => CalculateBoundingBoxTransform(),
-      MODEL_ORIGIN => new NAV.Vector3D(0, 0, 0), // Default identity transform
+      PROJECTBASEORIGIN => CalculateProjectBasePointTransform(),
+      BOUNDINGBOXORIGIN => CalculateBoundingBoxTransform(),
+      MODELORIGIN => new NAV.Vector3D(0, 0, 0), // Default identity transform
       _ => throw new NotSupportedException($"OriginMode {_originMode} is not supported.")
     };
 
