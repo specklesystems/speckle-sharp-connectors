@@ -1,35 +1,33 @@
-using System.IO;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Sdk;
+using Speckle.Sdk.Helpers;
 using Speckle.Sdk.SQLite;
 
 namespace Speckle.Connectors.TeklaShared.HostApp;
 
 public class TeklaDocumentModelStore : DocumentModelStore
 {
-  private readonly ISpeckleApplication _speckleApplication;
   private readonly ILogger<TeklaDocumentModelStore> _logger;
   private readonly ISqLiteJsonCacheManager _jsonCacheManager;
   private readonly TSM.Events _events;
+  private string? _modelKey;
 
   public TeklaDocumentModelStore(
     IJsonSerializer jsonSerializer,
-    ISpeckleApplication speckleApplication,
     ILogger<TeklaDocumentModelStore> logger,
     ISqLiteJsonCacheManagerFactory jsonCacheManagerFactory
   )
     : base(jsonSerializer)
   {
-    _speckleApplication = speckleApplication;
     _logger = logger;
-    _jsonCacheManager = jsonCacheManagerFactory.CreateForUser(
-      Path.Combine("ConnectorsFileData", _speckleApplication.Slug)
-    );
+    _jsonCacheManager = jsonCacheManagerFactory.CreateForUser("ConnectorsFileData");
     _events = new TSM.Events();
     _events.ModelLoad += () =>
     {
+      var model = new TSM.Model();
+      _modelKey = Crypt.Md5(model.GetInfo().ModelPath, length: 32);
       LoadState();
       OnDocumentChanged();
     };
@@ -41,13 +39,15 @@ public class TeklaDocumentModelStore : DocumentModelStore
     }
   }
 
-  private string GetKey() => _speckleApplication.ApplicationAndVersion;
-
   protected override void HostAppSaveState(string modelCardState)
   {
     try
     {
-      _jsonCacheManager.SaveObject(GetKey(), modelCardState);
+      if (_modelKey is null)
+      {
+        return;
+      }
+      _jsonCacheManager.SaveObject(_modelKey, modelCardState);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
@@ -57,7 +57,11 @@ public class TeklaDocumentModelStore : DocumentModelStore
 
   protected override void LoadState()
   {
-    var state = _jsonCacheManager.GetObject(GetKey());
+    if (_modelKey is null)
+    {
+      return;
+    }
+    var state = _jsonCacheManager.GetObject(_modelKey);
     LoadFromString(state);
   }
 }
