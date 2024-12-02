@@ -9,7 +9,7 @@ public class CSiSharedSelectionBinding : ISelectionBinding
 {
   public string Name => "selectionBinding";
   public IBrowserBridge Parent { get; }
-  private readonly ICSiApplicationService _csiApplicationService; // Update selection binding to centralized CSiSharedApplicationService instead of trying to maintain a reference to "sapModel"
+  private readonly ICSiApplicationService _csiApplicationService;
 
   public CSiSharedSelectionBinding(IBrowserBridge parent, ICSiApplicationService csiApplicationService)
   {
@@ -17,9 +17,15 @@ public class CSiSharedSelectionBinding : ISelectionBinding
     _csiApplicationService = csiApplicationService;
   }
 
+  /// <summary>
+  /// Gets the selection and creates an encoded ID (objectType and objectName).
+  /// </summary>
+  /// <remarks>
+  /// Refer to ObjectIdentifier.cs for more info.
+  /// </remarks>
   public SelectionInfo GetSelection()
   {
-    // TODO: Handle better. Enums? ObjectType same in ETABS and SAP
+    // TODO: Since this is standard across CSi Suite - better stored in an enum?
     var objectTypeMap = new Dictionary<int, string>
     {
       { 1, "Point" },
@@ -46,7 +52,7 @@ public class CSiSharedSelectionBinding : ISelectionBinding
       var typeName = objectTypeMap.TryGetValue(typeKey, out var name) ? name : $"Unknown ({typeKey})";
 
       encodedIds.Add(ObjectIdentifier.Encode(typeKey, objectName[i]));
-      typeCounts[typeName] = (typeCounts.TryGetValue(typeName, out var count) ? count : 0) + 1; // NOTE: Cross-framework compatibility
+      typeCounts[typeName] = (typeCounts.TryGetValue(typeName, out var count) ? count : 0) + 1; // NOTE: Cross-framework compatibility (net 48 and net8)
     }
 
     var summary =

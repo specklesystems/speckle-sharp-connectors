@@ -24,10 +24,10 @@ public static class ServiceRegistration
     services.AddSingleton<ICSiApplicationService, CSiApplicationService>();
 
     services.AddConnectorUtils();
-    services.AddDUI<CSiSharedDocumentModelStore>();
+    services.AddDUI<CSiDocumentModelStore>();
     services.AddDUIView();
 
-    services.AddSingleton<DocumentModelStore, CSiSharedDocumentModelStore>();
+    services.AddSingleton<DocumentModelStore, CSiDocumentModelStore>();
 
     services.AddSingleton<IBinding, TestBinding>();
     services.AddSingleton<IBinding, ConfigBinding>();
@@ -35,7 +35,7 @@ public static class ServiceRegistration
 
     services.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
     services.AddSingleton<IBasicConnectorBinding, CSiSharedBasicConnectorBinding>();
-    services.AddSingleton<IAppIdleManager, CSiSharedIdleManager>();
+    services.AddSingleton<IAppIdleManager, CSiIdleManager>();
 
     services.AddSingleton<IBinding, CSiSharedSelectionBinding>();
     services.AddSingleton<IBinding, CSiSharedSendBinding>();

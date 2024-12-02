@@ -33,7 +33,7 @@ public sealed class CSiSharedSendBinding : ISendBinding
   private readonly CancellationManager _cancellationManager;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<CSiSharedSendBinding> _logger;
-  private readonly ICSiApplicationService _csiApplicationService; // Update selection binding to centralized CSiSharedApplicationService instead of trying to maintain a reference to "sapModel"
+  private readonly ICSiApplicationService _csiApplicationService; // Update selection binding to centralized CSiApplicationService instead of trying to maintain a reference to "sapModel"
   private readonly ICSiConversionSettingsFactory _csiConversionSettingsFactory;
   private readonly ISpeckleApplication _speckleApplication;
   private readonly ISdkActivityFactory _activityFactory;

@@ -19,7 +19,7 @@ public class FrameToSpeckleConverter : ITypedConverter<CSiFrameWrapper, Line>
     _pointConverter = pointConverter;
   }
 
-  public Line Convert(CSiFrameWrapper target) // NOTE: THIS IS TEMPORARY
+  public Line Convert(CSiFrameWrapper target) // NOTE: THIS IS TEMPORARY POC
   {
     // frame points
     string startPoint = "",

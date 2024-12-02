@@ -8,19 +8,19 @@ using Speckle.Sdk.Logging;
 
 namespace Speckle.Connectors.CSiShared.HostApp;
 
-public class CSiSharedDocumentModelStore : DocumentModelStore
+public class CSiDocumentModelStore : DocumentModelStore
 {
   private readonly ISpeckleApplication _speckleApplication;
-  private readonly ILogger<CSiSharedDocumentModelStore> _logger;
+  private readonly ILogger<CSiDocumentModelStore> _logger;
   private readonly ICSiApplicationService _csiApplicationService;
   private string HostAppUserDataPath { get; set; }
   private string DocumentStateFile { get; set; }
   private string ModelPathHash { get; set; }
 
-  public CSiSharedDocumentModelStore(
+  public CSiDocumentModelStore(
     IJsonSerializer jsonSerializerSettings,
     ISpeckleApplication speckleApplication,
-    ILogger<CSiSharedDocumentModelStore> logger,
+    ILogger<CSiDocumentModelStore> logger,
     ICSiApplicationService csiApplicationService
   )
     : base(jsonSerializerSettings)

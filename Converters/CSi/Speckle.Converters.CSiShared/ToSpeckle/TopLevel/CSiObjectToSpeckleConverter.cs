@@ -34,7 +34,7 @@ public class CSiObjectToSpeckleConverter : IToSpeckleTopLevelConverter
     var result = new CSiObject
     {
       name = csiWrapper.Name,
-      type = csiWrapper.GetType().ToString().Split('.').Last().Replace("Wrapper", ""),
+      type = csiWrapper.GetType().ToString().Split('.').Last().Replace("Wrapper", ""), // CSiJointWrapper → CSiJoint, CSiFrameWrapper → CSiFrame etc.
       units = _settingsStore.Current.SpeckleUnits,
       // TODO: properties
       displayValue = _displayValueExtractor.GetDisplayValue(csiWrapper).ToList()

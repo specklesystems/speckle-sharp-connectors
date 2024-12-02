@@ -4,6 +4,7 @@ using Speckle.Objects.Geometry;
 
 namespace Speckle.Converters.CSiShared.ToSpeckle.Raw;
 
+// NOTE: This is HORRIBLE but serves just as a poc!
 public class JointToSpeckleConverter : ITypedConverter<CSiJointWrapper, Point>
 {
   private readonly IConverterSettingsStore<CSiConversionSettings> _settingStore;

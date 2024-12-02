@@ -4,6 +4,7 @@ using Speckle.Objects.Geometry;
 
 namespace Speckle.Converters.CSiShared.ToSpeckle.Raw;
 
+// NOTE: This is HORRIBLE but serves just as a poc! We need point caching and weak referencing to joint objects
 public class ShellToSpeckleConverter : ITypedConverter<CSiShellWrapper, Mesh>
 {
   private readonly IConverterSettingsStore<CSiConversionSettings> _settingsStore;

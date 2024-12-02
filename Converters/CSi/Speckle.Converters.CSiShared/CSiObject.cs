@@ -3,6 +3,7 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.CSiShared;
 
+// NOTE: These are just temporarily here. Should be in SDK
 [SpeckleType("Converters.CSiShared.CSiObject")]
 public class CSiObject : Base, ICSiObject
 {
