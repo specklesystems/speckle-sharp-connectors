@@ -91,7 +91,7 @@ public class AutocadMaterialBaker
     transaction.Commit();
   }
 
-  public async Task ParseAndBakeRenderMaterials(
+  public void ParseAndBakeRenderMaterials(
     List<RenderMaterialProxy> materialProxies,
     string baseLayerPrefix,
     IProgress<CardProgress> onOperationProgressed
@@ -140,7 +140,6 @@ public class AutocadMaterialBaker
     }
 
     transaction.Commit();
-    await Task.Yield();
   }
 
   private (ObjectId, ReceiveConversionResult) BakeMaterial(
