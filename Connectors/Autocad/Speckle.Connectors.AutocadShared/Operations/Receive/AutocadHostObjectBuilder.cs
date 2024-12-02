@@ -26,13 +26,14 @@ public class AutocadHostObjectBuilder(
   IAutocadColorBaker colorBaker,
   AutocadContext autocadContext,
   RootObjectUnpacker rootObjectUnpacker
-) : HostObjectBuilder
+) : IHostObjectBuilder
 {
-  protected override HostObjectBuilderResult Build(
+  public HostObjectBuilderResult Build(
     Base rootObject,
     string projectName,
     string modelName,
-    IProgress<CardProgress> onOperationProgressed
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken
   )
   {
     // Prompt the UI conversion started. Progress bar will swoosh.
@@ -88,7 +89,7 @@ public class AutocadHostObjectBuilder(
     {
       string objectId = atomicObject.applicationId ?? atomicObject.id;
       onOperationProgressed.Report(new("Converting objects", (double)++count / atomicObjects.Count));
-
+      cancellationToken.ThrowIfCancellationRequested();
       try
       {
         List<Entity> convertedObjects = ConvertObject(atomicObject, layerPath, baseLayerPrefix);

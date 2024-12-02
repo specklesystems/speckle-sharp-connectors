@@ -43,7 +43,7 @@ public sealed class ReceiveOperation(
 
     // 4 - Convert objects
     HostObjectBuilderResult res = await threadContext
-      .RunOnThreadAsync(
+      .RunOnThread(
         () => ConvertObjects(commitObject, receiveInfo, onOperationProgressed, cancellationToken),
         threadOptions.RunReceiveBuildOnMainThread
       )
@@ -80,7 +80,7 @@ public sealed class ReceiveOperation(
     return commitObject;
   }
 
-  private async Task<HostObjectBuilderResult> ConvertObjects(
+  private HostObjectBuilderResult ConvertObjects(
     Base commitObject,
     ReceiveInfo receiveInfo,
     IProgress<CardProgress> onOperationProgressed,
@@ -97,9 +97,13 @@ public sealed class ReceiveOperation(
 
     try
     {
-      HostObjectBuilderResult res = await hostObjectBuilder
-        .Build(commitObject, receiveInfo.ProjectName, receiveInfo.ModelName, onOperationProgressed, cancellationToken)
-        .BackToAny();
+      HostObjectBuilderResult res = hostObjectBuilder.Build(
+        commitObject,
+        receiveInfo.ProjectName,
+        receiveInfo.ModelName,
+        onOperationProgressed,
+        cancellationToken
+      );
       conversionActivity?.SetStatus(SdkActivityStatusCode.Ok);
       return res;
     }

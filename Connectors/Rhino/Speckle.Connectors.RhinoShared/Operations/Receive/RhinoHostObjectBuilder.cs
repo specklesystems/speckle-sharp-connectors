@@ -19,7 +19,7 @@ namespace Speckle.Connectors.Rhino.Operations.Receive;
 /// <summary>
 /// <para>Expects to be a scoped dependency per receive operation.</para>
 /// </summary>
-public class RhinoHostObjectBuilder : HostObjectBuilder
+public class RhinoHostObjectBuilder : IHostObjectBuilder
 {
   private readonly IRootToHostConverter _converter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _converterSettings;
@@ -55,12 +55,13 @@ public class RhinoHostObjectBuilder : HostObjectBuilder
   }
 
 #pragma warning disable CA1506
-  protected override HostObjectBuilderResult Build(
+  public HostObjectBuilderResult Build(
 #pragma warning restore CA1506
     Base rootObject,
     string projectName,
     string modelName,
-    IProgress<CardProgress> onOperationProgressed
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken
   )
   {
     using var activity = _activityFactory.Start("Build");
@@ -109,6 +110,7 @@ public class RhinoHostObjectBuilder : HostObjectBuilder
     onOperationProgressed.Report(new("Baking layers (redraw disabled)", null));
     using (var _ = _activityFactory.Start("Pre baking layers"))
     {
+      //TODO what is this?  This is going to the UI thread
       RhinoApp.InvokeAndWait(() =>
       {
         using var layerNoDraw = new DisableRedrawScope(_converterSettings.Current.Document.Views);
@@ -133,6 +135,7 @@ public class RhinoHostObjectBuilder : HostObjectBuilder
           onOperationProgressed.Report(
             new("Converting objects", (double)++count / atomicObjectsWithoutInstanceComponentsForConverter.Count)
           );
+          cancellationToken.ThrowIfCancellationRequested();
           try
           {
             // 0: get pre-created layer from cache in layer baker

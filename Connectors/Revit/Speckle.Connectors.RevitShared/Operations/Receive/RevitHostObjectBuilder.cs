@@ -34,13 +34,14 @@ public sealed class RevitHostObjectBuilder(
   ILogger<RevitHostObjectBuilder> logger,
   RevitToHostCacheSingleton revitToHostCacheSingleton,
   ITypedConverter<(Base atomicObject, List<Matrix4x4> matrix), DirectShape> localToGlobalDirectShapeConverter
-) : HostObjectBuilder, IDisposable
+) : IHostObjectBuilder, IDisposable
 {
-  protected override HostObjectBuilderResult Build(
+  public HostObjectBuilderResult Build(
     Base rootObject,
     string projectName,
     string modelName,
-    IProgress<CardProgress> onOperationProgressed
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken
   )
   {
     var baseGroupName = $"Project {projectName}: Model {modelName}"; // TODO: unify this across connectors!
@@ -92,7 +93,7 @@ public sealed class RevitHostObjectBuilder(
     {
       using var _ = activityFactory.Start("Baking objects");
       transactionManager.StartTransaction(true, "Baking objects");
-      conversionResults = BakeObjects(localToGlobalMaps, onOperationProgressed);
+      conversionResults = BakeObjects(localToGlobalMaps, onOperationProgressed, cancellationToken);
       transactionManager.CommitTransaction();
     }
 
@@ -118,7 +119,11 @@ public sealed class RevitHostObjectBuilder(
   private (
     HostObjectBuilderResult builderResult,
     List<(DirectShape res, string applicationId)> postBakePaintTargets
-  ) BakeObjects(List<LocalToGlobalMap> localToGlobalMaps, IProgress<CardProgress> onOperationProgressed)
+  ) BakeObjects(
+    List<LocalToGlobalMap> localToGlobalMaps,
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken
+  )
   {
     using var _ = activityFactory.Start("BakeObjects");
     var conversionResults = new List<ReceiveConversionResult>();
@@ -129,6 +134,7 @@ public sealed class RevitHostObjectBuilder(
 
     foreach (LocalToGlobalMap localToGlobalMap in localToGlobalMaps)
     {
+      cancellationToken.ThrowIfCancellationRequested();
       try
       {
         using var activity = activityFactory.Start("BakeObject");
