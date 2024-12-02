@@ -55,7 +55,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   }
 
 #pragma warning disable CA1506
-  public async Task<HostObjectBuilderResult> Build(
+  public Task<HostObjectBuilderResult> Build(
 #pragma warning restore CA1506
     Base rootObject,
     string projectName,
@@ -207,9 +207,12 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     // 6 - Convert instances
     using (var _ = _activityFactory.Start("Converting instances"))
     {
-      var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = await _instanceBaker
-        .BakeInstances(instanceComponentsWithPath, applicationIdMap, baseLayerName, onOperationProgressed)
-        .ConfigureAwait(false);
+      var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = _instanceBaker.BakeInstances(
+        instanceComponentsWithPath,
+        applicationIdMap,
+        baseLayerName,
+        onOperationProgressed
+      );
 
       bakedObjectIds.RemoveAll(id => consumedObjectIds.Contains(id)); // remove all objects that have been "consumed"
       bakedObjectIds.AddRange(createdInstanceIds); // add instance ids
@@ -224,7 +227,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     }
 
     _converterSettings.Current.Document.Views.Redraw();
-    return new HostObjectBuilderResult(bakedObjectIds, conversionResults);
+    return Task.FromResult(new HostObjectBuilderResult(bakedObjectIds, conversionResults));
   }
 
   private void PreReceiveDeepClean(string baseLayerName)
