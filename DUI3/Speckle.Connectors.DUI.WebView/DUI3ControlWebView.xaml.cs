@@ -26,7 +26,7 @@ public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExec
 
   public object BrowserElement => Browser;
 
-  public  Task ExecuteScriptAsyncMethod(string script, CancellationToken cancellationToken)
+  public Task ExecuteScriptAsyncMethod(string script, CancellationToken cancellationToken)
   {
     if (!Browser.IsInitialized)
     {
@@ -34,20 +34,20 @@ public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExec
     }
 
     bool isAlreadyMainThread = Browser.Dispatcher.CheckAccess();
-   if (isAlreadyMainThread)
-   {
-     //fire and forget
-     Browser.ExecuteScriptAsync(script);
-   }
-   else
-   {
-     Browser.Dispatcher.Invoke(
-       //fire and forget
-       () => Browser.ExecuteScriptAsync(script),
-       DispatcherPriority.Background
-     );
-   }
-   return Task.CompletedTask;
+    if (isAlreadyMainThread)
+    {
+      //fire and forget
+      Browser.ExecuteScriptAsync(script);
+    }
+    else
+    {
+      Browser.Dispatcher.Invoke(
+        //fire and forget
+        () => Browser.ExecuteScriptAsync(script),
+        DispatcherPriority.Background
+      );
+    }
+    return Task.CompletedTask;
   }
 
   private void OnInitialized(object? sender, CoreWebView2InitializationCompletedEventArgs e)
