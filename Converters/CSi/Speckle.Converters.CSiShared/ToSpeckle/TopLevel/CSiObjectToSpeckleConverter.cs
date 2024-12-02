@@ -25,6 +25,7 @@ public class CSiObjectToSpeckleConverter : IToSpeckleTopLevelConverter
   }
 
   public Base Convert(object target) => Convert((CSiWrapperBase)target);
+  
   private Base Convert(CSiWrapperBase target)
   {
     var result = new Base
