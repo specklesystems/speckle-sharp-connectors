@@ -24,20 +24,16 @@ public class CSiObjectToSpeckleConverter : IToSpeckleTopLevelConverter
     // TODO: _property_extractor
   }
 
-  public Base Convert(object target)
+  public Base Convert(object target) => Convert((CSiWrapperBase)target);
+  private Base Convert(CSiWrapperBase target)
   {
-    if (target is not ICSiWrapper csiWrapper)
+    var result = new Base
     {
-      throw new ArgumentException($"Target object must be a CSi wrapper. Got {target.GetType()}");
-    }
-
-    var result = new CSiObject
-    {
-      name = csiWrapper.Name,
-      type = csiWrapper.GetType().ToString().Split('.').Last().Replace("Wrapper", ""), // CSiJointWrapper → CSiJoint, CSiFrameWrapper → CSiFrame etc.
-      units = _settingsStore.Current.SpeckleUnits,
+      ["name"] = target.Name,
+      ["type"] = target.GetType().ToString().Split('.').Last().Replace("Wrapper", ""), // CSiJointWrapper → CSiJoint, CSiFrameWrapper → CSiFrame etc.
+      ["units"] = _settingsStore.Current.SpeckleUnits,
       // TODO: properties
-      displayValue = _displayValueExtractor.GetDisplayValue(csiWrapper).ToList()
+      ["displayValue"] = _displayValueExtractor.GetDisplayValue(target).ToList()
     };
 
     return result;
