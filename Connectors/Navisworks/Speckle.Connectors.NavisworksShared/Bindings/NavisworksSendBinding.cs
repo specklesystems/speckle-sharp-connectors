@@ -36,7 +36,7 @@ public class NavisworksSendBinding : ISendBinding
   private readonly ISpeckleApplication _speckleApplication;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly INavisworksConversionSettingsFactory _conversionSettingsFactory;
-  private readonly IToSpeckleSettingsManagerNavisworks _toSpeckleSettingsManager;
+  private readonly ToSpeckleSettingsManagerNavisworks _toSpeckleSettingsManagerNavisworks;
 
   public NavisworksSendBinding(
     DocumentModelStore store,
@@ -49,7 +49,7 @@ public class NavisworksSendBinding : ISendBinding
     ISpeckleApplication speckleApplication,
     ISdkActivityFactory activityFactory,
     INavisworksConversionSettingsFactory conversionSettingsFactory,
-    IToSpeckleSettingsManagerNavisworks toSpeckleSettingsManager
+    ToSpeckleSettingsManagerNavisworks toSpeckleSettingsManagerNavisworks
   )
   {
     Parent = parent;
@@ -63,7 +63,7 @@ public class NavisworksSendBinding : ISendBinding
     _speckleApplication = speckleApplication;
     _activityFactory = activityFactory;
     _conversionSettingsFactory = conversionSettingsFactory;
-    _toSpeckleSettingsManager = toSpeckleSettingsManager;
+    _toSpeckleSettingsManagerNavisworks = toSpeckleSettingsManagerNavisworks;
     SubscribeToNavisworksEvents();
   }
 
@@ -96,10 +96,10 @@ public class NavisworksSendBinding : ISendBinding
         .ServiceProvider.GetRequiredService<IConverterSettingsStore<NavisworksConversionSettings>>()
         .Initialize(
           _conversionSettingsFactory.Create(
-            originMode: _toSpeckleSettingsManager.GetOriginMode(modelCard),
-            visualRepresentationMode: _toSpeckleSettingsManager.GetVisualRepresentationMode(modelCard),
-            convertHiddenElements: _toSpeckleSettingsManager.GetConvertHiddenElements(modelCard),
-            includeInternalProperties: _toSpeckleSettingsManager.GetIncludeInternalProperties(modelCard)
+            originMode: _toSpeckleSettingsManagerNavisworks.GetOriginMode(modelCard),
+            visualRepresentationMode: _toSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(modelCard),
+            convertHiddenElements: _toSpeckleSettingsManagerNavisworks.GetConvertHiddenElements(modelCard),
+            includeInternalProperties: _toSpeckleSettingsManagerNavisworks.GetIncludeInternalProperties(modelCard)
           )
         );
 

@@ -42,7 +42,7 @@ public static class NavisworksConnectorServiceRegistration
     serviceCollection.AddSingleton<INavisworksConversionSettingsFactory, NavisworksConversionSettingsFactory>();
 
     // Conversion settings
-    serviceCollection.AddSingleton<IToSpeckleSettingsManagerNavisworks, ToSpeckleSettingsManagerNavisworks>();
+    serviceCollection.AddSingleton<ToSpeckleSettingsManagerNavisworks>();
     serviceCollection.AddScoped<
       IConverterSettingsStore<NavisworksConversionSettings>,
       ConverterSettingsStore<NavisworksConversionSettings>
