@@ -42,5 +42,8 @@ public class DisplayValueExtractor
     yield return _frameConverter.Convert(target);
   }
 
-  private IEnumerable<Base> ExtractShell(CSiShellWrapper target) => throw new NotImplementedException();
+  private IEnumerable<Base> ExtractShell(CSiShellWrapper target)
+  {
+    yield return _shellConverter.Convert(target);
+  }
 }
