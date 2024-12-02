@@ -1,10 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
-using Speckle.Connector.Navisworks.Operations.Send.Settings;
-using Speckle.Connectors.DUI.Models.Card;
+using Speckle.Converter.Navisworks.Helpers;
+using Speckle.Converter.Navisworks.Models;
 using Speckle.Converters.Common;
 using Speckle.InterfaceGenerator;
-using static Speckle.Converter.Navisworks.Helpers.GeometryHelpers;
-using static Speckle.Converter.Navisworks.Settings.OriginMode;
 
 namespace Speckle.Converter.Navisworks.Settings;
 
@@ -14,7 +12,6 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
   private readonly IConverterSettingsStore<NavisworksConversionSettings> _settingsStore;
   private readonly ILogger<NavisworksConversionSettingsFactory> _logger;
   private readonly IHostToSpeckleUnitConverter<NAV.Units> _unitsConverter;
-  private readonly IToSpeckleSettingsManagerNavisworks _toSpeckleSettingsManager;
 
   private NAV.Document? _document;
   private NAV.BoundingBox3D? _modelBoundingBox;
@@ -23,14 +20,12 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
   public NavisworksConversionSettingsFactory(
     IHostToSpeckleUnitConverter<NAV.Units> unitsConverter,
     IConverterSettingsStore<NavisworksConversionSettings> settingsStore,
-    ILogger<NavisworksConversionSettingsFactory> logger,
-    IToSpeckleSettingsManagerNavisworks toSpeckleSettingsManager
+    ILogger<NavisworksConversionSettingsFactory> logger
   )
   {
     _logger = logger;
     _settingsStore = settingsStore;
     _unitsConverter = unitsConverter;
-    _toSpeckleSettingsManager = toSpeckleSettingsManager;
   }
 
   public NavisworksConversionSettings Current => _settingsStore.Current;
@@ -45,10 +40,15 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
   /// <exception cref="InvalidOperationException">
   /// Thrown when no active document is found or document units cannot be converted.
   /// </exception>
-  public NavisworksConversionSettings Create(SenderModelCard modelCard)
+  public NavisworksConversionSettings Create(
+    OriginMode originMode,
+    RepresentationMode visualRepresentationMode,
+    bool convertHiddenElements,
+    bool includeInternalProperties
+  )
   {
-    _convertHiddenElements = _toSpeckleSettingsManager.GetConvertHiddenElements(modelCard);
-    _originMode = _toSpeckleSettingsManager.GetOriginMode(modelCard);
+    _convertHiddenElements = convertHiddenElements;
+    _originMode = originMode;
 
     // Initialize document and validate
     InitializeDocument();
@@ -65,9 +65,9 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
     }
 
     // Calculate the transformation vector based on the origin mode
-    var transformVector =
+    using var transformVector =
       CalculateTransformVector() ?? throw new InvalidOperationException("Failed to calculate transform vector");
-    var isUpright = VectorMatch(_document.UpVector, s_canonicalUp);
+    var isUpright = GeometryHelpers.VectorMatch(_document.UpVector, s_canonicalUp);
 
     return new NavisworksConversionSettings(
       // Derived from Navisworks Application
@@ -82,9 +82,9 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
       // Optional settings for conversion to be offered in UI
       new User(
         OriginMode: _originMode,
-        IncludeInternalProperties: _toSpeckleSettingsManager.GetIncludeInternalProperties(modelCard),
+        IncludeInternalProperties: includeInternalProperties,
         ConvertHiddenElements: _convertHiddenElements,
-        VisualRepresentationMode: _toSpeckleSettingsManager.GetVisualRepresentationMode(modelCard),
+        VisualRepresentationMode: visualRepresentationMode,
         CoalescePropertiesFromFirstObjectAncestor: false, // Not yet exposed in the UI
         ExcludeProperties: false // Not yet exposed in the UI
       )
@@ -102,9 +102,9 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
   private NAV.Vector3D CalculateTransformVector() =>
     _originMode switch
     {
-      ProjectBasePoint => CalculateProjectBasePointTransform(),
-      BoundingBoxCenter => CalculateBoundingBoxTransform(),
-      ModelOrigin => new NAV.Vector3D(0, 0, 0), // Default identity transform
+      OriginMode.ProjectBasePoint => CalculateProjectBasePointTransform(),
+      OriginMode.BoundingBoxCenter => CalculateBoundingBoxTransform(),
+      OriginMode.ModelOrigin => new NAV.Vector3D(0, 0, 0), // Default identity transform
       _ => throw new NotSupportedException($"OriginMode {_originMode} is not supported.")
     };
 

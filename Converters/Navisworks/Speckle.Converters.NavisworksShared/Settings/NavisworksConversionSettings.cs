@@ -1,4 +1,6 @@
-﻿namespace Speckle.Converter.Navisworks.Settings;
+﻿using Speckle.Converter.Navisworks.Models;
+
+namespace Speckle.Converter.Navisworks.Settings;
 
 /// <summary>
 /// Represents the settings used for Navisworks conversions.

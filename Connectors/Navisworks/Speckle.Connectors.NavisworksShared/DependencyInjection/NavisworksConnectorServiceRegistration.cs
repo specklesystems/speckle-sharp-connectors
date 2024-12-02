@@ -1,9 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connector.Navisworks.Bindings;
-using Speckle.Connector.Navisworks.Filters;
 using Speckle.Connector.Navisworks.HostApp;
 using Speckle.Connector.Navisworks.Operations.Send;
-using Speckle.Connector.Navisworks.Settings;
+using Speckle.Connector.Navisworks.Operations.Send.Filters;
+using Speckle.Connector.Navisworks.Operations.Send.Settings;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Cancellation;

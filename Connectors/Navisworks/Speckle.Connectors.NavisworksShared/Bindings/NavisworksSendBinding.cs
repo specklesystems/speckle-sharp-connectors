@@ -11,6 +11,7 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
+using Speckle.Converter.Navisworks.Models;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
@@ -36,6 +37,7 @@ public class NavisworksSendBinding : ISendBinding
   private readonly ISpeckleApplication _speckleApplication;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly INavisworksConversionSettingsFactory _conversionSettingsFactory;
+  private readonly IToSpeckleSettingsManagerNavisworks _toSpeckleSettingsManager;
 
   public NavisworksSendBinding(
     DocumentModelStore store,
@@ -47,7 +49,8 @@ public class NavisworksSendBinding : ISendBinding
     ILogger<NavisworksSendBinding> logger,
     ISpeckleApplication speckleApplication,
     ISdkActivityFactory activityFactory,
-    INavisworksConversionSettingsFactory conversionSettingsFactory
+    INavisworksConversionSettingsFactory conversionSettingsFactory,
+    IToSpeckleSettingsManagerNavisworks toSpeckleSettingsManager
   )
   {
     Parent = parent;
@@ -61,6 +64,7 @@ public class NavisworksSendBinding : ISendBinding
     _speckleApplication = speckleApplication;
     _activityFactory = activityFactory;
     _conversionSettingsFactory = conversionSettingsFactory;
+    _toSpeckleSettingsManager = toSpeckleSettingsManager;
     SubscribeToNavisworksEvents();
   }
 
@@ -91,7 +95,14 @@ public class NavisworksSendBinding : ISendBinding
 
       scope
         .ServiceProvider.GetRequiredService<IConverterSettingsStore<NavisworksConversionSettings>>()
-        .Initialize(_conversionSettingsFactory.Create(modelCard));
+        .Initialize(
+          _conversionSettingsFactory.Create(
+            originMode: _toSpeckleSettingsManager.GetOriginMode(modelCard),
+            visualRepresentationMode: _toSpeckleSettingsManager.GetVisualRepresentationMode(modelCard),
+            convertHiddenElements: _toSpeckleSettingsManager.GetConvertHiddenElements(modelCard),
+            includeInternalProperties: _toSpeckleSettingsManager.GetIncludeInternalProperties(modelCard)
+          )
+        );
 
       CancellationToken token = _cancellationManager.InitCancellationTokenSource(modelCardId);
 

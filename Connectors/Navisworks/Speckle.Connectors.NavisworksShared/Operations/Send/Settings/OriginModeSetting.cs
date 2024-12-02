@@ -1,5 +1,5 @@
 ﻿using Speckle.Connectors.DUI.Settings;
-using Speckle.Converter.Navisworks.Settings;
+using Speckle.Converter.Navisworks.Models;
 
 namespace Speckle.Connector.Navisworks.Operations.Send.Settings;
 

@@ -1,7 +1,7 @@
-﻿using Speckle.Connector.Navisworks.Operations.Send.Settings;
+﻿using System.Diagnostics.CodeAnalysis;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Converter.Navisworks.Settings;
+using Speckle.Converter.Navisworks.Models;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Common;
 
@@ -25,6 +25,11 @@ public class ToSpeckleSettingsManagerNavisworks : IToSpeckleSettingsManagerNavis
 
   public RepresentationMode GetVisualRepresentationMode(SenderModelCard modelCard)
   {
+    if (modelCard == null)
+    {
+      throw new ArgumentNullException(nameof(modelCard));
+    }
+
     var representationString = modelCard.Settings?.First(s => s.Id == "visualRepresentation").Value as string;
 
     if (
@@ -42,6 +47,7 @@ public class ToSpeckleSettingsManagerNavisworks : IToSpeckleSettingsManagerNavis
           EvictCacheForModelCard(modelCard);
         }
       }
+
       _visualRepresentationCache[modelCard.ModelCardId.NotNull()] = representation;
       return representation;
     }
@@ -51,6 +57,11 @@ public class ToSpeckleSettingsManagerNavisworks : IToSpeckleSettingsManagerNavis
 
   public OriginMode GetOriginMode(SenderModelCard modelCard)
   {
+    if (modelCard == null)
+    {
+      throw new ArgumentNullException(nameof(modelCard));
+    }
+
     var originString = modelCard.Settings?.First(s => s.Id == "originMode").Value as string;
 
     if (originString is not null && OriginModeSetting.OriginModeMap.TryGetValue(originString, out OriginMode origin))
@@ -71,6 +82,11 @@ public class ToSpeckleSettingsManagerNavisworks : IToSpeckleSettingsManagerNavis
 
   public bool GetConvertHiddenElements(SenderModelCard modelCard)
   {
+    if (modelCard == null)
+    {
+      throw new ArgumentNullException(nameof(modelCard));
+    }
+
     var value = modelCard.Settings?.FirstOrDefault(s => s.Id == "convertHiddenElements")?.Value as bool?;
 
     var returnValue = value != null && value.NotNull();
@@ -86,7 +102,7 @@ public class ToSpeckleSettingsManagerNavisworks : IToSpeckleSettingsManagerNavis
     return returnValue;
   }
 
-  public bool GetIncludeInternalProperties(SenderModelCard modelCard)
+  public bool GetIncludeInternalProperties([NotNull] SenderModelCard modelCard)
   {
     var value = modelCard.Settings?.FirstOrDefault(s => s.Id == "includeInternalProperties")?.Value as bool?;
 
