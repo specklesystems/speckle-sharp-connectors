@@ -8,55 +8,35 @@ namespace Speckle.Converter.Navisworks.Models;
 /// </summary>
 public interface INavisworksObject : IDataObject
 {
-  /// <summary>
-  /// Adds a property to the object.
-  /// </summary>
-  /// <param name="key">The property key.</param>
-  /// <param name="value">The property value.</param>
   void AddProperty(string key, object? value);
-
-  /// <summary>
-  /// Retrieves a property value by key.
-  /// </summary>
-  /// <param name="key">The property key.</param>
-  /// <returns>The property value, or null if the key does not exist.</returns>
   object? GetProperty(string key);
 }
 
-/// <summary>
-/// Represents a non-geometry Speckle object.
-/// </summary>
-internal sealed class NavisworksObject(string name) : SSM.Base, INavisworksObject
+[SSM.SpeckleType("Objects.Navisworks.ModelItem")]
+internal sealed class NavisworksModelItem : SSM.Base, INavisworksObject
 {
-  public string name { get; init; } = name;
-
+  public required string name { get; init; }
   private readonly Dictionary<string, object?> _properties = [];
+
+  [SSM.DetachProperty]
+  public required List<NavisworksModelItem> elements { get; set; }
+
+  // Implement the `IDataObject.displayValue` property with an empty list
+  IReadOnlyList<SSM.Base> IDataObject.displayValue => [];
 
   public void AddProperty(string key, object? value) => _properties[key] = value;
 
   public object? GetProperty(string key) => _properties.TryGetValue(key, out var value) ? value : null;
-
-  [SSM.DetachProperty]
-  [SuppressMessage("Style", "IDE1006:Naming Styles")]
-  [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Local")]
-  [SuppressMessage("ReSharper", "InconsistentNaming")]
-  public required List<NavisworksObject> elements { get; set; } = [];
-
-  // Implement the `IDataObject.displayValue` property with an empty list
-  IReadOnlyList<SSM.Base> IDataObject.displayValue => [];
 }
 
-/// <summary>
-/// Represents a geometry-based Speckle object.
-/// </summary>
-internal sealed class NavisworksGeometryObject(IReadOnlyList<SSM.Base> displayValue, string name)
-  : SSM.Base,
-    INavisworksObject
+[SSM.SpeckleType("Objects.Navisworks.ModelGeometry")]
+internal sealed class NavisworksModelGeometry : SSM.Base, INavisworksObject
 {
-  IReadOnlyList<SSM.Base> IDataObject.displayValue => displayValue;
-  public string name { get; init; } = name;
-
+  public required string name { get; init; }
   private readonly Dictionary<string, object?> _properties = [];
+
+  [SSM.DetachProperty]
+  public required IReadOnlyList<SSM.Base> displayValue { get; init; }
 
   public void AddProperty(string key, object? value) => _properties[key] = value;
 
