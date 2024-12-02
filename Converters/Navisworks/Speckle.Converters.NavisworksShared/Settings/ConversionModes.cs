@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 
-namespace Speckle.Converter.Navisworks.Models;
+namespace Speckle.Converter.Navisworks.Settings;
 
 /// <summary>
 /// Defines the representation mode to be used during conversion.

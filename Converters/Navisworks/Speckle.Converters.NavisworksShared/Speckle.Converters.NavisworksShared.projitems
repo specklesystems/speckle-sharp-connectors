@@ -22,9 +22,9 @@
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\PropertyHelpers.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\GeometryHelpers.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Models\ConversionModes.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Models\NavisworksObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\NavisworksToSpeckleUnitConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Settings\ConversionModes.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\NavisworksConversionSettings.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\NavisworksConversionSettingsFactory.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\ModelItemTopLevelConverterToSpeckle.cs" />

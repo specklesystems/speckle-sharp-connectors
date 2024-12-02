@@ -20,7 +20,6 @@ public static class NavisworksConverterServiceRegistration
     serviceCollection.AddRootCommon<ModelItemTopLevelConverterToSpeckle>(converterAssembly);
 
     // Register settings management
-    serviceCollection.AddScoped<IToSpeckleSettingsManager, ToSpeckleSettingsManager>();
     serviceCollection.AddScoped<INavisworksConversionSettingsFactory, NavisworksConversionSettingsFactory>();
     serviceCollection.AddScoped<
       IConverterSettingsStore<NavisworksConversionSettings>,

@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Converter.Navisworks.Models;
+using Speckle.Converter.Navisworks.Settings;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Common;
 

@@ -272,6 +272,7 @@
         "type": "Project",
         "dependencies": {
           "Speckle.Connectors.DUI": "[1.0.0, )",
+          "Speckle.Connectors.Navisworks2021": "[1.0.0, )",
           "Speckle.Converters.Common": "[1.0.0, )",
           "Speckle.Navisworks.API": "[2021.0.0, )"
         }

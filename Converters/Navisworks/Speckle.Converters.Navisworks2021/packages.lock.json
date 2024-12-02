@@ -279,8 +279,27 @@
           "System.Threading.Tasks.Dataflow": "[6.0.0, )"
         }
       },
+      "speckle.connectors.dui.webview": {
+        "type": "Project",
+        "dependencies": {
+          "Microsoft.Web.WebView2": "[1.0.1938.49, )",
+          "Speckle.Connectors.DUI": "[1.0.0, )"
+        }
+      },
       "speckle.connectors.logging": {
         "type": "Project"
+      },
+      "speckle.connectors.navisworks2021": {
+        "type": "Project",
+        "dependencies": {
+          "Objects.Converter.Navisworks2021": "[1.0.0, )",
+          "Speckle.Connectors.Common": "[1.0.0, )",
+          "Speckle.Connectors.DUI": "[1.0.0, )",
+          "Speckle.Connectors.DUI.WebView": "[1.0.0, )",
+          "Speckle.Converters.Common": "[1.0.0, )",
+          "Speckle.Navisworks.API": "[2021.0.0, )",
+          "Speckle.Objects": "[3.1.0-dev.200, )"
+        }
       },
       "speckle.converters.common": {
         "type": "Project",
@@ -315,6 +334,12 @@
         "requested": "[2.2.0, )",
         "resolved": "2.2.0",
         "contentHash": "B2WqEox8o+4KUOpL7rZPyh6qYjik8tHi2tN8Z9jZkHzED8ElYgZa/h6K+xliB435SqUcWT290Fr2aa8BtZjn8A=="
+      },
+      "Microsoft.Web.WebView2": {
+        "type": "CentralTransitive",
+        "requested": "[1.0.1938.49, )",
+        "resolved": "1.0.1938.49",
+        "contentHash": "z8KnFnaTYzhA/ZnyRX0qGfS1NU5ZBJeClAH64F0fVDvdDJTvME7xl6zTJ0Jlfe1BtL3C0NH9xTy64shg2baKdw=="
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",

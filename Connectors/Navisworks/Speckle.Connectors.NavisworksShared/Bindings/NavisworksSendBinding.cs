@@ -11,7 +11,6 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
-using Speckle.Converter.Navisworks.Models;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 using Speckle.Sdk;

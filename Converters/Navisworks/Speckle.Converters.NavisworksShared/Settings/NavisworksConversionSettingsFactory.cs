@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
 using Speckle.Converter.Navisworks.Helpers;
-using Speckle.Converter.Navisworks.Models;
 using Speckle.Converters.Common;
 using Speckle.InterfaceGenerator;
 
