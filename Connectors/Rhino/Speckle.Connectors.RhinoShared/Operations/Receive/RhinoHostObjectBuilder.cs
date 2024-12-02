@@ -55,7 +55,7 @@ public class RhinoHostObjectBuilder : HostObjectBuilder
   }
 
 #pragma warning disable CA1506
-  protected override HostObjectBuilderResult Build(
+  public Task<HostObjectBuilderResult> Build(
 #pragma warning restore CA1506
     Base rootObject,
     string projectName,
@@ -226,7 +226,7 @@ public class RhinoHostObjectBuilder : HostObjectBuilder
     }
 
     _converterSettings.Current.Document.Views.Redraw();
-    return new HostObjectBuilderResult(bakedObjectIds, conversionResults);
+    return Task.FromResult(new HostObjectBuilderResult(bakedObjectIds, conversionResults));
   }
 
   private void PreReceiveDeepClean(string baseLayerName)
