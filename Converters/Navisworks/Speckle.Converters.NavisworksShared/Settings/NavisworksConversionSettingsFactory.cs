@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Speckle.Connector.Navisworks.Operations.Send.Settings;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Converters.Common;
 using Speckle.InterfaceGenerator;
@@ -13,7 +14,7 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
   private readonly IConverterSettingsStore<NavisworksConversionSettings> _settingsStore;
   private readonly ILogger<NavisworksConversionSettingsFactory> _logger;
   private readonly IHostToSpeckleUnitConverter<NAV.Units> _unitsConverter;
-  private readonly IToSpeckleSettingsManager _toSpeckleSettingsManager;
+  private readonly IToSpeckleSettingsManagerNavisworks _toSpeckleSettingsManager;
 
   private NAV.Document? _document;
   private NAV.BoundingBox3D? _modelBoundingBox;
@@ -23,7 +24,7 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
     IHostToSpeckleUnitConverter<NAV.Units> unitsConverter,
     IConverterSettingsStore<NavisworksConversionSettings> settingsStore,
     ILogger<NavisworksConversionSettingsFactory> logger,
-    IToSpeckleSettingsManager toSpeckleSettingsManager
+    IToSpeckleSettingsManagerNavisworks toSpeckleSettingsManager
   )
   {
     _logger = logger;

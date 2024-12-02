@@ -5,10 +5,10 @@ using Speckle.Converter.Navisworks.Settings;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Common;
 
-namespace Speckle.Connector.Navisworks.Operations.Send;
+namespace Speckle.Connector.Navisworks.Operations.Send.Settings;
 
 [GenerateAutoInterface]
-public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
+public class ToSpeckleSettingsManagerNavisworks : IToSpeckleSettingsManagerNavisworks
 {
   private readonly ISendConversionCache _sendConversionCache;
 
@@ -18,7 +18,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
   private readonly Dictionary<string, bool?> _convertHiddenElementsCache = [];
   private readonly Dictionary<string, bool?> _includeInternalPropertiesCache = [];
 
-  public ToSpeckleSettingsManager(ISendConversionCache sendConversionCache)
+  public ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConversionCache)
   {
     _sendConversionCache = sendConversionCache;
   }

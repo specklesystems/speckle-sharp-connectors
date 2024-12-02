@@ -23,7 +23,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ConvertHiddenEleementsSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\IncludeInternalPropertiesSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\OriginModeSetting.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ToSpeckleSettingsManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ToSpeckleSettingsManagerNavisworks.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\VisualRepresentationSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\AppUtils.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\BrowserPane.xaml.cs" />
