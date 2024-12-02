@@ -27,9 +27,9 @@ public class GitHubPullRequestAnalyzer
     int pullRequestNumber
   )
   {
-    // var pullRequest = await _client
-    //   .PullRequest.Get(repositoryOwner, repositoryName, pullRequestNumber)
-    //   .ConfigureAwait(true);
+    GetAssemblies();
+    GetMethods();
+
     var changedFiles = await _client
       .PullRequest.Files(repositoryOwner, repositoryName, pullRequestNumber)
       .ConfigureAwait(true);
@@ -100,46 +100,16 @@ public class GitHubPullRequestAnalyzer
     return modifiedLines;
   }
 
-  private List<string> GetFeatureImpactAttributesOld(string methodName)
+  private List<MethodInfo> MethodsToCheck { get; } = new();
+  private List<Assembly> Assemblies { get; } = new();
+
+  private void GetAssemblies()
   {
-    var impactedFeatures = new List<string>();
-
-    // Load the current assembly
-    var assembly = Assembly.GetExecutingAssembly();
-
-    foreach (var type in assembly.GetTypes())
-    {
-      foreach (
-        var method in type.GetMethods(
-          BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static
-        )
-      )
-      {
-        if (method.Name == methodName)
-        {
-          var attributes = method.GetCustomAttributes(typeof(FeatureImpactAttribute), true);
-          foreach (FeatureImpactAttribute attribute in attributes.Cast<FeatureImpactAttribute>())
-          {
-            impactedFeatures.AddRange(attribute.Features);
-          }
-        }
-      }
-    }
-
-    return impactedFeatures;
-  }
-
-  private List<string> GetFeatureImpactAttributes(string methodName)
-  {
-    var impactedFeatures = new List<string>();
-
-    var assemblies = new List<Assembly>();
-
     // Load all assemblies in the current AppDomain
     string? solutionDirectory = Path.GetFullPath(
       Path.Combine(Assembly.GetExecutingAssembly().Location, "..", "..", "..", "..", "..", "..")
     );
-    Console.WriteLine($"Solution Directory: {solutionDirectory}");
+
     if (!string.IsNullOrEmpty(solutionDirectory))
     {
       // Search for all DLLs in the parent directory and subdirectories
@@ -157,10 +127,10 @@ public class GitHubPullRequestAnalyzer
         try
         {
           var assemblyName = AssemblyName.GetAssemblyName(dll);
-          if (!assemblies.Any(a => a.FullName == assemblyName.FullName))
+          if (!Assemblies.Any(a => a.FullName == assemblyName.FullName))
           {
             var loadedAssembly = Assembly.LoadFrom(dll);
-            assemblies.Add(loadedAssembly);
+            Assemblies.Add(loadedAssembly);
             Console.WriteLine($"Loaded assembly: {loadedAssembly.FullName}");
           }
         }
@@ -174,44 +144,11 @@ public class GitHubPullRequestAnalyzer
         }
       }
     }
+  }
 
-    Console.WriteLine($"Solution directory {solutionDirectory}");
-
-    // Dynamically load assemblies from the solution directory
-    // string? solutionDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-    if (!string.IsNullOrEmpty(solutionDirectory))
-    {
-      var dllFiles = Directory
-        .GetFiles(solutionDirectory, "*.dll", SearchOption.AllDirectories)
-        .Where(dll =>
-          Path.GetFileName(dll).StartsWith("Speckle")
-          && !Path.GetFileName(dll).Equals("Speckle.Connectors.Logging.dll", StringComparison.OrdinalIgnoreCase)
-        );
-
-      foreach (var dll in dllFiles)
-      {
-        try
-        {
-          var assemblyName = AssemblyName.GetAssemblyName(dll);
-          if (!assemblies.Any(a => a.FullName == assemblyName.FullName))
-          {
-            var loadedAssembly = Assembly.LoadFrom(dll);
-            assemblies.Add(loadedAssembly);
-          }
-        }
-        catch (BadImageFormatException)
-        {
-          Console.WriteLine($"Skipping invalid assembly: {dll}");
-        }
-        catch (Exception ex) when (!ex.IsFatal())
-        {
-          Console.WriteLine($"Failed to load assembly: {dll}. Error: {ex.Message}");
-        }
-      }
-    }
-
-    // Process each assembly
-    foreach (var assembly in assemblies)
+  private void GetMethods()
+  {
+    foreach (var assembly in Assemblies)
     {
       try
       {
@@ -224,14 +161,10 @@ public class GitHubPullRequestAnalyzer
             )
           )
           {
-            if (method.Name == methodName)
+            var attributes = method.GetCustomAttributes(typeof(FeatureImpactAttribute), true);
+            if (attributes.Length != 0)
             {
-              // Find custom attributes of type FeatureImpactAttribute
-              var attributes = method.GetCustomAttributes(typeof(FeatureImpactAttribute), true);
-              foreach (FeatureImpactAttribute attribute in attributes.Cast<FeatureImpactAttribute>())
-              {
-                impactedFeatures.AddRange(attribute.Features);
-              }
+              MethodsToCheck.Add(method);
             }
           }
         }
@@ -243,6 +176,21 @@ public class GitHubPullRequestAnalyzer
         {
           Console.WriteLine($"Loader Exception: {loaderException?.Message}");
         }
+      }
+    }
+  }
+
+  private List<string> GetFeatureImpactAttributes(string methodName)
+  {
+    var impactedFeatures = new List<string>();
+
+    if (MethodsToCheck.Any(m => m.Name == methodName))
+    {
+      var method = MethodsToCheck.First(m => m.Name == methodName);
+      var attributes = method.GetCustomAttributes(typeof(FeatureImpactAttribute), true);
+      foreach (FeatureImpactAttribute attribute in attributes.Cast<FeatureImpactAttribute>())
+      {
+        impactedFeatures.AddRange(attribute.Features);
       }
     }
 
