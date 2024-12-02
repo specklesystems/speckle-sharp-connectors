@@ -1,38 +1,35 @@
-using System.IO;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Sdk;
 using Speckle.Sdk.Helpers;
-using Speckle.Sdk.Logging;
+using Speckle.Sdk.SQLite;
 
-namespace Speckle.Connector.Tekla2024.HostApp;
+namespace Speckle.Connectors.TeklaShared.HostApp;
 
 public class TeklaDocumentModelStore : DocumentModelStore
 {
-  private readonly ISpeckleApplication _speckleApplication;
   private readonly ILogger<TeklaDocumentModelStore> _logger;
-  private readonly TSM.Model _model;
+  private readonly ISqLiteJsonCacheManager _jsonCacheManager;
   private readonly TSM.Events _events;
-  private string HostAppUserDataPath { get; set; }
-  private string DocumentStateFile { get; set; }
-  private string ModelPathHash { get; set; }
+  private readonly TSM.Model _model;
+  private string? _modelKey;
 
   public TeklaDocumentModelStore(
     IJsonSerializer jsonSerializer,
-    ISpeckleApplication speckleApplication,
-    ILogger<TeklaDocumentModelStore> logger
+    ILogger<TeklaDocumentModelStore> logger,
+    ISqLiteJsonCacheManagerFactory jsonCacheManagerFactory
   )
     : base(jsonSerializer)
   {
-    _speckleApplication = speckleApplication;
     _logger = logger;
-    _model = new TSM.Model();
-    SetPaths();
+    _jsonCacheManager = jsonCacheManagerFactory.CreateForUser("ConnectorsFileData");
     _events = new TSM.Events();
+    _model = new TSM.Model();
+    GenerateKey();
     _events.ModelLoad += () =>
     {
-      SetPaths();
+      GenerateKey();
       LoadState();
       OnDocumentChanged();
     };
@@ -44,26 +41,17 @@ public class TeklaDocumentModelStore : DocumentModelStore
     }
   }
 
-  private void SetPaths()
-  {
-    ModelPathHash = Crypt.Md5(_model.GetInfo().ModelPath, length: 32);
-    HostAppUserDataPath = Path.Combine(
-      SpecklePathProvider.UserSpeckleFolderPath,
-      "ConnectorsFileData",
-      _speckleApplication.Slug
-    );
-    DocumentStateFile = Path.Combine(HostAppUserDataPath, $"{ModelPathHash}.json");
-  }
+  private void GenerateKey() => _modelKey = Crypt.Md5(_model.GetInfo().ModelPath, length: 32);
 
   protected override void HostAppSaveState(string modelCardState)
   {
     try
     {
-      if (!Directory.Exists(HostAppUserDataPath))
+      if (_modelKey is null)
       {
-        Directory.CreateDirectory(HostAppUserDataPath);
+        return;
       }
-      File.WriteAllText(DocumentStateFile, modelCardState);
+      _jsonCacheManager.SaveObject(_modelKey, modelCardState);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
@@ -73,19 +61,11 @@ public class TeklaDocumentModelStore : DocumentModelStore
 
   protected override void LoadState()
   {
-    if (!Directory.Exists(HostAppUserDataPath))
+    if (_modelKey is null)
     {
-      ClearAndSave();
       return;
     }
-
-    if (!File.Exists(DocumentStateFile))
-    {
-      ClearAndSave();
-      return;
-    }
-
-    string serializedState = File.ReadAllText(DocumentStateFile);
-    LoadFromString(serializedState);
+    var state = _jsonCacheManager.GetObject(_modelKey);
+    LoadFromString(state);
   }
 }
