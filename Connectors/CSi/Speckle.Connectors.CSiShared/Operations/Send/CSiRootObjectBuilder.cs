@@ -18,6 +18,7 @@ public class CSiRootObjectBuilder : IRootObjectBuilder<ICSiWrapper>
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IConverterSettingsStore<CSiConversionSettings> _converterSettings;
+  private readonly CSiSendCollectionManager _sendCollectionManager;
   private readonly ILogger<CSiRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly ICSiApplicationService _csiApplicationService;
@@ -26,6 +27,7 @@ public class CSiRootObjectBuilder : IRootObjectBuilder<ICSiWrapper>
     IRootToSpeckleConverter rootToSpeckleConverter,
     ISendConversionCache sendConversionCache,
     IConverterSettingsStore<CSiConversionSettings> converterSettings,
+    CSiSendCollectionManager sendCollectionManager,
     ILogger<CSiRootObjectBuilder> logger,
     ISdkActivityFactory activityFactory,
     ICSiApplicationService csiApplicationService
@@ -33,6 +35,7 @@ public class CSiRootObjectBuilder : IRootObjectBuilder<ICSiWrapper>
   {
     _sendConversionCache = sendConversionCache;
     _converterSettings = converterSettings;
+    _sendCollectionManager = sendCollectionManager;
     _rootToSpeckleConverter = rootToSpeckleConverter;
     _logger = logger;
     _activityFactory = activityFactory;
@@ -48,33 +51,25 @@ public class CSiRootObjectBuilder : IRootObjectBuilder<ICSiWrapper>
   {
     using var activity = _activityFactory.Start("Build");
 
-    string fileName = _csiApplicationService.SapModel.GetModelFilename(false);
-    Collection rootObjectCollection = new() { name = fileName };
+    string modelFileName = _csiApplicationService.SapModel.GetModelFilename(false) ?? "Unnamed model";
+    Collection rootObjectCollection = new() { name = modelFileName };
     rootObjectCollection["units"] = _converterSettings.Current.SpeckleUnits;
 
-    var groupedObjects = csiObjects.GroupBy(x => x.GetType());
     List<SendConversionResult> results = new(csiObjects.Count);
     int count = 0;
 
     using (var _ = _activityFactory.Start("Convert all"))
     {
-      foreach (var group in groupedObjects)
+      foreach (ICSiWrapper csiObject in csiObjects)
       {
-        Collection typeCollection = new() { name = group.Key.Name.Replace("Wrapper", "") };
-        rootObjectCollection.elements ??= new List<Base>();
-        rootObjectCollection.elements.Add(typeCollection);
+        using var _2 = _activityFactory.Start("Convert");
+        cancellationToken.ThrowIfCancellationRequested();
 
-        foreach (ICSiWrapper csiObject in group)
-        {
-          using var _2 = _activityFactory.Start("Convert");
-          cancellationToken.ThrowIfCancellationRequested();
+        var result = ConvertCSiObject(csiObject, rootObjectCollection, sendInfo.ProjectId);
+        results.Add(result);
 
-          var result = ConvertCSiObject(csiObject, typeCollection, sendInfo.ProjectId);
-          results.Add(result);
-
-          count++;
-          onOperationProgressed.Report(new("Converting", (double)count / csiObjects.Count));
-        }
+        count++;
+        onOperationProgressed.Report(new("Converting", (double)count / csiObjects.Count));
       }
     }
 
@@ -104,8 +99,9 @@ public class CSiRootObjectBuilder : IRootObjectBuilder<ICSiWrapper>
         converted = _rootToSpeckleConverter.Convert(csiObject);
       }
 
-      typeCollection.elements ??= new List<Base>();
-      typeCollection.elements.Add(converted);
+      var collection = _sendCollectionManager.GetAndCreateObjectHostCollection(csiObject, typeCollection);
+      collection.elements ??= new List<Base>();
+      collection.elements.Add(converted);
 
       return new(Status.SUCCESS, applicationId, sourceType, converted);
     }

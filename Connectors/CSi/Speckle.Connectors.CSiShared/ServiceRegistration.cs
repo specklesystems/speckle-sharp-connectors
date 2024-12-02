@@ -41,6 +41,7 @@ public static class ServiceRegistration
     services.AddSingleton<IBinding, CSiSharedSendBinding>();
 
     services.AddScoped<ISendFilter, CSiSharedSelectionFilter>();
+    services.AddScoped<CSiSendCollectionManager>();
     services.AddScoped<IRootObjectBuilder<ICSiWrapper>, CSiRootObjectBuilder>();
     services.AddScoped<SendOperation<ICSiWrapper>>();
 

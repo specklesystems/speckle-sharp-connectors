@@ -13,6 +13,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\CSiSharedSelectionBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\CSiSharedSendBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Filters\CSiSharedSelectionFilter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\CSiSendCollectionManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\CSiRootObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\CSiSharedPluginBase.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\SpeckleFormBase.cs">
