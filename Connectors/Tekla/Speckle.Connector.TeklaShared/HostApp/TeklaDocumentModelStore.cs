@@ -12,6 +12,7 @@ public class TeklaDocumentModelStore : DocumentModelStore
   private readonly ILogger<TeklaDocumentModelStore> _logger;
   private readonly ISqLiteJsonCacheManager _jsonCacheManager;
   private readonly TSM.Events _events;
+  private readonly TSM.Model _model;
   private string? _modelKey;
 
   public TeklaDocumentModelStore(
@@ -24,10 +25,11 @@ public class TeklaDocumentModelStore : DocumentModelStore
     _logger = logger;
     _jsonCacheManager = jsonCacheManagerFactory.CreateForUser("ConnectorsFileData");
     _events = new TSM.Events();
+    _model = new TSM.Model();
+    GenerateKey();
     _events.ModelLoad += () =>
     {
-      var model = new TSM.Model();
-      _modelKey = Crypt.Md5(model.GetInfo().ModelPath, length: 32);
+      GenerateKey();
       LoadState();
       OnDocumentChanged();
     };
@@ -38,6 +40,8 @@ public class TeklaDocumentModelStore : DocumentModelStore
       OnDocumentChanged();
     }
   }
+
+  private void GenerateKey() => _modelKey = Crypt.Md5(_model.GetInfo().ModelPath, length: 32);
 
   protected override void HostAppSaveState(string modelCardState)
   {
