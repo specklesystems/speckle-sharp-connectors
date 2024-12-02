@@ -5,18 +5,14 @@ using ArcGIS.Desktop.Mapping;
 using ArcGIS.Desktop.Mapping.Events;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
-using Speckle.Newtonsoft.Json;
-using Speckle.Sdk.Common;
+using Speckle.Connectors.DUI.Utils;
 
 namespace Speckle.Connectors.ArcGIS.Utils;
 
 public class ArcGISDocumentStore : DocumentModelStore
 {
-  public ArcGISDocumentStore(
-    JsonSerializerSettings serializerOption,
-    ITopLevelExceptionHandler topLevelExceptionHandler
-  )
-    : base(serializerOption, true)
+  public ArcGISDocumentStore(IJsonSerializer jsonSerializer, ITopLevelExceptionHandler topLevelExceptionHandler)
+    : base(jsonSerializer)
   {
     ActiveMapViewChangedEvent.Subscribe(a => topLevelExceptionHandler.CatchUnhandled(() => OnMapViewChanged(a)), true);
     ProjectSavingEvent.Subscribe(
@@ -40,7 +36,7 @@ public class ArcGISDocumentStore : DocumentModelStore
     if (!IsDocumentInit && MapView.Active != null)
     {
       IsDocumentInit = true;
-      ReadFromFile();
+      LoadState();
       OnDocumentChanged();
     }
   }
@@ -52,14 +48,14 @@ public class ArcGISDocumentStore : DocumentModelStore
       return;
     }
 
-    WriteToFile();
+    SaveState();
   }
 
   private void OnProjectSaving()
   {
     if (MapView.Active is not null)
     {
-      WriteToFile();
+      SaveState();
     }
   }
 
@@ -74,11 +70,11 @@ public class ArcGISDocumentStore : DocumentModelStore
     }
 
     IsDocumentInit = true;
-    ReadFromFile();
+    LoadState();
     OnDocumentChanged();
   }
 
-  public override void WriteToFile()
+  protected override void HostAppSaveState(string modelCardState)
   {
     Map map = MapView.Active.Map;
     QueuedTask.Run(() =>
@@ -91,9 +87,7 @@ public class ArcGISDocumentStore : DocumentModelStore
         ? XDocument.Parse(existingMetadata)
         : new XDocument(new XElement("metadata"));
 
-      string serializedModels = Serialize();
-
-      XElement xmlModelCards = new("SpeckleModelCards", serializedModels);
+      XElement xmlModelCards = new("SpeckleModelCards", modelCardState);
 
       // Check if SpeckleModelCards element already exists at root and update it
       var speckleModelCardsElement = existingXmlDocument.Root?.Element("SpeckleModelCards");
@@ -110,7 +104,7 @@ public class ArcGISDocumentStore : DocumentModelStore
     });
   }
 
-  public override void ReadFromFile()
+  protected override void LoadState()
   {
     Map map = MapView.Active.Map;
     QueuedTask.Run(() =>
@@ -120,12 +114,12 @@ public class ArcGISDocumentStore : DocumentModelStore
       var element = root?.Element("SpeckleModelCards");
       if (element is null)
       {
-        Models = new();
+        ClearAndSave();
         return;
       }
 
       string modelsString = element.Value;
-      Models = Deserialize(modelsString).NotNull();
+      LoadFromString(modelsString);
     });
   }
 }

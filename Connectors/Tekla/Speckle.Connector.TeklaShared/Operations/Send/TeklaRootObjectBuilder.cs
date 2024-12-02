@@ -1,19 +1,19 @@
 using Microsoft.Extensions.Logging;
-using Speckle.Connector.Tekla2024.Extensions;
-using Speckle.Connector.Tekla2024.HostApp;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
-using Speckle.Converter.Tekla2024;
+using Speckle.Connectors.TeklaShared.Extensions;
+using Speckle.Connectors.TeklaShared.HostApp;
 using Speckle.Converters.Common;
+using Speckle.Converters.TeklaShared;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Task = System.Threading.Tasks.Task;
 
-namespace Speckle.Connector.Tekla2024.Operations.Send;
+namespace Speckle.Connectors.TeklaShared.Operations.Send;
 
 public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
 {
