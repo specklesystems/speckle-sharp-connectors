@@ -42,7 +42,7 @@ public class RhinoInstanceBaker : IInstanceBaker<List<string>>
   /// <param name="instanceComponents">Instance definitions and instances that need creating.</param>
   /// <param name="applicationIdMap">A dict mapping { original application id -> [resulting application ids post conversion] }</param>
   /// <param name="onOperationProgressed"></param>
-  public async Task<BakeResult> BakeInstances(
+  public BakeResult BakeInstances(
     IReadOnlyCollection<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
     Dictionary<string, List<string>> applicationIdMap,
     string baseLayerName,
@@ -81,6 +81,12 @@ public class RhinoInstanceBaker : IInstanceBaker<List<string>>
           foreach (var id in currentApplicationObjectsIds)
           {
             var docObject = doc.Objects.FindId(new Guid(id));
+            // NOTE: we're here being lenient on incomplete block creation. If a block contains unsupported elements that somehow threw/didn't manage to get baked as atomic objects,
+            // we just continue rather than throw on a null when accessing the docObject's Geometry.
+            if (docObject is null)
+            {
+              continue;
+            }
             definitionGeometryList.Add(docObject.Geometry);
             attributes.Add(docObject.Attributes);
           }
@@ -153,7 +159,6 @@ public class RhinoInstanceBaker : IInstanceBaker<List<string>>
       }
     }
 
-    await Task.Yield();
     return new(createdObjectIds, consumedObjectIds, conversionResults);
   }
 
