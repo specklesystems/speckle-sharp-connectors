@@ -42,7 +42,7 @@ public class RhinoInstanceBaker : IInstanceBaker<List<string>>
   /// <param name="instanceComponents">Instance definitions and instances that need creating.</param>
   /// <param name="applicationIdMap">A dict mapping { original application id -> [resulting application ids post conversion] }</param>
   /// <param name="onOperationProgressed"></param>
-  public async Task<BakeResult> BakeInstances(
+  public BakeResult BakeInstances(
     IReadOnlyCollection<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
     Dictionary<string, List<string>> applicationIdMap,
     string baseLayerName,
@@ -153,7 +153,6 @@ public class RhinoInstanceBaker : IInstanceBaker<List<string>>
       }
     }
 
-    await Task.Yield();
     return new(createdObjectIds, consumedObjectIds, conversionResults);
   }
 

@@ -14,7 +14,7 @@ public interface IInstanceBaker<TAppIdMapValueType>
   /// <param name="baseLayerName"></param>
   /// <param name="onOperationProgressed"></param>
   /// <returns></returns>
-  Task<BakeResult> BakeInstances(
+  BakeResult BakeInstances(
     IReadOnlyCollection<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
     Dictionary<string, TAppIdMapValueType> applicationIdMap,
     string baseLayerName,
