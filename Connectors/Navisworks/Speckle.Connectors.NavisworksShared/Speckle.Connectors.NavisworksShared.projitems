@@ -14,7 +14,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\NavisworksSendBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\NavisworksConnectorServiceRegistration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\ElementSelectionExtension.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Filters\NavisworksSelectionFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksDocumentEvents.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksDocumentModelStore.cs" />
@@ -25,6 +24,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\OriginModeSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ToSpeckleSettingsManagerNavisworks.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\VisualRepresentationSetting.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\NavisworksSelectionFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\AppUtils.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\BrowserPane.xaml.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\Commands.cs" />

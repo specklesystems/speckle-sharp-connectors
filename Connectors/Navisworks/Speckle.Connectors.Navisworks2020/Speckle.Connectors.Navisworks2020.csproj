@@ -60,6 +60,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
     <ProjectReference Include="..\..\..\Converters\Navisworks\Speckle.Converters.Navisworks2020\Speckle.Converters.Navisworks2020.csproj" />
     <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj"/>
     <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj"/>
