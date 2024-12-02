@@ -108,7 +108,7 @@ public class RevitMaterialBaker
   /// <param name="baseLayerName"></param>
   /// <returns></returns>
   public Dictionary<string, ElementId> BakeMaterials(
-    List<RenderMaterialProxy> speckleRenderMaterialProxies,
+    IReadOnlyCollection<RenderMaterialProxy> speckleRenderMaterialProxies,
     string baseLayerName
   )
   {

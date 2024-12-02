@@ -9,7 +9,7 @@ namespace Speckle.Connectors.Common.Instances;
 
 public class LocalToGlobalMap
 {
-  public LocalToGlobalMap(TraversalContext traversalContext, Base atomicObject, List<Matrix4x4> matrix)
+  public LocalToGlobalMap(TraversalContext traversalContext, Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix)
   {
     TraversalContext = traversalContext;
     AtomicObject = atomicObject;
@@ -18,5 +18,5 @@ public class LocalToGlobalMap
 
   public TraversalContext TraversalContext { get; set; }
   public Base AtomicObject { get; set; }
-  public List<Matrix4x4> Matrix { get; set; }
+  public IReadOnlyCollection<Matrix4x4> Matrix { get; set; }
 }

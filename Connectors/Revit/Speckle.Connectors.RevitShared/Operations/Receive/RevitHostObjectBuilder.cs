@@ -34,7 +34,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   private readonly RevitMaterialBaker _materialBaker;
   private readonly ILogger<RevitHostObjectBuilder> _logger;
   private readonly ITypedConverter<
-    (Base atomicObject, List<Matrix4x4> matrix),
+    (Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix),
     DirectShape
   > _localToGlobalDirectShapeConverter;
 
@@ -52,7 +52,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     RootObjectUnpacker rootObjectUnpacker,
     ILogger<RevitHostObjectBuilder> logger,
     RevitToHostCacheSingleton revitToHostCacheSingleton,
-    ITypedConverter<(Base atomicObject, List<Matrix4x4> matrix), DirectShape> localToGlobalDirectShapeConverter
+    ITypedConverter<(Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix), DirectShape> localToGlobalDirectShapeConverter
   )
   {
     _converter = converter;
@@ -161,7 +161,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     HostObjectBuilderResult builderResult,
     List<(DirectShape res, string applicationId)> postBakePaintTargets
   ) BakeObjects(
-    List<LocalToGlobalMap> localToGlobalMaps,
+      IReadOnlyCollection<LocalToGlobalMap> localToGlobalMaps,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
@@ -195,7 +195,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
           }
 
           localToGlobalMap.AtomicObject = (newTransformable as Base)!;
-          localToGlobalMap.Matrix = new(); // flush out the list, as we've applied the transforms already
+          localToGlobalMap.Matrix = new HashSet<Matrix4x4>(); // flush out the list, as we've applied the transforms already
         }
 
         // actual conversion happens here!

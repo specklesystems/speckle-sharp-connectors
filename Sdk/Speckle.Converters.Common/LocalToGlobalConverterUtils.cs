@@ -20,7 +20,7 @@ public class LocalToGlobalConverterUtils
   }
 
   // POC: This could move to converters instead handling all cases like this.
-  public Base TransformObjects(Base atomicObject, List<Matrix4x4> matrix)
+  public Base TransformObjects(Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix)
   {
     if (matrix.Count == 0)
     {
