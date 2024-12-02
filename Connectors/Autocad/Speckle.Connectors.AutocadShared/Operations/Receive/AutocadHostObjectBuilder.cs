@@ -5,7 +5,6 @@ using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
-using Speckle.Connectors.Common.Threading;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
@@ -27,28 +26,9 @@ public class AutocadHostObjectBuilder(
   IAutocadColorBaker colorBaker,
   AutocadContext autocadContext,
   RootObjectUnpacker rootObjectUnpacker
-) : IHostObjectBuilder
+) : HostObjectBuilder
 {
-  public async Task<HostObjectBuilderResult> Build(
-    Base rootObject,
-    string projectName,
-    string modelName,
-    IProgress<CardProgress> onOperationProgressed,
-    CancellationToken cancellationToken
-  )
-  {
-    // NOTE: This is the only place we apply ISyncToThread across connectors. We need to sync up with main thread here
-    //  after GetObject and Deserialization. It is anti-pattern now. Happiness level 3/10 but works.
-    return await _syncToThread
-      .RunOnThread(async () =>
-      {
-        await Task.CompletedTask.ConfigureAwait(true);
-        return BuildSync(rootObject, projectName, modelName, onOperationProgressed);
-      })
-      .ConfigureAwait(false);
-  }
-
-  private HostObjectBuilderResult BuildSync(
+  protected override HostObjectBuilderResult Build(
     Base rootObject,
     string projectName,
     string modelName,
@@ -57,7 +37,6 @@ public class AutocadHostObjectBuilder(
   {
     // Prompt the UI conversion started. Progress bar will swoosh.
     onOperationProgressed.Report(new("Converting", null));
-    await Yield.Force().BackToThread();
 
     // Layer filter for received commit with project and model name
     layerBaker.CreateLayerFilter(projectName, modelName);
@@ -88,7 +67,7 @@ public class AutocadHostObjectBuilder(
     // 3 - Bake materials and colors, as they are used later down the line by layers and objects
     if (unpackedRoot.RenderMaterialProxies != null)
     {
-      _materialBaker.ParseAndBakeRenderMaterials(
+      materialBaker.ParseAndBakeRenderMaterials(
         unpackedRoot.RenderMaterialProxies,
         baseLayerPrefix,
         onOperationProgressed
@@ -97,7 +76,7 @@ public class AutocadHostObjectBuilder(
 
     if (unpackedRoot.ColorProxies != null)
     {
-      _colorBaker.ParseColors(unpackedRoot.ColorProxies, onOperationProgressed);
+      colorBaker.ParseColors(unpackedRoot.ColorProxies, onOperationProgressed);
     }
 
     // 5 - Convert atomic objects
@@ -109,10 +88,6 @@ public class AutocadHostObjectBuilder(
     {
       string objectId = atomicObject.applicationId ?? atomicObject.id;
       onOperationProgressed.Report(new("Converting objects", (double)++count / atomicObjects.Count));
-      if (count % 50 == 0)
-      {
-        await Yield.Force().BackToThread();
-      }
 
       try
       {
@@ -138,7 +113,7 @@ public class AutocadHostObjectBuilder(
     }
 
     // 6 - Convert instances
-    var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = _instanceBaker.BakeInstances(
+    var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = instanceBaker.BakeInstances(
       instanceComponentsWithPath,
       applicationIdMap,
       baseLayerPrefix,
