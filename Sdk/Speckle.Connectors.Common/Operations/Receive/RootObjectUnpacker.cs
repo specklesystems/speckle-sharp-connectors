@@ -32,7 +32,8 @@ public class RootObjectUnpacker
   public IReadOnlyCollection<TraversalContext> GetObjectsToConvert(Base root) =>
     _traverseFunction.Traverse(root).Where(obj => obj.Current is not Collection).Freeze();
 
-  public IReadOnlyCollection<ColorProxy>? TryGetColorProxies(Base root) => TryGetProxies<ColorProxy>(root, ProxyKeys.COLOR);
+  public IReadOnlyCollection<ColorProxy>? TryGetColorProxies(Base root) =>
+    TryGetProxies<ColorProxy>(root, ProxyKeys.COLOR);
 
   public IReadOnlyCollection<RenderMaterialProxy>? TryGetRenderMaterialProxies(Base root) =>
     TryGetProxies<RenderMaterialProxy>(root, ProxyKeys.RENDER_MATERIAL);
@@ -40,7 +41,8 @@ public class RootObjectUnpacker
   public IReadOnlyCollection<InstanceDefinitionProxy>? TryGetInstanceDefinitionProxies(Base root) =>
     TryGetProxies<InstanceDefinitionProxy>(root, ProxyKeys.INSTANCE_DEFINITION);
 
-  public IReadOnlyCollection<GroupProxy>? TryGetGroupProxies(Base root) => TryGetProxies<GroupProxy>(root, ProxyKeys.GROUP);
+  public IReadOnlyCollection<GroupProxy>? TryGetGroupProxies(Base root) =>
+    TryGetProxies<GroupProxy>(root, ProxyKeys.GROUP);
 
   public (
     IReadOnlyCollection<TraversalContext> atomicObjects,
@@ -63,5 +65,6 @@ public class RootObjectUnpacker
     return (atomicObjects.Freeze(), instanceComponents.Freeze());
   }
 
-  private IReadOnlyCollection<T>? TryGetProxies<T>(Base root, string key) => (root[key] as List<object>)?.Cast<T>().ToList();
+  private IReadOnlyCollection<T>? TryGetProxies<T>(Base root, string key) =>
+    (root[key] as List<object>)?.Cast<T>().ToList();
 }

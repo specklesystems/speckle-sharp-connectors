@@ -80,7 +80,9 @@ public class AutocadInstanceBaker : IInstanceBaker<IReadOnlyCollection<Entity>>
         {
           // TODO: create definition (block table record)
           var constituentEntities = definitionProxy
-            .objects.Select(id => applicationIdMap.TryGetValue(id, out IReadOnlyCollection<Entity>? value) ? value : null)
+            .objects.Select(id =>
+              applicationIdMap.TryGetValue(id, out IReadOnlyCollection<Entity>? value) ? value : null
+            )
             .Where(x => x is not null)
             .SelectMany(ent => ent!)
             .ToList();

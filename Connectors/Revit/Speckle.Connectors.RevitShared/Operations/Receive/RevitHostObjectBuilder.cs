@@ -52,7 +52,10 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     RootObjectUnpacker rootObjectUnpacker,
     ILogger<RevitHostObjectBuilder> logger,
     RevitToHostCacheSingleton revitToHostCacheSingleton,
-    ITypedConverter<(Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix), DirectShape> localToGlobalDirectShapeConverter
+    ITypedConverter<
+      (Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix),
+      DirectShape
+    > localToGlobalDirectShapeConverter
   )
   {
     _converter = converter;
@@ -161,7 +164,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     HostObjectBuilderResult builderResult,
     List<(DirectShape res, string applicationId)> postBakePaintTargets
   ) BakeObjects(
-      IReadOnlyCollection<LocalToGlobalMap> localToGlobalMaps,
+    IReadOnlyCollection<LocalToGlobalMap> localToGlobalMaps,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
