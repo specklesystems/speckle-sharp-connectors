@@ -18,7 +18,7 @@ public class DefaultThreadContext : ThreadContext
       {
         try
         {
-          T result = await RunContext(action).ConfigureAwait(false);
+          T result = await action().BackToCurrent();
           tcs.SetResult(result);
         }
         catch (Exception ex)
@@ -42,11 +42,11 @@ public class DefaultThreadContext : ThreadContext
   {
     TaskCompletionSource<T> tcs = new();
     _threadContext.Post(
-      async _ =>
+      _ =>
       {
         try
         {
-          T result = await RunContext(action).ConfigureAwait(false);
+          T result = action();
           tcs.SetResult(result);
         }
         catch (Exception ex)

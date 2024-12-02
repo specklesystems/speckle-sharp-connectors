@@ -9,27 +9,19 @@ public abstract class ThreadContext : IThreadContext
 
   public static bool IsMainThread => Environment.CurrentManagedThreadId == 1 && !Thread.CurrentThread.IsBackground;
 
-  protected virtual void RunContext(Action action) => action();
-
-  protected virtual Task<T> RunContext<T>(Func<T> action) => Task.FromResult(action());
-
-  protected virtual Task RunContext(Func<Task> action) => action();
-
-  protected virtual Task<T> RunContext<T>(Func<Task<T>> action) => action();
-
   public async Task RunOnThread(Action action, bool useMain)
   {
     if (useMain)
     {
       if (IsMainThread)
       {
-        RunContext(action);
+        action();
       }
       else
       {
         await WorkerToMainAsync(() =>
           {
-            RunContext(action);
+            action();
             return s_completedTask;
           })
           .ConfigureAwait(false);
@@ -48,7 +40,7 @@ public abstract class ThreadContext : IThreadContext
       }
       else
       {
-        RunContext(action);
+        action();
       }
     }
   }
@@ -59,7 +51,7 @@ public abstract class ThreadContext : IThreadContext
     {
       if (IsMainThread)
       {
-        return RunContext(action);
+        return Task.FromResult(action());
       }
 
       return WorkerToMain(action);
@@ -69,7 +61,7 @@ public abstract class ThreadContext : IThreadContext
       return MainToWorker(action);
     }
 
-    return RunContext(action);
+    return Task.FromResult(action());
   }
 
   public async Task RunOnThreadAsync(Func<Task> action, bool useMain)
@@ -78,16 +70,16 @@ public abstract class ThreadContext : IThreadContext
     {
       if (IsMainThread)
       {
-        await RunContext(action).ConfigureAwait(false);
+        await action().BackToCurrent();
       }
       else
       {
         await WorkerToMainAsync<object?>(async () =>
           {
-            await RunContext(action.Invoke).ConfigureAwait(false);
+            await action().BackToCurrent();
             return null;
           })
-          .ConfigureAwait(false);
+          .BackToCurrent();
       }
     }
     else
@@ -96,14 +88,14 @@ public abstract class ThreadContext : IThreadContext
       {
         await MainToWorkerAsync<object?>(async () =>
           {
-            await action().BackToAny();
+            await action().BackToCurrent();
             return null;
           })
-          .BackToAny();
+          .BackToCurrent();
       }
       else
       {
-        await RunContext(action.Invoke).ConfigureAwait(false);
+        await action().BackToCurrent();
       }
     }
   }
@@ -114,7 +106,7 @@ public abstract class ThreadContext : IThreadContext
     {
       if (IsMainThread)
       {
-        return RunContext(action.Invoke);
+        return action();
       }
 
       return WorkerToMainAsync(action);
@@ -123,7 +115,7 @@ public abstract class ThreadContext : IThreadContext
     {
       return MainToWorkerAsync(action);
     }
-    return RunContext(action.Invoke);
+    return action();
   }
 
   protected abstract Task<T> WorkerToMainAsync<T>(Func<Task<T>> action);
