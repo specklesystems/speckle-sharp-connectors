@@ -1,10 +1,10 @@
-using Speckle.Converter.Tekla2024.Extensions;
-using Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.TeklaShared.Extensions;
+using Speckle.Converters.TeklaShared.ToSpeckle.Helpers;
 using Speckle.Sdk.Models;
 
-namespace Speckle.Converter.Tekla2024.ToSpeckle.TopLevel;
+namespace Speckle.Converters.TeklaShared.ToSpeckle.TopLevel;
 
 [NameAndRankValue(nameof(TSM.ModelObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter

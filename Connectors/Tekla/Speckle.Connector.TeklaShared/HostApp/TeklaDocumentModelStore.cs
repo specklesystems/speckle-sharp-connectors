@@ -5,7 +5,7 @@ using Speckle.Connectors.DUI.Utils;
 using Speckle.Sdk;
 using Speckle.Sdk.SQLite;
 
-namespace Speckle.Connector.Tekla2024.HostApp;
+namespace Speckle.Connectors.TeklaShared.HostApp;
 
 public class TeklaDocumentModelStore : DocumentModelStore
 {

@@ -1,6 +1,6 @@
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 
-namespace Speckle.Connector.Tekla2024.Filters;
+namespace Speckle.Connectors.TeklaShared.Filters;
 
 public class TeklaSelectionFilter : DirectSelectionSendFilter
 {
