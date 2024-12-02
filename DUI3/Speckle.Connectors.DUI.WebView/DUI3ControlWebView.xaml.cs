@@ -26,57 +26,28 @@ public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExec
 
   public object BrowserElement => Browser;
 
-  // {
-  //   if (!Browser.IsInitialized)
-  //   {
-  //     throw new InvalidOperationException("Failed to execute script, Webview2 is not initialized yet.");
-  //   }
-  //
-  //   var t = Browser.Dispatcher.Invoke(
-  //     async () =>
-  //     {
-  //       var res = await Browser.ExecuteScriptAsync(script).ConfigureAwait(true);
-  //       await Task.Delay(100).ConfigureAwait(true);
-  //       return res;
-  //     },
-  //     DispatcherPriority.Background
-  //   );
-  //
-  //   _ = t.IsCompleted;
-
-  // bool isAlreadyMainThread = Browser.Dispatcher.CheckAccess();
-  // if (isAlreadyMainThread)
-  // {
-  //   Browser.ExecuteScriptAsync(script);
-  // }
-  // else
-  // {
-  //   Browser.Dispatcher.Invoke(
-  //     () =>
-  //     {
-  //       return Browser.ExecuteScriptAsync(script);
-  //     },
-  //     DispatcherPriority.Background
-  //   );
-  // }
-  // }
-
-  public async Task ExecuteScriptAsyncMethod(string script, CancellationToken cancellationToken)
+  public  Task ExecuteScriptAsyncMethod(string script, CancellationToken cancellationToken)
   {
     if (!Browser.IsInitialized)
     {
       throw new InvalidOperationException("Failed to execute script, Webview2 is not initialized yet.");
     }
 
-    var callbackTask = await Browser
-      .Dispatcher.InvokeAsync(
-        async () => await Browser.ExecuteScriptAsync(script).ConfigureAwait(false),
-        DispatcherPriority.Background,
-        cancellationToken
-      )
-      .Task.ConfigureAwait(false);
-
-    _ = await callbackTask.ConfigureAwait(false);
+    bool isAlreadyMainThread = Browser.Dispatcher.CheckAccess();
+   if (isAlreadyMainThread)
+   {
+     //fire and forget
+     Browser.ExecuteScriptAsync(script);
+   }
+   else
+   {
+     Browser.Dispatcher.Invoke(
+       //fire and forget
+       () => Browser.ExecuteScriptAsync(script),
+       DispatcherPriority.Background
+     );
+   }
+   return Task.CompletedTask;
   }
 
   private void OnInitialized(object? sender, CoreWebView2InitializationCompletedEventArgs e)
