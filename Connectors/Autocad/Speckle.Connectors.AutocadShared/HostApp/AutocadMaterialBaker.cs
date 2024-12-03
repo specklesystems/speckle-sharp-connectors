@@ -92,7 +92,7 @@ public class AutocadMaterialBaker
   }
 
   public void ParseAndBakeRenderMaterials(
-    List<RenderMaterialProxy> materialProxies,
+    IReadOnlyCollection<RenderMaterialProxy> materialProxies,
     string baseLayerPrefix,
     IProgress<CardProgress> onOperationProgressed
   )
