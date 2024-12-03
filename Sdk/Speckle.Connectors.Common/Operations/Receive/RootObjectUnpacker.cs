@@ -1,4 +1,5 @@
 ﻿using Speckle.Objects.Other;
+using Speckle.Sdk.Dependencies;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
@@ -28,26 +29,28 @@ public class RootObjectUnpacker
       TryGetColorProxies(root)
     );
 
-  public IEnumerable<TraversalContext> GetObjectsToConvert(Base root) =>
-    _traverseFunction.Traverse(root).Where(obj => obj.Current is not Collection);
+  public IReadOnlyCollection<TraversalContext> GetObjectsToConvert(Base root) =>
+    _traverseFunction.Traverse(root).Where(obj => obj.Current is not Collection).Freeze();
 
-  public List<ColorProxy>? TryGetColorProxies(Base root) => TryGetProxies<ColorProxy>(root, ProxyKeys.COLOR);
+  public IReadOnlyCollection<ColorProxy>? TryGetColorProxies(Base root) =>
+    TryGetProxies<ColorProxy>(root, ProxyKeys.COLOR);
 
-  public List<RenderMaterialProxy>? TryGetRenderMaterialProxies(Base root) =>
+  public IReadOnlyCollection<RenderMaterialProxy>? TryGetRenderMaterialProxies(Base root) =>
     TryGetProxies<RenderMaterialProxy>(root, ProxyKeys.RENDER_MATERIAL);
 
-  public List<InstanceDefinitionProxy>? TryGetInstanceDefinitionProxies(Base root) =>
+  public IReadOnlyCollection<InstanceDefinitionProxy>? TryGetInstanceDefinitionProxies(Base root) =>
     TryGetProxies<InstanceDefinitionProxy>(root, ProxyKeys.INSTANCE_DEFINITION);
 
-  public List<GroupProxy>? TryGetGroupProxies(Base root) => TryGetProxies<GroupProxy>(root, ProxyKeys.GROUP);
+  public IReadOnlyCollection<GroupProxy>? TryGetGroupProxies(Base root) =>
+    TryGetProxies<GroupProxy>(root, ProxyKeys.GROUP);
 
   public (
-    List<TraversalContext> atomicObjects,
-    List<TraversalContext> instanceComponents
+    IReadOnlyCollection<TraversalContext> atomicObjects,
+    IReadOnlyCollection<TraversalContext> instanceComponents
   ) SplitAtomicObjectsAndInstances(IEnumerable<TraversalContext> objectsToSplit)
   {
-    List<TraversalContext> atomicObjects = new();
-    List<TraversalContext> instanceComponents = new();
+    HashSet<TraversalContext> atomicObjects = new();
+    HashSet<TraversalContext> instanceComponents = new();
     foreach (TraversalContext tc in objectsToSplit)
     {
       if (tc.Current is IInstanceComponent)
@@ -59,8 +62,9 @@ public class RootObjectUnpacker
         atomicObjects.Add(tc);
       }
     }
-    return (atomicObjects, instanceComponents);
+    return (atomicObjects.Freeze(), instanceComponents.Freeze());
   }
 
-  private List<T>? TryGetProxies<T>(Base root, string key) => (root[key] as List<object>)?.Cast<T>().ToList();
+  private IReadOnlyCollection<T>? TryGetProxies<T>(Base root, string key) =>
+    (root[key] as List<object>)?.Cast<T>().ToList();
 }

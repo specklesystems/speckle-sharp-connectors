@@ -89,7 +89,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     }
 
     int count = 0;
-    List<LocalToGlobalMap> objectsToConvert = GetObjectsToConvert(rootObject);
+    IReadOnlyCollection<LocalToGlobalMap> objectsToConvert = GetObjectsToConvert(rootObject);
     Dictionary<TraversalContext, ObjectConversionTracker> conversionTracker = new();
 
     // 1. convert everything
@@ -242,7 +242,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     return new(bakedObjectIds, results);
   }
 
-  private List<LocalToGlobalMap> GetObjectsToConvert(Base rootObject)
+  private IReadOnlyCollection<LocalToGlobalMap> GetObjectsToConvert(Base rootObject)
   {
     // keep GISlayers in the list, because they are still needed to extract CRS of the commit (code below)
     List<TraversalContext> objectsToConvertTc = _traverseFunction.Traverse(rootObject).ToList();

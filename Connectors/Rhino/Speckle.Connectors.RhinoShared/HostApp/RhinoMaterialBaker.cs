@@ -28,7 +28,7 @@ public class RhinoMaterialBaker
   /// </summary>
   public Dictionary<string, int> ObjectIdAndMaterialIndexMap { get; } = new();
 
-  public void BakeMaterials(List<RenderMaterialProxy> speckleRenderMaterialProxies, string baseLayerName)
+  public void BakeMaterials(IReadOnlyCollection<RenderMaterialProxy> speckleRenderMaterialProxies, string baseLayerName)
   {
     var doc = _converterSettings.Current.Document; // POC: too much right now to interface around
     // List<ReceiveConversionResult> conversionResults = new(); // TODO: return this guy
