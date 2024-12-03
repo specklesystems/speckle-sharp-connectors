@@ -5,8 +5,6 @@ namespace Speckle.Connectors.Common.Threading;
 [GenerateAutoInterface]
 public abstract class ThreadContext : IThreadContext
 {
-  
-
   public static bool IsMainThread => Environment.CurrentManagedThreadId == 1 && !Thread.CurrentThread.IsBackground;
 
   public async ValueTask RunOnThread(Action action, bool useMain)
@@ -88,7 +86,7 @@ public abstract class ThreadContext : IThreadContext
       {
         await MainToWorkerAsync<object?>(async () =>
           {
-            await action().BackToCurrent();            
+            await action().BackToCurrent();
             return new ValueTask<object?>(null);
           })
           .BackToCurrent();
@@ -117,6 +115,7 @@ public abstract class ThreadContext : IThreadContext
     }
     return action();
   }
+
   protected abstract ValueTask<T> WorkerToMainAsync<T>(Func<ValueTask<T>> action);
 
   protected abstract ValueTask<T> MainToWorkerAsync<T>(Func<ValueTask<T>> action);

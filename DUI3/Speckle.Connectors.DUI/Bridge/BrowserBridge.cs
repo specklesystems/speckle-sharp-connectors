@@ -105,25 +105,27 @@ public sealed class BrowserBridge : IBrowserBridge
   }
 
   public void RunMethod(string methodName, string requestId, string methodArgs) =>
-    _threadContext.RunOnThreadAsync(
-      async () =>
-      {
-        var task = await TopLevelExceptionHandler
-          .CatchUnhandledAsync(async () =>
-          {
-            var result = await ExecuteMethod(methodName, methodArgs).ConfigureAwait(false);
-            string resultJson = _jsonSerializer.Serialize(result);
-            await NotifyUIMethodCallResultReady(requestId, resultJson).ConfigureAwait(false);
-          })
-          .ConfigureAwait(false);
-        if (task.Exception is not null)
+    _threadContext
+      .RunOnThreadAsync(
+        async () =>
         {
-          string resultJson = SerializeFormattedException(task.Exception);
-          await NotifyUIMethodCallResultReady(requestId, resultJson).ConfigureAwait(false);
-        }
-      },
-      _threadOptions.RunCommandsOnMainThread
-    ).Wait();
+          var task = await TopLevelExceptionHandler
+            .CatchUnhandledAsync(async () =>
+            {
+              var result = await ExecuteMethod(methodName, methodArgs).ConfigureAwait(false);
+              string resultJson = _jsonSerializer.Serialize(result);
+              await NotifyUIMethodCallResultReady(requestId, resultJson).ConfigureAwait(false);
+            })
+            .ConfigureAwait(false);
+          if (task.Exception is not null)
+          {
+            string resultJson = SerializeFormattedException(task.Exception);
+            await NotifyUIMethodCallResultReady(requestId, resultJson).ConfigureAwait(false);
+          }
+        },
+        _threadOptions.RunCommandsOnMainThread
+      )
+      .Wait();
 
   /// <summary>
   /// Used by the action block to invoke the actual method called by the UI.

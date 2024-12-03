@@ -33,7 +33,12 @@ public class DefaultThreadContext : ThreadContext
 
   protected override ValueTask<T> MainToWorkerAsync<T>(Func<ValueTask<T>> action)
   {
-    Task<Task<T>> f = Task.Factory.StartNew(async () => await action().BackToCurrent(), default, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+    Task<Task<T>> f = Task.Factory.StartNew(
+      async () => await action().BackToCurrent(),
+      default,
+      TaskCreationOptions.LongRunning,
+      TaskScheduler.Default
+    );
     return new ValueTask<T>(f.Unwrap());
   }
 

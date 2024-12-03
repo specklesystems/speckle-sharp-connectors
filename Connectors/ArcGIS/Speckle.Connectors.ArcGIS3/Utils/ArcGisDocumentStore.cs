@@ -82,47 +82,51 @@ public class ArcGISDocumentStore : DocumentModelStore
   }
 
   protected override void HostAppSaveState(string modelCardState) =>
-    _threadContext.RunOnWorker(() =>
-    {
-      Map map = MapView.Active.Map;
-      // Read existing metadata - To prevent messing existing metadata. 🤞 Hope other add-in developers will do same :D
-      var existingMetadata = map.GetMetadata();
-
-      // Parse existing metadata
-      XDocument existingXmlDocument = !string.IsNullOrEmpty(existingMetadata)
-        ? XDocument.Parse(existingMetadata)
-        : new XDocument(new XElement("metadata"));
-
-      XElement xmlModelCards = new("SpeckleModelCards", modelCardState);
-
-      // Check if SpeckleModelCards element already exists at root and update it
-      var speckleModelCardsElement = existingXmlDocument.Root?.Element("SpeckleModelCards");
-      if (speckleModelCardsElement != null)
+    _threadContext
+      .RunOnWorker(() =>
       {
-        speckleModelCardsElement.ReplaceWith(xmlModelCards);
-      }
-      else
-      {
-        existingXmlDocument.Root?.Add(xmlModelCards);
-      }
+        Map map = MapView.Active.Map;
+        // Read existing metadata - To prevent messing existing metadata. 🤞 Hope other add-in developers will do same :D
+        var existingMetadata = map.GetMetadata();
 
-      map.SetMetadata(existingXmlDocument.ToString());
-    }).Wait();
+        // Parse existing metadata
+        XDocument existingXmlDocument = !string.IsNullOrEmpty(existingMetadata)
+          ? XDocument.Parse(existingMetadata)
+          : new XDocument(new XElement("metadata"));
+
+        XElement xmlModelCards = new("SpeckleModelCards", modelCardState);
+
+        // Check if SpeckleModelCards element already exists at root and update it
+        var speckleModelCardsElement = existingXmlDocument.Root?.Element("SpeckleModelCards");
+        if (speckleModelCardsElement != null)
+        {
+          speckleModelCardsElement.ReplaceWith(xmlModelCards);
+        }
+        else
+        {
+          existingXmlDocument.Root?.Add(xmlModelCards);
+        }
+
+        map.SetMetadata(existingXmlDocument.ToString());
+      })
+      .Wait();
 
   protected override void LoadState() =>
-    _threadContext.RunOnWorker(() =>
-    {
-      Map map = MapView.Active.Map;
-      var metadata = map.GetMetadata();
-      var root = XDocument.Parse(metadata).Root;
-      var element = root?.Element("SpeckleModelCards");
-      if (element is null)
+    _threadContext
+      .RunOnWorker(() =>
       {
-        ClearAndSave();
-        return;
-      }
+        Map map = MapView.Active.Map;
+        var metadata = map.GetMetadata();
+        var root = XDocument.Parse(metadata).Root;
+        var element = root?.Element("SpeckleModelCards");
+        if (element is null)
+        {
+          ClearAndSave();
+          return;
+        }
 
-      string modelsString = element.Value;
-      LoadFromString(modelsString);
-    }).Wait();
+        string modelsString = element.Value;
+        LoadFromString(modelsString);
+      })
+      .Wait();
 }
