@@ -29,10 +29,7 @@ public class AutocadColorBaker
   /// </summary>
   /// <param name="colorProxies"></param>
   /// <param name="onOperationProgressed"></param>
-  public async Task ParseColors(
-    IReadOnlyCollection<ColorProxy> colorProxies,
-    IProgress<CardProgress> onOperationProgressed
-  )
+  public void ParseColors(IReadOnlyCollection<ColorProxy> colorProxies, IProgress<CardProgress> onOperationProgressed)
   {
     var count = 0;
     foreach (ColorProxy colorProxy in colorProxies)
@@ -64,8 +61,6 @@ public class AutocadColorBaker
       {
         _logger.LogError(ex, "Failed parsing color proxy");
       }
-
-      await Task.Yield();
     }
   }
 
