@@ -34,69 +34,13 @@ public sealed class RevitHostObjectBuilder(
   RootObjectUnpacker rootObjectUnpacker,
   ILogger<RevitHostObjectBuilder> logger,
   RevitToHostCacheSingleton revitToHostCacheSingleton,
-  ITypedConverter<(Base atomicObject, List<Matrix4x4> matrix), DirectShape> localToGlobalDirectShapeConverter
-) : IHostObjectBuilder, IDisposable
-{
-<<<<<<< HEAD
-  public HostObjectBuilderResult Build(
-=======
-  private readonly IRootToHostConverter _converter;
-  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
-  private readonly RevitToHostCacheSingleton _revitToHostCacheSingleton;
-  private readonly ITransactionManager _transactionManager;
-  private readonly ILocalToGlobalUnpacker _localToGlobalUnpacker;
-  private readonly RevitGroupBaker _groupBaker;
-  private readonly RevitMaterialBaker _materialBaker;
-  private readonly ILogger<RevitHostObjectBuilder> _logger;
-  private readonly ITypedConverter<
+  ITypedConverter<
     (Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix),
     DirectShape
-  > _localToGlobalDirectShapeConverter;
-
-  private readonly RootObjectUnpacker _rootObjectUnpacker;
-  private readonly ISdkActivityFactory _activityFactory;
-
-  public RevitHostObjectBuilder(
-    IRootToHostConverter converter,
-    IConverterSettingsStore<RevitConversionSettings> converterSettings,
-    ITransactionManager transactionManager,
-    ISdkActivityFactory activityFactory,
-    ILocalToGlobalUnpacker localToGlobalUnpacker,
-    RevitGroupBaker groupManager,
-    RevitMaterialBaker materialBaker,
-    RootObjectUnpacker rootObjectUnpacker,
-    ILogger<RevitHostObjectBuilder> logger,
-    RevitToHostCacheSingleton revitToHostCacheSingleton,
-    ITypedConverter<
-      (Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix),
-      DirectShape
-    > localToGlobalDirectShapeConverter
-  )
-  {
-    _converter = converter;
-    _converterSettings = converterSettings;
-    _transactionManager = transactionManager;
-    _localToGlobalUnpacker = localToGlobalUnpacker;
-    _groupBaker = groupManager;
-    _materialBaker = materialBaker;
-    _rootObjectUnpacker = rootObjectUnpacker;
-    _logger = logger;
-    _revitToHostCacheSingleton = revitToHostCacheSingleton;
-    _localToGlobalDirectShapeConverter = localToGlobalDirectShapeConverter;
-    _activityFactory = activityFactory;
-  }
-
-  public Task<HostObjectBuilderResult> Build(
-    Base rootObject,
-    string projectName,
-    string modelName,
-    IProgress<CardProgress> onOperationProgressed,
-    CancellationToken cancellationToken
-  ) =>
-    RevitTask.RunAsync(() => BuildSync(rootObject, projectName, modelName, onOperationProgressed, cancellationToken));
-
-  private HostObjectBuilderResult BuildSync(
->>>>>>> dev
+  > localToGlobalDirectShapeConverter
+) : IHostObjectBuilder, IDisposable
+{
+  public HostObjectBuilderResult Build(
     Base rootObject,
     string projectName,
     string modelName,

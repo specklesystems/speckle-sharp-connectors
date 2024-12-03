@@ -132,16 +132,11 @@ public class AutocadHostObjectBuilder(
     // 7 - Create groups
     if (unpackedRoot.GroupProxies != null)
     {
-<<<<<<< HEAD
-      List<ReceiveConversionResult> groupResults = groupBaker.CreateGroups(unpackedRoot.GroupProxies, applicationIdMap);
-      results.AddRange(groupResults);
-=======
-      IReadOnlyCollection<ReceiveConversionResult> groupResults = _groupBaker.CreateGroups(
+      IReadOnlyCollection<ReceiveConversionResult> groupResults = groupBaker.CreateGroups(
         unpackedRoot.GroupProxies,
         applicationIdMap
       );
       results.UnionWith(groupResults);
->>>>>>> dev
     }
 
     return new HostObjectBuilderResult(bakedObjectIds, results);
@@ -156,13 +151,8 @@ public class AutocadHostObjectBuilder(
 
   private IReadOnlyCollection<Entity> ConvertObject(Base obj, Collection[] layerPath, string baseLayerNamePrefix)
   {
-<<<<<<< HEAD
     string layerName = layerBaker.CreateLayerForReceive(layerPath, baseLayerNamePrefix);
-    var convertedEntities = new List<Entity>();
-=======
-    string layerName = _layerBaker.CreateLayerForReceive(layerPath, baseLayerNamePrefix);
     var convertedEntities = new HashSet<Entity>();
->>>>>>> dev
 
     using var tr = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
 
@@ -187,13 +177,8 @@ public class AutocadHostObjectBuilder(
 
   private Entity BakeObject(Entity entity, Base originalObject, string layerName, Base? parentObject = null)
   {
-<<<<<<< HEAD
-    var objId = originalObject.applicationId ?? originalObject.id;
-    if (colorBaker.ObjectColorsIdMap.TryGetValue(objId, out AutocadColor? color))
-=======
     var objId = originalObject.applicationId ?? originalObject.id.NotNull();
-    if (_colorBaker.ObjectColorsIdMap.TryGetValue(objId, out AutocadColor? color))
->>>>>>> dev
+    if (colorBaker.ObjectColorsIdMap.TryGetValue(objId, out AutocadColor? color))
     {
       entity.Color = color;
     }
