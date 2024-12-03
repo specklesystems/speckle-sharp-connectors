@@ -53,7 +53,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     // There is no event that we can hook here for double-click file open...
     // It is kind of harmless since we create this object as "SingleInstance".
     LoadState();
-   
+
     eventAggregator.GetEvent<DocumentChangedEvent>().Publish(new object());
   }
 

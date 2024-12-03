@@ -95,52 +95,61 @@ public sealed class RhinoSendBinding : ISendBinding
         ChangedObjectIds[selectedObject.Id.ToString()] = 1;
       }
     };
-    eventAggregator.GetEvent<ActiveDocumentChanged>().Subscribe(e =>
-    {
-      PreviousUnitSystem = e.Document.ModelUnitSystem;
-    });
-    
-    // NOTE: BE CAREFUL handling things in this event handler since it is triggered whenever we save something into file!
-    eventAggregator.GetEvent<ActiveDocumentChanged>().Subscribe(async e =>
-    {
-      var newUnit = e.Document.ModelUnitSystem;
-      if (newUnit != PreviousUnitSystem)
+    eventAggregator
+      .GetEvent<ActiveDocumentChanged>()
+      .Subscribe(e =>
       {
-        PreviousUnitSystem = newUnit;
+        PreviousUnitSystem = e.Document.ModelUnitSystem;
+      });
 
-        await InvalidateAllSender().ConfigureAwait(false);
-      }
-    });
+    // NOTE: BE CAREFUL handling things in this event handler since it is triggered whenever we save something into file!
+    eventAggregator
+      .GetEvent<ActiveDocumentChanged>()
+      .Subscribe(async e =>
+      {
+        var newUnit = e.Document.ModelUnitSystem;
+        if (newUnit != PreviousUnitSystem)
+        {
+          PreviousUnitSystem = newUnit;
 
+          await InvalidateAllSender().ConfigureAwait(false);
+        }
+      });
 
-    eventAggregator.GetEvent<AddRhinoObject>().Subscribe(e =>
-    {
-      // NOTE: This does not work if rhino starts and opens a blank doc;
-      // These events always happen in a doc. Why guard agains a null doc?
-      // if (!_store.IsDocumentInit)
-      // {
-      //   return;
-      // }
-      ChangedObjectIds[e.ObjectId.ToString()] = 1;
-      eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
-    });
-    
-    eventAggregator.GetEvent<DeleteRhinoObject>().Subscribe(e =>
-    {
-      // NOTE: This does not work if rhino starts and opens a blank doc;
-      // These events always happen in a doc. Why guard agains a null doc?
-      // if (!_store.IsDocumentInit)
-      // {
-      //   return;
-      // }
+    eventAggregator
+      .GetEvent<AddRhinoObject>()
+      .Subscribe(e =>
+      {
+        // NOTE: This does not work if rhino starts and opens a blank doc;
+        // These events always happen in a doc. Why guard agains a null doc?
+        // if (!_store.IsDocumentInit)
+        // {
+        //   return;
+        // }
+        ChangedObjectIds[e.ObjectId.ToString()] = 1;
+        eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
+      });
 
-      ChangedObjectIds[e.ObjectId.ToString()] = 1;
-      eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
-    });
+    eventAggregator
+      .GetEvent<DeleteRhinoObject>()
+      .Subscribe(e =>
+      {
+        // NOTE: This does not work if rhino starts and opens a blank doc;
+        // These events always happen in a doc. Why guard agains a null doc?
+        // if (!_store.IsDocumentInit)
+        // {
+        //   return;
+        // }
+
+        ChangedObjectIds[e.ObjectId.ToString()] = 1;
+        eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
+      });
 
     // NOTE: Catches an object's material change from one user defined doc material to another. Does not catch (as the top event is not triggered) swapping material sources for an object or moving to/from the default material (this is handled below)!
-    eventAggregator.GetEvent<RenderMaterialsTableEvent>().Subscribe(args =>
-    {
+    eventAggregator
+      .GetEvent<RenderMaterialsTableEvent>()
+      .Subscribe(args =>
+      {
         if (args is RhinoDoc.RenderMaterialAssignmentChangedEventArgs changedEventArgs)
         {
           ChangedObjectIds[changedEventArgs.ObjectId.ToString()] = 1;
@@ -149,8 +158,10 @@ public sealed class RhinoSendBinding : ISendBinding
       });
 
     // Catches and stores changed material ids. These are then used in the expiry checks to invalidate all objects that have assigned any of those material ids.
-    eventAggregator.GetEvent<MaterialTableEvent>().Subscribe(args =>
-    {
+    eventAggregator
+      .GetEvent<MaterialTableEvent>()
+      .Subscribe(args =>
+      {
         if (args.EventType == MaterialTableEventType.Modified)
         {
           ChangedMaterialIndexes[args.Index] = 1;
@@ -158,8 +169,10 @@ public sealed class RhinoSendBinding : ISendBinding
         }
       });
 
-    eventAggregator.GetEvent<ModifyObjectAttributes>().Subscribe(e =>
-    {
+    eventAggregator
+      .GetEvent<ModifyObjectAttributes>()
+      .Subscribe(e =>
+      {
         // NOTE: This does not work if rhino starts and opens a blank doc;
         // These events always happen in a doc. Why guard agains a null doc?
         // if (!_store.IsDocumentInit)
@@ -180,8 +193,10 @@ public sealed class RhinoSendBinding : ISendBinding
         }
       });
 
-    eventAggregator.GetEvent<ReplaceRhinoObject>().Subscribe(e =>
-    {
+    eventAggregator
+      .GetEvent<ReplaceRhinoObject>()
+      .Subscribe(e =>
+      {
         // NOTE: This does not work if rhino starts and opens a blank doc;
         // These events always happen in a doc. Why guard agains a null doc?
         // if (!_store.IsDocumentInit)

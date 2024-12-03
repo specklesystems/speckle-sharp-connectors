@@ -15,7 +15,9 @@ public class RhinoDocumentStore : DocumentModelStore
     : base(jsonSerializer)
   {
     eventAggregator.GetEvent<BeginOpenDocument>().Subscribe(_ => IsDocumentInit = false);
-    eventAggregator.GetEvent<EndOpenDocument>().Subscribe(e  =>
+    eventAggregator
+      .GetEvent<EndOpenDocument>()
+      .Subscribe(e =>
       {
         if (e.Merge)
         {

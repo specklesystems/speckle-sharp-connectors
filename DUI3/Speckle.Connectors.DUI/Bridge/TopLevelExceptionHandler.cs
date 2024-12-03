@@ -45,8 +45,8 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
   {
     var r = CatchUnhandled(() =>
     {
-       function();
-       return true;
+      function();
+      return true;
     });
     if (r.IsSuccess)
     {
@@ -79,15 +79,17 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
       throw;
     }
   }
+
   /// <inheritdoc cref="CatchUnhandled(Action)"/>
   /// <returns>A result pattern struct (where exceptions have been handled)</returns>
   public async Task<Result> CatchUnhandledAsync(Func<Task> function)
   {
     var r = await CatchUnhandledAsync(async () =>
-    {
-      await function().BackToCurrent();
-      return true;
-    }).BackToCurrent();
+      {
+        await function().BackToCurrent();
+        return true;
+      })
+      .BackToCurrent();
     if (r.IsSuccess)
     {
       return new Result();
@@ -117,7 +119,7 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
       throw;
     }
   }
-  
+
   /// <summary>
   /// Triggers an async action without explicitly needing to await it. <br/>
   /// Any <see cref="Exception"/> thrown by invoking <paramref name="function"/> will be handled by the <see cref="ITopLevelExceptionHandler"/><br/>

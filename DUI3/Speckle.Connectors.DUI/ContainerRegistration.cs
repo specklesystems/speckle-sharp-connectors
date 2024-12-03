@@ -36,11 +36,8 @@ public static class ContainerRegistration
     serviceCollection.AddSingleton<ITopLevelExceptionHandler, TopLevelExceptionHandler>();
     serviceCollection.AddTransient<ExceptionEvent>();
   }
-  
-  public static IServiceCollection AddEventsAsTransient(
-    this IServiceCollection serviceCollection,
-    Assembly assembly
-  )
+
+  public static IServiceCollection AddEventsAsTransient(this IServiceCollection serviceCollection, Assembly assembly)
   {
     foreach (var type in assembly.ExportedTypes.Where(t => t.IsNonAbstractClass()))
     {
