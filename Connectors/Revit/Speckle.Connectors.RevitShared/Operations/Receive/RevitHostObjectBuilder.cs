@@ -16,6 +16,7 @@ using Speckle.DoubleNumerics;
 using Speckle.Objects;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -216,7 +217,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 
           if (localToGlobalMap.AtomicObject is IRawEncodedObject and Base myBase)
           {
-            postBakePaintTargets.Add((directShapes, myBase.applicationId ?? myBase.id));
+            postBakePaintTargets.Add((directShapes, myBase.applicationId ?? myBase.id.NotNull()));
           }
 
           conversionResults.Add(

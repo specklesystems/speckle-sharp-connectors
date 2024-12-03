@@ -131,7 +131,7 @@ public class AutocadInstanceBaker : IInstanceBaker<IReadOnlyCollection<Entity>>
           string layerName = _layerBaker.CreateLayerForReceive(collectionPath, baseLayerName);
 
           // get color and material if any
-          string instanceId = instanceProxy.applicationId ?? instanceProxy.id;
+          string instanceId = instanceProxy.applicationId ?? instanceProxy.id.NotNull();
           AutocadColor? objColor = _colorBaker.ObjectColorsIdMap.TryGetValue(instanceId, out AutocadColor? color)
             ? color
             : null;

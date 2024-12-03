@@ -8,6 +8,7 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Dependencies;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -131,7 +132,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     var count = 0;
     foreach (var (layerPath, atomicObject) in atomicObjectsWithPath)
     {
-      string objectId = atomicObject.applicationId ?? atomicObject.id;
+      string objectId = atomicObject.applicationId ?? atomicObject.id.NotNull();
       onOperationProgressed.Report(new("Converting objects", (double)++count / atomicObjects.Count));
       try
       {
@@ -217,7 +218,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
 
   private Entity BakeObject(Entity entity, Base originalObject, string layerName, Base? parentObject = null)
   {
-    var objId = originalObject.applicationId ?? originalObject.id;
+    var objId = originalObject.applicationId ?? originalObject.id.NotNull();
     if (_colorBaker.ObjectColorsIdMap.TryGetValue(objId, out AutocadColor? color))
     {
       entity.Color = color;
