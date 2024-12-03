@@ -16,7 +16,7 @@ using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.Rhino.HostApp;
 
-public class RhinoInstanceBaker : IInstanceBaker<List<string>>
+public class RhinoInstanceBaker : IInstanceBaker<IReadOnlyCollection<string>>
 {
   private readonly RhinoMaterialBaker _materialBaker;
   private readonly RhinoLayerBaker _layerBaker;
@@ -43,8 +43,8 @@ public class RhinoInstanceBaker : IInstanceBaker<List<string>>
   /// <param name="applicationIdMap">A dict mapping { original application id -> [resulting application ids post conversion] }</param>
   /// <param name="onOperationProgressed"></param>
   public BakeResult BakeInstances(
-    IReadOnlyCollection<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
-    Dictionary<string, List<string>> applicationIdMap,
+    ICollection<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
+    Dictionary<string, IReadOnlyCollection<string>> applicationIdMap,
     string baseLayerName,
     IProgress<CardProgress> onOperationProgressed
   )
@@ -59,9 +59,9 @@ public class RhinoInstanceBaker : IInstanceBaker<List<string>>
     var definitionIdAndApplicationIdMap = new Dictionary<string, int>();
 
     var count = 0;
-    var conversionResults = new List<ReceiveConversionResult>();
-    var createdObjectIds = new List<string>();
-    var consumedObjectIds = new List<string>();
+    var conversionResults = new HashSet<ReceiveConversionResult>();
+    var createdObjectIds = new HashSet<string>();
+    var consumedObjectIds = new HashSet<string>();
     foreach (var (layerCollection, instanceOrDefinition) in sortedInstanceComponents)
     {
       onOperationProgressed.Report(new("Converting blocks", (double)++count / sortedInstanceComponents.Count));
@@ -70,10 +70,10 @@ public class RhinoInstanceBaker : IInstanceBaker<List<string>>
         if (instanceOrDefinition is InstanceDefinitionProxy definitionProxy)
         {
           var currentApplicationObjectsIds = definitionProxy
-            .objects.Select(x => applicationIdMap.TryGetValue(x, out List<string>? value) ? value : null)
+            .objects.Select(x => applicationIdMap.TryGetValue(x, out IReadOnlyCollection<string>? value) ? value : null)
             .Where(x => x is not null)
             .SelectMany(id => id.NotNull())
-            .ToList();
+            .ToHashSet();
 
           var definitionGeometryList = new List<GeometryBase>();
           var attributes = new List<ObjectAttributes>();
@@ -114,8 +114,8 @@ public class RhinoInstanceBaker : IInstanceBaker<List<string>>
 
           // Rhino deletes original objects on block creation - we should do the same.
           doc.Objects.Delete(currentApplicationObjectsIds.Select(stringId => new Guid(stringId)), false);
-          consumedObjectIds.AddRange(currentApplicationObjectsIds);
-          createdObjectIds.RemoveAll(id => consumedObjectIds.Contains(id)); // in case we've consumed some existing instances
+          consumedObjectIds.UnionWith(currentApplicationObjectsIds);
+          createdObjectIds.RemoveWhere(id => consumedObjectIds.Contains(id)); // in case we've consumed some existing instances
         }
 
         if (
@@ -125,7 +125,7 @@ public class RhinoInstanceBaker : IInstanceBaker<List<string>>
         {
           var transform = MatrixToTransform(instanceProxy.transform, instanceProxy.units);
           int layerIndex = _layerBaker.GetLayerIndex(layerCollection, baseLayerName);
-          string instanceProxyId = instanceProxy.applicationId ?? instanceProxy.id;
+          string instanceProxyId = instanceProxy.applicationId ?? instanceProxy.id.NotNull();
 
           ObjectAttributes atts = new() { LayerIndex = layerIndex };
           if (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(instanceProxyId, out int mIndex))

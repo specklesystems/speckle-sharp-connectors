@@ -3,10 +3,13 @@ using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Dependencies;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
@@ -123,21 +126,21 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     }
 
     // 5 - Convert atomic objects
-    List<ReceiveConversionResult> results = new();
-    List<string> bakedObjectIds = new();
-    Dictionary<string, List<Entity>> applicationIdMap = new();
+    HashSet<ReceiveConversionResult> results = new();
+    HashSet<string> bakedObjectIds = new();
+    Dictionary<string, IReadOnlyCollection<Entity>> applicationIdMap = new();
     var count = 0;
     foreach (var (layerPath, atomicObject) in atomicObjectsWithPath)
     {
-      string objectId = atomicObject.applicationId ?? atomicObject.id;
+      string objectId = atomicObject.applicationId ?? atomicObject.id.NotNull();
       onOperationProgressed.Report(new("Converting objects", (double)++count / atomicObjects.Count));
       try
       {
-        List<Entity> convertedObjects = ConvertObject(atomicObject, layerPath, baseLayerPrefix);
+        IReadOnlyCollection<Entity> convertedObjects = ConvertObject(atomicObject, layerPath, baseLayerPrefix);
 
         applicationIdMap[objectId] = convertedObjects;
 
-        results.AddRange(
+        results.UnionWith(
           convertedObjects.Select(e => new ReceiveConversionResult(
             Status.SUCCESS,
             atomicObject,
@@ -146,7 +149,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
           ))
         );
 
-        bakedObjectIds.AddRange(convertedObjects.Select(e => e.GetSpeckleApplicationId()));
+        bakedObjectIds.UnionWith(convertedObjects.Select(e => e.GetSpeckleApplicationId()));
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
@@ -162,19 +165,19 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       onOperationProgressed
     );
 
-    bakedObjectIds.RemoveAll(id => consumedObjectIds.Contains(id));
-    bakedObjectIds.AddRange(createdInstanceIds);
-    results.RemoveAll(result => result.ResultId != null && consumedObjectIds.Contains(result.ResultId));
-    results.AddRange(instanceConversionResults);
+    bakedObjectIds.RemoveWhere(id => consumedObjectIds.Contains(id));
+    bakedObjectIds.UnionWith(createdInstanceIds);
+    results.RemoveWhere(result => result.ResultId != null && consumedObjectIds.Contains(result.ResultId));
+    results.UnionWith(instanceConversionResults);
 
     // 7 - Create groups
     if (unpackedRoot.GroupProxies != null)
     {
-      List<ReceiveConversionResult> groupResults = _groupBaker.CreateGroups(
+      IReadOnlyCollection<ReceiveConversionResult> groupResults = _groupBaker.CreateGroups(
         unpackedRoot.GroupProxies,
         applicationIdMap
       );
-      results.AddRange(groupResults);
+      results.UnionWith(groupResults);
     }
 
     return new HostObjectBuilderResult(bakedObjectIds, results);
@@ -187,10 +190,10 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     _materialBaker.PurgeMaterials(baseLayerPrefix);
   }
 
-  private List<Entity> ConvertObject(Base obj, Collection[] layerPath, string baseLayerNamePrefix)
+  private IReadOnlyCollection<Entity> ConvertObject(Base obj, Collection[] layerPath, string baseLayerNamePrefix)
   {
     string layerName = _layerBaker.CreateLayerForReceive(layerPath, baseLayerNamePrefix);
-    var convertedEntities = new List<Entity>();
+    var convertedEntities = new HashSet<Entity>();
 
     using var tr = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
 
@@ -206,16 +209,16 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     else if (converted is IEnumerable<(object, Base)> fallbackConversionResult)
     {
       var bakedFallbackEntities = BakeObjectsAsGroup(fallbackConversionResult, obj, layerName, baseLayerNamePrefix);
-      convertedEntities.AddRange(bakedFallbackEntities);
+      convertedEntities.UnionWith(bakedFallbackEntities);
     }
 
     tr.Commit();
-    return convertedEntities;
+    return convertedEntities.Freeze();
   }
 
   private Entity BakeObject(Entity entity, Base originalObject, string layerName, Base? parentObject = null)
   {
-    var objId = originalObject.applicationId ?? originalObject.id;
+    var objId = originalObject.applicationId ?? originalObject.id.NotNull();
     if (_colorBaker.ObjectColorsIdMap.TryGetValue(objId, out AutocadColor? color))
     {
       entity.Color = color;

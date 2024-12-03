@@ -16,6 +16,7 @@ using Speckle.DoubleNumerics;
 using Speckle.Objects;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -34,7 +35,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
   private readonly RevitMaterialBaker _materialBaker;
   private readonly ILogger<RevitHostObjectBuilder> _logger;
   private readonly ITypedConverter<
-    (Base atomicObject, List<Matrix4x4> matrix),
+    (Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix),
     DirectShape
   > _localToGlobalDirectShapeConverter;
 
@@ -52,7 +53,10 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     RootObjectUnpacker rootObjectUnpacker,
     ILogger<RevitHostObjectBuilder> logger,
     RevitToHostCacheSingleton revitToHostCacheSingleton,
-    ITypedConverter<(Base atomicObject, List<Matrix4x4> matrix), DirectShape> localToGlobalDirectShapeConverter
+    ITypedConverter<
+      (Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix),
+      DirectShape
+    > localToGlobalDirectShapeConverter
   )
   {
     _converter = converter;
@@ -161,7 +165,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
     HostObjectBuilderResult builderResult,
     List<(DirectShape res, string applicationId)> postBakePaintTargets
   ) BakeObjects(
-    List<LocalToGlobalMap> localToGlobalMaps,
+    IReadOnlyCollection<LocalToGlobalMap> localToGlobalMaps,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
@@ -188,14 +192,17 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
           && localToGlobalMap.AtomicObject["units"] is string units
         )
         {
+          var id = localToGlobalMap.AtomicObject.id;
           ITransformable? newTransformable = null;
           foreach (var mat in localToGlobalMap.Matrix)
           {
             transformable.TransformTo(new Transform() { matrix = mat, units = units }, out newTransformable);
+            transformable = newTransformable; // we need to keep the reference to the new object, as we're going to use it in the cache'
           }
 
           localToGlobalMap.AtomicObject = (newTransformable as Base)!;
-          localToGlobalMap.Matrix = new(); // flush out the list, as we've applied the transforms already
+          localToGlobalMap.AtomicObject.id = id; // restore the id, as it's used in the cache'
+          localToGlobalMap.Matrix = new HashSet<Matrix4x4>(); // flush out the list, as we've applied the transforms already
         }
 
         // actual conversion happens here!
@@ -213,7 +220,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
 
           if (localToGlobalMap.AtomicObject is IRawEncodedObject and Base myBase)
           {
-            postBakePaintTargets.Add((directShapes, myBase.applicationId ?? myBase.id));
+            postBakePaintTargets.Add((directShapes, myBase.applicationId ?? myBase.id.NotNull()));
           }
 
           conversionResults.Add(

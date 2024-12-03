@@ -2,6 +2,7 @@
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.DoubleNumerics;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
@@ -12,7 +13,7 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 /// All this is  poc that should be burned, once we enable proper block support to revit.
 /// </summary>
 public class LocalToGlobalToDirectShapeConverter
-  : ITypedConverter<(Base atomicObject, List<Matrix4x4> matrix), DB.DirectShape>
+  : ITypedConverter<(Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix), DB.DirectShape>
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<(Matrix4x4 matrix, string units), DB.Transform> _transformConverter;
@@ -26,7 +27,7 @@ public class LocalToGlobalToDirectShapeConverter
     _transformConverter = transformConverter;
   }
 
-  public DB.DirectShape Convert((Base atomicObject, List<Matrix4x4> matrix) target)
+  public DB.DirectShape Convert((Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix) target)
   {
     // 1- set ds category
     var category = target.atomicObject["builtinCategory"] as string;
@@ -52,7 +53,7 @@ public class LocalToGlobalToDirectShapeConverter
     {
       var def = DB
         .DirectShapeLibrary.GetDirectShapeLibrary(_converterSettings.Current.Document)
-        .FindDefinition(target.atomicObject.applicationId ?? target.atomicObject.id);
+        .FindDefinition(target.atomicObject.applicationId ?? target.atomicObject.id.NotNull());
       result.SetShape(def);
       return result; // note fast exit here
     }
@@ -72,7 +73,7 @@ public class LocalToGlobalToDirectShapeConverter
 
     var transformedGeometries = DB.DirectShape.CreateGeometryInstance(
       _converterSettings.Current.Document,
-      target.atomicObject.applicationId ?? target.atomicObject.id,
+      target.atomicObject.applicationId ?? target.atomicObject.id.NotNull(),
       combinedTransform
     );
 

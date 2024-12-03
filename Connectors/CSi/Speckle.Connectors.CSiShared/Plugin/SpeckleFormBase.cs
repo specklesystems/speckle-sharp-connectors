@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.DUI.WebView;
+using Speckle.Converters.CSiShared;
 using Speckle.Sdk.Host;
 
 namespace Speckle.Connectors.CSiShared;
@@ -21,6 +22,7 @@ public abstract class SpeckleFormBase : Form
     var services = new ServiceCollection();
     services.Initialize(HostApplications.ETABS, GetVersion());
     services.AddCSi();
+    services.AddCSiConverters();
 
     Container = services.BuildServiceProvider();
 
