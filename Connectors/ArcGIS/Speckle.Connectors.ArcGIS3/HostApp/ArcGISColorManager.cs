@@ -6,6 +6,7 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Objects;
 using Speckle.Objects.Other;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Proxies;
@@ -227,7 +228,7 @@ public class ArcGISColorManager
     foreach (var tContext in traversalContexts)
     {
       // get unique label
-      string uniqueLabel = tContext.Current.id;
+      string uniqueLabel = tContext.Current.id.NotNull();
       if (tContext.Current is IGisFeature gisFeat)
       {
         var existingLabel = gisFeat.attributes["Speckle_ID"];
