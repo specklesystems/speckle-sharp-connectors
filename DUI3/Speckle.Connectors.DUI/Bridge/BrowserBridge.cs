@@ -123,7 +123,7 @@ public sealed class BrowserBridge : IBrowserBridge
         }
       },
       _threadOptions.RunCommandsOnMainThread
-    );
+    ).Wait();
 
   /// <summary>
   /// Used by the action block to invoke the actual method called by the UI.
