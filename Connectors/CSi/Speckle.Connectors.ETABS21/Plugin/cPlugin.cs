@@ -6,7 +6,7 @@ using Speckle.Connectors.CSiShared;
 namespace Speckle.Connectors.ETABS21;
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
-public class cPlugin : CSiSharedPluginBase
+public class cPlugin : CSiPluginBase
 {
   protected override SpeckleFormBase CreateForm() => new SpeckleForm();
 }
