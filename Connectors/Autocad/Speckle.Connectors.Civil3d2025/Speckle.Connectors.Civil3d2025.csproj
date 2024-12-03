@@ -7,7 +7,6 @@
     <DefineConstants>$(DefineConstants);CIVIL3D2025;CIVIL3D;CIVIL3D2022_OR_GREATER;CIVIL3D2023_OR_GREATER;CIVIL3D2024_OR_GREATER;CIVIL3D2025_OR_GREATER</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier> <!-- .NET Core uses this to move native dependencies into a root for runtime selection and usage for non-windows development https://learn.microsoft.com/en-us/dotnet/core/project-sdk/msbuild-props#enablewindowstargeting -->
     <StartAction>Program</StartAction>
     <StartProgram>$(ProgramW6432)\Autodesk\AutoCAD $(Civil3DVersion)\acad.exe</StartProgram>
   </PropertyGroup>

@@ -7,7 +7,6 @@
     <DefineConstants>$(DefineConstants);AUTOCAD2025;AUTOCAD</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier> <!-- .NET Core uses this to move native dependencies into a root for runtime selection and usage for non-windows development https://learn.microsoft.com/en-us/dotnet/core/project-sdk/msbuild-props#enablewindowstargeting -->
     <StartAction>Program</StartAction>
     <StartProgram>$(ProgramW6432)\Autodesk\AutoCAD $(AutoCADVersion)\acad.exe</StartProgram>
   </PropertyGroup>

@@ -2,12 +2,10 @@
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <UseWpf>true</UseWpf>
     <RevitVersion>2025</RevitVersion>
     <DefineConstants>$(DefineConstants);REVIT2025;REVIT2022_OR_GREATER;REVIT2023_OR_GREATER;REVIT2024_OR_GREATER;REVIT2025_OR_GREATER</DefineConstants>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
@@ -28,7 +26,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Plugin\Speckle.Connectors.Revit2025.addin" />
     <Content Include="Plugin\Speckle.Connectors.Revit2025.addin">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
