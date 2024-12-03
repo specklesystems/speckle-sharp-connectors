@@ -2,14 +2,14 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Geometry;
 
-namespace Speckle.Converters.CSiShared.ToSpeckle.Raw;
+namespace Speckle.Converters.CSiShared.ToSpeckle.Geometry;
 
 // NOTE: This is HORRIBLE but serves just as a poc! We need point caching and weak referencing to joint objects
-public class ShellToSpeckleConverter : ITypedConverter<CSiShellWrapper, Mesh>
+public class MeshToSpeckleConverter : ITypedConverter<CSiShellWrapper, Mesh>
 {
   private readonly IConverterSettingsStore<CSiConversionSettings> _settingsStore;
 
-  public ShellToSpeckleConverter(IConverterSettingsStore<CSiConversionSettings> settingsStore)
+  public MeshToSpeckleConverter(IConverterSettingsStore<CSiConversionSettings> settingsStore)
   {
     _settingsStore = settingsStore;
   }

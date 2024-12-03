@@ -2,14 +2,14 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Geometry;
 
-namespace Speckle.Converters.CSiShared.ToSpeckle.Raw;
+namespace Speckle.Converters.CSiShared.ToSpeckle.Geometry;
 
 // NOTE: This is HORRIBLE but serves just as a poc!
-public class JointToSpeckleConverter : ITypedConverter<CSiJointWrapper, Point>
+public class PointToSpeckleConverter : ITypedConverter<CSiJointWrapper, Point>
 {
   private readonly IConverterSettingsStore<CSiConversionSettings> _settingStore;
 
-  public JointToSpeckleConverter(IConverterSettingsStore<CSiConversionSettings> settingStore)
+  public PointToSpeckleConverter(IConverterSettingsStore<CSiConversionSettings> settingStore)
   {
     _settingStore = settingStore;
   }

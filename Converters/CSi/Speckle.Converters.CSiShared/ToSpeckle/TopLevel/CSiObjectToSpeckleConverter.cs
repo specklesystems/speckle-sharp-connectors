@@ -10,18 +10,17 @@ public class CSiObjectToSpeckleConverter : IToSpeckleTopLevelConverter
 {
   private readonly IConverterSettingsStore<CSiConversionSettings> _settingsStore;
   private readonly DisplayValueExtractor _displayValueExtractor;
-
-  // TODO: _propertyExtractor
+  private readonly ClassPropertyExtractor _classPropertyExtractor;
 
   public CSiObjectToSpeckleConverter(
     IConverterSettingsStore<CSiConversionSettings> settingsStore,
-    DisplayValueExtractor displayValueExtractor
-  // TODO: _propertyExtractor
+    DisplayValueExtractor displayValueExtractor,
+    ClassPropertyExtractor classPropertyExtractor
   )
   {
     _settingsStore = settingsStore;
     _displayValueExtractor = displayValueExtractor;
-    // TODO: _property_extractor
+    _classPropertyExtractor = classPropertyExtractor;
   }
 
   public Base Convert(object target) => Convert((CSiWrapperBase)target);
@@ -33,7 +32,7 @@ public class CSiObjectToSpeckleConverter : IToSpeckleTopLevelConverter
       ["name"] = target.Name,
       ["type"] = target.GetType().ToString().Split('.').Last().Replace("Wrapper", ""), // CSiJointWrapper → CSiJoint, CSiFrameWrapper → CSiFrame etc.
       ["units"] = _settingsStore.Current.SpeckleUnits,
-      // TODO: properties
+      ["properties"] = _classPropertyExtractor.GetProperties(target),
       ["displayValue"] = _displayValueExtractor.GetDisplayValue(target).ToList()
     };
 
