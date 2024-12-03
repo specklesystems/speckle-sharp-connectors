@@ -1,12 +1,14 @@
 ﻿using Speckle.Connectors.Common.Threading;
+using Speckle.Connectors.DUI.Bridge;
 
 namespace Speckle.Connectors.DUI.Eventing;
 
 public class WorkerEventSubscription<TPayload>(
   IDelegateReference actionReference,
   IDelegateReference filterReference,
-  IThreadContext threadContext
-) : EventSubscription<TPayload>(actionReference, filterReference)
+  IThreadContext threadContext,
+  ITopLevelExceptionHandler exceptionHandler
+) : EventSubscription<TPayload>(actionReference, filterReference, exceptionHandler)
 {
   public override void InvokeAction(Action<TPayload> action, TPayload argument) =>
     threadContext.RunOnWorker(() => action(argument));

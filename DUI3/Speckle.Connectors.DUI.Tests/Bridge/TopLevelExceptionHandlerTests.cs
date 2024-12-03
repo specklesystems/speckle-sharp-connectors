@@ -29,7 +29,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
 
     eventAggregator
       .Setup(x => x.GetEvent<ExceptionEvent>())
-      .Returns(new ExceptionEvent(Create<IThreadContext>().Object));
+      .Returns(new ExceptionEvent(Create<IThreadContext>().Object, Create<ITopLevelExceptionHandler>().Object));
 
     var sut = new TopLevelExceptionHandler(logger.Object, eventAggregator.Object);
 
@@ -58,7 +58,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
 
     eventAggregator
       .Setup(x => x.GetEvent<ExceptionEvent>())
-      .Returns(new ExceptionEvent(Create<IThreadContext>().Object));
+      .Returns(new ExceptionEvent(Create<IThreadContext>().Object, Create<ITopLevelExceptionHandler>().Object));
 
     var sut = new TopLevelExceptionHandler(logger.Object, eventAggregator.Object);
 
@@ -103,7 +103,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
 
     eventAggregator
       .Setup(x => x.GetEvent<ExceptionEvent>())
-      .Returns(new ExceptionEvent(Create<IThreadContext>().Object));
+      .Returns(new ExceptionEvent(Create<IThreadContext>().Object, Create<ITopLevelExceptionHandler>().Object));
 
     var sut = new TopLevelExceptionHandler(logger.Object, eventAggregator.Object);
 

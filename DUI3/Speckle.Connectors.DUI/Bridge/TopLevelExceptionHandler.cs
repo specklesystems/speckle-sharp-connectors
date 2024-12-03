@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Eventing;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
@@ -40,31 +41,30 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
   /// <param name="function">The function to invoke and provide error handling for</param>
   /// <exception cref="Exception"><see cref="ExceptionHelpers.IsFatal"/> will be rethrown, these should be allowed to bubble up to the host app</exception>
   /// <seealso cref="ExceptionHelpers.IsFatal"/>
-  public void CatchUnhandled(Action function)
+  public Result CatchUnhandled(Action function)
   {
-    _ = CatchUnhandled<object?>(() =>
+    var r = CatchUnhandled(() =>
     {
-      function();
-      return null;
+       function();
+       return true;
     });
+    if (r.IsSuccess)
+    {
+      return new Result();
+    }
+    return new Result(r.Exception);
   }
 
   /// <inheritdoc cref="CatchUnhandled(Action)"/>
   /// <typeparam name="T"><paramref name="function"/> return type</typeparam>
   /// <returns>A result pattern struct (where exceptions have been handled)</returns>
-  public Result<T> CatchUnhandled<T>(Func<T> function) =>
-    CatchUnhandledAsync(() => Task.FromResult(function.Invoke())).Result; //Safe to do a .Result because this as an already completed and non-async Task from the Task.FromResult
-
-  /// <inheritdoc cref="CatchUnhandled(Action)"/>
-  /// <returns>A result pattern struct (where exceptions have been handled)</returns>
-  public async Task<Result> CatchUnhandledAsync(Func<Task> function)
+  public Result<T> CatchUnhandled<T>(Func<T> function)
   {
     try
     {
       try
       {
-        await function().ConfigureAwait(false);
-        return new Result();
+        return new Result<T>(function());
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
@@ -78,6 +78,21 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
       _logger.LogCritical(ex, UNHANDLED_LOGGER_TEMPLATE);
       throw;
     }
+  }
+  /// <inheritdoc cref="CatchUnhandled(Action)"/>
+  /// <returns>A result pattern struct (where exceptions have been handled)</returns>
+  public async Task<Result> CatchUnhandledAsync(Func<Task> function)
+  {
+    var r = await CatchUnhandledAsync(async () =>
+    {
+      await function().BackToCurrent();
+      return true;
+    }).BackToCurrent();
+    if (r.IsSuccess)
+    {
+      return new Result();
+    }
+    return new Result(r.Exception);
   }
 
   ///<inheritdoc cref="CatchUnhandled{T}(Func{T})"/>

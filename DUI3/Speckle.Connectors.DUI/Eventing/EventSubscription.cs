@@ -1,4 +1,6 @@
-﻿namespace Speckle.Connectors.DUI.Eventing;
+﻿using Speckle.Connectors.DUI.Bridge;
+
+namespace Speckle.Connectors.DUI.Eventing;
 
 public interface IEventSubscription
 {
@@ -25,6 +27,7 @@ public class EventSubscription<TPayload> : IEventSubscription
 {
   private readonly IDelegateReference _actionReference;
   private readonly IDelegateReference _filterReference;
+  private readonly ITopLevelExceptionHandler _exceptionHandler;
 
   ///<summary>
   /// Creates a new instance of <see cref="EventSubscription{TPayload}"/>.
@@ -34,7 +37,8 @@ public class EventSubscription<TPayload> : IEventSubscription
   ///<exception cref="ArgumentNullException">When <paramref name="actionReference"/> or <see paramref="filterReference"/> are <see langword="null" />.</exception>
   ///<exception cref="ArgumentException">When the target of <paramref name="actionReference"/> is not of type <see cref="System.Action{TPayload}"/>,
   ///or the target of <paramref name="filterReference"/> is not of type <see cref="Predicate{TPayload}"/>.</exception>
-  public EventSubscription(IDelegateReference actionReference, IDelegateReference filterReference)
+  public EventSubscription(IDelegateReference actionReference, IDelegateReference filterReference, 
+    ITopLevelExceptionHandler exceptionHandler)
   {
     if (actionReference == null)
     {
@@ -58,6 +62,7 @@ public class EventSubscription<TPayload> : IEventSubscription
 
     _actionReference = actionReference;
     _filterReference = filterReference;
+    _exceptionHandler = exceptionHandler;
   }
 
   /// <summary>
@@ -126,6 +131,6 @@ public class EventSubscription<TPayload> : IEventSubscription
       throw new ArgumentNullException(nameof(action));
     }
 
-    action(argument);
+    _exceptionHandler.CatchUnhandled(() => action(argument));
   }
 }

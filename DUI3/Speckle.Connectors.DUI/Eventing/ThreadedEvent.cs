@@ -1,8 +1,9 @@
 ﻿using Speckle.Connectors.Common.Threading;
+using Speckle.Connectors.DUI.Bridge;
 
 namespace Speckle.Connectors.DUI.Eventing;
 
-public class ThreadedEvent<T>(IThreadContext threadContext) : PubSubEvent<T>
+public class ThreadedEvent<T>(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler) : PubSubEvent<T>
   where T : notnull
 {
   public override SubscriptionToken Subscribe(
@@ -34,14 +35,14 @@ public class ThreadedEvent<T>(IThreadContext threadContext) : PubSubEvent<T>
     switch (threadOption)
     {
       case ThreadOption.WorkerThread:
-        subscription = new WorkerEventSubscription<T>(actionReference, filterReference, threadContext);
+        subscription = new WorkerEventSubscription<T>(actionReference, filterReference, threadContext, exceptionHandler);
         break;
       case ThreadOption.MainThread:
-        subscription = new MainThreadEventSubscription<T>(actionReference, filterReference, threadContext);
+        subscription = new MainThreadEventSubscription<T>(actionReference, filterReference, threadContext, exceptionHandler);
         break;
       case ThreadOption.PublisherThread:
       default:
-        subscription = new EventSubscription<T>(actionReference, filterReference);
+        subscription = new EventSubscription<T>(actionReference, filterReference, exceptionHandler);
         break;
     }
 
