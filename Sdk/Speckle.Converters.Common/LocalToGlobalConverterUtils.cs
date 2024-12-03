@@ -46,7 +46,7 @@ public class LocalToGlobalConverterUtils
         );
       }
 
-      string id = atomicObject.id;
+      string id = atomicObject.id.NotNull();
       atomicObject = (Base)c;
       atomicObject.id = id;
 

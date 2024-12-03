@@ -5,6 +5,7 @@ using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Extensions;
 using Speckle.Sdk.Models.GraphTraversal;
@@ -122,7 +123,7 @@ public class RevitMaterialBaker
         var diffuse = System.Drawing.Color.FromArgb(speckleRenderMaterial.diffuse);
         double transparency = 1 - speckleRenderMaterial.opacity;
         double smoothness = 1 - speckleRenderMaterial.roughness;
-        string materialId = speckleRenderMaterial.applicationId ?? speckleRenderMaterial.id;
+        string materialId = speckleRenderMaterial.applicationId ?? speckleRenderMaterial.id.NotNull();
         string matName = _revitUtils.RemoveInvalidChars($"{speckleRenderMaterial.name}-({materialId})-{baseLayerName}");
 
         var newMaterialId = Autodesk.Revit.DB.Material.Create(_converterSettings.Current.Document, matName);

@@ -2,6 +2,7 @@
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.LayerManager;
 using Speckle.Connectors.Common.Operations.Receive;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models.Collections;
 using AutocadColor = Autodesk.AutoCAD.Colors.Color;
 
@@ -52,7 +53,7 @@ public class AutocadLayerBaker : TraversalContextUnpacker
       // Goes up the tree to find any potential parent layer that has a material/color
       for (int j = layerPath.Length - 1; j >= 0; j--)
       {
-        string layerId = layerPath[j].applicationId ?? layerPath[j].id;
+        string layerId = layerPath[j].applicationId ?? layerPath[j].id.NotNull();
 
         if (!foundColor)
         {

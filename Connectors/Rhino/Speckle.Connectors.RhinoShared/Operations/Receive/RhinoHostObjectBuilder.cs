@@ -10,6 +10,7 @@ using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -192,7 +193,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
             }
 
             // 5: populate app id map
-            applicationIdMap[obj.applicationId ?? obj.id] = conversionIds;
+            applicationIdMap[obj.applicationId ?? obj.id.NotNull()] = conversionIds;
             convertActivity?.SetStatus(SdkActivityStatusCode.Ok);
           }
           catch (Exception ex) when (!ex.IsFatal())
@@ -285,7 +286,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   /// </remarks>
   private Guid BakeObject(GeometryBase obj, Base originalObject, string? parentObjectId, ObjectAttributes atts)
   {
-    var objectId = originalObject.applicationId ?? originalObject.id;
+    var objectId = originalObject.applicationId ?? originalObject.id.NotNull();
 
     if (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(objectId, out int mIndex))
     {
@@ -326,7 +327,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   )
   {
     List<Guid> objectIds = new();
-    string parentId = originatingObject.applicationId ?? originatingObject.id;
+    string parentId = originatingObject.applicationId ?? originatingObject.id.NotNull();
 
     foreach (var (conversionResult, originalBaseObject) in fallbackConversionResult)
     {

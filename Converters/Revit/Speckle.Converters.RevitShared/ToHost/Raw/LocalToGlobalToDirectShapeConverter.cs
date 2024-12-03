@@ -2,6 +2,7 @@
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.DoubleNumerics;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
@@ -52,7 +53,7 @@ public class LocalToGlobalToDirectShapeConverter
     {
       var def = DB
         .DirectShapeLibrary.GetDirectShapeLibrary(_converterSettings.Current.Document)
-        .FindDefinition(target.atomicObject.applicationId ?? target.atomicObject.id);
+        .FindDefinition(target.atomicObject.applicationId ?? target.atomicObject.id.NotNull());
       result.SetShape(def);
       return result; // note fast exit here
     }
@@ -72,7 +73,7 @@ public class LocalToGlobalToDirectShapeConverter
 
     var transformedGeometries = DB.DirectShape.CreateGeometryInstance(
       _converterSettings.Current.Document,
-      target.atomicObject.applicationId ?? target.atomicObject.id,
+      target.atomicObject.applicationId ?? target.atomicObject.id.NotNull(),
       combinedTransform
     );
 

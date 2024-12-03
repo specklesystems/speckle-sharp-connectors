@@ -3,6 +3,7 @@ using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.DoubleNumerics;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.RevitShared.ToHost.TopLevel;
@@ -38,7 +39,7 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObj
 
     ElementId materialId = ElementId.InvalidElementId;
     if (
-      _revitToHostCacheSingleton.MaterialsByObjectId.TryGetValue(mesh.applicationId ?? mesh.id, out var mappedElementId)
+      _revitToHostCacheSingleton.MaterialsByObjectId.TryGetValue(mesh.applicationId ?? mesh.id.NotNull(), out var mappedElementId)
     )
     {
       materialId = mappedElementId;

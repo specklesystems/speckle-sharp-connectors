@@ -125,7 +125,7 @@ public class RhinoInstanceBaker : IInstanceBaker<IReadOnlyCollection<string>>
         {
           var transform = MatrixToTransform(instanceProxy.transform, instanceProxy.units);
           int layerIndex = _layerBaker.GetLayerIndex(layerCollection, baseLayerName);
-          string instanceProxyId = instanceProxy.applicationId ?? instanceProxy.id;
+          string instanceProxyId = instanceProxy.applicationId ?? instanceProxy.id.NotNull();
 
           ObjectAttributes atts = new() { LayerIndex = layerIndex };
           if (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(instanceProxyId, out int mIndex))
