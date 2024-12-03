@@ -1,11 +1,11 @@
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Threading;
+using Speckle.Connectors.Logging;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Extensions;
-#pragma warning disable CS9113 // Parameter is unread.
 
 namespace Speckle.Connectors.Common.Operations;
 
@@ -20,7 +20,7 @@ public sealed class ReceiveOperation(
   IThreadOptions threadOptions
 )
 {
-  public Task<HostObjectBuilderResult> Execute(
+  public async Task<HostObjectBuilderResult> Execute(
     ReceiveInfo receiveInfo,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken

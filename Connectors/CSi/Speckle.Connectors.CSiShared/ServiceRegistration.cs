@@ -39,8 +39,6 @@ public static class ServiceRegistration
 
     services.AddScoped<ISendFilter, CSiSharedSelectionFilter>();
 
-    services.RegisterTopLevelExceptionHandler();
-
     return services;
   }
 }
