@@ -1,7 +1,6 @@
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Objects;
 using Speckle.Sdk.Models;
 using ValidationException = System.ComponentModel.DataAnnotations.ValidationException;
 
@@ -28,7 +27,7 @@ public class MultipatchFeatureToSpeckleConverter : ITypedConverter<ACG.Multipatc
   {
     List<Base> converted = new();
     // placeholder, needs to be declared in order to be used in the Ring patch type
-    SOG.Polygon polygonGeom = new() { units = _settingsStore.Current.SpeckleUnits };
+    //SOG.Polygon polygonGeom = new() { units = _settingsStore.Current.SpeckleUnits };
 
     // convert and store all multipatch points per Part
     List<List<SOG.Point>> allPoints = new();
@@ -44,12 +43,12 @@ public class MultipatchFeatureToSpeckleConverter : ITypedConverter<ACG.Multipatc
       allPoints.Add(pointList);
     }
 
+    // convert all parts
     for (int idx = 0; idx < target.PartCount; idx++)
     {
       // get the patch type to get the point arrangement in the mesh
       // https://pro.arcgis.com/en/pro-app/latest/sdk/api-reference/topic27403.html
       ACG.PatchType patchType = target.GetPatchType(idx);
-      int ptCount = target.GetPatchPointCount(idx);
 
       if (patchType == ACG.PatchType.TriangleStrip)
       {
@@ -73,25 +72,20 @@ public class MultipatchFeatureToSpeckleConverter : ITypedConverter<ACG.Multipatc
       // the following Patch Parts cannot be pushed to external method, as they will possibly, add voids/rings to the same GisPolygon
       else if (patchType == ACG.PatchType.FirstRing)
       {
-        // chech if there were already Polygons, add them to list
-        if (polygonGeom.boundary != null)
-        {
-          converted.Add(polygonGeom);
-        }
-
         // first ring means a start of a new PolygonGeometry3d
-        polygonGeom = new() { voids = new List<ICurve>(), units = _settingsStore.Current.SpeckleUnits };
         List<double> pointCoords = allPoints[idx].SelectMany(x => new List<double>() { x.x, x.y, x.z }).ToList();
-
-        SOG.Polyline polyline = new() { value = pointCoords, units = _settingsStore.Current.SpeckleUnits };
-        polygonGeom.boundary = polyline;
-
-        // if it's already the last part, add to list
-        if (idx == target.PartCount - 1)
-        {
-          converted.Add(polygonGeom);
-        }
+        List<int> faces = new() { pointCoords.Count };
+        faces.AddRange(Enumerable.Range(0, pointCoords.Count));
+        SOG.Mesh multipatch =
+          new()
+          {
+            vertices = pointCoords,
+            faces = faces,
+            units = _settingsStore.Current.SpeckleUnits
+          };
+        converted.Add(multipatch);
       }
+      /* ignore before we support triangulation, then only add shape after looping through all loops: if (idx == target.PartCount - 1)
       else if (patchType == ACG.PatchType.Ring)
       {
         List<double> pointCoords = allPoints[idx].SelectMany(x => new List<double>() { x.x, x.y, x.z }).ToList();
@@ -121,6 +115,7 @@ public class MultipatchFeatureToSpeckleConverter : ITypedConverter<ACG.Multipatc
           converted.Add(polygonGeom);
         }
       }
+      */
       else
       {
         throw new ValidationException($"Patch type {patchType} is not supported");

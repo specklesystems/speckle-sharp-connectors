@@ -27,7 +27,7 @@ public class PolygonListToHostConverter : ITypedConverter<List<SOG.Polygon>, ACG
         ACG.Polyline boundary = _polylineConverter.Convert(boundaryPolyline);
         ACG.PolygonBuilderEx polyOuterRing = new(boundary);
 
-        foreach (ICurve loop in poly.voids)
+        foreach (ICurve loop in poly.innerLoops)
         {
           if (loop is SOG.Polyline loopPolyline)
           {

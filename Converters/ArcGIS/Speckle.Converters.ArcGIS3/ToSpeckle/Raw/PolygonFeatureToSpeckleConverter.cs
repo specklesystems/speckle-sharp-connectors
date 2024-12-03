@@ -44,7 +44,7 @@ public class PolygonFeatureToSpeckleConverter : ITypedConverter<ACG.Polygon, IRe
         polygon = new()
         {
           boundary = polyline,
-          voids = new List<ICurve>(),
+          innerLoops = new List<ICurve>(),
           units = _settingsStore.Current.SpeckleUnits
         };
         polygonList.Add(polygon);
@@ -53,9 +53,9 @@ public class PolygonFeatureToSpeckleConverter : ITypedConverter<ACG.Polygon, IRe
       {
         if (polygon == null)
         {
-          throw new ValidationException("Invalid ArcGIS Polygon. Interior part preceeding the exterior ring.");
+          throw new ValidationException("Invalid ArcGIS Polygon. Interior part preceding the exterior ring.");
         }
-        polygon.voids.Add(polyline);
+        polygon.innerLoops.Add(polyline);
       }
     }
 

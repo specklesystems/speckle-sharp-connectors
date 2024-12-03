@@ -6,7 +6,6 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Objects;
 using Speckle.Objects.Other;
-using Speckle.Sdk.Common;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Extensions;
 using Speckle.Sdk.Models.GraphTraversal;
@@ -257,7 +256,7 @@ public class ArcGISColorManager
     foreach (var tContext in traversalContexts)
     {
       // get unique label
-      string uniqueLabel = tContext.Current.id;
+      string? uniqueLabel = tContext.Current?.id;
 
       // remove any GIS-specific classes for now
       /*
@@ -270,7 +269,7 @@ public class ArcGISColorManager
         }
       }*/
 
-      if (!listUniqueValueClasses.Select(x => x.Label).Contains(uniqueLabel))
+      if (uniqueLabel is not null && !listUniqueValueClasses.Select(x => x.Label).Contains(uniqueLabel))
       {
         CIMUniqueValueClass newUniqueValueClass = CreateColorCategory(tContext, fLayer.ShapeType, uniqueLabel);
         listUniqueValueClasses.Add(newUniqueValueClass);
