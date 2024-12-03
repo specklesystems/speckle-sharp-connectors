@@ -13,6 +13,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\..\Converters\CSi\Speckle.Converters.ETABS22\Speckle.Converters.ETABS22.csproj" />
       <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
       <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
     </ItemGroup>
