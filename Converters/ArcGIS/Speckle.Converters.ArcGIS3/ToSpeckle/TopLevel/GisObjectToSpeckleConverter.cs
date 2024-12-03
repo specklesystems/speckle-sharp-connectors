@@ -106,13 +106,16 @@ public class GisObjectToSpeckleConverter : ITypedConverter<object, GisObject>
         case ACG.Polygon polygon:
           List<SOG.Polygon> polygons = _polygonConverter.Convert(polygon).ToList();
           List<SOG.Mesh> meshes = GetPolygonDisplayMeshes(polygons);
-          return new GisObject()
-          {
-            type = GISLayerGeometryType.POLYGON,
-            name = "Polygon Feature",
-            applicationId = "",
-            displayValue = meshes,
-          };
+          GisObject gisObj =
+            new()
+            {
+              type = GISLayerGeometryType.POLYGON,
+              name = "Polygon Feature",
+              applicationId = "",
+              displayValue = meshes,
+            };
+          gisObj["geometry"] = polygons;
+          return gisObj;
 
         case ACG.Multipatch multipatch:
           List<Base> geometry = _multipatchConverter.Convert(multipatch).ToList();
