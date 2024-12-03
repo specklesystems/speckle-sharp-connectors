@@ -12,26 +12,28 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
 {
   private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
   private readonly DisplayValueExtractor _displayValueExtractor;
-  private readonly ClassPropertyExtractor _propertyExtractor;
-  private readonly ReportPropertyExtractor _reportPropertyExtractor;
+  private readonly PropertiesExtractor _propertiesExtractor;
+  private readonly ClassPropertyExtractor _classPropertyExtractor;
 
   public ModelObjectToSpeckleConverter(
     IConverterSettingsStore<TeklaConversionSettings> settingsStore,
     DisplayValueExtractor displayValueExtractor,
-    ClassPropertyExtractor propertyExtractor,
-    ReportPropertyExtractor reportPropertyExtractor
+    PropertiesExtractor propertiesExtractor,
+    ClassPropertyExtractor classPropertyExtractor
   )
   {
     _settingsStore = settingsStore;
     _displayValueExtractor = displayValueExtractor;
-    _propertyExtractor = propertyExtractor;
-    _reportPropertyExtractor = reportPropertyExtractor;
+    _propertiesExtractor = propertiesExtractor;
+    _classPropertyExtractor = classPropertyExtractor;
   }
 
   public Base Convert(object target) => Convert((TSM.ModelObject)target);
 
   private TeklaObject Convert(TSM.ModelObject target)
   {
+    string type = target.GetType().ToString().Split('.').Last();
+
     // get children
     // POC: This logic should be same in the material unpacker in connector
     List<TeklaObject> children = new();
@@ -45,27 +47,34 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
     // get display value
     IEnumerable<Base> displayValue = _displayValueExtractor.GetDisplayValue(target).ToList();
 
-    string type = target.GetType().ToString().Split('.').Last();
+    // get name
+    string name = type;
+    switch (target)
+    {
+      case TSM.Part part:
+        name = part.Name;
+        break;
+      case TSM.Reinforcement reinforcement:
+        name = reinforcement.Name;
+        break;
+    }
+
+    // get properties
+    var properties = _propertiesExtractor.GetProperties(target);
+
     var result = new TeklaObject()
     {
-      name = type,
+      name = name,
       type = type,
       elements = children,
+      properties = properties,
       displayValue = displayValue.ToList(),
       units = _settingsStore.Current.SpeckleUnits
     };
 
-    // get report properties
-    var reportProperties = _reportPropertyExtractor.GetReportProperties(target);
-    if (reportProperties.Count > 0)
-    {
-      var propertiesDict = new Dictionary<string, object?> { { "report", reportProperties } };
-      result["properties"] = propertiesDict;
-    }
-
-    // get properties
-    var properties = _propertyExtractor.GetProperties(target);
-    foreach (var prop in properties)
+    // add dynamic class properties
+    var classProperties = _classPropertyExtractor.GetProperties(target);
+    foreach (var prop in classProperties)
     {
       result[prop.Key] = prop.Value;
     }

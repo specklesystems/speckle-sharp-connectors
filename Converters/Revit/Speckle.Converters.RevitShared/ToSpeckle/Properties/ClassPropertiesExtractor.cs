@@ -7,8 +7,6 @@ public class ClassPropertiesExtractor
 {
   private readonly ParameterValueExtractor _parameterValueExtractor;
   private readonly ITypedConverter<DB.CurveArrArray, List<SOG.Polycurve>> _curveArrArrayConverter;
-  private readonly ITypedConverter<DB.ModelCurveArray, SOG.Polycurve> _modelCurveArrayConverter;
-  private readonly ITypedConverter<DB.ModelCurveArrArray, SOG.Polycurve[]> _modelCurveArrArrayConverter;
   private readonly ITypedConverter<IList<DB.BoundarySegment>, SOG.Polycurve> _boundarySegmentConverter;
   private readonly ITypedConverter<DB.Curve, Speckle.Objects.ICurve> _curveConverter;
 
@@ -19,8 +17,6 @@ public class ClassPropertiesExtractor
   public ClassPropertiesExtractor(
     ParameterValueExtractor parameterValueExtractor,
     ITypedConverter<DB.CurveArrArray, List<SOG.Polycurve>> curveArrArrayConverter,
-    ITypedConverter<DB.ModelCurveArray, SOG.Polycurve> modelCurveArrayConverter,
-    ITypedConverter<DB.ModelCurveArrArray, SOG.Polycurve[]> modelCurveArrArrayConverter,
     ITypedConverter<IList<DB.BoundarySegment>, SOG.Polycurve> boundarySegmentConverter,
     ITypedConverter<DB.Level, Dictionary<string, object>> levelConverter,
     ITypedConverter<DB.Curve, Speckle.Objects.ICurve> curveConverter
@@ -28,8 +24,6 @@ public class ClassPropertiesExtractor
   {
     _parameterValueExtractor = parameterValueExtractor;
     _curveArrArrayConverter = curveArrArrayConverter;
-    _modelCurveArrayConverter = modelCurveArrayConverter;
-    _modelCurveArrArrayConverter = modelCurveArrArrayConverter;
     _boundarySegmentConverter = boundarySegmentConverter;
     _levelConverter = levelConverter;
     _curveConverter = curveConverter;

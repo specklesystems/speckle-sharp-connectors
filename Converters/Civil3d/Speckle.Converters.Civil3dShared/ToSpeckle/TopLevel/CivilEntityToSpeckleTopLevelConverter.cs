@@ -16,23 +16,26 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly BaseCurveExtractor _baseCurveExtractor;
   private readonly ClassPropertiesExtractor _classPropertiesExtractor;
+  private readonly PropertiesExtractor _propertiesExtractor;
 
   public CivilEntityToSpeckleTopLevelConverter(
     IConverterSettingsStore<Civil3dConversionSettings> settingsStore,
     DisplayValueExtractor displayValueExtractor,
     BaseCurveExtractor baseCurveExtractor,
-    ClassPropertiesExtractor classPropertiesExtractor
+    ClassPropertiesExtractor classPropertiesExtractor,
+    PropertiesExtractor propertiesExtractor
   )
   {
     _settingsStore = settingsStore;
     _displayValueExtractor = displayValueExtractor;
     _baseCurveExtractor = baseCurveExtractor;
     _classPropertiesExtractor = classPropertiesExtractor;
+    _propertiesExtractor = propertiesExtractor;
   }
 
   public Base Convert(object target) => Convert((CDB.Entity)target);
 
-  public CivilObject Convert(CDB.Entity target)
+  public Civil3dObject Convert(CDB.Entity target)
   {
     string name = target.DisplayName;
     try
@@ -52,11 +55,14 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
       displayValue = _displayValueExtractor.ProcessICurvesForDisplay(baseCurves).ToList();
     }
 
+    // get properties
+    Dictionary<string, object?> properties = _propertiesExtractor.GetProperties(target);
+
     // determine if this entity has any children elements that need to be converted.
     // this is a bespoke method by class type.
     var children = GetEntityChildren(target).ToList();
 
-    CivilObject civilObject =
+    Civil3dObject civilObject =
       new()
       {
         name = name,
@@ -64,6 +70,7 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
         baseCurves = baseCurves,
         elements = children,
         displayValue = displayValue,
+        properties = properties,
         units = _settingsStore.Current.SpeckleUnits,
         applicationId = target.GetSpeckleApplicationId()
       };
@@ -81,7 +88,7 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     return civilObject;
   }
 
-  private IEnumerable<CivilObject> GetEntityChildren(CDB.Entity entity)
+  private IEnumerable<Civil3dObject> GetEntityChildren(CDB.Entity entity)
   {
     switch (entity)
     {
@@ -103,7 +110,7 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     }
   }
 
-  private IEnumerable<CivilObject> GetSiteChildren(CDB.Site site)
+  private IEnumerable<Civil3dObject> GetSiteChildren(CDB.Site site)
   {
     using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
     {
@@ -117,7 +124,7 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     }
   }
 
-  private IEnumerable<CivilObject> GetAlignmentChildren(CDB.Alignment alignment)
+  private IEnumerable<Civil3dObject> GetAlignmentChildren(CDB.Alignment alignment)
   {
     using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
     {
