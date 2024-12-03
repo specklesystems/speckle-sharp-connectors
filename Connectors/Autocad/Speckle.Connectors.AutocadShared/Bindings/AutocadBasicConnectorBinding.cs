@@ -169,6 +169,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
             {
               // Note: we're swallowing exeptions here because of a weird case when receiving blocks, we would have
               // acad api throw an error on accessing entity.GeometricExtents.
+              // may also throw Autodesk.AutoCAD.Runtime.Exception for invalid extents on objects like rays and xlines
             }
           }
 

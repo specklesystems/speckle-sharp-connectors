@@ -2,6 +2,7 @@ using Autodesk.AutoCAD.DatabaseServices;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Sdk;
+using Speckle.Sdk.Dependencies;
 using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Connectors.Autocad.HostApp;
@@ -29,12 +30,12 @@ public class AutocadGroupBaker
   /// <param name="applicationIdMap"></param>
   /// <returns></returns>
   // TODO: Oguzhan! Do not report here too! But this is TBD that we don't know the shape of the report yet.
-  public List<ReceiveConversionResult> CreateGroups(
+  public IReadOnlyCollection<ReceiveConversionResult> CreateGroups(
     IEnumerable<GroupProxy> groupProxies,
-    Dictionary<string, List<Entity>> applicationIdMap
+    Dictionary<string, IReadOnlyCollection<Entity>> applicationIdMap
   )
   {
-    List<ReceiveConversionResult> results = new();
+    HashSet<ReceiveConversionResult> results = new();
 
     using var groupCreationTransaction =
       Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
@@ -75,6 +76,6 @@ public class AutocadGroupBaker
 
     groupCreationTransaction.Commit();
 
-    return results;
+    return results.Freeze();
   }
 }

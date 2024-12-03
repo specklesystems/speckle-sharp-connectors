@@ -3,12 +3,14 @@ using Rhino.DocObjects;
 using Rhino.Geometry;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -121,9 +123,9 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     }
 
     // 5 - Convert atomic objects
-    List<string> bakedObjectIds = new();
-    Dictionary<string, List<string>> applicationIdMap = new(); // This map is used in converting blocks in stage 2. keeps track of original app id => resulting new app ids post baking
-    List<ReceiveConversionResult> conversionResults = new();
+    var bakedObjectIds = new HashSet<string>();
+    Dictionary<string, IReadOnlyCollection<string>> applicationIdMap = new(); // This map is used in converting blocks in stage 2. keeps track of original app id => resulting new app ids post baking
+    HashSet<ReceiveConversionResult> conversionResults = new();
 
     int count = 0;
     using (var _ = _activityFactory.Start("Converting objects"))
@@ -193,7 +195,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
             }
 
             // 5: populate app id map
-            applicationIdMap[obj.applicationId ?? obj.id] = conversionIds;
+            applicationIdMap[obj.applicationId ?? obj.id.NotNull()] = conversionIds;
             convertActivity?.SetStatus(SdkActivityStatusCode.Ok);
           }
           catch (Exception ex) when (!ex.IsFatal())
@@ -216,10 +218,10 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
         onOperationProgressed
       );
 
-      bakedObjectIds.RemoveAll(id => consumedObjectIds.Contains(id)); // remove all objects that have been "consumed"
-      bakedObjectIds.AddRange(createdInstanceIds); // add instance ids
-      conversionResults.RemoveAll(result => result.ResultId != null && consumedObjectIds.Contains(result.ResultId)); // remove all conversion results for atomic objects that have been consumed (POC: not that cool, but prevents problems on object highlighting)
-      conversionResults.AddRange(instanceConversionResults); // add instance conversion results to our list
+      bakedObjectIds.RemoveWhere(id => consumedObjectIds.Contains(id)); // remove all objects that have been "consumed"
+      bakedObjectIds.UnionWith(createdInstanceIds); // add instance ids
+      conversionResults.RemoveWhere(result => result.ResultId != null && consumedObjectIds.Contains(result.ResultId)); // remove all conversion results for atomic objects that have been consumed (POC: not that cool, but prevents problems on object highlighting)
+      conversionResults.UnionWith(instanceConversionResults); // add instance conversion results to our list
     }
 
     // 7 - Create groups
@@ -286,7 +288,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   /// </remarks>
   private Guid BakeObject(GeometryBase obj, Base originalObject, string? parentObjectId, ObjectAttributes atts)
   {
-    var objectId = originalObject.applicationId ?? originalObject.id;
+    var objectId = originalObject.applicationId ?? originalObject.id.NotNull();
 
     if (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(objectId, out int mIndex))
     {
@@ -327,7 +329,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   )
   {
     List<Guid> objectIds = new();
-    string parentId = originatingObject.applicationId ?? originatingObject.id;
+    string parentId = originatingObject.applicationId ?? originatingObject.id.NotNull();
 
     foreach (var (conversionResult, originalBaseObject) in fallbackConversionResult)
     {

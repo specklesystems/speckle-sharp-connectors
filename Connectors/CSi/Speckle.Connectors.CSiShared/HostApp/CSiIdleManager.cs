@@ -2,11 +2,11 @@
 
 namespace Speckle.Connectors.CSiShared.HostApp;
 
-public sealed class CSiSharedIdleManager : AppIdleManager
+public sealed class CSiIdleManager : AppIdleManager
 {
   private readonly IIdleCallManager _idleCallManager;
 
-  public CSiSharedIdleManager(IIdleCallManager idleCallManager)
+  public CSiIdleManager(IIdleCallManager idleCallManager)
     : base(idleCallManager)
   {
     _idleCallManager = idleCallManager;
@@ -14,7 +14,7 @@ public sealed class CSiSharedIdleManager : AppIdleManager
 
   protected override void AddEvent()
   {
-    // ETABS specific idle handling can be added here if needed
+    // TODO: CSi specific idle handling can be added here if needed
     _idleCallManager.AppOnIdle(() => { });
   }
 }
