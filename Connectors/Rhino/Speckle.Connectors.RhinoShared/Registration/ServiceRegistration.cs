@@ -43,6 +43,8 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<IAppIdleManager, RhinoIdleManager>();
 
     // Register bindings
+    serviceCollection.AddSingleton<IBinding, RhinoTestBinding>();
+
     serviceCollection.AddSingleton<IBinding, TestBinding>();
     serviceCollection.AddSingleton<IBinding, ConfigBinding>(); // POC: Easier like this for now, should be cleaned up later
     serviceCollection.AddSingleton<IBinding, AccountBinding>();
