@@ -18,5 +18,5 @@ public class DisplayValueExtractor
     _logger = logger;
   }
 
-  internal List<SSM.Base> GetDisplayValue(NAV.ModelItem _) => [];
+  internal static List<SSM.Base> GetDisplayValue(NAV.ModelItem _) => [];
 }
