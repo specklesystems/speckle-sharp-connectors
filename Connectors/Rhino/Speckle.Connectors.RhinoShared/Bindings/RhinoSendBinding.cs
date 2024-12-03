@@ -8,7 +8,6 @@ using Rhino.DocObjects.Tables;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
-using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Eventing;
@@ -34,7 +33,6 @@ public sealed class RhinoSendBinding : ISendBinding
   public IBrowserBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly IAppIdleManager _idleManager;
   private readonly IServiceProvider _serviceProvider;
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
@@ -58,7 +56,6 @@ public sealed class RhinoSendBinding : ISendBinding
 
   public RhinoSendBinding(
     DocumentModelStore store,
-    IAppIdleManager idleManager,
     IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     IServiceProvider serviceProvider,
@@ -73,7 +70,6 @@ public sealed class RhinoSendBinding : ISendBinding
   )
   {
     _store = store;
-    _idleManager = idleManager;
     _serviceProvider = serviceProvider;
     _sendFilters = sendFilters.ToList();
     _cancellationManager = cancellationManager;
@@ -126,7 +122,7 @@ public sealed class RhinoSendBinding : ISendBinding
       //   return;
       // }
       ChangedObjectIds[e.ObjectId.ToString()] = 1;
-      eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), async () => await RunExpirationChecks().BackToAny());
+      eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
     });
     
     eventAggregator.GetEvent<DeleteRhinoObject>().Subscribe(e =>
@@ -139,7 +135,7 @@ public sealed class RhinoSendBinding : ISendBinding
       // }
 
       ChangedObjectIds[e.ObjectId.ToString()] = 1;
-      _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+      eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
     });
 
     // NOTE: Catches an object's material change from one user defined doc material to another. Does not catch (as the top event is not triggered) swapping material sources for an object or moving to/from the default material (this is handled below)!
@@ -148,7 +144,7 @@ public sealed class RhinoSendBinding : ISendBinding
         if (args is RhinoDoc.RenderMaterialAssignmentChangedEventArgs changedEventArgs)
         {
           ChangedObjectIds[changedEventArgs.ObjectId.ToString()] = 1;
-          _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+          eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
         }
       });
 
@@ -158,7 +154,7 @@ public sealed class RhinoSendBinding : ISendBinding
         if (args.EventType == MaterialTableEventType.Modified)
         {
           ChangedMaterialIndexes[args.Index] = 1;
-          _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+          eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
         }
       });
 
@@ -180,7 +176,7 @@ public sealed class RhinoSendBinding : ISendBinding
         )
         {
           ChangedObjectIds[e.RhinoObject.Id.ToString()] = 1;
-          _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+          eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
         }
       });
 
@@ -195,7 +191,7 @@ public sealed class RhinoSendBinding : ISendBinding
 
         ChangedObjectIds[e.NewRhinoObject.Id.ToString()] = 1;
         ChangedObjectIds[e.OldRhinoObject.Id.ToString()] = 1;
-        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
       });
   }
 

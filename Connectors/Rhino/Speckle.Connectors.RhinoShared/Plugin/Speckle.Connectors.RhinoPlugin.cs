@@ -21,7 +21,6 @@ namespace Speckle.Connectors.Rhino.Plugin;
 ///</summary>
 public class SpeckleConnectorsRhinoPlugin : PlugIn
 {
-  private IRhinoPlugin? _rhinoPlugin;
   private IDisposable? _disposableLogger;
 
   protected override string LocalPlugInName => "Speckle (Beta) for Rhino";
@@ -55,9 +54,6 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
       Container = services.BuildServiceProvider();
 
       RhinoEvents.Register(Container.GetRequiredService<IEventAggregator>());
-      // Resolve root plugin object and initialise.
-      _rhinoPlugin = Container.GetRequiredService<IRhinoPlugin>();
-      _rhinoPlugin.Initialise();
 
       return LoadReturnCode.Success;
     }
@@ -81,7 +77,6 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
 
   protected override void OnShutdown()
   {
-    _rhinoPlugin?.Shutdown();
     _disposableLogger?.Dispose();
     Container?.Dispose();
     base.OnShutdown();

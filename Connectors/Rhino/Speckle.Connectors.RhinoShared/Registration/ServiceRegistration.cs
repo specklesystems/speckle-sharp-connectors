@@ -11,7 +11,6 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
-using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Connectors.Rhino.Bindings;
@@ -35,10 +34,6 @@ public static class ServiceRegistration
     serviceCollection.AddConnectorUtils();
     serviceCollection.AddDUI<DefaultThreadContext, RhinoDocumentStore>();
     serviceCollection.AddDUIView();
-
-    // Register other connector specific types
-    serviceCollection.AddSingleton<IRhinoPlugin, RhinoPlugin>();
-    serviceCollection.AddSingleton<IAppIdleManager, RhinoIdleManager>();
 
     // Register bindings
     serviceCollection.AddSingleton<IBinding, TestBinding>();

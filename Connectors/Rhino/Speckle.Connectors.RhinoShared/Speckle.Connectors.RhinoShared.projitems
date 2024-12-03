@@ -33,7 +33,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoDocumentStore.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoGroupBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoGroupUnpacker.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoInstanceBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoInstanceUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoLayerBaker.cs" />
@@ -44,7 +43,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\DisableRedrawScope.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\RhinoHostObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\RhinoRootObjectBuilder.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Plugin\RhinoPlugin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\Speckle.Connectors.RhinoCommand.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\Speckle.Connectors.RhinoPlugin.cs" />
   </ItemGroup>

@@ -9,23 +9,23 @@ namespace Speckle.Connectors.Rhino.Bindings;
 
 public class RhinoSelectionBinding : ISelectionBinding
 {
-  private readonly IAppIdleManager _idleManager;
   private const string SELECTION_EVENT = "setSelection";
+  private readonly IEventAggregator _eventAggregator;
 
   public string Name => "selectionBinding";
   public IBrowserBridge Parent { get; }
 
-  public RhinoSelectionBinding(IAppIdleManager idleManager, IBrowserBridge parent, IEventAggregator eventAggregator)
+  public RhinoSelectionBinding(IBrowserBridge parent, IEventAggregator eventAggregator)
   {
-    _idleManager = idleManager;
     Parent = parent;
+    _eventAggregator = eventAggregator;
     eventAggregator.GetEvent<SelectObjects>().Subscribe(OnSelectionChange);
     eventAggregator.GetEvent<DeselectObjects>().Subscribe(OnSelectionChange);
     eventAggregator.GetEvent<DeselectAllObjects>().Subscribe(OnSelectionChange);
   }
 
   private void OnSelectionChange(EventArgs eventArgs) =>
-    _idleManager.SubscribeToIdle(nameof(RhinoSelectionBinding), UpdateSelection);
+    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSelectionBinding),  UpdateSelection);
 
   private void UpdateSelection()
   {
