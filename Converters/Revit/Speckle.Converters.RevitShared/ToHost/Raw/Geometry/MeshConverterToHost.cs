@@ -39,7 +39,10 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObj
 
     ElementId materialId = ElementId.InvalidElementId;
     if (
-      _revitToHostCacheSingleton.MaterialsByObjectId.TryGetValue(mesh.applicationId ?? mesh.id.NotNull(), out var mappedElementId)
+      _revitToHostCacheSingleton.MaterialsByObjectId.TryGetValue(
+        mesh.applicationId ?? mesh.id.NotNull(),
+        out var mappedElementId
+      )
     )
     {
       materialId = mappedElementId;
