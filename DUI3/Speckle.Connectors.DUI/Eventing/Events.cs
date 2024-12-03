@@ -7,3 +7,5 @@ public class ExceptionEvent(IThreadContext threadContext, ITopLevelExceptionHand
 
 public class DocumentChangedEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler) 
   : ThreadedEvent<object>(threadContext, exceptionHandler);
+
+public class IdleEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler) : OneTimeThreadedEvent<object>(threadContext, exceptionHandler);

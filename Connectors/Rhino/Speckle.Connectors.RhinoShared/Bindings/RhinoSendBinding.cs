@@ -8,14 +8,17 @@ using Rhino.DocObjects.Tables;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
+using Speckle.Connectors.RhinoShared;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
@@ -38,7 +41,6 @@ public sealed class RhinoSendBinding : ISendBinding
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<RhinoSendBinding> _logger;
-  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IRhinoConversionSettingsFactory _rhinoConversionSettingsFactory;
   private readonly ISpeckleApplication _speckleApplication;
   private readonly ISdkActivityFactory _activityFactory;
@@ -67,7 +69,7 @@ public sealed class RhinoSendBinding : ISendBinding
     IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
     ISpeckleApplication speckleApplication,
     ISdkActivityFactory activityFactory,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    IEventAggregator eventAggregator
   )
   {
     _store = store;
@@ -80,15 +82,14 @@ public sealed class RhinoSendBinding : ISendBinding
     _logger = logger;
     _rhinoConversionSettingsFactory = rhinoConversionSettingsFactory;
     _speckleApplication = speckleApplication;
-    _topLevelExceptionHandler = topLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent); // POC: Commands are tightly coupled with their bindings, at least for now, saves us injecting a factory.
     _activityFactory = activityFactory;
     PreviousUnitSystem = RhinoDoc.ActiveDoc.ModelUnitSystem;
-    SubscribeToRhinoEvents();
+    SubscribeToRhinoEvents(eventAggregator);
   }
 
-  private void SubscribeToRhinoEvents()
+  private void SubscribeToRhinoEvents(IEventAggregator eventAggregator)
   {
     Command.BeginCommand += (_, e) =>
     {
@@ -98,14 +99,13 @@ public sealed class RhinoSendBinding : ISendBinding
         ChangedObjectIds[selectedObject.Id.ToString()] = 1;
       }
     };
-
-    RhinoDoc.ActiveDocumentChanged += (_, e) =>
+    eventAggregator.GetEvent<ActiveDocumentChanged>().Subscribe(e =>
     {
       PreviousUnitSystem = e.Document.ModelUnitSystem;
-    };
-
+    });
+    
     // NOTE: BE CAREFUL handling things in this event handler since it is triggered whenever we save something into file!
-    RhinoDoc.DocumentPropertiesChanged += async (_, e) =>
+    eventAggregator.GetEvent<ActiveDocumentChanged>().Subscribe(async e =>
     {
       var newUnit = e.Document.ModelUnitSystem;
       if (newUnit != PreviousUnitSystem)
@@ -114,40 +114,37 @@ public sealed class RhinoSendBinding : ISendBinding
 
         await InvalidateAllSender().ConfigureAwait(false);
       }
-    };
+    });
 
-    RhinoDoc.AddRhinoObject += (_, e) =>
-      _topLevelExceptionHandler.CatchUnhandled(() =>
-      {
-        // NOTE: This does not work if rhino starts and opens a blank doc;
-        // These events always happen in a doc. Why guard agains a null doc?
-        // if (!_store.IsDocumentInit)
-        // {
-        //   return;
-        // }
 
-        ChangedObjectIds[e.ObjectId.ToString()] = 1;
-        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
-      });
+    eventAggregator.GetEvent<AddRhinoObject>().Subscribe(e =>
+    {
+      // NOTE: This does not work if rhino starts and opens a blank doc;
+      // These events always happen in a doc. Why guard agains a null doc?
+      // if (!_store.IsDocumentInit)
+      // {
+      //   return;
+      // }
+      ChangedObjectIds[e.ObjectId.ToString()] = 1;
+      eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), async () => await RunExpirationChecks().BackToAny());
+    });
+    
+    eventAggregator.GetEvent<DeleteRhinoObject>().Subscribe(e =>
+    {
+      // NOTE: This does not work if rhino starts and opens a blank doc;
+      // These events always happen in a doc. Why guard agains a null doc?
+      // if (!_store.IsDocumentInit)
+      // {
+      //   return;
+      // }
 
-    RhinoDoc.DeleteRhinoObject += (_, e) =>
-      _topLevelExceptionHandler.CatchUnhandled(() =>
-      {
-        // NOTE: This does not work if rhino starts and opens a blank doc;
-        // These events always happen in a doc. Why guard agains a null doc?
-        // if (!_store.IsDocumentInit)
-        // {
-        //   return;
-        // }
-
-        ChangedObjectIds[e.ObjectId.ToString()] = 1;
-        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
-      });
+      ChangedObjectIds[e.ObjectId.ToString()] = 1;
+      _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+    });
 
     // NOTE: Catches an object's material change from one user defined doc material to another. Does not catch (as the top event is not triggered) swapping material sources for an object or moving to/from the default material (this is handled below)!
-    RhinoDoc.RenderMaterialsTableEvent += (_, args) =>
-      _topLevelExceptionHandler.CatchUnhandled(() =>
-      {
+    eventAggregator.GetEvent<RenderMaterialsTableEvent>().Subscribe(args =>
+    {
         if (args is RhinoDoc.RenderMaterialAssignmentChangedEventArgs changedEventArgs)
         {
           ChangedObjectIds[changedEventArgs.ObjectId.ToString()] = 1;
@@ -156,9 +153,8 @@ public sealed class RhinoSendBinding : ISendBinding
       });
 
     // Catches and stores changed material ids. These are then used in the expiry checks to invalidate all objects that have assigned any of those material ids.
-    RhinoDoc.MaterialTableEvent += (_, args) =>
-      _topLevelExceptionHandler.CatchUnhandled(() =>
-      {
+    eventAggregator.GetEvent<MaterialTableEvent>().Subscribe(args =>
+    {
         if (args.EventType == MaterialTableEventType.Modified)
         {
           ChangedMaterialIndexes[args.Index] = 1;
@@ -166,9 +162,8 @@ public sealed class RhinoSendBinding : ISendBinding
         }
       });
 
-    RhinoDoc.ModifyObjectAttributes += (_, e) =>
-      _topLevelExceptionHandler.CatchUnhandled(() =>
-      {
+    eventAggregator.GetEvent<ModifyObjectAttributes>().Subscribe(e =>
+    {
         // NOTE: This does not work if rhino starts and opens a blank doc;
         // These events always happen in a doc. Why guard agains a null doc?
         // if (!_store.IsDocumentInit)
@@ -189,9 +184,8 @@ public sealed class RhinoSendBinding : ISendBinding
         }
       });
 
-    RhinoDoc.ReplaceRhinoObject += (_, e) =>
-      _topLevelExceptionHandler.CatchUnhandled(() =>
-      {
+    eventAggregator.GetEvent<ReplaceRhinoObject>().Subscribe(e =>
+    {
         // NOTE: This does not work if rhino starts and opens a blank doc;
         // These events always happen in a doc. Why guard agains a null doc?
         // if (!_store.IsDocumentInit)

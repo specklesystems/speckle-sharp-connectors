@@ -74,6 +74,8 @@ public abstract class PubSubEvent<TPayload> : EventBase
     bool keepSubscriberReferenceAlive
   ) => Subscribe(action, threadOption, keepSubscriberReferenceAlive, null);
 
+  
+  
   /// <summary>
   /// Subscribes a delegate to an event.
   /// </summary>

@@ -7,8 +7,9 @@ public class MainThreadEventSubscription<T>(
   IDelegateReference actionReference,
   IDelegateReference filterReference,
   IThreadContext threadContext,
-  ITopLevelExceptionHandler exceptionHandler
-) : EventSubscription<T>(actionReference, filterReference, exceptionHandler)
+  ITopLevelExceptionHandler exceptionHandler,
+  bool isOnce
+) : OneTimeEventSubscription<T>(actionReference, filterReference, exceptionHandler, isOnce)
 {
   public override void InvokeAction(Action<T> action, T payload) => threadContext.RunOnMain(() => action.Invoke(payload));
 }

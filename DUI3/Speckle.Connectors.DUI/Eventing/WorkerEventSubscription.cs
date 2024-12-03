@@ -7,8 +7,9 @@ public class WorkerEventSubscription<TPayload>(
   IDelegateReference actionReference,
   IDelegateReference filterReference,
   IThreadContext threadContext,
-  ITopLevelExceptionHandler exceptionHandler
-) : EventSubscription<TPayload>(actionReference, filterReference, exceptionHandler)
+  ITopLevelExceptionHandler exceptionHandler,
+  bool isOnce
+) : OneTimeEventSubscription<TPayload>(actionReference, filterReference, exceptionHandler, isOnce)
 {
   public override void InvokeAction(Action<TPayload> action, TPayload argument) =>
     threadContext.RunOnWorker(() => action(argument));

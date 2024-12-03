@@ -29,6 +29,8 @@ public sealed class SubscriptionToken(Action<SubscriptionToken> unsubscribeActio
   }
 
   public override int GetHashCode() => _token.GetHashCode();
+  
+  public bool IsActive => _unsubscribeAction != null;
 
   public void Dispose()
   {
