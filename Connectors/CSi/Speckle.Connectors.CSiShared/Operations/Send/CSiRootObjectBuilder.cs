@@ -99,7 +99,7 @@ public class CSiRootObjectBuilder : IRootObjectBuilder<ICSiWrapper>
         converted = _rootToSpeckleConverter.Convert(csiObject);
       }
 
-      var collection = _sendCollectionManager.GetAndCreateObjectHostCollection(csiObject, typeCollection);
+      var collection = _sendCollectionManager.AddObjectCollectionToRoot(csiObject, typeCollection);
       collection.elements ??= new List<Base>();
       collection.elements.Add(converted);
 

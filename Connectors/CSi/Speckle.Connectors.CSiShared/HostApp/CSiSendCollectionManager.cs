@@ -22,21 +22,18 @@ public class CSiSendCollectionManager
   }
 
   // TODO: Frames could be further classified under Columns, Braces and Beams. Same for Shells which could be classified into walls, floors
-  public Collection GetAndCreateObjectHostCollection(ICSiWrapper csiObject, Collection rootObject)
+  public Collection AddObjectCollectionToRoot(ICSiWrapper csiObject, Collection rootObject)
   {
     var path = csiObject.GetType().Name.Replace("Wrapper", ""); // CSiJointWrapper → CSiJoint, CSiFrameWrapper → CSiFrame etc.
 
-    if (_collectionCache.TryGetValue(path, out Collection? value))
+    if (_collectionCache.TryGetValue(path, out Collection? collection))
     {
-      return value;
+      return collection;
     }
 
     Collection childCollection = new(path);
     rootObject.elements.Add(childCollection);
     _collectionCache[path] = childCollection;
-
-    rootObject = childCollection;
-
-    return rootObject;
+    return childCollection;
   }
 }
