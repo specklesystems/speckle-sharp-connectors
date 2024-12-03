@@ -49,7 +49,7 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
   }
 
   [SuppressMessage("Maintainability", "CA1506:Avoid excessive class coupling")]
-  public async Task<BakeResult> BakeInstances(
+  public BakeResult BakeInstances(
     IReadOnlyCollection<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
     Dictionary<string, List<Entity>> applicationIdMap,
     string baseLayerName,
@@ -167,7 +167,6 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
     }
 
     transaction.Commit();
-    await Task.Yield();
     return new(createdObjectIds, consumedObjectIds, conversionResults);
   }
 
