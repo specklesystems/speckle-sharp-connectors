@@ -13,12 +13,6 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
 {
   private readonly List<ModelCard> _models = new();
 
-  /// <summary>
-  /// This event is triggered by each specific host app implementation of the document model store.
-  /// </summary>
-  // POC: unsure about the PublicAPI annotation, unsure if this changed handle should live here on the store...  :/
-  public event EventHandler? DocumentChanged;
-
   //needed for javascript UI
   public IReadOnlyList<ModelCard> Models
   {
@@ -87,8 +81,6 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
       SaveState();
     }
   }
-
-  protected void OnDocumentChanged() => DocumentChanged?.Invoke(this, EventArgs.Empty);
 
   public IEnumerable<SenderModelCard> GetSenders()
   {

@@ -3,6 +3,7 @@ using Autodesk.Revit.DB.ExtensibleStorage;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Converters.RevitShared.Helpers;
@@ -20,6 +21,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
   private readonly IAppIdleManager _idleManager;
   private readonly DocumentModelStorageSchema _documentModelStorageSchema;
   private readonly IdStorageSchema _idStorageSchema;
+  private readonly IEventAggregator _eventAggregator;
 
   public RevitDocumentStore(
     IAppIdleManager idleManager,
@@ -27,6 +29,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     IJsonSerializer jsonSerializer,
     DocumentModelStorageSchema documentModelStorageSchema,
     IdStorageSchema idStorageSchema,
+    IEventAggregator eventAggregator,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
     : base(jsonSerializer)
@@ -35,6 +38,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     _revitContext = revitContext;
     _documentModelStorageSchema = documentModelStorageSchema;
     _idStorageSchema = idStorageSchema;
+    _eventAggregator = eventAggregator;
 
     UIApplication uiApplication = _revitContext.UIApplication.NotNull();
 
@@ -49,7 +53,8 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     // There is no event that we can hook here for double-click file open...
     // It is kind of harmless since we create this object as "SingleInstance".
     LoadState();
-    OnDocumentChanged();
+   
+    eventAggregator.GetEvent<DocumentChangedEvent>().Publish(new object());
   }
 
   /// <summary>
@@ -74,7 +79,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
       () =>
       {
         LoadState();
-        OnDocumentChanged();
+        _eventAggregator.GetEvent<DocumentChangedEvent>().Publish(new object());
       }
     );
   }

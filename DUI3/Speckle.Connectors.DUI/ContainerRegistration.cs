@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
@@ -24,6 +25,8 @@ public static class ContainerRegistration
 
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetAssembly(typeof(IdleCallManager)));
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetAssembly(typeof(IServerTransportFactory)));
+    serviceCollection.AddEventsAsTransient(Assembly.GetAssembly(typeof(TDocumentStore)));
+    serviceCollection.AddEventsAsTransient(Assembly.GetAssembly(typeof(IdleCallManager)));
     serviceCollection.AddSingleton<IEventAggregator, EventAggregator>();
 
     serviceCollection.AddSingleton<IBinding, TopLevelExceptionHandlerBinding>(sp =>
@@ -32,5 +35,21 @@ public static class ContainerRegistration
     serviceCollection.AddSingleton<TopLevelExceptionHandlerBinding>();
     serviceCollection.AddSingleton<ITopLevelExceptionHandler, TopLevelExceptionHandler>();
     serviceCollection.AddTransient<ExceptionEvent>();
+  }
+  
+  public static IServiceCollection AddEventsAsTransient(
+    this IServiceCollection serviceCollection,
+    Assembly assembly
+  )
+  {
+    foreach (var type in assembly.ExportedTypes.Where(t => t.IsNonAbstractClass()))
+    {
+      if (type.FindInterfaces((i, _) => i == typeof(ISpeckleEvent), null).Length != 0)
+      {
+        serviceCollection.TryAddTransient(type);
+      }
+    }
+
+    return serviceCollection;
   }
 }
