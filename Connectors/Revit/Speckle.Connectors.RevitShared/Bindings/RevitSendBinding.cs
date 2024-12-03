@@ -357,12 +357,11 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     // Step 1: get any changed types
     var elementTypeIdsList = changedIds
       .Select(e => doc.GetElement(e))
-      .Where(el => el is ElementType)
-      .Cast<ElementType>()
+      .OfType<ElementType>()
       .Select(el => el.Id)
       .ToArray();
 
-    // Step 2: Find all elements of any of the changed types, and add them to the changed ids list.
+    // Step 2: Find all elements of the changed types, and add them to the changed ids list.
     if (elementTypeIdsList.Length != 0)
     {
       using var collector = new FilteredElementCollector(doc);
