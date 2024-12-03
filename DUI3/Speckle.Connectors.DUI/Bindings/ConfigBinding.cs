@@ -2,7 +2,7 @@ using System.Runtime.Serialization;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Sdk;
-using Speckle.Sdk.Transports;
+using Speckle.Sdk.SQLite;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
@@ -17,14 +17,19 @@ public class ConfigBinding : IBinding
 {
   public string Name => "configBinding";
   public IBrowserBridge Parent { get; }
-  private SQLiteTransport ConfigStorage { get; }
+  private readonly ISqLiteJsonCacheManager _jsonCacheManager;
   private readonly ISpeckleApplication _speckleApplication;
   private readonly IJsonSerializer _serializer;
 
-  public ConfigBinding(IJsonSerializer serializer, ISpeckleApplication speckleApplication, IBrowserBridge bridge)
+  public ConfigBinding(
+    IJsonSerializer serializer,
+    ISpeckleApplication speckleApplication,
+    IBrowserBridge bridge,
+    ISqLiteJsonCacheManagerFactory sqLiteJsonCacheManagerFactory
+  )
   {
     Parent = bridge;
-    ConfigStorage = new SQLiteTransport(scope: "DUI3Config"); // POC: maybe inject? (if we ever want to use a different storage for configs later down the line)
+    _jsonCacheManager = sqLiteJsonCacheManagerFactory.CreateForUser("DUI3Config"); // POC: maybe inject? (if we ever want to use a different storage for configs later down the line)
     _speckleApplication = speckleApplication;
     _serializer = serializer;
   }
@@ -40,9 +45,9 @@ public class ConfigBinding : IBinding
 #endif
   }
 
-  public async Task<ConnectorConfig> GetConfig()
+  public ConnectorConfig GetConfig()
   {
-    var rawConfig = await ConfigStorage.GetObject(_speckleApplication.HostApplication).ConfigureAwait(false);
+    var rawConfig = _jsonCacheManager.GetObject(_speckleApplication.HostApplication);
     if (rawConfig is null)
     {
       return SeedConfig();
@@ -74,18 +79,18 @@ public class ConfigBinding : IBinding
   public void UpdateConfig(ConnectorConfig config)
   {
     var str = _serializer.Serialize(config);
-    ConfigStorage.UpdateObject(_speckleApplication.HostApplication, str);
+    _jsonCacheManager.SaveObject(_speckleApplication.HostApplication, str);
   }
 
   public void SetUserSelectedAccountId(string userSelectedAccountId)
   {
     var str = _serializer.Serialize(new AccountsConfig() { UserSelectedAccountId = userSelectedAccountId });
-    ConfigStorage.UpdateObject("accounts", str);
+    _jsonCacheManager.SaveObject("accounts", str);
   }
 
-  public async Task<AccountsConfig?> GetUserSelectedAccountId()
+  public AccountsConfig? GetUserSelectedAccountId()
   {
-    var rawConfig = await ConfigStorage.GetObject("accounts").ConfigureAwait(false);
+    var rawConfig = _jsonCacheManager.GetObject("accounts");
     if (rawConfig is null)
     {
       return null;
