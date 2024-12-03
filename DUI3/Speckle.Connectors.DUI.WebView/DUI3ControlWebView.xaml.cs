@@ -26,7 +26,7 @@ public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExec
 
   public object BrowserElement => Browser;
 
-  public Task ExecuteScriptAsyncMethod(string script, CancellationToken cancellationToken)
+  public void ExecuteScriptAsync(string script)
   {
     if (!Browser.IsInitialized)
     {
@@ -39,7 +39,6 @@ public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExec
       () => Browser.ExecuteScriptAsync(script),
       DispatcherPriority.Background
     );
-    return Task.CompletedTask;
   }
 
   private void OnInitialized(object? sender, CoreWebView2InitializationCompletedEventArgs e)

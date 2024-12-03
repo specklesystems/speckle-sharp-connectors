@@ -4,7 +4,7 @@ public interface IBrowserScriptExecutor
 {
   /// <exception cref="InvalidOperationException">thrown when <see cref="IsBrowserInitialized"/> is <see langword="false"/></exception>
   /// <param name="script">The (constant string) script to execute on the browser</param>
-  public Task ExecuteScriptAsyncMethod(string script, CancellationToken cancellationToken);
+  public void ExecuteScriptAsync(string script);
 
   public bool IsBrowserInitialized { get; }
 
