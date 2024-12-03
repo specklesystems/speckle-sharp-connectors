@@ -40,11 +40,7 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
     // Add ElementID to the converted objects
     result["elementId"] = element.Id.ToString()!;
 
-    // POC DirectShapes have RevitCategory enum as the type or the category property, DS category property is already set in the converter
-    if (target is not DB.DirectShape)
-    {
-      result["builtinCategory"] = element.Category?.GetBuiltInCategory().ToString();
-    }
+    result["builtInCategory"] = element.Category?.GetBuiltInCategory().ToString();
 
     result["worksetId"] = element.WorksetId.ToString();
     if (!_worksetCache.TryGetValue(element.WorksetId, out var worksetName))

@@ -1,6 +1,5 @@
 using Speckle.Converters.Civil3dShared.Extensions;
 using Speckle.Converters.Civil3dShared.Helpers;
-using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converters.Civil3dShared.ToSpeckle;
@@ -12,28 +11,22 @@ namespace Speckle.Converters.Civil3dShared.ToSpeckle;
 /// </summary>
 public class ClassPropertiesExtractor
 {
-  private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
   private readonly ITypedConverter<AG.Point3dCollection, SOG.Polyline> _point3dCollectionConverter;
   private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
   private readonly CatchmentGroupHandler _catchmentGroupHandler;
   private readonly PipeNetworkHandler _pipeNetworkHandler;
-  private readonly CorridorHandler _corridorHandler;
 
   public ClassPropertiesExtractor(
-    IConverterSettingsStore<Civil3dConversionSettings> settingsStore,
     ITypedConverter<AG.Point3dCollection, SOG.Polyline> point3dCollectionConverter,
     ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
     CatchmentGroupHandler catchmentGroupHandler,
-    PipeNetworkHandler pipeNetworkHandler,
-    CorridorHandler corridorHandler
+    PipeNetworkHandler pipeNetworkHandler
   )
   {
     _point3dCollectionConverter = point3dCollectionConverter;
     _pointConverter = pointConverter;
-    _settingsStore = settingsStore;
     _catchmentGroupHandler = catchmentGroupHandler;
     _pipeNetworkHandler = pipeNetworkHandler;
-    _corridorHandler = corridorHandler;
   }
 
   /// <summary>
@@ -63,10 +56,6 @@ public class ClassPropertiesExtractor
         return ExtractAlignmentProperties(alignment);
       case CDB.Profile profile:
         return ExtractProfileProperties(profile);
-
-      // corridors
-      case CDB.Corridor corridor:
-        return ExtractCorridorProperties(corridor);
 
       // assemblies
       case CDB.Subassembly subassembly:
@@ -169,14 +158,6 @@ public class ClassPropertiesExtractor
     }
 
     return alignmentProperties;
-  }
-
-  private Dictionary<string, object?> ExtractCorridorProperties(CDB.Corridor corridor)
-  {
-    Dictionary<string, object?> corridorProperties =
-      new() { ["@baselines"] = _corridorHandler.GetCorridorChildren(corridor) };
-
-    return corridorProperties;
   }
 
   private Dictionary<string, object?> ExtractPipeProperties(CDB.Pipe pipe)

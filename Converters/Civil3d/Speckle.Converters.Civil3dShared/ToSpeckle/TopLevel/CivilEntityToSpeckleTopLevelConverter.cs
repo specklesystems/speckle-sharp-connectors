@@ -17,13 +17,15 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
   private readonly BaseCurveExtractor _baseCurveExtractor;
   private readonly ClassPropertiesExtractor _classPropertiesExtractor;
   private readonly PropertiesExtractor _propertiesExtractor;
+  private readonly CorridorHandler _corridorHandler;
 
   public CivilEntityToSpeckleTopLevelConverter(
     IConverterSettingsStore<Civil3dConversionSettings> settingsStore,
     DisplayValueExtractor displayValueExtractor,
     BaseCurveExtractor baseCurveExtractor,
     ClassPropertiesExtractor classPropertiesExtractor,
-    PropertiesExtractor propertiesExtractor
+    PropertiesExtractor propertiesExtractor,
+    CorridorHandler corridorHandler
   )
   {
     _settingsStore = settingsStore;
@@ -31,6 +33,7 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     _baseCurveExtractor = baseCurveExtractor;
     _classPropertiesExtractor = classPropertiesExtractor;
     _propertiesExtractor = propertiesExtractor;
+    _corridorHandler = corridorHandler;
   }
 
   public Base Convert(object target) => Convert((CDB.Entity)target);
@@ -88,7 +91,7 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     return civilObject;
   }
 
-  private IEnumerable<Civil3dObject> GetEntityChildren(CDB.Entity entity)
+  private IEnumerable<Base> GetEntityChildren(CDB.Entity entity)
   {
     switch (entity)
     {
@@ -103,6 +106,14 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
       case CDB.Site site:
         var siteChildren = GetSiteChildren(site).ToList();
         foreach (var child in siteChildren)
+        {
+          yield return child;
+        }
+        break;
+
+      case CDB.Corridor corridor:
+        var corridorChildren = _corridorHandler.GetCorridorChildren(corridor);
+        foreach (var child in corridorChildren)
         {
           yield return child;
         }

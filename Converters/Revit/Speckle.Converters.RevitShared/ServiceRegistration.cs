@@ -47,7 +47,6 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<ParameterValueExtractor>();
     serviceCollection.AddScoped<DisplayValueExtractor>();
 
-    serviceCollection.AddScoped<IRevitCategories, RevitCategories>();
     serviceCollection.AddScoped<ParameterDefinitionHandler>();
     serviceCollection.AddScoped<ParameterExtractor>();
     serviceCollection.AddScoped<ClassPropertiesExtractor>();

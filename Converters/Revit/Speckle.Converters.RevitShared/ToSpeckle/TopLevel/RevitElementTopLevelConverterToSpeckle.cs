@@ -41,9 +41,20 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
 
   public RevitObject Convert(DB.Element target)
   {
-    string category = target is DB.DirectShape ds
-      ? ds.Category.GetBuiltInCategory().GetSchemaBuilderCategoryFromBuiltIn().ToString()
-      : target.Category?.Name ?? "none";
+    string category = target.Category?.Name ?? "none";
+
+    // special case for direct shapes: use builtin category instead
+    if (target is DB.DirectShape ds)
+    {
+      // Clean up built-in name by removing "OST" prefixes
+      category = ds
+        .Category.GetBuiltInCategory()
+        .ToString()
+        .Replace("OST_IOS", "") //for OST_IOSModelGroups
+        .Replace("OST_MEP", "") //for OST_MEPSpaces
+        .Replace("OST_", "") //for any other OST_blablabla
+        .Replace("_", " ");
+    }
 
     string name = $"{category} - {target.Name}"; // Note: I find this looks better in the frontend.
     string familyName = "none";
