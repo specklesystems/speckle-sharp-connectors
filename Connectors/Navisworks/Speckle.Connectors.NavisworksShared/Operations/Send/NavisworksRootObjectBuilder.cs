@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
@@ -48,8 +48,11 @@ public class NavisworksRootObjectBuilder : IRootObjectBuilder<NAV.ModelItem>
     // Initialize root collection
     var name = NavisworksApp.ActiveDocument.Title ?? "Unnamed model";
 
-    var rootObjectCollection = new Collection { name = name };
-    rootObjectCollection["units"] = _converterSettings.Current.Derived.SpeckleUnits;
+    var rootObjectCollection = new Collection
+    {
+      name = name,
+      ["units"] = _converterSettings.Current.Derived.SpeckleUnits
+    };
 
     if (!navisworksModelItems.Any() || navisworksModelItems == null)
     {
