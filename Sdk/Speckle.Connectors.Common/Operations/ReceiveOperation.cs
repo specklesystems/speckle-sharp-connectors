@@ -26,7 +26,34 @@ public sealed class ReceiveOperation(
     CancellationToken cancellationToken
   )
   {
-    throw new NotImplementedException("This is a placeholder for now.");
+    using var execute = activityFactory.Start("Receive Operation");
+    execute?.SetTag("receiveInfo", receiveInfo);
+    // 2 - Check account exist
+    Account account = accountService.GetAccountWithServerUrlFallback(receiveInfo.AccountId, receiveInfo.ServerUrl);
+    using Client apiClient = clientFactory.Create(account);
+    using var userScope = ActivityScope.SetTag(Consts.USER_ID, account.GetHashedEmail());
+
+    var version = await apiClient
+      .Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ProjectId, cancellationToken)
+      .BackToAny();
+
+    var commitObject = await threadContext
+      .RunOnWorkerAsync(() => ReceiveData(account, version, receiveInfo, onOperationProgressed, cancellationToken))
+      .BackToAny();
+
+    // 4 - Convert objects
+    HostObjectBuilderResult res = await threadContext
+      .RunOnThread(
+        () => ConvertObjects(commitObject, receiveInfo, onOperationProgressed, cancellationToken),
+        threadOptions.RunReceiveBuildOnMainThread
+      )
+      .BackToAny();
+
+    await apiClient
+      .Version.Received(new(version.id, receiveInfo.ProjectId, receiveInfo.SourceApplication), cancellationToken)
+      .BackToAny();
+
+    return res;
   }
 
   private async Task<Base> ReceiveData(
@@ -53,7 +80,7 @@ public sealed class ReceiveOperation(
     return commitObject;
   }
 
-  private async Task<HostObjectBuilderResult> ConvertObjects(
+  private HostObjectBuilderResult ConvertObjects(
     Base commitObject,
     ReceiveInfo receiveInfo,
     IProgress<CardProgress> onOperationProgressed,
@@ -70,9 +97,13 @@ public sealed class ReceiveOperation(
 
     try
     {
-      HostObjectBuilderResult res = await hostObjectBuilder
-        .Build(commitObject, receiveInfo.ProjectName, receiveInfo.ModelName, onOperationProgressed, cancellationToken)
-        .BackToAny();
+      HostObjectBuilderResult res = hostObjectBuilder.Build(
+        commitObject,
+        receiveInfo.ProjectName,
+        receiveInfo.ModelName,
+        onOperationProgressed,
+        cancellationToken
+      );
       conversionActivity?.SetStatus(SdkActivityStatusCode.Ok);
       return res;
     }

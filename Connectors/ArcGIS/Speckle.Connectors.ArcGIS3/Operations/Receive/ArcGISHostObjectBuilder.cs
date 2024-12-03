@@ -8,7 +8,6 @@ using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
-using Speckle.Connectors.Common.Threading;
 using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
@@ -58,7 +57,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     _crsUtils = crsUtils;
   }
 
-  public async Task<HostObjectBuilderResult> Build(
+  public HostObjectBuilderResult Build(
     Base rootObject,
     string projectName,
     string modelName,
@@ -78,14 +77,14 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       .ToList();
     if (materials != null)
     {
-      await _colorManager.ParseMaterials(materials, onOperationProgressed).BackToThread();
+      _colorManager.ParseMaterials(materials, onOperationProgressed);
     }
 
     // get colors
     List<ColorProxy>? colors = (rootObject[ProxyKeys.COLOR] as List<object>)?.Cast<ColorProxy>().ToList();
     if (colors != null)
     {
-      await _colorManager.ParseColors(colors, onOperationProgressed).BackToThread();
+      _colorManager.ParseColors(colors, onOperationProgressed);
     }
 
     int count = 0;

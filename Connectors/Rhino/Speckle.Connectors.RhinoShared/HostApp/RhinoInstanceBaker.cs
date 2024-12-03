@@ -81,6 +81,12 @@ public class RhinoInstanceBaker : IInstanceBaker<List<string>>
           foreach (var id in currentApplicationObjectsIds)
           {
             var docObject = doc.Objects.FindId(new Guid(id));
+            // NOTE: we're here being lenient on incomplete block creation. If a block contains unsupported elements that somehow threw/didn't manage to get baked as atomic objects,
+            // we just continue rather than throw on a null when accessing the docObject's Geometry.
+            if (docObject is null)
+            {
+              continue;
+            }
             definitionGeometryList.Add(docObject.Geometry);
             attributes.Add(docObject.Attributes);
           }

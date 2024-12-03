@@ -4,24 +4,6 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.Common.Builders;
 
-public abstract class HostObjectBuilder : IHostObjectBuilder
-{
-  Task<HostObjectBuilderResult> IHostObjectBuilder.Build(
-    Base rootObject,
-    string projectName,
-    string modelName,
-    IProgress<CardProgress> onOperationProgressed,
-    CancellationToken cancellationToken
-  ) => Task.FromResult(Build(rootObject, projectName, modelName, onOperationProgressed));
-
-  protected abstract HostObjectBuilderResult Build(
-    Base rootObject,
-    string projectName,
-    string modelName,
-    IProgress<CardProgress> onOperationProgressed
-  );
-}
-
 // POC: We might consider to put also IRootObjectBuilder interface here in same folder and create concrete classes from it in per connector.
 public interface IHostObjectBuilder
 {
@@ -35,7 +17,7 @@ public interface IHostObjectBuilder
   /// <returns> List of application ids.</returns> // POC: Where we will return these ids will matter later when we target to also cache received application ids.
   /// <remarks>Project and model name are needed for now to construct host app objects into related layers or filters.
   /// POC: we might consider later to have HostObjectBuilderContext? that might hold all possible data we will need.</remarks>
-  Task<HostObjectBuilderResult> Build(
+  HostObjectBuilderResult Build(
     Base rootObject,
     string projectName,
     string modelName,

@@ -5,7 +5,6 @@ using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
-using Speckle.Connectors.Common.Threading;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
@@ -29,7 +28,7 @@ public class AutocadHostObjectBuilder(
   RootObjectUnpacker rootObjectUnpacker
 ) : IHostObjectBuilder
 {
-  public async Task<HostObjectBuilderResult> Build(
+  public HostObjectBuilderResult Build(
     Base rootObject,
     string projectName,
     string modelName,
@@ -39,7 +38,6 @@ public class AutocadHostObjectBuilder(
   {
     // Prompt the UI conversion started. Progress bar will swoosh.
     onOperationProgressed.Report(new("Converting", null));
-    await Yield.Force().BackToThread();
 
     // Layer filter for received commit with project and model name
     layerBaker.CreateLayerFilter(projectName, modelName);
@@ -91,7 +89,7 @@ public class AutocadHostObjectBuilder(
     {
       string objectId = atomicObject.applicationId ?? atomicObject.id;
       onOperationProgressed.Report(new("Converting objects", (double)++count / atomicObjects.Count));
-      await Yield.Force().BackToThread();
+      cancellationToken.ThrowIfCancellationRequested();
       try
       {
         List<Entity> convertedObjects = ConvertObject(atomicObject, layerPath, baseLayerPrefix);
