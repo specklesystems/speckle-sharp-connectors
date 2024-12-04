@@ -6,9 +6,9 @@ using Speckle.Sdk.Models.Proxies;
 namespace Speckle.Connectors.Common.Operations.Receive;
 
 public record RootObjectUnpackerResult(
-  IEnumerable<TraversalContext> ObjectsToConvert,
-  List<InstanceDefinitionProxy>? DefinitionProxies,
-  List<GroupProxy>? GroupProxies,
-  List<RenderMaterialProxy>? RenderMaterialProxies,
-  List<ColorProxy>? ColorProxies
+  IReadOnlyCollection<TraversalContext> ObjectsToConvert,
+  IReadOnlyCollection<InstanceDefinitionProxy>? DefinitionProxies,
+  IReadOnlyCollection<GroupProxy>? GroupProxies,
+  IReadOnlyCollection<RenderMaterialProxy>? RenderMaterialProxies,
+  IReadOnlyCollection<ColorProxy>? ColorProxies
 );

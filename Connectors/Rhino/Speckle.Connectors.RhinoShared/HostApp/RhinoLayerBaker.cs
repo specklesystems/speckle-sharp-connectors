@@ -2,6 +2,7 @@ using Rhino;
 using Rhino.DocObjects;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models.Collections;
 using Layer = Rhino.DocObjects.Layer;
 
@@ -112,7 +113,7 @@ public class RhinoLayerBaker : TraversalContextUnpacker
       // set material
       if (
         _materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(
-          collection.applicationId ?? collection.id,
+          collection.applicationId ?? collection.id.NotNull(),
           out int mIndex
         )
       )
@@ -123,7 +124,7 @@ public class RhinoLayerBaker : TraversalContextUnpacker
       // set color
       if (
         _colorBaker.ObjectColorsIdMap.TryGetValue(
-          collection.applicationId ?? collection.id,
+          collection.applicationId ?? collection.id.NotNull(),
           out (Color, ObjectColorSource) color
         )
       )

@@ -3,7 +3,7 @@
 namespace Speckle.Connectors.Common.Instances;
 
 public record BakeResult(
-  List<string> CreatedInstanceIds,
-  List<string> ConsumedObjectIds,
-  List<ReceiveConversionResult> InstanceConversionResults
+  IReadOnlyCollection<string> CreatedInstanceIds,
+  IReadOnlyCollection<string> ConsumedObjectIds,
+  IReadOnlyCollection<ReceiveConversionResult> InstanceConversionResults
 );
