@@ -4,18 +4,11 @@ using static Speckle.Converter.Navisworks.Helpers.PropertyHelpers;
 
 namespace Speckle.Converter.Navisworks.ToSpeckle;
 
-public class PropertySetsExtractor
+public class PropertySetsExtractor(IConverterSettingsStore<NavisworksConversionSettings> settingsStore)
 {
-  private readonly IConverterSettingsStore<NavisworksConversionSettings> _settingsStore;
-
-  public PropertySetsExtractor(IConverterSettingsStore<NavisworksConversionSettings> settingsStore)
-  {
-    _settingsStore = settingsStore;
-  }
-
   internal Dictionary<string, object?>? GetPropertySets(NAV.ModelItem modelItem)
   {
-    if (_settingsStore.Current.User.ExcludeProperties)
+    if (settingsStore.Current.User.ExcludeProperties)
     {
       return null;
     }
@@ -48,7 +41,7 @@ public class PropertySetsExtractor
       foreach (var property in propertyCategory.Properties)
       {
         string sanitizedName = SanitizePropertyName(property.DisplayName);
-        var propertyValue = ConvertPropertyValue(property.Value, _settingsStore.Current.Derived.SpeckleUnits);
+        var propertyValue = ConvertPropertyValue(property.Value, settingsStore.Current.Derived.SpeckleUnits);
 
         if (propertyValue != null)
         {

@@ -13,28 +13,19 @@ namespace Speckle.Converter.Navisworks.ToSpeckle;
 [NameAndRankValue(nameof(NAV.ModelItem), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
 {
-  private readonly ClassPropertiesExtractor _classPropertiesExtractor;
-  private readonly PropertySetsExtractor _propertySetsExtractor;
-  private readonly ModelPropertiesExtractor _modelPropertiesExtractor;
   private readonly StandardPropertyHandler _standardHandler;
   private readonly HierarchicalPropertyHandler _hierarchicalHandler;
   private readonly IConverterSettingsStore<NavisworksConversionSettings> _settingsStore;
 
   public ModelItemToToSpeckleConverter(
     IConverterSettingsStore<NavisworksConversionSettings> settingsStore,
-    ClassPropertiesExtractor classPropertiesExtractor,
-    PropertySetsExtractor propertySetsExtractor,
     StandardPropertyHandler standardHandler,
-    HierarchicalPropertyHandler hierarchicalHandler,
-    ModelPropertiesExtractor modelPropertiesExtractor
+    HierarchicalPropertyHandler hierarchicalHandler
   )
   {
     _settingsStore = settingsStore;
-    _classPropertiesExtractor = classPropertiesExtractor;
-    _propertySetsExtractor = propertySetsExtractor;
     _standardHandler = standardHandler;
     _hierarchicalHandler = hierarchicalHandler;
-    _modelPropertiesExtractor = modelPropertiesExtractor;
   }
 
   /// <summary>

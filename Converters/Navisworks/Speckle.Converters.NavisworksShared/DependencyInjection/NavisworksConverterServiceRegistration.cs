@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converter.Navisworks.ToSpeckle;
+using Speckle.Converter.Navisworks.ToSpeckle.PropertyHandlers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Registration;
 using Speckle.Sdk;
@@ -18,6 +19,10 @@ public static class NavisworksConverterServiceRegistration
     // Register base converters
     serviceCollection.AddMatchingInterfacesAsTransient(converterAssembly);
     serviceCollection.AddRootCommon<NavisworksRootToSpeckleConverter>(converterAssembly);
+
+    // Register property handlers
+    serviceCollection.AddScoped<StandardPropertyHandler>();
+    serviceCollection.AddScoped<HierarchicalPropertyHandler>();
 
     // Register settings management
     serviceCollection.AddScoped<INavisworksConversionSettingsFactory, NavisworksConversionSettingsFactory>();

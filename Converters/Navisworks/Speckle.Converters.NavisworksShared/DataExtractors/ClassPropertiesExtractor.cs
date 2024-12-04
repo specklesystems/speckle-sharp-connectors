@@ -1,19 +1,10 @@
-﻿using Speckle.Converter.Navisworks.Settings;
-using Speckle.Converters.Common;
-using static Speckle.Converter.Navisworks.Helpers.PropertyHelpers;
+﻿using static Speckle.Converter.Navisworks.Helpers.PropertyHelpers;
 
 namespace Speckle.Converter.Navisworks.ToSpeckle;
 
 public class ClassPropertiesExtractor
 {
-  private readonly IConverterSettingsStore<NavisworksConversionSettings> _settingsStore;
-
-  public ClassPropertiesExtractor(IConverterSettingsStore<NavisworksConversionSettings> settingsStore)
-  {
-    _settingsStore = settingsStore;
-  }
-
-  internal static Dictionary<string, object?>? GetClassProperties(NAV.ModelItem modelItem) =>
+  internal Dictionary<string, object?>? GetClassProperties(NAV.ModelItem modelItem) =>
     ExtractClassProperties(modelItem);
 
   /// <summary>

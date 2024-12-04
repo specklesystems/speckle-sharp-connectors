@@ -5,8 +5,9 @@
 /// </summary>
 public class StandardPropertyHandler(
   PropertySetsExtractor propertySetsExtractor,
-  ModelPropertiesExtractor modelPropertiesExtractor
-) : BasePropertyHandler(propertySetsExtractor, modelPropertiesExtractor)
+  ModelPropertiesExtractor modelPropertiesExtractor,
+  ClassPropertiesExtractor classPropertiesExtractor
+) : BasePropertyHandler(propertySetsExtractor, modelPropertiesExtractor, classPropertiesExtractor)
 {
   protected override void AssignPropertySets(SSM.Base speckleObject, NAV.ModelItem modelItem)
   {
