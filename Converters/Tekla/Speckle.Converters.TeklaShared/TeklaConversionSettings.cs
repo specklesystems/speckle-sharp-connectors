@@ -1,5 +1,5 @@
 using Tekla.Structures.Model;
 
-namespace Speckle.Converter.Tekla2024;
+namespace Speckle.Converters.TeklaShared;
 
 public record TeklaConversionSettings(Model Document, bool SendRebarsAsSolid, string SpeckleUnits);
