@@ -17,7 +17,7 @@ public static class NavisworksConverterServiceRegistration
 
     // Register base converters
     serviceCollection.AddMatchingInterfacesAsTransient(converterAssembly);
-    serviceCollection.AddRootCommon<ModelItemTopLevelConverterToSpeckle>(converterAssembly);
+    serviceCollection.AddRootCommon<NavisworksRootToSpeckleConverter>(converterAssembly);
 
     // Register settings management
     serviceCollection.AddScoped<INavisworksConversionSettingsFactory, NavisworksConversionSettingsFactory>();

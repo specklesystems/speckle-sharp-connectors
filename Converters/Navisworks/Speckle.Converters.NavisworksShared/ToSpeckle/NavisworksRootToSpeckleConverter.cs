@@ -46,7 +46,7 @@ public class NavisworksRootToSpeckleConverter : IRootToSpeckleConverter
 
     Base result = objectConverter.Convert(modelItem);
 
-    result.applicationId = ElementSelectionHelper.ResolveModelItemToIndexPathStatic(modelItem);
+    result.applicationId = ElementSelectionHelper.ResolveModelItemToIndexPath(modelItem);
 
     return result;
   }
