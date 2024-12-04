@@ -4,7 +4,19 @@ using Speckle.Objects.Geometry;
 
 namespace Speckle.Converters.CSiShared.ToSpeckle.Geometry;
 
-// NOTE: This is HORRIBLE but serves just as a poc!
+/// <summary>
+/// Every joint has as its displayValue a Speckle point defined by extracting their coordinates.
+/// </summary>
+/// <remarks>
+/// Creates a point from joint coordinates using the CSi API:
+/// 1. Extracts cartesian coordinates
+/// 2. Creates a Speckle point with appropriate units
+/// 
+/// TODO: Current implementation is a proof of concept, needs refinement
+/// The TODOs noted will be completed as part of the "Data Extraction (Send)" milestone.
+/// 
+/// Throws ArgumentException if coordinate extraction fails.
+/// </remarks>
 public class PointToSpeckleConverter : ITypedConverter<CSiJointWrapper, Point>
 {
   private readonly IConverterSettingsStore<CSiConversionSettings> _settingStore;
@@ -16,10 +28,6 @@ public class PointToSpeckleConverter : ITypedConverter<CSiJointWrapper, Point>
 
   public Point Convert(CSiJointWrapper target) // NOTE: This is just a temporary POC
   {
-    string applicationId = "";
-
-    _ = _settingStore.Current.SapModel.PointObj.GetGUID(target.Name, ref applicationId);
-
     double pointX = 0;
     double pointY = 0;
     double pointZ = 0;
@@ -36,6 +44,6 @@ public class PointToSpeckleConverter : ITypedConverter<CSiJointWrapper, Point>
       throw new ArgumentException($"Failed to convert {target.Name} to {typeof(Point)}");
     }
 
-    return new(pointX, pointY, pointZ, _settingStore.Current.SpeckleUnits, applicationId);
+    return new(pointX, pointY, pointZ, _settingStore.Current.SpeckleUnits);
   }
 }

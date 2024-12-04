@@ -4,7 +4,25 @@ using Speckle.Objects.Geometry;
 
 namespace Speckle.Converters.CSiShared.ToSpeckle.Geometry;
 
-// NOTE: This is HORRIBLE but serves just as a poc! We need point caching and weak referencing to joint objects
+/// <summary>
+/// Every shell has as its displayValue a planar 2D Speckle mesh defined by the vertices.
+/// </summary>
+/// <remarks>
+/// Creates a mesh from shell vertices using the CSi API:
+/// 1. Gets shell vertex point names
+/// 2. Extracts coordinates for each vertex
+/// 3. Constructs mesh using flat vertex list (x,y,z triplets) and face indices
+/// 
+/// TODO: Implement point caching and weak referencing to joint objects for better performance
+/// TODO: Investigate if SAP2000 has other freeform non-planar surface definitions?
+/// The TODOs noted will be completed as part of the "Data Extraction (Send)" milestone.
+/// 
+/// Face indices format:
+/// - First value is the number of vertices in the face
+/// - Followed by indices into the vertex list
+/// 
+/// Throws ArgumentException if vertex extraction fails.
+/// </remarks>
 public class MeshToSpeckleConverter : ITypedConverter<CSiShellWrapper, Mesh>
 {
   private readonly IConverterSettingsStore<CSiConversionSettings> _settingsStore;
@@ -25,7 +43,6 @@ public class MeshToSpeckleConverter : ITypedConverter<CSiShellWrapper, Mesh>
       throw new ArgumentException($"Failed to convert {target.Name} to Speckle Mesh");
     }
 
-    // List to store vertices defining a face
     List<double> vertices = new List<double>(numberPoints * 3);
     List<int> faces = new List<int>(numberPoints + 1);
 

@@ -12,6 +12,9 @@ public class CSiObjectToSpeckleConverter : IToSpeckleTopLevelConverter
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly ClassPropertyExtractor _classPropertyExtractor;
 
+  /// <summary>
+  /// Converts CSi objects to Speckle format, extracting properties, display geometry and application IDs.
+  /// </summary>
   public CSiObjectToSpeckleConverter(
     IConverterSettingsStore<CSiConversionSettings> settingsStore,
     DisplayValueExtractor displayValueExtractor,
@@ -25,7 +28,10 @@ public class CSiObjectToSpeckleConverter : IToSpeckleTopLevelConverter
 
   public Base Convert(object target) => Convert((CSiWrapperBase)target);
 
-  private Base Convert(CSiWrapperBase target)
+  /// <remarks>
+  /// This will be refined! Just a POC for now. Data Extraction (Send) milestone will incorporate improvements here.
+  /// </remarks>
+  private Base Convert(CSiWrapperBase target) // TODO: CSiObject and not Base pending SDK updates.
   {
     var result = new Base
     {
@@ -36,8 +42,8 @@ public class CSiObjectToSpeckleConverter : IToSpeckleTopLevelConverter
       ["displayValue"] = _displayValueExtractor.GetDisplayValue(target).ToList()
     };
 
-    string applicationId = "";
-    if (target is CSiJointWrapper)
+    string applicationId = ""; // TODO: Investigate the GUIDs coming through
+    if (target is CSiJointWrapper) // TODO: Surely there is a better way of doing this? Gross.
     {
       _ = _settingsStore.Current.SapModel.PointObj.GetGUID(target.Name, ref applicationId);
     }

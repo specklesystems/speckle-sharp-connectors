@@ -6,6 +6,19 @@ using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.ETABSShared.HostApp;
 
+/// <summary>
+/// ETABS-specific collection manager that organizes structural elements by story and type.
+/// </summary>
+/// <remarks>
+/// Creates a two-level hierarchy:
+/// 1. Story level (e.g., "Story 1", "Story 2")
+/// 2. Element type level with ETABS-specific categorization:
+///    - Frames: Columns, Beams, Braces
+///    - Shells: Walls, Floors, Ramps
+///    
+/// Elements without story assignment are placed in "Unassigned" collection.
+/// Uses caching to maintain collection references and prevent duplicates.
+/// </remarks>
 public class ETABSSendCollectionManager : CSiSendCollectionManager
 {
     public ETABSSendCollectionManager(IConverterSettingsStore<CSiConversionSettings> converterSettings) 
@@ -13,6 +26,7 @@ public class ETABSSendCollectionManager : CSiSendCollectionManager
     {
     }
 
+    // TODO: This is gross. Too many strings. Improve as part of next milestone. Out of scope of "First Send".
     public override Collection AddObjectCollectionToRoot(Base convertedObject, Collection rootObject)
     {
         var properties = convertedObject["properties"] as Dictionary<string, object>;
@@ -26,6 +40,7 @@ public class ETABSSendCollectionManager : CSiSendCollectionManager
         return typeCollection;
     }
 
+    // TODO: This is gross. Too many strings. Improve as part of next milestone. Out of scope of "First Send".
     private Collection GetOrCreateStoryCollection(string story, Collection rootObject)
     {
         string storyPath = $"Story_{story}";
@@ -40,6 +55,7 @@ public class ETABSSendCollectionManager : CSiSendCollectionManager
         return storyCollection;
     }
 
+    // TODO: This is gross. Too many strings. Improve as part of next milestone. Out of scope of "First Send".
     private Collection GetOrCreateTypeCollection(string objectType, Collection storyCollection)
     {
         string typePath = $"{storyCollection["name"]}_{objectType}";
@@ -54,6 +70,7 @@ public class ETABSSendCollectionManager : CSiSendCollectionManager
         return typeCollection;
     }
 
+    // TODO: This is gross. Too many strings. Improve as part of next milestone. Out of scope of "First Send".
     private string GetObjectType(Base convertedObject, Dictionary<string, object>? properties)
     {
         string baseType = convertedObject["type"]?.ToString() ?? "Unknown";
@@ -91,6 +108,7 @@ public class ETABSSendCollectionManager : CSiSendCollectionManager
         return baseType;
     }
 
+    // TODO: This is gross. Too many strings. Improve as part of next milestone. Out of scope of "First Send".
     private string GetStoryName(Dictionary<string, object>? properties)
     {
         if (properties != null && properties.TryGetValue("story", out var story))
