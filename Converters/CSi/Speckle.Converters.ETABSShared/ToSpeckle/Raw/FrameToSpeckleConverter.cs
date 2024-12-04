@@ -18,10 +18,8 @@ namespace Speckle.Converters.ETABSShared.ToSpeckle.Raw;
 /// </remarks>
 public class FrameToSpeckleConverter : CSiFrameToSpeckleConverter
 {
-  public FrameToSpeckleConverter(IConverterSettingsStore<CSiConversionSettings> settingsStore) 
-    : base(settingsStore)
-  {
-  }
+  public FrameToSpeckleConverter(IConverterSettingsStore<CSiConversionSettings> settingsStore)
+    : base(settingsStore) { }
 
   /// <summary>
   /// Adds ETABS-specific properties to the frame object.
@@ -31,10 +29,14 @@ public class FrameToSpeckleConverter : CSiFrameToSpeckleConverter
   /// <remarks>
   /// This structure for AddProductSpecificClassProperties() is exactly same for Frame, Joint and Shell. Write better?
   /// </remarks>
-  protected override void AddProductSpecificClassProperties(CSiFrameWrapper frame, Dictionary<string, object> properties)
+  protected override void AddProductSpecificClassProperties(
+    CSiFrameWrapper frame,
+    Dictionary<string, object> properties
+  )
   {
     // Get label and story
-    string label = "", story = "";
+    string label = "",
+      story = "";
     _ = SettingsStore.Current.SapModel.FrameObj.GetLabelFromName(frame.Name, ref label, ref story);
 
     properties["label"] = label;
@@ -43,7 +45,7 @@ public class FrameToSpeckleConverter : CSiFrameToSpeckleConverter
     // Get design orientation
     eFrameDesignOrientation designOrientation = eFrameDesignOrientation.Null;
     _ = SettingsStore.Current.SapModel.FrameObj.GetDesignOrientation(frame.Name, ref designOrientation);
-    
+
     properties["designOrientation"] = designOrientation.ToString();
   }
 }

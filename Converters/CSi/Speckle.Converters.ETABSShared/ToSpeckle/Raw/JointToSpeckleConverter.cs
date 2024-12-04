@@ -18,8 +18,8 @@ namespace Speckle.Converters.ETABSShared.ToSpeckle.Raw;
 /// </remarks>
 public class JointToSpeckleConverter : CSiJointToSpeckleConverter
 {
-  public JointToSpeckleConverter(IConverterSettingsStore<CSiConversionSettings> settingsStore) : base(settingsStore)
-  { }
+  public JointToSpeckleConverter(IConverterSettingsStore<CSiConversionSettings> settingsStore)
+    : base(settingsStore) { }
 
   /// <summary>
   /// Adds ETABS-specific properties to the joint object.
@@ -29,16 +29,19 @@ public class JointToSpeckleConverter : CSiJointToSpeckleConverter
   /// <remarks>
   /// This structure for AddProductSpecificClassProperties() is exactly same for Frame, Joint and Shell. Write better?
   /// </remarks>
-  protected override void AddProductSpecificClassProperties(CSiJointWrapper joint,
-    Dictionary<string, object> properties)
+  protected override void AddProductSpecificClassProperties(
+    CSiJointWrapper joint,
+    Dictionary<string, object> properties
+  )
   {
     // Get label and story
-    string label = "", story = "";
+    string label = "",
+      story = "";
     _ = SettingsStore.Current.SapModel.PointObj.GetLabelFromName(joint.Name, ref label, ref story);
 
     properties["label"] = label;
     properties["story"] = story;
-    
+
     // Diaphragm assignments
     eDiaphragmOption diaphragmOption = eDiaphragmOption.Disconnect;
     string diaphragmName = "";

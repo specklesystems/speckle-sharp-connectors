@@ -15,7 +15,7 @@ namespace Speckle.Connectors.CSiShared.HostApp;
 public class CSiSendCollectionManager
 {
   protected IConverterSettingsStore<CSiConversionSettings> ConverterSettings { get; }
-  protected Dictionary<string, Collection> CollectionCache { get; }= new();
+  protected Dictionary<string, Collection> CollectionCache { get; } = new();
 
   public CSiSendCollectionManager(IConverterSettingsStore<CSiConversionSettings> converterSettings)
   {

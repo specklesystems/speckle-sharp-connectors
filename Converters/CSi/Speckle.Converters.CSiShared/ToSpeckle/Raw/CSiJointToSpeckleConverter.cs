@@ -12,7 +12,7 @@ public abstract class CSiJointToSpeckleConverter
   {
     SettingsStore = settingsStore;
   }
-  
+
   protected IConverterSettingsStore<CSiConversionSettings> SettingsStore { get; }
 
   /// <summary>
@@ -25,7 +25,7 @@ public abstract class CSiJointToSpeckleConverter
   public Dictionary<string, object> GetClassProperties(CSiJointWrapper joint)
   {
     var properties = new Dictionary<string, object>();
-        
+
     AddCommonClassProperties(joint, properties);
     AddProductSpecificClassProperties(joint, properties);
 
@@ -37,7 +37,7 @@ public abstract class CSiJointToSpeckleConverter
     // TODO: As part of data extraction. But a placeholder example below:
     int numberGroups = 0;
     string[] groups = Array.Empty<string>();
-    
+
     int result = SettingsStore.Current.SapModel.FrameObj.GetGroupAssign(joint.Name, ref numberGroups, ref groups);
 
     if (result == 0 && groups.Length > 0)
@@ -46,6 +46,8 @@ public abstract class CSiJointToSpeckleConverter
     }
   }
 
-  protected virtual void AddProductSpecificClassProperties(CSiJointWrapper joint, Dictionary<string, object> properties)
-  { }
+  protected virtual void AddProductSpecificClassProperties(
+    CSiJointWrapper joint,
+    Dictionary<string, object> properties
+  ) { }
 }

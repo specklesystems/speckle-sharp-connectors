@@ -10,7 +10,7 @@ public abstract class ETABSPluginBase : CSiPluginBase
     text = "Hey Speckler! This is our next-gen ETABS Connector.";
     return 0;
   }
-  
+
   protected override SpeckleFormBase CreateForm() => CreateETABSForm();
 
   protected abstract ETABSSpeckleFormBase CreateETABSForm();

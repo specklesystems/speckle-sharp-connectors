@@ -12,7 +12,7 @@ public abstract class CSiShellToSpeckleConverter
   {
     SettingsStore = settingsStore;
   }
-  
+
   protected IConverterSettingsStore<CSiConversionSettings> SettingsStore { get; }
 
   /// <summary>
@@ -25,7 +25,7 @@ public abstract class CSiShellToSpeckleConverter
   public Dictionary<string, object> GetClassProperties(CSiShellWrapper shell)
   {
     var properties = new Dictionary<string, object>();
-        
+
     AddCommonClassProperties(shell, properties);
     AddProductSpecificClassProperties(shell, properties);
 
@@ -37,7 +37,7 @@ public abstract class CSiShellToSpeckleConverter
     // TODO: As part of data extraction. But a placeholder example below:
     int numberGroups = 0;
     string[] groups = Array.Empty<string>();
-    
+
     int result = SettingsStore.Current.SapModel.AreaObj.GetGroupAssign(shell.Name, ref numberGroups, ref groups);
 
     if (result == 0 && groups.Length > 0)
@@ -46,6 +46,8 @@ public abstract class CSiShellToSpeckleConverter
     }
   }
 
-  protected virtual void AddProductSpecificClassProperties(CSiShellWrapper shell, Dictionary<string, object> properties)
-  { }
+  protected virtual void AddProductSpecificClassProperties(
+    CSiShellWrapper shell,
+    Dictionary<string, object> properties
+  ) { }
 }

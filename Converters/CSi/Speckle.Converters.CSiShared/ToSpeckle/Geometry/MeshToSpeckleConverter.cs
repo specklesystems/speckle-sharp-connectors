@@ -12,15 +12,15 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.Geometry;
 /// 1. Gets shell vertex point names
 /// 2. Extracts coordinates for each vertex
 /// 3. Constructs mesh using flat vertex list (x,y,z triplets) and face indices
-/// 
+///
 /// TODO: Implement point caching and weak referencing to joint objects for better performance
 /// TODO: Investigate if SAP2000 has other freeform non-planar surface definitions?
 /// The TODOs noted will be completed as part of the "Data Extraction (Send)" milestone.
-/// 
+///
 /// Face indices format:
 /// - First value is the number of vertices in the face
 /// - Followed by indices into the vertex list
-/// 
+///
 /// Throws ArgumentException if vertex extraction fails.
 /// </remarks>
 public class MeshToSpeckleConverter : ITypedConverter<CSiShellWrapper, Mesh>

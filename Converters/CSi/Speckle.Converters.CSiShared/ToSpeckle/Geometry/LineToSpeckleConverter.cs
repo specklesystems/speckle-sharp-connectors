@@ -22,7 +22,8 @@ public class LineToSpeckleConverter : ITypedConverter<CSiFrameWrapper, Line>
 
   public LineToSpeckleConverter(
     IConverterSettingsStore<CSiConversionSettings> settingsStore,
-    ITypedConverter<CSiJointWrapper, Point> pointConverter)
+    ITypedConverter<CSiJointWrapper, Point> pointConverter
+  )
   {
     _settingsStore = settingsStore;
     _pointConverter = pointConverter;
@@ -31,21 +32,26 @@ public class LineToSpeckleConverter : ITypedConverter<CSiFrameWrapper, Line>
   public Line Convert(CSiFrameWrapper target)
   {
     // TODO: Better exception handling
-    string startPoint = "", endPoint = "";
+    string startPoint = "",
+      endPoint = "";
     if (_settingsStore.Current.SapModel.FrameObj.GetPoints(target.Name, ref startPoint, ref endPoint) != 0)
     {
       throw new ArgumentException($"Failed to convert frame {target.Name}");
     }
 
     // TODO: Point caching. This is gross!
-    double startX = 0, startY = 0, startZ = 0;
+    double startX = 0,
+      startY = 0,
+      startZ = 0;
     if (_settingsStore.Current.SapModel.PointObj.GetCoordCartesian(startPoint, ref startX, ref startY, ref startZ) != 0)
     {
       throw new ArgumentException($"Failed to convert point {startPoint}");
     }
 
     // TODO: Point caching. This is gross!
-    double endX = 0, endY = 0, endZ = 0;
+    double endX = 0,
+      endY = 0,
+      endZ = 0;
     if (_settingsStore.Current.SapModel.PointObj.GetCoordCartesian(endPoint, ref endX, ref endY, ref endZ) != 0)
     {
       throw new ArgumentException($"Failed to convert point {endPoint}");

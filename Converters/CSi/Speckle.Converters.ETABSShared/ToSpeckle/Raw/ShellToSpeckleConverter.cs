@@ -18,8 +18,8 @@ namespace Speckle.Converters.ETABSShared.ToSpeckle.Raw;
 /// </remarks>
 public class ShellToSpeckleConverter : CSiShellToSpeckleConverter
 {
-  public ShellToSpeckleConverter(IConverterSettingsStore<CSiConversionSettings> settingsStore) : base(settingsStore)
-  { }
+  public ShellToSpeckleConverter(IConverterSettingsStore<CSiConversionSettings> settingsStore)
+    : base(settingsStore) { }
 
   /// <summary>
   /// Adds ETABS-specific properties to the shell object.
@@ -29,18 +29,21 @@ public class ShellToSpeckleConverter : CSiShellToSpeckleConverter
   /// <remarks>
   /// This structure for AddProductSpecificClassProperties() is exactly same for Frame, Joint and Shell. Write better?
   /// </remarks>
-  protected override void AddProductSpecificClassProperties(CSiShellWrapper shell,
-    Dictionary<string, object> properties)
+  protected override void AddProductSpecificClassProperties(
+    CSiShellWrapper shell,
+    Dictionary<string, object> properties
+  )
   {
-    string label = "", story = "";
+    string label = "",
+      story = "";
     _ = SettingsStore.Current.SapModel.AreaObj.GetLabelFromName(shell.Name, ref label, ref story);
 
     properties["label"] = label;
     properties["story"] = story;
-    
+
     eAreaDesignOrientation designOrientation = eAreaDesignOrientation.Null;
     _ = SettingsStore.Current.SapModel.AreaObj.GetDesignOrientation(shell.Name, ref designOrientation);
-    
+
     properties["designOrientation"] = designOrientation.ToString();
   }
 }

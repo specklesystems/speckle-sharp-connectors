@@ -18,7 +18,7 @@ public interface ICSiWrapper
 public abstract class CSiWrapperBase : ICSiWrapper
 {
   public required string Name { get; set; }
-  public abstract int ObjectType { get; } 
+  public abstract int ObjectType { get; }
   public abstract string ObjectName { get; }
 }
 

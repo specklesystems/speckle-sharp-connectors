@@ -11,7 +11,8 @@ public class ClassPropertyExtractor
   public ClassPropertyExtractor(
     CSiFrameToSpeckleConverter frameConverter,
     CSiJointToSpeckleConverter jointConverter,
-    CSiShellToSpeckleConverter shellConverter)
+    CSiShellToSpeckleConverter shellConverter
+  )
   {
     _frameConverter = frameConverter;
     _jointConverter = jointConverter;

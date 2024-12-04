@@ -38,9 +38,9 @@ public abstract class SpeckleFormBase : Form
     services.AddCSi();
     services.AddCSiConverters();
   }
-  
+
   protected abstract HostApplication GetHostApplication();
-  
+
   protected abstract HostAppVersion GetVersion();
 
   public void SetSapModel(ref cSapModel sapModel, ref cPluginCallback pluginCallback)
@@ -57,6 +57,7 @@ public abstract class SpeckleFormBase : Form
     Host.Dispose();
     _pluginCallback.Finish(0);
   }
+
   public new void ShowDialog()
   {
     base.ShowDialog();

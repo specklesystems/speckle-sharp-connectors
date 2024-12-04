@@ -11,10 +11,10 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.Geometry;
 /// Creates a point from joint coordinates using the CSi API:
 /// 1. Extracts cartesian coordinates
 /// 2. Creates a Speckle point with appropriate units
-/// 
+///
 /// TODO: Current implementation is a proof of concept, needs refinement
 /// The TODOs noted will be completed as part of the "Data Extraction (Send)" milestone.
-/// 
+///
 /// Throws ArgumentException if coordinate extraction fails.
 /// </remarks>
 public class PointToSpeckleConverter : ITypedConverter<CSiJointWrapper, Point>
