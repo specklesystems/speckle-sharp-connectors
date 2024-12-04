@@ -99,7 +99,7 @@ public static class PropertyHelpers
     name == "Item"
       // Item is a reserved term for Indexed Properties: https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/indexers/using-indexers
       ? "Item"
-      : Regex.Replace(name, @"[\.\/]", "_");
+      : Regex.Replace(name, @"[\.\/\s]", "_");
 
   internal static bool IsCategoryToBeSkipped(NAV.PropertyCategory propertyCategory) =>
     s_excludedCategories.Contains(propertyCategory.DisplayName);
