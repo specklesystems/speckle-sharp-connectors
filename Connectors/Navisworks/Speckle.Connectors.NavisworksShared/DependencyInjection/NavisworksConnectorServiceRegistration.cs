@@ -53,6 +53,7 @@ public static class NavisworksConnectorServiceRegistration
     serviceCollection.AddScoped<SendOperation<NAV.ModelItem>>();
     serviceCollection.AddSingleton(DefaultTraversal.CreateTraversalFunc());
     serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();
+    serviceCollection.AddScoped<GeometryNodeMerger>();
 
     // Register Intercom/interop
     serviceCollection.RegisterTopLevelExceptionHandler();

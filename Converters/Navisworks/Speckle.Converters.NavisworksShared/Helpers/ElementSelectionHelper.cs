@@ -5,8 +5,6 @@
 /// </summary>
 public static class ElementSelectionHelper
 {
-  private const char DEFAULT_SEPARATOR = '/';
-
   /// <summary>
   /// Resolves a Navisworks <see cref="NAV.ModelItem"/> to its unique index path representation.
   /// </summary>
@@ -29,17 +27,17 @@ public static class ElementSelectionHelper
     var pathIndex =
       modelItemPathId.PathId == "a"
         ? $"{modelItemPathId.ModelIndex}" // Root-level model item
-        : $"{modelItemPathId.ModelIndex}{DEFAULT_SEPARATOR}{modelItemPathId.PathId}"; // Nested model item
+        : $"{modelItemPathId.ModelIndex}{PathConstants.SEPARATOR}{modelItemPathId.PathId}"; // Nested model item
 
     return pathIndex;
   }
 
   internal static NAV.ModelItem ResolveIndexPathToModelItem(string indexPath)
   {
-    var indexPathParts = indexPath.Split(DEFAULT_SEPARATOR);
+    var indexPathParts = indexPath.Split(PathConstants.SEPARATOR);
 
     var modelIndex = int.Parse(indexPathParts[0]);
-    var pathId = string.Join(DEFAULT_SEPARATOR.ToString(), indexPathParts.Skip(1));
+    var pathId = string.Join(PathConstants.SEPARATOR.ToString(), indexPathParts.Skip(1));
 
     // assign the first part of indexPathParts to modelIndex and parse it to int, the second part to pathId string
     NAV.DocumentParts.ModelItemPathId modelItemPathId = new() { ModelIndex = modelIndex, PathId = pathId };

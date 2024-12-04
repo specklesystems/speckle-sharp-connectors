@@ -27,6 +27,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\PropertyHelpers.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\GeometryHelpers.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)PathConstants.cs" />
     <Folder Include="$(MSBuildThisFileDirectory)Models\" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\NavisworksToSpeckleUnitConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\ConversionModes.cs" />

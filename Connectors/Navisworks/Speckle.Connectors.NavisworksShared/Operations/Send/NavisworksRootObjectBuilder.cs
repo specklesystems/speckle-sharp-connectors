@@ -4,12 +4,14 @@ using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Converter.Navisworks.Settings;
+using Speckle.Converter.Navisworks.ToSpeckle;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using static Speckle.Connector.Navisworks.Extensions.ElementSelectionExtension;
+using static Speckle.Connector.Navisworks.Extensions.NavisworksRootObjectBuilderExtensions;
 
 namespace Speckle.Connector.Navisworks.Operations.Send;
 
@@ -20,13 +22,17 @@ public class NavisworksRootObjectBuilder : IRootObjectBuilder<NAV.ModelItem>
   private readonly IConverterSettingsStore<NavisworksConversionSettings> _converterSettings;
   private readonly ILogger<NavisworksRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
+  private readonly ClassPropertiesExtractor _classPropertiesExtractor;
+  private readonly PropertySetsExtractor _propertySetsExtractor;
 
   public NavisworksRootObjectBuilder(
     IRootToSpeckleConverter rootToSpeckleConverter,
     ISendConversionCache sendConversionCache,
     IConverterSettingsStore<NavisworksConversionSettings> converterSettings,
     ILogger<NavisworksRootObjectBuilder> logger,
-    ISdkActivityFactory activityFactory
+    ISdkActivityFactory activityFactory,
+    ClassPropertiesExtractor classPropertiesExtractor,
+    PropertySetsExtractor propertySetsExtractor
   )
   {
     _rootToSpeckleConverter = rootToSpeckleConverter;
@@ -34,7 +40,11 @@ public class NavisworksRootObjectBuilder : IRootObjectBuilder<NAV.ModelItem>
     _converterSettings = converterSettings;
     _logger = logger;
     _activityFactory = activityFactory;
+    _classPropertiesExtractor = classPropertiesExtractor;
+    _propertySetsExtractor = propertySetsExtractor;
   }
+
+  internal NavisworksConversionSettings GetCurrentSettings() => _converterSettings.Current;
 
   public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<NAV.ModelItem> navisworksModelItems,
@@ -45,53 +55,24 @@ public class NavisworksRootObjectBuilder : IRootObjectBuilder<NAV.ModelItem>
   {
     using var activity = _activityFactory.Start("Build");
 
-    // Initialize root collection
-    var name = NavisworksApp.ActiveDocument.Title ?? "Unnamed model";
-
-    var rootObjectCollection = new Collection
-    {
-      name = name,
-      ["units"] = _converterSettings.Current.Derived.SpeckleUnits
-    };
-
-    if (!navisworksModelItems.Any() || navisworksModelItems == null)
+    if (!navisworksModelItems.Any())
     {
       throw new SpeckleException("No objects to convert");
     }
 
-    List<SendConversionResult> results = new(navisworksModelItems.Count);
-    int count = 0;
-
-    using (var _ = _activityFactory.Start("Convert all"))
-    {
-      foreach (var navisworksItem in navisworksModelItems)
-      {
-        using var _2 = _activityFactory.Start("Convert");
-        cancellationToken.ThrowIfCancellationRequested();
-
-        if (sendInfo == null)
-        {
-          continue;
-        }
-
-        var result = ConvertNavisworksItem(navisworksItem, rootObjectCollection, sendInfo.ProjectId);
-        results.Add(result);
-
-        ++count;
-        onOperationProgressed?.Report(new CardProgress("Converting", (double)count / navisworksModelItems.Count));
-      }
-    }
-
-    if (results.All(x => x.Status == Status.ERROR))
-    {
-      throw new SpeckleException("Failed to convert all objects.");
-    }
-
-    await Task.Yield();
-    return new RootObjectBuilderResult(rootObjectCollection, results);
+    return await BuildWithMergedSiblings(
+        navisworksModelItems,
+        onOperationProgressed,
+        _rootToSpeckleConverter,
+        _classPropertiesExtractor,
+        _propertySetsExtractor,
+        _converterSettings,
+        cancellationToken
+      )
+      .ConfigureAwait(false);
   }
 
-  private SendConversionResult ConvertNavisworksItem(
+  internal SendConversionResult ConvertNavisworksItem(
     NAV.ModelItem navisworksItem,
     Collection collectionHost,
     string projectId
