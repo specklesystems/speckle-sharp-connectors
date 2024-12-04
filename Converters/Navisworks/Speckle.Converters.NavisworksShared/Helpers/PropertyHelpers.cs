@@ -98,7 +98,7 @@ public static class PropertyHelpers
     // Regex pattern from speckle-sharp/Core/Core/Models/DynamicBase.cs IsPropNameValid
     name == "Item"
       // Item is a reserved term for Indexed Properties: https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/indexers/using-indexers
-      ? "Item_"
+      ? "Item"
       : Regex.Replace(name, @"[\.\/]", "_");
 
   internal static bool IsCategoryToBeSkipped(NAV.PropertyCategory propertyCategory) =>
