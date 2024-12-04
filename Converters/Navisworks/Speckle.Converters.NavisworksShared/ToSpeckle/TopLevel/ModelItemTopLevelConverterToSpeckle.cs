@@ -81,6 +81,25 @@ public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
       ["properties"] = new Dictionary<string, object?>()
     };
 
-  private static string GetObjectName(NAV.ModelItem target) =>
-    target.ClassDisplayName ?? target.FindFirstObjectAncestor()?.ClassDisplayName ?? "Unnamed model";
+  private static string GetObjectName(NAV.ModelItem target)
+  {
+    var targetName = target.DisplayName;
+
+    var firstObjectAncestor = target.FindFirstObjectAncestor();
+
+    // while the target node name is null keep cycling through parent objects until displayname is not null or empty OR object is firstObjectAncestor
+
+    while (string.IsNullOrEmpty(targetName) && target != firstObjectAncestor)
+    {
+      target = target.Parent;
+      targetName = target.DisplayName;
+    }
+
+    if (string.IsNullOrEmpty(targetName))
+    {
+      targetName = "Unnamed model item";
+    }
+
+    return targetName;
+  }
 }
