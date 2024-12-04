@@ -33,4 +33,7 @@ public static class TaskExtensions
   public static void Wait(this ValueTask task) => task.GetAwaiter().GetResult();
 
   public static T Wait<T>(this ValueTask<T> task) => task.GetAwaiter().GetResult();
+#pragma warning disable CA1030
+  public static void FireAndForget(this ValueTask valueTask) => valueTask.BackToAny();
+#pragma warning restore CA1030
 }

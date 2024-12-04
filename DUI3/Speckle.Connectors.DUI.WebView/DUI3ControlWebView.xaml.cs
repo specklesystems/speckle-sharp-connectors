@@ -26,7 +26,7 @@ public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExec
 
   public object BrowserElement => Browser;
 
-  public void ExecuteScriptAsync(string script)
+  public void ExecuteScript(string script)
   {
     if (!Browser.IsInitialized)
     {

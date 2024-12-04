@@ -126,7 +126,7 @@ public sealed class BrowserBridge : IBrowserBridge
         },
         _threadOptions.RunCommandsOnMainThread
       )
-      .BackToAny();
+      .FireAndForget();
 
   /// <summary>
   /// Used by the action block to invoke the actual method called by the UI.
@@ -218,12 +218,12 @@ public sealed class BrowserBridge : IBrowserBridge
   /// </summary>
   /// <param name="requestId"></param>
   /// <param name="serializedData"></param>
-  /// <exception cref="InvalidOperationException"><inheritdoc cref="IBrowserScriptExecutor.ExecuteScriptAsync"/></exception>
+  /// <exception cref="InvalidOperationException"><inheritdoc cref="IBrowserScriptExecutor.ExecuteScript"/></exception>
   private void NotifyUIMethodCallResultReady(string requestId, string? serializedData = null)
   {
     _resultsStore[requestId] = serializedData;
     string script = $"{FrontendBoundName}.responseReady('{requestId}')";
-    _browserScriptExecutor.ExecuteScriptAsync(script);
+    _browserScriptExecutor.ExecuteScript(script);
   }
 
   /// <summary>
@@ -266,7 +266,7 @@ public sealed class BrowserBridge : IBrowserBridge
 
     var script = $"{FrontendBoundName}.emit('{eventName}')";
 
-    _browserScriptExecutor.ExecuteScriptAsync(script);
+    _browserScriptExecutor.ExecuteScript(script);
     return Task.CompletedTask;
   }
 
@@ -282,7 +282,7 @@ public sealed class BrowserBridge : IBrowserBridge
     string requestId = $"{Guid.NewGuid()}_{eventName}";
     _resultsStore[requestId] = payload;
     var script = $"{FrontendBoundName}.emitResponseReady('{eventName}', '{requestId}')";
-    _browserScriptExecutor.ExecuteScriptAsync(script);
+    _browserScriptExecutor.ExecuteScript(script);
     return Task.CompletedTask;
   }
 }
