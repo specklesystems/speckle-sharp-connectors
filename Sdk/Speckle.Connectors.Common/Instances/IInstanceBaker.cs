@@ -15,7 +15,7 @@ public interface IInstanceBaker<TAppIdMapValueType>
   /// <param name="onOperationProgressed"></param>
   /// <returns></returns>
   BakeResult BakeInstances(
-    IReadOnlyCollection<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
+    ICollection<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
     Dictionary<string, TAppIdMapValueType> applicationIdMap,
     string baseLayerName,
     IProgress<CardProgress> onOperationProgressed

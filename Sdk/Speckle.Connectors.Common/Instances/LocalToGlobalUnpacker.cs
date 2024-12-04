@@ -1,5 +1,6 @@
 ﻿using Speckle.DoubleNumerics;
 using Speckle.InterfaceGenerator;
+using Speckle.Sdk.Dependencies;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
@@ -14,15 +15,15 @@ namespace Speckle.Connectors.Common.Instances;
 [GenerateAutoInterface]
 public class LocalToGlobalUnpacker : ILocalToGlobalUnpacker
 {
-  public List<LocalToGlobalMap> Unpack(
-    List<InstanceDefinitionProxy>? instanceDefinitionProxies,
-    List<TraversalContext> objectsToUnpack
+  public IReadOnlyCollection<LocalToGlobalMap> Unpack(
+    IReadOnlyCollection<InstanceDefinitionProxy>? instanceDefinitionProxies,
+    IReadOnlyCollection<TraversalContext> objectsToUnpack
   )
   {
-    var localToGlobalMaps = new List<LocalToGlobalMap>();
+    var localToGlobalMaps = new HashSet<LocalToGlobalMap>();
 
-    var instanceProxies = new List<(TraversalContext tc, InstanceProxy obj)>();
-    var atomicObjects = new List<(TraversalContext tc, Base obj)>();
+    var instanceProxies = new HashSet<(TraversalContext tc, InstanceProxy obj)>();
+    var atomicObjects = new HashSet<(TraversalContext tc, Base obj)>();
 
     // 1. Split up the instances from the non-instances
     foreach (TraversalContext objectToUnpack in objectsToUnpack)
@@ -37,8 +38,8 @@ public class LocalToGlobalUnpacker : ILocalToGlobalUnpacker
       }
     }
 
-    var objectsAtAbsolute = new List<(TraversalContext tc, Base obj)>();
-    var objectsAtRelative = new List<(TraversalContext tc, Base obj)>();
+    var objectsAtAbsolute = new HashSet<(TraversalContext tc, Base obj)>();
+    var objectsAtRelative = new HashSet<(TraversalContext tc, Base obj)>();
 
     // 2. Split atomic objects that in absolute or relative coordinates.
     foreach ((TraversalContext tc, Base atomicObject) in atomicObjects)
@@ -61,7 +62,7 @@ public class LocalToGlobalUnpacker : ILocalToGlobalUnpacker
     // 3. Add atomic objects that on absolute coordinates that doesn't need a transformation.
     foreach ((TraversalContext tc, Base objectAtAbsolute) in objectsAtAbsolute)
     {
-      localToGlobalMaps.Add(new LocalToGlobalMap(tc, objectAtAbsolute, new List<Matrix4x4>()));
+      localToGlobalMaps.Add(new LocalToGlobalMap(tc, objectAtAbsolute, new HashSet<Matrix4x4>()));
     }
 
     // 4. Return if no logic around instancing.
@@ -78,28 +79,28 @@ public class LocalToGlobalUnpacker : ILocalToGlobalUnpacker
         instanceProxies,
         objectAtRelative,
         objectAtRelative,
-        new List<Matrix4x4>(),
+        new HashSet<Matrix4x4>(),
         localToGlobalMaps
       );
     }
 
-    return localToGlobalMaps.Where(ltgm => ltgm.AtomicObject is not InstanceProxy).ToList();
+    return localToGlobalMaps.Where(ltgm => ltgm.AtomicObject is not InstanceProxy).Freeze();
   }
 
   private void UnpackMatrix(
-    List<InstanceDefinitionProxy> instanceDefinitionProxies,
-    List<(TraversalContext tc, InstanceProxy instanceProxy)> instanceProxies,
+    IReadOnlyCollection<InstanceDefinitionProxy> instanceDefinitionProxies,
+    HashSet<(TraversalContext tc, InstanceProxy instanceProxy)> instanceProxies,
     (TraversalContext tc, Base obj) objectAtRelative,
     (TraversalContext tc, Base obj) searchForDefinition,
-    List<Matrix4x4> matrices,
-    List<LocalToGlobalMap> localToGlobalMaps
+    HashSet<Matrix4x4> matrices,
+    HashSet<LocalToGlobalMap> localToGlobalMaps
   )
   {
     if (searchForDefinition.obj.applicationId is null)
     {
       return;
     }
-    InstanceDefinitionProxy? definitionProxy = instanceDefinitionProxies.Find(idp =>
+    InstanceDefinitionProxy? definitionProxy = instanceDefinitionProxies.FirstOrDefault(idp =>
       idp.objects.Contains(searchForDefinition.obj.applicationId)
     );
     if (definitionProxy is null)
@@ -116,7 +117,7 @@ public class LocalToGlobalUnpacker : ILocalToGlobalUnpacker
     var instances = instanceProxies.Where(ic => ic.instanceProxy.definitionId == definitionProxy.applicationId);
     foreach (var instance in instances)
     {
-      List<Matrix4x4> newMatrices = [.. matrices, instance.instanceProxy.transform]; // Do not mutate the list!
+      HashSet<Matrix4x4> newMatrices = [.. matrices, instance.instanceProxy.transform]; // Do not mutate the list!
       UnpackMatrix(
         instanceDefinitionProxies,
         instanceProxies,
