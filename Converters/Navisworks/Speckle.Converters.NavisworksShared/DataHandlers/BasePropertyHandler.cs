@@ -4,7 +4,6 @@
 /// Base property handler providing common functionality for property assignment.
 /// </summary>
 public abstract class BasePropertyHandler(
-  ClassPropertiesExtractor classPropertiesExtractor,
   PropertySetsExtractor propertySetsExtractor,
   ModelPropertiesExtractor modelPropertiesExtractor
 ) : IPropertyHandler
@@ -15,9 +14,9 @@ public abstract class BasePropertyHandler(
     AssignPropertySets(speckleObject, modelItem);
   }
 
-  private void AssignClassProperties(SSM.Base speckleObject, NAV.ModelItem modelItem)
+  private static void AssignClassProperties(SSM.Base speckleObject, NAV.ModelItem modelItem)
   {
-    var classProperties = classPropertiesExtractor.GetClassProperties(modelItem);
+    var classProperties = ClassPropertiesExtractor.GetClassProperties(modelItem);
     if (classProperties == null)
     {
       return;

@@ -13,7 +13,7 @@ public class ClassPropertiesExtractor
     _settingsStore = settingsStore;
   }
 
-  internal Dictionary<string, object?>? GetClassProperties(NAV.ModelItem modelItem) =>
+  internal static Dictionary<string, object?>? GetClassProperties(NAV.ModelItem modelItem) =>
     ExtractClassProperties(modelItem);
 
   /// <summary>

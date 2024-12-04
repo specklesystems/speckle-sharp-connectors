@@ -4,10 +4,9 @@
 /// Handles standard property assignment without any merging or hierarchy processing.
 /// </summary>
 public class StandardPropertyHandler(
-  ClassPropertiesExtractor classPropertiesExtractor,
   PropertySetsExtractor propertySetsExtractor,
   ModelPropertiesExtractor modelPropertiesExtractor
-) : BasePropertyHandler(classPropertiesExtractor, propertySetsExtractor, modelPropertiesExtractor)
+) : BasePropertyHandler(propertySetsExtractor, modelPropertiesExtractor)
 {
   protected override void AssignPropertySets(SSM.Base speckleObject, NAV.ModelItem modelItem)
   {
