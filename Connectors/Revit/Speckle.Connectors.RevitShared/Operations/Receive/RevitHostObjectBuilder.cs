@@ -192,16 +192,18 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
           && localToGlobalMap.AtomicObject["units"] is string units
         )
         {
+          //TODO TransformTo will be deprecated as it's dangerous and requires ID transposing which is wrong!
+          //ID needs to be copied to the new instance
           var id = localToGlobalMap.AtomicObject.id;
           ITransformable? newTransformable = null;
           foreach (var mat in localToGlobalMap.Matrix)
           {
             transformable.TransformTo(new Transform() { matrix = mat, units = units }, out newTransformable);
-            transformable = newTransformable; // we need to keep the reference to the new object, as we're going to use it in the cache'
+            transformable = newTransformable; // we need to keep the reference to the new object, as we're going to use it in the cache
           }
 
           localToGlobalMap.AtomicObject = (newTransformable as Base)!;
-          localToGlobalMap.AtomicObject.id = id; // restore the id, as it's used in the cache'
+          localToGlobalMap.AtomicObject.id = id; // restore the id, as it's used in the cache
           localToGlobalMap.Matrix = new HashSet<Matrix4x4>(); // flush out the list, as we've applied the transforms already
         }
 
