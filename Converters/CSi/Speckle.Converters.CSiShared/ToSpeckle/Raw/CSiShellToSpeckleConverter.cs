@@ -23,7 +23,16 @@ public abstract class CSiShellToSpeckleConverter
 
   private void AddCommonClassProperties(CSiShellWrapper shell, Dictionary<string, object> properties)
   {
-    properties["name"] = shell.Name;
+    // TODO: As part of data extraction. But a placeholder example below:
+    int numberGroups = 0;
+    string[] groups = Array.Empty<string>();
+    
+    int result = SettingsStore.Current.SapModel.AreaObj.GetGroupAssign(shell.Name, ref numberGroups, ref groups);
+
+    if (result == 0 && groups.Length > 0)
+    {
+      properties["groupAssigns"] = new List<string>(groups);
+    }
   }
 
   protected virtual void AddProductSpecificClassProperties(CSiShellWrapper shell, Dictionary<string, object> properties)

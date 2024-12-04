@@ -26,22 +26,17 @@ public class MeshToSpeckleConverter : ITypedConverter<CSiShellWrapper, Mesh>
     }
 
     // List to store vertices defining a face
-    List<double> vertices = new List<double>();
-    List<int> faces = new List<int>();
+    List<double> vertices = new List<double>(numberPoints * 3);
+    List<int> faces = new List<int>(numberPoints + 1);
 
-    // How many vertices to define a face?
-    faces.Add(numberPoints);
-
-    // Lopp through points to get coordinates
-    // TODO: This is gross!
-    foreach (string pointName in pointNames)
+    for (int i = 0; i < numberPoints; i++)
     {
       double pointX = 0;
       double pointY = 0;
       double pointZ = 0;
 
       result = _settingsStore.Current.SapModel.PointObj.GetCoordCartesian(
-        pointName,
+        pointNames[i],
         ref pointX,
         ref pointY,
         ref pointZ
@@ -49,15 +44,18 @@ public class MeshToSpeckleConverter : ITypedConverter<CSiShellWrapper, Mesh>
 
       if (result != 0)
       {
-        throw new ArgumentException($"Failed to retrieve coordinate of vertex point name {pointName}.");
+        throw new ArgumentException($"Failed to retrieve coordinate of vertex point name {pointNames[i]}.");
       }
 
-      // Add vertex info
       vertices.Add(pointX);
       vertices.Add(pointY);
       vertices.Add(pointZ);
+    }
 
-      // TODO: Check normals direction?
+    faces.Add(numberPoints);
+    for (int i = 0; i < numberPoints; i++)
+    {
+      faces.Add(i);
     }
 
     return new Mesh()

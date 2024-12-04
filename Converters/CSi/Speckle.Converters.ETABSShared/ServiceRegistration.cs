@@ -13,8 +13,8 @@ public static class ServiceRegistration
     var converterAssembly = Assembly.GetExecutingAssembly();
 
     serviceCollection.AddTransient<CSiFrameToSpeckleConverter, FrameToSpeckleConverter>();
-    //serviceCollection.AddTransient<CSiJointToSpeckleConverter, JointToSpeckleConverter>();
-    //serviceCollection.AddTransient<CSiShellToSpeckleConverter, ShellToSpeckleConverter>();
+    serviceCollection.AddTransient<CSiJointToSpeckleConverter, JointToSpeckleConverter>();
+    serviceCollection.AddTransient<CSiShellToSpeckleConverter, ShellToSpeckleConverter>();
 
     serviceCollection.AddMatchingInterfacesAsTransient(converterAssembly);
 

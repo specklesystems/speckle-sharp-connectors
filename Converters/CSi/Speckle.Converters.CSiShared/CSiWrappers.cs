@@ -4,6 +4,7 @@ public interface ICSiWrapper
 {
   string Name { get; set; }
   int ObjectType { get; }
+  string ObjectName { get; }
 }
 
 /// <summary>
@@ -17,42 +18,50 @@ public interface ICSiWrapper
 public abstract class CSiWrapperBase : ICSiWrapper
 {
   public required string Name { get; set; }
-  public abstract int ObjectType { get; }
+  public abstract int ObjectType { get; } 
+  public abstract string ObjectName { get; }
 }
 
 public class CSiJointWrapper : CSiWrapperBase
 {
   public override int ObjectType => 1;
+  public override string ObjectName => "Joint";
 }
 
 public class CSiFrameWrapper : CSiWrapperBase
 {
   public override int ObjectType => 2;
+  public override string ObjectName => "Frame";
 }
 
 public class CSiCableWrapper : CSiWrapperBase
 {
   public override int ObjectType => 3;
+  public override string ObjectName => "Cable";
 }
 
 public class CSiTendonWrapper : CSiWrapperBase
 {
   public override int ObjectType => 4;
+  public override string ObjectName => "Tendon";
 }
 
 public class CSiShellWrapper : CSiWrapperBase
 {
   public override int ObjectType => 5;
+  public override string ObjectName => "Shell";
 }
 
 public class CSiSolidWrapper : CSiWrapperBase
 {
   public override int ObjectType => 6;
+  public override string ObjectName => "Solid";
 }
 
 public class CSiLinkWrapper : CSiWrapperBase
 {
   public override int ObjectType => 7;
+  public override string ObjectName => "Link";
 }
 
 /// <summary>

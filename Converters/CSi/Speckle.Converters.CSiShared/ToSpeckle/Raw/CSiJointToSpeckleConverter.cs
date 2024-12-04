@@ -23,7 +23,16 @@ public abstract class CSiJointToSpeckleConverter
 
   private void AddCommonClassProperties(CSiJointWrapper joint, Dictionary<string, object> properties)
   {
-    properties["name"] = joint.Name;
+    // TODO: As part of data extraction. But a placeholder example below:
+    int numberGroups = 0;
+    string[] groups = Array.Empty<string>();
+    
+    int result = SettingsStore.Current.SapModel.FrameObj.GetGroupAssign(joint.Name, ref numberGroups, ref groups);
+
+    if (result == 0 && groups.Length > 0)
+    {
+      properties["groupAssigns"] = new List<string>(groups);
+    }
   }
 
   protected virtual void AddProductSpecificClassProperties(CSiJointWrapper joint, Dictionary<string, object> properties)

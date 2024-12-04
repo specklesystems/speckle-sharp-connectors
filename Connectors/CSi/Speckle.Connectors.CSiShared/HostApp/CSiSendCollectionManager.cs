@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
+using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.CSiShared.HostApp;
@@ -13,27 +14,30 @@ namespace Speckle.Connectors.CSiShared.HostApp;
 /// </remarks>
 public class CSiSendCollectionManager
 {
-  private readonly IConverterSettingsStore<CSiConversionSettings> _converterSettings;
-  private readonly Dictionary<string, Collection> _collectionCache = new();
+  protected IConverterSettingsStore<CSiConversionSettings> ConverterSettings { get; }
+  protected Dictionary<string, Collection> CollectionCache { get; }= new();
 
   public CSiSendCollectionManager(IConverterSettingsStore<CSiConversionSettings> converterSettings)
   {
-    _converterSettings = converterSettings;
+    ConverterSettings = converterSettings;
   }
 
-  // TODO: Frames could be further classified under Columns, Braces and Beams. Same for Shells which could be classified into walls, floors
-  public Collection AddObjectCollectionToRoot(ICSiWrapper csiObject, Collection rootObject)
+  public virtual Collection AddObjectCollectionToRoot(Base convertedObject, Collection rootObject)
   {
-    var path = csiObject.GetType().Name.Replace("Wrapper", ""); // CSiJointWrapper → CSiJoint, CSiFrameWrapper → CSiFrame etc.
+    var path = GetCollectionPath(convertedObject);
 
-    if (_collectionCache.TryGetValue(path, out Collection? collection))
+    if (CollectionCache.TryGetValue(path, out Collection? collection))
     {
       return collection;
     }
 
-    Collection childCollection = new(path);
+    Collection childCollection = CreateCollection(convertedObject);
     rootObject.elements.Add(childCollection);
-    _collectionCache[path] = childCollection;
+    CollectionCache[path] = childCollection;
     return childCollection;
   }
+
+  protected virtual string GetCollectionPath(Base convertedObject) => convertedObject["type"]?.ToString() ?? "Unknown";
+
+  protected virtual Collection CreateCollection(Base convertedObject) => new(GetCollectionPath(convertedObject));
 }

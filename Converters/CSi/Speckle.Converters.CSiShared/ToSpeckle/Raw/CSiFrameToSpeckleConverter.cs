@@ -24,8 +24,16 @@ public abstract class CSiFrameToSpeckleConverter
   private void AddCommonClassProperties(CSiFrameWrapper frame, Dictionary<string, object> properties)
   {
    
-    // TODO: Add common properties
-    properties["name"] = frame.Name;
+    // TODO: As part of data extraction. But a placeholder example below:
+    int numberGroups = 0;
+    string[] groups = Array.Empty<string>();
+    
+    int result = SettingsStore.Current.SapModel.FrameObj.GetGroupAssign(frame.Name, ref numberGroups, ref groups);
+
+    if (result == 0 && groups.Length > 0)
+    {
+      properties["groupAssigns"] = new List<string>(groups);
+    }
 
   }
 
