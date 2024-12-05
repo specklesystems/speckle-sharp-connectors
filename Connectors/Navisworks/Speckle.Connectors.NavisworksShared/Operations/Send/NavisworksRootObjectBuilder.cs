@@ -47,21 +47,21 @@ public class NavisworksRootObjectBuilder : IRootObjectBuilder<NAV.ModelItem>
   {
     using var activity = _activityFactory.Start("Build");
 
+    // 1. Validate input
     if (!navisworksModelItems.Any())
     {
       throw new SpeckleException("No objects to convert");
     }
 
-    // Create root collection
+    // 2. Initialize root collection
     var rootObjectCollection = new Collection
     {
       name = NavisworksApp.ActiveDocument.Title ?? "Unnamed model",
       ["units"] = _converterSettings.Current.Derived.SpeckleUnits
     };
 
+    // 3. Convert all model items and store results
     var convertedBases = new Dictionary<string, Base?>();
-
-    // First convert everything and track results
     var results = new List<SendConversionResult>();
     int processedCount = 0;
     int totalCount = navisworksModelItems.Count;
@@ -75,62 +75,52 @@ public class NavisworksRootObjectBuilder : IRootObjectBuilder<NAV.ModelItem>
       onOperationProgressed.Report(new CardProgress("Converting", (double)processedCount / totalCount));
     }
 
-    // Create final elements list
+    // 4. Initialize final elements list and group nodes
     var finalElements = new List<Base>();
-
-    // Get groups of siblings
     var merger = new GeometryNodeMerger();
     var groupedNodes = merger.GroupSiblingGeometryNodes(navisworksModelItems);
+    var processedPaths = new HashSet<string>();
 
-    // Handle grouped nodes first
+    // 5. Process and merge grouped nodes
     foreach (var group in groupedNodes)
     {
-      var siblingBases = convertedBases.Where(r => r.Key.StartsWith(group.Key)).Select(r => r.Value).ToList();
+      var siblingBases = new List<Base>();
+      foreach (var itemPath in group.Value.Select(ResolveModelItemToIndexPath))
+      {
+        processedPaths.Add(itemPath);
+
+        if (convertedBases.TryGetValue(itemPath, out var convertedBase) && convertedBase != null)
+        {
+          siblingBases.Add(convertedBase);
+        }
+      }
 
       if (siblingBases.Count == 0)
       {
         continue;
       }
 
-      List<Base> displayValues = [];
-
-      foreach (var siblingBase in siblingBases.OfType<Base>())
-      {
-        var dv = siblingBase["displayValue"];
-
-        Console.WriteLine(dv);
-
-        if (siblingBase["displayValue"] is not List<Base> displayValue)
-        {
-          continue;
-        }
-
-        displayValues.AddRange(displayValue);
-      }
-
       var parentBase = new Base
       {
         applicationId = group.Key,
-        ["properties"] = siblingBases.First()?["properties"],
-        ["displayValue"] = displayValues
+        ["properties"] = siblingBases.First()["properties"],
+        ["name"] = siblingBases.First()["name"],
+        ["displayValue"] = siblingBases.SelectMany(b => b["displayValue"] as List<Base> ?? []).ToList()
       };
       finalElements.Add(parentBase);
     }
 
-    // Handle non-grouped nodes
-    var groupedPaths = groupedNodes.SelectMany(g => g.Value).Select(ResolveModelItemToIndexPath).ToHashSet();
-
-    foreach (var result in results.Where(result => !groupedPaths.Contains(result.SourceId)))
+    // 6. Add remaining non-grouped nodes
+    foreach (var result in results.Where(result => !processedPaths.Contains(result.SourceId)))
     {
-      if (_sendConversionCache.TryGetValue(result.SourceId, sendInfo.ProjectId, out ObjectReference? value))
+      if (convertedBases.TryGetValue(result.SourceId, out var convertedBase) && convertedBase != null)
       {
-        finalElements.Add(value);
+        finalElements.Add(convertedBase);
       }
     }
 
-    // Set the final elements list
+    // 7. Finalize and return
     rootObjectCollection.elements = finalElements;
-
     return Task.FromResult(new RootObjectBuilderResult(rootObjectCollection, results));
   }
 
