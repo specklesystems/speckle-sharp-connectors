@@ -18,7 +18,6 @@ public static class TeklaEvents
   public static void Register(Tekla.Structures.Model.Events events, IEventAggregator eventAggregator)
   {
     events.UnRegister();
-    events.ModelSave += () => eventAggregator.GetEvent<IdleEvent>().Publish(new object());
     events.SelectionChange += () => eventAggregator.GetEvent<SelectionChange>().Publish(new object());
     events.ModelObjectChanged += x => eventAggregator.GetEvent<ModelObjectChanged>().Publish(x);
     events.ModelLoad += () => eventAggregator.GetEvent<ModelLoad>().Publish(new object());

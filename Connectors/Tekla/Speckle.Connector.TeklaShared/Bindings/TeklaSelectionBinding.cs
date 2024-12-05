@@ -8,7 +8,6 @@ namespace Speckle.Connectors.TeklaShared.Bindings;
 
 public class TeklaSelectionBinding : ISelectionBinding
 {
-  private readonly IAppIdleManager _idleManager;
   private const string SELECTION_EVENT = "setSelection";
   private readonly object _selectionEventHandlerLock = new object();
   private readonly Tekla.Structures.Model.UI.ModelObjectSelector _selector;
@@ -18,13 +17,11 @@ public class TeklaSelectionBinding : ISelectionBinding
   public IBrowserBridge Parent { get; }
 
   public TeklaSelectionBinding(
-    IAppIdleManager idleManager,
     IBrowserBridge parent,
     Tekla.Structures.Model.UI.ModelObjectSelector selector,
     IEventAggregator eventAggregator
   )
   {
-    _idleManager = idleManager;
     Parent = parent;
     _selector = selector;
     _eventAggregator = eventAggregator;
@@ -36,14 +33,14 @@ public class TeklaSelectionBinding : ISelectionBinding
   {
     lock (_selectionEventHandlerLock)
     {
-      _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(TeklaSelectionBinding), UpdateSelection);
+      UpdateSelection();
     }
   }
 
   private void UpdateSelection()
   {
     SelectionInfo selInfo = GetSelection();
-    Parent.Send(SELECTION_EVENT, selInfo);
+    Parent.Send2(SELECTION_EVENT, selInfo);
   }
 
   public SelectionInfo GetSelection()
