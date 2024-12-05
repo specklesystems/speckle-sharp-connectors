@@ -31,4 +31,6 @@
 
     <Import Project="..\Speckle.Connectors.CSiShared\Speckle.Connectors.CSiShared.projitems" Label="Shared" />
 
+    <Import Project="..\Speckle.Connectors.ETABSShared\Speckle.Connectors.ETABSShared.projitems" Label="Shared" />
+
 </Project>
