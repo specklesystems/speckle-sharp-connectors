@@ -25,11 +25,6 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<DisplayValueExtractor>();
     serviceCollection.AddScoped<ClassPropertyExtractor>();
 
-    // Register geometry converters
-    serviceCollection.AddTransient<ITypedConverter<CSiFrameWrapper, Line>, LineToSpeckleConverter>();
-    serviceCollection.AddTransient<ITypedConverter<CSiJointWrapper, Point>, PointToSpeckleConverter>();
-    serviceCollection.AddTransient<ITypedConverter<CSiShellWrapper, Mesh>, MeshToSpeckleConverter>();
-
     // Register application-level converters
     serviceCollection.AddApplicationConverters<CSiToSpeckleUnitConverter, eUnits>(converterAssembly);
     serviceCollection.AddScoped<
