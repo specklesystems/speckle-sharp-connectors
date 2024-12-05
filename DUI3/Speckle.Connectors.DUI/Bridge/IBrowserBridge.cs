@@ -39,4 +39,8 @@ public interface IBrowserBridge
   /// <exception cref="InvalidOperationException">Bridge was not initialized with a binding</exception>
   public Task Send<T>(string eventName, T data, CancellationToken cancellationToken = default)
     where T : class;
+
+  public void Send2<T>(string eventName, T data)
+    where T : class;
+  public ITopLevelExceptionHandler TopLevelExceptionHandler { get; }
 }

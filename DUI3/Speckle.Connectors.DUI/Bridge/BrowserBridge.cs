@@ -128,26 +128,29 @@ public sealed class BrowserBridge : IBrowserBridge
     return bindingNames;
   }
 
+  //don't wait for browser runs on purpose
   public void RunMethod(string methodName, string requestId, string methodArgs) =>
-    _threadContext.RunOnThreadAsync(
-      async () =>
-      {
-        var task = await _topLevelExceptionHandler
-          .CatchUnhandledAsync(async () =>
-          {
-            var result = await ExecuteMethod(methodName, methodArgs).ConfigureAwait(false);
-            string resultJson = _jsonSerializer.Serialize(result);
-            await NotifyUIMethodCallResultReady(requestId, resultJson).ConfigureAwait(false);
-          })
-          .ConfigureAwait(false);
-        if (task.Exception is not null)
+    _threadContext
+      .RunOnThreadAsync(
+        async () =>
         {
-          string resultJson = SerializeFormattedException(task.Exception);
-          await NotifyUIMethodCallResultReady(requestId, resultJson).ConfigureAwait(false);
-        }
-      },
-      _threadOptions.RunCommandsOnMainThread
-    );
+          var task = await TopLevelExceptionHandler
+            .CatchUnhandledAsync(async () =>
+            {
+              var result = await ExecuteMethod(methodName, methodArgs).ConfigureAwait(false);
+              string resultJson = _jsonSerializer.Serialize(result);
+              NotifyUIMethodCallResultReady(requestId, resultJson);
+            })
+            .ConfigureAwait(false);
+          if (task.Exception is not null)
+          {
+            string resultJson = SerializeFormattedException(task.Exception);
+            NotifyUIMethodCallResultReady(requestId, resultJson);
+          }
+        },
+        _threadOptions.RunCommandsOnMainThread
+      )
+      .FireAndForget();
 
   /// <summary>
   /// Used by the action block to invoke the actual method called by the UI.
@@ -239,16 +242,12 @@ public sealed class BrowserBridge : IBrowserBridge
   /// </summary>
   /// <param name="requestId"></param>
   /// <param name="serializedData"></param>
-  /// <exception cref="InvalidOperationException"><inheritdoc cref="IBrowserScriptExecutor.ExecuteScriptAsyncMethod"/></exception>
-  private async Task NotifyUIMethodCallResultReady(
-    string requestId,
-    string? serializedData = null,
-    CancellationToken cancellationToken = default
-  )
+  /// <exception cref="InvalidOperationException"><inheritdoc cref="IBrowserScriptExecutor.ExecuteScript"/></exception>
+  private void NotifyUIMethodCallResultReady(string requestId, string? serializedData = null)
   {
     _resultsStore[requestId] = serializedData;
     string script = $"{FrontendBoundName}.responseReady('{requestId}')";
-    await _browserScriptExecutor.ExecuteScriptAsyncMethod(script, cancellationToken).ConfigureAwait(false);
+    _browserScriptExecutor.ExecuteScript(script);
   }
 
   /// <summary>
@@ -282,7 +281,7 @@ public sealed class BrowserBridge : IBrowserBridge
     Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
   }
 
-  public async Task Send(string eventName, CancellationToken cancellationToken = default)
+  public Task Send(string eventName, CancellationToken cancellationToken = default)
   {
     if (_binding is null)
     {
@@ -291,10 +290,11 @@ public sealed class BrowserBridge : IBrowserBridge
 
     var script = $"{FrontendBoundName}.emit('{eventName}')";
 
-    await _browserScriptExecutor.ExecuteScriptAsyncMethod(script, cancellationToken).ConfigureAwait(false);
+    _browserScriptExecutor.ExecuteScript(script);
+    return Task.CompletedTask;
   }
 
-  public async Task Send<T>(string eventName, T data, CancellationToken cancellationToken = default)
+  public Task Send<T>(string eventName, T data, CancellationToken cancellationToken = default)
     where T : class
   {
     if (_binding is null)
@@ -306,6 +306,22 @@ public sealed class BrowserBridge : IBrowserBridge
     string requestId = $"{Guid.NewGuid()}_{eventName}";
     _resultsStore[requestId] = payload;
     var script = $"{FrontendBoundName}.emitResponseReady('{eventName}', '{requestId}')";
-    await _browserScriptExecutor.ExecuteScriptAsyncMethod(script, cancellationToken).ConfigureAwait(false);
+    _browserScriptExecutor.ExecuteScript(script);
+    return Task.CompletedTask;
+  }
+
+  public void Send2<T>(string eventName, T data)
+    where T : class
+  {
+    if (_binding is null)
+    {
+      throw new InvalidOperationException("Bridge was not initialized with a binding");
+    }
+
+    string payload = _jsonSerializer.Serialize(data);
+    string requestId = $"{Guid.NewGuid()}_{eventName}";
+    _resultsStore[requestId] = payload;
+    var script = $"{FrontendBoundName}.emitResponseReady('{eventName}', '{requestId}')";
+    _browserScriptExecutor.ExecuteScript(script);
   }
 }

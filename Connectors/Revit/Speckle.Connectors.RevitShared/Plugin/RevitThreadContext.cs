@@ -5,11 +5,12 @@ namespace Speckle.Connectors.Revit.Plugin;
 
 public class RevitThreadContext : ThreadContext
 {
-  protected override Task<T> MainToWorkerAsync<T>(Func<Task<T>> action) => action();
+  protected override ValueTask<T> MainToWorkerAsync<T>(Func<ValueTask<T>> action) => action();
 
-  protected override Task<T> WorkerToMainAsync<T>(Func<Task<T>> action) => RevitTask.RunAsync(action);
+  protected override ValueTask<T> WorkerToMainAsync<T>(Func<ValueTask<T>> action) =>
+    RevitTask.RunAsync(async () => await action().BackToCurrent()).AsValueTask();
 
-  protected override Task<T> MainToWorker<T>(Func<T> action) => Task.FromResult(action());
+  protected override ValueTask<T> MainToWorker<T>(Func<T> action) => new(action());
 
-  protected override Task<T> WorkerToMain<T>(Func<T> action) => RevitTask.RunAsync(action);
+  protected override ValueTask<T> WorkerToMain<T>(Func<T> action) => new(RevitTask.RunAsync(action));
 }

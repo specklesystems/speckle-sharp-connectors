@@ -48,7 +48,7 @@ public sealed class SendOperation<T>(
     return new(rootObjId, convertedReferences, buildResult.ConversionResults);
   }
 
-  public async Task<SerializeProcessResults> Send(
+  public async ValueTask<SerializeProcessResults> Send(
     Base commitObject,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,

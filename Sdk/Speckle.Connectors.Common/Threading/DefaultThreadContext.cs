@@ -10,7 +10,7 @@ public class DefaultThreadContext : ThreadContext
   );
 
   [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "TaskCompletionSource")]
-  protected override Task<T> WorkerToMainAsync<T>(Func<Task<T>> action)
+  protected override ValueTask<T> WorkerToMainAsync<T>(Func<ValueTask<T>> action)
   {
     TaskCompletionSource<T> tcs = new();
     _threadContext.Post(
@@ -28,17 +28,22 @@ public class DefaultThreadContext : ThreadContext
       },
       null
     );
-    return tcs.Task;
+    return new ValueTask<T>(tcs.Task);
   }
 
-  protected override Task<T> MainToWorkerAsync<T>(Func<Task<T>> action)
+  protected override ValueTask<T> MainToWorkerAsync<T>(Func<ValueTask<T>> action)
   {
-    Task<Task<T>> f = Task.Factory.StartNew(action, default, TaskCreationOptions.LongRunning, TaskScheduler.Default);
-    return f.Unwrap();
+    Task<Task<T>> f = Task.Factory.StartNew(
+      async () => await action().BackToCurrent(),
+      default,
+      TaskCreationOptions.LongRunning,
+      TaskScheduler.Default
+    );
+    return new ValueTask<T>(f.Unwrap());
   }
 
   [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "TaskCompletionSource")]
-  protected override Task<T> WorkerToMain<T>(Func<T> action)
+  protected override ValueTask<T> WorkerToMain<T>(Func<T> action)
   {
     TaskCompletionSource<T> tcs = new();
     _threadContext.Post(
@@ -56,12 +61,12 @@ public class DefaultThreadContext : ThreadContext
       },
       null
     );
-    return tcs.Task;
+    return new ValueTask<T>(tcs.Task);
   }
 
-  protected override Task<T> MainToWorker<T>(Func<T> action)
+  protected override ValueTask<T> MainToWorker<T>(Func<T> action)
   {
     Task<T> f = Task.Factory.StartNew(action, default, TaskCreationOptions.LongRunning, TaskScheduler.Default);
-    return f;
+    return new ValueTask<T>(f);
   }
 }

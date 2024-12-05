@@ -5,11 +5,9 @@ namespace Speckle.Connectors.Common.Threading;
 [GenerateAutoInterface]
 public abstract class ThreadContext : IThreadContext
 {
-  private static readonly Task<object?> s_completedTask = Task.FromResult<object?>(null);
-
   public static bool IsMainThread => Environment.CurrentManagedThreadId == 1 && !Thread.CurrentThread.IsBackground;
 
-  public async Task RunOnThread(Action action, bool useMain)
+  public async ValueTask RunOnThread(Action action, bool useMain)
   {
     if (useMain)
     {
@@ -22,7 +20,7 @@ public abstract class ThreadContext : IThreadContext
         await WorkerToMainAsync(() =>
           {
             action();
-            return s_completedTask;
+            return new ValueTask<object?>();
           })
           .ConfigureAwait(false);
       }
@@ -34,7 +32,7 @@ public abstract class ThreadContext : IThreadContext
         await MainToWorkerAsync(() =>
           {
             action();
-            return s_completedTask;
+            return new ValueTask<object?>();
           })
           .BackToAny();
       }
@@ -45,13 +43,13 @@ public abstract class ThreadContext : IThreadContext
     }
   }
 
-  public virtual Task<T> RunOnThread<T>(Func<T> action, bool useMain)
+  public virtual ValueTask<T> RunOnThread<T>(Func<T> action, bool useMain)
   {
     if (useMain)
     {
       if (IsMainThread)
       {
-        return Task.FromResult(action());
+        return new ValueTask<T>(action());
       }
 
       return WorkerToMain(action);
@@ -61,10 +59,10 @@ public abstract class ThreadContext : IThreadContext
       return MainToWorker(action);
     }
 
-    return Task.FromResult(action());
+    return new ValueTask<T>(action());
   }
 
-  public async Task RunOnThreadAsync(Func<Task> action, bool useMain)
+  public async ValueTask RunOnThreadAsync(Func<ValueTask> action, bool useMain)
   {
     if (useMain)
     {
@@ -77,7 +75,7 @@ public abstract class ThreadContext : IThreadContext
         await WorkerToMainAsync<object?>(async () =>
           {
             await action().BackToCurrent();
-            return null;
+            return new ValueTask<object?>(null);
           })
           .BackToCurrent();
       }
@@ -89,7 +87,7 @@ public abstract class ThreadContext : IThreadContext
         await MainToWorkerAsync<object?>(async () =>
           {
             await action().BackToCurrent();
-            return null;
+            return new ValueTask<object?>(null);
           })
           .BackToCurrent();
       }
@@ -100,7 +98,7 @@ public abstract class ThreadContext : IThreadContext
     }
   }
 
-  public Task<T> RunOnThreadAsync<T>(Func<Task<T>> action, bool useMain)
+  public ValueTask<T> RunOnThreadAsync<T>(Func<ValueTask<T>> action, bool useMain)
   {
     if (useMain)
     {
@@ -118,10 +116,10 @@ public abstract class ThreadContext : IThreadContext
     return action();
   }
 
-  protected abstract Task<T> WorkerToMainAsync<T>(Func<Task<T>> action);
+  protected abstract ValueTask<T> WorkerToMainAsync<T>(Func<ValueTask<T>> action);
 
-  protected abstract Task<T> MainToWorkerAsync<T>(Func<Task<T>> action);
-  protected abstract Task<T> WorkerToMain<T>(Func<T> action);
+  protected abstract ValueTask<T> MainToWorkerAsync<T>(Func<ValueTask<T>> action);
+  protected abstract ValueTask<T> WorkerToMain<T>(Func<T> action);
 
-  protected abstract Task<T> MainToWorker<T>(Func<T> action);
+  protected abstract ValueTask<T> MainToWorker<T>(Func<T> action);
 }

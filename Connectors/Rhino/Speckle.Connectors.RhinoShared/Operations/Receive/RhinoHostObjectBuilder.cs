@@ -3,12 +3,15 @@ using Rhino.DocObjects;
 using Rhino.Geometry;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -30,6 +33,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private readonly RhinoGroupBaker _groupBaker;
   private readonly RootObjectUnpacker _rootObjectUnpacker;
   private readonly ISdkActivityFactory _activityFactory;
+  private readonly IThreadContext _threadContext;
 
   public RhinoHostObjectBuilder(
     IRootToHostConverter converter,
@@ -40,7 +44,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     RhinoMaterialBaker materialBaker,
     RhinoColorBaker colorBaker,
     RhinoGroupBaker groupBaker,
-    ISdkActivityFactory activityFactory
+    ISdkActivityFactory activityFactory,
+    IThreadContext threadContext
   )
   {
     _converter = converter;
@@ -52,6 +57,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _layerBaker = layerBaker;
     _groupBaker = groupBaker;
     _activityFactory = activityFactory;
+    _threadContext = threadContext;
   }
 
 #pragma warning disable CA1506
@@ -111,19 +117,21 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     using (var _ = _activityFactory.Start("Pre baking layers"))
     {
       //TODO what is this?  This is going to the UI thread
-      RhinoApp.InvokeAndWait(() =>
-      {
-        using var layerNoDraw = new DisableRedrawScope(_converterSettings.Current.Document.Views);
-        var paths = atomicObjectsWithoutInstanceComponentsWithPath.Select(t => t.path).ToList();
-        paths.AddRange(instanceComponentsWithPath.Select(t => t.path));
-        _layerBaker.CreateAllLayersForReceive(paths, baseLayerName);
-      });
+      _threadContext
+        .RunOnMain(() =>
+        {
+          using var layerNoDraw = new DisableRedrawScope(_converterSettings.Current.Document.Views);
+          var paths = atomicObjectsWithoutInstanceComponentsWithPath.Select(t => t.path).ToList();
+          paths.AddRange(instanceComponentsWithPath.Select(t => t.path));
+          _layerBaker.CreateAllLayersForReceive(paths, baseLayerName);
+        })
+        .Wait();
     }
 
     // 5 - Convert atomic objects
-    List<string> bakedObjectIds = new();
-    Dictionary<string, List<string>> applicationIdMap = new(); // This map is used in converting blocks in stage 2. keeps track of original app id => resulting new app ids post baking
-    List<ReceiveConversionResult> conversionResults = new();
+    var bakedObjectIds = new HashSet<string>();
+    Dictionary<string, IReadOnlyCollection<string>> applicationIdMap = new(); // This map is used in converting blocks in stage 2. keeps track of original app id => resulting new app ids post baking
+    HashSet<ReceiveConversionResult> conversionResults = new();
 
     int count = 0;
     using (var _ = _activityFactory.Start("Converting objects"))
@@ -193,7 +201,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
             }
 
             // 5: populate app id map
-            applicationIdMap[obj.applicationId ?? obj.id] = conversionIds;
+            applicationIdMap[obj.applicationId ?? obj.id.NotNull()] = conversionIds;
             convertActivity?.SetStatus(SdkActivityStatusCode.Ok);
           }
           catch (Exception ex) when (!ex.IsFatal())
@@ -216,10 +224,10 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
         onOperationProgressed
       );
 
-      bakedObjectIds.RemoveAll(id => consumedObjectIds.Contains(id)); // remove all objects that have been "consumed"
-      bakedObjectIds.AddRange(createdInstanceIds); // add instance ids
-      conversionResults.RemoveAll(result => result.ResultId != null && consumedObjectIds.Contains(result.ResultId)); // remove all conversion results for atomic objects that have been consumed (POC: not that cool, but prevents problems on object highlighting)
-      conversionResults.AddRange(instanceConversionResults); // add instance conversion results to our list
+      bakedObjectIds.RemoveWhere(id => consumedObjectIds.Contains(id)); // remove all objects that have been "consumed"
+      bakedObjectIds.UnionWith(createdInstanceIds); // add instance ids
+      conversionResults.RemoveWhere(result => result.ResultId != null && consumedObjectIds.Contains(result.ResultId)); // remove all conversion results for atomic objects that have been consumed (POC: not that cool, but prevents problems on object highlighting)
+      conversionResults.UnionWith(instanceConversionResults); // add instance conversion results to our list
     }
 
     // 7 - Create groups
@@ -241,35 +249,37 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       RhinoMath.UnsetIntIndex
     );
 
-    RhinoApp.InvokeAndWait(() =>
-    {
-      _instanceBaker.PurgeInstances(baseLayerName);
-      _materialBaker.PurgeMaterials(baseLayerName);
-
-      var doc = _converterSettings.Current.Document;
-      // Cleans up any previously received objects
-      if (rootLayerIndex != RhinoMath.UnsetIntIndex)
+    _threadContext
+      .RunOnMain(() =>
       {
-        var documentLayer = doc.Layers[rootLayerIndex];
-        var childLayers = documentLayer.GetChildren();
-        if (childLayers != null)
+        _instanceBaker.PurgeInstances(baseLayerName);
+        _materialBaker.PurgeMaterials(baseLayerName);
+
+        var doc = _converterSettings.Current.Document;
+        // Cleans up any previously received objects
+        if (rootLayerIndex != RhinoMath.UnsetIntIndex)
         {
-          using var layerNoDraw = new DisableRedrawScope(doc.Views);
-          foreach (var layer in childLayers)
+          var documentLayer = doc.Layers[rootLayerIndex];
+          var childLayers = documentLayer.GetChildren();
+          if (childLayers != null)
           {
-            var purgeSuccess = doc.Layers.Purge(layer.Index, true);
-            if (!purgeSuccess)
+            using var layerNoDraw = new DisableRedrawScope(doc.Views);
+            foreach (var layer in childLayers)
             {
-              Console.WriteLine($"Failed to purge layer: {layer}");
+              var purgeSuccess = doc.Layers.Purge(layer.Index, true);
+              if (!purgeSuccess)
+              {
+                Console.WriteLine($"Failed to purge layer: {layer}");
+              }
             }
           }
+          doc.Layers.Purge(documentLayer.Index, true);
         }
-        doc.Layers.Purge(documentLayer.Index, true);
-      }
 
-      // Cleans up any previously received group
-      _groupBaker.PurgeGroups(baseLayerName);
-    });
+        // Cleans up any previously received group
+        _groupBaker.PurgeGroups(baseLayerName);
+      })
+      .Wait();
   }
 
   /// <summary>
@@ -286,7 +296,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   /// </remarks>
   private Guid BakeObject(GeometryBase obj, Base originalObject, string? parentObjectId, ObjectAttributes atts)
   {
-    var objectId = originalObject.applicationId ?? originalObject.id;
+    var objectId = originalObject.applicationId ?? originalObject.id.NotNull();
 
     if (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(objectId, out int mIndex))
     {
@@ -327,7 +337,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   )
   {
     List<Guid> objectIds = new();
-    string parentId = originatingObject.applicationId ?? originatingObject.id;
+    string parentId = originatingObject.applicationId ?? originatingObject.id.NotNull();
 
     foreach (var (conversionResult, originalBaseObject) in fallbackConversionResult)
     {

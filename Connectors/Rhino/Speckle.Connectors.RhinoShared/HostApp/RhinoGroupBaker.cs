@@ -25,8 +25,8 @@ public class RhinoGroupBaker
   }
 
   public void BakeGroups(
-    List<GroupProxy> groupProxies,
-    Dictionary<string, List<string>> applicationIdMap,
+    IReadOnlyCollection<GroupProxy> groupProxies,
+    Dictionary<string, IReadOnlyCollection<string>> applicationIdMap,
     string baseLayerName
   )
   {

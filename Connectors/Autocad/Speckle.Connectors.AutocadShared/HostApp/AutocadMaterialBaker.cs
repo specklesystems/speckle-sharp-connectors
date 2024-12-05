@@ -7,6 +7,7 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.InterfaceGenerator;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Material = Autodesk.AutoCAD.DatabaseServices.Material;
 using RenderMaterial = Speckle.Objects.Other.RenderMaterial;
@@ -44,7 +45,7 @@ public class AutocadMaterialBaker : IAutocadMaterialBaker
   public bool TryGetMaterialId(Base originalObject, Base? parentObject, out ObjectId materialId)
   {
     materialId = ObjectId.Null;
-    var originalObjectId = originalObject.applicationId ?? originalObject.id;
+    var originalObjectId = originalObject.applicationId ?? originalObject.id.NotNull();
     if (ObjectMaterialsIdMap.TryGetValue(originalObjectId, out ObjectId originalObjectMaterialId))
     {
       materialId = originalObjectMaterialId;
@@ -56,7 +57,7 @@ public class AutocadMaterialBaker : IAutocadMaterialBaker
       return false;
     }
 
-    var subObjectId = parentObject.applicationId ?? parentObject.id;
+    var subObjectId = parentObject.applicationId ?? parentObject.id.NotNull();
     if (ObjectMaterialsIdMap.TryGetValue(subObjectId, out ObjectId subObjectMaterialId))
     {
       materialId = subObjectMaterialId;
@@ -94,7 +95,7 @@ public class AutocadMaterialBaker : IAutocadMaterialBaker
   }
 
   public void ParseAndBakeRenderMaterials(
-    List<RenderMaterialProxy> materialProxies,
+    IReadOnlyCollection<RenderMaterialProxy> materialProxies,
     string baseLayerPrefix,
     IProgress<CardProgress> onOperationProgressed
   )
@@ -116,7 +117,7 @@ public class AutocadMaterialBaker : IAutocadMaterialBaker
 
       // bake render material
       RenderMaterial renderMaterial = materialProxy.value;
-      string renderMaterialId = renderMaterial.applicationId ?? renderMaterial.id;
+      string renderMaterialId = renderMaterial.applicationId ?? renderMaterial.id.NotNull();
       ObjectId materialId = ObjectId.Null;
 
       if (!ObjectMaterialsIdMap.TryGetValue(renderMaterialId, out materialId))
@@ -157,7 +158,7 @@ public class AutocadMaterialBaker : IAutocadMaterialBaker
     {
       // POC: Currently we're relying on the render material name for identification if it's coming from speckle and from which model; could we do something else?
       // POC: we should assume render materials all have application ids?
-      string renderMaterialId = renderMaterial.applicationId ?? renderMaterial.id;
+      string renderMaterialId = renderMaterial.applicationId ?? renderMaterial.id.NotNull();
       string matName = _autocadContext.RemoveInvalidChars(
         $"{renderMaterial.name}-({renderMaterialId})-{baseLayerPrefix}"
       );

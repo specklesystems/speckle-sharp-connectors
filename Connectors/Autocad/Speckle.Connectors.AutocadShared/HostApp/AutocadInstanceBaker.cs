@@ -12,6 +12,7 @@ using Speckle.DoubleNumerics;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
+using Speckle.Sdk.Dependencies;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
@@ -22,7 +23,7 @@ namespace Speckle.Connectors.Autocad.HostApp;
 /// <summary>
 /// Expects to be a scoped dependency receive operation.
 /// </summary>
-public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
+public class AutocadInstanceBaker : IInstanceBaker<IReadOnlyCollection<Entity>>
 {
   private readonly AutocadLayerBaker _layerBaker;
   private readonly IAutocadColorBaker _colorBaker;
@@ -50,8 +51,8 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
 
   [SuppressMessage("Maintainability", "CA1506:Avoid excessive class coupling")]
   public BakeResult BakeInstances(
-    IReadOnlyCollection<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
-    Dictionary<string, List<Entity>> applicationIdMap,
+    ICollection<(Collection[] collectionPath, IInstanceComponent obj)> instanceComponents,
+    Dictionary<string, IReadOnlyCollection<Entity>> applicationIdMap,
     string baseLayerName,
     IProgress<CardProgress> onOperationProgressed
   )
@@ -64,9 +65,9 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
     var definitionIdAndApplicationIdMap = new Dictionary<string, ObjectId>();
 
     using var transaction = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
-    var conversionResults = new List<ReceiveConversionResult>();
-    var createdObjectIds = new List<string>();
-    var consumedObjectIds = new List<string>();
+    var conversionResults = new HashSet<ReceiveConversionResult>();
+    var createdObjectIds = new HashSet<string>();
+    var consumedObjectIds = new HashSet<string>();
     var count = 0;
 
     foreach (var (collectionPath, instanceOrDefinition) in sortedInstanceComponents)
@@ -79,7 +80,9 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
         {
           // TODO: create definition (block table record)
           var constituentEntities = definitionProxy
-            .objects.Select(id => applicationIdMap.TryGetValue(id, out List<Entity>? value) ? value : null)
+            .objects.Select(id =>
+              applicationIdMap.TryGetValue(id, out IReadOnlyCollection<Entity>? value) ? value : null
+            )
             .Where(x => x is not null)
             .SelectMany(ent => ent!)
             .ToList();
@@ -109,8 +112,8 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
           definitionIdAndApplicationIdMap[definitionProxy.applicationId] = id;
           transaction.AddNewlyCreatedDBObject(record, true);
           var consumedEntitiesHandleValues = constituentEntities.Select(ent => ent.GetSpeckleApplicationId()).ToArray();
-          consumedObjectIds.AddRange(consumedEntitiesHandleValues);
-          createdObjectIds.RemoveAll(newId => consumedEntitiesHandleValues.Contains(newId));
+          consumedObjectIds.UnionWith(consumedEntitiesHandleValues);
+          createdObjectIds.RemoveWhere(newId => consumedEntitiesHandleValues.Contains(newId));
         }
         else if (
           instanceOrDefinition is InstanceProxy instanceProxy
@@ -128,7 +131,7 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
           string layerName = _layerBaker.CreateLayerForReceive(collectionPath, baseLayerName);
 
           // get color and material if any
-          string instanceId = instanceProxy.applicationId ?? instanceProxy.id;
+          string instanceId = instanceProxy.applicationId ?? instanceProxy.id.NotNull();
           AutocadColor? objColor = _colorBaker.ObjectColorsIdMap.TryGetValue(instanceId, out AutocadColor? color)
             ? color
             : null;
@@ -167,7 +170,7 @@ public class AutocadInstanceBaker : IInstanceBaker<List<Entity>>
     }
 
     transaction.Commit();
-    return new(createdObjectIds, consumedObjectIds, conversionResults);
+    return new(createdObjectIds.Freeze(), consumedObjectIds.Freeze(), conversionResults.Freeze());
   }
 
   /// <summary>
