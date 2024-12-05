@@ -3,14 +3,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Rhino;
 using Rhino.Geometry;
 using Speckle.Connectors.Common.Operations;
-using Speckle.Connectors.Grasshopper8.Operations.Receive;
+using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models;
 
-namespace Speckle.Connectors.Grasshopper8;
+namespace Speckle.Connectors.Grasshopper8.Components;
 
 public class SpeckleFirstComponent : GH_TaskCapableComponent<List<object?>>
 {
@@ -24,7 +24,7 @@ public class SpeckleFirstComponent : GH_TaskCapableComponent<List<object?>>
   /// new tabs/panels will automatically be created.
   /// </summary>
   public SpeckleFirstComponent()
-    : base("Send to Speckle", "STP", "Sends objects to speckle", "Speckle", "Operations")
+    : base("First Speckle Component", "STP", "Sends objects to speckle", "Speckle", "Other")
   {
     _accountManager = PriorityLoader.Container.NotNull().GetRequiredService<AccountManager>();
   }
@@ -45,8 +45,8 @@ public class SpeckleFirstComponent : GH_TaskCapableComponent<List<object?>>
     {
       // Collect the data and create the task
       string url = GetInput(da);
-      TaskList.Add(PerformReceiveOperation(url, CancelToken));
       Message = "Receiving...";
+      TaskList.Add(PerformReceiveOperation(url, CancelToken));
       return;
     }
 
@@ -125,9 +125,10 @@ public class SpeckleFirstComponent : GH_TaskCapableComponent<List<object?>>
         throw new NotSupportedException($"Unsupported conversion result type: {conversionResult}");
       }
 
+      //results.Add(ghConversionResult.Source);
       if (ghConversionResult.Result is GeometryBase geometryBase)
       {
-        //var guid = BakeObject(geometryBase, obj, atts);
+        results.Add(geometryBase);
       }
       else if (ghConversionResult.Result is List<GeometryBase> geometryBases) // one to many raw encoding case
       {
@@ -137,7 +138,6 @@ public class SpeckleFirstComponent : GH_TaskCapableComponent<List<object?>>
       {
         results.AddRange(fallbackConversionResult.Select(o => o.Item1));
       }
-      results.Add(ghConversionResult.Result);
     }
 
     return results;

@@ -11,11 +11,12 @@ using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
 
-namespace Speckle.Connectors.Grasshopper8.Operations.Receive;
+namespace Speckle.Connectors.Grasshopper8.HostApp;
 
 public sealed class GrasshopperReceiveConversionResult : ReceiveConversionResult
 {
   public object? Result { get; set; }
+  public Base Source { get; set; }
 
   public GrasshopperReceiveConversionResult(
     Status status,
@@ -28,6 +29,7 @@ public sealed class GrasshopperReceiveConversionResult : ReceiveConversionResult
     : base(status, source, resultId, resultType, exception)
   {
     Result = result;
+    Source = source;
   }
 }
 
@@ -146,6 +148,8 @@ public class GrasshopperHostObjectBuilder : IHostObjectBuilder
             conversionResults.Add(
               new GrasshopperReceiveConversionResult(Status.SUCCESS, obj, result, null, result.GetType().ToString())
             );
+
+            // applicationIdMap[obj.applicationId ?? obj.id] = conversionIds;
             convertActivity?.SetStatus(SdkActivityStatusCode.Ok);
           }
           catch (Exception ex) when (!ex.IsFatal())
