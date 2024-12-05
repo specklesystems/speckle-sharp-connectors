@@ -1,5 +1,7 @@
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
+using Speckle.Connectors.RhinoShared;
 using Tekla.Structures.Model;
 
 namespace Speckle.Connectors.TeklaShared.Bindings;
@@ -8,9 +10,9 @@ public class TeklaSelectionBinding : ISelectionBinding
 {
   private readonly IAppIdleManager _idleManager;
   private const string SELECTION_EVENT = "setSelection";
-  private readonly Tekla.Structures.Model.Events _events;
   private readonly object _selectionEventHandlerLock = new object();
   private readonly Tekla.Structures.Model.UI.ModelObjectSelector _selector;
+  private readonly IEventAggregator _eventAggregator;
 
   public string Name => "selectionBinding";
   public IBrowserBridge Parent { get; }
@@ -18,24 +20,23 @@ public class TeklaSelectionBinding : ISelectionBinding
   public TeklaSelectionBinding(
     IAppIdleManager idleManager,
     IBrowserBridge parent,
-    Events events,
-    Tekla.Structures.Model.UI.ModelObjectSelector selector
+    Tekla.Structures.Model.UI.ModelObjectSelector selector,
+    IEventAggregator eventAggregator
   )
   {
     _idleManager = idleManager;
     Parent = parent;
-    _events = events;
     _selector = selector;
+    _eventAggregator = eventAggregator;
 
-    _events.SelectionChange += Events_SelectionChangeEvent;
-    _events.Register();
+    eventAggregator.GetEvent<SelectionChange>().Subscribe(_ => Events_SelectionChangeEvent());
   }
 
   private void Events_SelectionChangeEvent()
   {
     lock (_selectionEventHandlerLock)
     {
-      _idleManager.SubscribeToIdle(nameof(TeklaSelectionBinding), UpdateSelection);
+      _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(TeklaSelectionBinding), UpdateSelection);
     }
   }
 

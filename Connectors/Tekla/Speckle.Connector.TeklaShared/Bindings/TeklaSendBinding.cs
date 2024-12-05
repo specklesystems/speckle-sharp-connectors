@@ -6,12 +6,14 @@ using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
+using Speckle.Connectors.RhinoShared;
 using Speckle.Connectors.TeklaShared.Operations.Send.Settings;
 using Speckle.Converters.Common;
 using Speckle.Converters.TeklaShared;
@@ -24,14 +26,13 @@ using Task = System.Threading.Tasks.Task;
 
 namespace Speckle.Connectors.TeklaShared.Bindings;
 
-public sealed class TeklaSendBinding : ISendBinding, IDisposable
+public sealed class TeklaSendBinding : ISendBinding
 {
   public string Name => "sendBinding";
   public SendBindingUICommands Commands { get; }
   public IBrowserBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly IAppIdleManager _idleManager;
   private readonly IServiceProvider _serviceProvider;
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
@@ -42,14 +43,12 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
   private readonly ISpeckleApplication _speckleApplication;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly Model _model;
-  private readonly Events _events;
   private readonly ToSpeckleSettingsManager _toSpeckleSettingsManager;
 
   private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
 
   public TeklaSendBinding(
     DocumentModelStore store,
-    IAppIdleManager idleManager,
     IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     IServiceProvider serviceProvider,
@@ -60,11 +59,11 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
     ITeklaConversionSettingsFactory teklaConversionSettingsFactory,
     ISpeckleApplication speckleApplication,
     ISdkActivityFactory activityFactory,
-    ToSpeckleSettingsManager toSpeckleSettingsManager
+    ToSpeckleSettingsManager toSpeckleSettingsManager,
+    IEventAggregator eventAggregator
   )
   {
     _store = store;
-    _idleManager = idleManager;
     _serviceProvider = serviceProvider;
     _sendFilters = sendFilters.ToList();
     _cancellationManager = cancellationManager;
@@ -79,14 +78,7 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
     _toSpeckleSettingsManager = toSpeckleSettingsManager;
 
     _model = new Model();
-    _events = new Events();
-    SubscribeToTeklaEvents();
-  }
-
-  private void SubscribeToTeklaEvents()
-  {
-    _events.ModelObjectChanged += ModelHandler_OnChange;
-    _events.Register();
+    eventAggregator.GetEvent<ModelObjectChanged>().Subscribe(ModelHandler_OnChange);
   }
 
   // subscribes the all changes in a modelobject
@@ -197,16 +189,5 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
     await Commands.SetModelsExpired(expiredSenderIds).ConfigureAwait(false);
 
     ChangedObjectIds = new ConcurrentDictionary<string, byte>();
-  }
-
-  private bool _disposed;
-
-  public void Dispose()
-  {
-    if (!_disposed)
-    {
-      _events.UnRegister();
-      _disposed = true;
-    }
   }
 }

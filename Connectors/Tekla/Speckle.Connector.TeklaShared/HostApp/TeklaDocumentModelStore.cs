@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
+using Speckle.Connectors.RhinoShared;
 using Speckle.Sdk;
 using Speckle.Sdk.Helpers;
 using Speckle.Sdk.SQLite;
@@ -12,7 +13,6 @@ public class TeklaDocumentModelStore : DocumentModelStore
 {
   private readonly ILogger<TeklaDocumentModelStore> _logger;
   private readonly ISqLiteJsonCacheManager _jsonCacheManager;
-  private readonly TSM.Events _events;
   private readonly TSM.Model _model;
   private string? _modelKey;
 
@@ -26,16 +26,16 @@ public class TeklaDocumentModelStore : DocumentModelStore
   {
     _logger = logger;
     _jsonCacheManager = jsonCacheManagerFactory.CreateForUser("ConnectorsFileData");
-    _events = new TSM.Events();
     _model = new TSM.Model();
     GenerateKey();
-    _events.ModelLoad += () =>
-    {
-      GenerateKey();
-      LoadState();
-      eventAggregator.GetEvent<DocumentChangedEvent>().Publish(new object());
-    };
-    _events.Register();
+    eventAggregator
+      .GetEvent<ModelLoad>()
+      .Publish(() =>
+      {
+        GenerateKey();
+        LoadState();
+        eventAggregator.GetEvent<DocumentChangedEvent>().Publish(new object());
+      });
     if (SpeckleTeklaPanelHost.IsInitialized)
     {
       LoadState();
