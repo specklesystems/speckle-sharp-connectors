@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
+using Speckle.Objects.Geometry;
 
 namespace Speckle.Converter.Navisworks.ToSpeckle;
 
@@ -18,5 +19,10 @@ public class DisplayValueExtractor
     _logger = logger;
   }
 
-  public static List<SSM.Base> GetDisplayValue(NAV.ModelItem _) => [];
+  public static List<SSM.Base> GetDisplayValue(NAV.ModelItem _)
+  {
+    var pt = new Point(0, 0, 0, "m");
+
+    return [pt];
+  }
 }

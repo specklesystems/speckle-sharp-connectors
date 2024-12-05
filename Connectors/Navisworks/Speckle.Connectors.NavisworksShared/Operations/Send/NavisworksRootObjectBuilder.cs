@@ -4,14 +4,12 @@ using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Converter.Navisworks.Settings;
-using Speckle.Converter.Navisworks.ToSpeckle;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using static Speckle.Connector.Navisworks.Extensions.ElementSelectionExtension;
-using static Speckle.Connector.Navisworks.Extensions.NavisworksRootObjectBuilderExtensions;
 
 namespace Speckle.Connector.Navisworks.Operations.Send;
 
@@ -22,17 +20,13 @@ public class NavisworksRootObjectBuilder : IRootObjectBuilder<NAV.ModelItem>
   private readonly IConverterSettingsStore<NavisworksConversionSettings> _converterSettings;
   private readonly ILogger<NavisworksRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
-  private readonly ClassPropertiesExtractor _classPropertiesExtractor;
-  private readonly PropertySetsExtractor _propertySetsExtractor;
 
   public NavisworksRootObjectBuilder(
     IRootToSpeckleConverter rootToSpeckleConverter,
     ISendConversionCache sendConversionCache,
     IConverterSettingsStore<NavisworksConversionSettings> converterSettings,
     ILogger<NavisworksRootObjectBuilder> logger,
-    ISdkActivityFactory activityFactory,
-    ClassPropertiesExtractor classPropertiesExtractor,
-    PropertySetsExtractor propertySetsExtractor
+    ISdkActivityFactory activityFactory
   )
   {
     _rootToSpeckleConverter = rootToSpeckleConverter;
@@ -40,13 +34,11 @@ public class NavisworksRootObjectBuilder : IRootObjectBuilder<NAV.ModelItem>
     _converterSettings = converterSettings;
     _logger = logger;
     _activityFactory = activityFactory;
-    _classPropertiesExtractor = classPropertiesExtractor;
-    _propertySetsExtractor = propertySetsExtractor;
   }
 
   internal NavisworksConversionSettings GetCurrentSettings() => _converterSettings.Current;
 
-  public async Task<RootObjectBuilderResult> Build(
+  public Task<RootObjectBuilderResult> Build(
     IReadOnlyList<NAV.ModelItem> navisworksModelItems,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
@@ -60,22 +52,92 @@ public class NavisworksRootObjectBuilder : IRootObjectBuilder<NAV.ModelItem>
       throw new SpeckleException("No objects to convert");
     }
 
-    return await BuildWithMergedSiblings(
-        navisworksModelItems,
-        onOperationProgressed,
-        _rootToSpeckleConverter,
-        _classPropertiesExtractor,
-        _propertySetsExtractor,
-        _converterSettings,
-        cancellationToken
-      )
-      .ConfigureAwait(false);
+    // Create root collection
+    var rootObjectCollection = new Collection
+    {
+      name = NavisworksApp.ActiveDocument.Title ?? "Unnamed model",
+      ["units"] = _converterSettings.Current.Derived.SpeckleUnits
+    };
+
+    var convertedBases = new Dictionary<string, Base?>();
+
+    // First convert everything and track results
+    var results = new List<SendConversionResult>();
+    int processedCount = 0;
+    int totalCount = navisworksModelItems.Count;
+
+    foreach (var item in navisworksModelItems)
+    {
+      cancellationToken.ThrowIfCancellationRequested();
+      var converted = ConvertNavisworksItem(item, convertedBases, sendInfo);
+      results.Add(converted);
+      processedCount++;
+      onOperationProgressed.Report(new CardProgress("Converting", (double)processedCount / totalCount));
+    }
+
+    // Create final elements list
+    var finalElements = new List<Base>();
+
+    // Get groups of siblings
+    var merger = new GeometryNodeMerger();
+    var groupedNodes = merger.GroupSiblingGeometryNodes(navisworksModelItems);
+
+    // Handle grouped nodes first
+    foreach (var group in groupedNodes)
+    {
+      var siblingBases = convertedBases.Where(r => r.Key.StartsWith(group.Key)).Select(r => r.Value).ToList();
+
+      if (siblingBases.Count == 0)
+      {
+        continue;
+      }
+
+      List<Base> displayValues = [];
+
+      foreach (var siblingBase in siblingBases.OfType<Base>())
+      {
+        var dv = siblingBase["displayValue"];
+
+        Console.WriteLine(dv);
+
+        if (siblingBase["displayValue"] is not List<Base> displayValue)
+        {
+          continue;
+        }
+
+        displayValues.AddRange(displayValue);
+      }
+
+      var parentBase = new Base
+      {
+        applicationId = group.Key,
+        ["properties"] = siblingBases.First()?["properties"],
+        ["displayValue"] = displayValues
+      };
+      finalElements.Add(parentBase);
+    }
+
+    // Handle non-grouped nodes
+    var groupedPaths = groupedNodes.SelectMany(g => g.Value).Select(ResolveModelItemToIndexPath).ToHashSet();
+
+    foreach (var result in results.Where(result => !groupedPaths.Contains(result.SourceId)))
+    {
+      if (_sendConversionCache.TryGetValue(result.SourceId, sendInfo.ProjectId, out ObjectReference? value))
+      {
+        finalElements.Add(value);
+      }
+    }
+
+    // Set the final elements list
+    rootObjectCollection.elements = finalElements;
+
+    return Task.FromResult(new RootObjectBuilderResult(rootObjectCollection, results));
   }
 
   internal SendConversionResult ConvertNavisworksItem(
     NAV.ModelItem navisworksItem,
-    Collection collectionHost,
-    string projectId
+    Dictionary<string, Base?> convertedBases,
+    SendInfo sendInfo
   )
   {
     string applicationId = ResolveModelItemToIndexPath(navisworksItem);
@@ -83,14 +145,11 @@ public class NavisworksRootObjectBuilder : IRootObjectBuilder<NAV.ModelItem>
 
     try
     {
-      Base converted =
-        // Check cache first
-        _sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value)
-          ? value
-          // Convert geometry
-          : _rootToSpeckleConverter.Convert(navisworksItem);
+      Base converted = _sendConversionCache.TryGetValue(applicationId, sendInfo.ProjectId, out ObjectReference? cached)
+        ? cached
+        : _rootToSpeckleConverter.Convert(navisworksItem);
 
-      collectionHost.elements.Add(converted);
+      convertedBases[applicationId] = converted;
 
       return new SendConversionResult(Status.SUCCESS, applicationId, sourceType, converted);
     }

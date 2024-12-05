@@ -14,7 +14,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\NavisworksSendBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\NavisworksConnectorServiceRegistration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\ElementSelectionExtension.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Extensions\NavisworksRootObjectBuilderExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksDocumentEvents.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksDocumentModelStore.cs" />
