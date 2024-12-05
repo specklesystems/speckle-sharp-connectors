@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Speckle.Connector.Navisworks.HostApp;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
@@ -13,30 +14,16 @@ using static Speckle.Connector.Navisworks.Extensions.ElementSelectionExtension;
 
 namespace Speckle.Connector.Navisworks.Operations.Send;
 
-public class NavisworksRootObjectBuilder : IRootObjectBuilder<NAV.ModelItem>
+public class NavisworksRootObjectBuilder(
+  IRootToSpeckleConverter rootToSpeckleConverter,
+  ISendConversionCache sendConversionCache,
+  IConverterSettingsStore<NavisworksConversionSettings> converterSettings,
+  ILogger<NavisworksRootObjectBuilder> logger,
+  ISdkActivityFactory activityFactory,
+  NavisworksMaterialUnpacker materialUnpacker
+) : IRootObjectBuilder<NAV.ModelItem>
 {
-  private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
-  private readonly ISendConversionCache _sendConversionCache;
-  private readonly IConverterSettingsStore<NavisworksConversionSettings> _converterSettings;
-  private readonly ILogger<NavisworksRootObjectBuilder> _logger;
-  private readonly ISdkActivityFactory _activityFactory;
-
-  public NavisworksRootObjectBuilder(
-    IRootToSpeckleConverter rootToSpeckleConverter,
-    ISendConversionCache sendConversionCache,
-    IConverterSettingsStore<NavisworksConversionSettings> converterSettings,
-    ILogger<NavisworksRootObjectBuilder> logger,
-    ISdkActivityFactory activityFactory
-  )
-  {
-    _rootToSpeckleConverter = rootToSpeckleConverter;
-    _sendConversionCache = sendConversionCache;
-    _converterSettings = converterSettings;
-    _logger = logger;
-    _activityFactory = activityFactory;
-  }
-
-  internal NavisworksConversionSettings GetCurrentSettings() => _converterSettings.Current;
+  internal NavisworksConversionSettings GetCurrentSettings() => converterSettings.Current;
 
   public Task<RootObjectBuilderResult> Build(
     IReadOnlyList<NAV.ModelItem> navisworksModelItems,
@@ -45,7 +32,7 @@ public class NavisworksRootObjectBuilder : IRootObjectBuilder<NAV.ModelItem>
     CancellationToken cancellationToken = default
   )
   {
-    using var activity = _activityFactory.Start("Build");
+    using var activity = activityFactory.Start("Build");
 
     // 1. Validate input
     if (!navisworksModelItems.Any())
@@ -57,12 +44,12 @@ public class NavisworksRootObjectBuilder : IRootObjectBuilder<NAV.ModelItem>
     var rootObjectCollection = new Collection
     {
       name = NavisworksApp.ActiveDocument.Title ?? "Unnamed model",
-      ["units"] = _converterSettings.Current.Derived.SpeckleUnits
+      ["units"] = converterSettings.Current.Derived.SpeckleUnits
     };
 
     // 3. Convert all model items and store results
+    List<SendConversionResult> results = new(navisworksModelItems.Count);
     var convertedBases = new Dictionary<string, Base?>();
-    var results = new List<SendConversionResult>();
     int processedCount = 0;
     int totalCount = navisworksModelItems.Count;
 
@@ -73,6 +60,11 @@ public class NavisworksRootObjectBuilder : IRootObjectBuilder<NAV.ModelItem>
       results.Add(converted);
       processedCount++;
       onOperationProgressed.Report(new CardProgress("Converting", (double)processedCount / totalCount));
+    }
+
+    if (results.All(x => x.Status == Status.ERROR))
+    {
+      throw new SpeckleException("Failed to convert all objects."); // fail fast instead creating empty commit! It will appear as model card error with red color.
     }
 
     // 4. Initialize final elements list and group nodes
@@ -119,12 +111,18 @@ public class NavisworksRootObjectBuilder : IRootObjectBuilder<NAV.ModelItem>
       }
     }
 
-    // 7. Finalize and return
+    using (var _ = activityFactory.Start("UnpackRenderMaterials"))
+    {
+      // 7.  - Unpack the render material proxies
+      rootObjectCollection[ProxyKeys.RENDER_MATERIAL] = materialUnpacker.UnpackRenderMaterial(navisworksModelItems);
+    }
+
+    // 8. Finalize and return
     rootObjectCollection.elements = finalElements;
     return Task.FromResult(new RootObjectBuilderResult(rootObjectCollection, results));
   }
 
-  internal SendConversionResult ConvertNavisworksItem(
+  private SendConversionResult ConvertNavisworksItem(
     NAV.ModelItem navisworksItem,
     Dictionary<string, Base?> convertedBases,
     SendInfo sendInfo
@@ -135,9 +133,9 @@ public class NavisworksRootObjectBuilder : IRootObjectBuilder<NAV.ModelItem>
 
     try
     {
-      Base converted = _sendConversionCache.TryGetValue(applicationId, sendInfo.ProjectId, out ObjectReference? cached)
+      Base converted = sendConversionCache.TryGetValue(applicationId, sendInfo.ProjectId, out ObjectReference? cached)
         ? cached
-        : _rootToSpeckleConverter.Convert(navisworksItem);
+        : rootToSpeckleConverter.Convert(navisworksItem);
 
       convertedBases[applicationId] = converted;
 
@@ -145,7 +143,7 @@ public class NavisworksRootObjectBuilder : IRootObjectBuilder<NAV.ModelItem>
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      _logger.LogError(ex, "Failed to convert model item {id}", applicationId);
+      logger.LogError(ex, "Failed to convert model item {id}", applicationId);
       return new SendConversionResult(Status.ERROR, applicationId, "ModelItem", null, ex);
     }
   }

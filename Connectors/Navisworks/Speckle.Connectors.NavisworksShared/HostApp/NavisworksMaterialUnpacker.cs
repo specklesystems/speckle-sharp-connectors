@@ -7,20 +7,11 @@ using static Speckle.Connector.Navisworks.Extensions.ElementSelectionExtension;
 
 namespace Speckle.Connector.Navisworks.HostApp;
 
-public class NavisworksMaterialUnpacker
+public class NavisworksMaterialUnpacker(
+  ILogger<NavisworksMaterialUnpacker> logger,
+  IConverterSettingsStore<NavisworksConversionSettings> converterSettings
+)
 {
-  private readonly ILogger<NavisworksMaterialUnpacker> _logger;
-  private readonly IConverterSettingsStore<NavisworksConversionSettings> _converterSettings;
-
-  public NavisworksMaterialUnpacker(
-    ILogger<NavisworksMaterialUnpacker> logger,
-    IConverterSettingsStore<NavisworksConversionSettings> converterSettings
-  )
-  {
-    _logger = logger;
-    _converterSettings = converterSettings;
-  }
-
   // Helper function to select a property based on the representation mode
   // Selector method for individual properties
   private static T Select<T>(RepresentationMode mode, T active, T permanent, T original, T defaultValue) =>
@@ -32,7 +23,7 @@ public class NavisworksMaterialUnpacker
       _ => defaultValue,
     };
 
-  public List<RenderMaterialProxy> UnpackRenderMaterial(List<NAV.ModelItem> navisworksObjects)
+  public List<RenderMaterialProxy> UnpackRenderMaterial(IReadOnlyList<NAV.ModelItem> navisworksObjects)
   {
     if (navisworksObjects == null)
     {
@@ -55,7 +46,7 @@ public class NavisworksMaterialUnpacker
         var geometry = navisworksObject.Geometry;
 
         // Extract the current visual representation mode
-        var mode = _converterSettings.Current.User.VisualRepresentationMode;
+        var mode = converterSettings.Current.User.VisualRepresentationMode;
 
         // Assign properties using the selector
         var renderColor = Select(
@@ -131,7 +122,7 @@ public class NavisworksMaterialUnpacker
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(ex, "Failed to unpack render material from Navisworks object");
+        logger.LogError(ex, "Failed to unpack render material from Navisworks object");
       }
     }
 

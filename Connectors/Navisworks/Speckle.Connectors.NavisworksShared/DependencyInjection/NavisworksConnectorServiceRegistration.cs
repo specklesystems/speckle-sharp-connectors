@@ -47,6 +47,7 @@ public static class NavisworksConnectorServiceRegistration
       IConverterSettingsStore<NavisworksConversionSettings>,
       ConverterSettingsStore<NavisworksConversionSettings>
     >();
+    serviceCollection.AddScoped<NavisworksMaterialUnpacker>();
 
     // Sending operations
     serviceCollection.AddScoped<IRootObjectBuilder<NAV.ModelItem>, NavisworksRootObjectBuilder>();
