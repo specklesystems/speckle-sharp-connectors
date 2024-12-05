@@ -30,15 +30,14 @@ public class OperationProgressManager : IOperationProgressManager
   )
   {
     var progress = new NonUIThreadProgress<CardProgress>(args =>
-      {
-        SetModelProgress(
-          bridge,
-          modelCardId,
-          new ModelCardProgress(modelCardId, args.Status, args.Progress),
-          cancellationToken
-        );
-      }
-    );
+    {
+      SetModelProgress(
+        bridge,
+        modelCardId,
+        new ModelCardProgress(modelCardId, args.Status, args.Progress),
+        cancellationToken
+      );
+    });
     return progress;
   }
 
@@ -59,7 +58,7 @@ public class OperationProgressManager : IOperationProgressManager
       t.Item1 = DateTime.Now;
       s_lastProgressValues[modelCardId] = (t.Item1, progress.Status);
       // Since it's the first time we get a call for this model card, we should send it out
-       SendProgress(bridge, modelCardId, progress);
+      SendProgress(bridge, modelCardId, progress);
       return;
     }
 
@@ -71,7 +70,7 @@ public class OperationProgressManager : IOperationProgressManager
       return;
     }
     s_lastProgressValues[modelCardId] = (currentTime, progress.Status);
-     SendProgress(bridge, modelCardId, progress);
+    SendProgress(bridge, modelCardId, progress);
   }
 
   private static void SendProgress(IBrowserBridge bridge, string modelCardId, ModelCardProgress progress) =>

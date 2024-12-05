@@ -285,7 +285,7 @@ public sealed class BrowserBridge : IBrowserBridge
     _browserScriptExecutor.ExecuteScript(script);
     return Task.CompletedTask;
   }
-  
+
   public void Send2<T>(string eventName, T data)
     where T : class
   {
