@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Sdk;
@@ -18,7 +19,8 @@ public class TeklaDocumentModelStore : DocumentModelStore
   public TeklaDocumentModelStore(
     IJsonSerializer jsonSerializer,
     ILogger<TeklaDocumentModelStore> logger,
-    ISqLiteJsonCacheManagerFactory jsonCacheManagerFactory
+    ISqLiteJsonCacheManagerFactory jsonCacheManagerFactory,
+    IEventAggregator eventAggregator
   )
     : base(jsonSerializer)
   {
@@ -31,13 +33,13 @@ public class TeklaDocumentModelStore : DocumentModelStore
     {
       GenerateKey();
       LoadState();
-      OnDocumentChanged();
+      eventAggregator.GetEvent<DocumentChangedEvent>().Publish(new object());
     };
     _events.Register();
     if (SpeckleTeklaPanelHost.IsInitialized)
     {
       LoadState();
-      OnDocumentChanged();
+      eventAggregator.GetEvent<DocumentChangedEvent>().Publish(new object());
     }
   }
 

@@ -134,7 +134,7 @@ public sealed class BrowserBridge : IBrowserBridge
       .RunOnThreadAsync(
         async () =>
         {
-          var task = await TopLevelExceptionHandler
+          var task = await _topLevelExceptionHandler
             .CatchUnhandledAsync(async () =>
             {
               var result = await ExecuteMethod(methodName, methodArgs).ConfigureAwait(false);

@@ -11,7 +11,7 @@ namespace Speckle.Connectors.DUI.Bindings;
 /// This class requires a specific bridge in its binding, so registering it will create random bridge which we don't want to.
 /// </summary>
 [GenerateAutoInterface]
-public class OperationProgressManager(ITopLevelExceptionHandler topLevelExceptionHandler) : IOperationProgressManager
+public class OperationProgressManager : IOperationProgressManager
 {
   private class NonUIThreadProgress<T>(Action<T> handler) : IProgress<T>
   {

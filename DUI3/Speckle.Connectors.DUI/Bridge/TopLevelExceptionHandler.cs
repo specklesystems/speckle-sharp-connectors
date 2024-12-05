@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Threading;
-using Speckle.Connectors.DUI.Bindings;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
 
@@ -64,19 +64,12 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
     {
       try
       {
-        await function().BackToCurrent();
-        return new Result();
+        return new Result<T>(function());
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
         _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
-        await SetGlobalNotification(
-            ToastNotificationType.DANGER,
-            "Unhandled Exception Occured",
-            ex.ToFormattedString(),
-            false
-          )
-          .BackToCurrent();
+        _eventAggregator.GetEvent<ExceptionEvent>().Publish(ex);
         return new(ex);
       }
     }
@@ -115,7 +108,8 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        await HandleException(ex).BackToCurrent();
+        _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
+        _eventAggregator.GetEvent<ExceptionEvent>().Publish(ex);
         return new(ex);
       }
     }

@@ -3,6 +3,7 @@ using ArcGIS.Desktop.Mapping;
 using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Sdk;
@@ -25,7 +26,7 @@ public class BasicConnectorBinding : IBasicConnectorBinding
     DocumentModelStore store,
     IBrowserBridge parent,
     ISpeckleApplication speckleApplication,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    IEventAggregator eventAggregator
   )
   {
     _store = store;
@@ -33,11 +34,9 @@ public class BasicConnectorBinding : IBasicConnectorBinding
     Parent = parent;
     Commands = new BasicConnectorBindingCommands(parent);
 
-    _store.DocumentChanged += (_, _) =>
-      topLevelExceptionHandler.FireAndForget(async () =>
-      {
-        await Commands.NotifyDocumentChanged().ConfigureAwait(false);
-      });
+    eventAggregator
+      .GetEvent<DocumentChangedEvent>()
+      .Subscribe(async _ => await Commands.NotifyDocumentChanged().ConfigureAwait(false));
   }
 
   public string GetSourceApplicationName() => _speckleApplication.Slug;

@@ -12,5 +12,5 @@ public class WorkerEventSubscription<TPayload>(
 ) : OneTimeEventSubscription<TPayload>(actionReference, filterReference, exceptionHandler, isOnce)
 {
   public override void InvokeAction(Action<TPayload> action, TPayload argument) =>
-    threadContext.RunOnWorker(() => action(argument));
+    threadContext.RunOnWorker(() => action(argument)).BackToCurrent();
 }

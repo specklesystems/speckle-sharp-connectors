@@ -4,6 +4,7 @@ using ArcGIS.Desktop.Mapping;
 using ArcGIS.Desktop.Mapping.Events;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
 
@@ -12,15 +13,18 @@ namespace Speckle.Connectors.ArcGIS.Utils;
 public class ArcGISDocumentStore : DocumentModelStore
 {
   private readonly IThreadContext _threadContext;
+  private readonly IEventAggregator _eventAggregator;
 
   public ArcGISDocumentStore(
     IJsonSerializer jsonSerializer,
     ITopLevelExceptionHandler topLevelExceptionHandler,
-    IThreadContext threadContext
+    IThreadContext threadContext,
+    IEventAggregator eventAggregator
   )
     : base(jsonSerializer)
   {
     _threadContext = threadContext;
+    _eventAggregator = eventAggregator;
     ActiveMapViewChangedEvent.Subscribe(a => topLevelExceptionHandler.CatchUnhandled(() => OnMapViewChanged(a)), true);
     ProjectSavingEvent.Subscribe(
       _ =>
@@ -44,7 +48,7 @@ public class ArcGISDocumentStore : DocumentModelStore
     {
       IsDocumentInit = true;
       LoadState();
-      OnDocumentChanged();
+      eventAggregator.GetEvent<DocumentChangedEvent>().Publish(new object());
     }
   }
 
@@ -78,7 +82,7 @@ public class ArcGISDocumentStore : DocumentModelStore
 
     IsDocumentInit = true;
     LoadState();
-    OnDocumentChanged();
+    _eventAggregator.GetEvent<DocumentChangedEvent>().Publish(new object());
   }
 
   protected override void HostAppSaveState(string modelCardState) =>

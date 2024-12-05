@@ -42,5 +42,4 @@ public interface IBrowserBridge
 
   public void Send2<T>(string eventName, T data)
     where T : class;
-  public ITopLevelExceptionHandler TopLevelExceptionHandler { get; }
 }
