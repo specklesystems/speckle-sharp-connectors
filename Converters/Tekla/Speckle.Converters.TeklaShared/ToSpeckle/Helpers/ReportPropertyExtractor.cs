@@ -46,9 +46,9 @@ public class ReportPropertyExtractor
       { typeof(TSM.BoltArray), new[] { "BOLT_SIZE", "NUMBER_OF_BOLTS", "BOLT_STANDARD", "BOLT_TYPE", "LENGTH" } }
     };
 
-  public Dictionary<string, Dictionary<string, object?>> GetReportProperties(TSM.ModelObject modelObject)
+  public Dictionary<string, object?> GetReportProperties(TSM.ModelObject modelObject)
   {
-    var reportProperties = new Dictionary<string, Dictionary<string, object?>>();
+    var reportProperties = new Dictionary<string, object?>();
 
     if (!s_typeSpecificProperties.TryGetValue(modelObject.GetType(), out var propertyNames))
     {
@@ -67,7 +67,7 @@ public class ReportPropertyExtractor
   private void TryGetReportProperty(
     TSM.ModelObject modelObject,
     string propertyName,
-    Dictionary<string, Dictionary<string, object?>> properties
+    Dictionary<string, object?> properties
   )
   {
     var reportProperty = new Dictionary<string, object?> { ["name"] = propertyName };

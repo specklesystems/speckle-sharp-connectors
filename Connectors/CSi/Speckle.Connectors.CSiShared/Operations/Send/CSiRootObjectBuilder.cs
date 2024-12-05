@@ -85,7 +85,7 @@ public class CSiRootObjectBuilder : IRootObjectBuilder<ICSiWrapper>
   private SendConversionResult ConvertCSiObject(ICSiWrapper csiObject, Collection typeCollection, string projectId)
   {
     string applicationId = $"{csiObject.ObjectType}{csiObject.Name}"; // TODO: NO! Use GUID
-    string sourceType = csiObject.GetType().Name;
+    string sourceType = csiObject.ObjectName;
 
     try
     {
@@ -99,7 +99,7 @@ public class CSiRootObjectBuilder : IRootObjectBuilder<ICSiWrapper>
         converted = _rootToSpeckleConverter.Convert(csiObject);
       }
 
-      var collection = _sendCollectionManager.AddObjectCollectionToRoot(csiObject, typeCollection);
+      var collection = _sendCollectionManager.AddObjectCollectionToRoot(converted, typeCollection);
       collection.elements ??= new List<Base>();
       collection.elements.Add(converted);
 
