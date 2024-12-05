@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
@@ -64,7 +65,7 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
     {
       try
       {
-        await function().ConfigureAwait(false);
+        await function().BackToCurrent();
         return new Result();
       }
       catch (Exception ex) when (!ex.IsFatal())
@@ -76,7 +77,7 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
             ex.ToFormattedString(),
             false
           )
-          .ConfigureAwait(false);
+          .BackToCurrent();
         return new(ex);
       }
     }
@@ -94,11 +95,11 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
     {
       try
       {
-        return new(await function.Invoke().ConfigureAwait(false));
+        return new(await function.Invoke().BackToCurrent());
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        await HandleException(ex).ConfigureAwait(false);
+        await HandleException(ex).BackToCurrent();
         return new(ex);
       }
     }
@@ -121,7 +122,7 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
           ex.ToFormattedString(),
           false
         )
-        .ConfigureAwait(false);
+        .BackToCurrent();
     }
     catch (Exception toastEx)
     {
@@ -145,7 +146,7 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
   /// In cases where you can use <see langword="await"/> keyword, you should prefer using <see cref="CatchUnhandledAsync"/>
   /// </remarks>
   /// <param name="function"><inheritdoc cref="CatchUnhandled{T}(Func{T})"/></param>
-  public async void FireAndForget(Func<Task> function) => await CatchUnhandledAsync(function).ConfigureAwait(false);
+  public async void FireAndForget(Func<Task> function) => await CatchUnhandledAsync(function).BackToCurrent();
 
   private async Task SetGlobalNotification(ToastNotificationType type, string title, string message, bool autoClose) =>
     await Parent
@@ -159,5 +160,5 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
           autoClose
         }
       )
-      .ConfigureAwait(false);
+      .BackToCurrent();
 }

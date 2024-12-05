@@ -40,5 +40,7 @@ public interface IBrowserBridge
   public Task Send<T>(string eventName, T data, CancellationToken cancellationToken = default)
     where T : class;
 
+  public void Send2<T>(string eventName, T data)
+    where T : class;
   public ITopLevelExceptionHandler TopLevelExceptionHandler { get; }
 }

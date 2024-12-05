@@ -285,4 +285,19 @@ public sealed class BrowserBridge : IBrowserBridge
     _browserScriptExecutor.ExecuteScript(script);
     return Task.CompletedTask;
   }
+  
+  public void Send2<T>(string eventName, T data)
+    where T : class
+  {
+    if (_binding is null)
+    {
+      throw new InvalidOperationException("Bridge was not initialized with a binding");
+    }
+
+    string payload = _jsonSerializer.Serialize(data);
+    string requestId = $"{Guid.NewGuid()}_{eventName}";
+    _resultsStore[requestId] = payload;
+    var script = $"{FrontendBoundName}.emitResponseReady('{eventName}', '{requestId}')";
+    _browserScriptExecutor.ExecuteScript(script);
+  }
 }
