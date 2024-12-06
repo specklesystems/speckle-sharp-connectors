@@ -14,12 +14,15 @@ public static class ServiceRegistration
   {
     var converterAssembly = Assembly.GetExecutingAssembly();
 
+    // Register top-level converters
     serviceCollection.AddTransient<CSiObjectToSpeckleConverter>();
-    serviceCollection.AddScoped<DisplayValueExtractor>();
-
-    // TODO: Property extractor
-
     serviceCollection.AddRootCommon<CSiRootToSpeckleConverter>(converterAssembly);
+
+    // Register extractors
+    serviceCollection.AddScoped<DisplayValueExtractor>();
+    serviceCollection.AddScoped<ClassPropertyExtractor>();
+
+    // Register application-level converters
     serviceCollection.AddApplicationConverters<CSiToSpeckleUnitConverter, eUnits>(converterAssembly);
     serviceCollection.AddScoped<
       IConverterSettingsStore<CSiConversionSettings>,

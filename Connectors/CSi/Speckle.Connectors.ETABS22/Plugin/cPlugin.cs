@@ -1,4 +1,4 @@
-using Speckle.Connectors.CSiShared;
+using Speckle.Connectors.ETABSShared;
 
 // NOTE: Plugin entry point must match the assembly name, otherwise ETABS hits you with a "Not found" error when loading plugin
 // Disabling error below to prioritize DUI3 project structure. Name of cPlugin class cannot be changed
@@ -6,7 +6,7 @@ using Speckle.Connectors.CSiShared;
 namespace Speckle.Connectors.ETABS22;
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
-public class cPlugin : CSiPluginBase
+public class cPlugin : ETABSPluginBase
 {
-  protected override SpeckleFormBase CreateForm() => new SpeckleForm();
+  protected override ETABSSpeckleFormBase CreateETABSForm() => new SpeckleForm();
 }
