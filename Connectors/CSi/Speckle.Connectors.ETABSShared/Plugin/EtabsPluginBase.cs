@@ -3,7 +3,7 @@ using Speckle.Connectors.CSiShared;
 namespace Speckle.Connectors.ETABSShared;
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
-public abstract class ETABSPluginBase : CSiPluginBase
+public abstract class EtabsPluginBase : CSiPluginBase
 {
   public override int Info(ref string text)
   {
@@ -11,7 +11,7 @@ public abstract class ETABSPluginBase : CSiPluginBase
     return 0;
   }
 
-  protected override SpeckleFormBase CreateForm() => CreateETABSForm();
+  protected override SpeckleFormBase CreateForm() => CreateEtabsForm();
 
-  protected abstract ETABSSpeckleFormBase CreateETABSForm();
+  protected abstract EtabsSpeckleFormBase CreateEtabsForm();
 }

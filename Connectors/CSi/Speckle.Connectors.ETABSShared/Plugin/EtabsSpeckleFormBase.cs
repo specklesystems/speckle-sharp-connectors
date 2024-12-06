@@ -4,7 +4,7 @@ using Speckle.Sdk.Host;
 
 namespace Speckle.Connectors.ETABSShared;
 
-public abstract class ETABSSpeckleFormBase : SpeckleFormBase
+public abstract class EtabsSpeckleFormBase : SpeckleFormBase
 {
   protected override HostApplication GetHostApplication() => HostApplications.ETABS;
 
