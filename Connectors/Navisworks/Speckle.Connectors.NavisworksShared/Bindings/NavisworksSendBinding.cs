@@ -82,62 +82,28 @@ public class NavisworksSendBinding : ISendBinding
   public async Task Send(string modelCardId)
   {
     using var activity = _activityFactory.Start();
-
     try
     {
-      if (_store.GetModelById(modelCardId) is not SenderModelCard modelCard)
-      {
-        throw new InvalidOperationException("No publish model card was found.");
-      }
+      await Parent
+        .RunOnMainThreadAsync(async () =>
+        {
+          var modelCard = GetModelCard(modelCardId);
 
-      using var scope = _serviceProvider.CreateScope();
+          using var scope = _serviceProvider.CreateScope();
 
-      scope
-        .ServiceProvider.GetRequiredService<IConverterSettingsStore<NavisworksConversionSettings>>()
-        .Initialize(
-          _conversionSettingsFactory.Create(
-            originMode: _toSpeckleSettingsManagerNavisworks.GetOriginMode(modelCard),
-            visualRepresentationMode: _toSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(modelCard),
-            convertHiddenElements: _toSpeckleSettingsManagerNavisworks.GetConvertHiddenElements(modelCard),
-            includeInternalProperties: _toSpeckleSettingsManagerNavisworks.GetIncludeInternalProperties(modelCard)
-          )
-        );
+          InitializeConverterSettings(scope, modelCard);
 
-      CancellationToken token = _cancellationManager.InitCancellationTokenSource(modelCardId);
+          CancellationToken token = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
-      // Get the selected paths from the filter
-      var selectedPaths = modelCard.SendFilter.NotNull().RefreshObjectIds();
-      if (selectedPaths.Count == 0)
-      {
-        throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
-      }
+          var navisworksModelItems = GetNavisworksModelItems(modelCard);
 
-      List<NAV.ModelItem> navisworksModelItems = modelCard
-        .SendFilter.NotNull()
-        .RefreshObjectIds()
-        .Select(ResolveIndexPathToModelItem)
-        .SelectMany(ResolveGeometryLeafNodes)
-        .Where(IsElementVisible)
-        .ToList();
+          var sendResult = await ExecuteSendOperation(scope, modelCard, navisworksModelItems, token)
+            .ConfigureAwait(false);
 
-      if (navisworksModelItems.Count == 0)
-      {
-        // Handle as CARD ERROR in this function
-        throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
-      }
-
-      var sendResult = await scope
-        .ServiceProvider.GetRequiredService<SendOperation<NAV.ModelItem>>()
-        .Execute(
-          navisworksModelItems,
-          modelCard.GetSendInfo(_speckleApplication.Slug),
-          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, token),
-          token
-        )
-        .ConfigureAwait(false);
-
-      await Commands
-        .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
+          await Commands
+            .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
+            .ConfigureAwait(false);
+        })
         .ConfigureAwait(false);
     }
     catch (OperationCanceledException)
@@ -152,6 +118,60 @@ public class NavisworksSendBinding : ISendBinding
       await Commands.SetModelError(modelCardId, ex).ConfigureAwait(false);
     }
   }
+
+  private SenderModelCard GetModelCard(string modelCardId) =>
+    _store.GetModelById(modelCardId) is not SenderModelCard modelCard
+      ? throw new InvalidOperationException("No publish model card was found.")
+      : modelCard;
+
+  private void InitializeConverterSettings(IServiceScope scope, SenderModelCard modelCard) =>
+    scope
+      .ServiceProvider.GetRequiredService<IConverterSettingsStore<NavisworksConversionSettings>>()
+      .Initialize(
+        _conversionSettingsFactory.Create(
+          originMode: _toSpeckleSettingsManagerNavisworks.GetOriginMode(modelCard),
+          visualRepresentationMode: _toSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(modelCard),
+          convertHiddenElements: _toSpeckleSettingsManagerNavisworks.GetConvertHiddenElements(modelCard),
+          includeInternalProperties: _toSpeckleSettingsManagerNavisworks.GetIncludeInternalProperties(modelCard)
+        )
+      );
+
+  private static List<NAV.ModelItem> GetNavisworksModelItems(SenderModelCard modelCard)
+  {
+    var selectedPaths = modelCard.SendFilter.NotNull().RefreshObjectIds();
+    if (selectedPaths.Count == 0)
+    {
+      throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
+    }
+
+    var modelItems = modelCard
+      .SendFilter.NotNull()
+      .RefreshObjectIds()
+      .Select(ResolveIndexPathToModelItem)
+      .SelectMany(ResolveGeometryLeafNodes)
+      .Where(IsElementVisible)
+      .ToList();
+
+    return modelItems.Count == 0
+      ? throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!")
+      : modelItems;
+  }
+
+  private async Task<SendOperationResult> ExecuteSendOperation(
+    IServiceScope scope,
+    SenderModelCard modelCard,
+    List<NAV.ModelItem> navisworksModelItems,
+    CancellationToken token
+  ) =>
+    await scope
+      .ServiceProvider.GetRequiredService<SendOperation<NAV.ModelItem>>()
+      .Execute(
+        navisworksModelItems,
+        modelCard.GetSendInfo(_speckleApplication.Slug),
+        _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCard.ModelCardId!, token),
+        token
+      )
+      .ConfigureAwait(false);
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
 

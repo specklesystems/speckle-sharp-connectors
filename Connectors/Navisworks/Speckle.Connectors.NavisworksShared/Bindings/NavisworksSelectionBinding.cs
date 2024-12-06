@@ -20,12 +20,24 @@ public class NavisworksSelectionBinding : ISelectionBinding
   }
 
   private void OnSelectionChange(object? o, EventArgs eventArgs) =>
-    _appIdleManager.SubscribeToIdle(nameof(NavisworksSelectionBinding), UpdateSelection);
+    _appIdleManager.SubscribeToIdle(
+      nameof(NavisworksSelectionBinding),
+      async () => await UpdateSelectionAsync().ConfigureAwait(false)
+    );
 
   private void UpdateSelection()
   {
     SelectionInfo selInfo = GetSelection();
     Parent.Send(SELECTION_EVENT, selInfo);
+  }
+
+  private async Task UpdateSelectionAsync()
+  {
+    var selInfo = await Parent
+      .RunOnMainThreadAsync<SelectionInfo>(() => Task.FromResult(GetSelection()))
+      .ConfigureAwait(false);
+
+    await Parent.Send<SelectionInfo>(SELECTION_EVENT, selInfo).ConfigureAwait(false);
   }
 
   public SelectionInfo GetSelection()

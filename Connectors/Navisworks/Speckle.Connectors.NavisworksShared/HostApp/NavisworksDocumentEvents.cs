@@ -15,6 +15,7 @@ public sealed class NavisworksDocumentEvents : IDisposable
   private readonly IServiceProvider _serviceProvider;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IAppIdleManager _idleManager;
+  private readonly IBrowserBridge _parent;
   private readonly object _subscriptionLock = new();
 
   private bool _isSubscribed;
@@ -33,12 +34,15 @@ public sealed class NavisworksDocumentEvents : IDisposable
   public NavisworksDocumentEvents(
     IServiceProvider serviceProvider,
     ITopLevelExceptionHandler topLevelExceptionHandler,
-    IAppIdleManager idleManager
+    IAppIdleManager idleManager,
+    IBrowserBridge parent
   )
   {
     _serviceProvider = serviceProvider;
     _topLevelExceptionHandler = topLevelExceptionHandler;
     _idleManager = idleManager;
+
+    _parent = parent;
 
     SubscribeToDocumentModelEvents();
   }
@@ -83,9 +87,50 @@ public sealed class NavisworksDocumentEvents : IDisposable
       () =>
         _idleManager.SubscribeToIdle(
           nameof(NavisworksDocumentEvents),
-          async () => await NotifyValidModelStateChange().ConfigureAwait(false)
+          async () => await ProcessModelStateChangeAsync().ConfigureAwait(false)
         )
     );
+  }
+
+  private async Task ProcessModelStateChangeAsync()
+  {
+    if (_isProcessing)
+    {
+      return;
+    }
+
+    _isProcessing = true;
+
+    try
+    {
+      await _parent
+        .RunOnMainThreadAsync(async () =>
+        {
+          var store = _serviceProvider.GetRequiredService<DocumentModelStore>();
+          var basicBinding = _serviceProvider.GetRequiredService<IBasicConnectorBinding>();
+          var commands = (basicBinding as NavisworksBasicConnectorBinding)?.Commands;
+
+          switch (_finalModelCount)
+          {
+            case 0 when _priorModelCount > 0:
+              store.ClearAndSave();
+              break;
+            case > 0 when _priorModelCount == 0:
+              store.LoadState();
+              break;
+          }
+
+          if (commands != null)
+          {
+            await commands.NotifyDocumentChanged().ConfigureAwait(false);
+          }
+        })
+        .ConfigureAwait(false);
+    }
+    finally
+    {
+      _isProcessing = false;
+    }
   }
 
   /// <summary>
