@@ -47,6 +47,7 @@ public static class NavisworksConnectorServiceRegistration
       IConverterSettingsStore<NavisworksConversionSettings>,
       ConverterSettingsStore<NavisworksConversionSettings>
     >();
+
     serviceCollection.AddScoped<NavisworksMaterialUnpacker>();
 
     // Sending operations
@@ -60,7 +61,8 @@ public static class NavisworksConnectorServiceRegistration
     serviceCollection.RegisterTopLevelExceptionHandler();
     serviceCollection.AddTransient<CancellationManager>();
     serviceCollection.AddSingleton<IAppIdleManager, NavisworksIdleManager>();
-    serviceCollection.AddSingleton<DocumentModelStore, NavisworksDocumentModelStore>();
+    serviceCollection.AddSingleton<NavisworksDocumentModelStore>();
+    serviceCollection.AddSingleton<DocumentModelStore>(sp => sp.GetRequiredService<NavisworksDocumentModelStore>());
     serviceCollection.AddSingleton<NavisworksDocumentEvents>();
 
     // register filters

@@ -2,7 +2,6 @@
 using Speckle.Connector.Navisworks.Bindings;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Models;
 
 namespace Speckle.Connector.Navisworks.HostApp;
 
@@ -106,7 +105,7 @@ public sealed class NavisworksDocumentEvents : IDisposable
       await _parent
         .RunOnMainThreadAsync(async () =>
         {
-          var store = _serviceProvider.GetRequiredService<DocumentModelStore>();
+          var store = _serviceProvider.GetRequiredService<NavisworksDocumentModelStore>();
           var basicBinding = _serviceProvider.GetRequiredService<IBasicConnectorBinding>();
           var commands = (basicBinding as NavisworksBasicConnectorBinding)?.Commands;
 
@@ -116,7 +115,7 @@ public sealed class NavisworksDocumentEvents : IDisposable
               store.ClearAndSave();
               break;
             case > 0 when _priorModelCount == 0:
-              store.LoadState();
+              store.ReloadState();
               break;
           }
 
@@ -147,7 +146,7 @@ public sealed class NavisworksDocumentEvents : IDisposable
 
     try
     {
-      var store = _serviceProvider.GetRequiredService<DocumentModelStore>();
+      var store = _serviceProvider.GetRequiredService<NavisworksDocumentModelStore>();
       var basicBinding = _serviceProvider.GetRequiredService<IBasicConnectorBinding>();
       var commands = (basicBinding as NavisworksBasicConnectorBinding)?.Commands;
 
@@ -159,7 +158,7 @@ public sealed class NavisworksDocumentEvents : IDisposable
           break;
         case > 0 when _priorModelCount == 0:
           // Load state when models are added
-          store.LoadState();
+          store.ReloadState();
           break;
       }
 

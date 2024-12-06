@@ -26,7 +26,7 @@ public sealed class NavisworksDocumentModelStore : DocumentModelStore
     LoadState();
   }
 
-  public override void HostAppSaveState(string modelCardState)
+  protected override void HostAppSaveState(string modelCardState)
   {
     if (!IsActiveDocumentValid())
     {
@@ -45,7 +45,12 @@ public sealed class NavisworksDocumentModelStore : DocumentModelStore
     }
   }
 
-  public override void LoadState()
+  /// <summary>
+  /// Public method to reload the state from storage.
+  /// </summary>
+  public void ReloadState() => LoadState();
+
+  protected override void LoadState()
   {
     if (!IsActiveDocumentValid())
     {
