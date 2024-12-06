@@ -99,7 +99,8 @@ public class NavisworksRootObjectBuilder(
         name = ElementSelectionExtension.ResolveIndexPathToModelItem(group.Key)?.DisplayName ?? string.Empty,
         displayValue = siblingBases.SelectMany(b => b["displayValue"] as List<Base> ?? []).ToList(),
         properties = siblingBases.First()["properties"] as Dictionary<string, object?> ?? [],
-        units = converterSettings.Current.Derived.SpeckleUnits
+        units = converterSettings.Current.Derived.SpeckleUnits,
+        applicationId = group.Key
       };
 
       finalElements.Add(navisworksObject);
@@ -125,7 +126,8 @@ public class NavisworksRootObjectBuilder(
           name = convertedBase["name"] as string ?? string.Empty,
           displayValue = convertedBase["displayValue"] as List<Base> ?? [],
           properties = convertedBase["properties"] as Dictionary<string, object?> ?? [],
-          units = converterSettings.Current.Derived.SpeckleUnits
+          units = converterSettings.Current.Derived.SpeckleUnits,
+          applicationId = convertedBase.applicationId
         };
         finalElements.Add(navisworksObject);
       }
