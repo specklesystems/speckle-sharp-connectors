@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Speckle.Connector.Navisworks.Extensions;
 using Speckle.Connector.Navisworks.HostApp;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
@@ -6,6 +7,7 @@ using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
+using Speckle.Objects.Data;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -92,22 +94,40 @@ public class NavisworksRootObjectBuilder(
         continue;
       }
 
-      var parentBase = new Base
+      var navisworksObject = new NavisworksObject
       {
-        applicationId = group.Key,
-        ["properties"] = siblingBases.First()["properties"],
-        ["name"] = siblingBases.First()["name"],
-        ["displayValue"] = siblingBases.SelectMany(b => b["displayValue"] as List<Base> ?? []).ToList()
+        name = ElementSelectionExtension.ResolveIndexPathToModelItem(group.Key)?.DisplayName ?? string.Empty,
+        displayValue = siblingBases.SelectMany(b => b["displayValue"] as List<Base> ?? []).ToList(),
+        properties = siblingBases.First()["properties"] as Dictionary<string, object?> ?? [],
+        units = converterSettings.Current.Derived.SpeckleUnits
       };
-      finalElements.Add(parentBase);
+
+      finalElements.Add(navisworksObject);
     }
 
     // 6. Add remaining non-grouped nodes
     foreach (var result in results.Where(result => !processedPaths.Contains(result.SourceId)))
     {
-      if (convertedBases.TryGetValue(result.SourceId, out var convertedBase) && convertedBase != null)
+      if (!convertedBases.TryGetValue(result.SourceId, out var convertedBase) || convertedBase == null)
       {
-        finalElements.Add(convertedBase);
+        continue;
+      }
+      // TODO: check if converted base is a collection when full tree sending is implemented
+
+      if (convertedBase is Collection convertedCollection)
+      {
+        finalElements.Add(convertedCollection);
+      }
+      else
+      {
+        var navisworksObject = new NavisworksObject
+        {
+          name = convertedBase["name"] as string ?? string.Empty,
+          displayValue = convertedBase["displayValue"] as List<Base> ?? [],
+          properties = convertedBase["properties"] as Dictionary<string, object?> ?? [],
+          units = converterSettings.Current.Derived.SpeckleUnits
+        };
+        finalElements.Add(navisworksObject);
       }
     }
 
