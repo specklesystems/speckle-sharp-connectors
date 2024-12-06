@@ -1,13 +1,23 @@
 ﻿using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
+using Rhino;
+using Rhino.Geometry;
+using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.Grasshopper8.Components.BaseComponents;
+using Speckle.Connectors.Grasshopper8.Components.Operations.Conversion;
 using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Connectors.Grasshopper8.Parameters;
+using Speckle.Converters.Common;
+using Speckle.Converters.Rhino;
+using Speckle.DoubleNumerics;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.Grasshopper8.Components.Operations.Receive;
 
@@ -65,6 +75,13 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
   )
   {
     // TODO: Resolving dependencies here may be overkill in most cases. Must re-evaluate.
+    var rhinoConversionSettingsFactory = scope.ServiceProvider.GetRequiredService<IRhinoConversionSettingsFactory>();
+    scope
+      .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
+      .Initialize(rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
+
+    var rootConverter = scope.ServiceProvider.GetService<IRootToHostConverter>();
+
     var accountManager = scope.ServiceProvider.GetRequiredService<AccountService>();
     var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
     var receiveOperation = scope.ServiceProvider.GetRequiredService<GrasshopperReceiveOperation>();
@@ -92,6 +109,145 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
       .ReceiveCommitObject(receiveInfo, progress, cancellationToken)
       .ConfigureAwait(false);
 
-    return new ReceiveComponentOutput { RootObject = root };
+    // We need to rething these lovely unpackers, there's a bit too many of 'em
+    var rootObjectUnpacker = scope.ServiceProvider.GetService<RootObjectUnpacker>();
+    var localToGlobalUnpacker = new LocalToGlobalUnpacker();
+    var traversalContextUnpacker = new TraversalContextUnpacker();
+
+    var unpackedRoot = rootObjectUnpacker.Unpack(root);
+    var localToGlobalMaps = localToGlobalUnpacker.Unpack(
+      unpackedRoot.DefinitionProxies,
+      unpackedRoot.ObjectsToConvert.ToList()
+    );
+
+    var collGen = new CollectionRebuilder((root as Collection) ?? new Collection() { name = "unnamed" });
+    var results = new List<SpeckleGrasshopperObject>();
+    foreach (var map in localToGlobalMaps)
+    {
+      var converted = Convert(map.AtomicObject, rootConverter);
+      var path = traversalContextUnpacker.GetCollectionPath(map.TraversalContext).ToList();
+
+      foreach (var matrix in map.Matrix)
+      {
+        var mat = MatrixToTransform(matrix, "meters");
+        converted.ForEach(res => res.Transform(mat));
+      }
+
+      foreach (var geometryBase in converted)
+      {
+        var gh = new SpeckleGrasshopperObject()
+        {
+          OriginalObject = map.AtomicObject,
+          Path = path,
+          GeometryBase = geometryBase
+        };
+        collGen.AppendSpeckleGrasshopperObject(gh);
+      }
+    }
+    return new ReceiveComponentOutput { RootObject = collGen.RootCollection };
   }
+
+  private List<GeometryBase> Convert(Base input, IRootToHostConverter rootConverter)
+  {
+    var result = rootConverter.Convert(input);
+
+    if (result is GeometryBase geometry)
+    {
+      return new List<GeometryBase> { geometry };
+    }
+    else if (result is List<GeometryBase> geometryList)
+    {
+      return geometryList;
+    }
+    else if (result is IEnumerable<(object, Base)> fallbackConversionResult)
+    {
+      // note special handling for proxying render materials OR we don't care about revit
+      return fallbackConversionResult.Select(t => t.Item1).Cast<GeometryBase>().ToList();
+    }
+
+    throw new SpeckleException("Failed to convert input to rhino");
+  }
+
+  private Transform MatrixToTransform(Matrix4x4 matrix, string units)
+  {
+    var currentDoc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
+    var conversionFactor = Units.GetConversionFactor(units, currentDoc.ModelUnitSystem.ToSpeckleString());
+
+    var t = Transform.Identity;
+    t.M00 = matrix.M11;
+    t.M01 = matrix.M12;
+    t.M02 = matrix.M13;
+    t.M03 = matrix.M14 * conversionFactor;
+
+    t.M10 = matrix.M21;
+    t.M11 = matrix.M22;
+    t.M12 = matrix.M23;
+    t.M13 = matrix.M24 * conversionFactor;
+
+    t.M20 = matrix.M31;
+    t.M21 = matrix.M32;
+    t.M22 = matrix.M33;
+    t.M23 = matrix.M34 * conversionFactor;
+
+    t.M30 = matrix.M41;
+    t.M31 = matrix.M42;
+    t.M32 = matrix.M43;
+    t.M33 = matrix.M44;
+    return t;
+  }
+}
+
+// NOTE: We will need GrasshopperCollections (with an extra path element)
+// these will need to be handled now
+public class CollectionRebuilder
+{
+  public Collection RootCollection { get; }
+
+  private readonly Dictionary<string, Collection> _cache = new();
+
+  public CollectionRebuilder(Collection baseCollection)
+  {
+    RootCollection = new Collection() { name = baseCollection.name, applicationId = baseCollection.applicationId };
+  }
+
+  public void AppendSpeckleGrasshopperObject(SpeckleGrasshopperObject speckleGrasshopperObject)
+  {
+    // TODO
+    var collection = GetOrCreateCollectionFromPath(speckleGrasshopperObject.Path);
+    collection.elements.Add(speckleGrasshopperObject);
+  }
+
+  public Collection GetOrCreateCollectionFromPath(IEnumerable<Collection> path)
+  {
+    // TODO - this flows but it can be optimised (ie, concat path first, check cache, iterate only if not in cache)
+    var currentLayerName = "";
+    Collection previousCollection = RootCollection;
+    foreach (var collection in path)
+    {
+      currentLayerName += collection.name;
+      if (_cache.TryGetValue(currentLayerName, out Collection col))
+      {
+        previousCollection = col;
+        continue;
+      }
+
+      var newCollection = new Collection() { name = collection.name };
+      _cache[currentLayerName] = newCollection;
+      previousCollection.elements.Add(newCollection);
+
+      previousCollection = newCollection;
+    }
+
+    return previousCollection;
+  }
+}
+
+public class SpeckleGrasshopperObject : Base
+{
+  public Base OriginalObject { get; set; }
+  public GeometryBase GeometryBase { get; set; }
+  public List<Collection> Path { get; set; }
+
+  // RenderMaterial
+  // Properties (?)
 }

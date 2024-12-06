@@ -12,7 +12,7 @@ public abstract class SpeckleScopedTaskCapableComponent<TInput, TOutput>(
 {
   protected override Task<TOutput> PerformTask(TInput input, CancellationToken cancellationToken = default)
   {
-    using var scope = PriorityLoader.Container.CreateScope();
+    var scope = PriorityLoader.Container.CreateScope();
     return PerformScopedTask(input, scope, cancellationToken);
   }
 
