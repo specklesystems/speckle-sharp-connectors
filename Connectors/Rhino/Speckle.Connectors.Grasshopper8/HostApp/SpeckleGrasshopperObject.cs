@@ -13,6 +13,7 @@ public class SpeckleGrasshopperObject : Base
   public List<Collection> Path { get; set; }
 
   // RenderMaterial, ColorProxies, Properties (?)
+  public override string ToString() => $"Speckle Wrapper [{GeometryBase.GetType().Name}]";
 }
 
 public class SpeckleGrasshopperObjectGoo : GH_Goo<SpeckleGrasshopperObject>
