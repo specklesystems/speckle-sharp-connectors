@@ -113,10 +113,12 @@ public class FeatureClassUtils : IFeatureClassUtils
         $"speckle_{speckleType}_SR_{activeSR.SpatialReference.Name[..Math.Min(15, activeSR.SpatialReference.Name.Length - 1)]}_X_{xOffset}_Y_{yOffset}_North_{trueNorth}_speckleID_{parentId}";
 
       // for gis elements, use a parent layer ID
+      /*
       if (item.Key.Parent?.Current is SGIS.GisLayer vLayer)
       {
         uniqueKey = "speckleID_" + vLayer.id;
       }
+      */
 
       if (!geometryGroups.TryGetValue(uniqueKey, out _))
       {

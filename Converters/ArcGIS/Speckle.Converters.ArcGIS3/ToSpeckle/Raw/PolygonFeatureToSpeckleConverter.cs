@@ -1,11 +1,15 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Objects;
 using Speckle.Sdk.Common.Exceptions;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
 
-public class PolygonFeatureToSpeckleConverter : ITypedConverter<ACG.Polygon, IReadOnlyList<SOG.Polygon>>
+/// <summary>
+/// Converts a Polygon feature to a list of Mesh from the polygon boundary, and polylines for any inner loops.
+/// This is a placeholder conversion since we don't have a polygon class or meshing strategy for interior loops yet.
+/// </summary>
+public class PolygonFeatureToSpeckleConverter : ITypedConverter<ACG.Polygon, List<Base>>
 {
   private readonly ITypedConverter<ACG.ReadOnlySegmentCollection, SOG.Polyline> _segmentConverter;
   private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
@@ -19,46 +23,46 @@ public class PolygonFeatureToSpeckleConverter : ITypedConverter<ACG.Polygon, IRe
     _settingsStore = settingsStore;
   }
 
-  public IReadOnlyList<SOG.Polygon> Convert(ACG.Polygon target)
+  public List<Base> Convert(ACG.Polygon target)
   {
     // https://pro.arcgis.com/en/pro-app/latest/sdk/api-reference/topic30235.html
-    List<SOG.Polygon> polygonList = new();
     int partCount = target.PartCount;
+    List<Base> parts = new();
 
     if (partCount == 0)
     {
       throw new ValidationException("ArcGIS Polygon contains no parts");
     }
 
-    SOG.Polygon? polygon = null;
-
-    // test each part for "exterior ring"
     for (int idx = 0; idx < partCount; idx++)
     {
+      // get the part polyline
       ACG.ReadOnlySegmentCollection segmentCollection = target.Parts[idx];
       SOG.Polyline polyline = _segmentConverter.Convert(segmentCollection);
 
-      bool isExteriorRing = target.IsExteriorRing(idx);
-      if (isExteriorRing)
+      // create a mesh from the polyline if this is the exterior part
+      if (target.IsExteriorRing(idx))
       {
-        polygon = new()
-        {
-          boundary = polyline,
-          innerLoops = new List<ICurve>(),
-          units = _settingsStore.Current.SpeckleUnits
-        };
-        polygonList.Add(polygon);
+        int vertexCount = polyline.value.Count / 3;
+        List<int> faces = Enumerable.Range(0, vertexCount).ToList();
+
+        SOG.Mesh mesh =
+          new()
+          {
+            vertices = polyline.value,
+            faces = faces,
+            units = _settingsStore.Current.SpeckleUnits
+          };
+
+        parts.Add(mesh);
       }
-      else // interior part
+      // otherwise, create polylines
+      else
       {
-        if (polygon == null)
-        {
-          throw new ValidationException("Invalid ArcGIS Polygon. Interior part preceding the exterior ring.");
-        }
-        polygon.innerLoops.Add(polyline);
+        parts.Add(polyline);
       }
     }
 
-    return polygonList;
+    return parts;
   }
 }
