@@ -291,7 +291,7 @@
       "speckle.connectors.dui.webview": {
         "type": "Project",
         "dependencies": {
-          "Microsoft.Web.WebView2": "[1.0.2088.41, )",
+          "Microsoft.Web.WebView2": "[1.0.1938.49, )",
           "Speckle.Connectors.DUI": "[1.0.0, )"
         }
       },
@@ -341,9 +341,9 @@
       },
       "Microsoft.Web.WebView2": {
         "type": "CentralTransitive",
-        "requested": "[1.0.2088.41, )",
-        "resolved": "1.0.2088.41",
-        "contentHash": "QNiJR29CUrCqWCen7jyprw2RjQChHq5Kc95BV47DuCbu8S+iYmgnbDTsf/znQd92gVI2tBeUusD01uL+EK6Wag=="
+        "requested": "[1.0.1938.49, )",
+        "resolved": "1.0.1938.49",
+        "contentHash": "z8KnFnaTYzhA/ZnyRX0qGfS1NU5ZBJeClAH64F0fVDvdDJTvME7xl6zTJ0Jlfe1BtL3C0NH9xTy64shg2baKdw=="
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
