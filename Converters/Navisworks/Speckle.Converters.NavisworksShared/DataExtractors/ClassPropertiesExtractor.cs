@@ -2,9 +2,17 @@
 
 namespace Speckle.Converter.Navisworks.ToSpeckle;
 
-public class ClassPropertiesExtractor
+public static class ClassPropertiesExtractor
 {
-  public Dictionary<string, object?>? GetClassProperties(NAV.ModelItem modelItem) => ExtractClassProperties(modelItem);
+  public static Dictionary<string, object?>? GetClassProperties(NAV.ModelItem modelItem)
+  {
+    if (modelItem == null)
+    {
+      throw new ArgumentNullException(nameof(modelItem));
+    }
+
+    return ExtractClassProperties(modelItem);
+  }
 
   /// <summary>
   /// Extracts property sets from a NAV.ModelItem and adds them to a dictionary,

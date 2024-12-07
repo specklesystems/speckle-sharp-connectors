@@ -6,7 +6,7 @@ namespace Speckle.Converter.Navisworks.ToSpeckle;
 
 public class PropertySetsExtractor(IConverterSettingsStore<NavisworksConversionSettings> settingsStore)
 {
-  public Dictionary<string, object?>? GetPropertySets(NAV.ModelItem modelItem)
+  internal Dictionary<string, object?>? GetPropertySets(NAV.ModelItem modelItem)
   {
     if (settingsStore.Current.User.ExcludeProperties)
     {

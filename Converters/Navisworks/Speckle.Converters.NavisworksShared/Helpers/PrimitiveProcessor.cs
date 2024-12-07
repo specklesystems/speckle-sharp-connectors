@@ -9,20 +9,14 @@ public class PrimitiveProcessor : InwSimplePrimitivesCB
 {
   private readonly List<double> _coords = [];
   private List<int> _faces = [];
-  private List<LineD> _lines = [];
-  private List<PointD> _points = [];
-  private List<TriangleD> _triangles = [];
+  private List<SafeLine> _lines = [];
+  private List<SafePoint> _points = [];
+  private List<SafeTriangle> _triangles = [];
   private bool IsUpright { get; set; }
 
-  public PrimitiveProcessor(bool isUpright, IEnumerable<double> localToWorldTransformation)
-    : this(localToWorldTransformation)
+  internal PrimitiveProcessor(bool isUpright)
   {
     IsUpright = isUpright;
-  }
-
-  private PrimitiveProcessor(IEnumerable<double> localToWorldTransformation)
-  {
-    LocalToWorldTransformation = localToWorldTransformation;
     SetCoords(new ReadOnlyCollection<double>([]));
     SetFaces([]);
     SetTriangles([]);
@@ -32,10 +26,10 @@ public class PrimitiveProcessor : InwSimplePrimitivesCB
 
   public IReadOnlyList<double> Coords => _coords.AsReadOnly();
   private IReadOnlyList<int> Faces => _faces.AsReadOnly();
-  public IReadOnlyList<TriangleD> Triangles => _triangles.AsReadOnly();
-  public IReadOnlyList<LineD> Lines => _lines.AsReadOnly();
-  public IReadOnlyList<PointD> Points => _points.AsReadOnly();
-  private IEnumerable<double> LocalToWorldTransformation { get; set; }
+  public IReadOnlyList<SafeTriangle> Triangles => _triangles.AsReadOnly();
+  public IReadOnlyList<SafeLine> Lines => _lines.AsReadOnly();
+  public IReadOnlyList<SafePoint> Points => _points.AsReadOnly();
+  internal IEnumerable<double>? LocalToWorldTransformation { get; set; }
 
   public void Line(InwSimpleVertex? v1, InwSimpleVertex? v2)
   {
@@ -55,8 +49,8 @@ public class PrimitiveProcessor : InwSimplePrimitivesCB
 
     try
     {
-      var line = new LineD(vD1, vD2);
-      AddLine(line);
+      var safeLine = new SafeLine(vD1, vD2);
+      AddLine(safeLine);
     }
     catch (ArgumentException ex)
     {
@@ -80,11 +74,12 @@ public class PrimitiveProcessor : InwSimplePrimitivesCB
       IsUpright
     );
 
-    AddPoint(new PointD(vD1));
+    var safePoint = new SafePoint(vD1);
+    AddPoint(safePoint);
   }
 
   // TODO: Needed for Splines
-  public void SnapPoint(InwSimpleVertex? v1) => throw new NotImplementedException();
+  public void SnapPoint(InwSimpleVertex? v1) => Point(v1);
 
   public void Triangle(InwSimpleVertex? v1, InwSimpleVertex? v2, InwSimpleVertex? v3)
   {
@@ -106,11 +101,27 @@ public class PrimitiveProcessor : InwSimplePrimitivesCB
       IsUpright
     );
 
+    // Capture values immediately in our safe struct
+    var safeTriangle = new SafeTriangle(vD1, vD2, vD3);
+
     var indexPointer = Faces.Count;
     AddFace(3);
     AddFaces([indexPointer + 0, indexPointer + 1, indexPointer + 2]);
-    AddCoords([vD1.X, vD1.Y, vD1.Z, vD2.X, vD2.Y, vD2.Z, vD3.X, vD3.Y, vD3.Z]);
-    AddTriangle(new TriangleD(vD1, vD2, vD3));
+    AddCoords(
+      [
+        safeTriangle.Vertex1.X,
+        safeTriangle.Vertex1.Y,
+        safeTriangle.Vertex1.Z,
+        safeTriangle.Vertex2.X,
+        safeTriangle.Vertex2.Y,
+        safeTriangle.Vertex2.Z,
+        safeTriangle.Vertex3.X,
+        safeTriangle.Vertex3.Y,
+        safeTriangle.Vertex3.Z
+      ]
+    );
+
+    AddTriangle(safeTriangle);
   }
 
   private void SetCoords(IEnumerable<double> coords)
@@ -127,25 +138,25 @@ public class PrimitiveProcessor : InwSimplePrimitivesCB
 
   private void AddFaces(IEnumerable<int> faces) => _faces.AddRange(faces);
 
-  private void SetTriangles(List<TriangleD> triangles) =>
+  private void SetTriangles(List<SafeTriangle> triangles) =>
     _triangles = triangles ?? throw new ArgumentNullException(nameof(triangles));
 
-  private void AddTriangle(TriangleD triangle) => _triangles.Add(triangle);
+  private void AddTriangle(SafeTriangle triangle) => _triangles.Add(triangle);
 
-  private void SetLines(List<LineD> lines) => _lines = lines ?? throw new ArgumentNullException(nameof(lines));
+  private void SetLines(List<SafeLine> lines) => _lines = lines ?? throw new ArgumentNullException(nameof(lines));
 
-  private void AddLine(LineD line) => _lines.Add(line);
+  private void AddLine(SafeLine line) => _lines.Add(line);
 
-  private void SetPoints(List<PointD> points) => _points = points ?? throw new ArgumentNullException(nameof(points));
+  private void SetPoints(List<SafePoint> points) => _points = points ?? throw new ArgumentNullException(nameof(points));
 
-  private void AddPoint(PointD point) => _points.Add(point);
+  private void AddPoint(SafePoint point) => _points.Add(point);
 
   private static NAV.Vector3D TransformVectorToOrientation(NAV.Vector3D v, bool isUpright) =>
     isUpright ? v : new NAV.Vector3D(v.X, -v.Z, v.Y);
 
-  private static NAV.Vector3D ApplyTransformation(Vector3 vector3, IEnumerable<double> matrixStore)
+  private static NAV.Vector3D ApplyTransformation(Vector3 vector3, IEnumerable<double>? matrixStore)
   {
-    var matrix = matrixStore.ToList();
+    var matrix = matrixStore!.ToList();
     var t1 = matrix[3] * vector3.X + matrix[7] * vector3.Y + matrix[11] * vector3.Z + matrix[15];
     var vectorDoubleX = (matrix[0] * vector3.X + matrix[4] * vector3.Y + matrix[8] * vector3.Z + matrix[12]) / t1;
     var vectorDoubleY = (matrix[1] * vector3.X + matrix[5] * vector3.Y + matrix[9] * vector3.Z + matrix[13]) / t1;

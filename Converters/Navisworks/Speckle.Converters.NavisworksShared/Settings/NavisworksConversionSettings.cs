@@ -1,4 +1,6 @@
-﻿namespace Speckle.Converter.Navisworks.Settings;
+﻿using Speckle.Converter.Navisworks.Geometry;
+
+namespace Speckle.Converter.Navisworks.Settings;
 
 /// <summary>
 /// Represents the settings used for Navisworks conversions.
@@ -8,8 +10,8 @@ public record NavisworksConversionSettings(Derived Derived, User User);
 // Derived from Navisworks Application
 public record Derived(
   NAV.Document Document, // The active Navisworks document to be processed.
-  NAV.BoundingBox3D ModelBoundingBox, // The bounding box of the model.
-  NAV.Vector3D? TransformVector, // Transformation vector applied to the model.
+  SafeBoundingBox ModelBoundingBox, // The bounding box of the model.
+  SafeVector TransformVector, // Transformation vector applied to the model.
   bool IsUpright, // Indicates if the model's orientation is upright relative to canonical up.
   string SpeckleUnits // Units used in Speckle for standardised measurements.
 );

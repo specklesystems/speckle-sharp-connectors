@@ -23,7 +23,7 @@ public class NavisworksMaterialUnpacker(
       _ => defaultValue,
     };
 
-  public List<RenderMaterialProxy> UnpackRenderMaterial(IReadOnlyList<NAV.ModelItem> navisworksObjects)
+  internal List<RenderMaterialProxy> UnpackRenderMaterial(IReadOnlyList<NAV.ModelItem> navisworksObjects)
   {
     if (navisworksObjects == null)
     {
@@ -48,13 +48,15 @@ public class NavisworksMaterialUnpacker(
         // Extract the current visual representation mode
         var mode = converterSettings.Current.User.VisualRepresentationMode;
 
+        using var defaultColor = new NAV.Color(1.0, 1.0, 1.0);
+
         // Assign properties using the selector
         var renderColor = Select(
           mode,
           geometry.ActiveColor,
           geometry.PermanentColor,
           geometry.OriginalColor,
-          new NAV.Color(1.0, 1.0, 1.0)
+          defaultColor
         );
 
         var renderTransparency = Select(
@@ -129,7 +131,7 @@ public class NavisworksMaterialUnpacker(
     return renderMaterialProxies.Values.ToList();
   }
 
-  private RenderMaterial ConvertRenderColorAndTransparencyToSpeckle(
+  private static RenderMaterial ConvertRenderColorAndTransparencyToSpeckle(
     string name,
     double transparency,
     NAV.Color navisworksColor,

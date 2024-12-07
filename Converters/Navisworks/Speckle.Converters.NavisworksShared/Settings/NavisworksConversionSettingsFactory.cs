@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Speckle.Converter.Navisworks.Geometry;
 using Speckle.Converter.Navisworks.Helpers;
 using Speckle.Converters.Common;
 using Speckle.InterfaceGenerator;
@@ -13,7 +14,7 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
   private readonly IHostToSpeckleUnitConverter<NAV.Units> _unitsConverter;
 
   private NAV.Document? _document;
-  private NAV.BoundingBox3D? _modelBoundingBox;
+  private SafeBoundingBox _modelBoundingBox;
   private bool _convertHiddenElements;
 
   public NavisworksConversionSettingsFactory(
@@ -64,16 +65,14 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
     }
 
     // Calculate the transformation vector based on the origin mode
-    using var transformVector =
-      CalculateTransformVector() ?? throw new InvalidOperationException("Failed to calculate transform vector");
+    var transformVector = CalculateTransformVector();
     var isUpright = GeometryHelpers.VectorMatch(_document.UpVector, s_canonicalUp);
 
     return new NavisworksConversionSettings(
       // Derived from Navisworks Application
       new Derived(
         Document: _document,
-        ModelBoundingBox: _modelBoundingBox
-          ?? throw new InvalidOperationException("Bounding box could not be determined, which is weird."),
+        ModelBoundingBox: _modelBoundingBox,
         TransformVector: transformVector,
         IsUpright: isUpright,
         SpeckleUnits: units
@@ -94,16 +93,15 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
   {
     _document = NavisworksApp.ActiveDocument ?? throw new InvalidOperationException("No active document found.");
     _logger.LogInformation("Creating settings for document: {DocumentName}", _document.Title);
-
-    _modelBoundingBox = _document.GetBoundingBox(_convertHiddenElements);
+    _modelBoundingBox = new SafeBoundingBox(_document.GetBoundingBox(_convertHiddenElements));
   }
 
-  private NAV.Vector3D CalculateTransformVector() =>
+  private SafeVector CalculateTransformVector() =>
     _originMode switch
     {
       OriginMode.ProjectBasePoint => CalculateProjectBasePointTransform(),
       OriginMode.BoundingBoxCenter => CalculateBoundingBoxTransform(),
-      OriginMode.ModelOrigin => new NAV.Vector3D(0, 0, 0), // Default identity transform
+      OriginMode.ModelOrigin => new SafeVector(0.0, 0.0, 0.0), // Default identity transform
       _ => throw new NotSupportedException($"OriginMode {_originMode} is not supported.")
     };
 
@@ -115,10 +113,10 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
   /// This uses mocked project base point data and should be replaced with actual logic
   /// when finally integrating with UI or external configurations.
   /// </remarks>
-  private NAV.Vector3D CalculateProjectBasePointTransform()
+  private SafeVector CalculateProjectBasePointTransform()
   {
     // TODO: Replace with actual logic to fetch project base point and units from UI or settings
-    using var projectBasePoint = new NAV.Vector3D(10, 20, 0);
+    var projectBasePoint = new SafeVector(10, 20, 0);
     // ReSharper disable once ConvertToConstant.Local
     var projectBasePointUnits = NAV.Units.Meters;
 
@@ -126,7 +124,7 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
 
     // The transformation vector is the negative of the project base point, scaled to the source units.
     // These units are independent of the Speckle units, and because they are from user input.
-    return new NAV.Vector3D(-projectBasePoint.X * scale, -projectBasePoint.Y * scale, 0);
+    return new SafeVector(-projectBasePoint.X * scale, -projectBasePoint.Y * scale, 0);
   }
 
   /// <summary>
@@ -135,8 +133,8 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
   /// <returns>The calculated transformation vector.</returns>
   /// <remarks>
   /// This uses the document active model bounding box center as the base point for the transformation.
+  /// Assumes no translation in the Z-axis.
   /// </remarks>
-  private NAV.Vector3D CalculateBoundingBoxTransform() =>
-    (_modelBoundingBox != null ? new NAV.Vector3D(-_modelBoundingBox.Center.X, -_modelBoundingBox.Center.Y, 0) : null)
-    ?? throw new InvalidOperationException("Bounding box could not be determined.");
+  private SafeVector CalculateBoundingBoxTransform() =>
+    new(-_modelBoundingBox.Center.X, -_modelBoundingBox.Center.Y, 0);
 }

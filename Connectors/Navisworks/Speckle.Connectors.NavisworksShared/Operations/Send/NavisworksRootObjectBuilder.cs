@@ -13,6 +13,7 @@ using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using static Speckle.Connector.Navisworks.Extensions.ElementSelectionExtension;
+using static Speckle.Connector.Navisworks.Operations.Send.GeometryNodeMerger;
 
 namespace Speckle.Connector.Navisworks.Operations.Send;
 
@@ -50,10 +51,20 @@ public class NavisworksRootObjectBuilder(
     };
 
     // 3. Convert all model items and store results
+    if (navisworksModelItems == null)
+    {
+      throw new ArgumentNullException(nameof(navisworksModelItems));
+    }
+
     List<SendConversionResult> results = new(navisworksModelItems.Count);
     var convertedBases = new Dictionary<string, Base?>();
     int processedCount = 0;
     int totalCount = navisworksModelItems.Count;
+
+    if (onOperationProgressed == null || sendInfo == null)
+    {
+      throw new ArgumentNullException(nameof(onOperationProgressed));
+    }
 
     foreach (var item in navisworksModelItems)
     {
@@ -71,8 +82,7 @@ public class NavisworksRootObjectBuilder(
 
     // 4. Initialize final elements list and group nodes
     var finalElements = new List<Base>();
-    var merger = new GeometryNodeMerger();
-    var groupedNodes = merger.GroupSiblingGeometryNodes(navisworksModelItems);
+    var groupedNodes = GroupSiblingGeometryNodes(navisworksModelItems);
     var processedPaths = new HashSet<string>();
 
     // 5. Process and merge grouped nodes
@@ -96,7 +106,7 @@ public class NavisworksRootObjectBuilder(
 
       var navisworksObject = new NavisworksObject
       {
-        name = ElementSelectionExtension.ResolveIndexPathToModelItem(group.Key)?.DisplayName ?? string.Empty,
+        name = ElementSelectionExtension.ResolveIndexPathToModelItem(group.Key).DisplayName ?? string.Empty,
         displayValue = siblingBases.SelectMany(b => b["displayValue"] as List<Base> ?? []).ToList(),
         properties = siblingBases.First()["properties"] as Dictionary<string, object?> ?? [],
         units = converterSettings.Current.Derived.SpeckleUnits,

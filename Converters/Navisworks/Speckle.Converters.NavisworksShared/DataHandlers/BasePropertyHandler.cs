@@ -5,8 +5,7 @@
 /// </summary>
 public abstract class BasePropertyHandler(
   PropertySetsExtractor propertySetsExtractor,
-  ModelPropertiesExtractor modelPropertiesExtractor,
-  ClassPropertiesExtractor classPropertiesExtractor
+  ModelPropertiesExtractor modelPropertiesExtractor
 ) : IPropertyHandler
 {
   public void AssignProperties(SSM.Base speckleObject, NAV.ModelItem modelItem)
@@ -15,9 +14,9 @@ public abstract class BasePropertyHandler(
     AssignPropertySets(speckleObject, modelItem);
   }
 
-  private void AssignClassProperties(SSM.Base speckleObject, NAV.ModelItem modelItem)
+  private static void AssignClassProperties(SSM.Base speckleObject, NAV.ModelItem modelItem)
   {
-    var classProperties = classPropertiesExtractor.GetClassProperties(modelItem);
+    var classProperties = ClassPropertiesExtractor.GetClassProperties(modelItem);
     if (classProperties == null)
     {
       return;

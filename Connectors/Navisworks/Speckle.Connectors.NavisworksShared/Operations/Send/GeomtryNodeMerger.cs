@@ -5,9 +5,9 @@ namespace Speckle.Connector.Navisworks.Operations.Send;
 /// <summary>
 /// Groups geometry nodes by their parent paths for merging displayValues
 /// </summary>
-public class GeometryNodeMerger
+public static class GeometryNodeMerger
 {
-  public Dictionary<string, List<NAV.ModelItem>> GroupSiblingGeometryNodes(IReadOnlyList<NAV.ModelItem> nodes) =>
+  public static Dictionary<string, List<NAV.ModelItem>> GroupSiblingGeometryNodes(IReadOnlyList<NAV.ModelItem> nodes) =>
     nodes
       .Where(node => node.HasGeometry && string.IsNullOrEmpty(node.DisplayName)) // Only anonymous geometry nodes
       .GroupBy(node =>

@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
@@ -36,10 +36,8 @@ public static class NavisworksConverterServiceRegistration
 
     // Register converters and handlers
     serviceCollection.AddApplicationConverters<NavisworksToSpeckleUnitConverter, NAV.Units>(converterAssembly);
-    serviceCollection.AddScoped<DisplayValueExtractor>();
-    serviceCollection.AddScoped<ClassPropertiesExtractor>();
     serviceCollection.AddScoped<ModelPropertiesExtractor>();
-    serviceCollection.AddScoped<NavisworksPrimitiveProcessor>();
+    serviceCollection.AddScoped<PrimitiveProcessor>();
     serviceCollection.AddScoped<PropertySetsExtractor>();
 
     return serviceCollection;

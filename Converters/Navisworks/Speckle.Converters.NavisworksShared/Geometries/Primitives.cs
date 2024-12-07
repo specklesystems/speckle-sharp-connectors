@@ -1,49 +1,155 @@
-﻿// ---------------------------------------------------------------------------------------------------------------------
-// File: Primitives.cs
-// Description: Contains definitions for primitives (PointD, TriangleD, LineD) with double-precision vertex storage
-//              for use in the Speckle Navisworks converter. These classes ensure higher precision for geometric data
-//              compared to the default float-based representations.
-//
-// ---------------------------------------------------------------------------------------------------------------------
-// Notes:
-// - These primitives leverage NAV.Vector3D for double-precision vertex representation.
-// - Suppression of unused member warnings is intentional to accommodate potential future use cases.
-//
-// ---------------------------------------------------------------------------------------------------------------------
+﻿namespace Speckle.Converter.Navisworks.Geometry;
 
-
-
-using System.Diagnostics.CodeAnalysis;
-
-namespace Speckle.Converter.Navisworks.Geometry;
-
-/// <summary>
-///   A Point where the vertex is stored with double values as opposed to floats
-/// </summary>
-[SuppressMessage("ReSharper", "UnusedMember.Global")]
-public class PointD(NAV.Vector3D vertex1)
+public readonly struct SafeBoundingBox
 {
-  // ReSharper disable once UnusedAutoPropertyAccessor.Global
-  public NAV.Vector3D Vertex1 { get; set; } = vertex1;
+  public SafeVertex Center { get; }
+  public SafeVertex Min { get; }
+  public SafeVertex Max { get; }
+  public double SizeX { get; }
+  public double SizeY { get; }
+  public double SizeZ { get; }
+
+  public SafeBoundingBox(NAV.BoundingBox3D boundingBox)
+  {
+    if (boundingBox == null)
+    {
+      throw new ArgumentNullException(nameof(boundingBox));
+    }
+
+    Center = new SafeVertex(boundingBox.Center);
+    Min = new SafeVertex(boundingBox.Min);
+    Max = new SafeVertex(boundingBox.Max);
+    SizeX = boundingBox.Size.X;
+    SizeY = boundingBox.Size.Y;
+    SizeZ = boundingBox.Size.Z;
+  }
 }
 
 /// <summary>
-///   A Triangle where all vertices are in turn stored with double values as opposed to floats
+/// Safe structure to store vector coordinates without COM dependency
 /// </summary>
-[SuppressMessage("ReSharper", "UnusedMember.Global")]
-public class TriangleD(NAV.Vector3D v1, NAV.Vector3D v2, NAV.Vector3D v3)
+public readonly struct SafeVector
 {
-  public NAV.Vector3D Vertex1 { get; set; } = v1;
-  public NAV.Vector3D Vertex2 { get; set; } = v2;
-  public NAV.Vector3D Vertex3 { get; set; } = v3;
+  public double X { get; }
+  public double Y { get; }
+  public double Z { get; }
+
+  public SafeVector(NAV.Vector3D vector)
+  {
+    if (vector == null)
+    {
+      throw new ArgumentNullException(nameof(vector));
+    }
+    X = vector.X;
+    Y = vector.Y;
+    Z = vector.Z;
+  }
+
+  public SafeVector(NAV.Point3D point)
+  {
+    if (point == null)
+    {
+      throw new ArgumentNullException(nameof(point));
+    }
+    X = point.X;
+    Y = point.Y;
+    Z = point.Z;
+  }
+
+  // Constructor for raw coordinates
+  public SafeVector(double x, double y, double z)
+  {
+    X = x;
+    Y = y;
+    Z = z;
+  }
 }
 
-/// <summary>
-///   A Line where each end point vertex is in turn stored with double values as opposed to floats
-/// </summary>
-[SuppressMessage("ReSharper", "UnusedMember.Global")]
-public class LineD(NAV.Vector3D v1, NAV.Vector3D v2)
+public readonly struct SafeVertex
 {
-  public NAV.Vector3D Vertex1 { get; set; } = v1;
-  public NAV.Vector3D Vertex2 { get; set; } = v2;
+  public double X { get; }
+  public double Y { get; }
+  public double Z { get; }
+
+  public SafeVertex(NAV.Vector3D vector)
+  {
+    if (vector == null)
+    {
+      throw new ArgumentNullException(nameof(vector));
+    }
+
+    X = vector.X;
+    Y = vector.Y;
+    Z = vector.Z;
+  }
+
+  public SafeVertex(NAV.Point3D point)
+  {
+    if (point == null)
+    {
+      throw new ArgumentNullException(nameof(point));
+    }
+    X = point.X;
+    Y = point.Y;
+    Z = point.Z;
+  }
+
+  // Constructor for raw coordinates
+  public SafeVertex(double x, double y, double z)
+  {
+    X = x;
+    Y = y;
+    Z = z;
+  }
+}
+
+public readonly struct SafePoint
+{
+  public SafeVertex Vertex { get; }
+
+  public SafePoint(NAV.Vector3D point)
+  {
+    if (point == null)
+    {
+      throw new ArgumentNullException(nameof(point));
+    }
+
+    Vertex = new SafeVertex(point);
+  }
+}
+
+public readonly struct SafeTriangle
+{
+  public SafeVertex Vertex1 { get; }
+  public SafeVertex Vertex2 { get; }
+  public SafeVertex Vertex3 { get; }
+
+  public SafeTriangle(NAV.Vector3D v1, NAV.Vector3D v2, NAV.Vector3D v3)
+  {
+    if (v1 == null || v2 == null || v3 == null)
+    {
+      throw new ArgumentNullException(nameof(v1));
+    }
+
+    Vertex1 = new SafeVertex(v1);
+    Vertex2 = new SafeVertex(v2);
+    Vertex3 = new SafeVertex(v3);
+  }
+}
+
+public readonly struct SafeLine
+{
+  public SafeVertex Start { get; }
+  public SafeVertex End { get; }
+
+  public SafeLine(NAV.Vector3D start, NAV.Vector3D end)
+  {
+    if (start == null || end == null)
+    {
+      throw new ArgumentNullException(nameof(start));
+    }
+
+    Start = new SafeVertex(start);
+    End = new SafeVertex(end);
+  }
 }
