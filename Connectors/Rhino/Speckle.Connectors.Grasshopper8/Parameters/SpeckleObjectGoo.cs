@@ -47,7 +47,7 @@ public class SpeckleObjectGoo : GH_Goo<Base>
     }
     else if (type == typeof(SpeckleCollectionGoo) && Value is Collection collection)
     {
-      target = (TOut)(object)new SpeckleObjectGoo { Value = collection };
+      target = (TOut)(object)new SpeckleCollectionGoo { Value = collection };
       success = true;
     }
     else if (type == typeof(Base))

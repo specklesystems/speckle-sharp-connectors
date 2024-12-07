@@ -12,7 +12,7 @@ public abstract class SpeckleScopedTaskCapableComponent<TInput, TOutput>(
 {
   protected override Task<TOutput> PerformTask(TInput input, CancellationToken cancellationToken = default)
   {
-    var scope = PriorityLoader.Container.CreateScope();
+    /*using*/var scope = PriorityLoader.Container.CreateScope(); // NOTE: this component does not work as intended in e.g the receive component; the scope gets disposed before the task completes.
     return PerformScopedTask(input, scope, cancellationToken);
   }
 

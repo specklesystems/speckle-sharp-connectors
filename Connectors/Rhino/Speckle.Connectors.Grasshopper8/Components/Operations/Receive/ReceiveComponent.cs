@@ -15,6 +15,7 @@ using Speckle.DoubleNumerics;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -23,7 +24,7 @@ namespace Speckle.Connectors.Grasshopper8.Components.Operations.Receive;
 
 public class ReceiveComponentOutput
 {
-  public Base RootObject { get; set; }
+  public Collection RootObject { get; set; }
 }
 
 public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlModelResource, ReceiveComponentOutput>
@@ -124,26 +125,35 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
     var results = new List<SpeckleGrasshopperObject>();
     foreach (var map in localToGlobalMaps)
     {
-      var converted = Convert(map.AtomicObject, rootConverter);
-      var path = traversalContextUnpacker.GetCollectionPath(map.TraversalContext).ToList();
-
-      foreach (var matrix in map.Matrix)
+      try
       {
-        var mat = MatrixToTransform(matrix, "meters");
-        converted.ForEach(res => res.Transform(mat));
-      }
+        var converted = Convert(map.AtomicObject, rootConverter);
+        var path = traversalContextUnpacker.GetCollectionPath(map.TraversalContext).ToList();
 
-      foreach (var geometryBase in converted)
-      {
-        var gh = new SpeckleGrasshopperObject()
+        foreach (var matrix in map.Matrix)
         {
-          OriginalObject = map.AtomicObject,
-          Path = path,
-          GeometryBase = geometryBase
-        };
-        collGen.AppendSpeckleGrasshopperObject(gh);
+          var mat = MatrixToTransform(matrix, "meters");
+          converted.ForEach(res => res.Transform(mat));
+        }
+
+        foreach (var geometryBase in converted)
+        {
+          var gh = new SpeckleGrasshopperObject()
+          {
+            OriginalObject = map.AtomicObject,
+            Path = path,
+            GeometryBase = geometryBase
+          };
+          collGen.AppendSpeckleGrasshopperObject(gh);
+        }
+      }
+      catch (ConversionException)
+      {
+        // TODO
       }
     }
+
+    // var x = new SpeckleCollectionGoo { Value = collGen.RootCollection };
     return new ReceiveComponentOutput { RootObject = collGen.RootCollection };
   }
 
@@ -240,14 +250,4 @@ public class CollectionRebuilder
 
     return previousCollection;
   }
-}
-
-public class SpeckleGrasshopperObject : Base
-{
-  public Base OriginalObject { get; set; }
-  public GeometryBase GeometryBase { get; set; }
-  public List<Collection> Path { get; set; }
-
-  // RenderMaterial
-  // Properties (?)
 }
