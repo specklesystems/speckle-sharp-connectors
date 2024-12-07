@@ -227,31 +227,25 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Connectors.Naviswor
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Converters.NavisworksShared", "Converters\Navisworks\Speckle.Converters.NavisworksShared\Speckle.Converters.NavisworksShared.shproj", "{23830613-87F8-4655-B523-72189A597962}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2025", "2025", "{DE37E4A3-0B09-422B-907E-2F5115FE125C}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2023", "2023", "{4D6F62C7-AB52-442D-A966-2D7248999A90}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2022", "2022", "{F6A5AF0B-81D4-4E72-B8BE-BD836F469176}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2021", "2021", "{26D9206A-F78D-43A4-AE71-562BC4A64A56}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2020", "2020", "{67ECA72C-01F3-471E-B82A-F0BF74147E36}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Navisworks2025", "Connectors\Navisworks\Speckle.Connectors.Navisworks2025\Speckle.Connectors.Navisworks2025.csproj", "{A054E952-37A1-49C5-9715-730CF4D00329}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Navisworks2025", "Converters\Navisworks\Speckle.Converters.Navisworks2025\Speckle.Converters.Navisworks2025.csproj", "{4C3FCDE3-F3B2-41DE-AA68-915FB8CBF025}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Navisworks2023", "Converters\Navisworks\Speckle.Converters.Navisworks2023\Speckle.Converters.Navisworks2023.csproj", "{D84887F1-61DB-429B-9978-229DE36E1B6C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Navisworks2023", "Connectors\Navisworks\Speckle.Connectors.Navisworks2023\Speckle.Connectors.Navisworks2023.csproj", "{69B16CC3-FA20-4D35-87FA-5D34C743334C}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2022", "2022", "{F6A5AF0B-81D4-4E72-B8BE-BD836F469176}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Navisworks2022", "Converters\Navisworks\Speckle.Converters.Navisworks2022\Speckle.Converters.Navisworks2022.csproj", "{3517D757-6F62-483A-BDD9-43FBC23978E1}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Navisworks2022", "Connectors\Navisworks\Speckle.Connectors.Navisworks2022\Speckle.Connectors.Navisworks2022.csproj", "{52EEEBF5-23FA-41C2-A635-CEB091823E91}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2021", "2021", "{26D9206A-F78D-43A4-AE71-562BC4A64A56}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Navisworks2021", "Connectors\Navisworks\Speckle.Connectors.Navisworks2021\Speckle.Connectors.Navisworks2021.csproj", "{F58DE804-4CD4-40B2-802B-14E63AB5C1F9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Navisworks2021", "Converters\Navisworks\Speckle.Converters.Navisworks2021\Speckle.Converters.Navisworks2021.csproj", "{8603A729-9B1E-4C91-9D47-E7A61093A44C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2020", "2020", "{67ECA72C-01F3-471E-B82A-F0BF74147E36}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Navisworks2020", "Converters\Navisworks\Speckle.Converters.Navisworks2020\Speckle.Converters.Navisworks2020.csproj", "{2B90EED0-9AA2-4DC8-A18F-F80CB70E92B8}"
 EndProject
