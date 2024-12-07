@@ -46,6 +46,7 @@ public sealed class DisplayValueExtractor
         break;
 
       case ACD.Analyst3D.LasPoint point:
+        yield return _pointConverter.Convert(point.ToMapPoint());
         break;
 
       default:

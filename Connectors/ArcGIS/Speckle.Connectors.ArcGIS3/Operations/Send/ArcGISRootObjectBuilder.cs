@@ -1,11 +1,9 @@
-using System.Diagnostics;
 using ArcGIS.Core.CIM;
 using ArcGIS.Core.Data.Analyst3D;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.ArcGIS.HostApp;
-using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
@@ -31,7 +29,6 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
   private readonly ArcGISLayerUnpacker _layerUnpacker;
   private readonly ArcGISColorManager _colorManager;
   private readonly IConverterSettingsStore<ArcGISConversionSettings> _converterSettings;
-  private readonly MapMembersUtils _mapMemberUtils;
   private readonly ILogger<ArcGISRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
 
@@ -41,7 +38,6 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     ArcGISColorManager colorManager,
     IConverterSettingsStore<ArcGISConversionSettings> converterSettings,
     IRootToSpeckleConverter rootToSpeckleConverter,
-    MapMembersUtils mapMemberUtils,
     ILogger<ArcGISRootObjectBuilder> logger,
     ISdkActivityFactory activityFactory
   )
@@ -51,7 +47,6 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     _colorManager = colorManager;
     _converterSettings = converterSettings;
     _rootToSpeckleConverter = rootToSpeckleConverter;
-    _mapMemberUtils = mapMemberUtils;
     _logger = logger;
     _activityFactory = activityFactory;
   }
@@ -66,7 +61,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     // TODO: add a warning if Geographic CRS is set
     // "Data has been sent in the units 'degrees'. It is advisable to set the project CRS to Projected type (e.g. EPSG:32631) to be able to receive geometry correctly in CAD/BIM software"
 
-    // TODO: send caching
+    // TODO: send caching. This may be tricky, depending on whether layers or objects are cached.
 
     int count = 0;
 
@@ -85,7 +80,6 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     }
 
     List<SendConversionResult> results = new(unpackedLayers.Count);
-    var cacheHitCount = 0;
 
     onOperationProgressed.Report(new("Converting", null));
     using (var convertingActivity = _activityFactory.Start("Converting objects"))
@@ -152,13 +146,9 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     }
 
     // POC: Add Color Proxies
-    List<ColorProxy> colorProxies = _colorManager.UnpackColors(layersWithDisplayPriority);
+    // POC: this class definitely needs to be refactored.
+    List<ColorProxy> colorProxies = _colorManager.UnpackColors(unpackedLayers);
     rootCollection[ProxyKeys.COLOR] = colorProxies;
-
-    // POC: Log would be nice, or can be removed.
-    Debug.WriteLine(
-      $"Cache hit count {cacheHitCount} out of {layers.Count} ({(double)cacheHitCount / objlayersects.Count})"
-    );
 
     return new RootObjectBuilderResult(rootCollection, results);
   }

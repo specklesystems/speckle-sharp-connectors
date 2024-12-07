@@ -24,7 +24,6 @@ public static class ArcGISConverterModule
 
     // most things should be InstancePerLifetimeScope so we get one per operation
     serviceCollection.AddScoped<IFeatureClassUtils, FeatureClassUtils>();
-    serviceCollection.AddScoped<ICrsUtils, CrsUtils>();
     serviceCollection.AddScoped<IArcGISFieldUtils, ArcGISFieldUtils>();
     serviceCollection.AddScoped<LocalToGlobalConverterUtils>();
     serviceCollection.AddScoped<ICharacterCleaner, CharacterCleaner>();

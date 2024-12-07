@@ -1,6 +1,5 @@
 using System.Drawing;
 using ArcGIS.Core.CIM;
-using ArcGIS.Core.Data;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.ArcGIS3.Utils;
@@ -13,6 +12,9 @@ using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Connectors.ArcGIS.HostApp;
 
+/// <summary>
+/// TODO: definitely need to refactor this, probably will collect colors during layer iteration in the root object builder.
+/// </summary>
 public class ArcGISColorManager
 {
   private Dictionary<string, ColorProxy> ColorProxies { get; set; } = new();
@@ -22,29 +24,29 @@ public class ArcGISColorManager
   /// <summary>
   /// Iterates through a given set of arcGIS map members (layers containing objects) and collects their colors.
   /// </summary>
-  /// <param name="mapMembersWithDisplayPriority"></param>
-  /// <returns>A list of color proxies, where the application Id is argb value + display priority</returns>
+  /// <param name="mapMembers"></param>
+  /// <returns>A list of color proxies, where the application Id is argb value</returns>
   /// <remarks>
   /// In ArcGIS, map members contain a formula, which individual features contained in map members will use to calculate their color.
-  /// Since display priority is important for ArcGIS layers, we are creating different Color Proxies for eg the same argb color value but different display priority.
+  /// We are not taking display priority into account for now.
   /// </remarks>
-  public List<ColorProxy> UnpackColors(List<(MapMember, int)> mapMembersWithDisplayPriority)
+  public List<ColorProxy> UnpackColors(List<MapMember> mapMembers)
   {
     // injected as Singleton, so we need to clean existing proxies first
     ColorProxies = new();
 
-    foreach ((MapMember mapMember, int priority) in mapMembersWithDisplayPriority)
+    foreach (MapMember mapMember in mapMembers)
     {
       switch (mapMember)
       {
         // FeatureLayer colors will be processed per feature object
         case FeatureLayer featureLayer:
-          ProcessFeatureLayerColors(featureLayer, priority);
+          ProcessFeatureLayerColors(featureLayer);
           break;
 
         // RasterLayer object colors are converted as mesh vertex colors, but we need to store displayPriority on the raster layer. Default color is used for all rasters.
         case RasterLayer rasterLayer:
-          ProcessRasterLayerColors(rasterLayer, priority);
+          ProcessRasterLayerColors(rasterLayer);
           break;
       }
     }
@@ -305,11 +307,11 @@ public class ArcGISColorManager
     return uvr;
   }
 
-  private string GetColorApplicationId(int argb, double order) => $"{argb}_{order}";
+  private string GetColorApplicationId(int argb) => $"{argb}";
 
   // Adds the element id to the color proxy based on colorId if it exists in ColorProxies,
   // otherwise creates a new Color Proxy with the element id in the objects property
-  private void AddElementIdToColorProxy(string elementAppId, int colorValue, string colorId, int displayPriority)
+  private void AddElementIdToColorProxy(string elementAppId, int colorValue, string colorId)
   {
     if (ColorProxies.TryGetValue(colorId, out ColorProxy? colorProxy))
     {
@@ -326,25 +328,23 @@ public class ArcGISColorManager
           name = colorId
         };
 
-      newProxy["displayOrder"] = displayPriority; // 0 - top layer (top display priority), 1,2,3.. decreasing priority
       ColorProxies.Add(colorId, newProxy);
     }
   }
 
-  private void ProcessRasterLayerColors(RasterLayer rasterLayer, int displayPriority)
+  private void ProcessRasterLayerColors(RasterLayer rasterLayer)
   {
     string elementAppId = $"{rasterLayer.URI}_0"; // POC: explain why count = 0 here
     int argb = -1;
-    string colorId = GetColorApplicationId(argb, displayPriority); // We are using a default color of -1 for all raster layers
-    AddElementIdToColorProxy(elementAppId, argb, colorId, displayPriority);
+    string colorId = GetColorApplicationId(argb); // We are using a default color of -1 for all raster layers
+    AddElementIdToColorProxy(elementAppId, argb, colorId);
   }
 
   /// <summary>
   /// Record colors from every feature of the layer into ColorProxies
   /// </summary>
   /// <param name="layer"></param>
-  /// <param name="displayPriority"></param>
-  private void ProcessFeatureLayerColors(FeatureLayer layer, int displayPriority)
+  private void ProcessFeatureLayerColors(FeatureLayer layer)
   {
     // first get a list of layer fields
     // field names are unique, but often their alias is used instead by renderer headings
@@ -359,7 +359,7 @@ public class ArcGISColorManager
 
     CIMRenderer layerRenderer = layer.GetRenderer();
     int count = 1;
-    using (RowCursor rowCursor = layer.Search())
+    using (ACD.RowCursor rowCursor = layer.Search())
     {
       // if layer doesn't have a valid data source (and the conversion likely failed), don't create a colorProxy
       if (rowCursor is null)
@@ -369,12 +369,12 @@ public class ArcGISColorManager
       while (rowCursor.MoveNext())
       {
         string elementAppId = $"{layer.URI}_{count}";
-        using (Row row = rowCursor.Current)
+        using (ACD.Row row = rowCursor.Current)
         {
           // get row color
           int argb = GetLayerColorByRendererAndRow(layerRenderer, row, layerFieldDictionary);
-          string colorId = GetColorApplicationId(argb, displayPriority);
-          AddElementIdToColorProxy(elementAppId, argb, colorId, displayPriority);
+          string colorId = GetColorApplicationId(argb);
+          AddElementIdToColorProxy(elementAppId, argb, colorId);
         }
 
         count++;
@@ -496,7 +496,7 @@ public class ArcGISColorManager
 
   private bool TryGetUniqueRendererColor(
     CIMUniqueValueRenderer uniqueRenderer,
-    Row row,
+    ACD.Row row,
     Dictionary<string, FieldDescription> fields,
     out int color
   )
@@ -599,7 +599,7 @@ public class ArcGISColorManager
 
   private bool TryGetGraduatedRendererColor(
     CIMClassBreaksRenderer graduatedRenderer,
-    Row row,
+    ACD.Row row,
     Dictionary<string, FieldDescription> fields,
     out int color
   )
@@ -638,7 +638,11 @@ public class ArcGISColorManager
   }
 
   // Tries to retrieve the feature layer color by renderer and row, or a default color of -1
-  private int GetLayerColorByRendererAndRow(CIMRenderer renderer, Row row, Dictionary<string, FieldDescription> fields)
+  private int GetLayerColorByRendererAndRow(
+    CIMRenderer renderer,
+    ACD.Row row,
+    Dictionary<string, FieldDescription> fields
+  )
   {
     // default color to white. this will be used if the renderer is not supported.
     int color = -1;

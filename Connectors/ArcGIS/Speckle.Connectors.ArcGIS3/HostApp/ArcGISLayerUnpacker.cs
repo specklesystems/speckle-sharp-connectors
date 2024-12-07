@@ -1,4 +1,3 @@
-using Speckle.Connectors.ArcGIS.Extensions;
 using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.ArcGIS.HostApp;
