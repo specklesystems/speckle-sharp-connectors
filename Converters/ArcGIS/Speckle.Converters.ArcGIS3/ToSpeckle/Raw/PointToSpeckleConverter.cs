@@ -1,12 +1,11 @@
 using System.ComponentModel.DataAnnotations;
-using ArcGIS.Core.Geometry;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk;
 
 namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
 
-public class PointToSpeckleConverter : ITypedConverter<MapPoint, SOG.Point>
+public class PointToSpeckleConverter : ITypedConverter<ACG.MapPoint, SOG.Point>
 {
   private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
 
@@ -15,14 +14,14 @@ public class PointToSpeckleConverter : ITypedConverter<MapPoint, SOG.Point>
     _settingsStore = settingsStore;
   }
 
-  public SOG.Point Convert(MapPoint target)
+  public SOG.Point Convert(ACG.MapPoint target)
   {
     try
     {
       // reproject to Active CRS
       if (
-        GeometryEngine.Instance.Project(target, _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference)
-        is not MapPoint reprojectedPt
+        ACG.GeometryEngine.Instance.Project(target, _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference)
+        is not ACG.MapPoint reprojectedPt
       )
       {
         throw new ValidationException(
@@ -31,10 +30,10 @@ public class PointToSpeckleConverter : ITypedConverter<MapPoint, SOG.Point>
       }
 
       if (
-        Double.IsNaN(reprojectedPt.X)
-        || Double.IsInfinity(reprojectedPt.X)
-        || Double.IsNaN(reprojectedPt.Y)
-        || Double.IsInfinity(reprojectedPt.Y)
+        double.IsNaN(reprojectedPt.X)
+        || double.IsInfinity(reprojectedPt.X)
+        || double.IsNaN(reprojectedPt.Y)
+        || double.IsInfinity(reprojectedPt.Y)
       )
       {
         throw new ValidationException(

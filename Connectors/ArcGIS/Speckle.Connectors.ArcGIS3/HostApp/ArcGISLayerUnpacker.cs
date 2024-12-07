@@ -64,7 +64,10 @@ public class ArcGISLayerUnpacker
     switch (mapMember)
     {
       case ADM.IDisplayTable displayTable: // get fields from layers that implement IDisplayTable, eg FeatureLayer or StandaloneTable
-        collection["fields"] = displayTable.GetFieldsAsDictionary();
+        Dictionary<string, string>? fields = displayTable
+          .GetFieldDescriptions()
+          .ToDictionary(field => field.Name, field => field.Type.ToString());
+        collection["fields"] = fields;
         if (mapMember is ADM.BasicFeatureLayer basicFeatureLayer)
         {
           collection["shapeType"] = basicFeatureLayer.ShapeType.ToString();

@@ -99,6 +99,19 @@ public class ArcGISColorManager
     }
   }
 
+  public int RGBToInt(CIMRGBColor color)
+  {
+    return (255 << 24) | ((int)Math.Round(color.R) << 16) | ((int)Math.Round(color.G) << 8) | (int)Math.Round(color.B);
+  }
+
+  public int CIMColorToInt(CIMColor color)
+  {
+    return (255 << 24)
+      | ((int)Math.Round(color.Values[0]) << 16)
+      | ((int)Math.Round(color.Values[1]) << 8)
+      | (int)Math.Round(color.Values[2]);
+  }
+
   /// <summary>
   /// Create a new CIMUniqueValueClass for UniqueRenderer per each object ID
   /// </summary>
@@ -225,7 +238,7 @@ public class ArcGISColorManager
     }
 
     // declare default grey color, create default symbol for the given layer geometry type
-    var color = Color.FromArgb(ColorFactory.Instance.GreyRGB.CIMColorToInt());
+    var color = Color.FromArgb(CIMColorToInt(ColorFactory.Instance.GreyRGB));
     CIMSymbolReference defaultSymbol = CreateSymbol(fLayer.ShapeType, color);
 
     // get existing renderer classes
@@ -378,7 +391,7 @@ public class ArcGISColorManager
       switch (cimColor)
       {
         case CIMRGBColor rgbColor:
-          symbolColor = rgbColor.CIMColorToInt();
+          symbolColor = CIMColorToInt(rgbColor);
           return true;
         case CIMHSVColor hsvColor:
           symbolColor = RgbFromHsv(hsvColor);

@@ -29,6 +29,7 @@ public static class ArcGISConverterModule
     serviceCollection.AddScoped<LocalToGlobalConverterUtils>();
     serviceCollection.AddScoped<ICharacterCleaner, CharacterCleaner>();
     serviceCollection.AddScoped<DisplayValueExtractor>();
+    serviceCollection.AddScoped<PropertiesExtractor>();
 
     // single stack per conversion
     serviceCollection.AddScoped<

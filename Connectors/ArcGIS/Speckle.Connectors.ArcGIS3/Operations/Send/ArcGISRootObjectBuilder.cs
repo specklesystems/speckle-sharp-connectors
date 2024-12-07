@@ -1,5 +1,8 @@
 using System.Diagnostics;
+using ArcGIS.Core.CIM;
+using ArcGIS.Core.Data.Analyst3D;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
+using ArcGIS.Desktop.Mapping;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.ArcGIS.HostApp;
 using Speckle.Connectors.ArcGIS.Utils;
@@ -54,7 +57,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
   }
 
   public async Task<RootObjectBuilderResult> Build(
-    IReadOnlyList<ADM.MapMember> layers,
+    IReadOnlyList<MapMember> layers,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
@@ -68,7 +71,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     int count = 0;
 
     Collection rootCollection =
-      new() { name = ADM.MapView.Active.Map.Name, ["units"] = _converterSettings.Current.SpeckleUnits };
+      new() { name = MapView.Active.Map.Name, ["units"] = _converterSettings.Current.SpeckleUnits };
 
     // 1 - Unpack the selected mapmembers
     // In Arcgis, mapmembers are collections of other mapmember or objects.
@@ -96,37 +99,45 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
           // get the corresponding collection for this layer - we'll add all converted objects to the collection
           if (_layerUnpacker.CollectionCache.TryGetValue(layer.URI, out Collection? layerCollection))
           {
+            var status = Status.SUCCESS;
+            var sdkStatus = SdkActivityStatusCode.Ok;
             switch (layer)
             {
               case ADM.FeatureLayer featureLayer:
                 List<Base> convertedFeatureLayerObjects = await QueuedTask
-          .Run(() => ConvertFeatureLayerObjectsAsync(featureLayer, layerCollection))
-          .ConfigureAwait(false);
+                  .Run(() => ConvertFeatureLayerObjectsAsync(featureLayer))
+                  .ConfigureAwait(false);
                 layerCollection.elements.AddRange(convertedFeatureLayerObjects);
                 break;
               case ADM.RasterLayer rasterLayer:
-                List<Base> convertedRasterLayerObjects = await QueuedTask.Run(() => ConvertRasterLayerObjectsAsync(rasterLayer)).ConfigureAwait(false);
+                List<Base> convertedRasterLayerObjects = await QueuedTask
+                  .Run(() => ConvertRasterLayerObjectsAsync(rasterLayer))
+                  .ConfigureAwait(false);
                 layerCollection.elements.AddRange(convertedRasterLayerObjects);
                 break;
               case ADM.LasDatasetLayer lasDatasetLayer:
-                List<Base> convertedLasDatasetObjects = await QueuedTask.Run(() => ConvertLasDatasetLayerObjectsAsync(lasDatasetLayer)).ConfigureAwait(false);
+                List<Base> convertedLasDatasetObjects = await QueuedTask
+                  .Run(() => ConvertLasDatasetLayerObjectsAsync(lasDatasetLayer))
+                  .ConfigureAwait(false);
                 layerCollection.elements.AddRange(convertedLasDatasetObjects);
                 break;
               default:
-                // TODO: report unsupported layer type here
+                status = Status.ERROR;
+                sdkStatus = SdkActivityStatusCode.Error;
+                break;
             }
+            results.Add(new(status, layer.URI, layer.GetType().Name, layerCollection));
+            convertingActivity?.SetStatus(sdkStatus);
           }
           else
           {
             // TODO: throw error, a collection should have been converted for this layer in the layerUnpacker.
           }
-          results.Add(new(Status.SUCCESS, layer.URI, sourceType, layerCollection));
-          convertingActivity?.SetStatus(SdkActivityStatusCode.Ok);
         }
         catch (Exception ex) when (!ex.IsFatal())
         {
-          _logger.LogSendConversionError(ex, sourceType);
-          results.Add(new(Status.ERROR, layer.URI, sourceType, null, ex));
+          _logger.LogSendConversionError(ex, layer.GetType().Name);
+          results.Add(new(Status.ERROR, layer.URI, layer.GetType().Name, null, ex));
           convertingActivity?.SetStatus(SdkActivityStatusCode.Error);
           convertingActivity?.RecordException(ex);
         }
@@ -152,13 +163,11 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     return new RootObjectBuilderResult(rootCollection, results);
   }
 
-  private async Task<List<Base>> ConvertFeatureLayerObjectsAsync(ADM.FeatureLayer featureLayer, Collection featureLayerCollection)
+  private async Task<List<Base>> ConvertFeatureLayerObjectsAsync(ADM.FeatureLayer featureLayer)
   {
-      if (featureLayerCollection["fields"] is Dictionary<string, string> visibleFields)
-      {
-        List<Base> convertedObjects = new();
+    List<Base> convertedObjects = new();
 
-        await QueuedTask
+    await QueuedTask
       .Run(() =>
       {
         // search the rows of the layer, where each row is treated like an object
@@ -171,7 +180,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
             // Same IDisposable issue appears to happen on Row class too. Docs say it should always be disposed of manually by the caller.
             using (ACD.Row row = rowCursor.Current)
             {
-              Base converted = _rootToSpeckleConverter.Convert((row, visibleFields));
+              Base converted = _rootToSpeckleConverter.Convert(row);
               convertedObjects.Add(converted);
             }
           }
@@ -179,12 +188,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
       })
       .ConfigureAwait(false);
 
-        return convertedObjects;
-      }
-      else
-      {
-        // TODO: throw exception here, this layer should have fields
-      }
+    return convertedObjects;
   }
 
   private async Task<List<Base>> ConvertRasterLayerObjectsAsync(ADM.RasterLayer rasterLayer)
@@ -193,9 +197,8 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     await QueuedTask
       .Run(() =>
       {
-        Base converted = _rootToSpeckleConverter.Convert((rasterLayer.GetRaster(), new Dictionary<string,string>()));
+        Base converted = _rootToSpeckleConverter.Convert(rasterLayer.GetRaster());
         convertedObjects.Add(converted);
-
       })
       .ConfigureAwait(false);
 
@@ -205,27 +208,66 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
   private async Task<List<Base>> ConvertLasDatasetLayerObjectsAsync(ADM.LasDatasetLayer lasDatasetLayer)
   {
     List<Base> convertedObjects = new();
+
     await QueuedTask
-     .Run(() =>
-     {
-       using (ACD.Analyst3D.LasPointCursor ptCursor = lasDatasetLayer.SearchPoints(new ACD.Analyst3D.LasPointFilter()))
-       {
-         while (ptCursor.MoveNext())
-         {
-           using (ACD.Analyst3D.LasPoint pt = ptCursor.Current)
-           {
-             Base converted = _rootToSpeckleConverter.Convert((pt, new Dictionary<string, string>()));
-             convertedObjects.Add(converted);
-           }
-         }
-       }
-     })
+      .Run(() =>
+      {
+        // TODO: handle point colors here
+        var renderer = lasDatasetLayer.GetRenderers()[0];
+
+        using (ACD.Analyst3D.LasPointCursor ptCursor = lasDatasetLayer.SearchPoints(new ACD.Analyst3D.LasPointFilter()))
+        {
+          while (ptCursor.MoveNext())
+          {
+            using (ACD.Analyst3D.LasPoint pt = ptCursor.Current)
+            {
+              Base converted = _rootToSpeckleConverter.Convert(pt);
+              convertedObjects.Add(converted);
+            }
+          }
+        }
+      })
       .ConfigureAwait(false);
 
     return convertedObjects;
   }
 
-
-
+  // TODO: move this to color manager. Bringing this over from the converter for now.
+  private int GetPointColor(LasPoint pt, object renderer)
+  {
+    // get color
+    int color = 0;
+    string classCode = pt.ClassCode.ToString();
+    if (renderer is CIMTinUniqueValueRenderer uniqueRenderer)
+    {
+      foreach (CIMUniqueValueGroup group in uniqueRenderer.Groups)
+      {
+        if (color != 0)
+        {
+          break;
+        }
+        foreach (CIMUniqueValueClass groupClass in group.Classes)
+        {
+          if (color != 0)
+          {
+            break;
+          }
+          for (int i = 0; i < groupClass.Values.Length; i++)
+          {
+            if (classCode == groupClass.Values[i].FieldValues[0])
+            {
+              CIMColor symbolColor = groupClass.Symbol.Symbol.GetColor();
+              color = _colorManager.CIMColorToInt(symbolColor);
+              break;
+            }
+          }
+        }
+      }
+    }
+    else
+    {
+      color = _colorManager.RGBToInt(pt.RGBColor);
+    }
+    return color;
+  }
 }
-
