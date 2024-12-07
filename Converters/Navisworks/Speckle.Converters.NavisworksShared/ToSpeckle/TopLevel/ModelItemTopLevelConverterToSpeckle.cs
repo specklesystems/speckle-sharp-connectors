@@ -16,16 +16,19 @@ public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
   private readonly StandardPropertyHandler _standardHandler;
   private readonly HierarchicalPropertyHandler _hierarchicalHandler;
   private readonly IConverterSettingsStore<NavisworksConversionSettings> _settingsStore;
+  private readonly DisplayValueExtractor _displayValueExtractor;
 
   public ModelItemToToSpeckleConverter(
     IConverterSettingsStore<NavisworksConversionSettings> settingsStore,
     StandardPropertyHandler standardHandler,
-    HierarchicalPropertyHandler hierarchicalHandler
+    HierarchicalPropertyHandler hierarchicalHandler,
+    DisplayValueExtractor displayValueExtractor
   )
   {
     _settingsStore = settingsStore;
     _standardHandler = standardHandler;
     _hierarchicalHandler = hierarchicalHandler;
+    _displayValueExtractor = displayValueExtractor;
   }
 
   /// <summary>
@@ -65,11 +68,11 @@ public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
   /// </summary>
   private static bool ShouldMergeProperties(NAV.ModelItem target) => target.HasGeometry;
 
-  private static Base CreateGeometryObject(NAV.ModelItem target, string name) =>
+  private Base CreateGeometryObject(NAV.ModelItem target, string name) =>
     new()
     {
       ["name"] = name,
-      ["displayValue"] = DisplayValueExtractor.GetDisplayValue(target),
+      ["displayValue"] = _displayValueExtractor.GetDisplayValue(target),
       ["properties"] = new Dictionary<string, object?>()
     };
 

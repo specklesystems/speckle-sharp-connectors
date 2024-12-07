@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using Speckle.Converter.Navisworks.Helpers;
 using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converter.Navisworks.ToSpeckle;
@@ -39,6 +40,10 @@ public static class NavisworksConverterServiceRegistration
     serviceCollection.AddScoped<ModelPropertiesExtractor>();
     serviceCollection.AddScoped<PrimitiveProcessor>();
     serviceCollection.AddScoped<PropertySetsExtractor>();
+
+    // Register geometry conversion
+    serviceCollection.AddScoped<DisplayValueExtractor>();
+    serviceCollection.AddScoped<GeometryToSpeckleConverter>();
 
     return serviceCollection;
   }

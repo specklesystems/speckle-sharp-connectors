@@ -12,7 +12,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\ClassPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\DisplayValueExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\ModelPropertiesExtractor.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\NavisworksPrimitiveProcessor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\PropertySetsExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataHandlers\BasePropertyHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataHandlers\HierarchicalPropertyHandler.cs" />
@@ -28,6 +27,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\GeometryHelpers.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)PathConstants.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\GeometryToSpeckleConverter.cs" />
     <Folder Include="$(MSBuildThisFileDirectory)Models\" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\NavisworksToSpeckleUnitConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\ConversionModes.cs" />

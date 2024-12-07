@@ -1,7 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
-using Speckle.Objects.Geometry;
+using Speckle.Sdk.Models;
+using static Speckle.Converter.Navisworks.Helpers.ElementSelectionHelper;
 
 namespace Speckle.Converter.Navisworks.ToSpeckle;
 
@@ -9,6 +10,7 @@ public class DisplayValueExtractor
 {
   private readonly IConverterSettingsStore<NavisworksConversionSettings> _converterSettings;
   private readonly ILogger<DisplayValueExtractor> _logger;
+  private readonly GeometryToSpeckleConverter _geometryConverter;
 
   public DisplayValueExtractor(
     IConverterSettingsStore<NavisworksConversionSettings> converterSettings,
@@ -17,12 +19,20 @@ public class DisplayValueExtractor
   {
     _converterSettings = converterSettings;
     _logger = logger;
+    _geometryConverter = new GeometryToSpeckleConverter(_converterSettings.Current);
   }
 
-  public static List<SSM.Base> GetDisplayValue(NAV.ModelItem _)
+  internal List<Base> GetDisplayValue(NAV.ModelItem modelItem)
   {
-    var pt = new Point(0, 0, 0, "m");
+    if (modelItem == null)
+    {
+      throw new ArgumentNullException(nameof(modelItem));
+    }
+    if (!modelItem.HasGeometry)
+    {
+      return [];
+    }
 
-    return [pt];
+    return !IsElementVisible(modelItem) ? [] : _geometryConverter.Convert(modelItem);
   }
 }
