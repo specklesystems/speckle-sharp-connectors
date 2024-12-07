@@ -659,6 +659,7 @@ Global
 		Converters\Revit\Speckle.Converters.RevitShared.Tests\Speckle.Converters.RevitShared.Tests.projitems*{68cf9bdf-94ac-4d2d-a7bd-d1c064f97051}*SharedItemsImports = 5
 		Converters\Revit\Speckle.Converters.RevitShared\Speckle.Converters.RevitShared.projitems*{68cf9bdf-94ac-4d2d-a7bd-d1c064f97051}*SharedItemsImports = 5
 		Connectors\Revit\Speckle.Connectors.RevitShared.Cef\Speckle.Connectors.RevitShared.Cef.projitems*{6a40cbe4-ecab-4ced-9917-5c64cbf75da6}*SharedItemsImports = 13
+		Converters\CSi\Speckle.Converters.CSiShared\Speckle.Converters.CSiShared.projitems*{791e3288-8001-4d54-8eab-03d1d7f51044}*SharedItemsImports = 5
 		Connectors\CSi\Speckle.Connectors.CsiShared\Speckle.Connectors.CsiShared.projitems*{7c49337a-6f7b-47ab-b549-42e799e89cf2}*SharedItemsImports = 5
 		Connectors\Revit\Speckle.Connectors.RevitShared.Cef\Speckle.Connectors.RevitShared.Cef.projitems*{7f1fdcf2-0ce8-4119-b3c1-f2cc6d7e1c36}*SharedItemsImports = 5
 		Connectors\Revit\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems*{7f1fdcf2-0ce8-4119-b3c1-f2cc6d7e1c36}*SharedItemsImports = 5
@@ -688,6 +689,7 @@ Global
 		Connectors\Autocad\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems*{c70ebb84-ba5b-4f2f-819e-25e0985ba13c}*SharedItemsImports = 5
 		Connectors\Autocad\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems*{ca8eae01-ab9f-4ec1-b6f3-73721487e9e1}*SharedItemsImports = 5
 		Connectors\Autocad\Speckle.Connectors.Civil3dShared\Speckle.Connectors.Civil3dShared.projitems*{ca8eae01-ab9f-4ec1-b6f3-73721487e9e1}*SharedItemsImports = 5
+		Converters\CSi\Speckle.Converters.CSiShared\Speckle.Converters.CSiShared.projitems*{d61ecd90-3d17-4af0-8b1a-0e0ad302dff9}*SharedItemsImports = 5
 		Converters\Revit\Speckle.Converters.RevitShared.Tests\Speckle.Converters.RevitShared.Tests.projitems*{d8069a23-ad2e-4c9e-8574-7e8c45296a46}*SharedItemsImports = 5
 		Converters\Revit\Speckle.Converters.RevitShared\Speckle.Converters.RevitShared.projitems*{d8069a23-ad2e-4c9e-8574-7e8c45296a46}*SharedItemsImports = 5
 		Converters\Autocad\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.projitems*{db31e57b-60fc-49be-91e0-1374290bcf03}*SharedItemsImports = 5

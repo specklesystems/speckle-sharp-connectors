@@ -1,3 +1,3 @@
+global using AC = ArcGIS.Core;
 global using ACG = ArcGIS.Core.Geometry;
-global using SGIS = Speckle.Objects.GIS;
 global using SOG = Speckle.Objects.Geometry;

@@ -39,25 +39,4 @@ public class MapMembersUtils
 
     return mapMembers;
   }
-
-  // Gets the layer display priority for selected layers
-  public List<(MapMember, int)> GetLayerDisplayPriority(Map map, IReadOnlyList<MapMember> selectedMapMembers)
-  {
-    // first get all map layers
-    List<MapMember> allMapMembers = GetAllMapMembers(map);
-
-    // recalculate selected layer priority from all map layers
-    List<(MapMember, int)> selectedLayers = new();
-    int newCount = 0;
-    foreach (MapMember mapMember in allMapMembers)
-    {
-      if (selectedMapMembers.Contains(mapMember))
-      {
-        selectedLayers.Add((mapMember, newCount));
-        newCount++;
-      }
-    }
-
-    return selectedLayers;
-  }
 }

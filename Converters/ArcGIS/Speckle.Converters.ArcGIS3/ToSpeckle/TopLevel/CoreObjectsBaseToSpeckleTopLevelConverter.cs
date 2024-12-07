@@ -10,8 +10,7 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToSpeckle.TopLevel;
 
-[NameAndRankValue(nameof(AC.CoreObjectsBase), 0)]
-public class CoreObjectsBaseToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
+public class GisObjectToSpeckleConverter : ITypedConverter<object, GisObject>
 {
   private readonly ITypedConverter<ACG.MapPoint, SOG.Point> _pointConverter;
   private readonly ITypedConverter<ACG.Multipoint, IReadOnlyList<SOG.Point>> _multiPointConverter;
@@ -22,7 +21,7 @@ public class CoreObjectsBaseToSpeckleTopLevelConverter : IToSpeckleTopLevelConve
   private readonly ITypedConverter<LasDatasetLayer, Speckle.Objects.Geometry.Pointcloud> _pointcloudConverter;
   private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
 
-  public CoreObjectsBaseToSpeckleTopLevelConverter(
+  public GisObjectToSpeckleConverter(
     ITypedConverter<ACG.MapPoint, SOG.Point> pointConverter,
     ITypedConverter<ACG.Multipoint, IReadOnlyList<SOG.Point>> multiPointConverter,
     ITypedConverter<ACG.Polyline, IReadOnlyList<SOG.Polyline>> polylineConverter,
@@ -43,7 +42,7 @@ public class CoreObjectsBaseToSpeckleTopLevelConverter : IToSpeckleTopLevelConve
     _settingsStore = settingsStore;
   }
 
-  public Arcgisobject Convert(object target)
+  public ArcgisObject Convert(object target)
   {
     if (target is Row row)
     {
