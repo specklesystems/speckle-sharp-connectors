@@ -8,13 +8,13 @@ namespace Speckle.Converters.ETABSShared;
 
 public static class ServiceRegistration
 {
-  public static IServiceCollection AddETABSConverters(this IServiceCollection serviceCollection)
+  public static IServiceCollection AddEtabsConverters(this IServiceCollection serviceCollection)
   {
     var converterAssembly = Assembly.GetExecutingAssembly();
 
-    serviceCollection.AddTransient<CSiFrameToSpeckleConverter, FrameToSpeckleConverter>();
-    serviceCollection.AddTransient<CSiJointToSpeckleConverter, JointToSpeckleConverter>();
-    serviceCollection.AddTransient<CSiShellToSpeckleConverter, ShellToSpeckleConverter>();
+    serviceCollection.AddTransient<CsiFrameToSpeckleConverter, FrameToSpeckleConverter>();
+    serviceCollection.AddTransient<CsiJointToSpeckleConverter, JointToSpeckleConverter>();
+    serviceCollection.AddTransient<CsiShellToSpeckleConverter, ShellToSpeckleConverter>();
 
     serviceCollection.AddMatchingInterfacesAsTransient(converterAssembly);
 

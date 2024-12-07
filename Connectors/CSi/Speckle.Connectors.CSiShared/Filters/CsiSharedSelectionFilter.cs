@@ -2,9 +2,9 @@
 
 namespace Speckle.Connectors.CSiShared.Filters;
 
-public class CSiSharedSelectionFilter : DirectSelectionSendFilter
+public class CsiSharedSelectionFilter : DirectSelectionSendFilter
 {
-  public CSiSharedSelectionFilter()
+  public CsiSharedSelectionFilter()
   {
     IsDefault = true;
   }

@@ -20,7 +20,7 @@ using Speckle.Sdk.Logging;
 
 namespace Speckle.Connectors.CSiShared.Bindings;
 
-public sealed class CSiSharedSendBinding : ISendBinding
+public sealed class CsiSharedSendBinding : ISendBinding
 {
   public string Name => "sendBinding";
   public SendBindingUICommands Commands { get; }
@@ -32,13 +32,13 @@ public sealed class CSiSharedSendBinding : ISendBinding
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
   private readonly IOperationProgressManager _operationProgressManager;
-  private readonly ILogger<CSiSharedSendBinding> _logger;
-  private readonly ICSiApplicationService _csiApplicationService;
-  private readonly ICSiConversionSettingsFactory _csiConversionSettingsFactory;
+  private readonly ILogger<CsiSharedSendBinding> _logger;
+  private readonly ICsiApplicationService _csiApplicationService;
+  private readonly ICsiConversionSettingsFactory _csiConversionSettingsFactory;
   private readonly ISpeckleApplication _speckleApplication;
   private readonly ISdkActivityFactory _activityFactory;
 
-  public CSiSharedSendBinding(
+  public CsiSharedSendBinding(
     DocumentModelStore store,
     IAppIdleManager idleManager,
     IBrowserBridge parent,
@@ -46,11 +46,11 @@ public sealed class CSiSharedSendBinding : ISendBinding
     IServiceProvider serviceProvider,
     CancellationManager cancellationManager,
     IOperationProgressManager operationProgressManager,
-    ILogger<CSiSharedSendBinding> logger,
-    ICSiConversionSettingsFactory csiConversionSettingsFactory,
+    ILogger<CsiSharedSendBinding> logger,
+    ICsiConversionSettingsFactory csiConversionSettingsFactory,
     ISpeckleApplication speckleApplication,
     ISdkActivityFactory activityFactory,
-    ICSiApplicationService csiApplicationService
+    ICsiApplicationService csiApplicationService
   )
   {
     _store = store;
@@ -84,12 +84,12 @@ public sealed class CSiSharedSendBinding : ISendBinding
       }
       using var scope = _serviceProvider.CreateScope();
       scope
-        .ServiceProvider.GetRequiredService<IConverterSettingsStore<CSiConversionSettings>>()
+        .ServiceProvider.GetRequiredService<IConverterSettingsStore<CsiConversionSettings>>()
         .Initialize(_csiConversionSettingsFactory.Create(_csiApplicationService.SapModel));
 
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
-      List<ICSiWrapper> wrappers = modelCard
+      List<ICsiWrapper> wrappers = modelCard
         .SendFilter.NotNull()
         .RefreshObjectIds()
         .Select(DecodeObjectIdentifier)
@@ -101,7 +101,7 @@ public sealed class CSiSharedSendBinding : ISendBinding
       }
 
       var sendResult = await scope
-        .ServiceProvider.GetRequiredService<SendOperation<ICSiWrapper>>()
+        .ServiceProvider.GetRequiredService<SendOperation<ICsiWrapper>>()
         .Execute(
           wrappers,
           modelCard.GetSendInfo(_speckleApplication.Slug),
@@ -125,10 +125,10 @@ public sealed class CSiSharedSendBinding : ISendBinding
     }
   }
 
-  private ICSiWrapper DecodeObjectIdentifier(string encodedId)
+  private ICsiWrapper DecodeObjectIdentifier(string encodedId)
   {
     var (type, name) = ObjectIdentifier.Decode(encodedId);
-    return CSiWrapperFactory.Create(type, name);
+    return CsiWrapperFactory.Create(type, name);
   }
 
   public void CancelSend(string modelCardId)

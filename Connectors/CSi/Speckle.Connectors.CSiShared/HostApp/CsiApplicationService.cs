@@ -10,18 +10,18 @@ namespace Speckle.Connectors.CSiShared.HostApp;
 /// Prevent having to pass the "sapModel" around between classes and this ensures consistent access.
 /// Name "sapModel" is misleading since it doesn't only apply to SAP2000, but this is the convention in the API, so we keep it.
 /// </remarks>
-public interface ICSiApplicationService
+public interface ICsiApplicationService
 {
   cSapModel SapModel { get; }
   void Initialize(cSapModel sapModel, cPluginCallback pluginCallback);
 }
 
-public class CSiApplicationService : ICSiApplicationService
+public class CsiApplicationService : ICsiApplicationService
 {
   public cSapModel SapModel { get; private set; }
   private cPluginCallback _pluginCallback;
 
-  public CSiApplicationService()
+  public CsiApplicationService()
   {
     SapModel = null!;
   }

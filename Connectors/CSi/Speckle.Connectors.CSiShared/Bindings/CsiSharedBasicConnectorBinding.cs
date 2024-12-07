@@ -6,7 +6,7 @@ using Speckle.Sdk;
 
 namespace Speckle.Connectors.CSiShared.Bindings;
 
-public class CSiSharedBasicConnectorBinding : IBasicConnectorBinding
+public class CsiSharedBasicConnectorBinding : IBasicConnectorBinding
 {
   private readonly ISpeckleApplication _speckleApplication;
   private readonly DocumentModelStore _store;
@@ -15,7 +15,7 @@ public class CSiSharedBasicConnectorBinding : IBasicConnectorBinding
   public IBrowserBridge Parent { get; }
   public BasicConnectorBindingCommands Commands { get; }
 
-  public CSiSharedBasicConnectorBinding(
+  public CsiSharedBasicConnectorBinding(
     IBrowserBridge parent,
     ISpeckleApplication speckleApplication,
     DocumentModelStore store

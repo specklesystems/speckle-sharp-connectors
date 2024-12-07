@@ -11,11 +11,11 @@ namespace Speckle.Converters.CSiShared;
 /// CSi GetPresentUnits() valid for both SAP 2000 and ETABS.
 /// Represents units transmitted through API calls and not necessarily those displayed in GUI.
 /// </remarks>
-public class CSiToSpeckleUnitConverter : IHostToSpeckleUnitConverter<eUnits>
+public class CsiToSpeckleUnitConverter : IHostToSpeckleUnitConverter<eUnits>
 {
   private readonly Dictionary<eUnits, string> _unitMapping = new Dictionary<eUnits, string>();
 
-  public CSiToSpeckleUnitConverter()
+  public CsiToSpeckleUnitConverter()
   {
     _unitMapping[eUnits.lb_in_F] = Units.Inches;
     _unitMapping[eUnits.lb_ft_F] = Units.Feet;

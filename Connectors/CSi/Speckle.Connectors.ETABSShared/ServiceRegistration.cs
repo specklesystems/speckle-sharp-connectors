@@ -7,10 +7,10 @@ namespace Speckle.Connectors.ETABSShared;
 
 public static class ServiceRegistration
 {
-  public static IServiceCollection AddETABS(this IServiceCollection services)
+  public static IServiceCollection AddEtabs(this IServiceCollection services)
   {
-    services.AddETABSConverters();
-    services.AddScoped<CSiSendCollectionManager, ETABSSendCollectionManager>();
+    services.AddEtabsConverters();
+    services.AddScoped<CsiSendCollectionManager, EtabsSendCollectionManager>();
 
     return services;
   }

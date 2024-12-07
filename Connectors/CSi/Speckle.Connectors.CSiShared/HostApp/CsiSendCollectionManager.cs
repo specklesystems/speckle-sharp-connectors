@@ -12,12 +12,12 @@ namespace Speckle.Connectors.CSiShared.HostApp;
 /// This class manages the collections. If the key (from the path) already exists, this collection is returned.
 /// If it doesn't exist, a new collection is created and added to the rootObject.
 /// </remarks>
-public class CSiSendCollectionManager
+public class CsiSendCollectionManager
 {
-  protected IConverterSettingsStore<CSiConversionSettings> ConverterSettings { get; }
+  protected IConverterSettingsStore<CsiConversionSettings> ConverterSettings { get; }
   protected Dictionary<string, Collection> CollectionCache { get; } = new();
 
-  public CSiSendCollectionManager(IConverterSettingsStore<CSiConversionSettings> converterSettings)
+  public CsiSendCollectionManager(IConverterSettingsStore<CsiConversionSettings> converterSettings)
   {
     ConverterSettings = converterSettings;
   }

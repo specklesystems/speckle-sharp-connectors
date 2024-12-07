@@ -5,13 +5,13 @@ using Speckle.Connectors.DUI.Bridge;
 
 namespace Speckle.Connectors.CSiShared.Bindings;
 
-public class CSiSharedSelectionBinding : ISelectionBinding
+public class CsiSharedSelectionBinding : ISelectionBinding
 {
   public string Name => "selectionBinding";
   public IBrowserBridge Parent { get; }
-  private readonly ICSiApplicationService _csiApplicationService;
+  private readonly ICsiApplicationService _csiApplicationService;
 
-  public CSiSharedSelectionBinding(IBrowserBridge parent, ICSiApplicationService csiApplicationService)
+  public CsiSharedSelectionBinding(IBrowserBridge parent, ICsiApplicationService csiApplicationService)
   {
     Parent = parent;
     _csiApplicationService = csiApplicationService;

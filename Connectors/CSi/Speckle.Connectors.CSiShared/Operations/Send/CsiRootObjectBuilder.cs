@@ -13,24 +13,24 @@ using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.CSiShared.Builders;
 
-public class CSiRootObjectBuilder : IRootObjectBuilder<ICSiWrapper>
+public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
 {
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;
-  private readonly IConverterSettingsStore<CSiConversionSettings> _converterSettings;
-  private readonly CSiSendCollectionManager _sendCollectionManager;
-  private readonly ILogger<CSiRootObjectBuilder> _logger;
+  private readonly IConverterSettingsStore<CsiConversionSettings> _converterSettings;
+  private readonly CsiSendCollectionManager _sendCollectionManager;
+  private readonly ILogger<CsiRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
-  private readonly ICSiApplicationService _csiApplicationService;
+  private readonly ICsiApplicationService _csiApplicationService;
 
-  public CSiRootObjectBuilder(
+  public CsiRootObjectBuilder(
     IRootToSpeckleConverter rootToSpeckleConverter,
     ISendConversionCache sendConversionCache,
-    IConverterSettingsStore<CSiConversionSettings> converterSettings,
-    CSiSendCollectionManager sendCollectionManager,
-    ILogger<CSiRootObjectBuilder> logger,
+    IConverterSettingsStore<CsiConversionSettings> converterSettings,
+    CsiSendCollectionManager sendCollectionManager,
+    ILogger<CsiRootObjectBuilder> logger,
     ISdkActivityFactory activityFactory,
-    ICSiApplicationService csiApplicationService
+    ICsiApplicationService csiApplicationService
   )
   {
     _sendConversionCache = sendConversionCache;
@@ -43,7 +43,7 @@ public class CSiRootObjectBuilder : IRootObjectBuilder<ICSiWrapper>
   }
 
   public async Task<RootObjectBuilderResult> Build(
-    IReadOnlyList<ICSiWrapper> csiObjects,
+    IReadOnlyList<ICsiWrapper> csiObjects,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken = default
@@ -60,7 +60,7 @@ public class CSiRootObjectBuilder : IRootObjectBuilder<ICSiWrapper>
 
     using (var _ = _activityFactory.Start("Convert all"))
     {
-      foreach (ICSiWrapper csiObject in csiObjects)
+      foreach (ICsiWrapper csiObject in csiObjects)
       {
         using var _2 = _activityFactory.Start("Convert");
         cancellationToken.ThrowIfCancellationRequested();
@@ -82,7 +82,7 @@ public class CSiRootObjectBuilder : IRootObjectBuilder<ICSiWrapper>
     return new RootObjectBuilderResult(rootObjectCollection, results);
   }
 
-  private SendConversionResult ConvertCSiObject(ICSiWrapper csiObject, Collection typeCollection, string projectId)
+  private SendConversionResult ConvertCSiObject(ICsiWrapper csiObject, Collection typeCollection, string projectId)
   {
     string applicationId = $"{csiObject.ObjectType}{csiObject.Name}"; // TODO: NO! Use GUID
     string sourceType = csiObject.ObjectName;

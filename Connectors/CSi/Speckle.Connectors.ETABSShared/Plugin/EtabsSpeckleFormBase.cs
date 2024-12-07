@@ -11,6 +11,6 @@ public abstract class EtabsSpeckleFormBase : SpeckleFormBase
   protected override void ConfigureServices(IServiceCollection services)
   {
     base.ConfigureServices(services);
-    services.AddETABS();
+    services.AddEtabs();
   }
 }

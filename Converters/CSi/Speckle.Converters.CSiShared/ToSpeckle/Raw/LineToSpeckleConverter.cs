@@ -2,34 +2,31 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Geometry;
 
-namespace Speckle.Converters.CSiShared.ToSpeckle.Geometry;
+namespace Speckle.Converters.CSiShared.ToSpeckle.Raw;
 
 /// <summary>
-/// Every frame has as its displayValue a Speckle lines by defined by the endpoint coordinates.
+/// Every frame has as its displayValue a Speckle line. This is defined by the start and end points.
 /// </summary>
 /// <remarks>
-/// Creates a line from frame endpoints using the CSi API:
-/// 1. Gets frame endpoint names
-/// 2. Extracts coordinate values for each endpoint
-/// 3. Creates a Speckle line with appropriate units
-/// Throws ArgumentException if coordinate extraction fails.
-/// The TODOs noted below will be completed as part of the "Data Extraction (Send)" milestone.
+/// Display value extraction is always handled by CsiShared.
+/// This is because geometry representation is the same for both Sap2000 and Etabs products.
+/// TODO: Point caching
 /// </remarks>
-public class LineToSpeckleConverter : ITypedConverter<CSiFrameWrapper, Line>
+public class LineToSpeckleConverter : ITypedConverter<CsiFrameWrapper, Line>
 {
-  private readonly IConverterSettingsStore<CSiConversionSettings> _settingsStore;
-  private readonly ITypedConverter<CSiJointWrapper, Point> _pointConverter;
+  private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
+  private readonly ITypedConverter<CsiJointWrapper, Point> _pointConverter;
 
   public LineToSpeckleConverter(
-    IConverterSettingsStore<CSiConversionSettings> settingsStore,
-    ITypedConverter<CSiJointWrapper, Point> pointConverter
+    IConverterSettingsStore<CsiConversionSettings> settingsStore,
+    ITypedConverter<CsiJointWrapper, Point> pointConverter
   )
   {
     _settingsStore = settingsStore;
     _pointConverter = pointConverter;
   }
 
-  public Line Convert(CSiFrameWrapper target)
+  public Line Convert(CsiFrameWrapper target)
   {
     // TODO: Better exception handling
     string startPoint = "",

@@ -7,16 +7,16 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.CSiShared;
 
-public class CSiRootToSpeckleConverter : IRootToSpeckleConverter
+public class CsiRootToSpeckleConverter : IRootToSpeckleConverter
 {
   private readonly IConverterManager<IToSpeckleTopLevelConverter> _toSpeckle;
-  private readonly IConverterSettingsStore<CSiConversionSettings> _settingsStore;
-  private readonly ILogger<CSiRootToSpeckleConverter> _logger;
+  private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
+  private readonly ILogger<CsiRootToSpeckleConverter> _logger;
 
-  public CSiRootToSpeckleConverter(
+  public CsiRootToSpeckleConverter(
     IConverterManager<IToSpeckleTopLevelConverter> toSpeckle,
-    IConverterSettingsStore<CSiConversionSettings> settingsStore,
-    ILogger<CSiRootToSpeckleConverter> logger
+    IConverterSettingsStore<CsiConversionSettings> settingsStore,
+    ILogger<CsiRootToSpeckleConverter> logger
   )
   {
     _toSpeckle = toSpeckle;
@@ -26,7 +26,7 @@ public class CSiRootToSpeckleConverter : IRootToSpeckleConverter
 
   public Base Convert(object target)
   {
-    if (target is not ICSiWrapper wrapper)
+    if (target is not ICsiWrapper wrapper)
     {
       throw new ValidationException($"Target object is not a CSiWrapper. It's a ${target.GetType()}");
     }

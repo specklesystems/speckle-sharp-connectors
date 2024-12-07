@@ -10,23 +10,23 @@ namespace Speckle.Converters.CSiShared;
 
 public static class ServiceRegistration
 {
-  public static IServiceCollection AddCSiConverters(this IServiceCollection serviceCollection)
+  public static IServiceCollection AddCsiConverters(this IServiceCollection serviceCollection)
   {
     var converterAssembly = Assembly.GetExecutingAssembly();
 
     // Register top-level converters
-    serviceCollection.AddTransient<CSiObjectToSpeckleConverter>();
-    serviceCollection.AddRootCommon<CSiRootToSpeckleConverter>(converterAssembly);
+    serviceCollection.AddTransient<CsiObjectToSpeckleConverterBase>();
+    serviceCollection.AddRootCommon<CsiRootToSpeckleConverter>(converterAssembly);
 
     // Register extractors
     serviceCollection.AddScoped<DisplayValueExtractor>();
-    serviceCollection.AddScoped<ClassPropertyExtractor>();
+    serviceCollection.AddScoped<CsiGeneralPropertiesExtractor>();
 
     // Register application-level converters
-    serviceCollection.AddApplicationConverters<CSiToSpeckleUnitConverter, eUnits>(converterAssembly);
+    serviceCollection.AddApplicationConverters<CsiToSpeckleUnitConverter, eUnits>(converterAssembly);
     serviceCollection.AddScoped<
-      IConverterSettingsStore<CSiConversionSettings>,
-      ConverterSettingsStore<CSiConversionSettings>
+      IConverterSettingsStore<CsiConversionSettings>,
+      ConverterSettingsStore<CsiConversionSettings>
     >();
 
     serviceCollection.AddMatchingInterfacesAsTransient(converterAssembly);

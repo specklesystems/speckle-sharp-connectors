@@ -4,13 +4,13 @@ using Speckle.InterfaceGenerator;
 namespace Speckle.Converters.CSiShared;
 
 [GenerateAutoInterface]
-public class CSiConversionSettingsFactory(
+public class CsiConversionSettingsFactory(
   IHostToSpeckleUnitConverter<eUnits> unitsConverter,
-  IConverterSettingsStore<CSiConversionSettings> settingsStore
-) : ICSiConversionSettingsFactory
+  IConverterSettingsStore<CsiConversionSettings> settingsStore
+) : ICsiConversionSettingsFactory
 {
-  public CSiConversionSettings Current => settingsStore.Current;
+  public CsiConversionSettings Current => settingsStore.Current;
 
-  public CSiConversionSettings Create(cSapModel document) =>
+  public CsiConversionSettings Create(cSapModel document) =>
     new(document, unitsConverter.ConvertOrThrow(document.GetPresentUnits()));
 }

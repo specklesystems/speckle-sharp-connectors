@@ -19,9 +19,9 @@ namespace Speckle.Connectors.ETABSShared.HostApp;
 /// Elements without story assignment are placed in "Unassigned" collection.
 /// Uses caching to maintain collection references and prevent duplicates.
 /// </remarks>
-public class ETABSSendCollectionManager : CSiSendCollectionManager
+public class EtabsSendCollectionManager : CsiSendCollectionManager
 {
-  public ETABSSendCollectionManager(IConverterSettingsStore<CSiConversionSettings> converterSettings)
+  public EtabsSendCollectionManager(IConverterSettingsStore<CsiConversionSettings> converterSettings)
     : base(converterSettings) { }
 
   // TODO: This is gross. Too many strings. Improve as part of next milestone. Out of scope of "First Send".

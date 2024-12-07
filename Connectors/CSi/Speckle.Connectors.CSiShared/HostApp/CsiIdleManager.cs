@@ -2,11 +2,11 @@
 
 namespace Speckle.Connectors.CSiShared.HostApp;
 
-public sealed class CSiIdleManager : AppIdleManager
+public sealed class CsiIdleManager : AppIdleManager
 {
   private readonly IIdleCallManager _idleCallManager;
 
-  public CSiIdleManager(IIdleCallManager idleCallManager)
+  public CsiIdleManager(IIdleCallManager idleCallManager)
     : base(idleCallManager)
   {
     _idleCallManager = idleCallManager;
