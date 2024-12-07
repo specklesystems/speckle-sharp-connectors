@@ -1,6 +1,5 @@
 using Speckle.Converters.Civil3dShared.Extensions;
 using Speckle.Converters.Civil3dShared.Helpers;
-using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converters.Civil3dShared.ToSpeckle;
@@ -12,14 +11,12 @@ namespace Speckle.Converters.Civil3dShared.ToSpeckle;
 /// </summary>
 public class ClassPropertiesExtractor
 {
-  private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
   private readonly ITypedConverter<AG.Point3dCollection, SOG.Polyline> _point3dCollectionConverter;
   private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
   private readonly CatchmentGroupHandler _catchmentGroupHandler;
   private readonly PipeNetworkHandler _pipeNetworkHandler;
 
   public ClassPropertiesExtractor(
-    IConverterSettingsStore<Civil3dConversionSettings> settingsStore,
     ITypedConverter<AG.Point3dCollection, SOG.Polyline> point3dCollectionConverter,
     ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
     CatchmentGroupHandler catchmentGroupHandler,
@@ -28,7 +25,6 @@ public class ClassPropertiesExtractor
   {
     _point3dCollectionConverter = point3dCollectionConverter;
     _pointConverter = pointConverter;
-    _settingsStore = settingsStore;
     _catchmentGroupHandler = catchmentGroupHandler;
     _pipeNetworkHandler = pipeNetworkHandler;
   }

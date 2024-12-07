@@ -214,6 +214,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.ETABS22"
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Converters.CSiShared", "Converters\CSi\Speckle.Converters.CSiShared\Speckle.Converters.CSiShared.shproj", "{1B5C5FB2-3B22-4371-9AA5-3EDF3B4D62DE}"
 EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Connectors.ETABSShared", "Connectors\CSi\Speckle.Connectors.ETABSShared\Speckle.Connectors.ETABSShared.shproj", "{5D1E0B0D-56A7-4E13-B9A9-8633E02B8F17}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Converters.ETABSShared", "Converters\CSi\Speckle.Converters.ETABSShared\Speckle.Converters.ETABSShared.shproj", "{36377858-D696-4567-AB05-637F4EC841F5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -647,6 +651,8 @@ Global
 		{3B81B220-92E3-43FC-86C6-1E6DBEEB1917} = {FCCE9A47-05D8-41CB-A8EE-586FC5B69545}
 		{5E924B13-B3E8-4724-9BA7-CE82E39866EB} = {F2A1E5FC-CFEF-4590-BF0D-BE7B9F74E567}
 		{1B5C5FB2-3B22-4371-9AA5-3EDF3B4D62DE} = {D2638AC8-28B2-4667-A47B-3FAB9F900E6F}
+		{5D1E0B0D-56A7-4E13-B9A9-8633E02B8F17} = {D2638AC8-28B2-4667-A47B-3FAB9F900E6F}
+		{36377858-D696-4567-AB05-637F4EC841F5} = {D2638AC8-28B2-4667-A47B-3FAB9F900E6F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}
