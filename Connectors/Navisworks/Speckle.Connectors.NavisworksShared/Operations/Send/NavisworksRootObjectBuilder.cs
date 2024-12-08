@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
-using Speckle.Connector.Navisworks.Extensions;
 using Speckle.Connector.Navisworks.HostApp;
+using Speckle.Connector.Navisworks.Services;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
@@ -12,7 +12,6 @@ using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
-using static Speckle.Connector.Navisworks.Extensions.ElementSelectionExtension;
 using static Speckle.Connector.Navisworks.Operations.Send.GeometryNodeMerger;
 
 namespace Speckle.Connector.Navisworks.Operations.Send;
@@ -23,7 +22,8 @@ public class NavisworksRootObjectBuilder(
   IConverterSettingsStore<NavisworksConversionSettings> converterSettings,
   ILogger<NavisworksRootObjectBuilder> logger,
   ISdkActivityFactory activityFactory,
-  NavisworksMaterialUnpacker materialUnpacker
+  NavisworksMaterialUnpacker materialUnpacker,
+  IElementSelectionService elementSelectionService
 ) : IRootObjectBuilder<NAV.ModelItem>
 {
   internal NavisworksConversionSettings GetCurrentSettings() => converterSettings.Current;
@@ -89,7 +89,7 @@ public class NavisworksRootObjectBuilder(
     foreach (var group in groupedNodes)
     {
       var siblingBases = new List<Base>();
-      foreach (var itemPath in group.Value.Select(ResolveModelItemToIndexPath))
+      foreach (var itemPath in group.Value.Select(elementSelectionService.GetModelItemPath))
       {
         processedPaths.Add(itemPath);
 
@@ -106,7 +106,7 @@ public class NavisworksRootObjectBuilder(
 
       var navisworksObject = new NavisworksObject
       {
-        name = ElementSelectionExtension.ResolveIndexPathToModelItem(group.Key).DisplayName ?? string.Empty,
+        name = elementSelectionService.GetModelItemFromPath(group.Key).DisplayName ?? string.Empty,
         displayValue = siblingBases.SelectMany(b => b["displayValue"] as List<Base> ?? []).ToList(),
         properties = siblingBases.First()["properties"] as Dictionary<string, object?> ?? [],
         units = converterSettings.Current.Derived.SpeckleUnits,
@@ -160,7 +160,7 @@ public class NavisworksRootObjectBuilder(
     SendInfo sendInfo
   )
   {
-    string applicationId = ResolveModelItemToIndexPath(navisworksItem);
+    string applicationId = elementSelectionService.GetModelItemPath(navisworksItem);
     string sourceType = navisworksItem.GetType().Name;
 
     try

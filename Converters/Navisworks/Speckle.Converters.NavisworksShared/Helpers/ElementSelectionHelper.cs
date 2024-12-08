@@ -15,7 +15,7 @@ public static class ElementSelectionHelper
   /// For root-level model items, only the model index is included.
   /// </returns>
   /// <exception cref="ArgumentNullException">Thrown if <paramref name="modelItem"/> is null.</exception>
-  internal static string ResolveModelItemToIndexPath(NAV.ModelItem modelItem)
+  public static string ResolveModelItemToIndexPath(NAV.ModelItem modelItem)
   {
     if (modelItem == null)
     {
@@ -32,8 +32,13 @@ public static class ElementSelectionHelper
     return pathIndex;
   }
 
-  internal static NAV.ModelItem ResolveIndexPathToModelItem(string indexPath)
+  public static NAV.ModelItem ResolveIndexPathToModelItem(string indexPath)
   {
+    if (indexPath == null)
+    {
+      throw new ArgumentNullException(nameof(indexPath));
+    }
+
     var indexPathParts = indexPath.Split(PathConstants.SEPARATOR);
 
     var modelIndex = int.Parse(indexPathParts[0]);
@@ -52,7 +57,7 @@ public static class ElementSelectionHelper
   /// <param name="modelItem">The model item to check for visibility.</param>
   /// <returns>True if the item and all ancestors are visible; otherwise, false.</returns>
   /// <exception cref="ArgumentNullException">Thrown if <paramref name="modelItem"/> is null.</exception>
-  internal static bool IsElementVisible(NAV.ModelItem modelItem)
+  public static bool IsElementVisible(NAV.ModelItem modelItem)
   {
     if (modelItem == null)
     {
@@ -63,6 +68,13 @@ public static class ElementSelectionHelper
     return modelItem.AncestorsAndSelf.All(item => !item.IsHidden);
   }
 
-  internal static List<NAV.ModelItem> ResolveGeometryLeafNodes(NAV.ModelItem modelItem) =>
-    modelItem.DescendantsAndSelf.Where(x => x.HasGeometry).ToList();
+  public static IReadOnlyCollection<NAV.ModelItem> ResolveGeometryLeafNodes(NAV.ModelItem modelItem)
+  {
+    if (modelItem == null)
+    {
+      throw new ArgumentNullException(nameof(modelItem));
+    }
+
+    return modelItem.DescendantsAndSelf.Where(x => x.HasGeometry).ToList();
+  }
 }

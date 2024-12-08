@@ -1,15 +1,16 @@
 ﻿using Microsoft.Extensions.Logging;
+using Speckle.Connector.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
-using static Speckle.Connector.Navisworks.Extensions.ElementSelectionExtension;
 
 namespace Speckle.Connector.Navisworks.HostApp;
 
 public class NavisworksMaterialUnpacker(
   ILogger<NavisworksMaterialUnpacker> logger,
-  IConverterSettingsStore<NavisworksConversionSettings> converterSettings
+  IConverterSettingsStore<NavisworksConversionSettings> converterSettings,
+  IElementSelectionService selectionService
 )
 {
   // Helper function to select a property based on the representation mode
@@ -41,7 +42,7 @@ public class NavisworksMaterialUnpacker(
           continue;
         }
 
-        var navisworksObjectId = ResolveModelItemToIndexPath(navisworksObject);
+        var navisworksObjectId = selectionService.GetModelItemPath(navisworksObject);
 
         var geometry = navisworksObject.Geometry;
 

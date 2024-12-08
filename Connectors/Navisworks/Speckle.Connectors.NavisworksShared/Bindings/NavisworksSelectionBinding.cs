@@ -1,4 +1,4 @@
-using Speckle.Connector.Navisworks.Extensions;
+using Speckle.Connector.Navisworks.Services;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 
@@ -7,12 +7,18 @@ namespace Speckle.Connector.Navisworks.Bindings;
 public class NavisworksSelectionBinding : ISelectionBinding
 {
   private readonly IAppIdleManager _appIdleManager;
+  private readonly IElementSelectionService _selectionService;
   private const string SELECTION_EVENT = "setSelection";
   public string Name { get; } = "selectionBinding";
   public IBrowserBridge Parent { get; }
 
-  public NavisworksSelectionBinding(IAppIdleManager idleManager, IBrowserBridge parent)
+  public NavisworksSelectionBinding(
+    IAppIdleManager idleManager,
+    IBrowserBridge parent,
+    IElementSelectionService selectionService
+  )
   {
+    _selectionService = selectionService;
     _appIdleManager = idleManager;
     Parent = parent;
 
@@ -53,8 +59,8 @@ public class NavisworksSelectionBinding : ISelectionBinding
     // Ensure only visible elements are processed by filtering using IsElementVisible
     var selectedObjectsIds = new HashSet<string>(
       activeDocument
-        .CurrentSelection.SelectedItems.Where(ElementSelectionExtension.IsElementVisible) // Exclude hidden elements
-        .Select(ElementSelectionExtension.ResolveModelItemToIndexPath) // Resolve to index paths
+        .CurrentSelection.SelectedItems.Where(_selectionService.IsVisible) // Exclude hidden elements
+        .Select(_selectionService.GetModelItemPath) // Resolve to index paths
     );
 
     return new SelectionInfo(

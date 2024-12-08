@@ -4,6 +4,7 @@ using Speckle.Connector.Navisworks.HostApp;
 using Speckle.Connector.Navisworks.Operations.Send;
 using Speckle.Connector.Navisworks.Operations.Send.Filters;
 using Speckle.Connector.Navisworks.Operations.Send.Settings;
+using Speckle.Connector.Navisworks.Services;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Cancellation;
@@ -66,5 +67,6 @@ public static class NavisworksConnectorServiceRegistration
 
     // register filters
     serviceCollection.AddScoped<ISendFilter, NavisworksSelectionFilter>();
+    serviceCollection.AddScoped<IElementSelectionService, ElementSelectionService>();
   }
 }

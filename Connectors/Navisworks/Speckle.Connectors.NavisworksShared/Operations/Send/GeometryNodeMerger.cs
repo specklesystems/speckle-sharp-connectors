@@ -1,4 +1,4 @@
-﻿using Speckle.Connector.Navisworks.Extensions;
+﻿using Speckle.Connector.Navisworks.Services;
 
 namespace Speckle.Connector.Navisworks.Operations.Send;
 
@@ -12,7 +12,8 @@ public static class GeometryNodeMerger
       .Where(node => node.HasGeometry && string.IsNullOrEmpty(node.DisplayName)) // Only anonymous geometry nodes
       .GroupBy(node =>
       {
-        var path = ElementSelectionExtension.ResolveModelItemToIndexPath(node);
+        var service = new ElementSelectionService();
+        var path = service.GetModelItemPath(node);
         var lastSeparatorIndex = path.LastIndexOf(PathConstants.SEPARATOR);
         return lastSeparatorIndex == -1 ? path : path[..lastSeparatorIndex];
       })

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Speckle.Connector.Navisworks.Operations.Send.Settings;
+using Speckle.Connector.Navisworks.Services;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Bindings;
@@ -16,7 +17,6 @@ using Speckle.Converters.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Logging;
-using static Speckle.Connector.Navisworks.Extensions.ElementSelectionExtension;
 
 namespace Speckle.Connector.Navisworks.Bindings;
 
@@ -37,6 +37,7 @@ public class NavisworksSendBinding : ISendBinding
   private readonly ISdkActivityFactory _activityFactory;
   private readonly INavisworksConversionSettingsFactory _conversionSettingsFactory;
   private readonly ToSpeckleSettingsManagerNavisworks _toSpeckleSettingsManagerNavisworks;
+  private readonly IElementSelectionService _selectionService;
 
   public NavisworksSendBinding(
     DocumentModelStore store,
@@ -49,7 +50,8 @@ public class NavisworksSendBinding : ISendBinding
     ISpeckleApplication speckleApplication,
     ISdkActivityFactory activityFactory,
     INavisworksConversionSettingsFactory conversionSettingsFactory,
-    ToSpeckleSettingsManagerNavisworks toSpeckleSettingsManagerNavisworks
+    ToSpeckleSettingsManagerNavisworks toSpeckleSettingsManagerNavisworks,
+    IElementSelectionService selectionService
   )
   {
     Parent = parent;
@@ -64,6 +66,7 @@ public class NavisworksSendBinding : ISendBinding
     _activityFactory = activityFactory;
     _conversionSettingsFactory = conversionSettingsFactory;
     _toSpeckleSettingsManagerNavisworks = toSpeckleSettingsManagerNavisworks;
+    _selectionService = selectionService;
     SubscribeToNavisworksEvents();
   }
 
@@ -136,7 +139,7 @@ public class NavisworksSendBinding : ISendBinding
         )
       );
 
-  private static List<NAV.ModelItem> GetNavisworksModelItems(SenderModelCard modelCard)
+  private List<NAV.ModelItem> GetNavisworksModelItems(SenderModelCard modelCard)
   {
     var selectedPaths = modelCard.SendFilter.NotNull().RefreshObjectIds();
     if (selectedPaths.Count == 0)
@@ -147,9 +150,9 @@ public class NavisworksSendBinding : ISendBinding
     var modelItems = modelCard
       .SendFilter.NotNull()
       .RefreshObjectIds()
-      .Select(ResolveIndexPathToModelItem)
-      .SelectMany(ResolveGeometryLeafNodes)
-      .Where(IsElementVisible)
+      .Select(_selectionService.GetModelItemFromPath)
+      .SelectMany(_selectionService.GetGeometryNodes)
+      .Where(_selectionService.IsVisible)
       .ToList();
 
     return modelItems.Count == 0
