@@ -6,7 +6,7 @@ namespace Speckle.Connectors.ArcGIS.HostApp;
 public class ArcGISLayerUnpacker
 {
   /// <summary>
-  /// Cache of all collections created by unpacked Layer MapMembers. Key is is the Speckle applicatoinId (Layer URI).
+  /// Cache of all collections created by unpacked Layer MapMembers. Key is the Speckle applicationId (Layer URI).
   /// </summary>
   public Dictionary<string, Collection> CollectionCache { get; } = new();
 

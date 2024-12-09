@@ -1,5 +1,3 @@
-using ArcGIS.Core.CIM;
-using ArcGIS.Core.Data.Analyst3D;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Microsoft.Extensions.Logging;
@@ -16,7 +14,6 @@ using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
-using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Connectors.ArcGis.Operations.Send;
 
@@ -28,7 +25,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ArcGISLayerUnpacker _layerUnpacker;
-  private readonly ArcGISColorManager _colorManager;
+  private readonly ArcGISColorUnpacker _colorUnpacker;
   private readonly IConverterSettingsStore<ArcGISConversionSettings> _converterSettings;
   private readonly ILogger<ArcGISRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
@@ -36,7 +33,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
   public ArcGISRootObjectBuilder(
     ISendConversionCache sendConversionCache,
     ArcGISLayerUnpacker layerUnpacker,
-    ArcGISColorManager colorManager,
+    ArcGISColorUnpacker colorUnpacker,
     IConverterSettingsStore<ArcGISConversionSettings> converterSettings,
     IRootToSpeckleConverter rootToSpeckleConverter,
     ILogger<ArcGISRootObjectBuilder> logger,
@@ -45,7 +42,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
   {
     _sendConversionCache = sendConversionCache;
     _layerUnpacker = layerUnpacker;
-    _colorManager = colorManager;
+    _colorUnpacker = colorUnpacker;
     _converterSettings = converterSettings;
     _rootToSpeckleConverter = rootToSpeckleConverter;
     _logger = logger;
@@ -158,10 +155,8 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
       throw new SpeckleException("Failed to convert all objects."); // fail fast instead creating empty commit! It will appear as model card error with red color.
     }
 
-    // POC: Add Color Proxies
-    // POC: this class definitely needs to be refactored.
-    List<ColorProxy> colorProxies = _colorManager.UnpackColors(unpackedLayers);
-    rootCollection[ProxyKeys.COLOR] = colorProxies;
+    // 3 -  Add Color Proxies
+    rootCollection[ProxyKeys.COLOR] = _colorUnpacker.ColorProxyCache.Values.ToList();
 
     return new RootObjectBuilderResult(rootCollection, results);
   }
@@ -169,10 +164,12 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
   private async Task<List<Base>> ConvertFeatureLayerObjectsAsync(ADM.FeatureLayer featureLayer)
   {
     List<Base> convertedObjects = new();
-
     await QueuedTask
       .Run(() =>
       {
+        // store the layer renderer for color unpacking
+        _colorUnpacker.StoreRendererAndFields(featureLayer);
+
         // search the rows of the layer, where each row is treated like an object
         // RowCursor is IDisposable but is not being correctly picked up by IDE warnings.
         // This means we need to be carefully adding using statements based on the API documentation coming from each method/class
@@ -185,6 +182,9 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
             {
               Base converted = _rootToSpeckleConverter.Convert(row);
               convertedObjects.Add(converted);
+
+              // process the object color
+              _colorUnpacker.ProcessFeatureLayerColor(row);
             }
           }
         }
@@ -194,6 +194,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     return convertedObjects;
   }
 
+  // POC: raster colors are stored as mesh vertex colors in RasterToSpeckleConverter. Should probably move to color unpacker.
   private async Task<List<Base>> ConvertRasterLayerObjectsAsync(ADM.RasterLayer rasterLayer)
   {
     List<Base> convertedObjects = new();
@@ -217,8 +218,8 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
       await QueuedTask
         .Run(() =>
         {
-          // TODO: handle point colors here
-          var renderer = lasDatasetLayer.GetRenderers()[0];
+          // store the layer renderer for color unpacking
+          _colorUnpacker.StoreRenderer(lasDatasetLayer);
 
           using (
             ACD.Analyst3D.LasPointCursor ptCursor = lasDatasetLayer.SearchPoints(new ACD.Analyst3D.LasPointFilter())
@@ -230,6 +231,9 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
               {
                 Base converted = _rootToSpeckleConverter.Convert(pt);
                 convertedObjects.Add(converted);
+
+                // process the object color
+                _colorUnpacker.ProcessLasLayerColor(pt);
               }
             }
           }
@@ -242,44 +246,5 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     }
 
     return convertedObjects;
-  }
-
-  // TODO: move this to color manager. Bringing this over from the converter for now.
-  private int GetPointColor(LasPoint pt, object renderer)
-  {
-    // get color
-    int color = 0;
-    string classCode = pt.ClassCode.ToString();
-    if (renderer is CIMTinUniqueValueRenderer uniqueRenderer)
-    {
-      foreach (CIMUniqueValueGroup group in uniqueRenderer.Groups)
-      {
-        if (color != 0)
-        {
-          break;
-        }
-        foreach (CIMUniqueValueClass groupClass in group.Classes)
-        {
-          if (color != 0)
-          {
-            break;
-          }
-          for (int i = 0; i < groupClass.Values.Length; i++)
-          {
-            if (classCode == groupClass.Values[i].FieldValues[0])
-            {
-              CIMColor symbolColor = groupClass.Symbol.Symbol.GetColor();
-              color = _colorManager.CIMColorToInt(symbolColor);
-              break;
-            }
-          }
-        }
-      }
-    }
-    else
-    {
-      color = _colorManager.RGBToInt(pt.RGBColor);
-    }
-    return color;
   }
 }

@@ -57,6 +57,7 @@ public static class ArcGISConnectorModule
     serviceCollection.AddScoped<LocalToGlobalConverterUtils>();
 
     serviceCollection.AddScoped<ArcGISColorManager>();
+    serviceCollection.AddScoped<ArcGISColorUnpacker>();
     serviceCollection.AddScoped<MapMembersUtils>();
 
     // register send conversion cache
