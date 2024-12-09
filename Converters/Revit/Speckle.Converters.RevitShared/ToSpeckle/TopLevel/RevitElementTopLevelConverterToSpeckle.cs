@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Converters.RevitShared.ToSpeckle.Properties;
@@ -14,6 +15,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
 {
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly ClassPropertiesExtractor _classPropertiesExtractor;
+  private readonly PropertiesExtractor _propertiesExtractor;
   private readonly ITypedConverter<DB.Location, Base> _locationConverter;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<DB.Level, Dictionary<string, object>> _levelConverter;
@@ -21,6 +23,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
   public ElementTopLevelConverterToSpeckle(
     DisplayValueExtractor displayValueExtractor,
     ClassPropertiesExtractor classPropertiesExtractor,
+    PropertiesExtractor propertiesExtractor,
     ITypedConverter<DB.Location, Base> locationConverter,
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ITypedConverter<DB.Level, Dictionary<string, object>> levelConverter
@@ -28,6 +31,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
   {
     _displayValueExtractor = displayValueExtractor;
     _classPropertiesExtractor = classPropertiesExtractor;
+    _propertiesExtractor = propertiesExtractor;
     _locationConverter = locationConverter;
     _converterSettings = converterSettings;
     _levelConverter = levelConverter;
@@ -38,6 +42,20 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
   public RevitObject Convert(DB.Element target)
   {
     string category = target.Category?.Name ?? "none";
+
+    // special case for direct shapes: use builtin category instead
+    if (target is DB.DirectShape ds)
+    {
+      // Clean up built-in name by removing "OST" prefixes
+      category = ds
+        .Category.GetBuiltInCategory()
+        .ToString()
+        .Replace("OST_IOS", "") //for OST_IOSModelGroups
+        .Replace("OST_MEP", "") //for OST_MEPSpaces
+        .Replace("OST_", "") //for any other OST_blablabla
+        .Replace("_", " ");
+    }
+
     string name = $"{category} - {target.Name}"; // Note: I find this looks better in the frontend.
     string familyName = "none";
     string typeName = "none";
@@ -74,6 +92,9 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
     // this is a bespoke method by class type.
     var children = GetElementChildren(target).ToList();
 
+    // get properties
+    Dictionary<string, object?> properties = _propertiesExtractor.GetProperties(target);
+
     RevitObject revitObject =
       new()
       {
@@ -84,6 +105,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
         location = convertedLocation,
         elements = children,
         displayValue = displayValue,
+        properties = properties,
         units = _converterSettings.Current.SpeckleUnits
       };
 

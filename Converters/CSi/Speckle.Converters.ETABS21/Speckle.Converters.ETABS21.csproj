@@ -16,4 +16,6 @@
 
     <Import Project="..\Speckle.Converters.CSiShared\Speckle.Converters.CSiShared.projitems" Label="Shared" />
 
+    <Import Project="..\Speckle.Converters.ETABSShared\Speckle.Converters.ETABSShared.projitems" Label="Shared" />
+
 </Project>
