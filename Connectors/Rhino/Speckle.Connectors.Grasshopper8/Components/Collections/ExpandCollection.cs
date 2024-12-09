@@ -1,9 +1,8 @@
 using System.Collections;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
-using Rhino.Display;
 using Rhino.Geometry;
-using Speckle.Connectors.Grasshopper8.HostApp;
+using Speckle.Connectors.Grasshopper8.Parameters;
 using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.Grasshopper8.Components.Collections;
@@ -17,23 +16,35 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
   public ExpandCollection()
     : base("Expand Collection", "expand", "Expands a new collection", "Speckle", "Collections") { }
 
-  protected override void RegisterInputParams(GH_InputParamManager pManager) =>
-    pManager.AddGenericParameter("Collection", "C", "Collection to unpack", GH_ParamAccess.item);
+  protected override void RegisterInputParams(GH_InputParamManager pManager)
+  {
+    pManager.AddParameter(
+      new SpeckleCollectionWrapperParam(GH_ParamAccess.item),
+      "Data",
+      "D",
+      "The data you want to expand",
+      GH_ParamAccess.item
+    );
+  }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager) { }
 
-  private List<SpeckleGrasshopperObject> _previewObjects = new();
+  private List<SpeckleObject> _previewObjects = new();
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
-    Collection res = new();
-    da.GetData("Collection", ref res);
-    var c = res;
+    SpeckleCollectionGoo res = new();
+    da.GetData(0, ref res);
+    var c = res.Value;
 
     Name = c.name;
     NickName = c.name;
 
-    var objects = c.elements.Where(el => el is not Collection).OfType<SpeckleGrasshopperObject>().ToList();
+    var objects = c
+      .elements.Where(el => el is not Collection)
+      .OfType<SpeckleObject>()
+      .Select(o => new SpeckleObjectGoo(o))
+      .ToList();
     var collections = c.elements.Where(el => el is Collection).OfType<Collection>().ToList();
 
     var outputParams = new List<OutputParamWrapper>();
@@ -42,13 +53,13 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
       var param = new Param_GenericObject()
       {
         Name = "Inner objects",
-        NickName = "OBJS",
+        NickName = "Inner Objs",
         Description =
           "Some collections may contain a mix of objects and other collections. Here we output the atomic objects from within this collection.",
         Access = GH_ParamAccess.list // NOTE: todo check on list if it's tree path-based
       };
 
-      outputParams.Add(new OutputParamWrapper(param, objects));
+      outputParams.Add(new OutputParamWrapper(param, objects, false));
     }
 
     foreach (var collection in collections)
@@ -60,9 +71,9 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
       }
 
       var hasInnerCollections = collection.elements.Any(el => el is Collection);
-      var isPathBasedCollection = collection["treePath"] as string; // Note: this is a reminder for the future
+      var isPathBasedCollection = collection["path"] as string; // Note: this is a reminder for the future
       var nickName = collection.name;
-      if (collection.name.Length > 12)
+      if (collection.name.Length > 16)
       {
         nickName = collection.name[..3];
         nickName += "..." + collection.name[^3..];
@@ -76,9 +87,18 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
       };
       if (!hasInnerCollections)
       {
-        _previewObjects.AddRange(collection.elements.Cast<SpeckleGrasshopperObject>());
+        _previewObjects.AddRange(collection.elements.Cast<SpeckleObject>());
       }
-      outputParams.Add(new OutputParamWrapper(param, hasInnerCollections ? collection : collection.elements));
+
+      outputParams.Add(
+        new OutputParamWrapper(
+          param,
+          hasInnerCollections
+            ? new SpeckleCollectionGoo(collection)
+            : collection.elements.OfType<SpeckleObject>().Select(o => new SpeckleObjectGoo(o)).ToList(),
+          hasInnerCollections
+        )
+      );
     }
 
     if (da.Iteration == 0 && OutputMismatch(outputParams))
@@ -116,8 +136,12 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
     }
   }
 
+  private BoundingBox _clippingBox;
+  public override BoundingBox ClippingBox => _clippingBox;
+
   private void FlattenForPreview(Collection c)
   {
+    _clippingBox = new BoundingBox();
     foreach (var element in c.elements)
     {
       if (element is Collection subCol)
@@ -125,9 +149,11 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
         FlattenForPreview(subCol);
       }
 
-      if (element is SpeckleGrasshopperObject sg)
+      if (element is SpeckleObject sg)
       {
         _previewObjects.Add(sg);
+        var box = sg.GeometryBase.GetBoundingBox(false);
+        _clippingBox.Union(box);
       }
     }
   }
@@ -139,48 +165,10 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
     {
       return;
     }
-
     var isSelected = args.Document.SelectedObjects().Contains(this);
-
-    using var displayMat = new DisplayMaterial(Color.CornflowerBlue, 0.1); // note can be coming from the actual render mat
-
     foreach (var elem in _previewObjects)
     {
-      switch (elem.GeometryBase)
-      {
-        case Mesh m:
-          args.Display.DrawMeshShaded(m, isSelected ? args.ShadeMaterial_Selected : args.ShadeMaterial);
-          break;
-        case Brep b:
-          args.Display.DrawBrepShaded(b, isSelected ? args.ShadeMaterial_Selected : args.ShadeMaterial);
-          args.Display.DrawBrepWires(
-            b,
-            isSelected ? args.WireColour_Selected : args.WireColour,
-            args.DefaultCurveThickness
-          );
-          break;
-        case Extrusion e:
-          args.Display.DrawMeshShaded(
-            e.GetMesh(MeshType.Any),
-            isSelected ? args.ShadeMaterial_Selected : args.ShadeMaterial
-          );
-          break;
-        case SubD d:
-          args.Display.DrawSubDShaded(d, isSelected ? args.ShadeMaterial_Selected : args.ShadeMaterial);
-          args.Display.DrawSubDWires(
-            d,
-            isSelected ? args.WireColour_Selected : args.WireColour,
-            args.DefaultCurveThickness
-          );
-          break;
-        case Curve c:
-          args.Display.DrawCurve(
-            c,
-            isSelected ? args.WireColour_Selected : args.WireColour,
-            args.DefaultCurveThickness
-          );
-          break;
-      }
+      elem.DrawPreview(args, isSelected);
     }
   }
 
@@ -254,4 +242,4 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
   public bool DestroyParameter(GH_ParameterSide side, int index) => side == GH_ParameterSide.Output;
 }
 
-public record OutputParamWrapper(Param_GenericObject Param, object Values);
+public record OutputParamWrapper(Param_GenericObject Param, object Values, bool IsCollection);

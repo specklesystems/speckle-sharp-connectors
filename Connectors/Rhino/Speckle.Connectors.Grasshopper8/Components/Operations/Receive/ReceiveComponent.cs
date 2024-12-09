@@ -6,15 +6,12 @@ using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.Grasshopper8.Components.BaseComponents;
-using Speckle.Connectors.Grasshopper8.Components.Operations.Conversion;
 using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Connectors.Grasshopper8.Parameters;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
-using Speckle.DoubleNumerics;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
-using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models;
@@ -24,7 +21,7 @@ namespace Speckle.Connectors.Grasshopper8.Components.Operations.Receive;
 
 public class ReceiveComponentOutput
 {
-  public Collection RootObject { get; set; }
+  public SpeckleCollectionGoo RootObject { get; set; }
 }
 
 public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlModelResource, ReceiveComponentOutput>
@@ -43,7 +40,7 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
   {
     pManager.AddParameter(
-      new SpeckleObjectParam(GH_ParamAccess.item),
+      new SpeckleCollectionWrapperParam(GH_ParamAccess.item),
       "Model",
       "model",
       "The model object for the received version",
@@ -110,19 +107,21 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
       .ReceiveCommitObject(receiveInfo, progress, cancellationToken)
       .ConfigureAwait(false);
 
-    // We need to rething these lovely unpackers, there's a bit too many of 'em
+    // We need to rethink these lovely unpackers, there's a bit too many of 'em
     var rootObjectUnpacker = scope.ServiceProvider.GetService<RootObjectUnpacker>();
     var localToGlobalUnpacker = new LocalToGlobalUnpacker();
     var traversalContextUnpacker = new TraversalContextUnpacker();
 
     var unpackedRoot = rootObjectUnpacker.Unpack(root);
+
+    // "flatten" block instances
     var localToGlobalMaps = localToGlobalUnpacker.Unpack(
       unpackedRoot.DefinitionProxies,
       unpackedRoot.ObjectsToConvert.ToList()
     );
 
     var collGen = new CollectionRebuilder((root as Collection) ?? new Collection() { name = "unnamed" });
-    var results = new List<SpeckleGrasshopperObject>();
+
     foreach (var map in localToGlobalMaps)
     {
       try
@@ -132,13 +131,14 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
 
         foreach (var matrix in map.Matrix)
         {
-          var mat = MatrixToTransform(matrix, "meters");
+          var mat = GrasshopperHelpers.MatrixToTransform(matrix, "meters");
           converted.ForEach(res => res.Transform(mat));
         }
 
+        // note one to many not handled too nice here
         foreach (var geometryBase in converted)
         {
-          var gh = new SpeckleGrasshopperObject()
+          var gh = new SpeckleObject()
           {
             OriginalObject = map.AtomicObject,
             Path = path,
@@ -154,7 +154,8 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
     }
 
     // var x = new SpeckleCollectionGoo { Value = collGen.RootCollection };
-    return new ReceiveComponentOutput { RootObject = collGen.RootCollection };
+    var goo = new SpeckleCollectionGoo(collGen.RootCollection);
+    return new ReceiveComponentOutput { RootObject = goo };
   }
 
   private List<GeometryBase> Convert(Base input, IRootToHostConverter rootConverter)
@@ -163,13 +164,13 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
 
     if (result is GeometryBase geometry)
     {
-      return new List<GeometryBase> { geometry };
+      return [geometry];
     }
-    else if (result is List<GeometryBase> geometryList)
+    if (result is List<GeometryBase> geometryList)
     {
       return geometryList;
     }
-    else if (result is IEnumerable<(object, Base)> fallbackConversionResult)
+    if (result is IEnumerable<(object, Base)> fallbackConversionResult)
     {
       // note special handling for proxying render materials OR we don't care about revit
       return fallbackConversionResult.Select(t => t.Item1).Cast<GeometryBase>().ToList();
@@ -177,39 +178,11 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
 
     throw new SpeckleException("Failed to convert input to rhino");
   }
-
-  private Transform MatrixToTransform(Matrix4x4 matrix, string units)
-  {
-    var currentDoc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
-    var conversionFactor = Units.GetConversionFactor(units, currentDoc.ModelUnitSystem.ToSpeckleString());
-
-    var t = Transform.Identity;
-    t.M00 = matrix.M11;
-    t.M01 = matrix.M12;
-    t.M02 = matrix.M13;
-    t.M03 = matrix.M14 * conversionFactor;
-
-    t.M10 = matrix.M21;
-    t.M11 = matrix.M22;
-    t.M12 = matrix.M23;
-    t.M13 = matrix.M24 * conversionFactor;
-
-    t.M20 = matrix.M31;
-    t.M21 = matrix.M32;
-    t.M22 = matrix.M33;
-    t.M23 = matrix.M34 * conversionFactor;
-
-    t.M30 = matrix.M41;
-    t.M31 = matrix.M42;
-    t.M32 = matrix.M43;
-    t.M33 = matrix.M44;
-    return t;
-  }
 }
 
 // NOTE: We will need GrasshopperCollections (with an extra path element)
 // these will need to be handled now
-public class CollectionRebuilder
+sealed class CollectionRebuilder
 {
   public Collection RootCollection { get; }
 
@@ -220,14 +193,13 @@ public class CollectionRebuilder
     RootCollection = new Collection() { name = baseCollection.name, applicationId = baseCollection.applicationId };
   }
 
-  public void AppendSpeckleGrasshopperObject(SpeckleGrasshopperObject speckleGrasshopperObject)
+  public void AppendSpeckleGrasshopperObject(SpeckleObject speckleGrasshopperObject)
   {
-    // TODO
     var collection = GetOrCreateCollectionFromPath(speckleGrasshopperObject.Path);
     collection.elements.Add(speckleGrasshopperObject);
   }
 
-  public Collection GetOrCreateCollectionFromPath(IEnumerable<Collection> path)
+  private Collection GetOrCreateCollectionFromPath(IEnumerable<Collection> path)
   {
     // TODO - this flows but it can be optimised (ie, concat path first, check cache, iterate only if not in cache)
     var currentLayerName = "";
@@ -241,7 +213,11 @@ public class CollectionRebuilder
         continue;
       }
 
-      var newCollection = new Collection() { name = collection.name };
+      var newCollection = new Collection() { name = collection.name, applicationId = collection.applicationId };
+      if (collection["path"] != null)
+      {
+        newCollection["path"] = collection["path"];
+      }
       _cache[currentLayerName] = newCollection;
       previousCollection.elements.Add(newCollection);
 
