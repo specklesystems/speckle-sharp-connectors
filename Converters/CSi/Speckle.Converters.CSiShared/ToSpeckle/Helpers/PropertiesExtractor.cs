@@ -47,7 +47,8 @@ public class PropertiesExtractor
     _classPropertyExtractor.ExtractProperties(wrapper, properties);
 
     // Capture "base" properties
-    var applicationId = properties.GetValueOrDefault("applicationId")?.ToString() ?? string.Empty;
+    properties.TryGetValue("applicationId", out var guid);
+    var applicationId = guid?.ToString() ?? string.Empty;
 
     // The "base" properties are removed from the dictionary (they sit at object root)
     properties.Remove("applicationId");

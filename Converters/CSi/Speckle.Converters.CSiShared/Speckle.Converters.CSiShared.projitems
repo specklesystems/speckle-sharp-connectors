@@ -27,5 +27,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\IPropertyExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\PropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\CsiObjectToSpeckleConverterBase.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Utils\DictionaryUtils.cs" />
   </ItemGroup>
 </Project>

@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
+using Speckle.Converters.CSiShared.Utils;
 
 namespace Speckle.Converters.ETABSShared.ToSpeckle.Helpers;
 
@@ -14,14 +15,12 @@ public sealed class EtabsFramePropertiesExtractor
 
   public void ExtractProperties(CsiFrameWrapper frame, Dictionary<string, object?> properties)
   {
-    Dictionary<string, object?> objectId = new Dictionary<string, object?>();
-
-    objectId["deisgnOrientation"] = GetDesignOrientation(frame);
+    var objectId = DictionaryUtils.EnsureNestedDictionary(properties, "objectId");
+    objectId["designOrientation"] = GetDesignOrientation(frame);
     (objectId["label"], objectId["level"]) = GetLabelAndLevel(frame);
 
-    properties["objectId"] = objectId;
-
-    // TODO: Add other ETABS-specific properties
+    var design = DictionaryUtils.EnsureNestedDictionary(properties, "design");
+    design["designProcedure"] = GetDesignProcedure(frame);
   }
 
   private (string label, string level) GetLabelAndLevel(CsiFrameWrapper frame)
@@ -37,5 +36,21 @@ public sealed class EtabsFramePropertiesExtractor
     eFrameDesignOrientation designOrientation = eFrameDesignOrientation.Null;
     _ = _settingsStore.Current.SapModel.FrameObj.GetDesignOrientation(frame.Name, ref designOrientation);
     return designOrientation.ToString();
+  }
+
+  private string GetDesignProcedure(CsiFrameWrapper frame)
+  {
+    int myType = 0;
+    _ = _settingsStore.Current.SapModel.FrameObj.GetDesignProcedure(frame.Name, ref myType);
+    return myType switch
+    {
+      1 => "Steel Frame Design",
+      2 => "Concrete Frame Design",
+      3 => "Composite Beam Design",
+      4 => "Steel Joist Design",
+      7 => "No Design",
+      13 => "Composite Column Design",
+      _ => "Program determined"
+    };
   }
 }
