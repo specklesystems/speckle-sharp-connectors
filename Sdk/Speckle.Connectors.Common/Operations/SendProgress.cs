@@ -56,9 +56,7 @@ public class SendProgress(IProgressDisplayManager progressDisplayManager) : ISen
         break;
       case ProgressEvent.FromCacheOrSerialized:
         var message = $"Serializing... ({_serialized} done / {_total} found objects)";
-        onOperationProgressed.Report(
-          new(message, progressDisplayManager.CalculatePercentage(args))
-        );
+        onOperationProgressed.Report(new(message, progressDisplayManager.CalculatePercentage(args)));
         break;
     }
   }
