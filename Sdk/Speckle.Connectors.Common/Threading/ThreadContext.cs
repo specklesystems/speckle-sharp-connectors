@@ -75,7 +75,7 @@ public abstract class ThreadContext : IThreadContext
         await WorkerToMainAsync<object?>(async () =>
           {
             await action().BackToCurrent();
-            return new ValueTask<object?>(null);
+            return Task.FromResult<object?>(null);
           })
           .BackToCurrent();
       }
@@ -87,7 +87,7 @@ public abstract class ThreadContext : IThreadContext
         await MainToWorkerAsync<object?>(async () =>
           {
             await action().BackToCurrent();
-            return new ValueTask<object?>(null);
+            return Task.FromResult<object?>(null);
           })
           .BackToCurrent();
       }
