@@ -283,14 +283,8 @@
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
           "Speckle.Connectors.Common": "[1.0.0, )",
-<<<<<<< HEAD
-          "Speckle.Sdk": "[3.1.0-dev.205, )",
-          "Speckle.Sdk.Dependencies": "[3.1.0-dev.205, )"
-=======
           "Speckle.Sdk": "[3.1.0-dev.212, )",
-          "Speckle.Sdk.Dependencies": "[3.1.0-dev.212, )",
-          "System.Threading.Tasks.Dataflow": "[6.0.0, )"
->>>>>>> dev
+          "Speckle.Sdk.Dependencies": "[3.1.0-dev.212, )"
         }
       },
       "speckle.connectors.dui.webview": {
@@ -378,21 +372,9 @@
       },
       "Speckle.Sdk.Dependencies": {
         "type": "CentralTransitive",
-<<<<<<< HEAD
-        "requested": "[3.1.0-dev.205, )",
-        "resolved": "3.1.0-dev.205",
-        "contentHash": "MjWRxQhXYZxfpc1JwKc33jjBH3mLLxnbCNx5mcYAdGRJDFb/6ebHzQqWE1abxxCa5k1GJBbH8RpMscFm3w6oVQ=="
-=======
         "requested": "[3.1.0-dev.212, )",
         "resolved": "3.1.0-dev.212",
         "contentHash": "b6nJAUSYixTWwZMjff1uPkrKXKp8ehoO6Nfw/eQxLpXdwaF4xdk1/sOXwFeGWaWId9E41Jf2jq4YHcxPEnDjYA=="
-      },
-      "System.Threading.Tasks.Dataflow": {
-        "type": "CentralTransitive",
-        "requested": "[6.0.0, )",
-        "resolved": "6.0.0",
-        "contentHash": "+tyDCU3/B1lDdOOAJywHQoFwyXIUghIaP2BxG79uvhfTnO+D9qIgjVlL/JV2NTliYbMHpd6eKDmHp2VHpij7MA=="
->>>>>>> dev
       }
     }
   }
