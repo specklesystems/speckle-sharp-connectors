@@ -12,9 +12,8 @@
 /// </remarks>
 public static class Url
 {
-  public static readonly Uri Netlify = new("https://boisterous-douhua-e3cefb.netlify.app/");
-
-  // public static readonly Uri Netlify = new("http://localhost:8082/");
+  //public static readonly Uri Netlify = new("https://boisterous-douhua-e3cefb.netlify.app/");
+  public static readonly Uri Netlify = new("http://localhost:8082/hostapptests");
 
   // In CefSharp XAML file we cannot call ToString() function over URI
   public static readonly string NetlifyString = Netlify.ToString();

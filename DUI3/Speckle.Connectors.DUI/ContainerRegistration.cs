@@ -4,6 +4,7 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
+using Speckle.Connectors.DUI.Testing;
 using Speckle.Sdk;
 using Speckle.Sdk.Transports;
 
@@ -15,6 +16,7 @@ public static class ContainerRegistration
     where TDocumentStore : DocumentModelStore
   {
     serviceCollection.AddSingleton<DocumentModelStore, TDocumentStore>();
+    serviceCollection.AddTesting();
 
     // send operation and dependencies
     serviceCollection.AddSingleton<ISyncToThread, SyncToUIThread>();
