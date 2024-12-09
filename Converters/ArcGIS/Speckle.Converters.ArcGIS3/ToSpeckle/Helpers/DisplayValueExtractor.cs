@@ -9,16 +9,16 @@ public sealed class DisplayValueExtractor
   private readonly ITypedConverter<ACG.MapPoint, SOG.Point> _pointConverter;
   private readonly ITypedConverter<ACG.Multipoint, IReadOnlyList<SOG.Point>> _multiPointConverter;
   private readonly ITypedConverter<ACG.Polyline, IReadOnlyList<SOG.Polyline>> _polylineConverter;
-  private readonly ITypedConverter<ACG.Polygon, List<Base>> _polygonConverter;
-  private readonly ITypedConverter<ACG.Multipatch, IReadOnlyList<Base>> _multipatchConverter;
+  private readonly ITypedConverter<ACG.Polygon, IReadOnlyList<SOG.Polyline>> _polygonConverter;
+  private readonly ITypedConverter<ACG.Multipatch, IReadOnlyList<SOG.Mesh>> _multipatchConverter;
   private readonly ITypedConverter<ACD.Raster.Raster, SOG.Mesh> _gisRasterConverter;
 
   public DisplayValueExtractor(
     ITypedConverter<ACG.MapPoint, SOG.Point> pointConverter,
     ITypedConverter<ACG.Multipoint, IReadOnlyList<SOG.Point>> multiPointConverter,
     ITypedConverter<ACG.Polyline, IReadOnlyList<SOG.Polyline>> polylineConverter,
-    ITypedConverter<ACG.Polygon, List<Base>> polygonConverter,
-    ITypedConverter<ACG.Multipatch, IReadOnlyList<Base>> multipatchConverter,
+    ITypedConverter<ACG.Polygon, IReadOnlyList<SOG.Polyline>> polygonConverter,
+    ITypedConverter<ACG.Multipatch, IReadOnlyList<SOG.Mesh>> multipatchConverter,
     ITypedConverter<ACD.Raster.Raster, SOG.Mesh> gisRasterConverter
   )
   {
@@ -97,7 +97,7 @@ public sealed class DisplayValueExtractor
         break;
 
       case ACG.Multipatch multipatch:
-        foreach (Base converted in _multipatchConverter.Convert(multipatch))
+        foreach (SOG.Mesh converted in _multipatchConverter.Convert(multipatch))
         {
           yield return converted;
         }

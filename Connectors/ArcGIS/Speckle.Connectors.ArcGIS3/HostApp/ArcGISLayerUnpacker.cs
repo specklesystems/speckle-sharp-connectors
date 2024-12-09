@@ -1,3 +1,4 @@
+using Speckle.Connectors.ArcGIS.HostApp.Extensions;
 using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.ArcGIS.HostApp;
@@ -5,7 +6,7 @@ namespace Speckle.Connectors.ArcGIS.HostApp;
 public class ArcGISLayerUnpacker
 {
   /// <summary>
-  /// Cache of all collections created by unpacked Layer MapMembers. Key is Layer URI.
+  /// Cache of all collections created by unpacked Layer MapMembers. Key is is the Speckle applicatoinId (Layer URI).
   /// </summary>
   public Dictionary<string, Collection> CollectionCache { get; } = new();
 
@@ -16,6 +17,7 @@ public class ArcGISLayerUnpacker
   /// <param name="mapMembers"></param>
   /// <param name="parentCollection"></param>
   /// <returns>List of layers containing objects.</returns>
+  /// <exception cref="AC.CalledOnWrongThreadException">Thrown when this method is *not* called on the MCT, because this method accesses mapmember fields</exception>
   public async Task<List<ADM.MapMember>> UnpackSelectionAsync(
     IReadOnlyList<ADM.MapMember> mapMembers,
     Collection parentCollection
@@ -36,9 +38,8 @@ public class ArcGISLayerUnpacker
           break;
 
         default:
-          Collection collection = CreateAndAddMapMemberCollectionToParentCollection(mapMember, parentCollection);
+          CreateAndAddMapMemberCollectionToParentCollection(mapMember, parentCollection);
           objects.Add(mapMember);
-          CollectionCache.Add(mapMember.URI, collection);
           break;
       }
     }
@@ -52,11 +53,12 @@ public class ArcGISLayerUnpacker
     Collection parentCollection
   )
   {
+    string mapMemberApplicationId = mapMember.GetSpeckleApplicationId();
     Collection collection =
       new()
       {
         name = mapMember.Name,
-        applicationId = mapMember.URI,
+        applicationId = mapMemberApplicationId,
         ["type"] = mapMember.GetType().Name
       };
 
@@ -83,7 +85,7 @@ public class ArcGISLayerUnpacker
     }
 
     parentCollection.elements.Add(collection);
-    CollectionCache.Add(mapMember.URI, collection);
+    CollectionCache.Add(mapMemberApplicationId, collection);
 
     return collection;
   }

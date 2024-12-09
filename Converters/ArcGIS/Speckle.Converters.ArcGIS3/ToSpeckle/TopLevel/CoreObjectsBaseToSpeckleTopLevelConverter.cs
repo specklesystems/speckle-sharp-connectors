@@ -43,7 +43,8 @@ public class CoreObjectsBaseToSpeckleTopLevelConverter : IToSpeckleTopLevelConve
         type = type,
         displayValue = display,
         properties = properties,
-        units = _settingsStore.Current.SpeckleUnits
+        units = _settingsStore.Current.SpeckleUnits,
+        applicationId = target.Handle.ToString()
       };
 
     return result;

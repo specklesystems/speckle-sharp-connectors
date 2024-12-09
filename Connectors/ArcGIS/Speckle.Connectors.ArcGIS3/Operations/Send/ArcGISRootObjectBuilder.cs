@@ -4,6 +4,7 @@ using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.ArcGIS.HostApp;
+using Speckle.Connectors.ArcGIS.HostApp.Extensions;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
@@ -61,9 +62,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     // TODO: add a warning if Geographic CRS is set
     // "Data has been sent in the units 'degrees'. It is advisable to set the project CRS to Projected type (e.g. EPSG:32631) to be able to receive geometry correctly in CAD/BIM software"
 
-    // TODO: send caching. This may be tricky, depending on whether layers or objects are cached.
 
-    int count = 0;
 
     Collection rootCollection =
       new() { name = MapView.Active.Map.Name, ["units"] = _converterSettings.Current.SpeckleUnits };
@@ -80,21 +79,35 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     }
 
     List<SendConversionResult> results = new(unpackedLayers.Count);
-
     onOperationProgressed.Report(new("Converting", null));
     using (var convertingActivity = _activityFactory.Start("Converting objects"))
     {
+      int count = 0;
       foreach (ADM.MapMember layer in unpackedLayers)
       {
         ct.ThrowIfCancellationRequested();
+        string layerApplicationId = layer.GetSpeckleApplicationId();
 
         try
         {
           // get the corresponding collection for this layer - we'll add all converted objects to the collection
-          if (_layerUnpacker.CollectionCache.TryGetValue(layer.URI, out Collection? layerCollection))
+          if (_layerUnpacker.CollectionCache.TryGetValue(layerApplicationId, out Collection? layerCollection))
           {
             var status = Status.SUCCESS;
             var sdkStatus = SdkActivityStatusCode.Ok;
+
+            // TODO: check cache first to see if this layer was previously converted
+            /*
+            if (_sendConversionCache.TryGetValue(
+              sendInfo.ProjectId,
+              layerApplicationId,
+              out ObjectReference? value
+            ))
+            {
+
+            }
+            */
+
             switch (layer)
             {
               case ADM.FeatureLayer featureLayer:
@@ -120,18 +133,18 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
                 sdkStatus = SdkActivityStatusCode.Error;
                 break;
             }
-            results.Add(new(status, layer.URI, layer.GetType().Name, layerCollection));
+            results.Add(new(status, layerApplicationId, layer.GetType().Name, layerCollection));
             convertingActivity?.SetStatus(sdkStatus);
           }
           else
           {
-            // TODO: throw error, a collection should have been converted for this layer in the layerUnpacker.
+            throw new SpeckleException($"No converted Collection found for layer {layerApplicationId}.");
           }
         }
         catch (Exception ex) when (!ex.IsFatal())
         {
           _logger.LogSendConversionError(ex, layer.GetType().Name);
-          results.Add(new(Status.ERROR, layer.URI, layer.GetType().Name, null, ex));
+          results.Add(new(Status.ERROR, layerApplicationId, layer.GetType().Name, null, ex));
           convertingActivity?.SetStatus(SdkActivityStatusCode.Error);
           convertingActivity?.RecordException(ex);
         }
@@ -199,25 +212,34 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
   {
     List<Base> convertedObjects = new();
 
-    await QueuedTask
-      .Run(() =>
-      {
-        // TODO: handle point colors here
-        var renderer = lasDatasetLayer.GetRenderers()[0];
-
-        using (ACD.Analyst3D.LasPointCursor ptCursor = lasDatasetLayer.SearchPoints(new ACD.Analyst3D.LasPointFilter()))
+    try
+    {
+      await QueuedTask
+        .Run(() =>
         {
-          while (ptCursor.MoveNext())
+          // TODO: handle point colors here
+          var renderer = lasDatasetLayer.GetRenderers()[0];
+
+          using (
+            ACD.Analyst3D.LasPointCursor ptCursor = lasDatasetLayer.SearchPoints(new ACD.Analyst3D.LasPointFilter())
+          )
           {
-            using (ACD.Analyst3D.LasPoint pt = ptCursor.Current)
+            while (ptCursor.MoveNext())
             {
-              Base converted = _rootToSpeckleConverter.Convert(pt);
-              convertedObjects.Add(converted);
+              using (ACD.Analyst3D.LasPoint pt = ptCursor.Current)
+              {
+                Base converted = _rootToSpeckleConverter.Convert(pt);
+                convertedObjects.Add(converted);
+              }
             }
           }
-        }
-      })
-      .ConfigureAwait(false);
+        })
+        .ConfigureAwait(false);
+    }
+    catch (ACD.Exceptions.TinException ex)
+    {
+      throw new SpeckleException($"3D analyst extension is not enabled for .las layer operations", ex);
+    }
 
     return convertedObjects;
   }
