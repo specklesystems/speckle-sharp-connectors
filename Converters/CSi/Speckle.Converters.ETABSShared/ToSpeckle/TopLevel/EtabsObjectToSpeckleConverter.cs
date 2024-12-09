@@ -10,11 +10,11 @@ namespace Speckle.Converters.ETABSShared.ToSpeckle.TopLevel;
 
 /// <summary>
 /// Top level converter responsible for converting Etabs objects to Speckle objects.
-/// Implements the Template Method pattern through inheritance from CsiObjectToSpeckleConverter.
+/// Implements the Template Method pattern through inheritance from CsiObjectToSpeckleConverterBase.
 /// </summary>
 /// <remarks>
 /// Conversion Flow:
-/// 1. EtabsObjectToSpeckleConverter inherits base conversion logic from CsiObjectToSpeckleConverter
+/// 1. EtabsObjectToSpeckleConverter inherits base conversion logic from CsiObjectToSpeckleConverterBase
 /// 2. Base Convert method orchestrates the conversion process:
 ///    - DisplayValue extraction (handled by CsiShared - shared geometry conversion)
 ///    - Property extraction (combination of CsiShared and EtabsShared)
@@ -23,7 +23,7 @@ namespace Speckle.Converters.ETABSShared.ToSpeckle.TopLevel;
 /// 3. CreateTargetObject method ensures type-safe conversion to EtabsObject
 /// </remarks>
 [NameAndRankValue(nameof(CsiWrapperBase), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class EtabsObjectToSpeckleConverter : CsiObjectToSpeckleConverter
+public class EtabsObjectToSpeckleConverter : CsiObjectToSpeckleConverterBase
 {
   public EtabsObjectToSpeckleConverter(
     IConverterSettingsStore<CsiConversionSettings> settingsStore,

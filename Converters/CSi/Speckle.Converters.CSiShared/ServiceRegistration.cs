@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Registration;
 using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
-using Speckle.Converters.CSiShared.ToSpeckle.TopLevel;
 using Speckle.Sdk;
 
 namespace Speckle.Converters.CSiShared;
@@ -15,14 +14,17 @@ public static class ServiceRegistration
     var converterAssembly = Assembly.GetExecutingAssembly();
 
     // Register top-level converters
-    serviceCollection.AddTransient<CsiObjectToSpeckleConverterBase>();
     serviceCollection.AddRootCommon<CsiRootToSpeckleConverter>(converterAssembly);
 
-    // Register extractors
+    // Register property extractors
+    serviceCollection.AddScoped<FramePropertiesExtractor>();
+    serviceCollection.AddScoped<JointPropertiesExtractor>();
+    serviceCollection.AddScoped<ShellPropertiesExtractor>();
+    serviceCollection.AddScoped<IGeneralPropertyExtractor, CsiGeneralPropertiesExtractor>();
     serviceCollection.AddScoped<DisplayValueExtractor>();
-    serviceCollection.AddScoped<CsiGeneralPropertiesExtractor>();
+    serviceCollection.AddScoped<PropertiesExtractor>();
 
-    // Register application-level converters
+    // Settings and unit conversions
     serviceCollection.AddApplicationConverters<CsiToSpeckleUnitConverter, eUnits>(converterAssembly);
     serviceCollection.AddScoped<
       IConverterSettingsStore<CsiConversionSettings>,

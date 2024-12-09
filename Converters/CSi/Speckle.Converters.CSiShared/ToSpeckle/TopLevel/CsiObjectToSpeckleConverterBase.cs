@@ -22,13 +22,13 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.TopLevel;
 /// - Gathers properties
 /// - Delegates final object creation to product-specific implementations
 /// </remarks>
-public abstract class CsiObjectToSpeckleConverter : IToSpeckleTopLevelConverter
+public abstract class CsiObjectToSpeckleConverterBase : IToSpeckleTopLevelConverter
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly PropertiesExtractor _propertiesExtractor;
 
-  protected CsiObjectToSpeckleConverter(
+  protected CsiObjectToSpeckleConverterBase(
     IConverterSettingsStore<CsiConversionSettings> settingsStore,
     DisplayValueExtractor displayValueExtractor,
     PropertiesExtractor propertiesExtractor

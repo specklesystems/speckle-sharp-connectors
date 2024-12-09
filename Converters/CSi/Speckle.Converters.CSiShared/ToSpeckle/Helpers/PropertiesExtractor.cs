@@ -1,12 +1,23 @@
 namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 
+/// <summary>
+/// Main orchestrator for combining general CSi properties with product-specific properties.
+/// Uses composition to combine results from multiple property extractors.
+/// </summary>
+/// <remarks>
+/// Architectural Notes:
+/// - Composes multiple property extractors following Composition over Inheritance
+/// - Uses dependency injection for loose coupling
+/// - Maintains single responsibility of combining property results
+/// - Preserves separation between CSi common and product-specific properties
+/// </remarks>
 public class PropertiesExtractor
 {
-  private readonly CsiGeneralPropertiesExtractor _generalPropertyExtractor;
-  private readonly IClassPropertyExtractor _classPropertyExtractor; // This will be product specific extractor (i.e. EtabsClassPropertiesExtractor)
+  private readonly IGeneralPropertyExtractor _generalPropertyExtractor;
+  private readonly IClassPropertyExtractor _classPropertyExtractor;
 
   public PropertiesExtractor(
-    CsiGeneralPropertiesExtractor generalPropertyExtractor,
+    IGeneralPropertyExtractor generalPropertyExtractor,
     IClassPropertyExtractor classPropertyExtractor
   )
   {
@@ -14,19 +25,25 @@ public class PropertiesExtractor
     _classPropertyExtractor = classPropertyExtractor;
   }
 
+  /// <summary>
+  /// Combines properties from both general and product-specific extractors.
+  /// </summary>
+  /// <param name="wrapper">The CSi wrapper to extract properties from</param>
+  /// <returns>Combined dictionary of all extracted properties</returns>
   public Dictionary<string, object?> GetProperties(ICsiWrapper wrapper)
   {
     var properties = new Dictionary<string, object?>();
 
-    var generalProperties = _generalPropertyExtractor.ExtractProperties(wrapper); // Csi common properties
+    var generalProps = _generalPropertyExtractor.ExtractProperties(wrapper);
+    if (generalProps != null)
     {
-      properties["General Properties"] = generalProperties;
+      properties["General Properties"] = generalProps; // TODO: Think about naming here
     }
-    if (generalProperties != null) { }
-    var classProperties = _classPropertyExtractor.ExtractProperties(wrapper); // Verticals specific properties
-    if (classProperties != null)
+
+    var classProps = _classPropertyExtractor.ExtractProperties(wrapper);
+    if (classProps != null)
     {
-      properties["Class Properties"] = classProperties;
+      properties["Class Properties"] = classProps; // TODO: Think about naming here
     }
 
     return properties;
