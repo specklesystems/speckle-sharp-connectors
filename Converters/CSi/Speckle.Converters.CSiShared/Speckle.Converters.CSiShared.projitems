@@ -16,9 +16,9 @@
     <Compile Include="$(MSBuildThisFileDirectory)CsiWrappers.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\FramePropertiesExtractor.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\JointPropertiesExtractor.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\ShellPropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CsiFramePropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CsiJointPropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CsiShellPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\LineToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\MeshToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\PointToSpeckleConverter.cs" />

@@ -14,20 +14,18 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 /// - Part of the property extraction hierarchy.
 /// - Used by <see cref="CsiGeneralPropertiesExtractor"/> for delegating joint property extraction.
 /// </remarks>
-public sealed class JointPropertiesExtractor
+public sealed class CsiJointPropertiesExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
 
-  public JointPropertiesExtractor(IConverterSettingsStore<CsiConversionSettings> settingsStore)
+  public CsiJointPropertiesExtractor(IConverterSettingsStore<CsiConversionSettings> settingsStore)
   {
     _settingsStore = settingsStore;
   }
 
-  public Dictionary<string, object?>? ExtractProperties(CsiJointWrapper joint)
+  public void ExtractProperties(CsiJointWrapper joint, Dictionary<string, object?> properties)
   {
-    var properties = new Dictionary<string, object?>();
     properties["applicationId"] = GetApplicationId(joint);
-    return properties;
   }
 
   private string GetApplicationId(CsiJointWrapper joint)

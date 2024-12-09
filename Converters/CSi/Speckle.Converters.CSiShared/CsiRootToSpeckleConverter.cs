@@ -26,7 +26,7 @@ public class CsiRootToSpeckleConverter : IRootToSpeckleConverter
 
   public Base Convert(object target)
   {
-    if (target is not ICsiWrapper wrapper)
+    if (target is not ICsiWrapper)
     {
       throw new ValidationException($"Target object is not a CSiWrapper. It's a ${target.GetType()}");
     }
@@ -35,7 +35,6 @@ public class CsiRootToSpeckleConverter : IRootToSpeckleConverter
     var objectConverter = _toSpeckle.ResolveConverter(type, true);
 
     Base result = objectConverter.Convert(target);
-    result.applicationId = $"{wrapper.ObjectType}{wrapper.Name}";
 
     return result;
   }

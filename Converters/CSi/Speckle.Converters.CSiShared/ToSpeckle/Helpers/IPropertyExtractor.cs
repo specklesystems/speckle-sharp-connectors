@@ -11,7 +11,7 @@ public interface IPropertyExtractor
   /// </summary>
   /// <param name="wrapper">The CSi wrapper object to extract properties from</param>
   /// <returns>Dictionary of extracted properties, or null if no properties are available</returns>
-  Dictionary<string, object?>? ExtractProperties(ICsiWrapper wrapper);
+  void ExtractProperties(ICsiWrapper wrapper, Dictionary<string, object?> properties);
 }
 
 /// <summary>

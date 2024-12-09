@@ -16,32 +16,32 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 /// - Works alongside product-specific extractors (e.g., EtabsClassPropertiesExtractor).
 /// - Properties extracted here are available in both SAP2000 and ETABS.
 /// Changes in Access Modifier:
-/// - Sub-extractors (FramePropertiesExtractor, JointPropertiesExtractor, ShellPropertiesExtractor) are now public to allow DI container registration.
+/// - Sub-extractors (CsiFramePropertiesExtractor, CsiJointPropertiesExtractor, CsiShellPropertiesExtractor) are now public to allow DI container registration.
 /// </remarks>
 public class CsiGeneralPropertiesExtractor : IGeneralPropertyExtractor
 {
-  private readonly FramePropertiesExtractor _framePropertiesExtractor;
-  private readonly JointPropertiesExtractor _jointPropertiesExtractor;
-  private readonly ShellPropertiesExtractor _shellPropertiesExtractor;
+  private readonly CsiFramePropertiesExtractor _csiFramePropertiesExtractor;
+  private readonly CsiJointPropertiesExtractor _csiJointPropertiesExtractor;
+  private readonly CsiShellPropertiesExtractor _csiShellPropertiesExtractor;
 
   /// <summary>
   /// Initializes a new instance of the <see cref="CsiGeneralPropertiesExtractor"/> class.
   /// </summary>
-  /// <param name="framePropertiesExtractor">The extractor for frame-specific properties.</param>
-  /// <param name="jointPropertiesExtractor">The extractor for joint-specific properties.</param>
-  /// <param name="shellPropertiesExtractor">The extractor for shell-specific properties.</param>
+  /// <param name="csiFramePropertiesExtractor">The extractor for frame-specific properties.</param>
+  /// <param name="csiJointPropertiesExtractor">The extractor for joint-specific properties.</param>
+  /// <param name="csiShellPropertiesExtractor">The extractor for shell-specific properties.</param>
   /// <remarks>
   /// The sub-extractors are resolved by the DI container and injected into this class.
   /// </remarks>
   public CsiGeneralPropertiesExtractor(
-    FramePropertiesExtractor framePropertiesExtractor,
-    JointPropertiesExtractor jointPropertiesExtractor,
-    ShellPropertiesExtractor shellPropertiesExtractor
+    CsiFramePropertiesExtractor csiFramePropertiesExtractor,
+    CsiJointPropertiesExtractor csiJointPropertiesExtractor,
+    CsiShellPropertiesExtractor csiShellPropertiesExtractor
   )
   {
-    _framePropertiesExtractor = framePropertiesExtractor;
-    _jointPropertiesExtractor = jointPropertiesExtractor;
-    _shellPropertiesExtractor = shellPropertiesExtractor;
+    _csiFramePropertiesExtractor = csiFramePropertiesExtractor;
+    _csiJointPropertiesExtractor = csiJointPropertiesExtractor;
+    _csiShellPropertiesExtractor = csiShellPropertiesExtractor;
   }
 
   /// <summary>
@@ -57,14 +57,19 @@ public class CsiGeneralPropertiesExtractor : IGeneralPropertyExtractor
   /// - <see cref="CsiJointWrapper"/>: Properties from PointObj API calls.
   /// - <see cref="CsiShellWrapper"/>: Properties from AreaObj API calls.
   /// </remarks>
-  public Dictionary<string, object?>? ExtractProperties(ICsiWrapper wrapper)
+  public void ExtractProperties(ICsiWrapper wrapper, Dictionary<string, object?> properties)
   {
-    return wrapper switch
+    switch (wrapper)
     {
-      CsiFrameWrapper frame => _framePropertiesExtractor.ExtractProperties(frame),
-      CsiJointWrapper joint => _jointPropertiesExtractor.ExtractProperties(joint),
-      CsiShellWrapper shell => _shellPropertiesExtractor.ExtractProperties(shell),
-      _ => null
-    };
+      case CsiFrameWrapper frame:
+        _csiFramePropertiesExtractor.ExtractProperties(frame, properties);
+        break;
+      case CsiJointWrapper joint:
+        _csiJointPropertiesExtractor.ExtractProperties(joint, properties);
+        break;
+      case CsiShellWrapper shell:
+        _csiShellPropertiesExtractor.ExtractProperties(shell, properties);
+        break;
+    }
   }
 }

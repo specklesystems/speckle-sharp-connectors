@@ -1,5 +1,12 @@
 namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 
+public record PropertyExtractionResult(
+  string Name,
+  string Type,
+  string ApplicationId,
+  Dictionary<string, object?> Properties
+);
+
 /// <summary>
 /// Main orchestrator for combining general CSi properties with product-specific properties.
 /// Uses composition to combine results from multiple property extractors.
@@ -30,22 +37,21 @@ public class PropertiesExtractor
   /// </summary>
   /// <param name="wrapper">The CSi wrapper to extract properties from</param>
   /// <returns>Combined dictionary of all extracted properties</returns>
-  public Dictionary<string, object?> GetProperties(ICsiWrapper wrapper)
+  public PropertyExtractionResult GetProperties(ICsiWrapper wrapper)
   {
+    // Single dictionary populated by respective extractors
     var properties = new Dictionary<string, object?>();
 
-    var generalProps = _generalPropertyExtractor.ExtractProperties(wrapper);
-    if (generalProps != null)
-    {
-      properties["General Properties"] = generalProps; // TODO: Think about naming here
-    }
+    // Extractors do their thing
+    _generalPropertyExtractor.ExtractProperties(wrapper, properties);
+    _classPropertyExtractor.ExtractProperties(wrapper, properties);
 
-    var classProps = _classPropertyExtractor.ExtractProperties(wrapper);
-    if (classProps != null)
-    {
-      properties["Class Properties"] = classProps; // TODO: Think about naming here
-    }
+    // Capture "base" properties
+    var applicationId = properties.GetValueOrDefault("applicationId")?.ToString() ?? string.Empty;
 
-    return properties;
+    // The "base" properties are removed from the dictionary (they sit at object root)
+    properties.Remove("applicationId");
+
+    return new(wrapper.Name, wrapper.ObjectName, applicationId, properties);
   }
 }

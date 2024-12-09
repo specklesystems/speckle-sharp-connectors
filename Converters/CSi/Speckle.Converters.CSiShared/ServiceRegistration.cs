@@ -17,9 +17,9 @@ public static class ServiceRegistration
     serviceCollection.AddRootCommon<CsiRootToSpeckleConverter>(converterAssembly);
 
     // Register property extractors
-    serviceCollection.AddScoped<FramePropertiesExtractor>();
-    serviceCollection.AddScoped<JointPropertiesExtractor>();
-    serviceCollection.AddScoped<ShellPropertiesExtractor>();
+    serviceCollection.AddScoped<CsiFramePropertiesExtractor>();
+    serviceCollection.AddScoped<CsiJointPropertiesExtractor>();
+    serviceCollection.AddScoped<CsiShellPropertiesExtractor>();
     serviceCollection.AddScoped<IGeneralPropertyExtractor, CsiGeneralPropertiesExtractor>();
     serviceCollection.AddScoped<DisplayValueExtractor>();
     serviceCollection.AddScoped<PropertiesExtractor>();

@@ -14,20 +14,18 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 /// - Part of the property extraction hierarchy.
 /// - Used by <see cref="CsiGeneralPropertiesExtractor"/> for delegating shell property extraction.
 /// </remarks>
-public sealed class ShellPropertiesExtractor
+public sealed class CsiShellPropertiesExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
 
-  public ShellPropertiesExtractor(IConverterSettingsStore<CsiConversionSettings> settingsStore)
+  public CsiShellPropertiesExtractor(IConverterSettingsStore<CsiConversionSettings> settingsStore)
   {
     _settingsStore = settingsStore;
   }
 
-  public Dictionary<string, object?>? ExtractProperties(CsiShellWrapper shell)
+  public void ExtractProperties(CsiShellWrapper shell, Dictionary<string, object?> properties)
   {
-    var properties = new Dictionary<string, object?>();
     properties["applicationId"] = GetApplicationId(shell);
-    return properties;
   }
 
   private string GetApplicationId(CsiShellWrapper shell)

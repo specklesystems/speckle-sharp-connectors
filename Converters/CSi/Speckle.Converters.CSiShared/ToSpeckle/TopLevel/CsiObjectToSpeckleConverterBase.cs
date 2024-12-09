@@ -46,14 +46,17 @@ public abstract class CsiObjectToSpeckleConverterBase : IToSpeckleTopLevelConver
     var displayValue = _displayValueExtractor.GetDisplayValue(wrapper).ToList();
     var properties = _propertiesExtractor.GetProperties(wrapper);
 
-    return CreateTargetObject(
-      wrapper.Name,
-      wrapper.ObjectName,
+    var baseObject = CreateTargetObject(
+      properties.Name,
+      properties.Type,
       new List<ICsiObject>(),
       displayValue,
-      properties,
+      properties.Properties,
       _settingsStore.Current.SpeckleUnits
     );
+
+    baseObject["applicationId"] = properties.ApplicationId;
+    return baseObject;
   }
 
   protected abstract Base CreateTargetObject(

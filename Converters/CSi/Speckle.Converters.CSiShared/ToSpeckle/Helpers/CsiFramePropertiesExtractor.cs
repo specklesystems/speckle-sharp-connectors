@@ -14,20 +14,18 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 /// - Part of the property extraction hierarchy.
 /// - Used by <see cref="CsiGeneralPropertiesExtractor"/> for delegating frame property extraction.
 /// </remarks>
-public sealed class FramePropertiesExtractor
+public sealed class CsiFramePropertiesExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
 
-  public FramePropertiesExtractor(IConverterSettingsStore<CsiConversionSettings> settingsStore)
+  public CsiFramePropertiesExtractor(IConverterSettingsStore<CsiConversionSettings> settingsStore)
   {
     _settingsStore = settingsStore;
   }
 
-  public Dictionary<string, object?>? ExtractProperties(CsiFrameWrapper frame)
+  public void ExtractProperties(CsiFrameWrapper frame, Dictionary<string, object?> properties)
   {
-    var properties = new Dictionary<string, object?>();
     properties["applicationId"] = GetApplicationId(frame);
-    return properties;
   }
 
   private string GetApplicationId(CsiFrameWrapper frame)

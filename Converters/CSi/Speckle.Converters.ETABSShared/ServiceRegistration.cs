@@ -15,6 +15,9 @@ public static class ServiceRegistration
     var converterAssembly = Assembly.GetExecutingAssembly();
 
     // Etabs-specific implementations
+    serviceCollection.AddScoped<EtabsFramePropertiesExtractor>();
+    serviceCollection.AddScoped<EtabsJointPropertiesExtractor>();
+    serviceCollection.AddScoped<EtabsShellPropertiesExtractor>();
     serviceCollection.AddScoped<IClassPropertyExtractor, EtabsClassPropertiesExtractor>();
     serviceCollection.AddScoped<CsiObjectToSpeckleConverterBase, EtabsObjectToSpeckleConverter>(); // Explicitly map EtabsObjectToSpeckleConverter to CsiObjectToSpeckleConverterBase
 
