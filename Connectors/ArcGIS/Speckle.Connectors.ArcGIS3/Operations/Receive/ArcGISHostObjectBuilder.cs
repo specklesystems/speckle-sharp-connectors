@@ -100,10 +100,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       try
       {
         obj = _localToGlobalConverterUtils.TransformObjects(objectToConvert.AtomicObject, objectToConvert.Matrix);
-        object? conversionResult =
-          //(obj["displayValue"] is null || (obj["displayValue"] is IReadOnlyList<Base> list && list.Count == 0))
-          //  ? null :
-          await QueuedTask.Run(() => _converter.Convert(obj)).ConfigureAwait(false);
+        object? conversionResult = await QueuedTask.Run(() => _converter.Convert(obj)).ConfigureAwait(false);
 
         string nestedLayerPath = $"{string.Join("\\", path)}";
 
