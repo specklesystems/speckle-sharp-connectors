@@ -13,6 +13,7 @@ public sealed class DisplayValueExtractor
   private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
   private readonly ITypedConverter<TG.Arc, SOG.Arc> _arcConverter;
   private readonly ITypedConverter<TSM.Grid, IEnumerable<Base>> _gridConverter;
+  private readonly ITypedConverter<TSM.BooleanPart, IEnumerable<Base>> _openingConverter;
 
   public DisplayValueExtractor(
     ITypedConverter<TSM.Solid, SOG.Mesh> meshConverter,
@@ -20,6 +21,7 @@ public sealed class DisplayValueExtractor
     ITypedConverter<TG.LineSegment, SOG.Line> lineConverter,
     ITypedConverter<TG.Arc, SOG.Arc> arcConverter,
     ITypedConverter<TSM.Grid, IEnumerable<Base>> gridConverter,
+    ITypedConverter<TSM.BooleanPart, IEnumerable<Base>> openingConverter,
     IConverterSettingsStore<TeklaConversionSettings> settingsStore
   )
   {
@@ -30,6 +32,7 @@ public sealed class DisplayValueExtractor
     _lineConverter = lineConverter;
     _arcConverter = arcConverter;
     _gridConverter = gridConverter;
+    _openingConverter = openingConverter;
   }
 
   public IEnumerable<Base> GetDisplayValue(TSM.ModelObject modelObject)
@@ -95,6 +98,14 @@ public sealed class DisplayValueExtractor
           yield return gridLine;
         }
 
+        break;
+
+      case TSM.BooleanPart booleanPart:
+        var openingConverter = _openingConverter.Convert(booleanPart);
+        foreach (var line in openingConverter)
+        {
+          yield return line;
+        }
         break;
 
       default:

@@ -1,10 +1,13 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Converters.Common;
+using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
 using Speckle.Converters.TeklaShared.ToSpeckle.Helpers;
+using Speckle.Converters.TeklaShared.ToSpeckle.Raw;
 using Speckle.Converters.TeklaShared.ToSpeckle.TopLevel;
 using Speckle.Sdk;
+using Speckle.Sdk.Models;
 using Tekla.Structures.Datatype;
 
 namespace Speckle.Converters.TeklaShared;
@@ -27,6 +30,8 @@ public static class ServiceRegistration
       IConverterSettingsStore<TeklaConversionSettings>,
       ConverterSettingsStore<TeklaConversionSettings>
     >();
+
+    serviceCollection.AddTransient<ITypedConverter<TSM.BooleanPart, IEnumerable<Base>>, OpeningToSpeckleConverter>();
 
     serviceCollection.AddMatchingInterfacesAsTransient(converterAssembly);
 
