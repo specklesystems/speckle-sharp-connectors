@@ -16,7 +16,7 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 ///   * Simpler maintenance as each method maps to one API concept
 /// Integration:
 /// - Part of the property extraction hierarchy
-/// - Used by <see cref="CsiGeneralPropertiesExtractor"/> for delegating shell property extraction
+/// - Used by <see cref="SharedPropertiesExtractor"/> for delegating shell property extraction
 /// </remarks>
 public sealed class CsiShellPropertiesExtractor
 {
@@ -27,14 +27,14 @@ public sealed class CsiShellPropertiesExtractor
     _settingsStore = settingsStore;
   }
 
-  public void ExtractProperties(CsiShellWrapper shell, Dictionary<string, object?> properties)
+  public void ExtractProperties(CsiShellWrapper shell, PropertyExtractionResult shellData)
   {
-    properties["applicationId"] = GetApplicationId(shell);
+    shellData.ApplicationId = GetApplicationId(shell);
 
-    var geometry = DictionaryUtils.EnsureNestedDictionary(properties, "Geometry");
+    var geometry = DictionaryUtils.EnsureNestedDictionary(shellData.Properties, "Geometry");
     geometry["shellVerticesJointNames"] = GetPointNames(shell);
 
-    var assignments = DictionaryUtils.EnsureNestedDictionary(properties, "Assignments");
+    var assignments = DictionaryUtils.EnsureNestedDictionary(shellData.Properties, "Assignments");
     assignments["groups"] = new List<string>(GetGroupAssigns(shell));
     assignments["localAxis"] = GetLocalAxes(shell);
     assignments["materialOverwrite"] = GetMaterialOverwrite(shell);

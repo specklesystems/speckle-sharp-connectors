@@ -16,25 +16,34 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 ///   * Simpler maintenance as each method maps to one API concept
 /// Integration:
 /// - Part of the property extraction hierarchy
-/// - Used by <see cref="CsiGeneralPropertiesExtractor"/> for delegating frame property extraction
+/// - Used by <see cref="SharedPropertiesExtractor"/> for delegating frame property extraction
 /// </remarks>
 public sealed class CsiFramePropertiesExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
+  private static readonly string[] s_releaseKeys =
+  [
+    "axial",
+    "minorShear",
+    "majorShear",
+    "torsion",
+    "minorBending",
+    "majorBending"
+  ]; // Note: caching keys for better performance
 
   public CsiFramePropertiesExtractor(IConverterSettingsStore<CsiConversionSettings> settingsStore)
   {
     _settingsStore = settingsStore;
   }
 
-  public void ExtractProperties(CsiFrameWrapper frame, Dictionary<string, object?> properties)
+  public void ExtractProperties(CsiFrameWrapper frame, PropertyExtractionResult frameData)
   {
-    properties["applicationId"] = GetApplicationId(frame);
+    frameData.ApplicationId = GetApplicationId(frame);
 
-    var geometry = DictionaryUtils.EnsureNestedDictionary(properties, "Geometry");
+    var geometry = DictionaryUtils.EnsureNestedDictionary(frameData.Properties, "Geometry");
     (geometry["startJointName"], geometry["endJointName"]) = GetEndPointNames(frame);
 
-    var assignments = DictionaryUtils.EnsureNestedDictionary(properties, "Assignments");
+    var assignments = DictionaryUtils.EnsureNestedDictionary(frameData.Properties, "Assignments");
     assignments["groups"] = new List<string>(GetGroupAssigns(frame));
     assignments["materialOverwrite"] = GetMaterialOverwrite(frame);
     assignments["localAxis"] = GetLocalAxes(frame);
@@ -104,9 +113,7 @@ public sealed class CsiFramePropertiesExtractor
 
     _ = _settingsStore.Current.SapModel.FrameObj.GetReleases(frame.Name, ref ii, ref jj, ref startValue, ref endValue);
 
-    var releaseKeys = new[] { "axial", "minorShear", "majorShear", "torsion", "minorBending", "majorBending" };
-
-    var startNodes = releaseKeys
+    var startNodes = s_releaseKeys
       .Select(
         (key, index) =>
           new KeyValuePair<string, object?>(
@@ -116,7 +123,7 @@ public sealed class CsiFramePropertiesExtractor
       )
       .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
-    var endNodes = releaseKeys
+    var endNodes = s_releaseKeys
       .Select(
         (key, index) =>
           new KeyValuePair<string, object?>(

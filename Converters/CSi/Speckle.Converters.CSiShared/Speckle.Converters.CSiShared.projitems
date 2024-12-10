@@ -23,10 +23,9 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\LineToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\MeshToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\PointToSpeckleConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CsiGeneralPropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\SharedPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\DisplayValueExtractor.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\IPropertyExtractor.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\PropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\IApplicationPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\CsiObjectToSpeckleConverterBase.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Utils\DictionaryUtils.cs" />
   </ItemGroup>

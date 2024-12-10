@@ -19,7 +19,7 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 /// - Ensures consistency in property extraction logic across supported CSi products.
 /// Integration:
 /// - Part of the property extraction hierarchy
-/// - Used by <see cref="CsiGeneralPropertiesExtractor"/> for delegating joint property extraction
+/// - Used by <see cref="SharedPropertiesExtractor"/> for delegating joint property extraction
 /// </remarks>
 public sealed class CsiJointPropertiesExtractor
 {
@@ -30,11 +30,11 @@ public sealed class CsiJointPropertiesExtractor
     _settingsStore = settingsStore;
   }
 
-  public void ExtractProperties(CsiJointWrapper joint, Dictionary<string, object?> properties)
+  public void ExtractProperties(CsiJointWrapper joint, PropertyExtractionResult jointData)
   {
-    properties["applicationId"] = GetApplicationId(joint);
+    jointData.ApplicationId = GetApplicationId(joint);
 
-    var assignments = DictionaryUtils.EnsureNestedDictionary(properties, "Assignments");
+    var assignments = DictionaryUtils.EnsureNestedDictionary(jointData.Properties, "Assignments");
     assignments["groups"] = new List<string>(GetGroupAssigns(joint));
     assignments["restraints"] = GetRestraints(joint);
   }

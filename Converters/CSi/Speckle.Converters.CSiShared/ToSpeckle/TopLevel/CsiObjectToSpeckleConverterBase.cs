@@ -13,30 +13,28 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.TopLevel;
 /// <remarks>
 /// Core Components:
 /// 1. DisplayValueExtractor: Handles geometry conversion common to all CSi products
-/// 2. PropertiesExtractor: Combines:
-///    - General CSi properties (common across products)
-///    - Product-specific class properties (through IClassPropertyExtractor)
+/// 2. IApplicationPropertiesExtractor: Handles both shared and product-specific properties through composition
 ///
 /// The Convert method defines the template for conversion:
 /// - Extracts display geometry
-/// - Gathers properties
+/// - Gathers properties through the application-specific implementation
 /// - Delegates final object creation to product-specific implementations
 /// </remarks>
 public abstract class CsiObjectToSpeckleConverterBase : IToSpeckleTopLevelConverter
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
   private readonly DisplayValueExtractor _displayValueExtractor;
-  private readonly PropertiesExtractor _propertiesExtractor;
+  private readonly IApplicationPropertiesExtractor _applicationPropertiesExtractor;
 
   protected CsiObjectToSpeckleConverterBase(
     IConverterSettingsStore<CsiConversionSettings> settingsStore,
     DisplayValueExtractor displayValueExtractor,
-    PropertiesExtractor propertiesExtractor
+    IApplicationPropertiesExtractor applicationPropertiesExtractor
   )
   {
     _settingsStore = settingsStore;
     _displayValueExtractor = displayValueExtractor;
-    _propertiesExtractor = propertiesExtractor;
+    _applicationPropertiesExtractor = applicationPropertiesExtractor;
   }
 
   public Base Convert(object target) => Convert((CsiWrapperBase)target);
@@ -44,18 +42,18 @@ public abstract class CsiObjectToSpeckleConverterBase : IToSpeckleTopLevelConver
   public Base Convert(CsiWrapperBase wrapper)
   {
     var displayValue = _displayValueExtractor.GetDisplayValue(wrapper).ToList();
-    var properties = _propertiesExtractor.GetProperties(wrapper);
+    var objectData = _applicationPropertiesExtractor.ExtractProperties(wrapper);
 
     var baseObject = CreateTargetObject(
-      properties.Name,
-      properties.Type,
+      objectData.Name,
+      objectData.Type,
       new List<ICsiObject>(),
       displayValue,
-      properties.Properties,
+      objectData.Properties,
       _settingsStore.Current.SpeckleUnits
     );
 
-    baseObject["applicationId"] = properties.ApplicationId;
+    baseObject["applicationId"] = objectData.ApplicationId;
     return baseObject;
   }
 

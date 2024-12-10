@@ -20,9 +20,8 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<CsiFramePropertiesExtractor>();
     serviceCollection.AddScoped<CsiJointPropertiesExtractor>();
     serviceCollection.AddScoped<CsiShellPropertiesExtractor>();
-    serviceCollection.AddScoped<IGeneralPropertyExtractor, CsiGeneralPropertiesExtractor>();
+    serviceCollection.AddScoped<SharedPropertiesExtractor>();
     serviceCollection.AddScoped<DisplayValueExtractor>();
-    serviceCollection.AddScoped<PropertiesExtractor>();
 
     // Settings and unit conversions
     serviceCollection.AddApplicationConverters<CsiToSpeckleUnitConverter, eUnits>(converterAssembly);

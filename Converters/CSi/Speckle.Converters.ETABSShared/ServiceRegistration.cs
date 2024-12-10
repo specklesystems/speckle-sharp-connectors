@@ -18,7 +18,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<EtabsFramePropertiesExtractor>();
     serviceCollection.AddScoped<EtabsJointPropertiesExtractor>();
     serviceCollection.AddScoped<EtabsShellPropertiesExtractor>();
-    serviceCollection.AddScoped<IClassPropertyExtractor, EtabsClassPropertiesExtractor>();
+    serviceCollection.AddScoped<IApplicationPropertiesExtractor, ApplicationPropertiesExtractor>();
     serviceCollection.AddScoped<CsiObjectToSpeckleConverterBase, EtabsObjectToSpeckleConverter>();
 
     serviceCollection.AddMatchingInterfacesAsTransient(converterAssembly);

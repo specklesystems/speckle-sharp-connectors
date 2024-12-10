@@ -17,9 +17,9 @@ namespace Speckle.Converters.ETABSShared.ToSpeckle.TopLevel;
 /// 1. EtabsObjectToSpeckleConverter inherits base conversion logic from CsiObjectToSpeckleConverterBase
 /// 2. Base Convert method orchestrates the conversion process:
 ///    - DisplayValue extraction (handled by CsiShared - shared geometry conversion)
-///    - Property extraction (combination of CsiShared and EtabsShared)
-///      * CsiGeneralPropertiesExtractor for common CSi properties
-///      * EtabsClassPropertiesExtractor (implements IClassPropertyExtractor) for ETABS-specific properties
+///    - Object data querying (combination of shared and application-specific data)
+///      * SharedPropertiesExtractor for common CSi data
+///      * IApplicationPropertiesExtractor for ETABS-specific data
 /// 3. CreateTargetObject method ensures type-safe conversion to EtabsObject
 /// </remarks>
 [NameAndRankValue(nameof(CsiWrapperBase), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
@@ -28,9 +28,9 @@ public class EtabsObjectToSpeckleConverter : CsiObjectToSpeckleConverterBase
   public EtabsObjectToSpeckleConverter(
     IConverterSettingsStore<CsiConversionSettings> settingsStore,
     DisplayValueExtractor displayValueExtractor,
-    PropertiesExtractor propertiesExtractor
+    IApplicationPropertiesExtractor applicationPropertiesExtractor
   )
-    : base(settingsStore, displayValueExtractor, propertiesExtractor) { }
+    : base(settingsStore, displayValueExtractor, applicationPropertiesExtractor) { }
 
   protected override Base CreateTargetObject(
     string name,

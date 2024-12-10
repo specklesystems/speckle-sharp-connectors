@@ -19,7 +19,7 @@ namespace Speckle.Converters.ETABSShared.ToSpeckle.Helpers;
 /// - Properties are organized by their functional groups (Object ID, Assignments, Design)
 ///
 /// Integration:
-/// - Used by <see cref="EtabsClassPropertiesExtractor"/> for frame-specific property extraction
+/// - Used by <see cref="ApplicationPropertiesExtractor"/> for frame-specific property extraction
 /// - Works alongside CsiFramePropertiesExtractor to build complete property set
 /// </remarks>
 public sealed class EtabsFramePropertiesExtractor
