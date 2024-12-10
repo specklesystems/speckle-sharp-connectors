@@ -74,7 +74,7 @@ public sealed class ConverterWithFallback : IRootToHostConverter
     // if the host app returns a list of objects as the result of the fallback conversion, we zip them together with the original base display value objects that generated them.
     if (conversionResult is IEnumerable<object> result)
     {
-      return result.Zip(displayValue, (a, b) => (a, b));
+      return result.Zip(displayValue, (a, b) => (a, b)).ToList();
     }
 
     // if not, and the host app "merges" together somehow multiple display values into one entity, we return that.

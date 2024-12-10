@@ -28,6 +28,8 @@ public class PriorityLoader : GH_AssemblyPriority
       services.AddTransient<IHostObjectBuilder, GrasshopperHostObjectBuilder>();
       services.AddTransient<GrasshopperReceiveOperation>();
       services.AddSingleton(DefaultTraversal.CreateTraversalFunc());
+      services.AddScoped<RootObjectUnpacker>();
+
       services.AddTransient<TraversalContextUnpacker>();
       services.AddTransient<AccountManager>();
       Container = services.BuildServiceProvider();
