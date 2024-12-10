@@ -10,7 +10,7 @@ namespace Speckle.Converters.ETABSShared.ToSpeckle.TopLevel;
 
 /// <summary>
 /// Top level converter responsible for converting Etabs objects to Speckle objects.
-/// Implements the Template Method pattern through inheritance from CsiObjectToSpeckleConverterBase.
+/// Implements the Template Method pattern through inheritance from (abstract) CsiObjectToSpeckleConverterBase.
 /// </summary>
 /// <remarks>
 /// Conversion Flow:

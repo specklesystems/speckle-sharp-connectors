@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
+using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 using Speckle.Converters.CSiShared.Utils;
 
 namespace Speckle.Converters.ETABSShared.ToSpeckle.Helpers;
@@ -10,7 +11,7 @@ namespace Speckle.Converters.ETABSShared.ToSpeckle.Helpers;
 /// <remarks>
 /// Responsibilities:
 /// - Extracts properties only available in ETABS (e.g., Label, Level)
-/// - Complements CsiShellPropertiesExtractor by adding product-specific data
+/// - Complements <see cref="CsiShellPropertiesExtractor"/> by adding product-specific data
 /// - Follows same pattern of single-purpose methods for clear API mapping
 ///
 /// Design Decisions:
@@ -37,10 +38,10 @@ public sealed class EtabsShellPropertiesExtractor
     (objectId["label"], objectId["level"]) = GetLabelAndLevel(shell);
 
     var assignments = DictionaryUtils.EnsureNestedDictionary(properties, "Assignments");
-    assignments["diaphragmName"] = GetDiaphragm(shell);
+    assignments["diaphragmName"] = GetAssignedDiaphragmName(shell);
     assignments["isOpening"] = IsOpening(shell);
-    assignments["pierAssignment"] = GetPierAssignment(shell);
-    assignments["spandrelAssignment"] = GetSpandrelAssignment(shell);
+    assignments["pierAssignment"] = GetPierAssignmentName(shell);
+    assignments["spandrelAssignment"] = GetSpandrelAssignmentName(shell);
     assignments["springAssignmentName"] = GetSpringAssignmentName(shell);
   }
 
@@ -59,9 +60,9 @@ public sealed class EtabsShellPropertiesExtractor
     return designOrientation.ToString();
   }
 
-  private string GetDiaphragm(CsiShellWrapper shell)
+  private string GetAssignedDiaphragmName(CsiShellWrapper shell)
   {
-    string diaphragmName = "None";
+    string diaphragmName = "None"; // Is there a better way to handle null?
     _ = _settingsStore.Current.SapModel.AreaObj.GetDiaphragm(shell.Name, ref diaphragmName);
     return diaphragmName;
   }
@@ -73,23 +74,23 @@ public sealed class EtabsShellPropertiesExtractor
     return isOpening.ToString();
   }
 
-  private string GetPierAssignment(CsiShellWrapper shell)
+  private string GetPierAssignmentName(CsiShellWrapper shell)
   {
-    string pierAssignment = "None";
+    string pierAssignment = "None"; // Is there a better way to handle null?
     _ = _settingsStore.Current.SapModel.AreaObj.GetPier(shell.Name, ref pierAssignment);
     return pierAssignment;
   }
 
-  private string GetSpandrelAssignment(CsiShellWrapper shell)
+  private string GetSpandrelAssignmentName(CsiShellWrapper shell)
   {
-    string spandrelAssignment = "None";
+    string spandrelAssignment = "None"; // Is there a better way to handle null?
     _ = _settingsStore.Current.SapModel.AreaObj.GetSpandrel(shell.Name, ref spandrelAssignment);
     return spandrelAssignment;
   }
 
   private string GetSpringAssignmentName(CsiShellWrapper shell)
   {
-    string springAssignmentName = "None";
+    string springAssignmentName = "None"; // Is there a better way to handle null?
     _ = _settingsStore.Current.SapModel.AreaObj.GetSpringAssignment(shell.Name, ref springAssignmentName);
     return springAssignmentName;
   }

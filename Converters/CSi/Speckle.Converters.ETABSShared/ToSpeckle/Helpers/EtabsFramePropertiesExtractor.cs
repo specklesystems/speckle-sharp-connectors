@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
+using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 using Speckle.Converters.CSiShared.Utils;
 
 namespace Speckle.Converters.ETABSShared.ToSpeckle.Helpers;
@@ -10,7 +11,7 @@ namespace Speckle.Converters.ETABSShared.ToSpeckle.Helpers;
 /// <remarks>
 /// Responsibilities:
 /// - Extracts properties only available in ETABS (e.g., Label, Level)
-/// - Complements CsiFramePropertiesExtractor by adding product-specific data
+/// - Complements <see cref="CsiFramePropertiesExtractor"/> by adding product-specific data
 /// - Follows same pattern of single-purpose methods for clear API mapping
 ///
 /// Design Decisions:
@@ -76,7 +77,7 @@ public sealed class EtabsFramePropertiesExtractor
 
   private string GetSpringAssignmentName(CsiFrameWrapper frame)
   {
-    string springPropertyName = "None";
+    string springPropertyName = "None"; // Is there a better way to handle null?
     _ = _settingsStore.Current.SapModel.FrameObj.GetSpringAssignment(frame.Name, ref springPropertyName);
     return springPropertyName;
   }

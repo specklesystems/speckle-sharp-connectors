@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
+using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 using Speckle.Converters.CSiShared.Utils;
 
 namespace Speckle.Converters.ETABSShared.ToSpeckle.Helpers;
@@ -10,7 +11,7 @@ namespace Speckle.Converters.ETABSShared.ToSpeckle.Helpers;
 /// <remarks>
 /// Responsibilities:
 /// - Extracts properties only available in ETABS (e.g., Diaphragm)
-/// - Complements CsiJointPropertiesExtractor by adding product-specific data
+/// - Complements <see cref="CsiJointPropertiesExtractor"/> by adding product-specific data
 /// - Follows same pattern of single-purpose methods for clear API mapping
 ///
 /// Design Decisions:
@@ -36,14 +37,14 @@ public sealed class EtabsJointPropertiesExtractor
     (objectId["label"], objectId["level"]) = GetLabelAndLevel(joint);
 
     var assignments = DictionaryUtils.EnsureNestedDictionary(properties, "Assignments");
-    (assignments["diaphragmOption"], assignments["diaphragmName"]) = GetDiaphragm(joint);
+    (assignments["diaphragmOption"], assignments["diaphragmName"]) = GetAssignedDiaphragm(joint);
     assignments["springAssignment"] = GetSpringAssignmentName(joint);
   }
 
-  private (string diaphramOption, string diaphragmName) GetDiaphragm(CsiJointWrapper joint)
+  private (string diaphramOption, string diaphragmName) GetAssignedDiaphragm(CsiJointWrapper joint)
   {
     eDiaphragmOption diaphragmOption = eDiaphragmOption.Disconnect;
-    string diaphragmName = "None";
+    string diaphragmName = "None"; // Is there a better way to handle null?
     _ = _settingsStore.Current.SapModel.PointObj.GetDiaphragm(joint.Name, ref diaphragmOption, ref diaphragmName);
     return (diaphragmOption.ToString(), diaphragmName);
   }
@@ -58,7 +59,7 @@ public sealed class EtabsJointPropertiesExtractor
 
   private string GetSpringAssignmentName(CsiJointWrapper joint)
   {
-    string springPropertyName = "None";
+    string springPropertyName = "None"; // Is there a better way to handle null?
     _ = _settingsStore.Current.SapModel.PointObj.GetSpringAssignment(joint.Name, ref springPropertyName);
     return springPropertyName;
   }
