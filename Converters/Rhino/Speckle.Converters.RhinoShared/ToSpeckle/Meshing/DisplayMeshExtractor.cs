@@ -11,27 +11,44 @@ public static class DisplayMeshExtractor
     var renderMeshes = obj.GetMeshes(RG.MeshType.Render);
     if (renderMeshes.Length == 0)
     {
-      switch (obj)
-      {
-        case BrepObject brep:
-          renderMeshes = RG.Mesh.CreateFromBrep(brep.BrepGeometry, new(0.05, 0.05));
-          break;
-        case ExtrusionObject extrusion:
-          renderMeshes = RG.Mesh.CreateFromBrep(extrusion.ExtrusionGeometry.ToBrep(), new(0.05, 0.05));
-          break;
-        case SubDObject subDObject:
-#pragma warning disable CA2000
-          var mesh = RG.Mesh.CreateFromSubD(subDObject.Geometry as RG.SubD, 0);
-#pragma warning restore CA2000
-          renderMeshes = [mesh];
-          break;
-        default:
-          throw new ConversionException($"Unsupported object for display mesh generation {obj.GetType().FullName}");
-      }
+      renderMeshes = GetDisplayMeshes(obj.Geometry);
     }
 
     var joinedMesh = new RG.Mesh();
     joinedMesh.Append(renderMeshes);
     return joinedMesh;
+  }
+
+  public static RG.Mesh GetDisplayMesh(RG.GeometryBase obj)
+  {
+    // note: unsure this is nice, we get bigger meshes - we should to benchmark (conversion time vs size tradeoffs)
+    var renderMeshes = GetDisplayMeshes(obj);
+    var joinedMesh = new RG.Mesh();
+    joinedMesh.Append(renderMeshes);
+    return joinedMesh;
+  }
+
+  private static RG.Mesh[] GetDisplayMeshes(RG.GeometryBase obj)
+  {
+    RG.Mesh[] renderMeshes;
+    switch (obj)
+    {
+      case RG.Brep brep:
+        renderMeshes = RG.Mesh.CreateFromBrep(brep, new(0.05, 0.05));
+        break;
+      case RG.Extrusion extrusion:
+        renderMeshes = RG.Mesh.CreateFromBrep(extrusion.ToBrep(), new(0.05, 0.05));
+        break;
+      case RG.SubD subDObject:
+#pragma warning disable CA2000
+        var mesh = RG.Mesh.CreateFromSubD(subDObject, 0);
+#pragma warning restore CA2000
+        renderMeshes = [mesh];
+        break;
+      default:
+        throw new ConversionException($"Unsupported object for display mesh generation {obj.GetType().FullName}");
+    }
+
+    return renderMeshes;
   }
 }
