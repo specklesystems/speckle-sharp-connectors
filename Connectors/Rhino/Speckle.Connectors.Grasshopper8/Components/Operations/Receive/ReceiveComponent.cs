@@ -182,7 +182,7 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
 
 // NOTE: We will need GrasshopperCollections (with an extra path element)
 // these will need to be handled now
-sealed class CollectionRebuilder
+internal sealed class CollectionRebuilder
 {
   public Collection RootCollection { get; }
 

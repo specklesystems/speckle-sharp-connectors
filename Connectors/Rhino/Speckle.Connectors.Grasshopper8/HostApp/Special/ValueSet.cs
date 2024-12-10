@@ -26,6 +26,7 @@ using OS = System.Environment;
 
 namespace Speckle.Connectors.Grasshopper8.HostApp.Special;
 
+#pragma warning disable IDE0040
 /// <summary>
 /// <see cref="IEqualityComparer{T}"/> implementation for <see cref="IGH_Goo"/> references.
 /// </summary>
@@ -788,7 +789,7 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
 
 #pragma warning disable CA1502
     protected override void Render(GH_Canvas canvas, Graphics graphics, GH_CanvasChannel channel)
-#pragma warning restore
+#pragma warning restore CA1502
     {
       switch (channel)
       {
@@ -1857,3 +1858,4 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
 //       subcategory: "Input"
 //     ) { }
 // }
+#pragma warning restore IDE0040
