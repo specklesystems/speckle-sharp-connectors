@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>a8e949b8-aa55-4909-99f0-8b551791a1f8</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>Speckle.Connectors.CSiShared</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\CSiSharedBasicConnectorBinding.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\CSiSharedSelectionBinding.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\CSiSharedSendBinding.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Filters\CSiSharedSelectionFilter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\CSiSendCollectionManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\CSiRootObjectBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\CSiPluginBase.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\SpeckleFormBase.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\CSiApplicationService.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\CSiDocumentModelStore.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\CSiIdleManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Utils\ObjectIdentifiers.cs" />
+  </ItemGroup>
+</Project>

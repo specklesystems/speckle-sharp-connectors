@@ -40,7 +40,7 @@ public class IRawEncodedObjectConverter : ITypedConverter<SOG.IRawEncodedObject,
     DB.ElementId materialId = DB.ElementId.InvalidElementId;
     if (
       _revitToHostCacheSingleton.MaterialsByObjectId.TryGetValue(
-        targetAsBase.applicationId ?? targetAsBase.id,
+        targetAsBase.applicationId ?? targetAsBase.id.NotNull(),
         out var mappedElementId
       )
     )
