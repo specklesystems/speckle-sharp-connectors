@@ -45,7 +45,9 @@ public class SendProgress(IProgressDisplayManager progressDisplayManager) : ISen
         {
           return;
         }
-        onOperationProgressed.Report(new($"Caching... ({args.Count} objects)", null));
+        onOperationProgressed.Report(
+          new($"Caching... ({args.Count} objects)", progressDisplayManager.CalculatePercentage(args))
+        );
         break;
       case ProgressEvent.UploadBytes:
         if (!_serializeIsDone)
@@ -55,7 +57,7 @@ public class SendProgress(IProgressDisplayManager progressDisplayManager) : ISen
         onOperationProgressed.Report(new($"Uploading... ({_previousSpeed})", null));
         break;
       case ProgressEvent.FromCacheOrSerialized:
-        var message = $"Serializing... ({_serialized} done / {_total} found objects)";
+        var message = $"Serializing... ({_serialized} / {_total} found objects)";
         onOperationProgressed.Report(new(message, progressDisplayManager.CalculatePercentage(args)));
         break;
     }
