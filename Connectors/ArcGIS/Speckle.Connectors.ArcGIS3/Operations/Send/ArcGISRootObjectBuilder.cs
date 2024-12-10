@@ -66,7 +66,8 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
 
     // 1 - Unpack the selected mapmembers
     // In Arcgis, mapmembers are collections of other mapmember or objects.
-    // We need to unpack the selected mapmembers into their children objects and build the root collection structure during unpacking.
+    // We need to unpack the selected mapmembers into all leaf-level mapmembers (containing just objects) and build the root collection structure during unpacking.
+    // Mapmember dynamically attached properties are also added at this step.
     List<ADM.MapMember> unpackedLayers;
     using (var _ = _activityFactory.Start("Unpacking selection"))
     {
