@@ -1,11 +1,10 @@
 using System.Reflection;
-using Microsoft.Extensions.DependencyInjection;
 using Rhino;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Testing;
-using Speckle.Sdk.Common;
+using Speckle.Converters.Rhino7.Tests;
+using Xunit.Abstractions;
 using Xunit.Runners;
 
 namespace Speckle.Connectors.Rhino.Bindings;
@@ -19,22 +18,20 @@ public interface IHostAppTestBinding : IBinding
 
 public sealed class RhinoTestBinding : IHostAppTestBinding, IDisposable
 {   
-  private static readonly object s_consoleLock = new();
-
+  private static readonly object s_consoleLock = new();  
   private ManualResetEventSlim? _finished;
-  private readonly ITestStorage _testStorage;
-  private readonly IServiceProvider _serviceProvider;
+  
+  private readonly List<ModelTest> _tests = new();
+  private readonly List<ModelTestResult> _testResults = new();
   public string Name => "hostAppTestBiding";
   public IBrowserBridge Parent { get; }
 
-  public RhinoTestBinding(IBrowserBridge parent, ITestStorageFactory testStorage, IServiceProvider serviceProvider)
+  public RhinoTestBinding(IBrowserBridge parent)
   {
     Parent = parent;
-    _testStorage = testStorage.CreateForUser();
-    _serviceProvider = serviceProvider;
   }
-
   public void Dispose() => _finished?.Dispose();
+
 
   private string? LoadedModel => RhinoDoc.ActiveDoc.Name;
 
@@ -54,11 +51,32 @@ public sealed class RhinoTestBinding : IHostAppTestBinding, IDisposable
     {
       return [];
     }
+
+    _tests.Clear();
+    using var runner = new TestExecutor(Assembly.GetExecutingAssembly());
+    runner.OnDiscoveryMessage = OnDiscoveryMessage;
+    runner.FindAll();
+
+    return _tests.ToArray();
+  }
+  private  void OnDiscoveryMessage(ITestCaseDiscoveryMessage info)
+  {
+    lock (_tests)
+    {
+      _tests.Add(new(info.TestCase.DisplayName, "NOT RUN"));
+    }
+  }
+  public ModelTestResult[] GetTestsResults()
+  {
+    if (string.IsNullOrEmpty(LoadedModel))
+    {
+      return [];
+    }
     
-  
+    
+     
     _finished = new ManualResetEventSlim(false);
-   using var runner = AssemblyRunner.WithoutAppDomain(Assembly.GetExecutingAssembly().Location);
-    runner.OnDiscoveryComplete = OnDiscoveryComplete;
+    using var runner = AssemblyRunner.WithoutAppDomain(Assembly.GetExecutingAssembly().Location);
     runner.OnExecutionComplete = OnExecutionComplete;
     runner.OnTestFailed = OnTestFailed;
     runner.OnTestPassed = OnTestPassed;
@@ -69,47 +87,10 @@ public sealed class RhinoTestBinding : IHostAppTestBinding, IDisposable
     _finished.Dispose();
     _finished = null;
 
-    return [new("Receive"), new("Bar")];
-  }
-  public ModelTestResult[] GetTestsResults()
-  {
-    if (string.IsNullOrEmpty(LoadedModel))
-    {
-      return [];
-    }
-
-    return _testStorage.GetResults(LoadedModel.NotNull()).Select(x => new ModelTestResult(x.ModelName,
-      x.TestName, x.Results, x.TimeStamp?.ToLocalTime().ToString() ?? "Unknown")).ToArray();
-  }
-
-  public void Receive()
-  {
-    var store = _serviceProvider.GetRequiredService<TestDocumentModelStore>();
-    var card = new ReceiverModelCard()
-    {
-      ModelCardId = "test",
-      AccountId = "test",
-      ServerUrl = "",
-      ProjectId = "",
-      ProjectName = "",
-      ModelId = "",
-      ModelName = "",
-      SelectedVersionId = ""
-    };
-    store.AddModel(card);
-    var bridge = _serviceProvider.GetRequiredService<TestBrowserBridge>();
-    var binding = ActivatorUtilities.CreateInstance<RhinoReceiveBinding>(_serviceProvider, store, bridge);
-    binding.Receive("test").Wait();
-    Console.WriteLine(string.Join(",", card.BakedObjectIds??[]));
+    return _testResults.ToArray();
   }
   
-  private  void OnDiscoveryComplete(DiscoveryCompleteInfo info)
-  {
-    lock (s_consoleLock)
-    {
-      Console.WriteLine($"Running {info.TestCasesToRun} of {info.TestCasesDiscovered} tests...");
-    }
-  }
+ 
 
   private void OnExecutionComplete(ExecutionCompleteInfo info)
   {
@@ -127,6 +108,7 @@ public sealed class RhinoTestBinding : IHostAppTestBinding, IDisposable
   {
     lock (s_consoleLock)
     {
+      _testResults.Add(new ModelTestResult(info.TestDisplayName, "FAIL", DateTime.UtcNow.ToString()));
       Console.ForegroundColor = ConsoleColor.Red;
 
       Console.WriteLine("[FAIL] {0}: {1}", info.TestDisplayName, info.ExceptionMessage);
@@ -143,6 +125,7 @@ public sealed class RhinoTestBinding : IHostAppTestBinding, IDisposable
   {
     lock (s_consoleLock)
     {
+      _testResults.Add(new ModelTestResult(info.TestDisplayName, "PASS", DateTime.UtcNow.ToString()));
       Console.ForegroundColor = ConsoleColor.Green;
       Console.WriteLine("[PASS] {0}", info.TestDisplayName);
       Console.ResetColor();
@@ -153,9 +136,12 @@ public sealed class RhinoTestBinding : IHostAppTestBinding, IDisposable
   {
     lock (s_consoleLock)
     {
+      _testResults.Add(new ModelTestResult(info.TestDisplayName, "SKIPPED", DateTime.UtcNow.ToString()));
       Console.ForegroundColor = ConsoleColor.Yellow;
       Console.WriteLine("[SKIP] {0}: {1}", info.TestDisplayName, info.SkipReason);
       Console.ResetColor();
     }
   }
+
+  
 }
