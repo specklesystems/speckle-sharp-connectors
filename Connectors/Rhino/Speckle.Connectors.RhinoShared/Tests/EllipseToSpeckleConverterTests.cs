@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Speckle.Converters.Rhino.ToSpeckle.Raw;
+using Speckle.Converters.Common.Objects;
 using Xunit;
 
 namespace Speckle.Converters.Rhino7.Tests;
@@ -11,6 +11,6 @@ public class EllipseToSpeckleConverterTests(IServiceProvider serviceProvider)
   [Fact]
   public void Convert_Test()
   {
-    _ = serviceProvider.GetRequiredService<EllipseToSpeckleConverter>();
+    _ = serviceProvider.GetRequiredService<ITypedConverter<RG.Ellipse, SOG.Ellipse>>();
   }
 }

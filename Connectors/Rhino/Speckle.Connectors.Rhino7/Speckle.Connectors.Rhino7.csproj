@@ -16,7 +16,8 @@
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="RhinoCommon" IncludeAssets="compile;build" VersionOverride="7.13.21348.13001" />
     <PackageReference Include="RhinoWindows" IncludeAssets="compile;build" VersionOverride="7.13.21348.13001" />
-    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.utility" />
   </ItemGroup>
  
   <ItemGroup>
