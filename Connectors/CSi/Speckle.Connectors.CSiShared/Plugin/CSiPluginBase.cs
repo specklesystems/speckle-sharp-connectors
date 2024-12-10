@@ -27,7 +27,7 @@ public abstract class CSiPluginBase : cPluginContract, IDisposable
 
   public virtual int Info(ref string text)
   {
-    text = "Hey Speckler! This is our next-gen ETABS Connector.";
+    text = "Hey Speckler! This is our next-gen CSi Connector.";
     return 0;
   }
 
