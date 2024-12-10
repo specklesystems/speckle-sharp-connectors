@@ -1,4 +1,5 @@
 ﻿using Grasshopper.Kernel;
+using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Sdk;
 
 namespace Speckle.Connectors.Grasshopper8.Components.BaseComponents;
@@ -52,6 +53,9 @@ public abstract class SpeckleTaskCapableComponent<TInput, TOutput>(
     }
   }
 
+  protected override Bitmap Icon => BitmapBuilder.CreateSquareIconBitmap(IconText);
+
+  protected string IconText => string.Join("", Name.Split(' ').Select(s => s.First()));
   protected abstract TInput GetInput(IGH_DataAccess da);
 
   protected abstract void SetOutput(IGH_DataAccess da, TOutput result);
