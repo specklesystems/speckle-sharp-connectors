@@ -14,6 +14,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)CsiRootToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)CsiToSpeckleUnitConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)CsiWrappers.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Extensions\SpeckleApplicationIdExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CsiFramePropertiesExtractor.cs" />

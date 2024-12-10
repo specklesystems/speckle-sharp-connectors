@@ -4,7 +4,7 @@ public interface ICsiWrapper
 {
   string Name { get; set; }
   int ObjectType { get; }
-  string ObjectName { get; } // TODO: Better approach to objectType number and name. Enum?
+  string ObjectName { get; }
 }
 
 /// <summary>

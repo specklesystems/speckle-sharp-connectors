@@ -1,4 +1,5 @@
 using Speckle.Converters.Common;
+using Speckle.Converters.CSiShared.Extensions;
 using Speckle.Converters.CSiShared.Utils;
 
 namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
@@ -38,12 +39,8 @@ public sealed class CsiJointPropertiesExtractor
     assignments["restraints"] = GetRestraints(joint);
   }
 
-  private string GetApplicationId(CsiJointWrapper joint)
-  {
-    string applicationId = string.Empty;
-    _ = _settingsStore.Current.SapModel.PointObj.GetGUID(joint.Name, ref applicationId);
-    return applicationId;
-  }
+  private string GetApplicationId(CsiJointWrapper joint) =>
+    joint.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
 
   private string[] GetGroupAssigns(CsiJointWrapper joint)
   {

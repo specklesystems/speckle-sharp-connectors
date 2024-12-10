@@ -1,4 +1,5 @@
 using Speckle.Converters.Common;
+using Speckle.Converters.CSiShared.Extensions;
 using Speckle.Converters.CSiShared.Utils;
 
 namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
@@ -43,12 +44,8 @@ public sealed class CsiFramePropertiesExtractor
     assignments["path"] = GetPathType(frame);
   }
 
-  private string GetApplicationId(CsiFrameWrapper frame)
-  {
-    string applicationId = string.Empty;
-    _ = _settingsStore.Current.SapModel.FrameObj.GetGUID(frame.Name, ref applicationId);
-    return applicationId;
-  }
+  private string GetApplicationId(CsiFrameWrapper frame) =>
+    frame.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
 
   private string[] GetGroupAssigns(CsiFrameWrapper frame)
   {

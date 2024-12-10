@@ -1,4 +1,5 @@
 using Speckle.Converters.Common;
+using Speckle.Converters.CSiShared.Extensions;
 using Speckle.Converters.CSiShared.Utils;
 
 namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
@@ -41,12 +42,8 @@ public sealed class CsiShellPropertiesExtractor
     assignments["sectionProperty"] = GetSectionName(shell);
   }
 
-  private string GetApplicationId(CsiShellWrapper shell)
-  {
-    string applicationId = string.Empty;
-    _ = _settingsStore.Current.SapModel.AreaObj.GetGUID(shell.Name, ref applicationId);
-    return applicationId;
-  }
+  private string GetApplicationId(CsiShellWrapper shell) =>
+    shell.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
 
   private string[] GetGroupAssigns(CsiShellWrapper shell)
   {
