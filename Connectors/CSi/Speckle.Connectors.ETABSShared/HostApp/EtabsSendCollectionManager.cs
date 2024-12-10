@@ -7,111 +7,147 @@ using Speckle.Sdk.Models.Collections;
 namespace Speckle.Connectors.ETABSShared.HostApp;
 
 /// <summary>
-/// ETABS-specific collection manager that organizes structural elements by story and type.
+/// ETABS-specific collection manager that organizes structural elements by level and type.
+/// Creates a hierarchical structure that mirrors ETABS' native organization.
 /// </summary>
-/// <remarks>
-/// Creates a two-level hierarchy:
-/// 1. Story level (e.g., "Story 1", "Story 2")
-/// 2. Element type level with ETABS-specific categorization:
-///    - Frames: Columns, Beams, Braces
-///    - Shells: Walls, Floors, Ramps
-///
-/// Elements without story assignment are placed in "Unassigned" collection.
-/// Uses caching to maintain collection references and prevent duplicates.
-/// </remarks>
 public class EtabsSendCollectionManager : CsiSendCollectionManager
 {
+  private const string DEFAULT_LEVEL = "Unassigned";
+
+  private readonly Dictionary<ElementCategory, string> _categoryNames =
+    new()
+    {
+      { ElementCategory.COLUMN, "Columns" },
+      { ElementCategory.BEAM, "Beams" },
+      { ElementCategory.BRACE, "Braces" },
+      { ElementCategory.WALL, "Walls" },
+      { ElementCategory.FLOOR, "Floors" },
+      { ElementCategory.RAMP, "Ramps" },
+      { ElementCategory.JOINT, "Joints" },
+      { ElementCategory.OTHER, "Other" }
+    };
+
   public EtabsSendCollectionManager(IConverterSettingsStore<CsiConversionSettings> converterSettings)
     : base(converterSettings) { }
 
-  // TODO: This is gross. Too many strings. Improve as part of next milestone. Out of scope of "First Send".
   public override Collection AddObjectCollectionToRoot(Base convertedObject, Collection rootObject)
   {
-    var properties = convertedObject["properties"] as Dictionary<string, object>;
-    string story = GetStoryName(properties);
-    string objectType = GetObjectType(convertedObject, properties);
+    var level = GetObjectLevelFromObject(convertedObject);
+    var category = GetElementCategoryFromObject(convertedObject);
 
-    var storyCollection = GetOrCreateStoryCollection(story, rootObject);
-
-    var typeCollection = GetOrCreateTypeCollection(objectType, storyCollection);
-
-    return typeCollection;
+    return GetOrCreateCollectionHierarchy(level, category, rootObject);
   }
 
-  // TODO: This is gross. Too many strings. Improve as part of next milestone. Out of scope of "First Send".
-  private Collection GetOrCreateStoryCollection(string story, Collection rootObject)
+  private string GetObjectLevelFromObject(Base obj)
   {
-    string storyPath = $"Story_{story}";
-    if (CollectionCache.TryGetValue(storyPath, out Collection? existingCollection))
+    // Properties from converter are stored in "Object ID" dictionary
+    // NOTE: Introduce enums for these object keys? I don't like string indexing.
+    if (obj["properties"] is not Dictionary<string, object> properties)
+    {
+      return DEFAULT_LEVEL;
+    }
+
+    if (properties.TryGetValue("Object ID", out var objectId) && objectId is Dictionary<string, object> parameters)
+    {
+      return parameters.TryGetValue("level", out var level) ? level?.ToString() ?? DEFAULT_LEVEL : DEFAULT_LEVEL;
+    }
+
+    return DEFAULT_LEVEL;
+  }
+
+  private ElementCategory GetElementCategoryFromObject(Base obj)
+  {
+    var type = obj["type"]?.ToString();
+
+    // Handle non-structural elements
+    if (string.IsNullOrEmpty(type))
+    {
+      return ElementCategory.OTHER;
+    }
+
+    // For frames and shells, get design orientation from Object ID
+    if ((type == "Frame" || type == "Shell") && obj["properties"] is Dictionary<string, object> properties)
+    {
+      if (properties.TryGetValue("Object ID", out var objectId) && objectId is Dictionary<string, object> parameters)
+      {
+        if (parameters.TryGetValue("designOrientation", out var orientation))
+        {
+          return GetCategoryFromDesignOrientation(orientation?.ToString(), type);
+        }
+      }
+    }
+
+    // For joints, simply categorize as joints
+    return type == "Joint" ? ElementCategory.JOINT : ElementCategory.OTHER;
+  }
+
+  private ElementCategory GetCategoryFromDesignOrientation(string? orientation, string type)
+  {
+    if (string.IsNullOrEmpty(orientation))
+    {
+      return ElementCategory.OTHER;
+    }
+
+    return (orientation, type) switch
+    {
+      ("Column", "Frame") => ElementCategory.COLUMN,
+      ("Beam", "Frame") => ElementCategory.BEAM,
+      ("Brace", "Frame") => ElementCategory.BRACE,
+      ("Wall", "Shell") => ElementCategory.WALL,
+      ("Floor", "Shell") => ElementCategory.FLOOR,
+      ("Ramp", "Shell") => ElementCategory.RAMP,
+      _ => ElementCategory.OTHER
+    };
+  }
+
+  private Collection GetOrCreateCollectionHierarchy(string level, ElementCategory category, Collection root)
+  {
+    var hierarchyKey = $"{level}_{category}";
+
+    if (CollectionCache.TryGetValue(hierarchyKey, out var existingCollection))
     {
       return existingCollection;
     }
 
-    var storyCollection = new Collection(story);
-    rootObject.elements.Add(storyCollection);
-    CollectionCache[storyPath] = storyCollection;
-    return storyCollection;
+    var levelCollection = GetOrCreateLevelCollection(level, root);
+    var categoryCollection = CreateCategoryCollection(category, levelCollection);
+
+    CollectionCache[hierarchyKey] = categoryCollection;
+    return categoryCollection;
   }
 
-  // TODO: This is gross. Too many strings. Improve as part of next milestone. Out of scope of "First Send".
-  private Collection GetOrCreateTypeCollection(string objectType, Collection storyCollection)
+  private Collection GetOrCreateLevelCollection(string level, Collection root)
   {
-    string typePath = $"{storyCollection["name"]}_{objectType}";
-    if (CollectionCache.TryGetValue(typePath, out Collection? existingCollection))
+    var levelKey = $"Level_{level}";
+
+    if (CollectionCache.TryGetValue(levelKey, out var existingCollection))
     {
       return existingCollection;
     }
 
-    var typeCollection = new Collection(objectType);
-    storyCollection.elements.Add(typeCollection);
-    CollectionCache[typePath] = typeCollection;
-    return typeCollection;
+    var levelCollection = new Collection(level);
+    root.elements.Add(levelCollection);
+    CollectionCache[levelKey] = levelCollection;
+
+    return levelCollection;
   }
 
-  // TODO: This is gross. Too many strings. Improve as part of next milestone. Out of scope of "First Send".
-  private string GetObjectType(Base convertedObject, Dictionary<string, object>? properties)
+  private Collection CreateCategoryCollection(ElementCategory category, Collection levelCollection)
   {
-    string baseType = convertedObject["type"]?.ToString() ?? "Unknown";
-
-    if (baseType == "Frame" && properties != null)
-    {
-      if (properties.TryGetValue("designOrientation", out var orientation))
-      {
-        return orientation?.ToString() switch
-        {
-          "Column" => "Columns",
-          "Beam" => "Beams",
-          "Brace" => "Braces",
-          "Null" => "Null",
-          _ => "Frames (Other)"
-        };
-      }
-    }
-    else if (baseType == "Shell" && properties != null)
-    {
-      if (properties.TryGetValue("designOrientation", out var orientation))
-      {
-        return orientation?.ToString() switch
-        {
-          "Wall" => "Walls",
-          "Floor" => "Floors",
-          "Ramp_DO_NOT_USE" => "Ramps",
-          "Null" => "Null",
-          _ => "Shells (Other)"
-        };
-      }
-    }
-
-    return baseType;
+    var categoryCollection = new Collection(_categoryNames[category]);
+    levelCollection.elements.Add(categoryCollection);
+    return categoryCollection;
   }
 
-  // TODO: This is gross. Too many strings. Improve as part of next milestone. Out of scope of "First Send".
-  private string GetStoryName(Dictionary<string, object>? properties)
+  private enum ElementCategory
   {
-    if (properties != null && properties.TryGetValue("story", out var story))
-    {
-      return story?.ToString() ?? "Unassigned";
-    }
-    return "Unassigned";
+    COLUMN,
+    BEAM,
+    BRACE,
+    WALL,
+    FLOOR,
+    RAMP,
+    JOINT,
+    OTHER
   }
 }

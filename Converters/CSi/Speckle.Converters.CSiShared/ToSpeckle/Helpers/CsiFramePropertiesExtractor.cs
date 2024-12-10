@@ -4,16 +4,18 @@ using Speckle.Converters.CSiShared.Utils;
 namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 
 /// <summary>
-/// Extracts properties common to frame elements across CSi products (e.g., ETABS, SAP2000)
+/// Extracts properties common to frame elements across CSi products (e.g., Etabs, Sap2000)
 /// using the FrameObj API calls.
 /// </summary>
 /// <remarks>
-/// Responsibilities:
-/// - Provides a focused interface for extracting properties specific to frame elements.
-/// - Ensures consistency in property extraction logic across supported CSi products.
+/// Design Decisions:
+/// - Individual methods preferred over batched calls due to:
+///   * Independent API calls with no performance gain from batching (?)
+///   * Easier debugging and error tracing
+///   * Simpler maintenance as each method maps to one API concept
 /// Integration:
-/// - Part of the property extraction hierarchy.
-/// - Used by <see cref="CsiGeneralPropertiesExtractor"/> for delegating frame property extraction.
+/// - Part of the property extraction hierarchy
+/// - Used by <see cref="CsiGeneralPropertiesExtractor"/> for delegating frame property extraction
 /// </remarks>
 public sealed class CsiFramePropertiesExtractor
 {
@@ -28,15 +30,17 @@ public sealed class CsiFramePropertiesExtractor
   {
     properties["applicationId"] = GetApplicationId(frame);
 
-    var geometry = DictionaryUtils.EnsureNestedDictionary(properties, "geometry");
+    var geometry = DictionaryUtils.EnsureNestedDictionary(properties, "Geometry");
     (geometry["startJointName"], geometry["endJointName"]) = GetEndPointNames(frame);
 
-    var assignments = DictionaryUtils.EnsureNestedDictionary(properties, "assignments");
+    var assignments = DictionaryUtils.EnsureNestedDictionary(properties, "Assignments");
     assignments["groups"] = new List<string>(GetGroupAssigns(frame));
-    assignments["localAxes"] = GetLocalAxes(frame);
     assignments["materialOverwrite"] = GetMaterialOverwrite(frame);
-    assignments["modifiers"] = GetModifiers(frame);
+    assignments["localAxis"] = GetLocalAxes(frame);
+    assignments["propertyModifiers"] = GetModifiers(frame);
     assignments["endReleases"] = GetReleases(frame);
+    assignments["sectionProperty"] = GetSectionName(frame);
+    assignments["path"] = GetPathType(frame);
   }
 
   private string GetApplicationId(CsiFrameWrapper frame)
@@ -64,7 +68,7 @@ public sealed class CsiFramePropertiesExtractor
 
   private string GetMaterialOverwrite(CsiFrameWrapper frame)
   {
-    string propName = string.Empty;
+    string propName = "None";
     _ = _settingsStore.Current.SapModel.FrameObj.GetMaterialOverwrite(frame.Name, ref propName);
     return propName;
   }
@@ -127,31 +131,19 @@ public sealed class CsiFramePropertiesExtractor
 
     return startNodes.Concat(endNodes).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
   }
-}
 
-/*
-GetDesignProcedure - Common but returns are different -> Etabs - Done
-GetElm - Backlog (Important? Can be user-requested)
-GetEndLengthOffset - Backlog (Important? Can be user-requested)
-GetGroupAssign - Done
-GetGUID - Done
-GetInsertionPoint_1 - Backlog (Important? Can be user-requested)
-GetLateralBracing - Backlog (Important? Can be user-requested)
-GetLoadDistributed - Backlog (Nothing in place for loads, yet)
-GetLoadPoint - Backlog (Nothing in place for loads, yet)
-GetLoadTemperature - Backlog (Nothing in place for loads, yet)
-GetLocalAxes - Done
-GetMass - Backlog (Important? Can be user-requested)
-GetMaterialOverwrite - Done
-GetModifiers - Done
-GetNameList - Backlog (Important? Can be user-requested)
-GetOutputStations - Backlog (Important? Can be user-requested)
-GetPoints - Done
-GetReleases - Done
-GetSection
-GetSectionNonPrismatic
-GetSelected - Don't need this. Won't do.
-GetTCLimits
-GetTransformationMatrix
-GetTypeOAPI
- */
+  private string GetSectionName(CsiFrameWrapper frame)
+  {
+    string sectionName = string.Empty,
+      sAuto = string.Empty;
+    _ = _settingsStore.Current.SapModel.FrameObj.GetSection(frame.Name, ref sectionName, ref sAuto);
+    return sectionName;
+  }
+
+  private string GetPathType(CsiFrameWrapper frame)
+  {
+    string pathType = string.Empty;
+    _ = _settingsStore.Current.SapModel.FrameObj.GetTypeOAPI(frame.Name, ref pathType);
+    return pathType;
+  }
+}

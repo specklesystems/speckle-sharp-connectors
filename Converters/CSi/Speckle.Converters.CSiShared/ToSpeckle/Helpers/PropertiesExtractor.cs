@@ -8,15 +8,15 @@ public record PropertyExtractionResult(
 );
 
 /// <summary>
-/// Main orchestrator for combining general CSi properties with product-specific properties.
+/// Main orchestrator for combining general Csi properties with product-specific properties.
 /// Uses composition to combine results from multiple property extractors.
 /// </summary>
 /// <remarks>
-/// Architectural Notes:
-/// - Composes multiple property extractors following Composition over Inheritance
-/// - Uses dependency injection for loose coupling
-/// - Maintains single responsibility of combining property results
-/// - Preserves separation between CSi common and product-specific properties
+/// Implementation Notes:
+/// - The "applicationId" property is extracted during the general property extraction phase
+/// - It is removed from the properties dictionary as it needs to (desired) be handled at the object root level
+/// - This approach (not ideal) maintains consistent method signatures across CSiShared and product-specific libraries
+/// - First instinct is understandably "feels like a leaky abstraction and could be refactored to be more explicit"
 /// </remarks>
 public class PropertiesExtractor
 {

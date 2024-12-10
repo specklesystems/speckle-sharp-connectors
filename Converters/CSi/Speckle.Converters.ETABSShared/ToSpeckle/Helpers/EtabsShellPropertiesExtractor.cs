@@ -1,8 +1,26 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
+using Speckle.Converters.CSiShared.Utils;
 
 namespace Speckle.Converters.ETABSShared.ToSpeckle.Helpers;
 
+/// <summary>
+/// Extracts ETABS-specific properties from shell elements using the AreaObj API calls.
+/// </summary>
+/// <remarks>
+/// Responsibilities:
+/// - Extracts properties only available in ETABS (e.g., Label, Level)
+/// - Complements CsiShellPropertiesExtractor by adding product-specific data
+/// - Follows same pattern of single-purpose methods for clear API mapping
+///
+/// Design Decisions:
+/// - Maintains separate methods for each property following CSI API structure
+/// - Properties are organized by their functional groups (Object ID, Assignments, Design)
+///
+/// Integration:
+/// - Used by <see cref="EtabsClassPropertiesExtractor"/> for shell-specific property extraction
+/// - Works alongside CsiShellPropertiesExtractor to build complete property set
+/// </remarks>
 public sealed class EtabsShellPropertiesExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
@@ -14,14 +32,16 @@ public sealed class EtabsShellPropertiesExtractor
 
   public void ExtractProperties(CsiShellWrapper shell, Dictionary<string, object?> properties)
   {
-    Dictionary<string, object?> objectId = new Dictionary<string, object?>();
-
-    objectId["deisgnOrientation"] = GetDesignOrientation(shell);
+    var objectId = DictionaryUtils.EnsureNestedDictionary(properties, "Object ID");
+    objectId["designOrientation"] = GetDesignOrientation(shell);
     (objectId["label"], objectId["level"]) = GetLabelAndLevel(shell);
 
-    properties["objectId"] = objectId;
-
-    // TODO: Add other ETABS-specific properties
+    var assignments = DictionaryUtils.EnsureNestedDictionary(properties, "Assignments");
+    assignments["diaphragmName"] = GetDiaphragm(shell);
+    assignments["isOpening"] = IsOpening(shell);
+    assignments["pierAssignment"] = GetPierAssignment(shell);
+    assignments["spandrelAssignment"] = GetSpandrelAssignment(shell);
+    assignments["springAssignmentName"] = GetSpringAssignmentName(shell);
   }
 
   private (string label, string level) GetLabelAndLevel(CsiShellWrapper shell)
@@ -37,5 +57,40 @@ public sealed class EtabsShellPropertiesExtractor
     eAreaDesignOrientation designOrientation = eAreaDesignOrientation.Null;
     _ = _settingsStore.Current.SapModel.AreaObj.GetDesignOrientation(shell.Name, ref designOrientation);
     return designOrientation.ToString();
+  }
+
+  private string GetDiaphragm(CsiShellWrapper shell)
+  {
+    string diaphragmName = "None";
+    _ = _settingsStore.Current.SapModel.AreaObj.GetDiaphragm(shell.Name, ref diaphragmName);
+    return diaphragmName;
+  }
+
+  private string IsOpening(CsiShellWrapper shell)
+  {
+    bool isOpening = false;
+    _ = _settingsStore.Current.SapModel.AreaObj.GetOpening(shell.Name, ref isOpening);
+    return isOpening.ToString();
+  }
+
+  private string GetPierAssignment(CsiShellWrapper shell)
+  {
+    string pierAssignment = "None";
+    _ = _settingsStore.Current.SapModel.AreaObj.GetPier(shell.Name, ref pierAssignment);
+    return pierAssignment;
+  }
+
+  private string GetSpandrelAssignment(CsiShellWrapper shell)
+  {
+    string spandrelAssignment = "None";
+    _ = _settingsStore.Current.SapModel.AreaObj.GetSpandrel(shell.Name, ref spandrelAssignment);
+    return spandrelAssignment;
+  }
+
+  private string GetSpringAssignmentName(CsiShellWrapper shell)
+  {
+    string springAssignmentName = "None";
+    _ = _settingsStore.Current.SapModel.AreaObj.GetSpringAssignment(shell.Name, ref springAssignmentName);
+    return springAssignmentName;
   }
 }

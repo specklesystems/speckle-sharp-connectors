@@ -4,6 +4,23 @@ using Speckle.Converters.CSiShared.Utils;
 
 namespace Speckle.Converters.ETABSShared.ToSpeckle.Helpers;
 
+/// <summary>
+/// Extracts ETABS-specific properties from frame elements using the FrameObj API calls.
+/// </summary>
+/// <remarks>
+/// Responsibilities:
+/// - Extracts properties only available in ETABS (e.g., Label, Level)
+/// - Complements CsiFramePropertiesExtractor by adding product-specific data
+/// - Follows same pattern of single-purpose methods for clear API mapping
+///
+/// Design Decisions:
+/// - Maintains separate methods for each property following CSI API structure
+/// - Properties are organized by their functional groups (Object ID, Assignments, Design)
+///
+/// Integration:
+/// - Used by <see cref="EtabsClassPropertiesExtractor"/> for frame-specific property extraction
+/// - Works alongside CsiFramePropertiesExtractor to build complete property set
+/// </remarks>
 public sealed class EtabsFramePropertiesExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
@@ -15,11 +32,14 @@ public sealed class EtabsFramePropertiesExtractor
 
   public void ExtractProperties(CsiFrameWrapper frame, Dictionary<string, object?> properties)
   {
-    var objectId = DictionaryUtils.EnsureNestedDictionary(properties, "objectId");
+    var objectId = DictionaryUtils.EnsureNestedDictionary(properties, "Object ID");
     objectId["designOrientation"] = GetDesignOrientation(frame);
     (objectId["label"], objectId["level"]) = GetLabelAndLevel(frame);
 
-    var design = DictionaryUtils.EnsureNestedDictionary(properties, "design");
+    var assignments = DictionaryUtils.EnsureNestedDictionary(properties, "Assignments");
+    assignments["springAssignment"] = GetSpringAssignmentName(frame);
+
+    var design = DictionaryUtils.EnsureNestedDictionary(properties, "Design");
     design["designProcedure"] = GetDesignProcedure(frame);
   }
 
@@ -52,5 +72,12 @@ public sealed class EtabsFramePropertiesExtractor
       13 => "Composite Column Design",
       _ => "Program determined"
     };
+  }
+
+  private string GetSpringAssignmentName(CsiFrameWrapper frame)
+  {
+    string springPropertyName = "None";
+    _ = _settingsStore.Current.SapModel.FrameObj.GetSpringAssignment(frame.Name, ref springPropertyName);
+    return springPropertyName;
   }
 }

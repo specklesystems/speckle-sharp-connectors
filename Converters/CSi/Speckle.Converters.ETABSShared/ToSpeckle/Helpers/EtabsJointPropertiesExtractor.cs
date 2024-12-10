@@ -1,8 +1,26 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
+using Speckle.Converters.CSiShared.Utils;
 
 namespace Speckle.Converters.ETABSShared.ToSpeckle.Helpers;
 
+/// <summary>
+/// Extracts ETABS-specific properties from joint elements using the PointObj API calls.
+/// </summary>
+/// <remarks>
+/// Responsibilities:
+/// - Extracts properties only available in ETABS (e.g., Diaphragm)
+/// - Complements CsiJointPropertiesExtractor by adding product-specific data
+/// - Follows same pattern of single-purpose methods for clear API mapping
+///
+/// Design Decisions:
+/// - Maintains separate methods for each property following CSI API structure
+/// - Properties are organized by their functional groups (Object ID, Assignments, Design)
+///
+/// Integration:
+/// - Used by <see cref="EtabsClassPropertiesExtractor"/> for joint-specific property extraction
+/// - Works alongside CsiJointPropertiesExtractor to build complete property set
+/// </remarks>
 public sealed class EtabsJointPropertiesExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
@@ -14,13 +32,20 @@ public sealed class EtabsJointPropertiesExtractor
 
   public void ExtractProperties(CsiJointWrapper joint, Dictionary<string, object?> properties)
   {
-    Dictionary<string, object?> objectId = new Dictionary<string, object?>();
-
+    var objectId = DictionaryUtils.EnsureNestedDictionary(properties, "Object ID");
     (objectId["label"], objectId["level"]) = GetLabelAndLevel(joint);
 
-    properties["objectId"] = objectId;
+    var assignments = DictionaryUtils.EnsureNestedDictionary(properties, "Assignments");
+    (assignments["diaphragmOption"], assignments["diaphragmName"]) = GetDiaphragm(joint);
+    assignments["springAssignment"] = GetSpringAssignmentName(joint);
+  }
 
-    // TODO: Add other ETABS-specific properties
+  private (string diaphramOption, string diaphragmName) GetDiaphragm(CsiJointWrapper joint)
+  {
+    eDiaphragmOption diaphragmOption = eDiaphragmOption.Disconnect;
+    string diaphragmName = "None";
+    _ = _settingsStore.Current.SapModel.PointObj.GetDiaphragm(joint.Name, ref diaphragmOption, ref diaphragmName);
+    return (diaphragmOption.ToString(), diaphragmName);
   }
 
   private (string label, string level) GetLabelAndLevel(CsiJointWrapper joint)
@@ -29,5 +54,12 @@ public sealed class EtabsJointPropertiesExtractor
       level = string.Empty;
     _ = _settingsStore.Current.SapModel.PointObj.GetLabelFromName(joint.Name, ref label, ref level);
     return (label, level);
+  }
+
+  private string GetSpringAssignmentName(CsiJointWrapper joint)
+  {
+    string springPropertyName = "None";
+    _ = _settingsStore.Current.SapModel.PointObj.GetSpringAssignment(joint.Name, ref springPropertyName);
+    return springPropertyName;
   }
 }
