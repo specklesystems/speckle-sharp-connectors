@@ -47,5 +47,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RhinoPlugin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\Speckle.Connectors.RhinoCommand.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\Speckle.Connectors.RhinoPlugin.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Tests\*.cs" />
   </ItemGroup>
 </Project>

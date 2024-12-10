@@ -13,8 +13,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="FluentAssertions" />
     <PackageReference Include="RhinoCommon" IncludeAssets="compile; build" PrivateAssets="all" />
     <PackageReference Include="RhinoWindows" IncludeAssets="compile; build" PrivateAssets="all" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.utility" />
   </ItemGroup>
 
   <ItemGroup>

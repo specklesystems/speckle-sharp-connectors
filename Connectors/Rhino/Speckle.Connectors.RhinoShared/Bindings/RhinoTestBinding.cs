@@ -6,6 +6,7 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Testing;
 using Speckle.Sdk.Common;
+using Xunit.Runners;
 
 namespace Speckle.Connectors.Rhino.Bindings;
 
@@ -16,8 +17,11 @@ public interface IHostAppTestBinding : IBinding
   ModelTestResult[] GetTestsResults();
 }
 
-public class RhinoTestBinding : IHostAppTestBinding
-{
+public sealed class RhinoTestBinding : IHostAppTestBinding, IDisposable
+{   
+  private static readonly object s_consoleLock = new();
+
+  private ManualResetEventSlim? _finished;
   private readonly ITestStorage _testStorage;
   private readonly IServiceProvider _serviceProvider;
   public string Name => "hostAppTestBiding";
@@ -30,6 +34,8 @@ public class RhinoTestBinding : IHostAppTestBinding
     _serviceProvider = serviceProvider;
   }
 
+  public void Dispose() => _finished?.Dispose();
+
   private string? LoadedModel => RhinoDoc.ActiveDoc.Name;
 
   public string GetLoadedModel()
@@ -37,29 +43,9 @@ public class RhinoTestBinding : IHostAppTestBinding
     return LoadedModel ?? string.Empty;
   }
 
-  public async Task ExecuteTest(string testName)
+  public void ExecuteTest(string testName)
   {
     Console.WriteLine(testName);
-    var method = typeof(RhinoTestBinding).GetMethods().FirstOrDefault(x => x.Name == testName);
-    if (method is null)
-    {
-      return;
-    }
-    object? resultTyped = method.Invoke(this, []);
-
-    // Was the method called async?
-    if (resultTyped is not Task resultTypedTask)
-    {
-      // Regular method: no need to await things
-      return;
-    }
-
-    // It's an async call
-    await resultTypedTask.ConfigureAwait(false);
-
-    // If has a "Result" property return the value otherwise null (Task<void> etc)
-    PropertyInfo? resultProperty = resultTypedTask.GetType().GetProperty(nameof(Task<object>.Result));
-    object? taskResult = resultProperty?.GetValue(resultTypedTask);
   }
 
   public ModelTest[] GetTests()
@@ -68,6 +54,20 @@ public class RhinoTestBinding : IHostAppTestBinding
     {
       return [];
     }
+    
+  
+    _finished = new ManualResetEventSlim(false);
+   using var runner = AssemblyRunner.WithoutAppDomain(Assembly.GetExecutingAssembly().Location);
+    runner.OnDiscoveryComplete = OnDiscoveryComplete;
+    runner.OnExecutionComplete = OnExecutionComplete;
+    runner.OnTestFailed = OnTestFailed;
+    runner.OnTestPassed = OnTestPassed;
+    runner.OnTestSkipped = OnTestSkipped;
+    runner.Start();
+    _finished.Wait();
+    
+    _finished.Dispose();
+    _finished = null;
 
     return [new("Receive"), new("Bar")];
   }
@@ -101,5 +101,61 @@ public class RhinoTestBinding : IHostAppTestBinding
     var binding = ActivatorUtilities.CreateInstance<RhinoReceiveBinding>(_serviceProvider, store, bridge);
     binding.Receive("test").Wait();
     Console.WriteLine(string.Join(",", card.BakedObjectIds??[]));
+  }
+  
+  private  void OnDiscoveryComplete(DiscoveryCompleteInfo info)
+  {
+    lock (s_consoleLock)
+    {
+      Console.WriteLine($"Running {info.TestCasesToRun} of {info.TestCasesDiscovered} tests...");
+    }
+  }
+
+  private void OnExecutionComplete(ExecutionCompleteInfo info)
+  {
+    lock (s_consoleLock)
+    {
+      Console.WriteLine(
+        $"Finished: {info.TotalTests} tests in {Math.Round(info.ExecutionTime, 3)}s ({info.TestsFailed} failed, {info.TestsSkipped} skipped)");
+    
+  }
+
+    _finished?.Set();
+  }
+
+  private  void OnTestFailed(TestFailedInfo info)
+  {
+    lock (s_consoleLock)
+    {
+      Console.ForegroundColor = ConsoleColor.Red;
+
+      Console.WriteLine("[FAIL] {0}: {1}", info.TestDisplayName, info.ExceptionMessage);
+      if (info.ExceptionStackTrace != null)
+      {
+        Console.WriteLine(info.ExceptionStackTrace);
+      }
+
+      Console.ResetColor();
+    }
+  }
+
+  private  void OnTestPassed(TestPassedInfo info)
+  {
+    lock (s_consoleLock)
+    {
+      Console.ForegroundColor = ConsoleColor.Green;
+      Console.WriteLine("[PASS] {0}", info.TestDisplayName);
+      Console.ResetColor();
+    }
+  }
+
+  private  void OnTestSkipped(TestSkippedInfo info)
+  {
+    lock (s_consoleLock)
+    {
+      Console.ForegroundColor = ConsoleColor.Yellow;
+      Console.WriteLine("[SKIP] {0}: {1}", info.TestDisplayName, info.SkipReason);
+      Console.ResetColor();
+    }
   }
 }
