@@ -39,6 +39,7 @@ public class ApplicationPropertiesExtractor : IApplicationPropertiesExtractor
     // Extract shared properties first
     var propertiesExtractionResult = SharedPropertiesExtractor.Extract(wrapper);
 
+    // Then we go into Etabs-specific stuff
     switch (wrapper)
     {
       case CsiFrameWrapper frame:

@@ -32,15 +32,12 @@ public sealed class CsiJointPropertiesExtractor
 
   public void ExtractProperties(CsiJointWrapper joint, PropertyExtractionResult jointData)
   {
-    jointData.ApplicationId = GetApplicationId(joint);
+    jointData.ApplicationId = joint.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
 
     var assignments = DictionaryUtils.EnsureNestedDictionary(jointData.Properties, "Assignments");
     assignments["groups"] = new List<string>(GetGroupAssigns(joint));
     assignments["restraints"] = GetRestraints(joint);
   }
-
-  private string GetApplicationId(CsiJointWrapper joint) =>
-    joint.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
 
   private string[] GetGroupAssigns(CsiJointWrapper joint)
   {

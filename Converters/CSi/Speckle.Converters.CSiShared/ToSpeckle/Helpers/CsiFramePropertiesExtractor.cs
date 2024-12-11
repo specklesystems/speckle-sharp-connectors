@@ -38,7 +38,7 @@ public sealed class CsiFramePropertiesExtractor
 
   public void ExtractProperties(CsiFrameWrapper frame, PropertyExtractionResult frameData)
   {
-    frameData.ApplicationId = GetApplicationId(frame);
+    frameData.ApplicationId = frame.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
 
     var geometry = DictionaryUtils.EnsureNestedDictionary(frameData.Properties, "Geometry");
     (geometry["startJointName"], geometry["endJointName"]) = GetEndPointNames(frame);
@@ -52,9 +52,6 @@ public sealed class CsiFramePropertiesExtractor
     assignments["sectionProperty"] = GetSectionName(frame);
     assignments["path"] = GetPathType(frame);
   }
-
-  private string GetApplicationId(CsiFrameWrapper frame) =>
-    frame.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
 
   private string[] GetGroupAssigns(CsiFrameWrapper frame)
   {

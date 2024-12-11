@@ -29,7 +29,7 @@ public sealed class CsiShellPropertiesExtractor
 
   public void ExtractProperties(CsiShellWrapper shell, PropertyExtractionResult shellData)
   {
-    shellData.ApplicationId = GetApplicationId(shell);
+    shellData.ApplicationId = shell.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
 
     var geometry = DictionaryUtils.EnsureNestedDictionary(shellData.Properties, "Geometry");
     geometry["shellVerticesJointNames"] = GetPointNames(shell);
@@ -41,9 +41,6 @@ public sealed class CsiShellPropertiesExtractor
     assignments["propertyModifiers"] = GetModifiers(shell);
     assignments["sectionProperty"] = GetSectionName(shell);
   }
-
-  private string GetApplicationId(CsiShellWrapper shell) =>
-    shell.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
 
   private string[] GetGroupAssigns(CsiShellWrapper shell)
   {
