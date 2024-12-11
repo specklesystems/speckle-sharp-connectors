@@ -3,7 +3,7 @@ using Speckle.Connectors.DUI.Models.Card;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Common;
 
-namespace Speckle.Connector.Tekla2024.Operations.Send.Settings;
+namespace Speckle.Connectors.TeklaShared.Operations.Send.Settings;
 
 [GenerateAutoInterface]
 public class ToSpeckleSettingsManager : IToSpeckleSettingsManager

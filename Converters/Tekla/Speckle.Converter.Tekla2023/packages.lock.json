@@ -295,7 +295,7 @@
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
-          "Speckle.Objects": "[3.1.0-dev.191, )"
+          "Speckle.Objects": "[3.1.0-dev.215, )"
         }
       },
       "Microsoft.Extensions.DependencyInjection.Abstractions": {
@@ -324,18 +324,18 @@
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.191, )",
-        "resolved": "3.1.0-dev.191",
-        "contentHash": "+m7jRFm0ABbkcSz2UphdxAsislY10IpQ1u79c8a3aVvegLjnsVQZ1sXfRIRO1aFdulkhjYKXYpB3N9M8Z+epgQ==",
+        "requested": "[3.1.0-dev.215, )",
+        "resolved": "3.1.0-dev.215",
+        "contentHash": "NNiTR3dp1/4WNIv2WRHm87pr4WQztt9vVRALqULEUTcYrvb34xwnKwPwt3Ah5iXW1g3qkecXto5V7Ex+IIzeRQ==",
         "dependencies": {
-          "Speckle.Sdk": "3.1.0-dev.191"
+          "Speckle.Sdk": "3.1.0-dev.215"
         }
       },
       "Speckle.Sdk": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.191, )",
-        "resolved": "3.1.0-dev.191",
-        "contentHash": "VVT3LJiYlhqnggxxdeTt1QLrqfxDb044x0yX6kxS9b5MRzeDvK2Vz86pLDfuHs+SXvDimRVfYx1M42IW/aPcTQ==",
+        "requested": "[3.1.0-dev.215, )",
+        "resolved": "3.1.0-dev.215",
+        "contentHash": "YMb7xdELiza88RSCUWcqmKJlrnoqjxlc1+Z1gEQSCfvFV0Ibvfjz08YAMkOWFc/ZaY9nBUZvshHEWYIskEk5cg==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.Bcl.AsyncInterfaces": "5.0.0",
@@ -345,14 +345,14 @@
           "Microsoft.Extensions.Logging": "2.2.0",
           "Speckle.DoubleNumerics": "4.0.1",
           "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Dependencies": "3.1.0-dev.191"
+          "Speckle.Sdk.Dependencies": "3.1.0-dev.215"
         }
       },
       "Speckle.Sdk.Dependencies": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.191, )",
-        "resolved": "3.1.0-dev.191",
-        "contentHash": "EmEOyjsGsNi56Z/ZoBOn8WirTmIT2yqWvlUeUh0BSPX2TDMZXHTKOM/kHmP6HSd10KVFn2Zo/ItY7/K9iRtL1Q=="
+        "requested": "[3.1.0-dev.215, )",
+        "resolved": "3.1.0-dev.215",
+        "contentHash": "cT5HRu+pRBvfKTRJIvQBgdX2X5eeTebHe7zmNz82tFT0p65RsK9K7Ap9RjvMndbEPqFtt8/sCNa5RHyfrf+IUg=="
       },
       "Tekla.Structures.Dialog": {
         "type": "CentralTransitive",

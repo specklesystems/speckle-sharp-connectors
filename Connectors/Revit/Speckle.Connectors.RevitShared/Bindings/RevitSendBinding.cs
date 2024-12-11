@@ -167,6 +167,11 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       _logger.LogModelCardHandledError(ex);
       await Commands.SetModelError(modelCardId, ex).ConfigureAwait(false);
     }
+    finally
+    {
+      // otherwise the id of the operation persists on the cancellation manager and triggers 'Operations cancelled because of document swap!' message to UI.
+      _cancellationManager.CancelOperation(modelCardId);
+    }
   }
 
   private async Task<List<Element>> RefreshElementsOnSender(SenderModelCard modelCard)
@@ -346,15 +351,32 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     }
 
     var objUniqueIds = new List<string>();
+    var changedIds = ChangedObjectIds.Keys.ToList();
+
+    // Handling type changes: if an element's type is changed, we need to mark as changed all objects that have that type.
+    // Step 1: get any changed types
+    var elementTypeIdsList = changedIds
+      .Select(e => doc.GetElement(e))
+      .OfType<ElementType>()
+      .Select(el => el.Id)
+      .ToArray();
+
+    // Step 2: Find all elements of the changed types, and add them to the changed ids list.
+    if (elementTypeIdsList.Length != 0)
+    {
+      using var collector = new FilteredElementCollector(doc);
+      var collectorElements = collector
+        .WhereElementIsNotElementType()
+        .Where(e => elementTypeIdsList.Contains(e.GetTypeId()));
+      foreach (var elm in collectorElements)
+      {
+        changedIds.Add(elm.Id);
+      }
+    }
 
     foreach (var sender in senders)
     {
-      // if (sender.SendFilter is null) // NOTE: RunExpirationChecks sometimes triggered unnecessarily before send and, we didn't set up yet IdMap, if so we do not need to deal with it
-      // {
-      //   continue;
-      // }
-
-      foreach (var changedElementId in ChangedObjectIds.Keys)
+      foreach (var changedElementId in changedIds)
       {
         if (sender.SendFilter?.IdMap?.TryGetValue(changedElementId.ToString(), out var id) ?? false)
         {
@@ -362,21 +384,6 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         }
       }
     }
-
-    // foreach (var changedElementId in ChangedObjectIds.Keys.ToArray())
-    // {
-    //   foreach (var sender in senders)
-    //   {
-    //     if (sender.SendFilter.NotNull().IdMap is null)
-    //     {
-    //       continue;
-    //     }
-    //     if (sender.SendFilter.NotNull().IdMap.NotNull().ContainsKey(changedElementId.ToString()))
-    //     {
-    //       objUniqueIds.Add(sender.SendFilter.NotNull().IdMap.NotNull()[changedElementId.ToString()]);
-    //     }
-    //   }
-    // }
 
     var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objUniqueIds);
     _sendConversionCache.EvictObjects(unpackedObjectIds);

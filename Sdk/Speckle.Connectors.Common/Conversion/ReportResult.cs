@@ -1,3 +1,4 @@
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.Common.Conversion;
@@ -49,7 +50,7 @@ public class ReceiveConversionResult : ConversionResult
   )
   {
     Status = status;
-    SourceId = source.id;
+    SourceId = source.id.NotNull();
     SourceType = source.speckle_type; // Note: we'll parse it nicely in FE
     ResultId = resultId;
     ResultType = resultType;

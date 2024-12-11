@@ -66,7 +66,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
 
   public DocumentModelStore GetDocumentState() => _store;
 
-  public void AddModel(ModelCard model) => _store.Models.Add(model);
+  public void AddModel(ModelCard model) => _store.AddModel(model);
 
   public void UpdateModel(ModelCard model) => _store.UpdateModel(model);
 
@@ -165,6 +165,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
             {
               // Note: we're swallowing exeptions here because of a weird case when receiving blocks, we would have
               // acad api throw an error on accessing entity.GeometricExtents.
+              // may also throw Autodesk.AutoCAD.Runtime.Exception for invalid extents on objects like rays and xlines
             }
           }
 
