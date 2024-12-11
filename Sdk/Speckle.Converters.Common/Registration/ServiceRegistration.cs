@@ -3,6 +3,7 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.ToHost;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.Common.Registration;
 
@@ -50,7 +51,7 @@ public static class ServiceRegistration
       .Where(x => x.GetCustomAttribute<NameAndRankValueAttribute>() != null)
       .Select(x =>
       {
-        var nameAndRank = x.GetCustomAttribute<NameAndRankValueAttribute>();
+        var nameAndRank = x.GetCustomAttribute<NameAndRankValueAttribute>().NotNull();
 
         return (name: nameAndRank.Name, rank: nameAndRank.Rank, type: x);
       })
