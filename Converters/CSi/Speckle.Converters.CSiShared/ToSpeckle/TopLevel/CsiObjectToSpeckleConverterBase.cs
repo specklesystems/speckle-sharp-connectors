@@ -50,10 +50,10 @@ public abstract class CsiObjectToSpeckleConverterBase : IToSpeckleTopLevelConver
       new List<ICsiObject>(),
       displayValue,
       objectData.Properties,
-      _settingsStore.Current.SpeckleUnits
+      _settingsStore.Current.SpeckleUnits,
+      objectData.ApplicationId
     );
 
-    baseObject["applicationId"] = objectData.ApplicationId;
     return baseObject;
   }
 
@@ -63,6 +63,7 @@ public abstract class CsiObjectToSpeckleConverterBase : IToSpeckleTopLevelConver
     List<ICsiObject> elements,
     List<Base> displayValue,
     Dictionary<string, object?> properties,
-    string units
+    string units,
+    string applicationId
   );
 }

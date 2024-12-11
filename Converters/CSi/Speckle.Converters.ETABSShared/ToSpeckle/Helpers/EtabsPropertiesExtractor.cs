@@ -14,14 +14,14 @@ namespace Speckle.Converters.ETABSShared.ToSpeckle.Helpers;
 /// 2. Augment with ETABS-specific properties
 /// This ensures consistent base properties with ETABS-specific enrichment.
 /// </remarks>
-public class ApplicationPropertiesExtractor : IApplicationPropertiesExtractor
+public class EtabsPropertiesExtractor : IApplicationPropertiesExtractor
 {
   public SharedPropertiesExtractor SharedPropertiesExtractor { get; }
   private readonly EtabsFramePropertiesExtractor _etabsFramePropertiesExtractor;
   private readonly EtabsJointPropertiesExtractor _etabsJointPropertiesExtractor;
   private readonly EtabsShellPropertiesExtractor _etabsShellPropertiesExtractor;
 
-  public ApplicationPropertiesExtractor(
+  public EtabsPropertiesExtractor(
     SharedPropertiesExtractor sharedPropertiesExtractor,
     EtabsFramePropertiesExtractor etabsFramePropertiesExtractor,
     EtabsJointPropertiesExtractor etabsJointPropertiesExtractor,

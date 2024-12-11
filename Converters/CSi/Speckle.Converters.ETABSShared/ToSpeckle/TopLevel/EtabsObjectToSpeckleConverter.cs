@@ -38,7 +38,8 @@ public class EtabsObjectToSpeckleConverter : CsiObjectToSpeckleConverterBase
     List<ICsiObject> elements,
     List<Base> displayValue,
     Dictionary<string, object?> properties,
-    string units
+    string units,
+    string applicationId
   ) =>
     new EtabsObject
     {
@@ -47,6 +48,7 @@ public class EtabsObjectToSpeckleConverter : CsiObjectToSpeckleConverterBase
       elements = elements.Cast<EtabsObject>().ToList(),
       displayValue = displayValue,
       properties = properties,
-      units = units
+      units = units,
+      applicationId = applicationId
     };
 }

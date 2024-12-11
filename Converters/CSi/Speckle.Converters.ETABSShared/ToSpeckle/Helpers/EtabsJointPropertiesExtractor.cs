@@ -19,7 +19,7 @@ namespace Speckle.Converters.ETABSShared.ToSpeckle.Helpers;
 /// - Properties are organized by their functional groups (Object ID, Assignments, Design)
 ///
 /// Integration:
-/// - Used by <see cref="ApplicationPropertiesExtractor"/> for joint-specific property extraction
+/// - Used by <see cref="EtabsPropertiesExtractor"/> for joint-specific property extraction
 /// - Works alongside CsiJointPropertiesExtractor to build complete property set
 /// </remarks>
 public sealed class EtabsJointPropertiesExtractor
