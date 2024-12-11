@@ -1,9 +1,9 @@
 using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
 using Speckle.Converters.Common;
-using Speckle.Converters.Common.Objects;
+using Speckle.Converters.RevitShared;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Converters.RevitShared.ToSpeckle;
 using Speckle.HostApps;
 using Xunit;
 
@@ -23,20 +23,24 @@ public class XyzConversionToPointTests(IServiceProvider serviceProvider) : MoqTe
     var yScaled = 4.2;
     var zScaled = 4.3;
 
-    var xyz = new DB.XYZ(x,y,z);
+    var xyz2 = new DB.XYZ(x,y,z);
+    var xyz1 = new DB.XYZ(0,1,0);
 
 
     var units = "units";
     var conversionContext = Create<IConverterSettingsStore<RevitConversionSettings>>();
     conversionContext.Setup(x => x.Current).Returns(new RevitConversionSettings(null!, DetailLevelType.Coarse, null, units, false) );
 
+    var referencePointConverter = Create<IReferencePointConverter>();
+    referencePointConverter.Setup(x => x.ConvertToExternalCoordinates(xyz1, true)).Returns(xyz2);
+    
     var scalingServiceToSpeckle = Create<IScalingServiceToSpeckle>();
     scalingServiceToSpeckle.Setup(a => a.ScaleLength(x)).Returns(xScaled);
     scalingServiceToSpeckle.Setup(a => a.ScaleLength(y)).Returns(yScaled);
     scalingServiceToSpeckle.Setup(a => a.ScaleLength(z)).Returns(zScaled);
 
-    var converter = ActivatorUtilities.CreateInstance<ITypedConverter<DB.XYZ, SOG.Point>>(serviceProvider);
-    var point = converter.Convert(xyz);
+    var converter = serviceProvider.Create<XyzConversionToPoint>(referencePointConverter.Object, conversionContext.Object, scalingServiceToSpeckle.Object);
+    var point = converter.Convert(xyz1);
 
     point.x.Should().Be(xScaled);
     point.y.Should().Be(yScaled);

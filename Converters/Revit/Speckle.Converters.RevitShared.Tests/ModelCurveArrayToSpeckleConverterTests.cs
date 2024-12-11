@@ -1,16 +1,24 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.RevitShared.Raw;
+using Speckle.Converters.RevitShared.Services;
+using Speckle.Converters.RevitShared.Settings;
+using Speckle.HostApps;
 using Speckle.Sdk.Common.Exceptions;
 using Xunit;
 
 namespace Speckle.Converters.Revit2023.Tests;
 
-public class ModelCurveArrayToSpeckleConverterTests(IServiceProvider serviceProvider)
+public class ModelCurveArrayToSpeckleConverterTests(IServiceProvider serviceProvider) : MoqTest
 {
   [Fact]
   public void Convert_Empty()
-  {
-    var sut = serviceProvider.GetRequiredService<ITypedConverter<DB.ModelCurveArray, SOG.Polycurve>>();
+  {  
+    var conversionContext = Create<IConverterSettingsStore<RevitConversionSettings>>();
+    var scalingService = Create<IScalingServiceToSpeckle>();
+    var converter = Create< ITypedConverter<DB.Curve, SO.ICurve>>();
+    
+    var sut = serviceProvider.Create<ModelCurveArrayToSpeckleConverter>(conversionContext.Object, scalingService.Object, converter.Object);
     Assert.Throws<ValidationException>(() => sut.Convert(new DB.ModelCurveArray()));
   }
 /*

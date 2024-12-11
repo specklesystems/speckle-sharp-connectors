@@ -48,4 +48,11 @@
   <Target AfterTargets="Build"  Name="AfterBuildRhino" Condition="'$(RhinoVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
     <Message Text="RhinoVersion $(RhinoVersion)" Importance="high"/>
   </Target>
+
+  <ItemGroup Condition="'$(HostAppTests)' == 'true'">
+    <AssemblyAttribute Include="Xunit.TestFrameworkAttribute">
+      <_Parameter1>Speckle.HostApps.SpeckleXunitTestFramework</_Parameter1>
+      <_Parameter2>Speckle.HostApps</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
 </Project>

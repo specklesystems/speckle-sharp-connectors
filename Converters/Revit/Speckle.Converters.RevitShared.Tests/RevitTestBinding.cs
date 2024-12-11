@@ -67,6 +67,8 @@ public sealed class RevitTestBinding : IHostAppTestBinding
       return [];
     }
 
+    _testResults.Clear();
+
     using var runner = _testExecutorFactory.Create(Assembly.GetExecutingAssembly());
     runner.OnExecutionComplete = OnExecutionComplete;
     runner.OnTestFailed = OnTestFailed;

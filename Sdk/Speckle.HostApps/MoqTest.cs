@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 
 namespace Speckle.HostApps;
@@ -21,4 +22,10 @@ public abstract class MoqTest : IDisposable
 
   protected Mock<T> Create<T>(MockBehavior behavior = MockBehavior.Strict)
     where T : class => Repository.Create<T>(behavior);
+}
+
+
+public static class ServiceProviderExtensions
+{
+  public static T Create<T>(this IServiceProvider provider, params object[] parameters) => ActivatorUtilities.CreateInstance<T>(provider, parameters);
 }

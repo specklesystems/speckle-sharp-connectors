@@ -1,2 +1,2 @@
 global using DB = Autodesk.Revit.DB;
-global using SOG = Speckle.Objects.Geometry;
+global using SO = Speckle.Objects;
