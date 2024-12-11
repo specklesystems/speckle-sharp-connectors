@@ -4,7 +4,9 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.Revit.DependencyInjection;
+using Speckle.Converters.Revit2023.Tests;
 using Speckle.Converters.RevitShared;
+using Speckle.HostApps;
 using Speckle.Sdk;
 using Speckle.Sdk.Host;
 
@@ -47,8 +49,10 @@ internal sealed class RevitExternalApplication : IExternalApplication
       services.AddRevit();
       services.AddRevitConverters();
       services.AddSingleton(application);
+      services.AddHostAppTesting<RevitTestBinding>();
       _container = services.BuildServiceProvider();
       _container.UseDUI();
+      _container.UseHostAppTesting();
 
       // resolve root object
       _revitPlugin = _container.GetRequiredService<IRevitPlugin>();

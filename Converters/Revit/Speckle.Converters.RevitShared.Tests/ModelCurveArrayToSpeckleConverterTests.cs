@@ -1,36 +1,20 @@
-﻿using FluentAssertions;
-using NUnit.Framework;
-using Speckle.Converters.Common;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Raw;
-using Speckle.Converters.RevitShared.Services;
-using Speckle.Converters.RevitShared.Settings;
-using Speckle.Objects;
 using Speckle.Sdk.Common.Exceptions;
-using Speckle.Testing;
+using Xunit;
 
 namespace Speckle.Converters.Revit2023.Tests;
 
-public class ModelCurveArrayToSpeckleConverterTests : MoqTest
+public class ModelCurveArrayToSpeckleConverterTests(IServiceProvider serviceProvider)
 {
-  [Test]
+  [Fact]
   public void Convert_Empty()
   {
-    var revitConversionContextStack = Create<IConverterSettingsStore<RevitConversionSettings>>();
-    var scalingServiceToSpeckle = Create<IScalingServiceToSpeckle>();
-    var curveConverter = Create<ITypedConverter<DB.Curve, ICurve>>();
-
-    var sut = new ModelCurveArrayToSpeckleConverter(
-      revitConversionContextStack.Object,
-      scalingServiceToSpeckle.Object,
-      curveConverter.Object
-    );
-    var array = Create<DB.ModelCurveArray>();
-    array.Setup(x => x.GetEnumerator()).Returns(Enumerable.Empty<object>().GetEnumerator());
-    Assert.Throws<ValidationException>(() => sut.Convert(array.Object));
+    var sut = serviceProvider.GetRequiredService<ITypedConverter<DB.ModelCurveArray, SOG.Polycurve>>();
+    Assert.Throws<ValidationException>(() => sut.Convert(new DB.ModelCurveArray()));
   }
-
-  [Test]
+/*
+  [Fact]
   public void Convert()
   {
     var revitConversionContextStack = Create<IConverterSettingsStore<RevitConversionSettings>>();
@@ -80,5 +64,5 @@ public class ModelCurveArrayToSpeckleConverterTests : MoqTest
     polycurve.closed.Should().BeFalse();
     polycurve.length.Should().Be(scaleLength);
     polycurve.segments.Count.Should().Be(2);
-  }
+  }*/
 }

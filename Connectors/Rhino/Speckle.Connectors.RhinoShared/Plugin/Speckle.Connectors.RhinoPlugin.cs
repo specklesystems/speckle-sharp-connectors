@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Rhino.PlugIns;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI;
+using Speckle.Connectors.Rhino.Bindings;
 using Speckle.Connectors.Rhino.DependencyInjection;
 using Speckle.Converters.Rhino;
 using Speckle.HostApps;
@@ -50,7 +51,7 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
       _disposableLogger = services.Initialize(HostApplications.Rhino, GetVersion());
       services.AddRhino();
       services.AddRhinoConverters();
-      services.AddHostAppTesting();
+      services.AddHostAppTesting<RhinoTestBinding>();
 
       // but the Rhino connector has `.rhp` as it is extension.
       Container = services.BuildServiceProvider();

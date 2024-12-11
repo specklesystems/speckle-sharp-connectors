@@ -1,34 +1,31 @@
-using System.Reflection;
-using Rhino;
-using Speckle.Connectors.DUI.Bindings;
+﻿using System.Reflection;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Testing;
 using Speckle.HostApps;
 using Xunit.Abstractions;
 using Xunit.Runners;
 
-namespace Speckle.Connectors.Rhino.Bindings;
+namespace Speckle.Converters.Revit2023.Tests;
 
-public sealed class RhinoTestBinding : IHostAppTestBinding, IDisposable
-{   
-  private static readonly object s_consoleLock = new();  
-  private ManualResetEventSlim? _finished;
-  
+
+public sealed class RevitTestBinding : IHostAppTestBinding
+{
+  private static readonly object s_consoleLock = new();
+
   private readonly List<ModelTest> _tests = new();
   private readonly List<ModelTestResult> _testResults = new();
   public string Name => "hostAppTestBiding";
   public IBrowserBridge Parent { get; }
   private readonly ITestExecutorFactory _testExecutorFactory;
 
-  public RhinoTestBinding(IBrowserBridge parent, ITestExecutorFactory testExecutorFactory)
+  public RevitTestBinding(IBrowserBridge parent, ITestExecutorFactory testExecutorFactory)
   {
     _testExecutorFactory = testExecutorFactory;
     Parent = parent;
   }
-  public void Dispose() => _finished?.Dispose();
-
-
-  private string? LoadedModel => RhinoDoc.ActiveDoc.Name;
+  
+  private string? LoadedModel => "empty";
 
   public string GetLoadedModel()
   {
@@ -54,38 +51,33 @@ public sealed class RhinoTestBinding : IHostAppTestBinding, IDisposable
 
     return _tests.ToArray();
   }
-  private  void OnDiscoveryMessage(ITestCaseDiscoveryMessage info)
+
+  private void OnDiscoveryMessage(ITestCaseDiscoveryMessage info)
   {
     lock (_tests)
     {
       _tests.Add(new(info.TestCase.DisplayName, "NOT RUN"));
     }
   }
+
   public ModelTestResult[] GetTestsResults()
   {
     if (string.IsNullOrEmpty(LoadedModel))
     {
       return [];
     }
-    
-    
-     
-    _finished = new ManualResetEventSlim(false);
-    using var runner = AssemblyRunner.WithoutAppDomain(Assembly.GetExecutingAssembly().Location);
+
+    using var runner = _testExecutorFactory.Create(Assembly.GetExecutingAssembly());
     runner.OnExecutionComplete = OnExecutionComplete;
     runner.OnTestFailed = OnTestFailed;
     runner.OnTestPassed = OnTestPassed;
     runner.OnTestSkipped = OnTestSkipped;
-    runner.Start();
-    _finished.Wait();
-    
-    _finished.Dispose();
-    _finished = null;
+    runner.RunAll();
 
     return _testResults.ToArray();
   }
-  
- 
+
+
 
   private void OnExecutionComplete(ExecutionCompleteInfo info)
   {
@@ -93,13 +85,11 @@ public sealed class RhinoTestBinding : IHostAppTestBinding, IDisposable
     {
       Console.WriteLine(
         $"Finished: {info.TotalTests} tests in {Math.Round(info.ExecutionTime, 3)}s ({info.TestsFailed} failed, {info.TestsSkipped} skipped)");
-    
+
+    }
   }
 
-    _finished?.Set();
-  }
-
-  private  void OnTestFailed(TestFailedInfo info)
+  private void OnTestFailed(TestFailedInfo info)
   {
     lock (s_consoleLock)
     {
@@ -116,7 +106,7 @@ public sealed class RhinoTestBinding : IHostAppTestBinding, IDisposable
     }
   }
 
-  private  void OnTestPassed(TestPassedInfo info)
+  private void OnTestPassed(TestPassedInfo info)
   {
     lock (s_consoleLock)
     {
@@ -127,7 +117,7 @@ public sealed class RhinoTestBinding : IHostAppTestBinding, IDisposable
     }
   }
 
-  private  void OnTestSkipped(TestSkippedInfo info)
+  private void OnTestSkipped(TestSkippedInfo info)
   {
     lock (s_consoleLock)
     {
@@ -137,6 +127,4 @@ public sealed class RhinoTestBinding : IHostAppTestBinding, IDisposable
       Console.ResetColor();
     }
   }
-
-  
 }

@@ -47,7 +47,6 @@ public sealed class TestExecutor(Assembly assembly) : IMessageSinkWithTypes
   private bool _disposed;
 
   private readonly ManualResetEvent _discoveryCompleteEvent = new ManualResetEvent(true);
-  private  readonly ManualResetEvent _discoveryCompleteIntermediateEvent = new ManualResetEvent(true);
   private   readonly ManualResetEvent _executionCompleteEvent = new ManualResetEvent(true);     
   private  readonly object _statusLock = new object();
   private int _testCasesDiscovered;
@@ -77,34 +76,26 @@ public sealed class TestExecutor(Assembly assembly) : IMessageSinkWithTypes
     }
 
     _discoveryCompleteEvent.Dispose();
-    _discoveryCompleteIntermediateEvent.Dispose();
     _executionCompleteEvent.Dispose();
   }
     
   public void FindAll()
   {
-      using (XunitFrontController controller = new (AppDomainSupport.Denied, assembly.Location))
-      {
-        _discoveryCompleteIntermediateEvent.Reset();
-      ITestFrameworkDiscoveryOptions discoveryOptions = TestFrameworkOptions.ForDiscovery();
-      controller.Find(false, this, discoveryOptions);
-      _discoveryCompleteIntermediateEvent.WaitOne();
-    }
+    using XunitFrontController controller = new (AppDomainSupport.Denied, assembly.Location);
+    _discoveryCompleteEvent.Reset();
+    ITestFrameworkDiscoveryOptions discoveryOptions = TestFrameworkOptions.ForDiscovery();
+    controller.Find(false, this, discoveryOptions);
+    _discoveryCompleteEvent.WaitOne();
   }
 
   public void RunAll()
   {
-    var runnerReporter = new DefaultRunnerReporterWithTypes();
-    IMessageSink messageSink = runnerReporter.CreateMessageHandler(new ConsoleRunnerLogger(false, false));
-
-    using (IMessageSinkWithTypes executionMessageSink = MessageSinkWithTypesAdapter.Wrap(messageSink))
-    using (ExecutionSink executionSink = new (executionMessageSink, new ExecutionSinkOptions { DiagnosticMessageSink = messageSink }))
-    using (XunitFrontController controller = new (AppDomainSupport.Denied, assembly.Location, diagnosticMessageSink: messageSink))
-    {
-      ITestFrameworkExecutionOptions executionOptions = TestFrameworkOptions.ForExecution();
-      ITestFrameworkDiscoveryOptions discoveryOptions = TestFrameworkOptions.ForDiscovery();
-      controller.RunAll(executionSink, discoveryOptions, executionOptions);
-    }
+    using XunitFrontController controller = new (AppDomainSupport.Denied, assembly.Location);
+    _executionCompleteEvent.Reset();
+    ITestFrameworkExecutionOptions executionOptions = TestFrameworkOptions.ForExecution();
+    ITestFrameworkDiscoveryOptions discoveryOptions = TestFrameworkOptions.ForDiscovery();
+    controller.RunAll(this, discoveryOptions, executionOptions);
+    _executionCompleteEvent.WaitOne();
   }
   
   private bool DispatchMessage<TMessage>(IMessageSinkMessage message, HashSet<string> messageTypes, Action<TMessage> handler)
@@ -136,7 +127,7 @@ public sealed class TestExecutor(Assembly assembly) : IMessageSinkWithTypes
     if (DispatchMessage<IDiscoveryCompleteMessage>(message, messageTypes, discoveryComplete =>
         {
           OnDiscoveryComplete?.Invoke(discoveryComplete);
-          _discoveryCompleteIntermediateEvent.Set();
+          _discoveryCompleteEvent.Set();
         }))
     {
       return !_cancelled;

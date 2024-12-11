@@ -7,8 +7,13 @@
   <ItemGroup>
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Moq" />
     <PackageReference Include="Speckle.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.utility" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
   </ItemGroup>
 </Project>

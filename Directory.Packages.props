@@ -51,5 +51,6 @@
     <GlobalPackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" />
     <PackageVersion Include="xunit" Version="2.9.2" />
     <PackageVersion Include="xunit.runner.utility" Version="2.9.2" />
+    <PackageVersion Include="chromiumembeddedframework.runtime.win-x64" Version="119.4.3" />
   </ItemGroup>
 </Project>
