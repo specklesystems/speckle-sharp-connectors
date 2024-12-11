@@ -6,7 +6,7 @@ using Speckle.Connectors.ETABSShared;
 namespace Speckle.Connectors.ETABS21;
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
-public class cPlugin : ETABSPluginBase
+public class cPlugin : EtabsPluginBase
 {
-  protected override ETABSSpeckleFormBase CreateETABSForm() => new SpeckleForm();
+  protected override EtabsSpeckleFormBase CreateEtabsForm() => new SpeckleForm();
 }
