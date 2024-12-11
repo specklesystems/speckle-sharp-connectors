@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
-    <PlatformTarget>x64</PlatformTarget>
+    <PlatformTarget>x64</PlatformTarget>    
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <UseWpf>true</UseWpf>
     <RevitVersion>2025</RevitVersion>
@@ -28,7 +28,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Plugin\Speckle.Connectors.Revit2025.addin" />
     <Content Include="Plugin\Speckle.Connectors.Revit2025.addin">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
