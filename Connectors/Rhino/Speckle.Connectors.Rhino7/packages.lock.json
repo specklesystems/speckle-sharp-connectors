@@ -381,6 +381,16 @@
           "Speckle.Converters.Common": "[1.0.0, )"
         }
       },
+      "speckle.hostapps": {
+        "type": "Project",
+        "dependencies": {
+          "FluentAssertions": "[6.12.1, )",
+          "Microsoft.Extensions.DependencyInjection": "[2.2.0, )",
+          "Speckle.Sdk": "[3.1.0-dev.215, )",
+          "xunit": "[2.9.2, )",
+          "xunit.runner.utility": "[2.9.2, )"
+        }
+      },
       "Microsoft.Extensions.DependencyInjection": {
         "type": "CentralTransitive",
         "requested": "[2.2.0, )",

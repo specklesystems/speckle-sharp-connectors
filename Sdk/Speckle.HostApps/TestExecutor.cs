@@ -3,7 +3,7 @@ using Xunit;
 using Xunit.Abstractions;
 using Xunit.Runners;
 
-namespace Speckle.Converters.Rhino7.Tests;
+namespace Speckle.HostApps;
 
 public sealed class TestExecutor(Assembly assembly) : IMessageSinkWithTypes
 { public Action<DiagnosticMessageInfo> OnDiagnosticMessage { get; set; }
@@ -110,7 +110,7 @@ public sealed class TestExecutor(Assembly assembly) : IMessageSinkWithTypes
   private bool DispatchMessage<TMessage>(IMessageSinkMessage message, HashSet<string> messageTypes, Action<TMessage> handler)
     where TMessage : class
   {
-    if (!messageTypes.Contains(typeof(TMessage).FullName))
+    if (!messageTypes.Contains(typeof(TMessage).FullName ?? throw new InvalidOperationException()))
     {
       return false;
     }

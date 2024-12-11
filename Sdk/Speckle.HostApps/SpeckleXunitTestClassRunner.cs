@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Xunit.Abstractions;
 using Xunit.Sdk;
 
-namespace Speckle.Converters.Rhino7.Tests;
+namespace Speckle.HostApps;
 
 public class SpeckleXunitTestClassRunner : XunitTestClassRunner
 {
@@ -52,7 +52,7 @@ public class SpeckleXunitTestClassRunner : XunitTestClassRunner
       {
         try
         {
-          parameterValues[i] = _serviceScope.ServiceProvider.GetService(parameterInfo.ParameterType);
+          parameterValues[i] = _serviceScope.ServiceProvider.GetRequiredService(parameterInfo.ParameterType);
         }
 #pragma warning disable CA1031
         catch (Exception exception)

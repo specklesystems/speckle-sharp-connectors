@@ -2,15 +2,6 @@
   "version": 2,
   "dependencies": {
     ".NETFramework,Version=v4.8": {
-      "FluentAssertions": {
-        "type": "Direct",
-        "requested": "[6.12.1, )",
-        "resolved": "6.12.1",
-        "contentHash": "hciWwryyLw3eonfqhFpOMTXyM1/auJChYslEBA+iGJyuBs5O3t/kA8YaeH4iRo/2Fe3ElSYL86C0miivtZ0f3g==",
-        "dependencies": {
-          "System.Threading.Tasks.Extensions": "4.5.0"
-        }
-      },
       "Microsoft.NETFramework.ReferenceAssemblies": {
         "type": "Direct",
         "requested": "[1.0.3, )",
@@ -56,26 +47,6 @@
         "requested": "[0.9.6, )",
         "resolved": "0.9.6",
         "contentHash": "HKH7tYrYYlCK1ct483hgxERAdVdMtl7gUKW9ijWXxA1UsYR4Z+TrRHYmzZ9qmpu1NnTycSrp005NYM78GDKV1w=="
-      },
-      "xunit": {
-        "type": "Direct",
-        "requested": "[2.9.2, )",
-        "resolved": "2.9.2",
-        "contentHash": "7LhFS2N9Z6Xgg8aE5lY95cneYivRMfRI8v+4PATa4S64D5Z/Plkg0qa8dTRHSiGRgVZ/CL2gEfJDE5AUhOX+2Q==",
-        "dependencies": {
-          "xunit.analyzers": "1.16.0",
-          "xunit.assert": "2.9.2",
-          "xunit.core": "[2.9.2]"
-        }
-      },
-      "xunit.runner.utility": {
-        "type": "Direct",
-        "requested": "[2.9.2, )",
-        "resolved": "2.9.2",
-        "contentHash": "Rv2vjrRFpVDO5cqZwmvJ7TW3c59tbo6qfX1K0ofibTm6W51GyJ/5lORp+o99GS6ymiVvNjlcQLlJ03+jD5sIQQ==",
-        "dependencies": {
-          "xunit.abstractions": "2.0.3"
-        }
       },
       "GraphQL.Client": {
         "type": "Transitive",
@@ -381,6 +352,25 @@
           "Speckle.Converters.Common": "[1.0.0, )"
         }
       },
+      "speckle.hostapps": {
+        "type": "Project",
+        "dependencies": {
+          "FluentAssertions": "[6.12.1, )",
+          "Microsoft.Extensions.DependencyInjection": "[2.2.0, )",
+          "Speckle.Sdk": "[3.1.0-dev.215, )",
+          "xunit": "[2.9.2, )",
+          "xunit.runner.utility": "[2.9.2, )"
+        }
+      },
+      "FluentAssertions": {
+        "type": "CentralTransitive",
+        "requested": "[6.12.1, )",
+        "resolved": "6.12.1",
+        "contentHash": "hciWwryyLw3eonfqhFpOMTXyM1/auJChYslEBA+iGJyuBs5O3t/kA8YaeH4iRo/2Fe3ElSYL86C0miivtZ0f3g==",
+        "dependencies": {
+          "System.Threading.Tasks.Extensions": "4.5.0"
+        }
+      },
       "Microsoft.Extensions.DependencyInjection": {
         "type": "CentralTransitive",
         "requested": "[2.2.0, )",
@@ -451,6 +441,26 @@
         "requested": "[6.0.0, )",
         "resolved": "6.0.0",
         "contentHash": "+tyDCU3/B1lDdOOAJywHQoFwyXIUghIaP2BxG79uvhfTnO+D9qIgjVlL/JV2NTliYbMHpd6eKDmHp2VHpij7MA=="
+      },
+      "xunit": {
+        "type": "CentralTransitive",
+        "requested": "[2.9.2, )",
+        "resolved": "2.9.2",
+        "contentHash": "7LhFS2N9Z6Xgg8aE5lY95cneYivRMfRI8v+4PATa4S64D5Z/Plkg0qa8dTRHSiGRgVZ/CL2gEfJDE5AUhOX+2Q==",
+        "dependencies": {
+          "xunit.analyzers": "1.16.0",
+          "xunit.assert": "2.9.2",
+          "xunit.core": "[2.9.2]"
+        }
+      },
+      "xunit.runner.utility": {
+        "type": "CentralTransitive",
+        "requested": "[2.9.2, )",
+        "resolved": "2.9.2",
+        "contentHash": "Rv2vjrRFpVDO5cqZwmvJ7TW3c59tbo6qfX1K0ofibTm6W51GyJ/5lORp+o99GS6ymiVvNjlcQLlJ03+jD5sIQQ==",
+        "dependencies": {
+          "xunit.abstractions": "2.0.3"
+        }
       }
     }
   }

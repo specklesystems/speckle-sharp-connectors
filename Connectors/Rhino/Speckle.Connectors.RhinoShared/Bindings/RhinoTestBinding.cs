@@ -3,7 +3,7 @@ using Rhino;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Testing;
-using Speckle.Converters.Rhino7.Tests;
+using Speckle.HostApps;
 using Xunit.Abstractions;
 using Xunit.Runners;
 
@@ -25,9 +25,11 @@ public sealed class RhinoTestBinding : IHostAppTestBinding, IDisposable
   private readonly List<ModelTestResult> _testResults = new();
   public string Name => "hostAppTestBiding";
   public IBrowserBridge Parent { get; }
+  private readonly ITestExecutorFactory _testExecutorFactory;
 
-  public RhinoTestBinding(IBrowserBridge parent)
+  public RhinoTestBinding(IBrowserBridge parent, ITestExecutorFactory testExecutorFactory)
   {
+    _testExecutorFactory = testExecutorFactory;
     Parent = parent;
   }
   public void Dispose() => _finished?.Dispose();
@@ -53,7 +55,7 @@ public sealed class RhinoTestBinding : IHostAppTestBinding, IDisposable
     }
 
     _tests.Clear();
-    using var runner = new TestExecutor(Assembly.GetExecutingAssembly());
+    using var runner = _testExecutorFactory.Create(Assembly.GetExecutingAssembly());
     runner.OnDiscoveryMessage = OnDiscoveryMessage;
     runner.FindAll();
 

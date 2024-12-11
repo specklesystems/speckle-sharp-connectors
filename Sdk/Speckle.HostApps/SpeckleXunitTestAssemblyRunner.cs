@@ -1,7 +1,7 @@
 ﻿using Xunit.Abstractions;
 using Xunit.Sdk;
 
-namespace Speckle.Converters.Rhino7.Tests;
+namespace Speckle.HostApps;
 
 public class SpeckleXunitTestAssemblyRunner : XunitTestAssemblyRunner
 {
