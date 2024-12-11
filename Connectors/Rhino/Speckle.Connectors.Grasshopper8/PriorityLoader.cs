@@ -1,14 +1,9 @@
 ﻿using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common;
-using Speckle.Connectors.Common.Builders;
-using Speckle.Connectors.Common.Operations.Receive;
-using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
-using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Host;
-using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.Grasshopper8;
 
@@ -23,13 +18,9 @@ public class PriorityLoader : GH_AssemblyPriority
     {
       var services = new ServiceCollection();
       _disposableLogger = services.Initialize(HostApplications.Grasshopper, GetVersion());
-      services.AddRhinoConverters().AddConnectorUtils();
 
-      services.AddTransient<IHostObjectBuilder, GrasshopperHostObjectBuilder>();
-      services.AddTransient<GrasshopperReceiveOperation>();
-      services.AddSingleton(DefaultTraversal.CreateTraversalFunc());
-      services.AddTransient<TraversalContextUnpacker>();
-      services.AddTransient<AccountManager>();
+      services.AddRhinoConverters().AddGrasshopper().AddConnectorUtils();
+
       Container = services.BuildServiceProvider();
       return GH_LoadingInstruction.Proceed;
     }

@@ -32,6 +32,8 @@ public static class Consts
     }
 
     var indexOfPlusSign = informationalVersion.IndexOf('+');
+#pragma warning disable IDE0057
     return indexOfPlusSign > 0 ? informationalVersion.Substring(0, indexOfPlusSign) : informationalVersion;
+#pragma warning restore IDE0057
   }
 }

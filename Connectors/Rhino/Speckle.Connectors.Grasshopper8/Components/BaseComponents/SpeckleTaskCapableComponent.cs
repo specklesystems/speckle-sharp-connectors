@@ -1,4 +1,5 @@
 ﻿using Grasshopper.Kernel;
+using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Sdk;
 
 namespace Speckle.Connectors.Grasshopper8.Components.BaseComponents;
@@ -26,11 +27,28 @@ public abstract class SpeckleTaskCapableComponent<TInput, TOutput>(
       catch (SpeckleException e)
       {
         Console.WriteLine(e);
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
       }
       return;
     }
 
-    if (!GetSolveResults(da, out TOutput result))
+    bool solveResults = false;
+    TOutput? result = default;
+
+    try
+    {
+      solveResults = GetSolveResults(da, out result);
+    }
+    catch (AggregateException e)
+    {
+      Console.WriteLine(e);
+      foreach (var inner in e.InnerExceptions)
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, inner.Message);
+      }
+    }
+
+    if (!solveResults)
     {
       // INFO: This will run synchronously. Useful for Rhino.Compute runs, but can also be enabled by user.
       try
@@ -39,9 +57,12 @@ public abstract class SpeckleTaskCapableComponent<TInput, TOutput>(
         var syncResult = PerformTask(input).Result;
         result = syncResult;
       }
-      catch (SpeckleException e)
+      catch (AggregateException e)
       {
-        Console.WriteLine(e);
+        foreach (var inner in e.InnerExceptions)
+        {
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, inner.Message);
+        }
         return;
       }
     }
@@ -51,6 +72,10 @@ public abstract class SpeckleTaskCapableComponent<TInput, TOutput>(
       SetOutput(da, result);
     }
   }
+
+  protected override Bitmap Icon => BitmapBuilder.CreateSquareIconBitmap(IconText);
+
+  protected string IconText => string.Join("", Name.Split(' ').Select(s => s.First()));
 
   protected abstract TInput GetInput(IGH_DataAccess da);
 
