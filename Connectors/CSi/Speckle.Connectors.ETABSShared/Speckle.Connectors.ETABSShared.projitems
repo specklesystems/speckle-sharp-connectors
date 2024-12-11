@@ -9,9 +9,9 @@
     <Import_RootNamespace>Speckle.Connectors.ETABSShared</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)HostApp\ETABSSendCollectionManager.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Plugin\ETABSPluginBase.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Plugin\ETABSSpeckleFormBase.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\EtabsSendCollectionManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\EtabsPluginBase.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\EtabsSpeckleFormBase.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
   </ItemGroup>
 </Project>
