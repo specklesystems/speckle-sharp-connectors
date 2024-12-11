@@ -17,4 +17,10 @@
     <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="RevitAPISteel">
+      <HintPath>..\..\..\..\..\..\..\Program Files\Autodesk\Revit 2024\RevitAPISteel.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>

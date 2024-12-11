@@ -4,6 +4,9 @@ using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk.Common;
+#if REVIT2024_OR_GREATER
+using Autodesk.Revit.DB.Steel;
+#endif
 
 namespace Speckle.Converters.RevitShared.Helpers;
 
@@ -120,6 +123,18 @@ public sealed class DisplayValueExtractor
     try
     {
       geom = element.get_Geometry(options);
+
+#if REVIT2024_OR_GREATER
+      // NOTE: incomplete solution. https://forums.autodesk.com/t5/revit-api-forum/how-to-get-steelproxyelement-geometry/td-p/10347898
+      // If steel element proxies will be sucked in via category selection, and they are not visible in the current view, they will not be extracted out.
+      // I'm inclined to go with this as a semi-permanent limitation.
+      // https://speckle.community/t/revit-2025-2-missing-elements-and-colors/14073
+      if (element is SteelProxyElement && geom is null)
+      {
+        options = new DB.Options() { View = _converterSettings.Current.Document?.ActiveView };
+        geom = element.get_Geometry(options);
+      }
+#endif
     }
     // POC: should we be trying to continue?
     catch (Autodesk.Revit.Exceptions.ArgumentException)
@@ -131,7 +146,7 @@ public sealed class DisplayValueExtractor
     var solids = new List<DB.Solid>();
     var meshes = new List<DB.Mesh>();
 
-    if (geom != null)
+    if (geom != null && geom.Any())
     {
       // retrieves all meshes and solids from a geometry element
       SortGeometry(element, solids, meshes, geom);
