@@ -1,3 +1,3 @@
 namespace Speckle.Converters.CSiShared;
 
-public record CSiConversionSettings(cSapModel SapModel, string SpeckleUnits);
+public record CsiConversionSettings(cSapModel SapModel, string SpeckleUnits);
