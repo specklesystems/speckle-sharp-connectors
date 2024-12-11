@@ -35,8 +35,8 @@ public abstract class SpeckleFormBase : Form
   protected virtual void ConfigureServices(IServiceCollection services)
   {
     services.Initialize(GetHostApplication(), GetVersion());
-    services.AddCSi();
-    services.AddCSiConverters();
+    services.AddCsi();
+    services.AddCsiConverters();
   }
 
   protected abstract HostApplication GetHostApplication();
@@ -48,7 +48,7 @@ public abstract class SpeckleFormBase : Form
     _sapModel = sapModel;
     _pluginCallback = pluginCallback;
 
-    var csiService = Container.GetRequiredService<ICSiApplicationService>();
+    var csiService = Container.GetRequiredService<ICsiApplicationService>();
     csiService.Initialize(sapModel, pluginCallback);
   }
 
