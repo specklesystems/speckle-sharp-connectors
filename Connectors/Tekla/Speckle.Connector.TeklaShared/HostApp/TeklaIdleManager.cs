@@ -1,7 +1,7 @@
 using Speckle.Connectors.DUI.Bridge;
 using Tekla.Structures.Model;
 
-namespace Speckle.Connector.Tekla2024.HostApp;
+namespace Speckle.Connectors.TeklaShared.HostApp;
 
 public sealed class TeklaIdleManager : AppIdleManager
 {

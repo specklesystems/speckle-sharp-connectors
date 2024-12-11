@@ -1,6 +1,6 @@
 ﻿using Speckle.Connectors.DUI.Settings;
 
-namespace Speckle.Connector.Tekla2024.Operations.Send.Settings;
+namespace Speckle.Connectors.TeklaShared.Operations.Send.Settings;
 
 public class SendRebarsAsSolidSetting(bool value) : ICardSetting
 {

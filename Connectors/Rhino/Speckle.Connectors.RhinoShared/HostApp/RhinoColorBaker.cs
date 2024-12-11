@@ -23,7 +23,7 @@ public class RhinoColorBaker
   /// Parse Color Proxies and stores in ObjectColorsIdMap the relationship between object ids and colors
   /// </summary>
   /// <param name="colorProxies"></param>
-  public void ParseColors(List<ColorProxy> colorProxies)
+  public void ParseColors(IReadOnlyCollection<ColorProxy> colorProxies)
   {
     foreach (ColorProxy colorProxy in colorProxies)
     {

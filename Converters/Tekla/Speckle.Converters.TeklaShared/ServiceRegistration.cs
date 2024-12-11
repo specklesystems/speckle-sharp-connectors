@@ -1,13 +1,13 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
-using Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
-using Speckle.Converter.Tekla2024.ToSpeckle.TopLevel;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Registration;
+using Speckle.Converters.TeklaShared.ToSpeckle.Helpers;
+using Speckle.Converters.TeklaShared.ToSpeckle.TopLevel;
 using Speckle.Sdk;
 using Tekla.Structures.Datatype;
 
-namespace Speckle.Converter.Tekla2024;
+namespace Speckle.Converters.TeklaShared;
 
 public static class ServiceRegistration
 {
@@ -20,6 +20,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<DisplayValueExtractor>();
     serviceCollection.AddScoped<ClassPropertyExtractor>();
     serviceCollection.AddScoped<ReportPropertyExtractor>();
+    serviceCollection.AddScoped<PropertiesExtractor>();
 
     serviceCollection.AddRootCommon<TeklaRootToSpeckleConverter>(converterAssembly);
     serviceCollection.AddApplicationConverters<TeklaToSpeckleUnitConverter, Distance.UnitType>(converterAssembly);

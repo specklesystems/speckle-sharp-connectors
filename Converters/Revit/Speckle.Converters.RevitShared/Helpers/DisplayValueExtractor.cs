@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk.Common;
 
@@ -97,6 +98,23 @@ public sealed class DisplayValueExtractor
   {
     //options = ViewSpecificOptions ?? options ?? new Options() { DetailLevel = DetailLevelSetting };
     options ??= new DB.Options { DetailLevel = _detailLevelMap[_converterSettings.Current.DetailLevel] };
+
+    // Note: some elements do not get display values (you get invalid solids) unless we force the view detail level to be fine. This is annoying, but it's bad ux: people think the
+    // elements are not there (they are, just invisible).
+    if (
+      element.Category is not null
+      && (
+        element.Category.GetBuiltInCategory() == DB.BuiltInCategory.OST_PipeFitting
+        || element.Category.GetBuiltInCategory() == DB.BuiltInCategory.OST_PipeAccessory
+        || element.Category.GetBuiltInCategory() == DB.BuiltInCategory.OST_PlumbingFixtures
+#if REVIT2024_OR_GREATER
+        || element is DB.Toposolid // note, brought back from 2.x.x.
+#endif
+      )
+    )
+    {
+      options.DetailLevel = DB.ViewDetailLevel.Fine;
+    }
 
     DB.GeometryElement geom;
     try
