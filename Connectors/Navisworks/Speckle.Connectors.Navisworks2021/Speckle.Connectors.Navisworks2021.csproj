@@ -2,7 +2,6 @@
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <FileAlignment>512</FileAlignment>
 
     <NavisworksBuildNumber>v18</NavisworksBuildNumber>
@@ -17,7 +16,6 @@
 
     <PluginBundleTarget>$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Navisworksv3.bundle</PluginBundleTarget>
     <PluginVersionContentTarget>$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Navisworksv3.bundle\Contents\$(NavisworksVersion)</PluginVersionContentTarget>
-    <RootNamespace>Speckle.Connector.Navisworks</RootNamespace>
 
   </PropertyGroup>
 
