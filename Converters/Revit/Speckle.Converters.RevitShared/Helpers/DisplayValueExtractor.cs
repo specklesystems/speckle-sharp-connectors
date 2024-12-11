@@ -4,9 +4,6 @@ using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk.Common;
-#if REVIT2024_OR_GREATER
-using Autodesk.Revit.DB.Steel;
-#endif
 
 namespace Speckle.Converters.RevitShared.Helpers;
 
@@ -104,12 +101,13 @@ public sealed class DisplayValueExtractor
 
     // Note: some elements do not get display values (you get invalid solids) unless we force the view detail level to be fine. This is annoying, but it's bad ux: people think the
     // elements are not there (they are, just invisible).
+    var elementBuiltInCategory = element.Category.GetBuiltInCategory();
     if (
       element.Category is not null
       && (
-        element.Category.GetBuiltInCategory() == DB.BuiltInCategory.OST_PipeFitting
-        || element.Category.GetBuiltInCategory() == DB.BuiltInCategory.OST_PipeAccessory
-        || element.Category.GetBuiltInCategory() == DB.BuiltInCategory.OST_PlumbingFixtures
+        elementBuiltInCategory == DB.BuiltInCategory.OST_PipeFitting
+        || elementBuiltInCategory == DB.BuiltInCategory.OST_PipeAccessory
+        || elementBuiltInCategory == DB.BuiltInCategory.OST_PlumbingFixtures
 #if REVIT2024_OR_GREATER
         || element is DB.Toposolid // note, brought back from 2.x.x.
 #endif
@@ -129,9 +127,18 @@ public sealed class DisplayValueExtractor
       // If steel element proxies will be sucked in via category selection, and they are not visible in the current view, they will not be extracted out.
       // I'm inclined to go with this as a semi-permanent limitation.
       // https://speckle.community/t/revit-2025-2-missing-elements-and-colors/14073
-      if (element is SteelProxyElement && geom is null)
+      if (
+        geom is null
+        && (
+          elementBuiltInCategory == DB.BuiltInCategory.OST_StructConnections
+          || elementBuiltInCategory == DB.BuiltInCategory.OST_StructConnectionPlates
+          || elementBuiltInCategory == DB.BuiltInCategory.OST_StructConnectionBolts
+          || elementBuiltInCategory == DB.BuiltInCategory.OST_StructConnectionWelds
+          || elementBuiltInCategory == DB.BuiltInCategory.OST_StructConnectionShearStuds
+        )
+      )
       {
-        options = new DB.Options() { View = _converterSettings.Current.Document?.ActiveView };
+        options = new DB.Options() { View = _converterSettings.Current.Document?.ActiveView }; // NOTE: in case it's a view filter, it should use that specific view!
         geom = element.get_Geometry(options);
       }
 #endif
