@@ -26,6 +26,7 @@
     <Reference Include="WindowsFormsIntegration"/>
     <PackageReference Include="Speckle.Objects"/>
     <PackageReference Include="Speckle.Navisworks.API" VersionOverride="2025.0.0"/>
+    <PackageReference Include="Microsoft.Web.WebView2" VersionOverride="1.0.2045.28" />
   </ItemGroup>
 
   <ItemGroup>
