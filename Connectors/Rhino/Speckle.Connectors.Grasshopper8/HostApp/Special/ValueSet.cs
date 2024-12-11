@@ -479,7 +479,7 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
       // Menu_AppendManageCollection(menu);
 
       // Menu_AppendSeparator(menu);
-      // Menu_AppendDestroyPersistent(menu);
+      Menu_AppendDestroyPersistent(menu);
       // Menu_AppendInternaliseData(menu);
 
       if (Exposure != GH_Exposure.hidden)

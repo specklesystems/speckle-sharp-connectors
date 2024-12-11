@@ -12,7 +12,7 @@ namespace Speckle.Connectors.Grasshopper8.Parameters;
 //   public override string ToString() => $"{OriginalObject.name} [{OriginalObject.elements.Count}]";
 // }
 
-public class SpeckleCollectionGoo : GH_Goo<Collection> //, IGH_PreviewData // can be made previewable later
+public class SpeckleCollectionGoo : GH_Goo<Collection>, ISpeckleGoo //, IGH_PreviewData // can be made previewable later
 {
   public override IGH_Goo Duplicate() => throw new NotImplementedException();
 

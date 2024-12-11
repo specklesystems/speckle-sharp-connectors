@@ -27,8 +27,12 @@ public class CollectionPathsSelector : ValueSet<IGH_Goo>
     }
 
     // NOTE: supporting multiple collections? maybe? not really?
-    var myCollection = GetPaths(collections.First());
-    m_data.AppendRange(myCollection.Select(s => new GH_String(s)));
+    var paths = new List<string>();
+    foreach (var col in collections)
+    {
+      paths.AddRange(GetPaths(col));
+    }
+    m_data.AppendRange(paths.Select(s => new GH_String(s)));
   }
 
   private List<string> GetPaths(Collection c)

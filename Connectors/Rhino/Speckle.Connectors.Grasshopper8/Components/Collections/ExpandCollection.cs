@@ -1,8 +1,11 @@
 using System.Collections;
+using Grasshopper;
 using Grasshopper.Kernel;
+using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Parameters;
 using Rhino.Geometry;
 using Speckle.Connectors.Grasshopper8.Parameters;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.Grasshopper8.Components.Collections;
@@ -36,7 +39,10 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
     SpeckleCollectionGoo res = new();
     da.GetData(0, ref res);
     var c = res.Value;
-
+    if (c is null)
+    {
+      return;
+    }
     Name = c.name;
     NickName = c.name;
 
@@ -56,10 +62,10 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
         NickName = "Inner Objs",
         Description =
           "Some collections may contain a mix of objects and other collections. Here we output the atomic objects from within this collection.",
-        Access = GH_ParamAccess.list // NOTE: todo check on list if it's tree path-based
+        Access = GH_ParamAccess.list
       };
 
-      outputParams.Add(new OutputParamWrapper(param, objects, false));
+      outputParams.Add(new OutputParamWrapper(param, objects, null));
     }
 
     foreach (var collection in collections)
@@ -71,7 +77,7 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
       }
 
       var hasInnerCollections = collection.elements.Any(el => el is Collection);
-      var isPathBasedCollection = collection["path"] as string; // Note: this is a reminder for the future
+      var topology = collection["topology"] as string; // Note: this is a reminder for the future
       var nickName = collection.name;
       if (collection.name.Length > 16)
       {
@@ -83,7 +89,11 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
       {
         Name = collection.name,
         NickName = nickName,
-        Access = hasInnerCollections ? GH_ParamAccess.item : GH_ParamAccess.list // we will directly set objects out; note access can be list or tree based on whether it will be a path based collection
+        Access = hasInnerCollections
+          ? GH_ParamAccess.item
+          : topology is null
+            ? GH_ParamAccess.list
+            : GH_ParamAccess.tree // we will directly set objects out; note access can be list or tree based on whether it will be a path based collection
       };
       if (!hasInnerCollections)
       {
@@ -96,7 +106,7 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
           hasInnerCollections
             ? new SpeckleCollectionGoo(collection)
             : collection.elements.OfType<SpeckleObject>().Select(o => new SpeckleObjectGoo(o)).ToList(),
-          hasInnerCollections
+          topology
         )
       );
     }
@@ -120,20 +130,56 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
       for (int i = 0; i < outputParams.Count; i++)
       {
         var outParam = Params.Output[i];
+        var outParamWrapper = outputParams[i];
         switch (outParam.Access)
         {
           case GH_ParamAccess.item:
-            da.SetData(i, outputParams[i].Values);
+            da.SetData(i, outParamWrapper.Values);
             break;
           case GH_ParamAccess.list:
-            da.SetDataList(i, outputParams[i].Values as IList);
+            da.SetDataList(i, outParamWrapper.Values as IList);
             break;
           case GH_ParamAccess.tree:
             //TODO: means we need to convert the collection to a tree
+            var topo = outParamWrapper.Topology.NotNull();
+            var values = outParamWrapper.Values as IList;
+            var tree = CreateDataTree(topo, values.NotNull());
+            da.SetDataTree(i, tree);
             break;
         }
       }
     }
+  }
+
+  private DataTree<object> CreateDataTree(string topology, IList subset)
+  {
+    var tree = new DataTree<object>();
+    var treeTopo = topology.Split(' ');
+    int subsetCount = 0;
+    foreach (var branch in treeTopo)
+    {
+      if (!string.IsNullOrEmpty(branch))
+      {
+        var branchTopo = branch.Split('-')[0].Split(';');
+        var branchIndexes = new List<int>();
+        foreach (var t in branchTopo)
+        {
+          branchIndexes.Add(Convert.ToInt32(t));
+        }
+
+        var elCount = Convert.ToInt32(branch.Split('-')[1]);
+        var myPath = new GH_Path(branchIndexes.ToArray());
+
+        for (int i = 0; i < elCount; i++)
+        {
+          tree.EnsurePath(myPath).Add(new Grasshopper.Kernel.Types.GH_ObjectWrapper(subset[subsetCount + i]));
+        }
+
+        subsetCount += elCount;
+      }
+    }
+
+    return tree;
   }
 
   private BoundingBox _clippingBox;
@@ -211,7 +257,7 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
         Name = newParam.Param.Name,
         NickName = newParam.Param.NickName,
         MutableNickName = false,
-        Access = newParam.Param.Access // count == 0 ? GH_ParamAccess.list : GH_ParamAccess.item, // TODO: objects should always be a list or a tree, depending on whether the collection is a gh collection with a path prop
+        Access = newParam.Param.Access
       };
       Params.RegisterOutputParam(param);
     }
@@ -242,4 +288,4 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
   public bool DestroyParameter(GH_ParameterSide side, int index) => side == GH_ParameterSide.Output;
 }
 
-public record OutputParamWrapper(Param_GenericObject Param, object Values, bool IsCollection);
+public record OutputParamWrapper(Param_GenericObject Param, object Values, string? Topology);

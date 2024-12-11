@@ -13,7 +13,7 @@ namespace Speckle.Connectors.Grasshopper8.Parameters;
 public class SpeckleObject : Base
 {
   public Base OriginalObject { get; set; }
-  public GeometryBase GeometryBase { get; set; }
+  public GeometryBase GeometryBase { get; set; } // note: how will we send intervals and other gh native objects? do we? maybe not for now
   public List<Collection> Path { get; set; }
 
   // RenderMaterial, ColorProxies, Properties (?)
@@ -79,11 +79,11 @@ public class SpeckleObject : Base
   }
 }
 
-public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData
+public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckleGoo
 {
   public override IGH_Goo Duplicate() => throw new NotImplementedException();
 
-  public override string ToString() => $@"Speckle Object Goo [{m_value.OriginalObject.speckle_type}]";
+  public override string ToString() => $@"Speckle Object Goo [{m_value.OriginalObject?.speckle_type}]";
 
   public override bool IsValid => true;
   public override string TypeName => "Speckle object wrapper";
