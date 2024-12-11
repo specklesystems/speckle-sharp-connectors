@@ -30,7 +30,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
 
   protected override void SolveInstance(IGH_DataAccess dataAccess)
   {
-    var baseCollection = new Collection() { name = Params.Output[0].NickName, applicationId = "temp" };
+    var rootCollection = new Collection() { name = Params.Output[0].NickName, applicationId = "temp" };
     foreach (var inputParam in Params.Input)
     {
       var data = inputParam.VolatileData.AllData(true).ToList();
@@ -109,10 +109,10 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
         }
       }
 
-      baseCollection.elements.Add(childCollection);
+      rootCollection.elements.Add(childCollection);
     }
 
-    dataAccess.SetData(0, new SpeckleCollectionGoo(baseCollection));
+    dataAccess.SetData(0, new SpeckleCollectionGoo(rootCollection));
   }
 
   public bool CanInsertParameter(GH_ParameterSide side, int index)
@@ -137,7 +137,6 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
 
     myParam.NickName = myParam.Name;
     myParam.Optional = true;
-    // myParam.ObjectChanged += (sender, e) => { };
     return myParam;
   }
 
