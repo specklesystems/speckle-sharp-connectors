@@ -143,7 +143,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       }
 
       var sendResult = await scope
-        .ServiceProvider.GetRequiredService<SendOperation<ElementId>>()
+        .ServiceProvider.GetRequiredService<SendOperation<IReadOnlyList<ElementId>>>()
         .Execute(
           elementIds,
           modelCard.GetSendInfo(_speckleApplication.Slug),

@@ -239,7 +239,7 @@ public sealed class RhinoSendBinding : ISendBinding
       }
 
       var sendResult = await scope
-        .ServiceProvider.GetRequiredService<SendOperation<RhinoObject>>()
+        .ServiceProvider.GetRequiredService<SendOperation<IReadOnlyList<RhinoObject>>>()
         .Execute(
           rhinoObjects,
           modelCard.GetSendInfo(_speckleApplication.Slug),

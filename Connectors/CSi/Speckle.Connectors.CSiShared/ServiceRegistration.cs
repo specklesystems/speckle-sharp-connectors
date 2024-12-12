@@ -42,7 +42,7 @@ public static class ServiceRegistration
 
     services.AddScoped<ISendFilter, CsiSharedSelectionFilter>();
     services.AddScoped<CsiSendCollectionManager>();
-    services.AddScoped<IRootObjectBuilder<ICsiWrapper>, CsiRootObjectBuilder>();
+    services.AddScoped<IRootObjectBuilder<IReadOnlyList<ICsiWrapper>>, CsiRootObjectBuilder>();
     services.AddScoped<SendOperation<ICsiWrapper>>();
 
     services.RegisterTopLevelExceptionHandler();

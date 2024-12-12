@@ -22,7 +22,7 @@ namespace Speckle.Connectors.Rhino.Operations.Send;
 /// <summary>
 /// Stateless builder object to turn an <see cref="ISendFilter"/> into a <see cref="Base"/> object
 /// </summary>
-public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
+public class RhinoRootObjectBuilder : IRootObjectBuilder<IReadOnlyList<RhinoObject>>
 {
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;

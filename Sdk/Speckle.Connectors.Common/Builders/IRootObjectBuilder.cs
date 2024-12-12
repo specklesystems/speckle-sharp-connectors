@@ -7,7 +7,7 @@ namespace Speckle.Connectors.Common.Builders;
 public interface IRootObjectBuilder<in T>
 {
   public Task<RootObjectBuilderResult> Build(
-    IReadOnlyList<T> objects,
+    T input,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default

@@ -144,7 +144,7 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
       }
 
       var sendResult = await scope
-        .ServiceProvider.GetRequiredService<SendOperation<ModelObject>>()
+        .ServiceProvider.GetRequiredService<SendOperation<IReadOnlyList<ModelObject>>>()
         .Execute(
           teklaObjects,
           modelCard.GetSendInfo(_speckleApplication.Slug),

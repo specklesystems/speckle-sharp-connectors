@@ -70,7 +70,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<SendOperation<RhinoObject>>();
     serviceCollection.AddSingleton(DefaultTraversal.CreateTraversalFunc());
 
-    serviceCollection.AddScoped<IRootObjectBuilder<RhinoObject>, RhinoRootObjectBuilder>();
+    serviceCollection.AddScoped<IRootObjectBuilder<IReadOnlyList<RhinoObject>>, RhinoRootObjectBuilder>();
     serviceCollection.AddScoped<
       IInstanceObjectsManager<RhinoObject, List<string>>,
       InstanceObjectsManager<RhinoObject, List<string>>

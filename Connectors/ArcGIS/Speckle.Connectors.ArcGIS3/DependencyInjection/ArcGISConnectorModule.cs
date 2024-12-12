@@ -50,7 +50,7 @@ public static class ArcGISConnectorModule
     // register send operation and dependencies
     serviceCollection.AddScoped<SendOperation<MapMember>>();
     serviceCollection.AddScoped<ArcGISRootObjectBuilder>();
-    serviceCollection.AddScoped<IRootObjectBuilder<MapMember>, ArcGISRootObjectBuilder>();
+    serviceCollection.AddScoped<IRootObjectBuilder<IReadOnlyList<MapMember>>, ArcGISRootObjectBuilder>();
 
     serviceCollection.AddScoped<LocalToGlobalConverterUtils>();
 

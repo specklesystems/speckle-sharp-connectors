@@ -16,7 +16,7 @@ using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.Autocad.Operations.Send;
 
-public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadRootObject>
+public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<IReadOnlyList<AutocadRootObject>>
 {
   private readonly IRootToSpeckleConverter _converter;
   private readonly string[] _documentPathSeparator = ["\\"];

@@ -23,7 +23,7 @@ namespace Speckle.Connectors.ArcGis.Operations.Send;
 /// <summary>
 /// Stateless builder object to turn an ISendFilter into a <see cref="Base"/> object
 /// </summary>
-public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
+public class ArcGISRootObjectBuilder : IRootObjectBuilder<IReadOnlyList<MapMember>>
 {
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;

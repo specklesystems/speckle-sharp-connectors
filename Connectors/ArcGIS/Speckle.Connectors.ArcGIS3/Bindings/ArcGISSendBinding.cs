@@ -408,7 +408,7 @@ public sealed class ArcGISSendBinding : ISendBinding
           }
 
           var result = await scope
-            .ServiceProvider.GetRequiredService<SendOperation<MapMember>>()
+            .ServiceProvider.GetRequiredService<SendOperation<IReadOnlyList<MapMember>>>()
             .Execute(
               mapMembers,
               modelCard.GetSendInfo("ArcGIS"), // POC: get host app name from settings? same for GetReceiveInfo

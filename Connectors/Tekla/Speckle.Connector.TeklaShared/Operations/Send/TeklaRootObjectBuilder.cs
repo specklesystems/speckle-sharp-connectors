@@ -15,7 +15,7 @@ using Task = System.Threading.Tasks.Task;
 
 namespace Speckle.Connectors.TeklaShared.Operations.Send;
 
-public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
+public class TeklaRootObjectBuilder : IRootObjectBuilder<IReadOnlyList<TSM.ModelObject>>
 {
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;

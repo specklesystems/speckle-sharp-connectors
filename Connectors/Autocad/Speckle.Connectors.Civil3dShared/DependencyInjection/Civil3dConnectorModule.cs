@@ -20,7 +20,7 @@ public static class Civil3dConnectorModule
     serviceCollection.LoadSend();
 
     // register civil specific send classes
-    serviceCollection.AddScoped<IRootObjectBuilder<AutocadRootObject>, Civil3dRootObjectBuilder>();
+    serviceCollection.AddScoped<IRootObjectBuilder<IReadOnlyList<AutocadRootObject>>, Civil3dRootObjectBuilder>();
     serviceCollection.AddSingleton<IBinding, Civil3dSendBinding>();
 
     // automatically detects the Class:IClass interface pattern to register all generated interfaces

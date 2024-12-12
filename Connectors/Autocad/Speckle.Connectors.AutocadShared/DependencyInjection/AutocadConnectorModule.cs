@@ -17,7 +17,7 @@ public static class AutocadConnectorModule
 
     // Send
     serviceCollection.LoadSend();
-    serviceCollection.AddScoped<IRootObjectBuilder<AutocadRootObject>, AutocadRootObjectBuilder>();
+    serviceCollection.AddScoped<IRootObjectBuilder<IReadOnlyList<AutocadRootObject>>, AutocadRootObjectBuilder>();
 
     // Receive
     serviceCollection.LoadReceive();

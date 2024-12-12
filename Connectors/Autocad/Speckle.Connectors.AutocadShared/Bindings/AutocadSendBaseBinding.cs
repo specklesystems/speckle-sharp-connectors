@@ -182,7 +182,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
       }
 
       var sendResult = await scope
-        .ServiceProvider.GetRequiredService<SendOperation<AutocadRootObject>>()
+        .ServiceProvider.GetRequiredService<SendOperation<IReadOnlyList<AutocadRootObject>>>()
         .Execute(
           autocadObjects,
           modelCard.GetSendInfo(_speckleApplication.Slug),

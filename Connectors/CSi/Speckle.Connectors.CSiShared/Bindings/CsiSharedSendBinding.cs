@@ -101,7 +101,7 @@ public sealed class CsiSharedSendBinding : ISendBinding
       }
 
       var sendResult = await scope
-        .ServiceProvider.GetRequiredService<SendOperation<ICsiWrapper>>()
+        .ServiceProvider.GetRequiredService<SendOperation<IReadOnlyList<ICsiWrapper>>>()
         .Execute(
           wrappers,
           modelCard.GetSendInfo(_speckleApplication.Slug),

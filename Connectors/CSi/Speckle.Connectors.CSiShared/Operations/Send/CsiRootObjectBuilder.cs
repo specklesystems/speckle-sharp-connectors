@@ -13,7 +13,7 @@ using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.CSiShared.Builders;
 
-public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
+public class CsiRootObjectBuilder : IRootObjectBuilder<IReadOnlyList<ICsiWrapper>>
 {
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;

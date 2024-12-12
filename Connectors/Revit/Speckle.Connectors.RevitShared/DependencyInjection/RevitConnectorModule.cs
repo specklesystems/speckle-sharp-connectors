@@ -52,7 +52,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<SendOperation<ElementId>>();
     serviceCollection.AddScoped<ElementUnpacker>();
     serviceCollection.AddScoped<SendCollectionManager>();
-    serviceCollection.AddScoped<IRootObjectBuilder<ElementId>, RevitRootObjectBuilder>();
+    serviceCollection.AddScoped<IRootObjectBuilder<IReadOnlyList<ElementId>>, RevitRootObjectBuilder>();
     serviceCollection.AddSingleton<ISendConversionCache, SendConversionCache>();
     serviceCollection.AddSingleton<ToSpeckleSettingsManager>();
 

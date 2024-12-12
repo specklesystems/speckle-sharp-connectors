@@ -18,7 +18,7 @@ using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.Revit.Operations.Send;
 
-public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
+public class RevitRootObjectBuilder : IRootObjectBuilder<IReadOnlyList<ElementId>>
 {
   // POC: SendSelection and RevitConversionContextStack should be interfaces, former needs interfaces
   private readonly IRootToSpeckleConverter _converter;
