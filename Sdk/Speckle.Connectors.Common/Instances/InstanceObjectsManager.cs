@@ -30,7 +30,7 @@ public class InstanceObjectsManager<THostObjectType, TAppIdMapValueType>
     [NotNullWhen(true)] out List<InstanceProxy>? instanceProxiesWithSameDefinition
   )
   {
-    if (_instanceProxiesByDefinitionId.TryGetValue(definitionId, out List<InstanceProxy> value))
+    if (_instanceProxiesByDefinitionId.TryGetValue(definitionId, out List<InstanceProxy>? value))
     {
       instanceProxiesWithSameDefinition = value;
       return true;
@@ -44,7 +44,7 @@ public class InstanceObjectsManager<THostObjectType, TAppIdMapValueType>
     [NotNullWhen(true)] out InstanceDefinitionProxy? instanceDefinitionProxy
   )
   {
-    if (_definitionProxies.TryGetValue(definitionId, out InstanceDefinitionProxy value))
+    if (_definitionProxies.TryGetValue(definitionId, out InstanceDefinitionProxy? value))
     {
       instanceDefinitionProxy = value;
       return true;

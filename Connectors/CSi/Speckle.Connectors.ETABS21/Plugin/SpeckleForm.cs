@@ -1,4 +1,4 @@
-using Speckle.Connectors.CSiShared;
+using Speckle.Connectors.ETABSShared;
 using Speckle.Sdk.Host;
 
 // NOTE: Plugin entry point must match the assembly name, otherwise ETABS hits you with a "Not found" error when loading plugin
@@ -6,7 +6,7 @@ using Speckle.Sdk.Host;
 #pragma warning disable IDE0130
 namespace Speckle.Connectors.ETABS21;
 
-public class SpeckleForm : SpeckleFormBase
+public class SpeckleForm : EtabsSpeckleFormBase
 {
-  protected override HostAppVersion GetVersion() => HostAppVersion.v2021;
+  protected override HostAppVersion GetVersion() => HostAppVersion.v2021; // TODO: We need a v21
 }

@@ -1,4 +1,5 @@
-﻿using System.Windows.Forms.Integration;
+﻿using System.ComponentModel;
+using System.Windows.Forms.Integration;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.CSiShared.HostApp;
@@ -8,6 +9,7 @@ using Speckle.Sdk.Host;
 
 namespace Speckle.Connectors.CSiShared;
 
+[DesignerCategory("")]
 public abstract class SpeckleFormBase : Form
 {
   protected ElementHost Host { get; set; }
@@ -20,9 +22,7 @@ public abstract class SpeckleFormBase : Form
     Text = "Speckle (Beta)";
 
     var services = new ServiceCollection();
-    services.Initialize(HostApplications.ETABS, GetVersion());
-    services.AddCSi();
-    services.AddCSiConverters();
+    ConfigureServices(services);
 
     Container = services.BuildServiceProvider();
 
@@ -32,12 +32,23 @@ public abstract class SpeckleFormBase : Form
     FormClosing += Form1Closing;
   }
 
+  protected virtual void ConfigureServices(IServiceCollection services)
+  {
+    services.Initialize(GetHostApplication(), GetVersion());
+    services.AddCsi();
+    services.AddCsiConverters();
+  }
+
+  protected abstract HostApplication GetHostApplication();
+
+  protected abstract HostAppVersion GetVersion();
+
   public void SetSapModel(ref cSapModel sapModel, ref cPluginCallback pluginCallback)
   {
     _sapModel = sapModel;
     _pluginCallback = pluginCallback;
 
-    var csiService = Container.GetRequiredService<ICSiApplicationService>();
+    var csiService = Container.GetRequiredService<ICsiApplicationService>();
     csiService.Initialize(sapModel, pluginCallback);
   }
 
@@ -46,8 +57,6 @@ public abstract class SpeckleFormBase : Form
     Host.Dispose();
     _pluginCallback.Finish(0);
   }
-
-  protected abstract HostAppVersion GetVersion();
 
   public new void ShowDialog()
   {
