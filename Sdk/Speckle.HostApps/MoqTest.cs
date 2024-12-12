@@ -23,6 +23,6 @@ public abstract class MoqTest : IDisposable
   protected Mock<T> Create<T>(MockBehavior behavior = MockBehavior.Strict)
     where T : class => Repository.Create<T>(behavior);
 
-  protected Mock<IConverterSettingsStore<T>> CreateSettingsStore<T>() where T : class =>
-    Repository.Create<IConverterSettingsStore<T>>();
+  protected Mock<IConverterSettingsStore<T>> CreateSettingsStore<T>()
+    where T : class => Repository.Create<IConverterSettingsStore<T>>();
 }

@@ -8,8 +8,8 @@ public sealed class SpeckleXunitTestFrameworkExecutor(
   IServiceProvider serviceProvider,
   AssemblyName assemblyName,
   ISourceInformationProvider sourceInformationProvider,
-  IMessageSink diagnosticMessageSink)
-  : XunitTestFrameworkExecutor(assemblyName, sourceInformationProvider, diagnosticMessageSink)
+  IMessageSink diagnosticMessageSink
+) : XunitTestFrameworkExecutor(assemblyName, sourceInformationProvider, diagnosticMessageSink)
 {
   internal ExceptionAggregator Aggregator { get; set; } = new ExceptionAggregator();
 
@@ -17,10 +17,18 @@ public sealed class SpeckleXunitTestFrameworkExecutor(
   protected override async void RunTestCases(
     IEnumerable<IXunitTestCase> testCases,
     IMessageSink executionMessageSink,
-    ITestFrameworkExecutionOptions executionOptions)
+    ITestFrameworkExecutionOptions executionOptions
+  )
   {
-    using var runner = new SpeckleXunitTestAssemblyRunner(serviceProvider, TestAssembly, testCases, DiagnosticMessageSink,
-      executionMessageSink, executionOptions, Aggregator);
-    await  runner.RunAsync().ConfigureAwait(false);
+    using var runner = new SpeckleXunitTestAssemblyRunner(
+      serviceProvider,
+      TestAssembly,
+      testCases,
+      DiagnosticMessageSink,
+      executionMessageSink,
+      executionOptions,
+      Aggregator
+    );
+    await runner.RunAsync().ConfigureAwait(false);
   }
 }

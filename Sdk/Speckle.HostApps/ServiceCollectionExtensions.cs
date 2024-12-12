@@ -8,10 +8,10 @@ namespace Speckle.HostApps;
 public static class ServiceCollectionExtensions
 {
   public static void AddHostAppTesting<TTestBinding>(this IServiceCollection services)
-  where TTestBinding : class, IBinding
+    where TTestBinding : class, IBinding
   {
     services.AddSingleton<IBinding, TTestBinding>();
-   services.AddMatchingInterfacesAsTransient(typeof(TestExecutor).Assembly);
+    services.AddMatchingInterfacesAsTransient(typeof(TestExecutor).Assembly);
   }
 
   public static void UseHostAppTesting(this IServiceProvider serviceProvider)

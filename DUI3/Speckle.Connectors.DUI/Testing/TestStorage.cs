@@ -61,31 +61,36 @@ public class TestStorage : ITestStorage
     cmd4.ExecuteNonQuery();
   }
 
-
   public IEnumerable<TestResults> GetResults(string modelName)
   {
     using var c = new SqliteConnection(_connectionString);
     c.Open();
-    using var command = new SqliteCommand(@"SELECT name, test, results, timestamp
+    using var command = new SqliteCommand(
+      @"SELECT name, test, results, timestamp
                                 FROM results 
                                 WHERE name = @modelName 
-                                ORDER BY timestamp DESC LIMIT 1;", c);
+                                ORDER BY timestamp DESC LIMIT 1;",
+      c
+    );
     command.Parameters.AddWithValue("@modelName", modelName);
     using var reader = command.ExecuteReader();
     while (reader.Read())
     {
-      yield return new TestResults(reader.GetString(1),
+      yield return new TestResults(
+        reader.GetString(1),
         reader.GetString(2),
         reader.GetString(3),
-        reader.GetDateTime(4));
+        reader.GetDateTime(4)
+      );
     }
   }
-  
+
   public void Save(TestResults results)
   {
     using var c = new SqliteConnection(_connectionString);
     c.Open();
-    const string COMMAND_TEXT = @"INSERT OR IGNORE INTO results(name, test, results, timestamp) 
+    const string COMMAND_TEXT =
+      @"INSERT OR IGNORE INTO results(name, test, results, timestamp) 
                                 VALUES(@name, @test, @results, @timestamp)";
 
     using var command = new SqliteCommand(COMMAND_TEXT, c);
@@ -96,4 +101,3 @@ public class TestStorage : ITestStorage
     command.ExecuteNonQuery();
   }
 }
-

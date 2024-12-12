@@ -6,5 +6,5 @@ namespace Speckle.HostApps;
 [GenerateAutoInterface]
 public class TestExecutorFactory : ITestExecutorFactory
 {
-  public TestExecutor Create(Assembly assembly) => new (assembly);
+  public TestExecutor Create(Assembly assembly) => new(assembly);
 }

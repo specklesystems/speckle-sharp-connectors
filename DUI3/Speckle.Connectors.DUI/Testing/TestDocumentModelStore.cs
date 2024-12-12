@@ -15,15 +15,17 @@ public class TestDocumentModelStore(IJsonSerializer serializer) : DocumentModelS
 public class TestBrowserBridge : IBrowserBridge
 {
   public string FrontendBoundName => "TestBrowserBridge";
+
   public void AssociateWithBinding(IBinding binding) { }
 
   public string[] GetBindingsMethodNames() => throw new NotImplementedException();
 
-  public void RunMethod(string methodName, string requestId, string args) => Console.WriteLine($"RunMethod: {methodName}");
+  public void RunMethod(string methodName, string requestId, string args) =>
+    Console.WriteLine($"RunMethod: {methodName}");
 
   public Task<T> RunOnMainThreadAsync<T>(Func<Task<T>> action) => throw new NotImplementedException();
 
-  public  Task RunOnMainThreadAsync(Func<Task> action) => throw new NotImplementedException();
+  public Task RunOnMainThreadAsync(Func<Task> action) => throw new NotImplementedException();
 
   public Task Send(string eventName, CancellationToken cancellationToken = default)
   {
@@ -31,7 +33,8 @@ public class TestBrowserBridge : IBrowserBridge
     return Task.CompletedTask;
   }
 
-  public  Task Send<T>(string eventName, T data, CancellationToken cancellationToken = default) where T : class 
+  public Task Send<T>(string eventName, T data, CancellationToken cancellationToken = default)
+    where T : class
   {
     Console.WriteLine($"RunMethod: {eventName}");
     return Task.CompletedTask;

@@ -16,10 +16,17 @@ public class SpeckleXunitTestCollectionRunner : XunitTestCollectionRunner
     IMessageBus messageBus,
     ITestCaseOrderer testCaseOrderer,
     ExceptionAggregator aggregator,
-    CancellationTokenSource cancellationTokenSource)
-    : base(testCollection, testCases, diagnosticMessageSink,
-      messageBus, testCaseOrderer, aggregator, cancellationTokenSource)
-    => _serviceScope = provider.GetRequiredService<IServiceScopeFactory>().CreateScope();
+    CancellationTokenSource cancellationTokenSource
+  )
+    : base(
+      testCollection,
+      testCases,
+      diagnosticMessageSink,
+      messageBus,
+      testCaseOrderer,
+      aggregator,
+      cancellationTokenSource
+    ) => _serviceScope = provider.GetRequiredService<IServiceScopeFactory>().CreateScope();
 
   /// <inheritdoc/>
   protected override async Task BeforeTestCollectionFinishedAsync()
@@ -29,10 +36,21 @@ public class SpeckleXunitTestCollectionRunner : XunitTestCollectionRunner
   }
 
   /// <inheritdoc />
-  protected override Task<RunSummary> RunTestClassAsync(ITestClass testClass,
-    IReflectionTypeInfo @class, IEnumerable<IXunitTestCase> testCases) =>
-    new SpeckleXunitTestClassRunner(_serviceScope, testClass, @class, testCases,
-        DiagnosticMessageSink, MessageBus, TestCaseOrderer,
-        new ExceptionAggregator(Aggregator), CancellationTokenSource, CollectionFixtureMappings)
-      .RunAsync();
+  protected override Task<RunSummary> RunTestClassAsync(
+    ITestClass testClass,
+    IReflectionTypeInfo @class,
+    IEnumerable<IXunitTestCase> testCases
+  ) =>
+    new SpeckleXunitTestClassRunner(
+      _serviceScope,
+      testClass,
+      @class,
+      testCases,
+      DiagnosticMessageSink,
+      MessageBus,
+      TestCaseOrderer,
+      new ExceptionAggregator(Aggregator),
+      CancellationTokenSource,
+      CollectionFixtureMappings
+    ).RunAsync();
 }

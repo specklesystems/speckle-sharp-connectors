@@ -4,7 +4,8 @@ using Speckle.HostApps;
 
 namespace Speckle.Connectors.Rhino.Bindings;
 
-public sealed class RhinoTestBinding(ITestExecutorFactory testExecutorFactory, IBrowserBridge parent) : TestBindingBase(testExecutorFactory)
+public sealed class RhinoTestBinding(ITestExecutorFactory testExecutorFactory, IBrowserBridge parent)
+  : TestBindingBase(testExecutorFactory)
 {
   public override IEnumerable<Assembly> GetAssemblies()
   {

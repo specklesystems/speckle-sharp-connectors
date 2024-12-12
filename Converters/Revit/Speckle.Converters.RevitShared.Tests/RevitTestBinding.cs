@@ -4,8 +4,8 @@ using Speckle.HostApps;
 
 namespace Speckle.Converters.Revit2023.Tests;
 
-
-public sealed class RevitTestBinding(ITestExecutorFactory testExecutorFactory, IBrowserBridge parent) : TestBindingBase(testExecutorFactory)
+public sealed class RevitTestBinding(ITestExecutorFactory testExecutorFactory, IBrowserBridge parent)
+  : TestBindingBase(testExecutorFactory)
 {
   public override IEnumerable<Assembly> GetAssemblies()
   {

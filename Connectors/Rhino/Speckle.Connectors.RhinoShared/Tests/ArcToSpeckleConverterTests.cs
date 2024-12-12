@@ -4,9 +4,9 @@ using Speckle.Converters.Common.Objects;
 using Xunit;
 
 namespace Speckle.Connectors.Rhino;
+
 public class ArcToSpeckleConverterTests(IServiceProvider serviceProvider)
 {
-  
   [Fact]
   public void Convert_ShouldConvertArcCorrectly()
   {

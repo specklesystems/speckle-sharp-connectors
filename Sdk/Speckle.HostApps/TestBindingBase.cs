@@ -17,6 +17,7 @@ public abstract class TestBindingBase(ITestExecutorFactory testExecutorFactory) 
   public abstract IEnumerable<Assembly> GetAssemblies();
 
   public abstract IBrowserBridge Parent { get; }
+
   public string GetLoadedModel() => string.Empty;
 
   public ModelTest[] GetTests() => GetTests(GetAssemblies());
@@ -75,15 +76,13 @@ public abstract class TestBindingBase(ITestExecutorFactory testExecutorFactory) 
     return _testResults.ToArray();
   }
 
-
-
   private void OnExecutionComplete(ExecutionCompleteInfo info)
   {
     lock (s_consoleLock)
     {
       Console.WriteLine(
-        $"Finished: {info.TotalTests} tests in {Math.Round(info.ExecutionTime, 3)}s ({info.TestsFailed} failed, {info.TestsSkipped} skipped)");
-
+        $"Finished: {info.TotalTests} tests in {Math.Round(info.ExecutionTime, 3)}s ({info.TestsFailed} failed, {info.TestsSkipped} skipped)"
+      );
     }
   }
 

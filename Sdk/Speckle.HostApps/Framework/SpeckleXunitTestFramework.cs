@@ -7,9 +7,9 @@ namespace Speckle.HostApps.Framework;
 public sealed class SpeckleXunitTestFramework(IMessageSink messageSink) : XunitTestFramework(messageSink)
 {
   private ExceptionAggregator Aggregator { get; set; } = new ExceptionAggregator();
-  
+
   public static IServiceProvider? ServiceProvider { get; set; }
-        
+
   /// <inheritdoc/>
   protected override ITestFrameworkExecutor CreateExecutor(AssemblyName assemblyName)
   {
@@ -18,7 +18,11 @@ public sealed class SpeckleXunitTestFramework(IMessageSink messageSink) : XunitT
       if (ServiceProvider != null)
       {
         return new SpeckleXunitTestFrameworkExecutor(
-          ServiceProvider, assemblyName, SourceInformationProvider, DiagnosticMessageSink);
+          ServiceProvider,
+          assemblyName,
+          SourceInformationProvider,
+          DiagnosticMessageSink
+        );
       }
     }
 #pragma warning disable CA1031

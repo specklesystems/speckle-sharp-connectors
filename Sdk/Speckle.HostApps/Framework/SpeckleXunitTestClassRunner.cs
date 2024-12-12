@@ -9,7 +9,8 @@ public class SpeckleXunitTestClassRunner : XunitTestClassRunner
 {
   private readonly IServiceScope _serviceScope;
 
-  public SpeckleXunitTestClassRunner(IServiceScope serviceScope,
+  public SpeckleXunitTestClassRunner(
+    IServiceScope serviceScope,
     ITestClass testClass,
     IReflectionTypeInfo @class,
     IEnumerable<IXunitTestCase> testCases,
@@ -18,11 +19,19 @@ public class SpeckleXunitTestClassRunner : XunitTestClassRunner
     ITestCaseOrderer testCaseOrderer,
     ExceptionAggregator aggregator,
     CancellationTokenSource cancellationTokenSource,
-    IDictionary<Type, object> collectionFixtureMappings)
-    : base(testClass, @class, testCases, diagnosticMessageSink,
-      messageBus, testCaseOrderer, aggregator,
-      cancellationTokenSource, collectionFixtureMappings) => 
-    _serviceScope = serviceScope;
+    IDictionary<Type, object> collectionFixtureMappings
+  )
+    : base(
+      testClass,
+      @class,
+      testCases,
+      diagnosticMessageSink,
+      messageBus,
+      testCaseOrderer,
+      aggregator,
+      cancellationTokenSource,
+      collectionFixtureMappings
+    ) => _serviceScope = serviceScope;
 
   /// <inheritdoc />
   protected override object[] CreateTestClassConstructorArguments()

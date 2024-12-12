@@ -12,12 +12,16 @@ public class ModelCurveArrayToSpeckleConverterTests(IServiceProvider serviceProv
 {
   [Fact]
   public void Convert_Empty()
-  {  
+  {
     var conversionContext = CreateSettingsStore<RevitConversionSettings>();
     var scalingService = this.CreateScalingService();
-    var converter = Create< ITypedConverter<DB.Curve, SO.ICurve>>();
-    
-    var sut = serviceProvider.Create<ModelCurveArrayToSpeckleConverter>(conversionContext.Object, scalingService.Object, converter.Object);
+    var converter = Create<ITypedConverter<DB.Curve, SO.ICurve>>();
+
+    var sut = serviceProvider.Create<ModelCurveArrayToSpeckleConverter>(
+      conversionContext.Object,
+      scalingService.Object,
+      converter.Object
+    );
     Assert.Throws<ValidationException>(() => sut.Convert(new DB.ModelCurveArray()));
   }
 
@@ -55,7 +59,11 @@ public class ModelCurveArrayToSpeckleConverterTests(IServiceProvider serviceProv
     curveConverter.Setup(x => x.Convert(geometry1.Object)).Returns(Create<SO.ICurve>().Object);
     curveConverter.Setup(x => x.Convert(geometry2.Object)).Returns(Create<SO.ICurve>().Object);
 
-    var sut = serviceProvider.Create<ModelCurveArrayToSpeckleConverter>(conversionContext.Object, scalingService.Object, curveConverter.Object);
+    var sut = serviceProvider.Create<ModelCurveArrayToSpeckleConverter>(
+      conversionContext.Object,
+      scalingService.Object,
+      curveConverter.Object
+    );
     var array = Create<DB.ModelCurveArray>();
 
     array
