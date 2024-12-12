@@ -66,7 +66,7 @@ public class CancellationManager
   /// <param name="id">Id to cancel operation.</param>
   public void CancelOperation(string id)
   {
-    if (_operationsInProgress.TryGetValue(id, out CancellationTokenSource cts))
+    if (_operationsInProgress.TryGetValue(id, out CancellationTokenSource? cts))
     {
       cts.Cancel();
       cts.Dispose();

@@ -10,8 +10,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\FrameToSpeckleConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\JointToSpeckleConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\ShellToSpeckleConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\EtabsPropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\EtabsFramePropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\EtabsJointPropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\EtabsShellPropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\EtabsObjectToSpeckleConverter.cs" />
   </ItemGroup>
 </Project>
