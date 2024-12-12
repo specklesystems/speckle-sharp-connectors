@@ -2,7 +2,7 @@
 using Speckle.Converters.Common.Objects;
 using Xunit;
 
-namespace Speckle.Converters.Rhino7.Tests;
+namespace Speckle.Connectors.Rhino;
 
 #pragma warning disable xUnit1041
 public class EllipseToSpeckleConverterTests(IServiceProvider serviceProvider)

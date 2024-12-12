@@ -1,13 +1,9 @@
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using Rhino;
-using Speckle.Connectors.Rhino.DependencyInjection;
-using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.Rhino;
-using Speckle.Converters.Rhino7.Tests;
 using Xunit;
 
+namespace Speckle.Connectors.Rhino;
 public class ArcToSpeckleConverterTests(IServiceProvider serviceProvider)
 {
   
