@@ -121,7 +121,7 @@ public sealed class DisplayValueExtractor
     try
     {
       geom = element.get_Geometry(options);
-      
+
       // NOTE: incomplete solution. https://forums.autodesk.com/t5/revit-api-forum/how-to-get-steelproxyelement-geometry/td-p/10347898
       // If steel element proxies will be sucked in via category selection, and they are not visible in the current view, they will not be extracted out.
       // I'm inclined to go with this as a semi-permanent limitation.
