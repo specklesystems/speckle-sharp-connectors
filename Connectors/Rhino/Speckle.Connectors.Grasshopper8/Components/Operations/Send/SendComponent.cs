@@ -94,7 +94,9 @@ public class SendComponent()
 
     var accountManager = scope.ServiceProvider.GetRequiredService<AccountService>();
     var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
-    var sendOperation = scope.ServiceProvider.GetRequiredService<GrasshopperSendOperation>();
+    var sendOperation = scope.ServiceProvider.GetRequiredService<
+      SendOperation<IReadOnlyDictionary<string, GH_Structure<IGH_Goo>>>
+    >();
 
     // TODO: Get any account for this server, as we don't have a mechanism yet to pass accountIds through
     var account = accountManager.GetAccountWithServerUrlFallback("", new Uri(input.Resource.Server));
@@ -118,7 +120,7 @@ public class SendComponent()
       .ConfigureAwait(false);
 
     return new SendComponentOutput(
-      new SpeckleUrlModelObjectResource(receiveInfo.ServerUrl.ToString(), receiveInfo.ProjectId, result.RootId)
+      new SpeckleUrlModelObjectResource(receiveInfo.ServerUrl.ToString(), receiveInfo.ProjectId, result.RootObjId)
     );
   }
 }

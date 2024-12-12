@@ -4,10 +4,10 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.Common.Builders;
 
-public interface IRootObjectBuilder<in T>
+public interface IRootObjectBuilder<in TInput>
 {
   public Task<RootObjectBuilderResult> Build(
-    T input,
+    TInput input,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default

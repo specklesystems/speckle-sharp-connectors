@@ -23,13 +23,13 @@ public sealed class SendOperation<T>(
 )
 {
   public async Task<SendOperationResult> Execute(
-    T objects,
+    T input,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
   )
   {
-    var buildResult = await rootObjectBuilder.Build(objects, sendInfo, onOperationProgressed, ct).ConfigureAwait(false);
+    var buildResult = await rootObjectBuilder.Build(input, sendInfo, onOperationProgressed, ct).ConfigureAwait(false);
 
     // POC: Jonathon asks on behalf of willow twin - let's explore how this can work
     // buildResult.RootObject["@report"] = new Report { ConversionResults = buildResult.ConversionResults };

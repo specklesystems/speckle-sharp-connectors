@@ -1,5 +1,8 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Grasshopper.Kernel.Data;
+using Grasshopper.Kernel.Types;
+using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Sdk.Credentials;
@@ -12,8 +15,12 @@ public static class ServiceRegistration
   public static IServiceCollection AddGrasshopper(this IServiceCollection services)
   {
     services.AddTransient<IHostObjectBuilder, GrasshopperHostObjectBuilder>();
+    services.AddTransient<
+      IRootObjectBuilder<IReadOnlyDictionary<string, GH_Structure<IGH_Goo>>>,
+      GrasshopperRootObjectBuilder
+    >();
     services.AddTransient<GrasshopperReceiveOperation>();
-    services.AddTransient<GrasshopperSendOperation>();
+    services.AddTransient<SendOperation<IReadOnlyDictionary<string, GH_Structure<IGH_Goo>>>>();
     services.AddSingleton(DefaultTraversal.CreateTraversalFunc());
     services.AddScoped<RootObjectUnpacker>();
 
