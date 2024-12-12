@@ -18,32 +18,32 @@ namespace Speckle.Connectors.CSiShared;
 
 public static class ServiceRegistration
 {
-  public static IServiceCollection AddCSi(this IServiceCollection services)
+  public static IServiceCollection AddCsi(this IServiceCollection services)
   {
     services.AddSingleton<IBrowserBridge, BrowserBridge>();
-    services.AddSingleton<ICSiApplicationService, CSiApplicationService>();
+    services.AddSingleton<ICsiApplicationService, CsiApplicationService>();
 
     services.AddConnectorUtils();
-    services.AddDUI<CSiDocumentModelStore>();
+    services.AddDUI<CsiDocumentModelStore>();
     services.AddDUIView();
 
-    services.AddSingleton<DocumentModelStore, CSiDocumentModelStore>();
+    services.AddSingleton<DocumentModelStore, CsiDocumentModelStore>();
 
     services.AddSingleton<IBinding, TestBinding>();
     services.AddSingleton<IBinding, ConfigBinding>();
     services.AddSingleton<IBinding, AccountBinding>();
 
     services.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
-    services.AddSingleton<IBasicConnectorBinding, CSiSharedBasicConnectorBinding>();
-    services.AddSingleton<IAppIdleManager, CSiIdleManager>();
+    services.AddSingleton<IBasicConnectorBinding, CsiSharedBasicConnectorBinding>();
+    services.AddSingleton<IAppIdleManager, CsiIdleManager>();
 
-    services.AddSingleton<IBinding, CSiSharedSelectionBinding>();
-    services.AddSingleton<IBinding, CSiSharedSendBinding>();
+    services.AddSingleton<IBinding, CsiSharedSelectionBinding>();
+    services.AddSingleton<IBinding, CsiSharedSendBinding>();
 
-    services.AddScoped<ISendFilter, CSiSharedSelectionFilter>();
-    services.AddScoped<CSiSendCollectionManager>();
-    services.AddScoped<IRootObjectBuilder<ICSiWrapper>, CSiRootObjectBuilder>();
-    services.AddScoped<SendOperation<ICSiWrapper>>();
+    services.AddScoped<ISendFilter, CsiSharedSelectionFilter>();
+    services.AddScoped<CsiSendCollectionManager>();
+    services.AddScoped<IRootObjectBuilder<ICsiWrapper>, CsiRootObjectBuilder>();
+    services.AddScoped<SendOperation<ICsiWrapper>>();
 
     services.RegisterTopLevelExceptionHandler();
 

@@ -9,18 +9,18 @@
     <Import_RootNamespace>Speckle.Connectors.CSiShared</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)Bindings\CSiSharedBasicConnectorBinding.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Bindings\CSiSharedSelectionBinding.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Bindings\CSiSharedSendBinding.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Filters\CSiSharedSelectionFilter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)HostApp\CSiSendCollectionManager.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\CSiRootObjectBuilder.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Plugin\CSiPluginBase.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\CsiSharedBasicConnectorBinding.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\CsiSharedSelectionBinding.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\CsiSharedSendBinding.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Filters\CsiSharedSelectionFilter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\CsiSendCollectionManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\CsiRootObjectBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\CsiPluginBase.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\SpeckleFormBase.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)HostApp\CSiApplicationService.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)HostApp\CSiDocumentModelStore.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)HostApp\CSiIdleManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\CsiApplicationService.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\CsiDocumentModelStore.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\CsiIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Utils\ObjectIdentifiers.cs" />
   </ItemGroup>

@@ -6,7 +6,7 @@ using Speckle.Sdk.Host;
 #pragma warning disable IDE0130
 namespace Speckle.Connectors.ETABS22;
 
-public class SpeckleForm : ETABSSpeckleFormBase
+public class SpeckleForm : EtabsSpeckleFormBase
 {
   protected override HostAppVersion GetVersion() => HostAppVersion.v2021; // TODO: v22
 }

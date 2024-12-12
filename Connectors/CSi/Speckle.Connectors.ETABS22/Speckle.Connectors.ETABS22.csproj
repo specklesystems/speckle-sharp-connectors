@@ -23,9 +23,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Compile Update="Plugin\SpeckleForm.cs">
-        <SubType>Form</SubType>
-      </Compile>
+      <Compile Update="Plugin\SpeckleForm.cs" />
     </ItemGroup>
 
     <Import Project="..\Speckle.Connectors.CSiShared\Speckle.Connectors.CSiShared.projitems" Label="Shared" />
