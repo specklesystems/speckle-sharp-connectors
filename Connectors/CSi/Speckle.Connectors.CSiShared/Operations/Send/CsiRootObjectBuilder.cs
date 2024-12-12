@@ -43,7 +43,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
   }
 
   public RootObjectBuilderResult Build(
-    IReadOnlyList<ICSiWrapper> csiObjects,
+    IReadOnlyList<ICsiWrapper> csiObjects,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed
   )

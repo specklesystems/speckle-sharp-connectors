@@ -24,7 +24,7 @@ public static class ServiceRegistration
     services.AddSingleton<ICsiApplicationService, CsiApplicationService>();
 
     services.AddConnectorUtils();
-    services.AddDUI<DefaultThreadContext, CSiDocumentModelStore>();
+    services.AddDUI<DefaultThreadContext, CsiDocumentModelStore>();
     services.AddDUIView();
 
     services.AddSingleton<IBinding, TestBinding>();
