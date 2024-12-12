@@ -11,6 +11,7 @@ using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.Common;
+using Speckle.Objects.GIS;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -69,7 +70,17 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
       {
         ["name"] = sr.Name,
         ["unit"] = sr.Unit.Name,
-        ["centralMeridian"] = sr.CentralMeridian
+        ["centralMeridian"] = sr.CentralMeridian,
+        ["wkt"] = sr.Wkt,
+      };
+
+    Dictionary<string, object?> crs =
+      new()
+      {
+        ["trueNorthRadians"] = _converterSettings.Current.ActiveCRSoffsetRotation.TrueNorthRadians,
+        ["latOffset"] = _converterSettings.Current.ActiveCRSoffsetRotation.LatOffset,
+        ["lonOffset"] = _converterSettings.Current.ActiveCRSoffsetRotation.LonOffset,
+        ["spatialReference"] = spatialReference
       };
 
     Collection rootCollection =
@@ -77,10 +88,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
       {
         name = MapView.Active.Map.Name,
         ["units"] = _converterSettings.Current.SpeckleUnits,
-        ["trueNorthRadians"] = _converterSettings.Current.ActiveCRSoffsetRotation.TrueNorthRadians,
-        ["latOffset"] = _converterSettings.Current.ActiveCRSoffsetRotation.LatOffset,
-        ["lonOffset"] = _converterSettings.Current.ActiveCRSoffsetRotation.LonOffset,
-        ["spatialReference"] = spatialReference
+        ["crs"] = crs
       };
 
     // 1 - Unpack the selected mapmembers
