@@ -28,9 +28,9 @@ public class SendComponentInput
   }
 }
 
-public class SendComponentOutput(SpeckleUrlModelObjectResource resource)
+public class SendComponentOutput(SpeckleUrlModelResource resource)
 {
-  public SpeckleUrlModelObjectResource Resource { get; } = resource;
+  public SpeckleUrlModelResource Resource { get; } = resource;
 }
 
 public class SendComponent()
@@ -120,7 +120,12 @@ public class SendComponent()
       .ConfigureAwait(false);
 
     return new SendComponentOutput(
-      new SpeckleUrlModelObjectResource(receiveInfo.ServerUrl.ToString(), receiveInfo.ProjectId, result.RootObjId)
+      new SpeckleUrlModelVersionResource(
+        receiveInfo.ServerUrl.ToString(),
+        receiveInfo.ProjectId,
+        receiveInfo.ModelId,
+        result.VersionId
+      )
     );
   }
 }

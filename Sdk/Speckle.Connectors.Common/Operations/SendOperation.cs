@@ -37,13 +37,13 @@ public sealed class SendOperation<T>(
     buildResult.RootObject["version"] = 3;
     // base object handler is separated, so we can do some testing on non-production databases
     // exact interface may want to be tweaked when we implement this
-    var (rootObjId, convertedReferences) = await Send(buildResult.RootObject, sendInfo, onOperationProgressed, ct)
+    var (versionId, serialiseResults) = await Send(buildResult.RootObject, sendInfo, onOperationProgressed, ct)
       .ConfigureAwait(false);
 
-    return new(rootObjId, convertedReferences, buildResult.ConversionResults);
+    return new(serialiseResults.RootId, versionId, serialiseResults.ConvertedReferences, buildResult.ConversionResults);
   }
 
-  public async Task<SerializeProcessResults> Send(
+  public async Task<(string versionId, SerializeProcessResults serializeResults)> Send(
     Base commitObject,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
@@ -78,7 +78,7 @@ public sealed class SendOperation<T>(
 
     // 8 - Create the version (commit)
     using var apiClient = clientFactory.Create(account);
-    _ = await apiClient
+    var versionId = await apiClient
       .Version.Create(
         new CreateVersionInput(
           sendResult.RootId,
@@ -89,13 +89,13 @@ public sealed class SendOperation<T>(
         ct
       )
       .ConfigureAwait(true);
-
-    return sendResult;
+    return (versionId, sendResult);
   }
 }
 
 public record SendOperationResult(
   string RootObjId,
+  string VersionId,
   IReadOnlyDictionary<Id, ObjectReference> ConvertedReferences,
   IEnumerable<SendConversionResult> ConversionResults
 );
