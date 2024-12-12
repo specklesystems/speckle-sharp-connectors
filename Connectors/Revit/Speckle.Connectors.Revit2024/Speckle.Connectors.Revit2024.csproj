@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <Import Project="..\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems" Label="Shared" />
-
+  <Import Project="..\..\..\Converters\Revit\Speckle.Converters.RevitShared.Tests\Speckle.Converters.RevitShared.Tests.projitems" Label="Shared" />
   <Import Project="..\Speckle.Connectors.RevitShared.Cef\Speckle.Connectors.RevitShared.Cef.projitems" Label="Shared" />
   
   <ItemGroup>
@@ -27,6 +27,7 @@
     <ProjectReference Include="..\..\..\Converters\Revit\Speckle.Converters.Revit2024\Speckle.Converters.Revit2024.csproj" />
     <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
     <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.HostApps\Speckle.HostApps.csproj" />
   </ItemGroup>
 
   <ItemGroup>
