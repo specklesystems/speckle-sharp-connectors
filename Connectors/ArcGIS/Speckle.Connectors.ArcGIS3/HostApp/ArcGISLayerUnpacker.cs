@@ -30,7 +30,7 @@ public class ArcGISLayerUnpacker
       switch (mapMember)
       {
         case ADM.ILayerContainer container:
-          Collection containerCollection = CreateAndCacheMapMemberCollection(mapMember);
+          Collection containerCollection = CreateAndCacheMapMemberCollection(mapMember, true);
           parentCollection.elements.Add(containerCollection);
 
           await UnpackSelectionAsync(container.Layers, containerCollection).ConfigureAwait(false);
@@ -47,7 +47,7 @@ public class ArcGISLayerUnpacker
     return objects;
   }
 
-  private Collection CreateAndCacheMapMemberCollection(ADM.MapMember mapMember)
+  private Collection CreateAndCacheMapMemberCollection(ADM.MapMember mapMember, bool isLayerContainer = false)
   {
     string mapMemberApplicationId = mapMember.GetSpeckleApplicationId();
     Collection collection =
@@ -80,7 +80,11 @@ public class ArcGISLayerUnpacker
         break;
     }
 
-    CollectionCache.Add(mapMemberApplicationId, collection);
+    if (!isLayerContainer) // do not cache layer containers, since these won't contain any objects
+    {
+      CollectionCache.Add(mapMemberApplicationId, collection);
+    }
+
     return collection;
   }
 }
