@@ -1,5 +1,6 @@
 ﻿using Grasshopper.Kernel;
 using Grasshopper.Kernel.Data;
+using Grasshopper.Kernel.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.Grasshopper8.Components.BaseComponents;
@@ -9,14 +10,14 @@ using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.Grasshopper8.Components.Collections;
 
-public record UnpackRootObjectComponentInput(Collection RootObject) { }
+public record UnpackCollectionComponentInput(Collection RootObject) { }
 
 public record UnpackRootObjectComponentOutput(Dictionary<string, List<SpeckleObject?>> Elements) { }
 
-public class UnpackRootObjectComponent
-  : SpeckleScopedTaskCapableComponent<UnpackRootObjectComponentInput, UnpackRootObjectComponentOutput>
+public class UnpackCollectionComponent
+  : SpeckleScopedTaskCapableComponent<UnpackCollectionComponentInput, UnpackRootObjectComponentOutput>
 {
-  public UnpackRootObjectComponent()
+  public UnpackCollectionComponent()
     : base("Unpack Root Object", "SURO", "Unpacks the root object from a receive operation", "Speckle", "Collections")
   { }
 
@@ -29,11 +30,11 @@ public class UnpackRootObjectComponent
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
   {
-    pManager.AddTextParameter("Element Paths", "EP", "Path to the element in the collection tree", GH_ParamAccess.list);
+    pManager.AddTextParameter("Element Paths", "EP", "Path to the element in the collection tree", GH_ParamAccess.tree);
     pManager.AddParameter(new SpeckleObjectParam(), "Elements", "E", "Elements", GH_ParamAccess.tree);
   }
 
-  protected override UnpackRootObjectComponentInput GetInput(IGH_DataAccess da)
+  protected override UnpackCollectionComponentInput GetInput(IGH_DataAccess da)
   {
     SpeckleCollectionGoo? collectionGoo = null;
     da.GetData(0, ref collectionGoo);
@@ -41,30 +42,31 @@ public class UnpackRootObjectComponent
     {
       throw new SpeckleException("No base object provided");
     }
-    return new UnpackRootObjectComponentInput(collectionGoo.Value);
+    return new UnpackCollectionComponentInput(collectionGoo.Value);
   }
 
   protected override void SetOutput(IGH_DataAccess da, UnpackRootObjectComponentOutput result)
   {
-    List<string> paths = new();
+    GH_Structure<GH_String> paths = new();
     GH_Structure<SpeckleObjectGoo> elements = new();
 
     int count = 0;
     foreach (var element in result.Elements)
     {
       var ints = da.ParameterTargetPath(0);
-      var ghPath = ints.AppendElement(da.ParameterTargetIndex(0)).AppendElement(count);
-      paths.Add(element.Key);
-      elements.AppendRange(element.Value.Select(e => new SpeckleObjectGoo(e!)), ghPath);
+      var indexPath = ints.AppendElement(da.ParameterTargetIndex(0));
+      var countPath = indexPath.AppendElement(count);
+      paths.Append(new GH_String(element.Key), indexPath);
+      elements.AppendRange(element.Value.Select(e => new SpeckleObjectGoo(e!)), countPath);
       count++;
     }
 
-    da.SetDataList(0, paths);
+    da.SetDataTree(0, paths);
     da.SetDataTree(1, elements);
   }
 
   protected override Task<UnpackRootObjectComponentOutput> PerformScopedTask(
-    UnpackRootObjectComponentInput input,
+    UnpackCollectionComponentInput input,
     IServiceScope scope,
     CancellationToken cancellationToken = default
   )
