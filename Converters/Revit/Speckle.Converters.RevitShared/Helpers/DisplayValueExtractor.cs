@@ -122,26 +122,25 @@ public sealed class DisplayValueExtractor
     {
       geom = element.get_Geometry(options);
 
-#if REVIT2024_OR_GREATER
       // NOTE: incomplete solution. https://forums.autodesk.com/t5/revit-api-forum/how-to-get-steelproxyelement-geometry/td-p/10347898
       // If steel element proxies will be sucked in via category selection, and they are not visible in the current view, they will not be extracted out.
       // I'm inclined to go with this as a semi-permanent limitation.
       // https://speckle.community/t/revit-2025-2-missing-elements-and-colors/14073
       if (
-        geom is null
-        && (
-          elementBuiltInCategory == DB.BuiltInCategory.OST_StructConnections
-          || elementBuiltInCategory == DB.BuiltInCategory.OST_StructConnectionPlates
-          || elementBuiltInCategory == DB.BuiltInCategory.OST_StructConnectionBolts
-          || elementBuiltInCategory == DB.BuiltInCategory.OST_StructConnectionWelds
-          || elementBuiltInCategory == DB.BuiltInCategory.OST_StructConnectionShearStuds
-        )
+        (geom is null || !geom.Any())
+        && elementBuiltInCategory
+          is DB.BuiltInCategory.OST_StructConnections
+            or DB.BuiltInCategory.OST_StructConnectionPlates
+            or DB.BuiltInCategory.OST_StructuralFraming
+            or DB.BuiltInCategory.OST_StructuralColumns
+            or DB.BuiltInCategory.OST_StructConnectionBolts
+            or DB.BuiltInCategory.OST_StructConnectionWelds
+            or DB.BuiltInCategory.OST_StructConnectionShearStuds
       )
       {
-        options = new DB.Options() { View = _converterSettings.Current.Document?.ActiveView }; // NOTE: in case it's a view filter, it should use that specific view!
+        options = new DB.Options() { View = _converterSettings.Current.Document.NotNull().ActiveView }; // TODO/NOTE: in case it's a view filter, it should use that specific view. This is a limiting partial fix.
         geom = element.get_Geometry(options);
       }
-#endif
     }
     // POC: should we be trying to continue?
     catch (Autodesk.Revit.Exceptions.ArgumentException)
