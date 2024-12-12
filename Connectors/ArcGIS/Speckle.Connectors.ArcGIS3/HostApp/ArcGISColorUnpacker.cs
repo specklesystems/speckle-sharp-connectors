@@ -289,7 +289,7 @@ public class ArcGISColorUnpacker
           // all field values have to match the row values
           for (int i = 0; i < StoredRendererFields.Count; i++)
           {
-            string groupValue = value.FieldValues[i].Replace("<Null>", "");
+            string groupValue = value.FieldValues[i];
             object? rowValue = row[StoredRendererFields[i]];
 
             if (!ValuesAreEqual(groupValue, rowValue))
@@ -325,21 +325,23 @@ public class ArcGISColorUnpacker
   /// <param name="groupValue"></param>
   private bool ValuesAreEqual(string groupValue, object? objectValue)
   {
-    string objectStringValue = Convert.ToString(objectValue) ?? "";
-
     switch (objectValue)
     {
       case int:
       case short:
       case long:
       case byte:
-        return groupValue.Equals(objectStringValue);
+        string objectValueString = Convert.ToString(objectValue) ?? "";
+        return groupValue.Equals(objectValueString);
 
-      // POC: these are tricky to compare with the label strings accurately, so will trim row value to label length
-      case double:
-      case float:
-        return objectStringValue.Length >= groupValue.Length
-          && objectStringValue[..groupValue.Length].Equals(groupValue);
+      case string:
+        return groupValue.Equals(objectValue);
+
+      // POC: these are tricky to compare with the label strings accurately, so will trim both values to 5 decimal places.
+      case double d:
+        return double.TryParse(groupValue, out double groupDouble) && groupDouble - d < 0.000001;
+      case float f:
+        return float.TryParse(groupValue, out float groupFloat) && groupFloat - f < 0.000001;
 
       default:
         return false;
