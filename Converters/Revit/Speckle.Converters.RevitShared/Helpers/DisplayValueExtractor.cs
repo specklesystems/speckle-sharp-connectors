@@ -234,7 +234,7 @@ public sealed class DisplayValueExtractor
   }
 
   /// <summary>
-  /// Overrides current view options to extract meaningful geometry for various elements.
+  /// Overrides current view options to extract meaningful geometry for various elements. E.g., pipes, plumbing fixtures, steel elements
   /// </summary>
   /// <param name="element"></param>
   /// <returns></returns>
