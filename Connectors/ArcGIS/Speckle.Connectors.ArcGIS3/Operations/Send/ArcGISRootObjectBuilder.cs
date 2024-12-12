@@ -68,7 +68,6 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
       new()
       {
         ["name"] = sr.Name,
-        ["gcs"] = sr.Gcs,
         ["unit"] = sr.Unit,
         ["centralMeridian"] = sr.CentralMeridian
       };
