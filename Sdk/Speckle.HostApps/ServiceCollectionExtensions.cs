@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.DUI.Bindings;
+using Speckle.HostApps.Framework;
 using Speckle.Sdk;
 
 namespace Speckle.HostApps;

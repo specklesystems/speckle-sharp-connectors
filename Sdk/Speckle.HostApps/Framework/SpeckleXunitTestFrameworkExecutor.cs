@@ -2,7 +2,7 @@
 using Xunit.Abstractions;
 using Xunit.Sdk;
 
-namespace Speckle.HostApps;
+namespace Speckle.HostApps.Framework;
 
 public sealed class SpeckleXunitTestFrameworkExecutor(
   IServiceProvider serviceProvider,

@@ -376,6 +376,7 @@
           "Microsoft.Extensions.DependencyInjection": "[2.2.0, )",
           "Moq": "[4.20.70, )",
           "Speckle.Connectors.DUI": "[1.0.0, )",
+          "Speckle.Converters.Common": "[1.0.0, )",
           "Speckle.Sdk": "[3.1.0-dev.215, )",
           "xunit": "[2.9.2, )",
           "xunit.runner.utility": "[2.9.2, )"

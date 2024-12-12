@@ -79,22 +79,29 @@ public sealed class TestExecutor(Assembly assembly) : IMessageSinkWithTypes
     _executionCompleteEvent.Dispose();
   }
     
-  public void FindAll()
+  public void StartFind()
   {
     using XunitFrontController controller = new (AppDomainSupport.Denied, assembly.Location);
     _discoveryCompleteEvent.Reset();
     ITestFrameworkDiscoveryOptions discoveryOptions = TestFrameworkOptions.ForDiscovery();
     controller.Find(false, this, discoveryOptions);
-    _discoveryCompleteEvent.WaitOne();
   }
 
-  public void RunAll()
+  public void WaitForFindFinish()
+  {
+    _discoveryCompleteEvent.WaitOne();
+  }
+  public void StartExecution()
   {
     using XunitFrontController controller = new (AppDomainSupport.Denied, assembly.Location);
     _executionCompleteEvent.Reset();
     ITestFrameworkExecutionOptions executionOptions = TestFrameworkOptions.ForExecution();
     ITestFrameworkDiscoveryOptions discoveryOptions = TestFrameworkOptions.ForDiscovery();
     controller.RunAll(this, discoveryOptions, executionOptions);
+  }
+
+  public void WaitForExecutionFinish()
+  {
     _executionCompleteEvent.WaitOne();
   }
   

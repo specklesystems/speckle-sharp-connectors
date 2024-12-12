@@ -51,7 +51,7 @@
 
   <ItemGroup Condition="'$(HostAppTests)' == 'true'">
     <AssemblyAttribute Include="Xunit.TestFrameworkAttribute">
-      <_Parameter1>Speckle.HostApps.SpeckleXunitTestFramework</_Parameter1>
+      <_Parameter1>Speckle.HostApps.Framework.SpeckleXunitTestFramework</_Parameter1>
       <_Parameter2>Speckle.HostApps</_Parameter2>
     </AssemblyAttribute>
   </ItemGroup>

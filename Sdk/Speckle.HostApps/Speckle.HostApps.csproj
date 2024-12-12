@@ -15,5 +15,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
+    <ProjectReference Include="..\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
   </ItemGroup>
 </Project>

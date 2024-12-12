@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using Speckle.Converters.Common;
 
 namespace Speckle.HostApps;
 
@@ -18,14 +18,11 @@ public abstract class MoqTest : IDisposable
 #pragma warning restore CA1063
 #pragma warning restore CA1816
 
-  protected MockRepository Repository { get; private set; } = new(MockBehavior.Strict);
+  public MockRepository Repository { get; private set; } = new(MockBehavior.Strict);
 
   protected Mock<T> Create<T>(MockBehavior behavior = MockBehavior.Strict)
     where T : class => Repository.Create<T>(behavior);
-}
 
-
-public static class ServiceProviderExtensions
-{
-  public static T Create<T>(this IServiceProvider provider, params object[] parameters) => ActivatorUtilities.CreateInstance<T>(provider, parameters);
+  protected Mock<IConverterSettingsStore<T>> CreateSettingsStore<T>() where T : class =>
+    Repository.Create<IConverterSettingsStore<T>>();
 }

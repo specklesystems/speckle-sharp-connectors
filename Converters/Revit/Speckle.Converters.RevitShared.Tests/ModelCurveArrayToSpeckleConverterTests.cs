@@ -1,7 +1,6 @@
-﻿using Speckle.Converters.Common;
+﻿using FluentAssertions;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Raw;
-using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.HostApps;
 using Speckle.Sdk.Common.Exceptions;
@@ -14,20 +13,20 @@ public class ModelCurveArrayToSpeckleConverterTests(IServiceProvider serviceProv
   [Fact]
   public void Convert_Empty()
   {  
-    var conversionContext = Create<IConverterSettingsStore<RevitConversionSettings>>();
-    var scalingService = Create<IScalingServiceToSpeckle>();
+    var conversionContext = CreateSettingsStore<RevitConversionSettings>();
+    var scalingService = this.CreateScalingService();
     var converter = Create< ITypedConverter<DB.Curve, SO.ICurve>>();
     
     var sut = serviceProvider.Create<ModelCurveArrayToSpeckleConverter>(conversionContext.Object, scalingService.Object, converter.Object);
     Assert.Throws<ValidationException>(() => sut.Convert(new DB.ModelCurveArray()));
   }
-/*
+
   [Fact]
   public void Convert()
   {
-    var revitConversionContextStack = Create<IConverterSettingsStore<RevitConversionSettings>>();
-    var scalingServiceToSpeckle = Create<IScalingServiceToSpeckle>();
-    var curveConverter = Create<ITypedConverter<DB.Curve, ICurve>>();
+    var conversionContext = CreateSettingsStore<RevitConversionSettings>();
+    var scalingService = this.CreateScalingService();
+    var curveConverter = Create<ITypedConverter<DB.Curve, SO.ICurve>>();
 
     var endpoint1 = Create<DB.XYZ>();
     var geometry1 = Create<DB.Curve>();
@@ -44,23 +43,19 @@ public class ModelCurveArrayToSpeckleConverterTests(IServiceProvider serviceProv
     geometry2.Setup(x => x.GetEndPoint(1)).Returns(endpoint2.Object);
 
     var units = "units";
-    revitConversionContextStack
+    conversionContext
       .Setup(x => x.Current)
       .Returns(new RevitConversionSettings(null!, DetailLevelType.Coarse, null, units, false));
 
     var scaleLength = 2.2;
-    scalingServiceToSpeckle.Setup(x => x.ScaleLength(2 + 3)).Returns(scaleLength);
+    scalingService.Setup(x => x.ScaleLength(2 + 3)).Returns(scaleLength);
 
     endpoint1.Setup(x => x.DistanceTo(endpoint2.Object)).Returns(4.4);
 
-    curveConverter.Setup(x => x.Convert(geometry1.Object)).Returns(Create<ICurve>().Object);
-    curveConverter.Setup(x => x.Convert(geometry2.Object)).Returns(Create<ICurve>().Object);
+    curveConverter.Setup(x => x.Convert(geometry1.Object)).Returns(Create<SO.ICurve>().Object);
+    curveConverter.Setup(x => x.Convert(geometry2.Object)).Returns(Create<SO.ICurve>().Object);
 
-    var sut = new ModelCurveArrayToSpeckleConverter(
-      revitConversionContextStack.Object,
-      scalingServiceToSpeckle.Object,
-      curveConverter.Object
-    );
+    var sut = serviceProvider.Create<ModelCurveArrayToSpeckleConverter>(conversionContext.Object, scalingService.Object, curveConverter.Object);
     var array = Create<DB.ModelCurveArray>();
 
     array
@@ -72,5 +67,5 @@ public class ModelCurveArrayToSpeckleConverterTests(IServiceProvider serviceProv
     polycurve.closed.Should().BeFalse();
     polycurve.length.Should().Be(scaleLength);
     polycurve.segments.Count.Should().Be(2);
-  }*/
+  }
 }

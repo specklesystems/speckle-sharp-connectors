@@ -1,7 +1,7 @@
 ﻿using Xunit.Abstractions;
 using Xunit.Sdk;
 
-namespace Speckle.HostApps;
+namespace Speckle.HostApps.Framework;
 
 public class SpeckleXunitTestAssemblyRunner : XunitTestAssemblyRunner
 {
