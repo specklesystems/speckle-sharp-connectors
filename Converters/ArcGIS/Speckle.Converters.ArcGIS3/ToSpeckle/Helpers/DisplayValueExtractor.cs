@@ -50,6 +50,7 @@ public sealed class DisplayValueExtractor
         break;
 
       default:
+        // TODO: log that no display value is supported for this type
         yield break;
     }
   }

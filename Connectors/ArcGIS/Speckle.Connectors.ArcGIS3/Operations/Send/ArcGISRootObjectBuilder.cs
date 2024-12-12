@@ -1,3 +1,4 @@
+using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Microsoft.Extensions.Logging;
@@ -60,9 +61,28 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     // "Data has been sent in the units 'degrees'. It is advisable to set the project CRS to Projected type (e.g. EPSG:32631) to be able to receive geometry correctly in CAD/BIM software"
 
 
+    // 0 - Create Root collection and attach CRS properties
+    // CRS properties are useful for data based workflows coming out of gis applications
+    SpatialReference sr = _converterSettings.Current.ActiveCRSoffsetRotation.SpatialReference;
+    Dictionary<string, object?> spatialReference =
+      new()
+      {
+        ["name"] = sr.Name,
+        ["gcs"] = sr.Gcs,
+        ["unit"] = sr.Unit,
+        ["centralMeridian"] = sr.CentralMeridian
+      };
 
     Collection rootCollection =
-      new() { name = MapView.Active.Map.Name, ["units"] = _converterSettings.Current.SpeckleUnits };
+      new()
+      {
+        name = MapView.Active.Map.Name,
+        ["units"] = _converterSettings.Current.SpeckleUnits,
+        ["trueNorthRadians"] = _converterSettings.Current.ActiveCRSoffsetRotation.TrueNorthRadians,
+        ["latOffset"] = _converterSettings.Current.ActiveCRSoffsetRotation.LatOffset,
+        ["lonOffset"] = _converterSettings.Current.ActiveCRSoffsetRotation.LonOffset,
+        ["spatialReference"] = spatialReference
+      };
 
     // 1 - Unpack the selected mapmembers
     // In Arcgis, mapmembers are collections of other mapmember or objects.

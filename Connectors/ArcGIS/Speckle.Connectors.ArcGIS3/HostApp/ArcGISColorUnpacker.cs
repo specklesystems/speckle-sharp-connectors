@@ -98,6 +98,7 @@ public class ArcGISColorUnpacker
     // clear stored values
     StoredTinRenderer = null;
 
+    // POC: not sure why we are only using the first renderer here
     AC.CIM.CIMTinRenderer layerRenderer = lasLayer.GetRenderers()[0];
     bool isSupported = false;
     switch (layerRenderer)

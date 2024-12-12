@@ -30,15 +30,15 @@ public class ArcGISLayerUnpacker
       switch (mapMember)
       {
         case ADM.ILayerContainer container:
-          Collection containerCollection = CreateAndAddMapMemberCollectionToParentCollection(
-            mapMember,
-            parentCollection
-          );
+          Collection containerCollection = CreateAndCacheMapMemberCollection(mapMember);
+          parentCollection.elements.Add(containerCollection);
+
           await UnpackSelectionAsync(container.Layers, containerCollection).ConfigureAwait(false);
           break;
 
         default:
-          CreateAndAddMapMemberCollectionToParentCollection(mapMember, parentCollection);
+          Collection collection = CreateAndCacheMapMemberCollection(mapMember);
+          parentCollection.elements.Add(collection);
           objects.Add(mapMember);
           break;
       }
@@ -47,11 +47,7 @@ public class ArcGISLayerUnpacker
     return objects;
   }
 
-  // POC: we are *not* attaching CRS information on each layer, because this is only needed for GIS <-> GIS multiplayer, which is not currently a supported workflow.
-  private Collection CreateAndAddMapMemberCollectionToParentCollection(
-    ADM.MapMember mapMember,
-    Collection parentCollection
-  )
+  private Collection CreateAndCacheMapMemberCollection(ADM.MapMember mapMember)
   {
     string mapMemberApplicationId = mapMember.GetSpeckleApplicationId();
     Collection collection =
@@ -84,9 +80,7 @@ public class ArcGISLayerUnpacker
         break;
     }
 
-    parentCollection.elements.Add(collection);
     CollectionCache.Add(mapMemberApplicationId, collection);
-
     return collection;
   }
 }
