@@ -13,7 +13,6 @@ using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Objects.Data;
-using Speckle.Objects.GIS;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
@@ -30,7 +29,6 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
   private readonly IFeatureClassUtils _featureClassUtils;
   private readonly ILocalToGlobalUnpacker _localToGlobalUnpacker;
   private readonly LocalToGlobalConverterUtils _localToGlobalConverterUtils;
-  private readonly ICrsUtils _crsUtils;
 
   // POC: figure out the correct scope to only initialize on Receive
   private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
@@ -43,7 +41,6 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     IFeatureClassUtils featureClassUtils,
     ILocalToGlobalUnpacker localToGlobalUnpacker,
     LocalToGlobalConverterUtils localToGlobalConverterUtils,
-    ICrsUtils crsUtils,
     GraphTraversal traverseFunction,
     ArcGISColorManager colorManager
   )
@@ -55,7 +52,6 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     _localToGlobalConverterUtils = localToGlobalConverterUtils;
     _traverseFunction = traverseFunction;
     _colorManager = colorManager;
-    _crsUtils = crsUtils;
   }
 
   public async Task<HostObjectBuilderResult> Build(
@@ -104,22 +100,17 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       try
       {
         obj = _localToGlobalConverterUtils.TransformObjects(objectToConvert.AtomicObject, objectToConvert.Matrix);
-        object? conversionResult =
-          //(obj["displayValue"] is null || (obj["displayValue"] is IReadOnlyList<Base> list && list.Count == 0))
-          //  ? null :
-          await QueuedTask.Run(() => _converter.Convert(obj)).ConfigureAwait(false);
+        object? conversionResult = await QueuedTask.Run(() => _converter.Convert(obj)).ConfigureAwait(false);
 
         string nestedLayerPath = $"{string.Join("\\", path)}";
-        if (objectToConvert.TraversalContext.Parent?.Current is not GisLayer)
+
+        if (obj is ArcgisObject gisObj)
         {
-          if (obj is GisObject gisObj)
-          {
-            nestedLayerPath += $"\\{gisObj.name}";
-          }
-          else
-          {
-            nestedLayerPath += $"\\{obj.speckle_type.Split(".")[^1]}"; // add sub-layer by speckleType, for non-GIS objects
-          }
+          nestedLayerPath += $"\\{gisObj.name}";
+        }
+        else
+        {
+          nestedLayerPath += $"\\{obj.speckle_type.Split(".")[^1]}"; // add sub-layer by speckleType, for non-GIS objects
         }
 
         conversionTracker[objectToConvert.TraversalContext] = new ObjectConversionTracker(
@@ -253,10 +244,6 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
   {
     // keep GISlayers in the list, because they are still needed to extract CRS of the commit (code below)
     List<TraversalContext> objectsToConvertTc = _traverseFunction.Traverse(rootObject).ToList();
-
-    // get CRS from any present GisLayer
-    Base? vLayer = objectsToConvertTc.FirstOrDefault(x => x.Current is GisLayer)?.Current;
-    using var crs = _crsUtils.FindSetCrsDataOnReceive(vLayer); // TODO help
 
     // now filter the objects
     objectsToConvertTc = objectsToConvertTc.Where(ctx => ctx.Current is not Collection).ToList();
@@ -425,18 +412,5 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
 
     var originalPath = reverseOrderPath.Reverse().ToArray();
     return originalPath.Where(x => !string.IsNullOrEmpty(x)).ToArray();
-  }
-
-  [Pure]
-  private static bool HasGISParent(TraversalContext context)
-  {
-    List<Base> gisLayers = context.GetAscendants().Where(IsGISType).Where(obj => obj != context.Current).ToList();
-    return gisLayers.Count > 0;
-  }
-
-  [Pure]
-  private static bool IsGISType(Base obj)
-  {
-    return obj is GisLayer;
   }
 }

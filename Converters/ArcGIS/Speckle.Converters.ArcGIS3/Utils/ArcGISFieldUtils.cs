@@ -2,10 +2,10 @@ using System.Collections;
 using ArcGIS.Core.Data;
 using ArcGIS.Core.Data.Exceptions;
 using Speckle.InterfaceGenerator;
-using Speckle.Objects.GIS;
 using Speckle.Sdk;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
 using FieldDescription = ArcGIS.Core.Data.DDL.FieldDescription;
 
@@ -80,14 +80,14 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
     return rowBuffer;
   }
 
-  public List<FieldDescription> GetFieldsFromSpeckleLayer(GisLayer target)
+  public List<FieldDescription> GetFieldsFromSpeckleLayer(Collection target)
   {
-    if (target["attributes"] is Base attributes)
+    if (target["fields"] is Dictionary<string, string> attributes)
     {
       List<FieldDescription> fields = new();
       List<string> fieldAdded = new();
 
-      foreach (var field in attributes.GetMembers(DynamicBaseMemberType.Dynamic))
+      foreach (var field in attributes)
       {
         if (!fieldAdded.Contains(field.Key) && field.Key != FID_FIELD_NAME)
         {
@@ -288,8 +288,8 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
 
     // Get Fields, geomType and attributeFunction - separately for GIS and non-GIS
     if (
-      listOfContextAndTrackers.FirstOrDefault().Item1.Parent?.Current is SGIS.GisLayer vLayer
-      && vLayer["attributes"] is Base
+      listOfContextAndTrackers.FirstOrDefault().Item1.Parent?.Current is Collection vLayer
+      && vLayer["fields"] is Dictionary<string, string>
     ) // GIS
     {
       fields = GetFieldsFromSpeckleLayer(vLayer);
