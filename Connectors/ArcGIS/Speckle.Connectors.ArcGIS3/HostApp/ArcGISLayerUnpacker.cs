@@ -82,7 +82,7 @@ public class ArcGISLayerUnpacker
 
     if (!isLayerContainer) // do not cache layer containers, since these won't contain any objects
     {
-      CollectionCache.TryAdd(mapMemberApplicationId, collection);
+      CollectionCache.Add(mapMemberApplicationId, collection);
     }
 
     return collection;
