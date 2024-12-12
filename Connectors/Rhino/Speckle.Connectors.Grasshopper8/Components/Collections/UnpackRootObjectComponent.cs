@@ -83,8 +83,7 @@ public class UnpackRootObjectComponent
     var atomicObjectsWithPath = contextUnpacker.GetAtomicObjectsWithPath(atomicObjects);
 
     var dict = new Dictionary<string, List<SpeckleObject?>>();
-
-    atomicObjectsWithPath.ForEach(atomicObj =>
+    foreach (var atomicObj in atomicObjectsWithPath)
     {
       var names = atomicObj.path.Select(p => p.name);
       string fullPath = string.Join("::", names);
@@ -94,7 +93,7 @@ public class UnpackRootObjectComponent
         dict.Add(fullPath, value);
       }
       value.Add(atomicObj.current as SpeckleObject);
-    });
+    }
 
     var output = new UnpackRootObjectComponentOutput(dict);
 
