@@ -7,23 +7,17 @@ public class ArcToSpeckleConverter : ITypedConverter<RG.Arc, SOG.Arc>
 {
   private readonly ITypedConverter<RG.Point3d, SOG.Point> _pointConverter;
   private readonly ITypedConverter<RG.Plane, SOG.Plane> _planeConverter;
-  private readonly ITypedConverter<RG.Box, SOG.Box> _boxConverter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
-  private readonly IBoxFactory _boxFactory;
 
   public ArcToSpeckleConverter(
     ITypedConverter<RG.Point3d, SOG.Point> pointConverter,
     ITypedConverter<RG.Plane, SOG.Plane> planeConverter,
-    ITypedConverter<RG.Box, SOG.Box> boxConverter,
-    IConverterSettingsStore<RhinoConversionSettings> settingsStore,
-    IBoxFactory boxFactory
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore
   )
   {
     _pointConverter = pointConverter;
     _planeConverter = planeConverter;
-    _boxConverter = boxConverter;
     _settingsStore = settingsStore;
-    _boxFactory = boxFactory;
   }
 
   /// <summary>
@@ -42,7 +36,6 @@ public class ArcToSpeckleConverter : ITypedConverter<RG.Arc, SOG.Arc>
       midPoint = _pointConverter.Convert(target.MidPoint),
       endPoint = _pointConverter.Convert(target.EndPoint),
       domain = SOP.Interval.UnitInterval,
-      bbox = _boxConverter.Convert(_boxFactory.Create(target.BoundingBox())),
       units = _settingsStore.Current.SpeckleUnits,
     };
 }

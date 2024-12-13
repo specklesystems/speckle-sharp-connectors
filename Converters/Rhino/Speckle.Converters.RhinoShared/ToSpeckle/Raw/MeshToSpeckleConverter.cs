@@ -8,17 +8,14 @@ namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
 public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
 {
   private readonly ITypedConverter<RG.Point3d, SOG.Point> _pointConverter;
-  private readonly ITypedConverter<RG.Box, SOG.Box> _boxConverter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   public MeshToSpeckleConverter(
     ITypedConverter<RG.Point3d, SOG.Point> pointConverter,
-    ITypedConverter<RG.Box, SOG.Box> boxConverter,
     IConverterSettingsStore<RhinoConversionSettings> settingsStore
   )
   {
     _pointConverter = pointConverter;
-    _boxConverter = boxConverter;
     _settingsStore = settingsStore;
   }
 
@@ -66,7 +63,6 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
     }
 
     double volume = target.IsClosed ? target.Volume() : 0;
-    SOG.Box bbox = _boxConverter.Convert(new RG.Box(target.GetBoundingBox(false)));
 
     return new SOG.Mesh
     {
@@ -75,8 +71,7 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
       colors = colors,
       textureCoordinates = textureCoordinates,
       units = _settingsStore.Current.SpeckleUnits,
-      volume = volume,
-      bbox = bbox
+      volume = volume
     };
   }
 }

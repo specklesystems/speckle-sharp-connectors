@@ -310,8 +310,18 @@
       "speckle.converters.rhino8": {
         "type": "Project",
         "dependencies": {
+          "Grasshopper": "[8.9.24194.18121, )",
           "RhinoCommon": "[8.9.24194.18121, )",
           "Speckle.Converters.Common": "[1.0.0, )"
+        }
+      },
+      "Grasshopper": {
+        "type": "CentralTransitive",
+        "requested": "[8.9.24194.18121, )",
+        "resolved": "8.9.24194.18121",
+        "contentHash": "ZQ7vT1urn9jG2KLMdT/aVhCsijN349lj2Lrg7+Cd5A84KOW+RIErG6IqH+133hc9HT9D10+7oi/XnIlgYZRzqQ==",
+        "dependencies": {
+          "RhinoCommon": "[8.9.24194.18121]"
         }
       },
       "Microsoft.Extensions.DependencyInjection": {

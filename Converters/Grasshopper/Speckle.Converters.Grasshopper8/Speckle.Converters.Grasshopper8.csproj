@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <Configurations>Debug;Release;Local</Configurations>
-    <DefineConstants>$(DefineConstants);RHINO8;RHINO7_OR_GREATER;RHINO8_OR_GREATER</DefineConstants>
+    <DefineConstants>$(DefineConstants)GRASSHOPPER;RHINO8;RHINO7_OR_GREATER;RHINO8_OR_GREATER</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,6 +14,8 @@
     <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
   </ItemGroup>
 
-  <Import Project="..\Speckle.Converters.RhinoShared\Speckle.Converters.RhinoShared.projitems" Label="Shared" />
+  <Import Project="..\Speckle.Converters.GrasshopperShared\Speckle.Converters.GrasshopperShared.projitems" Label="Shared" />
+
+  <Import Project="..\..\Rhino\Speckle.Converters.RhinoShared\Speckle.Converters.RhinoShared.projitems" Label="Shared" />
 
 </Project>
