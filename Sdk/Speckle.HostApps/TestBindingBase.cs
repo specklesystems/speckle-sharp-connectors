@@ -20,11 +20,11 @@ public abstract class TestBindingBase(ITestExecutorFactory testExecutorFactory) 
 
   public string GetLoadedModel() => string.Empty;
 
-  public ModelTest[] GetTests() => GetTests(GetAssemblies());
+  public ModelTest[] GetTests() => GetTestsInternal(GetAssemblies());
 
-  public ModelTestResult[] GetTestsResults() => GetTestsResults(GetAssemblies());
+  public ModelTestResult[] GetTestsResults() => GetTestsResultsInternal(GetAssemblies());
 
-  public ModelTest[] GetTests(IEnumerable<Assembly> assemblies)
+  public ModelTest[] GetTestsInternal(IEnumerable<Assembly> assemblies)
   {
     _tests.Clear();
     var executors = new List<TestExecutor>();
@@ -38,7 +38,7 @@ public abstract class TestBindingBase(ITestExecutorFactory testExecutorFactory) 
 
     foreach (var executor in executors)
     {
-      executor.WaitForExecutionFinish();
+      executor.WaitForFindFinish();
       executor.Dispose();
     }
 
@@ -53,7 +53,7 @@ public abstract class TestBindingBase(ITestExecutorFactory testExecutorFactory) 
     }
   }
 
-  public ModelTestResult[] GetTestsResults(IEnumerable<Assembly> assemblies)
+  public ModelTestResult[] GetTestsResultsInternal(IEnumerable<Assembly> assemblies)
   {
     _testResults.Clear();
     var executors = new List<TestExecutor>();

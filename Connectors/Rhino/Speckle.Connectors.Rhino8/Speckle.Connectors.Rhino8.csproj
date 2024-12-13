@@ -10,6 +10,7 @@
     <UseWpf>true</UseWpf>
     <UseWindowsForms>true</UseWindowsForms>
     <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
+    <HostAppTests>true</HostAppTests>
   </PropertyGroup>
 
   <ItemGroup>
