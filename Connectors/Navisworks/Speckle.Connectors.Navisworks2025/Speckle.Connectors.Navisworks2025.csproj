@@ -1,13 +1,9 @@
-<?xml version="1.0" encoding="utf-8"?>
-
 <Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
-
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <FileAlignment>512</FileAlignment>
-    <Deterministic>true</Deterministic>
 
     <NavisworksBuildNumber>v22</NavisworksBuildNumber>
     <NavisworksVersion>2025</NavisworksVersion>
@@ -21,50 +17,22 @@
 
     <PluginBundleTarget>$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Navisworksv3.bundle</PluginBundleTarget>
     <PluginVersionContentTarget>$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Navisworksv3.bundle\Contents\$(NavisworksVersion)</PluginVersionContentTarget>
-    <RootNamespace>Speckle.Connector.Navisworks</RootNamespace>
 
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Speckle.Objects"/>
-  </ItemGroup>
+  <Import Project="..\Speckle.Connectors.NavisworksShared\Speckle.Connectors.NavisworksShared.projitems" Label="Shared"/>
 
   <ItemGroup>
     <Reference Include="WindowsFormsIntegration"/>
-  </ItemGroup>
-
-  <!-- Configurations -->
-  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
-    <OutputPath>bin\x64\Debug\</OutputPath>
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <OutputPath>bin\x64\Release\</OutputPath>
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-
-  <!-- Includes -->
-  <Import Project="..\Speckle.Connectors.NavisworksShared\Speckle.Connectors.NavisworksShared.projitems" Label="Shared"/>
-
-  <!-- NUGETS -->
-  <ItemGroup>
+    <PackageReference Include="Speckle.Objects"/>
     <PackageReference Include="Speckle.Navisworks.API" VersionOverride="2025.0.0"/>
+    <PackageReference Include="Microsoft.Web.WebView2" VersionOverride="1.0.2045.28" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
     <ProjectReference Include="..\..\..\Converters\Navisworks\Speckle.Converters.Navisworks2025\Speckle.Converters.Navisworks2025.csproj" />
     <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj"/>
     <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj"/>
-    <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
   </ItemGroup>
 
   <!-- Post Builds -->

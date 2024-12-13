@@ -1,22 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Title>SpeckleConverterNavisworks</Title>
-    <AssemblyName>Objects.Converter.Navisworks2022</AssemblyName>
-    <RootNamespace>Objects.Converter.Navisworks</RootNamespace>
-    <Platforms>AnyCPU;x64</Platforms>
-    <OutputPath>bin\x64\$(Configuration)</OutputPath>
-    <CopyToKitFolder>true</CopyToKitFolder>
-    <DefineConstants>$(DefineConstants);NAVIS2022</DefineConstants>
     <TargetFramework>net48</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <DefineConstants>$(DefineConstants);NAVIS2022</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
-    <RootNamespace>Speckle.Converter.Navisworks</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Speckle.Navisworks.API" VersionOverride="2022.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-<!--    <ProjectReference Include="..\..\..\Connectors\Navisworks\Speckle.Connectors.Navisworks2022\Speckle.Connectors.Navisworks2022.csproj" />-->
     <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
     <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
   </ItemGroup>
