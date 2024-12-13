@@ -98,50 +98,12 @@ public sealed class DisplayValueExtractor
   {
     //options = ViewSpecificOptions ?? options ?? new Options() { DetailLevel = DetailLevelSetting };
     options ??= new DB.Options { DetailLevel = _detailLevelMap[_converterSettings.Current.DetailLevel] };
-
-    // Note: some elements do not get display values (you get invalid solids) unless we force the view detail level to be fine. This is annoying, but it's bad ux: people think the
-    // elements are not there (they are, just invisible).
-    var elementBuiltInCategory = element.Category.GetBuiltInCategory();
-    if (
-      element.Category is not null
-      && (
-        elementBuiltInCategory == DB.BuiltInCategory.OST_PipeFitting
-        || elementBuiltInCategory == DB.BuiltInCategory.OST_PipeAccessory
-        || elementBuiltInCategory == DB.BuiltInCategory.OST_PlumbingFixtures
-#if REVIT2024_OR_GREATER
-        || element is DB.Toposolid // note, brought back from 2.x.x.
-#endif
-      )
-    )
-    {
-      options.DetailLevel = DB.ViewDetailLevel.Fine;
-    }
+    options = OverrideViewOptions(element, options);
 
     DB.GeometryElement geom;
     try
     {
       geom = element.get_Geometry(options);
-
-#if REVIT2024_OR_GREATER
-      // NOTE: incomplete solution. https://forums.autodesk.com/t5/revit-api-forum/how-to-get-steelproxyelement-geometry/td-p/10347898
-      // If steel element proxies will be sucked in via category selection, and they are not visible in the current view, they will not be extracted out.
-      // I'm inclined to go with this as a semi-permanent limitation.
-      // https://speckle.community/t/revit-2025-2-missing-elements-and-colors/14073
-      if (
-        geom is null
-        && (
-          elementBuiltInCategory == DB.BuiltInCategory.OST_StructConnections
-          || elementBuiltInCategory == DB.BuiltInCategory.OST_StructConnectionPlates
-          || elementBuiltInCategory == DB.BuiltInCategory.OST_StructConnectionBolts
-          || elementBuiltInCategory == DB.BuiltInCategory.OST_StructConnectionWelds
-          || elementBuiltInCategory == DB.BuiltInCategory.OST_StructConnectionShearStuds
-        )
-      )
-      {
-        options = new DB.Options() { View = _converterSettings.Current.Document?.ActiveView }; // NOTE: in case it's a view filter, it should use that specific view!
-        geom = element.get_Geometry(options);
-      }
-#endif
     }
     // POC: should we be trying to continue?
     catch (Autodesk.Revit.Exceptions.ArgumentException)
@@ -269,5 +231,52 @@ public sealed class DisplayValueExtractor
 #else
     return false;
 #endif
+  }
+
+  /// <summary>
+  /// Overrides current view options to extract meaningful geometry for various elements. E.g., pipes, plumbing fixtures, steel elements
+  /// </summary>
+  /// <param name="element"></param>
+  /// <returns></returns>
+  private DB.Options OverrideViewOptions(DB.Element element, DB.Options currentOptions)
+  {
+    var elementBuiltInCategory = element.Category.GetBuiltInCategory();
+
+    // Note: some elements do not get display values (you get invalid solids) unless we force the view detail level to be fine. This is annoying, but it's bad ux: people think the
+    // elements are not there (they are, just invisible).
+    if (
+      element.Category is not null
+      && (
+        elementBuiltInCategory == DB.BuiltInCategory.OST_PipeFitting
+        || elementBuiltInCategory == DB.BuiltInCategory.OST_PipeAccessory
+        || elementBuiltInCategory == DB.BuiltInCategory.OST_PlumbingFixtures
+#if REVIT2024_OR_GREATER
+        || element is DB.Toposolid // note, brought back from 2.x.x.
+#endif
+      )
+    )
+    {
+      currentOptions.DetailLevel = DB.ViewDetailLevel.Fine; // Force detail level to be fine
+      return currentOptions;
+    }
+    // NOTE: On steel elements. This is an incomplete solution.
+    // If steel element proxies will be sucked in via category selection, and they are not visible in the current view, they will not be extracted out.
+    // I'm inclined to go with this as a semi-permanent limitation. See:
+    // https://speckle.community/t/revit-2025-2-missing-elements-and-colors/14073
+    // and https://forums.autodesk.com/t5/revit-api-forum/how-to-get-steelproxyelement-geometry/td-p/10347898
+    if (
+      elementBuiltInCategory
+      is DB.BuiltInCategory.OST_StructConnections
+        or DB.BuiltInCategory.OST_StructConnectionPlates
+        or DB.BuiltInCategory.OST_StructuralFraming
+        or DB.BuiltInCategory.OST_StructuralColumns
+        or DB.BuiltInCategory.OST_StructConnectionBolts
+        or DB.BuiltInCategory.OST_StructConnectionWelds
+        or DB.BuiltInCategory.OST_StructConnectionShearStuds
+    )
+    {
+      return new DB.Options() { View = _converterSettings.Current.Document.NotNull().ActiveView }; // TODO/NOTE: in case it's a view filter, it should use that specific view. This is a limiting partial fix.
+    }
+    return currentOptions;
   }
 }
