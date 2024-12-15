@@ -1,5 +1,4 @@
 using ArcGIS.Desktop.Mapping;
-using Speckle.Connectors.ArcGIS.HostApp.Extensions;
 using Speckle.Converters.ArcGIS3.Extensions;
 using Speckle.Sdk.Models.Proxies;
 

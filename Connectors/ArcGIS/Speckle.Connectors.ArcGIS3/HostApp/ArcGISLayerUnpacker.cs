@@ -20,10 +20,14 @@ public class ArcGISLayerUnpacker
   /// <exception cref="AC.CalledOnWrongThreadException">Thrown when this method is *not* called on the MCT, because this method accesses mapmember fields</exception>
   public async Task<List<ADM.MapMember>> UnpackSelectionAsync(
     IReadOnlyList<ADM.MapMember> mapMembers,
-    Collection parentCollection
+    Collection parentCollection,
+    List<ADM.MapMember>? objects = null
   )
   {
-    List<ADM.MapMember> objects = new();
+    if (objects is null)
+    {
+      objects = new();
+    }
 
     foreach (ADM.MapMember mapMember in mapMembers)
     {
@@ -33,13 +37,16 @@ public class ArcGISLayerUnpacker
           Collection containerCollection = CreateAndCacheMapMemberCollection(mapMember, true);
           parentCollection.elements.Add(containerCollection);
 
-          await UnpackSelectionAsync(container.Layers, containerCollection).ConfigureAwait(false);
+          await UnpackSelectionAsync(container.Layers, containerCollection, objects).ConfigureAwait(false);
           break;
 
         default:
-          Collection collection = CreateAndCacheMapMemberCollection(mapMember);
-          parentCollection.elements.Add(collection);
-          objects.Add(mapMember);
+          if (!(objects.Contains(mapMember)))
+          {
+            Collection collection = CreateAndCacheMapMemberCollection(mapMember);
+            parentCollection.elements.Add(collection);
+            objects.Add(mapMember);
+          }
           break;
       }
     }

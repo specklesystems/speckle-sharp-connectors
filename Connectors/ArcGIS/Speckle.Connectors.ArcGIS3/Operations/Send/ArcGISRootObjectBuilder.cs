@@ -1,9 +1,9 @@
 using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
-using ArcGIS.Desktop.Mapping;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.ArcGIS.HostApp;
 using Speckle.Connectors.ArcGIS.HostApp.Extensions;
+using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
@@ -30,6 +30,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
   private readonly IConverterSettingsStore<ArcGISConversionSettings> _converterSettings;
   private readonly ILogger<ArcGISRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
+  private readonly MapMembersUtils _mapMemberUtils;
 
   public ArcGISRootObjectBuilder(
     ISendConversionCache sendConversionCache,
@@ -38,7 +39,8 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     IConverterSettingsStore<ArcGISConversionSettings> converterSettings,
     IRootToSpeckleConverter rootToSpeckleConverter,
     ILogger<ArcGISRootObjectBuilder> logger,
-    ISdkActivityFactory activityFactory
+    ISdkActivityFactory activityFactory,
+    MapMembersUtils mapMemberUtils
   )
   {
     _sendConversionCache = sendConversionCache;
@@ -48,10 +50,11 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     _rootToSpeckleConverter = rootToSpeckleConverter;
     _logger = logger;
     _activityFactory = activityFactory;
+    _mapMemberUtils = mapMemberUtils;
   }
 
   public async Task<RootObjectBuilderResult> Build(
-    IReadOnlyList<MapMember> layers,
+    IReadOnlyList<ADM.MapMember> layers,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
@@ -85,7 +88,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     Collection rootCollection =
       new()
       {
-        name = MapView.Active.Map.Name,
+        name = ADM.MapView.Active.Map.Name,
         ["units"] = _converterSettings.Current.SpeckleUnits,
         ["crs"] = crs
       };
@@ -95,10 +98,12 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     // We need to unpack the selected mapmembers into all leaf-level mapmembers (containing just objects) and build the root collection structure during unpacking.
     // Mapmember dynamically attached properties are also added at this step.
     List<ADM.MapMember> unpackedLayers;
+    ADM.Map map = ADM.MapView.Active.Map;
+    List<ADM.MapMember> layersOrdered = _mapMemberUtils.GetMapMembersInOrder(map, layers);
     using (var _ = _activityFactory.Start("Unpacking selection"))
     {
       unpackedLayers = await QueuedTask
-        .Run(() => _layerUnpacker.UnpackSelectionAsync(layers, rootCollection))
+        .Run(() => _layerUnpacker.UnpackSelectionAsync(layersOrdered, rootCollection))
         .ConfigureAwait(false);
     }
 
@@ -173,7 +178,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
           convertingActivity?.RecordException(ex);
         }
 
-        onOperationProgressed.Report(new("Converting", (double)++count / layers.Count));
+        onOperationProgressed.Report(new("Converting", (double)++count / layersOrdered.Count));
       }
     }
 
