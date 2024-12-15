@@ -283,7 +283,7 @@
           "Speckle.Objects": "[3.1.0-dev.215, )"
         }
       },
-      "speckle.converters.rhino8": {
+      "speckle.converters.grasshopper8": {
         "type": "Project",
         "dependencies": {
           "Grasshopper": "[8.9.24194.18121, )",

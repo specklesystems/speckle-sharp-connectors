@@ -16,5 +16,5 @@ public class Point3dToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
 
   public Base Convert(object target) => Convert((RG.Point3d)target);
 
-  public Base Convert(RG.Point3d target) => _pointConverter.Convert(target);
+  public SOG.Point Convert(RG.Point3d target) => _pointConverter.Convert(target);
 }

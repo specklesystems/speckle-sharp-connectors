@@ -294,7 +294,8 @@
         "type": "Project",
         "dependencies": {
           "Speckle.Connectors.Common": "[1.0.0, )",
-          "Speckle.Converters.Rhino8": "[1.0.0, )"
+          "Speckle.Converters.Common": "[1.0.0, )",
+          "Speckle.Converters.Grasshopper8": "[1.0.0, )"
         }
       },
       "speckle.connectors.logging": {
@@ -305,6 +306,14 @@
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
           "Speckle.Objects": "[3.1.0-dev.215, )"
+        }
+      },
+      "speckle.converters.grasshopper8": {
+        "type": "Project",
+        "dependencies": {
+          "Grasshopper": "[8.9.24194.18121, )",
+          "RhinoCommon": "[8.9.24194.18121, )",
+          "Speckle.Converters.Common": "[1.0.0, )"
         }
       },
       "speckle.converters.rhino8": {

@@ -23,11 +23,12 @@
 
   <ItemGroup>
     <PackageReference Include="RhinoCommon" IncludeAssets="compile; build" PrivateAssets="all" />
-    <PackageReference Include="Grasshopper" IncludeAssets="compile; build" PrivateAssets="all"/>
+    <PackageReference Include="Grasshopper" IncludeAssets="compile; build" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Converters\Rhino\Speckle.Converters.Rhino8\Speckle.Converters.Rhino8.csproj" />
+    <ProjectReference Include="..\..\..\Converters\Grasshopper\Speckle.Converters.Grasshopper8\Speckle.Converters.Grasshopper8.csproj" />
     <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
   </ItemGroup>
 </Project>

@@ -13,14 +13,18 @@
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsings.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GrasshopperConversionSettings.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\ArcToHostTopLevelConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\CircleToHostTopLevelConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\LineToHostTopLevelConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\Point3dToHostTopLevelConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\CurveToHostTopLevelConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\PolylineToHostTopLevelConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\CircleToSpeckleTopLevelConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\MeshToSpeckleTopLevelConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\PolylineToSpeckleTopLevelConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\Point3dToSpeckleTopLevelConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\LineToSpeckleTopLevelConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\ArcToSpeckleTopLevelConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\ModelObjectToSpeckleTopLevelConverter.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\" />
   </ItemGroup>
 </Project>

@@ -16,5 +16,5 @@ public class LineToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
 
   public Base Convert(object target) => Convert((RG.Line)target);
 
-  public Base Convert(RG.Line target) => _lineConverter.Convert(target);
+  public SOG.Line Convert(RG.Line target) => _lineConverter.Convert(target);
 }

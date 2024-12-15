@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.Grasshopper8.HostApp;

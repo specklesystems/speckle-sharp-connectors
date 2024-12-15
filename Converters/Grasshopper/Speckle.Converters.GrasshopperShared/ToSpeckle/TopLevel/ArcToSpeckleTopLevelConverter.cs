@@ -17,5 +17,5 @@ public class ArcToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
 
   public Base Convert(object target) => Convert((RG.Arc)target);
 
-  public Base Convert(RG.Arc target) => (Base)_arcConverter.Convert(target);
+  public SOG.Arc Convert(RG.Arc target) => (SOG.Arc)_arcConverter.Convert(target);
 }

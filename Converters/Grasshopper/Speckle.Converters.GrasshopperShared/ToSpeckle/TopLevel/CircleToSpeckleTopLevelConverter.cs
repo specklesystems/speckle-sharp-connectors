@@ -7,14 +7,14 @@ namespace Speckle.Converters.Grasshopper.ToSpeckle.TopLevel;
 [NameAndRankValue(nameof(RG.Circle), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class CircleToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
 {
-  private readonly ITypedConverter<RG.Circle, SOG.Circle> _lineConverter;
+  private readonly ITypedConverter<RG.Circle, SOG.Circle> _circleConverter;
 
-  public CircleToSpeckleTopLevelConverter(ITypedConverter<RG.Circle, SOG.Circle> lineConverter)
+  public CircleToSpeckleTopLevelConverter(ITypedConverter<RG.Circle, SOG.Circle> circleConverter)
   {
-    _lineConverter = lineConverter;
+    _circleConverter = circleConverter;
   }
 
   public Base Convert(object target) => Convert((RG.Circle)target);
 
-  public Base Convert(RG.Circle target) => _lineConverter.Convert(target);
+  public Base Convert(RG.Circle target) => _circleConverter.Convert(target);
 }
