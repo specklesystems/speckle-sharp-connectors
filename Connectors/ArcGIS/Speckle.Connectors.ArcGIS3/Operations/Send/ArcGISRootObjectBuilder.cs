@@ -97,9 +97,8 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     List<ADM.MapMember> unpackedLayers;
     using (var _ = _activityFactory.Start("Unpacking selection"))
     {
-      List<MapMember> rootLayers = _layerUnpacker.RemoveNestedMapMembers(layers);
       unpackedLayers = await QueuedTask
-        .Run(() => _layerUnpacker.UnpackSelectionAsync(rootLayers, rootCollection))
+        .Run(() => _layerUnpacker.UnpackSelectionAsync(layers, rootCollection))
         .ConfigureAwait(false);
     }
 

@@ -10,23 +10,6 @@ public class ArcGISLayerUnpacker
   /// </summary>
   public Dictionary<string, Collection> CollectionCache { get; } = new();
 
-  public List<ADM.MapMember> RemoveNestedMapMembers(IReadOnlyList<ADM.MapMember> mapMembers)
-  {
-    List<ADM.MapMember> rootLayers = new();
-    foreach (ADM.MapMember mapMember in mapMembers)
-    {
-      if (mapMember is ADM.Layer layer)
-      {
-        if (layer.Parent is ADM.Map)
-        {
-          rootLayers.Add(mapMember);
-        }
-      }
-    }
-
-    return rootLayers;
-  }
-
   /// <summary>
   /// Mapmembers can be layers containing objects, or LayerContainers containing other layers.
   /// Unpacks selected mapMembers and creates their corresponding collection on the root collection.
@@ -50,9 +33,7 @@ public class ArcGISLayerUnpacker
           Collection containerCollection = CreateAndCacheMapMemberCollection(mapMember, true);
           parentCollection.elements.Add(containerCollection);
 
-          List<ADM.MapMember> unpackedLayers = await UnpackSelectionAsync(container.Layers, containerCollection)
-            .ConfigureAwait(false);
-          objects.AddRange(unpackedLayers);
+          await UnpackSelectionAsync(container.Layers, containerCollection).ConfigureAwait(false);
           break;
 
         default:
