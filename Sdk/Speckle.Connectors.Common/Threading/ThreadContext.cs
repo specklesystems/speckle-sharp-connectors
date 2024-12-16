@@ -5,7 +5,7 @@ namespace Speckle.Connectors.Common.Threading;
 [GenerateAutoInterface]
 public abstract class ThreadContext : IThreadContext
 {
-  public static bool IsMainThread => Environment.CurrentManagedThreadId == 1 && !Thread.CurrentThread.IsBackground;
+  public static bool IsMainThread => Environment.CurrentManagedThreadId == 1;
 
   public async ValueTask RunOnThread(Action action, bool useMain)
   {

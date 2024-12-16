@@ -62,7 +62,7 @@ public sealed class ReceiveOperation(
   )
   {
     receiveProgress.Begin();
-    Base? commitObject = await operations.Receive2(
+    Base commitObject = await operations.Receive2(
       new Uri(account.serverInfo.url),
       receiveInfo.ProjectId,
       version.referencedObject,
