@@ -303,6 +303,11 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
       return $"{layer.URI}_{row.GetObjectID()}";
     }
 
+    if (coreObject is Raster)
+    {
+      return $"{layer.URI}_0";
+    }
+
     if (coreObject is ACD.Analyst3D.LasPoint point)
     {
       return $"{layer.URI}_{point.PointID}";
