@@ -1,3 +1,4 @@
+using ArcGIS.Core.Data.Raster;
 using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -12,6 +13,7 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -212,11 +214,15 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
             // Same IDisposable issue appears to happen on Row class too. Docs say it should always be disposed of manually by the caller.
             using (ACD.Row row = rowCursor.Current)
             {
+              // get application id. test for subtypes before defaulting to base type.
               Base converted = _rootToSpeckleConverter.Convert(row);
+              string applicationId = GetSpeckleApplicationId(featureLayer, row);
+              converted.applicationId = applicationId;
+
               convertedObjects.Add(converted);
 
               // process the object color
-              _colorUnpacker.ProcessFeatureLayerColor(row);
+              _colorUnpacker.ProcessFeatureLayerColor(row, applicationId);
             }
           }
         }
@@ -233,7 +239,10 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     await QueuedTask
       .Run(() =>
       {
-        Base converted = _rootToSpeckleConverter.Convert(rasterLayer.GetRaster());
+        Raster raster = rasterLayer.GetRaster();
+        Base converted = _rootToSpeckleConverter.Convert(raster);
+        string applicationId = GetSpeckleApplicationId(rasterLayer, raster);
+        converted.applicationId = applicationId;
         convertedObjects.Add(converted);
       })
       .ConfigureAwait(false);
@@ -262,10 +271,12 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
               using (ACD.Analyst3D.LasPoint pt = ptCursor.Current)
               {
                 Base converted = _rootToSpeckleConverter.Convert(pt);
+                string applicationId = GetSpeckleApplicationId(lasDatasetLayer, pt);
+                converted.applicationId = applicationId;
                 convertedObjects.Add(converted);
 
                 // process the object color
-                _colorUnpacker.ProcessLasLayerColor(pt);
+                _colorUnpacker.ProcessLasLayerColor(pt, applicationId);
               }
             }
           }
@@ -274,9 +285,29 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     }
     catch (ACD.Exceptions.TinException ex)
     {
-      throw new SpeckleException($"3D analyst extension is not enabled for .las layer operations", ex);
+      throw new SpeckleException("3D analyst extension is not enabled for .las layer operations", ex);
     }
 
     return convertedObjects;
+  }
+
+  /// <summary>
+  /// Retrieves the Speckle application id for Features as a concatenation of the layer URI (applicationId)
+  /// and the row OID (index of row in layer) or point OID for LasDatasets.
+  /// </summary>
+  /// <exception cref="ACD.Exceptions.GeodatabaseException">Throws when this is *not* called on MCT. Use QueuedTask.Run.</exception>
+  public string GetSpeckleApplicationId(ADM.Layer layer, AC.CoreObjectsBase coreObject)
+  {
+    if (coreObject is ACD.Row row)
+    {
+      return $"{layer.URI}_{row.GetObjectID()}";
+    }
+
+    if (coreObject is ACD.Analyst3D.LasPoint point)
+    {
+      return $"{layer.URI}_{point.PointID}";
+    }
+
+    throw new ConversionNotSupportedException($"Conversion not supported for objects of type '{coreObject.GetType()}'");
   }
 }

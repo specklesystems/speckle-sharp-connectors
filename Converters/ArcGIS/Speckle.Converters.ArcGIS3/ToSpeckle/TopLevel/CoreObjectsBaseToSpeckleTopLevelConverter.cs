@@ -1,4 +1,3 @@
-using Speckle.Converters.ArcGIS3.Extensions;
 using Speckle.Converters.ArcGIS3.ToSpeckle.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
@@ -37,13 +36,6 @@ public class CoreObjectsBaseToSpeckleTopLevelConverter : IToSpeckleTopLevelConve
     // get properties
     Dictionary<string, object?> properties = _propertiesExtractor.GetProperties(target);
 
-    // get application id. test for subtypes before defaulting to base type.
-    string applicationId = target is ACD.Row row
-      ? row.GetSpeckleApplicationId()
-      : target is ACD.Analyst3D.LasPoint point
-        ? point.GetSpeckleApplicationId()
-        : target.GetSpeckleApplicationId();
-
     ArcgisObject result =
       new()
       {
@@ -52,7 +44,7 @@ public class CoreObjectsBaseToSpeckleTopLevelConverter : IToSpeckleTopLevelConve
         displayValue = display,
         properties = properties,
         units = _settingsStore.Current.SpeckleUnits,
-        applicationId = applicationId
+        applicationId = ""
       };
 
     return result;

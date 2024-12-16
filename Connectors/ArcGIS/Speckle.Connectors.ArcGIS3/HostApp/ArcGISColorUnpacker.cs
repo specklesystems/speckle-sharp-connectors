@@ -1,5 +1,4 @@
 using ArcGIS.Desktop.Mapping;
-using Speckle.Converters.ArcGIS3.Extensions;
 using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Connectors.ArcGIS.HostApp;
@@ -121,10 +120,8 @@ public class ArcGISColorUnpacker
   /// POC: logic probably can be combined with ProcessFeatureLayerColor.
   /// </summary>
   /// <param name="point"></param>
-  public void ProcessLasLayerColor(ACD.Analyst3D.LasPoint point)
+  public void ProcessLasLayerColor(ACD.Analyst3D.LasPoint point, string pointApplicationId)
   {
-    string pointApplicationId = point.GetSpeckleApplicationId();
-
     // get the color from the renderer and point
     AC.CIM.CIMColor? color;
     switch (StoredTinRenderer)
@@ -180,10 +177,8 @@ public class ArcGISColorUnpacker
   /// <param name="row"></param>
   /// <returns></returns>
   /// <exception cref="ACD.Exceptions.GeodatabaseException"></exception>
-  public void ProcessFeatureLayerColor(ACD.Row row)
+  public void ProcessFeatureLayerColor(ACD.Row row, string rowApplicationId)
   {
-    string rowApplicationId = row.GetSpeckleApplicationId();
-
     // if stored color is not null, this means the renderer was a simple renderer that applies to the entire layer, and was already created.
     // just add the row application id to the color proxy.
     if (StoredColor is int existingColorProxyId)
