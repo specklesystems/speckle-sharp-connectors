@@ -1,4 +1,3 @@
-using System;
 using System.Windows.Threading;
 
 namespace ConnectorGrasshopper.Extras;
@@ -38,7 +37,7 @@ public class DebounceDispatcher
   /// <param name="disp">optional dispatcher. If not passed or null CurrentDispatcher is used.</param>
   public void Debounce(
     int interval,
-    Action<object> action,
+    Action<object?> action,
     object? param = null,
     DispatcherPriority priority = DispatcherPriority.ApplicationIdle,
     Dispatcher? disp = null
@@ -90,10 +89,10 @@ public class DebounceDispatcher
   /// <param name="disp">optional dispatcher. If not passed or null CurrentDispatcher is used.</param>
   public void Throttle(
     int interval,
-    Action<object> action,
-    object param = null,
+    Action<object?> action,
+    object? param = null,
     DispatcherPriority priority = DispatcherPriority.ApplicationIdle,
-    Dispatcher disp = null
+    Dispatcher? disp = null
   )
   {
     // kill pending timer and pending ticks

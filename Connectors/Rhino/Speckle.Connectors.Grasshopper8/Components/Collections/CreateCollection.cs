@@ -1,6 +1,8 @@
+using ConnectorGrasshopper.Extras;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
 using Grasshopper.Kernel.Types;
+using Grasshopper.Rhinoceros.Model;
 using Rhino.Geometry;
 using Speckle.Connectors.Grasshopper8.Parameters;
 using Speckle.Sdk.Models.Collections;
@@ -13,6 +15,8 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
 #pragma warning restore CA1711
 {
   public override Guid ComponentGuid => new("BDCE743E-7BDB-479B-AA81-19854AB5A254");
+
+  private DebounceDispatcher _debounceDispatcher = new();
 
   public CreateCollection()
     : base("Create layer", "create", "Creates a new layer", "Speckle", "Collections") { }
@@ -44,11 +48,11 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
       if (collections != 0 && nonCollections != 0)
       {
         // TODO: error out! we want to disallow setting objects and collections in the same parent collection
-        AddRuntimeMessage(
-          GH_RuntimeMessageLevel.Error,
-          $"Parameter {inputParam.NickName} should not contain both objects and collections."
-        );
-        return;
+        // AddRuntimeMessage(
+        //   GH_RuntimeMessageLevel.Error,
+        //   $"Parameter {inputParam.NickName} should not contain both objects and collections."
+        // );
+        // return;
       }
 
       var childCollection = new Collection(inputParam.NickName) { applicationId = inputParam.InstanceGuid.ToString() };
@@ -107,6 +111,10 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
             // ignore
           }
         }
+        else if (obj is ModelObject)
+        {
+          // TODO
+        }
       }
 
       rootCollection.elements.Add(childCollection);
@@ -157,6 +165,12 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
     {
       switch (args.OriginalArguments.Type)
       {
+        case GH_ObjectEventType.NickName:
+          // This means the user is typing characters, debounce until it stops for 400ms before expiring the solution.
+          // Prevents UI from locking too soon while writing new names for inputs.
+          args.Parameter.Name = args.Parameter.NickName;
+          _debounceDispatcher.Debounce(500, e => ExpireSolution(true));
+          break;
         case GH_ObjectEventType.NickNameAccepted:
           args.Parameter.Name = args.Parameter.NickName;
           ExpireSolution(true);
