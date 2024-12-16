@@ -53,4 +53,6 @@ public class SpeckleXunitTestCollectionRunner : XunitTestCollectionRunner
       CancellationTokenSource,
       CollectionFixtureMappings
     ).RunAsync();
+
+ protected override void CreateCollectionFixture(Type fixtureType) => Aggregator.Run(() => ActivatorUtilities.CreateInstance(_serviceScope.ServiceProvider, fixtureType));
 }

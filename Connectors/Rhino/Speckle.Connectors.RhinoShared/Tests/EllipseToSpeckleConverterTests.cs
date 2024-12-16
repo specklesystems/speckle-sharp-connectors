@@ -4,6 +4,7 @@ using Xunit;
 
 namespace Speckle.Connectors.Rhino;
 
+[Collection(RhinoSetup.RhinoCollection)]
 public class EllipseToSpeckleConverterTests(IServiceProvider serviceProvider)
 {
   [Fact]
