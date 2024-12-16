@@ -40,22 +40,22 @@ public class MapMembersUtils
     return mapMembers;
   }
 
-  // Gets the layer display priority for selected layers
-  public List<MapMember> GetMapMembersInOrder(Map map, IReadOnlyList<MapMember> selectedMapMembers)
+  /// <summary>
+  /// Sorts the selected mapmembers into the same order as they appear in the Table of Contents (TOC) bar in the file.
+  /// This is a required step before unpacking layers, because depending on the user selection order, some children layers may appear before their container layer if both the container and children layers are selected.
+  /// </summary>
+  public IEnumerable<MapMember> GetMapMembersInOrder(Map map, IReadOnlyList<MapMember> selectedMapMembers)
   {
     // first get all map layers
     List<MapMember> allMapMembers = GetAllMapMembers(map);
 
     // recalculate selected layer priority from all map layers
-    List<MapMember> selectedLayers = new();
     foreach (MapMember mapMember in allMapMembers)
     {
       if (selectedMapMembers.Contains(mapMember))
       {
-        selectedLayers.Add((mapMember));
+        yield return mapMember;
       }
     }
-
-    return selectedLayers;
   }
 }

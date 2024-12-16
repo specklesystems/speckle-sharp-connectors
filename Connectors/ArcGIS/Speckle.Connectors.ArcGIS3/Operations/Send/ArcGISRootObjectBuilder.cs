@@ -101,7 +101,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     // Mapmember dynamically attached properties are also added at this step.
     List<ADM.MapMember> unpackedLayers;
     ADM.Map map = ADM.MapView.Active.Map;
-    List<ADM.MapMember> layersOrdered = _mapMemberUtils.GetMapMembersInOrder(map, layers);
+    IEnumerable<ADM.MapMember> layersOrdered = _mapMemberUtils.GetMapMembersInOrder(map, layers);
     using (var _ = _activityFactory.Start("Unpacking selection"))
     {
       unpackedLayers = await QueuedTask

@@ -19,7 +19,7 @@ public class ArcGISLayerUnpacker
   /// <returns>List of layers containing objects.</returns>
   /// <exception cref="AC.CalledOnWrongThreadException">Thrown when this method is *not* called on the MCT, because this method accesses mapmember fields</exception>
   public async Task<List<ADM.MapMember>> UnpackSelectionAsync(
-    IReadOnlyList<ADM.MapMember> mapMembers,
+    IEnumerable<ADM.MapMember> mapMembers,
     Collection parentCollection,
     List<ADM.MapMember>? objects = null
   )
