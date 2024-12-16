@@ -6,6 +6,7 @@
     <RevitVersion>2024</RevitVersion>
     <DefineConstants>$(DefineConstants);REVIT2024;REVIT2022_OR_GREATER;REVIT2023_OR_GREATER;REVIT2024_OR_GREATER</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
+    <HostAppTests>true</HostAppTests>
   </PropertyGroup>
 
   <Import Project="..\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems" Label="Shared" />

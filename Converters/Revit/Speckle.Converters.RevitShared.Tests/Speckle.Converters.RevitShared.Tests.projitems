@@ -12,6 +12,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ModelCurveArrayToSpeckleConverterTests.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)MoqTestExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)RevitTestBinding.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)RevitCollection.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)XyzConversionToPointTests.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsings.cs" />
   </ItemGroup>

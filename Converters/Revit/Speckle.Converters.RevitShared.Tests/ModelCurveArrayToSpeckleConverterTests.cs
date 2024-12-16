@@ -1,4 +1,5 @@
 ﻿using FluentAssertions;
+using Speckle.Connectors.Rhino;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Raw;
 using Speckle.Converters.RevitShared.Settings;
@@ -8,6 +9,7 @@ using Xunit;
 
 namespace Speckle.Converters.Revit2023.Tests;
 
+[Collection(RevitSetup.RevitCollection)]
 public class ModelCurveArrayToSpeckleConverterTests(IServiceProvider serviceProvider) : MoqTest
 {
   [Fact]

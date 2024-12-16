@@ -7,6 +7,7 @@
     <CefSharpAnyCpuSupport>true</CefSharpAnyCpuSupport>
     <Prefer32bit>false</Prefer32bit>
     <Configurations>Debug;Release;Local</Configurations>
+    <HostAppTests>true</HostAppTests>
   </PropertyGroup>
 
   <Import Project="..\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems" Label="Shared" />
