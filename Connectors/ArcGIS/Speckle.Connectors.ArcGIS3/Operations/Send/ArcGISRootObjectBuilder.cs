@@ -13,7 +13,6 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
-using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -180,7 +179,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
           convertingActivity?.RecordException(ex);
         }
 
-        onOperationProgressed.Report(new("Converting", (double)++count / layersOrdered.Count));
+        onOperationProgressed.Report(new("Converting", (double)++count / layers.Count));
       }
     }
 
@@ -197,6 +196,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
 
   private async Task<List<Base>> ConvertFeatureLayerObjectsAsync(ADM.FeatureLayer featureLayer)
   {
+    string layerApplicationId = featureLayer.GetSpeckleApplicationId();
     List<Base> convertedObjects = new();
     await QueuedTask
       .Run(() =>
@@ -216,7 +216,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
             {
               // get application id. test for subtypes before defaulting to base type.
               Base converted = _rootToSpeckleConverter.Convert(row);
-              string applicationId = GetSpeckleApplicationId(featureLayer, row);
+              string applicationId = row.GetSpeckleApplicationId(layerApplicationId);
               converted.applicationId = applicationId;
 
               convertedObjects.Add(converted);
@@ -235,13 +235,14 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
   // POC: raster colors are stored as mesh vertex colors in RasterToSpeckleConverter. Should probably move to color unpacker.
   private async Task<List<Base>> ConvertRasterLayerObjectsAsync(ADM.RasterLayer rasterLayer)
   {
+    string layerApplicationId = rasterLayer.GetSpeckleApplicationId();
     List<Base> convertedObjects = new();
     await QueuedTask
       .Run(() =>
       {
         Raster raster = rasterLayer.GetRaster();
         Base converted = _rootToSpeckleConverter.Convert(raster);
-        string applicationId = GetSpeckleApplicationId(rasterLayer, raster);
+        string applicationId = raster.GetSpeckleApplicationId(layerApplicationId);
         converted.applicationId = applicationId;
         convertedObjects.Add(converted);
       })
@@ -252,6 +253,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
 
   private async Task<List<Base>> ConvertLasDatasetLayerObjectsAsync(ADM.LasDatasetLayer lasDatasetLayer)
   {
+    string layerApplicationId = lasDatasetLayer.GetSpeckleApplicationId();
     List<Base> convertedObjects = new();
 
     try
@@ -271,7 +273,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
               using (ACD.Analyst3D.LasPoint pt = ptCursor.Current)
               {
                 Base converted = _rootToSpeckleConverter.Convert(pt);
-                string applicationId = GetSpeckleApplicationId(lasDatasetLayer, pt);
+                string applicationId = pt.GetSpeckleApplicationId(layerApplicationId);
                 converted.applicationId = applicationId;
                 convertedObjects.Add(converted);
 
@@ -289,30 +291,5 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     }
 
     return convertedObjects;
-  }
-
-  /// <summary>
-  /// Retrieves the Speckle application id for Features as a concatenation of the layer URI (applicationId)
-  /// and the row OID (index of row in layer) or point OID for LasDatasets.
-  /// </summary>
-  /// <exception cref="ACD.Exceptions.GeodatabaseException">Throws when this is *not* called on MCT. Use QueuedTask.Run.</exception>
-  public string GetSpeckleApplicationId(ADM.Layer layer, AC.CoreObjectsBase coreObject)
-  {
-    if (coreObject is ACD.Row row)
-    {
-      return $"{layer.URI}_{row.GetObjectID()}";
-    }
-
-    if (coreObject is Raster)
-    {
-      return $"{layer.URI}_0";
-    }
-
-    if (coreObject is ACD.Analyst3D.LasPoint point)
-    {
-      return $"{layer.URI}_{point.PointID}";
-    }
-
-    throw new ConversionNotSupportedException($"Conversion not supported for objects of type '{coreObject.GetType()}'");
   }
 }
