@@ -115,10 +115,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   private void OnChangeChangedObjectIds(DBObject dBObject)
   {
     ChangedObjectIds[dBObject.GetSpeckleApplicationId()] = 1;
-    _idleManager.SubscribeToIdle(
-      nameof(AutocadSendBinding),
-      async () => await RunExpirationChecks().ConfigureAwait(false)
-    );
+    _idleManager.SubscribeToIdle(nameof(AutocadSendBinding), async () => await RunExpirationChecks());
   }
 
   private async Task RunExpirationChecks()
@@ -139,7 +136,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
       }
     }
 
-    await Commands.SetModelsExpired(expiredSenderIds).ConfigureAwait(false);
+    await Commands.SetModelsExpired(expiredSenderIds);
     ChangedObjectIds = new();
   }
 
@@ -148,9 +145,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   public List<ICardSetting> GetSendSettings() => [];
 
   public async Task Send(string modelCardId) =>
-    await _threadContext
-      .RunOnWorkerAsync(async () => await SendInternal(modelCardId).ConfigureAwait(false))
-      .ConfigureAwait(false);
+    await _threadContext.RunOnWorkerAsync(async () => await SendInternal(modelCardId));
 
   protected abstract void InitializeSettings(IServiceProvider serviceProvider);
 
@@ -192,12 +187,9 @@ public abstract class AutocadSendBaseBinding : ISendBinding
           modelCard.GetSendInfo(_speckleApplication.Slug),
           _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
           cancellationToken
-        )
-        .ConfigureAwait(false);
+        );
 
-      await Commands
-        .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
-        .ConfigureAwait(false);
+      await Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
     }
     catch (OperationCanceledException)
     {
@@ -209,7 +201,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
       _logger.LogModelCardHandledError(ex);
-      await Commands.SetModelError(modelCardId, ex).ConfigureAwait(false);
+      await Commands.SetModelError(modelCardId, ex);
     }
     finally
     {

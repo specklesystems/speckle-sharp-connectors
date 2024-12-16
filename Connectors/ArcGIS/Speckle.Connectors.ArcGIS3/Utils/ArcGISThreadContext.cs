@@ -14,12 +14,12 @@ public class ArcGISThreadContext : ThreadContext
     }
     else
     {
-      return QueuedTask.Run(async () => await action().BackToCurrent()).AsValueTask();
+      return QueuedTask.Run(async () => await action()).AsValueTask();
     }
   }
 
   protected override ValueTask<T> WorkerToMainAsync<T>(Func<ValueTask<T>> action) =>
-    QueuedTask.Run(async () => await action().BackToCurrent()).AsValueTask();
+    QueuedTask.Run(async () => await action()).AsValueTask();
 
   protected override ValueTask<T> MainToWorker<T>(Func<T> action)
   {

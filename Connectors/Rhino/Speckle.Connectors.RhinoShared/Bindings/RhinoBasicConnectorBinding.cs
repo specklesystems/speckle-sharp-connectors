@@ -38,7 +38,7 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
     _store.DocumentChanged += (_, _) =>
       parent.TopLevelExceptionHandler.FireAndForget(async () =>
       {
-        await Commands.NotifyDocumentChanged().ConfigureAwait(false);
+        await Commands.NotifyDocumentChanged();
         // Note: this prevents scaling issues when copy-pasting from one rhino doc to another in the same session.
         _sendConversionCache.ClearCache();
       });
@@ -100,9 +100,7 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
 
     if (objectIds.Count == 0)
     {
-      await Commands
-        .SetModelError(modelCardId, new OperationCanceledException("No objects found to highlight."))
-        .ConfigureAwait(false);
+      await Commands.SetModelError(modelCardId, new OperationCanceledException("No objects found to highlight."));
       return;
     }
 
@@ -112,9 +110,7 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
 
     if (objects.rhinoObjects.Count == 0 && objects.groups.Count == 0)
     {
-      await Commands
-        .SetModelError(modelCardId, new OperationCanceledException("No objects found to highlight."))
-        .ConfigureAwait(false);
+      await Commands.SetModelError(modelCardId, new OperationCanceledException("No objects found to highlight."));
       return;
     }
 

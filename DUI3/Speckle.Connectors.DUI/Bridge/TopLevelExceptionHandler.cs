@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
@@ -65,19 +64,18 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
     {
       try
       {
-        await function().BackToCurrent();
+        await function();
         return new Result();
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
         _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
         await SetGlobalNotification(
-            ToastNotificationType.DANGER,
-            "Unhandled Exception Occured",
-            ex.ToFormattedString(),
-            false
-          )
-          .BackToCurrent();
+          ToastNotificationType.DANGER,
+          "Unhandled Exception Occured",
+          ex.ToFormattedString(),
+          false
+        );
         return new(ex);
       }
     }
@@ -95,11 +93,11 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
     {
       try
       {
-        return new(await function.Invoke().BackToCurrent());
+        return new(await function.Invoke());
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        await HandleException(ex).BackToCurrent();
+        await HandleException(ex);
         return new(ex);
       }
     }
@@ -117,12 +115,11 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
     try
     {
       await SetGlobalNotification(
-          ToastNotificationType.DANGER,
-          "Unhandled Exception Occured",
-          ex.ToFormattedString(),
-          false
-        )
-        .BackToCurrent();
+        ToastNotificationType.DANGER,
+        "Unhandled Exception Occured",
+        ex.ToFormattedString(),
+        false
+      );
     }
     catch (Exception toastEx)
     {
@@ -146,19 +143,17 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
   /// In cases where you can use <see langword="await"/> keyword, you should prefer using <see cref="CatchUnhandledAsync"/>
   /// </remarks>
   /// <param name="function"><inheritdoc cref="CatchUnhandled{T}(Func{T})"/></param>
-  public async void FireAndForget(Func<Task> function) => await CatchUnhandledAsync(function).BackToCurrent();
+  public async void FireAndForget(Func<Task> function) => await CatchUnhandledAsync(function);
 
   private async Task SetGlobalNotification(ToastNotificationType type, string title, string message, bool autoClose) =>
-    await Parent
-      .Send(
-        BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, //TODO: We could move these constants into a DUI3 constants static class
-        new
-        {
-          type,
-          title,
-          description = message,
-          autoClose
-        }
-      )
-      .BackToCurrent();
+    await Parent.Send(
+      BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, //TODO: We could move these constants into a DUI3 constants static class
+      new
+      {
+        type,
+        title,
+        description = message,
+        autoClose
+      }
+    );
 }

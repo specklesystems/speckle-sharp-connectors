@@ -110,14 +110,12 @@ public sealed class BrowserBridge : IBrowserBridge
       .RunOnThreadAsync(
         async () =>
         {
-          var task = await TopLevelExceptionHandler
-            .CatchUnhandledAsync(async () =>
-            {
-              var result = await ExecuteMethod(methodName, methodArgs).ConfigureAwait(false);
-              string resultJson = _jsonSerializer.Serialize(result);
-              NotifyUIMethodCallResultReady(requestId, resultJson);
-            })
-            .ConfigureAwait(false);
+          var task = await TopLevelExceptionHandler.CatchUnhandledAsync(async () =>
+          {
+            var result = await ExecuteMethod(methodName, methodArgs);
+            string resultJson = _jsonSerializer.Serialize(result);
+            NotifyUIMethodCallResultReady(requestId, resultJson);
+          });
           if (task.Exception is not null)
           {
             string resultJson = SerializeFormattedException(task.Exception);
@@ -188,7 +186,7 @@ public sealed class BrowserBridge : IBrowserBridge
     }
 
     // It's an async call
-    await resultTypedTask.ConfigureAwait(false);
+    await resultTypedTask;
 
     // If has a "Result" property return the value otherwise null (Task<void> etc)
     PropertyInfo? resultProperty = resultTypedTask.GetType().GetProperty(nameof(Task<object>.Result));

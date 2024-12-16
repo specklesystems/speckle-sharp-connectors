@@ -33,25 +33,22 @@ public sealed class ReceiveOperation(
     using Client apiClient = clientFactory.Create(account);
     using var userScope = ActivityScope.SetTag(Consts.USER_ID, account.GetHashedEmail());
 
-    var version = await apiClient
-      .Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ProjectId, cancellationToken)
-      .BackToAny();
+    var version = await apiClient.Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ProjectId, cancellationToken);
 
-    var commitObject = await threadContext
-      .RunOnWorkerAsync(() => ReceiveData(account, version, receiveInfo, onOperationProgressed, cancellationToken))
-      .BackToAny();
+    var commitObject = await threadContext.RunOnWorkerAsync(
+      () => ReceiveData(account, version, receiveInfo, onOperationProgressed, cancellationToken)
+    );
 
     // 4 - Convert objects
-    HostObjectBuilderResult res = await threadContext
-      .RunOnThread(
-        () => ConvertObjects(commitObject, receiveInfo, onOperationProgressed, cancellationToken),
-        threadOptions.RunReceiveBuildOnMainThread
-      )
-      .BackToAny();
+    HostObjectBuilderResult res = await threadContext.RunOnThread(
+      () => ConvertObjects(commitObject, receiveInfo, onOperationProgressed, cancellationToken),
+      threadOptions.RunReceiveBuildOnMainThread
+    );
 
-    await apiClient
-      .Version.Received(new(version.id, receiveInfo.ProjectId, receiveInfo.SourceApplication), cancellationToken)
-      .BackToAny();
+    await apiClient.Version.Received(
+      new(version.id, receiveInfo.ProjectId, receiveInfo.SourceApplication),
+      cancellationToken
+    );
 
     return res;
   }
@@ -65,16 +62,14 @@ public sealed class ReceiveOperation(
   )
   {
     receiveProgress.Begin();
-    Base? commitObject = await operations
-      .Receive2(
-        new Uri(account.serverInfo.url),
-        receiveInfo.ProjectId,
-        version.referencedObject,
-        account.token,
-        onProgressAction: new PassthroughProgress(args => receiveProgress.Report(onOperationProgressed, args)),
-        cancellationToken: cancellationToken
-      )
-      .BackToAny();
+    Base? commitObject = await operations.Receive2(
+      new Uri(account.serverInfo.url),
+      receiveInfo.ProjectId,
+      version.referencedObject,
+      account.token,
+      onProgressAction: new PassthroughProgress(args => receiveProgress.Report(onOperationProgressed, args)),
+      cancellationToken: cancellationToken
+    );
 
     cancellationToken.ThrowIfCancellationRequested();
     return commitObject;

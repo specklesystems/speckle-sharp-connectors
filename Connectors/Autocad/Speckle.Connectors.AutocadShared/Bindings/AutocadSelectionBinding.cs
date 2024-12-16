@@ -44,9 +44,7 @@ public class AutocadSelectionBinding : ISelectionBinding
     if (!_visitedDocuments.Contains(document))
     {
       document.ImpliedSelectionChanged += (_, _) =>
-        _topLevelExceptionHandler.FireAndForget(
-          async () => await _threadContext.RunOnMainAsync(OnSelectionChanged).ConfigureAwait(false)
-        );
+        _topLevelExceptionHandler.FireAndForget(async () => await _threadContext.RunOnMainAsync(OnSelectionChanged));
 
       _visitedDocuments.Add(document);
     }
@@ -60,7 +58,7 @@ public class AutocadSelectionBinding : ISelectionBinding
   private async ValueTask OnSelectionChanged()
   {
     _selectionInfo = GetSelectionInternal();
-    await Parent.Send(SELECTION_EVENT, _selectionInfo).ConfigureAwait(false);
+    await Parent.Send(SELECTION_EVENT, _selectionInfo);
   }
 
   public SelectionInfo GetSelection() => _selectionInfo;

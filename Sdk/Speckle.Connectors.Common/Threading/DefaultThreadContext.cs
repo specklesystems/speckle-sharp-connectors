@@ -18,7 +18,7 @@ public class DefaultThreadContext : ThreadContext
       {
         try
         {
-          T result = await action().BackToCurrent();
+          T result = await action();
           tcs.SetResult(result);
         }
         catch (Exception ex)
@@ -34,7 +34,7 @@ public class DefaultThreadContext : ThreadContext
   protected override ValueTask<T> MainToWorkerAsync<T>(Func<ValueTask<T>> action)
   {
     Task<Task<T>> f = Task.Factory.StartNew(
-      async () => await action().BackToCurrent(),
+      async () => await action(),
       default,
       TaskCreationOptions.LongRunning,
       TaskScheduler.Default

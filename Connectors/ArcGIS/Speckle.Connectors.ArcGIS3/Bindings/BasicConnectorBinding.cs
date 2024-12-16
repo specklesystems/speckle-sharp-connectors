@@ -31,7 +31,7 @@ public class BasicConnectorBinding : IBasicConnectorBinding
     _store.DocumentChanged += (_, _) =>
       parent.TopLevelExceptionHandler.FireAndForget(async () =>
       {
-        await Commands.NotifyDocumentChanged().ConfigureAwait(false);
+        await Commands.NotifyDocumentChanged();
       });
   }
 

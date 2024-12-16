@@ -18,11 +18,10 @@ public abstract class ThreadContext : IThreadContext
       else
       {
         await WorkerToMainAsync(() =>
-          {
-            action();
-            return new ValueTask<object?>();
-          })
-          .ConfigureAwait(false);
+        {
+          action();
+          return new ValueTask<object?>();
+        });
       }
     }
     else
@@ -30,11 +29,10 @@ public abstract class ThreadContext : IThreadContext
       if (IsMainThread)
       {
         await MainToWorkerAsync(() =>
-          {
-            action();
-            return new ValueTask<object?>();
-          })
-          .BackToAny();
+        {
+          action();
+          return new ValueTask<object?>();
+        });
       }
       else
       {
@@ -68,16 +66,15 @@ public abstract class ThreadContext : IThreadContext
     {
       if (IsMainThread)
       {
-        await action().BackToCurrent();
+        await action();
       }
       else
       {
         await WorkerToMainAsync<object?>(async () =>
-          {
-            await action().BackToCurrent();
-            return Task.FromResult<object?>(null);
-          })
-          .BackToCurrent();
+        {
+          await action();
+          return Task.FromResult<object?>(null);
+        });
       }
     }
     else
@@ -85,15 +82,14 @@ public abstract class ThreadContext : IThreadContext
       if (IsMainThread)
       {
         await MainToWorkerAsync<object?>(async () =>
-          {
-            await action().BackToCurrent();
-            return Task.FromResult<object?>(null);
-          })
-          .BackToCurrent();
+        {
+          await action();
+          return Task.FromResult<object?>(null);
+        });
       }
       else
       {
-        await action().BackToCurrent();
+        await action();
       }
     }
   }

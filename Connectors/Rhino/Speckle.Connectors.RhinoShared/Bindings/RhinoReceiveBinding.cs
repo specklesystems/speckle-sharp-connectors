@@ -77,13 +77,14 @@ public class RhinoReceiveBinding : IReceiveBinding
           modelCard.GetReceiveInfo(_speckleApplication.Slug),
           _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
           cancellationToken
-        )
-        .ConfigureAwait(false);
+        );
 
       modelCard.BakedObjectIds = conversionResults.BakedObjectIds.ToList();
-      await Commands
-        .SetModelReceiveResult(modelCardId, conversionResults.BakedObjectIds, conversionResults.ConversionResults)
-        .ConfigureAwait(false);
+      await Commands.SetModelReceiveResult(
+        modelCardId,
+        conversionResults.BakedObjectIds,
+        conversionResults.ConversionResults
+      );
     }
     catch (OperationCanceledException)
     {
@@ -95,7 +96,7 @@ public class RhinoReceiveBinding : IReceiveBinding
     catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
       _logger.LogModelCardHandledError(ex);
-      await Commands.SetModelError(modelCardId, ex).ConfigureAwait(false);
+      await Commands.SetModelError(modelCardId, ex);
     }
   }
 
