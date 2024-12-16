@@ -1,4 +1,4 @@
-﻿using Grasshopper.Kernel.Data;
+using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Types;
 using Rhino.Geometry;
 using Speckle.Connectors.Common.Operations;

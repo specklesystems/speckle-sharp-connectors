@@ -9,7 +9,7 @@ namespace Speckle.Converters.Grasshopper;
 
 public static class ServiceRegistration
 {
-  public static IServiceCollection AddRhinoConverters(this IServiceCollection serviceCollection)
+  public static IServiceCollection AddGrasshopperConverters(this IServiceCollection serviceCollection)
   {
     var rhinoAssembly = typeof(RhinoConversionSettings).Assembly;
     var grasshopperAssembly = typeof(GrasshopperConversionSettings).Assembly;

@@ -1,4 +1,4 @@
-﻿using Grasshopper.Kernel;
+using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
 using Rhino;
 using Rhino.Geometry;
@@ -9,7 +9,7 @@ using Speckle.Connectors.Grasshopper8.Components.BaseComponents;
 using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Connectors.Grasshopper8.Parameters;
 using Speckle.Converters.Common;
-using Speckle.Converters.Rhino;
+using Speckle.Converters.Grasshopper;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Common.Exceptions;
@@ -73,10 +73,11 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
   )
   {
     // TODO: Resolving dependencies here may be overkill in most cases. Must re-evaluate.
-    var rhinoConversionSettingsFactory = scope.ServiceProvider.GetRequiredService<IRhinoConversionSettingsFactory>();
+    var grasshopperConversionSettingsFactory =
+      scope.ServiceProvider.GetRequiredService<IGrasshopperConversionSettingsFactory>();
     scope
-      .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
-      .Initialize(rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
+      .ServiceProvider.GetRequiredService<IConverterSettingsStore<GrasshopperConversionSettings>>()
+      .Initialize(grasshopperConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
 
     var rootConverter = scope.ServiceProvider.GetService<IRootToHostConverter>();
 

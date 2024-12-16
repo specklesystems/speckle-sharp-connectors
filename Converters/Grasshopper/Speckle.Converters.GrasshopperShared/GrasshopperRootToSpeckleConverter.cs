@@ -24,6 +24,8 @@ public class GrasshopperRootToSpeckleConverter : IRootToSpeckleConverter
     {
       result.applicationId = modelObject.Id.ToString();
     }
+
+    // POC: target can also be GM.ModelLayer, and GM.ModelInstanceDefinition. We probably want to handle these as well.
 #endif
 
     return result;

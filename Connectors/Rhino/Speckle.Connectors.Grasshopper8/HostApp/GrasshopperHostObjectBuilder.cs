@@ -1,10 +1,10 @@
-﻿using Rhino.Geometry;
+using Rhino.Geometry;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Converters.Common;
-using Speckle.Converters.Rhino;
+using Speckle.Converters.Grasshopper;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -36,14 +36,14 @@ public sealed class GrasshopperReceiveConversionResult : ReceiveConversionResult
 public class GrasshopperHostObjectBuilder : IHostObjectBuilder
 {
   private readonly IRootToHostConverter _converter;
-  private readonly IConverterSettingsStore<RhinoConversionSettings> _converterSettings;
+  private readonly IConverterSettingsStore<GrasshopperConversionSettings> _converterSettings;
   private readonly TraversalContextUnpacker _contextUnpacker;
   private readonly RootObjectUnpacker _rootObjectUnpacker;
   private readonly ISdkActivityFactory _activityFactory;
 
   public GrasshopperHostObjectBuilder(
     IRootToHostConverter converter,
-    IConverterSettingsStore<RhinoConversionSettings> converterSettings,
+    IConverterSettingsStore<GrasshopperConversionSettings> converterSettings,
     RootObjectUnpacker rootObjectUnpacker,
     ISdkActivityFactory activityFactory,
     TraversalContextUnpacker contextUnpacker
@@ -88,7 +88,10 @@ public class GrasshopperHostObjectBuilder : IHostObjectBuilder
       var transformed = unpackedRoot.DefinitionProxies.Select(proxy =>
         (Array.Empty<Collection>(), proxy as IInstanceComponent)
       );
-      instanceComponentsWithPath.AddRange(transformed);
+      foreach (var transformedObj in transformed)
+      {
+        instanceComponentsWithPath.Add(transformedObj);
+      }
     }
 
     // 3 - Bake materials and colors, as they are used later down the line by layers and objects

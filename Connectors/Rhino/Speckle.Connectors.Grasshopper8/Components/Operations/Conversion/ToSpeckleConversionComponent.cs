@@ -1,11 +1,11 @@
-﻿using Grasshopper.Kernel;
+using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
 using Rhino;
 using Rhino.Geometry;
 using Speckle.Connectors.Grasshopper8.Components.BaseComponents;
 using Speckle.Connectors.Grasshopper8.Parameters;
 using Speckle.Converters.Common;
-using Speckle.Converters.Rhino;
+using Speckle.Converters.Grasshopper;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 
@@ -50,11 +50,12 @@ public class ToSpeckleConversionComponent()
     CancellationToken cancellationToken = default
   )
   {
-    var rhinoConversionSettingsFactory = scope.ServiceProvider.GetRequiredService<IRhinoConversionSettingsFactory>();
+    var grasshopperConversionSettingsFactory =
+      scope.ServiceProvider.GetRequiredService<IGrasshopperConversionSettingsFactory>();
 
     scope
-      .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
-      .Initialize(rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
+      .ServiceProvider.GetRequiredService<IConverterSettingsStore<GrasshopperConversionSettings>>()
+      .Initialize(grasshopperConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
 
     var rootConverter = scope.ServiceProvider.GetRequiredService<IRootToSpeckleConverter>();
 

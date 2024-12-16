@@ -12,6 +12,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)GrasshopperRootToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsings.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GrasshopperConversionSettings.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)GrasshopperConversionSettingsFactory.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\ArcToHostTopLevelConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\CircleToHostTopLevelConverter.cs" />
