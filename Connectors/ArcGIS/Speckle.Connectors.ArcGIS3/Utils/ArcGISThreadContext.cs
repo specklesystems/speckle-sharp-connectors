@@ -6,7 +6,7 @@ namespace Speckle.Connectors.ArcGIS.Utils;
 //don't check for GUI as it's the same check we do in ThreadContext
 public class ArcGISThreadContext : ThreadContext
 {
-  protected override ValueTask<T> MainToWorkerAsync<T>(Func<ValueTask<T>> action)
+  protected override Task<T> MainToWorkerAsync<T>(Func<Task<T>> action)
   {
     if (QueuedTask.OnWorker)
     {
@@ -14,24 +14,23 @@ public class ArcGISThreadContext : ThreadContext
     }
     else
     {
-      return QueuedTask.Run(async () => await action()).AsValueTask();
+      return QueuedTask.Run(async () => await action());
     }
   }
 
-  protected override ValueTask<T> WorkerToMainAsync<T>(Func<ValueTask<T>> action) =>
-    QueuedTask.Run(async () => await action()).AsValueTask();
+  protected override Task<T> WorkerToMainAsync<T>(Func<Task<T>> action) => QueuedTask.Run(async () => await action());
 
-  protected override ValueTask<T> MainToWorker<T>(Func<T> action)
+  protected override Task<T> MainToWorker<T>(Func<T> action)
   {
     if (QueuedTask.OnWorker)
     {
-      return new(action());
+      return Task.FromResult(action());
     }
     else
     {
-      return QueuedTask.Run(action).AsValueTask();
+      return QueuedTask.Run(action);
     }
   }
 
-  protected override ValueTask<T> WorkerToMain<T>(Func<T> action) => QueuedTask.Run(action).AsValueTask();
+  protected override Task<T> WorkerToMain<T>(Func<T> action) => QueuedTask.Run(action);
 }

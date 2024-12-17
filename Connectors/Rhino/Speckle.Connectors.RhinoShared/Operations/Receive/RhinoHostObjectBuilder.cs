@@ -125,7 +125,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
           paths.AddRange(instanceComponentsWithPath.Select(t => t.path));
           _layerBaker.CreateAllLayersForReceive(paths, baseLayerName);
         })
-        .Wait();
+        .Wait(cancellationToken);
     }
 
     // 5 - Convert atomic objects

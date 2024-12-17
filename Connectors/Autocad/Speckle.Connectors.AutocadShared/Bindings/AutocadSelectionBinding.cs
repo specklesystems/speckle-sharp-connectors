@@ -55,7 +55,7 @@ public class AutocadSelectionBinding : ISelectionBinding
   // Ui requests to GetSelection() should just return this local copy that is kept up to date by the event handler.
   private SelectionInfo _selectionInfo;
 
-  private async ValueTask OnSelectionChanged()
+  private async Task OnSelectionChanged()
   {
     _selectionInfo = GetSelectionInternal();
     await Parent.Send(SELECTION_EVENT, _selectionInfo);

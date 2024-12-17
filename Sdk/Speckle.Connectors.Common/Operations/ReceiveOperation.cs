@@ -53,7 +53,7 @@ public sealed class ReceiveOperation(
     return res;
   }
 
-  private async ValueTask<Base> ReceiveData(
+  private async Task<Base> ReceiveData(
     Account account,
     Speckle.Sdk.Api.GraphQL.Models.Version version,
     ReceiveInfo receiveInfo,

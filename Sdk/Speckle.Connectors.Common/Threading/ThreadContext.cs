@@ -5,9 +5,10 @@ namespace Speckle.Connectors.Common.Threading;
 [GenerateAutoInterface]
 public abstract class ThreadContext : IThreadContext
 {
+  private static readonly Task<object?> s_empty = Task.FromResult<object?>(null);
   public static bool IsMainThread => Environment.CurrentManagedThreadId == 1;
 
-  public async ValueTask RunOnThread(Action action, bool useMain)
+  public async Task RunOnThread(Action action, bool useMain)
   {
     if (useMain)
     {
@@ -20,7 +21,7 @@ public abstract class ThreadContext : IThreadContext
         await WorkerToMainAsync(() =>
         {
           action();
-          return new ValueTask<object?>();
+          return s_empty;
         });
       }
     }
@@ -31,7 +32,7 @@ public abstract class ThreadContext : IThreadContext
         await MainToWorkerAsync(() =>
         {
           action();
-          return new ValueTask<object?>();
+          return s_empty;
         });
       }
       else
@@ -41,13 +42,13 @@ public abstract class ThreadContext : IThreadContext
     }
   }
 
-  public virtual ValueTask<T> RunOnThread<T>(Func<T> action, bool useMain)
+  public virtual Task<T> RunOnThread<T>(Func<T> action, bool useMain)
   {
     if (useMain)
     {
       if (IsMainThread)
       {
-        return new ValueTask<T>(action());
+        return Task.FromResult(action());
       }
 
       return WorkerToMain(action);
@@ -57,10 +58,10 @@ public abstract class ThreadContext : IThreadContext
       return MainToWorker(action);
     }
 
-    return new ValueTask<T>(action());
+    return Task.FromResult(action());
   }
 
-  public async ValueTask RunOnThreadAsync(Func<ValueTask> action, bool useMain)
+  public async Task RunOnThreadAsync(Func<Task> action, bool useMain)
   {
     if (useMain)
     {
@@ -94,7 +95,7 @@ public abstract class ThreadContext : IThreadContext
     }
   }
 
-  public ValueTask<T> RunOnThreadAsync<T>(Func<ValueTask<T>> action, bool useMain)
+  public Task<T> RunOnThreadAsync<T>(Func<Task<T>> action, bool useMain)
   {
     if (useMain)
     {
@@ -112,10 +113,10 @@ public abstract class ThreadContext : IThreadContext
     return action();
   }
 
-  protected abstract ValueTask<T> WorkerToMainAsync<T>(Func<ValueTask<T>> action);
+  protected abstract Task<T> WorkerToMainAsync<T>(Func<Task<T>> action);
 
-  protected abstract ValueTask<T> MainToWorkerAsync<T>(Func<ValueTask<T>> action);
-  protected abstract ValueTask<T> WorkerToMain<T>(Func<T> action);
+  protected abstract Task<T> MainToWorkerAsync<T>(Func<Task<T>> action);
+  protected abstract Task<T> WorkerToMain<T>(Func<T> action);
 
-  protected abstract ValueTask<T> MainToWorker<T>(Func<T> action);
+  protected abstract Task<T> MainToWorker<T>(Func<T> action);
 }
