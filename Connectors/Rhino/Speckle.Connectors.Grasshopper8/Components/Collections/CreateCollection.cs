@@ -3,8 +3,13 @@ using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
 using Grasshopper.Kernel.Types;
 using Grasshopper.Rhinoceros.Model;
+using Microsoft.Extensions.DependencyInjection;
+using Rhino;
 using Rhino.Geometry;
 using Speckle.Connectors.Grasshopper8.Parameters;
+using Speckle.Converters.Common;
+using Speckle.Converters.Rhino;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models.Collections;
 using Point = Rhino.Geometry.Point;
 
@@ -34,7 +39,14 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
 
   protected override void SolveInstance(IGH_DataAccess dataAccess)
   {
-    var rootCollection = new Collection() { name = Params.Output[0].NickName, applicationId = "temp" };
+    using var scope = PriorityLoader.Container.CreateScope();
+    var rhinoConversionSettingsFactory = scope.ServiceProvider.GetRequiredService<IRhinoConversionSettingsFactory>();
+    scope
+      .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
+      .Initialize(rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
+    var hostConverter = scope.ServiceProvider.GetService<IRootToSpeckleConverter>();
+
+    var rootCollection = new Collection() { name = "Unnamed", applicationId = InstanceGuid.ToString() };
     foreach (var inputParam in Params.Input)
     {
       var data = inputParam.VolatileData.AllData(true).ToList();
@@ -43,19 +55,31 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
         continue;
       }
 
-      var collections = data.Count(t => t is SpeckleCollectionGoo);
-      var nonCollections = data.Count(t => t is not SpeckleCollectionGoo);
-      if (collections != 0 && nonCollections != 0)
+      var inputCollections = data.OfType<SpeckleCollectionGoo>().Empty().ToList();
+      var inputNonCollections = data.Where(t => t is not SpeckleCollectionGoo).Empty().ToList();
+      if (inputCollections.Count != 0 && inputNonCollections.Count != 0)
       {
         // TODO: error out! we want to disallow setting objects and collections in the same parent collection
-        // AddRuntimeMessage(
-        //   GH_RuntimeMessageLevel.Error,
-        //   $"Parameter {inputParam.NickName} should not contain both objects and collections."
-        // );
-        // return;
+        AddRuntimeMessage(
+          GH_RuntimeMessageLevel.Error,
+          $"Parameter {inputParam.NickName} should not contain both objects and collections."
+        );
+        return;
+      }
+      var childCollection = new Collection(inputParam.NickName) { applicationId = inputParam.InstanceGuid.ToString() };
+
+      if (inputCollections.Count == data.Count)
+      {
+        // TODO
+        var subCollections = new List<Collection>();
+        foreach (var collection in inputCollections)
+        {
+          childCollection.elements.AddRange(collection.Value.elements);
+        }
+        rootCollection.elements.Add(childCollection);
+        continue;
       }
 
-      var childCollection = new Collection(inputParam.NickName) { applicationId = inputParam.InstanceGuid.ToString() };
       childCollection["topology"] = GetParamTopology(inputParam);
 
       foreach (var obj in data)
@@ -70,36 +94,51 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
         }
         else if (obj is IGH_GeometricGoo geoGeo)
         {
-          // if (geoGeo.CastTo<GeometryBase>(out GeometryBase? geometryBase)) // fails for points and lines
-          // {
-          //   var tempObj = new SpeckleObject() { GeometryBase = geometryBase };
-          //   childCollection.elements.Add(tempObj);
-          // }
-
           // TODO: right now creating incomplete speckle object wrappers, we should also convert
           try
           {
             var value = geoGeo.GetType().GetProperty("Value")?.GetValue(obj);
             if (value is GeometryBase gb)
             {
-              childCollection.elements.Add(new SpeckleObject() { GeometryBase = gb });
+              var converted = hostConverter.Convert(gb);
+              childCollection.elements.Add(new SpeckleObject() { GeometryBase = gb, OriginalObject = converted });
             }
 
             if (value is Point3d pt)
             {
               var geometryBasePoint = new Point(pt);
-              childCollection.elements.Add(new SpeckleObject() { GeometryBase = geometryBasePoint });
+              var converted = hostConverter.Convert(geometryBasePoint);
+              childCollection.elements.Add(
+                new SpeckleObject() { GeometryBase = geometryBasePoint, OriginalObject = converted }
+              );
             }
+
             if (value is Line ln)
             {
               var geometryBaseLine = new LineCurve(ln);
-              childCollection.elements.Add(new SpeckleObject() { GeometryBase = geometryBaseLine });
+              var converted = hostConverter.Convert(geometryBaseLine);
+              childCollection.elements.Add(
+                new SpeckleObject() { GeometryBase = geometryBaseLine, OriginalObject = converted }
+              );
             }
 
             if (value is Rectangle3d rc)
             {
-              childCollection.elements.Add(new SpeckleObject() { GeometryBase = rc.ToPolyline().ToPolylineCurve() });
+              var gbRec = rc.ToPolyline().ToPolylineCurve();
+              var converted = hostConverter.Convert(gbRec);
+              childCollection.elements.Add(new SpeckleObject() { GeometryBase = gbRec, OriginalObject = converted });
             }
+
+            if (value is Circle c)
+            {
+              var gbCircle = c.ToNurbsCurve();
+              var converted = hostConverter.Convert(gbCircle);
+              childCollection.elements.Add(new SpeckleObject() { GeometryBase = gbCircle, OriginalObject = converted });
+            }
+
+            if (value is Ellipse el) { }
+
+            if (value is Sphere sph) { }
 
             // TODO: other fucking primitives, circles, ellipses(?), bla bla
             // Ask alan casting is so much bs right now in gh

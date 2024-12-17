@@ -1,4 +1,6 @@
 #nullable disable
+#pragma warning disable IDE0040
+
 using System.ComponentModel;
 using GH_IO.Serialization;
 using Grasshopper;
@@ -1857,3 +1859,5 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
 //       subcategory: "Input"
 //     ) { }
 // }
+
+#pragma warning restore IDE0040
