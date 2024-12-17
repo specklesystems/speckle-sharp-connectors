@@ -29,36 +29,36 @@ public static class ArcGISConnectorModule
     serviceCollection.AddConnectorUtils();
     serviceCollection.AddDUI<ArcGISThreadContext, ArcGISDocumentStore>();
     serviceCollection.AddDUIView();
+
     // Register bindings
     serviceCollection.AddSingleton<IBinding, TestBinding>();
     serviceCollection.AddSingleton<IBinding, ConfigBinding>();
     serviceCollection.AddSingleton<IBinding, AccountBinding>();
-
-    serviceCollection.RegisterTopLevelExceptionHandler();
-
     serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
     serviceCollection.AddSingleton<IBasicConnectorBinding, BasicConnectorBinding>();
 
-    serviceCollection.AddSingleton<IBinding, ArcGISSelectionBinding>();
-    serviceCollection.AddSingleton<IBinding, ArcGISSendBinding>();
-    serviceCollection.AddSingleton<IBinding, ArcGISReceiveBinding>();
-
-    serviceCollection.AddTransient<ISendFilter, ArcGISSelectionFilter>();
-    serviceCollection.AddScoped<IHostObjectBuilder, ArcGISHostObjectBuilder>();
+    serviceCollection.RegisterTopLevelExceptionHandler();
     serviceCollection.AddSingleton(DefaultTraversal.CreateTraversalFunc());
 
     // register send operation and dependencies
+    serviceCollection.AddSingleton<IBinding, ArcGISSendBinding>();
     serviceCollection.AddScoped<SendOperation<MapMember>>();
+    serviceCollection.AddSingleton<IBinding, ArcGISSelectionBinding>();
+    serviceCollection.AddTransient<ISendFilter, ArcGISSelectionFilter>();
     serviceCollection.AddScoped<ArcGISRootObjectBuilder>();
     serviceCollection.AddScoped<IRootObjectBuilder<MapMember>, ArcGISRootObjectBuilder>();
-
-    serviceCollection.AddScoped<LocalToGlobalConverterUtils>();
-
-    serviceCollection.AddScoped<ArcGISColorManager>();
-    serviceCollection.AddScoped<MapMembersUtils>();
-
+    serviceCollection.AddScoped<ArcGISLayerUnpacker>();
+    serviceCollection.AddScoped<ArcGISColorUnpacker>();
     // register send conversion cache
     serviceCollection.AddSingleton<ISendConversionCache, SendConversionCache>();
+
+    // register receive operation and dependencies
+    // serviceCollection.AddSingleton<IBinding, ArcGISReceiveBinding>(); // POC: disabled until receive code is refactored
+    serviceCollection.AddScoped<LocalToGlobalConverterUtils>();
+    serviceCollection.AddScoped<ArcGISColorManager>();
+    serviceCollection.AddScoped<IHostObjectBuilder, ArcGISHostObjectBuilder>();
+
+    serviceCollection.AddScoped<MapMembersUtils>();
 
     // operation progress manager
     serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();

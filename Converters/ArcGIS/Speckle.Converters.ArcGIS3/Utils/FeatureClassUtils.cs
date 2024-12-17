@@ -113,10 +113,12 @@ public class FeatureClassUtils : IFeatureClassUtils
         $"speckle_{speckleType}_SR_{activeSR.SpatialReference.Name[..Math.Min(15, activeSR.SpatialReference.Name.Length - 1)]}_X_{xOffset}_Y_{yOffset}_North_{trueNorth}_speckleID_{parentId}";
 
       // for gis elements, use a parent layer ID
-      if (item.Key.Parent?.Current is SGIS.VectorLayer vLayer)
+      /*
+      if (item.Key.Parent?.Current is SGIS.GisLayer vLayer)
       {
         uniqueKey = "speckleID_" + vLayer.id;
       }
+      */
 
       if (!geometryGroups.TryGetValue(uniqueKey, out _))
       {
@@ -279,20 +281,23 @@ public class FeatureClassUtils : IFeatureClassUtils
   )
   {
     ACG.GeometryType geomType;
-    if (listOfContextAndTrackers.FirstOrDefault().Item1.Parent?.Current is SGIS.VectorLayer vLayer) // GIS
+    // remove all native geometry type checks for now
+    /*
+    if (
+      listOfContextAndTrackers.FirstOrDefault().Item1.Parent?.Current is SGIS.GisLayer vLayer
+      && vLayer["attributes"] is Base
+    ) // GIS
     {
       geomType = GISLayerGeometryType.GetNativeLayerGeometryType(vLayer);
-    }
-    else // non-GIS
+    }*/
+
+    var hostAppGeom = listOfContextAndTrackers[0].Item2.HostAppGeom;
+    if (hostAppGeom is null) // type check, should not happen
     {
-      var hostAppGeom = listOfContextAndTrackers[0].Item2.HostAppGeom;
-      if (hostAppGeom is null) // type check, should not happen
-      {
-        // TODO: Unsure about the type this exception should be.
-        throw new SpeckleException("Conversion failed");
-      }
-      geomType = hostAppGeom.GeometryType;
+      // TODO: Unsure about the type this exception should be.
+      throw new SpeckleException("Conversion failed");
     }
+    geomType = hostAppGeom.GeometryType;
 
     return geomType;
   }

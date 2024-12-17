@@ -51,7 +51,7 @@ public class TeklaDocumentModelStore : DocumentModelStore
       {
         return;
       }
-      _jsonCacheManager.SaveObject(_modelKey, modelCardState);
+      _jsonCacheManager.UpdateObject(_modelKey, modelCardState);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {

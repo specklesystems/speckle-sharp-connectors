@@ -25,7 +25,8 @@ public class MeshListToHostConverter : ITypedConverter<List<SOG.Mesh>, ACG.Multi
     {
       throw new ValidationException("Feature contains no geometries");
     }
-    ACG.MultipatchBuilderEx multipatchPart = new(_settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference);
+
+    ACG.MultipatchBuilderEx multipatchPart = new(); //_settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference);
 
     foreach (SOG.Mesh part in target)
     {
