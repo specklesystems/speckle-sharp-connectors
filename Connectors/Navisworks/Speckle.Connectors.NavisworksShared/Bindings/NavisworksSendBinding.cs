@@ -87,22 +87,21 @@ public class NavisworksSendBinding : ISendBinding
     using var activity = _activityFactory.Start();
     try
     {
-          var modelCard = GetModelCard(modelCardId);
+      var modelCard = GetModelCard(modelCardId);
 
-          using var scope = _serviceProvider.CreateScope();
+      using var scope = _serviceProvider.CreateScope();
 
-          InitializeConverterSettings(scope, modelCard);
+      InitializeConverterSettings(scope, modelCard);
 
-          CancellationToken token = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      CancellationToken token = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
-          var navisworksModelItems = GetNavisworksModelItems(modelCard);
+      var navisworksModelItems = GetNavisworksModelItems(modelCard);
 
-          var sendResult = await ExecuteSendOperation(scope, modelCard, navisworksModelItems, token)
-            .ConfigureAwait(false);
+      var sendResult = await ExecuteSendOperation(scope, modelCard, navisworksModelItems, token).ConfigureAwait(false);
 
-          await Commands
-            .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
-            .ConfigureAwait(false);
+      await Commands
+        .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
+        .ConfigureAwait(false);
     }
     catch (OperationCanceledException)
     {

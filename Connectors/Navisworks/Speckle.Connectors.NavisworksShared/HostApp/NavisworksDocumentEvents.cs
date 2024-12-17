@@ -102,24 +102,24 @@ public sealed class NavisworksDocumentEvents : IDisposable
 
     try
     {
-          var store = _serviceProvider.GetRequiredService<NavisworksDocumentModelStore>();
-          var basicBinding = _serviceProvider.GetRequiredService<IBasicConnectorBinding>();
-          var commands = (basicBinding as NavisworksBasicConnectorBinding)?.Commands;
+      var store = _serviceProvider.GetRequiredService<NavisworksDocumentModelStore>();
+      var basicBinding = _serviceProvider.GetRequiredService<IBasicConnectorBinding>();
+      var commands = (basicBinding as NavisworksBasicConnectorBinding)?.Commands;
 
-          switch (_finalModelCount)
-          {
-            case 0 when _priorModelCount > 0:
-              store.ClearAndSave();
-              break;
-            case > 0 when _priorModelCount == 0:
-              store.ReloadState();
-              break;
-          }
+      switch (_finalModelCount)
+      {
+        case 0 when _priorModelCount > 0:
+          store.ClearAndSave();
+          break;
+        case > 0 when _priorModelCount == 0:
+          store.ReloadState();
+          break;
+      }
 
-          if (commands != null)
-          {
-            await commands.NotifyDocumentChanged().ConfigureAwait(false);
-          }
+      if (commands != null)
+      {
+        await commands.NotifyDocumentChanged().ConfigureAwait(false);
+      }
     }
     finally
     {

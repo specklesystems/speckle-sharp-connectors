@@ -37,7 +37,7 @@ public class ArcGISLayerUnpacker
           Collection containerCollection = CreateAndCacheMapMemberCollection(mapMember, true);
           parentCollection.elements.Add(containerCollection);
 
-           UnpackSelection(container.Layers, containerCollection, objects);
+          UnpackSelection(container.Layers, containerCollection, objects);
           break;
 
         default:
