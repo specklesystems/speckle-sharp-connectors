@@ -6,6 +6,7 @@ using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
@@ -32,6 +33,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private readonly RhinoGroupBaker _groupBaker;
   private readonly RootObjectUnpacker _rootObjectUnpacker;
   private readonly ISdkActivityFactory _activityFactory;
+  private readonly IThreadContext _threadContext;
 
   public RhinoHostObjectBuilder(
     IRootToHostConverter converter,
@@ -42,7 +44,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     RhinoMaterialBaker materialBaker,
     RhinoColorBaker colorBaker,
     RhinoGroupBaker groupBaker,
-    ISdkActivityFactory activityFactory
+    ISdkActivityFactory activityFactory,
+    IThreadContext threadContext
   )
   {
     _converter = converter;
@@ -54,6 +57,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _layerBaker = layerBaker;
     _groupBaker = groupBaker;
     _activityFactory = activityFactory;
+    _threadContext = threadContext;
   }
 
 #pragma warning disable CA1506
@@ -112,13 +116,16 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     onOperationProgressed.Report(new("Baking layers (redraw disabled)", null));
     using (var _ = _activityFactory.Start("Pre baking layers"))
     {
-      //TODO what is this?  This is going to the UI thread
-
-
-      using var layerNoDraw = new DisableRedrawScope(_converterSettings.Current.Document.Views);
-      var paths = atomicObjectsWithoutInstanceComponentsWithPath.Select(t => t.path).ToList();
-      paths.AddRange(instanceComponentsWithPath.Select(t => t.path));
-      _layerBaker.CreateAllLayersForReceive(paths, baseLayerName);
+      //Rhino 8 doesn't play nice with Eto and layers
+      _threadContext
+        .RunOnMain(() =>
+        {
+          using var layerNoDraw = new DisableRedrawScope(_converterSettings.Current.Document.Views);
+          var paths = atomicObjectsWithoutInstanceComponentsWithPath.Select(t => t.path).ToList();
+          paths.AddRange(instanceComponentsWithPath.Select(t => t.path));
+          _layerBaker.CreateAllLayersForReceive(paths, baseLayerName);
+        })
+        .Wait();
     }
 
     // 5 - Convert atomic objects
@@ -242,32 +249,38 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       RhinoMath.UnsetIntIndex
     );
 
-    _instanceBaker.PurgeInstances(baseLayerName);
-    _materialBaker.PurgeMaterials(baseLayerName);
-
-    var doc = _converterSettings.Current.Document;
-    // Cleans up any previously received objects
-    if (rootLayerIndex != RhinoMath.UnsetIntIndex)
-    {
-      var documentLayer = doc.Layers[rootLayerIndex];
-      var childLayers = documentLayer.GetChildren();
-      if (childLayers != null)
+    //Rhino 8 doesn't play nice with Eto and layers
+    _threadContext
+      .RunOnMain(() =>
       {
-        using var layerNoDraw = new DisableRedrawScope(doc.Views);
-        foreach (var layer in childLayers)
-        {
-          var purgeSuccess = doc.Layers.Purge(layer.Index, true);
-          if (!purgeSuccess)
-          {
-            Console.WriteLine($"Failed to purge layer: {layer}");
-          }
-        }
-      }
-      doc.Layers.Purge(documentLayer.Index, true);
-    }
+        _instanceBaker.PurgeInstances(baseLayerName);
+        _materialBaker.PurgeMaterials(baseLayerName);
 
-    // Cleans up any previously received group
-    _groupBaker.PurgeGroups(baseLayerName);
+        var doc = _converterSettings.Current.Document;
+        // Cleans up any previously received objects
+        if (rootLayerIndex != RhinoMath.UnsetIntIndex)
+        {
+          var documentLayer = doc.Layers[rootLayerIndex];
+          var childLayers = documentLayer.GetChildren();
+          if (childLayers != null)
+          {
+            using var layerNoDraw = new DisableRedrawScope(doc.Views);
+            foreach (var layer in childLayers)
+            {
+              var purgeSuccess = doc.Layers.Purge(layer.Index, true);
+              if (!purgeSuccess)
+              {
+                Console.WriteLine($"Failed to purge layer: {layer}");
+              }
+            }
+          }
+          doc.Layers.Purge(documentLayer.Index, true);
+        }
+
+        // Cleans up any previously received group
+        _groupBaker.PurgeGroups(baseLayerName);
+      })
+      .Wait();
   }
 
   /// <summary>
