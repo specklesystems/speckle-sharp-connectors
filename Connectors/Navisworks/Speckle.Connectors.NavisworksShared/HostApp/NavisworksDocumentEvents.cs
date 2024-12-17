@@ -102,9 +102,6 @@ public sealed class NavisworksDocumentEvents : IDisposable
 
     try
     {
-      await _parent
-        .RunOnMainThreadAsync(async () =>
-        {
           var store = _serviceProvider.GetRequiredService<NavisworksDocumentModelStore>();
           var basicBinding = _serviceProvider.GetRequiredService<IBasicConnectorBinding>();
           var commands = (basicBinding as NavisworksBasicConnectorBinding)?.Commands;
@@ -123,8 +120,6 @@ public sealed class NavisworksDocumentEvents : IDisposable
           {
             await commands.NotifyDocumentChanged().ConfigureAwait(false);
           }
-        })
-        .ConfigureAwait(false);
     }
     finally
     {

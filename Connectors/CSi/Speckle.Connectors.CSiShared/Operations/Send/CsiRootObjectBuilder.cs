@@ -45,7 +45,8 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
   public RootObjectBuilderResult Build(
     IReadOnlyList<ICsiWrapper> csiObjects,
     SendInfo sendInfo,
-    IProgress<CardProgress> onOperationProgressed
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken
   )
   {
     using var activity = _activityFactory.Start("Build");
@@ -61,6 +62,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     {
       foreach (ICsiWrapper csiObject in csiObjects)
       {
+        cancellationToken.ThrowIfCancellationRequested();
         using var _2 = _activityFactory.Start("Convert");
 
         var result = ConvertCSiObject(csiObject, rootObjectCollection, sendInfo.ProjectId);

@@ -39,10 +39,7 @@ public class NavisworksSelectionBinding : ISelectionBinding
 
   private async Task UpdateSelectionAsync()
   {
-    var selInfo = await Parent
-      .RunOnMainThreadAsync<SelectionInfo>(() => Task.FromResult(GetSelection()))
-      .ConfigureAwait(false);
-
+    var selInfo = GetSelection();
     await Parent.Send<SelectionInfo>(SELECTION_EVENT, selInfo).ConfigureAwait(false);
   }
 

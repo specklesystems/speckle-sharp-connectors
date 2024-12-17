@@ -61,7 +61,8 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
   public RootObjectBuilderResult Build(
     IReadOnlyList<AutocadRootObject> objects,
     SendInfo sendInfo,
-    IProgress<CardProgress> onOperationProgressed
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken
   )
   {
     // 0 - Init the root
@@ -93,6 +94,7 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
       int count = 0;
       foreach (var (entity, applicationId) in atomicObjects)
       {
+        cancellationToken.ThrowIfCancellationRequested();
         using (var convertActivity = _activityFactory.Start("Converting object"))
         {
           // Create and add a collection for this entity if not done so already.

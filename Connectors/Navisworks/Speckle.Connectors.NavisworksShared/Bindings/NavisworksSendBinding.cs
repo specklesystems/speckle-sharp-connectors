@@ -87,9 +87,6 @@ public class NavisworksSendBinding : ISendBinding
     using var activity = _activityFactory.Start();
     try
     {
-      await Parent
-        .RunOnMainThreadAsync(async () =>
-        {
           var modelCard = GetModelCard(modelCardId);
 
           using var scope = _serviceProvider.CreateScope();
@@ -106,8 +103,6 @@ public class NavisworksSendBinding : ISendBinding
           await Commands
             .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
             .ConfigureAwait(false);
-        })
-        .ConfigureAwait(false);
     }
     catch (OperationCanceledException)
     {

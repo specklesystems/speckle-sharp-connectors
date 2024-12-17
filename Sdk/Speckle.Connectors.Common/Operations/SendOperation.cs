@@ -32,7 +32,7 @@ public sealed class SendOperation<T>(
   )
   {
     var buildResult = await threadContext.RunOnMain(
-      () => rootObjectBuilder.Build(objects, sendInfo, onOperationProgressed)
+      () => rootObjectBuilder.Build(objects, sendInfo, onOperationProgressed, ct)
     );
 
     // POC: Jonathon asks on behalf of willow twin - let's explore how this can work

@@ -28,11 +28,11 @@ public class NavisworksRootObjectBuilder(
 {
   internal NavisworksConversionSettings GetCurrentSettings() => converterSettings.Current;
 
-  public Task<RootObjectBuilderResult> Build(
+  public RootObjectBuilderResult Build(
     IReadOnlyList<NAV.ModelItem> navisworksModelItems,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
-    CancellationToken cancellationToken = default
+    CancellationToken cancellationToken
   )
   {
     using var activity = activityFactory.Start("Build");
@@ -151,7 +151,7 @@ public class NavisworksRootObjectBuilder(
 
     // 8. Finalize and return
     rootObjectCollection.elements = finalElements;
-    return Task.FromResult(new RootObjectBuilderResult(rootObjectCollection, results));
+    return new RootObjectBuilderResult(rootObjectCollection, results);
   }
 
   private SendConversionResult ConvertNavisworksItem(
