@@ -62,5 +62,5 @@ public class NavisworksBasicConnectorBinding : IBasicConnectorBinding
 
   public async Task HighlightObjects(IReadOnlyList<string> objectIds) =>
     // TODO: Implement highlighting logic on main thread
-    await Task.CompletedTask.ConfigureAwait(false);
+    await Task.CompletedTask;
 }

@@ -97,11 +97,9 @@ public class NavisworksSendBinding : ISendBinding
 
       var navisworksModelItems = GetNavisworksModelItems(modelCard);
 
-      var sendResult = await ExecuteSendOperation(scope, modelCard, navisworksModelItems, token).ConfigureAwait(false);
+      var sendResult = await ExecuteSendOperation(scope, modelCard, navisworksModelItems, token);
 
-      await Commands
-        .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
-        .ConfigureAwait(false);
+      await Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
     }
     catch (OperationCanceledException)
     {
@@ -112,7 +110,7 @@ public class NavisworksSendBinding : ISendBinding
     catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
       _logger.LogModelCardHandledError(ex);
-      await Commands.SetModelError(modelCardId, ex).ConfigureAwait(false);
+      await Commands.SetModelError(modelCardId, ex);
     }
   }
 
@@ -167,8 +165,7 @@ public class NavisworksSendBinding : ISendBinding
         modelCard.GetSendInfo(_speckleApplication.Slug),
         _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCard.ModelCardId!, token),
         token
-      )
-      .ConfigureAwait(false);
+      );
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
 

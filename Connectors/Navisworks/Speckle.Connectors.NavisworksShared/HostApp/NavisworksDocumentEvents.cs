@@ -84,10 +84,7 @@ public sealed class NavisworksDocumentEvents : IDisposable
 
     _topLevelExceptionHandler.CatchUnhandled(
       () =>
-        _idleManager.SubscribeToIdle(
-          nameof(NavisworksDocumentEvents),
-          async () => await ProcessModelStateChangeAsync().ConfigureAwait(false)
-        )
+        _idleManager.SubscribeToIdle(nameof(NavisworksDocumentEvents), async () => await ProcessModelStateChangeAsync())
     );
   }
 
@@ -118,7 +115,7 @@ public sealed class NavisworksDocumentEvents : IDisposable
 
       if (commands != null)
       {
-        await commands.NotifyDocumentChanged().ConfigureAwait(false);
+        await commands.NotifyDocumentChanged();
       }
     }
     finally
@@ -159,7 +156,7 @@ public sealed class NavisworksDocumentEvents : IDisposable
 
       if (commands != null)
       {
-        await commands.NotifyDocumentChanged().ConfigureAwait(false);
+        await commands.NotifyDocumentChanged();
       }
     }
     finally
