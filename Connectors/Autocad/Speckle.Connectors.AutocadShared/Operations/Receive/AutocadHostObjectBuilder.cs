@@ -23,7 +23,7 @@ namespace Speckle.Connectors.Autocad.Operations.Receive;
 public class AutocadHostObjectBuilder : IHostObjectBuilder
 {
   private readonly AutocadLayerBaker _layerBaker;
-  private readonly IRootToHostConverter _converter;
+  private readonly IHostConverter _converter;
   private readonly ISyncToThread _syncToThread;
   private readonly AutocadGroupBaker _groupBaker;
   private readonly AutocadMaterialBaker _materialBaker;
@@ -33,7 +33,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
   private readonly RootObjectUnpacker _rootObjectUnpacker;
 
   public AutocadHostObjectBuilder(
-    IRootToHostConverter converter,
+    IHostConverter converter,
     AutocadLayerBaker layerBaker,
     AutocadGroupBaker groupBaker,
     AutocadInstanceBaker instanceBaker,

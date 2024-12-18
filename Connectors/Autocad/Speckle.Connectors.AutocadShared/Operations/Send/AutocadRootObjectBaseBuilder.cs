@@ -18,7 +18,7 @@ namespace Speckle.Connectors.Autocad.Operations.Send;
 
 public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadRootObject>
 {
-  private readonly IRootToSpeckleConverter _converter;
+  private readonly ISpeckleConverter _converter;
   private readonly string[] _documentPathSeparator = ["\\"];
   private readonly ISendConversionCache _sendConversionCache;
   private readonly AutocadInstanceUnpacker _instanceUnpacker;
@@ -29,7 +29,7 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
   private readonly ISdkActivityFactory _activityFactory;
 
   protected AutocadRootObjectBaseBuilder(
-    IRootToSpeckleConverter converter,
+    ISpeckleConverter converter,
     ISendConversionCache sendConversionCache,
     AutocadInstanceUnpacker instanceObjectManager,
     AutocadMaterialUnpacker materialUnpacker,

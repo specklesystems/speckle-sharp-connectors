@@ -14,7 +14,7 @@ public sealed class AutocadRootObjectBuilder : AutocadRootObjectBaseBuilder
 
   public AutocadRootObjectBuilder(
     AutocadLayerUnpacker layerUnpacker,
-    IRootToSpeckleConverter converter,
+    ISpeckleConverter converter,
     ISendConversionCache sendConversionCache,
     AutocadInstanceUnpacker instanceObjectManager,
     AutocadMaterialUnpacker materialUnpacker,

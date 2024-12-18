@@ -1,7 +1,6 @@
 ﻿using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.Common.ToHost;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
@@ -14,18 +13,17 @@ public static class ServiceRegistration
     this IServiceCollection serviceCollection,
     Assembly converterAssembly
   )
-    where TRootToSpeckleConverter : class, IRootToSpeckleConverter
+    where TRootToSpeckleConverter : class, ISpeckleConverter
   {
-    serviceCollection.AddScoped<IRootToSpeckleConverter, TRootToSpeckleConverter>();
+    serviceCollection.AddScoped<ISpeckleConverter, TRootToSpeckleConverter>();
     /*
       POC: CNX-9267 Moved the Injection of converters into the converter module. Not sure if this is 100% right, as this doesn't just register the conversions within this converter, but any conversions found in any Speckle.*.dll file.
       This will require consolidating across other connectors.
     */
 
-
-
-    serviceCollection.AddScoped<IRootToHostConverter, ConverterWithFallback>();
-    serviceCollection.AddScoped<ConverterWithoutFallback>(); //Register as self, only the `ConverterWithFallback` needs it
+    
+    serviceCollection.AddScoped<IHostConverter, ConverterWithFallback>();
+    serviceCollection.AddScoped<HostConverter>(); //Register as self, only the `ConverterWithFallback` needs it
     serviceCollection.AddConverters(converterAssembly);
   }
 
