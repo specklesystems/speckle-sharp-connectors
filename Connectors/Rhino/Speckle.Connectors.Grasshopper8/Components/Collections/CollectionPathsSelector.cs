@@ -43,8 +43,11 @@ public class CollectionPathsSelector : ValueSet<IGH_Goo>
     void GetPathsInternal(Collection col)
     {
       currentPath.Add(col.name);
-      allPaths.Add(string.Join(" > ", currentPath));
-      var subCols = col.elements.OfType<Collection>();
+      var subCols = col.elements.OfType<Collection>().ToList();
+      if (subCols.Count != col.elements.Count)
+      {
+        allPaths.Add(string.Join(" :: ", currentPath));
+      }
       foreach (var subCol in subCols)
       {
         GetPathsInternal(subCol);

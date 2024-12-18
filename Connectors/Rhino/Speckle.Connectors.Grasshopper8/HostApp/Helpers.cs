@@ -1,3 +1,5 @@
+using Grasshopper;
+using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Types;
 using Rhino;
 using Rhino.Geometry;
@@ -91,5 +93,36 @@ public static class GrasshopperHelpers
     }
 
     throw new SpeckleException("Failed to cast IGH_GeometricGoo to geometry base");
+  }
+
+  public static DataTree<object> CreateDataTree(string topology, System.Collections.IList subset)
+  {
+    var tree = new DataTree<object>();
+    var treeTopo = topology.Split(' ');
+    int subsetCount = 0;
+    foreach (var branch in treeTopo)
+    {
+      if (!string.IsNullOrEmpty(branch))
+      {
+        var branchTopo = branch.Split('-')[0].Split(';');
+        var branchIndexes = new List<int>();
+        foreach (var t in branchTopo)
+        {
+          branchIndexes.Add(Convert.ToInt32(t));
+        }
+
+        var elCount = Convert.ToInt32(branch.Split('-')[1]);
+        var myPath = new GH_Path(branchIndexes.ToArray());
+
+        for (int i = 0; i < elCount; i++)
+        {
+          tree.EnsurePath(myPath).Add(new Grasshopper.Kernel.Types.GH_ObjectWrapper(subset[subsetCount + i]));
+        }
+
+        subsetCount += elCount;
+      }
+    }
+
+    return tree;
   }
 }

@@ -9,7 +9,7 @@ using Speckle.Sdk.Models.Collections;
 namespace Speckle.Connectors.Grasshopper8.Parameters;
 
 /// <summary>
-/// Wrapper around a received speckle object. It encapsulates the original object, its converted form and its original path.
+/// Wrapper around a geometry base object and its converted speckle equivalent.
 /// </summary>
 public class SpeckleObject : Base
 {
@@ -156,7 +156,9 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectGoo>
     : base(tag, access) { }
 
   public SpeckleObjectParam(GH_ParamAccess access)
-    : base("Speckle Grasshopper Object", "SGO", "XXXXX", "Speckle", "Params", access) { }
+    : base("Speckle Object", "SO", "Represents a Speckle object", "Speckle", "Params", access) { }
 
   public override Guid ComponentGuid => new("22FD5510-D5D3-4101-8727-153FFD329E4F");
+
+  protected override Bitmap Icon => BitmapBuilder.CreateHexagonalBitmap("SO");
 }

@@ -84,11 +84,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
 
       foreach (var obj in data)
       {
-        if (obj is SpeckleCollectionGoo collectionGoo)
-        {
-          childCollection.elements.Add(collectionGoo.Value);
-        }
-        else if (obj is SpeckleObjectGoo objectGoo)
+        if (obj is SpeckleObjectGoo objectGoo)
         {
           childCollection.elements.Add(objectGoo.Value);
         }

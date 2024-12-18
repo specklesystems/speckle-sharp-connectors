@@ -245,6 +245,7 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
 
   private void CreateOutputs(List<OutputParamWrapper> outputParams)
   {
+    // TODO: better, nicer handling of creation/removal
     while (Params.Output.Count > 0)
     {
       Params.UnregisterOutputParameter(Params.Output[^1]);
