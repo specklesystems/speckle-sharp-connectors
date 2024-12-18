@@ -1,7 +1,11 @@
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
+using Microsoft.Extensions.DependencyInjection;
+using Rhino;
 using Rhino.Display;
 using Rhino.Geometry;
+using Speckle.Converters.Common;
+using Speckle.Converters.Rhino;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 
@@ -12,7 +16,7 @@ namespace Speckle.Connectors.Grasshopper8.Parameters;
 /// </summary>
 public class SpeckleObject : Base
 {
-  public Base OriginalObject { get; set; }
+  public Base Base { get; set; }
   public GeometryBase GeometryBase { get; set; } // note: how will we send intervals and other gh native objects? do we? maybe not for now
   public List<Collection> Path { get; set; }
 
@@ -81,9 +85,11 @@ public class SpeckleObject : Base
 
 public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckleGoo
 {
+  private IRootToSpeckleConverter _hostConverter;
+
   public override IGH_Goo Duplicate() => throw new NotImplementedException();
 
-  public override string ToString() => $@"Speckle Object Goo [{m_value.OriginalObject?.speckle_type}]";
+  public override string ToString() => $@"Speckle Object Goo [{m_value.Base?.speckle_type}]";
 
   public override bool IsValid => true;
   public override string TypeName => "Speckle object wrapper";
@@ -99,6 +105,12 @@ public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckle
       case GH_Goo<SpeckleObject> speckleGrasshopperObjectGoo:
         Value = speckleGrasshopperObjectGoo.Value;
         return true;
+      case IGH_GeometricGoo:
+        // TODO: note scope management should be handled globally; we'd need a global converter provider for grashopper
+        // var gb = geometricGoo.GeometricGooToGeometryBase();
+        // var converted = _hostConverter.Convert(gb);
+        // Value = new SpeckleObject() { GeometryBase = gb, Base = converted };
+        return false;
     }
 
     return false;
@@ -132,10 +144,26 @@ public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckle
 
   public SpeckleObjectGoo(SpeckleObject value)
   {
+    Rhino.RhinoDoc.ActiveDocumentChanged += (_, _) => InitializeConverter();
     Value = value;
+    // InitializeConverter();
   }
 
-  public SpeckleObjectGoo() { }
+  public SpeckleObjectGoo()
+  {
+    Rhino.RhinoDoc.ActiveDocumentChanged += (_, _) => InitializeConverter();
+    // InitializeConverter();
+  }
+
+  private void InitializeConverter()
+  {
+    using var scope = PriorityLoader.Container.CreateScope();
+    var rhinoConversionSettingsFactory = scope.ServiceProvider.GetRequiredService<IRhinoConversionSettingsFactory>();
+    scope
+      .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
+      .Initialize(rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
+    _hostConverter = scope.ServiceProvider.GetService<IRootToSpeckleConverter>();
+  }
 }
 
 public class SpeckleObjectParam : GH_Param<SpeckleObjectGoo>

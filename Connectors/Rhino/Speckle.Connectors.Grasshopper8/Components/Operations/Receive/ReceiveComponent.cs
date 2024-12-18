@@ -140,7 +140,7 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
         {
           var gh = new SpeckleObject()
           {
-            OriginalObject = map.AtomicObject,
+            Base = map.AtomicObject,
             Path = path,
             GeometryBase = geometryBase
           };

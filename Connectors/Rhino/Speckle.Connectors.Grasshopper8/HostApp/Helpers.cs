@@ -1,6 +1,8 @@
+using Grasshopper.Kernel.Types;
 using Rhino;
 using Rhino.Geometry;
 using Speckle.DoubleNumerics;
+using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 
@@ -63,5 +65,31 @@ public static class GrasshopperHelpers
     t.M32 = matrix.M43;
     t.M33 = matrix.M44;
     return t;
+  }
+
+  public static GeometryBase GeometricGooToGeometryBase(this IGH_GeometricGoo geoGeo)
+  {
+    var value = geoGeo.GetType().GetProperty("Value")?.GetValue(geoGeo);
+    switch (value)
+    {
+      case GeometryBase gb:
+        return gb;
+      case Point3d pt:
+        return new Rhino.Geometry.Point(pt);
+      case Line ln:
+        return new LineCurve(ln);
+      case Rectangle3d rec:
+        return rec.ToNurbsCurve();
+      case Circle c:
+        return new ArcCurve(c);
+      case Arc ac:
+        return new ArcCurve(ac);
+      case Ellipse el:
+        return el.ToNurbsCurve();
+      case Sphere sp:
+        return sp.ToBrep();
+    }
+
+    throw new SpeckleException("Failed to cast IGH_GeometricGoo to geometry base");
   }
 }

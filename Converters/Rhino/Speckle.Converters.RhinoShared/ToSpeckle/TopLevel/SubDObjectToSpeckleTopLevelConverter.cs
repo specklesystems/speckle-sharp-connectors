@@ -8,7 +8,7 @@ using Speckle.Sdk.Models;
 namespace Speckle.Converters.Rhino.ToSpeckle.TopLevel;
 
 [NameAndRankValue(nameof(SubDObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class SubDObjectToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
+public class SubDObjectToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter, ITypedConverter<RG.SubD, SOG.SubDX>
 {
   private readonly ITypedConverter<RG.Mesh, SOG.Mesh> _meshConverter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
@@ -39,4 +39,23 @@ public class SubDObjectToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
 
     return bx;
   }
+
+  public Base ConvertRawSubD(RG.SubD target)
+  {
+    var subdEncoding = RawEncodingCreator.Encode(target, _settingsStore.Current.Document);
+
+    var mesh = DisplayMeshExtractor.GetDisplayMeshFromGeometry(target);
+    var displayValue = new List<SOG.Mesh> { _meshConverter.Convert(mesh) };
+
+    var bx = new SOG.SubDX()
+    {
+      displayValue = displayValue,
+      encodedValue = subdEncoding,
+      units = _settingsStore.Current.SpeckleUnits
+    };
+
+    return bx;
+  }
+
+  public SOG.SubDX Convert(RG.SubD target) => (SOG.SubDX)ConvertRawSubD(target);
 }

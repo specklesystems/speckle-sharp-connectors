@@ -8,7 +8,9 @@ using Speckle.Sdk.Models;
 namespace Speckle.Converters.Rhino.ToSpeckle.TopLevel;
 
 [NameAndRankValue(nameof(ExtrusionObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class ExtrusionObjectToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
+public class ExtrusionObjectToSpeckleTopLevelConverter
+  : IToSpeckleTopLevelConverter,
+    ITypedConverter<RG.Extrusion, SOG.ExtrusionX>
 {
   private readonly ITypedConverter<RG.Mesh, SOG.Mesh> _meshConverter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
@@ -39,4 +41,23 @@ public class ExtrusionObjectToSpeckleTopLevelConverter : IToSpeckleTopLevelConve
 
     return bx;
   }
+
+  public Base ConvertRawExtrusion(RG.Extrusion extrusion) // POC: hate this right now
+  {
+    var extrusionEncoding = RawEncodingCreator.Encode(extrusion, _settingsStore.Current.Document);
+
+    var mesh = DisplayMeshExtractor.GetDisplayMeshFromGeometry(extrusion);
+    var displayValue = new List<SOG.Mesh> { _meshConverter.Convert(mesh) };
+
+    var bx = new SOG.ExtrusionX()
+    {
+      displayValue = displayValue,
+      encodedValue = extrusionEncoding,
+      units = _settingsStore.Current.SpeckleUnits
+    };
+
+    return bx;
+  }
+
+  public SOG.ExtrusionX Convert(RG.Extrusion target) => (SOG.ExtrusionX)ConvertRawExtrusion(target);
 }

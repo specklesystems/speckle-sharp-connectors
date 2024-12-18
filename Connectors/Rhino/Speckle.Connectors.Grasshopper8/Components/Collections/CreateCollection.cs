@@ -5,13 +5,13 @@ using Grasshopper.Kernel.Types;
 using Grasshopper.Rhinoceros.Model;
 using Microsoft.Extensions.DependencyInjection;
 using Rhino;
-using Rhino.Geometry;
+using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Connectors.Grasshopper8.Parameters;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
+using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models.Collections;
-using Point = Rhino.Geometry.Point;
 
 namespace Speckle.Connectors.Grasshopper8.Components.Collections;
 
@@ -24,7 +24,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
   private DebounceDispatcher _debounceDispatcher = new();
 
   public CreateCollection()
-    : base("Create layer", "create", "Creates a new layer", "Speckle", "Collections") { }
+    : base("Create collection", "Create collection", "Creates a new collection", "Speckle", "Collections") { }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
@@ -68,10 +68,10 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
       }
       var childCollection = new Collection(inputParam.NickName) { applicationId = inputParam.InstanceGuid.ToString() };
 
+      // if on this port we're only receiving collections, we should become "pass-through" to not create
+      // needless nesting
       if (inputCollections.Count == data.Count)
       {
-        // TODO
-        var subCollections = new List<Collection>();
         foreach (var collection in inputCollections)
         {
           childCollection.elements.AddRange(collection.Value.elements);
@@ -94,65 +94,28 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
         }
         else if (obj is IGH_GeometricGoo geoGeo)
         {
-          // TODO: right now creating incomplete speckle object wrappers, we should also convert
           try
           {
-            var value = geoGeo.GetType().GetProperty("Value")?.GetValue(obj);
-            if (value is GeometryBase gb)
-            {
-              var converted = hostConverter.Convert(gb);
-              childCollection.elements.Add(new SpeckleObject() { GeometryBase = gb, OriginalObject = converted });
-            }
+            var geometryBase = geoGeo.GeometricGooToGeometryBase();
+            var converted = hostConverter.Convert(geometryBase);
 
-            if (value is Point3d pt)
-            {
-              var geometryBasePoint = new Point(pt);
-              var converted = hostConverter.Convert(geometryBasePoint);
-              childCollection.elements.Add(
-                new SpeckleObject() { GeometryBase = geometryBasePoint, OriginalObject = converted }
-              );
-            }
-
-            if (value is Line ln)
-            {
-              var geometryBaseLine = new LineCurve(ln);
-              var converted = hostConverter.Convert(geometryBaseLine);
-              childCollection.elements.Add(
-                new SpeckleObject() { GeometryBase = geometryBaseLine, OriginalObject = converted }
-              );
-            }
-
-            if (value is Rectangle3d rc)
-            {
-              var gbRec = rc.ToPolyline().ToPolylineCurve();
-              var converted = hostConverter.Convert(gbRec);
-              childCollection.elements.Add(new SpeckleObject() { GeometryBase = gbRec, OriginalObject = converted });
-            }
-
-            if (value is Circle c)
-            {
-              var gbCircle = c.ToNurbsCurve();
-              var converted = hostConverter.Convert(gbCircle);
-              childCollection.elements.Add(new SpeckleObject() { GeometryBase = gbCircle, OriginalObject = converted });
-            }
-
-            if (value is Ellipse el) { }
-
-            if (value is Sphere sph) { }
-
-            // TODO: other fucking primitives, circles, ellipses(?), bla bla
-            // Ask alan casting is so much bs right now in gh
+            var wrapper = new SpeckleObject() { GeometryBase = geometryBase, Base = converted };
+            childCollection.elements.Add(wrapper);
           }
-#pragma warning disable CA1031
-          catch (Exception)
-#pragma warning restore CA1031
+          catch (Exception e) when (!e.IsFatal())
           {
-            // ignore
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Failed to convert object of type {obj.GetType()}");
+            return;
           }
         }
-        else if (obj is ModelObject)
+        else if (obj is ModelObject { Id: not null } modelObject)
         {
-          // TODO
+          // TODO remove copy pasta
+          var docObject = RhinoDoc.ActiveDoc.Objects.FindId(modelObject.Id.NotNull());
+          var converted = hostConverter.Convert(docObject.Geometry);
+
+          var wrapper = new SpeckleObject() { GeometryBase = docObject.Geometry, Base = converted };
+          childCollection.elements.Add(wrapper);
         }
       }
 
@@ -202,6 +165,10 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
     base.AddedToDocument(document);
     Params.ParameterChanged += (sender, args) =>
     {
+      if (args.ParameterSide == GH_ParameterSide.Output)
+      {
+        return;
+      }
       switch (args.OriginalArguments.Type)
       {
         case GH_ObjectEventType.NickName:
