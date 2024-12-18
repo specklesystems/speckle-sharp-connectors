@@ -1,14 +1,15 @@
-﻿using System.Collections.Concurrent;
-using System.Reflection;
+﻿using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.ToHost;
-using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Common.Registration;
 
 public static class ServiceRegistration
 {
+  private static readonly Type s_base = typeof(ISpeckleObject);
   public static void AddRootCommon<TRootToSpeckleConverter>(
     this IServiceCollection serviceCollection,
     Assembly converterAssembly
@@ -25,9 +26,7 @@ public static class ServiceRegistration
 
     serviceCollection.AddScoped<IRootToHostConverter, ConverterWithFallback>();
     serviceCollection.AddScoped<ConverterWithoutFallback>(); //Register as self, only the `ConverterWithFallback` needs it
-
-    serviceCollection.AddConverters<IToSpeckleTopLevelConverter>(converterAssembly);
-    serviceCollection.AddConverters<IToHostTopLevelConverter>(converterAssembly);
+    serviceCollection.AddConverters(converterAssembly);
   }
 
   public static IServiceCollection AddApplicationConverters<THostToSpeckleUnitConverter, THostUnits>(
@@ -41,50 +40,32 @@ public static class ServiceRegistration
     return serviceCollection;
   }
 
-  public static void AddConverters<T>(this IServiceCollection serviceCollection, Assembly converterAssembly)
+  public static void AddConverters(this IServiceCollection serviceCollection, Assembly converterAssembly)
   {
-    ConcurrentDictionary<string, Type> converterTypes = new();
-    var types = converterAssembly.ExportedTypes.Where(x => x.GetInterfaces().Contains(typeof(T)));
-
-    // we only care about named types
-    var byName = types
-      .Where(x => x.GetCustomAttribute<NameAndRankValueAttribute>() != null)
-      .Select(x =>
-      {
-        var nameAndRank = x.GetCustomAttribute<NameAndRankValueAttribute>().NotNull();
-
-        return (name: nameAndRank.Name, rank: nameAndRank.Rank, type: x);
-      })
-      .ToList();
-
-    // we'll register the types accordingly
-    var names = byName.Select(x => x.name).Distinct();
-    foreach (string name in names)
+    Dictionary<(Type, Type), Type> toSpeckleConverters = new();
+    Dictionary<(Type, Type), Type> toHostConverters = new();
+    foreach (var type in converterAssembly.ExportedTypes)
     {
-      var namedTypes = byName.Where(x => x.name == name).OrderByDescending(y => y.rank).ToList();
-
-      // first type found
-      var first = namedTypes[0];
-
-      // POC: may need to be instance per lifecycle scope
-      converterTypes.TryAdd(first.name, first.type);
-
-      // POC: not sure yet if...
-      // * This should be an array of types
-      // * Whether the scope should be modified or modifiable
-      // * Whether this is in the write project... hmmm
-      // POC: IsAssignableFrom()
-      var secondaryType = first.type.GetInterface(typeof(ITypedConverter<,>).Name);
-      // POC: should we explode if no found?
-      if (secondaryType != null)
+      foreach (var interfaceType in type.GetInterfaces())
       {
-        converterTypes.TryAdd(first.name, secondaryType);
+        if (interfaceType.IsGenericType && interfaceType.GetGenericTypeDefinition() == typeof(ITypedConverter<,>))
+        {
+          var genericTypes = interfaceType.GenericTypeArguments;
+          if (s_base.IsAssignableFrom(genericTypes[0]) )
+          {
+            toHostConverters.Add((genericTypes[0], genericTypes[1]), type);
+          } else   if (s_base.IsAssignableFrom(genericTypes[1]))
+          {
+            toSpeckleConverters.Add((genericTypes[0], genericTypes[1]), type);
+          }
+          else
+          {
+            throw new ConversionException(type.Name + " is not a valid converter.");
+          }
+        }
       }
-
-      // register subsequent types with rank
-      namedTypes.RemoveAt(0);
     }
-    serviceCollection.AddScoped<IConverterManager<T>>(sp => new ConverterManager<T>(converterTypes, sp));
+    serviceCollection.AddScoped<IConverterManager>(sp => new ConverterManager(toSpeckleConverters, toHostConverters, sp));
   }
 
   public static void RegisterRawConversions(this IServiceCollection serviceCollection, Assembly conversionAssembly)

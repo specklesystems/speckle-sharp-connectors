@@ -1,28 +1,32 @@
+
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
-using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Common;
 
-[GenerateAutoInterface]
+public interface IRootToSpeckleConverter
+{
+  Base Convert(object target);
+}
+
 public class RootToSpeckleConverter : IRootToSpeckleConverter
 {
-  private readonly IConverterManager<IToSpeckleTopLevelConverter> _toSpeckle;
+  private readonly IConverterManager _toSpeckle;
 
-  public RootToSpeckleConverter(IConverterManager<IToSpeckleTopLevelConverter> toSpeckle)
+  public RootToSpeckleConverter(IConverterManager toSpeckle)
   {
     _toSpeckle = toSpeckle;
   }
 
   public Base Convert(object target)
-  {
+  {    
     Type type = target.GetType();
 
-    var objectConverter = _toSpeckle.ResolveConverter(type);
+    var objectConverter = _toSpeckle.GetHostConverter(type);
+    var interfaceType = typeof(ITypedConverter<,>).MakeGenericType(type, typeof(Base));
+    var convertedObject = interfaceType.GetMethod("Convert")!.Invoke(objectConverter, new object[] { target })!;
 
-    var convertedObject = objectConverter.Convert(target);
-
-    return convertedObject;
+    return (Base)convertedObject;
   }
 }

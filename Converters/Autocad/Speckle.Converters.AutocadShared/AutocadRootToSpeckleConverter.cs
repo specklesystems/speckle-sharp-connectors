@@ -9,11 +9,11 @@ namespace Speckle.Converters.Autocad;
 
 public class AutocadRootToSpeckleConverter : IRootToSpeckleConverter
 {
-  private readonly IConverterManager<IToSpeckleTopLevelConverter> _toSpeckle;
+  private readonly IConverterManager _toSpeckle;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public AutocadRootToSpeckleConverter(
-    IConverterManager<IToSpeckleTopLevelConverter> toSpeckle,
+    IConverterManager toSpeckle,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
@@ -23,24 +23,25 @@ public class AutocadRootToSpeckleConverter : IRootToSpeckleConverter
 
   public Base Convert(object target)
   {
+
+    Type type = target.GetType();
     if (target is not DBObject dbObject)
     {
       throw new ValidationException(
-        $"Conversion of {target.GetType().Name} to Speckle is not supported. Only objects that inherit from DBObject are."
+        $"Conversion of {type.Name} to Speckle is not supported. Only objects that inherit from DBObject are."
       );
     }
-
-    Type type = dbObject.GetType();
 
     using (var l = _settingsStore.Current.Document.LockDocument())
     {
       using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
       {
-        var objectConverter = _toSpeckle.ResolveConverter(type);
+        var objectConverter = _toSpeckle.GetHostConverter(type);
+        var interfaceType = typeof(ITypedConverter<,>).MakeGenericType(type, typeof(Base));
+       var convertedObject = interfaceType.GetMethod("Convert")!.Invoke(objectConverter, new object[] { dbObject })!;
 
-        var convertedObject = objectConverter.Convert(dbObject);
         tr.Commit();
-        return convertedObject;
+        return (Base)convertedObject!;
       }
     }
   }

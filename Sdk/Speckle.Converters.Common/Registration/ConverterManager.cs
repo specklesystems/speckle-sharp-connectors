@@ -1,48 +1,101 @@
-using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
+using Speckle.InterfaceGenerator;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Common.Registration;
 
-public class ConverterManager<T>(ConcurrentDictionary<string, Type> converterTypes, IServiceProvider serviceProvider)
-  : IConverterManager<T>
+[GenerateAutoInterface]
+public class ConverterManager(IReadOnlyDictionary<(Type, Type), Type> toSpeckleConverters,
+  IReadOnlyDictionary<(Type, Type), Type> toHostConverters,
+  IServiceProvider serviceProvider) : IConverterManager
 {
-  public string Name => typeof(T).Name;
-
-  public T ResolveConverter(Type type, bool recursive = true)
+  private readonly Dictionary<Type, (Type?, Type?)> _hostConverterCache = new();
+  private readonly Dictionary<Type, (Type?, Type?)> _speckleConverterCache = new();
+  
+  public (object, Type) GetSpeckleConverter(Type sourceType)
   {
-    var currentType = type;
-    while (true)
+    Type? destinationType;
+    Type? converterType;
+    if (!_speckleConverterCache.TryGetValue(sourceType, out var cached))
     {
-      var typeName = currentType.Name;
-      var converter = GetConverterByType(typeName);
-      if (converter is null && recursive)
-      {
-        var baseType = currentType.BaseType;
-        currentType = baseType;
-
-        if (currentType == null)
-        {
-          throw new ConversionNotSupportedException($"No conversion found for {type.Name} or any of its base types");
-        }
-      }
-      else if (converter is null)
-      {
-        throw new ConversionNotSupportedException($"No conversion found for {type.Name}");
-      }
-      else
-      {
-        return converter;
-      }
+      (destinationType, converterType) = GetConverter(sourceType, toSpeckleConverters);
+      _speckleConverterCache.Add(sourceType, (destinationType, converterType));
     }
+    else
+    {
+      (destinationType, converterType) = cached;
+    }
+
+    if (converterType is null)
+    {
+      throw new ConversionNotSupportedException(
+        $"No conversion found for {sourceType.Name}");
+    }
+
+    return (ActivatorUtilities.CreateInstance(serviceProvider, converterType), destinationType.NotNull());
   }
 
-  private T? GetConverterByType(string typeName)
+  public (object, Type) GetHostConverter(Type sourceType)
   {
-    if (converterTypes.TryGetValue(typeName, out var converter))
+    Type? destinationType;
+    Type? converterType;
+    if (!_hostConverterCache.TryGetValue(sourceType, out var cached))
     {
-      return (T)ActivatorUtilities.CreateInstance(serviceProvider, converter);
+      (destinationType, converterType) = GetConverter(sourceType, toHostConverters);
+      _hostConverterCache.Add(sourceType, (destinationType, converterType));
     }
-    return default;
+    else
+    {
+      (destinationType, converterType) = cached;
+    }
+
+    if (converterType is null)
+    {
+      throw new ConversionNotSupportedException(
+        $"No conversion found for {sourceType.Name}");
+    }
+
+    return (ActivatorUtilities.CreateInstance(serviceProvider, converterType), destinationType.NotNull());
+  }
+  
+  private (Type?, Type?) GetConverter(Type sourceType, IReadOnlyDictionary<(Type, Type), Type> converters)
+  {
+    Type? mostBasicDestinationType = null;
+    Type? mostBasicConverterType = null;
+    foreach (var (d, converterType) in GetConverters(sourceType, converters))
+    {
+      if (mostBasicDestinationType is null || d.IsAssignableFrom(mostBasicDestinationType))
+      {
+        mostBasicDestinationType = d;
+        mostBasicConverterType = converterType;
+      }
+    }
+
+    return (mostBasicDestinationType, mostBasicConverterType);
+  }
+
+  private IEnumerable<(Type, Type)> GetConverters(Type sourceType, IReadOnlyDictionary<(Type, Type), Type> converters)
+  {
+    foreach (var (s, d) in converters.Keys)
+    {
+      Type? currentSourceType = s;
+      while (true)
+      {
+        if (currentSourceType == sourceType)
+        {
+          yield return (d, converters[(s, d)]);
+        }
+        var baseType = currentSourceType.BaseType;
+        currentSourceType = baseType;
+
+        if (currentSourceType == null)
+        {
+          break;
+        }
+
+      }
+    }
   }
 }
+
