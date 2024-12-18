@@ -7,7 +7,6 @@ using Speckle.Sdk.Models.Extensions;
 
 namespace Speckle.Converters.Common.ToHost;
 
-
 public sealed class ConverterWithFallback(ConverterWithoutFallback baseConverter, ILogger<ConverterWithFallback> logger)
   : IRootToHostConverter
 {

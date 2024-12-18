@@ -9,7 +9,11 @@ namespace Speckle.Converters.Common.Extensions;
 
 public static class ToHostTopLevelConverterExtension
 {
-  public static HostResult ConvertAndLog(this ConverterResult<IToHostTopLevelConverter> converter, Base target, ILogger logger)
+  public static HostResult ConvertAndLog(
+    this ConverterResult<IToHostTopLevelConverter> converter,
+    Base target,
+    ILogger logger
+  )
   {
     try
     {
@@ -45,9 +49,12 @@ public static class ToHostTopLevelConverterExtension
         converter.GetType()
       );
 
-      return HostResult.NoConversion($"Conversion of object {target} using {converter} was not successful: " + ex.Message);
+      return HostResult.NoConversion(
+        $"Conversion of object {target} using {converter} was not successful: " + ex.Message
+      );
     }
   }
+
   public static HostResult ConvertAndLog(this IToHostTopLevelConverter converter, Base target, ILogger logger)
   {
     try

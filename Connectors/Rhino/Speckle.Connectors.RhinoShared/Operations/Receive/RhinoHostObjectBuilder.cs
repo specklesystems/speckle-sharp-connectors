@@ -149,7 +149,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
             var result = _converter.Convert(obj);
             if (!result.IsSuccess)
             {
-              conversionResults.Add(new(Status.ERROR, obj,  result.Message.NotNull()));
+              conversionResults.Add(new(Status.ERROR, obj, result.Message.NotNull()));
               convertActivity?.SetStatus(SdkActivityStatusCode.Error);
               continue;
             }

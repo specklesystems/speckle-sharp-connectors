@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Speckle.Converters.Common.Registration;
 
-
 public class ConverterManager<T>(ConcurrentDictionary<string, Type> converterTypes, IServiceProvider serviceProvider)
   : IConverterManager<T>
 {
@@ -23,7 +22,10 @@ public class ConverterManager<T>(ConcurrentDictionary<string, Type> converterTyp
 
         if (currentType == null)
         {
-          return new ConverterResult<T>(ConversionStatus.NoConverter, Message: $"No conversion found for {type.Name} or any of its base types");
+          return new ConverterResult<T>(
+            ConversionStatus.NoConverter,
+            Message: $"No conversion found for {type.Name} or any of its base types"
+          );
         }
       }
       else if (converter is null)
@@ -32,7 +34,6 @@ public class ConverterManager<T>(ConcurrentDictionary<string, Type> converterTyp
       }
       else
       {
-         
         return new ConverterResult<T>(ConversionStatus.Success, converter);
       }
     }

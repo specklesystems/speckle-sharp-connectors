@@ -8,8 +8,8 @@ namespace Speckle.Converters.Common.ToHost;
 
 public sealed class ConverterWithoutFallback(
   IConverterManager<IToHostTopLevelConverter> converterResolver,
-  ILogger<ConverterWithoutFallback> logger)
-  : IRootToHostConverter
+  ILogger<ConverterWithoutFallback> logger
+) : IRootToHostConverter
 {
   private readonly ILogger _logger = logger;
 

@@ -160,7 +160,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       }
       else
       {
-        var result  = _rootToSpeckleConverter.Convert(rhinoObject);
+        var result = _rootToSpeckleConverter.Convert(rhinoObject);
         if (result.IsSuccess)
         {
           converted = result.Base.NotNull();

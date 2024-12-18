@@ -20,7 +20,7 @@ public abstract class RhinoObjectToSpeckleTopLevelConverter<TTopLevelIn, TInRaw,
   // POC: IIndex would fix this as I would just request the type from `RhinoObject.Geometry` directly.
   protected abstract TInRaw GetTypedGeometry(TTopLevelIn input);
 
-  public  BaseResult Convert(object target)
+  public BaseResult Convert(object target)
   {
     var typedTarget = (TTopLevelIn)target;
     var typedGeometry = GetTypedGeometry(typedTarget);
@@ -34,6 +34,6 @@ public abstract class RhinoObjectToSpeckleTopLevelConverter<TTopLevelIn, TInRaw,
       result["name"] = typedTarget.Attributes.Name;
     }
 
-    return BaseResult.Success( result);
+    return BaseResult.Success(result);
   }
 }
