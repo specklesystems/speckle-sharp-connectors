@@ -1,7 +1,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Registration;
 using Speckle.Converters.RevitShared.Settings;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -23,9 +23,9 @@ public sealed class PointcloudTopLevelConverterToSpeckle : IToSpeckleTopLevelCon
     _boundingBoxConverter = boundingBoxConverter;
   }
 
-  public Base Convert(object target) => Convert((DB.PointCloudInstance)target);
+  public BaseResult Convert(object target) => Convert((DB.PointCloudInstance)target);
 
-  public SOG.Pointcloud Convert(DB.PointCloudInstance target)
+  public BaseResult Convert(DB.PointCloudInstance target)
   {
     var boundingBox = target.get_BoundingBox(null!);
     using DB.Transform transform = target.GetTransform();
@@ -48,7 +48,7 @@ public sealed class PointcloudTopLevelConverterToSpeckle : IToSpeckleTopLevelCon
 
       specklePointCloud["category"] = target.Category?.Name;
 
-      return specklePointCloud;
+      return BaseResult.Success(specklePointCloud);
     }
   }
 }

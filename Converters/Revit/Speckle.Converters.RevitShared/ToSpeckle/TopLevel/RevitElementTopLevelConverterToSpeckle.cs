@@ -1,10 +1,12 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Registration;
 using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Converters.RevitShared.ToSpeckle.Properties;
 using Speckle.Objects.Data;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
@@ -37,9 +39,9 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
     _levelConverter = levelConverter;
   }
 
-  public Base Convert(object target) => Convert((DB.Element)target);
+  public BaseResult Convert(object target) => Convert((DB.Element)target);
 
-  public RevitObject Convert(DB.Element target)
+  public BaseResult Convert(DB.Element target)
   {
     string category = target.Category?.Name ?? "none";
 
@@ -90,7 +92,15 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
 
     // get children elements
     // this is a bespoke method by class type.
-    var children = GetElementChildren(target).ToList();
+    var children = new List<RevitObject>();
+    foreach (var child in GetElementChildren(target))
+    {
+      if (child.IsFailure)
+      {
+        return BaseResult.NoConversion(child.Message);
+      }
+      children.Add((child.Base as RevitObject).NotNull());
+    }
 
     // get properties
     Dictionary<string, object?> properties = _propertiesExtractor.GetProperties(target);
@@ -125,7 +135,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
       }
     }
 
-    return revitObject;
+    return BaseResult.Success(revitObject);
   }
 
   // Custom handling of display values for some elements
@@ -156,7 +166,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
     }
   }
 
-  private IEnumerable<RevitObject> GetElementChildren(DB.Element element)
+  private IEnumerable<BaseResult> GetElementChildren(DB.Element element)
   {
     switch (element)
     {
@@ -178,7 +188,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
     }
   }
 
-  private IEnumerable<RevitObject> GetWallChildren(DB.Wall wall)
+  private IEnumerable<BaseResult> GetWallChildren(DB.Wall wall)
   {
     List<DB.ElementId> wallChildrenIds = new();
     if (wall.CurtainGrid is DB.CurtainGrid grid)
@@ -198,7 +208,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
   }
 
   // Shockingly, roofs can have curtain grids on them. I guess it makes sense: https://en.wikipedia.org/wiki/Louvre_Pyramid
-  private IEnumerable<RevitObject> GetFootPrintRoofChildren(DB.FootPrintRoof footPrintRoof)
+  private IEnumerable<BaseResult> GetFootPrintRoofChildren(DB.FootPrintRoof footPrintRoof)
   {
     List<DB.ElementId> footPrintRoofChildrenIds = new();
     if (footPrintRoof.CurtainGrids is { } gs)

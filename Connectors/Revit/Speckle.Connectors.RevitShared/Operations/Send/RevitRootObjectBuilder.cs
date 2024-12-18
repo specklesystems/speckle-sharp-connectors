@@ -117,14 +117,20 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
         }
         else
         {
-          converted = _converter.Convert(revitElement);
+          var conversionResult = _converter.Convert(revitElement);
+          if (conversionResult.IsFailure)
+          {
+            results.Add(new(Status.ERROR, applicationId,sourceType,  conversionResult.Message));
+            continue;
+          }
+          converted = conversionResult.Value;
           converted.applicationId = applicationId;
         }
 
         var collection = _sendCollectionManager.GetAndCreateObjectHostCollection(revitElement, rootObject);
 
         collection.elements.Add(converted);
-        results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
+        results.Add(new(Status.SUCCESS, applicationId, sourceType, converted, null));
       }
       catch (Exception ex) when (!ex.IsFatal())
       {

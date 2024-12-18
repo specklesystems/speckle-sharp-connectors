@@ -17,7 +17,6 @@ using Speckle.Objects;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
-using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Transform = Speckle.Objects.Other.Transform;
@@ -208,8 +207,14 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
         }
 
         // actual conversion happens here!
-        var result = _converter.Convert(localToGlobalMap.AtomicObject);
+        var conversionResult = _converter.Convert(localToGlobalMap.AtomicObject);
         onOperationProgressed.Report(new("Converting", (double)++count / localToGlobalMaps.Count));
+        if (conversionResult.IsFailure)
+        {
+          conversionResults.Add(new(Status.ERROR, localToGlobalMap.AtomicObject, conversionResult.Message));
+          continue;
+        }
+        var result = conversionResult.Host;
         if (result is DirectShapeDefinitionWrapper)
         {
           // direct shape creation happens here
@@ -231,7 +236,7 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
         }
         else
         {
-          throw new ConversionException($"Failed to cast {result.GetType()} to direct shape definition wrapper.");
+          conversionResults.Add(new(Status.ERROR, localToGlobalMap.AtomicObject, $"Failed to cast {result?.GetType()} to direct shape definition wrapper."));
         }
       }
       catch (Exception ex) when (!ex.IsFatal())

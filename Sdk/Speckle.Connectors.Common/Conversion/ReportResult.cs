@@ -25,8 +25,8 @@ public sealed class SendConversionResult : ConversionResult
     Status status,
     string sourceId,
     string sourceType,
-    Base? result = null,
-    Exception? exception = null
+    Base? result,
+    Exception? exception
   )
   {
     Status = status;
@@ -35,6 +35,16 @@ public sealed class SendConversionResult : ConversionResult
     ResultId = result?.id;
     ResultType = result?.speckle_type;
     Error = FormatError(exception);
+  }
+  
+  public SendConversionResult(Status status, 
+    string sourceId,
+    string sourceType, string? message)
+  {
+    Status = status;
+    SourceId = sourceId;
+    SourceType = sourceType;
+    Error = new ErrorWrapper() { Message = message.NotNull(), StackTrace = "" };
   }
 }
 
@@ -56,12 +66,12 @@ public sealed class ReceiveConversionResult : ConversionResult
     Error = FormatError(exception);
   }
 
-  public ReceiveConversionResult(Status status, Base source, string exception)
+  public ReceiveConversionResult(Status status, Base source, string? message)
   {
     Status = status;
     SourceId = source.id.NotNull();
     SourceType = source.speckle_type; // Note: we'll parse it nicely in FE
-    Error = new ErrorWrapper() { Message = exception, StackTrace = "" };
+    Error = new ErrorWrapper() { Message = message.NotNull(), StackTrace = "" };
   }
 }
 

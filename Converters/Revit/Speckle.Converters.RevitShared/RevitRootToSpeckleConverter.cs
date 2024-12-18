@@ -3,8 +3,8 @@ using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
 using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared;
 
@@ -24,17 +24,26 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
     _converterSettings = converterSettings;
   }
 
-  public Base Convert(object target)
+  public BaseResult Convert(object target)
   {
     if (target is not DB.Element element)
     {
       throw new ValidationException($"Target object is not a db element, it's a {target.GetType()}");
     }
 
-    var objectConverter = _toSpeckle.ResolveConverter(target.GetType());
+    var resolveResult = _toSpeckle.ResolveConverter(target.GetType());
+    if (resolveResult.IsFailure)
+    {
+      return BaseResult.NoConverter(resolveResult.Message);
+    }
 
-    Base result = objectConverter.Convert(target);
+    var converterResult = resolveResult.Converter.NotNull().Convert(target);
+    if (converterResult.IsFailure)
+    {
+      return BaseResult.NoConversion(converterResult.Message);
+    }
 
+    var result = converterResult.Base.NotNull();
     result.applicationId = element.UniqueId;
 
     // Add ElementID to the converted objects
@@ -51,6 +60,6 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
     }
     result["worksetName"] = worksetName;
 
-    return result;
+    return  BaseResult.Success(result);
   }
 }

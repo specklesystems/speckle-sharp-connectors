@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Registration;
 using Speckle.Objects;
 using Speckle.Sdk.Models;
 
@@ -16,12 +17,12 @@ public class ModelCurveToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     _curveConverter = curveConverter;
   }
 
-  public Base Convert(object target) => Convert((DB.ModelCurve)target);
+  public BaseResult Convert(object target) => Convert((DB.ModelCurve)target);
 
-  public Base Convert(DB.ModelCurve target)
+  public BaseResult Convert(DB.ModelCurve target)
   {
     var curve = (Base)_curveConverter.Convert(target.GeometryCurve);
     curve["category"] = target.Category?.Name;
-    return curve;
+    return BaseResult.Success(curve);
   }
 }
