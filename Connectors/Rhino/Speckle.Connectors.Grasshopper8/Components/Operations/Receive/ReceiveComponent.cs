@@ -1,6 +1,5 @@
 ﻿using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
-using Rhino;
 using Rhino.Geometry;
 using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
@@ -8,8 +7,6 @@ using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.Grasshopper8.Components.BaseComponents;
 using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Connectors.Grasshopper8.Parameters;
-using Speckle.Converters.Common;
-using Speckle.Converters.Rhino;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Common.Exceptions;
@@ -73,13 +70,6 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
   )
   {
     // TODO: Resolving dependencies here may be overkill in most cases. Must re-evaluate.
-    var rhinoConversionSettingsFactory = scope.ServiceProvider.GetRequiredService<IRhinoConversionSettingsFactory>();
-    scope
-      .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
-      .Initialize(rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
-
-    var rootConverter = scope.ServiceProvider.GetService<IRootToHostConverter>();
-
     var accountManager = scope.ServiceProvider.GetRequiredService<AccountService>();
     var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
     var receiveOperation = scope.ServiceProvider.GetRequiredService<GrasshopperReceiveOperation>();
@@ -126,7 +116,7 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
     {
       try
       {
-        var converted = Convert(map.AtomicObject, rootConverter);
+        var converted = Convert(map.AtomicObject);
         var path = traversalContextUnpacker.GetCollectionPath(map.TraversalContext).ToList();
 
         foreach (var matrix in map.Matrix)
@@ -158,9 +148,9 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
     return new ReceiveComponentOutput { RootObject = goo };
   }
 
-  private List<GeometryBase> Convert(Base input, IRootToHostConverter rootConverter)
+  private List<GeometryBase> Convert(Base input)
   {
-    var result = rootConverter.Convert(input);
+    var result = ToSpeckleConversionContext.ToHostConverter.Convert(input);
 
     if (result is GeometryBase geometry)
     {

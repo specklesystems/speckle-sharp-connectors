@@ -97,7 +97,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
           try
           {
             var geometryBase = geoGeo.GeometricGooToGeometryBase();
-            var converted = hostConverter.Convert(geometryBase);
+            var converted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(geometryBase); // .Convert(geometryBase);
 
             var wrapper = new SpeckleObject() { GeometryBase = geometryBase, Base = converted };
             childCollection.elements.Add(wrapper);
@@ -112,7 +112,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
         {
           // TODO remove copy pasta
           var docObject = RhinoDoc.ActiveDoc.Objects.FindId(modelObject.Id.NotNull());
-          var converted = hostConverter.Convert(docObject.Geometry);
+          var converted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(docObject.Geometry); // .Convert(docObject.Geometry);
 
           var wrapper = new SpeckleObject() { GeometryBase = docObject.Geometry, Base = converted };
           childCollection.elements.Add(wrapper);
