@@ -1,4 +1,5 @@
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Registration;
 using Speckle.Sdk.Models;
 using RhinoObject = Rhino.DocObjects.RhinoObject;
 
@@ -19,7 +20,7 @@ public abstract class RhinoObjectToSpeckleTopLevelConverter<TTopLevelIn, TInRaw,
   // POC: IIndex would fix this as I would just request the type from `RhinoObject.Geometry` directly.
   protected abstract TInRaw GetTypedGeometry(TTopLevelIn input);
 
-  public virtual Base Convert(object target)
+  public  BaseResult Convert(object target)
   {
     var typedTarget = (TTopLevelIn)target;
     var typedGeometry = GetTypedGeometry(typedTarget);
@@ -33,6 +34,6 @@ public abstract class RhinoObjectToSpeckleTopLevelConverter<TTopLevelIn, TInRaw,
       result["name"] = typedTarget.Attributes.Name;
     }
 
-    return result;
+    return BaseResult.Success( result);
   }
 }

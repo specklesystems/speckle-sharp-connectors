@@ -1,8 +1,8 @@
-using Speckle.Sdk.Models;
+using Speckle.Converters.Common.Registration;
 
 namespace Speckle.Converters.Common.Objects;
 
 public interface IToSpeckleTopLevelConverter
 {
-  Base Convert(object target);
+  BaseResult Convert(object target);
 }

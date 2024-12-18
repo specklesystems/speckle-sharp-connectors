@@ -1,5 +1,6 @@
 ﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Registration;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
@@ -21,7 +22,7 @@ public abstract class SpeckleToHostGeometryBaseTopLevelConverter<TIn, TOut> : IT
     _geometryBaseConverter = geometryBaseConverter;
   }
 
-  public object Convert(Base target)
+  public HostResult Convert(Base target)
   {
     var castedBase = (TIn)target;
     var result = _geometryBaseConverter.Convert(castedBase);
@@ -37,7 +38,7 @@ public abstract class SpeckleToHostGeometryBaseTopLevelConverter<TIn, TOut> : IT
     if (result is RG.GeometryBase geometryBase && units is not null)
     {
       geometryBase.Transform(GetScaleTransform(units));
-      return geometryBase;
+      return HostResult.Success(geometryBase);
     }
 
     if (result is List<RG.GeometryBase> geometryBases && units is not null)
@@ -48,10 +49,10 @@ public abstract class SpeckleToHostGeometryBaseTopLevelConverter<TIn, TOut> : IT
         gb.Transform(t);
       }
 
-      return geometryBases;
+      return HostResult.Success(geometryBases);
     }
 
-    return result;
+    return HostResult.Success(result);
   }
 
   private RG.Transform GetScaleTransform(string from)

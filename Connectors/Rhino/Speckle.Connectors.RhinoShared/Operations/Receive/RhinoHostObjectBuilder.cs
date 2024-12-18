@@ -147,15 +147,21 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
             // 2: convert
             var result = _converter.Convert(obj);
+            if (!result.IsSuccess)
+            {
+              conversionResults.Add(new(Status.ERROR, obj,  result.Message.NotNull()));
+              convertActivity?.SetStatus(SdkActivityStatusCode.Error);
+              continue;
+            }
 
             // 3: bake
             var conversionIds = new List<string>();
-            if (result is GeometryBase geometryBase)
+            if (result.Host is GeometryBase geometryBase)
             {
               var guid = BakeObject(geometryBase, obj, null, atts);
               conversionIds.Add(guid.ToString());
             }
-            else if (result is List<GeometryBase> geometryBases) // one to many raw encoding case
+            else if (result.Host is List<GeometryBase> geometryBases) // one to many raw encoding case
             {
               // NOTE: I'm unhappy about this case (dim). It's needed as the raw encoder approach can hypothetically return
               // multiple "geometry bases" - but this is not a fallback conversion.
@@ -167,7 +173,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
                 conversionIds.Add(guid.ToString());
               }
             }
-            else if (result is IEnumerable<(object, Base)> fallbackConversionResult) // one to many fallback conversion
+            else if (result.Host is IEnumerable<(object, Base)> fallbackConversionResult) // one to many fallback conversion
             {
               var guids = BakeObjectsAsFallbackGroup(fallbackConversionResult, obj, atts, baseLayerName);
               conversionIds.AddRange(guids.Select(id => id.ToString()));

@@ -1,9 +1,9 @@
 ﻿using Rhino.DocObjects;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Registration;
 using Speckle.Converters.Rhino.ToSpeckle.Encoding;
 using Speckle.Converters.Rhino.ToSpeckle.Meshing;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.TopLevel;
 
@@ -22,7 +22,7 @@ public class ExtrusionObjectToSpeckleTopLevelConverter : IToSpeckleTopLevelConve
     _settingsStore = settingsStore;
   }
 
-  public Base Convert(object target)
+  public BaseResult Convert(object target)
   {
     var extrusionObject = (ExtrusionObject)target;
     var extrusionEncoding = RawEncodingCreator.Encode(extrusionObject.Geometry, _settingsStore.Current.Document);
@@ -37,6 +37,6 @@ public class ExtrusionObjectToSpeckleTopLevelConverter : IToSpeckleTopLevelConve
       units = _settingsStore.Current.SpeckleUnits
     };
 
-    return bx;
+    return BaseResult.Success(bx);
   }
 }

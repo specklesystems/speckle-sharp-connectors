@@ -55,6 +55,18 @@ public sealed class ReceiveConversionResult : ConversionResult
     ResultType = resultType;
     Error = FormatError(exception);
   }
+  
+  public ReceiveConversionResult(
+    Status status,
+    Base source,
+    string exception
+  )
+  {
+    Status = status;
+    SourceId = source.id.NotNull();
+    SourceType = source.speckle_type; // Note: we'll parse it nicely in FE
+    Error = new ErrorWrapper() { Message = exception, StackTrace = "" };
+  }
 }
 
 /// <summary>

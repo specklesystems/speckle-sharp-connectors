@@ -1,8 +1,9 @@
+using Speckle.Converters.Common.Registration;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Common.Objects;
 
 public interface IToHostTopLevelConverter
 {
-  object Convert(Base target);
+  HostResult Convert(Base target);
 }

@@ -6,30 +6,17 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Common.ToHost;
 
-// POC: CNX-9394 Find a better home for this outside `DependencyInjection` project
-/// <summary>
-/// Provides an implementation for <see cref="IRootToHostConverter"/>
-/// that resolves a <see cref="IToHostTopLevelConverter"/> via the injected <see cref="IConverterManager{TConverter}"/>
-/// </summary>
-/// <seealso cref="ConverterWithFallback"/>
-public sealed class ConverterWithoutFallback : IRootToHostConverter
+public sealed class ConverterWithoutFallback(
+  IConverterManager<IToHostTopLevelConverter> converterResolver,
+  ILogger<ConverterWithoutFallback> logger)
+  : IRootToHostConverter
 {
-  private readonly IConverterManager<IToHostTopLevelConverter> _toHost;
-  private readonly ILogger _logger;
+  private readonly ILogger _logger = logger;
 
-  public ConverterWithoutFallback(
-    IConverterManager<IToHostTopLevelConverter> converterResolver,
-    ILogger<ConverterWithoutFallback> logger
-  )
+  public HostResult Convert(Base target)
   {
-    _toHost = converterResolver;
-    _logger = logger;
-  }
-
-  public object Convert(Base target)
-  {
-    var converter = _toHost.ResolveConverter(target.GetType());
-    object result = converter.ConvertAndLog(target, _logger);
+    var converter = converterResolver.ResolveConverter(target.GetType());
+    var result = converter.ConvertAndLog(target, _logger);
     return result;
   }
 }

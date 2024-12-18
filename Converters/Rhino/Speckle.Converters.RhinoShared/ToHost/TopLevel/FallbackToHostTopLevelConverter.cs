@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Registration;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
@@ -35,7 +36,7 @@ public class FallbackToHostTopLevelConverter
     _settingsStore = settingsStore;
   }
 
-  public object Convert(Base target) => Convert((DisplayableObject)target);
+  public HostResult Convert(Base target) => HostResult.Success(Convert((DisplayableObject)target));
 
   public List<RG.GeometryBase> Convert(DisplayableObject target)
   {

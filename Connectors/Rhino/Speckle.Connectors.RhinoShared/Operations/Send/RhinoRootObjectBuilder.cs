@@ -11,6 +11,7 @@ using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -159,8 +160,17 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       }
       else
       {
-        converted = _rootToSpeckleConverter.Convert(rhinoObject);
-        converted.applicationId = applicationId;
+        var result  = _rootToSpeckleConverter.Convert(rhinoObject);
+        if (result.IsSuccess)
+        {
+          converted = result.Base.NotNull();
+          converted.applicationId = applicationId;
+        }
+        else
+        {
+          _logger.LogSendConversionError(sourceType, result.Message.NotNull());
+          return new(Status.ERROR, applicationId, sourceType);
+        }
       }
 
       // add to host

@@ -20,4 +20,13 @@ public static class RootObjectBuilderExtensions
 
     logger.Log(logLevel, ex, "Conversion of object {objectType} was not successful", objectType);
   }
+  
+  public static void LogSendConversionError<T>(
+    this ILogger<IRootObjectBuilder<T>> logger,
+    string objectType,
+    string message
+  )
+  {
+    logger.Log(LogLevel.Information, "Conversion of object {objectType} was not successful:" + message, objectType);
+  }
 }
