@@ -110,7 +110,13 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
       }
       else
       {
-        converted = _rootToSpeckleConverter.Convert(teklaObject);
+        var result = _rootToSpeckleConverter.Convert(teklaObject);
+        if (result.IsFailure)
+        {
+          return new(Status.ERROR, applicationId, sourceType, result.Message);
+        }
+
+        converted = result.Value;
       }
 
       var collection = _sendCollectionManager.GetAndCreateObjectHostCollection(teklaObject, collectionHost);
@@ -118,7 +124,7 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
       // Add to host collection
       collection.elements.Add(converted);
 
-      return new(Status.SUCCESS, applicationId, sourceType, converted);
+      return new(Status.SUCCESS, applicationId, sourceType, converted, null);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {

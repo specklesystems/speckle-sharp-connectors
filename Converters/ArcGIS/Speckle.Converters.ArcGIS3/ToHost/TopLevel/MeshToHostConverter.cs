@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Registration;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.TopLevel;
@@ -14,7 +15,7 @@ public class MeshToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG
     _meshConverter = meshConverter;
   }
 
-  public object Convert(Base target) => Convert((SOG.Mesh)target);
+  public HostResult Convert(Base target) => HostResult.Success(  Convert((SOG.Mesh)target));
 
   public ACG.Multipatch Convert(SOG.Mesh target)
   {

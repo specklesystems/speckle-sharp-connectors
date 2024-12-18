@@ -1,5 +1,6 @@
 ﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Registration;
 using Speckle.Objects;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
@@ -24,7 +25,7 @@ public class FallbackToHostConverter : IToHostTopLevelConverter, ITypedConverter
     _pointListConverter = pointListConverter;
   }
 
-  public object Convert(Base target) => Convert((DisplayableObject)target);
+  public HostResult Convert(Base target) => HostResult.Success( Convert((DisplayableObject)target));
 
   public ACG.Geometry Convert(DisplayableObject target)
   {

@@ -7,6 +7,7 @@ using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
+using Speckle.Converters.Common.Registration;
 using Speckle.Objects.Data;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
@@ -165,13 +166,18 @@ public class NavisworksRootObjectBuilder(
 
     try
     {
-      Base converted = sendConversionCache.TryGetValue(applicationId, sendInfo.ProjectId, out ObjectReference? cached)
-        ? cached
+      var result = sendConversionCache.TryGetValue(applicationId, sendInfo.ProjectId, out ObjectReference? cached)
+        ? BaseResult.Success( cached)
         : rootToSpeckleConverter.Convert(navisworksItem);
 
+      if (result.IsFailure)
+      {
+        return new SendConversionResult(Status.ERROR, applicationId, "ModelItem", result.Message);
+        
+      }
+      var converted = result.Value;
       convertedBases[applicationId] = converted;
-
-      return new SendConversionResult(Status.SUCCESS, applicationId, sourceType, converted);
+      return new SendConversionResult(Status.SUCCESS, applicationId, sourceType, converted, null);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {

@@ -54,7 +54,9 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     _colorManager = colorManager;
   }
 
+#pragma warning disable CA1506
   public async Task<HostObjectBuilderResult> Build(
+#pragma warning restore CA1506
     Base rootObject,
     string projectName,
     string modelName,

@@ -3,8 +3,7 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
 using Speckle.Converters.TeklaShared.Extensions;
-using Speckle.Sdk.Common.Exceptions;
-using Speckle.Sdk.Models;
+using Speckle.Sdk.Common;
 using Tekla.Structures.Model;
 
 namespace Speckle.Converters.TeklaShared;
@@ -26,19 +25,23 @@ public class TeklaRootToSpeckleConverter : IRootToSpeckleConverter
     _logger = logger;
   }
 
-  public Base Convert(object target)
+  public BaseResult Convert(object target)
   {
     if (target is not ModelObject modelObject)
     {
-      throw new ValidationException($"Target object is not a ModelObject. It's a ${target.GetType()}");
+      return BaseResult.NoConversion($"Target object is not a ModelObject. It's a ${target.GetType()}");
     }
 
     Type type = target.GetType();
-    var objectConverter = _toSpeckle.ResolveConverter(type, true);
+    var converterResult = _toSpeckle.ResolveConverter(type, true);
+    if (converterResult.IsFailure)
+    {
+      return BaseResult.NoConverter(converterResult.Message);
+    }
 
-    Base result = objectConverter.Convert(target);
+    var result = converterResult.Converter.NotNull().Convert(target);
 
-    result.applicationId = modelObject.GetSpeckleApplicationId();
+    result.Value.applicationId = modelObject.GetSpeckleApplicationId();
 
     return result;
   }

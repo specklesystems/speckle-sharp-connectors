@@ -4,7 +4,7 @@ using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
-using Speckle.Sdk.Models;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converter.Navisworks.ToSpeckle;
 
@@ -28,7 +28,7 @@ public class NavisworksRootToSpeckleConverter : IRootToSpeckleConverter
     _settingsStore = settingsStore;
   }
 
-  public Base Convert(object target)
+  public BaseResult Convert(object target)
   {
     if (target == null)
     {
@@ -37,16 +37,23 @@ public class NavisworksRootToSpeckleConverter : IRootToSpeckleConverter
 
     if (target is not NAV.ModelItem modelItem)
     {
-      throw new InvalidOperationException($"The target object is not a ModelItem. It's a ${target.GetType()}.");
+      return BaseResult.NoConversion($"The target object is not a ModelItem. It's a ${target.GetType()}.");
     }
 
     Type type = target.GetType();
 
-    var objectConverter = _toSpeckle.ResolveConverter(type, true);
+    var converterResult = _toSpeckle.ResolveConverter(type, true);
+    if (converterResult.IsFailure)
+    {
+      return BaseResult.NoConversion(converterResult.Message);
+    }
 
-    Base result = objectConverter.Convert(modelItem);
+    var result = converterResult.Converter.NotNull().Convert(modelItem);
 
-    result.applicationId = ElementSelectionHelper.ResolveModelItemToIndexPath(modelItem);
+    if (result.IsSuccess)
+    {
+      result.Value.applicationId = ElementSelectionHelper.ResolveModelItemToIndexPath(modelItem);
+    }
 
     return result;
   }

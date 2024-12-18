@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Registration;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 
@@ -20,7 +21,7 @@ public class EllipseToHostConverter : IToHostTopLevelConverter, ITypedConverter<
     _settingsStore = settingsStore;
   }
 
-  public object Convert(Base target) => Convert((SOG.Ellipse)target);
+  public HostResult Convert(Base target) => HostResult.Success(Convert((SOG.Ellipse)target));
 
   public ACG.Polyline Convert(SOG.Ellipse target)
   {

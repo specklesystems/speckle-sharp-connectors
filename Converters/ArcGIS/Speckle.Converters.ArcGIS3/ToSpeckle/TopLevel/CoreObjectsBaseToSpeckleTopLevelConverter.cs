@@ -1,6 +1,7 @@
 using Speckle.Converters.ArcGIS3.ToSpeckle.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Registration;
 using Speckle.Objects.Data;
 using Speckle.Sdk.Models;
 
@@ -24,7 +25,7 @@ public class CoreObjectsBaseToSpeckleTopLevelConverter : IToSpeckleTopLevelConve
     _settingsStore = settingsStore;
   }
 
-  public Base Convert(object target) => Convert((AC.CoreObjectsBase)target);
+  public BaseResult Convert(object target) => BaseResult.Success( Convert((AC.CoreObjectsBase)target));
 
   private ArcgisObject Convert(AC.CoreObjectsBase target)
   {

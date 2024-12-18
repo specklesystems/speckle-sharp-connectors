@@ -2,8 +2,7 @@ using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
-using Speckle.Sdk.Common.Exceptions;
-using Speckle.Sdk.Models;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.CSiShared;
 
@@ -24,17 +23,21 @@ public class CsiRootToSpeckleConverter : IRootToSpeckleConverter
     _logger = logger;
   }
 
-  public Base Convert(object target)
+  public BaseResult Convert(object target)
   {
     if (target is not ICsiWrapper)
     {
-      throw new ValidationException($"Target object is not a CSiWrapper. It's a ${target.GetType()}");
+      return BaseResult.NoConversion($"Target object is not a CSiWrapper. It's a ${target.GetType()}");
     }
 
     Type type = target.GetType();
-    var objectConverter = _toSpeckle.ResolveConverter(type, true);
+    var converterResult = _toSpeckle.ResolveConverter(type, true);
+    if (converterResult.IsFailure)
+    {
+      return BaseResult.NoConverter(converterResult.Message);
+    }
 
-    Base result = objectConverter.Convert(target);
+    var result = converterResult.Converter.NotNull().Convert(target);
 
     return result;
   }

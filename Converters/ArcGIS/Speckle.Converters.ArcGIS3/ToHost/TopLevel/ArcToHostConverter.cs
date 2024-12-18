@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Registration;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.TopLevel;
@@ -19,7 +20,7 @@ public class ArcToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG.
     _settingsStore = settingsStore;
   }
 
-  public object Convert(Base target) => Convert((SOG.Arc)target);
+  public HostResult Convert(Base target) => HostResult.Success(Convert((SOG.Arc)target));
 
   public ACG.Polyline Convert(SOG.Arc target)
   {

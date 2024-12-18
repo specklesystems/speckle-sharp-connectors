@@ -13,6 +13,7 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -163,7 +164,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
                 sdkStatus = SdkActivityStatusCode.Error;
                 break;
             }
-            results.Add(new(status, layerApplicationId, layer.GetType().Name, layerCollection));
+            results.Add(new(status, layerApplicationId, layer.GetType().Name, layerCollection, null));
             convertingActivity?.SetStatus(sdkStatus);
           }
           else
@@ -215,7 +216,12 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
             using (ACD.Row row = rowCursor.Current)
             {
               // get application id. test for subtypes before defaulting to base type.
-              Base converted = _rootToSpeckleConverter.Convert(row);
+              var result = _rootToSpeckleConverter.Convert(row);
+              if (result.IsFailure)
+              {
+                throw new ConversionException(result.Message);
+              }
+              var converted = result.Value;
               string applicationId = row.GetSpeckleApplicationId(layerApplicationId);
               converted.applicationId = applicationId;
 
@@ -241,7 +247,12 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
       .Run(() =>
       {
         Raster raster = rasterLayer.GetRaster();
-        Base converted = _rootToSpeckleConverter.Convert(raster);
+        var result = _rootToSpeckleConverter.Convert(raster);
+        if (result.IsFailure)
+        {
+          throw new ConversionException(result.Message);
+        }
+        var converted = result.Value;
         string applicationId = raster.GetSpeckleApplicationId(layerApplicationId);
         converted.applicationId = applicationId;
         convertedObjects.Add(converted);
@@ -272,7 +283,12 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
             {
               using (ACD.Analyst3D.LasPoint pt = ptCursor.Current)
               {
-                Base converted = _rootToSpeckleConverter.Convert(pt);
+                var result = _rootToSpeckleConverter.Convert(pt);
+                if (result.IsFailure)
+                {
+                  throw new ConversionException(result.Message);
+                }
+                var converted = result.Value;
                 string applicationId = pt.GetSpeckleApplicationId(layerApplicationId);
                 converted.applicationId = applicationId;
                 convertedObjects.Add(converted);

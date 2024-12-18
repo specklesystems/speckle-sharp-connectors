@@ -96,14 +96,20 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
       }
       else
       {
-        converted = _rootToSpeckleConverter.Convert(csiObject);
+        var result = _rootToSpeckleConverter.Convert(csiObject);
+        if (result.IsFailure)
+        {
+          return new(Status.ERROR, applicationId, sourceType, result.Message);
+        }
+
+        converted = result.Value;
       }
 
       var collection = _sendCollectionManager.AddObjectCollectionToRoot(converted, typeCollection);
       collection.elements ??= new List<Base>();
       collection.elements.Add(converted);
 
-      return new(Status.SUCCESS, applicationId, sourceType, converted);
+      return new(Status.SUCCESS, applicationId, sourceType, converted, null);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {

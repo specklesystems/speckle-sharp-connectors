@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Registration;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.TopLevel;
@@ -14,5 +15,5 @@ public class PointToHostConverter : IToHostTopLevelConverter
     _pointConverter = pointConverter;
   }
 
-  public object Convert(Base target) => _pointConverter.Convert(new List<SOG.Point> { (SOG.Point)target });
+  public HostResult Convert(Base target) => HostResult.Success(  _pointConverter.Convert(new List<SOG.Point> { (SOG.Point)target }));
 }

@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Registration;
 using Speckle.Converters.TeklaShared.Extensions;
 using Speckle.Converters.TeklaShared.ToSpeckle.Helpers;
 using Speckle.Objects.Data;
@@ -28,7 +29,7 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
     _classPropertyExtractor = classPropertyExtractor;
   }
 
-  public Base Convert(object target) => Convert((TSM.ModelObject)target);
+  public BaseResult Convert(object target) => BaseResult.Success(Convert((TSM.ModelObject)target));
 
   private TeklaObject Convert(TSM.ModelObject target)
   {

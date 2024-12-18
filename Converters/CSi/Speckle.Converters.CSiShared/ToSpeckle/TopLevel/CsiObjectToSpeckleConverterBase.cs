@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Registration;
 using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 using Speckle.Objects;
 using Speckle.Sdk.Models;
@@ -37,9 +38,9 @@ public abstract class CsiObjectToSpeckleConverterBase : IToSpeckleTopLevelConver
     _applicationPropertiesExtractor = applicationPropertiesExtractor;
   }
 
-  public Base Convert(object target) => Convert((CsiWrapperBase)target);
+  public BaseResult Convert(object target) => Convert((CsiWrapperBase)target);
 
-  public Base Convert(CsiWrapperBase wrapper)
+  public BaseResult Convert(CsiWrapperBase wrapper)
   {
     var displayValue = _displayValueExtractor.GetDisplayValue(wrapper).ToList();
     var objectData = _applicationPropertiesExtractor.ExtractProperties(wrapper);
@@ -54,7 +55,7 @@ public abstract class CsiObjectToSpeckleConverterBase : IToSpeckleTopLevelConver
       objectData.ApplicationId
     );
 
-    return baseObject;
+    return BaseResult.Success(baseObject);
   }
 
   protected abstract Base CreateTargetObject(

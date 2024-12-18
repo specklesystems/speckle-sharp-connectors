@@ -169,14 +169,14 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         else
         {
           _logger.LogSendConversionError(sourceType, result.Message.NotNull());
-          return new(Status.ERROR, applicationId, sourceType);
+          return new(Status.ERROR, applicationId, sourceType, null);
         }
       }
 
       // add to host
       collectionHost.elements.Add(converted);
 
-      return new(Status.SUCCESS, applicationId, sourceType, converted);
+      return new(Status.SUCCESS, applicationId, sourceType, converted, null);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {

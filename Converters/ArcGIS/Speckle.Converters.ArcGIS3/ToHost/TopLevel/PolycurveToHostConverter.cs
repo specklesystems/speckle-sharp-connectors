@@ -1,5 +1,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Registration;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
@@ -20,7 +22,7 @@ public class PolycurveToHostConverter : IToHostTopLevelConverter, ITypedConverte
     _settingsStore = settingsStore;
   }
 
-  public object Convert(Base target) => Convert((SOG.Polycurve)target);
+  public HostResult Convert(Base target) => HostResult.Success( Convert((SOG.Polycurve)target));
 
   public ACG.Polyline Convert(SOG.Polycurve target)
   {
@@ -29,7 +31,7 @@ public class PolycurveToHostConverter : IToHostTopLevelConverter, ITypedConverte
 
     foreach (var segment in target.segments)
     {
-      ACG.Polyline converted = (ACG.Polyline)_converter.Convert((Base)segment); //CurveConverter.NotNull().Convert(segment);
+      ACG.Polyline converted = (ACG.Polyline)_converter.Convert((Base)segment).Host.NotNull(); 
       List<ACG.MapPoint> segmentPts = converted.Points.ToList();
 
       if (

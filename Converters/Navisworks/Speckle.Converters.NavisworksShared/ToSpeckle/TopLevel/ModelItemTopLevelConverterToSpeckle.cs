@@ -2,6 +2,7 @@
 using Speckle.Converter.Navisworks.ToSpeckle.PropertyHandlers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Registration;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 
@@ -36,7 +37,7 @@ public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
   /// </summary>
   /// <param name="target">The object to convert.</param>
   /// <returns>The converted Speckle Base object.</returns>
-  public Base Convert(object target)
+  public BaseResult Convert(object target)
   {
     if (target == null)
     {
@@ -47,7 +48,7 @@ public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
   }
 
   // Converts a Navisworks ModelItem into a Speckle Base object
-  private Base Convert(NAV.ModelItem target)
+  private BaseResult Convert(NAV.ModelItem target)
   {
     var name = GetObjectName(target);
 
@@ -59,7 +60,7 @@ public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
       handler.AssignProperties(navisworksObject, target);
     }
 
-    return navisworksObject;
+    return  BaseResult.Success(navisworksObject);
   }
 
   /// <summary>
