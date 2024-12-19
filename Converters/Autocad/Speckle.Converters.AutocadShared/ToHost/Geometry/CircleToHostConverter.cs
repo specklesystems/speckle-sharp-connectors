@@ -6,7 +6,7 @@ using Speckle.Sdk.Models;
 namespace Speckle.Converters.Autocad.ToHost.Geometry;
 
 [NameAndRankValue(nameof(SOG.Circle), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class CircleToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG.Circle, ADB.Circle>
+public class CircleToHostConverter :  ITypedConverter<SOG.Circle, ADB.Circle>
 {
   private readonly ITypedConverter<SOG.Point, AG.Point3d> _pointConverter;
   private readonly ITypedConverter<SOG.Vector, AG.Vector3d> _vectorConverter;

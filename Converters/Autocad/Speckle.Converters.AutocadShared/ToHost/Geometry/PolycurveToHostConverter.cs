@@ -1,6 +1,5 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.AutocadShared.ToHost.Geometry;
 
@@ -10,7 +9,7 @@ namespace Speckle.Converters.AutocadShared.ToHost.Geometry;
 /// Otherwise we convert it as spline (list of ADB.Entity) that switch cases according to each segment type.
 /// </summary>
 [NameAndRankValue(nameof(SOG.Polycurve), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class PolycurveToHostConverter : IToHostTopLevelConverter
+public class PolycurveToHostConverter : ITypedConverter<SOG.Polycurve, object>
 {
   private readonly ITypedConverter<SOG.Polycurve, ADB.Polyline> _polylineConverter;
   private readonly ITypedConverter<SOG.Polycurve, List<ADB.Entity>> _splineConverter;
@@ -24,9 +23,8 @@ public class PolycurveToHostConverter : IToHostTopLevelConverter
     _splineConverter = splineConverter;
   }
 
-  public object Convert(Base target)
+  public object Convert( SOG.Polycurve polycurve)
   {
-    SOG.Polycurve polycurve = (SOG.Polycurve)target;
     bool convertAsSpline = polycurve.segments.Any(s => s is not SOG.Line and not SOG.Arc);
     bool isPlanar = IsPolycurvePlanar(polycurve);
 

@@ -1,12 +1,11 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.Geometry;
 
 [NameAndRankValue(nameof(ADB.SubDMesh), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class DBSubDMeshToSpeckleConverter : IToSpeckleTopLevelConverter
+public class DBSubDMeshToSpeckleConverter : ITypedConverter<ADB.SubDMesh, SOG.Mesh>
 {
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
@@ -15,9 +14,7 @@ public class DBSubDMeshToSpeckleConverter : IToSpeckleTopLevelConverter
     _settingsStore = settingsStore;
   }
 
-  public Base Convert(object target) => RawConvert((ADB.SubDMesh)target);
-
-  public SOG.Mesh RawConvert(ADB.SubDMesh target)
+  public SOG.Mesh Convert(ADB.SubDMesh target)
   {
     //vertices
     var vertices = new List<double>(target.Vertices.Count * 3);

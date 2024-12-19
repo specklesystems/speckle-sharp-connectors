@@ -6,7 +6,7 @@ using Speckle.Sdk.Models;
 namespace Speckle.Converters.Autocad.ToHost.Geometry;
 
 [NameAndRankValue(nameof(SOG.Ellipse), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class EllipseToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG.Ellipse, ADB.Ellipse>
+public class EllipseToHostConverter :  ITypedConverter<SOG.Ellipse, ADB.Ellipse>
 {
   private readonly ITypedConverter<SOG.Point, AG.Point3d> _pointConverter;
   private readonly ITypedConverter<SOG.Vector, AG.Vector3d> _vectorConverter;

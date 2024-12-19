@@ -16,7 +16,7 @@ namespace Speckle.Converters.Autocad.Geometry;
 /// </remarks>
 [NameAndRankValue(nameof(ADB.Polyline2d), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class Polyline2dToSpeckleConverter
-  : IToSpeckleTopLevelConverter,
+  : 
     ITypedConverter<ADB.Polyline2d, SOG.Autocad.AutocadPolycurve>
 {
   private readonly ITypedConverter<ADB.Arc, SOG.Arc> _arcConverter;

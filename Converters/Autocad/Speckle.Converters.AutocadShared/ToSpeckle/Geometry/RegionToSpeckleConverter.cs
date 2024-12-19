@@ -1,12 +1,11 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Common.Exceptions;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.Geometry;
 
 [NameAndRankValue(nameof(ADB.Region), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConverter<ADB.Region, SOG.Mesh>
+public class RegionToSpeckleConverter :  ITypedConverter<ADB.Region, SOG.Mesh>
 {
   private readonly ITypedConverter<ABR.Brep, SOG.Mesh> _brepConverter;
 
@@ -15,7 +14,6 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
     _brepConverter = brepConverter;
   }
 
-  public Base Convert(object target) => Convert((ADB.Region)target);
 
   public SOG.Mesh Convert(ADB.Region target)
   {

@@ -6,7 +6,7 @@ using Speckle.Sdk.Models;
 namespace Speckle.Converters.Autocad.Geometry;
 
 [NameAndRankValue(nameof(ADB.Surface), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class SurfaceToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConverter<ADB.Surface, SOG.Mesh>
+public class SurfaceToSpeckleConverter :  ITypedConverter<ADB.Surface, SOG.Mesh>
 {
   private readonly ITypedConverter<ABR.Brep, SOG.Mesh> _brepConverter;
 

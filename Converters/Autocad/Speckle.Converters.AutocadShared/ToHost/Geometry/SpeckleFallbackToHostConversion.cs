@@ -7,7 +7,7 @@ namespace Speckle.Converters.Rhino7.ToHost.TopLevel;
 
 [NameAndRankValue(nameof(DisplayableObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class SpeckleFallbackToAutocadTopLevelConverter
-  : IToHostTopLevelConverter,
+  : 
     ITypedConverter<DisplayableObject, List<ADB.Entity>>
 {
   private readonly ITypedConverter<SOG.Line, ADB.Line> _lineConverter;
