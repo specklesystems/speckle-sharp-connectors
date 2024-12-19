@@ -104,7 +104,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
         category = category,
         location = convertedLocation,
         elements = children,
-        displayValue = displayValue,
+        displayValue = displayValue.Cast<Base>().ToList(),
         properties = properties,
         units = _converterSettings.Current.SpeckleUnits
       };
