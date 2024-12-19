@@ -3,7 +3,6 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 using Speckle.Converters.Common.Registration;
-using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Common.Tests;
 
@@ -30,29 +29,37 @@ public class ConverterManagerTests
   public void Test_Null()
   {
     var sut = SetupManager("Test", typeof(TestConverter));
-    Assert.Throws<ConversionNotSupportedException>(() => sut.ResolveConverter(typeof(string), false));
+    var result = sut.ResolveConverter(typeof(string), false);
+    result.IsFailure.Should().BeTrue();
   }
 
   [Test]
   public void Test_NoFallback()
   {
     var sut = SetupManager("String", typeof(TestConverter));
-    var converter = sut.ResolveConverter(typeof(string), false);
-    converter.Should().NotBeNull();
+    var result = sut.ResolveConverter(typeof(string), false);
+    result.Should().NotBeNull();
+    result.IsSuccess.Should().BeTrue();
+    result.IsFailure.Should().BeFalse();
+    result.Converter.Should().NotBeNull();
   }
 
   [Test]
   public void Test_Fallback()
   {
     var sut = SetupManager("Object", typeof(TestConverter));
-    var converter = sut.ResolveConverter(typeof(string), true);
-    converter.Should().NotBeNull();
+    var result = sut.ResolveConverter(typeof(string), true);
+    result.Should().NotBeNull();
+    result.IsSuccess.Should().BeTrue();
+    result.IsFailure.Should().BeFalse();
+    result.Converter.Should().NotBeNull();
   }
 
   [Test]
   public void Test_Fallback_Null()
   {
     var sut = SetupManager("Object", typeof(TestConverter));
-    Assert.Throws<ConversionNotSupportedException>(() => sut.ResolveConverter(typeof(string), false));
+    var result = sut.ResolveConverter(typeof(string), false);
+    result.IsFailure.Should().BeTrue();
   }
 }
