@@ -18,26 +18,6 @@ public static class GISAttributeFieldType
   public const string TIMESTAMPOFFSET = "TimeStampOffset";
   public const string BOOL = "Bool"; // not supported in ArcGIS, only in QGIS
 
-  public static string FieldTypeToSpeckle(FieldType fieldType)
-  {
-    return fieldType switch
-    {
-      FieldType.GUID => GUID_TYPE,
-      FieldType.OID => OID,
-      FieldType.String => STRING_TYPE,
-      FieldType.Single => FLOAT_TYPE,
-      FieldType.Integer => INTEGER_TYPE,
-      FieldType.BigInteger => BIGINTEGER,
-      FieldType.SmallInteger => SMALLINTEGER,
-      FieldType.Double => DOUBLE_TYPE,
-      FieldType.Date => DATETIME,
-      FieldType.DateOnly => DATEONLY,
-      FieldType.TimeOnly => TIMEONLY,
-      FieldType.TimestampOffset => TIMESTAMPOFFSET,
-      _ => throw new ArgumentOutOfRangeException(nameof(fieldType)),
-    };
-  }
-
   public static FieldType FieldTypeToNative(object fieldType)
   {
     if (fieldType is string fieldStringType)

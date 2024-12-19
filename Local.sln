@@ -214,6 +214,50 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Converters.ETABSSha
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.HostApps", "Sdk\Speckle.HostApps\Speckle.HostApps.csproj", "{8B6B15BA-5B8C-4D3F-92A2-EDC58FA1CD9C}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Navisworks", "Navisworks", "{95AD741F-44B5-4E01-AF9C-FF9256E26D4B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2024", "2024", "{AE58C92C-DBF3-4248-8614-8F283B8CB5F8}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shared", "Shared", "{46D4410B-009A-43BD-AA32-BDB8B00D9E93}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Navisworks2024", "Connectors\Navisworks\Speckle.Connectors.Navisworks2024\Speckle.Connectors.Navisworks2024.csproj", "{CE4D238F-66C2-46B1-BD25-9AC22D7CCB1A}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Connectors.NavisworksShared", "Connectors\Navisworks\Speckle.Connectors.NavisworksShared\Speckle.Connectors.NavisworksShared.shproj", "{62813838-52F7-43CB-9062-BB2611C00C79}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Converters.NavisworksShared", "Converters\Navisworks\Speckle.Converters.NavisworksShared\Speckle.Converters.NavisworksShared.shproj", "{23830613-87F8-4655-B523-72189A597962}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2020", "2020", "{EAFCD59F-3650-497C-94ED-AEEFC3131B18}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Navisworks2020", "Connectors\Navisworks\Speckle.Connectors.Navisworks2020\Speckle.Connectors.Navisworks2020.csproj", "{B6985672-4704-4F86-A3E0-2310BF8E6D73}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Navisworks2020", "Converters\Navisworks\Speckle.Converters.Navisworks2020\Speckle.Converters.Navisworks2020.csproj", "{56680EA7-3599-4D88-83A5-B43BA93AC046}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2021", "2021", "{78DE77B0-7954-41FF-B374-ABE705881CEC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Navisworks2021", "Converters\Navisworks\Speckle.Converters.Navisworks2021\Speckle.Converters.Navisworks2021.csproj", "{6101B44D-3805-4AA1-B8D0-E06C461ED202}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2022", "2022", "{19F15419-F493-4D53-83EA-F90869D97D6E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Navisworks2022", "Converters\Navisworks\Speckle.Converters.Navisworks2022\Speckle.Converters.Navisworks2022.csproj", "{A675E34C-667E-4069-A8FA-92F2C2DB8A27}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2023", "2023", "{91DCAFB0-283B-4B07-9F6F-7335DECEEB08}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Navisworks2023", "Converters\Navisworks\Speckle.Converters.Navisworks2023\Speckle.Converters.Navisworks2023.csproj", "{57AFB8CB-B310-49E4-9C53-621A614063CF}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2025", "2025", "{A88CFA1F-B2D5-4DBE-8496-68D0AFA46F2D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Navisworks2025", "Converters\Navisworks\Speckle.Converters.Navisworks2025\Speckle.Converters.Navisworks2025.csproj", "{0B5AB325-3791-4A81-B0EF-BCA040381BE2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Navisworks2021", "Connectors\Navisworks\Speckle.Connectors.Navisworks2021\Speckle.Connectors.Navisworks2021.csproj", "{C635619C-2938-4E6F-9E25-56CE1632A7EC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Navisworks2022", "Connectors\Navisworks\Speckle.Connectors.Navisworks2022\Speckle.Connectors.Navisworks2022.csproj", "{04FC86A3-2E25-41A1-98C5-10898616CD78}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Navisworks2023", "Connectors\Navisworks\Speckle.Connectors.Navisworks2023\Speckle.Connectors.Navisworks2023.csproj", "{FD44E1F0-D20A-49B6-ADC9-482D911A74FB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Navisworks2025", "Connectors\Navisworks\Speckle.Connectors.Navisworks2025\Speckle.Connectors.Navisworks2025.csproj", "{7791806E-7531-41D8-9C9D-4A1249D9F99C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Navisworks2024", "Converters\Navisworks\Speckle.Converters.Navisworks2024\Speckle.Converters.Navisworks2024.csproj", "{52D789C2-5B3C-4225-9F84-C54B3AB4F1B5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -539,6 +583,78 @@ Global
 		{8B6B15BA-5B8C-4D3F-92A2-EDC58FA1CD9C}.Local|Any CPU.Build.0 = Debug|Any CPU
 		{8B6B15BA-5B8C-4D3F-92A2-EDC58FA1CD9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8B6B15BA-5B8C-4D3F-92A2-EDC58FA1CD9C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CE4D238F-66C2-46B1-BD25-9AC22D7CCB1A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CE4D238F-66C2-46B1-BD25-9AC22D7CCB1A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CE4D238F-66C2-46B1-BD25-9AC22D7CCB1A}.Local|Any CPU.ActiveCfg = Debug|Any CPU
+		{CE4D238F-66C2-46B1-BD25-9AC22D7CCB1A}.Local|Any CPU.Build.0 = Debug|Any CPU
+		{CE4D238F-66C2-46B1-BD25-9AC22D7CCB1A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CE4D238F-66C2-46B1-BD25-9AC22D7CCB1A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B6985672-4704-4F86-A3E0-2310BF8E6D73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6985672-4704-4F86-A3E0-2310BF8E6D73}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6985672-4704-4F86-A3E0-2310BF8E6D73}.Local|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6985672-4704-4F86-A3E0-2310BF8E6D73}.Local|Any CPU.Build.0 = Debug|Any CPU
+		{B6985672-4704-4F86-A3E0-2310BF8E6D73}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6985672-4704-4F86-A3E0-2310BF8E6D73}.Release|Any CPU.Build.0 = Release|Any CPU
+		{56680EA7-3599-4D88-83A5-B43BA93AC046}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{56680EA7-3599-4D88-83A5-B43BA93AC046}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{56680EA7-3599-4D88-83A5-B43BA93AC046}.Local|Any CPU.ActiveCfg = Local|Any CPU
+		{56680EA7-3599-4D88-83A5-B43BA93AC046}.Local|Any CPU.Build.0 = Local|Any CPU
+		{56680EA7-3599-4D88-83A5-B43BA93AC046}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{56680EA7-3599-4D88-83A5-B43BA93AC046}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6101B44D-3805-4AA1-B8D0-E06C461ED202}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6101B44D-3805-4AA1-B8D0-E06C461ED202}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6101B44D-3805-4AA1-B8D0-E06C461ED202}.Local|Any CPU.ActiveCfg = Local|Any CPU
+		{6101B44D-3805-4AA1-B8D0-E06C461ED202}.Local|Any CPU.Build.0 = Local|Any CPU
+		{6101B44D-3805-4AA1-B8D0-E06C461ED202}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6101B44D-3805-4AA1-B8D0-E06C461ED202}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A675E34C-667E-4069-A8FA-92F2C2DB8A27}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A675E34C-667E-4069-A8FA-92F2C2DB8A27}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A675E34C-667E-4069-A8FA-92F2C2DB8A27}.Local|Any CPU.ActiveCfg = Local|Any CPU
+		{A675E34C-667E-4069-A8FA-92F2C2DB8A27}.Local|Any CPU.Build.0 = Local|Any CPU
+		{A675E34C-667E-4069-A8FA-92F2C2DB8A27}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A675E34C-667E-4069-A8FA-92F2C2DB8A27}.Release|Any CPU.Build.0 = Release|Any CPU
+		{57AFB8CB-B310-49E4-9C53-621A614063CF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{57AFB8CB-B310-49E4-9C53-621A614063CF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{57AFB8CB-B310-49E4-9C53-621A614063CF}.Local|Any CPU.ActiveCfg = Local|Any CPU
+		{57AFB8CB-B310-49E4-9C53-621A614063CF}.Local|Any CPU.Build.0 = Local|Any CPU
+		{57AFB8CB-B310-49E4-9C53-621A614063CF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{57AFB8CB-B310-49E4-9C53-621A614063CF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0B5AB325-3791-4A81-B0EF-BCA040381BE2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0B5AB325-3791-4A81-B0EF-BCA040381BE2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0B5AB325-3791-4A81-B0EF-BCA040381BE2}.Local|Any CPU.ActiveCfg = Local|Any CPU
+		{0B5AB325-3791-4A81-B0EF-BCA040381BE2}.Local|Any CPU.Build.0 = Local|Any CPU
+		{0B5AB325-3791-4A81-B0EF-BCA040381BE2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0B5AB325-3791-4A81-B0EF-BCA040381BE2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C635619C-2938-4E6F-9E25-56CE1632A7EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C635619C-2938-4E6F-9E25-56CE1632A7EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C635619C-2938-4E6F-9E25-56CE1632A7EC}.Local|Any CPU.ActiveCfg = Debug|Any CPU
+		{C635619C-2938-4E6F-9E25-56CE1632A7EC}.Local|Any CPU.Build.0 = Debug|Any CPU
+		{C635619C-2938-4E6F-9E25-56CE1632A7EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C635619C-2938-4E6F-9E25-56CE1632A7EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{04FC86A3-2E25-41A1-98C5-10898616CD78}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{04FC86A3-2E25-41A1-98C5-10898616CD78}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{04FC86A3-2E25-41A1-98C5-10898616CD78}.Local|Any CPU.ActiveCfg = Debug|Any CPU
+		{04FC86A3-2E25-41A1-98C5-10898616CD78}.Local|Any CPU.Build.0 = Debug|Any CPU
+		{04FC86A3-2E25-41A1-98C5-10898616CD78}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{04FC86A3-2E25-41A1-98C5-10898616CD78}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FD44E1F0-D20A-49B6-ADC9-482D911A74FB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FD44E1F0-D20A-49B6-ADC9-482D911A74FB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FD44E1F0-D20A-49B6-ADC9-482D911A74FB}.Local|Any CPU.ActiveCfg = Debug|Any CPU
+		{FD44E1F0-D20A-49B6-ADC9-482D911A74FB}.Local|Any CPU.Build.0 = Debug|Any CPU
+		{FD44E1F0-D20A-49B6-ADC9-482D911A74FB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FD44E1F0-D20A-49B6-ADC9-482D911A74FB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7791806E-7531-41D8-9C9D-4A1249D9F99C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7791806E-7531-41D8-9C9D-4A1249D9F99C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7791806E-7531-41D8-9C9D-4A1249D9F99C}.Local|Any CPU.ActiveCfg = Debug|Any CPU
+		{7791806E-7531-41D8-9C9D-4A1249D9F99C}.Local|Any CPU.Build.0 = Debug|Any CPU
+		{7791806E-7531-41D8-9C9D-4A1249D9F99C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7791806E-7531-41D8-9C9D-4A1249D9F99C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{52D789C2-5B3C-4225-9F84-C54B3AB4F1B5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{52D789C2-5B3C-4225-9F84-C54B3AB4F1B5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{52D789C2-5B3C-4225-9F84-C54B3AB4F1B5}.Local|Any CPU.ActiveCfg = Local|Any CPU
+		{52D789C2-5B3C-4225-9F84-C54B3AB4F1B5}.Local|Any CPU.Build.0 = Local|Any CPU
+		{52D789C2-5B3C-4225-9F84-C54B3AB4F1B5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{52D789C2-5B3C-4225-9F84-C54B3AB4F1B5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -635,6 +751,28 @@ Global
 		{5D1E0B0D-56A7-4E13-B9A9-8633E02B8F17} = {D2638AC8-28B2-4667-A47B-3FAB9F900E6F}
 		{36377858-D696-4567-AB05-637F4EC841F5} = {D2638AC8-28B2-4667-A47B-3FAB9F900E6F}
 		{8B6B15BA-5B8C-4D3F-92A2-EDC58FA1CD9C} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
+		{95AD741F-44B5-4E01-AF9C-FF9256E26D4B} = {42826721-9A18-4762-8BA9-F1429DD5C5B1}
+		{AE58C92C-DBF3-4248-8614-8F283B8CB5F8} = {95AD741F-44B5-4E01-AF9C-FF9256E26D4B}
+		{46D4410B-009A-43BD-AA32-BDB8B00D9E93} = {95AD741F-44B5-4E01-AF9C-FF9256E26D4B}
+		{CE4D238F-66C2-46B1-BD25-9AC22D7CCB1A} = {AE58C92C-DBF3-4248-8614-8F283B8CB5F8}
+		{62813838-52F7-43CB-9062-BB2611C00C79} = {46D4410B-009A-43BD-AA32-BDB8B00D9E93}
+		{23830613-87F8-4655-B523-72189A597962} = {46D4410B-009A-43BD-AA32-BDB8B00D9E93}
+		{EAFCD59F-3650-497C-94ED-AEEFC3131B18} = {95AD741F-44B5-4E01-AF9C-FF9256E26D4B}
+		{B6985672-4704-4F86-A3E0-2310BF8E6D73} = {EAFCD59F-3650-497C-94ED-AEEFC3131B18}
+		{56680EA7-3599-4D88-83A5-B43BA93AC046} = {EAFCD59F-3650-497C-94ED-AEEFC3131B18}
+		{78DE77B0-7954-41FF-B374-ABE705881CEC} = {95AD741F-44B5-4E01-AF9C-FF9256E26D4B}
+		{6101B44D-3805-4AA1-B8D0-E06C461ED202} = {78DE77B0-7954-41FF-B374-ABE705881CEC}
+		{19F15419-F493-4D53-83EA-F90869D97D6E} = {95AD741F-44B5-4E01-AF9C-FF9256E26D4B}
+		{A675E34C-667E-4069-A8FA-92F2C2DB8A27} = {19F15419-F493-4D53-83EA-F90869D97D6E}
+		{91DCAFB0-283B-4B07-9F6F-7335DECEEB08} = {95AD741F-44B5-4E01-AF9C-FF9256E26D4B}
+		{57AFB8CB-B310-49E4-9C53-621A614063CF} = {91DCAFB0-283B-4B07-9F6F-7335DECEEB08}
+		{A88CFA1F-B2D5-4DBE-8496-68D0AFA46F2D} = {95AD741F-44B5-4E01-AF9C-FF9256E26D4B}
+		{0B5AB325-3791-4A81-B0EF-BCA040381BE2} = {A88CFA1F-B2D5-4DBE-8496-68D0AFA46F2D}
+		{C635619C-2938-4E6F-9E25-56CE1632A7EC} = {78DE77B0-7954-41FF-B374-ABE705881CEC}
+		{04FC86A3-2E25-41A1-98C5-10898616CD78} = {19F15419-F493-4D53-83EA-F90869D97D6E}
+		{FD44E1F0-D20A-49B6-ADC9-482D911A74FB} = {91DCAFB0-283B-4B07-9F6F-7335DECEEB08}
+		{7791806E-7531-41D8-9C9D-4A1249D9F99C} = {A88CFA1F-B2D5-4DBE-8496-68D0AFA46F2D}
+		{52D789C2-5B3C-4225-9F84-C54B3AB4F1B5} = {AE58C92C-DBF3-4248-8614-8F283B8CB5F8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}
@@ -642,12 +780,17 @@ Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		Connectors\Revit\Speckle.Connectors.RevitShared.Cef\Speckle.Connectors.RevitShared.Cef.projitems*{01f98733-7352-47ad-a594-537d979de3de}*SharedItemsImports = 5
 		Connectors\Revit\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems*{01f98733-7352-47ad-a594-537d979de3de}*SharedItemsImports = 5
+		Connectors\Navisworks\Speckle.Connectors.NavisworksShared\Speckle.Connectors.NavisworksShared.projitems*{04fc86a3-2e25-41a1-98c5-10898616cd78}*SharedItemsImports = 5
+		Converters\Navisworks\Speckle.Converters.NavisworksShared\Speckle.Converters.NavisworksShared.projitems*{0b5ab325-3791-4a81-b0ef-bca040381be2}*SharedItemsImports = 5
 		Connectors\CSi\Speckle.Connectors.CSiShared\Speckle.Connectors.CSiShared.projitems*{1696f113-7f6b-49d6-a4ef-15751c7600f9}*SharedItemsImports = 5
+		Connectors\CSi\Speckle.Connectors.ETABSShared\Speckle.Connectors.ETABSShared.projitems*{1696f113-7f6b-49d6-a4ef-15751c7600f9}*SharedItemsImports = 5
 		Converters\Revit\Speckle.Converters.RevitShared\Speckle.Converters.RevitShared.projitems*{19424b55-058c-4e9c-b86f-700aef9eaec3}*SharedItemsImports = 5
 		Connectors\Autocad\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems*{1b1f674c-cfd5-4eac-adfd-f29a70b9d229}*SharedItemsImports = 5
+		Converters\CSi\Speckle.Converters.CSiShared\Speckle.Converters.CSiShared.projitems*{1b5c5fb2-3b22-4371-9aa5-3edf3b4d62de}*SharedItemsImports = 13
 		Connectors\Rhino\Speckle.Connectors.RhinoShared\Speckle.Connectors.RhinoShared.projitems*{1e2644a9-6b31-4350-8772-ceaad6ee0b21}*SharedItemsImports = 5
 		Converters\Autocad\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.projitems*{1f93164a-42ee-4d72-b7cd-9ca831f60e09}*SharedItemsImports = 5
 		Converters\Civil3d\Speckle.Converters.Civil3dShared\Speckle.Converters.Civil3dShared.projitems*{1f93164a-42ee-4d72-b7cd-9ca831f60e09}*SharedItemsImports = 5
+		Converters\Navisworks\Speckle.Converters.NavisworksShared\Speckle.Converters.NavisworksShared.projitems*{23830613-87f8-4655-b523-72189a597962}*SharedItemsImports = 13
 		Converters\Autocad\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.projitems*{25172c49-7aa4-4739-bb07-69785094c379}*SharedItemsImports = 5
 		Converters\Civil3d\Speckle.Converters.Civil3dShared\Speckle.Converters.Civil3dShared.projitems*{25172c49-7aa4-4739-bb07-69785094c379}*SharedItemsImports = 5
 		Converters\Revit\Speckle.Converters.RevitShared\Speckle.Converters.RevitShared.projitems*{26391930-f86f-47e0-a5f6-b89919e38ce1}*SharedItemsImports = 5
@@ -655,14 +798,25 @@ Global
 		Connectors\Tekla\Speckle.Connector.TeklaShared\Speckle.Connectors.TeklaShared.projitems*{2cbc9a3d-8ac6-4127-ada5-c6d7f07a35e3}*SharedItemsImports = 5
 		Converters\Autocad\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.projitems*{2f04e109-2b13-4dfc-961d-b7eea94299bd}*SharedItemsImports = 5
 		Converters\Civil3d\Speckle.Converters.Civil3dShared\Speckle.Converters.Civil3dShared.projitems*{35175682-da83-4c0a-a49d-b191f5885d8e}*SharedItemsImports = 13
+		Converters\CSi\Speckle.Converters.ETABSShared\Speckle.Converters.ETABSShared.projitems*{36377858-d696-4567-ab05-637f4ec841f5}*SharedItemsImports = 13
 		Connectors\Tekla\Speckle.Connector.TeklaShared\Speckle.Connectors.TeklaShared.projitems*{3ab9028b-b2d2-464b-9ba3-39c192441e50}*SharedItemsImports = 13
+		Converters\CSi\Speckle.Converters.CSiShared\Speckle.Converters.CSiShared.projitems*{3b81b220-92e3-43fc-86c6-1e6dbeeb1917}*SharedItemsImports = 5
+		Converters\CSi\Speckle.Converters.ETABSShared\Speckle.Converters.ETABSShared.projitems*{3b81b220-92e3-43fc-86c6-1e6dbeeb1917}*SharedItemsImports = 5
 		Connectors\Autocad\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems*{41bc679f-887f-44cf-971d-a5502ee87db0}*SharedItemsImports = 13
 		Converters\Tekla\Speckle.Converters.TeklaShared\Speckle.Converters.TeklaShared.projitems*{4c373fd0-e3f3-478b-ad32-cdbf340d21a9}*SharedItemsImports = 5
 		Converters\Revit\Speckle.Converters.RevitShared\Speckle.Converters.RevitShared.projitems*{4d40a101-07e6-4ff2-8934-83434932591d}*SharedItemsImports = 5
 		Converters\Tekla\Speckle.Converters.TeklaShared\Speckle.Converters.TeklaShared.projitems*{52666479-5401-47d6-b7ba-d554784439ea}*SharedItemsImports = 13
+		Converters\Navisworks\Speckle.Converters.NavisworksShared\Speckle.Converters.NavisworksShared.projitems*{52d789c2-5b3c-4225-9f84-c54b3ab4f1b5}*SharedItemsImports = 5
+		Converters\Navisworks\Speckle.Converters.NavisworksShared\Speckle.Converters.NavisworksShared.projitems*{56680ea7-3599-4d88-83a5-b43ba93ac046}*SharedItemsImports = 5
+		Converters\Navisworks\Speckle.Converters.NavisworksShared\Speckle.Converters.NavisworksShared.projitems*{57afb8cb-b310-49e4-9c53-621a614063cf}*SharedItemsImports = 5
 		Converters\Rhino\Speckle.Converters.RhinoShared\Speckle.Converters.RhinoShared.projitems*{57c1aa51-5be2-40f3-8cb2-8b7d2af0ff5c}*SharedItemsImports = 5
+		Connectors\CSi\Speckle.Connectors.ETABSShared\Speckle.Connectors.ETABSShared.projitems*{5d1e0b0d-56a7-4e13-b9a9-8633e02b8f17}*SharedItemsImports = 13
+		Converters\CSi\Speckle.Converters.CSiShared\Speckle.Converters.CSiShared.projitems*{5e924b13-b3e8-4724-9ba7-ce82e39866eb}*SharedItemsImports = 5
+		Converters\CSi\Speckle.Converters.ETABSShared\Speckle.Converters.ETABSShared.projitems*{5e924b13-b3e8-4724-9ba7-ce82e39866eb}*SharedItemsImports = 5
+		Converters\Navisworks\Speckle.Converters.NavisworksShared\Speckle.Converters.NavisworksShared.projitems*{6101b44d-3805-4aa1-b8d0-e06c461ed202}*SharedItemsImports = 5
 		Connectors\Revit\Speckle.Connectors.RevitShared.Cef\Speckle.Connectors.RevitShared.Cef.projitems*{617bd3c7-87d9-4d28-8ac9-4910945bb9fc}*SharedItemsImports = 5
 		Connectors\Revit\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems*{617bd3c7-87d9-4d28-8ac9-4910945bb9fc}*SharedItemsImports = 5
+		Connectors\Navisworks\Speckle.Connectors.NavisworksShared\Speckle.Connectors.NavisworksShared.projitems*{62813838-52f7-43cb-9062-bb2611c00c79}*SharedItemsImports = 13
 		Converters\Autocad\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.projitems*{62f50a22-8bbf-497a-b599-f858dff1d31c}*SharedItemsImports = 5
 		Converters\Autocad\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.projitems*{631c295a-7ccf-4b42-8686-7034e31469e7}*SharedItemsImports = 5
 		Converters\Rhino\Speckle.Converters.RhinoShared\Speckle.Converters.RhinoShared.projitems*{65a2f556-f14a-49f3-8a92-7f2e1e7ed3b5}*SharedItemsImports = 5
@@ -671,11 +825,13 @@ Global
 		Converters\Revit\Speckle.Converters.RevitShared\Speckle.Converters.RevitShared.projitems*{68cf9bdf-94ac-4d2d-a7bd-d1c064f97051}*SharedItemsImports = 5
 		Connectors\Revit\Speckle.Connectors.RevitShared.Cef\Speckle.Connectors.RevitShared.Cef.projitems*{6a40cbe4-ecab-4ced-9917-5c64cbf75da6}*SharedItemsImports = 13
 		Connectors\Rhino\Speckle.Connectors.RhinoShared\Speckle.Connectors.RhinoShared.projitems*{6f3fd892-6315-4f75-bfbd-843a489f8b94}*SharedItemsImports = 5
+		Connectors\Navisworks\Speckle.Connectors.NavisworksShared\Speckle.Connectors.NavisworksShared.projitems*{7791806e-7531-41d8-9c9d-4a1249d9f99c}*SharedItemsImports = 5
 		Connectors\Revit\Speckle.Connectors.RevitShared.Cef\Speckle.Connectors.RevitShared.Cef.projitems*{7f1fdcf2-0ce8-4119-b3c1-f2cc6d7e1c36}*SharedItemsImports = 5
 		Connectors\Revit\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems*{7f1fdcf2-0ce8-4119-b3c1-f2cc6d7e1c36}*SharedItemsImports = 5
 		Connectors\Autocad\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems*{89c4cbc7-1606-40de-b6da-fbe3aac98395}*SharedItemsImports = 5
 		Converters\Autocad\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.projitems*{9add1b7a-6401-4202-8613-f668e2fbc0a4}*SharedItemsImports = 13
 		Connectors\Tekla\Speckle.Connector.TeklaShared\Speckle.Connectors.TeklaShared.projitems*{a277cdf6-7c8f-4870-8d15-af35f4749caa}*SharedItemsImports = 5
+		Converters\Navisworks\Speckle.Converters.NavisworksShared\Speckle.Converters.NavisworksShared.projitems*{a675e34c-667e-4069-a8fa-92f2c2db8a27}*SharedItemsImports = 5
 		Connectors\Revit\Speckle.Connectors.RevitShared.Cef\Speckle.Connectors.RevitShared.Cef.projitems*{a6de3da0-b242-4f49-aef0-4e26af92d16c}*SharedItemsImports = 5
 		Connectors\Revit\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems*{a6de3da0-b242-4f49-aef0-4e26af92d16c}*SharedItemsImports = 5
 		Connectors\CSi\Speckle.Connectors.CSiShared\Speckle.Connectors.CSiShared.projitems*{a8e949b8-aa55-4909-99f0-8b551791a1f8}*SharedItemsImports = 13
@@ -683,8 +839,10 @@ Global
 		Converters\Autocad\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.projitems*{ae75b68f-3594-403b-9719-9c36da0e3f8a}*SharedItemsImports = 5
 		Converters\Civil3d\Speckle.Converters.Civil3dShared\Speckle.Converters.Civil3dShared.projitems*{ae75b68f-3594-403b-9719-9c36da0e3f8a}*SharedItemsImports = 5
 		Connectors\CSi\Speckle.Connectors.CSiShared\Speckle.Connectors.CSiShared.projitems*{afb47b71-4185-4135-98bb-eedffa8aa194}*SharedItemsImports = 5
+		Connectors\CSi\Speckle.Connectors.ETABSShared\Speckle.Connectors.ETABSShared.projitems*{afb47b71-4185-4135-98bb-eedffa8aa194}*SharedItemsImports = 5
 		Converters\Tekla\Speckle.Converters.TeklaShared\Speckle.Converters.TeklaShared.projitems*{b236750b-cfe5-4640-9073-77a27a7257f6}*SharedItemsImports = 5
 		Connectors\Rhino\Speckle.Connectors.RhinoShared\Speckle.Connectors.RhinoShared.projitems*{b37d4b9a-8d3f-4fa5-b9c8-e6c5f8a0c1e2}*SharedItemsImports = 13
+		Connectors\Navisworks\Speckle.Connectors.NavisworksShared\Speckle.Connectors.NavisworksShared.projitems*{b6985672-4704-4f86-a3e0-2310bf8e6d73}*SharedItemsImports = 5
 		Converters\Autocad\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.projitems*{b6c04ec4-ed81-4e61-b4b2-4902015808d7}*SharedItemsImports = 5
 		Converters\Civil3d\Speckle.Converters.Civil3dShared\Speckle.Converters.Civil3dShared.projitems*{b6c04ec4-ed81-4e61-b4b2-4902015808d7}*SharedItemsImports = 5
 		Converters\Autocad\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.projitems*{c2de264a-aa87-4012-b954-17e3f403a237}*SharedItemsImports = 5
@@ -694,8 +852,10 @@ Global
 		Converters\Revit\Speckle.Converters.RevitShared\Speckle.Converters.RevitShared.projitems*{c34d0246-6c16-4e81-ae57-2ce70f81484b}*SharedItemsImports = 5
 		Connectors\Autocad\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems*{c3879337-cd00-4011-89c5-585dd2cc3ed5}*SharedItemsImports = 5
 		Connectors\Autocad\Speckle.Connectors.Civil3dShared\Speckle.Connectors.Civil3dShared.projitems*{c3879337-cd00-4011-89c5-585dd2cc3ed5}*SharedItemsImports = 5
+		Connectors\Navisworks\Speckle.Connectors.NavisworksShared\Speckle.Connectors.NavisworksShared.projitems*{c635619c-2938-4e6f-9e25-56ce1632a7ec}*SharedItemsImports = 5
 		Connectors\Autocad\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems*{ca8eae01-ab9f-4ec1-b6f3-73721487e9e1}*SharedItemsImports = 5
 		Connectors\Autocad\Speckle.Connectors.Civil3dShared\Speckle.Connectors.Civil3dShared.projitems*{ca8eae01-ab9f-4ec1-b6f3-73721487e9e1}*SharedItemsImports = 5
+		Connectors\Navisworks\Speckle.Connectors.NavisworksShared\Speckle.Connectors.NavisworksShared.projitems*{ce4d238f-66c2-46b1-bd25-9ac22d7ccb1a}*SharedItemsImports = 5
 		Connectors\Autocad\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems*{d4566bf1-56cf-477a-8769-63299a9f45a3}*SharedItemsImports = 5
 		Connectors\Autocad\Speckle.Connectors.Civil3dShared\Speckle.Connectors.Civil3dShared.projitems*{d4566bf1-56cf-477a-8769-63299a9f45a3}*SharedItemsImports = 5
 		Connectors\Revit\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems*{dc570fff-6fe5-47bd-8bc1-b471a6067786}*SharedItemsImports = 13
@@ -704,6 +864,7 @@ Global
 		Converters\Revit\Speckle.Converters.RevitShared.Tests\Speckle.Converters.RevitShared.Tests.projitems*{e1c43415-3202-45f4-8bf9-a4dd7d7f2ed6}*SharedItemsImports = 13
 		Connectors\Autocad\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems*{eaad080d-49af-49bf-b8bd-a18ceb210734}*SharedItemsImports = 5
 		Connectors\Autocad\Speckle.Connectors.Civil3dShared\Speckle.Connectors.Civil3dShared.projitems*{efd01520-93e8-4cca-8e03-9cdc635f55f4}*SharedItemsImports = 13
+		Connectors\Navisworks\Speckle.Connectors.NavisworksShared\Speckle.Connectors.NavisworksShared.projitems*{fd44e1f0-d20a-49b6-adc9-482d911a74fb}*SharedItemsImports = 5
 		Connectors\Autocad\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems*{fe4cb79d-4e59-4070-871c-108545537e6c}*SharedItemsImports = 5
 		Connectors\Autocad\Speckle.Connectors.Civil3dShared\Speckle.Connectors.Civil3dShared.projitems*{fe4cb79d-4e59-4070-871c-108545537e6c}*SharedItemsImports = 5
 	EndGlobalSection
