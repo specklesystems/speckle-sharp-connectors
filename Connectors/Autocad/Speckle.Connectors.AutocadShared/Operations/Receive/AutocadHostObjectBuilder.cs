@@ -206,7 +206,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       var bakedEntity = BakeObject(entity, obj, layerName);
       convertedEntities.Add(bakedEntity);
     }
-    else if (converted is IEnumerable<(object, Base)> fallbackConversionResult)
+    else if (converted is List<(Entity, Base)> fallbackConversionResult)
     {
       var bakedFallbackEntities = BakeObjectsAsGroup(fallbackConversionResult, obj, layerName, baseLayerNamePrefix);
       convertedEntities.UnionWith(bakedFallbackEntities);
@@ -234,7 +234,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
   }
 
   private List<Entity> BakeObjectsAsGroup(
-    IEnumerable<(object, Base)> fallbackConversionResult,
+    List<(Entity, Base)> fallbackConversionResult,
     Base parentObject,
     string layerName,
     string baseLayerName
@@ -244,15 +244,9 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     var entities = new List<Entity>();
     foreach (var (conversionResult, originalObject) in fallbackConversionResult)
     {
-      if (conversionResult is not Entity entity)
-      {
-        // TODO: throw?
-        continue;
-      }
-
-      BakeObject(entity, originalObject, layerName, parentObject);
-      ids.Add(entity.ObjectId);
-      entities.Add(entity);
+      BakeObject(conversionResult, originalObject, layerName, parentObject);
+      ids.Add(conversionResult.ObjectId);
+      entities.Add(conversionResult);
     }
 
     var tr = Application.DocumentManager.CurrentDocument.Database.TransactionManager.TopTransaction;
