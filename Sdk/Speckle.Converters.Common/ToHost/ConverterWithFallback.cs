@@ -49,6 +49,8 @@ public sealed class ConverterWithFallback : IRootToHostConverter
     }
     catch (ConversionNotSupportedException e)
     {
+      // NOTE: `ConversionNotSupportedException` should not be an exception - we know what we can convert and what we can't; this is doubly true
+      // on hot paths where we *know* that we will fallback to a display value anyway.
       _logger.LogInformation(e, "Attempt to find conversion for type {type} failed", type);
     }
 
