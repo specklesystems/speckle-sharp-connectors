@@ -166,13 +166,12 @@ public class NavisworksRootObjectBuilder(
     try
     {
       var result = sendConversionCache.TryGetValue(applicationId, sendInfo.ProjectId, out ObjectReference? cached)
-        ? BaseResult.Success( cached)
+        ? BaseResult.Success(cached)
         : rootToSpeckleConverter.Convert(navisworksItem);
 
       if (result.IsFailure)
       {
         return new SendConversionResult(Status.ERROR, applicationId, "ModelItem", result.Message);
-        
       }
       var converted = result.Value;
       convertedBases[applicationId] = converted;

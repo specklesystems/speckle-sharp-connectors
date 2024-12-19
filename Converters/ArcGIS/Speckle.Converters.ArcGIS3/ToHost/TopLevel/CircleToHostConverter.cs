@@ -20,7 +20,7 @@ public class CircleToHostConverter : IToHostTopLevelConverter, ITypedConverter<S
     _settingsStore = settingsStore;
   }
 
-  public HostResult Convert(Base target) => HostResult.Success(  Convert((SOG.Circle)target));
+  public HostResult Convert(Base target) => HostResult.Success(Convert((SOG.Circle)target));
 
   public ACG.Polyline Convert(SOG.Circle target)
   {

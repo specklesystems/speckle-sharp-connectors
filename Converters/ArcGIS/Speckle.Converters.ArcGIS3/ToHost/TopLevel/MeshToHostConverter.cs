@@ -14,7 +14,7 @@ public class MeshToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG
     _meshConverter = meshConverter;
   }
 
-  public HostResult Convert(Base target) => HostResult.Success(  Convert((SOG.Mesh)target));
+  public HostResult Convert(Base target) => HostResult.Success(Convert((SOG.Mesh)target));
 
   public ACG.Multipatch Convert(SOG.Mesh target)
   {

@@ -13,7 +13,7 @@ public class DBArcToSpeckleConverter : IToSpeckleTopLevelConverter
     _arcConverter = arcConverter;
   }
 
-
   public BaseResult Convert(object target) => BaseResult.Success(Convert((ADB.Arc)target));
+
   public SOG.Arc Convert(ADB.Arc target) => _arcConverter.Convert(target);
 }

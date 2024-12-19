@@ -26,7 +26,7 @@ public readonly record struct ConverterResult<T>(
 {
   public bool IsSuccess => ConversionStatus == ConversionStatus.Success;
   public bool IsFailure => ConversionStatus != ConversionStatus.Success;
-  
+
   public T Converter
   {
     get

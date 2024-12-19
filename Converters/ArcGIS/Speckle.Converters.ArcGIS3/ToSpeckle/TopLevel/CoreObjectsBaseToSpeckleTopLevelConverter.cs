@@ -24,7 +24,7 @@ public class CoreObjectsBaseToSpeckleTopLevelConverter : IToSpeckleTopLevelConve
     _settingsStore = settingsStore;
   }
 
-  public BaseResult Convert(object target) => BaseResult.Success( Convert((AC.CoreObjectsBase)target));
+  public BaseResult Convert(object target) => BaseResult.Success(Convert((AC.CoreObjectsBase)target));
 
   private ArcgisObject Convert(AC.CoreObjectsBase target)
   {

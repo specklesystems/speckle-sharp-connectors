@@ -11,8 +11,8 @@ public record DirectShapeDefinitionWrapper(string DefinitionId, List<GeometryObj
 
 public class RevitRootToHostConverter(
   ITypedConverter<Base, List<DB.GeometryObject>> baseToGeometryConverter,
-  IConverterSettingsStore<RevitConversionSettings> converterSettings)
-  : IRootToHostConverter
+  IConverterSettingsStore<RevitConversionSettings> converterSettings
+) : IRootToHostConverter
 {
   public HostResult Convert(Base target)
   {

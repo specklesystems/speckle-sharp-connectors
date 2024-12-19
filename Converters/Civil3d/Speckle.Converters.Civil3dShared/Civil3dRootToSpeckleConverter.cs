@@ -44,15 +44,15 @@ public class Civil3dRootToSpeckleConverter : IRootToSpeckleConverter
       return BaseResult.Failure(converterResult);
     }
 
-      using (var l = _settingsStore.Current.Document.LockDocument())
+    using (var l = _settingsStore.Current.Document.LockDocument())
+    {
+      using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
       {
-        using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
-        {
-          var result = converterResult.Converter.Convert(objectToConvert);
+        var result = converterResult.Converter.Convert(objectToConvert);
 
-          tr.Commit();
-          return result;
-        }
+        tr.Commit();
+        return result;
       }
+    }
   }
 }

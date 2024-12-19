@@ -14,5 +14,6 @@ public class PointToHostConverter : IToHostTopLevelConverter
     _pointConverter = pointConverter;
   }
 
-  public HostResult Convert(Base target) => HostResult.Success(  _pointConverter.Convert(new List<SOG.Point> { (SOG.Point)target }));
+  public HostResult Convert(Base target) =>
+    HostResult.Success(_pointConverter.Convert(new List<SOG.Point> { (SOG.Point)target }));
 }

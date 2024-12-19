@@ -236,7 +236,13 @@ internal sealed class RevitHostObjectBuilder : IHostObjectBuilder, IDisposable
         }
         else
         {
-          conversionResults.Add(new(Status.ERROR, localToGlobalMap.AtomicObject, $"Failed to cast {result?.GetType()} to direct shape definition wrapper."));
+          conversionResults.Add(
+            new(
+              Status.ERROR,
+              localToGlobalMap.AtomicObject,
+              $"Failed to cast {result?.GetType()} to direct shape definition wrapper."
+            )
+          );
         }
       }
       catch (Exception ex) when (!ex.IsFatal())

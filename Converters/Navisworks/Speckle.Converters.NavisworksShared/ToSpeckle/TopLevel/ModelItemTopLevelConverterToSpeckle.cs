@@ -59,7 +59,7 @@ public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
       handler.AssignProperties(navisworksObject, target);
     }
 
-    return  BaseResult.Success(navisworksObject);
+    return BaseResult.Success(navisworksObject);
   }
 
   /// <summary>

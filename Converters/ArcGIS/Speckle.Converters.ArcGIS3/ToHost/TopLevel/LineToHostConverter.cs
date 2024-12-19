@@ -19,7 +19,7 @@ public class LineSingleToHostConverter : IToHostTopLevelConverter, ITypedConvert
     _settingsStore = settingsStore;
   }
 
-  public HostResult Convert(Base target) => HostResult.Success( Convert((SOG.Line)target));
+  public HostResult Convert(Base target) => HostResult.Success(Convert((SOG.Line)target));
 
   public ACG.Polyline Convert(SOG.Line target)
   {

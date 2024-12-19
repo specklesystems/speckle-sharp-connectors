@@ -19,7 +19,7 @@ public class PolylineToHostConverter : IToHostTopLevelConverter, ITypedConverter
     _settingsStore = settingsStore;
   }
 
-  public HostResult Convert(Base target) => HostResult.Success(  Convert((SOG.Polyline)target));
+  public HostResult Convert(Base target) => HostResult.Success(Convert((SOG.Polyline)target));
 
   public ACG.Polyline Convert(SOG.Polyline target)
   {

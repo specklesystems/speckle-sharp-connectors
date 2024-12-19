@@ -21,13 +21,7 @@ public enum Status
 
 public sealed class SendConversionResult : ConversionResult
 {
-  public SendConversionResult(
-    Status status,
-    string sourceId,
-    string sourceType,
-    Base? result,
-    Exception? exception
-  )
+  public SendConversionResult(Status status, string sourceId, string sourceType, Base? result, Exception? exception)
   {
     Status = status;
     SourceId = sourceId;
@@ -36,10 +30,8 @@ public sealed class SendConversionResult : ConversionResult
     ResultType = result?.speckle_type;
     Error = FormatError(exception);
   }
-  
-  public SendConversionResult(Status status, 
-    string sourceId,
-    string sourceType, string? message)
+
+  public SendConversionResult(Status status, string sourceId, string sourceType, string? message)
   {
     Status = status;
     SourceId = sourceId;

@@ -120,7 +120,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<ElementId>
           var conversionResult = _converter.Convert(revitElement);
           if (conversionResult.IsFailure)
           {
-            results.Add(new(Status.ERROR, applicationId,sourceType,  conversionResult.Message));
+            results.Add(new(Status.ERROR, applicationId, sourceType, conversionResult.Message));
             continue;
           }
           converted = conversionResult.Value;

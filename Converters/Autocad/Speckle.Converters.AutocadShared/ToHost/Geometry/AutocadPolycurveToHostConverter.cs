@@ -29,18 +29,18 @@ public class AutocadPolycurveToHostConverter : IToHostTopLevelConverter
     switch (polycurve.polyType)
     {
       case SOG.Autocad.AutocadPolyType.Light:
-        return HostResult.Success( _polylineConverter.Convert(polycurve));
+        return HostResult.Success(_polylineConverter.Convert(polycurve));
 
       case SOG.Autocad.AutocadPolyType.Simple2d:
       case SOG.Autocad.AutocadPolyType.FitCurve2d:
       case SOG.Autocad.AutocadPolyType.CubicSpline2d:
       case SOG.Autocad.AutocadPolyType.QuadSpline2d:
-        return HostResult.Success( _polyline2dConverter.Convert(polycurve));
+        return HostResult.Success(_polyline2dConverter.Convert(polycurve));
 
       case SOG.Autocad.AutocadPolyType.Simple3d:
       case SOG.Autocad.AutocadPolyType.CubicSpline3d:
       case SOG.Autocad.AutocadPolyType.QuadSpline3d:
-        return HostResult.Success( _polyline3dConverter.Convert(polycurve));
+        return HostResult.Success(_polyline3dConverter.Convert(polycurve));
 
       default:
         return HostResult.NoConversion("Unknown poly type for AutocadPolycurve");

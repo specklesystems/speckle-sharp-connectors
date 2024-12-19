@@ -24,7 +24,7 @@ public class FallbackToHostConverter : IToHostTopLevelConverter, ITypedConverter
     _pointListConverter = pointListConverter;
   }
 
-  public HostResult Convert(Base target) => HostResult.Success( Convert((DisplayableObject)target));
+  public HostResult Convert(Base target) => HostResult.Success(Convert((DisplayableObject)target));
 
   public ACG.Geometry Convert(DisplayableObject target)
   {

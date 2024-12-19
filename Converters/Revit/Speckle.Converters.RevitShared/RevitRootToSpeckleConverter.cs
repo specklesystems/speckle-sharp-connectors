@@ -60,6 +60,6 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
     }
     result["worksetName"] = worksetName;
 
-    return  BaseResult.Success(result);
+    return BaseResult.Success(result);
   }
 }
