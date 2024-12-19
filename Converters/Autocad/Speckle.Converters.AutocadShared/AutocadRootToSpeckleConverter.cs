@@ -3,7 +3,6 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
 using Speckle.Sdk.Common.Exceptions;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad;
 
@@ -21,7 +20,7 @@ public class AutocadRootToSpeckleConverter : IRootToSpeckleConverter
     _settingsStore = settingsStore;
   }
 
-  public Base Convert(object target)
+  public BaseResult Convert(object target)
   {
     if (target is not DBObject dbObject)
     {
@@ -36,9 +35,12 @@ public class AutocadRootToSpeckleConverter : IRootToSpeckleConverter
     {
       using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
       {
-        var objectConverter = _toSpeckle.ResolveConverter(type);
-
-        var convertedObject = objectConverter.Convert(dbObject);
+        var result = _toSpeckle.ResolveConverter(type);
+        if (result.IsFailure)
+        {
+          return BaseResult.Failure(result);
+        }
+        var convertedObject = result.Converter.Convert(dbObject);
         tr.Commit();
         return convertedObject;
       }

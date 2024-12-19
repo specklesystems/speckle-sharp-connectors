@@ -23,7 +23,7 @@ public class EllipseToHostConverter : IToHostTopLevelConverter, ITypedConverter<
     _settingsStore = settingsStore;
   }
 
-  public object Convert(Base target) => Convert((SOG.Ellipse)target);
+  public HostResult Convert(Base target) => HostResult.Success(Convert((SOG.Ellipse)target));
 
   /// <exception cref="ArgumentNullException"> Throws if any ellipse radius value is null.</exception>
   public ADB.Ellipse Convert(SOG.Ellipse target)

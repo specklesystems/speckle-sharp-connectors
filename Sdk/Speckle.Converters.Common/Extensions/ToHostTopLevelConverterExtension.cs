@@ -1,8 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.Common.Registration;
 using Speckle.Sdk;
-using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Common.Extensions;
@@ -19,7 +17,7 @@ public static class ToHostTopLevelConverterExtension
     {
       if (converter.IsSuccess)
       {
-        return converter.Converter.NotNull().Convert(target);
+        return converter.Converter.Convert(target);
       }
 
       logger.Log(

@@ -1,6 +1,5 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Geometry;
 
@@ -14,7 +13,7 @@ public class SplineToSpeckleConverter : IToSpeckleTopLevelConverter
     _splineConverter = splineConverter;
   }
 
-  public Base Convert(object target) => Convert((ADB.Spline)target);
+  public BaseResult Convert(object target) => BaseResult.Success(Convert((ADB.Spline)target));
 
   public SOG.Curve Convert(ADB.Spline target) => _splineConverter.Convert(target);
 }

@@ -1,7 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Common.Exceptions;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.Geometry;
 
@@ -15,7 +14,7 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
     _brepConverter = brepConverter;
   }
 
-  public Base Convert(object target) => Convert((ADB.Region)target);
+  public BaseResult Convert(object target) => BaseResult.Success(Convert((ADB.Region)target));
 
   public SOG.Mesh Convert(ADB.Region target)
   {

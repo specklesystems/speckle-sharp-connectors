@@ -14,7 +14,7 @@ public class CurveToHostConverter : IToHostTopLevelConverter, ITypedConverter<SO
     _curveConverter = curveConverter;
   }
 
-  public object Convert(Base target) => Convert((SOG.Curve)target);
+  public HostResult Convert(Base target) => HostResult.Success(Convert((SOG.Curve)target));
 
   public ADB.Curve Convert(SOG.Curve target) => ADB.Curve.CreateFromGeCurve(_curveConverter.Convert(target));
 }

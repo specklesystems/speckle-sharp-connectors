@@ -1,6 +1,5 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Geometry;
 
@@ -14,7 +13,7 @@ public class DBCircleToSpeckleConverter : IToSpeckleTopLevelConverter
     _circleConverter = circleConverter;
   }
 
-  public Base Convert(object target) => RawConvert((ADB.Circle)target);
+  public BaseResult Convert(object target) => BaseResult.Success(RawConvert((ADB.Circle)target));
 
   public SOG.Circle RawConvert(ADB.Circle target) => _circleConverter.Convert(target);
 }

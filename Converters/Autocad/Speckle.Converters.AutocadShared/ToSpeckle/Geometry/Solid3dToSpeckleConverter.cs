@@ -1,6 +1,5 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.Geometry;
 
@@ -14,7 +13,7 @@ public class Solid3dToSpeckleConverter : IToSpeckleTopLevelConverter
     _solidConverter = solidConverter;
   }
 
-  public Base Convert(object target) => RawConvert((ADB.Solid3d)target);
+  public BaseResult Convert(object target) => BaseResult.Success(RawConvert((ADB.Solid3d)target));
 
   public SOG.Mesh RawConvert(ADB.Solid3d target)
   {

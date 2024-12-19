@@ -14,7 +14,7 @@ public class PolylineToHostConverter : IToHostTopLevelConverter, ITypedConverter
     _pointConverter = pointConverter;
   }
 
-  public object Convert(Base target) => Convert((SOG.Polyline)target);
+  public HostResult Convert(Base target) => HostResult.Success(Convert((SOG.Polyline)target));
 
   public ADB.Polyline3d Convert(SOG.Polyline target)
   {

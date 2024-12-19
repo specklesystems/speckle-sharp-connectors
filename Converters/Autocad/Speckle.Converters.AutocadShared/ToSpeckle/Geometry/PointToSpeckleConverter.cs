@@ -1,6 +1,5 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Geometry;
 
@@ -14,7 +13,7 @@ public class PointToSpeckleConverter : IToSpeckleTopLevelConverter
     _pointConverter = pointConverter;
   }
 
-  public Base Convert(object target) => RawConvert((ADB.DBPoint)target);
+  public BaseResult Convert(object target) => BaseResult.Success(RawConvert((ADB.DBPoint)target));
 
   public SOG.Point RawConvert(ADB.DBPoint target) => _pointConverter.Convert(target.Position);
 }

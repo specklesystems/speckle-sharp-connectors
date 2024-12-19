@@ -176,12 +176,17 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
       }
       else
       {
-        converted = _converter.Convert(entity);
+        var result = _converter.Convert(entity);
+        if (result.IsFailure)
+        {
+          return new(Status.ERROR, applicationId, sourceType, result.Message);
+        }
+        converted = result.Value;
         converted.applicationId = applicationId;
       }
 
       collectionHost.elements.Add(converted);
-      return new(Status.SUCCESS, applicationId, sourceType, converted);
+      return new(Status.SUCCESS, applicationId, sourceType, converted, null);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {

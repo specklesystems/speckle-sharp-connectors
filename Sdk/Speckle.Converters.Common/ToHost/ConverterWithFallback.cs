@@ -1,6 +1,5 @@
 using System.Collections;
 using Microsoft.Extensions.Logging;
-using Speckle.Converters.Common.Registration;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Extensions;

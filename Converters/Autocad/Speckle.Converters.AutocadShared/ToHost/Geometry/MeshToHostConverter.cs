@@ -21,7 +21,7 @@ public class MeshToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG
     _settingsStore = settingsStore;
   }
 
-  public object Convert(Base target) => Convert((SOG.Mesh)target);
+  public HostResult Convert(Base target) => HostResult.Success(Convert((SOG.Mesh)target));
 
   /// <remarks>
   /// Mesh conversion requires transaction since it's vertices needed to be added into database in advance..

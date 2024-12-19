@@ -198,8 +198,12 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     using var tr = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
 
     // 1: convert
-    var converted = _converter.Convert(obj);
-
+    var result = _converter.Convert(obj);
+    if (result.IsFailure)
+    {
+      return [];
+    }
+    var converted = result.Host;
     // 2: handle result
     if (converted is Entity entity)
     {
@@ -211,7 +215,6 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       var bakedFallbackEntities = BakeObjectsAsGroup(fallbackConversionResult, obj, layerName, baseLayerNamePrefix);
       convertedEntities.UnionWith(bakedFallbackEntities);
     }
-
     tr.Commit();
     return convertedEntities.Freeze();
   }

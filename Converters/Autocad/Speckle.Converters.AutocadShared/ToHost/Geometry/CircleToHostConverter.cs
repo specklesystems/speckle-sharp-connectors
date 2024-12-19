@@ -23,7 +23,7 @@ public class CircleToHostConverter : IToHostTopLevelConverter, ITypedConverter<S
     _settingsStore = settingsStore;
   }
 
-  public object Convert(Base target) => Convert((SOG.Circle)target);
+  public HostResult Convert(Base target) => HostResult.Success(Convert((SOG.Circle)target));
 
   public ADB.Circle Convert(SOG.Circle target)
   {

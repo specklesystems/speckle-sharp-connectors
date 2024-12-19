@@ -1,6 +1,5 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Geometry;
 
@@ -14,7 +13,7 @@ public class DBArcToSpeckleConverter : IToSpeckleTopLevelConverter
     _arcConverter = arcConverter;
   }
 
-  public Base Convert(object target) => Convert((ADB.Arc)target);
 
+  public BaseResult Convert(object target) => BaseResult.Success(Convert((ADB.Arc)target));
   public SOG.Arc Convert(ADB.Arc target) => _arcConverter.Convert(target);
 }

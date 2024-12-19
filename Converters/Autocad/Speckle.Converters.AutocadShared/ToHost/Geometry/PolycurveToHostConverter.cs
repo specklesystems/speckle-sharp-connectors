@@ -24,7 +24,7 @@ public class PolycurveToHostConverter : IToHostTopLevelConverter
     _splineConverter = splineConverter;
   }
 
-  public object Convert(Base target)
+  public HostResult Convert(Base target)
   {
     SOG.Polycurve polycurve = (SOG.Polycurve)target;
     bool convertAsSpline = polycurve.segments.Any(s => s is not SOG.Line and not SOG.Arc);
@@ -32,11 +32,11 @@ public class PolycurveToHostConverter : IToHostTopLevelConverter
 
     if (convertAsSpline || !isPlanar)
     {
-      return _splineConverter.Convert(polycurve);
+      return HostResult.Success(_splineConverter.Convert(polycurve));
     }
     else
     {
-      return _polylineConverter.Convert(polycurve);
+      return HostResult.Success(_polylineConverter.Convert(polycurve));
     }
   }
 

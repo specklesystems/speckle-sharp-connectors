@@ -1,7 +1,7 @@
 ﻿using Speckle.Sdk;
 using Speckle.Sdk.Models;
 
-namespace Speckle.Converters.Common.Registration;
+namespace Speckle.Converters.Common;
 
 public interface IConversionResult
 {
@@ -20,12 +20,26 @@ public enum ConversionStatus
 
 public readonly record struct ConverterResult<T>(
   ConversionStatus ConversionStatus,
-  T? Converter = default,
+  T? ResolvedConverter = default,
   string? Message = null
 ) : IConversionResult
 {
   public bool IsSuccess => ConversionStatus == ConversionStatus.Success;
   public bool IsFailure => ConversionStatus != ConversionStatus.Success;
+  
+  public T Converter
+  {
+    get
+    {
+      if (IsSuccess)
+      {
+        return ResolvedConverter ?? throw new InvalidOperationException("ResolvedConverter was null");
+      }
+#pragma warning disable CA1065
+      throw new SpeckleException("Conversion wasn't successful: " + Message);
+#pragma warning restore CA1065
+    }
+  }
 }
 
 public readonly record struct BaseResult(ConversionStatus ConversionStatus, Base? Base = null, string? Message = null)
@@ -46,7 +60,16 @@ public readonly record struct BaseResult(ConversionStatus ConversionStatus, Base
       throw new SpeckleException("Conversion wasn't successful: " + Message);
 #pragma warning restore CA1065
     }
-  } 
+  }
+
+  public static BaseResult Failure<T>(ConverterResult<T> result)
+  {
+    if (result.IsSuccess)
+    {
+      throw new InvalidOperationException("Result was successful, but should have been a failure");
+    }
+    return NoConversion(result.Message);
+  }
 
   public static BaseResult Success(Base baseObject) => new(ConversionStatus.Success, baseObject);
 

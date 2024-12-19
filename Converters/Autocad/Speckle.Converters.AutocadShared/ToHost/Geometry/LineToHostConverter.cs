@@ -14,7 +14,7 @@ public class LineToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG
     _pointConverter = pointConverter;
   }
 
-  public object Convert(Base target) => Convert((SOG.Line)target);
+  public HostResult Convert(Base target) => HostResult.Success(Convert((SOG.Line)target));
 
   public ADB.Line Convert(SOG.Line target) =>
     new(_pointConverter.Convert(target.start), _pointConverter.Convert(target.end));

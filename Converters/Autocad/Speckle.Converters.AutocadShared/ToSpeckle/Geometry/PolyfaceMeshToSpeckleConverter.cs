@@ -1,7 +1,6 @@
 using Autodesk.AutoCAD.Geometry;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.Geometry;
 
@@ -29,7 +28,7 @@ public class DBPolyfaceMeshToSpeckleConverter : IToSpeckleTopLevelConverter
     _settingsStore = settingsStore;
   }
 
-  public Base Convert(object target) => RawConvert((ADB.PolyFaceMesh)target);
+  public BaseResult Convert(object target) => BaseResult.Success(RawConvert((ADB.PolyFaceMesh)target));
 
   public SOG.Mesh RawConvert(ADB.PolyFaceMesh target)
   {

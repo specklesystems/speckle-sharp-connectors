@@ -14,7 +14,7 @@ public class PointToHostConverter : IToHostTopLevelConverter, ITypedConverter<SO
     _pointConverter = pointConverter;
   }
 
-  public object Convert(Base target) => Convert((SOG.Point)target);
+  public HostResult Convert(Base target) => HostResult.Success(Convert((SOG.Point)target));
 
   public ADB.DBPoint Convert(SOG.Point target) => new(_pointConverter.Convert(target));
 }

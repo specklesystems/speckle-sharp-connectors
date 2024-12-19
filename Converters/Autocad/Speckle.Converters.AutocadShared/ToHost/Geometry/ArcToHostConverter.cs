@@ -22,7 +22,7 @@ public class ArcToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG.
     _settingsStore = settingsStore;
   }
 
-  public object Convert(Base target) => Convert((SOG.Arc)target);
+  public HostResult Convert(Base target) => HostResult.Success(Convert((SOG.Arc)target));
 
   public ADB.Arc Convert(SOG.Arc target)
   {

@@ -1,6 +1,5 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Geometry;
 
@@ -14,7 +13,7 @@ public class DBEllipseToSpeckleConverter : IToSpeckleTopLevelConverter
     _ellipseConverter = ellipseConverter;
   }
 
-  public Base Convert(object target) => RawConvert((ADB.Ellipse)target);
+  public BaseResult Convert(object target) => BaseResult.Success(RawConvert((ADB.Ellipse)target));
 
   public SOG.Ellipse RawConvert(ADB.Ellipse target) => _ellipseConverter.Convert(target);
 }

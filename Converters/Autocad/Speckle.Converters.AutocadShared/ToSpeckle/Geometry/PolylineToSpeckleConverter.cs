@@ -1,6 +1,5 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.Geometry;
 
@@ -36,7 +35,7 @@ public class PolylineToSpeckleConverter
     _settingsStore = settingsStore;
   }
 
-  public Base Convert(object target) => Convert((ADB.Polyline)target);
+  public BaseResult Convert(object target) => BaseResult.Success(Convert((ADB.Polyline)target));
 
   public SOG.Autocad.AutocadPolycurve Convert(ADB.Polyline target)
   {

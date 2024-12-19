@@ -1,6 +1,5 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad2023.ToHost.Geometry;
@@ -23,28 +22,28 @@ public class AutocadPolycurveToHostConverter : IToHostTopLevelConverter
     _polyline3dConverter = polyline3dConverter;
   }
 
-  public object Convert(Base target)
+  public HostResult Convert(Base target)
   {
     SOG.Autocad.AutocadPolycurve polycurve = (SOG.Autocad.AutocadPolycurve)target;
 
     switch (polycurve.polyType)
     {
       case SOG.Autocad.AutocadPolyType.Light:
-        return _polylineConverter.Convert(polycurve);
+        return HostResult.Success( _polylineConverter.Convert(polycurve));
 
       case SOG.Autocad.AutocadPolyType.Simple2d:
       case SOG.Autocad.AutocadPolyType.FitCurve2d:
       case SOG.Autocad.AutocadPolyType.CubicSpline2d:
       case SOG.Autocad.AutocadPolyType.QuadSpline2d:
-        return _polyline2dConverter.Convert(polycurve);
+        return HostResult.Success( _polyline2dConverter.Convert(polycurve));
 
       case SOG.Autocad.AutocadPolyType.Simple3d:
       case SOG.Autocad.AutocadPolyType.CubicSpline3d:
       case SOG.Autocad.AutocadPolyType.QuadSpline3d:
-        return _polyline3dConverter.Convert(polycurve);
+        return HostResult.Success( _polyline3dConverter.Convert(polycurve));
 
       default:
-        throw new ValidationException("Unknown poly type for AutocadPolycurve");
+        return HostResult.NoConversion("Unknown poly type for AutocadPolycurve");
     }
   }
 }

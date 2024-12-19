@@ -31,7 +31,7 @@ public class SpeckleFallbackToAutocadTopLevelConverter
     _pointConverter = pointConverter;
   }
 
-  public object Convert(Base target) => Convert((DisplayableObject)target);
+  public HostResult Convert(Base target) => HostResult.Success(Convert((DisplayableObject)target));
 
   public List<ADB.Entity> Convert(DisplayableObject target)
   {
