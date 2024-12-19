@@ -1,14 +1,15 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Objects.Data;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Rhino7.ToHost.TopLevel;
 
-[NameAndRankValue(nameof(DisplayableObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(nameof(DataObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class SpeckleFallbackToAutocadTopLevelConverter
   : IToHostTopLevelConverter,
-    ITypedConverter<DisplayableObject, List<ADB.Entity>>
+    ITypedConverter<DataObject, List<(ADB.Entity a, Base b)>>
 {
   private readonly ITypedConverter<SOG.Line, ADB.Line> _lineConverter;
   private readonly ITypedConverter<SOG.Polyline, ADB.Polyline3d> _polylineConverter;
@@ -31,9 +32,9 @@ public class SpeckleFallbackToAutocadTopLevelConverter
     _pointConverter = pointConverter;
   }
 
-  public object Convert(Base target) => Convert((DisplayableObject)target);
+  public object Convert(Base target) => Convert((DataObject)target);
 
-  public List<ADB.Entity> Convert(DisplayableObject target)
+  public List<(ADB.Entity a, Base b)> Convert(DataObject target)
   {
     var result = new List<ADB.Entity>();
     foreach (var item in target.displayValue)
@@ -49,7 +50,6 @@ public class SpeckleFallbackToAutocadTopLevelConverter
       };
       result.Add(x);
     }
-
-    return result;
+    return result.Zip(target.displayValue, (a, b) => (a, b)).ToList();
   }
 }
