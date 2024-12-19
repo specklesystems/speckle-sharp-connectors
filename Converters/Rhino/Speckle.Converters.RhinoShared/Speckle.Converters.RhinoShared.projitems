@@ -9,6 +9,6 @@
     <Import_RootNamespace>Speckle.Converters.RhinoShared</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)ToHost\TopLevel\DataObjectConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)**\*.cs" />
   </ItemGroup>
 </Project>
