@@ -1,6 +1,5 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.Common.Registration;
 using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 using Speckle.Objects;
 using Speckle.Sdk.Models;

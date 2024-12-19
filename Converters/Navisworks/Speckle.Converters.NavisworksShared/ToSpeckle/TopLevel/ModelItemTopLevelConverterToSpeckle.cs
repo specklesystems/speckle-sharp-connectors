@@ -2,7 +2,6 @@
 using Speckle.Converter.Navisworks.ToSpeckle.PropertyHandlers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.Common.Registration;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 

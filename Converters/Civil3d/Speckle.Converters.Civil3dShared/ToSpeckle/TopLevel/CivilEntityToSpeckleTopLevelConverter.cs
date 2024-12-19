@@ -36,7 +36,7 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     _corridorHandler = corridorHandler;
   }
 
-  public Base Convert(object target) => Convert((CDB.Entity)target);
+  public BaseResult Convert(object target) => BaseResult.Success(Convert((CDB.Entity)target));
 
   public Civil3dObject Convert(CDB.Entity target)
   {

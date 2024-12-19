@@ -1,7 +1,6 @@
 ﻿using Rhino.DocObjects;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.Common.Registration;
 using Speckle.Converters.Rhino.ToSpeckle.Encoding;
 using Speckle.Converters.Rhino.ToSpeckle.Meshing;
 

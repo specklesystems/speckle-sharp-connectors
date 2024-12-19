@@ -1,7 +1,6 @@
 using Speckle.Converters.ArcGIS3.ToSpeckle.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.Common.Registration;
 using Speckle.Objects.Data;
 using Speckle.Sdk.Models;
 

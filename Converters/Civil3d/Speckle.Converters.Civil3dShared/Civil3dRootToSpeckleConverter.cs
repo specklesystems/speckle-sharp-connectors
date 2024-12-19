@@ -2,8 +2,6 @@ using System.ComponentModel.DataAnnotations;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
-using Speckle.Sdk;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Civil3dShared;
 
@@ -21,7 +19,7 @@ public class Civil3dRootToSpeckleConverter : IRootToSpeckleConverter
     _settingsStore = settingsStore;
   }
 
-  public Base Convert(object target)
+  public BaseResult Convert(object target)
   {
     if (target is not ADB.DBObject dbObject)
     {
@@ -40,25 +38,21 @@ public class Civil3dRootToSpeckleConverter : IRootToSpeckleConverter
       objectToConvert = civilEntity;
     }
 
-    var objectConverter = _toSpeckle.ResolveConverter(type);
-
-    try
+    var converterResult = _toSpeckle.ResolveConverter(type);
+    if (converterResult.IsFailure)
     {
+      return BaseResult.Failure(converterResult);
+    }
+
       using (var l = _settingsStore.Current.Document.LockDocument())
       {
         using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
         {
-          var result = objectConverter.Convert(objectToConvert);
+          var result = converterResult.Converter.Convert(objectToConvert);
 
           tr.Commit();
           return result;
         }
       }
-    }
-    catch (SpeckleException e)
-    {
-      Console.WriteLine(e);
-      throw; // Just rethrowing for now, Logs may be needed here.
-    }
   }
 }

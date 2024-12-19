@@ -7,7 +7,6 @@ using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
-using Speckle.Converters.Common.Registration;
 using Speckle.Objects.Data;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
