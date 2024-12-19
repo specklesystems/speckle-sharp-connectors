@@ -15,7 +15,7 @@ public static class ContainerRegistration
     where TDocumentStore : DocumentModelStore
     where TThreadContext : IThreadContext, new()
   {
-    // send operation and dependencies
+    // context always newed up on host app's main/ui thread
     serviceCollection.AddSingleton<IThreadContext>(new TThreadContext());
     serviceCollection.AddSingleton<DocumentModelStore, TDocumentStore>();
 
