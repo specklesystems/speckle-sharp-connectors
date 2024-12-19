@@ -6,6 +6,13 @@ using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.Grasshopper8.Components.Collections;
 
+/// <summary>
+/// Given a collection and a path, this component will output the objects in the corresponding collection.
+/// Note: This component does not flatten the selected collection - if it contains sub collections those will not
+/// be outputted.
+///
+/// To extract those objects out, you should select that specific sub path as well.
+/// </summary>
 public class FilterObjectsByPaths : GH_Component
 {
   public override Guid ComponentGuid => new("77CAEE94-F0B9-4611-897C-71F2A22BA311");
@@ -65,12 +72,11 @@ public class FilterObjectsByPaths : GH_Component
       var tree = GrasshopperHelpers.CreateDataTreeFromTopologyAndItems(topology, targetCollection.elements);
       dataAccess.SetDataTree(0, tree);
     }
-    // dataAccess.SetData(0, test);
   }
 
   private Collection FindCollection(Collection root, string unifiedPath)
   {
-    var collectionNames = unifiedPath.Split(new string[] { " :: " }, StringSplitOptions.None).Skip(1).ToList();
+    var collectionNames = unifiedPath.Split([" :: "], StringSplitOptions.None).Skip(1).ToList();
     Collection currentCollection = root;
     while (collectionNames.Count != 0)
     {

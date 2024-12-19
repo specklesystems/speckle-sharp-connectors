@@ -83,7 +83,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
         continue;
       }
 
-      childCollection["topology"] = GetParamTopology(inputParam);
+      childCollection["topology"] = GrasshopperHelpers.GetParamTopology(inputParam);
 
       foreach (var obj in data)
       {
@@ -96,7 +96,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
           try
           {
             var geometryBase = geoGeo.GeometricGooToGeometryBase();
-            var converted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(geometryBase); // .Convert(geometryBase);
+            var converted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(geometryBase);
 
             var wrapper = new SpeckleObject() { GeometryBase = geometryBase, Base = converted };
             childCollection.elements.Add(wrapper);
@@ -111,7 +111,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
         {
           // TODO remove copy pasta
           var docObject = RhinoDoc.ActiveDoc.Objects.FindId(modelObject.Id.NotNull());
-          var converted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(docObject.Geometry); // .Convert(docObject.Geometry);
+          var converted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(docObject.Geometry);
 
           var wrapper = new SpeckleObject() { GeometryBase = docObject.Geometry, Base = converted };
           childCollection.elements.Add(wrapper);
@@ -182,15 +182,5 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
           break;
       }
     };
-  }
-
-  public string GetParamTopology(IGH_Param param)
-  {
-    string topology = "";
-    foreach (Grasshopper.Kernel.Data.GH_Path myPath in param.VolatileData.Paths)
-    {
-      topology += myPath.ToString(false) + "-" + param.VolatileData.get_Branch(myPath).Count + " ";
-    }
-    return topology;
   }
 }

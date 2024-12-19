@@ -1,4 +1,5 @@
 using Grasshopper;
+using Grasshopper.Kernel;
 using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Types;
 using Rhino;
@@ -101,6 +102,12 @@ public static class GrasshopperHelpers
     throw new SpeckleException("Failed to cast IGH_GeometricGoo to geometry base");
   }
 
+  /// <summary>
+  /// Creates a tree based of a string that encodes the grasshopper topology.
+  /// </summary>
+  /// <param name="topology"></param>
+  /// <param name="subset"></param>
+  /// <returns></returns>
   public static DataTree<object> CreateDataTreeFromTopologyAndItems(string topology, System.Collections.IList subset)
   {
     var tree = new DataTree<object>();
@@ -130,5 +137,21 @@ public static class GrasshopperHelpers
     }
 
     return tree;
+  }
+
+  /// <summary>
+  /// Encodes a tree topology into an exhaustive string which can be used to recreate it using
+  /// <see cref="CreateDataTreeFromTopologyAndItems"/>.
+  /// </summary>
+  /// <param name="param"></param>
+  /// <returns></returns>
+  public static string GetParamTopology(IGH_Param param)
+  {
+    string topology = "";
+    foreach (GH_Path myPath in param.VolatileData.Paths)
+    {
+      topology += myPath.ToString(false) + "-" + param.VolatileData.get_Branch(myPath).Count + " ";
+    }
+    return topology;
   }
 }
