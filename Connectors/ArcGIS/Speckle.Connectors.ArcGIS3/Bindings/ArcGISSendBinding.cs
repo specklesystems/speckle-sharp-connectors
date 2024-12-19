@@ -68,7 +68,9 @@ public sealed class ArcGISSendBinding : ISendBinding
     IOperationProgressManager operationProgressManager,
     ILogger<ArcGISSendBinding> logger,
     IArcGISConversionSettingsFactory arcGisConversionSettingsFactory,
-    MapMembersUtils mapMemberUtils, IThreadContext threadContext)
+    MapMembersUtils mapMemberUtils,
+    IThreadContext threadContext
+  )
   {
     _store = store;
     _serviceProvider = serviceProvider;
@@ -94,30 +96,44 @@ public sealed class ArcGISSendBinding : ISendBinding
   private void SubscribeToArcGISEvents()
   {
     LayersRemovedEvent.Subscribe(
-      a => _topLevelExceptionHandler.FireAndForget(async () => await _threadContext.RunOnWorkerAsync(async () => await GetIdsForLayersRemovedEvent(a))),
+      a =>
+        _topLevelExceptionHandler.FireAndForget(
+          async () => await _threadContext.RunOnWorkerAsync(async () => await GetIdsForLayersRemovedEvent(a))
+        ),
       true
     );
 
     StandaloneTablesRemovedEvent.Subscribe(
-      a => _topLevelExceptionHandler.FireAndForget(async () => await _threadContext.RunOnWorkerAsync(async () => await GetIdsForStandaloneTablesRemovedEvent(a))),
+      a =>
+        _topLevelExceptionHandler.FireAndForget(
+          async () => await _threadContext.RunOnWorkerAsync(async () => await GetIdsForStandaloneTablesRemovedEvent(a))
+        ),
       true
     );
 
     MapPropertyChangedEvent.Subscribe(
-      a => _topLevelExceptionHandler.FireAndForget(async () => await _threadContext.RunOnWorkerAsync(async () => await GetIdsForMapPropertyChangedEvent(a))),
+      a =>
+        _topLevelExceptionHandler.FireAndForget(
+          async () => await _threadContext.RunOnWorkerAsync(async () => await GetIdsForMapPropertyChangedEvent(a))
+        ),
       true
     ); // Map units, CRS etc.
 
     MapMemberPropertiesChangedEvent.Subscribe(
-      a => _topLevelExceptionHandler.FireAndForget(async () => await _threadContext.RunOnWorkerAsync(async () => await GetIdsForMapMemberPropertiesChangedEvent(a))),
+      a =>
+        _topLevelExceptionHandler.FireAndForget(
+          async () =>
+            await _threadContext.RunOnWorkerAsync(async () => await GetIdsForMapMemberPropertiesChangedEvent(a))
+        ),
       true
     ); // e.g. Layer name
 
     ActiveMapViewChangedEvent.Subscribe(
-      _ => _topLevelExceptionHandler.FireAndForget(async () =>
-      {
-        await _threadContext.RunOnWorker(SubscribeToMapMembersDataSourceChange);
-      }),
+      _ =>
+        _topLevelExceptionHandler.FireAndForget(async () =>
+        {
+          await _threadContext.RunOnWorker(SubscribeToMapMembersDataSourceChange);
+        }),
       true
     );
 
