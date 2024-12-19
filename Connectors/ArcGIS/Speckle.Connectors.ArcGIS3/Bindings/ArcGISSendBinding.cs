@@ -12,6 +12,7 @@ using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Exceptions;
@@ -43,6 +44,7 @@ public sealed class ArcGISSendBinding : ISendBinding
   private readonly ILogger<ArcGISSendBinding> _logger;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IArcGISConversionSettingsFactory _arcGISConversionSettingsFactory;
+  private readonly IThreadContext _threadContext;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -66,8 +68,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     IOperationProgressManager operationProgressManager,
     ILogger<ArcGISSendBinding> logger,
     IArcGISConversionSettingsFactory arcGisConversionSettingsFactory,
-    MapMembersUtils mapMemberUtils
-  )
+    MapMembersUtils mapMemberUtils, IThreadContext threadContext)
   {
     _store = store;
     _serviceProvider = serviceProvider;
@@ -79,6 +80,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
     _arcGISConversionSettingsFactory = arcGisConversionSettingsFactory;
     _mapMemberUtils = mapMemberUtils;
+    _threadContext = threadContext;
 
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
@@ -92,27 +94,30 @@ public sealed class ArcGISSendBinding : ISendBinding
   private void SubscribeToArcGISEvents()
   {
     LayersRemovedEvent.Subscribe(
-      a => _topLevelExceptionHandler.FireAndForget(async () => await GetIdsForLayersRemovedEvent(a)),
+      a => _topLevelExceptionHandler.FireAndForget(async () => await _threadContext.RunOnWorkerAsync(async () => await GetIdsForLayersRemovedEvent(a))),
       true
     );
 
     StandaloneTablesRemovedEvent.Subscribe(
-      a => _topLevelExceptionHandler.FireAndForget(async () => await GetIdsForStandaloneTablesRemovedEvent(a)),
+      a => _topLevelExceptionHandler.FireAndForget(async () => await _threadContext.RunOnWorkerAsync(async () => await GetIdsForStandaloneTablesRemovedEvent(a))),
       true
     );
 
     MapPropertyChangedEvent.Subscribe(
-      a => _topLevelExceptionHandler.FireAndForget(async () => await GetIdsForMapPropertyChangedEvent(a)),
+      a => _topLevelExceptionHandler.FireAndForget(async () => await _threadContext.RunOnWorkerAsync(async () => await GetIdsForMapPropertyChangedEvent(a))),
       true
     ); // Map units, CRS etc.
 
     MapMemberPropertiesChangedEvent.Subscribe(
-      a => _topLevelExceptionHandler.FireAndForget(async () => await GetIdsForMapMemberPropertiesChangedEvent(a)),
+      a => _topLevelExceptionHandler.FireAndForget(async () => await _threadContext.RunOnWorkerAsync(async () => await GetIdsForMapMemberPropertiesChangedEvent(a))),
       true
     ); // e.g. Layer name
 
     ActiveMapViewChangedEvent.Subscribe(
-      _ => _topLevelExceptionHandler.CatchUnhandled(SubscribeToMapMembersDataSourceChange),
+      _ => _topLevelExceptionHandler.FireAndForget(async () =>
+      {
+        await _threadContext.RunOnWorker(SubscribeToMapMembersDataSourceChange);
+      }),
       true
     );
 
