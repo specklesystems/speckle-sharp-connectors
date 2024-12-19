@@ -3,12 +3,9 @@ using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
 using Grasshopper.Kernel.Types;
 using Grasshopper.Rhinoceros.Model;
-using Microsoft.Extensions.DependencyInjection;
 using Rhino;
 using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Connectors.Grasshopper8.Parameters;
-using Speckle.Converters.Common;
-using Speckle.Converters.Rhino;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models.Collections;
@@ -39,13 +36,6 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
 
   protected override void SolveInstance(IGH_DataAccess dataAccess)
   {
-    using var scope = PriorityLoader.Container.CreateScope();
-    var rhinoConversionSettingsFactory = scope.ServiceProvider.GetRequiredService<IRhinoConversionSettingsFactory>();
-    scope
-      .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
-      .Initialize(rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
-    var hostConverter = scope.ServiceProvider.GetService<IRootToSpeckleConverter>();
-
     var rootCollection = new Collection() { name = "Unnamed", applicationId = InstanceGuid.ToString() };
     foreach (var inputParam in Params.Input)
     {
@@ -72,8 +62,21 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
       // needless nesting
       if (inputCollections.Count == data.Count)
       {
+        var nameTest = new HashSet<string>();
         foreach (var collection in inputCollections)
         {
+          foreach (var subCollectionName in collection.Value.elements.OfType<Collection>().Select(v => v.name))
+          {
+            var hasNotSeenNameBefore = nameTest.Add(subCollectionName);
+            if (!hasNotSeenNameBefore)
+            {
+              AddRuntimeMessage(
+                GH_RuntimeMessageLevel.Error,
+                $"Duplicate collection name found: {subCollectionName} in input parameter {inputParam.NickName}. Please ensure collection names are unique per nesting level.\n See https://speckle.docs/grashopper/collections"
+              );
+              return;
+            }
+          }
           childCollection.elements.AddRange(collection.Value.elements);
         }
         rootCollection.elements.Add(childCollection);

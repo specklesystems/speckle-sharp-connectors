@@ -1,9 +1,8 @@
 using System.Collections;
-using Grasshopper;
 using Grasshopper.Kernel;
-using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Parameters;
 using Rhino.Geometry;
+using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Connectors.Grasshopper8.Parameters;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models.Collections;
@@ -143,43 +142,12 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
             //TODO: means we need to convert the collection to a tree
             var topo = outParamWrapper.Topology.NotNull();
             var values = outParamWrapper.Values as IList;
-            var tree = CreateDataTree(topo, values.NotNull());
+            var tree = GrasshopperHelpers.CreateDataTreeFromTopologyAndItems(topo, values.NotNull());
             da.SetDataTree(i, tree);
             break;
         }
       }
     }
-  }
-
-  private DataTree<object> CreateDataTree(string topology, IList subset)
-  {
-    var tree = new DataTree<object>();
-    var treeTopo = topology.Split(' ');
-    int subsetCount = 0;
-    foreach (var branch in treeTopo)
-    {
-      if (!string.IsNullOrEmpty(branch))
-      {
-        var branchTopo = branch.Split('-')[0].Split(';');
-        var branchIndexes = new List<int>();
-        foreach (var t in branchTopo)
-        {
-          branchIndexes.Add(Convert.ToInt32(t));
-        }
-
-        var elCount = Convert.ToInt32(branch.Split('-')[1]);
-        var myPath = new GH_Path(branchIndexes.ToArray());
-
-        for (int i = 0; i < elCount; i++)
-        {
-          tree.EnsurePath(myPath).Add(new Grasshopper.Kernel.Types.GH_ObjectWrapper(subset[subsetCount + i]));
-        }
-
-        subsetCount += elCount;
-      }
-    }
-
-    return tree;
   }
 
   private BoundingBox _clippingBox;

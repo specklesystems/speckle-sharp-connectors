@@ -22,12 +22,18 @@ public class FilterObjectsByPaths : GH_Component
       "Collection to filter objects from",
       GH_ParamAccess.item
     );
-    pManager.AddTextParameter("Paths", "P", "Paths to filter by", GH_ParamAccess.item);
+    pManager.AddTextParameter("Path", "P", "Path to filter by", GH_ParamAccess.item);
   }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
   {
-    pManager.AddParameter(new SpeckleObjectParam(GH_ParamAccess.tree));
+    pManager.AddParameter(
+      new SpeckleObjectParam(),
+      "Objects",
+      "O",
+      "The contents of the selected collection",
+      GH_ParamAccess.tree
+    );
   }
 
   protected override void SolveInstance(IGH_DataAccess dataAccess)
@@ -56,7 +62,7 @@ public class FilterObjectsByPaths : GH_Component
     }
     else
     {
-      var tree = GrasshopperHelpers.CreateDataTree(topology, targetCollection.elements);
+      var tree = GrasshopperHelpers.CreateDataTreeFromTopologyAndItems(topology, targetCollection.elements);
       dataAccess.SetDataTree(0, tree);
     }
     // dataAccess.SetData(0, test);

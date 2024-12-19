@@ -69,6 +69,12 @@ public static class GrasshopperHelpers
     return t;
   }
 
+  /// <summary>
+  /// Attempts to cast the goo to a geometry base object.
+  /// </summary>
+  /// <param name="geoGeo"></param>
+  /// <returns></returns>
+  /// <exception cref="SpeckleException">If it fails to cast</exception>
   public static GeometryBase GeometricGooToGeometryBase(this IGH_GeometricGoo geoGeo)
   {
     var value = geoGeo.GetType().GetProperty("Value")?.GetValue(geoGeo);
@@ -95,7 +101,7 @@ public static class GrasshopperHelpers
     throw new SpeckleException("Failed to cast IGH_GeometricGoo to geometry base");
   }
 
-  public static DataTree<object> CreateDataTree(string topology, System.Collections.IList subset)
+  public static DataTree<object> CreateDataTreeFromTopologyAndItems(string topology, System.Collections.IList subset)
   {
     var tree = new DataTree<object>();
     var treeTopo = topology.Split(' ');

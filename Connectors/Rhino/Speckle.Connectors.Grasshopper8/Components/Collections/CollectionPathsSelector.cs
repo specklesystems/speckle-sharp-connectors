@@ -44,10 +44,14 @@ public class CollectionPathsSelector : ValueSet<IGH_Goo>
     {
       currentPath.Add(col.name);
       var subCols = col.elements.OfType<Collection>().ToList();
+
+      // NOTE: here we're basically outputting only paths that correspond to a collection
+      // that has values inside of it.
       if (subCols.Count != col.elements.Count)
       {
         allPaths.Add(string.Join(" :: ", currentPath));
       }
+
       foreach (var subCol in subCols)
       {
         GetPathsInternal(subCol);
