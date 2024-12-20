@@ -44,11 +44,11 @@ public static class Consts
     new(
       "navisworks",
       [
-        new("Connectors/Autocad/Speckle.Connectors.Navisworks2020", "net48"),
-        new("Connectors/Autocad/Speckle.Connectors.Navisworks2021", "net48"),
-        new("Connectors/Autocad/Speckle.Connectors.Navisworks2022", "net48"),
-        new("Connectors/Autocad/Speckle.Connectors.Navisworks2023", "net48"),
-        new("Connectors/Autocad/Speckle.Connectors.Navisworks2024", "net48")
+        new("Connectors/Navisworks/Speckle.Connectors.Navisworks2020", "net48"),
+        new("Connectors/Navisworks/Speckle.Connectors.Navisworks2021", "net48"),
+        new("Connectors/Navisworks/Speckle.Connectors.Navisworks2022", "net48"),
+        new("Connectors/Navisworks/Speckle.Connectors.Navisworks2023", "net48"),
+        new("Connectors/Navisworks/Speckle.Connectors.Navisworks2024", "net48")
       ]
     ),
     new(
