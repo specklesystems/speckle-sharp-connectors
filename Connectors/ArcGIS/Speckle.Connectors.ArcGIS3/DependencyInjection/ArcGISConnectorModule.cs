@@ -27,7 +27,7 @@ public static class ArcGISConnectorModule
   public static void AddArcGIS(this IServiceCollection serviceCollection)
   {
     serviceCollection.AddConnectorUtils();
-    serviceCollection.AddDUI<ArcGISDocumentStore>();
+    serviceCollection.AddDUI<ArcGISThreadContext, ArcGISDocumentStore>();
     serviceCollection.AddDUIView();
 
     // Register bindings

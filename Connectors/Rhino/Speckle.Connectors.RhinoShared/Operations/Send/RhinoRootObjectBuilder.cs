@@ -60,11 +60,11 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     _activityFactory = activityFactory;
   }
 
-  public async Task<RootObjectBuilderResult> Build(
+  public RootObjectBuilderResult Build(
     IReadOnlyList<RhinoObject> rhinoObjects,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
-    CancellationToken cancellationToken = default
+    CancellationToken cancellationToken
   )
   {
     using var activity = _activityFactory.Start("Build");
@@ -95,8 +95,8 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     {
       foreach (RhinoObject rhinoObject in atomicObjects)
       {
-        using var _2 = _activityFactory.Start("Convert");
         cancellationToken.ThrowIfCancellationRequested();
+        using var _2 = _activityFactory.Start("Convert");
 
         // handle layer
         Layer layer = _converterSettings.Current.Document.Layers[rhinoObject.Attributes.LayerIndex];
@@ -130,7 +130,6 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       rootObjectCollection[ProxyKeys.COLOR] = _colorUnpacker.UnpackColors(atomicObjects, versionLayers.ToList());
     }
 
-    await Task.Yield();
     return new RootObjectBuilderResult(rootObjectCollection, results);
   }
 

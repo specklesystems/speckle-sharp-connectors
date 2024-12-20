@@ -1,6 +1,5 @@
 using ArcGIS.Core.Data.Raster;
 using ArcGIS.Core.Geometry;
-using ArcGIS.Desktop.Framework.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.ArcGIS.HostApp;
 using Speckle.Connectors.ArcGIS.HostApp.Extensions;
@@ -54,11 +53,11 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     _mapMemberUtils = mapMemberUtils;
   }
 
-  public async Task<RootObjectBuilderResult> Build(
+  public RootObjectBuilderResult Build(
     IReadOnlyList<ADM.MapMember> layers,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
-    CancellationToken ct = default
+    CancellationToken cancellationToken
   )
   {
     // TODO: add a warning if Geographic CRS is set
@@ -103,9 +102,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     IEnumerable<ADM.MapMember> layersOrdered = _mapMemberUtils.GetMapMembersInOrder(map, layers);
     using (var _ = _activityFactory.Start("Unpacking selection"))
     {
-      unpackedLayers = await QueuedTask
-        .Run(() => _layerUnpacker.UnpackSelectionAsync(layersOrdered, rootCollection))
-        .ConfigureAwait(false);
+      unpackedLayers = _layerUnpacker.UnpackSelection(layersOrdered, rootCollection);
     }
 
     List<SendConversionResult> results = new(unpackedLayers.Count);
@@ -115,7 +112,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
       int count = 0;
       foreach (ADM.MapMember layer in unpackedLayers)
       {
-        ct.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
         string layerApplicationId = layer.GetSpeckleApplicationId();
 
         try
@@ -141,21 +138,15 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
             switch (layer)
             {
               case ADM.FeatureLayer featureLayer:
-                List<Base> convertedFeatureLayerObjects = await QueuedTask
-                  .Run(() => ConvertFeatureLayerObjectsAsync(featureLayer))
-                  .ConfigureAwait(false);
+                List<Base> convertedFeatureLayerObjects = ConvertFeatureLayerObjects(featureLayer);
                 layerCollection.elements.AddRange(convertedFeatureLayerObjects);
                 break;
               case ADM.RasterLayer rasterLayer:
-                List<Base> convertedRasterLayerObjects = await QueuedTask
-                  .Run(() => ConvertRasterLayerObjectsAsync(rasterLayer))
-                  .ConfigureAwait(false);
+                List<Base> convertedRasterLayerObjects = ConvertRasterLayerObjects(rasterLayer);
                 layerCollection.elements.AddRange(convertedRasterLayerObjects);
                 break;
               case ADM.LasDatasetLayer lasDatasetLayer:
-                List<Base> convertedLasDatasetObjects = await QueuedTask
-                  .Run(() => ConvertLasDatasetLayerObjectsAsync(lasDatasetLayer))
-                  .ConfigureAwait(false);
+                List<Base> convertedLasDatasetObjects = ConvertLasDatasetLayerObjects(lasDatasetLayer);
                 layerCollection.elements.AddRange(convertedLasDatasetObjects);
                 break;
               default:
@@ -194,96 +185,78 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     return new RootObjectBuilderResult(rootCollection, results);
   }
 
-  private async Task<List<Base>> ConvertFeatureLayerObjectsAsync(ADM.FeatureLayer featureLayer)
+  private List<Base> ConvertFeatureLayerObjects(ADM.FeatureLayer featureLayer)
   {
     string layerApplicationId = featureLayer.GetSpeckleApplicationId();
     List<Base> convertedObjects = new();
-    await QueuedTask
-      .Run(() =>
+    // store the layer renderer for color unpacking
+    _colorUnpacker.StoreRendererAndFields(featureLayer);
+
+    // search the rows of the layer, where each row is treated like an object
+    // RowCursor is IDisposable but is not being correctly picked up by IDE warnings.
+    // This means we need to be carefully adding using statements based on the API documentation coming from each method/class
+    using (ACD.RowCursor rowCursor = featureLayer.Search())
+    {
+      while (rowCursor.MoveNext())
       {
-        // store the layer renderer for color unpacking
-        _colorUnpacker.StoreRendererAndFields(featureLayer);
-
-        // search the rows of the layer, where each row is treated like an object
-        // RowCursor is IDisposable but is not being correctly picked up by IDE warnings.
-        // This means we need to be carefully adding using statements based on the API documentation coming from each method/class
-        using (ACD.RowCursor rowCursor = featureLayer.Search())
+        // Same IDisposable issue appears to happen on Row class too. Docs say it should always be disposed of manually by the caller.
+        using (ACD.Row row = rowCursor.Current)
         {
-          while (rowCursor.MoveNext())
-          {
-            // Same IDisposable issue appears to happen on Row class too. Docs say it should always be disposed of manually by the caller.
-            using (ACD.Row row = rowCursor.Current)
-            {
-              // get application id. test for subtypes before defaulting to base type.
-              Base converted = _rootToSpeckleConverter.Convert(row);
-              string applicationId = row.GetSpeckleApplicationId(layerApplicationId);
-              converted.applicationId = applicationId;
+          // get application id. test for subtypes before defaulting to base type.
+          Base converted = _rootToSpeckleConverter.Convert(row);
+          string applicationId = row.GetSpeckleApplicationId(layerApplicationId);
+          converted.applicationId = applicationId;
 
-              convertedObjects.Add(converted);
+          convertedObjects.Add(converted);
 
-              // process the object color
-              _colorUnpacker.ProcessFeatureLayerColor(row, applicationId);
-            }
-          }
+          // process the object color
+          _colorUnpacker.ProcessFeatureLayerColor(row, applicationId);
         }
-      })
-      .ConfigureAwait(false);
+      }
+    }
 
     return convertedObjects;
   }
 
   // POC: raster colors are stored as mesh vertex colors in RasterToSpeckleConverter. Should probably move to color unpacker.
-  private async Task<List<Base>> ConvertRasterLayerObjectsAsync(ADM.RasterLayer rasterLayer)
+  private List<Base> ConvertRasterLayerObjects(ADM.RasterLayer rasterLayer)
   {
     string layerApplicationId = rasterLayer.GetSpeckleApplicationId();
     List<Base> convertedObjects = new();
-    await QueuedTask
-      .Run(() =>
-      {
-        Raster raster = rasterLayer.GetRaster();
-        Base converted = _rootToSpeckleConverter.Convert(raster);
-        string applicationId = raster.GetSpeckleApplicationId(layerApplicationId);
-        converted.applicationId = applicationId;
-        convertedObjects.Add(converted);
-      })
-      .ConfigureAwait(false);
-
+    Raster raster = rasterLayer.GetRaster();
+    Base converted = _rootToSpeckleConverter.Convert(raster);
+    string applicationId = raster.GetSpeckleApplicationId(layerApplicationId);
+    converted.applicationId = applicationId;
+    convertedObjects.Add(converted);
     return convertedObjects;
   }
 
-  private async Task<List<Base>> ConvertLasDatasetLayerObjectsAsync(ADM.LasDatasetLayer lasDatasetLayer)
+  private List<Base> ConvertLasDatasetLayerObjects(ADM.LasDatasetLayer lasDatasetLayer)
   {
     string layerApplicationId = lasDatasetLayer.GetSpeckleApplicationId();
     List<Base> convertedObjects = new();
 
     try
     {
-      await QueuedTask
-        .Run(() =>
+      // store the layer renderer for color unpacking
+      _colorUnpacker.StoreRenderer(lasDatasetLayer);
+
+      using (ACD.Analyst3D.LasPointCursor ptCursor = lasDatasetLayer.SearchPoints(new ACD.Analyst3D.LasPointFilter()))
+      {
+        while (ptCursor.MoveNext())
         {
-          // store the layer renderer for color unpacking
-          _colorUnpacker.StoreRenderer(lasDatasetLayer);
-
-          using (
-            ACD.Analyst3D.LasPointCursor ptCursor = lasDatasetLayer.SearchPoints(new ACD.Analyst3D.LasPointFilter())
-          )
+          using (ACD.Analyst3D.LasPoint pt = ptCursor.Current)
           {
-            while (ptCursor.MoveNext())
-            {
-              using (ACD.Analyst3D.LasPoint pt = ptCursor.Current)
-              {
-                Base converted = _rootToSpeckleConverter.Convert(pt);
-                string applicationId = pt.GetSpeckleApplicationId(layerApplicationId);
-                converted.applicationId = applicationId;
-                convertedObjects.Add(converted);
+            Base converted = _rootToSpeckleConverter.Convert(pt);
+            string applicationId = pt.GetSpeckleApplicationId(layerApplicationId);
+            converted.applicationId = applicationId;
+            convertedObjects.Add(converted);
 
-                // process the object color
-                _colorUnpacker.ProcessLasLayerColor(pt, applicationId);
-              }
-            }
+            // process the object color
+            _colorUnpacker.ProcessLasLayerColor(pt, applicationId);
           }
-        })
-        .ConfigureAwait(false);
+        }
+      }
     }
     catch (ACD.Exceptions.TinException ex)
     {

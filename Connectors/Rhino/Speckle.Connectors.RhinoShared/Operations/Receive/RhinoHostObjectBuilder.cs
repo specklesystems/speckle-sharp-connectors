@@ -6,6 +6,7 @@ using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
@@ -32,6 +33,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private readonly RhinoGroupBaker _groupBaker;
   private readonly RootObjectUnpacker _rootObjectUnpacker;
   private readonly ISdkActivityFactory _activityFactory;
+  private readonly IThreadContext _threadContext;
 
   public RhinoHostObjectBuilder(
     IRootToHostConverter converter,
@@ -42,7 +44,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     RhinoMaterialBaker materialBaker,
     RhinoColorBaker colorBaker,
     RhinoGroupBaker groupBaker,
-    ISdkActivityFactory activityFactory
+    ISdkActivityFactory activityFactory,
+    IThreadContext threadContext
   )
   {
     _converter = converter;
@@ -54,10 +57,11 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _layerBaker = layerBaker;
     _groupBaker = groupBaker;
     _activityFactory = activityFactory;
+    _threadContext = threadContext;
   }
 
 #pragma warning disable CA1506
-  public Task<HostObjectBuilderResult> Build(
+  public HostObjectBuilderResult Build(
 #pragma warning restore CA1506
     Base rootObject,
     string projectName,
@@ -112,13 +116,16 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     onOperationProgressed.Report(new("Baking layers (redraw disabled)", null));
     using (var _ = _activityFactory.Start("Pre baking layers"))
     {
-      RhinoApp.InvokeAndWait(() =>
-      {
-        using var layerNoDraw = new DisableRedrawScope(_converterSettings.Current.Document.Views);
-        var paths = atomicObjectsWithoutInstanceComponentsWithPath.Select(t => t.path).ToList();
-        paths.AddRange(instanceComponentsWithPath.Select(t => t.path));
-        _layerBaker.CreateAllLayersForReceive(paths, baseLayerName);
-      });
+      //Rhino 8 doesn't play nice with Eto and layers
+      _threadContext
+        .RunOnMain(() =>
+        {
+          using var layerNoDraw = new DisableRedrawScope(_converterSettings.Current.Document.Views);
+          var paths = atomicObjectsWithoutInstanceComponentsWithPath.Select(t => t.path).ToList();
+          paths.AddRange(instanceComponentsWithPath.Select(t => t.path));
+          _layerBaker.CreateAllLayersForReceive(paths, baseLayerName);
+        })
+        .Wait(cancellationToken);
     }
 
     // 5 - Convert atomic objects
@@ -136,6 +143,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
           onOperationProgressed.Report(
             new("Converting objects", (double)++count / atomicObjectsWithoutInstanceComponentsForConverter.Count)
           );
+          cancellationToken.ThrowIfCancellationRequested();
           try
           {
             // 0: get pre-created layer from cache in layer baker
@@ -229,7 +237,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     }
 
     _converterSettings.Current.Document.Views.Redraw();
-    return Task.FromResult(new HostObjectBuilderResult(bakedObjectIds, conversionResults));
+    return new HostObjectBuilderResult(bakedObjectIds, conversionResults);
   }
 
   private void PreReceiveDeepClean(string baseLayerName)
@@ -241,35 +249,38 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       RhinoMath.UnsetIntIndex
     );
 
-    RhinoApp.InvokeAndWait(() =>
-    {
-      _instanceBaker.PurgeInstances(baseLayerName);
-      _materialBaker.PurgeMaterials(baseLayerName);
-
-      var doc = _converterSettings.Current.Document;
-      // Cleans up any previously received objects
-      if (rootLayerIndex != RhinoMath.UnsetIntIndex)
+    //Rhino 8 doesn't play nice with Eto and layers
+    _threadContext
+      .RunOnMain(() =>
       {
-        var documentLayer = doc.Layers[rootLayerIndex];
-        var childLayers = documentLayer.GetChildren();
-        if (childLayers != null)
+        _instanceBaker.PurgeInstances(baseLayerName);
+        _materialBaker.PurgeMaterials(baseLayerName);
+
+        var doc = _converterSettings.Current.Document;
+        // Cleans up any previously received objects
+        if (rootLayerIndex != RhinoMath.UnsetIntIndex)
         {
-          using var layerNoDraw = new DisableRedrawScope(doc.Views);
-          foreach (var layer in childLayers)
+          var documentLayer = doc.Layers[rootLayerIndex];
+          var childLayers = documentLayer.GetChildren();
+          if (childLayers != null)
           {
-            var purgeSuccess = doc.Layers.Purge(layer.Index, true);
-            if (!purgeSuccess)
+            using var layerNoDraw = new DisableRedrawScope(doc.Views);
+            foreach (var layer in childLayers)
             {
-              Console.WriteLine($"Failed to purge layer: {layer}");
+              var purgeSuccess = doc.Layers.Purge(layer.Index, true);
+              if (!purgeSuccess)
+              {
+                Console.WriteLine($"Failed to purge layer: {layer}");
+              }
             }
           }
+          doc.Layers.Purge(documentLayer.Index, true);
         }
-        doc.Layers.Purge(documentLayer.Index, true);
-      }
 
-      // Cleans up any previously received group
-      _groupBaker.PurgeGroups(baseLayerName);
-    });
+        // Cleans up any previously received group
+        _groupBaker.PurgeGroups(baseLayerName);
+      })
+      .Wait();
   }
 
   /// <summary>

@@ -2,7 +2,6 @@
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Utils;
-using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.RevitShared.Helpers;
 
 namespace Speckle.Connectors.RevitShared.Operations.Send.Filters;
@@ -10,7 +9,6 @@ namespace Speckle.Connectors.RevitShared.Operations.Send.Filters;
 public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilter
 {
   private RevitContext _revitContext;
-  private APIContext _apiContext;
   private Document? _doc;
   public string Id { get; set; } = "revitViews";
   public string Name { get; set; } = "Views";
@@ -23,10 +21,9 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
 
   public RevitViewsFilter() { }
 
-  public RevitViewsFilter(RevitContext revitContext, APIContext apiContext)
+  public RevitViewsFilter(RevitContext revitContext)
   {
     _revitContext = revitContext;
-    _apiContext = apiContext;
     _doc = _revitContext.UIApplication?.ActiveUIDocument.Document;
 
     GetViews();
@@ -100,10 +97,9 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
   /// NOTE: this is needed since we need doc on `GetObjectIds()` function after it deserialized.
   /// DI doesn't help here to pass RevitContext from constructor.
   /// </summary>
-  public void SetContext(RevitContext revitContext, APIContext apiContext)
+  public void SetContext(RevitContext revitContext)
   {
     _revitContext = revitContext;
-    _apiContext = apiContext;
     _doc = _revitContext.UIApplication?.ActiveUIDocument.Document;
   }
 }

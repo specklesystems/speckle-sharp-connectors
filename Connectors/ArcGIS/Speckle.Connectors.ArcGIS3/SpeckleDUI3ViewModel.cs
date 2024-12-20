@@ -18,7 +18,7 @@ internal sealed class SpeckleDUI3ViewModel : DockPane
   /// </summary>
   protected override async Task InitializeAsync()
   {
-    await base.InitializeAsync().ConfigureAwait(false);
+    await base.InitializeAsync();
   }
 
   /// <summary>
@@ -26,7 +26,7 @@ internal sealed class SpeckleDUI3ViewModel : DockPane
   /// </summary>
   protected override async Task UninitializeAsync()
   {
-    await base.UninitializeAsync().ConfigureAwait(false);
+    await base.UninitializeAsync();
   }
 }
 

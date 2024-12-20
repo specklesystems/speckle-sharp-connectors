@@ -10,6 +10,7 @@ using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
@@ -24,7 +25,7 @@ public static class SharedRegistration
   public static void AddAutocadBase(this IServiceCollection serviceCollection)
   {
     serviceCollection.AddConnectorUtils();
-    serviceCollection.AddDUI<AutocadDocumentStore>();
+    serviceCollection.AddDUI<DefaultThreadContext, AutocadDocumentStore>();
     serviceCollection.AddDUIView();
 
     // Register other connector specific types
@@ -43,10 +44,10 @@ public static class SharedRegistration
     serviceCollection.AddScoped<AutocadGroupBaker>();
 
     serviceCollection.AddScoped<AutocadColorUnpacker>();
-    serviceCollection.AddScoped<AutocadColorBaker>();
+    serviceCollection.AddScoped<IAutocadColorBaker, AutocadColorBaker>();
 
     serviceCollection.AddScoped<AutocadMaterialUnpacker>();
-    serviceCollection.AddScoped<AutocadMaterialBaker>();
+    serviceCollection.AddScoped<IAutocadMaterialBaker, AutocadMaterialBaker>();
 
     serviceCollection.AddSingleton<IAppIdleManager, AutocadIdleManager>();
 

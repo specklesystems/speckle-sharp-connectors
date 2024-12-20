@@ -1,6 +1,7 @@
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Logging;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Inputs;
@@ -19,7 +20,8 @@ public sealed class SendOperation<T>(
   ISendProgress sendProgress,
   IOperations operations,
   IClientFactory clientFactory,
-  ISdkActivityFactory activityFactory
+  ISdkActivityFactory activityFactory,
+  IThreadContext threadContext
 )
 {
   public async Task<SendOperationResult> Execute(
@@ -29,7 +31,9 @@ public sealed class SendOperation<T>(
     CancellationToken ct = default
   )
   {
-    var buildResult = await rootObjectBuilder.Build(objects, sendInfo, onOperationProgressed, ct).ConfigureAwait(false);
+    var buildResult = await threadContext.RunOnMain(
+      () => rootObjectBuilder.Build(objects, sendInfo, onOperationProgressed, ct)
+    );
 
     // POC: Jonathon asks on behalf of willow twin - let's explore how this can work
     // buildResult.RootObject["@report"] = new Report { ConversionResults = buildResult.ConversionResults };
@@ -37,8 +41,9 @@ public sealed class SendOperation<T>(
     buildResult.RootObject["version"] = 3;
     // base object handler is separated, so we can do some testing on non-production databases
     // exact interface may want to be tweaked when we implement this
-    var (rootObjId, convertedReferences) = await Send(buildResult.RootObject, sendInfo, onOperationProgressed, ct)
-      .ConfigureAwait(false);
+    var (rootObjId, convertedReferences) = await threadContext.RunOnWorkerAsync(
+      () => Send(buildResult.RootObject, sendInfo, onOperationProgressed, ct)
+    );
 
     return new(rootObjId, convertedReferences, buildResult.ConversionResults);
   }
@@ -59,16 +64,14 @@ public sealed class SendOperation<T>(
     using var activity = activityFactory.Start("SendOperation");
 
     sendProgress.Begin();
-    var sendResult = await operations
-      .Send2(
-        sendInfo.ServerUrl,
-        sendInfo.ProjectId,
-        account.token,
-        commitObject,
-        onProgressAction: new PassthroughProgress(args => sendProgress.Report(onOperationProgressed, args)),
-        ct
-      )
-      .ConfigureAwait(false);
+    var sendResult = await operations.Send2(
+      sendInfo.ServerUrl,
+      sendInfo.ProjectId,
+      account.token,
+      commitObject,
+      onProgressAction: new PassthroughProgress(args => sendProgress.Report(onOperationProgressed, args)),
+      ct
+    );
 
     sendConversionCache.StoreSendResult(sendInfo.ProjectId, sendResult.ConvertedReferences);
 
