@@ -1,15 +1,16 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Objects.Data;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Rhino.ToHost.TopLevel;
 
-[NameAndRankValue(nameof(DisplayableObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class FallbackToHostTopLevelConverter
+[NameAndRankValue(nameof(DataObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+public class DataObjectConverter
   : IToHostTopLevelConverter,
-    ITypedConverter<DisplayableObject, List<RG.GeometryBase>>
+    ITypedConverter<DataObject, List<(RG.GeometryBase a, Base b)>>
 {
   private readonly ITypedConverter<SOG.Point, RG.Point> _pointConverter;
   private readonly ITypedConverter<SOG.Line, RG.LineCurve> _lineConverter;
@@ -18,7 +19,7 @@ public class FallbackToHostTopLevelConverter
   private readonly ITypedConverter<SOG.Mesh, RG.Mesh> _meshConverter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
-  public FallbackToHostTopLevelConverter(
+  public DataObjectConverter(
     ITypedConverter<SOG.Point, RG.Point> pointConverter,
     ITypedConverter<SOG.Line, RG.LineCurve> lineConverter,
     ITypedConverter<SOG.Polyline, RG.PolylineCurve> polylineConverter,
@@ -35,9 +36,9 @@ public class FallbackToHostTopLevelConverter
     _settingsStore = settingsStore;
   }
 
-  public object Convert(Base target) => Convert((DisplayableObject)target);
+  public object Convert(Base target) => Convert((DataObject)target);
 
-  public List<RG.GeometryBase> Convert(DisplayableObject target)
+  public List<(RG.GeometryBase a, Base b)> Convert(DataObject target)
   {
     var result = new List<RG.GeometryBase>();
     foreach (var item in target.displayValue)
@@ -55,7 +56,7 @@ public class FallbackToHostTopLevelConverter
       result.Add(x);
     }
 
-    return result;
+    return result.Zip(target.displayValue, (a, b) => (a, b)).ToList();
   }
 
   private RG.Transform GetUnitsTransform(Base speckleObject)
