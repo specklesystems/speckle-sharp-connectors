@@ -48,7 +48,8 @@ public static class Consts
         new("Connectors/Navisworks/Speckle.Connectors.Navisworks2021", "net48"),
         new("Connectors/Navisworks/Speckle.Connectors.Navisworks2022", "net48"),
         new("Connectors/Navisworks/Speckle.Connectors.Navisworks2023", "net48"),
-        new("Connectors/Navisworks/Speckle.Connectors.Navisworks2024", "net48")
+        new("Connectors/Navisworks/Speckle.Connectors.Navisworks2024", "net48"),
+        new("Connectors/Navisworks/Speckle.Connectors.Navisworks2025", "net48")
       ]
     ),
     new(
