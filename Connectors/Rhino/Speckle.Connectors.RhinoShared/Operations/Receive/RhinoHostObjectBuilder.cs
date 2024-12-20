@@ -175,7 +175,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
                 conversionIds.Add(guid.ToString());
               }
             }
-            else if (result is IEnumerable<(object, Base)> fallbackConversionResult) // one to many fallback conversion
+            else if (result is List<(GeometryBase, Base)> fallbackConversionResult) // one to many fallback conversion
             {
               var guids = BakeObjectsAsFallbackGroup(fallbackConversionResult, obj, atts, baseLayerName);
               conversionIds.AddRange(guids.Select(id => id.ToString()));
@@ -293,7 +293,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   /// <returns></returns>
   /// <remarks>
   /// Material and Color attributes are processed here due to those properties existing sometimes on fallback geometry (instead of parent).
-  /// and this method is called by <see cref="BakeObjectsAsFallbackGroup(IEnumerable{ValueTuple{object, Base}}, Base, ObjectAttributes, string)"/>
+  /// and this method is called by <see cref="BakeObjectsAsFallbackGroup"/>
   /// </remarks>
   private Guid BakeObject(GeometryBase obj, Base originalObject, string? parentObjectId, ObjectAttributes atts)
   {
@@ -331,7 +331,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   }
 
   private List<Guid> BakeObjectsAsFallbackGroup(
-    IEnumerable<(object, Base)> fallbackConversionResult,
+    IEnumerable<(GeometryBase, Base)> fallbackConversionResult,
     Base originatingObject,
     ObjectAttributes atts,
     string baseLayerName
@@ -342,13 +342,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
     foreach (var (conversionResult, originalBaseObject) in fallbackConversionResult)
     {
-      if (conversionResult is not GeometryBase geometryBase)
-      {
-        // TODO: throw?
-        continue;
-      }
-
-      var id = BakeObject(geometryBase, originalBaseObject, parentId, atts);
+      var id = BakeObject(conversionResult, originalBaseObject, parentId, atts);
       objectIds.Add(id);
     }
 

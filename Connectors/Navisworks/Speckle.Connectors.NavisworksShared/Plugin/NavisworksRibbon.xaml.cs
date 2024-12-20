@@ -16,7 +16,6 @@ namespace Speckle.Connector.Navisworks.Plugin;
     LoadForCanExecute = true,
     Icon = "Resources/s2logo16.png",
     LargeIcon = "Resources/s2logo32.png",
-    Shortcut = "Ctrl+Shift+S",
     ToolTip = "Next Gen Speckle Connector for Navisworks",
     DisplayName = "Speckle\rConnector"
   ),
