@@ -22,7 +22,6 @@ public class ArcGISToSpeckleUnitConverter : IHostToSpeckleUnitConverter<Unit>
     dict[LinearUnit.Feet.FactoryCode] = Units.Feet;
     dict[LinearUnit.Yards.FactoryCode] = Units.Yards;
     dict[LinearUnit.Miles.FactoryCode] = Units.Miles;
-    //dict[9003] = Units.USFeet;
     return dict;
   }
 
