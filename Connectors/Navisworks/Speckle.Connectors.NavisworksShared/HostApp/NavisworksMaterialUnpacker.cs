@@ -24,14 +24,32 @@ public class NavisworksMaterialUnpacker(
       _ => defaultValue,
     };
 
-  internal List<RenderMaterialProxy> UnpackRenderMaterial(IReadOnlyList<NAV.ModelItem> navisworksObjects)
+  internal List<RenderMaterialProxy> UnpackRenderMaterial(
+    IReadOnlyList<NAV.ModelItem> navisworksObjects,
+    Dictionary<string, List<NAV.ModelItem>> groupedNodes
+  )
   {
     if (navisworksObjects == null)
     {
       throw new ArgumentNullException(nameof(navisworksObjects));
     }
 
+    if (groupedNodes == null)
+    {
+      throw new ArgumentNullException(nameof(groupedNodes));
+    }
+
     Dictionary<string, RenderMaterialProxy> renderMaterialProxies = [];
+    Dictionary<string, string> mergedIds = [];
+
+    // Build mergedIds map once
+    foreach (var group in groupedNodes)
+    {
+      foreach (var node in group.Value)
+      {
+        mergedIds[selectionService.GetModelItemPath(node)] = group.Key;
+      }
+    }
 
     foreach (NAV.ModelItem navisworksObject in navisworksObjects)
     {
@@ -43,15 +61,13 @@ public class NavisworksMaterialUnpacker(
         }
 
         var navisworksObjectId = selectionService.GetModelItemPath(navisworksObject);
+        var finalId = mergedIds.TryGetValue(navisworksObjectId, out var mergedId) ? mergedId : navisworksObjectId;
 
         var geometry = navisworksObject.Geometry;
-
-        // Extract the current visual representation mode
         var mode = converterSettings.Current.User.VisualRepresentationMode;
 
         using var defaultColor = new NAV.Color(1.0, 1.0, 1.0);
 
-        // Assign properties using the selector
         var renderColor = Select(
           mode,
           geometry.ActiveColor,
