@@ -126,9 +126,6 @@ public class NavisworksMaterialUnpacker(
         {
           renderMaterialProxies[renderMaterialId.ToString()] = new RenderMaterialProxy()
           {
-            // For now, we will just use the color and transparency to create a new material
-            // There is more information that is in the Material object that could be used to create a more accurate material
-            // But is constant regardless of the user settings
             value = ConvertRenderColorAndTransparencyToSpeckle(
               materialName,
               renderTransparency,
