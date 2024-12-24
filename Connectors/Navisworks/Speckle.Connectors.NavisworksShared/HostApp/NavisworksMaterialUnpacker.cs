@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Speckle.Connector.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
@@ -70,15 +70,15 @@ public class NavisworksMaterialUnpacker(
 
         var renderMaterialId = Select(
           mode,
-          geometry.ActiveColor.GetHashCode(),
-          geometry.PermanentColor.GetHashCode(),
-          geometry.OriginalColor.GetHashCode(),
+          $"{geometry.ActiveColor.GetHashCode()}_{geometry.ActiveTransparency}".GetHashCode(),
+          $"{geometry.PermanentColor.GetHashCode()}_{geometry.PermanentTransparency}".GetHashCode(),
+          $"{geometry.OriginalColor.GetHashCode()}_{geometry.OriginalTransparency}".GetHashCode(),
           0
         );
 
         var materialName = $"NavisworksMaterial_{Math.Abs(NavisworksColorToColor(renderColor).ToArgb())}";
 
-        // Alternatively the material could be stored on the Item property
+        // Check Item category for material name
         var itemCategory = navisworksObject.PropertyCategories.FindCategoryByDisplayName("Item");
         if (itemCategory != null)
         {
@@ -90,7 +90,7 @@ public class NavisworksMaterialUnpacker(
           }
         }
 
-        // Or in a Material property
+        // Check Material category for material name
         var materialPropertyCategory = navisworksObject.PropertyCategories.FindCategoryByDisplayName("Material");
         if (materialPropertyCategory != null)
         {
@@ -104,7 +104,7 @@ public class NavisworksMaterialUnpacker(
 
         if (renderMaterialProxies.TryGetValue(renderMaterialId.ToString(), out RenderMaterialProxy? value))
         {
-          value.objects.Add(navisworksObjectId);
+          value.objects.Add(finalId);
         }
         else
         {
@@ -119,7 +119,7 @@ public class NavisworksMaterialUnpacker(
               renderColor,
               renderMaterialId
             ),
-            objects = [navisworksObjectId]
+            objects = [finalId]
           };
         }
       }
