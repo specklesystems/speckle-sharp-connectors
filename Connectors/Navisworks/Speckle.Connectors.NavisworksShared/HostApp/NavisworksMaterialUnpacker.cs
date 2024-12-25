@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Speckle.Connector.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
@@ -24,14 +24,32 @@ public class NavisworksMaterialUnpacker(
       _ => defaultValue,
     };
 
-  internal List<RenderMaterialProxy> UnpackRenderMaterial(IReadOnlyList<NAV.ModelItem> navisworksObjects)
+  internal List<RenderMaterialProxy> UnpackRenderMaterial(
+    IReadOnlyList<NAV.ModelItem> navisworksObjects,
+    Dictionary<string, List<NAV.ModelItem>> groupedNodes
+  )
   {
     if (navisworksObjects == null)
     {
       throw new ArgumentNullException(nameof(navisworksObjects));
     }
 
+    if (groupedNodes == null)
+    {
+      throw new ArgumentNullException(nameof(groupedNodes));
+    }
+
     Dictionary<string, RenderMaterialProxy> renderMaterialProxies = [];
+    Dictionary<string, string> mergedIds = [];
+
+    // Build mergedIds map once
+    foreach (var group in groupedNodes)
+    {
+      foreach (var node in group.Value)
+      {
+        mergedIds[selectionService.GetModelItemPath(node)] = group.Key;
+      }
+    }
 
     foreach (NAV.ModelItem navisworksObject in navisworksObjects)
     {
@@ -43,15 +61,13 @@ public class NavisworksMaterialUnpacker(
         }
 
         var navisworksObjectId = selectionService.GetModelItemPath(navisworksObject);
+        var finalId = mergedIds.TryGetValue(navisworksObjectId, out var mergedId) ? mergedId : navisworksObjectId;
 
         var geometry = navisworksObject.Geometry;
-
-        // Extract the current visual representation mode
         var mode = converterSettings.Current.User.VisualRepresentationMode;
 
         using var defaultColor = new NAV.Color(1.0, 1.0, 1.0);
 
-        // Assign properties using the selector
         var renderColor = Select(
           mode,
           geometry.ActiveColor,
@@ -70,15 +86,15 @@ public class NavisworksMaterialUnpacker(
 
         var renderMaterialId = Select(
           mode,
-          geometry.ActiveColor.GetHashCode(),
-          geometry.PermanentColor.GetHashCode(),
-          geometry.OriginalColor.GetHashCode(),
+          $"{geometry.ActiveColor.GetHashCode()}_{geometry.ActiveTransparency}".GetHashCode(),
+          $"{geometry.PermanentColor.GetHashCode()}_{geometry.PermanentTransparency}".GetHashCode(),
+          $"{geometry.OriginalColor.GetHashCode()}_{geometry.OriginalTransparency}".GetHashCode(),
           0
         );
 
         var materialName = $"NavisworksMaterial_{Math.Abs(NavisworksColorToColor(renderColor).ToArgb())}";
 
-        // Alternatively the material could be stored on the Item property
+        // Check Item category for material name
         var itemCategory = navisworksObject.PropertyCategories.FindCategoryByDisplayName("Item");
         if (itemCategory != null)
         {
@@ -90,7 +106,7 @@ public class NavisworksMaterialUnpacker(
           }
         }
 
-        // Or in a Material property
+        // Check Material category for material name
         var materialPropertyCategory = navisworksObject.PropertyCategories.FindCategoryByDisplayName("Material");
         if (materialPropertyCategory != null)
         {
@@ -104,22 +120,19 @@ public class NavisworksMaterialUnpacker(
 
         if (renderMaterialProxies.TryGetValue(renderMaterialId.ToString(), out RenderMaterialProxy? value))
         {
-          value.objects.Add(navisworksObjectId);
+          value.objects.Add(finalId);
         }
         else
         {
           renderMaterialProxies[renderMaterialId.ToString()] = new RenderMaterialProxy()
           {
-            // For now, we will just use the color and transparency to create a new material
-            // There is more information that is in the Material object that could be used to create a more accurate material
-            // But is constant regardless of the user settings
             value = ConvertRenderColorAndTransparencyToSpeckle(
               materialName,
               renderTransparency,
               renderColor,
               renderMaterialId
             ),
-            objects = [navisworksObjectId]
+            objects = [finalId]
           };
         }
       }
@@ -157,8 +170,9 @@ public class NavisworksMaterialUnpacker(
 
   private static System.Drawing.Color NavisworksColorToColor(NAV.Color color) =>
     System.Drawing.Color.FromArgb(
-      Convert.ToInt32(color.R * 255),
-      Convert.ToInt32(color.G * 255),
-      Convert.ToInt32(color.B * 255)
+      alpha: 255,
+      red: Convert.ToInt32(color.R * 255),
+      green: Convert.ToInt32(color.G * 255),
+      blue: Convert.ToInt32(color.B * 255)
     );
 }
