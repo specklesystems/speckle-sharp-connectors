@@ -142,12 +142,9 @@ public sealed class TeklaSendBinding : ISendBinding
           modelCard.GetSendInfo(_speckleApplication.Slug),
           _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
           cancellationToken
-        )
-        .ConfigureAwait(false);
+        );
 
-      await Commands
-        .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
-        .ConfigureAwait(false);
+      await Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
     }
     catch (OperationCanceledException)
     {
@@ -156,7 +153,7 @@ public sealed class TeklaSendBinding : ISendBinding
     catch (Exception ex) when (!ex.IsFatal())
     {
       _logger.LogModelCardHandledError(ex);
-      await Commands.SetModelError(modelCardId, ex).ConfigureAwait(false);
+      await Commands.SetModelError(modelCardId, ex);
     }
   }
 
@@ -186,7 +183,7 @@ public sealed class TeklaSendBinding : ISendBinding
       }
     }
 
-    await Commands.SetModelsExpired(expiredSenderIds).ConfigureAwait(false);
+    await Commands.SetModelsExpired(expiredSenderIds);
 
     ChangedObjectIds = new ConcurrentDictionary<string, byte>();
   }

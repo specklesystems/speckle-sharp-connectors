@@ -12,6 +12,7 @@ using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Eventing;
@@ -44,6 +45,7 @@ public sealed class ArcGISSendBinding : ISendBinding
   private readonly ILogger<ArcGISSendBinding> _logger;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IArcGISConversionSettingsFactory _arcGISConversionSettingsFactory;
+  private readonly IThreadContext _threadContext;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -67,9 +69,8 @@ public sealed class ArcGISSendBinding : ISendBinding
     IOperationProgressManager operationProgressManager,
     ILogger<ArcGISSendBinding> logger,
     IArcGISConversionSettingsFactory arcGisConversionSettingsFactory,
-    ITopLevelExceptionHandler topLevelExceptionHandler,
     MapMembersUtils mapMemberUtils,
-    IEventAggregator eventAggregator
+    IThreadContext threadContext
   )
   {
     _store = store;
@@ -82,6 +83,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     _topLevelExceptionHandler = topLevelExceptionHandler;
     _arcGISConversionSettingsFactory = arcGisConversionSettingsFactory;
     _mapMemberUtils = mapMemberUtils;
+    _threadContext = threadContext;
 
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
@@ -98,14 +100,16 @@ public sealed class ArcGISSendBinding : ISendBinding
   {
     LayersRemovedEvent.Subscribe(
       a =>
-        _topLevelExceptionHandler.FireAndForget(async () => await GetIdsForLayersRemovedEvent(a).ConfigureAwait(false)),
+        _topLevelExceptionHandler.FireAndForget(
+          async () => await _threadContext.RunOnWorkerAsync(async () => await GetIdsForLayersRemovedEvent(a))
+        ),
       true
     );
 
     StandaloneTablesRemovedEvent.Subscribe(
       a =>
         _topLevelExceptionHandler.FireAndForget(
-          async () => await GetIdsForStandaloneTablesRemovedEvent(a).ConfigureAwait(false)
+          async () => await _threadContext.RunOnWorkerAsync(async () => await GetIdsForStandaloneTablesRemovedEvent(a))
         ),
       true
     );
@@ -113,7 +117,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     MapPropertyChangedEvent.Subscribe(
       a =>
         _topLevelExceptionHandler.FireAndForget(
-          async () => await GetIdsForMapPropertyChangedEvent(a).ConfigureAwait(false)
+          async () => await _threadContext.RunOnWorkerAsync(async () => await GetIdsForMapPropertyChangedEvent(a))
         ),
       true
     ); // Map units, CRS etc.
@@ -121,13 +125,18 @@ public sealed class ArcGISSendBinding : ISendBinding
     MapMemberPropertiesChangedEvent.Subscribe(
       a =>
         _topLevelExceptionHandler.FireAndForget(
-          async () => await GetIdsForMapMemberPropertiesChangedEvent(a).ConfigureAwait(false)
+          async () =>
+            await _threadContext.RunOnWorkerAsync(async () => await GetIdsForMapMemberPropertiesChangedEvent(a))
         ),
       true
     ); // e.g. Layer name
 
     ActiveMapViewChangedEvent.Subscribe(
-      _ => _topLevelExceptionHandler.CatchUnhandled(SubscribeToMapMembersDataSourceChange),
+      _ =>
+        _topLevelExceptionHandler.FireAndForget(async () =>
+        {
+          await _threadContext.RunOnWorker(SubscribeToMapMembersDataSourceChange);
+        }),
       true
     );
 
@@ -197,7 +206,7 @@ public sealed class ArcGISSendBinding : ISendBinding
       (args) =>
         _topLevelExceptionHandler.FireAndForget(async () =>
         {
-          await OnRowChanged(args).ConfigureAwait(false);
+          await OnRowChanged(args);
         }),
       layerTable
     );
@@ -205,7 +214,7 @@ public sealed class ArcGISSendBinding : ISendBinding
       (args) =>
         _topLevelExceptionHandler.FireAndForget(async () =>
         {
-          await OnRowChanged(args).ConfigureAwait(false);
+          await OnRowChanged(args);
         }),
       layerTable
     );
@@ -213,7 +222,7 @@ public sealed class ArcGISSendBinding : ISendBinding
       (args) =>
         _topLevelExceptionHandler.FireAndForget(async () =>
         {
-          await OnRowChanged(args).ConfigureAwait(false);
+          await OnRowChanged(args);
         }),
       layerTable
     );
@@ -258,7 +267,7 @@ public sealed class ArcGISSendBinding : ISendBinding
       }
     }
 
-    await RunExpirationChecks(false).ConfigureAwait(false);
+    await RunExpirationChecks(false);
   }
 
   private async Task GetIdsForLayersRemovedEvent(LayerEventsArgs args)
@@ -267,7 +276,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     {
       ChangedObjectIds[layer.URI] = 1;
     }
-    await RunExpirationChecks(true).ConfigureAwait(false);
+    await RunExpirationChecks(true);
   }
 
   private async Task GetIdsForStandaloneTablesRemovedEvent(StandaloneTableEventArgs args)
@@ -276,7 +285,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     {
       ChangedObjectIds[table.URI] = 1;
     }
-    await RunExpirationChecks(true).ConfigureAwait(false);
+    await RunExpirationChecks(true);
   }
 
   private async Task GetIdsForMapPropertyChangedEvent(MapPropertyChangedEventArgs args)
@@ -289,7 +298,7 @@ public sealed class ArcGISSendBinding : ISendBinding
         ChangedObjectIds[member.URI] = 1;
       }
     }
-    await RunExpirationChecks(false).ConfigureAwait(false);
+    await RunExpirationChecks(false);
   }
 
   private void GetIdsForLayersAddedEvent(LayerEventsArgs args)
@@ -339,7 +348,7 @@ public sealed class ArcGISSendBinding : ISendBinding
       {
         ChangedObjectIds[member.URI] = 1;
       }
-      await RunExpirationChecks(false).ConfigureAwait(false);
+      await RunExpirationChecks(false);
     }
   }
 
@@ -409,12 +418,9 @@ public sealed class ArcGISSendBinding : ISendBinding
           modelCard.GetSendInfo("ArcGIS"), // POC: get host app name from settings? same for GetReceiveInfo
           _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
           cancellationToken
-        )
-        .ConfigureAwait(false);
+        );
 
-      await Commands
-        .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
-        .ConfigureAwait(false);
+      await Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
     }
     catch (OperationCanceledException)
     {
@@ -426,7 +432,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
       _logger.LogModelCardHandledError(ex);
-      await Commands.SetModelError(modelCardId, ex).ConfigureAwait(false);
+      await Commands.SetModelError(modelCardId, ex);
     }
   }
 
@@ -461,7 +467,7 @@ public sealed class ArcGISSendBinding : ISendBinding
       }
     }
 
-    await Commands.SetModelsExpired(expiredSenderIds).ConfigureAwait(false);
+    await Commands.SetModelsExpired(expiredSenderIds);
     ChangedObjectIds = new();
   }
 }

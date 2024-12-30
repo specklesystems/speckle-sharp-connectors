@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>5d1e0b0d-56a7-4e13-b9a9-8633e02b8f17</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>Speckle.Connectors.ETABSShared</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\EtabsSendCollectionManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\EtabsPluginBase.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\EtabsSpeckleFormBase.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
+  </ItemGroup>
+</Project>

@@ -1,28 +1,28 @@
-﻿namespace Speckle.Connectors.Common.Threading;
+namespace Speckle.Connectors.Common.Threading;
 
 public static class ThreadContextExtensions
 {
-  public static ValueTask RunOnMain(this IThreadContext threadContext, Action action) =>
+  public static Task RunOnMain(this IThreadContext threadContext, Action action) =>
     threadContext.RunOnThread(action, true);
 
-  public static ValueTask RunOnWorker(this IThreadContext threadContext, Action action) =>
+  public static Task RunOnWorker(this IThreadContext threadContext, Action action) =>
     threadContext.RunOnThread(action, false);
 
-  public static ValueTask<T> RunOnMain<T>(this IThreadContext threadContext, Func<T> action) =>
+  public static Task<T> RunOnMain<T>(this IThreadContext threadContext, Func<T> action) =>
     threadContext.RunOnThread(action, true);
 
-  public static ValueTask<T> RunOnWorker<T>(this IThreadContext threadContext, Func<T> action) =>
+  public static Task<T> RunOnWorker<T>(this IThreadContext threadContext, Func<T> action) =>
     threadContext.RunOnThread(action, false);
 
-  public static ValueTask RunOnMainAsync(this IThreadContext threadContext, Func<ValueTask> action) =>
+  public static Task RunOnMainAsync(this IThreadContext threadContext, Func<Task> action) =>
     threadContext.RunOnThreadAsync(action, true);
 
-  public static ValueTask RunOnWorkerAsync(this IThreadContext threadContext, Func<ValueTask> action) =>
+  public static Task RunOnWorkerAsync(this IThreadContext threadContext, Func<Task> action) =>
     threadContext.RunOnThreadAsync(action, false);
 
-  public static ValueTask<T> RunOnMainAsync<T>(this IThreadContext threadContext, Func<ValueTask<T>> action) =>
+  public static Task<T> RunOnMainAsync<T>(this IThreadContext threadContext, Func<Task<T>> action) =>
     threadContext.RunOnThreadAsync(action, true);
 
-  public static ValueTask<T> RunOnWorkerAsync<T>(this IThreadContext threadContext, Func<ValueTask<T>> action) =>
+  public static Task<T> RunOnWorkerAsync<T>(this IThreadContext threadContext, Func<Task<T>> action) =>
     threadContext.RunOnThreadAsync(action, false);
 }

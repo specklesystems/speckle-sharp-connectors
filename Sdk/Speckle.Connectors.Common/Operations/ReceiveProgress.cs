@@ -13,34 +13,32 @@ public sealed class ReceiveProgress(IProgressDisplayManager progressDisplayManag
 
   public void Report(IProgress<CardProgress> onOperationProgressed, ProgressArgs args)
   {
+    switch (args.ProgressEvent)
     {
-      switch (args.ProgressEvent)
-      {
-        case ProgressEvent.CacheCheck:
-          _previousPercentage = progressDisplayManager.CalculatePercentage(args);
-          break;
-        case ProgressEvent.DownloadBytes:
-          _previousSpeed = progressDisplayManager.CalculateSpeed(args);
-          break;
-      }
+      case ProgressEvent.CacheCheck:
+        _previousPercentage = progressDisplayManager.CalculatePercentage(args);
+        break;
+      case ProgressEvent.DownloadBytes:
+        _previousSpeed = progressDisplayManager.CalculateSpeed(args);
+        break;
+    }
 
-      if (!progressDisplayManager.ShouldUpdate())
-      {
-        return;
-      }
+    if (!progressDisplayManager.ShouldUpdate())
+    {
+      return;
+    }
 
-      switch (args.ProgressEvent)
-      {
-        case ProgressEvent.CacheCheck:
-          onOperationProgressed.Report(new("Checking cache... ", _previousPercentage));
-          break;
-        case ProgressEvent.DownloadBytes:
-          onOperationProgressed.Report(new($"Downloading... ({_previousSpeed})", null));
-          break;
-        case ProgressEvent.DeserializeObject:
-          onOperationProgressed.Report(new("Deserializing ...", progressDisplayManager.CalculatePercentage(args)));
-          break;
-      }
+    switch (args.ProgressEvent)
+    {
+      case ProgressEvent.CacheCheck:
+        onOperationProgressed.Report(new("Checking cache... ", _previousPercentage));
+        break;
+      case ProgressEvent.DownloadBytes:
+        onOperationProgressed.Report(new($"Downloading... ({_previousSpeed})", null));
+        break;
+      case ProgressEvent.DeserializeObject:
+        onOperationProgressed.Report(new("Deserializing ...", progressDisplayManager.CalculatePercentage(args)));
+        break;
     }
   }
 }

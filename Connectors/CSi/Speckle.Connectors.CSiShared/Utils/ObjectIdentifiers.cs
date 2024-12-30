@@ -7,7 +7,7 @@ namespace Speckle.Connectors.CSiShared.Utils;
 /// All API methods are based on the objectType and objectName, not the GUID.
 /// We will obviously manage the GUIDs but for all method calls we need a concatenated version of the objectType and objectName.
 /// Since objectType is a single int (1, 2 ... 7) we know first index will always be the objectType.
-/// This int gets used by the CSiWrapperFactory to create the CSiWrappers.
+/// This int gets used by the CsiWrapperFactory to create the CSiWrappers.
 /// </remarks>
 public static class ObjectIdentifier
 {

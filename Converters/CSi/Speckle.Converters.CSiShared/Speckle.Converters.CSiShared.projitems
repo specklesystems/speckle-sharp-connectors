@@ -9,17 +9,24 @@
     <Import_RootNamespace>Speckle.Converters.CSiShared</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)CSiConversionSettings.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)CSiConversionSettingsFactory.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)CSiRootToSpeckleConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)CSiToSpeckleUnitConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)CSiWrappers.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)CsiConversionSettings.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)CsiConversionSettingsFactory.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)CsiRootToSpeckleConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)CsiToSpeckleUnitConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)CsiWrappers.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Extensions\SpeckleApplicationIdExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CsiFramePropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CsiJointPropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CsiShellPropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\LineToSpeckleConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\MeshToSpeckleConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\PointToSpeckleConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\SharedPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\DisplayValueExtractor.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\FrameToSpeckleConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\JointToSpeckleConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\ShellToSpeckleConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\CSiObjectToSpeckleConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\IApplicationPropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\CsiObjectToSpeckleConverterBase.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Utils\DictionaryUtils.cs" />
   </ItemGroup>
 </Project>

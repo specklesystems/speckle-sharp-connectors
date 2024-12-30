@@ -17,7 +17,6 @@ internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding, ID
     RevitContext revitContext,
     DocumentModelStore store,
     IAppIdleManager revitIdleManager,
-    ITopLevelExceptionHandler topLevelExceptionHandler,
     IBrowserBridge parent
   )
     : base("selectionBinding", store, parent, revitContext)

@@ -1,6 +1,5 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
@@ -17,7 +16,7 @@ public static class ContainerRegistration
     where TDocumentStore : DocumentModelStore
     where TThreadContext : IThreadContext, new()
   {
-    // send operation and dependencies
+    // context always newed up on host app's main/ui thread
     serviceCollection.AddSingleton<IThreadContext>(new TThreadContext());
     serviceCollection.AddSingleton<DocumentModelStore, TDocumentStore>();
 

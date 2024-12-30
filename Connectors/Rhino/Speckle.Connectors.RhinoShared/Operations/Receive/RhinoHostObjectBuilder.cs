@@ -116,7 +116,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     onOperationProgressed.Report(new("Baking layers (redraw disabled)", null));
     using (var _ = _activityFactory.Start("Pre baking layers"))
     {
-      //TODO what is this?  This is going to the UI thread
+      //Rhino 8 doesn't play nice with Eto and layers
       _threadContext
         .RunOnMain(() =>
         {
@@ -125,7 +125,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
           paths.AddRange(instanceComponentsWithPath.Select(t => t.path));
           _layerBaker.CreateAllLayersForReceive(paths, baseLayerName);
         })
-        .Wait();
+        .Wait(cancellationToken);
     }
 
     // 5 - Convert atomic objects
@@ -175,7 +175,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
                 conversionIds.Add(guid.ToString());
               }
             }
-            else if (result is IEnumerable<(object, Base)> fallbackConversionResult) // one to many fallback conversion
+            else if (result is List<(GeometryBase, Base)> fallbackConversionResult) // one to many fallback conversion
             {
               var guids = BakeObjectsAsFallbackGroup(fallbackConversionResult, obj, atts, baseLayerName);
               conversionIds.AddRange(guids.Select(id => id.ToString()));
@@ -249,6 +249,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       RhinoMath.UnsetIntIndex
     );
 
+    //Rhino 8 doesn't play nice with Eto and layers
     _threadContext
       .RunOnMain(() =>
       {
@@ -292,7 +293,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   /// <returns></returns>
   /// <remarks>
   /// Material and Color attributes are processed here due to those properties existing sometimes on fallback geometry (instead of parent).
-  /// and this method is called by <see cref="BakeObjectsAsFallbackGroup(IEnumerable{ValueTuple{object, Base}}, Base, ObjectAttributes, string)"/>
+  /// and this method is called by <see cref="BakeObjectsAsFallbackGroup"/>
   /// </remarks>
   private Guid BakeObject(GeometryBase obj, Base originalObject, string? parentObjectId, ObjectAttributes atts)
   {
@@ -330,7 +331,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   }
 
   private List<Guid> BakeObjectsAsFallbackGroup(
-    IEnumerable<(object, Base)> fallbackConversionResult,
+    IEnumerable<(GeometryBase, Base)> fallbackConversionResult,
     Base originatingObject,
     ObjectAttributes atts,
     string baseLayerName
@@ -341,13 +342,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
     foreach (var (conversionResult, originalBaseObject) in fallbackConversionResult)
     {
-      if (conversionResult is not GeometryBase geometryBase)
-      {
-        // TODO: throw?
-        continue;
-      }
-
-      var id = BakeObject(geometryBase, originalBaseObject, parentId, atts);
+      var id = BakeObject(conversionResult, originalBaseObject, parentId, atts);
       objectIds.Add(id);
     }
 

@@ -79,13 +79,13 @@ public class ConfigBinding : IBinding
   public void UpdateConfig(ConnectorConfig config)
   {
     var str = _serializer.Serialize(config);
-    _jsonCacheManager.SaveObject(_speckleApplication.HostApplication, str);
+    _jsonCacheManager.UpdateObject(_speckleApplication.HostApplication, str);
   }
 
   public void SetUserSelectedAccountId(string userSelectedAccountId)
   {
     var str = _serializer.Serialize(new AccountsConfig() { UserSelectedAccountId = userSelectedAccountId });
-    _jsonCacheManager.SaveObject("accounts", str);
+    _jsonCacheManager.UpdateObject("accounts", str);
   }
 
   public AccountsConfig? GetUserSelectedAccountId()

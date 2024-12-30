@@ -43,7 +43,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
       .GetEvent<DocumentChangedEvent>()
       .Subscribe(async _ =>
       {
-        await Commands.NotifyDocumentChanged().ConfigureAwait(false);
+        await Commands.NotifyDocumentChanged();
       });
   }
 
@@ -129,9 +129,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
     if (elementIds.Count == 0)
     {
-      await Commands
-        .SetModelError(modelCardId, new InvalidOperationException("No objects found to highlight."))
-        .ConfigureAwait(false);
+      await Commands.SetModelError(modelCardId, new InvalidOperationException("No objects found to highlight."));
       return;
     }
 

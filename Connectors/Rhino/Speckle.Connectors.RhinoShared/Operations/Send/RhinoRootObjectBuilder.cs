@@ -63,7 +63,8 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   public RootObjectBuilderResult Build(
     IReadOnlyList<RhinoObject> rhinoObjects,
     SendInfo sendInfo,
-    IProgress<CardProgress> onOperationProgressed
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken
   )
   {
     using var activity = _activityFactory.Start("Build");
@@ -94,6 +95,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     {
       foreach (RhinoObject rhinoObject in atomicObjects)
       {
+        cancellationToken.ThrowIfCancellationRequested();
         using var _2 = _activityFactory.Start("Convert");
 
         // handle layer

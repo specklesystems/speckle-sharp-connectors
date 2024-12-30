@@ -113,7 +113,7 @@ public class ArcGISDocumentStore : DocumentModelStore
 
         map.SetMetadata(existingXmlDocument.ToString());
       })
-      .Wait();
+      .FireAndForget();
 
   protected override void LoadState() =>
     _threadContext
@@ -132,5 +132,5 @@ public class ArcGISDocumentStore : DocumentModelStore
         string modelsString = element.Value;
         LoadFromString(modelsString);
       })
-      .Wait();
+      .FireAndForget();
 }

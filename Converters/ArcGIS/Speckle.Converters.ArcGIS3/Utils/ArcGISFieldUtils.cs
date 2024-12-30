@@ -2,10 +2,10 @@ using System.Collections;
 using ArcGIS.Core.Data;
 using ArcGIS.Core.Data.Exceptions;
 using Speckle.InterfaceGenerator;
-using Speckle.Objects;
-using Speckle.Objects.GIS;
 using Speckle.Sdk;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
 using FieldDescription = ArcGIS.Core.Data.DDL.FieldDescription;
 
@@ -80,48 +80,54 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
     return rowBuffer;
   }
 
-  public List<FieldDescription> GetFieldsFromSpeckleLayer(VectorLayer target)
+  public List<FieldDescription> GetFieldsFromSpeckleLayer(Collection target)
   {
-    List<FieldDescription> fields = new();
-    List<string> fieldAdded = new();
-
-    foreach (var field in target.attributes.GetMembers(DynamicBaseMemberType.Dynamic))
+    if (target["fields"] is Dictionary<string, string> attributes)
     {
-      if (!fieldAdded.Contains(field.Key) && field.Key != FID_FIELD_NAME)
-      {
-        // POC: TODO check for the forbidden characters/combinations: https://support.esri.com/en-us/knowledge-base/what-characters-should-not-be-used-in-arcgis-for-field--000005588
-        try
-        {
-          if (field.Value is not null)
-          {
-            string key = field.Key;
-            FieldType fieldType = GISAttributeFieldType.FieldTypeToNative(field.Value);
+      List<FieldDescription> fields = new();
+      List<string> fieldAdded = new();
 
-            FieldDescription fieldDescription =
-              new(_characterCleaner.CleanCharacters(key), fieldType) { AliasName = key };
-            fields.Add(fieldDescription);
-            fieldAdded.Add(key);
+      foreach (var field in attributes)
+      {
+        if (!fieldAdded.Contains(field.Key) && field.Key != FID_FIELD_NAME)
+        {
+          // POC: TODO check for the forbidden characters/combinations: https://support.esri.com/en-us/knowledge-base/what-characters-should-not-be-used-in-arcgis-for-field--000005588
+          try
+          {
+            if (field.Value is not null)
+            {
+              string key = field.Key;
+              FieldType fieldType = GISAttributeFieldType.FieldTypeToNative(field.Value);
+
+              FieldDescription fieldDescription =
+                new(_characterCleaner.CleanCharacters(key), fieldType) { AliasName = key };
+              fields.Add(fieldDescription);
+              fieldAdded.Add(key);
+            }
+            else
+            {
+              // log missing field
+            }
           }
-          else
+          catch (GeodatabaseFieldException)
           {
             // log missing field
           }
         }
-        catch (GeodatabaseFieldException)
-        {
-          // log missing field
-        }
       }
+
+      // every feature needs Speckle_ID to be colored (before we implement native GIS renderers on Receive)
+      if (!fieldAdded.Contains("Speckle_ID"))
+      {
+        FieldDescription fieldDescriptionId =
+          new(_characterCleaner.CleanCharacters("Speckle_ID"), FieldType.String) { AliasName = "Speckle_ID" };
+        fields.Add(fieldDescriptionId);
+      }
+
+      return fields;
     }
 
-    // every feature needs Speckle_ID to be colored (before we implement native GIS renderers on Receive)
-    if (!fieldAdded.Contains("Speckle_ID"))
-    {
-      FieldDescription fieldDescriptionId =
-        new(_characterCleaner.CleanCharacters("Speckle_ID"), FieldType.String) { AliasName = "Speckle_ID" };
-      fields.Add(fieldDescriptionId);
-    }
-    return fields;
+    throw new ValidationException("Creation of the custom fields failed: provided object is not a valid Vector Layer");
   }
 
   public List<(FieldDescription, Func<Base, object?>)> CreateFieldsFromListOfBase(List<Base> target)
@@ -281,11 +287,14 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
     List<FieldDescription> fields = new();
 
     // Get Fields, geomType and attributeFunction - separately for GIS and non-GIS
-    if (listOfContextAndTrackers.FirstOrDefault().Item1.Parent?.Current is SGIS.VectorLayer vLayer) // GIS
+    if (
+      listOfContextAndTrackers.FirstOrDefault().Item1.Parent?.Current is Collection vLayer
+      && vLayer["fields"] is Dictionary<string, string>
+    ) // GIS
     {
       fields = GetFieldsFromSpeckleLayer(vLayer);
       fieldsAndFunctions = fields
-        .Select(x => (x, (Func<Base, object?>)(y => (y as IGisFeature)?.attributes[x.Name])))
+        .Select(x => (x, (Func<Base, object?>)(y => (y?["properties"] as Base)?[x.Name])))
         .ToList();
     }
     else // non-GIS

@@ -242,9 +242,9 @@
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection": "[2.2.0, )",
           "Speckle.Connectors.Logging": "[1.0.0, )",
-          "Speckle.Objects": "[3.1.0-dev.205, )",
-          "Speckle.Sdk": "[3.1.0-dev.205, )",
-          "Speckle.Sdk.Dependencies": "[3.1.0-dev.205, )"
+          "Speckle.Objects": "[3.1.0-dev.219, )",
+          "Speckle.Sdk": "[3.1.0-dev.219, )",
+          "Speckle.Sdk.Dependencies": "[3.1.0-dev.219, )"
         }
       },
       "speckle.connectors.dui": {
@@ -252,15 +252,8 @@
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
           "Speckle.Connectors.Common": "[1.0.0, )",
-          "Speckle.Sdk": "[3.1.0-dev.205, )",
-          "Speckle.Sdk.Dependencies": "[3.1.0-dev.205, )"
-        }
-      },
-      "speckle.connectors.dui.webview": {
-        "type": "Project",
-        "dependencies": {
-          "Microsoft.Web.WebView2": "[1.0.1938.49, )",
-          "Speckle.Connectors.DUI": "[1.0.0, )"
+          "Speckle.Sdk": "[3.1.0-dev.219, )",
+          "Speckle.Sdk.Dependencies": "[3.1.0-dev.219, )"
         }
       },
       "speckle.connectors.logging": {
@@ -270,7 +263,7 @@
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
-          "Speckle.Objects": "[3.1.0-dev.205, )"
+          "Speckle.Objects": "[3.1.0-dev.219, )"
         }
       },
       "speckle.converters.revit2025": {
@@ -307,19 +300,13 @@
         "resolved": "2.2.0",
         "contentHash": "B2WqEox8o+4KUOpL7rZPyh6qYjik8tHi2tN8Z9jZkHzED8ElYgZa/h6K+xliB435SqUcWT290Fr2aa8BtZjn8A=="
       },
-      "Microsoft.Web.WebView2": {
-        "type": "CentralTransitive",
-        "requested": "[1.0.1938.49, )",
-        "resolved": "1.0.1938.49",
-        "contentHash": "z8KnFnaTYzhA/ZnyRX0qGfS1NU5ZBJeClAH64F0fVDvdDJTvME7xl6zTJ0Jlfe1BtL3C0NH9xTy64shg2baKdw=="
-      },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.205, )",
-        "resolved": "3.1.0-dev.205",
-        "contentHash": "k8nMXF91F2L+OMzbZEn6JMUuNwoz8htOteKQMsnNXoGY8r8YdfeoHpOgg2MA8vCzJOox7OEBCR+P/izbJffqYw==",
+        "requested": "[3.1.0-dev.219, )",
+        "resolved": "3.1.0-dev.219",
+        "contentHash": "2thsMUDkRr7lR0PXZJ8k3KWZLWjz/aBY0KaO2SuXM0lIKyJw1APMJ7lXJ89e6JAjBzEbK8yLHBb0qtfcc4bNRw==",
         "dependencies": {
-          "Speckle.Sdk": "3.1.0-dev.205"
+          "Speckle.Sdk": "3.1.0-dev.219"
         }
       },
       "Speckle.Revit.API": {
@@ -330,9 +317,9 @@
       },
       "Speckle.Sdk": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.205, )",
-        "resolved": "3.1.0-dev.205",
-        "contentHash": "bdvKQ8TGvBUVdmaAYkQYXoZXDHVpXMHO5HVrsjS2qEMzWoG93jFZzrR/Z1ccJB06sGqHlu9+g5BhLXoJZqPnkQ==",
+        "requested": "[3.1.0-dev.219, )",
+        "resolved": "3.1.0-dev.219",
+        "contentHash": "UTgz9UgkMFGqRLmCq1HPo74MngvKbSZOFWaMRzASHrrnsBtzZatBXjoJBlvVoeBCoiea5Jj+BgZg6RvlV2m3sg==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.CSharp": "4.7.0",
@@ -341,14 +328,14 @@
           "Microsoft.Extensions.Logging": "2.2.0",
           "Speckle.DoubleNumerics": "4.0.1",
           "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Dependencies": "3.1.0-dev.205"
+          "Speckle.Sdk.Dependencies": "3.1.0-dev.219"
         }
       },
       "Speckle.Sdk.Dependencies": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.205, )",
-        "resolved": "3.1.0-dev.205",
-        "contentHash": "MjWRxQhXYZxfpc1JwKc33jjBH3mLLxnbCNx5mcYAdGRJDFb/6ebHzQqWE1abxxCa5k1GJBbH8RpMscFm3w6oVQ=="
+        "requested": "[3.1.0-dev.219, )",
+        "resolved": "3.1.0-dev.219",
+        "contentHash": "5hqBd9whAs5cC8S/6YUgKFOivjntAkVutKhz06XD/f3Kj6xScT3hwcUaWBxiwK3Mw7FLtiVuU1uG777pjn0PKQ=="
       }
     },
     "net8.0-windows7.0/win-x64": {
@@ -377,12 +364,6 @@
         "type": "Transitive",
         "resolved": "2.1.4",
         "contentHash": "2C9Q9eX7CPLveJA0rIhf9RXAvu+7nWZu1A2MdG6SD/NOu26TakGgL1nsbc0JAspGijFOo3HoN79xrx8a368fBg=="
-      },
-      "Microsoft.Web.WebView2": {
-        "type": "CentralTransitive",
-        "requested": "[1.0.1938.49, )",
-        "resolved": "1.0.1938.49",
-        "contentHash": "z8KnFnaTYzhA/ZnyRX0qGfS1NU5ZBJeClAH64F0fVDvdDJTvME7xl6zTJ0Jlfe1BtL3C0NH9xTy64shg2baKdw=="
       }
     }
   }

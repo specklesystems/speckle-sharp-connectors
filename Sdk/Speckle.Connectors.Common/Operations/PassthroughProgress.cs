@@ -2,6 +2,7 @@
 
 namespace Speckle.Connectors.Common.Operations;
 
+//this aggregates speed across all SDK uploads and passes it to the main thread
 public class PassthroughProgress : IProgress<ProgressArgs>
 {
   private readonly Action<ProgressArgs> _progressCallback;
@@ -18,7 +19,7 @@ public class PassthroughProgress : IProgress<ProgressArgs>
 
   public void Report(ProgressArgs value)
   {
-    if (value.ProgressEvent == ProgressEvent.DownloadBytes)
+    if (value.ProgressEvent == ProgressEvent.DownloadBytes || value.ProgressEvent == ProgressEvent.UploadBytes)
     {
       long totalBytes;
       lock (_totals)
