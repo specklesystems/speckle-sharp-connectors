@@ -5,7 +5,6 @@ using Speckle.Connectors.ArcGIS.HostApp;
 using Speckle.Connectors.ArcGIS.HostApp.Extensions;
 using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.Common.Builders;
-using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
@@ -21,10 +20,9 @@ namespace Speckle.Connectors.ArcGis.Operations.Send;
 /// <summary>
 /// Stateless builder object to turn an ISendFilter into a <see cref="Base"/> object
 /// </summary>
-public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
+public class ArcGISRootObjectBuilder : RootObjectBuilderBase<ADM.MapMember>
 {
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
-  private readonly ISendConversionCache _sendConversionCache;
   private readonly ArcGISLayerUnpacker _layerUnpacker;
   private readonly ArcGISColorUnpacker _colorUnpacker;
   private readonly IConverterSettingsStore<ArcGISConversionSettings> _converterSettings;
@@ -33,7 +31,6 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
   private readonly MapMembersUtils _mapMemberUtils;
 
   public ArcGISRootObjectBuilder(
-    ISendConversionCache sendConversionCache,
     ArcGISLayerUnpacker layerUnpacker,
     ArcGISColorUnpacker colorUnpacker,
     IConverterSettingsStore<ArcGISConversionSettings> converterSettings,
@@ -43,7 +40,6 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     MapMembersUtils mapMemberUtils
   )
   {
-    _sendConversionCache = sendConversionCache;
     _layerUnpacker = layerUnpacker;
     _colorUnpacker = colorUnpacker;
     _converterSettings = converterSettings;
@@ -53,7 +49,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     _mapMemberUtils = mapMemberUtils;
   }
 
-  public RootObjectBuilderResult Build(
+  public override RootObjectBuilderResult Build(
     IReadOnlyList<ADM.MapMember> layers,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
