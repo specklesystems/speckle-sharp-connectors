@@ -30,7 +30,7 @@ public class NavisworksRootObjectBuilder(
 
   internal NavisworksConversionSettings GetCurrentSettings() => converterSettings.Current;
 
-  public RootObjectBuilderResult Build(
+  public async Task<RootObjectBuilderResult> BuildAsync(
     IReadOnlyList<NAV.ModelItem> navisworksModelItems,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
@@ -79,6 +79,7 @@ public class NavisworksRootObjectBuilder(
       results.Add(converted);
       processedCount++;
       onOperationProgressed.Report(new CardProgress("Converting", (double)processedCount / totalCount));
+      await Task.Yield();
     }
 
     if (results.All(x => x.Status == Status.ERROR))

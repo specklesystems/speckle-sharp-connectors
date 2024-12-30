@@ -54,7 +54,4 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="$(MSBuildThisFileDirectory)Operations\_Receive\" />
-  </ItemGroup>
 </Project>
