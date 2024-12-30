@@ -20,7 +20,7 @@ namespace Speckle.Connectors.ArcGis.Operations.Send;
 /// <summary>
 /// Stateless builder object to turn an ISendFilter into a <see cref="Base"/> object
 /// </summary>
-public class ArcGISRootObjectBuilder : RootObjectBuilderBase<ADM.MapMember>
+public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
 {
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ArcGISLayerUnpacker _layerUnpacker;
@@ -49,9 +49,9 @@ public class ArcGISRootObjectBuilder : RootObjectBuilderBase<ADM.MapMember>
     _mapMemberUtils = mapMemberUtils;
   }
 
-  public override RootObjectBuilderResult Build(
+  public async Task<RootObjectBuilderResult> BuildAsync(
     IReadOnlyList<ADM.MapMember> layers,
-    SendInfo sendInfo,
+    SendInfo __,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
@@ -167,6 +167,7 @@ public class ArcGISRootObjectBuilder : RootObjectBuilderBase<ADM.MapMember>
         }
 
         onOperationProgressed.Report(new("Converting", (double)++count / layers.Count));
+        await Task.Yield();
       }
     }
 
