@@ -14,7 +14,7 @@ using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.TeklaShared.Operations.Send;
 
-public class TeklaRootObjectBuilder : RootObjectBuilderBase<TSM.ModelObject>
+public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
 {
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;
@@ -43,7 +43,7 @@ public class TeklaRootObjectBuilder : RootObjectBuilderBase<TSM.ModelObject>
     _materialUnpacker = materialUnpacker;
   }
 
-  public override RootObjectBuilderResult Build(
+  public async Task<RootObjectBuilderResult> BuildAsync(
     IReadOnlyList<TSM.ModelObject> teklaObjects,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
@@ -73,6 +73,7 @@ public class TeklaRootObjectBuilder : RootObjectBuilderBase<TSM.ModelObject>
 
         ++count;
         onOperationProgressed.Report(new("Converting", (double)count / teklaObjects.Count));
+        await Task.Yield();
       }
     }
 

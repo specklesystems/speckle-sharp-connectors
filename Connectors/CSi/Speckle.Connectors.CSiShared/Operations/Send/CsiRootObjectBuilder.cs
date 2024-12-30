@@ -13,7 +13,7 @@ using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.CSiShared.Builders;
 
-public class CsiRootObjectBuilder : RootObjectBuilderBase<ICsiWrapper>
+public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
 {
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;
@@ -42,7 +42,7 @@ public class CsiRootObjectBuilder : RootObjectBuilderBase<ICsiWrapper>
     _csiApplicationService = csiApplicationService;
   }
 
-  public override RootObjectBuilderResult Build(
+  public async Task<RootObjectBuilderResult> BuildAsync(
     IReadOnlyList<ICsiWrapper> csiObjects,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
@@ -70,6 +70,7 @@ public class CsiRootObjectBuilder : RootObjectBuilderBase<ICsiWrapper>
 
         count++;
         onOperationProgressed.Report(new("Converting", (double)count / csiObjects.Count));
+        await Task.Yield();
       }
     }
 
