@@ -60,7 +60,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     _activityFactory = activityFactory;
   }
 
-  public RootObjectBuilderResult Build(
+  public async Task<RootObjectBuilderResult> BuildAsync(
     IReadOnlyList<RhinoObject> rhinoObjects,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
@@ -108,6 +108,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
 
         ++count;
         onOperationProgressed.Report(new("Converting", (double)count / atomicObjects.Count));
+        await Task.Yield();
 
         // NOTE: useful for testing ui states, pls keep for now so we can easily uncomment
         // Thread.Sleep(550);

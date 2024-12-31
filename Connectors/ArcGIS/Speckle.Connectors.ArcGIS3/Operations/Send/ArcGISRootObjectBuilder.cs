@@ -5,7 +5,6 @@ using Speckle.Connectors.ArcGIS.HostApp;
 using Speckle.Connectors.ArcGIS.HostApp.Extensions;
 using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.Common.Builders;
-using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
@@ -24,7 +23,6 @@ namespace Speckle.Connectors.ArcGis.Operations.Send;
 public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
 {
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
-  private readonly ISendConversionCache _sendConversionCache;
   private readonly ArcGISLayerUnpacker _layerUnpacker;
   private readonly ArcGISColorUnpacker _colorUnpacker;
   private readonly IConverterSettingsStore<ArcGISConversionSettings> _converterSettings;
@@ -33,7 +31,6 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
   private readonly MapMembersUtils _mapMemberUtils;
 
   public ArcGISRootObjectBuilder(
-    ISendConversionCache sendConversionCache,
     ArcGISLayerUnpacker layerUnpacker,
     ArcGISColorUnpacker colorUnpacker,
     IConverterSettingsStore<ArcGISConversionSettings> converterSettings,
@@ -43,7 +40,6 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     MapMembersUtils mapMemberUtils
   )
   {
-    _sendConversionCache = sendConversionCache;
     _layerUnpacker = layerUnpacker;
     _colorUnpacker = colorUnpacker;
     _converterSettings = converterSettings;
@@ -53,9 +49,9 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     _mapMemberUtils = mapMemberUtils;
   }
 
-  public RootObjectBuilderResult Build(
+  public async Task<RootObjectBuilderResult> BuildAsync(
     IReadOnlyList<ADM.MapMember> layers,
-    SendInfo sendInfo,
+    SendInfo __,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
@@ -171,6 +167,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
         }
 
         onOperationProgressed.Report(new("Converting", (double)++count / layers.Count));
+        await Task.Yield();
       }
     }
 

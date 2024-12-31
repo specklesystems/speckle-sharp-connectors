@@ -24,11 +24,11 @@ public class RevitRootObjectBuilder(
   SendCollectionManager sendCollectionManager,
   ILogger<RevitRootObjectBuilder> logger,
   RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton
-) : IRootObjectBuilder<ElementId>
+) : RootObjectBuilderBase<ElementId>
 {
   // POC: SendSelection and RevitConversionContextStack should be interfaces, former needs interfaces
 
-  public RootObjectBuilderResult Build(
+  public override RootObjectBuilderResult Build(
     IReadOnlyList<ElementId> objects,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,

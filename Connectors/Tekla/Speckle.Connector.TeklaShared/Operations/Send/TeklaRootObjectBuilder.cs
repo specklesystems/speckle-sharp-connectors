@@ -43,7 +43,7 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
     _materialUnpacker = materialUnpacker;
   }
 
-  public RootObjectBuilderResult Build(
+  public async Task<RootObjectBuilderResult> BuildAsync(
     IReadOnlyList<TSM.ModelObject> teklaObjects,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
@@ -73,6 +73,7 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
 
         ++count;
         onOperationProgressed.Report(new("Converting", (double)count / teklaObjects.Count));
+        await Task.Yield();
       }
     }
 
