@@ -112,9 +112,9 @@ public sealed class RhinoSendBinding : ISendBinding
         {
           PreviousUnitSystem = newUnit;
 
-        await InvalidateAllSender();
-      }
-    };
+          await InvalidateAllSender();
+        }
+      });
 
     eventAggregator
       .GetEvent<AddRhinoObject>()

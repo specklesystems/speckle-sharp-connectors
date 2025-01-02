@@ -59,7 +59,6 @@ public static class NavisworksConnectorServiceRegistration
     serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();
 
     // Register Intercom/interop
-    serviceCollection.RegisterTopLevelExceptionHandler();
     serviceCollection.AddTransient<CancellationManager>();
     serviceCollection.AddSingleton<IAppIdleManager, NavisworksIdleManager>();
     serviceCollection.AddSingleton<NavisworksDocumentModelStore>();

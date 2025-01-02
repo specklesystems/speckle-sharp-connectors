@@ -28,12 +28,8 @@ public sealed class BrowserBridge : IBrowserBridge
   /// </summary>
 
   private readonly ConcurrentDictionary<string, string?> _resultsStore = new();
-  public ITopLevelExceptionHandler TopLevelExceptionHandler { get; }
-  private readonly IThreadContext _threadContext;
-  private readonly IThreadOptions _threadOptions;
 
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
-  private readonly IEventAggregator _eventAggregator;
   private readonly IThreadContext _threadContext;
   private readonly IThreadOptions _threadOptions;
 
@@ -66,9 +62,10 @@ public sealed class BrowserBridge : IBrowserBridge
     IThreadContext threadContext,
     IJsonSerializer jsonSerializer,
     ILogger<BrowserBridge> logger,
-    ILogger<TopLevelExceptionHandler> topLogger,
     IBrowserScriptExecutor browserScriptExecutor,
-    IThreadOptions threadOptions
+    IThreadOptions threadOptions,
+    IEventAggregator eventAggregator,
+    ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
     _threadContext = threadContext;
@@ -77,6 +74,26 @@ public sealed class BrowserBridge : IBrowserBridge
     // Capture the main thread's SynchronizationContext
     _browserScriptExecutor = browserScriptExecutor;
     _threadOptions = threadOptions;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
+    eventAggregator
+      .GetEvent<ExceptionEvent>()
+      .Subscribe(
+        ex =>
+        {
+          Send(
+              BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION,
+              new
+              {
+                type = ToastNotificationType.DANGER,
+                title = "Unhandled Exception Occurred",
+                description = ex.ToFormattedString(),
+                autoClose = false
+              }
+            )
+            .ConfigureAwait(false);
+        },
+        ThreadOption.MainThread
+      );
   }
 
   public void AssociateWithBinding(IBinding binding)

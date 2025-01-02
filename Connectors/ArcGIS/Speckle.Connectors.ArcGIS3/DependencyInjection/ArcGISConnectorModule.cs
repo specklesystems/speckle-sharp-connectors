@@ -37,7 +37,6 @@ public static class ArcGISConnectorModule
     serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
     serviceCollection.AddSingleton<IBasicConnectorBinding, BasicConnectorBinding>();
 
-    serviceCollection.RegisterTopLevelExceptionHandler();
     serviceCollection.AddSingleton(DefaultTraversal.CreateTraversalFunc());
 
     // register send operation and dependencies

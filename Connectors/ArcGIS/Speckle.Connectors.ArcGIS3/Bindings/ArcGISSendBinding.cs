@@ -70,7 +70,9 @@ public sealed class ArcGISSendBinding : ISendBinding
     ILogger<ArcGISSendBinding> logger,
     IArcGISConversionSettingsFactory arcGisConversionSettingsFactory,
     MapMembersUtils mapMemberUtils,
-    IThreadContext threadContext
+    IThreadContext threadContext,
+    IEventAggregator eventAggregator,
+    ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
     _store = store;

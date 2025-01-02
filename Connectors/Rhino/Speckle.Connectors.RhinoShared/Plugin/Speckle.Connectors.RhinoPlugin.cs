@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Rhino.PlugIns;
 using Speckle.Connectors.Common;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.Rhino.DependencyInjection;
 using Speckle.Connectors.RhinoShared;
 using Speckle.Converters.Rhino;
