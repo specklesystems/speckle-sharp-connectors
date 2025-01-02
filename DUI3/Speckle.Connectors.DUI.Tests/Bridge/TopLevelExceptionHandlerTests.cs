@@ -75,10 +75,9 @@ public class TopLevelExceptionHandlerTests : MoqTest
     var eventAggregator = Create<IEventAggregator>();
     var sut = new TopLevelExceptionHandler(logger.Object, eventAggregator.Object);
 
-    var exception = Assert.Throws<AggregateException>(
+    Assert.Throws<AppDomainUnloadedException>(
       () => sut.CatchUnhandled(new Func<string>(() => throw new AppDomainUnloadedException()))
     );
-    exception.InnerExceptions.Single().Should().BeOfType<AppDomainUnloadedException>();
   }
 
   [Test]

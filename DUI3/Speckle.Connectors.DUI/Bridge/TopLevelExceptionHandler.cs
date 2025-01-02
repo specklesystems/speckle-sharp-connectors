@@ -61,16 +61,13 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
   {
     try
     {
-      try
-      {
-        return new Result<T>(function());
-      }
-      catch (Exception ex) when (!ex.IsFatal())
-      {
-        _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
-        _eventAggregator.GetEvent<ExceptionEvent>().Publish(ex);
-        return new(ex);
-      }
+      return new Result<T>(function());
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
+      _eventAggregator.GetEvent<ExceptionEvent>().Publish(ex);
+      return new(ex);
     }
     catch (Exception ex)
     {
