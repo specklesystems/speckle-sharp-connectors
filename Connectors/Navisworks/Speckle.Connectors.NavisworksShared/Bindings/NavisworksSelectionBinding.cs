@@ -28,12 +28,6 @@ public class NavisworksSelectionBinding : ISelectionBinding
   private void OnSelectionChange(object? o, EventArgs eventArgs) =>
     _appIdleManager.SubscribeToIdle(nameof(NavisworksSelectionBinding), async () => await UpdateSelectionAsync());
 
-  private void UpdateSelection()
-  {
-    SelectionInfo selInfo = GetSelection();
-    Parent.Send(SELECTION_EVENT, selInfo);
-  }
-
   private async Task UpdateSelectionAsync()
   {
     var selInfo = GetSelection();

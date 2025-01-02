@@ -163,7 +163,7 @@ public class NavisworksSendBinding : ISendBinding
       .Execute(
         navisworksModelItems,
         modelCard.GetSendInfo(_speckleApplication.Slug),
-        _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCard.ModelCardId!, token),
+        _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCard.ModelCardId.NotNull(), token),
         token
       );
 

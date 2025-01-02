@@ -42,7 +42,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     _csiApplicationService = csiApplicationService;
   }
 
-  public RootObjectBuilderResult Build(
+  public async Task<RootObjectBuilderResult> BuildAsync(
     IReadOnlyList<ICsiWrapper> csiObjects,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
@@ -70,6 +70,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
 
         count++;
         onOperationProgressed.Report(new("Converting", (double)count / csiObjects.Count));
+        await Task.Yield();
       }
     }
 
