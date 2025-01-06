@@ -21,7 +21,7 @@ public class SpeckleRhinoPanelHost : RhinoWindows.Controls.WpfElementHost
     _webView = SpeckleConnectorsRhinoPlugin.Instance.Container?.GetRequiredService<DUI3ControlWebView>();
     Panels.Closed += PanelsOnClosed;
   }
-  
+
   /// <summary>
   /// This is a lot like PanelsOnClosed but called when trying to show the panel to clear out a lingering parent as PanelsOnClosed isn't called
   /// </summary>
@@ -48,6 +48,7 @@ public class SpeckleRhinoPanelHost : RhinoWindows.Controls.WpfElementHost
       border.Child = null;
     }
   }
+
   private void PanelsOnClosed(object? sender, PanelEventArgs e)
   {
     if (e.PanelId == typeof(SpeckleRhinoPanelHost).GUID)

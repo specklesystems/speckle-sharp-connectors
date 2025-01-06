@@ -67,7 +67,9 @@ public class SpeckleConnectorsRhinoCommand : Command
 
     if (mode == RunMode.Interactive)
     {
-      SpeckleRhinoPanelHost.Reinitialize(SpeckleConnectorsRhinoPlugin.Instance.Container?.GetRequiredService<DUI3ControlWebView>());
+      SpeckleRhinoPanelHost.Reinitialize(
+        SpeckleConnectorsRhinoPlugin.Instance.Container?.GetRequiredService<DUI3ControlWebView>()
+      );
       Panels.OpenPanel(panelId);
       return Result.Success;
     }
