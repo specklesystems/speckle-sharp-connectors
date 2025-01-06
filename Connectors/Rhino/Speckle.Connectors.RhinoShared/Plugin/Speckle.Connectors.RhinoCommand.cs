@@ -1,9 +1,11 @@
 using System.IO;
 using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 using Rhino;
 using Rhino.Commands;
 using Rhino.Input.Custom;
 using Rhino.UI;
+using Speckle.Connectors.DUI.WebView;
 using Speckle.Connectors.Rhino.HostApp;
 
 // using Speckle.Connectorss.Rhino.Properties;
@@ -65,6 +67,7 @@ public class SpeckleConnectorsRhinoCommand : Command
 
     if (mode == RunMode.Interactive)
     {
+      SpeckleRhinoPanelHost.Reinitialize(SpeckleConnectorsRhinoPlugin.Instance.Container?.GetRequiredService<DUI3ControlWebView>());
       Panels.OpenPanel(panelId);
       return Result.Success;
     }
