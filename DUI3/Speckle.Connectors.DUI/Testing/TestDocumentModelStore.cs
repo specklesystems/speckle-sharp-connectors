@@ -40,6 +40,11 @@ public class TestBrowserBridge : IBrowserBridge
     return Task.CompletedTask;
   }
 
+  public void Send2<T>(string eventName, T data) where T : class   
+  {
+    Console.WriteLine($"RunMethod: {eventName}");
+  }
+
 #pragma warning disable CA1065
   public ITopLevelExceptionHandler TopLevelExceptionHandler => throw new NotImplementedException();
 #pragma warning restore CA1065
