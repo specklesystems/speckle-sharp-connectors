@@ -4,6 +4,7 @@ using Speckle.Connectors.Autocad.Bindings;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
@@ -32,7 +33,8 @@ public sealed class Civil3dSendBinding : AutocadSendBaseBinding
     ILogger<AutocadSendBinding> logger,
     ICivil3dConversionSettingsFactory civil3dConversionSettingsFactory,
     IAutocadConversionSettingsFactory autocadConversionSettingsFactory,
-    ISpeckleApplication speckleApplication
+    ISpeckleApplication speckleApplication,
+    IThreadContext threadContext
   )
     : base(
       store,
@@ -44,7 +46,8 @@ public sealed class Civil3dSendBinding : AutocadSendBaseBinding
       sendConversionCache,
       operationProgressManager,
       logger,
-      speckleApplication
+      speckleApplication,
+      threadContext
     )
   {
     _civil3dConversionSettingsFactory = civil3dConversionSettingsFactory;

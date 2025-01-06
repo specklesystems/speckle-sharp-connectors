@@ -26,15 +26,21 @@ public class NavisworksRootObjectBuilder(
   IElementSelectionService elementSelectionService
 ) : IRootObjectBuilder<NAV.ModelItem>
 {
+  private bool SkipNodeMerging { get; set; }
+
   internal NavisworksConversionSettings GetCurrentSettings() => converterSettings.Current;
 
-  public Task<RootObjectBuilderResult> Build(
+  public async Task<RootObjectBuilderResult> BuildAsync(
     IReadOnlyList<NAV.ModelItem> navisworksModelItems,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
-    CancellationToken cancellationToken = default
+    CancellationToken cancellationToken
   )
   {
+#if DEBUG
+    // This is a temporary workaround to disable node merging for debugging purposes - false is default, true is for debugging
+    SkipNodeMerging = false;
+#endif
     using var activity = activityFactory.Start("Build");
 
     // 1. Validate input
@@ -73,6 +79,7 @@ public class NavisworksRootObjectBuilder(
       results.Add(converted);
       processedCount++;
       onOperationProgressed.Report(new CardProgress("Converting", (double)processedCount / totalCount));
+      await Task.Yield();
     }
 
     if (results.All(x => x.Status == Status.ERROR))
@@ -82,7 +89,7 @@ public class NavisworksRootObjectBuilder(
 
     // 4. Initialize final elements list and group nodes
     var finalElements = new List<Base>();
-    var groupedNodes = GroupSiblingGeometryNodes(navisworksModelItems);
+    var groupedNodes = SkipNodeMerging ? [] : GroupSiblingGeometryNodes(navisworksModelItems);
     var processedPaths = new HashSet<string>();
 
     // 5. Process and merge grouped nodes
@@ -146,12 +153,15 @@ public class NavisworksRootObjectBuilder(
     using (var _ = activityFactory.Start("UnpackRenderMaterials"))
     {
       // 7.  - Unpack the render material proxies
-      rootObjectCollection[ProxyKeys.RENDER_MATERIAL] = materialUnpacker.UnpackRenderMaterial(navisworksModelItems);
+      rootObjectCollection[ProxyKeys.RENDER_MATERIAL] = materialUnpacker.UnpackRenderMaterial(
+        navisworksModelItems,
+        groupedNodes
+      );
     }
 
     // 8. Finalize and return
     rootObjectCollection.elements = finalElements;
-    return Task.FromResult(new RootObjectBuilderResult(rootObjectCollection, results));
+    return new RootObjectBuilderResult(rootObjectCollection, results);
   }
 
   private SendConversionResult ConvertNavisworksItem(

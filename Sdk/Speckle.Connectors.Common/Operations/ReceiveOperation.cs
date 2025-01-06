@@ -1,4 +1,5 @@
 using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Logging;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Credentials;
@@ -14,7 +15,9 @@ public sealed class ReceiveOperation(
   IReceiveProgress receiveProgress,
   ISdkActivityFactory activityFactory,
   IOperations operations,
-  IClientFactory clientFactory
+  IClientFactory clientFactory,
+  IThreadContext threadContext,
+  IThreadOptions threadOptions
 )
 {
   public async Task<HostObjectBuilderResult> Execute(
@@ -30,41 +33,49 @@ public sealed class ReceiveOperation(
     using Client apiClient = clientFactory.Create(account);
     using var userScope = ActivityScope.SetTag(Consts.USER_ID, account.GetHashedEmail());
 
-    var version = await apiClient
-      .Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ProjectId, cancellationToken)
-      .ConfigureAwait(false);
+    var version = await apiClient.Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ProjectId, cancellationToken);
 
-    receiveProgress.Begin();
-    Base? commitObject = await operations
-      .Receive2(
-        new Uri(account.serverInfo.url),
-        receiveInfo.ProjectId,
-        version.referencedObject,
-        account.token,
-        onProgressAction: new PassthroughProgress(args => receiveProgress.Report(onOperationProgressed, args)),
-        cancellationToken: cancellationToken
-      )
-      .ConfigureAwait(false);
-
-    cancellationToken.ThrowIfCancellationRequested();
+    var commitObject = await threadContext.RunOnWorkerAsync(
+      () => ReceiveData(account, version, receiveInfo, onOperationProgressed, cancellationToken)
+    );
 
     // 4 - Convert objects
-    HostObjectBuilderResult? res = await ConvertObjects(
-        commitObject,
-        receiveInfo,
-        onOperationProgressed,
-        cancellationToken
-      )
-      .ConfigureAwait(false);
+    HostObjectBuilderResult res = await threadContext.RunOnThread(
+      () => ConvertObjects(commitObject, receiveInfo, onOperationProgressed, cancellationToken),
+      threadOptions.RunReceiveBuildOnMainThread
+    );
 
-    await apiClient
-      .Version.Received(new(version.id, receiveInfo.ProjectId, receiveInfo.SourceApplication), cancellationToken)
-      .ConfigureAwait(false);
+    await apiClient.Version.Received(
+      new(version.id, receiveInfo.ProjectId, receiveInfo.SourceApplication),
+      cancellationToken
+    );
 
     return res;
   }
 
-  private async Task<HostObjectBuilderResult> ConvertObjects(
+  private async Task<Base> ReceiveData(
+    Account account,
+    Speckle.Sdk.Api.GraphQL.Models.Version version,
+    ReceiveInfo receiveInfo,
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken
+  )
+  {
+    receiveProgress.Begin();
+    Base commitObject = await operations.Receive2(
+      new Uri(account.serverInfo.url),
+      receiveInfo.ProjectId,
+      version.referencedObject,
+      account.token,
+      onProgressAction: new PassthroughProgress(args => receiveProgress.Report(onOperationProgressed, args)),
+      cancellationToken: cancellationToken
+    );
+
+    cancellationToken.ThrowIfCancellationRequested();
+    return commitObject;
+  }
+
+  private HostObjectBuilderResult ConvertObjects(
     Base commitObject,
     ReceiveInfo receiveInfo,
     IProgress<CardProgress> onOperationProgressed,
@@ -81,9 +92,13 @@ public sealed class ReceiveOperation(
 
     try
     {
-      HostObjectBuilderResult res = await hostObjectBuilder
-        .Build(commitObject, receiveInfo.ProjectName, receiveInfo.ModelName, onOperationProgressed, cancellationToken)
-        .ConfigureAwait(false);
+      HostObjectBuilderResult res = hostObjectBuilder.Build(
+        commitObject,
+        receiveInfo.ProjectName,
+        receiveInfo.ModelName,
+        onOperationProgressed,
+        cancellationToken
+      );
       conversionActivity?.SetStatus(SdkActivityStatusCode.Ok);
       return res;
     }

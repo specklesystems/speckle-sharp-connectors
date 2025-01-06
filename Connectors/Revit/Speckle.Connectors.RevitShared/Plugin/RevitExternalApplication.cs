@@ -2,7 +2,6 @@ using Autodesk.Revit.UI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common;
-using Speckle.Connectors.DUI;
 using Speckle.Connectors.Revit.DependencyInjection;
 using Speckle.Converters.Revit2023.Tests;
 using Speckle.Converters.RevitShared;

@@ -87,27 +87,19 @@ public class NavisworksSendBinding : ISendBinding
     using var activity = _activityFactory.Start();
     try
     {
-      await Parent
-        .RunOnMainThreadAsync(async () =>
-        {
-          var modelCard = GetModelCard(modelCardId);
+      var modelCard = GetModelCard(modelCardId);
 
-          using var scope = _serviceProvider.CreateScope();
+      using var scope = _serviceProvider.CreateScope();
 
-          InitializeConverterSettings(scope, modelCard);
+      InitializeConverterSettings(scope, modelCard);
 
-          CancellationToken token = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      CancellationToken token = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
-          var navisworksModelItems = GetNavisworksModelItems(modelCard);
+      var navisworksModelItems = GetNavisworksModelItems(modelCard);
 
-          var sendResult = await ExecuteSendOperation(scope, modelCard, navisworksModelItems, token)
-            .ConfigureAwait(false);
+      var sendResult = await ExecuteSendOperation(scope, modelCard, navisworksModelItems, token);
 
-          await Commands
-            .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
-            .ConfigureAwait(false);
-        })
-        .ConfigureAwait(false);
+      await Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
     }
     catch (OperationCanceledException)
     {
@@ -118,7 +110,7 @@ public class NavisworksSendBinding : ISendBinding
     catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
       _logger.LogModelCardHandledError(ex);
-      await Commands.SetModelError(modelCardId, ex).ConfigureAwait(false);
+      await Commands.SetModelError(modelCardId, ex);
     }
   }
 
@@ -171,10 +163,9 @@ public class NavisworksSendBinding : ISendBinding
       .Execute(
         navisworksModelItems,
         modelCard.GetSendInfo(_speckleApplication.Slug),
-        _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCard.ModelCardId!, token),
+        _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCard.ModelCardId.NotNull(), token),
         token
-      )
-      .ConfigureAwait(false);
+      );
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
 

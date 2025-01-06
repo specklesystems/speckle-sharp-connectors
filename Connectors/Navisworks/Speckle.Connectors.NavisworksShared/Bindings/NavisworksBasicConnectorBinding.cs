@@ -42,20 +42,13 @@ public class NavisworksBasicConnectorBinding : IBasicConnectorBinding
   public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
 
   public DocumentInfo? GetDocumentInfo() =>
-    Parent
-      .RunOnMainThreadAsync(
-        () =>
-          Task.FromResult(
-            NavisworksApp.ActiveDocument is null || NavisworksApp.ActiveDocument.Models.Count == 0
-              ? null
-              : new DocumentInfo(
-                NavisworksApp.ActiveDocument.CurrentFileName,
-                NavisworksApp.ActiveDocument.Title,
-                NavisworksApp.ActiveDocument.GetHashCode().ToString()
-              )
-          )
-      )
-      .Result;
+    NavisworksApp.ActiveDocument is null || NavisworksApp.ActiveDocument.Models.Count == 0
+      ? null
+      : new DocumentInfo(
+        NavisworksApp.ActiveDocument.CurrentFileName,
+        NavisworksApp.ActiveDocument.Title,
+        NavisworksApp.ActiveDocument.GetHashCode().ToString()
+      );
 
   public DocumentModelStore GetDocumentState() => _store;
 
@@ -68,11 +61,6 @@ public class NavisworksBasicConnectorBinding : IBasicConnectorBinding
   public Task HighlightModel(string modelCardId) => Task.CompletedTask;
 
   public async Task HighlightObjects(IReadOnlyList<string> objectIds) =>
-    await Parent
-      .RunOnMainThreadAsync(async () =>
-      {
-        // TODO: Implement highlighting logic on main thread
-        await Task.CompletedTask.ConfigureAwait(false);
-      })
-      .ConfigureAwait(false);
+    // TODO: Implement highlighting logic on main thread
+    await Task.CompletedTask;
 }

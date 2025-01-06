@@ -17,16 +17,14 @@ public sealed class ReceiveBindingUICommands : BasicConnectorBindingCommands
     IEnumerable<ConversionResult> conversionResults
   )
   {
-    await Bridge
-      .Send(
-        SET_MODEL_RECEIVE_RESULT_UI_COMMAND_NAME,
-        new
-        {
-          ModelCardId = modelCardId,
-          bakedObjectIds,
-          conversionResults
-        }
-      )
-      .ConfigureAwait(false);
+    await Bridge.Send(
+      SET_MODEL_RECEIVE_RESULT_UI_COMMAND_NAME,
+      new
+      {
+        ModelCardId = modelCardId,
+        bakedObjectIds,
+        conversionResults
+      }
+    );
   }
 }

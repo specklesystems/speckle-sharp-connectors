@@ -8,6 +8,7 @@ using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
@@ -32,11 +33,8 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<Command>(SpeckleConnectorsRhinoCommand.Instance);
 
     serviceCollection.AddConnectorUtils();
-    serviceCollection.AddDUI<RhinoDocumentStore>();
+    serviceCollection.AddDUI<DefaultThreadContext, RhinoDocumentStore>();
     serviceCollection.AddDUIView();
-
-    // POC: Overwriting the SyncToMainThread to SyncToCurrentThread for Rhino!
-    // builder.AddSingletonInstance<ISyncToThread, SyncToCurrentThread>();
 
     // Register other connector specific types
     serviceCollection.AddSingleton<IRhinoPlugin, RhinoPlugin>();

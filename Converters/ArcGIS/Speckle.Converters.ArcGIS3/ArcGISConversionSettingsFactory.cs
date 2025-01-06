@@ -1,7 +1,6 @@
 ﻿using ArcGIS.Core.Data;
 using ArcGIS.Core.Data.DDL;
 using ArcGIS.Desktop.Core;
-using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
@@ -137,8 +136,7 @@ public class ArcGISConversionSettingsFactory(IHostToSpeckleUnitConverter<ACG.Uni
     var parentFolder = Path.GetDirectoryName(databasePath.AbsolutePath);
     var fGdbName = databasePath.Segments[^1];
     Item folderToAdd = ItemFactory.Instance.Create(parentFolder);
-    // POC: QueuedTask
-    QueuedTask.Run(() => Project.Current.AddItem(folderToAdd as IProjectItem));
+    Project.Current.AddItem(folderToAdd as IProjectItem);
 
     // Add a file geodatabase or a SQLite or enterprise database connection to a project
     try
@@ -149,8 +147,7 @@ public class ArcGISConversionSettingsFactory(IHostToSpeckleUnitConverter<ACG.Uni
 
       if (gdbToAdd is not null)
       {
-        // POC: QueuedTask
-        var addedGeodatabase = QueuedTask.Run(() => Project.Current.AddItem(gdbToAdd as IProjectItem));
+        var addedGeodatabase = Project.Current.AddItem(gdbToAdd as IProjectItem);
       }
     }
     catch (NullReferenceException ex)

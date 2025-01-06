@@ -28,11 +28,11 @@ public static class Github
       Content = content
     };
     request.Headers.Add("X-GitHub-Api-Version", "2022-11-28");
-    var response = await client.SendAsync(request).ConfigureAwait(false);
+    var response = await client.SendAsync(request);
     if (!response.IsSuccessStatusCode)
     {
       throw new InvalidOperationException(
-        $"{response.StatusCode} {response.ReasonPhrase} {await response.Content.ReadAsStringAsync().ConfigureAwait(false)}"
+        $"{response.StatusCode} {response.ReasonPhrase} {await response.Content.ReadAsStringAsync()}"
       );
     }
   }

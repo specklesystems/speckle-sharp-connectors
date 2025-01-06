@@ -58,14 +58,32 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
 
   /// <inheritdoc cref="CatchUnhandled(Action)"/>
   /// <returns>A result pattern struct (where exceptions have been handled)</returns>
-  public async Task CatchUnhandledAsync(Func<Task> function)
+  public async Task<Result> CatchUnhandledAsync(Func<Task> function)
   {
-    _ = await CatchUnhandledAsync<object?>(async () =>
+    try
+    {
+      try
       {
-        await function().ConfigureAwait(false);
-        return null;
-      })
-      .ConfigureAwait(false);
+        await function();
+        return new Result();
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
+        await SetGlobalNotification(
+          ToastNotificationType.DANGER,
+          "Unhandled Exception Occured",
+          ex.ToFormattedString(),
+          false
+        );
+        return new(ex);
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogCritical(ex, UNHANDLED_LOGGER_TEMPLATE);
+      throw;
+    }
   }
 
   ///<inheritdoc cref="CatchUnhandled{T}(Func{T})"/>
@@ -75,11 +93,11 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
     {
       try
       {
-        return new(await function.Invoke().ConfigureAwait(false));
+        return new(await function.Invoke());
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        await HandleException(ex).ConfigureAwait(false);
+        await HandleException(ex);
         return new(ex);
       }
     }
@@ -97,12 +115,11 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
     try
     {
       await SetGlobalNotification(
-          ToastNotificationType.DANGER,
-          "Unhandled Exception Occured",
-          ex.ToFormattedString(),
-          false
-        )
-        .ConfigureAwait(false);
+        ToastNotificationType.DANGER,
+        "Unhandled Exception Occured",
+        ex.ToFormattedString(),
+        false
+      );
     }
     catch (Exception toastEx)
     {
@@ -126,19 +143,17 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
   /// In cases where you can use <see langword="await"/> keyword, you should prefer using <see cref="CatchUnhandledAsync"/>
   /// </remarks>
   /// <param name="function"><inheritdoc cref="CatchUnhandled{T}(Func{T})"/></param>
-  public async void FireAndForget(Func<Task> function) => await CatchUnhandledAsync(function).ConfigureAwait(false);
+  public async void FireAndForget(Func<Task> function) => await CatchUnhandledAsync(function);
 
   private async Task SetGlobalNotification(ToastNotificationType type, string title, string message, bool autoClose) =>
-    await Parent
-      .Send(
-        BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, //TODO: We could move these constants into a DUI3 constants static class
-        new
-        {
-          type,
-          title,
-          description = message,
-          autoClose
-        }
-      )
-      .ConfigureAwait(false);
+    await Parent.Send(
+      BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, //TODO: We could move these constants into a DUI3 constants static class
+      new
+      {
+        type,
+        title,
+        description = message,
+        autoClose
+      }
+    );
 }

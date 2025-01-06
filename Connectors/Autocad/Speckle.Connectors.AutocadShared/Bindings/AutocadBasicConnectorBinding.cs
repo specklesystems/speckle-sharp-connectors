@@ -1,6 +1,7 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
@@ -19,6 +20,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
 
   private readonly DocumentModelStore _store;
   private readonly ISpeckleApplication _speckleApplication;
+  private readonly IThreadContext _threadContext;
   private readonly ILogger<AutocadBasicConnectorBinding> _logger;
 
   public BasicConnectorBindingCommands Commands { get; }
@@ -28,7 +30,8 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
     IBrowserBridge parent,
     IAccountManager accountManager,
     ISpeckleApplication speckleApplication,
-    ILogger<AutocadBasicConnectorBinding> logger
+    ILogger<AutocadBasicConnectorBinding> logger,
+    IThreadContext threadContext
   )
   {
     _store = store;
@@ -39,9 +42,10 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
     _store.DocumentChanged += (_, _) =>
       parent.TopLevelExceptionHandler.FireAndForget(async () =>
       {
-        await Commands.NotifyDocumentChanged().ConfigureAwait(false);
+        await Commands.NotifyDocumentChanged();
       });
     _logger = logger;
+    _threadContext = threadContext;
   }
 
   public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
@@ -79,7 +83,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
 
     var dbObjects = doc.GetObjects(objectIds);
     var acadObjectIds = dbObjects.Select(tuple => tuple.Root.Id).ToArray();
-    await HighlightObjectsOnView(acadObjectIds).ConfigureAwait(false);
+    await HighlightObjectsOnView(acadObjectIds);
   }
 
   public async Task HighlightModel(string modelCardId)
@@ -116,79 +120,73 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
 
     if (objectIds.Length == 0)
     {
-      await Commands
-        .SetModelError(modelCardId, new OperationCanceledException("No objects found to highlight."))
-        .ConfigureAwait(false);
+      await Commands.SetModelError(modelCardId, new OperationCanceledException("No objects found to highlight."));
       return;
     }
 
-    await HighlightObjectsOnView(objectIds, modelCardId).ConfigureAwait(false);
+    await HighlightObjectsOnView(objectIds, modelCardId);
   }
 
   private async Task HighlightObjectsOnView(ObjectId[] objectIds, string? modelCardId = null)
   {
     var doc = Application.DocumentManager.MdiActiveDocument;
 
-    await Parent
-      .RunOnMainThreadAsync(async () =>
+    await _threadContext.RunOnMainAsync(async () =>
+    {
+      try
       {
+        doc.Editor.SetImpliedSelection([]); // Deselects
         try
         {
-          doc.Editor.SetImpliedSelection(Array.Empty<ObjectId>()); // Deselects
+          doc.Editor.SetImpliedSelection(objectIds);
+        }
+        catch (Exception e) when (!e.IsFatal())
+        {
+          // SWALLOW REASON:
+          // If the objects under the blocks, it won't be able to select them.
+          // If we try, API will throw the invalid input error, because we request something from API that Autocad doesn't
+          // handle it on its current canvas. Block elements only selectable when in its scope.
+        }
+        doc.Editor.UpdateScreen();
+
+        Extents3d selectedExtents = new();
+
+        var tr = doc.TransactionManager.StartTransaction();
+        foreach (ObjectId objectId in objectIds)
+        {
           try
           {
-            doc.Editor.SetImpliedSelection(objectIds);
+            var entity = (Entity?)tr.GetObject(objectId, OpenMode.ForRead);
+            if (entity?.GeometricExtents != null)
+            {
+              selectedExtents.AddExtents(entity.GeometricExtents);
+            }
           }
           catch (Exception e) when (!e.IsFatal())
           {
-            // SWALLOW REASON:
-            // If the objects under the blocks, it won't be able to select them.
-            // If we try, API will throw the invalid input error, because we request something from API that Autocad doesn't
-            // handle it on its current canvas. Block elements only selectable when in its scope.
+            // Note: we're swallowing exeptions here because of a weird case when receiving blocks, we would have
+            // acad api throw an error on accessing entity.GeometricExtents.
+            // may also throw Autodesk.AutoCAD.Runtime.Exception for invalid extents on objects like rays and xlines
           }
-          doc.Editor.UpdateScreen();
-
-          Extents3d selectedExtents = new();
-
-          var tr = doc.TransactionManager.StartTransaction();
-          foreach (ObjectId objectId in objectIds)
-          {
-            try
-            {
-              var entity = (Entity?)tr.GetObject(objectId, OpenMode.ForRead);
-              if (entity?.GeometricExtents != null)
-              {
-                selectedExtents.AddExtents(entity.GeometricExtents);
-              }
-            }
-            catch (Exception e) when (!e.IsFatal())
-            {
-              // Note: we're swallowing exeptions here because of a weird case when receiving blocks, we would have
-              // acad api throw an error on accessing entity.GeometricExtents.
-              // may also throw Autodesk.AutoCAD.Runtime.Exception for invalid extents on objects like rays and xlines
-            }
-          }
-
-          doc.Editor.Zoom(selectedExtents);
-          tr.Commit();
-          Autodesk.AutoCAD.Internal.Utils.FlushGraphics();
         }
-        catch (Exception ex) when (!ex.IsFatal())
+
+        doc.Editor.Zoom(selectedExtents);
+        tr.Commit();
+        Autodesk.AutoCAD.Internal.Utils.FlushGraphics();
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        if (modelCardId != null)
         {
-          if (modelCardId != null)
-          {
-            await Commands
-              .SetModelError(modelCardId, new OperationCanceledException("Failed to highlight objects."))
-              .ConfigureAwait(false);
-          }
-          else
-          {
-            // This will happen, in some cases, where we highlight individual objects. Should be caught by the top level handler and not
-            // crash the host app.
-            throw;
-          }
+          await Commands.SetModelError(modelCardId, new OperationCanceledException("Failed to highlight objects."));
         }
-      })
-      .ConfigureAwait(false);
+        else
+        {
+          // This will happen, in some cases, where we highlight individual objects. Should be caught by the top level handler and not
+          // crash the host app.
+          throw;
+        }
+      }
+    });
   }
 }

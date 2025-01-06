@@ -9,6 +9,7 @@ using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
@@ -27,7 +28,7 @@ public static class NavisworksConnectorServiceRegistration
   {
     // Register Core functionality
     serviceCollection.AddConnectorUtils();
-    serviceCollection.AddDUI<NavisworksDocumentModelStore>();
+    serviceCollection.AddDUI<DefaultThreadContext, NavisworksDocumentModelStore>();
     serviceCollection.AddDUIView();
 
     // Register bindings

@@ -56,7 +56,7 @@ public class IdleCallManagerTests : MoqTest
     handler
       .Setup(m => m.CatchUnhandledAsync(It.IsAny<Func<Task>>()))
       .Callback<Func<Task>>(a => a.Invoke())
-      .Returns(Task.CompletedTask);
+      .ReturnsAsync(new Result());
 
     var removeEvent = Create<Action>();
     removeEvent.Setup(x => x.Invoke());

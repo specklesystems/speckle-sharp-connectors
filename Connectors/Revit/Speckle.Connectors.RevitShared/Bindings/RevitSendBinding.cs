@@ -16,7 +16,6 @@ using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
-using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.RevitShared.Operations.Send.Filters;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
@@ -28,8 +27,7 @@ namespace Speckle.Connectors.Revit.Bindings;
 
 internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 {
-  private readonly IRevitIdleManager _idleManager;
-  private readonly APIContext _apiContext;
+  private readonly IAppIdleManager _idleManager;
   private readonly CancellationManager _cancellationManager;
   private readonly IServiceProvider _serviceProvider;
   private readonly ISendConversionCache _sendConversionCache;
@@ -49,9 +47,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private ConcurrentDictionary<ElementId, byte> ChangedObjectIds { get; set; } = new();
 
   public RevitSendBinding(
-    IRevitIdleManager idleManager,
+    IAppIdleManager idleManager,
     RevitContext revitContext,
-    APIContext apiContext,
     DocumentModelStore store,
     CancellationManager cancellationManager,
     IBrowserBridge bridge,
@@ -67,7 +64,6 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     : base("sendBinding", store, bridge, revitContext)
   {
     _idleManager = idleManager;
-    _apiContext = apiContext;
     _cancellationManager = cancellationManager;
     _serviceProvider = serviceProvider;
     _sendConversionCache = sendConversionCache;
@@ -82,20 +78,17 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     Commands = new SendBindingUICommands(bridge);
     // TODO expiry events
     // TODO filters need refresh events
-    _idleManager.RunAsync(() =>
-    {
-      revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
-        topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
-    });
-    Store.DocumentChanged += (_, _) =>
-      topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged().ConfigureAwait(false));
+
+    revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
+      topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
+    Store.DocumentChanged += (_, _) => topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged());
   }
 
   public List<ISendFilter> GetSendFilters() =>
     [
       new RevitSelectionFilter() { IsDefault = true },
-      new RevitViewsFilter(RevitContext, _apiContext),
-      new RevitCategoriesFilter(RevitContext, _apiContext)
+      new RevitViewsFilter(RevitContext),
+      new RevitCategoriesFilter(RevitContext)
     ];
 
   public List<ICardSetting> GetSendSettings() =>
@@ -133,7 +126,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
           )
         );
 
-      List<Element> elements = await RefreshElementsOnSender(modelCard.NotNull()).ConfigureAwait(false);
+      List<Element> elements = await RefreshElementsOnSender(modelCard.NotNull());
       List<ElementId> elementIds = elements.Select(el => el.Id).ToList();
 
       if (elementIds.Count == 0)
@@ -149,12 +142,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
           modelCard.GetSendInfo(_speckleApplication.Slug),
           _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
           cancellationToken
-        )
-        .ConfigureAwait(false);
+        );
 
-      await Commands
-        .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
-        .ConfigureAwait(false);
+      await Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
     }
     catch (OperationCanceledException)
     {
@@ -165,7 +155,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
       _logger.LogModelCardHandledError(ex);
-      await Commands.SetModelError(modelCardId, ex).ConfigureAwait(false);
+      await Commands.SetModelError(modelCardId, ex);
     }
     finally
     {
@@ -182,12 +172,10 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     if (modelCard.SendFilter is IRevitSendFilter viewFilter)
     {
-      viewFilter.SetContext(RevitContext, _apiContext);
+      viewFilter.SetContext(RevitContext);
     }
 
-    var selectedObjects = await _apiContext
-      .Run(_ => modelCard.SendFilter.NotNull().RefreshObjectIds())
-      .ConfigureAwait(false);
+    var selectedObjects = modelCard.SendFilter.NotNull().RefreshObjectIds();
 
     List<Element> elements = selectedObjects
       .Select(uid => activeUIDoc.Document.GetElement(uid))
@@ -204,9 +192,11 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       }
 
       // We update the state on the UI SenderModelCard to prevent potential inconsistencies between hostApp IdMap in sendfilters.
-      await Commands
-        .SetFilterObjectIds(modelCard.ModelCardId.NotNull(), modelCard.SendFilter.IdMap, newSelectedObjectIds)
-        .ConfigureAwait(false);
+      await Commands.SetFilterObjectIds(
+        modelCard.ModelCardId.NotNull(),
+        modelCard.SendFilter.IdMap,
+        newSelectedObjectIds
+      );
     }
 
     return elements;
@@ -315,7 +305,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   {
     foreach (var sender in Store.GetSenders().ToList())
     {
-      await RefreshElementsOnSender(sender).ConfigureAwait(false);
+      await RefreshElementsOnSender(sender);
     }
   }
 
@@ -330,12 +320,12 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     // var intersection = ChangedObjectIds.Keys.Intersect(views).ToList();
     // if (intersection.Count != 0)
     // {
-    //    await Commands.RefreshSendFilters().ConfigureAwait(false);
+    //    await Commands.RefreshSendFilters();
     // }
 
     if (ChangedObjectIds.Keys.Any(e => RevitContext.UIApplication?.ActiveUIDocument.Document.GetElement(e) is View))
     {
-      await Commands.RefreshSendFilters().ConfigureAwait(false);
+      await Commands.RefreshSendFilters();
     }
   }
 
@@ -394,7 +384,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     {
       if (modelCard.SendFilter is IRevitSendFilter viewFilter)
       {
-        viewFilter.SetContext(RevitContext, _apiContext);
+        viewFilter.SetContext(RevitContext);
       }
 
       var selectedObjects = modelCard.SendFilter.NotNull().IdMap.NotNull().Values;
@@ -406,7 +396,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       }
     }
 
-    await Commands.SetModelsExpired(expiredSenderIds).ConfigureAwait(false);
+    await Commands.SetModelsExpired(expiredSenderIds);
     ChangedObjectIds = new();
   }
 
@@ -419,13 +409,11 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     if (_cancellationManager.NumberOfOperations > 0)
     {
       _cancellationManager.CancelAllOperations();
-      await Commands
-        .SetGlobalNotification(
-          ToastNotificationType.INFO,
-          "Document Switch",
-          "Operations cancelled because of document swap!"
-        )
-        .ConfigureAwait(false);
+      await Commands.SetGlobalNotification(
+        ToastNotificationType.INFO,
+        "Document Switch",
+        "Operations cancelled because of document swap!"
+      );
     }
   }
 }

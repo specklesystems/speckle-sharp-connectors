@@ -1,8 +1,8 @@
 using System.Xml.Linq;
 using ArcGIS.Desktop.Core.Events;
-using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using ArcGIS.Desktop.Mapping.Events;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
@@ -11,9 +11,16 @@ namespace Speckle.Connectors.ArcGIS.Utils;
 
 public class ArcGISDocumentStore : DocumentModelStore
 {
-  public ArcGISDocumentStore(IJsonSerializer jsonSerializer, ITopLevelExceptionHandler topLevelExceptionHandler)
+  private readonly IThreadContext _threadContext;
+
+  public ArcGISDocumentStore(
+    IJsonSerializer jsonSerializer,
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    IThreadContext threadContext
+  )
     : base(jsonSerializer)
   {
+    _threadContext = threadContext;
     ActiveMapViewChangedEvent.Subscribe(a => topLevelExceptionHandler.CatchUnhandled(() => OnMapViewChanged(a)), true);
     ProjectSavingEvent.Subscribe(
       _ =>
@@ -74,52 +81,52 @@ public class ArcGISDocumentStore : DocumentModelStore
     OnDocumentChanged();
   }
 
-  protected override void HostAppSaveState(string modelCardState)
-  {
-    Map map = MapView.Active.Map;
-    QueuedTask.Run(() =>
-    {
-      // Read existing metadata - To prevent messing existing metadata. 🤞 Hope other add-in developers will do same :D
-      var existingMetadata = map.GetMetadata();
-
-      // Parse existing metadata
-      XDocument existingXmlDocument = !string.IsNullOrEmpty(existingMetadata)
-        ? XDocument.Parse(existingMetadata)
-        : new XDocument(new XElement("metadata"));
-
-      XElement xmlModelCards = new("SpeckleModelCards", modelCardState);
-
-      // Check if SpeckleModelCards element already exists at root and update it
-      var speckleModelCardsElement = existingXmlDocument.Root?.Element("SpeckleModelCards");
-      if (speckleModelCardsElement != null)
+  protected override void HostAppSaveState(string modelCardState) =>
+    _threadContext
+      .RunOnWorker(() =>
       {
-        speckleModelCardsElement.ReplaceWith(xmlModelCards);
-      }
-      else
+        Map map = MapView.Active.Map;
+        // Read existing metadata - To prevent messing existing metadata. 🤞 Hope other add-in developers will do same :D
+        var existingMetadata = map.GetMetadata();
+
+        // Parse existing metadata
+        XDocument existingXmlDocument = !string.IsNullOrEmpty(existingMetadata)
+          ? XDocument.Parse(existingMetadata)
+          : new XDocument(new XElement("metadata"));
+
+        XElement xmlModelCards = new("SpeckleModelCards", modelCardState);
+
+        // Check if SpeckleModelCards element already exists at root and update it
+        var speckleModelCardsElement = existingXmlDocument.Root?.Element("SpeckleModelCards");
+        if (speckleModelCardsElement != null)
+        {
+          speckleModelCardsElement.ReplaceWith(xmlModelCards);
+        }
+        else
+        {
+          existingXmlDocument.Root?.Add(xmlModelCards);
+        }
+
+        map.SetMetadata(existingXmlDocument.ToString());
+      })
+      .FireAndForget();
+
+  protected override void LoadState() =>
+    _threadContext
+      .RunOnWorker(() =>
       {
-        existingXmlDocument.Root?.Add(xmlModelCards);
-      }
+        Map map = MapView.Active.Map;
+        var metadata = map.GetMetadata();
+        var root = XDocument.Parse(metadata).Root;
+        var element = root?.Element("SpeckleModelCards");
+        if (element is null)
+        {
+          ClearAndSave();
+          return;
+        }
 
-      map.SetMetadata(existingXmlDocument.ToString());
-    });
-  }
-
-  protected override void LoadState()
-  {
-    Map map = MapView.Active.Map;
-    QueuedTask.Run(() =>
-    {
-      var metadata = map.GetMetadata();
-      var root = XDocument.Parse(metadata).Root;
-      var element = root?.Element("SpeckleModelCards");
-      if (element is null)
-      {
-        ClearAndSave();
-        return;
-      }
-
-      string modelsString = element.Value;
-      LoadFromString(modelsString);
-    });
-  }
+        string modelsString = element.Value;
+        LoadFromString(modelsString);
+      })
+      .FireAndForget();
 }
