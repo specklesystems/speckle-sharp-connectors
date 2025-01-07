@@ -50,7 +50,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
       services.AddSingleton(application);
       services.AddHostAppTesting<RevitTestBinding>();
       _container = services.BuildServiceProvider();
-      _container.UseHostAppTesting();
+      services.UseHostAppTesting();
 
       // resolve root object
       _revitPlugin = _container.GetRequiredService<IRevitPlugin>();

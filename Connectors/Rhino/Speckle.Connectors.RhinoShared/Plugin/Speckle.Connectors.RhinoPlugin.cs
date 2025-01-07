@@ -54,7 +54,7 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
 
       // but the Rhino connector has `.rhp` as it is extension.
       Container = services.BuildServiceProvider();
-      Container.UseHostAppTesting();
+      services.UseHostAppTesting();
 
       // Resolve root plugin object and initialise.
       _rhinoPlugin = Container.GetRequiredService<IRhinoPlugin>();

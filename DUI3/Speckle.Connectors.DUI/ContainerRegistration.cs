@@ -4,7 +4,6 @@ using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
-using Speckle.Connectors.DUI.Testing;
 using Speckle.Sdk;
 using Speckle.Sdk.Transports;
 
@@ -19,7 +18,6 @@ public static class ContainerRegistration
     // context always newed up on host app's main/ui thread
     serviceCollection.AddSingleton<IThreadContext>(new TThreadContext());
     serviceCollection.AddSingleton<DocumentModelStore, TDocumentStore>();
-    serviceCollection.AddTesting();
 
     serviceCollection.AddTransient<IBrowserBridge, BrowserBridge>(); // POC: Each binding should have it's own bridge instance
 
