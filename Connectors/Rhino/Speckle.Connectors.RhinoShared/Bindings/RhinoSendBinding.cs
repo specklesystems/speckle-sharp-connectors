@@ -364,10 +364,10 @@ public sealed class RhinoSendBinding : ISendBinding
         continue;
       }
 
-      var groupIdIntersection = modelCard
+      var groupOrLayerIntersection = modelCard
         .SendFilter.NotNull()
         .SelectedObjectIds.Intersect(changedObjectIdsInGroupsOrLayers);
-      if (groupIdIntersection.Any())
+      if (groupOrLayerIntersection.Any())
       {
         expiredSenderIds.Add(modelCard.ModelCardId.NotNull());
         continue;
