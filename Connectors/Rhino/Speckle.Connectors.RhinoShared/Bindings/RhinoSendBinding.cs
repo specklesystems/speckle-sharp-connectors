@@ -331,13 +331,17 @@ public sealed class RhinoSendBinding : ISendBinding
     foreach (SenderModelCard modelCard in senders)
     {
       var intersection = modelCard.SendFilter.NotNull().SelectedObjectIds.Intersect(objectIdsList);
-      var groupIdIntersection = modelCard.SendFilter.NotNull().SelectedObjectIds.Intersect(changedObjectIdsInGroups);
-
-      var isExpired = intersection.Any() || groupIdIntersection.Any();
-
-      if (isExpired)
+      if (intersection.Any())
       {
         expiredSenderIds.Add(modelCard.ModelCardId.NotNull());
+        continue;
+      }
+
+      var groupIdIntersection = modelCard.SendFilter.NotNull().SelectedObjectIds.Intersect(changedObjectIdsInGroups);
+      if (groupIdIntersection.Any())
+      {
+        expiredSenderIds.Add(modelCard.ModelCardId.NotNull());
+        continue;
       }
     }
 
