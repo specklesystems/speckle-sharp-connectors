@@ -56,7 +56,7 @@ public sealed class RhinoSendBinding : ISendBinding
   /// <summary>
   /// Stores objects that have "changed" only the commit structure/proxies - they do not need to be reconverted.
   /// </summary>
-  private ConcurrentDictionary<string, byte> ChangedObjectIdsInGroups { get; set; } = new();
+  private ConcurrentDictionary<string, byte> ChangedObjectIdsInGroupsOrLayers { get; set; } = new();
   private ConcurrentDictionary<int, byte> ChangedMaterialIndexes { get; set; } = new();
 
   private UnitSystem PreviousUnitSystem { get; set; }
@@ -108,7 +108,7 @@ public sealed class RhinoSendBinding : ISendBinding
       {
         foreach (RhinoObject selectedObject in RhinoDoc.ActiveDoc.Objects.GetSelectedObjects(false, false))
         {
-          ChangedObjectIdsInGroups[selectedObject.Id.ToString()] = 1;
+          ChangedObjectIdsInGroupsOrLayers[selectedObject.Id.ToString()] = 1;
         }
         _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
       }
@@ -175,7 +175,34 @@ public sealed class RhinoSendBinding : ISendBinding
       {
         foreach (var obj in RhinoDoc.ActiveDoc.Groups.GroupMembers(args.GroupIndex))
         {
-          ChangedObjectIdsInGroups[obj.Id.ToString()] = 1;
+          ChangedObjectIdsInGroupsOrLayers[obj.Id.ToString()] = 1;
+        }
+        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+      });
+
+    RhinoDoc.LayerTableEvent += (_, args) =>
+      _topLevelExceptionHandler.CatchUnhandled(() =>
+      {
+        if (
+          args.EventType == LayerTableEventType.Deleted
+          || args.EventType == LayerTableEventType.Current
+          || args.EventType == LayerTableEventType.Added
+        )
+        {
+          return;
+        }
+
+        var layer = RhinoDoc.ActiveDoc.Layers[args.LayerIndex];
+
+        // add all objects from the changed layers and sublayers to the non-destructively changed object list.
+        var allLayers = args.Document.Layers.Where(l => l.FullPath.Contains(layer.Name)); // not  e imperfect, but layer.GetChildren(true) is valid only in v8 and above; this filter will include the original layer.
+        foreach (var childLayer in allLayers)
+        {
+          var sublayerObjs = RhinoDoc.ActiveDoc.Objects.FindByLayer(childLayer) ?? [];
+          foreach (var obj in sublayerObjs)
+          {
+            ChangedObjectIdsInGroupsOrLayers[obj.Id.ToString()] = 1;
+          }
         }
         _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
       });
@@ -316,14 +343,14 @@ public sealed class RhinoSendBinding : ISendBinding
       }
     }
 
-    if (ChangedObjectIds.IsEmpty && ChangedObjectIdsInGroups.IsEmpty)
+    if (ChangedObjectIds.IsEmpty && ChangedObjectIdsInGroupsOrLayers.IsEmpty)
     {
       return;
     }
 
     // Actual model card invalidation
     string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
-    var changedObjectIdsInGroups = ChangedObjectIdsInGroups.Keys.ToArray();
+    var changedObjectIdsInGroups = ChangedObjectIdsInGroupsOrLayers.Keys.ToArray();
     _sendConversionCache.EvictObjects(objectIdsList);
     var senders = _store.GetSenders();
     List<string> expiredSenderIds = new();
@@ -347,7 +374,7 @@ public sealed class RhinoSendBinding : ISendBinding
 
     await Commands.SetModelsExpired(expiredSenderIds);
     ChangedObjectIds = new();
-    ChangedObjectIdsInGroups = new();
+    ChangedObjectIdsInGroupsOrLayers = new();
     ChangedMaterialIndexes = new();
   }
 
