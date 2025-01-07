@@ -3,6 +3,7 @@ using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Logging;
+using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Credentials;
@@ -13,15 +14,36 @@ using Speckle.Sdk.Serialisation.V2.Send;
 
 namespace Speckle.Connectors.Common.Operations;
 
+[GenerateAutoInterface]
+public class Committer(
+  IClientFactory clientFactory) : ICommitter
+{
+  public async Task Commit(Account account, SerializeProcessResults sendResult, SendInfo sendInfo, CancellationToken ct = default)
+  {
+    using var apiClient = clientFactory.Create(account);
+    _ = await apiClient
+      .Version.Create(
+        new CreateVersionInput(
+          sendResult.RootId,
+          sendInfo.ModelId,
+          sendInfo.ProjectId,
+          sourceApplication: sendInfo.SourceApplication
+        ),
+        ct
+      )
+      .ConfigureAwait(true);
+  }
+}
+
 public sealed class SendOperation<T>(
   IRootObjectBuilder<T> rootObjectBuilder,
   ISendConversionCache sendConversionCache,
-  AccountService accountService,
+  IAccountService accountService,
   ISendProgress sendProgress,
   IOperations operations,
-  IClientFactory clientFactory,
   ISdkActivityFactory activityFactory,
-  IThreadContext threadContext
+  IThreadContext threadContext,
+  ICommitter committer
 )
 {
   public async Task<SendOperationResult> Execute(
@@ -80,19 +102,8 @@ public sealed class SendOperation<T>(
     onOperationProgressed.Report(new("Linking version to model...", null));
 
     // 8 - Create the version (commit)
-    using var apiClient = clientFactory.Create(account);
-    _ = await apiClient
-      .Version.Create(
-        new CreateVersionInput(
-          sendResult.RootId,
-          sendInfo.ModelId,
-          sendInfo.ProjectId,
-          sourceApplication: sendInfo.SourceApplication
-        ),
-        ct
-      )
-      .ConfigureAwait(true);
-
+    await committer.Commit(account, sendResult, sendInfo, ct);
+   
     return sendResult;
   }
 }

@@ -1,4 +1,5 @@
 using Speckle.Sdk.Api;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Serialisation.V2.Send;
 using Speckle.Sdk.Transports;
@@ -8,11 +9,7 @@ namespace Speckle.Connectors.DUI.Testing;
 
 public class TestOperations : IOperations 
 {
-  public TestOperations()
-  {
-    Console.WriteLine("TestOperations");
-  }
-
+  public       IOperations? WrappedOperations { get; set; } = null!;
   public async Task<Base> Receive2(Uri url, string streamId, string objectId, string? authorizationToken = null,
     IProgress<ProgressArgs>? onProgressAction = null, CancellationToken cancellationToken = new CancellationToken()) =>
     throw new NotImplementedException();
@@ -21,9 +18,9 @@ public class TestOperations : IOperations
     IProgress<ProgressArgs>? onProgressAction = null, CancellationToken cancellationToken = new CancellationToken()) =>
     throw new NotImplementedException();
 
-  public async Task<SerializeProcessResults> Send2(Uri url, string streamId, string? authorizationToken, Base value, IProgress<ProgressArgs>? onProgressAction = null,
+  public Task<SerializeProcessResults> Send2(Uri url, string streamId, string? authorizationToken, Base value, IProgress<ProgressArgs>? onProgressAction = null,
     CancellationToken cancellationToken = new CancellationToken()) =>
-    throw new NotImplementedException();
+    WrappedOperations.NotNull().Send2(url, streamId, authorizationToken, value, onProgressAction, cancellationToken);
 
   public async Task<(string rootObjId, IReadOnlyDictionary<string, ObjectReference> convertedReferences)> Send(Base value, IServerTransport transport, bool useDefaultCache, IProgress<ProgressArgs>? onProgressAction = null,
     CancellationToken cancellationToken = new CancellationToken()) =>

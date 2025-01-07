@@ -11,7 +11,7 @@ namespace Speckle.Connectors.Common.Operations;
 
 public sealed class ReceiveOperation(
   IHostObjectBuilder hostObjectBuilder,
-  AccountService accountService,
+  IAccountService accountService,
   IReceiveProgress receiveProgress,
   ISdkActivityFactory activityFactory,
   IOperations operations,

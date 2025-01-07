@@ -28,7 +28,6 @@ public static class ContainerRegistration
     serviceCollection.AddSingleton<CancellationManager>();
     serviceCollection.AddScoped<RootObjectUnpacker>();
     serviceCollection.AddScoped<ReceiveOperation>();
-    serviceCollection.AddSingleton<AccountService>();
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
 
     serviceCollection.AddTransient(typeof(ILogger<>), typeof(Logger<>));

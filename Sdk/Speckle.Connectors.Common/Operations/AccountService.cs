@@ -1,13 +1,10 @@
-﻿using Speckle.Sdk.Credentials;
+﻿using Speckle.InterfaceGenerator;
+using Speckle.Sdk.Credentials;
 
 namespace Speckle.Connectors.Common.Operations;
 
-/// <summary>
-/// Service that responsible to get account for DUI3 from account id otherwise from server url if any.
-/// Note: Be sure it is registered on refactorings. Otherwise, we won't be able to do any send/receive ops.
-/// This can safely be registered as singleton.
-/// </summary>
-public class AccountService(IAccountManager accountManager)
+[GenerateAutoInterface]
+public class AccountService(IAccountManager accountManager) : IAccountService
 {
   /// <summary>
   /// Account to retrieve with its id, if not exist try to retrieve from matching serverUrl.
