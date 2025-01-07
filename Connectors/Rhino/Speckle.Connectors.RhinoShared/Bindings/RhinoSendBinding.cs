@@ -44,7 +44,9 @@ public sealed class RhinoSendBinding : ISendBinding
   private readonly ISdkActivityFactory _activityFactory;
 
   /// <summary>
-  /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
+  /// Used internally to aggregate the changed objects' id. Objects in this list will be reconverted.
+  ///
+  /// Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
   /// [CNX-202: Unhandled Exception Occurred when receiving in Rhino](https://linear.app/speckle/issue/CNX-202/unhandled-exception-occurred-when-receiving-in-rhino)
   /// As to why a concurrent dictionary, it's because it's the cheapest/easiest way to do so.
   /// https://stackoverflow.com/questions/18922985/concurrent-hashsett-in-net-framework
@@ -52,7 +54,7 @@ public sealed class RhinoSendBinding : ISendBinding
   private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
 
   /// <summary>
-  ///
+  /// Stores objects that have "changed" only the commit structure/proxies - they do not need to be reconverted.
   /// </summary>
   private ConcurrentDictionary<string, byte> ChangedObjectIdsInGroups { get; set; } = new();
   private ConcurrentDictionary<int, byte> ChangedMaterialIndexes { get; set; } = new();
