@@ -50,6 +50,11 @@ public sealed class RhinoSendBinding : ISendBinding
   /// https://stackoverflow.com/questions/18922985/concurrent-hashsett-in-net-framework
   /// </summary>
   private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
+
+  /// <summary>
+  ///
+  /// </summary>
+  private ConcurrentDictionary<string, byte> ChangedObjectIdsInGroups { get; set; } = new();
   private ConcurrentDictionary<int, byte> ChangedMaterialIndexes { get; set; } = new();
 
   private UnitSystem PreviousUnitSystem { get; set; }
@@ -101,7 +106,7 @@ public sealed class RhinoSendBinding : ISendBinding
       {
         foreach (RhinoObject selectedObject in RhinoDoc.ActiveDoc.Objects.GetSelectedObjects(false, false))
         {
-          ChangedObjectIds[selectedObject.Id.ToString()] = 1;
+          ChangedObjectIdsInGroups[selectedObject.Id.ToString()] = 1;
         }
         _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
       }
@@ -168,7 +173,7 @@ public sealed class RhinoSendBinding : ISendBinding
       {
         foreach (var obj in RhinoDoc.ActiveDoc.Groups.GroupMembers(args.GroupIndex))
         {
-          ChangedObjectIds[obj.Id.ToString()] = 1;
+          ChangedObjectIdsInGroups[obj.Id.ToString()] = 1;
         }
         _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
       });
@@ -309,21 +314,25 @@ public sealed class RhinoSendBinding : ISendBinding
       }
     }
 
-    if (ChangedObjectIds.IsEmpty)
+    if (ChangedObjectIds.IsEmpty && ChangedObjectIdsInGroups.IsEmpty)
     {
       return;
     }
 
     // Actual model card invalidation
-    string[] objectIdsList = ChangedObjectIds.Keys.ToArray(); // NOTE: could not copy to array happens here
+    string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
+    var changedObjectIdsInGroups = ChangedObjectIdsInGroups.Keys.ToArray();
     _sendConversionCache.EvictObjects(objectIdsList);
     var senders = _store.GetSenders();
     List<string> expiredSenderIds = new();
 
     foreach (SenderModelCard modelCard in senders)
     {
-      var intersection = modelCard.SendFilter.NotNull().SelectedObjectIds.Intersect(objectIdsList).ToList();
-      var isExpired = intersection.Count != 0;
+      var intersection = modelCard.SendFilter.NotNull().SelectedObjectIds.Intersect(objectIdsList);
+      var groupIdIntersection = modelCard.SendFilter.NotNull().SelectedObjectIds.Intersect(changedObjectIdsInGroups);
+
+      var isExpired = intersection.Any() || groupIdIntersection.Any();
+
       if (isExpired)
       {
         expiredSenderIds.Add(modelCard.ModelCardId.NotNull());
@@ -332,6 +341,7 @@ public sealed class RhinoSendBinding : ISendBinding
 
     await Commands.SetModelsExpired(expiredSenderIds);
     ChangedObjectIds = new();
+    ChangedObjectIdsInGroups = new();
     ChangedMaterialIndexes = new();
   }
 
