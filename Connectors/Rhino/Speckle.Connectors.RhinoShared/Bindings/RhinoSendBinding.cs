@@ -96,6 +96,15 @@ public sealed class RhinoSendBinding : ISendBinding
         var selectedObject = RhinoDoc.ActiveDoc.Objects.GetSelectedObjects(false, false).First();
         ChangedObjectIds[selectedObject.Id.ToString()] = 1;
       }
+
+      if (e.CommandEnglishName == "Ungroup")
+      {
+        foreach (RhinoObject selectedObject in RhinoDoc.ActiveDoc.Objects.GetSelectedObjects(false, false))
+        {
+          ChangedObjectIds[selectedObject.Id.ToString()] = 1;
+        }
+        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+      }
     };
 
     RhinoDoc.ActiveDocumentChanged += (_, e) =>
@@ -152,6 +161,16 @@ public sealed class RhinoSendBinding : ISendBinding
           ChangedObjectIds[changedEventArgs.ObjectId.ToString()] = 1;
           _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
         }
+      });
+
+    RhinoDoc.GroupTableEvent += (_, args) =>
+      _topLevelExceptionHandler.CatchUnhandled(() =>
+      {
+        foreach (var obj in RhinoDoc.ActiveDoc.Groups.GroupMembers(args.GroupIndex))
+        {
+          ChangedObjectIds[obj.Id.ToString()] = 1;
+        }
+        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
       });
 
     // Catches and stores changed material ids. These are then used in the expiry checks to invalidate all objects that have assigned any of those material ids.
