@@ -350,7 +350,7 @@ public sealed class RhinoSendBinding : ISendBinding
 
     // Actual model card invalidation
     string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
-    var changedObjectIdsInGroups = ChangedObjectIdsInGroupsOrLayers.Keys.ToArray();
+    var changedObjectIdsInGroupsOrLayers = ChangedObjectIdsInGroupsOrLayers.Keys.ToArray();
     _sendConversionCache.EvictObjects(objectIdsList);
     var senders = _store.GetSenders();
     List<string> expiredSenderIds = new();
@@ -364,7 +364,9 @@ public sealed class RhinoSendBinding : ISendBinding
         continue;
       }
 
-      var groupIdIntersection = modelCard.SendFilter.NotNull().SelectedObjectIds.Intersect(changedObjectIdsInGroups);
+      var groupIdIntersection = modelCard
+        .SendFilter.NotNull()
+        .SelectedObjectIds.Intersect(changedObjectIdsInGroupsOrLayers);
       if (groupIdIntersection.Any())
       {
         expiredSenderIds.Add(modelCard.ModelCardId.NotNull());
