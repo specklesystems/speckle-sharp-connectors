@@ -36,7 +36,7 @@ public class ConverterManagerTests
   [Test]
   public void Test_NoFallback()
   {
-    var sut = SetupManager("String", typeof(TestConverter));
+    var sut = SetupManager("System.String", typeof(TestConverter));
     var converter = sut.ResolveConverter(typeof(string), false);
     converter.Should().NotBeNull();
   }
@@ -44,7 +44,7 @@ public class ConverterManagerTests
   [Test]
   public void Test_Fallback()
   {
-    var sut = SetupManager("Object", typeof(TestConverter));
+    var sut = SetupManager("System.Object", typeof(TestConverter));
     var converter = sut.ResolveConverter(typeof(string), true);
     converter.Should().NotBeNull();
   }
