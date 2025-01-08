@@ -7,7 +7,7 @@ using Speckle.Objects.Data;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 
-namespace Speckle.Converters.Civil3dShared.ToSpeckle.BuiltElements;
+namespace Speckle.Converters.Civil3dShared.ToSpeckle.TopLevel;
 
 [NameAndRankValue(nameof(CDB.Entity), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
