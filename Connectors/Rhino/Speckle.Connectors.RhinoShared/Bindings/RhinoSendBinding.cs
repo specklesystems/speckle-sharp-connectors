@@ -108,7 +108,7 @@ public sealed class RhinoSendBinding : ISendBinding
         {
           ChangedObjectIdsInGroupsOrLayers[selectedObject.Id.ToString()] = 1;
         }
-        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
       }
     };
     eventAggregator
@@ -175,8 +175,9 @@ public sealed class RhinoSendBinding : ISendBinding
         }
       });
 
-    RhinoDoc.GroupTableEvent += (_, args) =>
-      _topLevelExceptionHandler.CatchUnhandled(() =>
+    eventAggregator
+      .GetEvent<GroupTableEvent>()
+      .Subscribe(args =>
       {
         if (!_store.IsDocumentInit)
         {
@@ -187,11 +188,12 @@ public sealed class RhinoSendBinding : ISendBinding
         {
           ChangedObjectIdsInGroupsOrLayers[obj.Id.ToString()] = 1;
         }
-        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
       });
 
-    RhinoDoc.LayerTableEvent += (_, args) =>
-      _topLevelExceptionHandler.CatchUnhandled(() =>
+    eventAggregator
+      .GetEvent<LayerTableEvent>()
+      .Subscribe(args =>
       {
         if (!_store.IsDocumentInit)
         {
@@ -219,7 +221,7 @@ public sealed class RhinoSendBinding : ISendBinding
             ChangedObjectIdsInGroupsOrLayers[obj.Id.ToString()] = 1;
           }
         }
-        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
       });
 
     // Catches and stores changed material ids. These are then used in the expiry checks to invalidate all objects that have assigned any of those material ids.

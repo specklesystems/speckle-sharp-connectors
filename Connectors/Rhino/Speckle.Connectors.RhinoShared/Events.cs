@@ -46,6 +46,12 @@ public class ModifyObjectAttributes(IThreadContext threadContext, ITopLevelExcep
 public class ReplaceRhinoObject(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
   : ThreadedEvent<RhinoReplaceObjectEventArgs>(threadContext, exceptionHandler);
 
+public class GroupTableEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
+  : ThreadedEvent<GroupTableEventArgs>(threadContext, exceptionHandler);
+
+public class LayerTableEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
+  : ThreadedEvent<LayerTableEventArgs>(threadContext, exceptionHandler);
+
 public static class RhinoEvents
 {
   public static void Register(IEventAggregator eventAggregator)
@@ -65,5 +71,7 @@ public static class RhinoEvents
     RhinoDoc.MaterialTableEvent += (_, e) => eventAggregator.GetEvent<MaterialTableEvent>().Publish(e);
     RhinoDoc.ModifyObjectAttributes += (_, e) => eventAggregator.GetEvent<ModifyObjectAttributes>().Publish(e);
     RhinoDoc.ReplaceRhinoObject += (_, e) => eventAggregator.GetEvent<ReplaceRhinoObject>().Publish(e);
+    RhinoDoc.GroupTableEvent += (_, e) => eventAggregator.GetEvent<GroupTableEvent>().Publish(e);
+    RhinoDoc.LayerTableEvent += (_, e) => eventAggregator.GetEvent<LayerTableEvent>().Publish(e);
   }
 }
