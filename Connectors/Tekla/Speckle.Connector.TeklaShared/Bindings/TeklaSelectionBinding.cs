@@ -45,20 +45,34 @@ public class TeklaSelectionBinding : ISelectionBinding
 
   public SelectionInfo GetSelection()
   {
+    if (_selector == null)
+    {
+      return new SelectionInfo(new List<string>(), "No objects selected.");
+    }
+
+    var objectIds = new List<string>();
+    var objectTypes = new List<string>();
+
     ModelObjectEnumerator selectedObjects = _selector.GetSelectedObjects();
-    List<string> objectIds = new List<string>();
-    List<string> objectTypes = new List<string>();
+    if (selectedObjects == null)
+    {
+      return new SelectionInfo(new List<string>(), "No objects selected.");
+    }
 
     while (selectedObjects.MoveNext())
     {
       ModelObject modelObject = selectedObjects.Current;
+      if (modelObject?.Identifier?.GUID == null)
+      {
+        continue; // Skip if any part is null
+      }
+
       string globalId = modelObject.Identifier.GUID.ToString();
       objectIds.Add(globalId);
       objectTypes.Add(modelObject.GetType().Name);
     }
 
     string typesString = string.Join(", ", objectTypes.Distinct());
-
     return new SelectionInfo(
       objectIds,
       objectIds.Count == 0 ? "No objects selected." : $"{objectIds.Count} objects ({typesString})"

@@ -44,12 +44,19 @@ public sealed class RhinoSendBinding : ISendBinding
   private readonly ISdkActivityFactory _activityFactory;
 
   /// <summary>
-  /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
+  /// Used internally to aggregate the changed objects' id. Objects in this list will be reconverted.
+  ///
+  /// Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
   /// [CNX-202: Unhandled Exception Occurred when receiving in Rhino](https://linear.app/speckle/issue/CNX-202/unhandled-exception-occurred-when-receiving-in-rhino)
   /// As to why a concurrent dictionary, it's because it's the cheapest/easiest way to do so.
   /// https://stackoverflow.com/questions/18922985/concurrent-hashsett-in-net-framework
   /// </summary>
   private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
+
+  /// <summary>
+  /// Stores objects that have "changed" only the commit structure/proxies - they do not need to be reconverted.
+  /// </summary>
+  private ConcurrentDictionary<string, byte> ChangedObjectIdsInGroupsOrLayers { get; set; } = new();
   private ConcurrentDictionary<int, byte> ChangedMaterialIndexes { get; set; } = new();
 
   private UnitSystem PreviousUnitSystem { get; set; }
@@ -93,6 +100,15 @@ public sealed class RhinoSendBinding : ISendBinding
       {
         var selectedObject = RhinoDoc.ActiveDoc.Objects.GetSelectedObjects(false, false).First();
         ChangedObjectIds[selectedObject.Id.ToString()] = 1;
+      }
+
+      if (e.CommandEnglishName == "Ungroup")
+      {
+        foreach (RhinoObject selectedObject in RhinoDoc.ActiveDoc.Objects.GetSelectedObjects(false, false))
+        {
+          ChangedObjectIdsInGroupsOrLayers[selectedObject.Id.ToString()] = 1;
+        }
+        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
       }
     };
     eventAggregator
@@ -155,6 +171,43 @@ public sealed class RhinoSendBinding : ISendBinding
           ChangedObjectIds[changedEventArgs.ObjectId.ToString()] = 1;
           eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
         }
+      });
+
+    RhinoDoc.GroupTableEvent += (_, args) =>
+      _topLevelExceptionHandler.CatchUnhandled(() =>
+      {
+        foreach (var obj in RhinoDoc.ActiveDoc.Groups.GroupMembers(args.GroupIndex))
+        {
+          ChangedObjectIdsInGroupsOrLayers[obj.Id.ToString()] = 1;
+        }
+        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+      });
+
+    RhinoDoc.LayerTableEvent += (_, args) =>
+      _topLevelExceptionHandler.CatchUnhandled(() =>
+      {
+        if (
+          args.EventType == LayerTableEventType.Deleted
+          || args.EventType == LayerTableEventType.Current
+          || args.EventType == LayerTableEventType.Added
+        )
+        {
+          return;
+        }
+
+        var layer = RhinoDoc.ActiveDoc.Layers[args.LayerIndex];
+
+        // add all objects from the changed layers and sublayers to the non-destructively changed object list.
+        var allLayers = args.Document.Layers.Where(l => l.FullPath.Contains(layer.Name)); // not  e imperfect, but layer.GetChildren(true) is valid only in v8 and above; this filter will include the original layer.
+        foreach (var childLayer in allLayers)
+        {
+          var sublayerObjs = RhinoDoc.ActiveDoc.Objects.FindByLayer(childLayer) ?? [];
+          foreach (var obj in sublayerObjs)
+          {
+            ChangedObjectIdsInGroupsOrLayers[obj.Id.ToString()] = 1;
+          }
+        }
+        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
       });
 
     // Catches and stores changed material ids. These are then used in the expiry checks to invalidate all objects that have assigned any of those material ids.
@@ -296,29 +349,40 @@ public sealed class RhinoSendBinding : ISendBinding
       }
     }
 
-    if (ChangedObjectIds.IsEmpty)
+    if (ChangedObjectIds.IsEmpty && ChangedObjectIdsInGroupsOrLayers.IsEmpty)
     {
       return;
     }
 
     // Actual model card invalidation
-    string[] objectIdsList = ChangedObjectIds.Keys.ToArray(); // NOTE: could not copy to array happens here
+    string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
+    var changedObjectIdsInGroupsOrLayers = ChangedObjectIdsInGroupsOrLayers.Keys.ToArray();
     _sendConversionCache.EvictObjects(objectIdsList);
     var senders = _store.GetSenders();
     List<string> expiredSenderIds = new();
 
     foreach (SenderModelCard modelCard in senders)
     {
-      var intersection = modelCard.SendFilter.NotNull().SelectedObjectIds.Intersect(objectIdsList).ToList();
-      var isExpired = intersection.Count != 0;
-      if (isExpired)
+      var intersection = modelCard.SendFilter.NotNull().SelectedObjectIds.Intersect(objectIdsList);
+      if (intersection.Any())
       {
         expiredSenderIds.Add(modelCard.ModelCardId.NotNull());
+        continue;
+      }
+
+      var groupOrLayerIntersection = modelCard
+        .SendFilter.NotNull()
+        .SelectedObjectIds.Intersect(changedObjectIdsInGroupsOrLayers);
+      if (groupOrLayerIntersection.Any())
+      {
+        expiredSenderIds.Add(modelCard.ModelCardId.NotNull());
+        continue;
       }
     }
 
     await Commands.SetModelsExpired(expiredSenderIds);
     ChangedObjectIds = new();
+    ChangedObjectIdsInGroupsOrLayers = new();
     ChangedMaterialIndexes = new();
   }
 
