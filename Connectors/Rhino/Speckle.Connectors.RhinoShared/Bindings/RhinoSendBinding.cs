@@ -136,12 +136,11 @@ public sealed class RhinoSendBinding : ISendBinding
       .GetEvent<AddRhinoObject>()
       .Subscribe(e =>
       {
-        // NOTE: This does not work if rhino starts and opens a blank doc;
-        // These events always happen in a doc. Why guard agains a null doc?
-        // if (!_store.IsDocumentInit)
-        // {
-        //   return;
-        // }
+        if (!_store.IsDocumentInit)
+        {
+          return;
+        }
+
         ChangedObjectIds[e.ObjectId.ToString()] = 1;
         eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
       });
@@ -150,12 +149,10 @@ public sealed class RhinoSendBinding : ISendBinding
       .GetEvent<DeleteRhinoObject>()
       .Subscribe(e =>
       {
-        // NOTE: This does not work if rhino starts and opens a blank doc;
-        // These events always happen in a doc. Why guard agains a null doc?
-        // if (!_store.IsDocumentInit)
-        // {
-        //   return;
-        // }
+        if (!_store.IsDocumentInit)
+        {
+          return;
+        }
 
         ChangedObjectIds[e.ObjectId.ToString()] = 1;
         eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
@@ -166,6 +163,11 @@ public sealed class RhinoSendBinding : ISendBinding
       .GetEvent<RenderMaterialsTableEvent>()
       .Subscribe(args =>
       {
+        if (!_store.IsDocumentInit)
+        {
+          return;
+        }
+
         if (args is RhinoDoc.RenderMaterialAssignmentChangedEventArgs changedEventArgs)
         {
           ChangedObjectIds[changedEventArgs.ObjectId.ToString()] = 1;
@@ -176,6 +178,11 @@ public sealed class RhinoSendBinding : ISendBinding
     RhinoDoc.GroupTableEvent += (_, args) =>
       _topLevelExceptionHandler.CatchUnhandled(() =>
       {
+        if (!_store.IsDocumentInit)
+        {
+          return;
+        }
+
         foreach (var obj in RhinoDoc.ActiveDoc.Groups.GroupMembers(args.GroupIndex))
         {
           ChangedObjectIdsInGroupsOrLayers[obj.Id.ToString()] = 1;
@@ -186,6 +193,11 @@ public sealed class RhinoSendBinding : ISendBinding
     RhinoDoc.LayerTableEvent += (_, args) =>
       _topLevelExceptionHandler.CatchUnhandled(() =>
       {
+        if (!_store.IsDocumentInit)
+        {
+          return;
+        }
+
         if (
           args.EventType == LayerTableEventType.Deleted
           || args.EventType == LayerTableEventType.Current
@@ -215,6 +227,11 @@ public sealed class RhinoSendBinding : ISendBinding
       .GetEvent<MaterialTableEvent>()
       .Subscribe(args =>
       {
+        if (!_store.IsDocumentInit)
+        {
+          return;
+        }
+
         if (args.EventType == MaterialTableEventType.Modified)
         {
           ChangedMaterialIndexes[args.Index] = 1;
@@ -226,12 +243,10 @@ public sealed class RhinoSendBinding : ISendBinding
       .GetEvent<ModifyObjectAttributes>()
       .Subscribe(e =>
       {
-        // NOTE: This does not work if rhino starts and opens a blank doc;
-        // These events always happen in a doc. Why guard agains a null doc?
-        // if (!_store.IsDocumentInit)
-        // {
-        //   return;
-        // }
+        if (!_store.IsDocumentInit)
+        {
+          return;
+        }
 
         // NOTE: not sure yet we want to track every attribute changes yet. TBD
         // NOTE: we might want to track here user strings too (once we send them out), and more!
@@ -250,12 +265,10 @@ public sealed class RhinoSendBinding : ISendBinding
       .GetEvent<ReplaceRhinoObject>()
       .Subscribe(e =>
       {
-        // NOTE: This does not work if rhino starts and opens a blank doc;
-        // These events always happen in a doc. Why guard agains a null doc?
-        // if (!_store.IsDocumentInit)
-        // {
-        //   return;
-        // }
+        if (!_store.IsDocumentInit)
+        {
+          return;
+        }
 
         ChangedObjectIds[e.NewRhinoObject.Id.ToString()] = 1;
         ChangedObjectIds[e.OldRhinoObject.Id.ToString()] = 1;
