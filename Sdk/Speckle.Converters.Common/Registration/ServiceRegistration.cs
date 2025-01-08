@@ -44,41 +44,41 @@ public static class ServiceRegistration
   public static void AddConverters<T>(this IServiceCollection serviceCollection, Assembly converterAssembly)
   {
     ConcurrentDictionary<string, Type> converterTypes = new();
-    var types = converterAssembly.ExportedTypes.Where(x => x.GetInterfaces().Contains(typeof(T)));
+    var exportedTypes = converterAssembly.ExportedTypes.Where(x => x.GetInterfaces().Contains(typeof(T)));
 
     // we only care about named types
-    var byName = types
+    var byName = exportedTypes
       .Where(x => x.GetCustomAttribute<NameAndRankValueAttribute>() != null)
       .Select(x =>
       {
         var nameAndRank = x.GetCustomAttribute<NameAndRankValueAttribute>().NotNull();
 
-        return (name: nameAndRank.Name, rank: nameAndRank.Rank, type: x);
+        return (Type: nameAndRank.Type, Rank: nameAndRank.Rank, Converter: x);
       })
       .ToList();
 
     // we'll register the types accordingly
-    var names = byName.Select(x => x.name).Distinct();
-    foreach (string name in names)
+    var types = byName.Select(x => x.Type).Distinct();
+    foreach (Type type in types)
     {
-      var namedTypes = byName.Where(x => x.name == name).OrderByDescending(y => y.rank).ToList();
+      var namedTypes = byName.Where(x => x.Type == type).OrderByDescending(y => y.Rank).ToList();
 
       // first type found
       var first = namedTypes[0];
 
       // POC: may need to be instance per lifecycle scope
-      converterTypes.TryAdd(first.name, first.type);
+      converterTypes.TryAdd(first.Type.FullName.NotNull(), first.Converter);
 
       // POC: not sure yet if...
       // * This should be an array of types
       // * Whether the scope should be modified or modifiable
       // * Whether this is in the write project... hmmm
       // POC: IsAssignableFrom()
-      var secondaryType = first.type.GetInterface(typeof(ITypedConverter<,>).Name);
+      var secondaryType = first.Type.GetInterface(typeof(ITypedConverter<,>).Name);
       // POC: should we explode if no found?
       if (secondaryType != null)
       {
-        converterTypes.TryAdd(first.name, secondaryType);
+        converterTypes.TryAdd(first.Type.FullName, secondaryType);
       }
 
       // register subsequent types with rank

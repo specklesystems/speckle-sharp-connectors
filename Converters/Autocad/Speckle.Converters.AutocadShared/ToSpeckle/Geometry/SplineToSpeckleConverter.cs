@@ -4,7 +4,7 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Geometry;
 
-[NameAndRankValue(nameof(ADB.Spline), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(ADB.Spline), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class SplineToSpeckleConverter : IToSpeckleTopLevelConverter
 {
   private readonly ITypedConverter<ADB.Spline, SOG.Curve> _splineConverter;
