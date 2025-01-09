@@ -60,13 +60,14 @@ public class ArcGISConversionSettingsFactory(IHostToSpeckleUnitConverter<ACG.Uni
   public Uri ValidateDatabasePath(Uri originalGatabasePath)
   {
     var fGdbName = originalGatabasePath.Segments[^1];
-    var parentFolder = Path.GetDirectoryName(originalGatabasePath.AbsolutePath);
-    if (parentFolder == null)
+    var parentFolderEncoded = Path.GetDirectoryName(originalGatabasePath.AbsolutePath);
+    if (parentFolderEncoded == null)
     {
       // POC: customize the exception type
       throw new ArgumentException($"Invalid path: {originalGatabasePath}");
     }
 
+    var parentFolder = Uri.UnescapeDataString(parentFolderEncoded);
     Uri databasePath = originalGatabasePath;
     Item folderToAdd = ItemFactory.Instance.Create(parentFolder);
     if (folderToAdd is null)
@@ -133,7 +134,13 @@ public class ArcGISConversionSettingsFactory(IHostToSpeckleUnitConverter<ACG.Uni
   public Uri AddDatabaseToProject(Uri databasePath)
   {
     // Add a folder connection to a project
-    var parentFolder = Path.GetDirectoryName(databasePath.AbsolutePath);
+    var parentFolderEncoded = Path.GetDirectoryName(databasePath.AbsolutePath);
+    if (parentFolderEncoded == null)
+    {
+      // POC: customize the exception type
+      throw new ArgumentException($"Invalid path: {databasePath}");
+    }
+    var parentFolder = Uri.UnescapeDataString(parentFolderEncoded);
     var fGdbName = databasePath.Segments[^1];
     Item folderToAdd = ItemFactory.Instance.Create(parentFolder);
     Project.Current.AddItem(folderToAdd as IProjectItem);
