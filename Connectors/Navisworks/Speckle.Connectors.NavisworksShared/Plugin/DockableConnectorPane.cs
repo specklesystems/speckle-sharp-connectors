@@ -32,6 +32,8 @@ internal sealed class Connector : NAV.Plugins.DockPanePlugin
 
   public override Control CreateControlPane()
   {
+    AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<Connector>;
+    
     var services = new ServiceCollection();
 
     services.Initialize(HostApplications.Navisworks, HostAppVersion.v2024);
