@@ -15,6 +15,7 @@ using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Serialisation;
 using Speckle.Sdk.Serialisation.V2.Send;
+using Speckle.Sdk.SQLite;
 
 namespace Speckle.HostApps;
 
@@ -37,11 +38,24 @@ public static class ServiceCollectionExtensions
     testServices.Replace(ServiceDescriptor.Singleton<IAccountService, TestAccountService>());
     testServices.Replace(ServiceDescriptor.Singleton<ICommitter, TestCommitter>());
     testServices.Replace(ServiceDescriptor.Singleton<ISendConversionCache, TestSendConversionCache>());
+    testServices.Replace(ServiceDescriptor.Singleton<ISqLiteJsonCacheManagerFactory, TestSqLiteJsonCacheManagerFactory>());
     var serviceProvider = testServices.BuildServiceProvider();
     SpeckleXunitTestFramework.ServiceProvider =  serviceProvider;
   }
 }
 
+
+public sealed class TestSqLiteJsonCacheManagerFactory : ISqLiteJsonCacheManagerFactory, IDisposable
+{
+  private readonly SqLiteJsonCacheManager _sqLiteJsonCacheManager = 
+    new SqLiteJsonCacheManager("Data Source=:memory;");
+
+  public ISqLiteJsonCacheManager CreateForUser(string scope) => _sqLiteJsonCacheManager;
+
+  public ISqLiteJsonCacheManager CreateFromStream(string streamId) => _sqLiteJsonCacheManager;
+
+  public void Dispose() { }
+}
 
 public class TestAccountService : IAccountService
 {

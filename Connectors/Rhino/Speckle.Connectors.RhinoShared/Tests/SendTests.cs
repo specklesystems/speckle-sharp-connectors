@@ -42,10 +42,15 @@ public class SendTests(IServiceProvider serviceProvider)
   [Fact]
   public async Task Test_Send_Current()
   {
-    var ids = RhinoDoc.ActiveDoc.Objects.Select(x => x.Id).ToList();
+    foreach (var currentDoc in RhinoDoc.OpenDocuments())
+    {
+      currentDoc.Dispose();
+    }
+    using var doc = RhinoDoc.Open("C:\\Users\\adam\\Git\\speckle-sharp-connectors\\Tests\\Models\\cube.3dm", out bool _);
+    var ids = doc.Objects.Select(x => x.Id).ToList();
     ids.Should().NotBeEmpty();
     
-    RhinoDoc.ActiveDoc.Objects.Select(ids, true);
+    doc.Objects.Select(ids, true);
     
     var binding = serviceProvider.GetBinding<IBasicConnectorBinding>();
     binding.AddModel(new SenderModelCard()
@@ -63,7 +68,6 @@ public class SendTests(IServiceProvider serviceProvider)
 
     var testOperations = (TestOperations)serviceProvider.GetRequiredService<IOperations>();
     testOperations.WrappedOperations = new TestSender();
-    
     
     var send = serviceProvider.GetBinding<ISendBinding>();
 
