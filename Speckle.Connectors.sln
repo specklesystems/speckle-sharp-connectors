@@ -9,7 +9,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{85A13E
 		codecov.yml = codecov.yml
 		CodeMetricsConfig.txt = CodeMetricsConfig.txt
 		Directory.Build.props = Directory.Build.props
-		Directory.Build.targets = Directory.Build.targets
 		Directory.Packages.props = Directory.Packages.props
 		global.json = global.json
 		README.md = README.md
@@ -18,6 +17,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DUI", "DUI", "{FD4D6594-D81E-456F-8F2E-35B09E04A755}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Revit", "Revit", "{D92751C8-1039-4005-90B2-913E55E0B8BD}"
+	ProjectSection(SolutionItems) = preProject
+		Connectors\Revit\Directory.Build.targets = Connectors\Revit\Directory.Build.targets
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Sdk", "Sdk", "{2E00592E-558D-492D-88F9-3ECEE4C0C7DA}"
 EndProject
@@ -36,6 +38,9 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Converters.Common", "Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj", "{8AEF06C0-CA5C-4460-BC2D-ADE5F35D0434}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Rhino", "Rhino", "{9584AEE5-CD59-46E6-93E6-2DC2B5285B75}"
+	ProjectSection(SolutionItems) = preProject
+		Connectors\Rhino\Directory.Build.targets = Connectors\Rhino\Directory.Build.targets
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Connectors.Rhino7", "Connectors\Rhino\Speckle.Connectors.Rhino7\Speckle.Connectors.Rhino7.csproj", "{1E2644A9-6B31-4350-8772-CEAAD6EE0B21}"
 EndProject
@@ -52,6 +57,9 @@ EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Connectors.AutocadShared", "Connectors\Autocad\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.shproj", "{41BC679F-887F-44CF-971D-A5502EE87DB0}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Autocad", "Autocad", "{804E065F-914C-414A-AF84-009312C3CFF6}"
+	ProjectSection(SolutionItems) = preProject
+		Connectors\Autocad\Directory.Build.targets = Connectors\Autocad\Directory.Build.targets
+	EndProjectSection
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Converters.AutocadShared", "Converters\Autocad\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.shproj", "{9ADD1B7A-6401-4202-8613-F668E2FBC0A4}"
 EndProject
@@ -154,6 +162,9 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Connectors.Logging", "Sdk\Speckle.Connectors.Logging\Speckle.Connectors.Logging.csproj", "{8098BAFC-DF1C-4AFA-A93E-08121E6D09D4}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tekla", "Tekla", "{696086E4-D8CC-4FE0-A9B3-5F10B9089B55}"
+	ProjectSection(SolutionItems) = preProject
+		Connectors\Tekla\Directory.Build.targets = Connectors\Tekla\Directory.Build.targets
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Connector.Tekla2024", "Connectors\Tekla\Speckle.Connector.Tekla2024\Speckle.Connector.Tekla2024.csproj", "{2319C00F-B268-4E4C-9F88-6B379E2BBD22}"
 EndProject

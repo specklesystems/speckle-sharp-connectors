@@ -22,6 +22,7 @@
 
 
   <Target Name="PostBuild" AfterTargets="Build">
+    <Message Text="Navisworks Version $(NavisworksVersion)" Importance="high"/>
     <RemoveDir Directories="$(PluginVersionContentTarget)" Condition="Exists('$(PluginVersionContentTarget)')"/>
   
     <Copy SourceFiles="$(OutDir)Plugin\PackageContents.xml" DestinationFolder="$(PluginBundleTarget)\"/>
