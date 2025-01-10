@@ -81,6 +81,9 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
       }
       catch (ValidationException)
       {
+        // NOTE: i've improved the if check above to make sure we never reach here
+        // we were throwing a lot here for various elements (e.g. floors) and we would
+        // be slowing things down
         // location was not a supported, do not attach to base element
       }
     }
