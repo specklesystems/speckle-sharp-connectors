@@ -88,6 +88,18 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
       .OfClass(typeof(View))
       .Cast<View>()
       .Where(v => !v.IsTemplate)
+      .Where(v => !v.IsAssemblyView)
+      .Where(v =>
+        v.ViewType
+          is ViewType.FloorPlan
+            or ViewType.Elevation
+            or ViewType.Rendering
+            or ViewType.Section
+            or ViewType.ThreeD
+            or ViewType.Detail
+            or ViewType.CeilingPlan
+            or ViewType.AreaPlan
+      )
       .Select(v => v.ViewType.ToString() + " - " + v.Name.ToString())
       .ToList();
     AvailableViews = views;
