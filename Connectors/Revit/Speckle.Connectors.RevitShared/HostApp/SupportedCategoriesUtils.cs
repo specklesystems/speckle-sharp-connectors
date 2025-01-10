@@ -16,6 +16,14 @@ public static class SupportedCategoriesUtils
     return (
         category.CategoryType == CategoryType.Model
       // || category.CategoryType == CategoryType.AnalyticalModel
-      ) && category.IsVisibleInUI;
+      )
+#if REVIT_2023_OR_GREATER
+      && category.BuiltInCategory != BuiltInCategory.OST_AreaSchemes
+      && category.BuiltInCategory != BuiltInCategory.OST_AreaSchemeLines
+#else
+      && category.Name != "OST_AreaSchemeLines"
+      && category.Name != "OST_AreaSchemes"
+#endif
+      && category.IsVisibleInUI;
   }
 }
