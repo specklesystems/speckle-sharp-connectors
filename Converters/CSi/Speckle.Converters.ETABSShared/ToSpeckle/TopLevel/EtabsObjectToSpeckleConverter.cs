@@ -22,7 +22,7 @@ namespace Speckle.Converters.ETABSShared.ToSpeckle.TopLevel;
 ///      * IApplicationPropertiesExtractor for ETABS-specific data
 /// 3. CreateTargetObject method ensures type-safe conversion to EtabsObject
 /// </remarks>
-[NameAndRankValue(nameof(CsiWrapperBase), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(CsiWrapperBase), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class EtabsObjectToSpeckleConverter : CsiObjectToSpeckleConverterBase
 {
   public EtabsObjectToSpeckleConverter(

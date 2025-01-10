@@ -3,7 +3,7 @@ using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converters.Rhino.ToHost.TopLevel;
 
-[NameAndRankValue(nameof(SOG.Curve), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(SOG.Curve), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class NurbsCurveToHostTopLevelConverter : SpeckleToHostGeometryBaseTopLevelConverter<SOG.Curve, RG.NurbsCurve>
 {
   public NurbsCurveToHostTopLevelConverter(

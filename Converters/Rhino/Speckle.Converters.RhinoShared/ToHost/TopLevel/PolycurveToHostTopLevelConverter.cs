@@ -3,7 +3,7 @@ using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converters.Rhino.ToHost.TopLevel;
 
-[NameAndRankValue(nameof(SOG.Polycurve), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(SOG.Polycurve), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class PolycurveToHostTopLevelConverter : SpeckleToHostGeometryBaseTopLevelConverter<SOG.Polycurve, RG.PolyCurve>
 {
   public PolycurveToHostTopLevelConverter(
