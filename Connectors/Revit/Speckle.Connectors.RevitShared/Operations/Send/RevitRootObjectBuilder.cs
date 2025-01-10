@@ -53,15 +53,27 @@ public class RevitRootObjectBuilder(
     foreach (var id in objects)
     {
       var el = converterSettings.Current.Document.GetElement(id);
-      if (el != null)
+      if (el == null)
       {
-        revitElements.Add(el);
+        continue;
       }
+
+      if (el.Category == null)
+      {
+        continue;
+      }
+
+      if (!SupportedCategoriesUtils.IsSupportedCategory(el.Category))
+      {
+        continue;
+      }
+
+      revitElements.Add(el);
     }
 
     if (revitElements.Count == 0)
     {
-      throw new SpeckleSendFilterException("No objects were found. Please update your send filter!");
+      throw new SpeckleSendFilterException("No objects were found. Please update your publish filter!");
     }
 
     List<SendConversionResult> results = new(revitElements.Count);
