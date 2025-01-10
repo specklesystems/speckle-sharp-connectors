@@ -34,6 +34,8 @@ public class Civil3dRootToSpeckleConverter : IRootToSpeckleConverter
     object objectToConvert = dbObject;
 
     // check first for civil type objects
+    // POC: some classes (eg Civil.DatabaseServices.CogoPoint) actually inherit from Autocad.DatabaseServices.Entity instead of Civil!!
+    // These need top level converters in Civil for now, but in the future we should implement a EntityToSpeckleTopLevelConverter for Autocad as well.
     if (target is CDB.Entity civilEntity)
     {
       type = civilEntity.GetType();
