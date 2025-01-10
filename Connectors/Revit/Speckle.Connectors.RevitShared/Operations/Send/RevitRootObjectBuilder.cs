@@ -48,7 +48,7 @@ public class RevitRootObjectBuilder(
     rootObject["units"] = converterSettings.Current.SpeckleUnits;
 
     var revitElements = new List<Element>();
-
+    List<SendConversionResult> results = new(revitElements.Count);
     // Convert ids to actual revit elements
     foreach (var id in objects)
     {
@@ -65,6 +65,15 @@ public class RevitRootObjectBuilder(
 
       if (!SupportedCategoriesUtils.IsSupportedCategory(el.Category))
       {
+        results.Add(
+          new(
+            Status.WARNING,
+            el.UniqueId,
+            el.Category.Name,
+            null,
+            new SpeckleException($"Category {el.Category.Name} is not supported.")
+          )
+        );
         continue;
       }
 
@@ -75,8 +84,6 @@ public class RevitRootObjectBuilder(
     {
       throw new SpeckleSendFilterException("No objects were found. Please update your publish filter!");
     }
-
-    List<SendConversionResult> results = new(revitElements.Count);
 
     // Unpack groups (& other complex data structures)
     var atomicObjects = elementUnpacker.UnpackSelectionForConversion(revitElements).ToList();
