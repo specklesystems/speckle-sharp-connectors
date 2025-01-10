@@ -4,7 +4,7 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Geometry;
 
-[NameAndRankValue(nameof(ADB.Arc), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(ADB.Arc), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class DBArcToSpeckleConverter : IToSpeckleTopLevelConverter
 {
   private readonly ITypedConverter<ADB.Arc, SOG.Arc> _arcConverter;

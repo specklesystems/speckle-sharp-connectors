@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Common.Registration;
@@ -14,7 +15,7 @@ public class ConverterManager<T>(ConcurrentDictionary<string, Type> converterTyp
     var currentType = type;
     while (true)
     {
-      var typeName = currentType.Name;
+      var typeName = currentType.FullName.NotNull();
       var converter = GetConverterByType(typeName);
       if (converter is null && recursive)
       {
@@ -37,9 +38,9 @@ public class ConverterManager<T>(ConcurrentDictionary<string, Type> converterTyp
     }
   }
 
-  private T? GetConverterByType(string typeName)
+  private T? GetConverterByType(string fullName)
   {
-    if (converterTypes.TryGetValue(typeName, out var converter))
+    if (converterTypes.TryGetValue(fullName, out var converter))
     {
       return (T)ActivatorUtilities.CreateInstance(serviceProvider, converter);
     }

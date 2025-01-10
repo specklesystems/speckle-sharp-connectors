@@ -4,7 +4,7 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Geometry;
 
-[NameAndRankValue(nameof(ADB.Line), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(ADB.Line), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class LineToSpeckleConverter : IToSpeckleTopLevelConverter
 {
   private readonly ITypedConverter<ADB.Line, SOG.Line> _lineConverter;

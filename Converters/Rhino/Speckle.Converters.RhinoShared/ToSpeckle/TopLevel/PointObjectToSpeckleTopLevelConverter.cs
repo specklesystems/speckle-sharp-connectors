@@ -4,7 +4,7 @@ using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.TopLevel;
 
-[NameAndRankValue(nameof(PointObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(PointObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class PointObjectToSpeckleTopLevelConverter
   : RhinoObjectToSpeckleTopLevelConverter<PointObject, RG.Point, SOG.Point>
 {
