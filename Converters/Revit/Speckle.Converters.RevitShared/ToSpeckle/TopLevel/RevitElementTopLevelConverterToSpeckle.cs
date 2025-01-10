@@ -73,7 +73,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
 
     // get location if any
     Base? convertedLocation = null;
-    if (target.Location is DB.Location location) // location can be null
+    if (target.Location is DB.Location location and (DB.LocationCurve or DB.LocationPoint)) // location can be null
     {
       try
       {
