@@ -7,7 +7,7 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.TeklaShared.ToSpeckle.TopLevel;
 
-[NameAndRankValue(nameof(TSM.ModelObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(TSM.ModelObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
 {
   private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;

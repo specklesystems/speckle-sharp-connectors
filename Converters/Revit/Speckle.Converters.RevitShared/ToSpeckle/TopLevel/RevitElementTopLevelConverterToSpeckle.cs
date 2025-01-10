@@ -10,7 +10,7 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
-[NameAndRankValue(nameof(DB.Element), 0)]
+[NameAndRankValue(typeof(DB.Element), 0)]
 public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
 {
   private readonly DisplayValueExtractor _displayValueExtractor;
