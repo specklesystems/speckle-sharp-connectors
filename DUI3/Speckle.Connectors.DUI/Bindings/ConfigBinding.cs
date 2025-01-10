@@ -1,10 +1,32 @@
 using System.Runtime.Serialization;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Utils;
+using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
 using Speckle.Sdk.SQLite;
 
 namespace Speckle.Connectors.DUI.Bindings;
+
+[GenerateAutoInterface]
+public class ConfigStorage : IConfigStorage
+{
+   
+    private readonly ISqLiteJsonCacheManager _jsonCacheManager;
+    private readonly ISpeckleApplication _speckleApplication;
+    
+    public ConfigStorage(ISqLiteJsonCacheManagerFactory sqLiteJsonCacheManagerFactory, ISpeckleApplication speckleApplication)
+    {
+      _speckleApplication = speckleApplication;
+      _jsonCacheManager = sqLiteJsonCacheManagerFactory.CreateForUser("DUI3Config"); // POC: maybe inject? (if we ever want to use a different storage for configs later down the line)
+    }
+    
+    public string? GetConfig() => _jsonCacheManager.GetObject(_speckleApplication.HostApplication);
+    public void UpdateConfig(string config) => _jsonCacheManager.UpdateObject(_speckleApplication.HostApplication, config);
+    
+    
+    public string? GetAccounts() => _jsonCacheManager.GetObject("accounts");
+    public void UpdateAccounts(string config) => _jsonCacheManager.UpdateObject("accounts", config);
+}
 
 /// <summary>
 /// POC: Simple config binding, as it was driving Dim nuts he couldn't swap to a dark theme.
@@ -17,20 +39,18 @@ public class ConfigBinding : IBinding
 {
   public string Name => "configBinding";
   public IBrowserBridge Parent { get; }
-  private readonly ISqLiteJsonCacheManager _jsonCacheManager;
-  private readonly ISpeckleApplication _speckleApplication;
+  
+  private readonly IConfigStorage _configStorage;
   private readonly IJsonSerializer _serializer;
 
   public ConfigBinding(
     IJsonSerializer serializer,
-    ISpeckleApplication speckleApplication,
     IBrowserBridge bridge,
-    ISqLiteJsonCacheManagerFactory sqLiteJsonCacheManagerFactory
+    IConfigStorage configStorage
   )
   {
     Parent = bridge;
-    _jsonCacheManager = sqLiteJsonCacheManagerFactory.CreateForUser("DUI3Config"); // POC: maybe inject? (if we ever want to use a different storage for configs later down the line)
-    _speckleApplication = speckleApplication;
+    _configStorage = configStorage;
     _serializer = serializer;
   }
 
@@ -47,7 +67,7 @@ public class ConfigBinding : IBinding
 
   public ConnectorConfig GetConfig()
   {
-    var rawConfig = _jsonCacheManager.GetObject(_speckleApplication.HostApplication);
+    var rawConfig = _configStorage.GetConfig();
     if (rawConfig is null)
     {
       return SeedConfig();
@@ -79,18 +99,18 @@ public class ConfigBinding : IBinding
   public void UpdateConfig(ConnectorConfig config)
   {
     var str = _serializer.Serialize(config);
-    _jsonCacheManager.UpdateObject(_speckleApplication.HostApplication, str);
+    _configStorage.UpdateConfig( str);
   }
 
   public void SetUserSelectedAccountId(string userSelectedAccountId)
   {
     var str = _serializer.Serialize(new AccountsConfig() { UserSelectedAccountId = userSelectedAccountId });
-    _jsonCacheManager.UpdateObject("accounts", str);
+    _configStorage.UpdateAccounts(str);
   }
 
   public AccountsConfig? GetUserSelectedAccountId()
   {
-    var rawConfig = _jsonCacheManager.GetObject("accounts");
+    var rawConfig = _configStorage.GetAccounts();
     if (rawConfig is null)
     {
       return null;

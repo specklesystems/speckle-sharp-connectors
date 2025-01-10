@@ -1,16 +1,14 @@
-﻿using FluentAssertions;
+﻿using System.IO;
+using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Rhino;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.DUI.Testing;
 using Speckle.Connectors.Rhino.Filters;
 using Speckle.HostApps;
-using Speckle.Sdk.Api;
-using Speckle.Sdk.Models;
-using Speckle.Sdk.Serialisation.V2.Send;
-using Speckle.Sdk.Transports;
+using Speckle.Newtonsoft.Json.Linq;
+using Speckle.Sdk.SQLite;
 using Xunit;
 
 namespace Speckle.Connectors.Rhino;
@@ -66,45 +64,27 @@ public class SendTests(IServiceProvider serviceProvider)
       ModelId = "ModelId",
     });
 
-    var testOperations = (TestOperations)serviceProvider.GetRequiredService<IOperations>();
-    testOperations.WrappedOperations = new TestSender();
     
+    var testFactory = (TestSqLiteJsonCacheManagerFactory)serviceProvider.GetRequiredService<ISqLiteJsonCacheManagerFactory>();
+    var fileName = Path.GetTempFileName();
+    testFactory.Initialize(fileName);
     var send = serviceProvider.GetBinding<ISendBinding>();
 
     await send.Send(MODEL_CARD_ID);
-  }
-
-  private sealed class TestSender : IOperations
-  {
-    public  Task<Base> Receive2(Uri url, string streamId, string objectId, string? authorizationToken = null,
-      IProgress<ProgressArgs>? onProgressAction = null, CancellationToken cancellationToken = new CancellationToken()) =>
-      throw new NotImplementedException();
-
-    public  Task<Base> Receive(string objectId, ITransport? remoteTransport = null, ITransport? localTransport = null,
-      IProgress<ProgressArgs>? onProgressAction = null, CancellationToken cancellationToken = new CancellationToken()) =>
-      throw new NotImplementedException();
-
-    public Task<SerializeProcessResults> Send2(Uri url, string streamId, string? authorizationToken, Base value,
-      IProgress<ProgressArgs>? onProgressAction = null,
-      CancellationToken cancellationToken = new())
+    var sqLiteJsonCacheManager = testFactory.CreateFromStream(string.Empty);
+    var all = sqLiteJsonCacheManager.GetAllObjects();
+    var jObject = new JObject();
+    foreach (var item in all)
     {
-      return Task.FromResult(new SerializeProcessResults());
+      jObject[item.Id] = item.Json;
     }
+    Console.WriteLine(jObject.ToString());
+  //  Snapshot.Match(jObject);
 
-    public  Task<(string rootObjId, IReadOnlyDictionary<string, ObjectReference> convertedReferences)> Send(Base value, IServerTransport transport, bool useDefaultCache, IProgress<ProgressArgs>? onProgressAction = null,
-      CancellationToken cancellationToken = new CancellationToken()) =>
-      throw new NotImplementedException();
-
-    public  Task<(string rootObjId, IReadOnlyDictionary<string, ObjectReference> convertedReferences)> Send(Base value, ITransport transport, bool useDefaultCache, IProgress<ProgressArgs>? onProgressAction = null,
-      CancellationToken cancellationToken = new CancellationToken()) =>
-      throw new NotImplementedException();
-
-    public  Task<(string rootObjId, IReadOnlyDictionary<string, ObjectReference> convertedReferences)> Send(Base value, IReadOnlyCollection<ITransport> transports, IProgress<ProgressArgs>? onProgressAction = null,
-      CancellationToken cancellationToken = new CancellationToken()) =>
-      throw new NotImplementedException();
-
-    public string Serialize(Base value, CancellationToken cancellationToken = new CancellationToken()) => throw new NotImplementedException();
-
-    public  Task<Base> DeserializeAsync(string value, CancellationToken cancellationToken = new CancellationToken()) => throw new NotImplementedException();
+    if (File.Exists(fileName))
+    {
+      testFactory.Dispose();
+      File.Delete(fileName);
+    }
   }
 }
