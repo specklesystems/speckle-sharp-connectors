@@ -16,6 +16,9 @@ public static class SupportedCategoriesUtils
     return (
         category.CategoryType == CategoryType.Model
       // || category.CategoryType == CategoryType.AnalyticalModel
-      ) && category.IsVisibleInUI;
+      )
+      && category.BuiltInCategory != BuiltInCategory.OST_AreaSchemes
+      && category.BuiltInCategory != BuiltInCategory.OST_AreaSchemeLines
+      && category.IsVisibleInUI;
   }
 }
