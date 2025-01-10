@@ -88,7 +88,7 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
       .OfClass(typeof(View))
       .Cast<View>()
       .Where(v => !v.IsTemplate)
-      .Where(v => !v.IsModifiable || !v.IsAssemblyView)
+      .Where(v => !v.IsAssemblyView)
       .Where(v =>
         v.ViewType
           is ViewType.FloorPlan
