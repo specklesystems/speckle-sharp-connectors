@@ -214,6 +214,9 @@ EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Converters.ETABSShared", "Converters\CSi\Speckle.Converters.ETABSShared\Speckle.Converters.ETABSShared.shproj", "{36377858-D696-4567-AB05-637F4EC841F5}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Navisworks", "Navisworks", "{7B95C512-C1CD-4110-A9A9-CECCD9630353}"
+	ProjectSection(SolutionItems) = preProject
+		Connectors\Navisworks\Directory.Build.targets = Connectors\Navisworks\Directory.Build.targets
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shared", "Shared", "{3C54FE49-F14E-43A2-B1DF-85D5C7638117}"
 EndProject
