@@ -12,7 +12,7 @@ namespace Speckle.Converters.Civil3dShared.ToSpeckle.TopLevel;
 /// This means cogo points will *not* be picked up by the top level civil entity converter.
 /// POC: implementing a top level autocad entity converter can probably replace this converter.
 /// </summary>
-[NameAndRankValue(nameof(CDB.CogoPoint), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(CDB.CogoPoint), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class CogoPointToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
 {
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
