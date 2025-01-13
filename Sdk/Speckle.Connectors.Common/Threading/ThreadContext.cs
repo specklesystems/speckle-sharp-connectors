@@ -14,7 +14,7 @@ public abstract class ThreadContext : IThreadContext
     {
       if (IsMainThread)
       {
-        action();
+        RunMain(action);
       }
       else
       {
@@ -37,7 +37,7 @@ public abstract class ThreadContext : IThreadContext
       }
       else
       {
-        action();
+        RunMain(action);
       }
     }
   }
@@ -48,7 +48,7 @@ public abstract class ThreadContext : IThreadContext
     {
       if (IsMainThread)
       {
-        return Task.FromResult(action());
+        return RunMainAsync(action);
       }
 
       return WorkerToMain(action);
@@ -58,7 +58,7 @@ public abstract class ThreadContext : IThreadContext
       return MainToWorker(action);
     }
 
-    return Task.FromResult(action());
+    return RunMainAsync(action);
   }
 
   public async Task RunOnThreadAsync(Func<Task> action, bool useMain)
@@ -67,7 +67,7 @@ public abstract class ThreadContext : IThreadContext
     {
       if (IsMainThread)
       {
-        await action();
+        await RunMainAsync(action);
       }
       else
       {
@@ -90,7 +90,7 @@ public abstract class ThreadContext : IThreadContext
       }
       else
       {
-        await action();
+        await RunMainAsync(action);
       }
     }
   }
@@ -101,7 +101,7 @@ public abstract class ThreadContext : IThreadContext
     {
       if (IsMainThread)
       {
-        return action();
+        return RunMainAsync(action);
       }
 
       return WorkerToMainAsync(action);
@@ -110,7 +110,7 @@ public abstract class ThreadContext : IThreadContext
     {
       return MainToWorkerAsync(action);
     }
-    return action();
+    return RunMainAsync(action);
   }
 
   protected abstract Task<T> WorkerToMainAsync<T>(Func<Task<T>> action);
@@ -119,4 +119,13 @@ public abstract class ThreadContext : IThreadContext
   protected abstract Task<T> WorkerToMain<T>(Func<T> action);
 
   protected abstract Task<T> MainToWorker<T>(Func<T> action);
+  
+  protected virtual void RunMain(Action action) => 
+    action();
+  protected virtual Task<T> RunMainAsync<T>(Func<T> action) => 
+    Task.FromResult(action());
+  protected virtual Task RunMainAsync(Func<Task> action) => 
+    Task.FromResult(action());
+  protected virtual Task<T> RunMainAsync<T>(Func<Task<T>> action) => 
+    action();
 }
