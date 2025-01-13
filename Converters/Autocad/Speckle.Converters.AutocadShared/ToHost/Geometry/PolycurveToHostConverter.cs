@@ -9,7 +9,7 @@ namespace Speckle.Converters.AutocadShared.ToHost.Geometry;
 /// If polycurve segments are planar and only of type <see cref="SOG.Line"/> and <see cref="SOG.Arc"/>, it can be represented as Polyline in Autocad.
 /// Otherwise we convert it as spline (list of ADB.Entity) that switch cases according to each segment type.
 /// </summary>
-[NameAndRankValue(nameof(SOG.Polycurve), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(SOG.Polycurve), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class PolycurveToHostConverter : IToHostTopLevelConverter
 {
   private readonly ITypedConverter<SOG.Polycurve, ADB.Polyline> _polylineConverter;

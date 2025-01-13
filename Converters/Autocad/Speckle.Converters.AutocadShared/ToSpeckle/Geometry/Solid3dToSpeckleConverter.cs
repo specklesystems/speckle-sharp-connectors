@@ -4,7 +4,7 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.Geometry;
 
-[NameAndRankValue(nameof(ADB.Solid3d), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(ADB.Solid3d), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class Solid3dToSpeckleConverter : IToSpeckleTopLevelConverter
 {
   private readonly ITypedConverter<ADB.Solid3d, SOG.Mesh> _solidConverter;

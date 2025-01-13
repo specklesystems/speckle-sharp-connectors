@@ -5,7 +5,7 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.TopLevel;
 
-[NameAndRankValue(nameof(SOG.Polycurve), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(SOG.Polycurve), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class PolycurveToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG.Polycurve, ACG.Polyline>
 {
   private readonly IRootToHostConverter _converter;
