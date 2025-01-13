@@ -10,7 +10,7 @@ namespace Speckle.Converter.Navisworks.ToSpeckle;
 /// <summary>
 /// Converts Navisworks ModelItem objects to Speckle Base objects.
 /// </summary>
-[NameAndRankValue(typeof(NAV.ModelItem), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(nameof(NAV.ModelItem), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
 {
   private readonly StandardPropertyHandler _standardHandler;

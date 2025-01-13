@@ -189,4 +189,11 @@ public class NavisworksRootObjectBuilder(
       return new SendConversionResult(Status.ERROR, applicationId, "ModelItem", null, ex);
     }
   }
+
+  public RootObjectBuilderResult Build(
+    IReadOnlyList<NAV.ModelItem> objects,
+    SendInfo sendInfo,
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken
+  ) => throw new NotImplementedException();
 }
