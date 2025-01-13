@@ -1,0 +1,325 @@
+{
+  "version": 2,
+  "dependencies": {
+    "net8.0": {
+      "JetBrains.Profiler.Api": {
+        "type": "Direct",
+        "requested": "[1.4.8, )",
+        "resolved": "1.4.8",
+        "contentHash": "hH0Hej/hjwTn14yhhzEcGaB3HJ40C/CwW2E8RrhsqCcBg5bs50LQFOx2a5dFXjWDMzspAso5xADtQmBI6lXKTw==",
+        "dependencies": {
+          "JetBrains.HabitatDetector": "1.4.3"
+        }
+      },
+      "JetBrains.Profiler.SelfApi": {
+        "type": "Direct",
+        "requested": "[2.5.12, )",
+        "resolved": "2.5.12",
+        "contentHash": "m0MGIX6Eut9Z5hzqF4gNVn8oK2jeYDe7kihZTtD2/Iy9P7zE+zemO9VisiMD/1I1V8Es7lHOI49HNq9VGut96A==",
+        "dependencies": {
+          "JetBrains.HabitatDetector": "1.4.3",
+          "JetBrains.Profiler.Api": "1.4.8"
+        }
+      },
+      "Microsoft.SourceLink.GitHub": {
+        "type": "Direct",
+        "requested": "[8.0.0, )",
+        "resolved": "8.0.0",
+        "contentHash": "G5q7OqtwIyGTkeIOAc3u2ZuV/kicQaec5EaRnc0pIeSnh9LUjj+PYQrJYBURvDt7twGl2PKA7nSN0kz1Zw5bnQ==",
+        "dependencies": {
+          "Microsoft.Build.Tasks.Git": "8.0.0",
+          "Microsoft.SourceLink.Common": "8.0.0"
+        }
+      },
+      "Speckle.InterfaceGenerator": {
+        "type": "Direct",
+        "requested": "[0.9.6, )",
+        "resolved": "0.9.6",
+        "contentHash": "HKH7tYrYYlCK1ct483hgxERAdVdMtl7gUKW9ijWXxA1UsYR4Z+TrRHYmzZ9qmpu1NnTycSrp005NYM78GDKV1w=="
+      },
+      "GraphQL.Client": {
+        "type": "Transitive",
+        "resolved": "6.0.0",
+        "contentHash": "8yPNBbuVBpTptivyAlak4GZvbwbUcjeQTL4vN1HKHRuOykZ4r7l5fcLS6vpyPyLn0x8FsL31xbOIKyxbmR9rbA==",
+        "dependencies": {
+          "GraphQL.Client.Abstractions": "6.0.0",
+          "GraphQL.Client.Abstractions.Websocket": "6.0.0",
+          "System.Reactive": "5.0.0"
+        }
+      },
+      "GraphQL.Client.Abstractions": {
+        "type": "Transitive",
+        "resolved": "6.0.0",
+        "contentHash": "h7uzWFORHZ+CCjwr/ThAyXMr0DPpzEANDa4Uo54wqCQ+j7qUKwqYTgOrb1W40sqbvNaZm9v/X7It31SUw0maHA==",
+        "dependencies": {
+          "GraphQL.Primitives": "6.0.0"
+        }
+      },
+      "GraphQL.Client.Abstractions.Websocket": {
+        "type": "Transitive",
+        "resolved": "6.0.0",
+        "contentHash": "Nr9bPf8gIOvLuXpqEpqr9z9jslYFJOvd0feHth3/kPqeR3uMbjF5pjiwh4jxyMcxHdr8Pb6QiXkV3hsSyt0v7A==",
+        "dependencies": {
+          "GraphQL.Client.Abstractions": "6.0.0"
+        }
+      },
+      "GraphQL.Primitives": {
+        "type": "Transitive",
+        "resolved": "6.0.0",
+        "contentHash": "yg72rrYDapfsIUrul7aF6wwNnTJBOFvuA9VdDTQpPa8AlAriHbufeXYLBcodKjfUdkCnaiggX1U/nEP08Zb5GA=="
+      },
+      "JetBrains.FormatRipper": {
+        "type": "Transitive",
+        "resolved": "2.2.2",
+        "contentHash": "UvbPJM1ryALWSrnMX428ZxLujOrSAxdCgSwr1/7A0mFFxM8Rxku0OjN+zZENmZQ6Hirm7StkC176qy0m30UgjQ=="
+      },
+      "JetBrains.HabitatDetector": {
+        "type": "Transitive",
+        "resolved": "1.4.3",
+        "contentHash": "4VC4sP/T+16MwsfUjwbKVYwKEOEu9cdQxLvN9uUiIm17m2y1SlV4Aj29HKsFbFyCbTePOGQMw3ccoPuym6d+EQ==",
+        "dependencies": {
+          "JetBrains.FormatRipper": "2.2.2"
+        }
+      },
+      "Microsoft.Build.Tasks.Git": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "bZKfSIKJRXLTuSzLudMFte/8CempWjVamNUR5eHJizsy+iuOuO/k2gnh7W0dHJmYY0tBf+gUErfluCv5mySAOQ=="
+      },
+      "Microsoft.CSharp": {
+        "type": "Transitive",
+        "resolved": "4.7.0",
+        "contentHash": "pTj+D3uJWyN3My70i2Hqo+OXixq3Os2D1nJ2x92FFo6sk8fYS1m1WLNTs0Dc1uPaViH0YvEEwvzddQ7y4rhXmA=="
+      },
+      "Microsoft.Data.Sqlite": {
+        "type": "Transitive",
+        "resolved": "7.0.5",
+        "contentHash": "KGxbPeWsQMnmQy43DSBxAFtHz3l2JX8EWBSGUCvT3CuZ8KsuzbkqMIJMDOxWtG8eZSoCDI04aiVQjWuuV8HmSw==",
+        "dependencies": {
+          "Microsoft.Data.Sqlite.Core": "7.0.5",
+          "SQLitePCLRaw.bundle_e_sqlite3": "2.1.4"
+        }
+      },
+      "Microsoft.Data.Sqlite.Core": {
+        "type": "Transitive",
+        "resolved": "7.0.5",
+        "contentHash": "FTerRmQPqHrCrnoUzhBu+E+1DNGwyrAMLqHkAqOOOu5pGfyMOj8qQUBxI/gDtWtG11p49UxSfWmBzRNlwZqfUg==",
+        "dependencies": {
+          "SQLitePCLRaw.core": "2.1.4"
+        }
+      },
+      "Microsoft.Extensions.Configuration": {
+        "type": "Transitive",
+        "resolved": "2.2.0",
+        "contentHash": "nOP8R1mVb/6mZtm2qgAJXn/LFm/2kMjHDAg/QJLFG6CuWYJtaD3p1BwQhufBVvRzL9ceJ/xF0SQ0qsI2GkDQAA==",
+        "dependencies": {
+          "Microsoft.Extensions.Configuration.Abstractions": "2.2.0"
+        }
+      },
+      "Microsoft.Extensions.Configuration.Abstractions": {
+        "type": "Transitive",
+        "resolved": "2.2.0",
+        "contentHash": "65MrmXCziWaQFrI0UHkQbesrX5wTwf9XPjY5yFm/VkgJKFJ5gqvXRoXjIZcf2wLi5ZlwGz/oMYfyURVCWbM5iw==",
+        "dependencies": {
+          "Microsoft.Extensions.Primitives": "2.2.0"
+        }
+      },
+      "Microsoft.Extensions.Configuration.Binder": {
+        "type": "Transitive",
+        "resolved": "2.2.0",
+        "contentHash": "vJ9xvOZCnUAIHcGC3SU35r3HKmHTVIeHzo6u/qzlHAqD8m6xv92MLin4oJntTvkpKxVX3vI1GFFkIQtU3AdlsQ==",
+        "dependencies": {
+          "Microsoft.Extensions.Configuration": "2.2.0"
+        }
+      },
+      "Microsoft.Extensions.DependencyInjection.Abstractions": {
+        "type": "Transitive",
+        "resolved": "8.0.2",
+        "contentHash": "3iE7UF7MQkCv1cxzCahz+Y/guQbTqieyxyaWKhrRO91itI9cOKO76OHeQDahqG4MmW5umr3CcCvGmK92lWNlbg=="
+      },
+      "Microsoft.Extensions.Logging": {
+        "type": "Transitive",
+        "resolved": "2.2.0",
+        "contentHash": "Nxqhadc9FCmFHzU+fz3oc8sFlE6IadViYg8dfUdGzJZ2JUxnCsRghBhhOWdM4B2zSZqEc+0BjliBh/oNdRZuig==",
+        "dependencies": {
+          "Microsoft.Extensions.Configuration.Binder": "2.2.0",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "2.2.0",
+          "Microsoft.Extensions.Logging.Abstractions": "2.2.0",
+          "Microsoft.Extensions.Options": "2.2.0"
+        }
+      },
+      "Microsoft.Extensions.Logging.Abstractions": {
+        "type": "Transitive",
+        "resolved": "2.2.0",
+        "contentHash": "B2WqEox8o+4KUOpL7rZPyh6qYjik8tHi2tN8Z9jZkHzED8ElYgZa/h6K+xliB435SqUcWT290Fr2aa8BtZjn8A=="
+      },
+      "Microsoft.Extensions.Options": {
+        "type": "Transitive",
+        "resolved": "2.2.0",
+        "contentHash": "UpZLNLBpIZ0GTebShui7xXYh6DmBHjWM8NxGxZbdQh/bPZ5e6YswqI+bru6BnEL5eWiOdodsXtEz3FROcgi/qg==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "2.2.0",
+          "Microsoft.Extensions.Primitives": "2.2.0",
+          "System.ComponentModel.Annotations": "4.5.0"
+        }
+      },
+      "Microsoft.Extensions.Primitives": {
+        "type": "Transitive",
+        "resolved": "2.2.0",
+        "contentHash": "azyQtqbm4fSaDzZHD/J+V6oWMFaf2tWP4WEGIYePLCMw3+b2RQdj9ybgbQyjCshcitQKQ4lEDOZjmSlTTrHxUg==",
+        "dependencies": {
+          "System.Memory": "4.5.1",
+          "System.Runtime.CompilerServices.Unsafe": "4.5.1"
+        }
+      },
+      "Microsoft.SourceLink.Common": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
+      },
+      "SQLitePCLRaw.bundle_e_sqlite3": {
+        "type": "Transitive",
+        "resolved": "2.1.4",
+        "contentHash": "EWI1olKDjFEBMJu0+3wuxwziIAdWDVMYLhuZ3Qs84rrz+DHwD00RzWPZCa+bLnHCf3oJwuFZIRsHT5p236QXww==",
+        "dependencies": {
+          "SQLitePCLRaw.lib.e_sqlite3": "2.1.4",
+          "SQLitePCLRaw.provider.e_sqlite3": "2.1.4"
+        }
+      },
+      "SQLitePCLRaw.core": {
+        "type": "Transitive",
+        "resolved": "2.1.4",
+        "contentHash": "inBjvSHo9UDKneGNzfUfDjK08JzlcIhn1+SP5Y3m6cgXpCxXKCJDy6Mka7LpgSV+UZmKSnC8rTwB0SQ0xKu5pA==",
+        "dependencies": {
+          "System.Memory": "4.5.3"
+        }
+      },
+      "SQLitePCLRaw.lib.e_sqlite3": {
+        "type": "Transitive",
+        "resolved": "2.1.4",
+        "contentHash": "2C9Q9eX7CPLveJA0rIhf9RXAvu+7nWZu1A2MdG6SD/NOu26TakGgL1nsbc0JAspGijFOo3HoN79xrx8a368fBg=="
+      },
+      "SQLitePCLRaw.provider.e_sqlite3": {
+        "type": "Transitive",
+        "resolved": "2.1.4",
+        "contentHash": "CSlb5dUp1FMIkez9Iv5EXzpeq7rHryVNqwJMWnpq87j9zWZexaEMdisDktMsnnrzKM6ahNrsTkjqNodTBPBxtQ==",
+        "dependencies": {
+          "SQLitePCLRaw.core": "2.1.4"
+        }
+      },
+      "System.ComponentModel.Annotations": {
+        "type": "Transitive",
+        "resolved": "4.5.0",
+        "contentHash": "UxYQ3FGUOtzJ7LfSdnYSFd7+oEv6M8NgUatatIN2HxNtDdlcvFAf+VIq4Of9cDMJEJC0aSRv/x898RYhB4Yppg=="
+      },
+      "System.Memory": {
+        "type": "Transitive",
+        "resolved": "4.5.5",
+        "contentHash": "XIWiDvKPXaTveaB7HVganDlOCRoj03l+jrwNvcge/t8vhGYKvqV+dMv6G4SAX2NoNmN0wZfVPTAlFwZcZvVOUw=="
+      },
+      "System.Reactive": {
+        "type": "Transitive",
+        "resolved": "5.0.0",
+        "contentHash": "erBZjkQHWL9jpasCE/0qKAryzVBJFxGHVBAvgRN1bzM0q2s1S4oYREEEL0Vb+1kA/6BKb5FjUZMp5VXmy+gzkQ=="
+      },
+      "System.Runtime.CompilerServices.Unsafe": {
+        "type": "Transitive",
+        "resolved": "4.5.1",
+        "contentHash": "Zh8t8oqolRaFa9vmOZfdQm/qKejdqz0J9kr7o2Fu0vPeoH3BL1EOXipKWwkWtLT1JPzjByrF19fGuFlNbmPpiw=="
+      },
+      "speckle.objects": {
+        "type": "Project",
+        "dependencies": {
+          "Speckle.Sdk": "[1.0.0, )"
+        }
+      },
+      "speckle.sdk": {
+        "type": "Project",
+        "dependencies": {
+          "GraphQL.Client": "[6.0.0, )",
+          "Microsoft.CSharp": "[4.7.0, )",
+          "Microsoft.Data.Sqlite": "[7.0.5, )",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "[2.2.0, )",
+          "Microsoft.Extensions.Logging": "[2.2.0, )",
+          "Speckle.DoubleNumerics": "[4.0.1, )",
+          "Speckle.Newtonsoft.Json": "[13.0.2, )",
+          "Speckle.Sdk.Dependencies": "[1.0.0, )"
+        }
+      },
+      "speckle.sdk.dependencies": {
+        "type": "Project"
+      },
+      "speckle.webifc.importer": {
+        "type": "Project",
+        "dependencies": {
+          "Ara3D.Buffers": "[1.4.5, )",
+          "Ara3D.Logging": "[1.4.5, )",
+          "Ara3D.Utils": "[1.4.5, )",
+          "Microsoft.Extensions.DependencyInjection": "[8.0.1, )",
+          "Speckle.Objects": "[1.0.0, )",
+          "Speckle.Sdk": "[1.0.0, )",
+          "Speckle.Sdk.Dependencies": "[1.0.0, )",
+          "Speckle.WebIfc": "[0.0.64-speckle1, )",
+          "System.CommandLine": "[2.0.0-beta4.22272.1, )"
+        }
+      },
+      "Ara3D.Buffers": {
+        "type": "CentralTransitive",
+        "requested": "[1.4.5, )",
+        "resolved": "1.4.5",
+        "contentHash": "SKcQqgtXukyHTlTKFPCaUW4spSkue3XfBU/GmoA7KhH6H995v6TbJxtqjs0EfSgnXEkajL8U7X1NqktScRozXw==",
+        "dependencies": {
+          "System.Memory": "4.5.5"
+        }
+      },
+      "Ara3D.Logging": {
+        "type": "CentralTransitive",
+        "requested": "[1.4.5, )",
+        "resolved": "1.4.5",
+        "contentHash": "7HPCe5Dq21JoOBF1iclk9H37XFCoB2ZzCPqTMNgdg4PWFvuRsofNbiuMdiE/HKgMHCVhy1C5opB2KwDKcO7Axw==",
+        "dependencies": {
+          "Ara3D.Utils": "1.4.5"
+        }
+      },
+      "Ara3D.Utils": {
+        "type": "CentralTransitive",
+        "requested": "[1.4.5, )",
+        "resolved": "1.4.5",
+        "contentHash": "yba/E7PpbWP0+RDp+KbKw/vBXnXBSIheScdpVKuDnr8ytRg8pZ2Jd6nwKES+G0FcVEB9PeOVmEW7SGrFvAwRCg=="
+      },
+      "Microsoft.Extensions.DependencyInjection": {
+        "type": "CentralTransitive",
+        "requested": "[8.0.1, )",
+        "resolved": "8.0.1",
+        "contentHash": "BmANAnR5Xd4Oqw7yQ75xOAYODybZQRzdeNucg7kS5wWKd2PNnMdYtJ2Vciy0QLylRmv42DGl5+AFL9izA6F1Rw==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.2"
+        }
+      },
+      "Speckle.DoubleNumerics": {
+        "type": "CentralTransitive",
+        "requested": "[4.0.1, )",
+        "resolved": "4.0.1",
+        "contentHash": "MzEQ1Im0zTja+tEsdRIk/WlPiKqb22NmTOJcR1ZKm/mz46pezyyID3/wRz6vJUELMpSLnG7LhsxBL+nxbr7V0w=="
+      },
+      "Speckle.Newtonsoft.Json": {
+        "type": "CentralTransitive",
+        "requested": "[13.0.2, )",
+        "resolved": "13.0.2",
+        "contentHash": "g1BejUZwax5PRfL6xHgLEK23sqHWOgOj9hE7RvfRRlN00AGt8GnPYt8HedSK7UB3HiRW8zCA9Pn0iiYxCK24BA=="
+      },
+      "Speckle.WebIfc": {
+        "type": "CentralTransitive",
+        "requested": "[0.0.64-speckle1, )",
+        "resolved": "0.0.64-speckle1",
+        "contentHash": "oJgPu/LCypQLelDrtV6+dk0Qm+3VSEYWXCjeXHs2/ekOZEKwpFKhcKVOd1uMjtVLh+n3CZ/6tMgO1nZq9FpwMw=="
+      },
+      "System.CommandLine": {
+        "type": "CentralTransitive",
+        "requested": "[2.0.0-beta4.22272.1, )",
+        "resolved": "2.0.0-beta4.22272.1",
+        "contentHash": "1uqED/q2H0kKoLJ4+hI2iPSBSEdTuhfCYADeJrAqERmiGQ2NNacYKRNEQ+gFbU4glgVyK8rxI+ZOe1onEtr/Pg=="
+      }
+    }
+  }
+}

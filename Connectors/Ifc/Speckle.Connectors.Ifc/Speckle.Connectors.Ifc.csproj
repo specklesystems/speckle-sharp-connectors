@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+ <PropertyGroup Label="Nuget Package Properties">
+    <IsPackable>true</IsPackable>
+    <IncludeSymbols>true</IncludeSymbols>
+    <version>0.0.6</version>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="Ara3D.Buffers"  />
+    <PackageReference Include="Ara3D.Logging"  />
+    <PackageReference Include="Ara3D.Utils" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Speckle.Objects" />
+    <PackageReference Include="Speckle.Sdk" />
+    <PackageReference Include="Speckle.WebIfc" />
+    <PackageReference Include="System.CommandLine" />
+  </ItemGroup>
+</Project>
