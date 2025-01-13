@@ -1,0 +1,21 @@
+{
+  "solution": {
+    "path": "..\\..\\Speckle.Connectors.sln",
+    "projects": [
+      "Connectors\\Navisworks\\Speckle.Connectors.Navisworks2020\\Speckle.Connectors.Navisworks2020.csproj",
+      "Connectors\\Navisworks\\Speckle.Connectors.Navisworks2021\\Speckle.Connectors.Navisworks2021.csproj",
+      "Connectors\\Navisworks\\Speckle.Connectors.Navisworks2022\\Speckle.Connectors.Navisworks2022.csproj",
+      "Connectors\\Navisworks\\Speckle.Connectors.Navisworks2023\\Speckle.Connectors.Navisworks2023.csproj",
+      "Connectors\\Navisworks\\Speckle.Connectors.Navisworks2024\\Speckle.Connectors.Navisworks2024.csproj",
+      "Connectors\\Navisworks\\Speckle.Connectors.Navisworks2025\\Speckle.Connectors.Navisworks2025.csproj",
+      "Connectors\\Navisworks\\Speckle.Connectors.NavisworksShared\\Speckle.Connectors.NavisworksShared.shproj",
+      "Converters\\Navisworks\\Speckle.Converters.Navisworks2020\\Speckle.Converters.Navisworks2020.csproj",
+      "Converters\\Navisworks\\Speckle.Converters.Navisworks2021\\Speckle.Converters.Navisworks2021.csproj",
+      "Converters\\Navisworks\\Speckle.Converters.Navisworks2022\\Speckle.Converters.Navisworks2022.csproj",
+      "Converters\\Navisworks\\Speckle.Converters.Navisworks2023\\Speckle.Converters.Navisworks2023.csproj",
+      "Converters\\Navisworks\\Speckle.Converters.Navisworks2024\\Speckle.Converters.Navisworks2024.csproj",
+      "Converters\\Navisworks\\Speckle.Converters.Navisworks2025\\Speckle.Converters.Navisworks2025.csproj",
+      "Converters\\Navisworks\\Speckle.Converters.NavisworksShared\\Speckle.Converters.NavisworksShared.shproj"
+    ]
+  }
+}
