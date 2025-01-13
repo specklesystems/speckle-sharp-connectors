@@ -2,6 +2,7 @@
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Utils;
+using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.RevitShared.Helpers;
 
 namespace Speckle.Connectors.RevitShared.Operations.Send.Filters;
@@ -69,7 +70,10 @@ public class RevitCategoriesFilter : DiscriminatedObject, ISendFilter, IRevitSen
 
     foreach (Category category in _doc.Settings.Categories)
     {
-      categories.Add(new CategoryData(category.Name, category.Id.ToString()));
+      if (SupportedCategoriesUtils.IsSupportedCategory(category))
+      {
+        categories.Add(new CategoryData(category.Name, category.Id.ToString()));
+      }
     }
 
     AvailableCategories = categories;
