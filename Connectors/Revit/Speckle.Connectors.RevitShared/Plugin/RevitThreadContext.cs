@@ -14,9 +14,9 @@ public class RevitThreadContext : ThreadContext
 
   protected override Task<T> WorkerToMain<T>(Func<T> action) => RevitTask.RunAsync(action);
 
-  protected override Task RunMainAsync(Func<Task> action) =>  RevitTask.RunAsync(action);
+  protected override Task RunMainAsync(Func<Task> action) => RevitTask.RunAsync(action);
 
-  protected override Task<T> RunMainAsync<T>(Func<T> action) =>  RevitTask.RunAsync(action);
+  protected override Task<T> RunMainAsync<T>(Func<T> action) => RevitTask.RunAsync(action);
 
   protected override Task<T> RunMainAsync<T>(Func<Task<T>> action) => RevitTask.RunAsync(action);
 }

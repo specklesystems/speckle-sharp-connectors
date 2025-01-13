@@ -119,13 +119,12 @@ public abstract class ThreadContext : IThreadContext
   protected abstract Task<T> WorkerToMain<T>(Func<T> action);
 
   protected abstract Task<T> MainToWorker<T>(Func<T> action);
-  
-  protected virtual void RunMain(Action action) => 
-    action();
-  protected virtual Task<T> RunMainAsync<T>(Func<T> action) => 
-    Task.FromResult(action());
-  protected virtual Task RunMainAsync(Func<Task> action) => 
-    Task.FromResult(action());
-  protected virtual Task<T> RunMainAsync<T>(Func<Task<T>> action) => 
-    action();
+
+  protected virtual void RunMain(Action action) => action();
+
+  protected virtual Task<T> RunMainAsync<T>(Func<T> action) => Task.FromResult(action());
+
+  protected virtual Task RunMainAsync(Func<Task> action) => Task.FromResult(action());
+
+  protected virtual Task<T> RunMainAsync<T>(Func<Task<T>> action) => action();
 }
