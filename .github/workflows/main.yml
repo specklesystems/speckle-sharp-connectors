@@ -87,7 +87,7 @@ jobs:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
 
-      - name: ⚒️ Run Build on Linux
+      - name: ⚒️ Run Build and Pack on Linux
         run: ./build.sh build-linux
 
       - name: ⚒️ Run tests
@@ -98,3 +98,6 @@ jobs:
         with:
           file: Converters/**/coverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Push to nuget.org
+        run: dotnet nuget push output/*.nupkg --source "https://api.nuget.org/v3/index.json" --api-key ${{secrets.CONNECTORS_NUGET_TOKEN }} --skip-duplicate
