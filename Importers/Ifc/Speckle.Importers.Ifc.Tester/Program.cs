@@ -12,6 +12,7 @@ using Speckle.Sdk.Serialisation.V2.Send;
 using Speckle.Sdk.SQLite;
 
 var serviceProvider = Import.GetServiceProvider();
+
 //DotMemory.Init();
 var filePath = new FilePath(
   //"C:\\Users\\adam\\Git\\speckle-server\\packages\\fileimport-service\\ifc-dotnet\\ifcs\\20210221PRIMARK.ifc"
