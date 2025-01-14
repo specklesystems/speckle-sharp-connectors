@@ -1,4 +1,4 @@
-using Speckle.Connectors.Ifc.Ifc;
+using Speckle.Connectors.Ifc.Types;
 using Speckle.InterfaceGenerator;
 using Speckle.Objects.Geometry;
 

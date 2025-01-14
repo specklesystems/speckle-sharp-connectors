@@ -1,6 +1,6 @@
 using System.Reflection;
 using Speckle.Connectors.Ifc.Ara3D.IfcParser;
-using Speckle.Connectors.Ifc.Ifc;
+using Speckle.Connectors.Ifc.Types;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Models;
 

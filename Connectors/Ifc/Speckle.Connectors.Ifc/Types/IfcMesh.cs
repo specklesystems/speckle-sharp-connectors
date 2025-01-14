@@ -1,4 +1,4 @@
-namespace Speckle.Connectors.Ifc.Ifc;
+namespace Speckle.Connectors.Ifc.Types;
 
 public class IfcMesh(IntPtr mesh)
 {

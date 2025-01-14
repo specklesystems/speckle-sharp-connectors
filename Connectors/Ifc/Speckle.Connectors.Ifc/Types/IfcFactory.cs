@@ -1,6 +1,6 @@
 using Speckle.InterfaceGenerator;
 
-namespace Speckle.Connectors.Ifc.Ifc;
+namespace Speckle.Connectors.Ifc.Types;
 
 [GenerateAutoInterface]
 public class IfcFactory : IIfcFactory

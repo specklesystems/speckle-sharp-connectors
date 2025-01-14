@@ -4,7 +4,7 @@ using Ara3D.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Ifc.Ara3D.IfcParser;
 using Speckle.Connectors.Ifc.Converters;
-using Speckle.Connectors.Ifc.Ifc;
+using Speckle.Connectors.Ifc.Types;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
