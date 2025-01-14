@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Speckle.Connector.Navisworks.Services;
+using Speckle.Converter.Navisworks.Helpers;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 using Speckle.Objects.Other;
@@ -92,7 +93,8 @@ public class NavisworksMaterialUnpacker(
           0
         );
 
-        var materialName = $"NavisworksMaterial_{Math.Abs(NavisworksColorToColor(renderColor).ToArgb())}";
+        var materialName =
+          $"NavisworksMaterial_{Math.Abs(ColorConverter.NavisworksColorToColor(renderColor).ToArgb())}";
 
         // Check Item category for material name
         var itemCategory = navisworksObject.PropertyCategories.FindCategoryByDisplayName("Item");
@@ -152,7 +154,7 @@ public class NavisworksMaterialUnpacker(
     int applicationId
   )
   {
-    var color = NavisworksColorToColor(navisworksColor);
+    var color = ColorConverter.NavisworksColorToColor(navisworksColor);
 
     var speckleRenderMaterial = new RenderMaterial()
     {
@@ -167,12 +169,4 @@ public class NavisworksMaterialUnpacker(
 
     return speckleRenderMaterial;
   }
-
-  private static System.Drawing.Color NavisworksColorToColor(NAV.Color color) =>
-    System.Drawing.Color.FromArgb(
-      alpha: 255,
-      red: Convert.ToInt32(color.R * 255),
-      green: Convert.ToInt32(color.G * 255),
-      blue: Convert.ToInt32(color.B * 255)
-    );
 }
