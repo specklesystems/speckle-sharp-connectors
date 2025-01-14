@@ -271,6 +271,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Naviswor
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Navisworks2025", "Connectors\Navisworks\Speckle.Connectors.Navisworks2025\Speckle.Connectors.Navisworks2025.csproj", "{7791806E-7531-41D8-9C9D-4A1249D9F99C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.NavsiworksShared.Tests", "Speckle.Connectors.NavsiworksShared.Tests\Speckle.Connectors.NavsiworksShared.Tests.csproj", "{89B10525-044D-48C6-8C2D-9893BCBC77C4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.NavisworksShared.Tests", "Speckle.Converters.NavisworksShared.Tests\Speckle.Converters.NavisworksShared.Tests.csproj", "{961AB48F-5C13-4913-8780-D7F20A6D8DC6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -662,6 +666,18 @@ Global
 		{7791806E-7531-41D8-9C9D-4A1249D9F99C}.Local|Any CPU.Build.0 = Debug|Any CPU
 		{7791806E-7531-41D8-9C9D-4A1249D9F99C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7791806E-7531-41D8-9C9D-4A1249D9F99C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{89B10525-044D-48C6-8C2D-9893BCBC77C4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{89B10525-044D-48C6-8C2D-9893BCBC77C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{89B10525-044D-48C6-8C2D-9893BCBC77C4}.Local|Any CPU.ActiveCfg = Debug|Any CPU
+		{89B10525-044D-48C6-8C2D-9893BCBC77C4}.Local|Any CPU.Build.0 = Debug|Any CPU
+		{89B10525-044D-48C6-8C2D-9893BCBC77C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{89B10525-044D-48C6-8C2D-9893BCBC77C4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{961AB48F-5C13-4913-8780-D7F20A6D8DC6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{961AB48F-5C13-4913-8780-D7F20A6D8DC6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{961AB48F-5C13-4913-8780-D7F20A6D8DC6}.Local|Any CPU.ActiveCfg = Debug|Any CPU
+		{961AB48F-5C13-4913-8780-D7F20A6D8DC6}.Local|Any CPU.Build.0 = Debug|Any CPU
+		{961AB48F-5C13-4913-8780-D7F20A6D8DC6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{961AB48F-5C13-4913-8780-D7F20A6D8DC6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -782,6 +798,8 @@ Global
 		{04FC86A3-2E25-41A1-98C5-10898616CD78} = {19F15419-F493-4D53-83EA-F90869D97D6E}
 		{FD44E1F0-D20A-49B6-ADC9-482D911A74FB} = {91DCAFB0-283B-4B07-9F6F-7335DECEEB08}
 		{7791806E-7531-41D8-9C9D-4A1249D9F99C} = {A88CFA1F-B2D5-4DBE-8496-68D0AFA46F2D}
+		{89B10525-044D-48C6-8C2D-9893BCBC77C4} = {3C54FE49-F14E-43A2-B1DF-85D5C7638117}
+		{961AB48F-5C13-4913-8780-D7F20A6D8DC6} = {3C54FE49-F14E-43A2-B1DF-85D5C7638117}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}
