@@ -218,8 +218,7 @@
           "Microsoft.Extensions.DependencyInjection": "[2.2.0, )",
           "Speckle.Objects": "[3.1.0-dev.227, )",
           "Speckle.Sdk": "[3.1.0-dev.227, )",
-          "Speckle.WebIfc": "[0.0.64-speckle1, )",
-          "System.CommandLine": "[2.0.0-beta4.22272.1, )"
+          "Speckle.WebIfc": "[0.0.64-speckle1, )"
         }
       },
       "Ara3D.Buffers": {
@@ -309,12 +308,6 @@
         "requested": "[0.0.64-speckle1, )",
         "resolved": "0.0.64-speckle1",
         "contentHash": "oJgPu/LCypQLelDrtV6+dk0Qm+3VSEYWXCjeXHs2/ekOZEKwpFKhcKVOd1uMjtVLh+n3CZ/6tMgO1nZq9FpwMw=="
-      },
-      "System.CommandLine": {
-        "type": "CentralTransitive",
-        "requested": "[2.0.0-beta4.22272.1, )",
-        "resolved": "2.0.0-beta4.22272.1",
-        "contentHash": "1uqED/q2H0kKoLJ4+hI2iPSBSEdTuhfCYADeJrAqERmiGQ2NNacYKRNEQ+gFbU4glgVyK8rxI+ZOe1onEtr/Pg=="
       }
     }
   }

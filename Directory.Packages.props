@@ -49,7 +49,6 @@
     <PackageVersion Include="Speckle.Sdk.Dependencies" Version="3.1.0-dev.227" />
     <PackageVersion Include="Speckle.WebIfc" Version="0.0.64-speckle1" />
     <PackageVersion Include="SimpleExec" Version="12.0.0" />
-    <PackageVersion Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
     <GlobalPackageReference Include="PolySharp" Version="1.14.1" />
     <GlobalPackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <GlobalPackageReference Include="Speckle.InterfaceGenerator" Version="0.9.6" />

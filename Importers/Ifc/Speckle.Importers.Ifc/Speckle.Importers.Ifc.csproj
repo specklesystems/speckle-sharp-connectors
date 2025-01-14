@@ -3,22 +3,20 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <RootNamespace>Speckle.Connectors.Ifc</RootNamespace>
   </PropertyGroup>
 
- <PropertyGroup Label="Nuget Package Properties">
+  <PropertyGroup Label="Nuget Package Properties">
     <IsPackable>true</IsPackable>
     <IncludeSymbols>true</IncludeSymbols>
-    <version>0.0.6</version>
   </PropertyGroup>
-
-
-  <PropertyGroup Label="Ignored Compile Warniongs">
-  <NoWarn>
-    IDE1006;IDE0130;IDE0011;CA1051;CA1720;CA1002;CA1054;CA1028;CA1721;CA1502;CA1065;
-    $(NoWarn)
-  </NoWarn>
-</PropertyGroup>
+  
+  <PropertyGroup Label="Ignored Compile Warnings">
+    <NoWarn>
+      IDE1006;IDE0130;IDE0011;CA1051;CA1720;CA1002;CA1054;CA1028;CA1721;CA1502;CA1065;
+      $(NoWarn)
+    </NoWarn>
+  </PropertyGroup>
+  
   <ItemGroup>
     <PackageReference Include="Ara3D.Buffers"  />
     <PackageReference Include="Ara3D.Logging"  />
@@ -27,6 +25,5 @@
     <PackageReference Include="Speckle.Objects" />
     <PackageReference Include="Speckle.Sdk" />
     <PackageReference Include="Speckle.WebIfc" />
-    <PackageReference Include="System.CommandLine" />
   </ItemGroup>
 </Project>
