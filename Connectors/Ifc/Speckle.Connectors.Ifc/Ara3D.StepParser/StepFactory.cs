@@ -1,4 +1,4 @@
-namespace Ara3D.StepParser;
+namespace Speckle.Connectors.Ifc.Ara3D.StepParser;
 
 public static unsafe class StepFactory
 {
@@ -53,7 +53,7 @@ public static unsafe class StepFactory
       case StepTokenType.Separator:
       case StepTokenType.EndGroup:
       default:
-        throw new Exception($"Cannot convert token type {token.Type} to a StepValue");
+        throw new SpeckleIfcException($"Cannot convert token type {token.Type} to a StepValue");
     }
   }
 
@@ -62,7 +62,7 @@ public static unsafe class StepFactory
     var values = new List<StepValue>();
     StepTokenizer.EatWSpace(ref token, end);
     if (token.Type != StepTokenType.BeginGroup)
-      throw new Exception("Expected '('");
+      throw new SpeckleIfcException("Expected '('");
 
     while (StepTokenizer.ParseNextToken(ref token, end))
     {
@@ -85,6 +85,6 @@ public static unsafe class StepFactory
       values.Add(curValue);
     }
 
-    throw new Exception("Unexpected end of input");
+    throw new SpeckleIfcException("Unexpected end of input");
   }
 }

@@ -2,7 +2,7 @@ using System.Diagnostics;
 using Ara3D.Buffers;
 using Ara3D.Utils;
 
-namespace Ara3D.StepParser;
+namespace Speckle.Connectors.Ifc.Ara3D.StepParser;
 
 /// <summary>
 /// The base class of the different type of value items that can be found in a STEP file.

@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using Ara3D.Logging;
-using Ara3D.StepParser;
 using Ara3D.Utils;
+using Speckle.Connectors.Ifc.Ara3D.StepParser;
 
-namespace Ara3D.IfcParser;
+namespace Speckle.Connectors.Ifc.Ara3D.IfcParser;
 
 /// <summary>
 /// This is a high-level representation of an IFC model as a graph of nodes and relations.
@@ -189,13 +189,13 @@ public class IfcGraph
   public IfcNode GetOrCreateNode(StepInstance lineData, int arg)
   {
     if (arg < 0 || arg >= lineData.AttributeValues.Count)
-      throw new Exception("Argument index out of range");
+      throw new SpeckleIfcException("Argument index out of range");
     return GetOrCreateNode(lineData.AttributeValues[arg]);
   }
 
   public IfcNode GetOrCreateNode(StepValue o) =>
     GetOrCreateNode(
-      o is StepId id ? id.Id : throw new Exception($"Expected a StepId value, not {o}")
+      o is StepId id ? id.Id : throw new SpeckleIfcException($"Expected a StepId value, not {o}")
     );
 
   public IfcNode GetOrCreateNode(uint id)
@@ -213,9 +213,9 @@ public class IfcGraph
   public List<IfcNode> GetOrCreateNodes(StepInstance line, int arg)
   {
     if (arg < 0 || arg >= line.AttributeValues.Count)
-      throw new Exception("Argument out of range");
+      throw new SpeckleIfcException("Argument out of range");
     if (line.AttributeValues[arg] is not StepList agg)
-      throw new Exception("Expected a list");
+      throw new SpeckleIfcException("Expected a list");
     return GetOrCreateNodes(agg.Values);
   }
 

@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using System.Reflection;
-using Ara3D.IfcParser;
 using Ara3D.Utils;
 using Microsoft.Extensions.DependencyInjection;
+using Speckle.Connectors.Ifc.Ara3D.IfcParser;
+using Speckle.Connectors.Ifc.Converters;
+using Speckle.Connectors.Ifc.Ifc;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
@@ -14,10 +16,8 @@ using Speckle.Sdk.Models;
 using Speckle.Sdk.Serialisation.V2;
 using Speckle.Sdk.Serialisation.V2.Send;
 using Speckle.Sdk.Transports;
-using Speckle.WebIfc.Importer.Converters;
-using Speckle.WebIfc.Importer.Ifc;
 
-namespace Speckle.WebIfc.Importer;
+namespace Speckle.Connectors.Ifc;
 
 public static class Import
 {

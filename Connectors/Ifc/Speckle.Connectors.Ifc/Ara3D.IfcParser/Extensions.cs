@@ -1,8 +1,8 @@
 ﻿using System.Text;
 using Ara3D.Buffers;
-using Ara3D.StepParser;
+using Speckle.Connectors.Ifc.Ara3D.StepParser;
 
-namespace Ara3D.IfcParser;
+namespace Speckle.Connectors.Ifc.Ara3D.IfcParser;
 
 public static class IfcExtensions
 {

@@ -3,7 +3,7 @@ using Ara3D.Buffers;
 using Ara3D.Logging;
 using Ara3D.Utils;
 
-namespace Ara3D.StepParser;
+namespace Speckle.Connectors.Ifc.Ara3D.StepParser;
 
 public sealed unsafe class StepDocument : IDisposable
 {

@@ -2,7 +2,7 @@
 using System.Runtime.InteropServices;
 using Ara3D.Buffers;
 
-namespace Ara3D.StepParser;
+namespace Speckle.Connectors.Ifc.Ara3D.StepParser;
 
 /// <summary>
 /// Contains information about where an instance is within a file.

@@ -1,12 +1,12 @@
 using Speckle.InterfaceGenerator;
 
-namespace Speckle.WebIfc.Importer.Ifc;
+namespace Speckle.Connectors.Ifc.Ifc;
 
 [GenerateAutoInterface]
 public class IfcFactory : IIfcFactory
 {
   //probably never disposing this
-  private static readonly IntPtr _ptr = WebIfc.InitializeApi();
+  private static readonly IntPtr _ptr = WebIfc.WebIfc.InitializeApi();
 
   public IfcModel Open(string fullPath)
   {
@@ -14,8 +14,8 @@ public class IfcFactory : IIfcFactory
     {
       throw new ArgumentException($"File does not exist: {fullPath}");
     }
-    return new(WebIfc.LoadModel(_ptr, fullPath));
+    return new(WebIfc.WebIfc.LoadModel(_ptr, fullPath));
   }
 
-  public string Version => WebIfc.GetVersion();
+  public string Version => WebIfc.WebIfc.GetVersion();
 }

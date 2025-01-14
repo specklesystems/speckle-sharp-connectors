@@ -1,10 +1,9 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Speckle.Connectors.Ifc.Ifc;
 using Speckle.Sdk;
-using Speckle.WebIfc.Importer.Ifc;
-
-namespace Speckle.WebIfc.Importer;
+namespace Speckle.Connectors.Ifc;
 
 public static class ServiceRegistration
 {

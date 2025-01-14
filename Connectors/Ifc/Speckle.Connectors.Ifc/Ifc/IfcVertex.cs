@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace Speckle.WebIfc.Importer.Ifc;
+namespace Speckle.Connectors.Ifc.Ifc;
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct IfcVertex

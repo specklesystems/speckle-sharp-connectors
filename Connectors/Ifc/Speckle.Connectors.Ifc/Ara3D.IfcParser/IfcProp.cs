@@ -1,6 +1,6 @@
-﻿using Ara3D.StepParser;
+﻿using Speckle.Connectors.Ifc.Ara3D.StepParser;
 
-namespace Ara3D.IfcParser;
+namespace Speckle.Connectors.Ifc.Ara3D.IfcParser;
 
 public class IfcProp : IfcNode
 {
@@ -13,9 +13,9 @@ public class IfcProp : IfcNode
     : base(graph, lineData)
   {
     if (lineData.Count < 2)
-      throw new System.Exception("Expected at least two values in the line data");
+      throw new SpeckleIfcException("Expected at least two values in the line data");
     if (lineData[0] is not StepString)
-      throw new System.Exception("Expected the first value to be a string (Name)");
+      throw new SpeckleIfcException("Expected the first value to be a string (Name)");
     Value = value;
   }
 }

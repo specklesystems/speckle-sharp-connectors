@@ -1,12 +1,12 @@
-namespace Speckle.WebIfc.Importer.Ifc;
+namespace Speckle.Connectors.Ifc.Ifc;
 
 public class IfcGeometry(IntPtr geometry)
 {
-  public IfcMesh GetMesh(int i) => new(WebIfc.GetMesh(geometry, i));
+  public IfcMesh GetMesh(int i) => new(WebIfc.WebIfc.GetMesh(geometry, i));
 
-  public int MeshCount => WebIfc.GetNumMeshes(geometry);
+  public int MeshCount => WebIfc.WebIfc.GetNumMeshes(geometry);
 
-  public IfcSchemaType Type => (IfcSchemaType)WebIfc.GetGeometryType(geometry);
+  public IfcSchemaType Type => (IfcSchemaType)WebIfc.WebIfc.GetGeometryType(geometry);
 
   public IEnumerable<IfcMesh> GetMeshes()
   {

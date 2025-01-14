@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
-using Ara3D.StepParser;
+using Speckle.Connectors.Ifc.Ara3D.StepParser;
 
-namespace Ara3D.IfcParser;
+namespace Speckle.Connectors.Ifc.Ara3D.IfcParser;
 
 // This merges two separate entity types: IfcPropertySet and IfcElementQuantity.
 // Both of which are derived from IfcPropertySetDefinition.
@@ -29,7 +29,7 @@ public class IfcPropSet : IfcNode
       var id = PropertyId(i);
       var node = Graph.GetNode(id);
       if (node is not IfcProp prop)
-        throw new System.Exception($"Expected a property not {node} from id {id}");
+        throw new SpeckleIfcException($"Expected a property not {node} from id {id}");
       yield return prop;
     }
   }

@@ -1,6 +1,6 @@
-﻿using Ara3D.StepParser;
+﻿using Speckle.Connectors.Ifc.Ara3D.StepParser;
 
-namespace Ara3D.IfcParser;
+namespace Speckle.Connectors.Ifc.Ara3D.IfcParser;
 
 // https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifckernel/lexical/ifcreldefinesbyproperties.htm
 public class IfcPropSetRelation : IfcRelation
@@ -14,7 +14,7 @@ public class IfcPropSetRelation : IfcRelation
     {
       var node = Graph.GetNode(From);
       if (node is not IfcPropSet r)
-        throw new System.Exception($"Expected a property set not {node} from id {From}");
+        throw new SpeckleIfcException($"Expected a property set not {node} from id {From}");
       return r;
     }
   }

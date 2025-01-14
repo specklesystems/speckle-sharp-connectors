@@ -1,7 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using Ara3D.Buffers;
 
-namespace Ara3D.StepParser;
+namespace Speckle.Connectors.Ifc.Ara3D.StepParser;
 
 public static class ByteSpanExtensions
 {

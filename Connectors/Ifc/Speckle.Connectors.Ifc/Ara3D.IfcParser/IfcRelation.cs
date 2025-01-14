@@ -1,6 +1,6 @@
-﻿using Ara3D.StepParser;
+﻿using Speckle.Connectors.Ifc.Ara3D.StepParser;
 
-namespace Ara3D.IfcParser;
+namespace Speckle.Connectors.Ifc.Ara3D.IfcParser;
 
 /// <summary>
 /// Always express a 1-to-many relation
@@ -14,7 +14,7 @@ public class IfcRelation : IfcEntity
     : base(graph, lineData)
   {
     if (!IsIfcRoot)
-      throw new System.Exception("Expected relation to be an IFC root entity");
+      throw new SpeckleIfcException("Expected relation to be an IFC root entity");
     From = from;
     To = to;
   }

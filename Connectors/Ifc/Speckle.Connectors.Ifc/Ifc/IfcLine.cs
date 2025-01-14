@@ -1,9 +1,9 @@
-namespace Speckle.WebIfc.Importer.Ifc;
+namespace Speckle.Connectors.Ifc.Ifc;
 
 public class IfcLine(IntPtr line)
 {
-  public uint Id => WebIfc.GetLineId(line);
-  public IfcSchemaType Type => (IfcSchemaType)WebIfc.GetLineType(line);
+  public uint Id => WebIfc.WebIfc.GetLineId(line);
+  public IfcSchemaType Type => (IfcSchemaType)WebIfc.WebIfc.GetLineType(line);
 
-  public string Arguments() => WebIfc.GetLineArguments(line);
+  public string Arguments() => WebIfc.WebIfc.GetLineArguments(line);
 }

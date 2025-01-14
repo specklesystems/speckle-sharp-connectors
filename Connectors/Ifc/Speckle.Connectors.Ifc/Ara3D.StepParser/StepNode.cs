@@ -1,6 +1,6 @@
 using Ara3D.Utils;
 
-namespace Ara3D.StepParser;
+namespace Speckle.Connectors.Ifc.Ara3D.StepParser;
 
 public class StepNode
 {
