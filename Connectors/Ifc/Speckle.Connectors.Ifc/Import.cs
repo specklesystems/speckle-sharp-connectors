@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Drawing;
 using System.Reflection;
 using Ara3D.IfcParser;
 using Ara3D.Utils;

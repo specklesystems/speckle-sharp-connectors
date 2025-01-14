@@ -13,8 +13,7 @@ public class IfcPropSetRelation : IfcRelation
     get
     {
       var node = Graph.GetNode(From);
-      var r = node as IfcPropSet;
-      if (r == null)
+      if (node is not IfcPropSet r)
         throw new System.Exception($"Expected a property set not {node} from id {From}");
       return r;
     }

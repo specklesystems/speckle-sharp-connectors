@@ -12,7 +12,7 @@ public class IfcEntity
 {
   public StepInstance LineData { get; }
   public IfcGraph Graph { get; }
-  public uint Id => (uint)LineData.Id;
+  public uint Id => LineData.Id;
   public string Type => LineData?.EntityType ?? "";
 
   public IfcEntity(IfcGraph graph, StepInstance lineData)
@@ -21,7 +21,7 @@ public class IfcEntity
     LineData = lineData;
   }
 
-  public override bool Equals(object obj)
+  public override bool Equals(object? obj)
   {
     if (obj is IfcEntity other)
       return Id == other.Id;
@@ -33,19 +33,19 @@ public class IfcEntity
   public override string ToString() => $"{Type}#{Id}";
 
   public bool IsIfcRoot =>
-    Count >= 4 && this[0] is StepString str && (this[1] is StepId) || (this[1] is StepUnassigned);
+    Count >= 4 && this[0] is StepString && (this[1] is StepId) || (this[1] is StepUnassigned);
 
   // Modern IFC files conform to this, but older ones have been observed to have different length IDs.
   // Leaving as a comment for now.
   //&& str.Value.Length == 22;
 
-  public string Guid => IsIfcRoot ? (this[0] as StepString)?.Value.ToString() : null;
+  public string? Guid => IsIfcRoot ? (this[0] as StepString)?.Value.ToString() : null;
 
   public uint OwnerId => IsIfcRoot ? (this[1] as StepId)?.Id ?? 0 : 0;
 
-  public string Name => IsIfcRoot ? (this[2] as StepString)?.AsString() : null;
+  public string? Name => IsIfcRoot ? (this[2] as StepString)?.AsString() : null;
 
-  public string Description => IsIfcRoot ? (this[3] as StepString)?.AsString() : null;
+  public string? Description => IsIfcRoot ? (this[3] as StepString)?.AsString() : null;
 
   public int Count => LineData.Count;
 

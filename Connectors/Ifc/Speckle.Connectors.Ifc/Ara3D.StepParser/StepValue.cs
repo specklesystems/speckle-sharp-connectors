@@ -39,7 +39,7 @@ public class StepList : StepValue
 
   public override string ToString() => $"({Values.JoinStringsWithComma()})";
 
-  public static StepList Default = new(new List<StepValue>());
+  public static StepList CreateDefault() => new(new List<StepValue>());
 }
 
 public class StepString : StepValue

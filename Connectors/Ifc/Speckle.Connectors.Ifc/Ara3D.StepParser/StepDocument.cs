@@ -5,7 +5,7 @@ using Ara3D.Utils;
 
 namespace Ara3D.StepParser;
 
-public unsafe class StepDocument : IDisposable
+public sealed unsafe class StepDocument : IDisposable
 {
   public readonly FilePath FilePath;
   public readonly byte* DataStart;
@@ -33,10 +33,10 @@ public unsafe class StepDocument : IDisposable
   /// </summary>
   public readonly List<int> LineOffsets;
 
-  public StepDocument(FilePath filePath, ILogger logger = null)
+  public StepDocument(FilePath filePath, ILogger? logger = null)
   {
     FilePath = filePath;
-    logger = logger ?? Logger.Null;
+    logger ??= Logger.Null;
 
     logger.Log($"Loading {filePath.GetFileSizeAsString()} of data from {filePath.GetFileName()}");
     Data = AlignedMemoryReader.ReadAllBytes(filePath);

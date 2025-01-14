@@ -5,7 +5,7 @@ using Ara3D.Buffers;
 
 namespace Ara3D.StepParser;
 
-public class StepLineParser
+public static class StepLineParser
 {
   public static readonly Vector256<byte> Comma = Vector256.Create((byte)',');
   public static readonly Vector256<byte> NewLine = Vector256.Create((byte)'\n');

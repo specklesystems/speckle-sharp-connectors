@@ -63,9 +63,9 @@ public class NodeConverter(IGeometryConverter geometryConverter) : INodeConverte
     return b;
   }
 
-  public static Dictionary<string, object> ToSpeckleDictionary(IfcPropSet ps)
+  public static Dictionary<string, object?> ToSpeckleDictionary(IfcPropSet ps)
   {
-    var d = new Dictionary<string, object>();
+    var d = new Dictionary<string, object?>();
     foreach (var p in ps.GetProperties())
       d[p.Name] = p.Value.ToJsonObject();
     return d;

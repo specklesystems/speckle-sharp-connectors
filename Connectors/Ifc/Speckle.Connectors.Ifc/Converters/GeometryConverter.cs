@@ -9,7 +9,7 @@ public class GeometryConverter(IMeshConverter meshConverter) : IGeometryConverte
 {
   public Collection Convert(IfcGeometry geometry)
   {
-    var c = new Collection(ge);
+    var c = new Collection();
     foreach (var mesh in geometry.GetMeshes())
     {
       c.elements.Add(meshConverter.Convert(mesh));

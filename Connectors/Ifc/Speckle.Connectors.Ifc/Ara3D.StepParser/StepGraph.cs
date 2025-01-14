@@ -1,4 +1,5 @@
 using Ara3D.Utils;
+using Speckle.Sdk.Common;
 
 namespace Ara3D.StepParser;
 
@@ -52,7 +53,7 @@ public class StepGraph
       case StepSymbol stepSymbol:
       case StepUnassigned stepUnassigned:
       default:
-        return value.ToString();
+        return value.ToString().NotNull();
     }
   }
 }

@@ -164,7 +164,7 @@ public class IfcGraph
     logger?.Log("Retrieving the roots of all of the spatial relationship");
     RootIds = GetSpatialRelations()
       .Where(r => r.From != null)
-      .Select(r => (uint)r.From.Id)
+      .Select(r => r.From.Id)
       .Distinct()
       .ToList();
 
@@ -195,7 +195,7 @@ public class IfcGraph
 
   public IfcNode GetOrCreateNode(StepValue o) =>
     GetOrCreateNode(
-      o is StepId id ? (uint)id.Id : throw new Exception($"Expected a StepId value, not {o}")
+      o is StepId id ? id.Id : throw new Exception($"Expected a StepId value, not {o}")
     );
 
   public IfcNode GetOrCreateNode(uint id)
@@ -214,7 +214,7 @@ public class IfcGraph
   {
     if (arg < 0 || arg >= line.AttributeValues.Count)
       throw new Exception("Argument out of range");
-    if (!(line.AttributeValues[arg] is StepList agg))
+    if (line.AttributeValues[arg] is not StepList agg)
       throw new Exception("Expected a list");
     return GetOrCreateNodes(agg.Values);
   }

@@ -21,5 +21,5 @@ public class StepInstance
 
   public int Count => AttributeValues.Count;
 
-  public StepValue this[int i] => i < Count ? AttributeValues[i] : null;
+  public StepValue this[int i] => AttributeValues[i];
 }

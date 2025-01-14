@@ -5,7 +5,7 @@ public static unsafe class StepFactory
   public static StepList GetAttributes(this StepRawInstance inst, byte* lineEnd)
   {
     if (!inst.IsValid())
-      return default;
+      return StepList.CreateDefault();
     var ptr = inst.Type.End();
     var token = StepTokenizer.ParseToken(ptr, lineEnd);
     // TODO: there is a potential bug here when the line is split across multiple line

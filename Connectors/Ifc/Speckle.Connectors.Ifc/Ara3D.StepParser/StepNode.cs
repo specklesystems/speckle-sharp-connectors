@@ -37,7 +37,7 @@ public class StepNode
 
   public override string ToString() => Entity.ToString();
 
-  public string ToGraph(HashSet<StepNode> prev = null)
+  public string ToGraph(HashSet<StepNode>? prev = null)
   {
     prev ??= new HashSet<StepNode>();
     if (prev.Contains(this))

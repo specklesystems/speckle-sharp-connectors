@@ -10,7 +10,14 @@
     <IncludeSymbols>true</IncludeSymbols>
     <version>0.0.6</version>
   </PropertyGroup>
-  
+
+
+  <PropertyGroup Label="Ignored Compile Warniongs">
+  <NoWarn>
+    IDE1006;IDE0130;IDE0011;CA1051;CA1720;CA1002;CA1054;CA1062;CA1028;CA1721;CA1502;CA1065;
+    $(NoWarn)
+  </NoWarn>
+</PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Ara3D.Buffers"  />
     <PackageReference Include="Ara3D.Logging"  />

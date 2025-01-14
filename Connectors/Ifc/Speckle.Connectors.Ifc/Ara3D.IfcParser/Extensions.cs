@@ -4,7 +4,7 @@ using Ara3D.StepParser;
 
 namespace Ara3D.IfcParser;
 
-public static class Extensions
+public static class IfcExtensions
 {
   public static void Add<TKey, TValue>(
     this IDictionary<TKey, List<TValue>> self,
@@ -151,7 +151,7 @@ public static class Extensions
 
   public static string AsString(this StepString ss) => ss.Value.AsString();
 
-  public static object ToJsonObject(this StepValue sv)
+  public static object? ToJsonObject(this StepValue sv)
   {
     switch (sv)
     {
