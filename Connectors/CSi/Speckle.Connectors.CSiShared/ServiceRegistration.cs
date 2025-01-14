@@ -45,6 +45,11 @@ public static class ServiceRegistration
 
     services.RegisterTopLevelExceptionHandler();
 
+    services.AddScoped<IMaterialUnpacker, SharedMaterialUnpacker>();
+    services.AddScoped<FrameSectionPropertiesUnpacker>();
+    services.AddScoped<ISectionUnpacker, SharedSectionUnpacker>();
+    services.AddScoped<IProxyRelationshipManager, ProxyRelationshipManager>();
+
     return services;
   }
 }

@@ -10,6 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\EtabsSendCollectionManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Proxies\Unpackers\EtabsFrameSectionPropertiesUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\EtabsPluginBase.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\EtabsSpeckleFormBase.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />

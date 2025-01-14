@@ -10,6 +10,8 @@ public static class ServiceRegistration
   public static IServiceCollection AddEtabs(this IServiceCollection services)
   {
     services.AddEtabsConverters();
+    services.AddScoped<FrameSectionPropertiesUnpacker, EtabsFrameSectionPropertiesUnpacker>();
+    services.AddScoped<ISectionUnpacker, SharedSectionUnpacker>();
     services.AddScoped<CsiSendCollectionManager, EtabsSendCollectionManager>();
 
     return services;

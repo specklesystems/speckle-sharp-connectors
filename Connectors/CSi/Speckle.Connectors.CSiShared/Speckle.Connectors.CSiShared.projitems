@@ -14,6 +14,15 @@
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\CsiSharedSendBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Filters\CsiSharedSelectionFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\CsiSendCollectionManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Proxies\Base\IMaterialUnpacker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Proxies\Base\IProxyRelationshipManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Proxies\Base\ISectionUnpacker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Proxies\Models\SectionProxy.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Proxies\Models\MaterialProxy.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Proxies\Unpackers\FrameSectionPropertiesUnpacker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Proxies\Unpackers\ProxyRelationshipManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Proxies\Unpackers\SharedSectionUnpacker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Proxies\Unpackers\SharedMaterialUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\CsiRootObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\CsiPluginBase.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\SpeckleFormBase.cs" />
