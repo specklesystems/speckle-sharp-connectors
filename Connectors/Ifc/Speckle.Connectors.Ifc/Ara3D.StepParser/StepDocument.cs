@@ -54,11 +54,7 @@ public sealed unsafe class StepDocument : IDisposable
     var currentLine = 1;
     for (var i = 0; i < Data.NumVectors; i++)
     {
-      StepLineParser.ComputeOffsets(
-        ((Vector256<byte>*)Data.BytePtr)[i],
-        ref currentLine,
-        LineOffsets
-      );
+      StepLineParser.ComputeOffsets(((Vector256<byte>*)Data.BytePtr)[i], ref currentLine, LineOffsets);
     }
 
     logger.Log($"Found {LineOffsets.Count} lines");
@@ -83,11 +79,9 @@ public sealed unsafe class StepDocument : IDisposable
 
   public void Dispose() => Data.Dispose();
 
-  public StepInstance GetInstanceWithData(uint id) =>
-    GetInstanceWithDataFromIndex(InstanceIdToIndex[id]);
+  public StepInstance GetInstanceWithData(uint id) => GetInstanceWithDataFromIndex(InstanceIdToIndex[id]);
 
-  public StepInstance GetInstanceWithDataFromIndex(int index) =>
-    GetInstanceWithData(RawInstances[index]);
+  public StepInstance GetInstanceWithDataFromIndex(int index) => GetInstanceWithData(RawInstances[index]);
 
   public StepInstance GetInstanceWithData(StepRawInstance inst)
   {

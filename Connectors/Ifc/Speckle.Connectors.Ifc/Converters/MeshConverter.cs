@@ -37,13 +37,7 @@ public class MeshConverter : IMeshConverter
     }
 
     var color = mesh.GetColor();
-    List<int> colors =
-    [
-      (int)(color->A * 255),
-      (int)(color->R * 255),
-      (int)(color->G * 255),
-      (int)(color->B * 255),
-    ];
+    List<int> colors = [(int)(color->A * 255), (int)(color->R * 255), (int)(color->G * 255), (int)(color->B * 255),];
     return new Mesh()
     {
       colors = colors,

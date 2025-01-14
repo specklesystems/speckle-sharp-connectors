@@ -18,10 +18,8 @@ public class IfcGraph
 
   public Dictionary<uint, IfcNode> Nodes { get; } = new Dictionary<uint, IfcNode>();
   public List<IfcRelation> Relations { get; } = new List<IfcRelation>();
-  public Dictionary<uint, List<IfcRelation>> RelationsByNode { get; } =
-    new Dictionary<uint, List<IfcRelation>>();
-  public Dictionary<uint, List<IfcPropSet>> PropertySetsByNode { get; } =
-    new Dictionary<uint, List<IfcPropSet>>();
+  public Dictionary<uint, List<IfcRelation>> RelationsByNode { get; } = new Dictionary<uint, List<IfcRelation>>();
+  public Dictionary<uint, List<IfcPropSet>> PropertySetsByNode { get; } = new Dictionary<uint, List<IfcPropSet>>();
 
   public IReadOnlyList<uint> RootIds { get; }
 
@@ -162,11 +160,7 @@ public class IfcGraph
     }
 
     logger?.Log("Retrieving the roots of all of the spatial relationship");
-    RootIds = GetSpatialRelations()
-      .Where(r => r.From != null)
-      .Select(r => r.From.Id)
-      .Distinct()
-      .ToList();
+    RootIds = GetSpatialRelations().Where(r => r.From != null).Select(r => r.From.Id).Distinct().ToList();
 
     logger?.Log("Creating lookup of property sets");
 
@@ -194,21 +188,16 @@ public class IfcGraph
   }
 
   public IfcNode GetOrCreateNode(StepValue o) =>
-    GetOrCreateNode(
-      o is StepId id ? id.Id : throw new SpeckleIfcException($"Expected a StepId value, not {o}")
-    );
+    GetOrCreateNode(o is StepId id ? id.Id : throw new SpeckleIfcException($"Expected a StepId value, not {o}"));
 
   public IfcNode GetOrCreateNode(uint id)
   {
-    var r = Nodes.TryGetValue(id, out var node)
-      ? node
-      : AddNode(new IfcNode(this, Document.GetInstanceWithData(id)));
+    var r = Nodes.TryGetValue(id, out var node) ? node : AddNode(new IfcNode(this, Document.GetInstanceWithData(id)));
     Debug.Assert(r.Id == id);
     return r;
   }
 
-  public List<IfcNode> GetOrCreateNodes(List<StepValue> list) =>
-    list.Select(GetOrCreateNode).ToList();
+  public List<IfcNode> GetOrCreateNodes(List<StepValue> list) => list.Select(GetOrCreateNode).ToList();
 
   public List<IfcNode> GetOrCreateNodes(StepInstance line, int arg)
   {
@@ -234,11 +223,9 @@ public class IfcGraph
 
   public IEnumerable<IfcProp> GetProps() => GetNodes().OfType<IfcProp>();
 
-  public IEnumerable<IfcRelationSpatial> GetSpatialRelations() =>
-    Relations.OfType<IfcRelationSpatial>();
+  public IEnumerable<IfcRelationSpatial> GetSpatialRelations() => Relations.OfType<IfcRelationSpatial>();
 
-  public IEnumerable<IfcRelationAggregate> GetAggregateRelations() =>
-    Relations.OfType<IfcRelationAggregate>();
+  public IEnumerable<IfcRelationAggregate> GetAggregateRelations() => Relations.OfType<IfcRelationAggregate>();
 
   public IReadOnlyList<IfcRelation> GetRelationsFrom(uint id) =>
     RelationsByNode.TryGetValue(id, out var list) ? list : Array.Empty<IfcRelation>();

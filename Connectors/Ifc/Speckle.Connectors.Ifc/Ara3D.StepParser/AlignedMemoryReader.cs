@@ -7,14 +7,7 @@ public static class AlignedMemoryReader
 {
   public static unsafe AlignedMemory ReadAllBytes(string path, int bufferSize = 1024 * 1024)
   {
-    using var fs = new FileStream(
-      path,
-      FileMode.Open,
-      FileAccess.Read,
-      FileShare.Read,
-      bufferSize,
-      false
-    );
+    using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, false);
     var fileLength = fs.Length;
     if (fileLength > int.MaxValue)
       throw new IOException("File too big: > 2GB");

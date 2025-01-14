@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Speckle.Connectors.Ifc.Types;
 using Speckle.Sdk;
+
 namespace Speckle.Connectors.Ifc;
 
 public static class ServiceRegistration

@@ -32,16 +32,7 @@ public static class Import
   )
   {
     var serviceProvider = GetServiceProvider();
-    return await Ifc(
-      serviceProvider,
-      url,
-      filePath,
-      streamId,
-      modelId,
-      commitMessage,
-      token,
-      progress
-    );
+    return await Ifc(serviceProvider, url, filePath, streamId, modelId, commitMessage, token, progress);
   }
 
   public static ServiceProvider GetServiceProvider()
@@ -93,11 +84,12 @@ public static class Import
       new SerializeProcessOptions(true, true, true, false)
     );
     var (rootId, _) = await process.Serialize(b, default).ConfigureAwait(false);
-    Account account = new()
-    {
-      token = token,
-      serverInfo = new ServerInfo { url = baseUri.ToString() },
-    };
+    Account account =
+      new()
+      {
+        token = token,
+        serverInfo = new ServerInfo { url = baseUri.ToString() },
+      };
     ms = ms2;
     ms2 = stopwatch.ElapsedMilliseconds;
     Console.WriteLine($"Uploaded to Speckle: {ms2 - ms} ms");

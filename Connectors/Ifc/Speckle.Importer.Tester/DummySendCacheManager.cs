@@ -5,6 +5,7 @@ namespace Speckle.Importer.Tester;
 public class DummySendCacheManager(Dictionary<string, string> objects) : ISqLiteJsonCacheManager
 {
   public void Dispose() { }
+
   public IReadOnlyCollection<(string, string)> GetAllObjects() => throw new NotImplementedException();
 
   public void DeleteObject(string id) => throw new NotImplementedException();

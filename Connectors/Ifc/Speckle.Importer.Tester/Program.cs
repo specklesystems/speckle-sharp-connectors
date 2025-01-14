@@ -14,10 +14,10 @@ using Speckle.WebIfc.Importer.Ifc;
 var serviceProvider = Import.GetServiceProvider();
 DotMemory.Init();
 var filePath = new FilePath(
-//"C:\\Users\\adam\\Git\\speckle-server\\packages\\fileimport-service\\ifc-dotnet\\ifcs\\20210221PRIMARK.ifc"
-//"C:\\Users\\adam\\Git\\speckle-server\\packages\\fileimport-service\\ifc-dotnet\\ifcs\\231110ADT-FZK-Haus-2005-2006.ifc"
-//"C:\\Users\\adam\\Downloads\\T03PV06IMPMI01C.ifc"
-"C:\\Users\\adam\\Downloads\\20231128_HW_Bouwkosten.ifc"
+  //"C:\\Users\\adam\\Git\\speckle-server\\packages\\fileimport-service\\ifc-dotnet\\ifcs\\20210221PRIMARK.ifc"
+  //"C:\\Users\\adam\\Git\\speckle-server\\packages\\fileimport-service\\ifc-dotnet\\ifcs\\231110ADT-FZK-Haus-2005-2006.ifc"
+  //"C:\\Users\\adam\\Downloads\\T03PV06IMPMI01C.ifc"
+  "C:\\Users\\adam\\Downloads\\20231128_HW_Bouwkosten.ifc"
 );
 
 var ifcFactory = serviceProvider.GetRequiredService<IIfcFactory>();
@@ -45,9 +45,10 @@ using var process2 = new SerializeProcess(
   new DummyServerObjectManager(),
   new BaseChildFinder(new BasePropertyGatherer()),
   new ObjectSerializerFactory(new BasePropertyGatherer()),
-  new SerializeProcessOptions(SkipServer:true)
+  new SerializeProcessOptions(SkipServer: true)
 );
 Console.WriteLine($"Caching to Speckle: {cache}");
+
 /*var config = new DotMemory.Config();
 config.OpenDotMemory();
 config.SaveToDir("C:\\Users\\adam\\dotTraceSnapshots");
