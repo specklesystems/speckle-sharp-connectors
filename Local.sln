@@ -262,6 +262,14 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Naviswor
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Navisworks2024", "Converters\Navisworks\Speckle.Converters.Navisworks2024\Speckle.Converters.Navisworks2024.csproj", "{52D789C2-5B3C-4225-9F84-C54B3AB4F1B5}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Importers", "Importers", "{24750B06-C90D-43B1-B2E4-088D531D6748}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Ifc", "Ifc", "{0EF6C4D6-AC76-408F-8D32-2F9DA8006077}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Importers.Ifc", "Importers\Ifc\Speckle.Importers.Ifc\Speckle.Importers.Ifc.csproj", "{9FD99F9B-8D50-4C7A-B3A6-22E28AB5F26B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Importers.Ifc.Tester", "Importers\Ifc\Speckle.Importers.Ifc.Tester\Speckle.Importers.Ifc.Tester.csproj", "{B3B126CA-A419-48D1-B117-6DEE1DE1AFAD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -671,6 +679,18 @@ Global
 		{52D789C2-5B3C-4225-9F84-C54B3AB4F1B5}.Local|Any CPU.Build.0 = Local|Any CPU
 		{52D789C2-5B3C-4225-9F84-C54B3AB4F1B5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{52D789C2-5B3C-4225-9F84-C54B3AB4F1B5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9FD99F9B-8D50-4C7A-B3A6-22E28AB5F26B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9FD99F9B-8D50-4C7A-B3A6-22E28AB5F26B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9FD99F9B-8D50-4C7A-B3A6-22E28AB5F26B}.Local|Any CPU.ActiveCfg = Debug|Any CPU
+		{9FD99F9B-8D50-4C7A-B3A6-22E28AB5F26B}.Local|Any CPU.Build.0 = Debug|Any CPU
+		{9FD99F9B-8D50-4C7A-B3A6-22E28AB5F26B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9FD99F9B-8D50-4C7A-B3A6-22E28AB5F26B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B3B126CA-A419-48D1-B117-6DEE1DE1AFAD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B3B126CA-A419-48D1-B117-6DEE1DE1AFAD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B3B126CA-A419-48D1-B117-6DEE1DE1AFAD}.Local|Any CPU.ActiveCfg = Debug|Any CPU
+		{B3B126CA-A419-48D1-B117-6DEE1DE1AFAD}.Local|Any CPU.Build.0 = Debug|Any CPU
+		{B3B126CA-A419-48D1-B117-6DEE1DE1AFAD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B3B126CA-A419-48D1-B117-6DEE1DE1AFAD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -791,6 +811,9 @@ Global
 		{FD44E1F0-D20A-49B6-ADC9-482D911A74FB} = {91DCAFB0-283B-4B07-9F6F-7335DECEEB08}
 		{7791806E-7531-41D8-9C9D-4A1249D9F99C} = {A88CFA1F-B2D5-4DBE-8496-68D0AFA46F2D}
 		{52D789C2-5B3C-4225-9F84-C54B3AB4F1B5} = {AE58C92C-DBF3-4248-8614-8F283B8CB5F8}
+		{0EF6C4D6-AC76-408F-8D32-2F9DA8006077} = {24750B06-C90D-43B1-B2E4-088D531D6748}
+		{9FD99F9B-8D50-4C7A-B3A6-22E28AB5F26B} = {0EF6C4D6-AC76-408F-8D32-2F9DA8006077}
+		{B3B126CA-A419-48D1-B117-6DEE1DE1AFAD} = {0EF6C4D6-AC76-408F-8D32-2F9DA8006077}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}

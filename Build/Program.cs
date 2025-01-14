@@ -199,7 +199,10 @@ Target(
       $"build {file} -c Release --no-restore -warnaserror -p:Version={version} -p:FileVersion={fileVersion} -v:m"
     );
 
-    RunAsync("dotnet", $"pack {file} -c Release -o output --no-build");
+    RunAsync(
+      "dotnet",
+      $"pack {file} -c Release -o output --no-build -p:Version={version} -p:FileVersion={fileVersion} -v:m"
+    );
   }
 );
 

@@ -46,7 +46,7 @@ jobs:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
 
-      - name: ⚒️ Run build
+      - name: ⚒️ Run Build on Linux
         run: ./build.sh build-linux
 
       - name: ⚒️ Run tests
