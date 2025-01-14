@@ -3,7 +3,7 @@ using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 using Ara3D.Buffers;
 
-namespace Speckle.Connectors.Ifc.Ara3D.StepParser;
+namespace Speckle.Importers.Ifc.Ara3D.StepParser;
 
 public static class StepLineParser
 {

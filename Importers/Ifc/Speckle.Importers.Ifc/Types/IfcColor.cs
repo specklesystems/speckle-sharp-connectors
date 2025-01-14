@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace Speckle.Connectors.Ifc.Types;
+namespace Speckle.Importers.Ifc.Types;
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct IfcColor

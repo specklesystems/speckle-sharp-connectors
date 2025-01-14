@@ -1,6 +1,6 @@
 ﻿using Speckle.Sdk;
 
-namespace Speckle.Connectors.Ifc;
+namespace Speckle.Importers.Ifc;
 
 public class SpeckleIfcException : SpeckleException
 {

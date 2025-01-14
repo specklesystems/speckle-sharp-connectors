@@ -1,6 +1,6 @@
-﻿using Speckle.Connectors.Ifc.Ara3D.StepParser;
+﻿using Speckle.Importers.Ifc.Ara3D.StepParser;
 
-namespace Speckle.Connectors.Ifc.Ara3D.IfcParser;
+namespace Speckle.Importers.Ifc.Ara3D.IfcParser;
 
 // https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifckernel/lexical/ifcreldefinesbyproperties.htm
 public class IfcPropSetRelation : IfcRelation

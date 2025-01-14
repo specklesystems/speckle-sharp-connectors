@@ -1,8 +1,8 @@
-using Speckle.Connectors.Ifc.Types;
+using Speckle.Importers.Ifc.Types;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Models.Collections;
 
-namespace Speckle.Connectors.Ifc.Converters;
+namespace Speckle.Importers.Ifc.Converters;
 
 [GenerateAutoInterface]
 public class GeometryConverter(IMeshConverter meshConverter) : IGeometryConverter

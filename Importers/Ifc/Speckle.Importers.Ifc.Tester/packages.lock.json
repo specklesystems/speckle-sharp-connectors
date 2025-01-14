@@ -217,8 +217,7 @@
           "Ara3D.Utils": "[1.4.5, )",
           "Microsoft.Extensions.DependencyInjection": "[2.2.0, )",
           "Speckle.Objects": "[3.1.0-dev.227, )",
-          "Speckle.Sdk": "[3.1.0-dev.227, )",
-          "Speckle.WebIfc": "[0.0.64-speckle1, )"
+          "Speckle.Sdk": "[3.1.0-dev.227, )"
         }
       },
       "Ara3D.Buffers": {
@@ -302,12 +301,6 @@
         "requested": "[3.1.0-dev.227, )",
         "resolved": "3.1.0-dev.227",
         "contentHash": "pdfBEvgXUHcZ2uCxTJ7bRt0Xs60iIvPvwzjUo3RaSYcHpcljPrOG0Ki1JRR844ZON66KPp7yesByjLvI0Ttujw=="
-      },
-      "Speckle.WebIfc": {
-        "type": "CentralTransitive",
-        "requested": "[0.0.64-speckle1, )",
-        "resolved": "0.0.64-speckle1",
-        "contentHash": "oJgPu/LCypQLelDrtV6+dk0Qm+3VSEYWXCjeXHs2/ekOZEKwpFKhcKVOd1uMjtVLh+n3CZ/6tMgO1nZq9FpwMw=="
       }
     }
   }

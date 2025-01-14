@@ -2,7 +2,7 @@
 using System.Runtime.CompilerServices;
 using Ara3D.Buffers;
 
-namespace Speckle.Connectors.Ifc.Ara3D.StepParser;
+namespace Speckle.Importers.Ifc.Ara3D.StepParser;
 
 public static class StepTokenizer
 {

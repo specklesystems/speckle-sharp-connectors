@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using Ara3D.Logging;
 using Ara3D.Utils;
-using Speckle.Connectors.Ifc.Ara3D.StepParser;
+using Speckle.Importers.Ifc.Ara3D.StepParser;
 
-namespace Speckle.Connectors.Ifc.Ara3D.IfcParser;
+namespace Speckle.Importers.Ifc.Ara3D.IfcParser;
 
 /// <summary>
 /// This is a high-level representation of an IFC model as a graph of nodes and relations.

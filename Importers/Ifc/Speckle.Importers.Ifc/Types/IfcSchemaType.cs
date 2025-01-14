@@ -1,4 +1,4 @@
-namespace Speckle.Connectors.Ifc.Types;
+namespace Speckle.Importers.Ifc.Types;
 
 #pragma warning disable CA1028
 #pragma warning disable CA1008

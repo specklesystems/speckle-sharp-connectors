@@ -1,10 +1,10 @@
 using System.Reflection;
-using Speckle.Connectors.Ifc.Ara3D.IfcParser;
-using Speckle.Connectors.Ifc.Types;
+using Speckle.Importers.Ifc.Ara3D.IfcParser;
+using Speckle.Importers.Ifc.Types;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Models;
 
-namespace Speckle.Connectors.Ifc.Converters;
+namespace Speckle.Importers.Ifc.Converters;
 
 [GenerateAutoInterface]
 public class NodeConverter(IGeometryConverter geometryConverter) : INodeConverter

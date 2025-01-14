@@ -3,11 +3,11 @@ using System.Diagnostics;
 using Ara3D.Utils;
 //using JetBrains.Profiler.SelfApi;
 using Microsoft.Extensions.DependencyInjection;
-using Speckle.Connectors.Ifc;
-using Speckle.Connectors.Ifc.Ara3D.IfcParser;
-using Speckle.Connectors.Ifc.Converters;
-using Speckle.Connectors.Ifc.Types;
+using Speckle.Importers.Ifc;
+using Speckle.Importers.Ifc.Ara3D.IfcParser;
+using Speckle.Importers.Ifc.Converters;
 using Speckle.Importers.Ifc.Tester;
+using Speckle.Importers.Ifc.Types;
 using Speckle.Sdk.Serialisation.V2.Send;
 using Speckle.Sdk.SQLite;
 

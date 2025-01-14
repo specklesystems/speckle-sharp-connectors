@@ -1,7 +1,7 @@
 using Ara3D.Utils;
 using Speckle.Sdk.Common;
 
-namespace Speckle.Connectors.Ifc.Ara3D.StepParser;
+namespace Speckle.Importers.Ifc.Ara3D.StepParser;
 
 public class StepGraph
 {

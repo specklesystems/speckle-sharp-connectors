@@ -1,6 +1,6 @@
-﻿using Speckle.Connectors.Ifc.Ara3D.StepParser;
+﻿using Speckle.Importers.Ifc.Ara3D.StepParser;
 
-namespace Speckle.Connectors.Ifc.Ara3D.IfcParser;
+namespace Speckle.Importers.Ifc.Ara3D.IfcParser;
 
 /// <summary>
 /// It represents an entity definition. It is usually a single line in a STEP file.
