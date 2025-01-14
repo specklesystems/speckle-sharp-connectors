@@ -2,6 +2,7 @@ using System.Data;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
+using Database = Autodesk.Navisworks.Api.DocumentParts.DocumentDatabase;
 
 namespace Speckle.Connector.Navisworks.HostApp;
 
@@ -15,6 +16,7 @@ public sealed class NavisworksDocumentModelStore : DocumentModelStore
   private const string KEY_NAME = "Speckle_DUI3";
 
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private string _lastSavedState = string.Empty;
 
   public NavisworksDocumentModelStore(
     IJsonSerializer jsonSerializer,
@@ -33,9 +35,16 @@ public sealed class NavisworksDocumentModelStore : DocumentModelStore
       return;
     }
 
+    // Compare current state with last saved state
+    if (modelCardState == _lastSavedState)
+    {
+      return; // Skip save if states match
+    }
+
     try
     {
       SaveStateToDatabase(modelCardState);
+      _lastSavedState = modelCardState; // Update last saved state after successful save
     }
     catch (NAV.Data.DatabaseException ex)
     {
@@ -54,7 +63,7 @@ public sealed class NavisworksDocumentModelStore : DocumentModelStore
   {
     if (!IsActiveDocumentValid())
     {
-      ClearAndSave();
+      ClearAndSaveThisState();
       return;
     }
 
@@ -62,14 +71,21 @@ public sealed class NavisworksDocumentModelStore : DocumentModelStore
     {
       string serializedState = RetrieveStateFromDatabase();
       LoadFromString(serializedState);
+      _lastSavedState = serializedState; // Store initial state after loading
     }
     catch (NAV.Data.DatabaseException ex)
     {
-      ClearAndSave(); // Clear models on failure to avoid stale data
+      ClearAndSaveThisState(); // Clear models on failure to avoid stale data
       _topLevelExceptionHandler.CatchUnhandled(
         () => throw new InvalidOperationException("Failed to read Speckle state from database", ex)
       );
     }
+  }
+
+  private void ClearAndSaveThisState()
+  {
+    ClearAndSave();
+    _lastSavedState = string.Empty; // Reset last saved state when clearing
   }
 
   private static bool IsActiveDocumentValid()
@@ -99,46 +115,55 @@ public sealed class NavisworksDocumentModelStore : DocumentModelStore
 
     var database = activeDoc.Database;
 
-    using (var transaction = database.BeginTransaction(NAV.Data.DatabaseChangedAction.Reset))
+    if (!DoesTableExist(database))
     {
-      EnsureDatabaseTableExists(transaction);
+      CreateTable(database);
     }
 
-    using (var transaction = database.BeginTransaction(NAV.Data.DatabaseChangedAction.Edited))
+    using var transaction = database.BeginTransaction(NAV.Data.DatabaseChangedAction.Edited);
+    try
     {
-      try
-      {
-        ReplaceStateInDatabase(transaction, modelCardState);
-        transaction.Commit();
-      }
-      catch
-      {
-        transaction.Rollback(); // Roll back transaction on failure
-        throw;
-      }
+      ReplaceStateInDatabase(transaction, modelCardState);
+      transaction.Commit();
+    }
+    catch
+    {
+      transaction.Rollback(); // Roll back transaction on failure
+      throw;
     }
   }
 
-  private static void EnsureDatabaseTableExists(NAV.Data.NavisworksTransaction transaction)
+  private static void ReplaceStateInDatabase(NAV.Data.NavisworksTransaction transaction, string modelCardState)
   {
     var command = transaction.Connection.CreateCommand();
-    command.CommandText = $"CREATE TABLE IF NOT EXISTS {TABLE_NAME}(key TEXT PRIMARY KEY, value TEXT)";
+    command.CommandText = $"REPLACE INTO {TABLE_NAME}(key, value) VALUES(@key, @value)";
+    command.Parameters.AddWithValue("@key", KEY_NAME);
+    command.Parameters.AddWithValue("@value", modelCardState);
     command.ExecuteNonQuery();
-    transaction.Commit(); // Ensure table exists before proceeding
   }
 
-  private static void ReplaceStateInDatabase(NAV.Data.NavisworksTransaction transaction, string serializedState)
+  private static bool DoesTableExist(Database database)
   {
-    var command = transaction.Connection.CreateCommand();
+    var checkCommand = database.Value.CreateCommand();
+    checkCommand.CommandText = $"SELECT name FROM sqlite_master WHERE type='table' AND name='{TABLE_NAME}'";
+    return checkCommand.ExecuteScalar() != null;
+  }
 
-    command.CommandText = $"DELETE FROM {TABLE_NAME} WHERE key = @key";
-    command.Parameters.AddWithValue("@key", KEY_NAME);
-    command.ExecuteNonQuery();
-
-    command.CommandText = $"INSERT INTO {TABLE_NAME}(key, value) VALUES(@key, @value)";
-    command.Parameters.AddWithValue("@key", KEY_NAME);
-    command.Parameters.AddWithValue("@value", serializedState);
-    command.ExecuteNonQuery();
+  private static void CreateTable(Database database)
+  {
+    using var transaction = database.BeginTransaction(NAV.Data.DatabaseChangedAction.Edited);
+    try
+    {
+      var command = transaction.Connection.CreateCommand();
+      command.CommandText = $"CREATE TABLE {TABLE_NAME}(key TEXT PRIMARY KEY, value TEXT)";
+      command.ExecuteNonQuery();
+      transaction.Commit();
+    }
+    catch
+    {
+      transaction.Rollback();
+      throw;
+    }
   }
 
   private static string RetrieveStateFromDatabase()
@@ -146,9 +171,9 @@ public sealed class NavisworksDocumentModelStore : DocumentModelStore
     var database = NavisworksApp.ActiveDocument!.Database;
     using var table = new DataTable();
 
-    using (var transaction = database.BeginTransaction(NAV.Data.DatabaseChangedAction.Reset))
+    if (!DoesTableExist(database))
     {
-      EnsureDatabaseTableExists(transaction);
+      return string.Empty;
     }
 
     using var dataAdapter = new NAV.Data.NavisworksDataAdapter(
@@ -158,13 +183,6 @@ public sealed class NavisworksDocumentModelStore : DocumentModelStore
     dataAdapter.SelectCommand.Parameters.AddWithValue("@key", KEY_NAME);
     dataAdapter.Fill(table);
 
-    if (table.Rows.Count <= 0)
-    {
-      return string.Empty; // Return an empty collection if no state is found
-    }
-
-    string stateString = table.Rows[0]["value"] as string ?? string.Empty;
-
-    return stateString;
+    return table.Rows.Count <= 0 ? string.Empty : table.Rows[0]["value"] as string ?? string.Empty;
   }
 }
