@@ -3,7 +3,7 @@ using Speckle.Sdk.Serialisation.V2;
 using Speckle.Sdk.Serialisation.V2.Send;
 using Speckle.Sdk.Transports;
 
-namespace Speckle.Importer.Tester;
+namespace Speckle.Importers.Ifc.Tester;
 
 public class DummyServerObjectManager : IServerObjectManager
 {

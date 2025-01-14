@@ -1,8 +1,8 @@
 using Speckle.Sdk.SQLite;
 
-namespace Speckle.Importer.Tester;
+namespace Speckle.Importers.Ifc.Tester;
 
-public class DummySendCacheManager(Dictionary<string, string> objects) : ISqLiteJsonCacheManager
+public sealed class DummySendCacheManager(Dictionary<string, string> objects) : ISqLiteJsonCacheManager
 {
   public void Dispose() { }
 

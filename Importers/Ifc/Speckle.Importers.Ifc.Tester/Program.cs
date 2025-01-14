@@ -1,18 +1,18 @@
 ﻿#pragma warning disable CA1506
 using System.Diagnostics;
-using Ara3D.IfcParser;
 using Ara3D.Utils;
-using JetBrains.Profiler.SelfApi;
+//using JetBrains.Profiler.SelfApi;
 using Microsoft.Extensions.DependencyInjection;
-using Speckle.Importer.Tester;
+using Speckle.Connectors.Ifc;
+using Speckle.Connectors.Ifc.Ara3D.IfcParser;
+using Speckle.Connectors.Ifc.Converters;
+using Speckle.Connectors.Ifc.Types;
+using Speckle.Importers.Ifc.Tester;
 using Speckle.Sdk.Serialisation.V2.Send;
 using Speckle.Sdk.SQLite;
-using Speckle.WebIfc.Importer;
-using Speckle.WebIfc.Importer.Converters;
-using Speckle.WebIfc.Importer.Ifc;
 
 var serviceProvider = Import.GetServiceProvider();
-DotMemory.Init();
+//DotMemory.Init();
 var filePath = new FilePath(
   //"C:\\Users\\adam\\Git\\speckle-server\\packages\\fileimport-service\\ifc-dotnet\\ifcs\\20210221PRIMARK.ifc"
   //"C:\\Users\\adam\\Git\\speckle-server\\packages\\fileimport-service\\ifc-dotnet\\ifcs\\231110ADT-FZK-Haus-2005-2006.ifc"
@@ -39,9 +39,10 @@ ms2 = stopwatch.ElapsedMilliseconds;
 Console.WriteLine($"Converted to Speckle Bases: {ms2 - ms} ms");
 
 var cache = $"C:\\Users\\adam\\Git\\temp\\{Guid.NewGuid()}.db";
+using var sqlite = new SqLiteJsonCacheManager($"Data Source={cache};", 2);
 using var process2 = new SerializeProcess(
   new Progress(true),
-  new SqLiteJsonCacheManager($"Data Source={cache};", 2),
+  sqlite,
   new DummyServerObjectManager(),
   new BaseChildFinder(new BasePropertyGatherer()),
   new ObjectSerializerFactory(new BasePropertyGatherer()),

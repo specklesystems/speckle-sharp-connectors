@@ -8,12 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Speckle.WebIfc.Importer\Speckle.WebIfc.Importer.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <PackageReference Include="JetBrains.Profiler.Api" />
-      <PackageReference Include="JetBrains.Profiler.SelfApi" />
+      <ProjectReference Include="..\Speckle.Importers.Ifc\Speckle.Importers.Ifc.csproj" />
     </ItemGroup>
 
 </Project>

@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RootNamespace>Speckle.Connectors.Ifc</RootNamespace>
   </PropertyGroup>
 
  <PropertyGroup Label="Nuget Package Properties">
@@ -14,7 +15,7 @@
 
   <PropertyGroup Label="Ignored Compile Warniongs">
   <NoWarn>
-    IDE1006;IDE0130;IDE0011;CA1051;CA1720;CA1002;CA1054;CA1062;CA1028;CA1721;CA1502;CA1065;
+    IDE1006;IDE0130;IDE0011;CA1051;CA1720;CA1002;CA1054;CA1028;CA1721;CA1502;CA1065;
     $(NoWarn)
   </NoWarn>
 </PropertyGroup>

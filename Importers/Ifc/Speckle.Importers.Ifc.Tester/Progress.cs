@@ -1,10 +1,10 @@
 using Speckle.Sdk.Transports;
 
-namespace Speckle.Importer.Tester;
+namespace Speckle.Importers.Ifc.Tester;
 
 public class Progress(bool write) : IProgress<ProgressArgs>
 {
-  private readonly TimeSpan DEBOUNCE = TimeSpan.FromMilliseconds(1000);
+  private readonly TimeSpan _debounce = TimeSpan.FromMilliseconds(1000);
   private DateTime _lastTime = DateTime.UtcNow;
 
   private long _totalBytes;
@@ -18,7 +18,7 @@ public class Progress(bool write) : IProgress<ProgressArgs>
         Interlocked.Add(ref _totalBytes, value.Count);
       }
       var now = DateTime.UtcNow;
-      if (now - _lastTime >= DEBOUNCE)
+      if (now - _lastTime >= _debounce)
       {
         if (value.ProgressEvent == ProgressEvent.DownloadBytes)
         {
