@@ -23,6 +23,7 @@ public class CsiFrameSectionPropertyExtractor : IFrameSectionPropertyExtractor
   public void ExtractProperties(string sectionName, SectionPropertyExtractionResult dataExtractionResult)
   {
     GetSectionProperties(sectionName, dataExtractionResult.Properties);
+    GetPropertyModifiers(sectionName, dataExtractionResult.Properties);
     dataExtractionResult.MaterialName = GetMaterialName(sectionName);
   }
 
@@ -65,17 +66,41 @@ public class CsiFrameSectionPropertyExtractor : IFrameSectionPropertyExtractor
     );
 
     var mechanicalProperties = DictionaryUtils.EnsureNestedDictionary(properties, "Section Properties");
-    mechanicalProperties["crossSectionalArea"] = crossSectionalArea;
-    mechanicalProperties["shearAreaInMajorAxisDirection"] = shearAreaInMajorAxisDirection;
-    mechanicalProperties["shearAreaInMinorAxisDirection"] = shearAreaInMinorAxisDirection;
-    mechanicalProperties["torsionalConstant"] = torsionalConstant;
-    mechanicalProperties["momentOfInertiaAboutMajorAxis"] = momentOfInertiaAboutMajorAxis;
-    mechanicalProperties["momentOfInertiaAboutMinorAxis"] = momentOfInertiaAboutMinorAxis;
-    mechanicalProperties["sectionModulusAboutMajorAxis"] = sectionModulusAboutMajorAxis;
-    mechanicalProperties["sectionModulusAboutMinorAxis"] = sectionModulusAboutMinorAxis;
-    mechanicalProperties["plasticModulusAboutMajorAxis"] = plasticModulusAboutMajorAxis;
-    mechanicalProperties["plasticModulusAboutMinorAxis"] = plasticModulusAboutMinorAxis;
-    mechanicalProperties["radiusOfGyrationAboutMajorAxis"] = radiusOfGyrationAboutMajorAxis;
-    mechanicalProperties["radiusOfGyrationAboutMinorAxis"] = radiusOfGyrationAboutMinorAxis;
+    mechanicalProperties["area"] = crossSectionalArea;
+    mechanicalProperties["As2"] = shearAreaInMajorAxisDirection;
+    mechanicalProperties["As3"] = shearAreaInMinorAxisDirection;
+    mechanicalProperties["torsion"] = torsionalConstant;
+    mechanicalProperties["I22"] = momentOfInertiaAboutMajorAxis;
+    mechanicalProperties["I33"] = momentOfInertiaAboutMinorAxis;
+    mechanicalProperties["S22"] = sectionModulusAboutMajorAxis;
+    mechanicalProperties["S33"] = sectionModulusAboutMinorAxis;
+    mechanicalProperties["Z22"] = plasticModulusAboutMajorAxis;
+    mechanicalProperties["Z33"] = plasticModulusAboutMinorAxis;
+    mechanicalProperties["R22"] = radiusOfGyrationAboutMajorAxis;
+    mechanicalProperties["R33"] = radiusOfGyrationAboutMinorAxis;
+  }
+
+  private void GetPropertyModifiers(string sectionName, Dictionary<string, object?> properties)
+  {
+    double[] stiffnessModifiersArray = [];
+    _settingsStore.Current.SapModel.PropFrame.GetModifiers(sectionName, ref stiffnessModifiersArray);
+
+    var modifierKeys = new[]
+    {
+      "crossSectionalAreaModifier",
+      "shearAreaInLocal2DirectionModifier",
+      "shearAreaInLocal3DirectionModifier",
+      "torsionalConstantModifier",
+      "momentOfInertiaAboutLocal2AxisModifier",
+      "momentOfInertiaAboutLocal3AxisModifier",
+      "mass",
+      "weight",
+    };
+    var modifiers = modifierKeys
+      .Zip(stiffnessModifiersArray, (key, value) => (key, value))
+      .ToDictionary(x => x.key, x => (object?)x.value);
+
+    var generalData = DictionaryUtils.EnsureNestedDictionary(properties, "General Data");
+    generalData["modifiers"] = modifiers;
   }
 }

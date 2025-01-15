@@ -34,7 +34,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IConverterSettingsStore<CsiConversionSettings> _converterSettings;
   private readonly CsiSendCollectionManager _sendCollectionManager;
-  private readonly IMaterialUnpacker _materialUnpacker;
+  private readonly MaterialUnpacker _materialUnpacker;
   private readonly ISectionUnpacker _sectionUnpacker;
   private readonly ISectionMaterialRelationshipManager _sectionMaterialRelationshipManager;
   private readonly IObjectSectionRelationshipManager _objectSectionRelationshipManager;
@@ -48,7 +48,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     ISendConversionCache sendConversionCache,
     IConverterSettingsStore<CsiConversionSettings> converterSettings,
     CsiSendCollectionManager sendCollectionManager,
-    IMaterialUnpacker materialUnpacker,
+    MaterialUnpacker materialUnpacker,
     ISectionUnpacker sectionUnpacker,
     ISectionMaterialRelationshipManager sectionMaterialRelationshipManager,
     IObjectSectionRelationshipManager objectSectionRelationshipManager,

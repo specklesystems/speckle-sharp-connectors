@@ -1,7 +1,7 @@
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Proxies;
 
-namespace Speckle.Connectors.CSiShared.HostApp;
+namespace Speckle.Connectors.CSiShared.HostApp.Helpers;
 
 /// <summary>
 /// Represents a section proxy with properties, material reference, and object references in a CSi model.
@@ -12,6 +12,7 @@ namespace Speckle.Connectors.CSiShared.HostApp;
 /// MaterialName is required to establish material-section relationships.
 /// </remarks>
 
+// TODO: These are currently not used - we're just using GroupProxy
 [SpeckleType("Objects.Other.SectionProxy")]
 public class SectionProxy : Base, IProxyCollection
 {

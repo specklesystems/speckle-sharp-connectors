@@ -7,7 +7,7 @@ using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Proxies;
 
-namespace Speckle.Connectors.ETABSShared.HostApp.Sections;
+namespace Speckle.Connectors.ETABSShared.HostApp;
 
 public class EtabsSectionUnpacker : ISectionUnpacker
 {

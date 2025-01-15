@@ -47,7 +47,8 @@ public static class ServiceRegistration
 
     services.RegisterTopLevelExceptionHandler();
 
-    services.AddScoped<IMaterialUnpacker, SharedMaterialUnpacker>();
+    services.AddScoped<CsiMaterialPropertyExtractor>();
+    services.AddScoped<MaterialUnpacker>();
     services.AddScoped<ISectionMaterialRelationshipManager, SectionMaterialRelationshipManager>();
     services.AddScoped<IObjectSectionRelationshipManager, ObjectSectionRelationshipManager>();
     services.AddScoped<IFrameSectionPropertyExtractor, CsiFrameSectionPropertyExtractor>();

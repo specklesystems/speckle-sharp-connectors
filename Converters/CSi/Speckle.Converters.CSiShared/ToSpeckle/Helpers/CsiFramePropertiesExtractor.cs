@@ -88,8 +88,8 @@ public sealed class CsiFramePropertiesExtractor
       ["torsionalConstantModifier"] = value[3],
       ["momentOfInertiaAboutLocal2AxisModifier"] = value[4],
       ["momentOfInertiaAboutLocal3AxisModifier"] = value[5],
-      ["massModifier"] = value[6],
-      ["weightModifier"] = value[7]
+      ["mass"] = value[6],
+      ["weight"] = value[7]
     };
   }
 
