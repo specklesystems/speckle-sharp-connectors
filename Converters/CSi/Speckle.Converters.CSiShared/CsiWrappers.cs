@@ -7,7 +7,7 @@ public interface ICsiWrapper
   string Name { get; set; }
   ModelObjectType ObjectType { get; }
   string ObjectName { get; }
-  bool RequiresSectionRelationship { get; }
+  bool RequiresSectionRelationship { get; } // Does this object have a section assigned to it (is there a matching SectionProxy)
 }
 
 /// <summary>

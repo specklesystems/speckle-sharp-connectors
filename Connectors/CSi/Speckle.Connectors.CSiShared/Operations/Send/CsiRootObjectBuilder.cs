@@ -133,6 +133,12 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
   /// 2. Performs conversion if not cached
   /// 3. Adds to type-specific collection
   /// 4. Tracks objects needing section relationships
+  ///
+  /// _convertedObjectsForProxies notes:
+  /// - SendConversionResult doesn't give us access to converted object
+  /// - rootObjectCollection flattening seems a little unnecessary. We also don't need access to all converted objects
+  /// - Only FRAME and SHELL have associated sections and thus need relations built
+  /// - For this reason, these types are "true" and added to list
   /// </remarks>
   private SendConversionResult ConvertCsiObject(ICsiWrapper csiObject, Collection typeCollection, string projectId)
   {
@@ -154,6 +160,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
       var collection = _sendCollectionManager.AddObjectCollectionToRoot(converted, typeCollection);
       collection.elements.Add(converted);
 
+      // NOTE: See remarks in docstrings
       if (csiObject.RequiresSectionRelationship)
       {
         _convertedObjectsForProxies.Add(converted);
