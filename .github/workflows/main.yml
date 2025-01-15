@@ -30,7 +30,7 @@ jobs:
       - name: ⚒️ Run GitVersion on Windows
         run: ./build.ps1 build-server-version
 
-      - name: ⚒️ Run build on Linux
+      - name: ⚒️ Run build on Windows
         run: ./build.ps1
 
       - name: ⬆️ Upload artifacts
