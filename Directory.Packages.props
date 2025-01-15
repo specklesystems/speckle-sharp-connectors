@@ -1,5 +1,8 @@
 <Project>
   <ItemGroup>
+    <PackageVersion Include="Ara3D.Buffers" Version="1.4.5" />
+    <PackageVersion Include="Ara3D.Logging" Version="1.4.5" />
+    <PackageVersion Include="Ara3D.Utils" Version="1.4.5" />
     <PackageVersion Include="altcover" Version="8.9.3" />
     <PackageVersion Include="Bullseye" Version="5.0.0" />
     <PackageVersion Include="CefSharp.Wpf" Version="92.0.260" />
