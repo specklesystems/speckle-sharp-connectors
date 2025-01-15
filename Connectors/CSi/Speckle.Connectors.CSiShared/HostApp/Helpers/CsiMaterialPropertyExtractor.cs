@@ -4,6 +4,13 @@ using Speckle.Converters.CSiShared.Utils;
 
 namespace Speckle.Connectors.CSiShared.HostApp.Helpers;
 
+/// <summary>
+/// Base material property extractor for CSi products.
+/// </summary>
+/// <remarks>
+/// Currently, all material property extraction can happen on a CsiShared level which simplifies things a lot.
+/// Properties depend on the directional symmetry of the material, hence the switch statements.
+/// </remarks>
 public class CsiMaterialPropertyExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;

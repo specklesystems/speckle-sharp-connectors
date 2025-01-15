@@ -29,6 +29,16 @@ public class EtabsSectionPropertyExtractor
     _etabsShellExtractor = etabsShellExtractor;
   }
 
+  /// <summary>
+  /// Extract the properties on both a Csi and app-specific level
+  /// </summary>
+  /// <remarks>
+  /// SectionPropertyExtractionResult formalises and enforces (somewhat) the required attributes
+  /// propertyExtraction gets mutated within the _csiFrameExtractor and _etabsFrameExtractor methods
+  /// Not ideal, BUT this way we negate specific order of operations AND it create uniformity in the approach
+  /// with shell sections although how obtain MaterialName (for example) differs between the two types.
+  /// For FRAME, the material is obtained easily on the CsiShared level
+  /// </remarks>
   public SectionPropertyExtractionResult ExtractFrameSectionProperties(string sectionName)
   {
     SectionPropertyExtractionResult propertyExtraction = new();
@@ -37,6 +47,16 @@ public class EtabsSectionPropertyExtractor
     return propertyExtraction;
   }
 
+  /// <summary>
+  /// Extract the properties on both a Csi and app-specific level
+  /// </summary>
+  /// <remarks>
+  /// SectionPropertyExtractionResult formalises and enforces (somewhat) the required attributes
+  /// propertyExtraction gets mutated within the _csiShellExtractor and _etabsShellExtractor methods
+  /// Not ideal, BUT this way we negate specific order of operations AND it create uniformity in the approach
+  /// with frame sections although how obtain MaterialName (for example) differs between the two types.
+  /// Property extraction is complicated for shells, see EtabsShellSectionResolver.
+  /// </remarks>
   public SectionPropertyExtractionResult ExtractShellSectionProperties(string sectionName)
   {
     SectionPropertyExtractionResult propertyExtraction = new();

@@ -9,11 +9,12 @@ using Speckle.Sdk.Models.Proxies;
 namespace Speckle.Connectors.CSiShared.HostApp;
 
 /// <summary>
-/// Unpacks materials and creates material proxies.
+/// Extracts material proxies from the root object collection.
 /// </summary>
 /// <remarks>
-/// Handles listing of materials and proxy creation.
-/// Property extraction delegated to material property extractor.
+/// Decouples material extraction from conversion processes. Supports complex material
+/// property retrieval (dependent on material type) while maintaining a clean separation of concerns.
+/// Enables extensible material proxy creation across different material types.
 /// </remarks>
 public class MaterialUnpacker
 {

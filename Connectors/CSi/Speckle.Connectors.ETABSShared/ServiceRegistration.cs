@@ -3,7 +3,6 @@ using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.CSiShared.HostApp.Helpers;
 using Speckle.Connectors.ETABSShared.HostApp;
 using Speckle.Connectors.ETABSShared.HostApp.Helpers;
-using Speckle.Connectors.ETABSShared.HostApp.Sections;
 using Speckle.Converters.ETABSShared;
 
 namespace Speckle.Connectors.ETABSShared;

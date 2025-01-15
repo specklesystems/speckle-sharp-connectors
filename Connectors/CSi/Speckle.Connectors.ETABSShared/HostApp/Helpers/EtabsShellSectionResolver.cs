@@ -10,7 +10,6 @@ namespace Speckle.Connectors.ETABSShared.HostApp.Helpers;
 /// This service focuses solely on determining the correct section type and returning its properties.
 /// Since section names are unique across different types (Wall, Slab, Deck), it uses a try-and-fail approach
 /// rather than attempting to predetermine the type. The first successful resolution is returned.
-/// The merging of the returned properties with any existing property collections should be handled by the caller.
 /// </remarks>
 public record AreaSectionResult
 {

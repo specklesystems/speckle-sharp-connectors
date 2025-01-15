@@ -47,7 +47,8 @@ public class ObjectSectionRelationshipManager : IObjectSectionRelationshipManage
 
   private string? GetObjectSectionName(Base baseObject)
   {
-    // 🙍‍♂️ This below is horrible! I know. We need to refine the accessibility of sectionProperty in a more robust manner
+    // TODO: We need to refine the accessibility of sectionProperty in a more robust manner
+    // 🙍‍♂️ This below is horrible! I know. But both SHELL and FRAME have the same nested property structure (unformalised)
     try
     {
       if (baseObject["properties"] is not Dictionary<string, object?> properties)

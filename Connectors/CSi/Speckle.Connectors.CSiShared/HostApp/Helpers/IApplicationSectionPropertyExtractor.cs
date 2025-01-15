@@ -12,6 +12,7 @@ public interface IApplicationSectionPropertyExtractor
   void ExtractProperties(string sectionName, SectionPropertyExtractionResult dataExtractionResult);
 }
 
+// NOTE: Seemingly silly, but allows us to register the correct extractor for the correct type.
 public interface IApplicationFrameSectionPropertyExtractor : IApplicationSectionPropertyExtractor { }
 
 public interface IApplicationShellSectionPropertyExtractor : IApplicationSectionPropertyExtractor { }

@@ -23,6 +23,14 @@ public class EtabsFrameSectionPropertyExtractor : IApplicationFrameSectionProper
     _logger = logger;
   }
 
+  /// <summary>
+  /// Gets generalised frame section properties
+  /// </summary>
+  /// <remarks>
+  /// Sap2000 doesn't support this method, unfortunately
+  /// Alternative is to account for extraction according to section type - we're talking over 40 section types!
+  /// This way, we get basic information with minimal computational costs.
+  /// </remarks>
   public void ExtractProperties(string sectionName, SectionPropertyExtractionResult dataExtractionResult)
   {
     // Get all frame properties

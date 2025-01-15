@@ -8,7 +8,7 @@ namespace Speckle.Connectors.CSiShared.HostApp.Helpers;
 /// Base shell section property extractor for CSi products.
 /// </summary>
 /// <remarks>
-/// Handles common shell section properties using CSi API.
+/// Handles common Csi API calls for shell section properties.
 /// Provides foundation for application-specific extractors.
 /// </remarks>
 public class CsiShellSectionPropertyExtractor : IShellSectionPropertyExtractor

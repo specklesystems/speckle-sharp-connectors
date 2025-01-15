@@ -8,7 +8,7 @@ namespace Speckle.Connectors.CSiShared.HostApp.Helpers;
 /// Base frame section property extractor for CSi products.
 /// </summary>
 /// <remarks>
-/// Handles common frame section properties using CSi API.
+/// Handles common Csi API calls for frame section properties
 /// Provides foundation for application-specific extractors.
 /// </remarks>
 public class CsiFrameSectionPropertyExtractor : IFrameSectionPropertyExtractor
@@ -27,7 +27,7 @@ public class CsiFrameSectionPropertyExtractor : IFrameSectionPropertyExtractor
     dataExtractionResult.MaterialName = GetMaterialName(sectionName);
   }
 
-  public string GetMaterialName(string sectionName)
+  private string GetMaterialName(string sectionName)
   {
     string materialName = string.Empty;
     _settingsStore.Current.SapModel.PropFrame.GetMaterial(sectionName, ref materialName);

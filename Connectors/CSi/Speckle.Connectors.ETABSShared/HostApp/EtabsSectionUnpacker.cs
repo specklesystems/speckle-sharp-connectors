@@ -9,6 +9,14 @@ using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Connectors.ETABSShared.HostApp;
 
+/// <summary>
+/// Unpacks and creates proxies for frame and shell sections from the model.
+/// </summary>
+/// <remarks>
+/// Provides a unified approach to section extraction across different section types.
+/// Leverages specialized extractors to handle complex property retrieval. Centralizes
+/// section proxy creation with robust error handling and logging mechanisms.
+/// </remarks>
 public class EtabsSectionUnpacker : ISectionUnpacker
 {
   private readonly ICsiApplicationService _csiApplicationService;

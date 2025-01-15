@@ -5,12 +5,10 @@ using Speckle.Sdk.Models.Proxies;
 namespace Speckle.Connectors.CSiShared.HostApp.Relationships;
 
 /// <summary>
-/// Manages relationships between sections and their assigned materials.
+/// Manages relationships between sections and materials.
 /// </summary>
 /// <remarks>
-/// Handles only section-material relationships for clear separation of concerns.
-/// Uses material names from section properties to establish links.
-/// Performs null checks and logging to maintain relationship integrity.
+/// Establishes clear links between sections and materials with minimal coupling.
 /// </remarks>
 public class SectionMaterialRelationshipManager : ISectionMaterialRelationshipManager
 {

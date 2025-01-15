@@ -26,6 +26,15 @@ public class EtabsShellSectionPropertyExtractor : IApplicationShellSectionProper
     _etabsShellSectionResolver = etabsShellSectionResolver;
   }
 
+  /// <summary>
+  /// Extract shell section properties
+  /// </summary>
+  /// <remarks>
+  /// sectionName is unique across all types (Wall, Slab and Deck)
+  /// There is no general query such as PropArea.GetShell() - rather we have to be specific on the type, for example
+  /// PropArea.GetWall() or PropArea.GetDeck() BUT we can't get the building type given a SectionName.
+  /// Hence the introduction of ResolveSection.
+  /// </remarks>
   public void ExtractProperties(string sectionName, SectionPropertyExtractionResult dataExtractionResult)
   {
     // Step 01: Finding the appropriate api query for the unknown section type (wall, deck or slab)
