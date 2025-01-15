@@ -46,7 +46,7 @@ jobs:
 
   deploy-installers:
     runs-on: ubuntu-latest
-    needs: build
+    needs: build-windows
     env:
       IS_TAG_BUILD: ${{ github.ref_type == 'tag' }}
       IS_RELEASE_BRANCH: ${{ startsWith(github.ref_name, 'release/') || github.ref_name == 'main'}}
@@ -58,7 +58,7 @@ jobs:
           workflow: Build Installers
           repo: specklesystems/connector-installers
           token: ${{ secrets.CONNECTORS_GH_TOKEN }}
-          inputs: '{ "run_id": "${{ github.run_id }}", "version": "${{ needs.build.outputs.version }}", "public_release": ${{ env.IS_TAG_BUILD }}, "store_artifacts": ${{ env.IS_RELEASE_BRANCH }} }'
+          inputs: '{ "run_id": "${{ github.run_id }}", "version": "${{ needs.build-windows.outputs.version }}", "public_release": ${{ env.IS_TAG_BUILD }}, "store_artifacts": ${{ env.IS_RELEASE_BRANCH }} }'
           ref: main
           wait-for-completion: true
           wait-for-completion-interval: 10s
