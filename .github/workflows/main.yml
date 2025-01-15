@@ -6,7 +6,7 @@ on:
     tags: ["v3.*"] # Manual delivery on every 3.x tag
 
 jobs:
-  build:
+  build-windows:
     runs-on: windows-latest
     outputs:
       version: ${{ steps.set-version.outputs.version }}
@@ -27,10 +27,10 @@ jobs:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
 
-      - name: ⚒️ Run GitVersion
+      - name: ⚒️ Run GitVersion on Windows
         run: ./build.ps1 build-server-version
 
-      - name: ⚒️ Run build
+      - name: ⚒️ Run build on Windows
         run: ./build.ps1
 
       - name: ⬆️ Upload artifacts
@@ -70,7 +70,7 @@ jobs:
         with:
           name: output-*
 
-  test:
+  build-linux:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -87,11 +87,14 @@ jobs:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
 
+      - name: ⚒️ Run GitVersion on Linux
+        run: ./build.sh build-server-version
+
+      - name: ⚒️ Run tests on Linux
+        run: ./build.sh test-only
+
       - name: ⚒️ Run Build and Pack on Linux
         run: ./build.sh build-linux
-
-      - name: ⚒️ Run tests
-        run: ./build.sh test-only
 
       - name: Upload coverage reports to Codecov with GitHub Action
         uses: codecov/codecov-action@v5
