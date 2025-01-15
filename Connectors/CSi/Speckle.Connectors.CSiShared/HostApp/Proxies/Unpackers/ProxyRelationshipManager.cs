@@ -71,10 +71,10 @@ public class ProxyRelationshipManager : IProxyRelationshipManager
       EstablishTypeObjectSectionRelationships(frameObjects, sectionProxies);
     }
 
-    if (convertedObjectsByType.TryGetValue(ModelObjectType.SHELL.ToString(), out var shellObjects))
+    /*if (convertedObjectsByType.TryGetValue(ModelObjectType.SHELL.ToString(), out var shellObjects))
     {
       EstablishTypeObjectSectionRelationships(shellObjects, sectionProxies);
-    }
+    }*/
   }
 
   private void EstablishTypeObjectSectionRelationships(List<Base> objects, List<IProxyCollection> sectionProxies)

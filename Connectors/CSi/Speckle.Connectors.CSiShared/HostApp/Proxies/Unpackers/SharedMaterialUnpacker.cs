@@ -145,39 +145,43 @@ public class SharedMaterialUnpacker : IMaterialUnpacker
       ref materialDirectionalSymmetryKey
     );
 
-    var mechanicalProperties = DictionaryUtils.EnsureNestedDictionary(properties, "Mechanical Properties");
-    mechanicalProperties["directionalSymmetryType"] = materialDirectionalSymmetryKey switch
+    var materialDirectionalSymmetryValue = materialDirectionalSymmetryKey switch
     {
-      1 => "Isotropic",
-      2 => "Orthotropic",
-      3 => "Anisotropic",
-      4 => "Uniaxial",
-      _ => $"Unknown ({materialDirectionalSymmetryKey})"
+      0 => DirectionalSymmetryType.ISOTROPIC,
+      1 => DirectionalSymmetryType.ORTHOTROPIC,
+      2 => DirectionalSymmetryType.ANISOTROPIC,
+      3 => DirectionalSymmetryType.UNIAXIAL,
+      _ => throw new ArgumentException($"Unknown symmetry type: {materialDirectionalSymmetryKey}")
     };
 
-    ExtractMechanicalPropertiesByType(materialName, materialDirectionalSymmetryKey, mechanicalProperties);
+    var mechanicalProperties = DictionaryUtils.EnsureNestedDictionary(properties, "Mechanical Properties");
+    mechanicalProperties["directionalSymmetryType"] = materialDirectionalSymmetryValue.ToString();
+
+    ExtractMechanicalPropertiesByType(materialName, materialDirectionalSymmetryValue, mechanicalProperties);
   }
 
   private void ExtractMechanicalPropertiesByType(
     string materialName,
-    int symmetryType,
+    DirectionalSymmetryType directionalSymmetryType,
     Dictionary<string, object?> mechanicalProperties
   )
   {
-    switch (symmetryType)
+    switch (directionalSymmetryType)
     {
-      case 1:
+      case DirectionalSymmetryType.ISOTROPIC:
         ExtractIsotropicProperties(materialName, mechanicalProperties);
         break;
-      case 2:
+      case DirectionalSymmetryType.ORTHOTROPIC:
         ExtractOrthotropicProperties(materialName, mechanicalProperties);
         break;
-      case 3:
+      case DirectionalSymmetryType.ANISOTROPIC:
         ExtractAnisotropicProperties(materialName, mechanicalProperties);
         break;
-      case 4:
+      case DirectionalSymmetryType.UNIAXIAL:
         ExtractUniaxialProperties(materialName, mechanicalProperties);
         break;
+      default:
+        throw new ArgumentException($"Unknown directional symmetry type: {directionalSymmetryType}");
     }
   }
 

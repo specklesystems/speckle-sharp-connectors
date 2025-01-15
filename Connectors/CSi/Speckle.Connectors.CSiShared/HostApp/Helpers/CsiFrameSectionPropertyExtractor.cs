@@ -1,41 +1,39 @@
-using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
 using Speckle.Converters.CSiShared.Utils;
 
-namespace Speckle.Connectors.CSiShared.HostApp;
+namespace Speckle.Connectors.CSiShared.HostApp.Helpers;
 
 /// <summary>
-/// Base implementation for extracting frame section properties from CSi products.
+/// Base frame section property extractor for CSi products.
 /// </summary>
 /// <remarks>
-/// Provides common CSi section properties with extension points for application-specific data.
-/// Properties organized in nested dictionaries matching CSi API structure.
-/// Design follows template method pattern for property extraction customization.
+/// Handles common frame section properties using CSi API.
+/// Provides foundation for application-specific extractors.
 /// </remarks>
-public class FrameSectionPropertiesUnpacker
+public class CsiFrameSectionPropertyExtractor : IFrameSectionPropertyExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
-  private readonly ILogger<FrameSectionPropertiesUnpacker> _logger;
 
-  protected FrameSectionPropertiesUnpacker(
-    IConverterSettingsStore<CsiConversionSettings> settingsStore,
-    ILogger<FrameSectionPropertiesUnpacker> logger
-  )
+  public CsiFrameSectionPropertyExtractor(IConverterSettingsStore<CsiConversionSettings> settingsStore)
   {
     _settingsStore = settingsStore;
-    _logger = logger;
   }
 
-  public Dictionary<string, object?> GetProperties(string sectionName)
+  public void ExtractProperties(string sectionName, SectionPropertyExtractionResult dataExtractionResult)
   {
-    var properties = new Dictionary<string, object?>();
-    ExtractCommonProperties(sectionName, properties);
-    ExtractTypeSpecificProperties(sectionName, properties);
-    return properties;
+    GetSectionProperties(sectionName, dataExtractionResult.Properties);
+    dataExtractionResult.MaterialName = GetMaterialName(sectionName);
   }
 
-  protected void ExtractCommonProperties(string sectionName, Dictionary<string, object?> properties)
+  public string GetMaterialName(string sectionName)
+  {
+    string materialName = string.Empty;
+    _settingsStore.Current.SapModel.PropFrame.GetMaterial(sectionName, ref materialName);
+    return materialName;
+  }
+
+  private void GetSectionProperties(string sectionName, Dictionary<string, object?> properties)
   {
     double crossSectionalArea = 0,
       shearAreaInMajorAxisDirection = 0,
@@ -79,18 +77,5 @@ public class FrameSectionPropertiesUnpacker
     mechanicalProperties["plasticModulusAboutMinorAxis"] = plasticModulusAboutMinorAxis;
     mechanicalProperties["radiusOfGyrationAboutMajorAxis"] = radiusOfGyrationAboutMajorAxis;
     mechanicalProperties["radiusOfGyrationAboutMinorAxis"] = radiusOfGyrationAboutMinorAxis;
-  }
-
-  // Virtual instead of abstract, with empty default implementation
-  protected virtual void ExtractTypeSpecificProperties(string sectionName, Dictionary<string, object?> properties)
-  {
-    // Base implementation does nothing
-  }
-
-  public string GetMaterialName(string sectionName)
-  {
-    string materialName = string.Empty;
-    _settingsStore.Current.SapModel.PropFrame.GetMaterial(sectionName, ref materialName);
-    return materialName;
   }
 }

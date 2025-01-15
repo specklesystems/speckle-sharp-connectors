@@ -4,9 +4,10 @@ using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.CSiShared.HostApp;
+using Speckle.Connectors.CSiShared.HostApp.Helpers;
+using Speckle.Connectors.CSiShared.HostApp.Relationships;
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
-using Speckle.Converters.CSiShared.Utils;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -15,20 +16,17 @@ using Speckle.Sdk.Models.Collections;
 namespace Speckle.Connectors.CSiShared.Builders;
 
 /// <summary>
-/// Manages the conversion of CSi model objects and creation of proxy relationships.
+/// Manages the conversion of CSi model objects and establishes proxy-based relationships.
 /// </summary>
 /// <remarks>
-/// Key responsibilities:
-/// - Converts ICsiWrappers to DataObjects (ETABS/SAP objects)
-/// - Manages material and section proxy creation
-/// - Establishes relationships between objects, sections, and materials
+/// Core responsibilities:
+/// - Converts ICsiWrappers to Speckle objects through caching-aware conversion
+/// - Creates proxy objects for materials and sections from model data
+/// - Establishes relationships between objects and their dependencies
 ///
-/// Design principles:
-/// - Two-stage process: conversion then relationship establishment
-/// - Objects grouped by type for efficient relationship processing
-/// - Proxies created through dedicated unpackers
-/// - Relationships managed through separate relationship manager
-/// - Error handling at each stage preserves partial success
+/// The builder follows a two-phase process:
+/// 1. Conversion Phase: ICsiWrappers → Speckle objects with cached results handling
+/// 2. Relationship Phase: Material/section proxy creation and relationship mapping
 /// </remarks>
 public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
 {
@@ -36,10 +34,11 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IConverterSettingsStore<CsiConversionSettings> _converterSettings;
   private readonly CsiSendCollectionManager _sendCollectionManager;
-  private readonly ISectionUnpacker _sectionUnpacker;
   private readonly IMaterialUnpacker _materialUnpacker;
-  private readonly IProxyRelationshipManager _proxyRelationshipManager;
-  private readonly Dictionary<string, List<Base>> _convertedObjectsForProxies = [];
+  private readonly ISectionUnpacker _sectionUnpacker;
+  private readonly ISectionMaterialRelationshipManager _sectionMaterialRelationshipManager;
+  private readonly IObjectSectionRelationshipManager _objectSectionRelationshipManager;
+  private readonly List<Base> _convertedObjectsForProxies = [];
   private readonly ILogger<CsiRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly ICsiApplicationService _csiApplicationService;
@@ -49,9 +48,10 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     ISendConversionCache sendConversionCache,
     IConverterSettingsStore<CsiConversionSettings> converterSettings,
     CsiSendCollectionManager sendCollectionManager,
-    ISectionUnpacker sectionUnpacker,
     IMaterialUnpacker materialUnpacker,
-    IProxyRelationshipManager proxyRelationshipManager,
+    ISectionUnpacker sectionUnpacker,
+    ISectionMaterialRelationshipManager sectionMaterialRelationshipManager,
+    IObjectSectionRelationshipManager objectSectionRelationshipManager,
     ILogger<CsiRootObjectBuilder> logger,
     ISdkActivityFactory activityFactory,
     ICsiApplicationService csiApplicationService
@@ -60,9 +60,10 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     _sendConversionCache = sendConversionCache;
     _converterSettings = converterSettings;
     _sendCollectionManager = sendCollectionManager;
-    _sectionUnpacker = sectionUnpacker;
     _materialUnpacker = materialUnpacker;
-    _proxyRelationshipManager = proxyRelationshipManager;
+    _sectionUnpacker = sectionUnpacker;
+    _sectionMaterialRelationshipManager = sectionMaterialRelationshipManager;
+    _objectSectionRelationshipManager = objectSectionRelationshipManager;
     _rootToSpeckleConverter = rootToSpeckleConverter;
     _logger = logger;
     _activityFactory = activityFactory;
@@ -70,17 +71,13 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
   }
 
   /// <summary>
-  /// Converts CSi objects and establishes proxy relationships.
+  /// Converts CSi objects into a Speckle-compatible object hierarchy with established relationships.
   /// </summary>
   /// <remarks>
-  /// Process flow:
-  /// 1. Converts each ICsiWrapper to appropriate DataObject
-  /// 2. Groups frame/shell objects for proxy relationships
-  /// 3. Creates material and section proxies
-  /// 4. Establishes relationships between all components
-  ///
-  /// Error handling ensures partial success is preserved even if some
-  /// objects fail conversion or relationship establishment.
+  /// Operation sequence:
+  /// 1. Creates root collection with model metadata
+  /// 2. Converts each object with caching and progress tracking
+  /// 3. Processes material/section relationships if conversion successful
   /// </remarks>
   public async Task<RootObjectBuilderResult> BuildAsync(
     IReadOnlyList<ICsiWrapper> csiObjects,
@@ -121,20 +118,21 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
 
     using (var _ = _activityFactory.Start("Process Proxies"))
     {
-      ProcessSectionsAndMaterials(rootObjectCollection);
+      ProcessProxies(rootObjectCollection);
     }
 
     return new RootObjectBuilderResult(rootObjectCollection, results);
   }
 
   /// <summary>
-  /// Converts a single ICsiWrapper to a DataObject.
+  /// Converts a single CSi object with caching and collection management.
   /// </summary>
   /// <remarks>
-  /// - Checks cache before conversion
-  /// - Only successful conversions added to collection
-  /// - Frame and shell objects tracked for proxy relationships
-  /// - Uses application-specific collection management
+  /// Conversion process:
+  /// 1. Checks conversion cache for existing result
+  /// 2. Performs conversion if not cached
+  /// 3. Adds to type-specific collection
+  /// 4. Tracks objects needing section relationships
   /// </remarks>
   private SendConversionResult ConvertCsiObject(ICsiWrapper csiObject, Collection typeCollection, string projectId)
   {
@@ -154,49 +152,44 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
       }
 
       var collection = _sendCollectionManager.AddObjectCollectionToRoot(converted, typeCollection);
-      collection.elements.Add(converted); // On successful conversion
+      collection.elements.Add(converted);
 
-      if (sourceType != ModelObjectType.FRAME.ToString() && sourceType != ModelObjectType.SHELL.ToString())
+      if (csiObject.RequiresSectionRelationship)
       {
-        return new(Status.SUCCESS, applicationId, sourceType, converted);
+        _convertedObjectsForProxies.Add(converted);
       }
-
-      if (!_convertedObjectsForProxies.TryGetValue(sourceType, out List<Base>? typeCollectionForProxies))
-      {
-        typeCollectionForProxies = ([]);
-        _convertedObjectsForProxies[sourceType] = typeCollectionForProxies;
-      }
-
-      typeCollectionForProxies.Add(converted);
 
       return new(Status.SUCCESS, applicationId, sourceType, converted);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
       _logger.LogError(ex, sourceType);
-      return new(Status.ERROR, applicationId, sourceType, null, ex); // On failed conversion
+      return new(Status.ERROR, applicationId, sourceType, null, ex);
     }
   }
 
   /// <summary>
-  /// Creates and links material and section proxies.
+  /// Creates proxy objects and establishes object relationships.
   /// </summary>
   /// <remarks>
-  /// Order of operations is important:
-  /// 1. Create material proxies (no dependencies)
-  /// 2. Create section proxies (references materials)
-  /// 3. Establish relationships (needs both proxies and converted objects)
+  /// Processing sequence:
+  /// 1. Creates material proxies (independent objects)
+  /// 2. Creates section proxies (may reference materials)
+  /// 3. Establishes section-material relationships
+  /// 4. Maps converted objects to their sections
+  /// Relationships are managed through specialized managers for clear responsibility separation.
   /// </remarks>
-  private void ProcessSectionsAndMaterials(Collection rootObjectCollection)
+  private void ProcessProxies(Collection rootObjectCollection)
   {
     try
     {
-      using var activity = _activityFactory.Start("Process Materials and Sections");
+      using var activity = _activityFactory.Start("Process Proxies");
 
       var materialProxies = _materialUnpacker.UnpackMaterials(rootObjectCollection);
       var sectionProxies = _sectionUnpacker.UnpackSections(rootObjectCollection);
 
-      _proxyRelationshipManager.EstablishRelationships(_convertedObjectsForProxies, materialProxies, sectionProxies);
+      _sectionMaterialRelationshipManager.EstablishRelationships(sectionProxies, materialProxies);
+      _objectSectionRelationshipManager.EstablishRelationships(_convertedObjectsForProxies, sectionProxies);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {

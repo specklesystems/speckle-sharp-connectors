@@ -7,6 +7,7 @@ public interface ICsiWrapper
   string Name { get; set; }
   ModelObjectType ObjectType { get; }
   string ObjectName { get; }
+  bool RequiresSectionRelationship { get; }
 }
 
 /// <summary>
@@ -22,48 +23,56 @@ public abstract class CsiWrapperBase : ICsiWrapper
   public required string Name { get; set; }
   public abstract ModelObjectType ObjectType { get; }
   public abstract string ObjectName { get; }
+  public abstract bool RequiresSectionRelationship { get; }
 }
 
 public class CsiJointWrapper : CsiWrapperBase
 {
   public override ModelObjectType ObjectType => ModelObjectType.JOINT;
   public override string ObjectName => ModelObjectType.JOINT.ToString();
+  public override bool RequiresSectionRelationship => false; // This will never be needed. A joint can't have a section
 }
 
 public class CsiFrameWrapper : CsiWrapperBase
 {
   public override ModelObjectType ObjectType => ModelObjectType.FRAME;
   public override string ObjectName => ModelObjectType.FRAME.ToString();
+  public override bool RequiresSectionRelationship => true;
 }
 
 public class CsiCableWrapper : CsiWrapperBase
 {
   public override ModelObjectType ObjectType => ModelObjectType.CABLE;
   public override string ObjectName => ModelObjectType.CABLE.ToString();
+  public override bool RequiresSectionRelationship => false; // TODO: Probably in realm of Sap2000
 }
 
 public class CsiTendonWrapper : CsiWrapperBase
 {
   public override ModelObjectType ObjectType => ModelObjectType.TENDON;
   public override string ObjectName => ModelObjectType.TENDON.ToString();
+  public override bool RequiresSectionRelationship => false; // This will probably never be needed
 }
 
 public class CsiShellWrapper : CsiWrapperBase
 {
   public override ModelObjectType ObjectType => ModelObjectType.SHELL;
   public override string ObjectName => ModelObjectType.SHELL.ToString();
+  public override bool RequiresSectionRelationship => true;
 }
 
 public class CsiSolidWrapper : CsiWrapperBase
 {
   public override ModelObjectType ObjectType => ModelObjectType.SOLID;
   public override string ObjectName => ModelObjectType.SOLID.ToString();
+  public override bool RequiresSectionRelationship => false; // This will probably never be needed - who models solids?
 }
 
 public class CsiLinkWrapper : CsiWrapperBase
 {
   public override ModelObjectType ObjectType => ModelObjectType.LINK;
   public override string ObjectName => ModelObjectType.LINK.ToString();
+  public override bool RequiresSectionRelationship => false; // This will probably never be needed
 }
 
 /// <summary>

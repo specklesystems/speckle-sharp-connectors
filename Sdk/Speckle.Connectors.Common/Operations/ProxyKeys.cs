@@ -9,5 +9,4 @@ public static class ProxyKeys
   public const string PARAMETER_DEFINITIONS = "parameterDefinitions";
   public const string PROPERTYSET_DEFINITIONS = "propertySetDefinitions";
   public const string MATERIAL = "materialProxies";
-  public const string SECTION = "sectionProxies";
 }
