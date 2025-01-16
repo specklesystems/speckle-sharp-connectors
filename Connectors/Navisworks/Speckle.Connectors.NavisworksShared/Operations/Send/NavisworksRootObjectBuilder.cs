@@ -5,6 +5,7 @@ using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Converter.Navisworks.Helpers;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 using Speckle.Objects.Data;
@@ -194,10 +195,20 @@ public class NavisworksRootObjectBuilder(
           finalElements.Add(collection);
           break;
         default:
-          finalElements.Add(CreateNavisworksObject(kvp.Value));
+          if (CreateNavisworksObject(kvp.Value) is { } navisworksObject)
+          {
+            finalElements.Add(navisworksObject);
+          }
+
           break;
       }
     }
+  }
+
+  private (NAV.ModelItem modelItem, string displayPath) GetDisplayPath(string applicationId)
+  {
+    var modelItem = elementSelectionService.GetModelItemFromPath(applicationId);
+    return (modelItem, DisplayPathHelper.GenerateDisplayPath(modelItem));
   }
 
   /// <summary>
@@ -207,30 +218,45 @@ public class NavisworksRootObjectBuilder(
   /// Handles both Collection and Base type elements differently.
   /// Only processes elements that weren't handled in grouped processing.
   /// </remarks>
-  private NavisworksObject CreateNavisworksObject(string groupKey, List<Base> siblingBases) =>
-    new()
+  private NavisworksObject CreateNavisworksObject(string groupKey, List<Base> siblingBases)
+  {
+    (NAV.ModelItem modelItem, string displayPath) = GetDisplayPath(groupKey);
+
+    return new NavisworksObject
     {
-      name = elementSelectionService.GetModelItemFromPath(groupKey).DisplayName ?? string.Empty,
+      name = modelItem.DisplayName ?? string.Empty,
       displayValue = siblingBases.SelectMany(b => b["displayValue"] as List<Base> ?? []).ToList(),
       properties = siblingBases.First()["properties"] as Dictionary<string, object?> ?? [],
       units = converterSettings.Current.Derived.SpeckleUnits,
-      applicationId = groupKey
+      applicationId = groupKey,
+      ["displayNamePath"] = displayPath
     };
+  }
 
   /// <summary>
   /// Creates a NavisworksObject from a single converted base.
   /// </summary>
   /// <param name="convertedBase">The converted Speckle Base object.</param>
   /// <returns>A new NavisworksObject containing the converted data.</returns>
-  private NavisworksObject CreateNavisworksObject(Base convertedBase) =>
-    new()
+  private NavisworksObject? CreateNavisworksObject(Base convertedBase)
+  {
+    if (convertedBase.applicationId == null)
+    {
+      return null;
+    }
+
+    (_, string displayPath) = GetDisplayPath(convertedBase.applicationId);
+
+    return new NavisworksObject
     {
       name = convertedBase["name"] as string ?? string.Empty,
       displayValue = convertedBase["displayValue"] as List<Base> ?? [],
       properties = convertedBase["properties"] as Dictionary<string, object?> ?? [],
       units = converterSettings.Current.Derived.SpeckleUnits,
-      applicationId = convertedBase.applicationId
+      applicationId = convertedBase.applicationId,
+      ["displayNamePath"] = displayPath
     };
+  }
 
   private Task AddProxiesToCollection(
     Collection rootCollection,
