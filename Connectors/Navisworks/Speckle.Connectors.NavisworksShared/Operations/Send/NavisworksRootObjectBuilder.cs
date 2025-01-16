@@ -211,6 +211,20 @@ public class NavisworksRootObjectBuilder(
     return (modelItem, DisplayPathHelper.GenerateDisplayPath(modelItem));
   }
 
+  private static string FindMeaningfulAncestorName(NAV.ModelItem modelItem)
+  {
+    var current = modelItem;
+    while (current != null)
+    {
+      if (!string.IsNullOrEmpty(current.DisplayName) && !current.HasGeometry)
+      {
+        return current.DisplayName;
+      }
+      current = current.Parent;
+    }
+    return string.Empty;
+  }
+
   /// <summary>
   /// Processes and adds any remaining non-grouped elements.
   /// </summary>
@@ -221,15 +235,16 @@ public class NavisworksRootObjectBuilder(
   private NavisworksObject CreateNavisworksObject(string groupKey, List<Base> siblingBases)
   {
     (NAV.ModelItem modelItem, string displayPath) = GetDisplayPath(groupKey);
+    var name = FindMeaningfulAncestorName(modelItem);
 
     return new NavisworksObject
     {
-      name = modelItem.DisplayName ?? string.Empty,
+      name = name,
       displayValue = siblingBases.SelectMany(b => b["displayValue"] as List<Base> ?? []).ToList(),
       properties = siblingBases.First()["properties"] as Dictionary<string, object?> ?? [],
       units = converterSettings.Current.Derived.SpeckleUnits,
       applicationId = groupKey,
-      ["displayNamePath"] = displayPath
+      ["path"] = displayPath
     };
   }
 
@@ -254,7 +269,7 @@ public class NavisworksRootObjectBuilder(
       properties = convertedBase["properties"] as Dictionary<string, object?> ?? [],
       units = converterSettings.Current.Derived.SpeckleUnits,
       applicationId = convertedBase.applicationId,
-      ["displayNamePath"] = displayPath
+      ["path"] = displayPath
     };
   }
 
