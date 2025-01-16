@@ -1,17 +1,15 @@
 ﻿namespace Speckle.Converter.Navisworks.Helpers;
 
 /// <summary>
-/// Helper class for generating display paths by traversing Navisworks model item ancestors.
+/// Helper class for generating display paths by traversing meaningful Navisworks model item ancestors.
 /// </summary>
 public static class DisplayPathHelper
 {
   private const char PATH_DELIMITER = '>';
 
   /// <summary>
-  /// Generates a display path string for a ModelItem by traversing its ancestors up to the first object ancestor.
+  /// Generates a display path string for a ModelItem by traversing its meaningful ancestors.
   /// </summary>
-  /// <param name="modelItem">The ModelItem to generate a path for.</param>
-  /// <returns>A string representing the full path of display names from ancestors, stopping at the first object.</returns>
   public static string GenerateDisplayPath(NAV.ModelItem modelItem)
   {
     if (modelItem == null)
@@ -19,29 +17,44 @@ public static class DisplayPathHelper
       throw new ArgumentNullException(nameof(modelItem));
     }
 
-    var firstObjectAncestor = modelItem.FindFirstObjectAncestor();
-
-    // If we don't find a first object ancestor, return just the model item's display name
-    if (firstObjectAncestor == null)
-    {
-      return modelItem.DisplayName ?? string.Empty;
-    }
-
-    var current = firstObjectAncestor;
     var ancestorPath = new List<string>();
 
-    // Work backwards from the first object ancestor to the root
+    // Start with the root document name if available
+    if (modelItem.HasModel && !string.IsNullOrEmpty(modelItem.Model.FileName))
+    {
+      ancestorPath.Add(Path.GetFileNameWithoutExtension(modelItem.Model.FileName));
+    }
+
+    // Work backwards through ancestors, skipping empty or geometry nodes
+    var current = modelItem.Parent;
     while (current != null)
     {
-      if (!string.IsNullOrEmpty(current.DisplayName))
+      // Skip nodes without meaningful names or geometry nodes
+      if (!string.IsNullOrEmpty(current.DisplayName) && !IsGeometryNode(current))
       {
-        ancestorPath.Add(current.DisplayName);
+        // Don't add duplicate names in sequence
+        if (ancestorPath.Count == 0 || ancestorPath.Last() != current.DisplayName)
+        {
+          ancestorPath.Add(current.DisplayName);
+        }
       }
+
       current = current.Parent;
     }
 
-    // Build the path from root to first object (reverse the collected names)
+    // Reverse to get root->leaf order
     ancestorPath.Reverse();
+    // if (ancestorPath.Count > 1)
+    // {
+    //   ancestorPath.RemoveAt(ancestorPath.Count - 1);
+    // }
+
     return string.Join($" {PATH_DELIMITER} ", ancestorPath);
+  }
+
+  private static bool IsGeometryNode(NAV.ModelItem item)
+  {
+    // A geometry node typically has geometry but no meaningful display name
+    return item.HasGeometry && string.IsNullOrEmpty(item.DisplayName);
   }
 }
