@@ -22,6 +22,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Geometries\Primitives.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Geometries\TransformMatrix.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\ColorConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Helpers\DisplayPathHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\ElementSelectionHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\PrimitiveProcessor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\PropertyHelpers.cs" />
