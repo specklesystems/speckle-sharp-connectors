@@ -7,7 +7,7 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.TopLevel;
 
-[NameAndRankValue(nameof(BrepObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(BrepObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class BrepObjectToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
 {
   private readonly ITypedConverter<RG.Mesh, SOG.Mesh> _meshConverter;

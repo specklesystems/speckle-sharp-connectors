@@ -5,15 +5,10 @@ namespace Speckle.Converters.Civil3dShared.ToSpeckle.Raw;
 
 public class Point3dCollectionToSpeckleRawConverter : ITypedConverter<AG.Point3dCollection, SOG.Polyline>
 {
-  private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
 
-  public Point3dCollectionToSpeckleRawConverter(
-    ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
-    IConverterSettingsStore<Civil3dConversionSettings> settingsStore
-  )
+  public Point3dCollectionToSpeckleRawConverter(IConverterSettingsStore<Civil3dConversionSettings> settingsStore)
   {
-    _pointConverter = pointConverter;
     _settingsStore = settingsStore;
   }
 

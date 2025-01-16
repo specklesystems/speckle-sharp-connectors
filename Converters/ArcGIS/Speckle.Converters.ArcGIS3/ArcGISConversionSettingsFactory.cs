@@ -60,15 +60,15 @@ public class ArcGISConversionSettingsFactory(IHostToSpeckleUnitConverter<ACG.Uni
   public Uri ValidateDatabasePath(Uri originalGatabasePath)
   {
     var fGdbName = originalGatabasePath.Segments[^1];
-    var parentFolder = Path.GetDirectoryName(originalGatabasePath.AbsolutePath);
-    if (parentFolder == null)
-    {
-      // POC: customize the exception type
-      throw new ArgumentException($"Invalid path: {originalGatabasePath}");
-    }
 
+    // Uri.AbsolutePath will return escaped string (replacing spaces), we need them back via .UnescapeDataString
+    var parentFolder = Uri.UnescapeDataString(
+      Path.GetDirectoryName(originalGatabasePath.AbsolutePath)
+        ?? throw new ArgumentException($"Invalid path: {originalGatabasePath}")
+    );
     Uri databasePath = originalGatabasePath;
     Item folderToAdd = ItemFactory.Instance.Create(parentFolder);
+
     if (folderToAdd is null)
     {
       // ArcGIS API doesn't show it as nullable, but it is
@@ -133,7 +133,10 @@ public class ArcGISConversionSettingsFactory(IHostToSpeckleUnitConverter<ACG.Uni
   public Uri AddDatabaseToProject(Uri databasePath)
   {
     // Add a folder connection to a project
-    var parentFolder = Path.GetDirectoryName(databasePath.AbsolutePath);
+    // Uri.AbsolutePath will return escaped string (replacing spaces), we need them back via .UnescapeDataString
+    var parentFolder = Uri.UnescapeDataString(
+      Path.GetDirectoryName(databasePath.AbsolutePath) ?? throw new ArgumentException($"Invalid path: {databasePath}")
+    );
     var fGdbName = databasePath.Segments[^1];
     Item folderToAdd = ItemFactory.Instance.Create(parentFolder);
     Project.Current.AddItem(folderToAdd as IProjectItem);

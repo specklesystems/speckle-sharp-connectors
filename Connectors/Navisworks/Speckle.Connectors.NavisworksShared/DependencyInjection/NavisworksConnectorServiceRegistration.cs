@@ -51,6 +51,7 @@ public static class NavisworksConnectorServiceRegistration
     >();
 
     serviceCollection.AddScoped<NavisworksMaterialUnpacker>();
+    serviceCollection.AddScoped<NavisworksColorUnpacker>();
 
     // Sending operations
     serviceCollection.AddScoped<IRootObjectBuilder<NAV.ModelItem>, NavisworksRootObjectBuilder>();
