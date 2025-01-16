@@ -16,7 +16,7 @@ using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.Autocad.Operations.Send;
 
-public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadRootObject>
+public abstract class AutocadRootObjectBaseBuilder : RootObjectBuilderBase<AutocadRootObject>
 {
   private readonly IRootToSpeckleConverter _converter;
   private readonly string[] _documentPathSeparator = ["\\"];
@@ -49,13 +49,6 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
     _activityFactory = activityFactory;
   }
 
-  public Task<RootObjectBuilderResult> Build(
-    IReadOnlyList<AutocadRootObject> objects,
-    SendInfo sendInfo,
-    IProgress<CardProgress> onOperationProgressed,
-    CancellationToken ct = default
-  ) => Task.FromResult(BuildSync(objects, sendInfo, onOperationProgressed, ct));
-
   [SuppressMessage(
     "Maintainability",
     "CA1506:Avoid excessive class coupling",
@@ -65,11 +58,11 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
       proxy classes yet. So I'm supressing this one now!!!
       """
   )]
-  private RootObjectBuilderResult BuildSync(
+  public override RootObjectBuilderResult Build(
     IReadOnlyList<AutocadRootObject> objects,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
-    CancellationToken ct = default
+    CancellationToken cancellationToken
   )
   {
     // 0 - Init the root
@@ -101,7 +94,7 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
       int count = 0;
       foreach (var (entity, applicationId) in atomicObjects)
       {
-        ct.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
         using (var convertActivity = _activityFactory.Start("Converting object"))
         {
           // Create and add a collection for this entity if not done so already.

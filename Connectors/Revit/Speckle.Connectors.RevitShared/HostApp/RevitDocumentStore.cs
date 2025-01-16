@@ -2,11 +2,9 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.ExtensibleStorage;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
-using Revit.Async;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
-using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk.Common;
 
@@ -19,12 +17,12 @@ internal sealed class RevitDocumentStore : DocumentModelStore
   private static readonly Guid s_revitDocumentStoreId = new("D35B3695-EDC9-4E15-B62A-D3FC2CB83FA3");
 
   private readonly RevitContext _revitContext;
-  private readonly IRevitIdleManager _idleManager;
+  private readonly IAppIdleManager _idleManager;
   private readonly DocumentModelStorageSchema _documentModelStorageSchema;
   private readonly IdStorageSchema _idStorageSchema;
 
   public RevitDocumentStore(
-    IRevitIdleManager idleManager,
+    IAppIdleManager idleManager,
     RevitContext revitContext,
     IJsonSerializer jsonSerializer,
     DocumentModelStorageSchema documentModelStorageSchema,
@@ -38,18 +36,15 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     _documentModelStorageSchema = documentModelStorageSchema;
     _idStorageSchema = idStorageSchema;
 
-    _idleManager.RunAsync(() =>
-    {
-      UIApplication uiApplication = _revitContext.UIApplication.NotNull();
+    UIApplication uiApplication = _revitContext.UIApplication.NotNull();
 
-      uiApplication.ViewActivated += (s, e) => topLevelExceptionHandler.CatchUnhandled(() => OnViewActivated(s, e));
+    uiApplication.ViewActivated += (s, e) => topLevelExceptionHandler.CatchUnhandled(() => OnViewActivated(s, e));
 
-      uiApplication.Application.DocumentOpening += (_, _) =>
-        topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
+    uiApplication.Application.DocumentOpening += (_, _) =>
+      topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
 
-      uiApplication.Application.DocumentOpened += (_, _) =>
-        topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
-    });
+    uiApplication.Application.DocumentOpened += (_, _) =>
+      topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
 
     // There is no event that we can hook here for double-click file open...
     // It is kind of harmless since we create this object as "SingleInstance".
@@ -92,23 +87,21 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     {
       return;
     }
-    RevitTask.RunAsync(() =>
-    {
-      var doc = (_revitContext.UIApplication?.ActiveUIDocument?.Document).NotNull();
-      using Transaction t = new(doc, "Speckle Write State");
-      t.Start();
-      using DataStorage ds = GetSettingsDataStorage(doc) ?? DataStorage.Create(doc);
 
-      using Entity stateEntity = new(_documentModelStorageSchema.GetSchema());
-      stateEntity.Set("contents", modelCardState);
+    using Transaction t = new(doc, "Speckle Write State");
+    t.Start();
+    using DataStorage ds = GetSettingsDataStorage(doc) ?? DataStorage.Create(doc);
 
-      using Entity idEntity = new(_idStorageSchema.GetSchema());
-      idEntity.Set("Id", s_revitDocumentStoreId);
+    using Entity stateEntity = new(_documentModelStorageSchema.GetSchema());
+    string serializedModels = Serialize();
+    stateEntity.Set("contents", serializedModels);
 
-      ds.SetEntity(idEntity);
-      ds.SetEntity(stateEntity);
-      t.Commit();
-    });
+    using Entity idEntity = new(_idStorageSchema.GetSchema());
+    idEntity.Set("Id", s_revitDocumentStoreId);
+
+    ds.SetEntity(idEntity);
+    ds.SetEntity(stateEntity);
+    t.Commit();
   }
 
   protected override void LoadState()

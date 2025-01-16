@@ -1,5 +1,4 @@
 using ArcGIS.Core.Data;
-using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.DUI.Bindings;
@@ -32,7 +31,7 @@ public class BasicConnectorBinding : IBasicConnectorBinding
     _store.DocumentChanged += (_, _) =>
       parent.TopLevelExceptionHandler.FireAndForget(async () =>
       {
-        await Commands.NotifyDocumentChanged().ConfigureAwait(false);
+        await Commands.NotifyDocumentChanged();
       });
   }
 
@@ -60,16 +59,19 @@ public class BasicConnectorBinding : IBasicConnectorBinding
 
   public void RemoveModel(ModelCard model) => _store.RemoveModel(model);
 
-  public async Task HighlightObjects(IReadOnlyList<string> objectIds) =>
-    await HighlightObjectsOnView(objectIds.Select(x => new ObjectID(x)).ToList()).ConfigureAwait(false);
+  public Task HighlightObjects(IReadOnlyList<string> objectIds)
+  {
+    HighlightObjectsOnView(objectIds.Select(x => new ObjectID(x)).ToList());
+    return Task.CompletedTask;
+  }
 
-  public async Task HighlightModel(string modelCardId)
+  public Task HighlightModel(string modelCardId)
   {
     var model = _store.GetModelById(modelCardId);
 
     if (model is null)
     {
-      return;
+      return Task.CompletedTask;
     }
 
     var objectIds = new List<ObjectID>();
@@ -86,26 +88,22 @@ public class BasicConnectorBinding : IBasicConnectorBinding
 
     if (objectIds is null)
     {
-      return;
+      return Task.CompletedTask;
     }
-    await HighlightObjectsOnView(objectIds).ConfigureAwait(false);
+    HighlightObjectsOnView(objectIds);
+    return Task.CompletedTask;
   }
 
-  private async Task HighlightObjectsOnView(IReadOnlyList<ObjectID> objectIds)
+  private void HighlightObjectsOnView(IReadOnlyList<ObjectID> objectIds)
   {
     MapView mapView = MapView.Active;
 
-    await QueuedTask
-      .Run(async () =>
-      {
-        List<MapMemberFeature> mapMembersFeatures = GetMapMembers(objectIds, mapView);
-        ClearSelectionInTOC();
-        ClearSelection();
-        await SelectMapMembersInTOC(mapMembersFeatures).ConfigureAwait(false);
-        SelectMapMembersAndFeatures(mapMembersFeatures);
-        mapView.ZoomToSelected();
-      })
-      .ConfigureAwait(false);
+    List<MapMemberFeature> mapMembersFeatures = GetMapMembers(objectIds, mapView);
+    ClearSelectionInTOC();
+    ClearSelection();
+    SelectMapMembersInTOC(mapMembersFeatures);
+    SelectMapMembersAndFeatures(mapMembersFeatures);
+    mapView.ZoomToSelected();
   }
 
   private List<MapMemberFeature> GetMapMembers(IReadOnlyList<ObjectID> objectIds, MapView mapView)
@@ -171,7 +169,7 @@ public class BasicConnectorBinding : IBasicConnectorBinding
     }
   }
 
-  private async Task SelectMapMembersInTOC(IReadOnlyList<MapMemberFeature> mapMembersFeatures)
+  private void SelectMapMembersInTOC(IReadOnlyList<MapMemberFeature> mapMembersFeatures)
   {
     List<Layer> layers = new();
     List<StandaloneTable> tables = new();
@@ -187,7 +185,7 @@ public class BasicConnectorBinding : IBasicConnectorBinding
         }
         else
         {
-          await QueuedTask.Run(() => layer.SetExpanded(true)).ConfigureAwait(false);
+          layer.SetExpanded(true);
         }
       }
       else if (member is StandaloneTable table)

@@ -1,7 +1,6 @@
 ﻿using ArcGIS.Core.Data;
 using ArcGIS.Core.Data.DDL;
 using ArcGIS.Desktop.Core;
-using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
@@ -61,15 +60,15 @@ public class ArcGISConversionSettingsFactory(IHostToSpeckleUnitConverter<ACG.Uni
   public Uri ValidateDatabasePath(Uri originalGatabasePath)
   {
     var fGdbName = originalGatabasePath.Segments[^1];
-    var parentFolder = Path.GetDirectoryName(originalGatabasePath.AbsolutePath);
-    if (parentFolder == null)
-    {
-      // POC: customize the exception type
-      throw new ArgumentException($"Invalid path: {originalGatabasePath}");
-    }
 
+    // Uri.AbsolutePath will return escaped string (replacing spaces), we need them back via .UnescapeDataString
+    var parentFolder = Uri.UnescapeDataString(
+      Path.GetDirectoryName(originalGatabasePath.AbsolutePath)
+        ?? throw new ArgumentException($"Invalid path: {originalGatabasePath}")
+    );
     Uri databasePath = originalGatabasePath;
     Item folderToAdd = ItemFactory.Instance.Create(parentFolder);
+
     if (folderToAdd is null)
     {
       // ArcGIS API doesn't show it as nullable, but it is
@@ -134,11 +133,13 @@ public class ArcGISConversionSettingsFactory(IHostToSpeckleUnitConverter<ACG.Uni
   public Uri AddDatabaseToProject(Uri databasePath)
   {
     // Add a folder connection to a project
-    var parentFolder = Path.GetDirectoryName(databasePath.AbsolutePath);
+    // Uri.AbsolutePath will return escaped string (replacing spaces), we need them back via .UnescapeDataString
+    var parentFolder = Uri.UnescapeDataString(
+      Path.GetDirectoryName(databasePath.AbsolutePath) ?? throw new ArgumentException($"Invalid path: {databasePath}")
+    );
     var fGdbName = databasePath.Segments[^1];
     Item folderToAdd = ItemFactory.Instance.Create(parentFolder);
-    // POC: QueuedTask
-    QueuedTask.Run(() => Project.Current.AddItem(folderToAdd as IProjectItem));
+    Project.Current.AddItem(folderToAdd as IProjectItem);
 
     // Add a file geodatabase or a SQLite or enterprise database connection to a project
     try
@@ -149,8 +150,7 @@ public class ArcGISConversionSettingsFactory(IHostToSpeckleUnitConverter<ACG.Uni
 
       if (gdbToAdd is not null)
       {
-        // POC: QueuedTask
-        var addedGeodatabase = QueuedTask.Run(() => Project.Current.AddItem(gdbToAdd as IProjectItem));
+        var addedGeodatabase = Project.Current.AddItem(gdbToAdd as IProjectItem);
       }
     }
     catch (NullReferenceException ex)

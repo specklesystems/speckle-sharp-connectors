@@ -4,6 +4,7 @@ using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
@@ -31,7 +32,7 @@ public static class ServiceRegistration
     services.AddSingleton<IBrowserBridge, BrowserBridge>();
 
     services.AddConnectorUtils();
-    services.AddDUI<TeklaDocumentModelStore>();
+    services.AddDUI<DefaultThreadContext, TeklaDocumentModelStore>();
     services.AddDUIView();
 
     services.AddSingleton<IAppIdleManager, TeklaIdleManager>();

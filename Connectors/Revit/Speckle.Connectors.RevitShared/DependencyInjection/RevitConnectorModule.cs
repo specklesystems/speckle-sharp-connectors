@@ -25,7 +25,7 @@ public static class ServiceRegistration
   public static void AddRevit(this IServiceCollection serviceCollection)
   {
     serviceCollection.AddConnectorUtils();
-    serviceCollection.AddDUI<RevitDocumentStore>();
+    serviceCollection.AddDUI<RevitThreadContext, RevitDocumentStore>();
     RegisterUiDependencies(serviceCollection);
 
     // Storage Schema
@@ -41,7 +41,7 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<IBinding, SelectionBinding>();
     serviceCollection.AddSingleton<IBinding, RevitSendBinding>();
     serviceCollection.AddSingleton<IBinding, RevitReceiveBinding>();
-    serviceCollection.AddSingleton<IRevitIdleManager, RevitIdleManager>();
+    serviceCollection.AddSingleton<IAppIdleManager, RevitIdleManager>();
 
     serviceCollection.RegisterTopLevelExceptionHandler();
 
@@ -69,9 +69,6 @@ public static class ServiceRegistration
 
     // operation progress manager
     serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();
-
-    // API context helps us to run functions on Revit UI Thread (main)
-    serviceCollection.AddSingleton<APIContext>();
   }
 
   public static void RegisterUiDependencies(IServiceCollection serviceCollection)

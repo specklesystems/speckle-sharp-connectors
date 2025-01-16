@@ -30,20 +30,18 @@ public class OperationProgressManager : IOperationProgressManager
   )
   {
     var progress = new NonUIThreadProgress<CardProgress>(args =>
-      bridge.TopLevelExceptionHandler.FireAndForget(
-        () =>
-          SetModelProgress(
-            bridge,
-            modelCardId,
-            new ModelCardProgress(modelCardId, args.Status, args.Progress),
-            cancellationToken
-          )
-      )
-    );
+    {
+      SetModelProgress(
+        bridge,
+        modelCardId,
+        new ModelCardProgress(modelCardId, args.Status, args.Progress),
+        cancellationToken
+      );
+    });
     return progress;
   }
 
-  public async Task SetModelProgress(
+  public void SetModelProgress(
     IBrowserBridge bridge,
     string modelCardId,
     ModelCardProgress progress,
@@ -60,7 +58,7 @@ public class OperationProgressManager : IOperationProgressManager
       t.Item1 = DateTime.Now;
       s_lastProgressValues[modelCardId] = (t.Item1, progress.Status);
       // Since it's the first time we get a call for this model card, we should send it out
-      await SendProgress(bridge, modelCardId, progress).ConfigureAwait(false);
+      SendProgress(bridge, modelCardId, progress);
       return;
     }
 
@@ -72,9 +70,9 @@ public class OperationProgressManager : IOperationProgressManager
       return;
     }
     s_lastProgressValues[modelCardId] = (currentTime, progress.Status);
-    await SendProgress(bridge, modelCardId, progress).ConfigureAwait(false);
+    SendProgress(bridge, modelCardId, progress);
   }
 
-  private static async Task SendProgress(IBrowserBridge bridge, string modelCardId, ModelCardProgress progress) =>
-    await bridge.Send(SET_MODEL_PROGRESS_UI_COMMAND_NAME, new { modelCardId, progress }).ConfigureAwait(false);
+  private static void SendProgress(IBrowserBridge bridge, string modelCardId, ModelCardProgress progress) =>
+    bridge.Send2(SET_MODEL_PROGRESS_UI_COMMAND_NAME, new { modelCardId, progress });
 }

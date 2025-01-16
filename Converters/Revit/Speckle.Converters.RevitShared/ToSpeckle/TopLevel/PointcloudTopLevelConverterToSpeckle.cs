@@ -5,7 +5,7 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
-[NameAndRankValue(nameof(DB.PointCloudInstance), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(DB.PointCloudInstance), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public sealed class PointcloudTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;

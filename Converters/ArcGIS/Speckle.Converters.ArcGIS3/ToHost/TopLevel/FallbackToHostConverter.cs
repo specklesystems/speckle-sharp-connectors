@@ -6,7 +6,7 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.TopLevel;
 
-[NameAndRankValue(nameof(DisplayableObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(DisplayableObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class FallbackToHostConverter : IToHostTopLevelConverter, ITypedConverter<DisplayableObject, ACG.Geometry>
 {
   private readonly ITypedConverter<List<SOG.Mesh>, ACG.Multipatch> _meshListConverter;

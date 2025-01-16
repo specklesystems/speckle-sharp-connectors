@@ -2,7 +2,6 @@ using ArcGIS.Desktop.Framework;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.ArcGIS.DependencyInjection;
 using Speckle.Connectors.Common;
-using Speckle.Connectors.DUI;
 using Speckle.Converters.ArcGIS3;
 using Speckle.Sdk.Host;
 using Module = ArcGIS.Desktop.Framework.Contracts.Module;
@@ -35,7 +34,6 @@ internal sealed class SpeckleModule : Module
     services.AddArcGIS();
     services.AddArcGISConverters();
     Container = services.BuildServiceProvider();
-    Container.UseDUI();
   }
 
   private HostAppVersion GetVersion()

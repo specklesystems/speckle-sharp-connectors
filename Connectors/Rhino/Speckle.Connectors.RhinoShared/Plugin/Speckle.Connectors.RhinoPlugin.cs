@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Rhino.PlugIns;
 using Speckle.Connectors.Common;
-using Speckle.Connectors.DUI;
 using Speckle.Connectors.Rhino.DependencyInjection;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
@@ -52,7 +51,6 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
 
       // but the Rhino connector has `.rhp` as it is extension.
       Container = services.BuildServiceProvider();
-      Container.UseDUI();
 
       // Resolve root plugin object and initialise.
       _rhinoPlugin = Container.GetRequiredService<IRhinoPlugin>();

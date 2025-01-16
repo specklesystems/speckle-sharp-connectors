@@ -26,16 +26,16 @@ namespace Speckle.Connectors.Autocad.HostApp;
 public class AutocadInstanceBaker : IInstanceBaker<IReadOnlyCollection<Entity>>
 {
   private readonly AutocadLayerBaker _layerBaker;
-  private readonly AutocadColorBaker _colorBaker;
-  private readonly AutocadMaterialBaker _materialBaker;
+  private readonly IAutocadColorBaker _colorBaker;
+  private readonly IAutocadMaterialBaker _materialBaker;
   private readonly AutocadContext _autocadContext;
   private readonly ILogger<AutocadInstanceBaker> _logger;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _converterSettings;
 
   public AutocadInstanceBaker(
     AutocadLayerBaker layerBaker,
-    AutocadColorBaker colorBaker,
-    AutocadMaterialBaker materialBaker,
+    IAutocadColorBaker colorBaker,
+    IAutocadMaterialBaker materialBaker,
     AutocadContext autocadContext,
     ILogger<AutocadInstanceBaker> logger,
     IConverterSettingsStore<AutocadConversionSettings> converterSettings

@@ -42,11 +42,11 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     _csiApplicationService = csiApplicationService;
   }
 
-  public async Task<RootObjectBuilderResult> Build(
+  public async Task<RootObjectBuilderResult> BuildAsync(
     IReadOnlyList<ICsiWrapper> csiObjects,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
-    CancellationToken cancellationToken = default
+    CancellationToken cancellationToken
   )
   {
     using var activity = _activityFactory.Start("Build");
@@ -62,14 +62,15 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     {
       foreach (ICsiWrapper csiObject in csiObjects)
       {
-        using var _2 = _activityFactory.Start("Convert");
         cancellationToken.ThrowIfCancellationRequested();
+        using var _2 = _activityFactory.Start("Convert");
 
         var result = ConvertCSiObject(csiObject, rootObjectCollection, sendInfo.ProjectId);
         results.Add(result);
 
         count++;
         onOperationProgressed.Report(new("Converting", (double)count / csiObjects.Count));
+        await Task.Yield();
       }
     }
 
@@ -78,7 +79,6 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
       throw new SpeckleException("Failed to convert all objects.");
     }
 
-    await Task.Yield();
     return new RootObjectBuilderResult(rootObjectCollection, results);
   }
 

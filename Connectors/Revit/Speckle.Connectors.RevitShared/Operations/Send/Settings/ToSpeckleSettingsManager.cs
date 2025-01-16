@@ -14,7 +14,6 @@ namespace Speckle.Connectors.Revit.Operations.Send.Settings;
 public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 {
   private readonly RevitContext _revitContext;
-  private readonly APIContext _apiContext;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ElementUnpacker _elementUnpacker;
 
@@ -25,13 +24,11 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 
   public ToSpeckleSettingsManager(
     RevitContext revitContext,
-    APIContext apiContext,
     ISendConversionCache sendConversionCache,
     ElementUnpacker elementUnpacker
   )
   {
     _revitContext = revitContext;
-    _apiContext = apiContext;
     _elementUnpacker = elementUnpacker;
     _sendConversionCache = sendConversionCache;
   }
