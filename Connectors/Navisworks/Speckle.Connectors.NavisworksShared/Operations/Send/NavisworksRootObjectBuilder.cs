@@ -205,24 +205,11 @@ public class NavisworksRootObjectBuilder(
     }
   }
 
-  private (NAV.ModelItem modelItem, string displayPath) GetDisplayPath(string applicationId)
+  private (string name, string path) GetContext(string applicationId)
   {
     var modelItem = elementSelectionService.GetModelItemFromPath(applicationId);
-    return (modelItem, DisplayPathHelper.GenerateDisplayPath(modelItem));
-  }
-
-  private static string FindMeaningfulAncestorName(NAV.ModelItem modelItem)
-  {
-    var current = modelItem;
-    while (current != null)
-    {
-      if (!string.IsNullOrEmpty(current.DisplayName) && !current.HasGeometry)
-      {
-        return current.DisplayName;
-      }
-      current = current.Parent;
-    }
-    return string.Empty;
+    var context = HierarchyHelper.ExtractContext(modelItem);
+    return (context.Name, context.Path);
   }
 
   /// <summary>
@@ -234,8 +221,7 @@ public class NavisworksRootObjectBuilder(
   /// </remarks>
   private NavisworksObject CreateNavisworksObject(string groupKey, List<Base> siblingBases)
   {
-    (NAV.ModelItem modelItem, string displayPath) = GetDisplayPath(groupKey);
-    var name = FindMeaningfulAncestorName(modelItem);
+    (string name, string path) = GetContext(groupKey);
 
     return new NavisworksObject
     {
@@ -244,7 +230,7 @@ public class NavisworksRootObjectBuilder(
       properties = siblingBases.First()["properties"] as Dictionary<string, object?> ?? [],
       units = converterSettings.Current.Derived.SpeckleUnits,
       applicationId = groupKey,
-      ["path"] = displayPath
+      ["path"] = path
     };
   }
 
@@ -260,16 +246,16 @@ public class NavisworksRootObjectBuilder(
       return null;
     }
 
-    (_, string displayPath) = GetDisplayPath(convertedBase.applicationId);
+    (string name, string path) = GetContext(convertedBase.applicationId);
 
     return new NavisworksObject
     {
-      name = convertedBase["name"] as string ?? string.Empty,
+      name = name,
       displayValue = convertedBase["displayValue"] as List<Base> ?? [],
       properties = convertedBase["properties"] as Dictionary<string, object?> ?? [],
       units = converterSettings.Current.Derived.SpeckleUnits,
       applicationId = convertedBase.applicationId,
-      ["path"] = displayPath
+      ["path"] = path
     };
   }
 
