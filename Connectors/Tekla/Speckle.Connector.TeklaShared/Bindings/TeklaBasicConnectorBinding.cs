@@ -37,7 +37,7 @@ public class TeklaBasicConnectorBinding : IBasicConnectorBinding
     _model = model;
     Commands = new BasicConnectorBindingCommands(parent);
     eventAggregator
-      .GetEvent<DocumentChangedEvent>()
+      .GetEvent<DocumentStoreChangedEvent>()
       .Subscribe(async _ =>
       {
         await Commands.NotifyDocumentChanged();

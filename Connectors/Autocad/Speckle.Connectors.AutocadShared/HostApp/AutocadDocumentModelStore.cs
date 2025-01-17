@@ -52,7 +52,7 @@ public class AutocadDocumentStore : DocumentModelStore
 
     _previousDocName = currentDocName;
     LoadState();
-    _eventAggregator.GetEvent<DocumentChangedEvent>().Publish(new object());
+    _eventAggregator.GetEvent<DocumentStoreChangedEvent>().Publish(new object());
   }
 
   protected override void LoadState()

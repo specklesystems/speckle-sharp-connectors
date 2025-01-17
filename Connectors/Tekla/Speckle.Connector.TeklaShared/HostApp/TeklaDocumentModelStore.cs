@@ -34,12 +34,12 @@ public class TeklaDocumentModelStore : DocumentModelStore
       {
         GenerateKey();
         LoadState();
-        eventAggregator.GetEvent<DocumentChangedEvent>().Publish(new object());
+        eventAggregator.GetEvent<DocumentStoreChangedEvent>().Publish(new object());
       });
     if (SpeckleTeklaPanelHost.IsInitialized)
     {
       LoadState();
-      eventAggregator.GetEvent<DocumentChangedEvent>().Publish(new object());
+      eventAggregator.GetEvent<DocumentStoreChangedEvent>().Publish(new object());
     }
   }
 

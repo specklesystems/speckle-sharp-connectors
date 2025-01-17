@@ -107,7 +107,7 @@ internal sealed class RevitCefPlugin : IRevitPlugin
       binding.Parent.AssociateWithBinding(binding);
     }
 
-    _cefSharpPanel.Browser.IsBrowserInitializedChanged += (sender, e) =>
+    _cefSharpPanel.Browser.IsBrowserInitializedChanged += (_, e) =>
     {
       if (e.NewValue is false)
       {

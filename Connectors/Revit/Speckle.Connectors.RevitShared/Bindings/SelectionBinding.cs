@@ -9,7 +9,7 @@ using Speckle.Sdk.Common;
 namespace Speckle.Connectors.Revit.Bindings;
 
 // POC: we need a base a RevitBaseBinding
-internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding, IDisposable
+internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding
 {
   public SelectionBinding(
     IRevitContext revitContext,
@@ -48,12 +48,5 @@ internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding, ID
       .Select(eid => activeUIDoc.Document.GetElement(eid).UniqueId.ToString())
       .ToList();
     return new SelectionInfo(selectionIds, $"{selectionIds.Count} objects selected.");
-  }
-
-  public void Dispose()
-  {
-#if REVIT2022
-    _selectionTimer.Dispose();
-#endif
   }
 }
