@@ -28,7 +28,6 @@ namespace Speckle.Connectors.Revit.Bindings;
 
 internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 {
-  private readonly IAppIdleManager _idleManager;
   private readonly CancellationManager _cancellationManager;
   private readonly IServiceProvider _serviceProvider;
   private readonly ISendConversionCache _sendConversionCache;
@@ -38,6 +37,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly ElementUnpacker _elementUnpacker;
   private readonly IRevitConversionSettingsFactory _revitConversionSettingsFactory;
   private readonly ISpeckleApplication _speckleApplication;
+  private readonly IEventAggregator _eventAggregator;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -48,8 +48,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private ConcurrentDictionary<ElementId, byte> ChangedObjectIds { get; set; } = new();
 
   public RevitSendBinding(
-    IAppIdleManager idleManager,
-    RevitContext revitContext,
+    IRevitContext revitContext,
     DocumentModelStore store,
     CancellationManager cancellationManager,
     IBrowserBridge bridge,
@@ -66,7 +65,6 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   )
     : base("sendBinding", store, bridge, revitContext)
   {
-    _idleManager = idleManager;
     _cancellationManager = cancellationManager;
     _serviceProvider = serviceProvider;
     _sendConversionCache = sendConversionCache;
@@ -76,6 +74,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _elementUnpacker = elementUnpacker;
     _revitConversionSettingsFactory = revitConversionSettingsFactory;
     _speckleApplication = speckleApplication;
+    _eventAggregator = eventAggregator;
 
     Commands = new SendBindingUICommands(bridge);
     // TODO expiry events
@@ -84,7 +83,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
       topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
     eventAggregator
-      .GetEvent<DocumentChangedEvent>()
+      .GetEvent<DocumentStoreChangedEvent>()
       .Subscribe(async _ =>
       {
         await OnDocumentChanged().ConfigureAwait(false);
@@ -250,7 +249,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     if (addedElementIds.Count > 0)
     {
-      _idleManager.SubscribeToIdle(nameof(PostSetObjectIds), PostSetObjectIds);
+      _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(PostSetObjectIds), PostSetObjectIds);
     }
 
     if (HaveUnitsChanged(e.GetDocument()))
@@ -270,8 +269,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       _sendConversionCache.EvictObjects(unpackedObjectIds);
     }
 
-    _idleManager.SubscribeToIdle(nameof(CheckFilterExpiration), CheckFilterExpiration);
-    _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
+    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(CheckFilterExpiration), CheckFilterExpiration);
+    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RunExpirationChecks), RunExpirationChecks);
   }
 
   // Keeps track of doc and current units

@@ -1,13 +1,11 @@
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.ExtensibleStorage;
-using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
-using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
+using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.HostApp;
 
@@ -17,50 +15,39 @@ internal sealed class RevitDocumentStore : DocumentModelStore
   // POC: move to somewhere central?
   private static readonly Guid s_revitDocumentStoreId = new("D35B3695-EDC9-4E15-B62A-D3FC2CB83FA3");
 
-  private readonly RevitContext _revitContext;
-  private readonly IAppIdleManager _idleManager;
+  private readonly IRevitContext _revitContext;
   private readonly DocumentModelStorageSchema _documentModelStorageSchema;
   private readonly IdStorageSchema _idStorageSchema;
   private readonly IEventAggregator _eventAggregator;
 
   public RevitDocumentStore(
-    IAppIdleManager idleManager,
-    RevitContext revitContext,
+    IRevitContext revitContext,
     IJsonSerializer jsonSerializer,
     DocumentModelStorageSchema documentModelStorageSchema,
     IdStorageSchema idStorageSchema,
-    IEventAggregator eventAggregator,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    IEventAggregator eventAggregator
   )
     : base(jsonSerializer)
   {
-    _idleManager = idleManager;
     _revitContext = revitContext;
     _documentModelStorageSchema = documentModelStorageSchema;
     _idStorageSchema = idStorageSchema;
     _eventAggregator = eventAggregator;
 
-    UIApplication uiApplication = _revitContext.UIApplication.NotNull();
-
-    uiApplication.ViewActivated += (s, e) => topLevelExceptionHandler.CatchUnhandled(() => OnViewActivated(s, e));
-
-    uiApplication.Application.DocumentOpening += (_, _) =>
-      topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
-
-    uiApplication.Application.DocumentOpened += (_, _) =>
-      topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
+    eventAggregator.GetEvent<DocumentStoreInitializingEvent>().Subscribe(_ => IsDocumentInit = false);
+    eventAggregator.GetEvent<ViewActivatedEvent>().Subscribe(OnViewActivated);
 
     // There is no event that we can hook here for double-click file open...
     // It is kind of harmless since we create this object as "SingleInstance".
     LoadState();
 
-    eventAggregator.GetEvent<DocumentChangedEvent>().Publish(new object());
+    eventAggregator.GetEvent<DocumentStoreChangedEvent>().Publish(new object());
   }
 
   /// <summary>
   /// This is the place where we track document switch for new document -> Responsible to Read from new doc
   /// </summary>
-  private void OnViewActivated(object? _, ViewActivatedEventArgs e)
+  private void OnViewActivated(ViewActivatedEventArgs e)
   {
     if (e.Document == null)
     {
@@ -74,12 +61,12 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     }
 
     IsDocumentInit = true;
-    _idleManager.SubscribeToIdle(
+    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(
       nameof(RevitDocumentStore),
       () =>
       {
         LoadState();
-        _eventAggregator.GetEvent<DocumentChangedEvent>().Publish(new object());
+        _eventAggregator.GetEvent<DocumentStoreChangedEvent>().Publish(new object());
       }
     );
   }
@@ -108,6 +95,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     ds.SetEntity(stateEntity);
     t.Commit();
   }
+  
 
   protected override void LoadState()
   {

@@ -12,9 +12,9 @@ internal abstract class RevitBaseBinding : IBinding
   public IBrowserBridge Parent { get; }
 
   protected readonly DocumentModelStore Store;
-  protected readonly RevitContext RevitContext;
+  protected readonly IRevitContext RevitContext;
 
-  protected RevitBaseBinding(string name, DocumentModelStore store, IBrowserBridge parent, RevitContext revitContext)
+  protected RevitBaseBinding(string name, DocumentModelStore store, IBrowserBridge parent, IRevitContext revitContext)
   {
     Name = name;
     Parent = parent;

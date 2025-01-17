@@ -14,7 +14,7 @@ internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding, ID
 #endif
 
   public SelectionBinding(
-    RevitContext revitContext,
+    IRevitContext revitContext,
     DocumentModelStore store,
     IAppIdleManager revitIdleManager,
     ITopLevelExceptionHandler topLevelExceptionHandler,

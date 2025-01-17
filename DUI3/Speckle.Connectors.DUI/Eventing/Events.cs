@@ -6,7 +6,7 @@ namespace Speckle.Connectors.DUI.Eventing;
 public class ExceptionEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
   : ThreadedEvent<Exception>(threadContext, exceptionHandler);
 
-public class DocumentChangedEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
+public class DocumentStoreChangedEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
   : ThreadedEvent<object>(threadContext, exceptionHandler);
 
 public class IdleEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
