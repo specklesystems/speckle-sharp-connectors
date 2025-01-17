@@ -1,6 +1,8 @@
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
+using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk.Common;
 
@@ -9,34 +11,21 @@ namespace Speckle.Connectors.Revit.Bindings;
 // POC: we need a base a RevitBaseBinding
 internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding, IDisposable
 {
-#if REVIT2022
-  private readonly System.Timers.Timer _selectionTimer;
-#endif
 
   public SelectionBinding(
     IRevitContext revitContext,
     DocumentModelStore store,
-    IAppIdleManager revitIdleManager,
-    ITopLevelExceptionHandler topLevelExceptionHandler,
-    IBrowserBridge parent
+    IBrowserBridge parent,
+    IEventAggregator eventAggregator
   )
     : base("selectionBinding", store, parent, revitContext)
   {
-#if REVIT2022
-    // NOTE: getting the selection data should be a fast function all, even for '000s of elements - and having a timer hitting it every 1s is ok.
-    _selectionTimer = new System.Timers.Timer(1000);
-    _selectionTimer.Elapsed += (_, _) => topLevelExceptionHandler.CatchUnhandled(OnSelectionChanged);
-    _selectionTimer.Start();
-#else
-
-    RevitContext.UIApplication.NotNull().SelectionChanged += (_, _) =>
-      revitIdleManager.SubscribeToIdle(nameof(SelectionBinding), OnSelectionChanged);
-#endif
+    eventAggregator.GetEvent<SelectionChanged>().Subscribe(_ => OnSelectionChanged());
   }
 
   private void OnSelectionChanged()
   {
-    if (RevitContext.UIApplication == null || RevitContext.UIApplication.ActiveUIDocument == null)
+    if (RevitContext.UIApplication.ActiveUIDocument == null)
     {
       return;
     }
@@ -45,7 +34,7 @@ internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding, ID
 
   public SelectionInfo GetSelection()
   {
-    if (RevitContext.UIApplication == null || RevitContext.UIApplication.ActiveUIDocument == null)
+    if (RevitContext.UIApplication.ActiveUIDocument == null)
     {
       return new SelectionInfo(Array.Empty<string>(), "No objects selected.");
     }

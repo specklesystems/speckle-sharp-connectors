@@ -41,7 +41,6 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<IBinding, SelectionBinding>();
     serviceCollection.AddSingleton<IBinding, RevitSendBinding>();
     serviceCollection.AddSingleton<IBinding, RevitReceiveBinding>();
-    serviceCollection.AddSingleton<IAppIdleManager, RevitIdleManager>();
 
     serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
     serviceCollection.AddSingleton<IBasicConnectorBinding, BasicConnectorBindingRevit>();
