@@ -1,3 +1,4 @@
+using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -15,6 +16,8 @@ internal sealed class RevitExternalApplication : IExternalApplication
 
   private ServiceProvider? _container;
   private IDisposable? _disposableLogger;
+
+  private UpdaterId? _updaterId;
 
   // POC: move to somewhere central?
   public static readonly DockablePaneId DockablePanelId = new(new Guid("{f7b5da7c-366c-4b13-8455-b56f433f461e}"));
@@ -51,6 +54,9 @@ internal sealed class RevitExternalApplication : IExternalApplication
       // resolve root object
       _revitPlugin = _container.GetRequiredService<IRevitPlugin>();
       _revitPlugin.Initialise();
+
+      application.ControlledApplication.DocumentOpened += OnDocumentOpened;
+      application.ControlledApplication.DocumentClosed += OnDocumentClosed;
     }
     catch (Exception e) when (!e.IsFatal())
     {
@@ -84,4 +90,25 @@ internal sealed class RevitExternalApplication : IExternalApplication
 
     return Result.Succeeded;
   }
+
+  private void OnDocumentOpened(object sender, Autodesk.Revit.DB.Events.DocumentOpenedEventArgs e)
+  {
+    var doc = e.Document;
+
+    // Register the updater
+    var updater = new VisibilityUpdater(doc.Application.ActiveAddInId, doc);
+    UpdaterRegistry.RegisterUpdater(updater);
+
+    _updaterId = updater.GetUpdaterId();
+
+    // Set triggers for the updater
+    UpdaterRegistry.AddTrigger(
+      updater.GetUpdaterId(),
+      new ElementClassFilter(typeof(View)),
+      Element.GetChangeTypeAny()
+    );
+  }
+
+  private void OnDocumentClosed(object sender, Autodesk.Revit.DB.Events.DocumentClosedEventArgs e) =>
+    UpdaterRegistry.UnregisterUpdater(_updaterId);
 }
