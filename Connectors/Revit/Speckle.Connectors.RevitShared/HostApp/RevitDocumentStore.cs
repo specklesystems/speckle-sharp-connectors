@@ -61,14 +61,16 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     }
 
     IsDocumentInit = true;
-    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(
-      nameof(RevitDocumentStore),
-      () =>
-      {
-        LoadState();
-        _eventAggregator.GetEvent<DocumentStoreChangedEvent>().Publish(new object());
-      }
-    );
+    _eventAggregator
+      .GetEvent<IdleEvent>()
+      .OneTimeSubscribe(
+        nameof(RevitDocumentStore),
+        () =>
+        {
+          LoadState();
+          _eventAggregator.GetEvent<DocumentStoreChangedEvent>().Publish(new object());
+        }
+      );
   }
 
   protected override void HostAppSaveState(string modelCardState)
@@ -95,7 +97,6 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     ds.SetEntity(stateEntity);
     t.Commit();
   }
-  
 
   protected override void LoadState()
   {

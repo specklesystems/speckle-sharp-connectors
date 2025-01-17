@@ -7,5 +7,3 @@ internal interface IRevitPlugin : IRevitContext
   void Initialise();
   void Shutdown();
 }
-
-

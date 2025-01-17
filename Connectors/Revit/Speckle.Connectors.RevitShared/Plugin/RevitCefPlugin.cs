@@ -98,7 +98,7 @@ internal sealed class RevitCefPlugin : IRevitPlugin
   private void OnApplicationInitialized(UIApplication uiApplication)
   {
     UIApplication = uiApplication;
-    
+
     var bindings = _serviceProvider.GetRequiredService<IEnumerable<IBinding>>();
     // binding the bindings to each bridge
     foreach (IBinding binding in bindings)
@@ -165,6 +165,6 @@ internal sealed class RevitCefPlugin : IRevitPlugin
 
     return null;
   }
-  
+
   public UIApplication UIApplication { get; private set; }
 }

@@ -11,7 +11,6 @@ namespace Speckle.Connectors.Revit.Bindings;
 // POC: we need a base a RevitBaseBinding
 internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding, IDisposable
 {
-
   public SelectionBinding(
     IRevitContext revitContext,
     DocumentModelStore store,
