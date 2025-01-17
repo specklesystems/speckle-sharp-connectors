@@ -76,4 +76,17 @@ public abstract class OneTimeThreadedEvent<T>(IThreadContext threadContext, ITop
       return token;
     }
   }
+
+  public override void Publish(T payload)
+  {
+    lock (_activeTokens)
+    {
+      base.Publish(payload);
+      foreach (var token in _activeTokens.Values)
+      {
+        token.Dispose();
+      }
+      _activeTokens.Clear();
+    }
+  }
 }
