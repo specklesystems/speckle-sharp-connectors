@@ -48,23 +48,42 @@ public class RevitRootObjectBuilder(
     rootObject["units"] = converterSettings.Current.SpeckleUnits;
 
     var revitElements = new List<Element>();
-
+    List<SendConversionResult> results = new(revitElements.Count);
     // Convert ids to actual revit elements
     foreach (var id in objects)
     {
       var el = converterSettings.Current.Document.GetElement(id);
-      if (el != null)
+      if (el == null)
       {
-        revitElements.Add(el);
+        continue;
       }
+
+      if (el.Category == null)
+      {
+        continue;
+      }
+
+      if (!SupportedCategoriesUtils.IsSupportedCategory(el.Category))
+      {
+        results.Add(
+          new(
+            Status.WARNING,
+            el.UniqueId,
+            el.Category.Name,
+            null,
+            new SpeckleException($"Category {el.Category.Name} is not supported.")
+          )
+        );
+        continue;
+      }
+
+      revitElements.Add(el);
     }
 
     if (revitElements.Count == 0)
     {
-      throw new SpeckleSendFilterException("No objects were found. Please update your send filter!");
+      throw new SpeckleSendFilterException("No objects were found. Please update your publish filter!");
     }
-
-    List<SendConversionResult> results = new(revitElements.Count);
 
     // Unpack groups (& other complex data structures)
     var atomicObjects = elementUnpacker.UnpackSelectionForConversion(revitElements).ToList();

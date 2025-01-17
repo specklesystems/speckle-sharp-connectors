@@ -83,7 +83,7 @@ public class RhinoLayerBaker : TraversalContextUnpacker
       return existingLayerIndex;
     }
 
-    throw new SpeckleException("Did not find a layer in the cache.");
+    throw new SpeckleException($"Did not find a layer in the cache with the name {layerFullName}");
   }
 
   /// <summary>
@@ -99,7 +99,8 @@ public class RhinoLayerBaker : TraversalContextUnpacker
     Layer? previousLayer = currentDocument.Layers.FindName(currentLayerName);
     foreach (Collection collection in collectionPath)
     {
-      currentLayerName += s_pathSeparator + collection.name;
+      currentLayerName += s_pathSeparator + (string.IsNullOrWhiteSpace(collection.name) ? "unnamed" : collection.name);
+
       currentLayerName = currentLayerName.Replace("{", "").Replace("}", ""); // Rhino specific cleanup for gh (see RemoveInvalidRhinoChars)
       if (_hostLayerCache.TryGetValue(currentLayerName, out int value))
       {
@@ -133,6 +134,10 @@ public class RhinoLayerBaker : TraversalContextUnpacker
       }
 
       int index = currentDocument.Layers.Add(newLayer);
+      if (index == -1)
+      {
+        throw new SpeckleException($"Could not create layer {currentLayerName}.");
+      }
       _hostLayerCache.Add(currentLayerName, index);
       previousLayer = currentDocument.Layers.FindIndex(index); // note we need to get the correct id out, hence why we're double calling this
     }

@@ -240,20 +240,23 @@ public sealed class DisplayValueExtractor
   /// <returns></returns>
   private DB.Options OverrideViewOptions(DB.Element element, DB.Options currentOptions)
   {
+    // there is no point to progress if element category already null
+    if (element.Category is null)
+    {
+      return currentOptions;
+    }
+
     var elementBuiltInCategory = element.Category.GetBuiltInCategory();
 
     // Note: some elements do not get display values (you get invalid solids) unless we force the view detail level to be fine. This is annoying, but it's bad ux: people think the
     // elements are not there (they are, just invisible).
     if (
-      element.Category is not null
-      && (
-        elementBuiltInCategory == DB.BuiltInCategory.OST_PipeFitting
-        || elementBuiltInCategory == DB.BuiltInCategory.OST_PipeAccessory
-        || elementBuiltInCategory == DB.BuiltInCategory.OST_PlumbingFixtures
+      elementBuiltInCategory == DB.BuiltInCategory.OST_PipeFitting
+      || elementBuiltInCategory == DB.BuiltInCategory.OST_PipeAccessory
+      || elementBuiltInCategory == DB.BuiltInCategory.OST_PlumbingFixtures
 #if REVIT2024_OR_GREATER
-        || element is DB.Toposolid // note, brought back from 2.x.x.
+      || element is DB.Toposolid // note, brought back from 2.x.x.
 #endif
-      )
     )
     {
       currentOptions.DetailLevel = DB.ViewDetailLevel.Fine; // Force detail level to be fine

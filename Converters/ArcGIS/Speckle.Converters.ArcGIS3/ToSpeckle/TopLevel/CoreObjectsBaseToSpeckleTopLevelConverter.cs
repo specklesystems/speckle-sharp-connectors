@@ -6,7 +6,7 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToSpeckle.TopLevel;
 
-[NameAndRankValue(nameof(AC.CoreObjectsBase), 0)]
+[NameAndRankValue(typeof(AC.CoreObjectsBase), 0)]
 public class CoreObjectsBaseToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
 {
   private readonly DisplayValueExtractor _displayValueExtractor;

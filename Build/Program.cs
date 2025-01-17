@@ -7,6 +7,7 @@ using static SimpleExec.Command;
 const string CLEAN = "clean";
 const string RESTORE = "restore";
 const string BUILD = "build";
+const string BUILD_LINUX = "build-linux";
 const string TEST = "test";
 const string TEST_ONLY = "test-only";
 const string FORMAT = "format";
@@ -179,6 +180,28 @@ Target(
     Run(
       "dotnet",
       $"test {file} -c Release --no-restore --verbosity=minimal  /p:AltCover=true /p:AltCoverAttributeFilter=ExcludeFromCodeCoverage /p:AltCoverVerbosity=Warning"
+    );
+  }
+);
+
+Target(
+  BUILD_LINUX,
+  DependsOn(FORMAT),
+  Glob.Files(".", "**/Speckle.Importers.Ifc.csproj"),
+  file =>
+  {
+    Run("dotnet", $"restore {file} --locked-mode");
+    var version = Environment.GetEnvironmentVariable("GitVersion_FullSemVer") ?? "3.0.0-localBuild";
+    var fileVersion = Environment.GetEnvironmentVariable("GitVersion_AssemblySemFileVer") ?? "3.0.0.0";
+    Console.WriteLine($"Version: {version} & {fileVersion}");
+    Run(
+      "dotnet",
+      $"build {file} -c Release --no-restore -warnaserror -p:Version={version} -p:FileVersion={fileVersion} -v:m"
+    );
+
+    RunAsync(
+      "dotnet",
+      $"pack {file} -c Release -o output --no-build -p:Version={version} -p:FileVersion={fileVersion} -v:m"
     );
   }
 );

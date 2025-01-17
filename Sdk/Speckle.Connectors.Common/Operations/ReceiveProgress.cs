@@ -7,7 +7,8 @@ namespace Speckle.Connectors.Common.Operations;
 public sealed class ReceiveProgress(IProgressDisplayManager progressDisplayManager) : IReceiveProgress
 {
   private double? _previousPercentage;
-  private string? _previousSpeed;
+  private string? _downloadSpeed;
+  private double? _downloadPercentage;
 
   public void Begin() => progressDisplayManager.Begin();
 
@@ -19,7 +20,10 @@ public sealed class ReceiveProgress(IProgressDisplayManager progressDisplayManag
         _previousPercentage = progressDisplayManager.CalculatePercentage(args);
         break;
       case ProgressEvent.DownloadBytes:
-        _previousSpeed = progressDisplayManager.CalculateSpeed(args);
+        _downloadSpeed = progressDisplayManager.CalculateSpeed(args);
+        break;
+      case ProgressEvent.DownloadObjects:
+        _downloadPercentage = progressDisplayManager.CalculatePercentage(args);
         break;
     }
 
@@ -34,10 +38,16 @@ public sealed class ReceiveProgress(IProgressDisplayManager progressDisplayManag
         onOperationProgressed.Report(new("Checking cache... ", _previousPercentage));
         break;
       case ProgressEvent.DownloadBytes:
-        onOperationProgressed.Report(new($"Downloading... ({_previousSpeed})", null));
+      case ProgressEvent.DownloadObjects:
+        onOperationProgressed.Report(new($"Downloading...  ({_downloadSpeed})", _downloadPercentage));
         break;
       case ProgressEvent.DeserializeObject:
-        onOperationProgressed.Report(new("Deserializing ...", progressDisplayManager.CalculatePercentage(args)));
+        onOperationProgressed.Report(
+          new(
+            $"Deserializing ... ({args.Count} / {args.Total} objects)",
+            progressDisplayManager.CalculatePercentage(args)
+          )
+        );
         break;
     }
   }

@@ -9,7 +9,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{85A13E
 		codecov.yml = codecov.yml
 		CodeMetricsConfig.txt = CodeMetricsConfig.txt
 		Directory.Build.props = Directory.Build.props
-		Directory.Build.targets = Directory.Build.targets
 		Directory.Packages.props = Directory.Packages.props
 		global.json = global.json
 		README.md = README.md
@@ -18,6 +17,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DUI", "DUI", "{FD4D6594-D81E-456F-8F2E-35B09E04A755}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Revit", "Revit", "{D92751C8-1039-4005-90B2-913E55E0B8BD}"
+	ProjectSection(SolutionItems) = preProject
+		Connectors\Revit\Directory.Build.targets = Connectors\Revit\Directory.Build.targets
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Sdk", "Sdk", "{2E00592E-558D-492D-88F9-3ECEE4C0C7DA}"
 EndProject
@@ -36,6 +38,9 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Converters.Common", "Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj", "{8AEF06C0-CA5C-4460-BC2D-ADE5F35D0434}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Rhino", "Rhino", "{9584AEE5-CD59-46E6-93E6-2DC2B5285B75}"
+	ProjectSection(SolutionItems) = preProject
+		Connectors\Rhino\Directory.Build.targets = Connectors\Rhino\Directory.Build.targets
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Connectors.Rhino7", "Connectors\Rhino\Speckle.Connectors.Rhino7\Speckle.Connectors.Rhino7.csproj", "{1E2644A9-6B31-4350-8772-CEAAD6EE0B21}"
 EndProject
@@ -52,6 +57,9 @@ EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Connectors.AutocadShared", "Connectors\Autocad\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.shproj", "{41BC679F-887F-44CF-971D-A5502EE87DB0}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Autocad", "Autocad", "{804E065F-914C-414A-AF84-009312C3CFF6}"
+	ProjectSection(SolutionItems) = preProject
+		Connectors\Autocad\Directory.Build.targets = Connectors\Autocad\Directory.Build.targets
+	EndProjectSection
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Converters.AutocadShared", "Converters\Autocad\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.shproj", "{9ADD1B7A-6401-4202-8613-F668E2FBC0A4}"
 EndProject
@@ -61,7 +69,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Connectors.DUI.WebV
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Build", "Build\Build.csproj", "{C50AA3E3-8C31-4131-9DEC-1D8B377D5A89}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "HostApps", "HostApps", "{42826721-9A18-4762-8BA9-F1429DD5C5B1}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Connectors", "Connectors", "{42826721-9A18-4762-8BA9-F1429DD5C5B1}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{59E8E8F3-4E42-4E92-83B3-B1C2AB901D18}"
 	ProjectSection(SolutionItems) = preProject
@@ -154,6 +162,9 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Connectors.Logging", "Sdk\Speckle.Connectors.Logging\Speckle.Connectors.Logging.csproj", "{8098BAFC-DF1C-4AFA-A93E-08121E6D09D4}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tekla", "Tekla", "{696086E4-D8CC-4FE0-A9B3-5F10B9089B55}"
+	ProjectSection(SolutionItems) = preProject
+		Connectors\Tekla\Directory.Build.targets = Connectors\Tekla\Directory.Build.targets
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Connector.Tekla2024", "Connectors\Tekla\Speckle.Connector.Tekla2024\Speckle.Connector.Tekla2024.csproj", "{2319C00F-B268-4E4C-9F88-6B379E2BBD22}"
 EndProject
@@ -214,6 +225,9 @@ EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Converters.ETABSShared", "Converters\CSi\Speckle.Converters.ETABSShared\Speckle.Converters.ETABSShared.shproj", "{36377858-D696-4567-AB05-637F4EC841F5}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Navisworks", "Navisworks", "{7B95C512-C1CD-4110-A9A9-CECCD9630353}"
+	ProjectSection(SolutionItems) = preProject
+		Connectors\Navisworks\Directory.Build.targets = Connectors\Navisworks\Directory.Build.targets
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shared", "Shared", "{3C54FE49-F14E-43A2-B1DF-85D5C7638117}"
 EndProject
@@ -256,6 +270,14 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Navisworks2023", "Connectors\Navisworks\Speckle.Connectors.Navisworks2023\Speckle.Connectors.Navisworks2023.csproj", "{FD44E1F0-D20A-49B6-ADC9-482D911A74FB}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Navisworks2025", "Connectors\Navisworks\Speckle.Connectors.Navisworks2025\Speckle.Connectors.Navisworks2025.csproj", "{7791806E-7531-41D8-9C9D-4A1249D9F99C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Importers.Ifc", "Importers\Ifc\Speckle.Importers.Ifc\Speckle.Importers.Ifc.csproj", "{E6B7A640-F85C-41C9-8226-B5310A98822D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Ifc", "Ifc", "{F93052A6-6937-443F-8F1F-4A967A8A2BEF}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Importers", "Importers", "{336F0341-5C39-40F7-9377-122FED4E4549}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Importers.Ifc.Tester", "Importers\Ifc\Speckle.Importers.Ifc.Tester\Speckle.Importers.Ifc.Tester.csproj", "{FCD6CB79-6B41-4448-99E1-787408AD24B0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -648,6 +670,18 @@ Global
 		{7791806E-7531-41D8-9C9D-4A1249D9F99C}.Local|Any CPU.Build.0 = Debug|Any CPU
 		{7791806E-7531-41D8-9C9D-4A1249D9F99C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7791806E-7531-41D8-9C9D-4A1249D9F99C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E6B7A640-F85C-41C9-8226-B5310A98822D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E6B7A640-F85C-41C9-8226-B5310A98822D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E6B7A640-F85C-41C9-8226-B5310A98822D}.Local|Any CPU.ActiveCfg = Debug|Any CPU
+		{E6B7A640-F85C-41C9-8226-B5310A98822D}.Local|Any CPU.Build.0 = Debug|Any CPU
+		{E6B7A640-F85C-41C9-8226-B5310A98822D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E6B7A640-F85C-41C9-8226-B5310A98822D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FCD6CB79-6B41-4448-99E1-787408AD24B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FCD6CB79-6B41-4448-99E1-787408AD24B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FCD6CB79-6B41-4448-99E1-787408AD24B0}.Local|Any CPU.ActiveCfg = Debug|Any CPU
+		{FCD6CB79-6B41-4448-99E1-787408AD24B0}.Local|Any CPU.Build.0 = Debug|Any CPU
+		{FCD6CB79-6B41-4448-99E1-787408AD24B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FCD6CB79-6B41-4448-99E1-787408AD24B0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -768,6 +802,9 @@ Global
 		{04FC86A3-2E25-41A1-98C5-10898616CD78} = {19F15419-F493-4D53-83EA-F90869D97D6E}
 		{FD44E1F0-D20A-49B6-ADC9-482D911A74FB} = {91DCAFB0-283B-4B07-9F6F-7335DECEEB08}
 		{7791806E-7531-41D8-9C9D-4A1249D9F99C} = {A88CFA1F-B2D5-4DBE-8496-68D0AFA46F2D}
+		{E6B7A640-F85C-41C9-8226-B5310A98822D} = {F93052A6-6937-443F-8F1F-4A967A8A2BEF}
+		{F93052A6-6937-443F-8F1F-4A967A8A2BEF} = {336F0341-5C39-40F7-9377-122FED4E4549}
+		{FCD6CB79-6B41-4448-99E1-787408AD24B0} = {F93052A6-6937-443F-8F1F-4A967A8A2BEF}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}

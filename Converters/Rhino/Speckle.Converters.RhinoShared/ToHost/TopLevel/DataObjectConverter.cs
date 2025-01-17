@@ -7,7 +7,7 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Rhino.ToHost.TopLevel;
 
-[NameAndRankValue(nameof(DataObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(DataObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class DataObjectConverter
   : IToHostTopLevelConverter,
     ITypedConverter<DataObject, List<(RG.GeometryBase a, Base b)>>
