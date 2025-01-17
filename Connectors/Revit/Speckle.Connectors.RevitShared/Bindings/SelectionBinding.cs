@@ -1,7 +1,6 @@
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Eventing;
-using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk.Common;
@@ -11,20 +10,18 @@ namespace Speckle.Connectors.Revit.Bindings;
 // POC: we need a base a RevitBaseBinding
 internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding
 {
-  public SelectionBinding(
-    IRevitContext revitContext,
-    DocumentModelStore store,
-    IBrowserBridge parent,
-    IEventAggregator eventAggregator
-  )
-    : base("selectionBinding", store, parent, revitContext)
+  private readonly IRevitContext _revitContext;
+
+  public SelectionBinding(IRevitContext revitContext, IBrowserBridge parent, IEventAggregator eventAggregator)
+    : base("selectionBinding", parent)
   {
-    eventAggregator.GetEvent<SelectionChanged>().Subscribe(_ => OnSelectionChanged());
+    _revitContext = revitContext;
+    eventAggregator.GetEvent<SelectionChangedEvent>().Subscribe(_ => OnSelectionChanged());
   }
 
   private void OnSelectionChanged()
   {
-    if (RevitContext.UIApplication.ActiveUIDocument == null)
+    if (_revitContext.UIApplication.ActiveUIDocument == null)
     {
       return;
     }
@@ -33,12 +30,12 @@ internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding
 
   public SelectionInfo GetSelection()
   {
-    if (RevitContext.UIApplication.ActiveUIDocument == null)
+    if (_revitContext.UIApplication.ActiveUIDocument == null)
     {
       return new SelectionInfo(Array.Empty<string>(), "No objects selected.");
     }
 
-    var activeUIDoc = RevitContext.UIApplication.ActiveUIDocument.NotNull();
+    var activeUIDoc = _revitContext.UIApplication.ActiveUIDocument.NotNull();
 
     // POC: this was also being called on shutdown
     // probably the bridge needs to be able to know if the plugin has been terminated

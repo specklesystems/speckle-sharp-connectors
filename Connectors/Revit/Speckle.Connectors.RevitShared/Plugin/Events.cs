@@ -16,8 +16,11 @@ public class ViewActivatedEvent(IThreadContext threadContext, ITopLevelException
 public class DocumentStoreInitializingEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
   : ThreadedEvent<object>(threadContext, exceptionHandler);
 
-public class SelectionChanged(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
+public class SelectionChangedEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
   : ThreadedEvent<object>(threadContext, exceptionHandler);
+
+public class DocumentChangedEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
+  : ThreadedEvent<Autodesk.Revit.DB.Events.DocumentChangedEventArgs>(threadContext, exceptionHandler);
 
 public static class RevitEvents
 {
@@ -35,17 +38,19 @@ public static class RevitEvents
       eventAggregator.GetEvent<DocumentStoreInitializingEvent>().Publish(new object());
     application.ControlledApplication.DocumentOpening += (_, _) =>
       eventAggregator.GetEvent<DocumentStoreInitializingEvent>().Publish(new object());
+    application.ControlledApplication.DocumentChanged += (_, args) =>
+      eventAggregator.GetEvent<DocumentChangedEvent>().Publish(args);
 
 #if REVIT2022
     // NOTE: getting the selection data should be a fast function all, even for '000s of elements - and having a timer hitting it every 1s is ok.
-    s_selectionTimer.Elapsed += (_, _) => eventAggregator.GetEvent<SelectionChanged>().Publish(new object());
+    s_selectionTimer.Elapsed += (_, _) => eventAggregator.GetEvent<SelectionChangedEvent>().Publish(new object());
     s_selectionTimer.Start();
 #else
 
     application.SelectionChanged += (_, _) =>
       eventAggregator
         .GetEvent<IdleEvent>()
-        .OneTimeSubscribe("Selection", () => eventAggregator.GetEvent<SelectionChanged>().Publish(new object()));
+        .OneTimeSubscribe("Selection", () => eventAggregator.GetEvent<SelectionChangedEvent>().Publish(new object()));
 #endif
   }
 }

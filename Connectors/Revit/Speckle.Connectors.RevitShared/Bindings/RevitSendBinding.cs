@@ -17,6 +17,7 @@ using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
+using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.RevitShared.Operations.Send.Filters;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
@@ -28,6 +29,8 @@ namespace Speckle.Connectors.Revit.Bindings;
 
 internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 {
+  private readonly IRevitContext _revitContext;
+  private readonly DocumentModelStore _store;
   private readonly CancellationManager _cancellationManager;
   private readonly IServiceProvider _serviceProvider;
   private readonly ISendConversionCache _sendConversionCache;
@@ -60,11 +63,12 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     ElementUnpacker elementUnpacker,
     IRevitConversionSettingsFactory revitConversionSettingsFactory,
     ISpeckleApplication speckleApplication,
-    IEventAggregator eventAggregator,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    IEventAggregator eventAggregator
   )
-    : base("sendBinding", store, bridge, revitContext)
+    : base("sendBinding", bridge)
   {
+    _revitContext = revitContext;
+    _store = store;
     _cancellationManager = cancellationManager;
     _serviceProvider = serviceProvider;
     _sendConversionCache = sendConversionCache;
@@ -80,8 +84,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     // TODO expiry events
     // TODO filters need refresh events
 
-    revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
-      topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
+    eventAggregator.GetEvent<DocumentChangedEvent>().Subscribe(DocChangeHandler);
     eventAggregator
       .GetEvent<DocumentStoreChangedEvent>()
       .Subscribe(async _ =>
@@ -93,8 +96,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   public List<ISendFilter> GetSendFilters() =>
     [
       new RevitSelectionFilter() { IsDefault = true },
-      new RevitViewsFilter(RevitContext),
-      new RevitCategoriesFilter(RevitContext)
+      new RevitViewsFilter(_revitContext),
+      new RevitCategoriesFilter(_revitContext)
     ];
 
   public List<ICardSetting> GetSendSettings() =>
@@ -113,7 +116,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     // Note: removed top level handling thing as it was confusing me
     try
     {
-      if (Store.GetModelById(modelCardId) is not SenderModelCard modelCard)
+      if (_store.GetModelById(modelCardId) is not SenderModelCard modelCard)
       {
         // Handle as GLOBAL ERROR at BrowserBridge
         throw new InvalidOperationException("No publish model card was found.");
@@ -173,12 +176,12 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private async Task<List<Element>> RefreshElementsOnSender(SenderModelCard modelCard)
   {
     var activeUIDoc =
-      RevitContext.UIApplication?.ActiveUIDocument
+      _revitContext.UIApplication.ActiveUIDocument
       ?? throw new SpeckleException("Unable to retrieve active UI document");
 
     if (modelCard.SendFilter is IRevitSendFilter viewFilter)
     {
-      viewFilter.SetContext(RevitContext);
+      viewFilter.SetContext(_revitContext);
     }
 
     var selectedObjects = modelCard.SendFilter.NotNull().RefreshObjectIds();
@@ -255,7 +258,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     if (HaveUnitsChanged(e.GetDocument()))
     {
       var objectIds = new List<string>();
-      foreach (var sender in Store.GetSenders().ToList())
+      foreach (var sender in _store.GetSenders().ToList())
       {
         if (sender.SendFilter is null)
         {
@@ -309,7 +312,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
   private async Task PostSetObjectIds()
   {
-    foreach (var sender in Store.GetSenders().ToList())
+    foreach (var sender in _store.GetSenders().ToList())
     {
       await RefreshElementsOnSender(sender);
     }
@@ -329,7 +332,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     //    await Commands.RefreshSendFilters();
     // }
 
-    if (ChangedObjectIds.Keys.Any(e => RevitContext.UIApplication?.ActiveUIDocument.Document.GetElement(e) is View))
+    if (ChangedObjectIds.Keys.Any(e => _revitContext.UIApplication.ActiveUIDocument.Document.GetElement(e) is View))
     {
       await Commands.RefreshSendFilters();
     }
@@ -337,9 +340,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
   private async Task RunExpirationChecks()
   {
-    var senders = Store.GetSenders().ToList();
+    var senders = _store.GetSenders().ToList();
     // string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
-    var doc = RevitContext.UIApplication?.ActiveUIDocument.Document;
+    var doc = _revitContext.UIApplication.ActiveUIDocument.Document;
 
     if (doc == null)
     {
@@ -390,7 +393,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     {
       if (modelCard.SendFilter is IRevitSendFilter viewFilter)
       {
-        viewFilter.SetContext(RevitContext);
+        viewFilter.SetContext(_revitContext);
       }
 
       var selectedObjects = modelCard.SendFilter.NotNull().IdMap.NotNull().Values;
