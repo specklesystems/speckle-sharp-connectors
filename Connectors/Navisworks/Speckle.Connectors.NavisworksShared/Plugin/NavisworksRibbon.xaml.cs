@@ -1,9 +1,11 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Windows.Forms;
 using Speckle.Connector.Navisworks.Plugin.Tools;
 
 namespace Speckle.Connector.Navisworks.Plugin;
 
+/// <summary>
+/// Handles plugin state and ribbon management for the Speckle V3 and V2 connectors.
+/// </summary>
 [
   NAV.Plugins.Plugin(SpeckleV3Tool.PLUGIN_ID, SpeckleV3Tool.DEVELOPER_ID, DisplayName = SpeckleV3Tool.DISPLAY_NAME),
   NAV.Plugins.Strings(SpeckleV3Tool.RIBBON_STRINGS),
@@ -30,14 +32,10 @@ namespace Speckle.Connector.Navisworks.Plugin;
     DisplayName = "$Speckle_Launch_V2.DisplayName"
   )
 ]
-[SuppressMessage(
-  "design",
-  "CA1812:Avoid uninstantiated internal classes",
-  Justification = "Instantiated by Navisworks"
-)]
 internal sealed class RibbonHandler : NAV.Plugins.CommandHandlerPlugin
 {
   private static bool? s_isV2PluginAvailable; // Nullable to indicate uncached state.
+  private static bool s_isV2RibbonHidden; // Tracks if the ribbon tab is already hidden.
 
   static RibbonHandler()
   {
@@ -47,6 +45,11 @@ internal sealed class RibbonHandler : NAV.Plugins.CommandHandlerPlugin
 
   private static void OnPluginRecordsChanged(object sender, EventArgs e) => s_isV2PluginAvailable = null;
 
+  /// <summary>
+  /// Determines whether a command can be executed and manages V2 plugin visibility.
+  /// </summary>
+  /// <param name="commandId">The command identifier to check.</param>
+  /// <returns>A CommandState indicating whether the command can be executed.</returns>
   public override NAV.Plugins.CommandState CanExecuteCommand(string commandId)
   {
     switch (commandId)
@@ -69,13 +72,32 @@ internal sealed class RibbonHandler : NAV.Plugins.CommandHandlerPlugin
     }
   }
 
-  private static void HideV2RibbonTab() =>
-    Autodesk.Windows.ComponentManager.Ribbon.Tabs.Remove(
-      Autodesk.Windows.ComponentManager.Ribbon.Tabs.FirstOrDefault(tab =>
-        tab.Id == SpeckleV2Tool.RIBBON_TAB_ID + SpeckleV2Tool.PLUGIN_SUFFIX
-      )
+  private static void HideV2RibbonTab()
+  {
+    if (s_isV2RibbonHidden)
+    {
+      return; // Skip if already hidden.
+    }
+
+    var v2RibbonTab = Autodesk.Windows.ComponentManager.Ribbon.Tabs.FirstOrDefault(tab =>
+      tab.Id == SpeckleV2Tool.RIBBON_TAB_ID + SpeckleV2Tool.PLUGIN_SUFFIX
     );
 
+    if (v2RibbonTab == null)
+    {
+      return;
+    }
+
+    Autodesk.Windows.ComponentManager.Ribbon.Tabs.Remove(v2RibbonTab);
+    s_isV2RibbonHidden = true; // Mark as hidden to avoid redundant calls.
+  }
+
+  /// <summary>
+  /// Executes the specified command after validating the Navisworks version.
+  /// </summary>
+  /// <param name="commandId">The command to execute.</param>
+  /// <param name="parameters">Additional command parameters.</param>
+  /// <returns>0 if successful, non-zero otherwise.</returns>
   public override int ExecuteCommand(string commandId, params string[] parameters)
   {
     if (!IsValidVersion())
