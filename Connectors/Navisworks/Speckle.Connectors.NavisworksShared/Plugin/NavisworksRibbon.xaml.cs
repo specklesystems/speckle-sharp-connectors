@@ -1,25 +1,34 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Windows.Forms;
+using Speckle.Connector.Navisworks.Plugin.Tools;
 #if DEBUG
 using System.Text;
 #endif
 
 namespace Speckle.Connector.Navisworks.Plugin;
 
-[
-  NAV.Plugins.Plugin("SpeckleNavisworksNextGen", "Speckle", DisplayName = "Speckle Next Gen"),
-  NAV.Plugins.Strings("NavisworksRibbon.name"),
-  NAV.Plugins.RibbonLayout("NavisworksRibbon.xaml"),
-  NAV.Plugins.RibbonTab("Speckle", DisplayName = "Speckle Next Gen", LoadForCanExecute = true),
-  NAV.Plugins.Command(
-    LaunchSpeckleConnector.COMMAND,
-    LoadForCanExecute = true,
-    Icon = "Resources/s2logo16.png",
-    LargeIcon = "Resources/s2logo32.png",
-    ToolTip = "Next Gen Speckle Connector for Navisworks",
-    DisplayName = "Speckle\rConnector"
-  ),
-]
+[NAV.Plugins.Plugin("SpeckleNavisworksNextGen", "Speckle", DisplayName = "Speckle Next Gen")]
+[NAV.Plugins.Strings("NavisworksRibbon.name")]
+[NAV.Plugins.RibbonLayout("NavisworksRibbon.xaml")]
+[NAV.Plugins.RibbonTab("Speckle", DisplayName = "Speckle", LoadForCanExecute = true)]
+// Speckle v3 Connector
+[NAV.Plugins.Command(
+  SpeckleV3Tool.COMMAND,
+  LoadForCanExecute = true,
+  Icon = "Resources/v3_logo16.png",
+  LargeIcon = "Resources/v3_logo32.png",
+  ToolTip = "Speckle Connector for Navisworks",
+  DisplayName = "$Speckle_Launch.DisplayName"
+)]
+// Legacy Speckle v2 Connector
+[NAV.Plugins.Command(
+  SpeckleV2Tool.COMMAND,
+  LoadForCanExecute = true,
+  Icon = "Resources/v2_logo16.png",
+  LargeIcon = "Resources/v2_logo32.png",
+  ToolTip = "Legacy Speckle v2 Connector",
+  DisplayName = "$Speckle_Launch_V2.DisplayName"
+)]
 [SuppressMessage(
   "design",
   "CA1812:Avoid uninstantiated internal classes",

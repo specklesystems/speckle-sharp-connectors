@@ -34,6 +34,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\Commands.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\DockableConnectorPane.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\NavisworksRibbon.xaml.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\Tools\SpeckleV2Tool.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\Tools\SpeckleV3Tool.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="$(MSBuildThisFileDirectory)Plugin\BrowserPane.xaml" />
@@ -43,10 +45,16 @@
     <Content Include="$(MSBuildThisFileDirectory)Plugin\NavisworksRibbon.name">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(MSBuildThisFileDirectory)Resources\s2logo16.png">
+    <Content Include="$(MSBuildThisFileDirectory)Resources\v2_logo16.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(MSBuildThisFileDirectory)Resources\s2logo32.png">
+    <Content Include="$(MSBuildThisFileDirectory)Resources\v2_logo32.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(MSBuildThisFileDirectory)Resources\v3_logo16.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(MSBuildThisFileDirectory)Resources\v3_logo32.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
