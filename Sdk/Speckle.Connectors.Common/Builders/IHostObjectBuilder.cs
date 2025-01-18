@@ -27,6 +27,6 @@ public interface IHostObjectBuilder
 }
 
 public record HostObjectBuilderResult(
-  IEnumerable<string> BakedObjectIds,
+  Dictionary<string, string> BakedObjectIds,
   IEnumerable<ReceiveConversionResult> ConversionResults
 );

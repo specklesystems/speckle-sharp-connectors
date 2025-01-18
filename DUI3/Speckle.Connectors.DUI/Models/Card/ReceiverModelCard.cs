@@ -14,7 +14,7 @@ public class ReceiverModelCard : ModelCard
   public string? LatestVersionSourceApp { get; set; }
   public string? LatestVersionUserId { get; set; }
   public bool HasDismissedUpdateWarning { get; set; }
-  public List<string>? BakedObjectIds { get; set; }
+  public Dictionary<string, string>? BakedObjectIds { get; set; }
 
   public ReceiveInfo GetReceiveInfo(string sourceApplication) =>
     new(

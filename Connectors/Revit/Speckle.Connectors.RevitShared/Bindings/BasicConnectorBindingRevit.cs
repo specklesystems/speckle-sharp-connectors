@@ -117,7 +117,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     {
       elementIds = receiverModelCard
         .BakedObjectIds.NotNull()
-        .Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid))
+        .Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid.Value))
         .Where(el => el is not null)
         .Cast<ElementId>()
         .ToList();

@@ -85,7 +85,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
           cancellationToken
         );
 
-      modelCard.BakedObjectIds = conversionResults.BakedObjectIds.ToList();
+      modelCard.BakedObjectIds = conversionResults.BakedObjectIds;
       await Commands.SetModelReceiveResult(
         modelCardId,
         conversionResults.BakedObjectIds,

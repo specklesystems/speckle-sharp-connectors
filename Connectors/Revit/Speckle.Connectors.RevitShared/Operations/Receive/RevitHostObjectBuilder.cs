@@ -131,7 +131,7 @@ public sealed class RevitHostObjectBuilder(
   {
     using var _ = activityFactory.Start("BakeObjects");
     var conversionResults = new List<ReceiveConversionResult>();
-    var bakedObjectIds = new List<string>();
+    var bakedObjectIds = new Dictionary<string, string>();
     int count = 0;
 
     var postBakePaintTargets = new List<(DirectShape res, string applicationId)>();
@@ -176,7 +176,7 @@ public sealed class RevitHostObjectBuilder(
             (localToGlobalMap.AtomicObject, localToGlobalMap.Matrix)
           );
 
-          bakedObjectIds.Add(directShapes.UniqueId);
+          bakedObjectIds.Add(localToGlobalMap.AtomicObject.id!, directShapes.UniqueId);
           groupManager.AddToTopLevelGroup(directShapes);
 
           if (localToGlobalMap.AtomicObject is IRawEncodedObject and Base myBase)

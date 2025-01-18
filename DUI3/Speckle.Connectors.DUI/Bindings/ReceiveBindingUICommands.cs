@@ -13,7 +13,7 @@ public sealed class ReceiveBindingUICommands : BasicConnectorBindingCommands
 
   public async Task SetModelReceiveResult(
     string modelCardId,
-    IEnumerable<string> bakedObjectIds,
+    Dictionary<string, string> bakedObjectIds,
     IEnumerable<ConversionResult> conversionResults
   )
   {
