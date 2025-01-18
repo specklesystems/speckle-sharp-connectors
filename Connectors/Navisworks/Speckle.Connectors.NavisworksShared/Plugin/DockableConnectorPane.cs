@@ -3,6 +3,7 @@ using System.Windows.Forms;
 using System.Windows.Forms.Integration;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connector.Navisworks.DependencyInjection;
+using Speckle.Connector.Navisworks.Plugin.Tools;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Converter.Navisworks.DependencyInjection;
@@ -13,9 +14,9 @@ namespace Speckle.Connector.Navisworks.Plugin;
 [
   NAV.Plugins.DockPanePlugin(450, 750, FixedSize = false, AutoScroll = true, MinimumHeight = 410, MinimumWidth = 250),
   NAV.Plugins.Plugin(
-    LaunchSpeckleConnector.PLUGIN,
-    "Speckle",
-    DisplayName = "Speckle",
+    SpeckleV3Tool.PLUGIN,
+    SpeckleV3Tool.DEVELOPER_ID,
+    DisplayName = SpeckleV3Tool.DISPLAY_NAME,
     Options = NAV.Plugins.PluginOptions.None,
     ToolTip = "Speckle Connector for Navisworks",
     ExtendedToolTip = "Speckle Connector for Navisworks"
@@ -36,7 +37,7 @@ internal sealed class Connector : NAV.Plugins.DockPanePlugin
 
     var services = new ServiceCollection();
 
-    services.Initialize(HostApplications.Navisworks, HostAppVersion.v2024);
+    services.Initialize(HostApplications.Navisworks, SpeckleV3Tool.Version);
 
     services.AddNavisworks();
     services.AddNavisworksConverter();
