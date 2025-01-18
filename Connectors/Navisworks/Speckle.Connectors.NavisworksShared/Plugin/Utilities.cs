@@ -1,7 +1,9 @@
-﻿using System.Text;
-using System.Windows.Forms;
+﻿using System.Windows.Forms;
 using Autodesk.Navisworks.Api.Plugins;
 using Speckle.Connector.Navisworks.Plugin.Tools;
+#if DEBUG
+using System.Text;
+#endif
 
 namespace Speckle.Connector.Navisworks.Plugin;
 
