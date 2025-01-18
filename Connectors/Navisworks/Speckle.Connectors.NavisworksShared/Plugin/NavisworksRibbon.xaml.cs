@@ -55,14 +55,26 @@ internal sealed class RibbonHandler : NAV.Plugins.CommandHandlerPlugin
         return new NAV.Plugins.CommandState(true);
       case SpeckleV2Tool.COMMAND:
       {
-        // Check the cached state or re-evaluate if not already cached
-        s_isV2PluginAvailable ??= PluginUtilities.FindV2Plugin() != null;
-        return new NAV.Plugins.CommandState(s_isV2PluginAvailable.Value);
+        // Find the v2 plugin
+        NAV.Plugins.PluginRecord? v2Plugin = PluginUtilities.FindV2Plugin();
+        s_isV2PluginAvailable = v2Plugin != null;
+
+        // Pass the plugin to the method for managing ribbon visibility
+        HideV2RibbonTab();
+
+        return new NAV.Plugins.CommandState((bool)s_isV2PluginAvailable);
       }
       default:
         return new NAV.Plugins.CommandState(false);
     }
   }
+
+  private static void HideV2RibbonTab() =>
+    Autodesk.Windows.ComponentManager.Ribbon.Tabs.Remove(
+      Autodesk.Windows.ComponentManager.Ribbon.Tabs.FirstOrDefault(tab =>
+        tab.Id == SpeckleV2Tool.RIBBON_TAB_ID + SpeckleV2Tool.PLUGIN_SUFFIX
+      )
+    );
 
   public override int ExecuteCommand(string commandId, params string[] parameters)
   {
