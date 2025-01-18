@@ -1,5 +1,4 @@
-﻿using System.Windows.Forms;
-using Autodesk.Navisworks.Api.Plugins;
+﻿using Autodesk.Navisworks.Api.Plugins;
 using Speckle.Connector.Navisworks.Plugin.Tools;
 
 namespace Speckle.Connector.Navisworks.Plugin;
@@ -17,13 +16,10 @@ internal static class PluginUtilities
     return v2Plugin ?? null;
   }
 
-  public static void ActivatePluginPane(PluginRecord? pluginRecord, string command)
+  public static void ActivatePluginPane(PluginRecord? pluginRecord)
   {
     if (pluginRecord is null || !pluginRecord.IsEnabled || !pluginRecord.IsLoaded)
     {
-#if DEBUG
-      MessageBox.Show($"Command '{command}' cannot activate plugin pane. Plugin state invalid.");
-#endif
       return;
     }
 

@@ -138,7 +138,7 @@ internal sealed class RibbonHandler : NAV.Plugins.CommandHandlerPlugin
     }
 
     _ = pluginRecord.LoadedPlugin ?? pluginRecord.LoadPlugin();
-    PluginUtilities.ActivatePluginPane(pluginRecord, commandId);
+    PluginUtilities.ActivatePluginPane(pluginRecord);
   }
 
   private static bool IsValidVersion()
