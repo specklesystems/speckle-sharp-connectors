@@ -86,36 +86,12 @@ internal sealed class RibbonHandler : NAV.Plugins.CommandHandlerPlugin
     switch (commandId)
     {
       case SpeckleV3Tool.COMMAND:
-      {
-        if (!PluginUtilities.ShouldSkipLoad(SpeckleV3Tool.PLUGIN, commandId, true))
-        {
-          var pluginRecord = NavisworksApp.Plugins.FindPlugin(SpeckleV3Tool.PLUGIN + SpeckleV3Tool.PLUGIN_SUFFIX);
-          if (pluginRecord != null)
-          {
-            _ = pluginRecord.LoadedPlugin ?? pluginRecord.LoadPlugin();
-            PluginUtilities.ActivatePluginPane(pluginRecord, commandId);
-          }
-        }
+        HandleCommand(SpeckleV3Tool.PLUGIN, commandId);
         break;
-      }
 
       case SpeckleV2Tool.COMMAND:
-      {
-        if (!PluginUtilities.ShouldSkipLoad(SpeckleV2Tool.PLUGIN, commandId, true))
-        {
-          var pluginRecord = NavisworksApp.Plugins.FindPlugin(SpeckleV2Tool.PLUGIN + SpeckleV2Tool.PLUGIN_SUFFIX);
-          if (pluginRecord != null)
-          {
-            _ = pluginRecord.LoadedPlugin ?? pluginRecord.LoadPlugin();
-            PluginUtilities.ActivatePluginPane(pluginRecord, $"{SpeckleV2Tool.PLUGIN}.{SpeckleV2Tool.DEVELOPER_ID}");
-          }
-          else
-          {
-            MessageBox.Show("Unable to find plugin for Speckle v2.");
-          }
-        }
+        HandleCommand(SpeckleV2Tool.PLUGIN, $"{SpeckleV2Tool.PLUGIN}.{SpeckleV2Tool.DEVELOPER_ID}");
         break;
-      }
       default:
       {
         MessageBox.Show($"You have clicked on an unexpected command with ID = '{commandId}'");
@@ -124,6 +100,23 @@ internal sealed class RibbonHandler : NAV.Plugins.CommandHandlerPlugin
     }
 
     return 0;
+  }
+
+  private static void HandleCommand(string pluginId, string commandId)
+  {
+    if (PluginUtilities.ShouldSkipLoad(pluginId, commandId, true))
+    {
+      return;
+    }
+
+    var pluginRecord = NavisworksApp.Plugins.FindPlugin(pluginId + SpeckleV3Tool.PLUGIN_SUFFIX);
+    if (pluginRecord == null)
+    {
+      return;
+    }
+
+    _ = pluginRecord.LoadedPlugin ?? pluginRecord.LoadPlugin();
+    PluginUtilities.ActivatePluginPane(pluginRecord, commandId);
   }
 
   private static bool IsValidVersion()
