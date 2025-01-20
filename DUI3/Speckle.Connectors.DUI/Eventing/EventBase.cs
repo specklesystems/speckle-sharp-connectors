@@ -3,30 +3,11 @@
 ///<summary>
 /// Defines a base class to publish and subscribe to events.
 ///</summary>
-public abstract class EventBase : IDisposable
+public abstract class EventBase
 {
-  private readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
   private readonly List<IEventSubscription> _subscriptions = new();
   protected ICollection<IEventSubscription> Subscriptions => _subscriptions;
 
-  protected virtual void Dispose(bool isDisposing)
-  {
-    if (isDisposing)
-    {
-      _semaphoreSlim.Dispose();
-    }
-  }
-  
-  public void Dispose()
-  {
-    Dispose(true);
-    GC.SuppressFinalize(this);
-  }
-
-  ~EventBase()
-  {
-    Dispose(false);
-  }
 
   /// <summary>
   /// Adds the specified <see cref="IEventSubscription"/> to the subscribers' collection.
@@ -45,14 +26,9 @@ public abstract class EventBase : IDisposable
 
     eventSubscription.SubscriptionToken = new SubscriptionToken(Unsubscribe);
 
-    _semaphoreSlim.Wait();
-    try
+    lock(Subscriptions)
     {
       Subscriptions.Add(eventSubscription);
-    }
-    finally
-    {
-      _semaphoreSlim.Release();
     }
     return eventSubscription.SubscriptionToken;
   }
@@ -79,8 +55,7 @@ public abstract class EventBase : IDisposable
   /// <param name="token">The <see cref="SubscriptionToken"/> returned by <see cref="EventBase"/> while subscribing to the event.</param>
   public void Unsubscribe(SubscriptionToken token)
   {
-    _semaphoreSlim.Wait();
-    try
+    lock(Subscriptions)
     {
       IEventSubscription? subscription = Subscriptions.FirstOrDefault(evt => evt.SubscriptionToken.Equals(token));
       if (subscription != null)
@@ -88,10 +63,6 @@ public abstract class EventBase : IDisposable
         Subscriptions.Remove(subscription);
         token.Unsubscribe(); //calling dispose is circular
       }
-    }
-    finally
-    {
-      _semaphoreSlim.Release();
     }
   }
 
@@ -102,22 +73,17 @@ public abstract class EventBase : IDisposable
   /// <returns><see langword="true"/> if there is a <see cref="SubscriptionToken"/> that matches; otherwise <see langword="false"/>.</returns>
   public  bool Contains(SubscriptionToken token)
   {
-    _semaphoreSlim.Wait();
-    try
+   
+    lock(Subscriptions)
     {
       IEventSubscription subscription = Subscriptions.FirstOrDefault(evt => evt.SubscriptionToken == token);
       return subscription != null;
-    }
-    finally
-    {
-      _semaphoreSlim.Release();
     }
   }
 
   private IEnumerable<Func<object[], Task>> PruneAndReturnStrategies()
   {
-    _semaphoreSlim.Wait();
-    try
+    lock(Subscriptions)
     {
       for (var i = Subscriptions.Count - 1; i >= 0; i--)
       {
@@ -134,10 +100,6 @@ public abstract class EventBase : IDisposable
         }
       }
     }
-    finally
-    {
-      _semaphoreSlim.Release();
-    }
   }
 
   /// <summary>
@@ -145,8 +107,7 @@ public abstract class EventBase : IDisposable
   /// </summary>
   public void Prune()
   {
-    _semaphoreSlim.Wait();
-    try
+    lock(Subscriptions)
     {
       for (var i = Subscriptions.Count - 1; i >= 0; i--)
       {
@@ -155,10 +116,6 @@ public abstract class EventBase : IDisposable
           _subscriptions.RemoveAt(i);
         }
       }
-    }
-    finally
-    {
-      _semaphoreSlim.Release();
     }
   }
 }
