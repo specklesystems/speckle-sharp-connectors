@@ -141,14 +141,22 @@ public class GeneralPropertiesExtractor
       int pointCount = 0;
       foreach (CDB.FeatureLinePoint point in featureline.FeatureLinePoints)
       {
-        pointsDict[pointCount.ToString()] = new Dictionary<string, object?>()
-        {
-          ["station"] = point.Station,
-          ["xyz"] = point.XYZ.ToArray(),
-          ["isBreak"] = point.IsBreak,
-          ["offset"] = point.Offset
-        };
+        Dictionary<string, object?> pointPropertiesDict =
+          new()
+          {
+            ["station"] = point.Station,
+            ["xyz"] = point.XYZ.ToArray(),
+            ["isBreak"] = point.IsBreak
+          };
 
+        // not all points have offsets. Accessing the offset property in this case will throw.
+        try
+        {
+          pointPropertiesDict["offset"] = point.Offset;
+        }
+        catch (ArgumentException) { } // do nothing - offset property will not be included
+
+        pointsDict[pointCount.ToString()] = pointPropertiesDict;
         pointCount++;
       }
 
@@ -303,19 +311,23 @@ public class GeneralPropertiesExtractor
       generalPropertiesDict["Design Critera"] = designCriteriaDict;
     }
 
-    // get offset alignment props
+    // get offset alignment props.
     if (alignment.IsOffsetAlignment)
     {
-      var offsetInfo = alignment.OffsetAlignmentInfo;
-      Dictionary<string, object?> offsetAlignmentDict =
-        new()
+      try
+      {
+        // accessing "OffsetAlignmentInfo" on offset alignments will sometimes throw /shrug.
+        // this happens when an offset alignment is unlinked from the parent and the CreateMode is still set to "ManuallyCreation"
+        // https://help.autodesk.com/view/CIV3D/2024/ENU/?guid=2ecbe421-4c08-cbde-d078-56a9f03b93f9
+        var offsetInfo = alignment.OffsetAlignmentInfo;
+        generalPropertiesDict["Offset Parameters"] = new Dictionary<string, object?>
         {
           ["side"] = offsetInfo.Side.ToString(),
           ["parentAlignmentId"] = offsetInfo.ParentAlignmentId.GetSpeckleApplicationId(),
           ["nominalOffset"] = offsetInfo.NominalOffset
         };
-
-      generalPropertiesDict["Offset Parameters"] = offsetAlignmentDict;
+      }
+      catch (InvalidOperationException) { } // do nothing
     }
 
     return generalPropertiesDict;
