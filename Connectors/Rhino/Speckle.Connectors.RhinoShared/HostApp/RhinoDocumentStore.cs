@@ -31,7 +31,7 @@ public class RhinoDocumentStore : DocumentModelStore
 
         IsDocumentInit = true;
         LoadState();
-        await eventAggregator.GetEvent<DocumentChangedEvent>().PublishAsync(new object());
+        await eventAggregator.GetEvent<DocumentStoreChangedEvent>().PublishAsync(new object());
       });
   }
 

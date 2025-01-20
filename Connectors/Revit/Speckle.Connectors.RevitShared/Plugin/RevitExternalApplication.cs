@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Revit.Async;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.Revit.DependencyInjection;
 using Speckle.Converters.RevitShared;
 using Speckle.Sdk;

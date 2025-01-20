@@ -36,7 +36,7 @@ public class TeklaDocumentModelStore : DocumentModelStore
       {
         GenerateKey();
         LoadState();
-        await eventAggregator.GetEvent<DocumentChangedEvent>().PublishAsync(new object());
+        await eventAggregator.GetEvent<DocumentStoreChangedEvent>().PublishAsync(new object());
       });
   }
 
@@ -45,7 +45,7 @@ public class TeklaDocumentModelStore : DocumentModelStore
     if (SpeckleTeklaPanelHost.IsInitialized)
     {
       LoadState();
-      await _eventAggregator.GetEvent<DocumentChangedEvent>().PublishAsync(new object());
+      await _eventAggregator.GetEvent<DocumentStoreChangedEvent>().PublishAsync(new object());
     }
   }
 

@@ -30,27 +30,34 @@ public static class RevitEvents
 
   public static void Register(IEventAggregator eventAggregator, UIControlledApplication application)
   {
-    application.Idling += (_, _) => eventAggregator.GetEvent<IdleEvent>().Publish(new object());
-    application.ControlledApplication.ApplicationInitialized += (sender, _) =>
-      eventAggregator.GetEvent<ApplicationInitializedEvent>().Publish(new UIApplication(sender as Application));
-    application.ViewActivated += (_, args) => eventAggregator.GetEvent<ViewActivatedEvent>().Publish(args);
-    application.ControlledApplication.DocumentOpened += (_, _) =>
-      eventAggregator.GetEvent<DocumentStoreInitializingEvent>().Publish(new object());
-    application.ControlledApplication.DocumentOpening += (_, _) =>
-      eventAggregator.GetEvent<DocumentStoreInitializingEvent>().Publish(new object());
-    application.ControlledApplication.DocumentChanged += (_, args) =>
-      eventAggregator.GetEvent<DocumentChangedEvent>().Publish(args);
+    application.Idling += async (_, _) => await eventAggregator.GetEvent<IdleEvent>().PublishAsync(new object());
+    application.ControlledApplication.ApplicationInitialized += async (sender, _) =>
+      await eventAggregator
+        .GetEvent<ApplicationInitializedEvent>()
+        .PublishAsync(new UIApplication(sender as Application));
+    application.ViewActivated += async (_, args) =>
+      await eventAggregator.GetEvent<ViewActivatedEvent>().PublishAsync(args);
+    application.ControlledApplication.DocumentOpened += async (_, _) =>
+      await eventAggregator.GetEvent<DocumentStoreInitializingEvent>().PublishAsync(new object());
+    application.ControlledApplication.DocumentOpening += async (_, _) =>
+      await eventAggregator.GetEvent<DocumentStoreInitializingEvent>().PublishAsync(new object());
+    application.ControlledApplication.DocumentChanged += async (_, args) =>
+      await eventAggregator.GetEvent<DocumentChangedEvent>().PublishAsync(args);
 
 #if REVIT2022
     // NOTE: getting the selection data should be a fast function all, even for '000s of elements - and having a timer hitting it every 1s is ok.
-    s_selectionTimer.Elapsed += (_, _) => eventAggregator.GetEvent<SelectionChangedEvent>().Publish(new object());
+    s_selectionTimer.Elapsed += async (_, _) =>
+      await eventAggregator.GetEvent<SelectionChangedEvent>().PublishAsync(new object());
     s_selectionTimer.Start();
 #else
 
     application.SelectionChanged += (_, _) =>
       eventAggregator
         .GetEvent<IdleEvent>()
-        .OneTimeSubscribe("Selection", () => eventAggregator.GetEvent<SelectionChangedEvent>().Publish(new object()));
+        .OneTimeSubscribe(
+          "Selection",
+          _ => eventAggregator.GetEvent<SelectionChangedEvent>().PublishAsync(new object())
+        );
 #endif
   }
 }

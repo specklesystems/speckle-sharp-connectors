@@ -252,7 +252,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     if (addedElementIds.Count > 0)
     {
-      _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(PostSetObjectIds), PostSetObjectIds);
+      _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(PostSetObjectIds), _ => PostSetObjectIds());
     }
 
     if (HaveUnitsChanged(e.GetDocument()))
@@ -272,8 +272,10 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       _sendConversionCache.EvictObjects(unpackedObjectIds);
     }
 
-    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(CheckFilterExpiration), CheckFilterExpiration);
-    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RunExpirationChecks), RunExpirationChecks);
+    _eventAggregator
+      .GetEvent<IdleEvent>()
+      .OneTimeSubscribe(nameof(CheckFilterExpiration), _ => CheckFilterExpiration());
+    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RunExpirationChecks), _ => RunExpirationChecks());
   }
 
   // Keeps track of doc and current units

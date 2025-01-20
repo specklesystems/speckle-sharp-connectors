@@ -51,7 +51,7 @@ public class ArcGISDocumentStore : DocumentModelStore
     {
       IsDocumentInit = true;
       LoadState();
-      await _eventAggregator.GetEvent<DocumentChangedEvent>().PublishAsync(new object());
+      await _eventAggregator.GetEvent<DocumentStoreChangedEvent>().PublishAsync(new object());
     }
   }
 
@@ -85,7 +85,7 @@ public class ArcGISDocumentStore : DocumentModelStore
 
     IsDocumentInit = true;
     LoadState();
-    await _eventAggregator.GetEvent<DocumentChangedEvent>().PublishAsync(new object());
+    await _eventAggregator.GetEvent<DocumentStoreChangedEvent>().PublishAsync(new object());
   }
 
   protected override void HostAppSaveState(string modelCardState) =>
