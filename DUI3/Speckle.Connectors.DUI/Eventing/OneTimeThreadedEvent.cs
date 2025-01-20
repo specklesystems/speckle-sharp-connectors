@@ -27,7 +27,7 @@ public abstract class OneTimeThreadedEvent<T>(IThreadContext threadContext, ITop
     Predicate<T>? filter = null
   )
   {
-    return OneTimeInternal(id, t => action(t), threadOption, keepSubscriberReferenceAlive, filter);
+    return OneTimeInternal(id, action, threadOption, keepSubscriberReferenceAlive, filter);
   }
 
   public SubscriptionToken OneTimeSubscribe(
@@ -40,32 +40,10 @@ public abstract class OneTimeThreadedEvent<T>(IThreadContext threadContext, ITop
   {
     return OneTimeInternal(id, _ => action(), threadOption, keepSubscriberReferenceAlive, filter);
   }
-
-  public SubscriptionToken OneTimeSubscribe(
-    string id,
-    Action<T> action,
-    ThreadOption threadOption = ThreadOption.PublisherThread,
-    bool keepSubscriberReferenceAlive = false,
-    Predicate<T>? filter = null
-  )
-  {
-    return OneTimeInternal(id, action, threadOption, keepSubscriberReferenceAlive, filter);
-  }
-
-  public SubscriptionToken OneTimeSubscribe(
-    string id,
-    Action action,
-    ThreadOption threadOption = ThreadOption.PublisherThread,
-    bool keepSubscriberReferenceAlive = false,
-    Predicate<T>? filter = null
-  )
-  {
-    return OneTimeInternal(id, _ => action(), threadOption, keepSubscriberReferenceAlive, filter);
-  }
-
+  
   private SubscriptionToken OneTimeInternal(
     string id,
-    Action<T> action,
+    Func<T, Task> action,
     ThreadOption threadOption,
     bool keepSubscriberReferenceAlive,
     Predicate<T>? filter

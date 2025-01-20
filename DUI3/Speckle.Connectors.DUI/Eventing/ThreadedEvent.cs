@@ -17,11 +17,21 @@ public abstract class ThreadedEvent<T>(IThreadContext threadContext, ITopLevelEx
     Predicate<T>? filter = null
   )
   {
-    return SubscribeOnceOrNot(t => action(t), threadOption, keepSubscriberReferenceAlive, filter, false);
+    return SubscribeOnceOrNot(action, threadOption, keepSubscriberReferenceAlive, filter, false);
+  }
+  
+  public SubscriptionToken Subscribe(
+    Func<Task> action,
+    ThreadOption threadOption = ThreadOption.PublisherThread,
+    bool keepSubscriberReferenceAlive = false,
+    Predicate<T>? filter = null
+  )
+  {
+    return SubscribeOnceOrNot(_ => action(), threadOption, keepSubscriberReferenceAlive, filter, false);
   }
 
   protected SubscriptionToken SubscribeOnceOrNot(
-    Action<T> action,
+    Func<T, Task> action,
     ThreadOption threadOption,
     bool keepSubscriberReferenceAlive,
     Predicate<T>? filter,

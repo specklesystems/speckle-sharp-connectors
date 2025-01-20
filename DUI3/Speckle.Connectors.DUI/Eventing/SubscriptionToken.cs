@@ -32,6 +32,8 @@ public sealed class SubscriptionToken(Action<SubscriptionToken> unsubscribeActio
 
   public bool IsActive => _unsubscribeAction != null;
 
+  public void Unsubscribe() => _unsubscribeAction = null;
+
   public void Dispose()
   {
     // While the SubscriptionToken class implements IDisposable, in the case of weak subscriptions
@@ -42,7 +44,7 @@ public sealed class SubscriptionToken(Action<SubscriptionToken> unsubscribeActio
     if (_unsubscribeAction != null)
     {
       _unsubscribeAction(this);
-      _unsubscribeAction = null;
+      Unsubscribe();
     }
   }
 }

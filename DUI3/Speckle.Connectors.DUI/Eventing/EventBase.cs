@@ -82,10 +82,11 @@ public abstract class EventBase : IDisposable
     _semaphoreSlim.Wait();
     try
     {
-      IEventSubscription subscription = Subscriptions.FirstOrDefault(evt => evt.SubscriptionToken == token);
+      IEventSubscription? subscription = Subscriptions.FirstOrDefault(evt => evt.SubscriptionToken.Equals(token));
       if (subscription != null)
       {
         Subscriptions.Remove(subscription);
+        token.Unsubscribe(); //calling dispose is circular
       }
     }
     finally
