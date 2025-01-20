@@ -4,7 +4,7 @@ using Speckle.Connectors.DUI.Bridge;
 namespace Speckle.Connectors.DUI.Eventing;
 
 public abstract class OneTimeThreadedEvent<T>(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
-  : ThreadedEvent<T>(threadContext, exceptionHandler), IDisposable
+  : SpeckleEvent<T>(threadContext, exceptionHandler), IDisposable
   where T : notnull
 {
   private readonly SemaphoreSlim _semaphore = new(1, 1);
@@ -29,53 +29,8 @@ public abstract class OneTimeThreadedEvent<T>(IThreadContext threadContext, ITop
   public SubscriptionToken OneTimeSubscribe(
     string id,
     Func<T, Task> action,
-    ThreadOption threadOption = ThreadOption.PublisherThread,
-    bool keepSubscriberReferenceAlive = false,
-    Predicate<T>? filter = null
-  ) =>
-    OneTimeInternal(id, action, threadOption, keepSubscriberReferenceAlive, filter);
-
-  public SubscriptionToken OneTimeSubscribe(
-    string id,
-    Func<Task> action,
-    ThreadOption threadOption = ThreadOption.PublisherThread,
-    bool keepSubscriberReferenceAlive = false,
-    Predicate<T>? filter = null
-  ) =>
-    OneTimeInternal(id, _ => action(), threadOption, keepSubscriberReferenceAlive, filter);
-
-  public SubscriptionToken OneTimeSubscribe(
-    string id,
-    Action action,
-    ThreadOption threadOption = ThreadOption.PublisherThread,
-    bool keepSubscriberReferenceAlive = false,
-    Predicate<T>? filter = null
-  ) =>
-    OneTimeInternal(id, _ =>
-    {
-      action();
-      return Task.CompletedTask;
-    }, threadOption, keepSubscriberReferenceAlive, filter);
-  public SubscriptionToken OneTimeSubscribe(
-    string id,
-    Action<T> action,
-    ThreadOption threadOption = ThreadOption.PublisherThread,
-    bool keepSubscriberReferenceAlive = false,
-    Predicate<T>? filter = null
-  ) =>
-    OneTimeInternal(id, t =>
-    {
-      action(t);
-      return Task.CompletedTask;
-    }, threadOption, keepSubscriberReferenceAlive, filter);
-  
-  private SubscriptionToken OneTimeInternal(
-    string id,
-    Func<T, Task> action,
-    ThreadOption threadOption,
-    bool keepSubscriberReferenceAlive,
-    Predicate<T>? filter
-  )
+    ThreadOption threadOption = ThreadOption.PublisherThread
+  ) 
   {
      _semaphore.Wait();
     try
@@ -88,7 +43,33 @@ public abstract class OneTimeThreadedEvent<T>(IThreadContext threadContext, ITop
         }
         _activeTokens.Remove(id);
       }
-      token = SubscribeOnceOrNot(action, threadOption, keepSubscriberReferenceAlive, filter, true);
+      token = SubscribeOnceOrNot(action, threadOption,  true);
+      _activeTokens.Add(id, token);
+      return token;
+    } finally
+    {
+      _semaphore.Release();
+    }
+  }
+  
+  public SubscriptionToken OneTimeSubscribe(
+    string id,
+    Action<T> action,
+    ThreadOption threadOption = ThreadOption.PublisherThread
+  )
+  {
+    _semaphore.Wait();
+    try
+    {
+      if (_activeTokens.TryGetValue(id, out var token))
+      {
+        if (token.IsActive)
+        {
+          return token;
+        }
+        _activeTokens.Remove(id);
+      }
+      token = SubscribeOnceOrNot(action, threadOption,  true);
       _activeTokens.Add(id, token);
       return token;
     } finally
