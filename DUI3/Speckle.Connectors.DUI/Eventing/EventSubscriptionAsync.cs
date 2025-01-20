@@ -26,19 +26,6 @@ public class EventSubscriptionAsync<TPayload>(
     };
   }
 
-  /// <summary>
-  /// Invokes the specified <see cref="System.Action{TPayload}"/> synchronously when not overridden.
-  /// </summary>
-  /// <param name="action">The action to execute.</param>
-  /// <param name="argument">The payload to pass <paramref name="action"/> while invoking it.</param>
-  /// <exception cref="ArgumentNullException">An <see cref="ArgumentNullException"/> is thrown if <paramref name="action"/> is null.</exception>
-  public virtual async Task InvokeAction(Func<TPayload, Task> action, TPayload argument)
-  {
-    if (action == null)
-    {
-      throw new ArgumentNullException(nameof(action));
-    }
-
+  public virtual async Task InvokeAction(Func<TPayload, Task> action, TPayload argument) =>
     await exceptionHandler.CatchUnhandledAsync(() => action(argument));
-  }
 }

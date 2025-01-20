@@ -11,7 +11,7 @@ public class OneTimeEventSubscriptionAsync<T>(
 {
   public override async Task InvokeAction(Func<T, Task> action, T payload)
   {
-    await action.Invoke(payload);
+    await base.InvokeAction(action, payload);
     if (isOnce)
     {
       SubscriptionToken.Dispose();
@@ -28,7 +28,7 @@ public class OneTimeEventSubscriptionSync<T>(
 {
   public override Task InvokeAction(Action<T> action, T payload)
   {
-    action.Invoke(payload);
+    base.InvokeAction(action, payload);
     if (isOnce)
     {
       SubscriptionToken.Dispose();

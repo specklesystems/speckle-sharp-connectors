@@ -28,11 +28,6 @@ public class EventSubscriptionSync<TPayload>(
 
   public virtual Task InvokeAction(Action<TPayload> action, TPayload argument)
   {
-    if (action == null)
-    {
-      throw new ArgumentNullException(nameof(action));
-    }
-
     exceptionHandler.CatchUnhandled(() => action(argument));
     return Task.CompletedTask;
   }
