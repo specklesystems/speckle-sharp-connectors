@@ -29,8 +29,8 @@ public class TeklaDocumentModelStore : DocumentModelStore
     _model = new TSM.Model();
     GenerateKey();
     eventAggregator
-      .GetEvent<ModelLoad>()
-      .Publish(() =>
+      .GetEvent<ModelLoadEvent>()
+      .Subscribe(_ =>
       {
         GenerateKey();
         LoadState();

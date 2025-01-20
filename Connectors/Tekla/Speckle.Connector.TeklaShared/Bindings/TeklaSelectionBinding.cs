@@ -26,7 +26,7 @@ public class TeklaSelectionBinding : ISelectionBinding
     _selector = selector;
     _eventAggregator = eventAggregator;
 
-    eventAggregator.GetEvent<SelectionChange>().Subscribe(_ => Events_SelectionChangeEvent());
+    eventAggregator.GetEvent<SelectionChangeEvent>().Subscribe(_ => Events_SelectionChangeEvent());
   }
 
   private void Events_SelectionChangeEvent()
