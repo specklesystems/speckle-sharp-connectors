@@ -49,8 +49,13 @@ public sealed class CsiFramePropertiesExtractor
     assignments["localAxis"] = GetLocalAxes(frame);
     assignments["propertyModifiers"] = GetModifiers(frame);
     assignments["endReleases"] = GetReleases(frame);
-    assignments["sectionProperty"] = GetSectionName(frame);
     assignments["path"] = GetPathType(frame);
+
+    // NOTE: sectionId and materialId a "quick-fix" to enable filtering in the viewer etc.
+    // Assign sectionId to variable as this will be an argument for the GetMaterialName method
+    string sectionId = GetSectionName(frame);
+    assignments["sectionId"] = sectionId;
+    assignments["materialId"] = GetMaterialName(sectionId);
   }
 
   private string[] GetGroupAssigns(CsiFrameWrapper frame)
@@ -146,5 +151,14 @@ public sealed class CsiFramePropertiesExtractor
     string pathType = string.Empty;
     _ = _settingsStore.Current.SapModel.FrameObj.GetTypeOAPI(frame.Name, ref pathType);
     return pathType;
+  }
+
+  // NOTE: This is a little convoluted as we aren't on the cFrameObj level, but one deeper.
+  // As noted in ExtractProperties, this is just a quick-fix to get some displayable materialId parameter
+  private string GetMaterialName(string sectionName)
+  {
+    string materialName = string.Empty;
+    _ = _settingsStore.Current.SapModel.PropFrame.GetMaterial(sectionName, ref materialName);
+    return materialName;
   }
 }

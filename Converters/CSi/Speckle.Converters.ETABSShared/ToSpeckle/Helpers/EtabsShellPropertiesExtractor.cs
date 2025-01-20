@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
 using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
@@ -25,10 +26,12 @@ namespace Speckle.Converters.ETABSShared.ToSpeckle.Helpers;
 public sealed class EtabsShellPropertiesExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
+  private readonly MaterialCache _materialCache;
 
   public EtabsShellPropertiesExtractor(IConverterSettingsStore<CsiConversionSettings> settingsStore)
   {
     _settingsStore = settingsStore;
+    _materialCache = new MaterialCache(settingsStore);
   }
 
   public void ExtractProperties(CsiShellWrapper shell, Dictionary<string, object?> properties)
@@ -43,6 +46,9 @@ public sealed class EtabsShellPropertiesExtractor
     assignments["pierAssignment"] = GetPierAssignmentName(shell);
     assignments["spandrelAssignment"] = GetSpandrelAssignmentName(shell);
     assignments["springAssignmentName"] = GetSpringAssignmentName(shell);
+    string sectionId = GetSectionName(shell);
+    assignments["sectionId"] = sectionId;
+    assignments["materialId"] = _materialCache.GetMaterialForSection(sectionId);
   }
 
   private (string label, string level) GetLabelAndLevel(CsiShellWrapper shell)
@@ -93,5 +99,82 @@ public sealed class EtabsShellPropertiesExtractor
     string springAssignmentName = "None"; // Is there a better way to handle null?
     _ = _settingsStore.Current.SapModel.AreaObj.GetSpringAssignment(shell.Name, ref springAssignmentName);
     return springAssignmentName;
+  }
+
+  // NOTE: Moved from CsiShellPropertiesExtractor because of the materialId issue.
+  // Results of the cDatabaseTable query for "Area Section Property Definitions - Summary" vary between Sap and Etabs
+  private string GetSectionName(CsiShellWrapper shell)
+  {
+    string sectionName = string.Empty;
+    _ = _settingsStore.Current.SapModel.AreaObj.GetProperty(shell.Name, ref sectionName);
+    return sectionName;
+  }
+
+  // TODO: This is a temporary solution until proper DatabaseTables implementation is available.
+  // FrameObj can use the following query: PropFrame.GetMaterial
+  // AreaObj doesn't have a PropArea.GetMaterial method
+  // So, what to do? Simplest solution: query the cDatabaseTable for the summary of area sections
+  // Cache the results as a dictionary where keys are sectionName and values are materialId
+  // Use the cached result to return the material string given a section name
+  // This is a temporary solution! The use of cDatabaseTable are being explored as a way to simplify a lot moving forward
+  private sealed class MaterialCache
+  {
+    private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
+    private readonly ConcurrentDictionary<string, string> _materialLookup = new();
+    private bool _isInitialized;
+
+    public MaterialCache(IConverterSettingsStore<CsiConversionSettings> settingsStore)
+    {
+      _settingsStore = settingsStore;
+    }
+
+    public string GetMaterialForSection(string sectionName)
+    {
+      if (!_isInitialized)
+      {
+        InitializeCache();
+      }
+
+      return _materialLookup.TryGetValue(sectionName, out string? value) ? value : "None";
+    }
+
+    private void InitializeCache()
+    {
+      string[] fieldKeyList = [],
+        fieldKeysIncluded = [],
+        tableData = [];
+      int tableVersion = 0,
+        numberOfRecords = 0;
+
+      int result = _settingsStore.Current.SapModel.DatabaseTables.GetTableForDisplayArray(
+        "Area Section Property Definitions - Summary",
+        ref fieldKeyList,
+        "",
+        ref tableVersion,
+        ref fieldKeysIncluded,
+        ref numberOfRecords,
+        ref tableData
+      );
+
+      if (result != 0 || numberOfRecords == 0)
+      {
+        _isInitialized = true; // Mark as initialized even on failure
+        return;
+      }
+
+      // Process each record (each record has fieldKeysIncluded.Length columns)
+      for (int i = 0; i < tableData.Length; i += fieldKeysIncluded.Length)
+      {
+        string name = tableData[i]; // Name is first column
+        string material = tableData[i + 3]; // Material is fourth column
+
+        if (!string.IsNullOrEmpty(name))
+        {
+          _materialLookup.TryAdd(name, material);
+        }
+      }
+
+      _isInitialized = true;
+    }
   }
 }
