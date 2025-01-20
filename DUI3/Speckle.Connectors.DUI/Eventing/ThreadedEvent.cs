@@ -10,24 +10,14 @@ public abstract class ThreadedEvent<T>(IThreadContext threadContext, ITopLevelEx
 {
   public string Name { get; } = typeof(T).Name;
 
-  public SubscriptionToken Subscribe(
+  public override SubscriptionToken Subscribe(
     Func<T, Task> action,
-    ThreadOption threadOption,
-    bool keepSubscriberReferenceAlive,
-    Predicate<T>? filter
+    ThreadOption threadOption = ThreadOption.PublisherThread,
+    bool keepSubscriberReferenceAlive = false,
+    Predicate<T>? filter = null
   )
   {
     return SubscribeOnceOrNot(t => action(t), threadOption, keepSubscriberReferenceAlive, filter, false);
-  }
-
-  public override SubscriptionToken Subscribe(
-    Action<T> action,
-    ThreadOption threadOption,
-    bool keepSubscriberReferenceAlive,
-    Predicate<T>? filter
-  )
-  {
-    return SubscribeOnceOrNot(action, threadOption, keepSubscriberReferenceAlive, filter, false);
   }
 
   protected SubscriptionToken SubscribeOnceOrNot(

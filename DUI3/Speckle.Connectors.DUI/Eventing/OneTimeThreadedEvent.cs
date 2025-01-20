@@ -7,7 +7,17 @@ public abstract class OneTimeThreadedEvent<T>(IThreadContext threadContext, ITop
   : ThreadedEvent<T>(threadContext, exceptionHandler)
   where T : notnull
 {
+  private readonly SemaphoreSlim _semaphore = new(1, 1);
   private readonly Dictionary<string, SubscriptionToken> _activeTokens = new();
+
+  protected override void Dispose(bool isDisposing)
+  {
+    base.Dispose(isDisposing);
+    if (isDisposing)
+    {
+      _semaphore.Dispose();
+    }
+  }
 
   public SubscriptionToken OneTimeSubscribe(
     string id,
@@ -61,7 +71,8 @@ public abstract class OneTimeThreadedEvent<T>(IThreadContext threadContext, ITop
     Predicate<T>? filter
   )
   {
-    lock (_activeTokens)
+     _semaphore.Wait();
+    try
     {
       if (_activeTokens.TryGetValue(id, out var token))
       {
@@ -74,19 +85,28 @@ public abstract class OneTimeThreadedEvent<T>(IThreadContext threadContext, ITop
       token = SubscribeOnceOrNot(action, threadOption, keepSubscriberReferenceAlive, filter, true);
       _activeTokens.Add(id, token);
       return token;
+    } finally
+    {
+      _semaphore.Release();
     }
   }
 
-  public override void Publish(T payload)
+  public override async Task PublishAsync(T payload)
   {
-    lock (_activeTokens)
+    await _semaphore.WaitAsync();
+    try
     {
-      base.Publish(payload);
+      await base.PublishAsync(payload);
       foreach (var token in _activeTokens.Values)
       {
         token.Dispose();
       }
+
       _activeTokens.Clear();
+    }
+    finally
+    {
+      _semaphore.Release();
     }
   }
 }

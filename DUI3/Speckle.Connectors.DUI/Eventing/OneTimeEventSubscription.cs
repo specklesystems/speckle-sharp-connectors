@@ -9,9 +9,9 @@ public class OneTimeEventSubscription<T>(
   bool isOnce
 ) : EventSubscription<T>(actionReference, filterReference, exceptionHandler)
 {
-  public override void InvokeAction(Action<T> action, T payload)
+  public override async Task InvokeAction(Func<T, Task> action, T payload)
   {
-    action.Invoke(payload);
+    await action.Invoke(payload);
     if (isOnce)
     {
       SubscriptionToken.Dispose();

@@ -66,7 +66,7 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
     catch (Exception ex) when (!ex.IsFatal())
     {
       _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
-      _eventAggregator.GetEvent<ExceptionEvent>().Publish(ex);
+      _eventAggregator.GetEvent<ExceptionEvent>().PublishAsync(ex).Wait();
       return new(ex);
     }
     catch (Exception ex)
@@ -104,7 +104,7 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
       catch (Exception ex) when (!ex.IsFatal())
       {
         _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
-        _eventAggregator.GetEvent<ExceptionEvent>().Publish(ex);
+        await _eventAggregator.GetEvent<ExceptionEvent>().PublishAsync(ex);
         return new(ex);
       }
     }

@@ -3,14 +3,14 @@ using Speckle.Connectors.DUI.Bridge;
 
 namespace Speckle.Connectors.DUI.Eventing;
 
-public class WorkerEventSubscription<TPayload>(
+public class WorkerEventSubscription<T>(
   IDelegateReference actionReference,
   IDelegateReference filterReference,
   IThreadContext threadContext,
   ITopLevelExceptionHandler exceptionHandler,
   bool isOnce
-) : OneTimeEventSubscription<TPayload>(actionReference, filterReference, exceptionHandler, isOnce)
+) : OneTimeEventSubscription<T>(actionReference, filterReference, exceptionHandler, isOnce)
 {
-  public override void InvokeAction(Action<TPayload> action, TPayload argument) =>
-    threadContext.RunOnWorker(() => action(argument));
+  public override Task InvokeAction(Func<T, Task> action, T argument) =>
+    threadContext.RunOnWorkerAsync(() => action(argument));
 }

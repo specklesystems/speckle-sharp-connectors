@@ -3,10 +3,30 @@
 ///<summary>
 /// Defines a base class to publish and subscribe to events.
 ///</summary>
-public abstract class EventBase
+public abstract class EventBase : IDisposable
 {
+  private readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
   private readonly List<IEventSubscription> _subscriptions = new();
   protected ICollection<IEventSubscription> Subscriptions => _subscriptions;
+
+  protected virtual void Dispose(bool isDisposing)
+  {
+    if (isDisposing)
+    {
+      _semaphoreSlim.Dispose();
+    }
+  }
+  
+  public void Dispose()
+  {
+    Dispose(true);
+    GC.SuppressFinalize(this);
+  }
+
+  ~EventBase()
+  {
+    Dispose(false);
+  }
 
   /// <summary>
   /// Adds the specified <see cref="IEventSubscription"/> to the subscribers' collection.
@@ -16,7 +36,7 @@ public abstract class EventBase
   /// <remarks>
   /// Adds the subscription to the internal list and assigns it a new <see cref="SubscriptionToken"/>.
   /// </remarks>
-  protected virtual SubscriptionToken InternalSubscribe(IEventSubscription eventSubscription)
+  protected SubscriptionToken InternalSubscribe(IEventSubscription eventSubscription)
   {
     if (eventSubscription == null)
     {
@@ -25,9 +45,14 @@ public abstract class EventBase
 
     eventSubscription.SubscriptionToken = new SubscriptionToken(Unsubscribe);
 
-    lock (Subscriptions)
+    _semaphoreSlim.Wait();
+    try
     {
       Subscriptions.Add(eventSubscription);
+    }
+    finally
+    {
+      _semaphoreSlim.Release();
     }
     return eventSubscription.SubscriptionToken;
   }
@@ -39,12 +64,12 @@ public abstract class EventBase
   /// <remarks>Before executing the strategies, this class will prune all the subscribers from the
   /// list that return a <see langword="null" /> <see cref="Action{T}"/> when calling the
   /// <see cref="IEventSubscription.GetExecutionStrategy"/> method.</remarks>
-  protected virtual void InternalPublish(params object[] arguments)
+  protected async Task InternalPublish(params object[] arguments)
   {
-    List<Action<object[]>> executionStrategies = PruneAndReturnStrategies();
+    var executionStrategies = PruneAndReturnStrategies();
     foreach (var executionStrategy in executionStrategies)
     {
-      executionStrategy(arguments);
+      await executionStrategy(arguments);
     }
   }
 
@@ -52,15 +77,20 @@ public abstract class EventBase
   /// Removes the subscriber matching the <see cref="SubscriptionToken"/>.
   /// </summary>
   /// <param name="token">The <see cref="SubscriptionToken"/> returned by <see cref="EventBase"/> while subscribing to the event.</param>
-  public virtual void Unsubscribe(SubscriptionToken token)
+  public void Unsubscribe(SubscriptionToken token)
   {
-    lock (Subscriptions)
+    _semaphoreSlim.Wait();
+    try
     {
       IEventSubscription subscription = Subscriptions.FirstOrDefault(evt => evt.SubscriptionToken == token);
       if (subscription != null)
       {
         Subscriptions.Remove(subscription);
       }
+    }
+    finally
+    {
+      _semaphoreSlim.Release();
     }
   }
 
@@ -69,24 +99,28 @@ public abstract class EventBase
   /// </summary>
   /// <param name="token">The <see cref="SubscriptionToken"/> returned by <see cref="EventBase"/> while subscribing to the event.</param>
   /// <returns><see langword="true"/> if there is a <see cref="SubscriptionToken"/> that matches; otherwise <see langword="false"/>.</returns>
-  public virtual bool Contains(SubscriptionToken token)
+  public  bool Contains(SubscriptionToken token)
   {
-    lock (Subscriptions)
+    _semaphoreSlim.Wait();
+    try
     {
       IEventSubscription subscription = Subscriptions.FirstOrDefault(evt => evt.SubscriptionToken == token);
       return subscription != null;
     }
+    finally
+    {
+      _semaphoreSlim.Release();
+    }
   }
 
-  private List<Action<object[]>> PruneAndReturnStrategies()
+  private IEnumerable<Func<object[], Task>> PruneAndReturnStrategies()
   {
-    List<Action<object[]>> returnList = new();
-
-    lock (Subscriptions)
+    _semaphoreSlim.Wait();
+    try
     {
       for (var i = Subscriptions.Count - 1; i >= 0; i--)
       {
-        Action<object[]>? listItem = _subscriptions[i].GetExecutionStrategy();
+        var listItem = _subscriptions[i].GetExecutionStrategy();
 
         if (listItem == null)
         {
@@ -95,12 +129,14 @@ public abstract class EventBase
         }
         else
         {
-          returnList.Add(listItem);
+          yield return listItem;
         }
       }
     }
-
-    return returnList;
+    finally
+    {
+      _semaphoreSlim.Release();
+    }
   }
 
   /// <summary>
@@ -108,7 +144,8 @@ public abstract class EventBase
   /// </summary>
   public void Prune()
   {
-    lock (Subscriptions)
+    _semaphoreSlim.Wait();
+    try
     {
       for (var i = Subscriptions.Count - 1; i >= 0; i--)
       {
@@ -117,6 +154,10 @@ public abstract class EventBase
           _subscriptions.RemoveAt(i);
         }
       }
+    }
+    finally
+    {
+      _semaphoreSlim.Release();
     }
   }
 }

@@ -15,7 +15,7 @@ public interface IEventSubscription
   /// </summary>
   /// <returns>An <see cref="Action{T}"/> with the execution strategy, or <see langword="null" /> if the <see cref="IEventSubscription"/> is no longer valid.</returns>
   [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
-  Action<object[]>? GetExecutionStrategy();
+  Func<object[], Task>? GetExecutionStrategy();
 }
 
 /// <summary>
@@ -48,7 +48,7 @@ public class EventSubscription<TPayload> : IEventSubscription
       throw new ArgumentNullException(nameof(actionReference));
     }
 
-    if (actionReference.Target is not Action<TPayload>)
+    if (actionReference.Target is not Func<TPayload, Task>)
     {
       throw new ArgumentException(null, nameof(actionReference));
     }
@@ -72,7 +72,7 @@ public class EventSubscription<TPayload> : IEventSubscription
   /// Gets the target <see cref="System.Action{T}"/> that is referenced by the <see cref="IDelegateReference"/>.
   /// </summary>
   /// <value>An <see cref="System.Action{T}"/> or <see langword="null" /> if the referenced target is not alive.</value>
-  public Action<TPayload>? Action => (Action<TPayload>?)_actionReference.Target;
+  public Func<TPayload, Task>? Action => (Func<TPayload, Task>?)_actionReference.Target;
 
   /// <summary>
   /// Gets the target <see cref="Predicate{T}"/> that is referenced by the <see cref="IDelegateReference"/>.
@@ -99,24 +99,24 @@ public class EventSubscription<TPayload> : IEventSubscription
   /// <see cref="Delegate">delegates</see>. As long as the returned delegate is not garbage collected,
   /// the <see cref="Action"/> and <see cref="Filter"/> references delegates won't get collected either.
   /// </remarks>
-  public virtual Action<object[]>? GetExecutionStrategy()
+  public virtual Func<object[], Task>? GetExecutionStrategy()
   {
-    Action<TPayload>? action = Action;
+    Func<TPayload, Task>? action = Action;
     if (action is null)
     {
       return null;
     }
     Predicate<TPayload>? filter = Filter;
-    return arguments =>
+    return async arguments =>
     {
       TPayload argument = (TPayload)arguments[0];
       if (filter is null)
       {
-        InvokeAction(action, argument);
+        await InvokeAction(action, argument);
       }
       else if (filter(argument))
       {
-        InvokeAction(action, argument);
+        await InvokeAction(action, argument);
       }
     };
   }
@@ -127,13 +127,13 @@ public class EventSubscription<TPayload> : IEventSubscription
   /// <param name="action">The action to execute.</param>
   /// <param name="argument">The payload to pass <paramref name="action"/> while invoking it.</param>
   /// <exception cref="ArgumentNullException">An <see cref="ArgumentNullException"/> is thrown if <paramref name="action"/> is null.</exception>
-  public virtual void InvokeAction(Action<TPayload> action, TPayload argument)
+  public virtual async Task InvokeAction(Func<TPayload, Task> action, TPayload argument)
   {
     if (action == null)
     {
       throw new ArgumentNullException(nameof(action));
     }
 
-    _exceptionHandler.CatchUnhandled(() => action(argument));
+    await _exceptionHandler.CatchUnhandledAsync(() => action(argument));
   }
 }

@@ -78,9 +78,9 @@ public sealed class BrowserBridge : IBrowserBridge
     eventAggregator
       .GetEvent<ExceptionEvent>()
       .Subscribe(
-        ex =>
+        async ex =>
         {
-          Send(
+          await Send(
               BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION,
               new
               {

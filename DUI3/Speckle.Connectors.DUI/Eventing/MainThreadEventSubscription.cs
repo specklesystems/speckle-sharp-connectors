@@ -11,6 +11,6 @@ public class MainThreadEventSubscription<T>(
   bool isOnce
 ) : OneTimeEventSubscription<T>(actionReference, filterReference, exceptionHandler, isOnce)
 {
-  public override void InvokeAction(Action<T> action, T payload) =>
-    threadContext.RunOnMain(() => action.Invoke(payload));
+  public override Task InvokeAction(Func<T, Task> action, T payload) =>
+     threadContext.RunOnMainAsync(() => action.Invoke(payload));
 }
