@@ -15,20 +15,38 @@ public abstract class ThreadedEvent<T>(IThreadContext threadContext, ITopLevelEx
     ThreadOption threadOption = ThreadOption.PublisherThread,
     bool keepSubscriberReferenceAlive = false,
     Predicate<T>? filter = null
-  )
-  {
-    return SubscribeOnceOrNot(action, threadOption, keepSubscriberReferenceAlive, filter, false);
-  }
-  
+  ) =>
+    SubscribeOnceOrNot(action, threadOption, keepSubscriberReferenceAlive, filter, false);
+
   public SubscriptionToken Subscribe(
     Func<Task> action,
     ThreadOption threadOption = ThreadOption.PublisherThread,
     bool keepSubscriberReferenceAlive = false,
     Predicate<T>? filter = null
-  )
-  {
-    return SubscribeOnceOrNot(_ => action(), threadOption, keepSubscriberReferenceAlive, filter, false);
-  }
+  ) =>
+    SubscribeOnceOrNot(_ => action(), threadOption, keepSubscriberReferenceAlive, filter, false);
+  public SubscriptionToken Subscribe(
+    Action action,
+    ThreadOption threadOption = ThreadOption.PublisherThread,
+    bool keepSubscriberReferenceAlive = false,
+    Predicate<T>? filter = null
+  ) =>
+    SubscribeOnceOrNot(_ =>
+    {
+       action();
+       return Task.CompletedTask;
+    }, threadOption, keepSubscriberReferenceAlive, filter, false);
+  public SubscriptionToken Subscribe(
+    Action<T> action,
+    ThreadOption threadOption = ThreadOption.PublisherThread,
+    bool keepSubscriberReferenceAlive = false,
+    Predicate<T>? filter = null
+  ) =>
+    SubscribeOnceOrNot(t =>
+    {
+       action(t);
+       return Task.CompletedTask;
+    }, threadOption, keepSubscriberReferenceAlive, filter, false);
 
   protected SubscriptionToken SubscribeOnceOrNot(
     Func<T, Task> action,

@@ -14,7 +14,7 @@ public class TestEvent(IThreadContext threadContext, ITopLevelExceptionHandler e
 public class EventAggregatorTests: MoqTest
 {
   [Test]
-  public async Task Sub_Task_Arg_DisposeToken()
+  public async Task Sub_Async_Arg_DisposeToken()
   {
     var services = new ServiceCollection();
     services.AddSingleton(Create<IThreadContext>().Object);
@@ -43,7 +43,7 @@ public class EventAggregatorTests: MoqTest
   }
   
   [Test]
-  public async Task Sub_Task_Arg_SubscribeToken()
+  public async Task Sub_Async_Arg_SubscribeToken()
   {
     var services = new ServiceCollection();
     services.AddSingleton(Create<IThreadContext>().Object);
@@ -71,8 +71,9 @@ public class EventAggregatorTests: MoqTest
     subscriptionToken.IsActive.Should().BeFalse();
   }
   
+  
   [Test]
-  public async Task Sub_Task_NoArg()
+  public async Task Sub_Async_NoArg()
   {
     var services = new ServiceCollection();
     services.AddSingleton(Create<IThreadContext>().Object);
@@ -85,6 +86,64 @@ public class EventAggregatorTests: MoqTest
     {
       val = true;
       return Task.CompletedTask;
+    });
+
+    await eventAggregator.GetEvent<TestEvent>().PublishAsync(new object());
+
+    
+    GC.Collect();
+    GC.WaitForPendingFinalizers();
+    subscriptionToken.IsActive.Should().BeTrue();
+    val.Should().BeTrue();
+    eventAggregator.GetEvent<TestEvent>().Unsubscribe(subscriptionToken);
+    GC.Collect();
+    GC.WaitForPendingFinalizers();
+    subscriptionToken.IsActive.Should().BeFalse();
+  }
+  
+  
+  [Test]
+  public async Task Sub_Sync_NoArg()
+  {
+    var services = new ServiceCollection();
+    services.AddSingleton(Create<IThreadContext>().Object);
+    services.AddSingleton(Create<ITopLevelExceptionHandler>().Object);
+    services.AddTransient<TestEvent>();
+
+    var val = false;
+    var eventAggregator = new EventAggregator(services.BuildServiceProvider());
+    var subscriptionToken =   eventAggregator.GetEvent<TestEvent>().Subscribe(() =>
+    {
+      val = true;
+    });
+
+    await eventAggregator.GetEvent<TestEvent>().PublishAsync(new object());
+
+    
+    GC.Collect();
+    GC.WaitForPendingFinalizers();
+    subscriptionToken.IsActive.Should().BeTrue();
+    val.Should().BeTrue();
+    eventAggregator.GetEvent<TestEvent>().Unsubscribe(subscriptionToken);
+    GC.Collect();
+    GC.WaitForPendingFinalizers();
+    subscriptionToken.IsActive.Should().BeFalse();
+  }
+  
+  
+  [Test]
+  public async Task Sub_Sync_Arg()
+  {
+    var services = new ServiceCollection();
+    services.AddSingleton(Create<IThreadContext>().Object);
+    services.AddSingleton(Create<ITopLevelExceptionHandler>().Object);
+    services.AddTransient<TestEvent>();
+
+    var val = false;
+    var eventAggregator = new EventAggregator(services.BuildServiceProvider());
+    var subscriptionToken =   eventAggregator.GetEvent<TestEvent>().Subscribe(x =>
+    {
+      val = true;
     });
 
     await eventAggregator.GetEvent<TestEvent>().PublishAsync(new object());
