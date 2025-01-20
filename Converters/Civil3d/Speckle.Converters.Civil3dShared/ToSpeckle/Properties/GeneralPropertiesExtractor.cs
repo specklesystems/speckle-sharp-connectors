@@ -316,8 +316,10 @@ public class GeneralPropertiesExtractor
     {
       try
       {
+        // accessing "OffsetAlignmentInfo" on offset alignments will sometimes throw /shrug.
+        // this happens when an offset alignment is unlinked from the parent and the CreateMode is still set to "ManuallyCreation"
+        // https://help.autodesk.com/view/CIV3D/2024/ENU/?guid=2ecbe421-4c08-cbde-d078-56a9f03b93f9
         var offsetInfo = alignment.OffsetAlignmentInfo;
-
         generalPropertiesDict["Offset Parameters"] = new Dictionary<string, object?>
         {
           ["side"] = offsetInfo.Side.ToString(),
@@ -325,7 +327,7 @@ public class GeneralPropertiesExtractor
           ["nominalOffset"] = offsetInfo.NominalOffset
         };
       }
-      catch (InvalidOperationException) { } // accessing "OffsetAlignmentInfo" will sometimes throw even for offset alignments /shrug. do nothing
+      catch (InvalidOperationException) { } // do nothing
     }
 
     return generalPropertiesDict;
