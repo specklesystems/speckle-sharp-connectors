@@ -3,6 +3,7 @@ using Autodesk.AutoCAD.Runtime;
 using Autodesk.AutoCAD.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common;
+using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.WebView;
 #if AUTOCAD
 using Speckle.Connectors.Autocad.DependencyInjection;
@@ -47,6 +48,7 @@ public class AutocadCommand
     services.AddCivil3dConverters();
 #endif
     Container = services.BuildServiceProvider();
+    Container.UseDUI();
 
     var panelWebView = Container.GetRequiredService<DUI3ControlWebView>();
 

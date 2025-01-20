@@ -53,9 +53,10 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     // There is no event that we can hook here for double-click file open...
     // It is kind of harmless since we create this object as "SingleInstance".
     LoadState();
-
-    eventAggregator.GetEvent<DocumentChangedEvent>().Publish(new object());
   }
+
+  public override Task OnDocumentStoreInitialized() =>
+    _eventAggregator.GetEvent<DocumentChangedEvent>().PublishAsync(new object());
 
   /// <summary>
   /// This is the place where we track document switch for new document -> Responsible to Read from new doc
@@ -76,10 +77,10 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     IsDocumentInit = true;
     _idleManager.SubscribeToIdle(
       nameof(RevitDocumentStore),
-      () =>
+      async () =>
       {
         LoadState();
-        _eventAggregator.GetEvent<DocumentChangedEvent>().Publish(new object());
+        await _eventAggregator.GetEvent<DocumentChangedEvent>().PublishAsync(new object());
       }
     );
   }

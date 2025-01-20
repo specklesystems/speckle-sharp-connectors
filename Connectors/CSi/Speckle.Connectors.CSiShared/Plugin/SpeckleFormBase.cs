@@ -3,6 +3,7 @@ using System.Windows.Forms.Integration;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.CSiShared.HostApp;
+using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Converters.CSiShared;
 using Speckle.Sdk.Host;
@@ -25,6 +26,7 @@ public abstract class SpeckleFormBase : Form
     ConfigureServices(services);
 
     Container = services.BuildServiceProvider();
+    Container.UseDUI();
 
     var webview = Container.GetRequiredService<DUI3ControlWebView>();
     Host = new() { Child = webview, Dock = DockStyle.Fill };

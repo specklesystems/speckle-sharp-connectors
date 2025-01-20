@@ -7,7 +7,6 @@ public abstract class EventBase
 {
   private readonly List<IEventSubscription> _subscriptions = new();
 
-
   protected SubscriptionToken InternalSubscribe(IEventSubscription eventSubscription)
   {
     if (eventSubscription == null)
@@ -17,7 +16,7 @@ public abstract class EventBase
 
     eventSubscription.SubscriptionToken = new SubscriptionToken(Unsubscribe);
 
-    lock(_subscriptions)
+    lock (_subscriptions)
     {
       _subscriptions.Add(eventSubscription);
     }
@@ -35,7 +34,7 @@ public abstract class EventBase
 
   private IEnumerable<Func<object[], Task>> PruneAndReturnStrategies()
   {
-    lock(_subscriptions)
+    lock (_subscriptions)
     {
       for (var i = _subscriptions.Count - 1; i >= 0; i--)
       {
@@ -54,10 +53,9 @@ public abstract class EventBase
     }
   }
 
-
   public void Unsubscribe(SubscriptionToken token)
   {
-    lock(_subscriptions)
+    lock (_subscriptions)
     {
       IEventSubscription? subscription = _subscriptions.FirstOrDefault(evt => evt.SubscriptionToken.Equals(token));
       if (subscription != null)
@@ -67,18 +65,19 @@ public abstract class EventBase
       }
     }
   }
-  public  bool Contains(SubscriptionToken token)
+
+  public bool Contains(SubscriptionToken token)
   {
-   
-    lock(_subscriptions)
+    lock (_subscriptions)
     {
       IEventSubscription subscription = _subscriptions.FirstOrDefault(evt => evt.SubscriptionToken == token);
       return subscription != null;
     }
   }
+
   public void Prune()
   {
-    lock(_subscriptions)
+    lock (_subscriptions)
     {
       for (var i = _subscriptions.Count - 1; i >= 0; i--)
       {

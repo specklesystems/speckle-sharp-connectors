@@ -58,18 +58,22 @@ public static class RhinoEvents
   {
     RhinoApp.Idle += async (_, e) => await eventAggregator.GetEvent<IdleEvent>().PublishAsync(e);
 
-    RhinoDoc.BeginOpenDocument +=async (_, e) => await eventAggregator.GetEvent<BeginOpenDocument>().PublishAsync(e);
+    RhinoDoc.BeginOpenDocument += async (_, e) => await eventAggregator.GetEvent<BeginOpenDocument>().PublishAsync(e);
     RhinoDoc.EndOpenDocument += async (_, e) => await eventAggregator.GetEvent<EndOpenDocument>().PublishAsync(e);
     RhinoDoc.SelectObjects += async (_, e) => await eventAggregator.GetEvent<SelectObjects>().PublishAsync(e);
     RhinoDoc.DeselectObjects += async (_, e) => await eventAggregator.GetEvent<DeselectObjects>().PublishAsync(e);
     RhinoDoc.DeselectAllObjects += async (_, e) => await eventAggregator.GetEvent<DeselectAllObjects>().PublishAsync(e);
-    RhinoDoc.ActiveDocumentChanged += async (_, e) => await eventAggregator.GetEvent<ActiveDocumentChanged>().PublishAsync(e);
-    RhinoDoc.DocumentPropertiesChanged +=async (_, e) => await eventAggregator.GetEvent<DocumentPropertiesChanged>().PublishAsync(e);
+    RhinoDoc.ActiveDocumentChanged += async (_, e) =>
+      await eventAggregator.GetEvent<ActiveDocumentChanged>().PublishAsync(e);
+    RhinoDoc.DocumentPropertiesChanged += async (_, e) =>
+      await eventAggregator.GetEvent<DocumentPropertiesChanged>().PublishAsync(e);
     RhinoDoc.AddRhinoObject += async (_, e) => await eventAggregator.GetEvent<AddRhinoObject>().PublishAsync(e);
     RhinoDoc.DeleteRhinoObject += async (_, e) => await eventAggregator.GetEvent<DeleteRhinoObject>().PublishAsync(e);
-    RhinoDoc.RenderMaterialsTableEvent += async (_, e) => await eventAggregator.GetEvent<RenderMaterialsTableEvent>().PublishAsync(e);
+    RhinoDoc.RenderMaterialsTableEvent += async (_, e) =>
+      await eventAggregator.GetEvent<RenderMaterialsTableEvent>().PublishAsync(e);
     RhinoDoc.MaterialTableEvent += async (_, e) => await eventAggregator.GetEvent<MaterialTableEvent>().PublishAsync(e);
-    RhinoDoc.ModifyObjectAttributes += async (_, e) => await eventAggregator.GetEvent<ModifyObjectAttributes>().PublishAsync(e);
+    RhinoDoc.ModifyObjectAttributes += async (_, e) =>
+      await eventAggregator.GetEvent<ModifyObjectAttributes>().PublishAsync(e);
     RhinoDoc.ReplaceRhinoObject += async (_, e) => await eventAggregator.GetEvent<ReplaceRhinoObject>().PublishAsync(e);
     RhinoDoc.GroupTableEvent += async (_, e) => await eventAggregator.GetEvent<GroupTableEvent>().PublishAsync(e);
     RhinoDoc.LayerTableEvent += async (_, e) => await eventAggregator.GetEvent<LayerTableEvent>().PublishAsync(e);

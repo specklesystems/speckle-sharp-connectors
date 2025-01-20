@@ -10,10 +10,11 @@ namespace Speckle.Connectors.DUI.Tests.Eventing;
 
 public class TestEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
   : ThreadedEvent<object>(threadContext, exceptionHandler);
+
 public class TestOneTimeEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
   : OneTimeThreadedEvent<object>(threadContext, exceptionHandler);
 
-public class EventAggregatorTests: MoqTest
+public class EventAggregatorTests : MoqTest
 {
   [Test]
   public async Task Sub_Async_Arg_DisposeToken()
@@ -25,16 +26,18 @@ public class EventAggregatorTests: MoqTest
 
     var val = false;
     var eventAggregator = new EventAggregator(services.BuildServiceProvider());
-    var subscriptionToken = eventAggregator.GetEvent<TestEvent>().Subscribe( _ =>
-    {
-       val = true;
-       return Task.CompletedTask;
-    });
+    var subscriptionToken = eventAggregator
+      .GetEvent<TestEvent>()
+      .Subscribe(_ =>
+      {
+        val = true;
+        return Task.CompletedTask;
+      });
 
     await eventAggregator.GetEvent<TestEvent>().PublishAsync(new object());
 
     val.Should().BeTrue();
-    
+
     GC.Collect();
     GC.WaitForPendingFinalizers();
     subscriptionToken.IsActive.Should().BeTrue();
@@ -43,7 +46,7 @@ public class EventAggregatorTests: MoqTest
     GC.WaitForPendingFinalizers();
     subscriptionToken.IsActive.Should().BeFalse();
   }
-  
+
   [Test]
   public async Task Sub_Async_Arg_SubscribeToken()
   {
@@ -54,16 +57,18 @@ public class EventAggregatorTests: MoqTest
 
     var val = false;
     var eventAggregator = new EventAggregator(services.BuildServiceProvider());
-    var subscriptionToken = eventAggregator.GetEvent<TestEvent>().Subscribe( _ =>
-    {
-      val = true;
-      return Task.CompletedTask;
-    });
+    var subscriptionToken = eventAggregator
+      .GetEvent<TestEvent>()
+      .Subscribe(_ =>
+      {
+        val = true;
+        return Task.CompletedTask;
+      });
 
     await eventAggregator.GetEvent<TestEvent>().PublishAsync(new object());
 
     val.Should().BeTrue();
-    
+
     GC.Collect();
     GC.WaitForPendingFinalizers();
     subscriptionToken.IsActive.Should().BeTrue();
@@ -72,12 +77,7 @@ public class EventAggregatorTests: MoqTest
     GC.WaitForPendingFinalizers();
     subscriptionToken.IsActive.Should().BeFalse();
   }
-  
-  
-  
-  
-  
-  
+
   [Test]
   public async Task Sub_Sync_Arg()
   {
@@ -88,14 +88,15 @@ public class EventAggregatorTests: MoqTest
 
     var val = false;
     var eventAggregator = new EventAggregator(services.BuildServiceProvider());
-    var subscriptionToken =   eventAggregator.GetEvent<TestEvent>().Subscribe(x =>
-    {
-      val = true;
-    });
+    var subscriptionToken = eventAggregator
+      .GetEvent<TestEvent>()
+      .Subscribe(x =>
+      {
+        val = true;
+      });
 
     await eventAggregator.GetEvent<TestEvent>().PublishAsync(new object());
 
-    
     GC.Collect();
     GC.WaitForPendingFinalizers();
     subscriptionToken.IsActive.Should().BeTrue();
@@ -105,7 +106,7 @@ public class EventAggregatorTests: MoqTest
     GC.WaitForPendingFinalizers();
     subscriptionToken.IsActive.Should().BeFalse();
   }
-  
+
   [Test]
   public async Task Onetime__Async_Arg()
   {
@@ -116,11 +117,16 @@ public class EventAggregatorTests: MoqTest
 
     var val = false;
     var eventAggregator = new EventAggregator(services.BuildServiceProvider());
-    var subscriptionToken = eventAggregator.GetEvent<TestOneTimeEvent>().OneTimeSubscribe("test", _ =>
-    {
-      val = true;
-      return Task.CompletedTask;
-    });
+    var subscriptionToken = eventAggregator
+      .GetEvent<TestOneTimeEvent>()
+      .OneTimeSubscribe(
+        "test",
+        _ =>
+        {
+          val = true;
+          return Task.CompletedTask;
+        }
+      );
     GC.Collect();
     GC.WaitForPendingFinalizers();
     subscriptionToken.IsActive.Should().BeTrue();
@@ -128,7 +134,7 @@ public class EventAggregatorTests: MoqTest
     await eventAggregator.GetEvent<TestOneTimeEvent>().PublishAsync(new object());
 
     val.Should().BeTrue();
-    
+
     GC.Collect();
     GC.WaitForPendingFinalizers();
     subscriptionToken.IsActive.Should().BeFalse();
@@ -137,9 +143,7 @@ public class EventAggregatorTests: MoqTest
     GC.WaitForPendingFinalizers();
     subscriptionToken.IsActive.Should().BeFalse();
   }
-  
-  
-  
+
   [Test]
   public async Task Onetime_Sync_Arg()
   {
@@ -150,17 +154,21 @@ public class EventAggregatorTests: MoqTest
 
     var val = false;
     var eventAggregator = new EventAggregator(services.BuildServiceProvider());
-    var subscriptionToken =   eventAggregator.GetEvent<TestOneTimeEvent>().OneTimeSubscribe("test",_ =>
-    {
-      val = true;
-    });
+    var subscriptionToken = eventAggregator
+      .GetEvent<TestOneTimeEvent>()
+      .OneTimeSubscribe(
+        "test",
+        _ =>
+        {
+          val = true;
+        }
+      );
     GC.Collect();
     GC.WaitForPendingFinalizers();
     subscriptionToken.IsActive.Should().BeTrue();
 
     await eventAggregator.GetEvent<TestOneTimeEvent>().PublishAsync(new object());
 
-    
     GC.Collect();
     GC.WaitForPendingFinalizers();
     subscriptionToken.IsActive.Should().BeFalse();
@@ -170,5 +178,4 @@ public class EventAggregatorTests: MoqTest
     GC.WaitForPendingFinalizers();
     subscriptionToken.IsActive.Should().BeFalse();
   }
-
 }

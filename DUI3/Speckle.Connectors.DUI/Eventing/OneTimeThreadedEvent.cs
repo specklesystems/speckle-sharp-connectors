@@ -4,7 +4,8 @@ using Speckle.Connectors.DUI.Bridge;
 namespace Speckle.Connectors.DUI.Eventing;
 
 public abstract class OneTimeThreadedEvent<T>(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
-  : SpeckleEvent<T>(threadContext, exceptionHandler), IDisposable
+  : SpeckleEvent<T>(threadContext, exceptionHandler),
+    IDisposable
   where T : notnull
 {
   private readonly SemaphoreSlim _semaphore = new(1, 1);
@@ -17,22 +18,22 @@ public abstract class OneTimeThreadedEvent<T>(IThreadContext threadContext, ITop
       _semaphore.Dispose();
     }
   }
-  
+
   public void Dispose()
   {
     Dispose(true);
     GC.SuppressFinalize(this);
   }
-  
+
   ~OneTimeThreadedEvent() => Dispose(false);
 
   public SubscriptionToken OneTimeSubscribe(
     string id,
     Func<T, Task> action,
     ThreadOption threadOption = ThreadOption.PublisherThread
-  ) 
+  )
   {
-     _semaphore.Wait();
+    _semaphore.Wait();
     try
     {
       if (_activeTokens.TryGetValue(id, out var token))
@@ -43,15 +44,16 @@ public abstract class OneTimeThreadedEvent<T>(IThreadContext threadContext, ITop
         }
         _activeTokens.Remove(id);
       }
-      token = SubscribeOnceOrNot(action, threadOption,  true);
+      token = SubscribeOnceOrNot(action, threadOption, true);
       _activeTokens.Add(id, token);
       return token;
-    } finally
+    }
+    finally
     {
       _semaphore.Release();
     }
   }
-  
+
   public SubscriptionToken OneTimeSubscribe(
     string id,
     Action<T> action,
@@ -69,10 +71,11 @@ public abstract class OneTimeThreadedEvent<T>(IThreadContext threadContext, ITop
         }
         _activeTokens.Remove(id);
       }
-      token = SubscribeOnceOrNot(action, threadOption,  true);
+      token = SubscribeOnceOrNot(action, threadOption, true);
       _activeTokens.Add(id, token);
       return token;
-    } finally
+    }
+    finally
     {
       _semaphore.Release();
     }

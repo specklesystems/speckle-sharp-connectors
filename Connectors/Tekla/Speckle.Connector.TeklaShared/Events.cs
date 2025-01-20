@@ -18,9 +18,10 @@ public static class TeklaEvents
   public static void Register(Tekla.Structures.Model.Events events, IEventAggregator eventAggregator)
   {
     events.UnRegister();
-    events.SelectionChange += async () => await eventAggregator.GetEvent<SelectionChange>().PublishAsync(new object());
-    events.ModelObjectChanged += async x => await eventAggregator.GetEvent<ModelObjectChanged>().PublishAsync(x);
-    events.ModelLoad += async () => await eventAggregator.GetEvent<ModelLoad>().PublishAsync(new object());
+    events.SelectionChange += async () =>
+      await eventAggregator.GetEvent<SelectionChangeEvent>().PublishAsync(new object());
+    events.ModelObjectChanged += async x => await eventAggregator.GetEvent<ModelObjectChangedEvent>().PublishAsync(x);
+    events.ModelLoad += async () => await eventAggregator.GetEvent<ModelLoadEvent>().PublishAsync(new object());
     events.Register();
   }
 }

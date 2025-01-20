@@ -108,7 +108,7 @@ public sealed class RhinoSendBinding : ISendBinding
         {
           ChangedObjectIdsInGroupsOrLayers[selectedObject.Id.ToString()] = 1;
         }
-        eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), _ =>  RunExpirationChecks());
+        eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), _ => RunExpirationChecks());
       }
     };
     eventAggregator

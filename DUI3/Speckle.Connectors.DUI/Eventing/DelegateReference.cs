@@ -24,9 +24,9 @@ public class DelegateReference : IDelegateReference
       throw new ArgumentNullException(nameof(@delegate));
     }
 
-      _weakReference = new WeakReference(@delegate.Target);
-      _method = @delegate.GetMethodInfo();
-      _delegateType = @delegate.GetType();
+    _weakReference = new WeakReference(@delegate.Target);
+    _method = @delegate.GetMethodInfo();
+    _delegateType = @delegate.GetType();
   }
 
   /// <summary>

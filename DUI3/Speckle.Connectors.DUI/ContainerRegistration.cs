@@ -49,4 +49,10 @@ public static class ContainerRegistration
 
     return serviceCollection;
   }
+
+  public static IServiceProvider UseDUI(this IServiceProvider serviceProvider)
+  {
+    serviceProvider.GetRequiredService<DocumentModelStore>().OnDocumentStoreInitialized().Wait();
+    return serviceProvider;
+  }
 }
