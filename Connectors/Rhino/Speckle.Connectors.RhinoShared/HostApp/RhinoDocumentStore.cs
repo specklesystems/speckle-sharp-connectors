@@ -17,7 +17,7 @@ public class RhinoDocumentStore : DocumentModelStore
     eventAggregator.GetEvent<BeginOpenDocument>().Subscribe(_ => IsDocumentInit = false);
     eventAggregator
       .GetEvent<EndOpenDocument>()
-      .Subscribe(e =>
+      .Subscribe(async e =>
       {
         if (e.Merge)
         {
@@ -31,7 +31,7 @@ public class RhinoDocumentStore : DocumentModelStore
 
         IsDocumentInit = true;
         LoadState();
-        eventAggregator.GetEvent<DocumentStoreChangedEvent>().Publish(new object());
+        await eventAggregator.GetEvent<DocumentChangedEvent>().PublishAsync(new object());
       });
   }
 

@@ -42,7 +42,7 @@ public class AutocadDocumentStore : DocumentModelStore
     //  OnDocChangeInternal((Document)args.DocumentWindow.Document);
   }
 
-  private void OnDocChangeInternal(Document? doc)
+  private async void OnDocChangeInternal(Document? doc)
   {
     var currentDocName = doc != null ? doc.Name : _nullDocumentName;
     if (_previousDocName == currentDocName)
@@ -52,7 +52,7 @@ public class AutocadDocumentStore : DocumentModelStore
 
     _previousDocName = currentDocName;
     LoadState();
-    _eventAggregator.GetEvent<DocumentStoreChangedEvent>().Publish(new object());
+    await _eventAggregator.GetEvent<DocumentChangedEvent>().PublishAsync(new object());
   }
 
   protected override void LoadState()

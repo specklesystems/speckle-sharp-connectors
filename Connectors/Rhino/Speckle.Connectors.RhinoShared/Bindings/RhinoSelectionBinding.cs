@@ -25,7 +25,7 @@ public class RhinoSelectionBinding : ISelectionBinding
   }
 
   private void OnSelectionChange(EventArgs eventArgs) =>
-    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSelectionBinding), UpdateSelection);
+    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSelectionBinding), _ => UpdateSelection());
 
   private void UpdateSelection()
   {

@@ -25,6 +25,8 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
     }
   }
 
+  public virtual Task OnDocumentStoreInitialized() => Task.CompletedTask;
+
   public virtual bool IsDocumentInit { get; set; }
 
   // TODO: not sure about this, throwing an exception, needs some thought...

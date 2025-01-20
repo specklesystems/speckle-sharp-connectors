@@ -12,6 +12,7 @@ namespace Speckle.Connectors.TeklaShared.HostApp;
 public class TeklaDocumentModelStore : DocumentModelStore
 {
   private readonly ILogger<TeklaDocumentModelStore> _logger;
+  private readonly IEventAggregator _eventAggregator;
   private readonly ISqLiteJsonCacheManager _jsonCacheManager;
   private readonly TSM.Model _model;
   private string? _modelKey;
@@ -25,21 +26,26 @@ public class TeklaDocumentModelStore : DocumentModelStore
     : base(jsonSerializer)
   {
     _logger = logger;
+    _eventAggregator = eventAggregator;
     _jsonCacheManager = jsonCacheManagerFactory.CreateForUser("ConnectorsFileData");
     _model = new TSM.Model();
     GenerateKey();
     eventAggregator
-      .GetEvent<ModelLoad>()
-      .Publish(() =>
+      .GetEvent<ModelLoadEvent>()
+      .Subscribe(async _ =>
       {
         GenerateKey();
         LoadState();
-        eventAggregator.GetEvent<DocumentStoreChangedEvent>().Publish(new object());
+        await eventAggregator.GetEvent<DocumentChangedEvent>().PublishAsync(new object());
       });
+  }
+
+  public override async Task OnDocumentStoreInitialized()
+  {
     if (SpeckleTeklaPanelHost.IsInitialized)
     {
       LoadState();
-      eventAggregator.GetEvent<DocumentStoreChangedEvent>().Publish(new object());
+      await _eventAggregator.GetEvent<DocumentChangedEvent>().PublishAsync(new object());
     }
   }
 

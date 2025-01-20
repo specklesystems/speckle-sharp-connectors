@@ -6,87 +6,32 @@
 public abstract class EventBase
 {
   private readonly List<IEventSubscription> _subscriptions = new();
-  protected ICollection<IEventSubscription> Subscriptions => _subscriptions;
 
-  /// <summary>
-  /// Adds the specified <see cref="IEventSubscription"/> to the subscribers' collection.
-  /// </summary>
-  /// <param name="eventSubscription">The subscriber.</param>
-  /// <returns>The <see cref="SubscriptionToken"/> that uniquely identifies every subscriber.</returns>
-  /// <remarks>
-  /// Adds the subscription to the internal list and assigns it a new <see cref="SubscriptionToken"/>.
-  /// </remarks>
-  protected virtual SubscriptionToken InternalSubscribe(IEventSubscription eventSubscription)
+  protected SubscriptionToken InternalSubscribe(IEventSubscription eventSubscription)
   {
-    if (eventSubscription == null)
+    lock (_subscriptions)
     {
-      throw new ArgumentNullException(nameof(eventSubscription));
-    }
-
-    eventSubscription.SubscriptionToken = new SubscriptionToken(Unsubscribe);
-
-    lock (Subscriptions)
-    {
-      Subscriptions.Add(eventSubscription);
+      _subscriptions.Add(eventSubscription);
     }
     return eventSubscription.SubscriptionToken;
   }
 
-  /// <summary>
-  /// Calls all the execution strategies exposed by the list of <see cref="IEventSubscription"/>.
-  /// </summary>
-  /// <param name="arguments">The arguments that will be passed to the listeners.</param>
-  /// <remarks>Before executing the strategies, this class will prune all the subscribers from the
-  /// list that return a <see langword="null" /> <see cref="Action{T}"/> when calling the
-  /// <see cref="IEventSubscription.GetExecutionStrategy"/> method.</remarks>
-  protected virtual void InternalPublish(params object[] arguments)
+  protected async Task InternalPublish(params object[] arguments)
   {
-    List<Action<object[]>> executionStrategies = PruneAndReturnStrategies();
+    var executionStrategies = PruneAndReturnStrategies();
     foreach (var executionStrategy in executionStrategies)
     {
-      executionStrategy(arguments);
+      await executionStrategy(arguments);
     }
   }
 
-  /// <summary>
-  /// Removes the subscriber matching the <see cref="SubscriptionToken"/>.
-  /// </summary>
-  /// <param name="token">The <see cref="SubscriptionToken"/> returned by <see cref="EventBase"/> while subscribing to the event.</param>
-  public virtual void Unsubscribe(SubscriptionToken token)
+  private IEnumerable<Func<object[], Task>> PruneAndReturnStrategies()
   {
-    lock (Subscriptions)
+    lock (_subscriptions)
     {
-      IEventSubscription subscription = Subscriptions.FirstOrDefault(evt => evt.SubscriptionToken == token);
-      if (subscription != null)
+      for (var i = _subscriptions.Count - 1; i >= 0; i--)
       {
-        Subscriptions.Remove(subscription);
-      }
-    }
-  }
-
-  /// <summary>
-  /// Returns <see langword="true"/> if there is a subscriber matching <see cref="SubscriptionToken"/>.
-  /// </summary>
-  /// <param name="token">The <see cref="SubscriptionToken"/> returned by <see cref="EventBase"/> while subscribing to the event.</param>
-  /// <returns><see langword="true"/> if there is a <see cref="SubscriptionToken"/> that matches; otherwise <see langword="false"/>.</returns>
-  public virtual bool Contains(SubscriptionToken token)
-  {
-    lock (Subscriptions)
-    {
-      IEventSubscription subscription = Subscriptions.FirstOrDefault(evt => evt.SubscriptionToken == token);
-      return subscription != null;
-    }
-  }
-
-  private List<Action<object[]>> PruneAndReturnStrategies()
-  {
-    List<Action<object[]>> returnList = new();
-
-    lock (Subscriptions)
-    {
-      for (var i = Subscriptions.Count - 1; i >= 0; i--)
-      {
-        Action<object[]>? listItem = _subscriptions[i].GetExecutionStrategy();
+        var listItem = _subscriptions[i].GetExecutionStrategy();
 
         if (listItem == null)
         {
@@ -95,22 +40,39 @@ public abstract class EventBase
         }
         else
         {
-          returnList.Add(listItem);
+          yield return listItem;
         }
       }
     }
-
-    return returnList;
   }
 
-  /// <summary>
-  /// Forces the PubSubEvent to remove any subscriptions that no longer have an execution strategy.
-  /// </summary>
+  public void Unsubscribe(SubscriptionToken token)
+  {
+    lock (_subscriptions)
+    {
+      IEventSubscription? subscription = _subscriptions.FirstOrDefault(evt => evt.SubscriptionToken.Equals(token));
+      if (subscription != null)
+      {
+        _subscriptions.Remove(subscription);
+        token.Unsubscribe(); //calling dispose is circular
+      }
+    }
+  }
+
+  public bool Contains(SubscriptionToken token)
+  {
+    lock (_subscriptions)
+    {
+      IEventSubscription subscription = _subscriptions.FirstOrDefault(evt => evt.SubscriptionToken == token);
+      return subscription != null;
+    }
+  }
+
   public void Prune()
   {
-    lock (Subscriptions)
+    lock (_subscriptions)
     {
-      for (var i = Subscriptions.Count - 1; i >= 0; i--)
+      for (var i = _subscriptions.Count - 1; i >= 0; i--)
       {
         if (_subscriptions[i].GetExecutionStrategy() == null)
         {

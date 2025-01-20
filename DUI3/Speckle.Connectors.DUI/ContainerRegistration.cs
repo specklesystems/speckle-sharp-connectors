@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
@@ -48,5 +49,22 @@ public static class ContainerRegistration
     }
 
     return serviceCollection;
+  }
+
+  public static IServiceProvider UseDUI(this IServiceProvider serviceProvider)
+  {
+    //observe the unobserved!
+    TaskScheduler.UnobservedTaskException += async (_, args) =>
+    {
+      await serviceProvider
+        .GetRequiredService<IEventAggregator>()
+        .GetEvent<ExceptionEvent>()
+        .PublishAsync(args.Exception);
+      serviceProvider.GetRequiredService<ILogger>().LogError(args.Exception, "Unobserved task exception");
+      args.SetObserved();
+    };
+
+    serviceProvider.GetRequiredService<DocumentModelStore>().OnDocumentStoreInitialized().Wait();
+    return serviceProvider;
   }
 }

@@ -78,7 +78,7 @@ public sealed class TeklaSendBinding : ISendBinding
     _toSpeckleSettingsManager = toSpeckleSettingsManager;
 
     _model = new Model();
-    eventAggregator.GetEvent<ModelObjectChanged>().Subscribe(ModelHandler_OnChange);
+    eventAggregator.GetEvent<ModelObjectChangedEvent>().Subscribe(ModelHandler_OnChange);
   }
 
   // subscribes the all changes in a modelobject
