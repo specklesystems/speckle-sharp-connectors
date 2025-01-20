@@ -4,13 +4,13 @@ using Speckle.Connectors.DUI.Eventing;
 
 namespace Speckle.Connectors.RhinoShared;
 
-public class SelectionChange(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
+public class SelectionChangeEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
   : ThreadedEvent<object>(threadContext, exceptionHandler);
 
-public class ModelObjectChanged(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
+public class ModelObjectChangedEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
   : ThreadedEvent<List<TSM.ChangeData>>(threadContext, exceptionHandler);
 
-public class ModelLoad(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
+public class ModelLoadEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
   : ThreadedEvent<object>(threadContext, exceptionHandler);
 
 public static class TeklaEvents
@@ -18,9 +18,9 @@ public static class TeklaEvents
   public static void Register(Tekla.Structures.Model.Events events, IEventAggregator eventAggregator)
   {
     events.UnRegister();
-    events.SelectionChange += () => eventAggregator.GetEvent<SelectionChange>().Publish(new object());
-    events.ModelObjectChanged += x => eventAggregator.GetEvent<ModelObjectChanged>().Publish(x);
-    events.ModelLoad += () => eventAggregator.GetEvent<ModelLoad>().Publish(new object());
+    events.SelectionChange += () => eventAggregator.GetEvent<SelectionChangeEvent>().Publish(new object());
+    events.ModelObjectChanged += x => eventAggregator.GetEvent<ModelObjectChangedEvent>().Publish(x);
+    events.ModelLoad += () => eventAggregator.GetEvent<ModelLoadEvent>().Publish(new object());
     events.Register();
   }
 }
