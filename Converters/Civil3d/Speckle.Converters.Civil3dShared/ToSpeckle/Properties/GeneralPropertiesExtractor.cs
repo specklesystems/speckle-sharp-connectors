@@ -141,14 +141,22 @@ public class GeneralPropertiesExtractor
       int pointCount = 0;
       foreach (CDB.FeatureLinePoint point in featureline.FeatureLinePoints)
       {
-        pointsDict[pointCount.ToString()] = new Dictionary<string, object?>()
-        {
-          ["station"] = point.Station,
-          ["xyz"] = point.XYZ.ToArray(),
-          ["isBreak"] = point.IsBreak,
-          ["offset"] = point.Offset
-        };
+        Dictionary<string, object?> pointPropertiesDict =
+          new()
+          {
+            ["station"] = point.Station,
+            ["xyz"] = point.XYZ.ToArray(),
+            ["isBreak"] = point.IsBreak
+          };
 
+        // not all points have offsets. Accessing the offset property in this case will throw.
+        try
+        {
+          pointPropertiesDict["offset"] = point.Offset;
+        }
+        catch (ArgumentException) { } // do nothing - offset property will not be included
+
+        pointsDict[pointCount.ToString()] = pointPropertiesDict;
         pointCount++;
       }
 
@@ -303,19 +311,21 @@ public class GeneralPropertiesExtractor
       generalPropertiesDict["Design Critera"] = designCriteriaDict;
     }
 
-    // get offset alignment props
+    // get offset alignment props.
     if (alignment.IsOffsetAlignment)
     {
-      var offsetInfo = alignment.OffsetAlignmentInfo;
-      Dictionary<string, object?> offsetAlignmentDict =
-        new()
+      try
+      {
+        var offsetInfo = alignment.OffsetAlignmentInfo;
+
+        generalPropertiesDict["Offset Parameters"] = new Dictionary<string, object?>
         {
           ["side"] = offsetInfo.Side.ToString(),
           ["parentAlignmentId"] = offsetInfo.ParentAlignmentId.GetSpeckleApplicationId(),
           ["nominalOffset"] = offsetInfo.NominalOffset
         };
-
-      generalPropertiesDict["Offset Parameters"] = offsetAlignmentDict;
+      }
+      catch (InvalidOperationException) { } // accessing "OffsetAlignmentInfo" will sometimes throw even for offset alignments /shrug. do nothing
     }
 
     return generalPropertiesDict;
