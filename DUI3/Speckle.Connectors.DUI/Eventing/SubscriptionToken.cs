@@ -34,14 +34,22 @@ public sealed class SubscriptionToken(Action<SubscriptionToken> unsubscribeActio
 
   public void Unsubscribe() => _unsubscribeAction = null;
 
+  ~SubscriptionToken() => Dispose(false);
+
   public void Dispose()
+  {
+    Dispose(true);
+    GC.SuppressFinalize(this);
+  }
+
+  private void Dispose(bool isDisposing)
   {
     // While the SubscriptionToken class implements IDisposable, in the case of weak subscriptions
     // (i.e. keepSubscriberReferenceAlive set to false in the Subscribe method) it's not necessary to unsubscribe,
     // as no resources should be kept alive by the event subscription.
     // In such cases, if a warning is issued, it could be suppressed.
 
-    if (_unsubscribeAction != null)
+    if (isDisposing && _unsubscribeAction != null)
     {
       _unsubscribeAction(this);
       Unsubscribe();

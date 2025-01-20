@@ -5,8 +5,9 @@ namespace Speckle.Connectors.DUI.Eventing;
 public class OneTimeEventSubscriptionAsync<T>(
   IDelegateReference actionReference,
   ITopLevelExceptionHandler exceptionHandler,
+  SubscriptionToken token,
   bool isOnce
-) : EventSubscriptionAsync<T>(actionReference, exceptionHandler)
+) : EventSubscriptionAsync<T>(actionReference, exceptionHandler, token)
 {
   public override async Task InvokeAction(Func<T, Task> action, T payload)
   {
@@ -21,8 +22,9 @@ public class OneTimeEventSubscriptionAsync<T>(
 public class OneTimeEventSubscriptionSync<T>(
   IDelegateReference actionReference,
   ITopLevelExceptionHandler exceptionHandler,
+  SubscriptionToken token,
   bool isOnce
-) : EventSubscriptionSync<T>(actionReference, exceptionHandler)
+) : EventSubscriptionSync<T>(actionReference, exceptionHandler, token)
 {
   public override Task InvokeAction(Action<T> action, T payload)
   {

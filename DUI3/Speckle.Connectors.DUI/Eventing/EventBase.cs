@@ -9,13 +9,6 @@ public abstract class EventBase
 
   protected SubscriptionToken InternalSubscribe(IEventSubscription eventSubscription)
   {
-    if (eventSubscription == null)
-    {
-      throw new ArgumentNullException(nameof(eventSubscription));
-    }
-
-    eventSubscription.SubscriptionToken = new SubscriptionToken(Unsubscribe);
-
     lock (_subscriptions)
     {
       _subscriptions.Add(eventSubscription);

@@ -4,12 +4,13 @@ namespace Speckle.Connectors.DUI.Eventing;
 
 public class EventSubscriptionAsync<TPayload>(
   IDelegateReference actionReference,
-  ITopLevelExceptionHandler exceptionHandler
+  ITopLevelExceptionHandler exceptionHandler,
+  SubscriptionToken token
 ) : IEventSubscription
 {
   public Func<TPayload, Task>? Action => (Func<TPayload, Task>?)actionReference.Target;
 
-  public SubscriptionToken SubscriptionToken { get; set; }
+  public SubscriptionToken SubscriptionToken => token;
 
   public virtual Func<object[], Task>? GetExecutionStrategy()
   {
@@ -39,41 +40,5 @@ public class EventSubscriptionAsync<TPayload>(
     }
 
     await exceptionHandler.CatchUnhandledAsync(() => action(argument));
-  }
-}
-
-public class EventSubscriptionSync<TPayload>(
-  IDelegateReference actionReference,
-  ITopLevelExceptionHandler exceptionHandler
-) : IEventSubscription
-{
-  public Action<TPayload>? Action => (Action<TPayload>?)actionReference.Target;
-
-  public SubscriptionToken SubscriptionToken { get; set; }
-
-  public virtual Func<object[], Task>? GetExecutionStrategy()
-  {
-    var action = Action;
-    if (action is null)
-    {
-      return null;
-    }
-    return arguments =>
-    {
-      TPayload argument = (TPayload)arguments[0];
-      InvokeAction(action, argument);
-      return Task.CompletedTask;
-    };
-  }
-
-  public virtual Task InvokeAction(Action<TPayload> action, TPayload argument)
-  {
-    if (action == null)
-    {
-      throw new ArgumentNullException(nameof(action));
-    }
-
-    exceptionHandler.CatchUnhandled(() => action(argument));
-    return Task.CompletedTask;
   }
 }
