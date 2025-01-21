@@ -1,20 +1,20 @@
 using Speckle.Importers.Ifc.Types;
 using Speckle.InterfaceGenerator;
-using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Importers.Ifc.Converters;
 
 [GenerateAutoInterface]
 public class GeometryConverter(IMeshConverter meshConverter) : IGeometryConverter
 {
-  public Collection Convert(IfcGeometry geometry)
+  public IList<Base> Convert(IfcGeometry geometry)
   {
-    var c = new Collection();
+    List<Base> ret = new();
     foreach (var mesh in geometry.GetMeshes())
     {
-      c.elements.Add(meshConverter.Convert(mesh));
+      ret.Add(meshConverter.Convert(mesh));
     }
 
-    return c;
+    return ret;
   }
 }

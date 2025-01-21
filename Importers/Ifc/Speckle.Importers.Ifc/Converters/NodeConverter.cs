@@ -37,8 +37,8 @@ public class NodeConverter(IGeometryConverter geometryConverter) : INodeConverte
     if (geo != null)
     {
       var c = geometryConverter.Convert(geo);
-      if (c.elements.Count > 0)
-        b["@displayValue"] = c.elements;
+      if (c.Count > 0)
+        b["@displayValue"] = c;
     }
 
     // Create the children

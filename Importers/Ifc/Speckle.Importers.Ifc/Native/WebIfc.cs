@@ -4,12 +4,11 @@ using System.Runtime.InteropServices;
 namespace Speckle.Importers.Ifc.Native;
 
 [SuppressMessage("Globalization", "CA2101:Specify marshaling for P/Invoke string arguments")]
-[SuppressMessage("Interoperability", "CA1401:P/Invokes should not be visible")]
 [SuppressMessage("Security", "CA5393:Do not use unsafe DllImportSearchPath value")]
-public static class WebIfc
+internal static partial class WebIfc
 {
 #if WINDOWS
-  private const string DllName = "web-ifc.dll";
+  private const string DllName = "Native/web-ifc.dll";
   private const CharSet Set = CharSet.Ansi;
 #else
   private const string DllName = "libweb-ifc.so";
@@ -18,25 +17,29 @@ public static class WebIfc
 
   private const DllImportSearchPath ImportSearchPath = DllImportSearchPath.AssemblyDirectory;
 
-  [DllImport(DllName)]
+  [LibraryImport(DllName)]
   [DefaultDllImportSearchPaths(ImportSearchPath)]
-  public static extern IntPtr InitializeApi();
+  public static partial IntPtr InitializeApi();
 
-  [DllImport(DllName)]
+  [LibraryImport(DllName)]
   [DefaultDllImportSearchPaths(ImportSearchPath)]
-  public static extern void FinalizeApi(IntPtr api);
+  public static partial void FinalizeApi(IntPtr api);
 
   [DllImport(DllName, CharSet = Set)]
   [DefaultDllImportSearchPaths(ImportSearchPath)]
   public static extern IntPtr LoadModel(IntPtr api, string fileName);
 
-  [DllImport(DllName, CharSet = Set)]
+  [LibraryImport(
+    DllName,
+    StringMarshalling = StringMarshalling.Custom,
+    StringMarshallingCustomType = typeof(System.Runtime.InteropServices.Marshalling.AnsiStringMarshaller)
+  )]
   [DefaultDllImportSearchPaths(ImportSearchPath)]
-  public static extern string GetVersion();
+  public static partial string GetVersion();
 
-  [DllImport(DllName)]
+  [LibraryImport(DllName)]
   [DefaultDllImportSearchPaths(ImportSearchPath)]
-  public static extern IntPtr GetMesh(IntPtr geometry, int index);
+  public static partial IntPtr GetMesh(IntPtr geometry, int index);
 
   [DllImport(DllName)]
   [DefaultDllImportSearchPaths(ImportSearchPath)]
