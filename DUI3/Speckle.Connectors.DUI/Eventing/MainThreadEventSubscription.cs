@@ -3,26 +3,14 @@ using Speckle.Connectors.DUI.Bridge;
 
 namespace Speckle.Connectors.DUI.Eventing;
 
-public class MainThreadEventSubscriptionAsync<T>(
-  IDelegateReference actionReference,
+public class MainThreadEventSubscription<T>(
+  DelegateReference actionReference,
   IThreadContext threadContext,
   ITopLevelExceptionHandler exceptionHandler,
   SubscriptionToken token,
   bool isOnce
-) : OneTimeEventSubscriptionAsync<T>(actionReference, exceptionHandler, token, isOnce)
+) : OneTimeEventSubscription<T>(actionReference, exceptionHandler, token, isOnce)
+  where T : notnull
 {
-  public override Task InvokeAction(Func<T, Task> action, T payload) =>
-    threadContext.RunOnMainAsync(() => action.Invoke(payload));
-}
-
-public class MainThreadEventSubscriptionSync<T>(
-  IDelegateReference actionReference,
-  IThreadContext threadContext,
-  ITopLevelExceptionHandler exceptionHandler,
-  SubscriptionToken token,
-  bool isOnce
-) : OneTimeEventSubscriptionSync<T>(actionReference, exceptionHandler, token, isOnce)
-{
-  public override Task InvokeAction(Action<T> action, T payload) =>
-    threadContext.RunOnMain(() => action.Invoke(payload));
+  public override Task InvokeAction(T payload) => threadContext.RunOnMainAsync(() => base.InvokeAction(payload));
 }

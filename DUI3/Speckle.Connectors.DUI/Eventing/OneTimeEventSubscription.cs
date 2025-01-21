@@ -2,37 +2,20 @@ using Speckle.Connectors.DUI.Bridge;
 
 namespace Speckle.Connectors.DUI.Eventing;
 
-public class OneTimeEventSubscriptionAsync<T>(
-  IDelegateReference actionReference,
+public class OneTimeEventSubscription<T>(
+  DelegateReference actionReference,
   ITopLevelExceptionHandler exceptionHandler,
   SubscriptionToken token,
   bool isOnce
-) : EventSubscriptionAsync<T>(actionReference, exceptionHandler, token)
+) : EventSubscription<T>(actionReference, exceptionHandler, token)
+  where T : notnull
 {
-  public override async Task InvokeAction(Func<T, Task> action, T payload)
+  public override async Task InvokeAction(T payload)
   {
-    await base.InvokeAction(action, payload);
+    await base.InvokeAction(payload);
     if (isOnce)
     {
       SubscriptionToken.Dispose();
     }
-  }
-}
-
-public class OneTimeEventSubscriptionSync<T>(
-  IDelegateReference actionReference,
-  ITopLevelExceptionHandler exceptionHandler,
-  SubscriptionToken token,
-  bool isOnce
-) : EventSubscriptionSync<T>(actionReference, exceptionHandler, token)
-{
-  public override Task InvokeAction(Action<T> action, T payload)
-  {
-    base.InvokeAction(action, payload);
-    if (isOnce)
-    {
-      SubscriptionToken.Dispose();
-    }
-    return Task.CompletedTask;
   }
 }

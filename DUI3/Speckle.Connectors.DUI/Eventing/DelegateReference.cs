@@ -2,65 +2,58 @@
 
 namespace Speckle.Connectors.DUI.Eventing;
 
-public interface IDelegateReference
+public class DelegateReference
 {
-  /// <summary>
-  /// Gets the referenced <see cref="Delegate" /> object.
-  /// </summary>
-  /// <value>A <see cref="Delegate"/> instance if the target is valid; otherwise <see langword="null"/>.</value>
-  Delegate? Target { get; }
-}
-
-public class DelegateReference : IDelegateReference
-{
-  private readonly WeakReference _weakReference;
+  private readonly WeakReference? _weakReference;
   private readonly MethodInfo _method;
   private readonly Type _delegateType;
 
-  public DelegateReference(Delegate @delegate)
+  public DelegateReference(Delegate @delegate, bool isAsync)
   {
-    if (@delegate == null)
-    {
-      throw new ArgumentNullException(nameof(@delegate));
-    }
-
-    _weakReference = new WeakReference(@delegate.Target);
-    _method = @delegate.GetMethodInfo();
-    _delegateType = @delegate.GetType();
-  }
-
-  /// <summary>
-  /// Gets the <see cref="Delegate" /> (the target) referenced by the current <see cref="DelegateReference"/> object.
-  /// </summary>
-  /// <value><see langword="null"/> if the object referenced by the current <see cref="DelegateReference"/> object has been garbage collected; otherwise, a reference to the <see cref="Delegate"/> referenced by the current <see cref="DelegateReference"/> object.</value>
-  public Delegate? Target => TryGetDelegate();
-
-  /// <summary>
-  /// Checks if the <see cref="Delegate" /> (the target) referenced by the current <see cref="DelegateReference"/> object are equal to another <see cref="Delegate" />.
-  /// This is equivalent with comparing <see cref="Target"/> with <paramref name="delegate"/>, only more efficient.
-  /// </summary>
-  /// <param name="delegate">The other delegate to compare with.</param>
-  /// <returns>True if the target referenced by the current object are equal to <paramref name="delegate"/>.</returns>
-  public bool TargetEquals(Delegate? @delegate)
-  {
-    if (@delegate == null)
-    {
-      return !_method.IsStatic && !_weakReference.IsAlive;
-    }
-    return _weakReference.Target == @delegate.Target && Equals(_method, @delegate.GetMethodInfo());
-  }
-
-  private Delegate? TryGetDelegate()
-  {
-    if (_method.IsStatic)
-    {
-      return _method.CreateDelegate(_delegateType, null);
-    }
-    object target = _weakReference.Target;
+    var target = @delegate.Target;
+    _method = @delegate.Method;
     if (target != null)
     {
-      return _method.CreateDelegate(_delegateType, target);
+      _weakReference = new WeakReference(target);
+      var messageType = @delegate.Method.GetParameters()[0].ParameterType;
+      if (isAsync)
+      {
+        _delegateType = typeof(Func<,>).MakeGenericType(messageType, typeof(Task));
+      }
+      else
+      {
+        _delegateType = typeof(Action<>).MakeGenericType(messageType);
+      }
     }
-    return null;
+    else
+    {
+      _weakReference = null;
+    }
+  }
+
+  public bool IsAlive => _weakReference == null || _weakReference.IsAlive;
+
+  public async Task<bool> Invoke(object message)
+  {
+    if (!IsAlive)
+    {
+      return false;
+    }
+
+    object? target = null;
+    if (_weakReference != null)
+    {
+      target = _weakReference.Target;
+    }
+    var method = Delegate.CreateDelegate(_delegateType, target, _method);
+
+    var task = method.DynamicInvoke(message) as Task;
+
+    if (task is not null)
+    {
+      await task;
+    }
+
+    return true;
   }
 }
