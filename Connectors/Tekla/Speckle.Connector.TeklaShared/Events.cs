@@ -2,7 +2,7 @@ using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Eventing;
 
-namespace Speckle.Connectors.RhinoShared;
+namespace Speckle.Connectors.TeklaShared;
 
 public class SelectionChangeEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
   : ThreadedEvent<object>(threadContext, exceptionHandler);

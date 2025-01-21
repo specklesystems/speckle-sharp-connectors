@@ -2,7 +2,6 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
-using Speckle.Connectors.RhinoShared;
 using Speckle.Sdk;
 using Speckle.Sdk.Helpers;
 using Speckle.Sdk.SQLite;
