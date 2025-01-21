@@ -31,7 +31,8 @@ public class NurbsSurfaceToSpeckleConverter : ITypedConverter<RG.NurbsSurface, S
   /// <returns>A Surface object representing the converted NurbsSurface.</returns>
   public SOG.Surface Convert(RG.NurbsSurface target)
   {
-    var result = new SOG.Surface
+    var controlPoints = ControlPointsToSpeckle(target.Points);
+    var result = new SOG.Surface(controlPoints)
     {
       degreeU = target.OrderU - 1,
       degreeV = target.OrderV - 1,
@@ -43,10 +44,8 @@ public class NurbsSurfaceToSpeckleConverter : ITypedConverter<RG.NurbsSurface, S
       knotsU = target.KnotsU.ToList(),
       knotsV = target.KnotsV.ToList(),
       units = _settingsStore.Current.SpeckleUnits,
-      bbox = _boxConverter.Convert(new RG.Box(target.GetBoundingBox(true)))
+      bbox = _boxConverter.Convert(new RG.Box(target.GetBoundingBox(true))),
     };
-
-    result.SetControlPoints(ControlPointsToSpeckle(target.Points));
 
     return result;
   }
