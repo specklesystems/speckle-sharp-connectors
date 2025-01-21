@@ -49,10 +49,20 @@ public class CsiShellSectionPropertyExtractor : IShellSectionPropertyExtractor
     double[] stiffnessModifiersArray = [];
     _settingsStore.Current.SapModel.PropArea.GetModifiers(sectionName, ref stiffnessModifiersArray);
 
-    var modifierKeys = new[] { "f11", "f22", "f12", "m11", "m22", "m12", "v13", "v23", "mass", "weight" };
-    var modifiers = modifierKeys
-      .Zip(stiffnessModifiersArray, (key, value) => (key, value))
-      .ToDictionary(x => x.key, x => (object?)x.value);
+    Dictionary<string, object?> modifiers =
+      new()
+      {
+        ["f11"] = stiffnessModifiersArray[0],
+        ["f22"] = stiffnessModifiersArray[1],
+        ["f12"] = stiffnessModifiersArray[2],
+        ["m11"] = stiffnessModifiersArray[3],
+        ["m22"] = stiffnessModifiersArray[3],
+        ["m12"] = stiffnessModifiersArray[4],
+        ["v13"] = stiffnessModifiersArray[5],
+        ["v23"] = stiffnessModifiersArray[6],
+        ["mass"] = stiffnessModifiersArray[7],
+        ["weight"] = stiffnessModifiersArray[8]
+      };
 
     var generalData = DictionaryUtils.EnsureNestedDictionary(properties, "General Data");
     generalData["modifiers"] = modifiers;

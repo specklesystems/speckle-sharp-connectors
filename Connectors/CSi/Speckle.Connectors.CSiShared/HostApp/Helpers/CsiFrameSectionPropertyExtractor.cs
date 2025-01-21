@@ -85,20 +85,18 @@ public class CsiFrameSectionPropertyExtractor : IFrameSectionPropertyExtractor
     double[] stiffnessModifiersArray = [];
     _settingsStore.Current.SapModel.PropFrame.GetModifiers(sectionName, ref stiffnessModifiersArray);
 
-    var modifierKeys = new[]
-    {
-      "crossSectionalAreaModifier",
-      "shearAreaInLocal2DirectionModifier",
-      "shearAreaInLocal3DirectionModifier",
-      "torsionalConstantModifier",
-      "momentOfInertiaAboutLocal2AxisModifier",
-      "momentOfInertiaAboutLocal3AxisModifier",
-      "mass",
-      "weight",
-    };
-    var modifiers = modifierKeys
-      .Zip(stiffnessModifiersArray, (key, value) => (key, value))
-      .ToDictionary(x => x.key, x => (object?)x.value);
+    Dictionary<string, object?> modifiers =
+      new()
+      {
+        ["crossSectionalAreaModifier"] = stiffnessModifiersArray[0],
+        ["shearAreaInLocal2DirectionModifier"] = stiffnessModifiersArray[1],
+        ["shearAreaInLocal3DirectionModifier"] = stiffnessModifiersArray[2],
+        ["torsionalConstantModifier"] = stiffnessModifiersArray[3],
+        ["momentOfInertiaAboutLocal2AxisModifier"] = stiffnessModifiersArray[4],
+        ["momentOfInertiaAboutLocal3AxisModifier"] = stiffnessModifiersArray[5],
+        ["mass"] = stiffnessModifiersArray[6],
+        ["weight"] = stiffnessModifiersArray[7],
+      };
 
     var generalData = DictionaryUtils.EnsureNestedDictionary(properties, "General Data");
     generalData["modifiers"] = modifiers;
