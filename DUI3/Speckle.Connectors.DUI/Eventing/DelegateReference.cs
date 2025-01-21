@@ -10,13 +10,17 @@ public class DelegateReference
   private readonly MethodInfo _method;
   private readonly Type? _delegateType;
 
-  public DelegateReference(Delegate @delegate, bool isAsync)
+  public DelegateReference(Delegate @delegate, EventFeatures features)
   {
     var target = @delegate.Target;
     _method = @delegate.Method;
     if (target != null)
     {
-      if (Attribute.IsDefined(_method.DeclaringType.NotNull(), typeof(CompilerGeneratedAttribute)))
+      //anonymous methods are always strong....should we do this? - doing a brief search says yes
+      if (
+        features.HasFlag(EventFeatures.ForceStrongReference)
+        || Attribute.IsDefined(_method.DeclaringType.NotNull(), typeof(CompilerGeneratedAttribute))
+      )
       {
         _weakReference = WeakOrStrongReference.CreateStrong(target);
       }
@@ -26,7 +30,7 @@ public class DelegateReference
       }
 
       var messageType = @delegate.Method.GetParameters()[0].ParameterType;
-      if (isAsync)
+      if (features.HasFlag(EventFeatures.IsAsync))
       {
         _delegateType = typeof(Func<,>).MakeGenericType(messageType, typeof(Task));
       }

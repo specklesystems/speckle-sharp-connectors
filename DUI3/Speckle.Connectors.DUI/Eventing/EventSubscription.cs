@@ -1,17 +1,21 @@
-﻿using Speckle.Connectors.DUI.Bridge;
+﻿using Speckle.Connectors.Common.Threading;
+using Speckle.Connectors.DUI.Bridge;
 
 namespace Speckle.Connectors.DUI.Eventing;
 
 public class EventSubscription<TPayload>(
   DelegateReference actionReference,
+  IThreadContext threadContext,
   ITopLevelExceptionHandler exceptionHandler,
-  SubscriptionToken token
+  SubscriptionToken token,
+  ThreadOption threadOption,
+  EventFeatures features
 ) : IEventSubscription
   where TPayload : notnull
 {
   public SubscriptionToken SubscriptionToken => token;
 
-  public virtual Func<object[], Task>? GetExecutionStrategy()
+  public Func<object[], Task>? GetExecutionStrategy()
   {
     if (!actionReference.IsAlive)
     {
@@ -24,6 +28,29 @@ public class EventSubscription<TPayload>(
     };
   }
 
-  public virtual async Task InvokeAction(TPayload argument) =>
+  private async Task InvokeAction(TPayload argument)
+  {
+    switch (threadOption)
+    {
+      case ThreadOption.MainThread:
+        await threadContext.RunOnMainAsync(() => Invoke(argument));
+        break;
+      case ThreadOption.WorkerThread:
+        await threadContext.RunOnWorkerAsync(() => Invoke(argument));
+        break;
+      case ThreadOption.PublisherThread:
+      default:
+        await Invoke(argument);
+        break;
+    }
+  }
+
+  private async Task Invoke(TPayload argument)
+  {
     await exceptionHandler.CatchUnhandledAsync(() => actionReference.Invoke(argument));
+    if (features.HasFlag(EventFeatures.OneTime))
+    {
+      SubscriptionToken.Dispose();
+    }
+  }
 }

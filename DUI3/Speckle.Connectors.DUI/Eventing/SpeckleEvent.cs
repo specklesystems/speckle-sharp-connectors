@@ -13,51 +13,28 @@ public abstract class SpeckleEvent<T>(IThreadContext threadContext, ITopLevelExc
 
   public virtual Task PublishAsync(T payload) => InternalPublish(payload);
 
-  protected SubscriptionToken SubscribeOnceOrNot(Func<T, Task> action, ThreadOption threadOption, bool isOnce)
+  protected SubscriptionToken Subscribe(Func<T, Task> action, ThreadOption threadOption, EventFeatures features)
   {
-    var actionReference = new DelegateReference(action, true);
-    return SubscribeOnceOrNot(actionReference, threadOption, isOnce);
+    features |= EventFeatures.IsAsync;
+    var actionReference = new DelegateReference(action, features);
+    return Subscribe(actionReference, threadOption, features);
   }
 
-  protected SubscriptionToken SubscribeOnceOrNot(Action<T> action, ThreadOption threadOption, bool isOnce)
+  protected SubscriptionToken Subscribe(Action<T> action, ThreadOption threadOption, EventFeatures features)
   {
-    var actionReference = new DelegateReference(action, false);
-    return SubscribeOnceOrNot(actionReference, threadOption, isOnce);
+    var actionReference = new DelegateReference(action, features);
+    return Subscribe(actionReference, threadOption, features);
   }
 
   [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope")]
-  private SubscriptionToken SubscribeOnceOrNot(
+  private SubscriptionToken Subscribe(
     DelegateReference actionReference,
     ThreadOption threadOption,
-    bool isOnce
+    EventFeatures features
   )
   {
-    EventSubscription<T> subscription;
-    switch (threadOption)
-    {
-      case ThreadOption.WorkerThread:
-        subscription = new WorkerEventSubscription<T>(
-          actionReference,
-          threadContext,
-          exceptionHandler,
-          new(Unsubscribe),
-          isOnce
-        );
-        break;
-      case ThreadOption.MainThread:
-        subscription = new MainThreadEventSubscription<T>(
-          actionReference,
-          threadContext,
-          exceptionHandler,
-          new(Unsubscribe),
-          isOnce
-        );
-        break;
-      case ThreadOption.PublisherThread:
-      default:
-        subscription = new OneTimeEventSubscription<T>(actionReference, exceptionHandler, new(Unsubscribe), isOnce);
-        break;
-    }
+    EventSubscription<T> subscription =
+      new(actionReference, threadContext, exceptionHandler, new(Unsubscribe), threadOption, features);
     return InternalSubscribe(subscription);
   }
 }

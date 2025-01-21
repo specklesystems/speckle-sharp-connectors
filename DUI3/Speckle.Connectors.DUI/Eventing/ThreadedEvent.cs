@@ -8,8 +8,8 @@ public abstract class ThreadedEvent<T>(IThreadContext threadContext, ITopLevelEx
   where T : notnull
 {
   public SubscriptionToken Subscribe(Func<T, Task> action, ThreadOption threadOption = ThreadOption.PublisherThread) =>
-    SubscribeOnceOrNot(action, threadOption, false);
+    Subscribe(action, threadOption, EventFeatures.None);
 
   public SubscriptionToken Subscribe(Action<T> action, ThreadOption threadOption = ThreadOption.PublisherThread) =>
-    SubscribeOnceOrNot(action, threadOption, false);
+    Subscribe(action, threadOption, EventFeatures.None);
 }

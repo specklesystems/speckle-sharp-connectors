@@ -44,7 +44,7 @@ public abstract class OneTimeThreadedEvent<T>(IThreadContext threadContext, ITop
         }
         _activeTokens.Remove(id);
       }
-      token = SubscribeOnceOrNot(action, threadOption, true);
+      token = Subscribe(action, threadOption, EventFeatures.OneTime);
       _activeTokens.Add(id, token);
       return token;
     }
@@ -71,7 +71,7 @@ public abstract class OneTimeThreadedEvent<T>(IThreadContext threadContext, ITop
         }
         _activeTokens.Remove(id);
       }
-      token = SubscribeOnceOrNot(action, threadOption, true);
+      token = Subscribe(action, threadOption, EventFeatures.OneTime);
       _activeTokens.Add(id, token);
       return token;
     }
