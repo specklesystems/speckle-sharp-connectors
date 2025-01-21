@@ -5,7 +5,7 @@ namespace Speckle.Importers.Ifc.Native;
 
 [SuppressMessage("Globalization", "CA2101:Specify marshaling for P/Invoke string arguments")]
 [SuppressMessage("Security", "CA5393:Do not use unsafe DllImportSearchPath value")]
-internal static partial class WebIfc
+internal static class WebIfc
 {
 #if WINDOWS
   private const string DllName = "Native/web-ifc.dll";
@@ -17,29 +17,25 @@ internal static partial class WebIfc
 
   private const DllImportSearchPath ImportSearchPath = DllImportSearchPath.AssemblyDirectory;
 
-  [LibraryImport(DllName)]
+  [DllImport(DllName)]
   [DefaultDllImportSearchPaths(ImportSearchPath)]
-  public static partial IntPtr InitializeApi();
+  public static extern IntPtr InitializeApi();
 
-  [LibraryImport(DllName)]
+  [DllImport(DllName)]
   [DefaultDllImportSearchPaths(ImportSearchPath)]
-  public static partial void FinalizeApi(IntPtr api);
+  public static extern void FinalizeApi(IntPtr api);
 
   [DllImport(DllName, CharSet = Set)]
   [DefaultDllImportSearchPaths(ImportSearchPath)]
   public static extern IntPtr LoadModel(IntPtr api, string fileName);
 
-  [LibraryImport(
-    DllName,
-    StringMarshalling = StringMarshalling.Custom,
-    StringMarshallingCustomType = typeof(System.Runtime.InteropServices.Marshalling.AnsiStringMarshaller)
-  )]
+  [DllImport(DllName, CharSet = Set)]
   [DefaultDllImportSearchPaths(ImportSearchPath)]
-  public static partial string GetVersion();
+  public static extern string GetVersion();
 
-  [LibraryImport(DllName)]
+  [DllImport(DllName)]
   [DefaultDllImportSearchPaths(ImportSearchPath)]
-  public static partial IntPtr GetMesh(IntPtr geometry, int index);
+  public static extern IntPtr GetMesh(IntPtr geometry, int index);
 
   [DllImport(DllName)]
   [DefaultDllImportSearchPaths(ImportSearchPath)]
