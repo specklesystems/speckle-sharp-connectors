@@ -15,5 +15,8 @@ public interface IObjectSectionRelationshipManager
   /// <summary>
   /// Establishes relationships between converted objects and their section proxies.
   /// </summary>
-  void EstablishRelationships(List<Base> convertedObjectsByType, List<IProxyCollection> sections);
+  void EstablishRelationships(
+    List<Base> convertedObjectsByType,
+    IReadOnlyDictionary<string, IProxyCollection> sections
+  );
 }

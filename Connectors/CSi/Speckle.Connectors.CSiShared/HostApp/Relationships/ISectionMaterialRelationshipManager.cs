@@ -14,5 +14,8 @@ public interface ISectionMaterialRelationshipManager
   /// <summary>
   /// Establishes bidirectional relationships between section and material proxies.
   /// </summary>
-  void EstablishRelationships(List<IProxyCollection> sections, List<IProxyCollection> materials);
+  void EstablishRelationships(
+    IReadOnlyDictionary<string, IProxyCollection> sections,
+    IReadOnlyDictionary<string, IProxyCollection> materials
+  );
 }

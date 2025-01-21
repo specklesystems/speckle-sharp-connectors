@@ -37,106 +37,105 @@ public class EtabsSectionUnpacker : ISectionUnpacker
     _activityFactory = activityFactory;
   }
 
-  public List<IProxyCollection> UnpackSections(Collection rootCollection)
+  public IReadOnlyDictionary<string, IProxyCollection> UnpackSections(
+    Collection rootCollection,
+    string[] frameSectionNames,
+    string[] shellSectionNames
+  )
   {
     try
     {
-      var frameSections = UnpackFrameSections();
+      // Unpack frame sections
+      var frameSections = UnpackFrameSections(frameSectionNames);
       if (frameSections.Count > 0)
       {
-        rootCollection["frameSectionProxies"] = frameSections;
+        rootCollection["frameSectionProxies"] = frameSections.Values.ToList();
       }
 
-      var shellSections = UnpackShellSections();
+      // Unpack shell sections
+      var shellSections = UnpackShellSections(shellSectionNames);
       if (shellSections.Count > 0)
       {
-        rootCollection["shellSectionProxies"] = shellSections;
+        rootCollection["shellSectionProxies"] = shellSections.Values.ToList();
       }
 
-      return frameSections.Concat(shellSections).ToList();
+      // Return concatenated dictionary of both sections
+      return frameSections.Concat(shellSections).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
       _logger.LogError(ex, "Failed to unpack sections");
-      return [];
+      return new Dictionary<string, IProxyCollection>();
     }
   }
 
-  private List<IProxyCollection> UnpackFrameSections()
+  private Dictionary<string, IProxyCollection> UnpackFrameSections(string[] frameSectionNames)
   {
     Dictionary<string, IProxyCollection> sections = [];
 
-    int numberOfSections = 0;
-    string[] sectionNames = [];
-    _csiApplicationService.SapModel.PropFrame.GetNameList(ref numberOfSections, ref sectionNames);
-
-    foreach (string sectionName in sectionNames)
+    foreach (string frameSectionName in frameSectionNames)
     {
       try
       {
         SectionPropertyExtractionResult extractionResult = _propertyExtractor.ExtractFrameSectionProperties(
-          sectionName
+          frameSectionName
         );
 
         // TODO: Replace with SectionProxy when we've decided what to do here / when SDK updated
         GroupProxy proxy =
           new()
           {
-            id = sectionName,
-            name = sectionName,
-            applicationId = sectionName,
+            id = frameSectionName,
+            name = frameSectionName,
+            applicationId = frameSectionName,
             objects = [],
             ["Properties"] = extractionResult.Properties,
             ["MaterialName"] = extractionResult.MaterialName,
           };
 
-        sections[sectionName] = proxy;
+        sections[frameSectionName] = proxy;
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(ex, "Failed to extract frame section properties for {SectionName}", sectionName);
+        _logger.LogError(ex, "Failed to extract frame section properties for {SectionName}", frameSectionName);
       }
     }
 
-    return sections.Values.ToList();
+    return sections;
   }
 
-  private List<IProxyCollection> UnpackShellSections()
+  private Dictionary<string, IProxyCollection> UnpackShellSections(string[] shellSectionNames)
   {
     using var activity = _activityFactory.Start("Unpack Shell Sections");
     Dictionary<string, IProxyCollection> sections = [];
 
-    int numberOfAreaSections = 0;
-    string[] areaPropertyNames = [];
-    _csiApplicationService.SapModel.PropArea.GetNameList(ref numberOfAreaSections, ref areaPropertyNames);
-
-    foreach (string areaPropertyName in areaPropertyNames)
+    foreach (string shellSectionName in shellSectionNames)
     {
       try
       {
         SectionPropertyExtractionResult extractionResult = _propertyExtractor.ExtractShellSectionProperties(
-          areaPropertyName
+          shellSectionName
         );
 
         GroupProxy sectionProxy =
           new()
           {
-            id = areaPropertyName,
-            name = areaPropertyName,
-            applicationId = areaPropertyName,
+            id = shellSectionName,
+            name = shellSectionName,
+            applicationId = shellSectionName,
             objects = [],
             ["Properties"] = extractionResult.Properties,
             ["MaterialName"] = extractionResult.MaterialName,
           };
 
-        sections[areaPropertyName] = sectionProxy;
+        sections[shellSectionName] = sectionProxy;
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(ex, "Failed to extract properties for shell section {SectionName}", areaPropertyName);
+        _logger.LogError(ex, "Failed to extract properties for shell section {SectionName}", shellSectionName);
       }
     }
 
-    return sections.Values.ToList();
+    return sections;
   }
 }

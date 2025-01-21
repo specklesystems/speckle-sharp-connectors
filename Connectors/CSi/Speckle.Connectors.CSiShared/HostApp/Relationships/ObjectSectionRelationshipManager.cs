@@ -23,33 +23,39 @@ public class ObjectSectionRelationshipManager : IObjectSectionRelationshipManage
     _logger = logger;
   }
 
-  public void EstablishRelationships(List<Base> convertedObjectsByType, List<IProxyCollection> sections)
+  public void EstablishRelationships(
+    List<Base> convertedObjectsByType,
+    IReadOnlyDictionary<string, IProxyCollection> sections
+  )
   {
     foreach (var obj in convertedObjectsByType)
     {
       string? sectionName = GetObjectSectionName(obj);
-      if (string.IsNullOrEmpty(sectionName))
+      if (sectionName == null)
       {
+        _logger.LogError($"No section name (sectionId) found for object {obj.applicationId}.");
         continue;
       }
 
-      var section = sections.FirstOrDefault(s => s.id == sectionName);
-      if (section == null)
+      if (!sections.TryGetValue(sectionName, out var section))
       {
+        continue; // This is valid. An opening has "none" for sectionId assignment. Not an error.
+      }
+
+      if (section.objects.Contains(obj.applicationId!))
+      {
+        _logger.LogError($"No object should be processed twice. This is occuring for Section {obj.applicationId}");
         continue;
       }
 
-      if (!section.objects.Contains(obj.applicationId!))
-      {
-        section.objects.Add(obj.applicationId!);
-      }
+      section.objects.Add(obj.applicationId!);
     }
   }
 
   private string? GetObjectSectionName(Base baseObject)
   {
-    // TODO: We need to refine the accessibility of sectionProperty in a more robust manner
-    // 🙍‍♂️ This below is horrible! I know. But both SHELL and FRAME have the same nested property structure (unformalised)
+    // 🙍‍♂️ This below is horrible! Heavy use of dictionary-style property access is brittle
+    // TODO: Make better :)
     try
     {
       if (baseObject["properties"] is not Dictionary<string, object?> properties)

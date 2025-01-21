@@ -36,17 +36,16 @@ public class MaterialUnpacker
     _propertyExtractor = propertyExtractor;
   }
 
-  public List<IProxyCollection> UnpackMaterials(Collection rootObjectCollection)
+  public IReadOnlyDictionary<string, IProxyCollection> UnpackMaterials(
+    Collection rootObjectCollection,
+    string[] materialNames
+  )
   {
     try
     {
       using var activity = _activityFactory.Start("Unpack Materials");
 
-      int numberOfMaterials = 0;
-      string[] materialNames = [];
-      _csiApplicationService.SapModel.PropMaterial.GetNameList(ref numberOfMaterials, ref materialNames);
-
-      Dictionary<string, IProxyCollection> materials = [];
+      var materials = new Dictionary<string, IProxyCollection>();
 
       foreach (string materialName in materialNames)
       {
@@ -73,18 +72,17 @@ public class MaterialUnpacker
         }
       }
 
-      var materialProxies = materials.Values.ToList();
-      if (materialProxies.Count > 0)
+      if (materials.Count > 0)
       {
-        rootObjectCollection[ProxyKeys.MATERIAL] = materialProxies;
+        rootObjectCollection[ProxyKeys.MATERIAL] = materials.Values.ToList();
       }
 
-      return materialProxies;
+      return materials;
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
       _logger.LogError(ex, "Failed to unpack materials");
-      return [];
+      return new Dictionary<string, IProxyCollection>();
     }
   }
 }

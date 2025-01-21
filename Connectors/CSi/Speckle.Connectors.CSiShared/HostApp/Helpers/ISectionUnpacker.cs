@@ -5,5 +5,9 @@ namespace Speckle.Connectors.CSiShared.HostApp.Helpers;
 
 public interface ISectionUnpacker
 {
-  List<IProxyCollection> UnpackSections(Collection rootObjectCollection);
+  IReadOnlyDictionary<string, IProxyCollection> UnpackSections(
+    Collection rootObjectCollection,
+    string[] frameSectionNames,
+    string[] shellSectionNames
+  );
 }

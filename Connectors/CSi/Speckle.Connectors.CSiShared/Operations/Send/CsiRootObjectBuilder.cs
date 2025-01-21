@@ -8,6 +8,7 @@ using Speckle.Connectors.CSiShared.HostApp.Helpers;
 using Speckle.Connectors.CSiShared.HostApp.Relationships;
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
+using Speckle.Converters.CSiShared.Utils;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -38,7 +39,10 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
   private readonly ISectionUnpacker _sectionUnpacker;
   private readonly ISectionMaterialRelationshipManager _sectionMaterialRelationshipManager;
   private readonly IObjectSectionRelationshipManager _objectSectionRelationshipManager;
-  private readonly List<Base> _convertedObjectsForProxies = [];
+  private readonly List<Base> _convertedObjectsForProxies = []; // Not nice, but a way to store converted objects
+  private readonly HashSet<string> _assignedFrameSectionIds = []; // Track which sections we NEED to create proxies for
+  private readonly HashSet<string> _assignedShellSectionIds = []; // Track which sections we NEED to create proxies for
+  private readonly HashSet<string> _assignedMaterialIds = []; // Track which materials we NEED to create proxies for
   private readonly ILogger<CsiRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly ICsiApplicationService _csiApplicationService;
@@ -160,10 +164,11 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
       var collection = _sendCollectionManager.AddObjectCollectionToRoot(converted, typeCollection);
       collection.elements.Add(converted);
 
-      // NOTE: See remarks in docstrings
+      // If object requires section relationship, collect both section and material names
       if (csiObject.RequiresSectionRelationship)
       {
         _convertedObjectsForProxies.Add(converted);
+        AddMaterialAndSectionIdsToCache(converted);
       }
 
       return new(Status.SUCCESS, applicationId, sourceType, converted);
@@ -188,19 +193,81 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
   /// </remarks>
   private void ProcessProxies(Collection rootObjectCollection)
   {
+    // TODO: Only unpack materials and sections which are assigned in the model
     try
     {
       using var activity = _activityFactory.Start("Process Proxies");
 
-      var materialProxies = _materialUnpacker.UnpackMaterials(rootObjectCollection);
-      var sectionProxies = _sectionUnpacker.UnpackSections(rootObjectCollection);
+      var materials = _materialUnpacker.UnpackMaterials(rootObjectCollection, _assignedMaterialIds.ToArray());
+      var sections = _sectionUnpacker.UnpackSections(
+        rootObjectCollection,
+        _assignedFrameSectionIds.ToArray(),
+        _assignedShellSectionIds.ToArray()
+      );
 
-      _sectionMaterialRelationshipManager.EstablishRelationships(sectionProxies, materialProxies);
-      _objectSectionRelationshipManager.EstablishRelationships(_convertedObjectsForProxies, sectionProxies);
+      _sectionMaterialRelationshipManager.EstablishRelationships(sections, materials);
+      _objectSectionRelationshipManager.EstablishRelationships(_convertedObjectsForProxies, sections);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
       _logger.LogError(ex, "Failed to process section and material proxies");
+    }
+  }
+
+  /// <summary>
+  /// Extracts section and material names from a converted object's assignments and adds them to their respective collections.
+  /// This is only done for objects (FRAME and SHELL) where material - section - object relationships need to be est.
+  /// Why do we need this? We only want to create proxies for assigned sections and materials.
+  /// For this, we need to know what sections and materials have been assigned.
+  /// </summary>
+  /// <remarks>
+  /// This method safely traverses the nested dictionary structure of the converted object to find:
+  /// - sectionId under properties -> Assignments -> sectionId
+  /// - materialId under properties -> Assignments -> materialId
+  /// Both IDs are collected independently, as one can exist without the other.
+  /// </remarks>
+  private void AddMaterialAndSectionIdsToCache(Base converted)
+  {
+    // TODO: Improve. This is extremely brittle, but an appropriate workaround / interim solution!
+    // Check if we can get the assignments dictionary
+    if (
+      converted["properties"] is not Dictionary<string, object?> { } properties
+      || !properties.TryGetValue(ObjectPropertyCategory.ASSIGNMENTS, out var assignmentsObj)
+      || assignmentsObj is not Dictionary<string, object?> { } assignments
+    )
+    {
+      return;
+    }
+
+    // Get the object type
+    var objectType = converted["type"]?.ToString();
+
+    // Collect section IDs if they exist and are non-empty
+    if (
+      assignments.TryGetValue("sectionId", out var section)
+      && section?.ToString() is { } sectionId
+      && sectionId != "None"
+    )
+    {
+      switch (objectType)
+      {
+        case var type when type == ModelObjectType.FRAME.ToString():
+          _assignedFrameSectionIds.Add(sectionId);
+          break;
+        case var type when type == ModelObjectType.SHELL.ToString():
+          _assignedShellSectionIds.Add(sectionId);
+          break;
+      }
+    }
+
+    // Collect material IDs if they exist and are non-empty
+    if (
+      assignments.TryGetValue("materialId", out var material)
+      && material?.ToString() is { } materialId
+      && materialId != "None"
+    )
+    {
+      _assignedMaterialIds.Add(materialId);
     }
   }
 }

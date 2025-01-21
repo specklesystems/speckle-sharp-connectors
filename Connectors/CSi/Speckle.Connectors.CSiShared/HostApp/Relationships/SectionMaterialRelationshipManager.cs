@@ -19,27 +19,37 @@ public class SectionMaterialRelationshipManager : ISectionMaterialRelationshipMa
     _logger = logger;
   }
 
-  public void EstablishRelationships(List<IProxyCollection> sections, List<IProxyCollection> materials)
+  public void EstablishRelationships(
+    IReadOnlyDictionary<string, IProxyCollection> sections,
+    IReadOnlyDictionary<string, IProxyCollection> materials
+  )
   {
-    foreach (var section in sections)
+    foreach (var section in sections.Values)
     {
       // This is critical that FrameSectionUnpacker and ShellSectionUnpacker extract material name exactly the same!
+      // Maybe better to access materialId nested within properties? This "formalised" extraction result is not nice.
       var materialName = ((Base)section)["MaterialName"]?.ToString();
-      if (string.IsNullOrEmpty(materialName))
+      if (materialName == null)
       {
+        _logger.LogError($"Section {section.id} has no material name");
         continue;
       }
 
-      var material = materials.FirstOrDefault(m => m.id == materialName);
-      if (material == null)
+      if (!materials.TryGetValue(materialName, out var material))
       {
+        _logger.LogError(
+          $"Material {materialName} not found for section {section.id}. This indicates a conversion error"
+        );
         continue;
       }
 
-      if (!material.objects.Contains(section.id!))
+      if (material.objects.Contains(section.id!))
       {
-        material.objects.Add(section.id!);
+        _logger.LogError($"No section should be processed twice. This is occuring for Section {section.id}");
+        continue;
       }
+
+      material.objects.Add(section.id!);
     }
   }
 }
