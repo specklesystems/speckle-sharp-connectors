@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Speckle.Converters.CSiShared.Utils;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Proxies;
@@ -57,14 +58,14 @@ public class ObjectSectionRelationshipManager : IObjectSectionRelationshipManage
       }
 
       if (
-        !properties.TryGetValue("Assignments", out object? assignments)
+        !properties.TryGetValue(ObjectPropertyCategory.ASSIGNMENTS, out object? assignments)
         || assignments is not Dictionary<string, object?> assignmentsDict
       )
       {
         return null;
       }
 
-      return assignmentsDict.TryGetValue("sectionProperty", out object? section) ? section?.ToString() : null;
+      return assignmentsDict.TryGetValue("sectionId", out object? section) ? section?.ToString() : null;
     }
     catch (Exception ex) when (!ex.IsFatal())
     {

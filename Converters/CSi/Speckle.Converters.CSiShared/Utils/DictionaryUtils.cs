@@ -16,7 +16,7 @@ public static class DictionaryUtils
   {
     if (!dictionary.TryGetValue(key, out var obj) || obj is not Dictionary<string, object?> nestedDictionary)
     {
-      nestedDictionary = new Dictionary<string, object?>();
+      nestedDictionary = [];
       dictionary[key] = nestedDictionary;
     }
 

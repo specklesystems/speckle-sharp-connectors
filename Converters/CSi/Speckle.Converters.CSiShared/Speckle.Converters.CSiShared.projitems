@@ -27,6 +27,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\DisplayValueExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\IApplicationPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\CsiObjectToSpeckleConverterBase.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Utils\Constants.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Utils\DictionaryUtils.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Utils\Enums.cs" />
   </ItemGroup>

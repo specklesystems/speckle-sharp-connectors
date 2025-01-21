@@ -31,10 +31,10 @@ public sealed class CsiShellPropertiesExtractor
   {
     shellData.ApplicationId = shell.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
 
-    var geometry = DictionaryUtils.EnsureNestedDictionary(shellData.Properties, "Geometry");
+    var geometry = DictionaryUtils.EnsureNestedDictionary(shellData.Properties, ObjectPropertyCategory.GEOMETRY);
     geometry["shellVerticesJointNames"] = GetPointNames(shell);
 
-    var assignments = DictionaryUtils.EnsureNestedDictionary(shellData.Properties, "Assignments");
+    var assignments = DictionaryUtils.EnsureNestedDictionary(shellData.Properties, ObjectPropertyCategory.ASSIGNMENTS);
     assignments["groups"] = new List<string>(GetGroupAssigns(shell));
     assignments["localAxis"] = GetLocalAxes(shell);
     assignments["materialOverwrite"] = GetMaterialOverwrite(shell);
@@ -66,7 +66,7 @@ public sealed class CsiShellPropertiesExtractor
 
   private Dictionary<string, double?> GetModifiers(CsiShellWrapper shell)
   {
-    double[] value = Array.Empty<double>();
+    double[] value = [];
     _ = _settingsStore.Current.SapModel.AreaObj.GetModifiers(shell.Name, ref value);
     return new Dictionary<string, double?>
     {
@@ -86,7 +86,7 @@ public sealed class CsiShellPropertiesExtractor
   private string[] GetPointNames(CsiShellWrapper shell)
   {
     int numberPoints = 0;
-    string[] pointNames = Array.Empty<string>();
+    string[] pointNames = [];
     _ = _settingsStore.Current.SapModel.AreaObj.GetPoints(shell.Name, ref numberPoints, ref pointNames);
     return pointNames;
   }

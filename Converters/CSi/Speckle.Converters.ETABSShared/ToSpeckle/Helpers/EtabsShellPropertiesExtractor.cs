@@ -36,11 +36,11 @@ public sealed class EtabsShellPropertiesExtractor
 
   public void ExtractProperties(CsiShellWrapper shell, Dictionary<string, object?> properties)
   {
-    var objectId = DictionaryUtils.EnsureNestedDictionary(properties, "Object ID");
+    var objectId = DictionaryUtils.EnsureNestedDictionary(properties, ObjectPropertyCategory.OBJECT_ID);
     objectId["designOrientation"] = GetDesignOrientation(shell);
     (objectId["label"], objectId["level"]) = GetLabelAndLevel(shell);
 
-    var assignments = DictionaryUtils.EnsureNestedDictionary(properties, "Assignments");
+    var assignments = DictionaryUtils.EnsureNestedDictionary(properties, ObjectPropertyCategory.ASSIGNMENTS);
     assignments["diaphragmName"] = GetAssignedDiaphragmName(shell);
     assignments["isOpening"] = IsOpening(shell);
     assignments["pierAssignment"] = GetPierAssignmentName(shell);

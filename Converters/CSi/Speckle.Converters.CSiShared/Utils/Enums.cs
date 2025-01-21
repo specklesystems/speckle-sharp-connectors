@@ -1,5 +1,6 @@
 namespace Speckle.Converters.CSiShared.Utils;
 
+// NOTE: Should number of enums become too large -> dedicated files.
 public enum ModelObjectType
 {
   NONE = 0,

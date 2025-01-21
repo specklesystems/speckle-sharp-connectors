@@ -13,6 +13,21 @@ namespace Speckle.Connectors.CSiShared.HostApp.Helpers;
 /// </remarks>
 public class CsiMaterialPropertyExtractor
 {
+  /// <summary>
+  /// Property strings for all mechanical properties, used by numerous methods.
+  /// </summary>
+  private static class MechanicalPropertyNames
+  {
+    public const string MODULUS_OF_ELASTICITY = "modulusOfElasticity";
+    public const string MODULUS_OF_ELASTICITY_ARRAY = "modulusOfElasticityArray";
+    public const string POISSON_RATIO = "poissonRatio";
+    public const string POISSON_RATIO_ARRAY = "poissonRatioArray";
+    public const string THERMAL_COEFFICIENT = "thermalCoefficient";
+    public const string THERMAL_COEFFICIENT_ARRAY = "thermalCoefficientArray";
+    public const string SHEAR_MODULUS = "shearModulus";
+    public const string SHEAR_MODULUS_ARRAY = "shearModulusArray";
+  }
+
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
 
   public CsiMaterialPropertyExtractor(IConverterSettingsStore<CsiConversionSettings> settingsStore)
@@ -132,18 +147,18 @@ public class CsiMaterialPropertyExtractor
       ref shearModulus
     );
 
-    mechanicalProperties["modulusOfElasticity"] = modulusOfElasticity;
-    mechanicalProperties["poissonRatio"] = poissonRatio;
-    mechanicalProperties["thermalCoefficient"] = thermalCoefficient;
-    mechanicalProperties["shearModulus"] = shearModulus;
+    mechanicalProperties[MechanicalPropertyNames.MODULUS_OF_ELASTICITY] = modulusOfElasticity;
+    mechanicalProperties[MechanicalPropertyNames.POISSON_RATIO] = poissonRatio;
+    mechanicalProperties[MechanicalPropertyNames.THERMAL_COEFFICIENT] = thermalCoefficient;
+    mechanicalProperties[MechanicalPropertyNames.SHEAR_MODULUS] = shearModulus;
   }
 
   private void ExtractOrthotropicProperties(string materialName, Dictionary<string, object?> mechanicalProperties)
   {
-    double[] modulusOfElasticityArray = Array.Empty<double>();
-    double[] poissonRatioArray = Array.Empty<double>();
-    double[] thermalCoefficientArray = Array.Empty<double>();
-    double[] shearModulusArray = Array.Empty<double>();
+    double[] modulusOfElasticityArray = [];
+    double[] poissonRatioArray = [];
+    double[] thermalCoefficientArray = [];
+    double[] shearModulusArray = [];
 
     _settingsStore.Current.SapModel.PropMaterial.GetMPOrthotropic(
       materialName,
@@ -153,18 +168,18 @@ public class CsiMaterialPropertyExtractor
       ref shearModulusArray
     );
 
-    mechanicalProperties["modulusOfElasticityArray"] = modulusOfElasticityArray;
-    mechanicalProperties["poissonRatioArray"] = poissonRatioArray;
-    mechanicalProperties["thermalCoefficientArray"] = thermalCoefficientArray;
-    mechanicalProperties["shearModulusArray"] = shearModulusArray;
+    mechanicalProperties[MechanicalPropertyNames.MODULUS_OF_ELASTICITY_ARRAY] = modulusOfElasticityArray;
+    mechanicalProperties[MechanicalPropertyNames.POISSON_RATIO_ARRAY] = poissonRatioArray;
+    mechanicalProperties[MechanicalPropertyNames.THERMAL_COEFFICIENT_ARRAY] = thermalCoefficientArray;
+    mechanicalProperties[MechanicalPropertyNames.SHEAR_MODULUS_ARRAY] = shearModulusArray;
   }
 
   private void ExtractAnisotropicProperties(string materialName, Dictionary<string, object?> mechanicalProperties)
   {
-    double[] modulusOfElasticityArray = Array.Empty<double>();
-    double[] poissonRatioArray = Array.Empty<double>();
-    double[] thermalCoefficientArray = Array.Empty<double>();
-    double[] shearModulusArray = Array.Empty<double>();
+    double[] modulusOfElasticityArray = [];
+    double[] poissonRatioArray = [];
+    double[] thermalCoefficientArray = [];
+    double[] shearModulusArray = [];
 
     _settingsStore.Current.SapModel.PropMaterial.GetMPAnisotropic(
       materialName,
@@ -174,10 +189,10 @@ public class CsiMaterialPropertyExtractor
       ref shearModulusArray
     );
 
-    mechanicalProperties["modulusOfElasticityArray"] = modulusOfElasticityArray;
-    mechanicalProperties["poissonRatioArray"] = poissonRatioArray;
-    mechanicalProperties["thermalCoefficientArray"] = thermalCoefficientArray;
-    mechanicalProperties["shearModulusArray"] = shearModulusArray;
+    mechanicalProperties[MechanicalPropertyNames.MODULUS_OF_ELASTICITY_ARRAY] = modulusOfElasticityArray;
+    mechanicalProperties[MechanicalPropertyNames.POISSON_RATIO_ARRAY] = poissonRatioArray;
+    mechanicalProperties[MechanicalPropertyNames.THERMAL_COEFFICIENT_ARRAY] = thermalCoefficientArray;
+    mechanicalProperties[MechanicalPropertyNames.SHEAR_MODULUS_ARRAY] = shearModulusArray;
   }
 
   private void ExtractUniaxialProperties(string materialName, Dictionary<string, object?> mechanicalProperties)
@@ -191,7 +206,7 @@ public class CsiMaterialPropertyExtractor
       ref thermalCoefficient
     );
 
-    mechanicalProperties["modulusOfElasticity"] = modulusOfElasticity;
-    mechanicalProperties["thermalCoefficient"] = thermalCoefficient;
+    mechanicalProperties[MechanicalPropertyNames.MODULUS_OF_ELASTICITY] = modulusOfElasticity;
+    mechanicalProperties[MechanicalPropertyNames.THERMAL_COEFFICIENT] = thermalCoefficient;
   }
 }

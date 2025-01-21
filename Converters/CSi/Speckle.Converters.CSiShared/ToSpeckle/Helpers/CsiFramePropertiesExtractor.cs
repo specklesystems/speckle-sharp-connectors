@@ -40,10 +40,10 @@ public sealed class CsiFramePropertiesExtractor
   {
     frameData.ApplicationId = frame.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
 
-    var geometry = DictionaryUtils.EnsureNestedDictionary(frameData.Properties, "Geometry");
+    var geometry = DictionaryUtils.EnsureNestedDictionary(frameData.Properties, ObjectPropertyCategory.GEOMETRY);
     (geometry["startJointName"], geometry["endJointName"]) = GetEndPointNames(frame);
 
-    var assignments = DictionaryUtils.EnsureNestedDictionary(frameData.Properties, "Assignments");
+    var assignments = DictionaryUtils.EnsureNestedDictionary(frameData.Properties, ObjectPropertyCategory.ASSIGNMENTS);
     assignments["groups"] = new List<string>(GetGroupAssigns(frame));
     assignments["materialOverwrite"] = GetMaterialOverwrite(frame);
     assignments["localAxis"] = GetLocalAxes(frame);
@@ -108,10 +108,10 @@ public sealed class CsiFramePropertiesExtractor
 
   private Dictionary<string, object?> GetReleases(CsiFrameWrapper frame)
   {
-    bool[] ii = Array.Empty<bool>(),
-      jj = Array.Empty<bool>();
-    double[] startValue = Array.Empty<double>(),
-      endValue = Array.Empty<double>();
+    bool[] ii = [],
+      jj = [];
+    double[] startValue = [],
+      endValue = [];
 
     _ = _settingsStore.Current.SapModel.FrameObj.GetReleases(frame.Name, ref ii, ref jj, ref startValue, ref endValue);
 
