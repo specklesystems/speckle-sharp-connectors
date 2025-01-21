@@ -35,14 +35,10 @@ public static class ServiceRegistration
     services.AddDUI<DefaultThreadContext, TeklaDocumentModelStore>();
     services.AddDUIView();
 
-    services.AddSingleton<IAppIdleManager, TeklaIdleManager>();
-
     services.AddSingleton<IBinding, TestBinding>();
     services.AddSingleton<IBinding, ConfigBinding>();
     services.AddSingleton<IBinding, AccountBinding>();
     services.AddSingleton<IBasicConnectorBinding, TeklaBasicConnectorBinding>();
-
-    services.RegisterTopLevelExceptionHandler();
 
     services.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
     services.AddSingleton<IBinding, TeklaSendBinding>();

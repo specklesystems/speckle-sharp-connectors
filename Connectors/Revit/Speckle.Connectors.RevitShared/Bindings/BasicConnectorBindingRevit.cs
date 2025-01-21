@@ -1,5 +1,6 @@
 using Autodesk.Revit.DB;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.RevitShared;
@@ -26,7 +27,8 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     DocumentModelStore store,
     IBrowserBridge parent,
     RevitContext revitContext,
-    ISpeckleApplication speckleApplication
+    ISpeckleApplication speckleApplication,
+    IEventAggregator eventAggregator
   )
   {
     Name = "baseBinding";
@@ -37,8 +39,9 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     Commands = new BasicConnectorBindingCommands(parent);
 
     // POC: event binding?
-    _store.DocumentChanged += (_, _) =>
-      parent.TopLevelExceptionHandler.FireAndForget(async () =>
+    eventAggregator
+      .GetEvent<DocumentChangedEvent>()
+      .Subscribe(async _ =>
       {
         await Commands.NotifyDocumentChanged();
       });

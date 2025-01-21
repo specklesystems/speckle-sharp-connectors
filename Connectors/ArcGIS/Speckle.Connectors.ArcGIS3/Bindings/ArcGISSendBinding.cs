@@ -15,6 +15,7 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
@@ -69,7 +70,9 @@ public sealed class ArcGISSendBinding : ISendBinding
     ILogger<ArcGISSendBinding> logger,
     IArcGISConversionSettingsFactory arcGisConversionSettingsFactory,
     MapMembersUtils mapMemberUtils,
-    IThreadContext threadContext
+    IThreadContext threadContext,
+    IEventAggregator eventAggregator,
+    ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
     _store = store;
@@ -79,7 +82,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     _sendConversionCache = sendConversionCache;
     _operationProgressManager = operationProgressManager;
     _logger = logger;
-    _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
     _arcGISConversionSettingsFactory = arcGisConversionSettingsFactory;
     _mapMemberUtils = mapMemberUtils;
     _threadContext = threadContext;
@@ -87,10 +90,12 @@ public sealed class ArcGISSendBinding : ISendBinding
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
     SubscribeToArcGISEvents();
-    _store.DocumentChanged += (_, _) =>
-    {
-      _sendConversionCache.ClearCache();
-    };
+    eventAggregator
+      .GetEvent<DocumentChangedEvent>()
+      .Subscribe(_ =>
+      {
+        _sendConversionCache.ClearCache();
+      });
   }
 
   private void SubscribeToArcGISEvents()
@@ -201,7 +206,7 @@ public sealed class ArcGISSendBinding : ISendBinding
   {
     RowCreatedEvent.Subscribe(
       (args) =>
-        Parent.TopLevelExceptionHandler.FireAndForget(async () =>
+        _topLevelExceptionHandler.FireAndForget(async () =>
         {
           await OnRowChanged(args);
         }),
@@ -209,7 +214,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     );
     RowChangedEvent.Subscribe(
       (args) =>
-        Parent.TopLevelExceptionHandler.FireAndForget(async () =>
+        _topLevelExceptionHandler.FireAndForget(async () =>
         {
           await OnRowChanged(args);
         }),
@@ -217,7 +222,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     );
     RowDeletedEvent.Subscribe(
       (args) =>
-        Parent.TopLevelExceptionHandler.FireAndForget(async () =>
+        _topLevelExceptionHandler.FireAndForget(async () =>
         {
           await OnRowChanged(args);
         }),

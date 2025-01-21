@@ -43,8 +43,6 @@ public static class ServiceRegistration
     services.AddScoped<IRootObjectBuilder<ICsiWrapper>, CsiRootObjectBuilder>();
     services.AddScoped<SendOperation<ICsiWrapper>>();
 
-    services.RegisterTopLevelExceptionHandler();
-
     return services;
   }
 }

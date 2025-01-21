@@ -15,7 +15,7 @@ public class IdleCallManagerTests : MoqTest
     var sut = new IdleCallManager(handler.Object);
     var action = Create<Action>();
     var addEvent = Create<Action>();
-    handler.Setup(x => x.CatchUnhandled(It.IsAny<Action>()));
+    handler.Setup(x => x.CatchUnhandled(It.IsAny<Action>())).Returns(new Result());
     sut.SubscribeToIdle("id", action.Object, addEvent.Object);
   }
 

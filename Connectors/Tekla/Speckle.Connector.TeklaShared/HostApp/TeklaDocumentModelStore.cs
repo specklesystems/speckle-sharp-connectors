@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Sdk;
@@ -10,34 +11,40 @@ namespace Speckle.Connectors.TeklaShared.HostApp;
 public class TeklaDocumentModelStore : DocumentModelStore
 {
   private readonly ILogger<TeklaDocumentModelStore> _logger;
+  private readonly IEventAggregator _eventAggregator;
   private readonly ISqLiteJsonCacheManager _jsonCacheManager;
-  private readonly TSM.Events _events;
   private readonly TSM.Model _model;
   private string? _modelKey;
 
   public TeklaDocumentModelStore(
     IJsonSerializer jsonSerializer,
     ILogger<TeklaDocumentModelStore> logger,
-    ISqLiteJsonCacheManagerFactory jsonCacheManagerFactory
+    ISqLiteJsonCacheManagerFactory jsonCacheManagerFactory,
+    IEventAggregator eventAggregator
   )
     : base(jsonSerializer)
   {
     _logger = logger;
+    _eventAggregator = eventAggregator;
     _jsonCacheManager = jsonCacheManagerFactory.CreateForUser("ConnectorsFileData");
-    _events = new TSM.Events();
     _model = new TSM.Model();
     GenerateKey();
-    _events.ModelLoad += () =>
-    {
-      GenerateKey();
-      LoadState();
-      OnDocumentChanged();
-    };
-    _events.Register();
+    eventAggregator
+      .GetEvent<ModelLoadEvent>()
+      .Subscribe(async _ =>
+      {
+        GenerateKey();
+        LoadState();
+        await eventAggregator.GetEvent<DocumentChangedEvent>().PublishAsync(new object());
+      });
+  }
+
+  public override async Task OnDocumentStoreInitialized()
+  {
     if (SpeckleTeklaPanelHost.IsInitialized)
     {
       LoadState();
-      OnDocumentChanged();
+      await _eventAggregator.GetEvent<DocumentChangedEvent>().PublishAsync(new object());
     }
   }
 
