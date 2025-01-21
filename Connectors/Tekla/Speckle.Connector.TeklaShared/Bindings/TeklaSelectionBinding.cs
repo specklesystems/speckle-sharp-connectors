@@ -1,7 +1,6 @@
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Eventing;
-using Speckle.Connectors.RhinoShared;
 using Tekla.Structures.Model;
 
 namespace Speckle.Connectors.TeklaShared.Bindings;
@@ -9,9 +8,8 @@ namespace Speckle.Connectors.TeklaShared.Bindings;
 public class TeklaSelectionBinding : ISelectionBinding
 {
   private const string SELECTION_EVENT = "setSelection";
-  private readonly object _selectionEventHandlerLock = new object();
+  private readonly object _selectionEventHandlerLock = new();
   private readonly Tekla.Structures.Model.UI.ModelObjectSelector _selector;
-  private readonly IEventAggregator _eventAggregator;
 
   public string Name => "selectionBinding";
   public IBrowserBridge Parent { get; }
@@ -24,7 +22,6 @@ public class TeklaSelectionBinding : ISelectionBinding
   {
     Parent = parent;
     _selector = selector;
-    _eventAggregator = eventAggregator;
 
     eventAggregator.GetEvent<SelectionChangeEvent>().Subscribe(_ => Events_SelectionChangeEvent());
   }
@@ -45,11 +42,6 @@ public class TeklaSelectionBinding : ISelectionBinding
 
   public SelectionInfo GetSelection()
   {
-    if (_selector == null)
-    {
-      return new SelectionInfo(new List<string>(), "No objects selected.");
-    }
-
     var objectIds = new List<string>();
     var objectTypes = new List<string>();
 

@@ -1,97 +1,73 @@
 ﻿using System.Reflection;
+using System.Runtime.CompilerServices;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.DUI.Eventing;
 
-public interface IDelegateReference
+public class DelegateReference
 {
-  /// <summary>
-  /// Gets the referenced <see cref="Delegate" /> object.
-  /// </summary>
-  /// <value>A <see cref="Delegate"/> instance if the target is valid; otherwise <see langword="null"/>.</value>
-  Delegate? Target { get; }
-}
-
-public class DelegateReference : IDelegateReference
-{
-  private readonly Delegate? _delegate;
-  private readonly WeakReference _weakReference;
+  private readonly WeakOrStrongReference? _weakReference;
   private readonly MethodInfo _method;
-  private readonly Type _delegateType;
+  private readonly Type? _delegateType;
 
-  /// <summary>
-  /// Initializes a new instance of <see cref="DelegateReference"/>.
-  /// </summary>
-  /// <param name="delegate">The original <see cref="Delegate"/> to create a reference for.</param>
-  /// <param name="keepReferenceAlive">If <see langword="false" /> the class will create a weak reference to the delegate, allowing it to be garbage collected. Otherwise it will keep a strong reference to the target.</param>
-  /// <exception cref="ArgumentNullException">If the passed <paramref name="delegate"/> is not assignable to <see cref="Delegate"/>.</exception>
-  public DelegateReference(Delegate @delegate, bool keepReferenceAlive)
+  public DelegateReference(Delegate @delegate, EventFeatures features)
   {
-    if (@delegate == null)
+    var target = @delegate.Target;
+    _method = @delegate.Method;
+    if (target != null)
     {
-      throw new ArgumentNullException(nameof(@delegate));
-    }
-
-    if (keepReferenceAlive)
-    {
-      _delegate = @delegate;
-    }
-    else
-    {
-      _weakReference = new WeakReference(@delegate.Target);
-      _method = @delegate.GetMethodInfo();
-      _delegateType = @delegate.GetType();
-    }
-  }
-
-  /// <summary>
-  /// Gets the <see cref="Delegate" /> (the target) referenced by the current <see cref="DelegateReference"/> object.
-  /// </summary>
-  /// <value><see langword="null"/> if the object referenced by the current <see cref="DelegateReference"/> object has been garbage collected; otherwise, a reference to the <see cref="Delegate"/> referenced by the current <see cref="DelegateReference"/> object.</value>
-  public Delegate? Target
-  {
-    get
-    {
-      if (_delegate != null)
+      //anonymous methods are always strong....should we do this? - doing a brief search says yes
+      if (
+        features.HasFlag(EventFeatures.ForceStrongReference)
+        || Attribute.IsDefined(_method.DeclaringType.NotNull(), typeof(CompilerGeneratedAttribute))
+      )
       {
-        return _delegate;
+        _weakReference = WeakOrStrongReference.CreateStrong(target);
       }
       else
       {
-        return TryGetDelegate();
+        _weakReference = WeakOrStrongReference.CreateWeak(target);
+      }
+
+      var messageType = @delegate.Method.GetParameters()[0].ParameterType;
+      if (features.HasFlag(EventFeatures.IsAsync))
+      {
+        _delegateType = typeof(Func<,>).MakeGenericType(messageType, typeof(Task));
+      }
+      else
+      {
+        _delegateType = typeof(Action<>).MakeGenericType(messageType);
       }
     }
+    else
+    {
+      _weakReference = null;
+    }
   }
 
-  /// <summary>
-  /// Checks if the <see cref="Delegate" /> (the target) referenced by the current <see cref="DelegateReference"/> object are equal to another <see cref="Delegate" />.
-  /// This is equivalent with comparing <see cref="Target"/> with <paramref name="delegate"/>, only more efficient.
-  /// </summary>
-  /// <param name="delegate">The other delegate to compare with.</param>
-  /// <returns>True if the target referenced by the current object are equal to <paramref name="delegate"/>.</returns>
-  public bool TargetEquals(Delegate? @delegate)
-  {
-    if (_delegate != null)
-    {
-      return _delegate == @delegate;
-    }
-    if (@delegate == null)
-    {
-      return !_method.IsStatic && !_weakReference.IsAlive;
-    }
-    return _weakReference.Target == @delegate.Target && Equals(_method, @delegate.GetMethodInfo());
-  }
+  public bool IsAlive => _weakReference == null || _weakReference.IsAlive;
 
-  private Delegate? TryGetDelegate()
+  public async Task<bool> Invoke(object message)
   {
-    if (_method.IsStatic)
+    if (!IsAlive)
     {
-      return _method.CreateDelegate(_delegateType, null);
+      return false;
     }
-    object target = _weakReference.Target;
-    if (target != null)
+
+    object? target = null;
+    if (_weakReference != null)
     {
-      return _method.CreateDelegate(_delegateType, target);
+      target = _weakReference.Target;
     }
-    return null;
+    var method = Delegate.CreateDelegate(_delegateType.NotNull(), target, _method);
+
+    var task = method.DynamicInvoke(message) as Task;
+
+    if (task is not null)
+    {
+      await task;
+    }
+
+    return true;
   }
 }

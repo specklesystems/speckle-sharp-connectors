@@ -42,13 +42,16 @@ public class ArcGISDocumentStore : DocumentModelStore
       },
       true
     );
+  }
 
+  public override async Task OnDocumentStoreInitialized()
+  {
     // in case plugin was loaded into already opened Map, read metadata from the current Map
     if (!IsDocumentInit && MapView.Active != null)
     {
       IsDocumentInit = true;
       LoadState();
-      eventAggregator.GetEvent<DocumentChangedEvent>().Publish(new object());
+      await _eventAggregator.GetEvent<DocumentChangedEvent>().PublishAsync(new object());
     }
   }
 
@@ -73,7 +76,7 @@ public class ArcGISDocumentStore : DocumentModelStore
   /// <summary>
   /// On map view switch, this event trigger twice, first for outgoing view, second for incoming view.
   /// </summary>
-  private void OnMapViewChanged(ActiveMapViewChangedEventArgs args)
+  private async void OnMapViewChanged(ActiveMapViewChangedEventArgs args)
   {
     if (args.IncomingView is null)
     {
@@ -82,7 +85,7 @@ public class ArcGISDocumentStore : DocumentModelStore
 
     IsDocumentInit = true;
     LoadState();
-    _eventAggregator.GetEvent<DocumentChangedEvent>().Publish(new object());
+    await _eventAggregator.GetEvent<DocumentChangedEvent>().PublishAsync(new object());
   }
 
   protected override void HostAppSaveState(string modelCardState) =>
