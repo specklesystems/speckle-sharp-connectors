@@ -1,7 +1,8 @@
 using Rhino;
-using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
+using Speckle.Connectors.RhinoShared;
 
 namespace Speckle.Connectors.Rhino.HostApp;
 
@@ -10,12 +11,13 @@ public class RhinoDocumentStore : DocumentModelStore
   private const string SPECKLE_KEY = "Speckle_DUI3";
   public override bool IsDocumentInit { get; set; } = true; // Note: because of rhino implementation details regarding expiry checking of sender cards.
 
-  public RhinoDocumentStore(IJsonSerializer jsonSerializer, ITopLevelExceptionHandler topLevelExceptionHandler)
+  public RhinoDocumentStore(IJsonSerializer jsonSerializer, IEventAggregator eventAggregator)
     : base(jsonSerializer)
   {
-    RhinoDoc.BeginOpenDocument += (_, _) => topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
-    RhinoDoc.EndOpenDocument += (_, e) =>
-      topLevelExceptionHandler.CatchUnhandled(() =>
+    eventAggregator.GetEvent<BeginOpenDocument>().Subscribe(_ => IsDocumentInit = false);
+    eventAggregator
+      .GetEvent<EndOpenDocument>()
+      .Subscribe(async e =>
       {
         if (e.Merge)
         {
@@ -29,7 +31,7 @@ public class RhinoDocumentStore : DocumentModelStore
 
         IsDocumentInit = true;
         LoadState();
-        OnDocumentChanged();
+        await eventAggregator.GetEvent<DocumentChangedEvent>().PublishAsync(new object());
       });
   }
 

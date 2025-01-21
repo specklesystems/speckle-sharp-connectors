@@ -4,6 +4,7 @@ using ArcGIS.Desktop.Mapping;
 using ArcGIS.Desktop.Mapping.Events;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
 
@@ -12,15 +13,18 @@ namespace Speckle.Connectors.ArcGIS.Utils;
 public class ArcGISDocumentStore : DocumentModelStore
 {
   private readonly IThreadContext _threadContext;
+  private readonly IEventAggregator _eventAggregator;
 
   public ArcGISDocumentStore(
     IJsonSerializer jsonSerializer,
     ITopLevelExceptionHandler topLevelExceptionHandler,
-    IThreadContext threadContext
+    IThreadContext threadContext,
+    IEventAggregator eventAggregator
   )
     : base(jsonSerializer)
   {
     _threadContext = threadContext;
+    _eventAggregator = eventAggregator;
     ActiveMapViewChangedEvent.Subscribe(a => topLevelExceptionHandler.CatchUnhandled(() => OnMapViewChanged(a)), true);
     ProjectSavingEvent.Subscribe(
       _ =>
@@ -38,13 +42,16 @@ public class ArcGISDocumentStore : DocumentModelStore
       },
       true
     );
+  }
 
+  public override async Task OnDocumentStoreInitialized()
+  {
     // in case plugin was loaded into already opened Map, read metadata from the current Map
     if (!IsDocumentInit && MapView.Active != null)
     {
       IsDocumentInit = true;
       LoadState();
-      OnDocumentChanged();
+      await _eventAggregator.GetEvent<DocumentChangedEvent>().PublishAsync(new object());
     }
   }
 
@@ -69,7 +76,7 @@ public class ArcGISDocumentStore : DocumentModelStore
   /// <summary>
   /// On map view switch, this event trigger twice, first for outgoing view, second for incoming view.
   /// </summary>
-  private void OnMapViewChanged(ActiveMapViewChangedEventArgs args)
+  private async void OnMapViewChanged(ActiveMapViewChangedEventArgs args)
   {
     if (args.IncomingView is null)
     {
@@ -78,7 +85,7 @@ public class ArcGISDocumentStore : DocumentModelStore
 
     IsDocumentInit = true;
     LoadState();
-    OnDocumentChanged();
+    await _eventAggregator.GetEvent<DocumentChangedEvent>().PublishAsync(new object());
   }
 
   protected override void HostAppSaveState(string modelCardState) =>

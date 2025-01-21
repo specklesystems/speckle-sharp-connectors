@@ -8,6 +8,7 @@ using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
@@ -59,7 +60,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     ILogger<RevitSendBinding> logger,
     ElementUnpacker elementUnpacker,
     IRevitConversionSettingsFactory revitConversionSettingsFactory,
-    ISpeckleApplication speckleApplication
+    ISpeckleApplication speckleApplication,
+    IEventAggregator eventAggregator,
+    ITopLevelExceptionHandler topLevelExceptionHandler
   )
     : base("sendBinding", store, bridge, revitContext)
   {
@@ -73,7 +76,6 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _elementUnpacker = elementUnpacker;
     _revitConversionSettingsFactory = revitConversionSettingsFactory;
     _speckleApplication = speckleApplication;
-    var topLevelExceptionHandler = Parent.TopLevelExceptionHandler;
 
     Commands = new SendBindingUICommands(bridge);
     // TODO expiry events
@@ -81,7 +83,12 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
       topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
-    Store.DocumentChanged += (_, _) => topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged());
+    eventAggregator
+      .GetEvent<DocumentChangedEvent>()
+      .Subscribe(async _ =>
+      {
+        await OnDocumentChanged().ConfigureAwait(false);
+      });
   }
 
   public List<ISendFilter> GetSendFilters() =>

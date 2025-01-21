@@ -1,4 +1,4 @@
-﻿namespace Speckle.Connectors.Common.Threading;
+namespace Speckle.Connectors.Common.Threading;
 
 public class DefaultThreadContext : ThreadContext
 {

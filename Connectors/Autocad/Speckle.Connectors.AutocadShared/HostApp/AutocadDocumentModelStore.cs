@@ -1,4 +1,5 @@
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
 
@@ -9,15 +10,18 @@ public class AutocadDocumentStore : DocumentModelStore
   private readonly string _nullDocumentName = "Null Doc";
   private string _previousDocName;
   private readonly AutocadDocumentManager _autocadDocumentManager;
+  private readonly IEventAggregator _eventAggregator;
 
   public AutocadDocumentStore(
     IJsonSerializer jsonSerializer,
     AutocadDocumentManager autocadDocumentManager,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    IEventAggregator eventAggregator
   )
     : base(jsonSerializer)
   {
     _autocadDocumentManager = autocadDocumentManager;
+    _eventAggregator = eventAggregator;
     _previousDocName = _nullDocumentName;
 
     // POC: Will be addressed to move it into AutocadContext!
@@ -38,7 +42,7 @@ public class AutocadDocumentStore : DocumentModelStore
     //  OnDocChangeInternal((Document)args.DocumentWindow.Document);
   }
 
-  private void OnDocChangeInternal(Document? doc)
+  private async void OnDocChangeInternal(Document? doc)
   {
     var currentDocName = doc != null ? doc.Name : _nullDocumentName;
     if (_previousDocName == currentDocName)
@@ -48,7 +52,7 @@ public class AutocadDocumentStore : DocumentModelStore
 
     _previousDocName = currentDocName;
     LoadState();
-    OnDocumentChanged();
+    await _eventAggregator.GetEvent<DocumentChangedEvent>().PublishAsync(new object());
   }
 
   protected override void LoadState()
