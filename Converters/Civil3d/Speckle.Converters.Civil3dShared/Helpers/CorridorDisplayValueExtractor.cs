@@ -94,6 +94,11 @@ public sealed class CorridorDisplayValueExtractor
     {
       foreach (ADB.ObjectId solidId in corridor.ExportSolids(param, corridor.Database))
       {
+        if (solidId.IsNull) // unclear why this happens
+        {
+          continue;
+        }
+
         SOG.Mesh? mesh = null;
         var solid = tr.GetObject(solidId, ADB.OpenMode.ForRead);
         if (solid is ADB.Solid3d solid3d)

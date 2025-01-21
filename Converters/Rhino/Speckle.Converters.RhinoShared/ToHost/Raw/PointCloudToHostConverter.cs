@@ -1,6 +1,7 @@
 ﻿using System.Drawing;
 using Rhino.Collections;
 using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Rhino.ToHost.Raw;
 
@@ -22,10 +23,17 @@ public class PointCloudToHostConverter : ITypedConverter<SOG.Pointcloud, RG.Poin
   public RG.PointCloud Convert(SOG.Pointcloud target)
   {
     var rhinoPoints = _pointListConverter.Convert(target.points);
-    var rhinoPointCloud = new RG.PointCloud(rhinoPoints);
 
-    if (target.colors.Count == rhinoPoints.Count)
+    var rhinoPointCloud = new RG.PointCloud(rhinoPoints);
+    if (target.colors.Count != 0)
     {
+      if (target.colors.Count != rhinoPoints.Count)
+      {
+        throw new ValidationException(
+          $"{target} has mismatched numbers of colors ({target.colors.Count}) and points ({rhinoPoints.Count})"
+        );
+      }
+
       for (int i = 0; i < rhinoPoints.Count; i++)
       {
         rhinoPointCloud[i].Color = Color.FromArgb(target.colors[i]);
