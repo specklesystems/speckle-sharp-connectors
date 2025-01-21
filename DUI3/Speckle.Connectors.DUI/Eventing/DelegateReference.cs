@@ -1,12 +1,14 @@
 ﻿using System.Reflection;
+using System.Runtime.CompilerServices;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.DUI.Eventing;
 
 public class DelegateReference
 {
-  private readonly WeakReference? _weakReference;
+  private readonly WeakOrStrongReference? _weakReference;
   private readonly MethodInfo _method;
-  private readonly Type _delegateType;
+  private readonly Type? _delegateType;
 
   public DelegateReference(Delegate @delegate, bool isAsync)
   {
@@ -14,7 +16,15 @@ public class DelegateReference
     _method = @delegate.Method;
     if (target != null)
     {
-      _weakReference = new WeakReference(target);
+      if (Attribute.IsDefined(_method.DeclaringType.NotNull(), typeof(CompilerGeneratedAttribute)))
+      {
+        _weakReference = WeakOrStrongReference.CreateStrong(target);
+      }
+      else
+      {
+        _weakReference = WeakOrStrongReference.CreateWeak(target);
+      }
+
       var messageType = @delegate.Method.GetParameters()[0].ParameterType;
       if (isAsync)
       {
@@ -45,7 +55,7 @@ public class DelegateReference
     {
       target = _weakReference.Target;
     }
-    var method = Delegate.CreateDelegate(_delegateType, target, _method);
+    var method = Delegate.CreateDelegate(_delegateType.NotNull(), target, _method);
 
     var task = method.DynamicInvoke(message) as Task;
 
