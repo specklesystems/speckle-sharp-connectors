@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
+using Speckle.Converters.CSiShared.Extensions;
 using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 using Speckle.Converters.CSiShared.Utils;
 
@@ -26,12 +27,17 @@ namespace Speckle.Converters.ETABSShared.ToSpeckle.Helpers;
 public sealed class EtabsShellPropertiesExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
-  private readonly MaterialCache _materialCache;
+  private readonly MaterialNameLookup _materialNameLookup;
+  private readonly CsiToSpeckleCacheSingleton _csiToSpeckleCacheSingleton;
 
-  public EtabsShellPropertiesExtractor(IConverterSettingsStore<CsiConversionSettings> settingsStore)
+  public EtabsShellPropertiesExtractor(
+    CsiToSpeckleCacheSingleton csiToSpeckleCacheSingleton,
+    IConverterSettingsStore<CsiConversionSettings> settingsStore
+  )
   {
     _settingsStore = settingsStore;
-    _materialCache = new MaterialCache(settingsStore);
+    _materialNameLookup = new MaterialNameLookup(settingsStore);
+    _csiToSpeckleCacheSingleton = csiToSpeckleCacheSingleton;
   }
 
   public void ExtractProperties(CsiShellWrapper shell, Dictionary<string, object?> properties)
@@ -46,9 +52,44 @@ public sealed class EtabsShellPropertiesExtractor
     assignments["pierAssignment"] = GetPierAssignmentName(shell);
     assignments["spandrelAssignment"] = GetSpandrelAssignmentName(shell);
     assignments["springAssignmentName"] = GetSpringAssignmentName(shell);
+
+    // NOTE: sectionId and materialId a "quick-fix" to enable filtering in the viewer etc.
+    // Assign sectionId to variable as this will be an argument for the GetMaterialName method
+    string shellAppId = shell.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
     string sectionId = GetSectionName(shell);
-    assignments["sectionId"] = sectionId;
-    assignments["materialId"] = _materialCache.GetMaterialForSection(sectionId);
+    string materialId = _materialNameLookup.GetMaterialForSection(sectionId);
+    assignments[ObjectPropertyKey.SECTION_ID] = sectionId;
+    assignments[ObjectPropertyKey.MATERIAL_ID] = materialId;
+
+    // store the object, section, and material id relationships in their corresponding caches to be accessed by the connector
+    if (!string.IsNullOrEmpty(sectionId))
+    {
+      if (_csiToSpeckleCacheSingleton.ShellSectionCache.TryGetValue(sectionId, out List<string>? shellIds))
+      {
+        shellIds.Add(shellAppId);
+      }
+      else
+      {
+        _csiToSpeckleCacheSingleton.ShellSectionCache.Add(sectionId, new List<string>() { shellAppId });
+      }
+
+      if (!string.IsNullOrEmpty(materialId))
+      {
+        if (_csiToSpeckleCacheSingleton.MaterialCache.TryGetValue(materialId, out List<string>? sectionIds))
+        {
+          // Since this is happening on the object level, we could be processing the same sectionIds (from different
+          // objects) many times. This is not necessary since we just want a set of sectionId corresponding to material
+          if (!sectionIds.Contains(sectionId))
+          {
+            sectionIds.Add(sectionId);
+          }
+        }
+        else
+        {
+          _csiToSpeckleCacheSingleton.MaterialCache.Add(materialId, new List<string>() { sectionId });
+        }
+      }
+    }
   }
 
   private (string label, string level) GetLabelAndLevel(CsiShellWrapper shell)
@@ -96,7 +137,7 @@ public sealed class EtabsShellPropertiesExtractor
 
   private string GetSpringAssignmentName(CsiShellWrapper shell)
   {
-    string springAssignmentName = "None"; // Is there a better way to handle null?
+    string springAssignmentName = string.Empty;
     _ = _settingsStore.Current.SapModel.AreaObj.GetSpringAssignment(shell.Name, ref springAssignmentName);
     return springAssignmentName;
   }
@@ -117,13 +158,13 @@ public sealed class EtabsShellPropertiesExtractor
   // Cache the results as a dictionary where keys are sectionName and values are materialId
   // Use the cached result to return the material string given a section name
   // This is a temporary solution! The use of cDatabaseTable are being explored as a way to simplify a lot moving forward
-  private sealed class MaterialCache
+  private sealed class MaterialNameLookup
   {
     private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
     private readonly ConcurrentDictionary<string, string> _materialLookup = new();
     private bool _isInitialized;
 
-    public MaterialCache(IConverterSettingsStore<CsiConversionSettings> settingsStore)
+    public MaterialNameLookup(IConverterSettingsStore<CsiConversionSettings> settingsStore)
     {
       _settingsStore = settingsStore;
     }
@@ -135,7 +176,7 @@ public sealed class EtabsShellPropertiesExtractor
         InitializeCache();
       }
 
-      return _materialLookup.TryGetValue(sectionName, out string? value) ? value : "None";
+      return _materialLookup.TryGetValue(sectionName, out string? value) ? value : string.Empty;
     }
 
     private void InitializeCache()

@@ -90,8 +90,10 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     }
     // Since ids of the objects generates from same seed, we should clear the cache always whenever doc swapped.
 
-    eventAggregator.GetEvent<DocumentChangedEvent>().Subscribe(_ => _sendConversionCache.ClearCache());
+    eventAggregator.GetEvent<DocumentStoreChangedEvent>().Subscribe(OnDocumentStoreChangedEvent);
   }
+
+  private void OnDocumentStoreChangedEvent(object _) => _sendConversionCache.ClearCache();
 
   private readonly List<string> _docSubsTracker = new();
 

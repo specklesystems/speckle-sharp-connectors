@@ -26,7 +26,7 @@ public abstract class SpeckleFormBase : Form
     ConfigureServices(services);
 
     Container = services.BuildServiceProvider();
-    Container.UseDUI();
+    Container.UseDUI(false);
 
     var webview = Container.GetRequiredService<DUI3ControlWebView>();
     Host = new() { Child = webview, Dock = DockStyle.Fill };

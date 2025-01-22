@@ -58,7 +58,7 @@ public class CsiMaterialPropertyExtractor
         ref materialGuid
       );
 
-      var generalData = DictionaryUtils.EnsureNestedDictionary(properties, "General Data");
+      var generalData = DictionaryUtils.EnsureNestedDictionary(properties, SectionPropertyCategory.GENERAL_DATA);
       generalData["name"] = materialName;
       generalData["type"] = materialType.ToString();
       generalData["notes"] = materialNotes;

@@ -1,88 +1,51 @@
-using Microsoft.Extensions.Logging;
-using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.CSiShared.HostApp.Helpers;
-using Speckle.Sdk;
-using Speckle.Sdk.Logging;
-using Speckle.Sdk.Models.Collections;
+using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Connectors.CSiShared.HostApp;
 
 /// <summary>
-/// Extracts material proxies from the root object collection.
+/// Creates material proxies based on stored entries from the materials cache
 /// </summary>
-/// <remarks>
-/// Decouples material extraction from conversion processes. Supports complex material
-/// property retrieval (dependent on material type) while maintaining a clean separation of concerns.
-/// Enables extensible material proxy creation across different material types.
-/// </remarks>
 public class MaterialUnpacker
 {
-  private readonly ILogger<MaterialUnpacker> _logger;
-  private readonly ICsiApplicationService _csiApplicationService;
-  private readonly ISdkActivityFactory _activityFactory;
   private readonly CsiMaterialPropertyExtractor _propertyExtractor;
+  private readonly CsiToSpeckleCacheSingleton _csiToSpeckleCacheSingleton;
 
   public MaterialUnpacker(
-    ILogger<MaterialUnpacker> logger,
-    ICsiApplicationService csiApplicationService,
-    ISdkActivityFactory activityFactory,
-    CsiMaterialPropertyExtractor propertyExtractor
+    CsiMaterialPropertyExtractor propertyExtractor,
+    CsiToSpeckleCacheSingleton csiToSpeckleCacheSingleton
   )
   {
-    _logger = logger;
-    _csiApplicationService = csiApplicationService;
-    _activityFactory = activityFactory;
     _propertyExtractor = propertyExtractor;
+    _csiToSpeckleCacheSingleton = csiToSpeckleCacheSingleton;
   }
 
-  public IReadOnlyDictionary<string, IProxyCollection> UnpackMaterials(
-    Collection rootObjectCollection,
-    string[] materialNames
-  )
+  // Creates a list of material proxies from the csi materials cache
+  public IEnumerable<IProxyCollection> UnpackMaterials()
   {
-    try
+    foreach (var kvp in _csiToSpeckleCacheSingleton.MaterialCache)
     {
-      using var activity = _activityFactory.Start("Unpack Materials");
+      // get the cached entry
+      string materialName = kvp.Key;
+      List<string> sectionIds = kvp.Value;
 
-      var materials = new Dictionary<string, IProxyCollection>();
+      // get the properties of the material
+      Dictionary<string, object?> properties = new(); // create empty dictionary
+      _propertyExtractor.ExtractProperties(materialName, properties); // dictionary mutated with respective properties
 
-      foreach (string materialName in materialNames)
-      {
-        try
+      // create the material proxy
+      GroupProxy materialProxy =
+        new()
         {
-          var properties = new Dictionary<string, object?>();
-          _propertyExtractor.ExtractProperties(materialName, properties);
+          id = materialName,
+          name = materialName,
+          applicationId = materialName,
+          objects = sectionIds,
+          ["Properties"] = properties
+        };
 
-          GroupProxy materialProxy =
-            new()
-            {
-              id = materialName,
-              name = materialName,
-              applicationId = materialName,
-              objects = [],
-              ["Properties"] = properties
-            };
-
-          materials[materialName] = materialProxy;
-        }
-        catch (Exception ex) when (!ex.IsFatal())
-        {
-          _logger.LogError(ex, "Failed to create material proxy for {MaterialName}", materialName);
-        }
-      }
-
-      if (materials.Count > 0)
-      {
-        rootObjectCollection[ProxyKeys.MATERIAL] = materials.Values.ToList();
-      }
-
-      return materials;
-    }
-    catch (Exception ex) when (!ex.IsFatal())
-    {
-      _logger.LogError(ex, "Failed to unpack materials");
-      return new Dictionary<string, IProxyCollection>();
+      yield return materialProxy;
     }
   }
 }

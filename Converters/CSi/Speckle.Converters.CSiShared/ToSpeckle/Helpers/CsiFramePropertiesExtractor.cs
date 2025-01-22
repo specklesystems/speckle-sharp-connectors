@@ -21,6 +21,9 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 public sealed class CsiFramePropertiesExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
+
+  private readonly CsiToSpeckleCacheSingleton _csiToSpeckleCacheSingleton;
+
   private static readonly string[] s_releaseKeys =
   [
     "axial",
@@ -31,8 +34,12 @@ public sealed class CsiFramePropertiesExtractor
     "majorBending"
   ]; // Note: caching keys for better performance
 
-  public CsiFramePropertiesExtractor(IConverterSettingsStore<CsiConversionSettings> settingsStore)
+  public CsiFramePropertiesExtractor(
+    CsiToSpeckleCacheSingleton csiToSpeckleCacheSingleton,
+    IConverterSettingsStore<CsiConversionSettings> settingsStore
+  )
   {
+    _csiToSpeckleCacheSingleton = csiToSpeckleCacheSingleton;
     _settingsStore = settingsStore;
   }
 
@@ -54,8 +61,39 @@ public sealed class CsiFramePropertiesExtractor
     // NOTE: sectionId and materialId a "quick-fix" to enable filtering in the viewer etc.
     // Assign sectionId to variable as this will be an argument for the GetMaterialName method
     string sectionId = GetSectionName(frame);
-    assignments["sectionId"] = sectionId;
-    assignments["materialId"] = GetMaterialName(sectionId);
+    string materialId = GetMaterialName(sectionId);
+    assignments[ObjectPropertyKey.SECTION_ID] = sectionId;
+    assignments[ObjectPropertyKey.MATERIAL_ID] = materialId;
+
+    // store the object, section, and material id relationships in their corresponding caches to be accessed by the connector
+    if (!string.IsNullOrEmpty(sectionId))
+    {
+      if (_csiToSpeckleCacheSingleton.FrameSectionCache.TryGetValue(sectionId, out List<string>? frameIds))
+      {
+        frameIds.Add(frameData.ApplicationId);
+      }
+      else
+      {
+        _csiToSpeckleCacheSingleton.FrameSectionCache.Add(sectionId, new List<string>() { frameData.ApplicationId });
+      }
+
+      if (!string.IsNullOrEmpty(materialId))
+      {
+        if (_csiToSpeckleCacheSingleton.MaterialCache.TryGetValue(materialId, out List<string>? sectionIds))
+        {
+          // Since this is happening on the object level, we could be processing the same sectionIds (from different
+          // objects) many times. This is not necessary since we just want a set of sectionId corresponding to material
+          if (!sectionIds.Contains(sectionId))
+          {
+            sectionIds.Add(sectionId);
+          }
+        }
+        else
+        {
+          _csiToSpeckleCacheSingleton.MaterialCache.Add(materialId, new List<string>() { sectionId });
+        }
+      }
+    }
   }
 
   private string[] GetGroupAssigns(CsiFrameWrapper frame)
@@ -76,14 +114,14 @@ public sealed class CsiFramePropertiesExtractor
 
   private string GetMaterialOverwrite(CsiFrameWrapper frame)
   {
-    string propName = "None";
+    string propName = string.Empty;
     _ = _settingsStore.Current.SapModel.FrameObj.GetMaterialOverwrite(frame.Name, ref propName);
     return propName;
   }
 
   private Dictionary<string, double?> GetModifiers(CsiFrameWrapper frame)
   {
-    double[] value = Array.Empty<double>();
+    double[] value = [];
     _ = _settingsStore.Current.SapModel.FrameObj.GetModifiers(frame.Name, ref value);
     return new Dictionary<string, double?>
     {

@@ -8,13 +8,13 @@ using Speckle.Connectors.CSiShared.Builders;
 using Speckle.Connectors.CSiShared.Filters;
 using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.CSiShared.HostApp.Helpers;
-using Speckle.Connectors.CSiShared.HostApp.Relationships;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Converters.CSiShared;
+using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 
 namespace Speckle.Connectors.CSiShared;
 
@@ -35,7 +35,6 @@ public static class ServiceRegistration // TODO: Fix in light of events
 
     services.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
     services.AddSingleton<IBasicConnectorBinding, CsiSharedBasicConnectorBinding>();
-    services.AddSingleton<IAppIdleManager, CsiIdleManager>();
 
     services.AddSingleton<IBinding, CsiSharedSelectionBinding>();
     services.AddSingleton<IBinding, CsiSharedSendBinding>();
@@ -47,10 +46,11 @@ public static class ServiceRegistration // TODO: Fix in light of events
 
     services.AddScoped<CsiMaterialPropertyExtractor>();
     services.AddScoped<MaterialUnpacker>();
-    services.AddScoped<ISectionMaterialRelationshipManager, SectionMaterialRelationshipManager>();
-    services.AddScoped<IObjectSectionRelationshipManager, ObjectSectionRelationshipManager>();
     services.AddScoped<IFrameSectionPropertyExtractor, CsiFrameSectionPropertyExtractor>();
     services.AddScoped<IShellSectionPropertyExtractor, CsiShellSectionPropertyExtractor>();
+
+    // add converter caches
+    services.AddScoped<CsiToSpeckleCacheSingleton>();
 
     return services;
   }

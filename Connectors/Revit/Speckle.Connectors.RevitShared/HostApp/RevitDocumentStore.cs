@@ -56,7 +56,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
   }
 
   public override Task OnDocumentStoreInitialized() =>
-    _eventAggregator.GetEvent<DocumentChangedEvent>().PublishAsync(new object());
+    _eventAggregator.GetEvent<DocumentStoreChangedEvent>().PublishAsync(new object());
 
   /// <summary>
   /// This is the place where we track document switch for new document -> Responsible to Read from new doc
@@ -80,7 +80,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
       async () =>
       {
         LoadState();
-        await _eventAggregator.GetEvent<DocumentChangedEvent>().PublishAsync(new object());
+        await _eventAggregator.GetEvent<DocumentStoreChangedEvent>().PublishAsync(new object());
       }
     );
   }

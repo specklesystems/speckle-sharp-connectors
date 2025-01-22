@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
+using Speckle.Converters.CSiShared.Utils;
 
 namespace Speckle.Connectors.ETABSShared.HostApp.Helpers;
 
@@ -15,7 +16,6 @@ public record AreaSectionResult
 {
   public bool Success { get; init; }
   public Dictionary<string, object?> Properties { get; init; }
-  public string MaterialName { get; init; }
 }
 
 public interface IAreaSectionResolver
@@ -39,14 +39,14 @@ public class EtabsShellSectionResolver
     ];
   }
 
-  public (string, Dictionary<String, object?>) ResolveSection(string sectionName)
+  public Dictionary<String, object?> ResolveSection(string sectionName)
   {
     foreach (var resolver in _resolvers)
     {
       var result = resolver.TryResolveSection(sectionName);
       if (result.Success)
       {
-        return (result.MaterialName, result.Properties);
+        return result.Properties;
       }
     }
 
@@ -90,15 +90,10 @@ public class WallSectionResolver(IConverterSettingsStore<CsiConversionSettings> 
     propertyData["thickness"] = thickness;
 
     Dictionary<string, object?> properties = [];
-    properties["General Data"] = generalData;
-    properties["Property Data"] = propertyData;
+    properties[SectionPropertyCategory.GENERAL_DATA] = generalData;
+    properties[SectionPropertyCategory.PROPERTY_DATA] = propertyData;
 
-    return new AreaSectionResult
-    {
-      Success = result == 0,
-      MaterialName = matProp,
-      Properties = properties
-    };
+    return new AreaSectionResult { Success = result == 0, Properties = properties };
   }
 }
 
@@ -137,15 +132,10 @@ public class SlabSectionResolver(IConverterSettingsStore<CsiConversionSettings> 
     propertyData["thickness"] = thickness;
 
     Dictionary<string, object?> properties = [];
-    properties["General Data"] = generalData;
-    properties["Property Data"] = propertyData;
+    properties[SectionPropertyCategory.GENERAL_DATA] = generalData;
+    properties[SectionPropertyCategory.PROPERTY_DATA] = propertyData;
 
-    return new AreaSectionResult
-    {
-      Success = result == 0,
-      MaterialName = matProp,
-      Properties = properties
-    };
+    return new AreaSectionResult { Success = result == 0, Properties = properties };
   }
 }
 
@@ -184,14 +174,9 @@ public class DeckSectionResolver(IConverterSettingsStore<CsiConversionSettings> 
     propertyData["thickness"] = thickness;
 
     Dictionary<string, object?> properties = [];
-    properties["General Data"] = generalData;
-    properties["Property Data"] = propertyData;
+    properties[SectionPropertyCategory.GENERAL_DATA] = generalData;
+    properties[SectionPropertyCategory.PROPERTY_DATA] = propertyData;
 
-    return new AreaSectionResult
-    {
-      Success = result == 0,
-      MaterialName = deckMatProp,
-      Properties = properties
-    };
+    return new AreaSectionResult { Success = result == 0, Properties = properties };
   }
 }

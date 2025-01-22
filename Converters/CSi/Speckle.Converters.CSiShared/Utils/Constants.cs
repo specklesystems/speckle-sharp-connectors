@@ -15,3 +15,20 @@ public static class ObjectPropertyCategory
   public const string GEOMETRY = "Geometry";
   public const string OBJECT_ID = "Object ID";
 }
+
+/// <summary>
+/// These strings are repeatedly used as keys when building the properties dictionary for objects
+/// </summary>
+public static class ObjectPropertyKey
+{
+  public const string MATERIAL_ID = "materialId";
+  public const string SECTION_ID = "sectionId";
+}
+
+public static class SectionPropertyCategory
+{
+  public const string GENERAL_DATA = "General Data";
+  public const string SECTION_PROPERTIES = "Section Properties";
+  public const string SECTION_DIMENSIONS = "Section Dimensions";
+  public const string PROPERTY_DATA = "Property Data";
+}

@@ -1,10 +1,6 @@
-using Microsoft.Extensions.Logging;
-using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.CSiShared.HostApp.Helpers;
 using Speckle.Connectors.ETABSShared.HostApp.Helpers;
-using Speckle.Sdk;
-using Speckle.Sdk.Logging;
-using Speckle.Sdk.Models.Collections;
+using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Connectors.ETABSShared.HostApp;
@@ -19,123 +15,94 @@ namespace Speckle.Connectors.ETABSShared.HostApp;
 /// </remarks>
 public class EtabsSectionUnpacker : ISectionUnpacker
 {
-  private readonly ICsiApplicationService _csiApplicationService;
   private readonly EtabsSectionPropertyExtractor _propertyExtractor;
-  private readonly ILogger<EtabsSectionUnpacker> _logger;
-  private readonly ISdkActivityFactory _activityFactory;
+  private readonly CsiToSpeckleCacheSingleton _csiToSpeckleCacheSingleton;
 
   public EtabsSectionUnpacker(
-    ICsiApplicationService csiApplicationService,
     EtabsSectionPropertyExtractor propertyExtractor,
-    ILogger<EtabsSectionUnpacker> logger,
-    ISdkActivityFactory activityFactory
+    CsiToSpeckleCacheSingleton csiToSpeckleCacheSingleton
   )
   {
-    _csiApplicationService = csiApplicationService;
     _propertyExtractor = propertyExtractor;
-    _logger = logger;
-    _activityFactory = activityFactory;
+    _csiToSpeckleCacheSingleton = csiToSpeckleCacheSingleton;
   }
 
-  public IReadOnlyDictionary<string, IProxyCollection> UnpackSections(
-    Collection rootCollection,
-    string[] frameSectionNames,
-    string[] shellSectionNames
-  )
+  public IEnumerable<GroupProxy> UnpackSections()
   {
-    try
+    foreach (GroupProxy frameSectionProxy in UnpackFrameSections())
     {
-      // Unpack frame sections
-      var frameSections = UnpackFrameSections(frameSectionNames);
-      if (frameSections.Count > 0)
-      {
-        rootCollection["frameSectionProxies"] = frameSections.Values.ToList();
-      }
-
-      // Unpack shell sections
-      var shellSections = UnpackShellSections(shellSectionNames);
-      if (shellSections.Count > 0)
-      {
-        rootCollection["shellSectionProxies"] = shellSections.Values.ToList();
-      }
-
-      // Return concatenated dictionary of both sections
-      return frameSections.Concat(shellSections).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+      yield return frameSectionProxy;
     }
-    catch (Exception ex) when (!ex.IsFatal())
+
+    foreach (GroupProxy shellSectionProxy in UnpackShellSections())
     {
-      _logger.LogError(ex, "Failed to unpack sections");
-      return new Dictionary<string, IProxyCollection>();
+      yield return shellSectionProxy;
     }
   }
 
-  private Dictionary<string, IProxyCollection> UnpackFrameSections(string[] frameSectionNames)
+  private IEnumerable<GroupProxy> UnpackFrameSections()
   {
-    Dictionary<string, IProxyCollection> sections = [];
-
-    foreach (string frameSectionName in frameSectionNames)
+    foreach (var entry in _csiToSpeckleCacheSingleton.FrameSectionCache)
     {
-      try
-      {
-        SectionPropertyExtractionResult extractionResult = _propertyExtractor.ExtractFrameSectionProperties(
-          frameSectionName
-        );
+      string sectionName = entry.Key;
+      List<string> frameIds = entry.Value;
 
-        // TODO: Replace with SectionProxy when we've decided what to do here / when SDK updated
-        GroupProxy proxy =
-          new()
-          {
-            id = frameSectionName,
-            name = frameSectionName,
-            applicationId = frameSectionName,
-            objects = [],
-            ["Properties"] = extractionResult.Properties,
-            ["MaterialName"] = extractionResult.MaterialName,
-          };
+      // Initialize properties outside the if statement
+      Dictionary<string, object?> properties = new Dictionary<string, object?>();
 
-        sections[frameSectionName] = proxy;
-      }
-      catch (Exception ex) when (!ex.IsFatal())
+      // get the properties of the section
+      // openings will have objects assigned to them, but won't have properties
+      // sectionName is initialized with string.Empty, but api ref returns string "None"
+      if (sectionName != "None")
       {
-        _logger.LogError(ex, "Failed to extract frame section properties for {SectionName}", frameSectionName);
+        properties = _propertyExtractor.ExtractFrameSectionProperties(sectionName);
       }
+
+      // create the section proxy
+      GroupProxy sectionProxy =
+        new()
+        {
+          id = sectionName,
+          name = sectionName,
+          applicationId = sectionName,
+          objects = frameIds,
+          ["Properties"] = properties // openings will just have an empty dict here
+        };
+
+      yield return sectionProxy;
     }
-
-    return sections;
   }
 
-  private Dictionary<string, IProxyCollection> UnpackShellSections(string[] shellSectionNames)
+  private IEnumerable<GroupProxy> UnpackShellSections()
   {
-    using var activity = _activityFactory.Start("Unpack Shell Sections");
-    Dictionary<string, IProxyCollection> sections = [];
-
-    foreach (string shellSectionName in shellSectionNames)
+    foreach (var entry in _csiToSpeckleCacheSingleton.ShellSectionCache)
     {
-      try
-      {
-        SectionPropertyExtractionResult extractionResult = _propertyExtractor.ExtractShellSectionProperties(
-          shellSectionName
-        );
+      string sectionName = entry.Key;
+      List<string> frameIds = entry.Value;
 
-        GroupProxy sectionProxy =
-          new()
-          {
-            id = shellSectionName,
-            name = shellSectionName,
-            applicationId = shellSectionName,
-            objects = [],
-            ["Properties"] = extractionResult.Properties,
-            ["MaterialName"] = extractionResult.MaterialName,
-          };
+      // Initialize properties outside the if statement
+      Dictionary<string, object?> properties = new Dictionary<string, object?>();
 
-        sections[shellSectionName] = sectionProxy;
-      }
-      catch (Exception ex) when (!ex.IsFatal())
+      // get the properties of the section
+      // openings will have objects assigned to them, but won't have properties
+      // sectionName is initialized with string.Empty, but api ref returns string "None"
+      if (sectionName != "None")
       {
-        _logger.LogError(ex, "Failed to extract properties for shell section {SectionName}", shellSectionName);
+        properties = _propertyExtractor.ExtractShellSectionProperties(sectionName);
       }
+
+      // create the section proxy
+      GroupProxy sectionProxy =
+        new()
+        {
+          id = sectionName,
+          name = sectionName,
+          applicationId = sectionName,
+          objects = frameIds,
+          ["Properties"] = properties // openings will just have an empty dict here
+        };
+
+      yield return sectionProxy;
     }
-
-    return sections;
   }
 }

@@ -20,18 +20,25 @@ public class CsiFrameSectionPropertyExtractor : IFrameSectionPropertyExtractor
     _settingsStore = settingsStore;
   }
 
-  public void ExtractProperties(string sectionName, SectionPropertyExtractionResult dataExtractionResult)
+  public void ExtractProperties(string sectionName, Dictionary<string, object?> properties)
   {
-    GetSectionProperties(sectionName, dataExtractionResult.Properties);
-    GetPropertyModifiers(sectionName, dataExtractionResult.Properties);
-    dataExtractionResult.MaterialName = GetMaterialName(sectionName);
+    GetMaterialName(sectionName, properties);
+    GetSectionProperties(sectionName, properties);
+    GetPropertyModifiers(sectionName, properties);
   }
 
-  private string GetMaterialName(string sectionName)
+  private void GetMaterialName(string sectionName, Dictionary<string, object?> properties)
   {
+    // get material name
     string materialName = string.Empty;
     _settingsStore.Current.SapModel.PropFrame.GetMaterial(sectionName, ref materialName);
-    return materialName;
+
+    // append to General Data of properties dictionary
+    Dictionary<string, object?> generalData = DictionaryUtils.EnsureNestedDictionary(
+      properties,
+      SectionPropertyCategory.GENERAL_DATA
+    );
+    generalData["material"] = materialName;
   }
 
   private void GetSectionProperties(string sectionName, Dictionary<string, object?> properties)
@@ -65,7 +72,10 @@ public class CsiFrameSectionPropertyExtractor : IFrameSectionPropertyExtractor
       ref radiusOfGyrationAboutMinorAxis
     );
 
-    var mechanicalProperties = DictionaryUtils.EnsureNestedDictionary(properties, "Section Properties");
+    Dictionary<string, object?> mechanicalProperties = DictionaryUtils.EnsureNestedDictionary(
+      properties,
+      SectionPropertyCategory.SECTION_PROPERTIES
+    );
     mechanicalProperties["area"] = crossSectionalArea;
     mechanicalProperties["As2"] = shearAreaInMajorAxisDirection;
     mechanicalProperties["As3"] = shearAreaInMinorAxisDirection;
@@ -98,7 +108,10 @@ public class CsiFrameSectionPropertyExtractor : IFrameSectionPropertyExtractor
         ["weight"] = stiffnessModifiersArray[7],
       };
 
-    var generalData = DictionaryUtils.EnsureNestedDictionary(properties, "General Data");
+    Dictionary<string, object?> generalData = DictionaryUtils.EnsureNestedDictionary(
+      properties,
+      SectionPropertyCategory.GENERAL_DATA
+    );
     generalData["modifiers"] = modifiers;
   }
 }
