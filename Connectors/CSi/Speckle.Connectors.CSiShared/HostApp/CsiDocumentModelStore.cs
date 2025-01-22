@@ -32,7 +32,7 @@ public class CsiDocumentModelStore : DocumentModelStore
     LoadState();
   }
 
-  private void SetPaths() // TODO: Event vent aggregator issues
+  private void SetPaths()
   {
     ModelPathHash = Crypt.Md5(_csiApplicationService.SapModel.GetModelFilepath(), length: 32);
     HostAppUserDataPath = Path.Combine(

@@ -42,7 +42,7 @@ public class MaterialUnpacker
           name = materialName,
           applicationId = materialName,
           objects = sectionIds,
-          ["Properties"] = properties
+          ["properties"] = properties
         };
 
       yield return materialProxy;
