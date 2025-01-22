@@ -45,7 +45,7 @@ public class DelegateReference
 
   public async Task<bool> Invoke(object message)
   {
-    if (_weakReference?.TryGetTarget(out object target) ?? true)
+    if (_weakReference == null || !_weakReference.TryGetTarget(out object target))
     {
       return false;
     }
