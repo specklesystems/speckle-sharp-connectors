@@ -48,7 +48,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
       services.AddRevitConverters();
       services.AddSingleton(application);
       _container = services.BuildServiceProvider();
-      _container.UseDUI(true);
+      _container.UseDUI(false);
 
       // resolve root object
       _revitPlugin = _container.GetRequiredService<IRevitPlugin>();
