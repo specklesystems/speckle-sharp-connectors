@@ -31,15 +31,14 @@ public sealed class CsiShellPropertiesExtractor
   {
     shellData.ApplicationId = shell.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
 
-    var geometry = DictionaryUtils.EnsureNestedDictionary(shellData.Properties, "Geometry");
+    var geometry = DictionaryUtils.EnsureNestedDictionary(shellData.Properties, ObjectPropertyCategory.GEOMETRY);
     geometry["shellVerticesJointNames"] = GetPointNames(shell);
 
-    var assignments = DictionaryUtils.EnsureNestedDictionary(shellData.Properties, "Assignments");
+    var assignments = DictionaryUtils.EnsureNestedDictionary(shellData.Properties, ObjectPropertyCategory.ASSIGNMENTS);
     assignments["groups"] = new List<string>(GetGroupAssigns(shell));
     assignments["localAxis"] = GetLocalAxes(shell);
     assignments["materialOverwrite"] = GetMaterialOverwrite(shell);
     assignments["propertyModifiers"] = GetModifiers(shell);
-    assignments["sectionProperty"] = GetSectionName(shell);
   }
 
   private string[] GetGroupAssigns(CsiShellWrapper shell)
@@ -60,42 +59,35 @@ public sealed class CsiShellPropertiesExtractor
 
   private string GetMaterialOverwrite(CsiShellWrapper shell)
   {
-    string propName = "None";
+    string propName = string.Empty;
     _ = _settingsStore.Current.SapModel.AreaObj.GetMaterialOverwrite(shell.Name, ref propName);
     return propName;
   }
 
   private Dictionary<string, double?> GetModifiers(CsiShellWrapper shell)
   {
-    double[] value = Array.Empty<double>();
+    double[] value = [];
     _ = _settingsStore.Current.SapModel.AreaObj.GetModifiers(shell.Name, ref value);
     return new Dictionary<string, double?>
     {
-      ["membraneF11Modifier"] = value[0],
-      ["membraneF22Modifier"] = value[1],
-      ["membraneF12Modifier"] = value[2],
-      ["bendingM11Modifier"] = value[3],
-      ["bendingM22Modifier"] = value[4],
-      ["bendingM12Modifier"] = value[5],
-      ["shearV13Modifier"] = value[6],
-      ["shearV23Modifier"] = value[7],
-      ["massModifier"] = value[8],
-      ["weightModifier"] = value[9]
+      ["f11"] = value[0],
+      ["f22"] = value[1],
+      ["f12"] = value[2],
+      ["m11"] = value[3],
+      ["m22"] = value[4],
+      ["m12"] = value[5],
+      ["v13"] = value[6],
+      ["v23"] = value[7],
+      ["mass"] = value[8],
+      ["weight"] = value[9]
     };
   }
 
   private string[] GetPointNames(CsiShellWrapper shell)
   {
     int numberPoints = 0;
-    string[] pointNames = Array.Empty<string>();
+    string[] pointNames = [];
     _ = _settingsStore.Current.SapModel.AreaObj.GetPoints(shell.Name, ref numberPoints, ref pointNames);
     return pointNames;
-  }
-
-  private string GetSectionName(CsiShellWrapper shell)
-  {
-    string sectionName = string.Empty;
-    _ = _settingsStore.Current.SapModel.AreaObj.GetProperty(shell.Name, ref sectionName);
-    return sectionName;
   }
 }
