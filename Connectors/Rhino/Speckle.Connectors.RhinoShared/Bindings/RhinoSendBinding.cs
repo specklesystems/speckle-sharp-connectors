@@ -10,12 +10,14 @@ using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
+using Speckle.Connectors.RhinoShared;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
@@ -31,14 +33,12 @@ public sealed class RhinoSendBinding : ISendBinding
   public IBrowserBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly IAppIdleManager _idleManager;
   private readonly IServiceProvider _serviceProvider;
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<RhinoSendBinding> _logger;
-  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IRhinoConversionSettingsFactory _rhinoConversionSettingsFactory;
   private readonly ISpeckleApplication _speckleApplication;
   private readonly ISdkActivityFactory _activityFactory;
@@ -63,7 +63,6 @@ public sealed class RhinoSendBinding : ISendBinding
 
   public RhinoSendBinding(
     DocumentModelStore store,
-    IAppIdleManager idleManager,
     IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     IServiceProvider serviceProvider,
@@ -73,11 +72,11 @@ public sealed class RhinoSendBinding : ISendBinding
     ILogger<RhinoSendBinding> logger,
     IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
     ISpeckleApplication speckleApplication,
-    ISdkActivityFactory activityFactory
+    ISdkActivityFactory activityFactory,
+    IEventAggregator eventAggregator
   )
   {
     _store = store;
-    _idleManager = idleManager;
     _serviceProvider = serviceProvider;
     _sendFilters = sendFilters.ToList();
     _cancellationManager = cancellationManager;
@@ -86,15 +85,14 @@ public sealed class RhinoSendBinding : ISendBinding
     _logger = logger;
     _rhinoConversionSettingsFactory = rhinoConversionSettingsFactory;
     _speckleApplication = speckleApplication;
-    _topLevelExceptionHandler = parent.TopLevelExceptionHandler.Parent.TopLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent); // POC: Commands are tightly coupled with their bindings, at least for now, saves us injecting a factory.
     _activityFactory = activityFactory;
     PreviousUnitSystem = RhinoDoc.ActiveDoc.ModelUnitSystem;
-    SubscribeToRhinoEvents();
+    SubscribeToRhinoEvents(eventAggregator);
   }
 
-  private void SubscribeToRhinoEvents()
+  private void SubscribeToRhinoEvents(IEventAggregator eventAggregator)
   {
     Command.BeginCommand += (_, e) =>
     {
@@ -110,41 +108,33 @@ public sealed class RhinoSendBinding : ISendBinding
         {
           ChangedObjectIdsInGroupsOrLayers[selectedObject.Id.ToString()] = 1;
         }
-        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), _ => RunExpirationChecks());
       }
     };
-
-    RhinoDoc.ActiveDocumentChanged += (_, e) =>
-    {
-      PreviousUnitSystem = e.Document.ModelUnitSystem;
-    };
-
-    // NOTE: BE CAREFUL handling things in this event handler since it is triggered whenever we save something into file!
-    RhinoDoc.DocumentPropertiesChanged += async (_, e) =>
-    {
-      var newUnit = e.Document.ModelUnitSystem;
-      if (newUnit != PreviousUnitSystem)
+    eventAggregator
+      .GetEvent<ActiveDocumentChanged>()
+      .Subscribe(e =>
       {
-        PreviousUnitSystem = newUnit;
-
-        await InvalidateAllSender();
-      }
-    };
-
-    RhinoDoc.AddRhinoObject += (_, e) =>
-      _topLevelExceptionHandler.CatchUnhandled(() =>
-      {
-        if (!_store.IsDocumentInit)
-        {
-          return;
-        }
-
-        ChangedObjectIds[e.ObjectId.ToString()] = 1;
-        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        PreviousUnitSystem = e.Document.ModelUnitSystem;
       });
 
-    RhinoDoc.DeleteRhinoObject += (_, e) =>
-      _topLevelExceptionHandler.CatchUnhandled(() =>
+    // NOTE: BE CAREFUL handling things in this event handler since it is triggered whenever we save something into file!
+    eventAggregator
+      .GetEvent<ActiveDocumentChanged>()
+      .Subscribe(async e =>
+      {
+        var newUnit = e.Document.ModelUnitSystem;
+        if (newUnit != PreviousUnitSystem)
+        {
+          PreviousUnitSystem = newUnit;
+
+          await InvalidateAllSender();
+        }
+      });
+
+    eventAggregator
+      .GetEvent<AddRhinoObject>()
+      .Subscribe(e =>
       {
         if (!_store.IsDocumentInit)
         {
@@ -152,12 +142,26 @@ public sealed class RhinoSendBinding : ISendBinding
         }
 
         ChangedObjectIds[e.ObjectId.ToString()] = 1;
-        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), _ => RunExpirationChecks());
+      });
+
+    eventAggregator
+      .GetEvent<DeleteRhinoObject>()
+      .Subscribe(e =>
+      {
+        if (!_store.IsDocumentInit)
+        {
+          return;
+        }
+
+        ChangedObjectIds[e.ObjectId.ToString()] = 1;
+        eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), _ => RunExpirationChecks());
       });
 
     // NOTE: Catches an object's material change from one user defined doc material to another. Does not catch (as the top event is not triggered) swapping material sources for an object or moving to/from the default material (this is handled below)!
-    RhinoDoc.RenderMaterialsTableEvent += (_, args) =>
-      _topLevelExceptionHandler.CatchUnhandled(() =>
+    eventAggregator
+      .GetEvent<RenderMaterialsTableEvent>()
+      .Subscribe(args =>
       {
         if (!_store.IsDocumentInit)
         {
@@ -167,12 +171,13 @@ public sealed class RhinoSendBinding : ISendBinding
         if (args is RhinoDoc.RenderMaterialAssignmentChangedEventArgs changedEventArgs)
         {
           ChangedObjectIds[changedEventArgs.ObjectId.ToString()] = 1;
-          _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+          eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), _ => RunExpirationChecks());
         }
       });
 
-    RhinoDoc.GroupTableEvent += (_, args) =>
-      _topLevelExceptionHandler.CatchUnhandled(() =>
+    eventAggregator
+      .GetEvent<GroupTableEvent>()
+      .Subscribe(args =>
       {
         if (!_store.IsDocumentInit)
         {
@@ -183,11 +188,12 @@ public sealed class RhinoSendBinding : ISendBinding
         {
           ChangedObjectIdsInGroupsOrLayers[obj.Id.ToString()] = 1;
         }
-        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), _ => RunExpirationChecks());
       });
 
-    RhinoDoc.LayerTableEvent += (_, args) =>
-      _topLevelExceptionHandler.CatchUnhandled(() =>
+    eventAggregator
+      .GetEvent<LayerTableEvent>()
+      .Subscribe(args =>
       {
         if (!_store.IsDocumentInit)
         {
@@ -215,12 +221,13 @@ public sealed class RhinoSendBinding : ISendBinding
             ChangedObjectIdsInGroupsOrLayers[obj.Id.ToString()] = 1;
           }
         }
-        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), _ => RunExpirationChecks());
       });
 
     // Catches and stores changed material ids. These are then used in the expiry checks to invalidate all objects that have assigned any of those material ids.
-    RhinoDoc.MaterialTableEvent += (_, args) =>
-      _topLevelExceptionHandler.CatchUnhandled(() =>
+    eventAggregator
+      .GetEvent<MaterialTableEvent>()
+      .Subscribe(args =>
       {
         if (!_store.IsDocumentInit)
         {
@@ -230,12 +237,13 @@ public sealed class RhinoSendBinding : ISendBinding
         if (args.EventType == MaterialTableEventType.Modified)
         {
           ChangedMaterialIndexes[args.Index] = 1;
-          _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+          eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), _ => RunExpirationChecks());
         }
       });
 
-    RhinoDoc.ModifyObjectAttributes += (_, e) =>
-      _topLevelExceptionHandler.CatchUnhandled(() =>
+    eventAggregator
+      .GetEvent<ModifyObjectAttributes>()
+      .Subscribe(e =>
       {
         if (!_store.IsDocumentInit)
         {
@@ -251,12 +259,13 @@ public sealed class RhinoSendBinding : ISendBinding
         )
         {
           ChangedObjectIds[e.RhinoObject.Id.ToString()] = 1;
-          _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+          eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), _ => RunExpirationChecks());
         }
       });
 
-    RhinoDoc.ReplaceRhinoObject += (_, e) =>
-      _topLevelExceptionHandler.CatchUnhandled(() =>
+    eventAggregator
+      .GetEvent<ReplaceRhinoObject>()
+      .Subscribe(e =>
       {
         if (!_store.IsDocumentInit)
         {
@@ -265,7 +274,7 @@ public sealed class RhinoSendBinding : ISendBinding
 
         ChangedObjectIds[e.NewRhinoObject.Id.ToString()] = 1;
         ChangedObjectIds[e.OldRhinoObject.Id.ToString()] = 1;
-        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), _ => RunExpirationChecks());
       });
   }
 

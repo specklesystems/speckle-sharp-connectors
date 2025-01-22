@@ -23,7 +23,7 @@ public class CsiApplicationService : ICsiApplicationService
 
   public CsiApplicationService()
   {
-    SapModel = null!;
+    SapModel = null!; // TODO: Event vent aggregator issues
   }
 
   public void Initialize(cSapModel sapModel, cPluginCallback pluginCallback)

@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using Autodesk.AutoCAD.DatabaseServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -11,6 +11,7 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
@@ -60,7 +61,9 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     IOperationProgressManager operationProgressManager,
     ILogger<AutocadSendBinding> logger,
     ISpeckleApplication speckleApplication,
-    IThreadContext threadContext
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    IThreadContext threadContext,
+    IEventAggregator eventAggregator
   )
   {
     _store = store;
@@ -73,7 +76,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     _logger = logger;
     _speckleApplication = speckleApplication;
     _threadContext = threadContext;
-    _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
 
@@ -86,10 +89,8 @@ public abstract class AutocadSendBaseBinding : ISendBinding
       SubscribeToObjectChanges(Application.DocumentManager.CurrentDocument);
     }
     // Since ids of the objects generates from same seed, we should clear the cache always whenever doc swapped.
-    _store.DocumentChanged += (_, _) =>
-    {
-      _sendConversionCache.ClearCache();
-    };
+
+    eventAggregator.GetEvent<DocumentChangedEvent>().Subscribe(_ => _sendConversionCache.ClearCache());
   }
 
   private readonly List<string> _docSubsTracker = new();

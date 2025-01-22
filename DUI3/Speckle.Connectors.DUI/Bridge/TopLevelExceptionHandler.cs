@@ -1,8 +1,7 @@
 using Microsoft.Extensions.Logging;
-using Speckle.Connectors.DUI.Bindings;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
-using Speckle.Sdk.Models.Extensions;
 
 namespace Speckle.Connectors.DUI.Bridge;
 
@@ -23,15 +22,15 @@ namespace Speckle.Connectors.DUI.Bridge;
 public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
 {
   private readonly ILogger<TopLevelExceptionHandler> _logger;
-  public IBrowserBridge Parent { get; }
+  private readonly IEventAggregator _eventAggregator;
   public string Name => nameof(TopLevelExceptionHandler);
 
   private const string UNHANDLED_LOGGER_TEMPLATE = "An unhandled Exception occured";
 
-  internal TopLevelExceptionHandler(ILogger<TopLevelExceptionHandler> logger, IBrowserBridge bridge)
+  public TopLevelExceptionHandler(ILogger<TopLevelExceptionHandler> logger, IEventAggregator eventAggregator)
   {
     _logger = logger;
-    Parent = bridge;
+    _eventAggregator = eventAggregator;
   }
 
   /// <summary>
@@ -41,49 +40,56 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
   /// <param name="function">The function to invoke and provide error handling for</param>
   /// <exception cref="Exception"><see cref="ExceptionHelpers.IsFatal"/> will be rethrown, these should be allowed to bubble up to the host app</exception>
   /// <seealso cref="ExceptionHelpers.IsFatal"/>
-  public void CatchUnhandled(Action function)
+  public Result CatchUnhandled(Action function)
   {
-    _ = CatchUnhandled<object?>(() =>
+    var r = CatchUnhandled(() =>
     {
       function();
-      return null;
+      return true;
     });
+    if (r.IsSuccess)
+    {
+      return new Result();
+    }
+    return new Result(r.Exception);
   }
 
   /// <inheritdoc cref="CatchUnhandled(Action)"/>
   /// <typeparam name="T"><paramref name="function"/> return type</typeparam>
   /// <returns>A result pattern struct (where exceptions have been handled)</returns>
-  public Result<T> CatchUnhandled<T>(Func<T> function) =>
-    CatchUnhandledAsync(() => Task.FromResult(function.Invoke())).Result; //Safe to do a .Result because this as an already completed and non-async Task from the Task.FromResult
-
-  /// <inheritdoc cref="CatchUnhandled(Action)"/>
-  /// <returns>A result pattern struct (where exceptions have been handled)</returns>
-  public async Task<Result> CatchUnhandledAsync(Func<Task> function)
+  public Result<T> CatchUnhandled<T>(Func<T> function)
   {
     try
     {
-      try
-      {
-        await function();
-        return new Result();
-      }
-      catch (Exception ex) when (!ex.IsFatal())
-      {
-        _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
-        await SetGlobalNotification(
-          ToastNotificationType.DANGER,
-          "Unhandled Exception Occured",
-          ex.ToFormattedString(),
-          false
-        );
-        return new(ex);
-      }
+      return new Result<T>(function());
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
+      _eventAggregator.GetEvent<ExceptionEvent>().PublishAsync(ex).Wait();
+      return new(ex);
     }
     catch (Exception ex)
     {
       _logger.LogCritical(ex, UNHANDLED_LOGGER_TEMPLATE);
       throw;
     }
+  }
+
+  /// <inheritdoc cref="CatchUnhandled(Action)"/>
+  /// <returns>A result pattern struct (where exceptions have been handled)</returns>
+  public async Task<Result> CatchUnhandledAsync(Func<Task> function)
+  {
+    var r = await CatchUnhandledAsync(async () =>
+    {
+      await function();
+      return true;
+    });
+    if (r.IsSuccess)
+    {
+      return new Result();
+    }
+    return new Result(r.Exception);
   }
 
   ///<inheritdoc cref="CatchUnhandled{T}(Func{T})"/>
@@ -97,7 +103,8 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        await HandleException(ex);
+        _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
+        await _eventAggregator.GetEvent<ExceptionEvent>().PublishAsync(ex);
         return new(ex);
       }
     }
@@ -105,32 +112,6 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
     {
       _logger.LogCritical(ex, UNHANDLED_LOGGER_TEMPLATE);
       throw;
-    }
-  }
-
-  private async Task HandleException(Exception ex)
-  {
-    _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
-
-    try
-    {
-      await SetGlobalNotification(
-        ToastNotificationType.DANGER,
-        "Unhandled Exception Occured",
-        ex.ToFormattedString(),
-        false
-      );
-    }
-    catch (Exception toastEx)
-    {
-      // Not only was a top level exception caught, but our attempt to display a toast failed!
-      // Toasts can fail if the BrowserBridge is not yet associated with a binding
-      // For this reason, binding authors should avoid doing anything in
-      // the constructors of bindings that may try and use the bridge!
-      AggregateException aggregateException =
-        new("An Unhandled top level exception was caught, and the toast failed to display it!", [toastEx, ex]);
-
-      throw aggregateException;
     }
   }
 
@@ -143,17 +124,5 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
   /// In cases where you can use <see langword="await"/> keyword, you should prefer using <see cref="CatchUnhandledAsync"/>
   /// </remarks>
   /// <param name="function"><inheritdoc cref="CatchUnhandled{T}(Func{T})"/></param>
-  public async void FireAndForget(Func<Task> function) => await CatchUnhandledAsync(function);
-
-  private async Task SetGlobalNotification(ToastNotificationType type, string title, string message, bool autoClose) =>
-    await Parent.Send(
-      BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, //TODO: We could move these constants into a DUI3 constants static class
-      new
-      {
-        type,
-        title,
-        description = message,
-        autoClose
-      }
-    );
+  public async void FireAndForget(Func<Task> function) => await CatchUnhandledAsync(function).ConfigureAwait(false);
 }

@@ -43,8 +43,6 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<IBinding, RevitReceiveBinding>();
     serviceCollection.AddSingleton<IAppIdleManager, RevitIdleManager>();
 
-    serviceCollection.RegisterTopLevelExceptionHandler();
-
     serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
     serviceCollection.AddSingleton<IBasicConnectorBinding, BasicConnectorBindingRevit>();
 

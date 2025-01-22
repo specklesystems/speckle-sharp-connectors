@@ -1,41 +1,35 @@
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Tekla.Structures.Model;
 
 namespace Speckle.Connectors.TeklaShared.Bindings;
 
 public class TeklaSelectionBinding : ISelectionBinding
 {
-  private readonly IAppIdleManager _idleManager;
   private const string SELECTION_EVENT = "setSelection";
-  private readonly Events _events;
-  private readonly object _selectionEventHandlerLock = new object();
+  private readonly object _selectionEventHandlerLock = new();
   private readonly Tekla.Structures.Model.UI.ModelObjectSelector _selector;
 
   public string Name => "selectionBinding";
   public IBrowserBridge Parent { get; }
 
   public TeklaSelectionBinding(
-    IAppIdleManager idleManager,
     IBrowserBridge parent,
-    Events events,
-    Tekla.Structures.Model.UI.ModelObjectSelector selector
+    Tekla.Structures.Model.UI.ModelObjectSelector selector,
+    IEventAggregator eventAggregator
   )
   {
-    _idleManager = idleManager;
     Parent = parent;
-    _events = events;
     _selector = selector;
 
-    _events.SelectionChange += Events_SelectionChangeEvent;
-    _events.Register();
+    eventAggregator.GetEvent<SelectionChangeEvent>().Subscribe(_ => Events_SelectionChangeEvent());
   }
 
   private void Events_SelectionChangeEvent()
   {
     lock (_selectionEventHandlerLock)
     {
-      _idleManager.SubscribeToIdle(nameof(TeklaSelectionBinding), UpdateSelection);
       UpdateSelection();
     }
   }
@@ -43,16 +37,11 @@ public class TeklaSelectionBinding : ISelectionBinding
   private void UpdateSelection()
   {
     SelectionInfo selInfo = GetSelection();
-    Parent.Send(SELECTION_EVENT, selInfo);
+    Parent.Send2(SELECTION_EVENT, selInfo);
   }
 
   public SelectionInfo GetSelection()
   {
-    if (_selector == null)
-    {
-      return new SelectionInfo(new List<string>(), "No objects selected.");
-    }
-
     var objectIds = new List<string>();
     var objectTypes = new List<string>();
 

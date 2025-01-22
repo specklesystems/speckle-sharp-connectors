@@ -18,7 +18,7 @@ using Speckle.Converters.CSiShared;
 
 namespace Speckle.Connectors.CSiShared;
 
-public static class ServiceRegistration
+public static class ServiceRegistration // TODO: Fix in light of events
 {
   public static IServiceCollection AddCsi(this IServiceCollection services)
   {
@@ -44,8 +44,6 @@ public static class ServiceRegistration
     services.AddScoped<CsiSendCollectionManager>();
     services.AddScoped<IRootObjectBuilder<ICsiWrapper>, CsiRootObjectBuilder>();
     services.AddScoped<SendOperation<ICsiWrapper>>();
-
-    services.RegisterTopLevelExceptionHandler();
 
     services.AddScoped<CsiMaterialPropertyExtractor>();
     services.AddScoped<MaterialUnpacker>();
