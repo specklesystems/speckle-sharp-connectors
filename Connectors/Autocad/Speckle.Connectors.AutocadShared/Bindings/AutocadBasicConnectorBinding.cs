@@ -42,15 +42,13 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
     _speckleApplication = speckleApplication;
     Commands = new BasicConnectorBindingCommands(parent);
     eventAggregator
-      .GetEvent<DocumentChangedEvent>()
-      .Subscribe(async _ =>
-      {
-        await Commands.NotifyDocumentChanged();
-      });
+      .GetEvent<DocumentStoreChangedEvent>()
+      .Subscribe(OnDocumentStoreChangedEvent);
     _logger = logger;
     _threadContext = threadContext;
   }
 
+  private async Task OnDocumentStoreChangedEvent(object _) =>await Commands.NotifyDocumentChanged();
   public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
 
   public string GetSourceApplicationName() => _speckleApplication.Slug;

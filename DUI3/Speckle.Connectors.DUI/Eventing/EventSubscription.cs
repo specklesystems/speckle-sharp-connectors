@@ -15,18 +15,12 @@ public class EventSubscription<TPayload>(
 {
   public SubscriptionToken SubscriptionToken => token;
 
-  public Func<object[], Task>? GetExecutionStrategy()
-  {
-    if (!actionReference.IsAlive)
-    {
-      return null;
-    }
-    return async arguments =>
+  public Func<object[], Task>? GetExecutionStrategy() =>
+    async arguments =>
     {
       TPayload argument = (TPayload)arguments[0];
       await InvokeAction(argument);
     };
-  }
 
   private async Task InvokeAction(TPayload argument)
   {

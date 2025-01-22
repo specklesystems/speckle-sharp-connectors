@@ -37,12 +37,10 @@ public class TeklaBasicConnectorBinding : IBasicConnectorBinding
     _model = model;
     Commands = new BasicConnectorBindingCommands(parent);
     eventAggregator
-      .GetEvent<DocumentChangedEvent>()
-      .Subscribe(async _ =>
-      {
-        await Commands.NotifyDocumentChanged();
-      });
+      .GetEvent<DocumentStoreChangedEvent>()
+      .Subscribe(OnDocumentStoreChangedEvent);
   }
+  private async Task OnDocumentStoreChangedEvent(object _) =>await Commands.NotifyDocumentChanged();
 
   public string GetSourceApplicationName() => _speckleApplication.Slug;
 

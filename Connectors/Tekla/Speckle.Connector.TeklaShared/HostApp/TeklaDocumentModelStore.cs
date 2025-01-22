@@ -31,12 +31,14 @@ public class TeklaDocumentModelStore : DocumentModelStore
     GenerateKey();
     eventAggregator
       .GetEvent<ModelLoadEvent>()
-      .Subscribe(async _ =>
-      {
-        GenerateKey();
-        LoadState();
-        await eventAggregator.GetEvent<DocumentChangedEvent>().PublishAsync(new object());
-      });
+      .Subscribe(OnModelLoadEvent);
+  }
+
+  private async Task OnModelLoadEvent(object _)
+  {
+    GenerateKey();
+    LoadState();
+    await _eventAggregator.GetEvent<DocumentStoreChangedEvent>().PublishAsync(new object());
   }
 
   public override async Task OnDocumentStoreInitialized()
@@ -44,7 +46,7 @@ public class TeklaDocumentModelStore : DocumentModelStore
     if (SpeckleTeklaPanelHost.IsInitialized)
     {
       LoadState();
-      await _eventAggregator.GetEvent<DocumentChangedEvent>().PublishAsync(new object());
+      await _eventAggregator.GetEvent<DocumentStoreChangedEvent>().PublishAsync(new object());
     }
   }
 
