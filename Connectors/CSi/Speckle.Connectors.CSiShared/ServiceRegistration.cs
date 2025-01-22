@@ -8,7 +8,6 @@ using Speckle.Connectors.CSiShared.Builders;
 using Speckle.Connectors.CSiShared.Filters;
 using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.CSiShared.HostApp.Helpers;
-using Speckle.Connectors.CSiShared.HostApp.Relationships;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
@@ -48,8 +47,6 @@ public static class ServiceRegistration // TODO: Fix in light of events
 
     services.AddScoped<CsiMaterialPropertyExtractor>();
     services.AddScoped<MaterialUnpacker>();
-    services.AddScoped<ISectionMaterialRelationshipManager, SectionMaterialRelationshipManager>();
-    services.AddScoped<IObjectSectionRelationshipManager, ObjectSectionRelationshipManager>();
     services.AddScoped<IFrameSectionPropertyExtractor, CsiFrameSectionPropertyExtractor>();
     services.AddScoped<IShellSectionPropertyExtractor, CsiShellSectionPropertyExtractor>();
 

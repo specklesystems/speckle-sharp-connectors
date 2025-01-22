@@ -62,8 +62,8 @@ public sealed class CsiFramePropertiesExtractor
     // Assign sectionId to variable as this will be an argument for the GetMaterialName method
     string sectionId = GetSectionName(frame);
     string materialId = GetMaterialName(sectionId);
-    assignments["sectionId"] = sectionId;
-    assignments["materialId"] = materialId;
+    assignments[ObjectPropertyKey.SECTION_ID] = sectionId;
+    assignments[ObjectPropertyKey.MATERIAL_ID] = materialId;
 
     // store the object, section, and material id relationships in their corresponding caches to be accessed by the connector
     if (!string.IsNullOrEmpty(sectionId))

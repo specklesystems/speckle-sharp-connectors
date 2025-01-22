@@ -5,18 +5,10 @@ using Speckle.Sdk.Models.Proxies;
 namespace Speckle.Connectors.CSiShared.HostApp;
 
 /// <summary>
-/// Extracts material proxies from the root object collection.
+/// Creates material proxies based on stored entries from the materials cache
 /// </summary>
-/// <remarks>
-/// Decouples material extraction from conversion processes. Supports complex material
-/// property retrieval (dependent on material type) while maintaining a clean separation of concerns.
-/// Enables extensible material proxy creation across different material types.
-/// </remarks>
 public class MaterialUnpacker
 {
-  // A cache storing a map of material name <-> section ids using this material
-  public Dictionary<string, List<string>> MaterialCache { get; set; } = new();
-
   private readonly CsiMaterialPropertyExtractor _propertyExtractor;
   private readonly CsiToSpeckleCacheSingleton _csiToSpeckleCacheSingleton;
 
@@ -32,14 +24,15 @@ public class MaterialUnpacker
   // Creates a list of material proxies from the csi materials cache
   public IEnumerable<IProxyCollection> UnpackMaterials()
   {
-    foreach (var entry in _csiToSpeckleCacheSingleton.MaterialCache)
+    foreach (var kvp in _csiToSpeckleCacheSingleton.MaterialCache)
     {
-      string materialName = entry.Key;
-      List<string> sectionIds = entry.Value;
+      // get the cached entry
+      string materialName = kvp.Key;
+      List<string> sectionIds = kvp.Value;
 
       // get the properties of the material
-      Dictionary<string, object?> properties = new();
-      _propertyExtractor.ExtractProperties(materialName, properties);
+      Dictionary<string, object?> properties = new(); // create empty dictionary
+      _propertyExtractor.ExtractProperties(materialName, properties); // dictionary mutated with respective properties
 
       // create the material proxy
       GroupProxy materialProxy =

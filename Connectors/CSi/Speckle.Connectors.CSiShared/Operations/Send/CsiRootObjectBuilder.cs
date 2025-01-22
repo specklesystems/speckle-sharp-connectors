@@ -63,13 +63,13 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
   }
 
   /// <summary>
-  /// Converts CSi objects into a Speckle-compatible object hierarchy with established relationships.
+  /// Converts Csi objects into a Speckle-compatible object hierarchy with established relationships.
   /// </summary>
   /// <remarks>
   /// Operation sequence:
   /// 1. Creates root collection with model metadata
   /// 2. Converts each object with caching and progress tracking
-  /// 3. Processes material/section relationships if conversion successful
+  /// 3. Creates proxies for materials and sections
   /// </remarks>
   public async Task<RootObjectBuilderResult> BuildAsync(
     IReadOnlyList<ICsiWrapper> csiObjects,
@@ -114,28 +114,15 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
       rootObjectCollection[ProxyKeys.MATERIAL] = _materialUnpacker.UnpackMaterials().ToList();
 
       // Create and all section proxies (frame and shell)
-      rootObjectCollection["sectionProxies"] = _sectionUnpacker.UnpackSections().ToList();
+      rootObjectCollection[ProxyKeys.SECTION] = _sectionUnpacker.UnpackSections().ToList();
     }
 
     return new RootObjectBuilderResult(rootObjectCollection, results);
   }
 
   /// <summary>
-  /// Converts a single CSi object with caching and collection management.
+  /// Converts a single Csi wrapper "object" to a data object with appropriate collection management.
   /// </summary>
-  /// <remarks>
-  /// Conversion process:
-  /// 1. Checks conversion cache for existing result
-  /// 2. Performs conversion if not cached
-  /// 3. Adds to type-specific collection
-  /// 4. Tracks objects needing section relationships
-  ///
-  /// _convertedObjectsForProxies notes:
-  /// - SendConversionResult doesn't give us access to converted object
-  /// - rootObjectCollection flattening seems a little unnecessary. We also don't need access to all converted objects
-  /// - Only FRAME and SHELL have associated sections and thus need relations built
-  /// - For this reason, these types are "true" and added to list
-  /// </remarks>
   private SendConversionResult ConvertCsiObject(ICsiWrapper csiObject, Collection typeCollection, string projectId)
   {
     string applicationId = $"{csiObject.ObjectType}{csiObject.Name}"; // TODO: NO! Use GUID

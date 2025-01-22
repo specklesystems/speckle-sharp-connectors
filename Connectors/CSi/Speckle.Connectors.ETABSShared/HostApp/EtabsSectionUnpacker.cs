@@ -1,11 +1,6 @@
-using Microsoft.Extensions.Logging;
-using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.CSiShared.HostApp.Helpers;
 using Speckle.Connectors.ETABSShared.HostApp.Helpers;
 using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
-using Speckle.Sdk;
-using Speckle.Sdk.Logging;
-using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Connectors.ETABSShared.HostApp;
@@ -20,27 +15,15 @@ namespace Speckle.Connectors.ETABSShared.HostApp;
 /// </remarks>
 public class EtabsSectionUnpacker : ISectionUnpacker
 {
-  // A cache storing a map of section name <-> objects ids using this section
-  public Dictionary<string, List<string>> SectionCache { get; set; } = new();
-
-  private readonly ICsiApplicationService _csiApplicationService;
   private readonly EtabsSectionPropertyExtractor _propertyExtractor;
-  private readonly ILogger<EtabsSectionUnpacker> _logger;
-  private readonly ISdkActivityFactory _activityFactory;
   private readonly CsiToSpeckleCacheSingleton _csiToSpeckleCacheSingleton;
 
   public EtabsSectionUnpacker(
-    ICsiApplicationService csiApplicationService,
     EtabsSectionPropertyExtractor propertyExtractor,
-    ILogger<EtabsSectionUnpacker> logger,
-    ISdkActivityFactory activityFactory,
     CsiToSpeckleCacheSingleton csiToSpeckleCacheSingleton
   )
   {
-    _csiApplicationService = csiApplicationService;
     _propertyExtractor = propertyExtractor;
-    _logger = logger;
-    _activityFactory = activityFactory;
     _csiToSpeckleCacheSingleton = csiToSpeckleCacheSingleton;
   }
 
@@ -65,9 +48,7 @@ public class EtabsSectionUnpacker : ISectionUnpacker
       List<string> frameIds = entry.Value;
 
       // get the properties of the section
-      // TODO: add dictionaries directly and remove extraction result class
-      Dictionary<string, object?> properties = new();
-      _propertyExtractor.ExtractProperties(sectionName, properties);
+      Dictionary<string, object?> properties = _propertyExtractor.ExtractFrameSectionProperties(sectionName);
 
       // create the section proxy
       GroupProxy sectionProxy =
@@ -92,9 +73,7 @@ public class EtabsSectionUnpacker : ISectionUnpacker
       List<string> frameIds = entry.Value;
 
       // get the properties of the section
-      // TODO: add dictionaries directly and remove extraction result class
-      Dictionary<string, object?> properties = new();
-      _propertyExtractor.ExtractShellSectionProperties(sectionName, properties);
+      Dictionary<string, object?> properties = _propertyExtractor.ExtractShellSectionProperties(sectionName);
 
       // create the section proxy
       GroupProxy sectionProxy =

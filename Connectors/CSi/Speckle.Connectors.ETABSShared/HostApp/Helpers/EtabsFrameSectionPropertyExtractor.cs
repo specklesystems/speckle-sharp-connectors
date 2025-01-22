@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using Speckle.Connectors.CSiShared.HostApp.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
@@ -12,15 +11,10 @@ namespace Speckle.Connectors.ETABSShared.HostApp.Helpers;
 public class EtabsFrameSectionPropertyExtractor : IApplicationFrameSectionPropertyExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
-  private readonly ILogger<EtabsFrameSectionPropertyExtractor> _logger;
 
-  public EtabsFrameSectionPropertyExtractor(
-    IConverterSettingsStore<CsiConversionSettings> settingsStore,
-    ILogger<EtabsFrameSectionPropertyExtractor> logger
-  )
+  public EtabsFrameSectionPropertyExtractor(IConverterSettingsStore<CsiConversionSettings> settingsStore)
   {
     _settingsStore = settingsStore;
-    _logger = logger;
   }
 
   /// <summary>
@@ -31,7 +25,7 @@ public class EtabsFrameSectionPropertyExtractor : IApplicationFrameSectionProper
   /// Alternative is to account for extraction according to section type - we're talking over 40 section types!
   /// This way, we get basic information with minimal computational costs.
   /// </remarks>
-  public void ExtractProperties(string sectionName, SectionPropertyExtractionResult dataExtractionResult)
+  public void ExtractProperties(string sectionName, Dictionary<string, object?> properties)
   {
     // Get all frame properties
     int numberOfNames = 0;
@@ -64,13 +58,13 @@ public class EtabsFrameSectionPropertyExtractor : IApplicationFrameSectionProper
     if (sectionIndex != -1)
     {
       // General Data
-      var generalData = DictionaryUtils.EnsureNestedDictionary(dataExtractionResult.Properties, "General Data");
+      var generalData = DictionaryUtils.EnsureNestedDictionary(properties, SectionPropertyCategory.GENERAL_DATA);
       generalData["type"] = propTypes[sectionIndex].ToString();
 
       // Section Dimensions
       var sectionDimensions = DictionaryUtils.EnsureNestedDictionary(
-        dataExtractionResult.Properties,
-        "Section Dimensions"
+        properties,
+        SectionPropertyCategory.SECTION_DIMENSIONS
       );
       sectionDimensions["t3"] = t3[sectionIndex];
       sectionDimensions["t2"] = t2[sectionIndex];

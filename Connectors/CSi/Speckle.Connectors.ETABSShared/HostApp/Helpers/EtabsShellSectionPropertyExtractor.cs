@@ -35,17 +35,12 @@ public class EtabsShellSectionPropertyExtractor : IApplicationShellSectionProper
   /// PropArea.GetWall() or PropArea.GetDeck() BUT we can't get the building type given a SectionName.
   /// Hence the introduction of ResolveSection.
   /// </remarks>
-  public void ExtractProperties(string sectionName, SectionPropertyExtractionResult dataExtractionResult)
+  public void ExtractProperties(string sectionName, Dictionary<string, object?> properties)
   {
     // Step 01: Finding the appropriate api query for the unknown section type (wall, deck or slab)
-    (string materialName, Dictionary<string, object?> resolvedProperties) = _etabsShellSectionResolver.ResolveSection(
-      sectionName
-    );
+    Dictionary<string, object?> resolvedProperties = _etabsShellSectionResolver.ResolveSection(sectionName);
 
-    // Step 02: Assign found material to extraction result
-    dataExtractionResult.MaterialName = materialName;
-
-    // Step 03: Mutate properties dictionary with resolved properties
+    // Step 02: Mutate properties dictionary with resolved properties
     foreach (var nestedDictionary in resolvedProperties)
     {
       if (nestedDictionary.Value is not Dictionary<string, object?> nestedValues)
@@ -59,10 +54,7 @@ public class EtabsShellSectionPropertyExtractor : IApplicationShellSectionProper
         continue;
       }
 
-      var nestedProperties = DictionaryUtils.EnsureNestedDictionary(
-        dataExtractionResult.Properties,
-        nestedDictionary.Key
-      );
+      var nestedProperties = DictionaryUtils.EnsureNestedDictionary(properties, nestedDictionary.Key);
       foreach (var kvp in nestedValues)
       {
         nestedProperties[kvp.Key] = kvp.Value;

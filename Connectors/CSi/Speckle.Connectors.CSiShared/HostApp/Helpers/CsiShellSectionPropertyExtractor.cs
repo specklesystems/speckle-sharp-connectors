@@ -20,13 +20,11 @@ public class CsiShellSectionPropertyExtractor : IShellSectionPropertyExtractor
     _settingsStore = settingsStore;
   }
 
-  public void ExtractProperties(string sectionName, SectionPropertyExtractionResult dataExtractionResult)
+  public void ExtractProperties(string sectionName, Dictionary<string, object?> properties)
   {
-    GetPropertyType(sectionName, dataExtractionResult.Properties);
-    GetPropertyModifiers(sectionName, dataExtractionResult.Properties);
+    GetPropertyType(sectionName, properties);
+    GetPropertyModifiers(sectionName, properties);
   }
-
-  public string GetMaterialName(string sectionName) => throw new NotImplementedException();
 
   private void GetPropertyType(string sectionName, Dictionary<string, object?> properties)
   {
@@ -40,7 +38,7 @@ public class CsiShellSectionPropertyExtractor : IShellSectionPropertyExtractor
       _ => throw new ArgumentException($"Unknown property type: {propertyTypeKey}"),
     };
 
-    var generalData = DictionaryUtils.EnsureNestedDictionary(properties, "General Data");
+    var generalData = DictionaryUtils.EnsureNestedDictionary(properties, SectionPropertyCategory.GENERAL_DATA);
     generalData["propertyType"] = propertyTypeValue;
   }
 
@@ -64,7 +62,7 @@ public class CsiShellSectionPropertyExtractor : IShellSectionPropertyExtractor
         ["weight"] = stiffnessModifiersArray[8]
       };
 
-    var generalData = DictionaryUtils.EnsureNestedDictionary(properties, "General Data");
+    var generalData = DictionaryUtils.EnsureNestedDictionary(properties, SectionPropertyCategory.GENERAL_DATA);
     generalData["modifiers"] = modifiers;
   }
 }

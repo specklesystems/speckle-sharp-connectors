@@ -58,8 +58,8 @@ public sealed class EtabsShellPropertiesExtractor
     string shellAppId = shell.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
     string sectionId = GetSectionName(shell);
     string materialId = _materialCache.GetMaterialForSection(sectionId);
-    assignments["sectionId"] = sectionId;
-    assignments["materialId"] = materialId;
+    assignments[ObjectPropertyKey.SECTION_ID] = sectionId;
+    assignments[ObjectPropertyKey.MATERIAL_ID] = materialId;
 
     // store the object, section, and material id relationships in their corresponding caches to be accessed by the connector
     if (!string.IsNullOrEmpty(sectionId))
