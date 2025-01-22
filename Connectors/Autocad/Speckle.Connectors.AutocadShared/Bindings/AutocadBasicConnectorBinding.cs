@@ -42,7 +42,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
     _speckleApplication = speckleApplication;
     Commands = new BasicConnectorBindingCommands(parent);
     eventAggregator
-      .GetEvent<DocumentChangedEvent>()
+      .GetEvent<DocumentStoreChangedEvent>()
       .Subscribe(async _ =>
       {
         await Commands.NotifyDocumentChanged();

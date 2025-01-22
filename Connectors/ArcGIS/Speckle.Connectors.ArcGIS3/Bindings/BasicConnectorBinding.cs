@@ -35,7 +35,7 @@ public class BasicConnectorBinding : IBasicConnectorBinding
     Commands = new BasicConnectorBindingCommands(parent);
 
     eventAggregator
-      .GetEvent<DocumentChangedEvent>()
+      .GetEvent<DocumentStoreChangedEvent>()
       .Subscribe(async _ => await Commands.NotifyDocumentChanged().ConfigureAwait(false));
   }
 

@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bridge;
 
