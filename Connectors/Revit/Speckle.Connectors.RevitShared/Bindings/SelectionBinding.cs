@@ -16,10 +16,10 @@ internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding
     : base("selectionBinding", parent)
   {
     _revitContext = revitContext;
-    eventAggregator.GetEvent<SelectionChangedEvent>().Subscribe(_ => OnSelectionChanged());
+    eventAggregator.GetEvent<SelectionChangedEvent>().Subscribe(OnSelectionChanged);
   }
 
-  private void OnSelectionChanged()
+  private void OnSelectionChanged(object _)
   {
     if (_revitContext.UIApplication.ActiveUIDocument == null)
     {

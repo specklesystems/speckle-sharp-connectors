@@ -28,8 +28,10 @@ public static class RevitEvents
   private static readonly System.Timers.Timer s_selectionTimer = new(1000);
 #endif
 
+  private static IEventAggregator? s_eventAggregator;
   public static void Register(IEventAggregator eventAggregator, UIControlledApplication application)
   {
+    s_eventAggregator = eventAggregator;
     application.Idling += async (_, _) => await eventAggregator.GetEvent<IdleEvent>().PublishAsync(new object());
     application.ControlledApplication.ApplicationInitialized += async (sender, _) =>
       await eventAggregator
@@ -56,8 +58,17 @@ public static class RevitEvents
         .GetEvent<IdleEvent>()
         .OneTimeSubscribe(
           "Selection",
-          _ => eventAggregator.GetEvent<SelectionChangedEvent>().PublishAsync(new object())
+          OnSelectionChanged
         );
 #endif
+  }
+
+  private static async Task OnSelectionChanged(object _)
+  {
+    if (s_eventAggregator is null)
+    {
+      return;
+    }
+    await s_eventAggregator.GetEvent<SelectionChangedEvent>().PublishAsync(new object());
   }
 }

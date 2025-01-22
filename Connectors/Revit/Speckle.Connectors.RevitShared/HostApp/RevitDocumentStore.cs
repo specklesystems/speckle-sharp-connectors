@@ -34,13 +34,17 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     _idStorageSchema = idStorageSchema;
     _eventAggregator = eventAggregator;
 
-    eventAggregator.GetEvent<DocumentStoreInitializingEvent>().Subscribe(_ => IsDocumentInit = false);
+    eventAggregator.GetEvent<DocumentStoreInitializingEvent>().Subscribe(OnDocumentStoreInitializingEvent);
     eventAggregator.GetEvent<ViewActivatedEvent>().Subscribe(OnViewActivated);
 
     // There is no event that we can hook here for double-click file open...
     // It is kind of harmless since we create this object as "SingleInstance".
     LoadState();
   }
+  
+  
+  public void OnDocumentStoreInitializingEvent(object _) =>
+    IsDocumentInit = false;
 
   public override Task OnDocumentStoreInitialized() =>
     _eventAggregator.GetEvent<DocumentStoreChangedEvent>().PublishAsync(new object());
@@ -66,12 +70,14 @@ internal sealed class RevitDocumentStore : DocumentModelStore
       .GetEvent<IdleEvent>()
       .OneTimeSubscribe(
         nameof(RevitDocumentStore),
-        async _ =>
-        {
-          LoadState();
-          await _eventAggregator.GetEvent<DocumentStoreChangedEvent>().PublishAsync(new object());
-        }
+        OnIdleEvent
       );
+  }
+
+  private async Task OnIdleEvent(object _)
+  {
+    LoadState();
+    await _eventAggregator.GetEvent<DocumentStoreChangedEvent>().PublishAsync(new object());
   }
 
   protected override void HostAppSaveState(string modelCardState)

@@ -249,7 +249,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     if (addedElementIds.Count > 0)
     {
-      _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(PostSetObjectIds), _ => PostSetObjectIds());
+      _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(PostSetObjectIds), PostSetObjectIds);
     }
 
     if (HaveUnitsChanged(e.GetDocument()))
@@ -271,8 +271,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     _eventAggregator
       .GetEvent<IdleEvent>()
-      .OneTimeSubscribe(nameof(CheckFilterExpiration), _ => CheckFilterExpiration());
-    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RunExpirationChecks), _ => RunExpirationChecks());
+      .OneTimeSubscribe(nameof(CheckFilterExpiration), CheckFilterExpiration);
+    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RunExpirationChecks), RunExpirationChecks);
   }
 
   // Keeps track of doc and current units
@@ -309,7 +309,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     return false;
   }
 
-  private async Task PostSetObjectIds()
+  private async Task PostSetObjectIds(object _)
   {
     foreach (var sender in _store.GetSenders().ToList())
     {
@@ -320,7 +320,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   /// <summary>
   /// Notifies ui if any filters need refreshing. Currently, this only applies for view filters.
   /// </summary>
-  private async Task CheckFilterExpiration()
+  private async Task CheckFilterExpiration(object _)
   {
     // NOTE: below code seems like more make sense in terms of performance but it causes unmanaged exception on Revit
     // using var viewCollector = new FilteredElementCollector(RevitContext.UIApplication?.ActiveUIDocument.Document);
@@ -337,7 +337,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     }
   }
 
-  private async Task RunExpirationChecks()
+  private async Task RunExpirationChecks(object _)
   {
     var senders = _store.GetSenders().ToList();
     // string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
