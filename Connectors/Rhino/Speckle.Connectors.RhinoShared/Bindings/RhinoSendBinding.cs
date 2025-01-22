@@ -120,7 +120,7 @@ public sealed class RhinoSendBinding : ISendBinding
 
     // NOTE: BE CAREFUL handling things in this event handler since it is triggered whenever we save something into file!
     eventAggregator
-      .GetEvent<ActiveDocumentChanged>()
+      .GetEvent<DocumentPropertiesChanged>()
       .Subscribe(async e =>
       {
         var newUnit = e.Document.ModelUnitSystem;
