@@ -17,14 +17,12 @@ public class RhinoDocumentStore : DocumentModelStore
   {
     _eventAggregator = eventAggregator;
     eventAggregator.GetEvent<BeginOpenDocument>().Subscribe(OnBeginOpenDocument);
-    eventAggregator
-      .GetEvent<EndOpenDocument>()
-      .Subscribe(OnEndOpenDocument);
+    eventAggregator.GetEvent<EndOpenDocument>().Subscribe(OnEndOpenDocument);
   }
-  
-  private void OnBeginOpenDocument(object _) => IsDocumentInit = false; 
-  
-  private async Task OnEndOpenDocument(DocumentOpenEventArgs e) 
+
+  private void OnBeginOpenDocument(object _) => IsDocumentInit = false;
+
+  private async Task OnEndOpenDocument(DocumentOpenEventArgs e)
   {
     if (e.Merge)
     {

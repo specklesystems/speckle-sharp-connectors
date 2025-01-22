@@ -34,12 +34,11 @@ public class BasicConnectorBinding : IBasicConnectorBinding
     Parent = parent;
     Commands = new BasicConnectorBindingCommands(parent);
 
-    eventAggregator
-      .GetEvent<DocumentStoreChangedEvent>()
-      .Subscribe(OnDocumentStoreChangedEvent);
+    eventAggregator.GetEvent<DocumentStoreChangedEvent>().Subscribe(OnDocumentStoreChangedEvent);
   }
 
-  private async Task OnDocumentStoreChangedEvent(object _) =>await Commands.NotifyDocumentChanged();
+  private async Task OnDocumentStoreChangedEvent(object _) => await Commands.NotifyDocumentChanged();
+
   public string GetSourceApplicationName() => _speckleApplication.Slug;
 
   public string GetSourceApplicationVersion() => _speckleApplication.HostApplicationVersion;

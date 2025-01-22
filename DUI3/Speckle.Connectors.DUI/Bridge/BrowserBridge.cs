@@ -75,11 +75,7 @@ public sealed class BrowserBridge : IBrowserBridge
     _browserScriptExecutor = browserScriptExecutor;
     _threadOptions = threadOptions;
     _topLevelExceptionHandler = topLevelExceptionHandler;
-    eventAggregator
-      .GetEvent<ExceptionEvent>()
-      .Subscribe(OnExceptionEvent,
-        ThreadOption.MainThread
-      );
+    eventAggregator.GetEvent<ExceptionEvent>().Subscribe(OnExceptionEvent, ThreadOption.MainThread);
   }
 
   private async Task OnExceptionEvent(Exception ex) =>

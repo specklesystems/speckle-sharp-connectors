@@ -37,9 +37,7 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
     _speckleApplication = speckleApplication;
     Commands = new BasicConnectorBindingCommands(parent);
 
-    eventAggregator
-      .GetEvent<DocumentStoreChangedEvent>()
-      .Subscribe(OnDocumentStoreChangedEvent);
+    eventAggregator.GetEvent<DocumentStoreChangedEvent>().Subscribe(OnDocumentStoreChangedEvent);
   }
 
   private async Task OnDocumentStoreChangedEvent(object _)
@@ -48,7 +46,6 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
     // Note: this prevents scaling issues when copy-pasting from one rhino doc to another in the same session.
     _sendConversionCache.ClearCache();
   }
-
 
   public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
 

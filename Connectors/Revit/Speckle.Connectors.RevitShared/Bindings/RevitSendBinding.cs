@@ -83,11 +83,10 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
       topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
-    eventAggregator
-      .GetEvent<DocumentStoreChangedEvent>()
-      .Subscribe(OnDocumentStoreChangedEvent);
+    eventAggregator.GetEvent<DocumentStoreChangedEvent>().Subscribe(OnDocumentStoreChangedEvent);
   }
-  private async Task OnDocumentStoreChangedEvent(object _) =>await Commands.NotifyDocumentChanged();
+
+  private async Task OnDocumentStoreChangedEvent(object _) => await Commands.NotifyDocumentChanged();
 
   public List<ISendFilter> GetSendFilters() =>
     [

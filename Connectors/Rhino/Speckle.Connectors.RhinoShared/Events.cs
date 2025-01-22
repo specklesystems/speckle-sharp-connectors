@@ -81,7 +81,7 @@ public static class RhinoEvents
     RhinoDoc.ReplaceRhinoObject += async (_, e) => await eventAggregator.GetEvent<ReplaceRhinoObject>().PublishAsync(e);
     RhinoDoc.GroupTableEvent += async (_, e) => await eventAggregator.GetEvent<GroupTableEvent>().PublishAsync(e);
     RhinoDoc.LayerTableEvent += async (_, e) => await eventAggregator.GetEvent<LayerTableEvent>().PublishAsync(e);
-    
+
     Command.BeginCommand += async (_, e) => await eventAggregator.GetEvent<BeginCommandEvent>().PublishAsync(e);
   }
 }

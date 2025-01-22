@@ -96,55 +96,32 @@ public sealed class RhinoSendBinding : ISendBinding
 
   private void SubscribeToRhinoEvents(IEventAggregator eventAggregator)
   {
-    eventAggregator
-      .GetEvent<BeginCommandEvent>()
-      .Subscribe(OnBeginCommandEvent);
-    
-    eventAggregator
-      .GetEvent<ActiveDocumentChanged>()
-      .Subscribe(OnActiveDocumentChanged);
+    eventAggregator.GetEvent<BeginCommandEvent>().Subscribe(OnBeginCommandEvent);
+
+    eventAggregator.GetEvent<ActiveDocumentChanged>().Subscribe(OnActiveDocumentChanged);
 
     // NOTE: BE CAREFUL handling things in this event handler since it is triggered whenever we save something into file!
-    eventAggregator
-      .GetEvent<DocumentPropertiesChanged>()
-      .Subscribe(OnDocumentPropertiesChanged);
+    eventAggregator.GetEvent<DocumentPropertiesChanged>().Subscribe(OnDocumentPropertiesChanged);
 
-    eventAggregator
-      .GetEvent<AddRhinoObject>()
-      .Subscribe(OnAddRhinoObject);
+    eventAggregator.GetEvent<AddRhinoObject>().Subscribe(OnAddRhinoObject);
 
-    eventAggregator
-      .GetEvent<DeleteRhinoObject>()
-      .Subscribe(OnDeleteRhinoObject);
+    eventAggregator.GetEvent<DeleteRhinoObject>().Subscribe(OnDeleteRhinoObject);
 
     // NOTE: Catches an object's material change from one user defined doc material to another. Does not catch (as the top event is not triggered) swapping material sources for an object or moving to/from the default material (this is handled below)!
-    eventAggregator
-      .GetEvent<RenderMaterialsTableEvent>()
-      .Subscribe(OnRenderMaterialsTableEvent);
+    eventAggregator.GetEvent<RenderMaterialsTableEvent>().Subscribe(OnRenderMaterialsTableEvent);
 
-    eventAggregator
-      .GetEvent<GroupTableEvent>()
-      .Subscribe(OnGroupTableEvent
-     );
+    eventAggregator.GetEvent<GroupTableEvent>().Subscribe(OnGroupTableEvent);
 
-    eventAggregator
-      .GetEvent<LayerTableEvent>()
-      .Subscribe(OnLayerTableEvent);
+    eventAggregator.GetEvent<LayerTableEvent>().Subscribe(OnLayerTableEvent);
 
     // Catches and stores changed material ids. These are then used in the expiry checks to invalidate all objects that have assigned any of those material ids.
-    eventAggregator
-      .GetEvent<MaterialTableEvent>()
-      .Subscribe(OnMaterialTableEvent);
+    eventAggregator.GetEvent<MaterialTableEvent>().Subscribe(OnMaterialTableEvent);
 
-    eventAggregator
-      .GetEvent<ModifyObjectAttributes>()
-      .Subscribe(OnModifyObjectAttributes);
+    eventAggregator.GetEvent<ModifyObjectAttributes>().Subscribe(OnModifyObjectAttributes);
 
-    eventAggregator
-      .GetEvent<ReplaceRhinoObject>()
-      .Subscribe(OnReplaceRhinoObject);
+    eventAggregator.GetEvent<ReplaceRhinoObject>().Subscribe(OnReplaceRhinoObject);
   }
-  
+
   private void OnActiveDocumentChanged(DocumentEventArgs e) => PreviousUnitSystem = e.Document.ModelUnitSystem;
 
   private async Task OnDocumentPropertiesChanged(DocumentEventArgs e)

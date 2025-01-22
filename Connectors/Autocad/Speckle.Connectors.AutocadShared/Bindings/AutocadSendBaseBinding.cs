@@ -94,6 +94,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   }
 
   private void OnDocumentStoreChangedEvent(object _) => _sendConversionCache.ClearCache();
+
   private readonly List<string> _docSubsTracker = new();
 
   private void SubscribeToObjectChanges(Document doc)
