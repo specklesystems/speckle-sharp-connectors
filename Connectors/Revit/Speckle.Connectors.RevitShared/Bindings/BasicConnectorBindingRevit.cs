@@ -38,14 +38,10 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     _speckleApplication = speckleApplication;
     Commands = new BasicConnectorBindingCommands(parent);
 
-    // POC: event binding?
-    eventAggregator
-      .GetEvent<DocumentStoreChangedEvent>()
-      .Subscribe(async _ =>
-      {
-        await Commands.NotifyDocumentChanged();
-      });
+    eventAggregator.GetEvent<DocumentStoreChangedEvent>().Subscribe(OnDocumentStoreChangedEvent);
   }
+
+  private async Task OnDocumentStoreChangedEvent(object _) => await Commands.NotifyDocumentChanged();
 
   public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
 

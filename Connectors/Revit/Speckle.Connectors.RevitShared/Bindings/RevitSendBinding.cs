@@ -85,13 +85,10 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     // TODO filters need refresh events
 
     eventAggregator.GetEvent<DocumentChangedEvent>().Subscribe(DocChangeHandler);
-    eventAggregator
-      .GetEvent<DocumentStoreChangedEvent>()
-      .Subscribe(async _ =>
-      {
-        await OnDocumentChanged().ConfigureAwait(false);
-      });
+    eventAggregator.GetEvent<DocumentStoreChangedEvent>().Subscribe(OnDocumentStoreChangedEvent);
   }
+
+  private async Task OnDocumentStoreChangedEvent(object _) => await Commands.NotifyDocumentChanged();
 
   public List<ISendFilter> GetSendFilters() =>
     [

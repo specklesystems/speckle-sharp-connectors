@@ -90,13 +90,10 @@ public sealed class ArcGISSendBinding : ISendBinding
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
     SubscribeToArcGISEvents();
-    eventAggregator
-      .GetEvent<DocumentStoreChangedEvent>()
-      .Subscribe(_ =>
-      {
-        _sendConversionCache.ClearCache();
-      });
+    eventAggregator.GetEvent<DocumentStoreChangedEvent>().Subscribe(OnDocumentStoreChangedEvent);
   }
+
+  private void OnDocumentStoreChangedEvent(object _) => _sendConversionCache.ClearCache();
 
   private void SubscribeToArcGISEvents()
   {

@@ -29,14 +29,14 @@ public class TeklaDocumentModelStore : DocumentModelStore
     _jsonCacheManager = jsonCacheManagerFactory.CreateForUser("ConnectorsFileData");
     _model = new TSM.Model();
     GenerateKey();
-    eventAggregator
-      .GetEvent<ModelLoadEvent>()
-      .Subscribe(async _ =>
-      {
-        GenerateKey();
-        LoadState();
-        await eventAggregator.GetEvent<DocumentStoreChangedEvent>().PublishAsync(new object());
-      });
+    eventAggregator.GetEvent<ModelLoadEvent>().Subscribe(OnModelLoadEvent);
+  }
+
+  private async Task OnModelLoadEvent(object _)
+  {
+    GenerateKey();
+    LoadState();
+    await _eventAggregator.GetEvent<DocumentStoreChangedEvent>().PublishAsync(new object());
   }
 
   public override async Task OnDocumentStoreInitialized()

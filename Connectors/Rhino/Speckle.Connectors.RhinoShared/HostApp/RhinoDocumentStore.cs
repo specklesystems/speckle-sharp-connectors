@@ -8,31 +8,35 @@ namespace Speckle.Connectors.Rhino.HostApp;
 
 public class RhinoDocumentStore : DocumentModelStore
 {
+  private readonly IEventAggregator _eventAggregator;
   private const string SPECKLE_KEY = "Speckle_DUI3";
   public override bool IsDocumentInit { get; set; } = true; // Note: because of rhino implementation details regarding expiry checking of sender cards.
 
   public RhinoDocumentStore(IJsonSerializer jsonSerializer, IEventAggregator eventAggregator)
     : base(jsonSerializer)
   {
-    eventAggregator.GetEvent<BeginOpenDocument>().Subscribe(_ => IsDocumentInit = false);
-    eventAggregator
-      .GetEvent<EndOpenDocument>()
-      .Subscribe(async e =>
-      {
-        if (e.Merge)
-        {
-          return;
-        }
+    _eventAggregator = eventAggregator;
+    eventAggregator.GetEvent<BeginOpenDocument>().Subscribe(OnBeginOpenDocument);
+    eventAggregator.GetEvent<EndOpenDocument>().Subscribe(OnEndOpenDocument);
+  }
 
-        if (e.Document == null)
-        {
-          return;
-        }
+  private void OnBeginOpenDocument(object _) => IsDocumentInit = false;
 
-        IsDocumentInit = true;
-        LoadState();
-        await eventAggregator.GetEvent<DocumentStoreChangedEvent>().PublishAsync(new object());
-      });
+  private async Task OnEndOpenDocument(DocumentOpenEventArgs e)
+  {
+    if (e.Merge)
+    {
+      return;
+    }
+
+    if (e.Document == null)
+    {
+      return;
+    }
+
+    IsDocumentInit = true;
+    LoadState();
+    await _eventAggregator.GetEvent<DocumentStoreChangedEvent>().PublishAsync(new object());
   }
 
   protected override void HostAppSaveState(string modelCardState)
