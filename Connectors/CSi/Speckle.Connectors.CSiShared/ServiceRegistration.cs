@@ -35,7 +35,6 @@ public static class ServiceRegistration // TODO: Fix in light of events
 
     services.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
     services.AddSingleton<IBasicConnectorBinding, CsiSharedBasicConnectorBinding>();
-    services.AddSingleton<IAppIdleManager, CsiIdleManager>();
 
     services.AddSingleton<IBinding, CsiSharedSelectionBinding>();
     services.AddSingleton<IBinding, CsiSharedSendBinding>();

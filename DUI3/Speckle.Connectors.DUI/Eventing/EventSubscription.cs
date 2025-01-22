@@ -15,18 +15,12 @@ public class EventSubscription<TPayload>(
 {
   public SubscriptionToken SubscriptionToken => token;
 
-  public Func<object[], Task>? GetExecutionStrategy()
-  {
-    if (!actionReference.IsAlive)
-    {
-      return null;
-    }
-    return async arguments =>
+  public Func<object[], Task>? GetExecutionStrategy() =>
+    async arguments =>
     {
       TPayload argument = (TPayload)arguments[0];
       await InvokeAction(argument);
     };
-  }
 
   private async Task InvokeAction(TPayload argument)
   {
@@ -45,12 +39,16 @@ public class EventSubscription<TPayload>(
     }
   }
 
-  private async Task Invoke(TPayload argument)
-  {
-    await exceptionHandler.CatchUnhandledAsync(() => actionReference.Invoke(argument));
-    if (features.HasFlag(EventFeatures.OneTime))
+  private async Task Invoke(TPayload argument) =>
+    await exceptionHandler.CatchUnhandledAsync(async () =>
     {
-      SubscriptionToken.Dispose();
-    }
-  }
+      if (!(await actionReference.Invoke(argument)))
+      {
+        SubscriptionToken.Dispose();
+      }
+      else if (features.HasFlag(EventFeatures.OneTime))
+      {
+        SubscriptionToken.Dispose();
+      }
+    });
 }

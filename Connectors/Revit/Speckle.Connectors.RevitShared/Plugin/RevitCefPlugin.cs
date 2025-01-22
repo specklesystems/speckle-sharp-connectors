@@ -11,6 +11,7 @@ using Revit.Async;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Models;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 
@@ -99,13 +100,17 @@ internal sealed class RevitCefPlugin : IRevitPlugin
     dui3Button.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://speckle.systems"));
   }
 
-  private void OnApplicationInitialized(object? sender, Autodesk.Revit.DB.Events.ApplicationInitializedEventArgs e)
+  private async void OnApplicationInitialized(
+    object? sender,
+    Autodesk.Revit.DB.Events.ApplicationInitializedEventArgs e
+  )
   {
     var uiApplication = new UIApplication(sender as Application);
     _revitContext.UIApplication = uiApplication;
 
     // POC: might be worth to interface this out, we shall see...
     RevitTask.Initialize(uiApplication);
+    await _serviceProvider.GetRequiredService<DocumentModelStore>().OnDocumentStoreInitialized();
 
     PostApplicationInit(); // for double-click file open
   }

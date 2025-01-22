@@ -1,4 +1,5 @@
 ﻿using Rhino;
+using Rhino.Commands;
 using Rhino.DocObjects;
 using Rhino.DocObjects.Tables;
 using Speckle.Connectors.Common.Threading;
@@ -52,6 +53,9 @@ public class GroupTableEvent(IThreadContext threadContext, ITopLevelExceptionHan
 public class LayerTableEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
   : ThreadedEvent<LayerTableEventArgs>(threadContext, exceptionHandler);
 
+public class BeginCommandEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
+  : ThreadedEvent<CommandEventArgs>(threadContext, exceptionHandler);
+
 public static class RhinoEvents
 {
   public static void Register(IEventAggregator eventAggregator)
@@ -77,5 +81,7 @@ public static class RhinoEvents
     RhinoDoc.ReplaceRhinoObject += async (_, e) => await eventAggregator.GetEvent<ReplaceRhinoObject>().PublishAsync(e);
     RhinoDoc.GroupTableEvent += async (_, e) => await eventAggregator.GetEvent<GroupTableEvent>().PublishAsync(e);
     RhinoDoc.LayerTableEvent += async (_, e) => await eventAggregator.GetEvent<LayerTableEvent>().PublishAsync(e);
+
+    Command.BeginCommand += async (_, e) => await eventAggregator.GetEvent<BeginCommandEvent>().PublishAsync(e);
   }
 }

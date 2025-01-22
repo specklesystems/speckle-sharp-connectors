@@ -75,26 +75,21 @@ public sealed class BrowserBridge : IBrowserBridge
     _browserScriptExecutor = browserScriptExecutor;
     _threadOptions = threadOptions;
     _topLevelExceptionHandler = topLevelExceptionHandler;
-    eventAggregator
-      .GetEvent<ExceptionEvent>()
-      .Subscribe(
-        async ex =>
-        {
-          await Send(
-              BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION,
-              new
-              {
-                type = ToastNotificationType.DANGER,
-                title = "Unhandled Exception Occurred",
-                description = ex.ToFormattedString(),
-                autoClose = false
-              }
-            )
-            .ConfigureAwait(false);
-        },
-        ThreadOption.MainThread
-      );
+    eventAggregator.GetEvent<ExceptionEvent>().Subscribe(OnExceptionEvent, ThreadOption.MainThread);
   }
+
+  private async Task OnExceptionEvent(Exception ex) =>
+    await Send(
+        BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION,
+        new
+        {
+          type = ToastNotificationType.DANGER,
+          title = "Unhandled Exception Occurred",
+          description = ex.ToFormattedString(),
+          autoClose = false
+        }
+      )
+      .ConfigureAwait(false);
 
   public void AssociateWithBinding(IBinding binding)
   {
