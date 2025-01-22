@@ -39,12 +39,16 @@ public class EventSubscription<TPayload>(
     }
   }
 
-  private async Task Invoke(TPayload argument)
-  {
-    await exceptionHandler.CatchUnhandledAsync(() => actionReference.Invoke(argument));
-    if (features.HasFlag(EventFeatures.OneTime))
+  private async Task Invoke(TPayload argument) =>
+    await exceptionHandler.CatchUnhandledAsync(async () =>
     {
-      SubscriptionToken.Dispose();
-    }
-  }
+      if (!(await actionReference.Invoke(argument)))
+      {
+        SubscriptionToken.Dispose();
+      }
+      else if (features.HasFlag(EventFeatures.OneTime))
+      {
+        SubscriptionToken.Dispose();
+      }
+    });
 }

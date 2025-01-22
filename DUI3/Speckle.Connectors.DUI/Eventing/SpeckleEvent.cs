@@ -2,7 +2,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.DUI.Eventing;
@@ -49,15 +48,4 @@ public abstract class SpeckleEvent<T>(IThreadContext threadContext, ITopLevelExc
       new(actionReference, threadContext, exceptionHandler, new(Unsubscribe), threadOption, features);
     return InternalSubscribe(subscription);
   }
-}
-
-public class EventSubscriptionException : SpeckleException
-{
-  public EventSubscriptionException(string message)
-    : base(message) { }
-
-  public EventSubscriptionException() { }
-
-  public EventSubscriptionException(string message, Exception innerException)
-    : base(message, innerException) { }
 }
