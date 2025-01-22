@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NUnit.Framework;
@@ -47,16 +47,10 @@ public class EventAggregatorTests : MoqTest
     subscriptionToken.IsActive.Should().BeFalse();
   }
 
-  private static SubscriptionToken Test_Sub_Async_DisposeToken(IServiceProvider serviceProvider)
+  private SubscriptionToken Test_Sub_Async_DisposeToken(IServiceProvider serviceProvider)
   {
     var eventAggregator = serviceProvider.GetRequiredService<IEventAggregator>();
-    var subscriptionToken = eventAggregator
-      .GetEvent<TestEvent>()
-      .Subscribe(_ =>
-      {
-        s_val = true;
-        return Task.CompletedTask;
-      });
+    var subscriptionToken = eventAggregator.GetEvent<TestEvent>().Subscribe(OnTestAsyncSubscribe);
     return subscriptionToken;
   }
 
@@ -90,15 +84,10 @@ public class EventAggregatorTests : MoqTest
     subscriptionToken.IsActive.Should().BeFalse();
   }
 
-  private static SubscriptionToken Test_Sub_Sync(IServiceProvider serviceProvider)
+  private SubscriptionToken Test_Sub_Sync(IServiceProvider serviceProvider)
   {
     var eventAggregator = serviceProvider.GetRequiredService<IEventAggregator>();
-    var subscriptionToken = eventAggregator
-      .GetEvent<TestEvent>()
-      .Subscribe(_ =>
-      {
-        s_val = true;
-      });
+    var subscriptionToken = eventAggregator.GetEvent<TestEvent>().Subscribe(OnTestSyncSubscribe);
     return subscriptionToken;
   }
 
@@ -132,20 +121,17 @@ public class EventAggregatorTests : MoqTest
     subscriptionToken.IsActive.Should().BeFalse();
   }
 
-  private static SubscriptionToken Test_Onetime_Sub_Async(IServiceProvider serviceProvider)
+  private SubscriptionToken Test_Onetime_Sub_Async(IServiceProvider serviceProvider)
   {
     var eventAggregator = serviceProvider.GetRequiredService<IEventAggregator>();
-    var subscriptionToken = eventAggregator
-      .GetEvent<TestOneTimeEvent>()
-      .OneTimeSubscribe(
-        "test",
-        _ =>
-        {
-          s_val = true;
-          return Task.CompletedTask;
-        }
-      );
+    var subscriptionToken = eventAggregator.GetEvent<TestOneTimeEvent>().OneTimeSubscribe("test", OnTestAsyncSubscribe);
     return subscriptionToken;
+  }
+
+  private Task OnTestAsyncSubscribe(object _)
+  {
+    s_val = true;
+    return Task.CompletedTask;
   }
 
   [Test]
@@ -183,19 +169,16 @@ public class EventAggregatorTests : MoqTest
     subscriptionToken.IsActive.Should().BeFalse();
   }
 
-  private static SubscriptionToken Test_Onetime_Sub_Sync(IServiceProvider serviceProvider)
+  private SubscriptionToken Test_Onetime_Sub_Sync(IServiceProvider serviceProvider)
   {
     var eventAggregator = serviceProvider.GetRequiredService<IEventAggregator>();
-    var subscriptionToken = eventAggregator
-      .GetEvent<TestOneTimeEvent>()
-      .OneTimeSubscribe(
-        "test",
-        _ =>
-        {
-          s_val = true;
-        }
-      );
+    var subscriptionToken = eventAggregator.GetEvent<TestOneTimeEvent>().OneTimeSubscribe("test", OnTestSyncSubscribe);
     return subscriptionToken;
+  }
+
+  private void OnTestSyncSubscribe(object _)
+  {
+    s_val = true;
   }
 
   [Test]
