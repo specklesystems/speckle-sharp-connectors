@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
+using Speckle.Converters.CSiShared.Extensions;
 using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 using Speckle.Converters.CSiShared.Utils;
 
@@ -27,11 +28,16 @@ public sealed class EtabsShellPropertiesExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
   private readonly MaterialCache _materialCache;
+  private readonly CsiToSpeckleCacheSingleton _csiToSpeckleCacheSingleton;
 
-  public EtabsShellPropertiesExtractor(IConverterSettingsStore<CsiConversionSettings> settingsStore)
+  public EtabsShellPropertiesExtractor(
+    CsiToSpeckleCacheSingleton csiToSpeckleCacheSingleton,
+    IConverterSettingsStore<CsiConversionSettings> settingsStore
+  )
   {
     _settingsStore = settingsStore;
     _materialCache = new MaterialCache(settingsStore);
+    _csiToSpeckleCacheSingleton = csiToSpeckleCacheSingleton;
   }
 
   public void ExtractProperties(CsiShellWrapper shell, Dictionary<string, object?> properties)
@@ -46,9 +52,39 @@ public sealed class EtabsShellPropertiesExtractor
     assignments["pierAssignment"] = GetPierAssignmentName(shell);
     assignments["spandrelAssignment"] = GetSpandrelAssignmentName(shell);
     assignments["springAssignmentName"] = GetSpringAssignmentName(shell);
+
+    // NOTE: sectionId and materialId a "quick-fix" to enable filtering in the viewer etc.
+    // Assign sectionId to variable as this will be an argument for the GetMaterialName method
+    string shellAppId = shell.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
     string sectionId = GetSectionName(shell);
+    string materialId = _materialCache.GetMaterialForSection(sectionId);
     assignments["sectionId"] = sectionId;
-    assignments["materialId"] = _materialCache.GetMaterialForSection(sectionId);
+    assignments["materialId"] = materialId;
+
+    // store the object, section, and material id relationships in their corresponding caches to be accessed by the connector
+    if (!string.IsNullOrEmpty(sectionId))
+    {
+      if (_csiToSpeckleCacheSingleton.ShellSectionCache.TryGetValue(sectionId, out List<string>? shellIds))
+      {
+        shellIds.Add(shellAppId);
+      }
+      else
+      {
+        _csiToSpeckleCacheSingleton.ShellSectionCache.Add(sectionId, new List<string>() { shellAppId });
+      }
+
+      if (!string.IsNullOrEmpty(materialId))
+      {
+        if (_csiToSpeckleCacheSingleton.MaterialCache.TryGetValue(materialId, out List<string>? sectionIds))
+        {
+          sectionIds.Add(sectionId);
+        }
+        else
+        {
+          _csiToSpeckleCacheSingleton.MaterialCache.Add(materialId, new List<string>() { sectionId });
+        }
+      }
+    }
   }
 
   private (string label, string level) GetLabelAndLevel(CsiShellWrapper shell)

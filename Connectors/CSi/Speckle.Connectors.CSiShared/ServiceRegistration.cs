@@ -15,6 +15,7 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Converters.CSiShared;
+using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 
 namespace Speckle.Connectors.CSiShared;
 
@@ -51,6 +52,9 @@ public static class ServiceRegistration // TODO: Fix in light of events
     services.AddScoped<IObjectSectionRelationshipManager, ObjectSectionRelationshipManager>();
     services.AddScoped<IFrameSectionPropertyExtractor, CsiFrameSectionPropertyExtractor>();
     services.AddScoped<IShellSectionPropertyExtractor, CsiShellSectionPropertyExtractor>();
+
+    // add converter caches
+    services.AddScoped<CsiToSpeckleCacheSingleton>();
 
     return services;
   }
