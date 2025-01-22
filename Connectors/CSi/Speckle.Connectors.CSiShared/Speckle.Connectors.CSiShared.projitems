@@ -20,7 +20,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\CsiApplicationService.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\CsiDocumentModelStore.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)HostApp\CsiIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Utils\ObjectIdentifiers.cs" />
   </ItemGroup>

@@ -33,7 +33,6 @@ public static class ServiceRegistration
 
     services.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
     services.AddSingleton<IBasicConnectorBinding, CsiSharedBasicConnectorBinding>();
-    services.AddSingleton<IAppIdleManager, CsiIdleManager>();
 
     services.AddSingleton<IBinding, CsiSharedSelectionBinding>();
     services.AddSingleton<IBinding, CsiSharedSendBinding>();
