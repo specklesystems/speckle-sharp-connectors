@@ -81,7 +81,12 @@ public sealed class CsiFramePropertiesExtractor
       {
         if (_csiToSpeckleCacheSingleton.MaterialCache.TryGetValue(materialId, out List<string>? sectionIds))
         {
-          sectionIds.Add(sectionId);
+          // Since this is happening on the object level, we could be processing the same sectionIds (from different
+          // objects) many times. This is not necessary since we just want a set of sectionId corresponding to material
+          if (!sectionIds.Contains(sectionId))
+          {
+            sectionIds.Add(sectionId);
+          }
         }
         else
         {
@@ -109,14 +114,14 @@ public sealed class CsiFramePropertiesExtractor
 
   private string GetMaterialOverwrite(CsiFrameWrapper frame)
   {
-    string propName = "None";
+    string propName = string.Empty;
     _ = _settingsStore.Current.SapModel.FrameObj.GetMaterialOverwrite(frame.Name, ref propName);
     return propName;
   }
 
   private Dictionary<string, double?> GetModifiers(CsiFrameWrapper frame)
   {
-    double[] value = Array.Empty<double>();
+    double[] value = [];
     _ = _settingsStore.Current.SapModel.FrameObj.GetModifiers(frame.Name, ref value);
     return new Dictionary<string, double?>
     {

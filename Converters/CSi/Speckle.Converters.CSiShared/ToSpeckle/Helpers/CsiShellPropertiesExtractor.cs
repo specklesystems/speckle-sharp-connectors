@@ -59,7 +59,7 @@ public sealed class CsiShellPropertiesExtractor
 
   private string GetMaterialOverwrite(CsiShellWrapper shell)
   {
-    string propName = "None";
+    string propName = string.Empty;
     _ = _settingsStore.Current.SapModel.AreaObj.GetMaterialOverwrite(shell.Name, ref propName);
     return propName;
   }

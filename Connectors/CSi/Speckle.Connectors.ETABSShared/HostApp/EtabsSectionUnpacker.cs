@@ -47,8 +47,16 @@ public class EtabsSectionUnpacker : ISectionUnpacker
       string sectionName = entry.Key;
       List<string> frameIds = entry.Value;
 
+      // Initialize properties outside the if statement
+      Dictionary<string, object?> properties = new Dictionary<string, object?>();
+
       // get the properties of the section
-      Dictionary<string, object?> properties = _propertyExtractor.ExtractFrameSectionProperties(sectionName);
+      // openings will have objects assigned to them, but won't have properties
+      // sectionName is initialized with string.Empty, but api ref returns string "None"
+      if (sectionName != "None")
+      {
+        properties = _propertyExtractor.ExtractFrameSectionProperties(sectionName);
+      }
 
       // create the section proxy
       GroupProxy sectionProxy =
@@ -58,7 +66,7 @@ public class EtabsSectionUnpacker : ISectionUnpacker
           name = sectionName,
           applicationId = sectionName,
           objects = frameIds,
-          ["Properties"] = properties
+          ["Properties"] = properties // openings will just have an empty dict here
         };
 
       yield return sectionProxy;
@@ -72,8 +80,16 @@ public class EtabsSectionUnpacker : ISectionUnpacker
       string sectionName = entry.Key;
       List<string> frameIds = entry.Value;
 
+      // Initialize properties outside the if statement
+      Dictionary<string, object?> properties = new Dictionary<string, object?>();
+
       // get the properties of the section
-      Dictionary<string, object?> properties = _propertyExtractor.ExtractShellSectionProperties(sectionName);
+      // openings will have objects assigned to them, but won't have properties
+      // sectionName is initialized with string.Empty, but api ref returns string "None"
+      if (sectionName != "None")
+      {
+        properties = _propertyExtractor.ExtractShellSectionProperties(sectionName);
+      }
 
       // create the section proxy
       GroupProxy sectionProxy =
@@ -83,7 +99,7 @@ public class EtabsSectionUnpacker : ISectionUnpacker
           name = sectionName,
           applicationId = sectionName,
           objects = frameIds,
-          ["Properties"] = properties
+          ["Properties"] = properties // openings will just have an empty dict here
         };
 
       yield return sectionProxy;
