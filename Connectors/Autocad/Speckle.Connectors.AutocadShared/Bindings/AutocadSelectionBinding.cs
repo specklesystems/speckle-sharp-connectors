@@ -13,16 +13,13 @@ public class AutocadSelectionBinding : ISelectionBinding
 {
   private const string SELECTION_EVENT = "setSelection";
   private readonly IEventAggregator _eventAggregator;
-  private readonly HashSet<Document> _visitedDocuments = new();
+  private readonly HashSet<string> _visitedDocuments = new();
 
   public string Name => "selectionBinding";
 
   public IBrowserBridge Parent { get; }
 
-  public AutocadSelectionBinding(
-    IBrowserBridge parent,
-    IEventAggregator eventAggregator
-  )
+  public AutocadSelectionBinding(IBrowserBridge parent, IEventAggregator eventAggregator)
   {
     _eventAggregator = eventAggregator;
     Parent = parent;
@@ -38,10 +35,10 @@ public class AutocadSelectionBinding : ISelectionBinding
 
   private void OnDocumentDestroyed(DocumentCollectionEventArgs e)
   {
-    if (!_visitedDocuments.Contains(e.Document))
+    if (!_visitedDocuments.Contains(e.Document.Name))
     {
-      e.Document.ImpliedSelectionChanged -=DocumentOnImpliedSelectionChanged;
-      _visitedDocuments.Remove(e.Document);
+      e.Document.ImpliedSelectionChanged -= DocumentOnImpliedSelectionChanged;
+      _visitedDocuments.Remove(e.Document.Name);
     }
   }
 
@@ -54,18 +51,17 @@ public class AutocadSelectionBinding : ISelectionBinding
       return;
     }
 
-    if (!_visitedDocuments.Contains(document))
+    if (!_visitedDocuments.Contains(document.Name))
     {
-
       document.ImpliedSelectionChanged += DocumentOnImpliedSelectionChanged;
 
-      _visitedDocuments.Add(document);
+      _visitedDocuments.Add(document.Name);
     }
   }
 
   // ReSharper disable once AsyncVoidMethod
   private async void DocumentOnImpliedSelectionChanged(object? sender, EventArgs e) =>
-  await _eventAggregator.GetEvent<ImpliedSelectionChangedEvent>().PublishAsync(e);
+    await _eventAggregator.GetEvent<ImpliedSelectionChangedEvent>().PublishAsync(e);
 
   // NOTE: Autocad 2022 caused problems, so we need to refactor things a bit in here to always store
   // selection info locally (and get it updated by the event, which we can control to run on the main thread).

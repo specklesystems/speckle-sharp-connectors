@@ -24,7 +24,6 @@ public class AutocadDocumentStore : DocumentModelStore
     _eventAggregator = eventAggregator;
     _previousDocName = NULL_DOCUMENT_NAME;
 
-
     eventAggregator.GetEvent<DocumentActivatedEvent>().Subscribe(DocChanged);
 
     // since below event triggered as secondary, it breaks the logic in OnDocChangeInternal function, leaving it here for now.
@@ -46,6 +45,7 @@ public class AutocadDocumentStore : DocumentModelStore
   }
 
   private async Task DocChanged(DocumentCollectionEventArgs e) => await TryDocChanged(e.Document);
+
   private async Task TryDocChanged(Document? doc)
   {
     var currentDocName = doc != null ? doc.Name : NULL_DOCUMENT_NAME;

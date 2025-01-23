@@ -79,7 +79,6 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
 
-
     if (Application.DocumentManager.CurrentDocument != null)
     {
       // catches the case when autocad just opens up with a blank new doc
@@ -94,23 +93,27 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     eventAggregator.GetEvent<ObjectErasedEvent>().Subscribe(ObjectErased);
     eventAggregator.GetEvent<ObjectModifiedEvent>().Subscribe(ObjectModified);
   }
+
   private void OnDocumentDestroyed(DocumentCollectionEventArgs args)
   {
     Document doc = args.Document;
     if (!_docSubsTracker.Contains(doc.Name))
     {
       doc.Database.ObjectAppended -= DatabaseOnObjectAppended;
-      doc.Database.ObjectErased -=  DatabaseOnObjectErased;
+      doc.Database.ObjectErased -= DatabaseOnObjectErased;
       doc.Database.ObjectModified -= DatabaseObjectModified;
-      
+
       _docSubsTracker.Remove(doc.Name);
     }
   }
+
   private void OnDocumentStoreChangedEvent(object _) => _sendConversionCache.ClearCache();
 
   private readonly List<string> _docSubsTracker = new();
 
- private void SubscribeToObjectChanges(DocumentCollectionEventArgs e) => TryRegisterSubscribeToObjectChanges(e.Document);
+  private void SubscribeToObjectChanges(DocumentCollectionEventArgs e) =>
+    TryRegisterSubscribeToObjectChanges(e.Document);
+
   private void TryRegisterSubscribeToObjectChanges(Document? doc)
   {
     if (doc == null || doc.Database == null || _docSubsTracker.Contains(doc.Name))
@@ -120,22 +123,29 @@ public abstract class AutocadSendBaseBinding : ISendBinding
 
     _docSubsTracker.Add(doc.Name);
     doc.Database.ObjectAppended += DatabaseOnObjectAppended;
-    doc.Database.ObjectErased +=  DatabaseOnObjectErased;
+    doc.Database.ObjectErased += DatabaseOnObjectErased;
     doc.Database.ObjectModified += DatabaseObjectModified;
   }
 
-  private async void DatabaseOnObjectAppended(object sender, ObjectEventArgs e) => await _eventAggregator.GetEvent<ObjectAppendedEvent>().PublishAsync(e);
-  private async void DatabaseOnObjectErased(object sender, ObjectErasedEventArgs e) => await _eventAggregator.GetEvent<ObjectErasedEvent>().PublishAsync(e);
-  private async void DatabaseObjectModified(object sender, ObjectEventArgs e) => await _eventAggregator.GetEvent<ObjectModifiedEvent>().PublishAsync(e);
+  private async void DatabaseOnObjectAppended(object sender, ObjectEventArgs e) =>
+    await _eventAggregator.GetEvent<ObjectAppendedEvent>().PublishAsync(e);
+
+  private async void DatabaseOnObjectErased(object sender, ObjectErasedEventArgs e) =>
+    await _eventAggregator.GetEvent<ObjectErasedEvent>().PublishAsync(e);
+
+  private async void DatabaseObjectModified(object sender, ObjectEventArgs e) =>
+    await _eventAggregator.GetEvent<ObjectModifiedEvent>().PublishAsync(e);
 
   private void OnObjectAppended(ObjectEventArgs e) => OnChangeChangedObjectIds(e.DBObject);
+
   private void ObjectErased(ObjectErasedEventArgs e) => OnChangeChangedObjectIds(e.DBObject);
+
   private void ObjectModified(ObjectEventArgs e) => OnChangeChangedObjectIds(e.DBObject);
 
   private void OnChangeChangedObjectIds(DBObject dBObject)
   {
     ChangedObjectIds[dBObject.GetSpeckleApplicationId()] = 1;
-    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(AutocadSendBinding),RunExpirationChecks);
+    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(AutocadSendBinding), RunExpirationChecks);
   }
 
   private async Task RunExpirationChecks(object _)
