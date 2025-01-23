@@ -26,6 +26,9 @@ public  static class AutocadEvents
 {
   public static void Register(IEventAggregator eventAggregator)
   {
+    Application.Idle += async (_, e) =>
+      await eventAggregator.GetEvent<IdleEvent>().PublishAsync(e);
+    
     Application.DocumentManager.DocumentActivated += async (_, e) =>
       await eventAggregator.GetEvent<DocumentActivatedEvent>().PublishAsync(e);
     Application.DocumentManager.DocumentToBeDestroyed+= async (_, e) =>

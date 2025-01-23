@@ -4,7 +4,6 @@ using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.DatabaseServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Autocad.Plugin;
@@ -35,7 +34,6 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   public IBrowserBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly IAutocadIdleManager _idleManager;
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
   private readonly IServiceProvider _serviceProvider;
@@ -56,7 +54,6 @@ public abstract class AutocadSendBaseBinding : ISendBinding
 
   protected AutocadSendBaseBinding(
     DocumentModelStore store,
-    IAutocadIdleManager idleManager,
     IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     CancellationManager cancellationManager,
@@ -70,7 +67,6 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   )
   {
     _store = store;
-    _idleManager = idleManager;
     _serviceProvider = serviceProvider;
     _cancellationManager = cancellationManager;
     _sendFilters = sendFilters.ToList();
@@ -139,10 +135,10 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   private void OnChangeChangedObjectIds(DBObject dBObject)
   {
     ChangedObjectIds[dBObject.GetSpeckleApplicationId()] = 1;
-    _idleManager.SubscribeToIdle(nameof(AutocadSendBinding), async () => await RunExpirationChecks());
+    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(AutocadSendBinding),RunExpirationChecks);
   }
 
-  private async Task RunExpirationChecks()
+  private async Task RunExpirationChecks(object _)
   {
     var senders = _store.GetSenders();
     string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
