@@ -23,7 +23,6 @@ public static class ServiceRegistration
   public static IServiceCollection AddCsi(this IServiceCollection services)
   {
     services.AddSingleton<IBrowserBridge, BrowserBridge>();
-    services.AddSingleton<ICsiApplicationService, CsiApplicationService>();
 
     services.AddConnectorUtils();
     services.AddDUI<DefaultThreadContext, CsiDocumentModelStore>();
