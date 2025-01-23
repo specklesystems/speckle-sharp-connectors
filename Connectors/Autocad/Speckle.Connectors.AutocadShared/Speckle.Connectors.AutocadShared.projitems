@@ -41,6 +41,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\AutocadRootObject.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\AutocadRootObjectBaseBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\AutocadRootObjectBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\AutocadEvents.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\AutocadRibbon.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\AutocadExtensionApplication.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\AutocadCommand.cs" />
