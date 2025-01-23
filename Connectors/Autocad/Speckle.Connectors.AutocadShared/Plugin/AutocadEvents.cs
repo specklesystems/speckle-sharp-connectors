@@ -1,4 +1,5 @@
 ﻿using Autodesk.AutoCAD.ApplicationServices;
+using Autodesk.AutoCAD.DatabaseServices;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Eventing;
@@ -13,6 +14,13 @@ public class DocumentToBeDestroyedEvent(IThreadContext threadContext, ITopLevelE
   : ThreadedEvent<DocumentCollectionEventArgs>(threadContext, exceptionHandler);
 public class ImpliedSelectionChangedEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
   : ThreadedEvent<EventArgs>(threadContext, exceptionHandler);
+
+public class ObjectAppendedEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
+  : ThreadedEvent<ObjectEventArgs>(threadContext, exceptionHandler);
+public class ObjectErasedEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
+  : ThreadedEvent<ObjectErasedEventArgs>(threadContext, exceptionHandler);
+public class ObjectModifiedEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
+  : ThreadedEvent<ObjectEventArgs>(threadContext, exceptionHandler);
 
 public  static class AutocadEvents
 {

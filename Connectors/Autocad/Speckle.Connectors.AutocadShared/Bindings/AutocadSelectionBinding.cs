@@ -40,8 +40,7 @@ public class AutocadSelectionBinding : ISelectionBinding
   {
     if (!_visitedDocuments.Contains(e.Document))
     {
-      e.Document.ImpliedSelectionChanged -= async (_, e) =>
-        await _eventAggregator.GetEvent<ImpliedSelectionChangedEvent>().PublishAsync(e);
+      e.Document.ImpliedSelectionChanged -=DocumentOnImpliedSelectionChanged;
       _visitedDocuments.Remove(e.Document);
     }
   }
@@ -58,12 +57,15 @@ public class AutocadSelectionBinding : ISelectionBinding
     if (!_visitedDocuments.Contains(document))
     {
 
-      document.ImpliedSelectionChanged +=
-        async (_, e) => await _eventAggregator.GetEvent<ImpliedSelectionChangedEvent>().PublishAsync(e);
+      document.ImpliedSelectionChanged += DocumentOnImpliedSelectionChanged;
 
       _visitedDocuments.Add(document);
     }
   }
+
+  // ReSharper disable once AsyncVoidMethod
+  private async void DocumentOnImpliedSelectionChanged(object? sender, EventArgs e) =>
+  await _eventAggregator.GetEvent<ImpliedSelectionChangedEvent>().PublishAsync(e);
 
   // NOTE: Autocad 2022 caused problems, so we need to refactor things a bit in here to always store
   // selection info locally (and get it updated by the event, which we can control to run on the main thread).
