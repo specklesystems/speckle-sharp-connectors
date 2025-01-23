@@ -1,6 +1,6 @@
 namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 
-public struct PropertyExtractionResult
+public class PropertyExtractionResult
 {
   public string Name { get; set; }
   public string Type { get; set; }

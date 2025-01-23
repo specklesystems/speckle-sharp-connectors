@@ -8,5 +8,5 @@ namespace Speckle.Connectors.ETABS22;
 
 public class SpeckleForm : EtabsSpeckleFormBase
 {
-  protected override HostAppVersion GetVersion() => HostAppVersion.v2021; // TODO: v22
+  protected override HostAppVersion GetVersion() => HostAppVersion.v22;
 }

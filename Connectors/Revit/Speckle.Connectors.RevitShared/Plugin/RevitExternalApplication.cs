@@ -50,7 +50,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
       services.AddRevitConverters();
       services.AddSingleton(application);
       _container = services.BuildServiceProvider();
-      _container.UseDUI();
+      _container.UseDUI(false);
 
       RevitTask.Initialize(application);
       RevitEvents.Register(_container.GetRequiredService<IEventAggregator>(), application);
