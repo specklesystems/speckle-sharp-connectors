@@ -269,9 +269,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       _sendConversionCache.EvictObjects(unpackedObjectIds);
     }
 
-    _eventAggregator
-      .GetEvent<IdleEvent>()
-      .OneTimeSubscribe(nameof(CheckFilterExpiration), CheckFilterExpiration);
+    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(CheckFilterExpiration), CheckFilterExpiration);
     _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RunExpirationChecks), RunExpirationChecks);
   }
 

@@ -113,7 +113,7 @@ public class EventAggregatorTests : MoqTest
     GC.WaitForPendingFinalizers();
     subscriptionToken.IsActive.Should().BeFalse();
   }
-  
+
   private SubscriptionToken Test_Sub_Sync(IServiceProvider serviceProvider)
   {
     var eventAggregator = serviceProvider.GetRequiredService<IEventAggregator>();
@@ -121,7 +121,6 @@ public class EventAggregatorTests : MoqTest
     return subscriptionToken;
   }
 
-  
   [Test]
   public async Task Sub_Sync_Static()
   {
@@ -151,18 +150,19 @@ public class EventAggregatorTests : MoqTest
     GC.WaitForPendingFinalizers();
     subscriptionToken.IsActive.Should().BeFalse();
   }
+
   private static SubscriptionToken Test_Sub_Sync_Static(IServiceProvider serviceProvider)
   {
     var eventAggregator = serviceProvider.GetRequiredService<IEventAggregator>();
     var subscriptionToken = eventAggregator.GetEvent<TestEvent>().Subscribe(OnTestSyncStaticSubscribe);
     return subscriptionToken;
   }
+
   private static void OnTestSyncStaticSubscribe(object _)
   {
     s_val = true;
   }
 
-  
   [Test]
   public async Task Sub_Async_Static()
   {
@@ -192,12 +192,14 @@ public class EventAggregatorTests : MoqTest
     GC.WaitForPendingFinalizers();
     subscriptionToken.IsActive.Should().BeFalse();
   }
+
   private static SubscriptionToken Test_Sub_Async_Static(IServiceProvider serviceProvider)
   {
     var eventAggregator = serviceProvider.GetRequiredService<IEventAggregator>();
     var subscriptionToken = eventAggregator.GetEvent<TestEvent>().Subscribe(OnTestAsyncStaticSubscribe);
     return subscriptionToken;
   }
+
   private static Task OnTestAsyncStaticSubscribe(object _)
   {
     s_val = true;

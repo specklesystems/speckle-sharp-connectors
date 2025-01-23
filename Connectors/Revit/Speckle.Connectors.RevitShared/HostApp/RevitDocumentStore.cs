@@ -42,10 +42,8 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     // It is kind of harmless since we create this object as "SingleInstance".
     LoadState();
   }
-  
-  
-  private void OnDocumentOpen(object _) =>
-    IsDocumentInit = false;
+
+  private void OnDocumentOpen(object _) => IsDocumentInit = false;
 
   public override Task OnDocumentStoreInitialized() =>
     _eventAggregator.GetEvent<DocumentStoreChangedEvent>().PublishAsync(new object());
@@ -67,12 +65,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     }
 
     IsDocumentInit = true;
-    _eventAggregator
-      .GetEvent<IdleEvent>()
-      .OneTimeSubscribe(
-        nameof(RevitDocumentStore),
-        OnIdleEvent
-      );
+    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RevitDocumentStore), OnIdleEvent);
   }
 
   private async Task OnIdleEvent(object _)

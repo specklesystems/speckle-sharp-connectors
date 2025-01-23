@@ -15,6 +15,7 @@ public class ViewActivatedEvent(IThreadContext threadContext, ITopLevelException
 
 public class DocumentOpeningEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
   : ThreadedEvent<object>(threadContext, exceptionHandler);
+
 public class DocumentOpenedEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
   : ThreadedEvent<object>(threadContext, exceptionHandler);
 
@@ -59,12 +60,7 @@ public static class RevitEvents
 #else
 
     application.SelectionChanged += (_, _) =>
-      eventAggregator
-        .GetEvent<IdleEvent>()
-        .OneTimeSubscribe(
-          "Selection",
-          OnSelectionChanged
-        );
+      eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe("Selection", OnSelectionChanged);
 #endif
   }
 
