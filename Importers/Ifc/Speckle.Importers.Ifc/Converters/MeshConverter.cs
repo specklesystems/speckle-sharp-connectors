@@ -60,10 +60,12 @@ public class MeshConverter(IRenderMaterialProxyManager renderMaterialManager) : 
     var color = mesh.Color;
     var diffuse = Color.FromArgb(1, To8BitValue(color.R), To8BitValue(color.G), To8BitValue(color.B));
 
+    var name = $"IFC_MATERIAL:{(color.A, color.R, color.G, color.B).GetHashCode()}";
+
     return new RenderMaterial()
     {
-      applicationId = $"IFC_MATERIAL:{diffuse.GetHashCode()}",
-      name = $"IFC_MATERIAL:{diffuse.GetHashCode()}",
+      applicationId = name,
+      name = name,
       diffuse = diffuse.ToArgb(),
       opacity = color.A
     };
