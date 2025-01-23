@@ -34,7 +34,8 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     _idStorageSchema = idStorageSchema;
     _eventAggregator = eventAggregator;
 
-    eventAggregator.GetEvent<DocumentStoreInitializingEvent>().Subscribe(OnDocumentStoreInitializingEvent);
+    eventAggregator.GetEvent<DocumentOpenedEvent>().Subscribe(OnDocumentOpen);
+    eventAggregator.GetEvent<DocumentOpeningEvent>().Subscribe(OnDocumentOpen);
     eventAggregator.GetEvent<ViewActivatedEvent>().Subscribe(OnViewActivated);
 
     // There is no event that we can hook here for double-click file open...
@@ -43,7 +44,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
   }
   
   
-  public void OnDocumentStoreInitializingEvent(object _) =>
+  private void OnDocumentOpen(object _) =>
     IsDocumentInit = false;
 
   public override Task OnDocumentStoreInitialized() =>

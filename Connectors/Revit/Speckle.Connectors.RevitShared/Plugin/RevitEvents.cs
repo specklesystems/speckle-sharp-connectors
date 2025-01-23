@@ -13,7 +13,9 @@ public class ApplicationInitializedEvent(IThreadContext threadContext, ITopLevel
 public class ViewActivatedEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
   : ThreadedEvent<ViewActivatedEventArgs>(threadContext, exceptionHandler);
 
-public class DocumentStoreInitializingEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
+public class DocumentOpeningEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
+  : ThreadedEvent<object>(threadContext, exceptionHandler);
+public class DocumentOpenedEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
   : ThreadedEvent<object>(threadContext, exceptionHandler);
 
 public class SelectionChangedEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
@@ -26,12 +28,15 @@ public static class RevitEvents
 {
 #if REVIT2022
   private static readonly System.Timers.Timer s_selectionTimer = new(1000);
+#else
+  private static IEventAggregator? s_eventAggregator;
 #endif
 
-  private static IEventAggregator? s_eventAggregator;
   public static void Register(IEventAggregator eventAggregator, UIControlledApplication application)
   {
+#if !REVIT2022
     s_eventAggregator = eventAggregator;
+#endif
     application.Idling += async (_, _) => await eventAggregator.GetEvent<IdleEvent>().PublishAsync(new object());
     application.ControlledApplication.ApplicationInitialized += async (sender, _) =>
       await eventAggregator
@@ -40,9 +45,9 @@ public static class RevitEvents
     application.ViewActivated += async (_, args) =>
       await eventAggregator.GetEvent<ViewActivatedEvent>().PublishAsync(args);
     application.ControlledApplication.DocumentOpened += async (_, _) =>
-      await eventAggregator.GetEvent<DocumentStoreInitializingEvent>().PublishAsync(new object());
+      await eventAggregator.GetEvent<DocumentOpenedEvent>().PublishAsync(new object());
     application.ControlledApplication.DocumentOpening += async (_, _) =>
-      await eventAggregator.GetEvent<DocumentStoreInitializingEvent>().PublishAsync(new object());
+      await eventAggregator.GetEvent<DocumentOpeningEvent>().PublishAsync(new object());
     application.ControlledApplication.DocumentChanged += async (_, args) =>
       await eventAggregator.GetEvent<DocumentChangedEvent>().PublishAsync(args);
 
@@ -63,6 +68,7 @@ public static class RevitEvents
 #endif
   }
 
+#if !REVIT2022
   private static async Task OnSelectionChanged(object _)
   {
     if (s_eventAggregator is null)
@@ -71,4 +77,5 @@ public static class RevitEvents
     }
     await s_eventAggregator.GetEvent<SelectionChangedEvent>().PublishAsync(new object());
   }
+#endif
 }
