@@ -3,7 +3,6 @@ namespace Speckle.Connectors.CSiShared;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
 public abstract class CSiPluginBase : cPluginContract, IDisposable
 {
-  private const string s_modality = "Non-Modal";
   private SpeckleFormBase? _panel;
   private bool _disposed;
 
@@ -12,15 +11,7 @@ public abstract class CSiPluginBase : cPluginContract, IDisposable
     _panel = CreateForm();
     _panel.Initialize(ref sapModel, ref pluginCallback);
     _panel.FormClosed += (_, _) => Dispose();
-
-    if (string.Equals(s_modality, "Non-Modal", StringComparison.OrdinalIgnoreCase))
-    {
-      _panel.Show();
-    }
-    else
-    {
-      _panel.ShowDialog();
-    }
+    _panel.ShowDialog();
   }
 
   protected abstract SpeckleFormBase CreateForm();

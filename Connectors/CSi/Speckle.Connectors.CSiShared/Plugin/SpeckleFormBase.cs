@@ -52,6 +52,7 @@ public abstract class SpeckleFormBase : Form, ICsiApplicationService
     var webview = _container.GetRequiredService<DUI3ControlWebView>();
     Host = new() { Child = webview, Dock = DockStyle.Fill };
     Controls.Add(Host);
+    FormBorderStyle = FormBorderStyle.Sizable;
     FormClosing += Form1Closing;
   }
 
