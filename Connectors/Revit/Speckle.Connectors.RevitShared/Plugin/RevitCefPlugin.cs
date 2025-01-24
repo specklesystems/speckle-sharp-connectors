@@ -3,16 +3,13 @@ using System.IO;
 using System.Reflection;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using Autodesk.Revit.ApplicationServices;
 using Autodesk.Revit.UI;
 using CefSharp;
 using Microsoft.Extensions.DependencyInjection;
-using Revit.Async;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Models;
-using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Sdk;
 
 namespace Speckle.Connectors.Revit.Plugin;
@@ -22,7 +19,6 @@ internal sealed class RevitCefPlugin : IRevitPlugin
   private readonly UIControlledApplication _uIControlledApplication;
   private readonly IServiceProvider _serviceProvider; // should be lazy to ensure the bindings are not created too early
   private readonly BindingOptions _bindingOptions;
-  private readonly RevitContext _revitContext;
   private readonly CefSharpPanel _cefSharpPanel;
   private readonly ISpeckleApplication _speckleApplication;
 
@@ -30,17 +26,17 @@ internal sealed class RevitCefPlugin : IRevitPlugin
     UIControlledApplication uIControlledApplication,
     IServiceProvider serviceProvider,
     BindingOptions bindingOptions,
-    RevitContext revitContext,
     CefSharpPanel cefSharpPanel,
-    ISpeckleApplication speckleApplication
+    ISpeckleApplication speckleApplication,
+    IEventAggregator eventAggregator
   )
   {
     _uIControlledApplication = uIControlledApplication;
     _serviceProvider = serviceProvider;
     _bindingOptions = bindingOptions;
-    _revitContext = revitContext;
     _cefSharpPanel = cefSharpPanel;
     _speckleApplication = speckleApplication;
+    eventAggregator.GetEvent<ApplicationInitializedEvent>().Subscribe(OnApplicationInitialized);
   }
 
   public void Initialise()
@@ -48,7 +44,6 @@ internal sealed class RevitCefPlugin : IRevitPlugin
     // Create and register panels before app initialized. this is needed for double-click file open
     CreateTabAndRibbonPanel(_uIControlledApplication);
     RegisterDockablePane();
-    _uIControlledApplication.ControlledApplication.ApplicationInitialized += OnApplicationInitialized;
   }
 
   public void Shutdown()
@@ -100,26 +95,10 @@ internal sealed class RevitCefPlugin : IRevitPlugin
     dui3Button.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://speckle.systems"));
   }
 
-  private async void OnApplicationInitialized(
-    object? sender,
-    Autodesk.Revit.DB.Events.ApplicationInitializedEventArgs e
-  )
+  private void OnApplicationInitialized(UIApplication uiApplication)
   {
-    var uiApplication = new UIApplication(sender as Application);
-    _revitContext.UIApplication = uiApplication;
+    UIApplication = uiApplication;
 
-    // POC: might be worth to interface this out, we shall see...
-    RevitTask.Initialize(uiApplication);
-    await _serviceProvider.GetRequiredService<DocumentModelStore>().OnDocumentStoreInitialized();
-
-    PostApplicationInit(); // for double-click file open
-  }
-
-  /// <summary>
-  /// Actions to run after UiApplication initialized. This is needed for double-click file open issue.
-  /// </summary>
-  private void PostApplicationInit()
-  {
     var bindings = _serviceProvider.GetRequiredService<IEnumerable<IBinding>>();
     // binding the bindings to each bridge
     foreach (IBinding binding in bindings)
@@ -128,7 +107,7 @@ internal sealed class RevitCefPlugin : IRevitPlugin
       binding.Parent.AssociateWithBinding(binding);
     }
 
-    _cefSharpPanel.Browser.IsBrowserInitializedChanged += (sender, e) =>
+    _cefSharpPanel.Browser.IsBrowserInitializedChanged += (_, e) =>
     {
       if (e.NewValue is false)
       {
@@ -186,4 +165,6 @@ internal sealed class RevitCefPlugin : IRevitPlugin
 
     return null;
   }
+
+  public UIApplication UIApplication { get; private set; }
 }

@@ -1,31 +1,13 @@
-﻿using Speckle.Connectors.Common.Threading;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bridge;
 
 namespace Speckle.Connectors.DUI.Eventing;
 
 public abstract class OneTimeThreadedEvent<T>(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
-  : SpeckleEvent<T>(threadContext, exceptionHandler),
-    IDisposable
+  : SpeckleEvent<T>(threadContext, exceptionHandler)
   where T : notnull
 {
-  private readonly SemaphoreSlim _semaphore = new(1, 1);
   private readonly Dictionary<string, SubscriptionToken> _activeTokens = new();
-
-  protected virtual void Dispose(bool isDisposing)
-  {
-    if (isDisposing)
-    {
-      _semaphore.Dispose();
-    }
-  }
-
-  public void Dispose()
-  {
-    Dispose(true);
-    GC.SuppressFinalize(this);
-  }
-
-  ~OneTimeThreadedEvent() => Dispose(false);
 
   public SubscriptionToken OneTimeSubscribe(
     string id,
@@ -33,8 +15,7 @@ public abstract class OneTimeThreadedEvent<T>(IThreadContext threadContext, ITop
     ThreadOption threadOption = ThreadOption.PublisherThread
   )
   {
-    _semaphore.Wait();
-    try
+    lock (_activeTokens)
     {
       if (_activeTokens.TryGetValue(id, out var token))
       {
@@ -44,13 +25,9 @@ public abstract class OneTimeThreadedEvent<T>(IThreadContext threadContext, ITop
         }
         _activeTokens.Remove(id);
       }
-      token = Subscribe(action, threadOption, EventFeatures.OneTime);
+      token = Subscribe(action, threadOption, EventFeatures.OneTime | EventFeatures.IsAsync);
       _activeTokens.Add(id, token);
       return token;
-    }
-    finally
-    {
-      _semaphore.Release();
     }
   }
 
@@ -60,8 +37,7 @@ public abstract class OneTimeThreadedEvent<T>(IThreadContext threadContext, ITop
     ThreadOption threadOption = ThreadOption.PublisherThread
   )
   {
-    _semaphore.Wait();
-    try
+    lock (_activeTokens)
     {
       if (_activeTokens.TryGetValue(id, out var token))
       {
@@ -75,28 +51,26 @@ public abstract class OneTimeThreadedEvent<T>(IThreadContext threadContext, ITop
       _activeTokens.Add(id, token);
       return token;
     }
-    finally
-    {
-      _semaphore.Release();
-    }
   }
 
   public override async Task PublishAsync(T payload)
   {
-    await _semaphore.WaitAsync();
-    try
+    SubscriptionToken[] tokensToDestory = [];
+    lock (_activeTokens)
     {
-      await base.PublishAsync(payload);
-      foreach (var token in _activeTokens.Values)
+      if (_activeTokens.Count > 0)
+      {
+        tokensToDestory = _activeTokens.Values.ToArray();
+        _activeTokens.Clear();
+      }
+    }
+    await base.PublishAsync(payload);
+    if (tokensToDestory.Length > 0)
+    {
+      foreach (var token in tokensToDestory)
       {
         token.Dispose();
       }
-
-      _activeTokens.Clear();
-    }
-    finally
-    {
-      _semaphore.Release();
     }
   }
 }

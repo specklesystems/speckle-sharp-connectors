@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using Speckle.Sdk.Common;
 
@@ -8,12 +8,21 @@ public class DelegateReference
 {
   private readonly WeakReference<object>? _weakReference;
   private readonly MethodInfo _method;
-  private readonly Type? _delegateType;
+  private readonly Type _delegateType;
 
   public DelegateReference(Delegate @delegate, EventFeatures features)
   {
     var target = @delegate.Target;
     _method = @delegate.Method;
+    var messageType = @delegate.Method.GetParameters()[0].ParameterType;
+    if (features.HasFlag(EventFeatures.IsAsync))
+    {
+      _delegateType = typeof(Func<,>).MakeGenericType(messageType, typeof(Task));
+    }
+    else
+    {
+      _delegateType = typeof(Action<>).MakeGenericType(messageType);
+    }
     if (target != null)
     {
       //anonymous methods are always strong....should we do this? - doing a brief search says yes
@@ -26,16 +35,6 @@ public class DelegateReference
       }
 
       _weakReference = new WeakReference<object>(target);
-
-      var messageType = @delegate.Method.GetParameters()[0].ParameterType;
-      if (features.HasFlag(EventFeatures.IsAsync))
-      {
-        _delegateType = typeof(Func<,>).MakeGenericType(messageType, typeof(Task));
-      }
-      else
-      {
-        _delegateType = typeof(Action<>).MakeGenericType(messageType);
-      }
     }
     else
     {
@@ -45,18 +44,31 @@ public class DelegateReference
 
   public async Task<bool> Invoke(object message)
   {
-    if (_weakReference == null || !_weakReference.TryGetTarget(out object target))
+    if (_weakReference == null)
+    {
+      var method = Delegate.CreateDelegate(_delegateType, null, _method);
+
+      var task = method.DynamicInvoke(message) as Task;
+
+      if (task is not null)
+      {
+        await task;
+      }
+
+      return true;
+    }
+    if (!_weakReference.TryGetTarget(out object target))
     {
       return false;
     }
 
-    var method = Delegate.CreateDelegate(_delegateType.NotNull(), target, _method);
+    var method2 = Delegate.CreateDelegate(_delegateType, target, _method);
 
-    var task = method.DynamicInvoke(message) as Task;
+    var task2 = method2.DynamicInvoke(message) as Task;
 
-    if (task is not null)
+    if (task2 is not null)
     {
-      await task;
+      await task2;
     }
 
     return true;

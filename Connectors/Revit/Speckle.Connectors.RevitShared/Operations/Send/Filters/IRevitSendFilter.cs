@@ -4,5 +4,5 @@ namespace Speckle.Connectors.RevitShared.Operations.Send.Filters;
 
 public interface IRevitSendFilter
 {
-  public void SetContext(RevitContext revitContext);
+  public void SetContext(IRevitContext revitContext);
 }
