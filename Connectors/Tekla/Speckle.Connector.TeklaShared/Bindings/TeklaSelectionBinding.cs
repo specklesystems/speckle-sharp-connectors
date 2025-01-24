@@ -23,10 +23,10 @@ public class TeklaSelectionBinding : ISelectionBinding
     Parent = parent;
     _selector = selector;
 
-    eventAggregator.GetEvent<SelectionChangeEvent>().Subscribe(_ => Events_SelectionChangeEvent());
+    eventAggregator.GetEvent<SelectionChangeEvent>().Subscribe(OnSelectionChangeEvent);
   }
 
-  private void Events_SelectionChangeEvent()
+  private void OnSelectionChangeEvent(object _)
   {
     lock (_selectionEventHandlerLock)
     {

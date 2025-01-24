@@ -2,20 +2,15 @@
 using Speckle.Connectors.CSiShared.Utils;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Converters.CSiShared.Utils;
 
 namespace Speckle.Connectors.CSiShared.Bindings;
 
-public class CsiSharedSelectionBinding : ISelectionBinding
+public class CsiSharedSelectionBinding(IBrowserBridge parent, ICsiApplicationService csiApplicationService)
+  : ISelectionBinding
 {
   public string Name => "selectionBinding";
-  public IBrowserBridge Parent { get; }
-  private readonly ICsiApplicationService _csiApplicationService;
-
-  public CsiSharedSelectionBinding(IBrowserBridge parent, ICsiApplicationService csiApplicationService)
-  {
-    Parent = parent;
-    _csiApplicationService = csiApplicationService;
-  }
+  public IBrowserBridge Parent { get; } = parent;
 
   /// <summary>
   /// Gets the selection and creates an encoded ID (objectType and objectName).
@@ -25,33 +20,21 @@ public class CsiSharedSelectionBinding : ISelectionBinding
   /// </remarks>
   public SelectionInfo GetSelection()
   {
-    // TODO: Since this is standard across CSi Suite - better stored in an enum?
-    var objectTypeMap = new Dictionary<int, string>
-    {
-      { 1, "Point" },
-      { 2, "Frame" },
-      { 3, "Cable" },
-      { 4, "Tendon" },
-      { 5, "Area" },
-      { 6, "Solid" },
-      { 7, "Link" }
-    };
-
     int numberItems = 0;
-    int[] objectType = Array.Empty<int>();
-    string[] objectName = Array.Empty<string>();
+    int[] objectType = [];
+    string[] objectName = [];
 
-    _csiApplicationService.SapModel.SelectObj.GetSelected(ref numberItems, ref objectType, ref objectName);
+    csiApplicationService.SapModel.SelectObj.GetSelected(ref numberItems, ref objectType, ref objectName);
 
     var encodedIds = new List<string>(numberItems);
     var typeCounts = new Dictionary<string, int>();
 
     for (int i = 0; i < numberItems; i++)
     {
-      var typeKey = objectType[i];
-      var typeName = objectTypeMap.TryGetValue(typeKey, out var name) ? name : $"Unknown ({typeKey})";
+      var typeKey = (ModelObjectType)objectType[i];
+      var typeName = typeKey.ToString();
 
-      encodedIds.Add(ObjectIdentifier.Encode(typeKey, objectName[i]));
+      encodedIds.Add(ObjectIdentifier.Encode(objectType[i], objectName[i]));
       typeCounts[typeName] = (typeCounts.TryGetValue(typeName, out var count) ? count : 0) + 1; // NOTE: Cross-framework compatibility (net 48 and net8)
     }
 
