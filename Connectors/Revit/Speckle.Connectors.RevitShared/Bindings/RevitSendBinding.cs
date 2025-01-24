@@ -17,6 +17,7 @@ using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
+using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.RevitShared.Operations.Send.Filters;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
@@ -28,7 +29,8 @@ namespace Speckle.Connectors.Revit.Bindings;
 
 internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 {
-  private readonly IAppIdleManager _idleManager;
+  private readonly IRevitContext _revitContext;
+  private readonly DocumentModelStore _store;
   private readonly CancellationManager _cancellationManager;
   private readonly IServiceProvider _serviceProvider;
   private readonly ISendConversionCache _sendConversionCache;
@@ -38,6 +40,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly ElementUnpacker _elementUnpacker;
   private readonly IRevitConversionSettingsFactory _revitConversionSettingsFactory;
   private readonly ISpeckleApplication _speckleApplication;
+  private readonly IEventAggregator _eventAggregator;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -48,8 +51,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private ConcurrentDictionary<ElementId, byte> ChangedObjectIds { get; set; } = new();
 
   public RevitSendBinding(
-    IAppIdleManager idleManager,
-    RevitContext revitContext,
+    IRevitContext revitContext,
     DocumentModelStore store,
     CancellationManager cancellationManager,
     IBrowserBridge bridge,
@@ -61,12 +63,12 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     ElementUnpacker elementUnpacker,
     IRevitConversionSettingsFactory revitConversionSettingsFactory,
     ISpeckleApplication speckleApplication,
-    IEventAggregator eventAggregator,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    IEventAggregator eventAggregator
   )
-    : base("sendBinding", store, bridge, revitContext)
+    : base("sendBinding", bridge)
   {
-    _idleManager = idleManager;
+    _revitContext = revitContext;
+    _store = store;
     _cancellationManager = cancellationManager;
     _serviceProvider = serviceProvider;
     _sendConversionCache = sendConversionCache;
@@ -76,13 +78,13 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _elementUnpacker = elementUnpacker;
     _revitConversionSettingsFactory = revitConversionSettingsFactory;
     _speckleApplication = speckleApplication;
+    _eventAggregator = eventAggregator;
 
     Commands = new SendBindingUICommands(bridge);
     // TODO expiry events
     // TODO filters need refresh events
 
-    revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
-      topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
+    eventAggregator.GetEvent<DocumentChangedEvent>().Subscribe(DocChangeHandler);
     eventAggregator.GetEvent<DocumentStoreChangedEvent>().Subscribe(OnDocumentStoreChangedEvent);
   }
 
@@ -91,8 +93,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   public List<ISendFilter> GetSendFilters() =>
     [
       new RevitSelectionFilter() { IsDefault = true },
-      new RevitViewsFilter(RevitContext),
-      new RevitCategoriesFilter(RevitContext)
+      new RevitViewsFilter(_revitContext),
+      new RevitCategoriesFilter(_revitContext)
     ];
 
   public List<ICardSetting> GetSendSettings() =>
@@ -111,7 +113,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     // Note: removed top level handling thing as it was confusing me
     try
     {
-      if (Store.GetModelById(modelCardId) is not SenderModelCard modelCard)
+      if (_store.GetModelById(modelCardId) is not SenderModelCard modelCard)
       {
         // Handle as GLOBAL ERROR at BrowserBridge
         throw new InvalidOperationException("No publish model card was found.");
@@ -171,12 +173,12 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private async Task<List<Element>> RefreshElementsOnSender(SenderModelCard modelCard)
   {
     var activeUIDoc =
-      RevitContext.UIApplication?.ActiveUIDocument
+      _revitContext.UIApplication.ActiveUIDocument
       ?? throw new SpeckleException("Unable to retrieve active UI document");
 
     if (modelCard.SendFilter is IRevitSendFilter viewFilter)
     {
-      viewFilter.SetContext(RevitContext);
+      viewFilter.SetContext(_revitContext);
     }
 
     var selectedObjects = modelCard.SendFilter.NotNull().RefreshObjectIds();
@@ -247,13 +249,13 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     if (addedElementIds.Count > 0)
     {
-      _idleManager.SubscribeToIdle(nameof(PostSetObjectIds), PostSetObjectIds);
+      _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(PostSetObjectIds), PostSetObjectIds);
     }
 
     if (HaveUnitsChanged(e.GetDocument()))
     {
       var objectIds = new List<string>();
-      foreach (var sender in Store.GetSenders().ToList())
+      foreach (var sender in _store.GetSenders().ToList())
       {
         if (sender.SendFilter is null)
         {
@@ -267,8 +269,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       _sendConversionCache.EvictObjects(unpackedObjectIds);
     }
 
-    _idleManager.SubscribeToIdle(nameof(CheckFilterExpiration), CheckFilterExpiration);
-    _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
+    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(CheckFilterExpiration), CheckFilterExpiration);
+    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RunExpirationChecks), RunExpirationChecks);
   }
 
   // Keeps track of doc and current units
@@ -305,9 +307,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     return false;
   }
 
-  private async Task PostSetObjectIds()
+  private async Task PostSetObjectIds(object _)
   {
-    foreach (var sender in Store.GetSenders().ToList())
+    foreach (var sender in _store.GetSenders().ToList())
     {
       await RefreshElementsOnSender(sender);
     }
@@ -316,7 +318,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   /// <summary>
   /// Notifies ui if any filters need refreshing. Currently, this only applies for view filters.
   /// </summary>
-  private async Task CheckFilterExpiration()
+  private async Task CheckFilterExpiration(object _)
   {
     // NOTE: below code seems like more make sense in terms of performance but it causes unmanaged exception on Revit
     // using var viewCollector = new FilteredElementCollector(RevitContext.UIApplication?.ActiveUIDocument.Document);
@@ -327,17 +329,17 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     //    await Commands.RefreshSendFilters();
     // }
 
-    if (ChangedObjectIds.Keys.Any(e => RevitContext.UIApplication?.ActiveUIDocument.Document.GetElement(e) is View))
+    if (ChangedObjectIds.Keys.Any(e => _revitContext.UIApplication.ActiveUIDocument.Document.GetElement(e) is View))
     {
       await Commands.RefreshSendFilters();
     }
   }
 
-  private async Task RunExpirationChecks()
+  private async Task RunExpirationChecks(object _)
   {
-    var senders = Store.GetSenders().ToList();
+    var senders = _store.GetSenders().ToList();
     // string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
-    var doc = RevitContext.UIApplication?.ActiveUIDocument.Document;
+    var doc = _revitContext.UIApplication.ActiveUIDocument.Document;
 
     if (doc == null)
     {
@@ -388,7 +390,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     {
       if (modelCard.SendFilter is IRevitSendFilter viewFilter)
       {
-        viewFilter.SetContext(RevitContext);
+        viewFilter.SetContext(_revitContext);
       }
 
       var selectedObjects = modelCard.SendFilter.NotNull().IdMap.NotNull().Values;

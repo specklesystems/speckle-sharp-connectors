@@ -8,8 +8,9 @@ namespace Speckle.Connectors.TeklaShared.Bindings;
 public class TeklaSelectionBinding : ISelectionBinding
 {
   private const string SELECTION_EVENT = "setSelection";
-  private readonly object _selectionEventHandlerLock = new();
+  private readonly object _selectionEventHandlerLock = new object();
   private readonly Tekla.Structures.Model.UI.ModelObjectSelector _selector;
+  private readonly IEventAggregator _eventAggregator;
 
   public string Name => "selectionBinding";
   public IBrowserBridge Parent { get; }
@@ -22,6 +23,7 @@ public class TeklaSelectionBinding : ISelectionBinding
   {
     Parent = parent;
     _selector = selector;
+    _eventAggregator = eventAggregator;
 
     eventAggregator.GetEvent<SelectionChangeEvent>().Subscribe(OnSelectionChangeEvent);
   }

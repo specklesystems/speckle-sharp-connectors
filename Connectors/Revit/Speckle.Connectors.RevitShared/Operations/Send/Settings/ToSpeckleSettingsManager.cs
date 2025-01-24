@@ -13,7 +13,7 @@ namespace Speckle.Connectors.Revit.Operations.Send.Settings;
 [GenerateAutoInterface]
 public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 {
-  private readonly RevitContext _revitContext;
+  private readonly IRevitContext _revitContext;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ElementUnpacker _elementUnpacker;
 
@@ -23,7 +23,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
   private readonly Dictionary<string, bool?> _sendNullParamsCache = new();
 
   public ToSpeckleSettingsManager(
-    RevitContext revitContext,
+    IRevitContext revitContext,
     ISendConversionCache sendConversionCache,
     ElementUnpacker elementUnpacker
   )
@@ -68,7 +68,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     {
       // get the current transform from setting first
       // we are doing this because we can't track if reference points were changed between send operations.
-      Transform? currentTransform = GetTransform(_revitContext, referencePoint);
+      Transform? currentTransform = GetTransform(referencePoint);
 
       if (_referencePointCache.TryGetValue(modelCard.ModelCardId.NotNull(), out Transform? previousTransform))
       {
@@ -109,11 +109,11 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     _sendConversionCache.EvictObjects(unpackedObjectIds);
   }
 
-  private Transform? GetTransform(RevitContext context, ReferencePointType referencePointType)
+  private Transform? GetTransform(ReferencePointType referencePointType)
   {
     Transform? referencePointTransform = null;
 
-    if (context.UIApplication is UIApplication uiApplication)
+    if (_revitContext.UIApplication is UIApplication uiApplication)
     {
       // first get the main doc base points and reference setting transform
       using FilteredElementCollector filteredElementCollector = new(uiApplication.ActiveUIDocument.Document);
