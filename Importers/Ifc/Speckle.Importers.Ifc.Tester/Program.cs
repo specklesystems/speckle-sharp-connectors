@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Ara3D.Utils;
 //using JetBrains.Profiler.SelfApi;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Speckle.Importers.Ifc;
 using Speckle.Importers.Ifc.Ara3D.IfcParser;
 using Speckle.Importers.Ifc.Converters;
@@ -47,6 +48,7 @@ using var process2 = new SerializeProcess(
   new DummyServerObjectManager(),
   new BaseChildFinder(new BasePropertyGatherer()),
   new ObjectSerializerFactory(new BasePropertyGatherer()),
+  new NullLoggerFactory(),
   new SerializeProcessOptions(SkipServer: true)
 );
 Console.WriteLine($"Caching to Speckle: {cache}");
