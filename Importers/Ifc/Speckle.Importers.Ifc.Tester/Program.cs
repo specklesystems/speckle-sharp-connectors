@@ -49,6 +49,7 @@ using var process2 = new SerializeProcess(
   new BaseChildFinder(new BasePropertyGatherer()),
   new ObjectSerializerFactory(new BasePropertyGatherer()),
   new NullLoggerFactory(),
+  default,
   new SerializeProcessOptions(SkipServer: true)
 );
 Console.WriteLine($"Caching to Speckle: {cache}");
@@ -58,7 +59,7 @@ config.OpenDotMemory();
 config.SaveToDir("C:\\Users\\adam\\dotTraceSnapshots");
 DotMemory.Attach(config);
 DotMemory.GetSnapshot("Before");*/
-var (rootId, _) = await process2.Serialize(b, default).ConfigureAwait(false);
+var (rootId, _) = await process2.Serialize(b).ConfigureAwait(false);
 Console.WriteLine(rootId);
 ms2 = stopwatch.ElapsedMilliseconds;
 Console.WriteLine($"Converted to JSON: {ms2 - ms} ms");
