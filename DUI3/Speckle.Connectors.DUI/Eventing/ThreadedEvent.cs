@@ -1,4 +1,4 @@
-﻿using Speckle.Connectors.Common.Threading;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bridge;
 
 namespace Speckle.Connectors.DUI.Eventing;

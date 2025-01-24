@@ -8,37 +8,31 @@ using Speckle.Sdk.Logging;
 
 namespace Speckle.Connectors.CSiShared.HostApp;
 
-public class CsiDocumentModelStore : DocumentModelStore
+public class CsiDocumentModelStore(
+  IJsonSerializer jsonSerializerSettings,
+  ISpeckleApplication speckleApplication,
+  ILogger<CsiDocumentModelStore> logger,
+  ICsiApplicationService csiApplicationService
+) : DocumentModelStore(jsonSerializerSettings)
 {
-  private readonly ISpeckleApplication _speckleApplication;
-  private readonly ILogger<CsiDocumentModelStore> _logger;
-  private readonly ICsiApplicationService _csiApplicationService;
   private string HostAppUserDataPath { get; set; }
   private string DocumentStateFile { get; set; }
   private string ModelPathHash { get; set; }
 
-  public CsiDocumentModelStore(
-    IJsonSerializer jsonSerializerSettings,
-    ISpeckleApplication speckleApplication,
-    ILogger<CsiDocumentModelStore> logger,
-    ICsiApplicationService csiApplicationService
-  )
-    : base(jsonSerializerSettings)
+  public override Task OnDocumentStoreInitialized()
   {
-    _speckleApplication = speckleApplication;
-    _logger = logger;
-    _csiApplicationService = csiApplicationService;
     SetPaths();
     LoadState();
+    return Task.CompletedTask;
   }
 
   private void SetPaths()
   {
-    ModelPathHash = Crypt.Md5(_csiApplicationService.SapModel.GetModelFilepath(), length: 32);
+    ModelPathHash = Crypt.Md5(csiApplicationService.SapModel.GetModelFilepath(), length: 32);
     HostAppUserDataPath = Path.Combine(
       SpecklePathProvider.UserSpeckleFolderPath,
       "ConnectorsFileData",
-      _speckleApplication.Slug
+      speckleApplication.Slug
     );
     DocumentStateFile = Path.Combine(HostAppUserDataPath, $"{ModelPathHash}.json");
   }
@@ -55,7 +49,7 @@ public class CsiDocumentModelStore : DocumentModelStore
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      _logger.LogError(ex.Message);
+      logger.LogError(ex.Message);
     }
   }
 

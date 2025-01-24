@@ -1,5 +1,3 @@
-using Speckle.Sdk.Common;
-
 namespace Speckle.Connectors.CSiShared.HostApp;
 
 /// <summary>
@@ -15,19 +13,4 @@ namespace Speckle.Connectors.CSiShared.HostApp;
 public interface ICsiApplicationService
 {
   cSapModel SapModel { get; }
-  void Initialize(cSapModel sapModel, cPluginCallback pluginCallback);
-}
-
-public class CsiApplicationService : ICsiApplicationService
-{
-  private cSapModel? _sapModel;
-  public cSapModel SapModel => _sapModel.NotNull();
-
-  private cPluginCallback? _pluginCallback;
-
-  public void Initialize(cSapModel sapModel, cPluginCallback pluginCallback)
-  {
-    _sapModel = sapModel;
-    _pluginCallback = pluginCallback;
-  }
 }

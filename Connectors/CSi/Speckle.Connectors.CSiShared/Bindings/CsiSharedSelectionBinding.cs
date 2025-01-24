@@ -6,17 +6,11 @@ using Speckle.Converters.CSiShared.Utils;
 
 namespace Speckle.Connectors.CSiShared.Bindings;
 
-public class CsiSharedSelectionBinding : ISelectionBinding
+public class CsiSharedSelectionBinding(IBrowserBridge parent, ICsiApplicationService csiApplicationService)
+  : ISelectionBinding
 {
   public string Name => "selectionBinding";
-  public IBrowserBridge Parent { get; }
-  private readonly ICsiApplicationService _csiApplicationService;
-
-  public CsiSharedSelectionBinding(IBrowserBridge parent, ICsiApplicationService csiApplicationService)
-  {
-    Parent = parent;
-    _csiApplicationService = csiApplicationService;
-  }
+  public IBrowserBridge Parent { get; } = parent;
 
   /// <summary>
   /// Gets the selection and creates an encoded ID (objectType and objectName).
@@ -27,10 +21,10 @@ public class CsiSharedSelectionBinding : ISelectionBinding
   public SelectionInfo GetSelection()
   {
     int numberItems = 0;
-    int[] objectType = Array.Empty<int>();
-    string[] objectName = Array.Empty<string>();
+    int[] objectType = [];
+    string[] objectName = [];
 
-    _csiApplicationService.SapModel.SelectObj.GetSelected(ref numberItems, ref objectType, ref objectName);
+    csiApplicationService.SapModel.SelectObj.GetSelected(ref numberItems, ref objectType, ref objectName);
 
     var encodedIds = new List<string>(numberItems);
     var typeCounts = new Dictionary<string, int>();

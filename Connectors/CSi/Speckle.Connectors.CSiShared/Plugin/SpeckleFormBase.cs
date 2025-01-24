@@ -11,28 +11,20 @@ using Speckle.Sdk.Host;
 namespace Speckle.Connectors.CSiShared;
 
 [DesignerCategory("")]
-public abstract class SpeckleFormBase : Form
+public abstract class SpeckleFormBase : Form, ICsiApplicationService
 {
-  protected ElementHost Host { get; set; }
-  public static new ServiceProvider? Container { get; set; }
-  private cSapModel _sapModel;
+  private ElementHost Host { get; set; }
   private cPluginCallback _pluginCallback;
+#pragma warning disable CA2213
+  private ServiceProvider _container;
+#pragma warning restore CA2213
 
   protected SpeckleFormBase()
   {
     Text = "Speckle (Beta)";
-
-    var services = new ServiceCollection();
-    ConfigureServices(services);
-
-    Container = services.BuildServiceProvider();
-    Container.UseDUI(false);
-
-    var webview = Container.GetRequiredService<DUI3ControlWebView>();
-    Host = new() { Child = webview, Dock = DockStyle.Fill };
-    Controls.Add(Host);
-    FormClosing += Form1Closing;
   }
+
+  public cSapModel SapModel { get; private set; }
 
   protected virtual void ConfigureServices(IServiceCollection services)
   {
@@ -45,23 +37,29 @@ public abstract class SpeckleFormBase : Form
 
   protected abstract HostAppVersion GetVersion();
 
-  public void SetSapModel(ref cSapModel sapModel, ref cPluginCallback pluginCallback)
+  public void Initialize(ref cSapModel sapModel, ref cPluginCallback pluginCallback)
   {
-    _sapModel = sapModel;
+    SapModel = sapModel;
     _pluginCallback = pluginCallback;
 
-    var csiService = Container.GetRequiredService<ICsiApplicationService>();
-    csiService.Initialize(sapModel, pluginCallback);
+    var services = new ServiceCollection();
+    services.AddSingleton<ICsiApplicationService>(this);
+    ConfigureServices(services);
+
+    _container = services.BuildServiceProvider();
+    _container.UseDUI();
+
+    var webview = _container.GetRequiredService<DUI3ControlWebView>();
+    Host = new() { Child = webview, Dock = DockStyle.Fill };
+    Controls.Add(Host);
+    FormBorderStyle = FormBorderStyle.Sizable;
+    FormClosing += Form1Closing;
   }
 
-  protected void Form1Closing(object? sender, FormClosingEventArgs e)
+  private void Form1Closing(object? sender, FormClosingEventArgs e)
   {
     Host.Dispose();
     _pluginCallback.Finish(0);
-  }
-
-  public new void ShowDialog()
-  {
-    base.ShowDialog();
+    _container.Dispose();
   }
 }

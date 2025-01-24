@@ -20,13 +20,13 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
   public BasicConnectorBindingCommands Commands { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly RevitContext _revitContext;
+  private readonly IRevitContext _revitContext;
   private readonly ISpeckleApplication _speckleApplication;
 
   public BasicConnectorBindingRevit(
     DocumentModelStore store,
     IBrowserBridge parent,
-    RevitContext revitContext,
+    IRevitContext revitContext,
     ISpeckleApplication speckleApplication,
     IEventAggregator eventAggregator
   )
