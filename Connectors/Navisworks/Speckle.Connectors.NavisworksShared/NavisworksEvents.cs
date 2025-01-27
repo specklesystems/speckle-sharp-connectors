@@ -6,14 +6,19 @@ namespace Speckle.Connector.Navisworks;
 
 public class SelectionChangedEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
   : ThreadedEvent<object>(threadContext, exceptionHandler);
+
 public class ActiveDocumentChangingEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
   : ThreadedEvent<object>(threadContext, exceptionHandler);
+
 public class ActiveDocumentChangedEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
   : ThreadedEvent<object>(threadContext, exceptionHandler);
+
 public class CollectionChangingEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
   : ThreadedEvent<object>(threadContext, exceptionHandler);
+
 public class CollectionChangedEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
   : ThreadedEvent<object>(threadContext, exceptionHandler);
+
 public static class NavisworksEvents
 {
   public static void Register(IEventAggregator eventAggregator)

@@ -25,8 +25,7 @@ public sealed class NavisworksDocumentEvents
   /// Initializes a new instance of the <see cref="NavisworksDocumentEvents"/> class and subscribes to document events.
   /// </summary>
   /// <param name="serviceProvider">The service provider for dependency injection.</param>
-  public NavisworksDocumentEvents(
-    IServiceProvider serviceProvider, IEventAggregator eventAggregator)
+  public NavisworksDocumentEvents(IServiceProvider serviceProvider, IEventAggregator eventAggregator)
   {
     _serviceProvider = serviceProvider;
     _eventAggregator = eventAggregator;
@@ -50,22 +49,22 @@ public sealed class NavisworksDocumentEvents
         return;
       }
 
-     
       var activeDocument = NavisworksApp.ActiveDocument;
       if (activeDocument != null)
       {
         activeDocument.Models.CollectionChanged += OnCollectionChanged;
         activeDocument.Models.CollectionChanging += OnCollectionChanging;
-
       }
 
       _isSubscribed = true;
     }
   }
 
-  private async void OnCollectionChanged(object sender, EventArgs _) => await _eventAggregator.GetEvent<CollectionChangedEvent>().PublishAsync(sender);
+  private async void OnCollectionChanged(object sender, EventArgs _) =>
+    await _eventAggregator.GetEvent<CollectionChangedEvent>().PublishAsync(sender);
 
-  private async void OnCollectionChanging(object sender, EventArgs _) => await _eventAggregator.GetEvent<CollectionChangingEvent>().PublishAsync(sender);
+  private async void OnCollectionChanging(object sender, EventArgs _) =>
+    await _eventAggregator.GetEvent<CollectionChangingEvent>().PublishAsync(sender);
 
   /// <summary>
   /// Tracks the current model count before changes occur.
@@ -80,9 +79,9 @@ public sealed class NavisworksDocumentEvents
   {
     _finalModelCount = ((NAV.Document)sender).Models.Count;
 
-    _eventAggregator.GetEvent<IdleEvent>()
+    _eventAggregator
+      .GetEvent<IdleEvent>()
       .OneTimeSubscribe(nameof(NavisworksDocumentEvents), ProcessModelStateChangeAsync);
-
   }
 
   private async Task ProcessModelStateChangeAsync(object _)
@@ -137,8 +136,10 @@ public sealed class NavisworksDocumentEvents
     document.Models.CollectionChanged -= OnCollectionChanged;
     document.Models.CollectionChanging -= OnCollectionChanging;
 
-    var sendBinding = _serviceProvider.GetRequiredService<IEnumerable<IBinding>>().OfType<NavisworksSendBinding>().First();
+    var sendBinding = _serviceProvider
+      .GetRequiredService<IEnumerable<IBinding>>()
+      .OfType<NavisworksSendBinding>()
+      .First();
     sendBinding.CancelAllSendOperations();
   }
-
 }

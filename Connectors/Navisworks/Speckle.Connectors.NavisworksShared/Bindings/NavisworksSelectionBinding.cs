@@ -24,7 +24,6 @@ public class NavisworksSelectionBinding : ISelectionBinding
     Parent = parent;
 
     eventAggregator.GetEvent<SelectionChangedEvent>().Subscribe(OnSelectionChange);
-    
   }
 
   private void OnSelectionChange(object _) =>
