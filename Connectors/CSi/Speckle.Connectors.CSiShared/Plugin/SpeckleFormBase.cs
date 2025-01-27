@@ -23,6 +23,7 @@ public abstract class SpeckleFormBase : Form, ICsiApplicationService
   protected SpeckleFormBase()
   {
     Text = "Speckle (Beta)";
+    Size = new System.Drawing.Size(400, 600);
   }
 
   public cSapModel SapModel { get; private set; }
