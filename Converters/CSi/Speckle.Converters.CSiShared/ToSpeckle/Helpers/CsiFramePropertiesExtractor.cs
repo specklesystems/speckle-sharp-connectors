@@ -21,6 +21,9 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 public sealed class CsiFramePropertiesExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
+
+  private readonly CsiToSpeckleCacheSingleton _csiToSpeckleCacheSingleton;
+
   private static readonly string[] s_releaseKeys =
   [
     "axial",
@@ -31,8 +34,12 @@ public sealed class CsiFramePropertiesExtractor
     "majorBending"
   ]; // Note: caching keys for better performance
 
-  public CsiFramePropertiesExtractor(IConverterSettingsStore<CsiConversionSettings> settingsStore)
+  public CsiFramePropertiesExtractor(
+    CsiToSpeckleCacheSingleton csiToSpeckleCacheSingleton,
+    IConverterSettingsStore<CsiConversionSettings> settingsStore
+  )
   {
+    _csiToSpeckleCacheSingleton = csiToSpeckleCacheSingleton;
     _settingsStore = settingsStore;
   }
 
@@ -40,17 +47,53 @@ public sealed class CsiFramePropertiesExtractor
   {
     frameData.ApplicationId = frame.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
 
-    var geometry = DictionaryUtils.EnsureNestedDictionary(frameData.Properties, "Geometry");
+    var geometry = DictionaryUtils.EnsureNestedDictionary(frameData.Properties, ObjectPropertyCategory.GEOMETRY);
     (geometry["startJointName"], geometry["endJointName"]) = GetEndPointNames(frame);
 
-    var assignments = DictionaryUtils.EnsureNestedDictionary(frameData.Properties, "Assignments");
+    var assignments = DictionaryUtils.EnsureNestedDictionary(frameData.Properties, ObjectPropertyCategory.ASSIGNMENTS);
     assignments["groups"] = new List<string>(GetGroupAssigns(frame));
     assignments["materialOverwrite"] = GetMaterialOverwrite(frame);
     assignments["localAxis"] = GetLocalAxes(frame);
     assignments["propertyModifiers"] = GetModifiers(frame);
     assignments["endReleases"] = GetReleases(frame);
-    assignments["sectionProperty"] = GetSectionName(frame);
     assignments["path"] = GetPathType(frame);
+
+    // NOTE: sectionId and materialId a "quick-fix" to enable filtering in the viewer etc.
+    // Assign sectionId to variable as this will be an argument for the GetMaterialName method
+    string sectionId = GetSectionName(frame);
+    string materialId = GetMaterialName(sectionId);
+    assignments[ObjectPropertyKey.SECTION_ID] = sectionId;
+    assignments[ObjectPropertyKey.MATERIAL_ID] = materialId;
+
+    // store the object, section, and material id relationships in their corresponding caches to be accessed by the connector
+    if (!string.IsNullOrEmpty(sectionId))
+    {
+      if (_csiToSpeckleCacheSingleton.FrameSectionCache.TryGetValue(sectionId, out List<string>? frameIds))
+      {
+        frameIds.Add(frameData.ApplicationId);
+      }
+      else
+      {
+        _csiToSpeckleCacheSingleton.FrameSectionCache.Add(sectionId, new List<string>() { frameData.ApplicationId });
+      }
+
+      if (!string.IsNullOrEmpty(materialId))
+      {
+        if (_csiToSpeckleCacheSingleton.MaterialCache.TryGetValue(materialId, out List<string>? sectionIds))
+        {
+          // Since this is happening on the object level, we could be processing the same sectionIds (from different
+          // objects) many times. This is not necessary since we just want a set of sectionId corresponding to material
+          if (!sectionIds.Contains(sectionId))
+          {
+            sectionIds.Add(sectionId);
+          }
+        }
+        else
+        {
+          _csiToSpeckleCacheSingleton.MaterialCache.Add(materialId, new List<string>() { sectionId });
+        }
+      }
+    }
   }
 
   private string[] GetGroupAssigns(CsiFrameWrapper frame)
@@ -71,14 +114,14 @@ public sealed class CsiFramePropertiesExtractor
 
   private string GetMaterialOverwrite(CsiFrameWrapper frame)
   {
-    string propName = "None";
+    string propName = string.Empty;
     _ = _settingsStore.Current.SapModel.FrameObj.GetMaterialOverwrite(frame.Name, ref propName);
     return propName;
   }
 
   private Dictionary<string, double?> GetModifiers(CsiFrameWrapper frame)
   {
-    double[] value = Array.Empty<double>();
+    double[] value = [];
     _ = _settingsStore.Current.SapModel.FrameObj.GetModifiers(frame.Name, ref value);
     return new Dictionary<string, double?>
     {
@@ -88,8 +131,8 @@ public sealed class CsiFramePropertiesExtractor
       ["torsionalConstantModifier"] = value[3],
       ["momentOfInertiaAboutLocal2AxisModifier"] = value[4],
       ["momentOfInertiaAboutLocal3AxisModifier"] = value[5],
-      ["massModifier"] = value[6],
-      ["weightModifier"] = value[7]
+      ["mass"] = value[6],
+      ["weight"] = value[7]
     };
   }
 
@@ -103,10 +146,10 @@ public sealed class CsiFramePropertiesExtractor
 
   private Dictionary<string, object?> GetReleases(CsiFrameWrapper frame)
   {
-    bool[] ii = Array.Empty<bool>(),
-      jj = Array.Empty<bool>();
-    double[] startValue = Array.Empty<double>(),
-      endValue = Array.Empty<double>();
+    bool[] ii = [],
+      jj = [];
+    double[] startValue = [],
+      endValue = [];
 
     _ = _settingsStore.Current.SapModel.FrameObj.GetReleases(frame.Name, ref ii, ref jj, ref startValue, ref endValue);
 
@@ -146,5 +189,14 @@ public sealed class CsiFramePropertiesExtractor
     string pathType = string.Empty;
     _ = _settingsStore.Current.SapModel.FrameObj.GetTypeOAPI(frame.Name, ref pathType);
     return pathType;
+  }
+
+  // NOTE: This is a little convoluted as we aren't on the cFrameObj level, but one deeper.
+  // As noted in ExtractProperties, this is just a quick-fix to get some displayable materialId parameter
+  private string GetMaterialName(string sectionName)
+  {
+    string materialName = string.Empty;
+    _ = _settingsStore.Current.SapModel.PropFrame.GetMaterial(sectionName, ref materialName);
+    return materialName;
   }
 }

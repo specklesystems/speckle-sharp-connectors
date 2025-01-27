@@ -15,6 +15,7 @@ using Speckle.Connectors.Revit.Operations.Send;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.Common;
+using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.Revit.DependencyInjection;
@@ -41,10 +42,10 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<IBinding, SelectionBinding>();
     serviceCollection.AddSingleton<IBinding, RevitSendBinding>();
     serviceCollection.AddSingleton<IBinding, RevitReceiveBinding>();
-    serviceCollection.AddSingleton<IAppIdleManager, RevitIdleManager>();
 
     serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
     serviceCollection.AddSingleton<IBasicConnectorBinding, BasicConnectorBindingRevit>();
+    serviceCollection.AddSingleton<IRevitContext>(sp => sp.GetRequiredService<IRevitPlugin>());
 
     // send operation and dependencies
     serviceCollection.AddScoped<SendOperation<ElementId>>();

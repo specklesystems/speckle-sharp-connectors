@@ -27,7 +27,6 @@ public sealed class CsiSharedSendBinding : ISendBinding
   public IBrowserBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly IAppIdleManager _idleManager;
   private readonly IServiceProvider _serviceProvider;
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
@@ -40,7 +39,6 @@ public sealed class CsiSharedSendBinding : ISendBinding
 
   public CsiSharedSendBinding(
     DocumentModelStore store,
-    IAppIdleManager idleManager,
     IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     IServiceProvider serviceProvider,
@@ -54,7 +52,6 @@ public sealed class CsiSharedSendBinding : ISendBinding
   )
   {
     _store = store;
-    _idleManager = idleManager;
     _serviceProvider = serviceProvider;
     _sendFilters = sendFilters.ToList();
     _cancellationManager = cancellationManager;

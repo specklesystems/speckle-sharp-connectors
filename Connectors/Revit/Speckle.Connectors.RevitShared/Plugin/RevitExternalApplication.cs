@@ -1,8 +1,10 @@
 using Autodesk.Revit.UI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Revit.Async;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.Revit.DependencyInjection;
 using Speckle.Converters.RevitShared;
 using Speckle.Sdk;
@@ -48,8 +50,10 @@ internal sealed class RevitExternalApplication : IExternalApplication
       services.AddRevitConverters();
       services.AddSingleton(application);
       _container = services.BuildServiceProvider();
-      _container.UseDUI(true);
+      _container.UseDUI();
 
+      RevitTask.Initialize(application);
+      RevitEvents.Register(_container.GetRequiredService<IEventAggregator>(), application);
       // resolve root object
       _revitPlugin = _container.GetRequiredService<IRevitPlugin>();
       _revitPlugin.Initialise();

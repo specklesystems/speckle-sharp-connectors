@@ -9,9 +9,9 @@ namespace Speckle.Connectors.Revit.HostApp;
 /// </summary>
 public class ElementUnpacker
 {
-  private readonly RevitContext _revitContext;
+  private readonly IRevitContext _revitContext;
 
-  public ElementUnpacker(RevitContext revitContext)
+  public ElementUnpacker(IRevitContext revitContext)
   {
     _revitContext = revitContext;
   }

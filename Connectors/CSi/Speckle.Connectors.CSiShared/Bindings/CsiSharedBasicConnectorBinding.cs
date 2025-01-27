@@ -6,42 +6,31 @@ using Speckle.Sdk;
 
 namespace Speckle.Connectors.CSiShared.Bindings;
 
-public class CsiSharedBasicConnectorBinding : IBasicConnectorBinding
+public class CsiSharedBasicConnectorBinding(
+  IBrowserBridge parent,
+  ISpeckleApplication speckleApplication,
+  DocumentModelStore store
+) : IBasicConnectorBinding
 {
-  private readonly ISpeckleApplication _speckleApplication;
-  private readonly DocumentModelStore _store;
-
   public string Name => "baseBinding";
-  public IBrowserBridge Parent { get; }
-  public BasicConnectorBindingCommands Commands { get; }
+  public IBrowserBridge Parent { get; } = parent;
+  public BasicConnectorBindingCommands Commands { get; } = new(parent);
 
-  public CsiSharedBasicConnectorBinding(
-    IBrowserBridge parent,
-    ISpeckleApplication speckleApplication,
-    DocumentModelStore store
-  )
-  {
-    Parent = parent;
-    _speckleApplication = speckleApplication;
-    _store = store;
-    Commands = new BasicConnectorBindingCommands(parent);
-  }
+  public string GetConnectorVersion() => speckleApplication.SpeckleVersion;
 
-  public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
+  public string GetSourceApplicationName() => speckleApplication.Slug;
 
-  public string GetSourceApplicationName() => _speckleApplication.Slug;
+  public string GetSourceApplicationVersion() => speckleApplication.HostApplicationVersion;
 
-  public string GetSourceApplicationVersion() => _speckleApplication.HostApplicationVersion;
+  public DocumentInfo? GetDocumentInfo() => new("ETABS Model", "ETABS Model", "1");
 
-  public DocumentInfo? GetDocumentInfo() => new DocumentInfo("ETABS Model", "ETABS Model", "1");
+  public DocumentModelStore GetDocumentState() => store;
 
-  public DocumentModelStore GetDocumentState() => _store;
+  public void AddModel(ModelCard model) => store.AddModel(model);
 
-  public void AddModel(ModelCard model) => _store.AddModel(model);
+  public void UpdateModel(ModelCard model) => store.UpdateModel(model);
 
-  public void UpdateModel(ModelCard model) => _store.UpdateModel(model);
-
-  public void RemoveModel(ModelCard model) => _store.RemoveModel(model);
+  public void RemoveModel(ModelCard model) => store.RemoveModel(model);
 
   public Task HighlightModel(string modelCardId) => Task.CompletedTask;
 
