@@ -43,18 +43,18 @@ public sealed class EtabsShellPropertiesExtractor
   public void ExtractProperties(CsiShellWrapper shell, Dictionary<string, object?> properties)
   {
     var objectId = DictionaryUtils.EnsureNestedDictionary(properties, ObjectPropertyCategory.OBJECT_ID);
-    objectId["designOrientation"] = GetDesignOrientation(shell);
-    (objectId["label"], objectId["level"]) = GetLabelAndLevel(shell);
+    objectId["Design Orientation"] = GetDesignOrientation(shell);
+    (objectId["Label"], objectId["Level"]) = GetLabelAndLevel(shell);
 
     var assignments = DictionaryUtils.EnsureNestedDictionary(properties, ObjectPropertyCategory.ASSIGNMENTS);
-    assignments["diaphragmName"] = GetAssignedDiaphragmName(shell);
-    assignments["isOpening"] = IsOpening(shell);
-    assignments["pierAssignment"] = GetPierAssignmentName(shell);
-    assignments["spandrelAssignment"] = GetSpandrelAssignmentName(shell);
-    assignments["springAssignmentName"] = GetSpringAssignmentName(shell);
+    assignments["Diaphragm"] = GetAssignedDiaphragmName(shell);
+    assignments["Opening"] = IsOpening(shell);
+    assignments["Pier"] = GetPierAssignmentName(shell);
+    assignments["Spandrel"] = GetSpandrelAssignmentName(shell);
+    assignments["Spring Assignment"] = GetSpringAssignmentName(shell);
 
-    // NOTE: sectionId and materialId a "quick-fix" to enable filtering in the viewer etc.
-    // Assign sectionId to variable as this will be an argument for the GetMaterialName method
+    // NOTE: Section Property and Material are a "quick-fix" to enable filtering in the viewer etc.
+    // Assign Section Property to variable as this will be an argument for the GetMaterialName method
     string shellAppId = shell.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
     string sectionId = GetSectionName(shell);
     string materialId = _materialNameLookup.GetMaterialForSection(sectionId);
@@ -109,7 +109,7 @@ public sealed class EtabsShellPropertiesExtractor
 
   private string GetAssignedDiaphragmName(CsiShellWrapper shell)
   {
-    string diaphragmName = "None"; // Is there a better way to handle null?
+    string diaphragmName = string.Empty;
     _ = _settingsStore.Current.SapModel.AreaObj.GetDiaphragm(shell.Name, ref diaphragmName);
     return diaphragmName;
   }
@@ -123,14 +123,14 @@ public sealed class EtabsShellPropertiesExtractor
 
   private string GetPierAssignmentName(CsiShellWrapper shell)
   {
-    string pierAssignment = "None"; // Is there a better way to handle null?
+    string pierAssignment = string.Empty;
     _ = _settingsStore.Current.SapModel.AreaObj.GetPier(shell.Name, ref pierAssignment);
     return pierAssignment;
   }
 
   private string GetSpandrelAssignmentName(CsiShellWrapper shell)
   {
-    string spandrelAssignment = "None"; // Is there a better way to handle null?
+    string spandrelAssignment = string.Empty;
     _ = _settingsStore.Current.SapModel.AreaObj.GetSpandrel(shell.Name, ref spandrelAssignment);
     return spandrelAssignment;
   }

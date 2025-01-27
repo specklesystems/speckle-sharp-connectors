@@ -22,4 +22,22 @@ public static class DictionaryUtils
 
     return nestedDictionary;
   }
+
+  /// <summary>
+  /// Creates a standardized dictionary containing name, value and units.
+  /// </summary>
+  /// <param name="name">The name of the value</param>
+  /// <param name="value">The numerical value</param>
+  /// <param name="units">The units of the value</param>
+  /// <returns>A dictionary with standardized keys for name, value and units</returns>
+  /// <remarks>
+  /// This just reduces repetion of creating dictionaries with the below keys.
+  /// </remarks>
+  public static Dictionary<string, object?> CreateValueUnitDictionary(string name, object value, string units) =>
+    new()
+    {
+      ["name"] = name,
+      ["value"] = value,
+      ["units"] = units
+    };
 }

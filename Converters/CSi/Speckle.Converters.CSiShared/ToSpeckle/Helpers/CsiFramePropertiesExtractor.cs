@@ -108,15 +108,12 @@ public sealed class CsiFramePropertiesExtractor
     double angle = 0;
     bool advanced = false;
     _ = _settingsStore.Current.SapModel.FrameObj.GetLocalAxes(frame.Name, ref angle, ref advanced);
-    Dictionary<string, object?> angleDictionary =
-      new()
-      {
-        ["name"] = "Angle",
-        ["value"] = angle,
-        ["units"] = "Degrees"
-      };
 
-    return new Dictionary<string, object?> { ["Angle"] = angleDictionary, ["Advanced"] = advanced.ToString() };
+    return new Dictionary<string, object?>
+    {
+      ["Angle"] = DictionaryUtils.CreateValueUnitDictionary("Angle", angle, "Degrees"),
+      ["Advanced"] = advanced.ToString()
+    };
   }
 
   private string GetMaterialOverwrite(CsiFrameWrapper frame)
