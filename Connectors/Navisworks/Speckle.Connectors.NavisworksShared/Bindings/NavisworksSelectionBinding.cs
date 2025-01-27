@@ -33,7 +33,7 @@ public class NavisworksSelectionBinding : ISelectionBinding
   private async Task UpdateSelectionAsync(object _)
   {
     var selInfo = GetSelection();
-    await Parent.Send<SelectionInfo>(SELECTION_EVENT, selInfo);
+    await Parent.Send(SELECTION_EVENT, selInfo);
   }
 
   public SelectionInfo GetSelection()
@@ -54,7 +54,7 @@ public class NavisworksSelectionBinding : ISelectionBinding
     );
 
     return new SelectionInfo(
-      [.. selectedObjectsIds],
+      selectedObjectsIds,
       $"{selectedObjectsIds.Count} object{(selectedObjectsIds.Count != 1 ? "s" : "")}"
     );
   }

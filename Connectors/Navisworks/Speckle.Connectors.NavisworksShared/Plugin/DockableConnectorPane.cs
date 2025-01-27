@@ -3,6 +3,7 @@ using System.Windows.Forms;
 using System.Windows.Forms.Integration;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connector.Navisworks.DependencyInjection;
+using Speckle.Connector.Navisworks.HostApp;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Eventing;
@@ -46,6 +47,7 @@ internal sealed class Connector : NAV.Plugins.DockPanePlugin
     Container = services.BuildServiceProvider();
     NavisworksEvents.Register(Container.GetRequiredService<IEventAggregator>());
     Container.UseDUI();
+    Container.GetRequiredService<NavisworksDocumentEvents>();
 
     var u = Container.GetRequiredService<DUI3ControlWebView>();
 

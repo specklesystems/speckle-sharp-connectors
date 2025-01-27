@@ -35,6 +35,7 @@ public sealed class NavisworksDocumentEvents
     _eventAggregator.GetEvent<ActiveDocumentChangedEvent>().Subscribe(SubscribeToDocumentModelEvents);
     _eventAggregator.GetEvent<CollectionChangingEvent>().Subscribe(HandleDocumentModelCountChanging);
     _eventAggregator.GetEvent<CollectionChangedEvent>().Subscribe(HandleDocumentModelCountChanged);
+    SubscribeToDocumentModelEvents(new object());
   }
 
   /// <summary>
@@ -120,47 +121,6 @@ public sealed class NavisworksDocumentEvents
     }
   }
 
-  /// <summary>
-  /// Processes model state changes by updating the store and notifying commands.
-  /// </summary>
-  private async Task NotifyValidModelStateChange()
-  {
-    if (_isProcessing)
-    {
-      return;
-    }
-
-    _isProcessing = true;
-
-    try
-    {
-      var store = _serviceProvider.GetRequiredService<NavisworksDocumentModelStore>();
-      var basicBinding = _serviceProvider.GetRequiredService<IBasicConnectorBinding>();
-      var commands = (basicBinding as NavisworksBasicConnectorBinding)?.Commands;
-
-      switch (_finalModelCount)
-      {
-        case 0 when _priorModelCount > 0:
-          // Clear the store when models are removed
-          store.ClearAndSave();
-          break;
-        case > 0 when _priorModelCount == 0:
-          // Load state when models are added
-          store.ReloadState();
-          break;
-      }
-
-      if (commands != null)
-      {
-        await commands.NotifyDocumentChanged();
-      }
-    }
-    finally
-    {
-      _isProcessing = false;
-    }
-  }
-
   private void UnsubscribeFromDocumentModelEvents(object _)
   {
     var activeDocument = NavisworksApp.ActiveDocument;
@@ -177,7 +137,7 @@ public sealed class NavisworksDocumentEvents
     document.Models.CollectionChanged -= OnCollectionChanged;
     document.Models.CollectionChanging -= OnCollectionChanging;
 
-    var sendBinding = _serviceProvider.GetRequiredService<NavisworksSendBinding>();
+    var sendBinding = _serviceProvider.GetRequiredService<IEnumerable<IBinding>>().OfType<NavisworksSendBinding>().First();
     sendBinding.CancelAllSendOperations();
   }
 
