@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connector.Navisworks.DependencyInjection;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Converter.Navisworks.DependencyInjection;
 using Speckle.Sdk.Host;
@@ -43,6 +44,7 @@ internal sealed class Connector : NAV.Plugins.DockPanePlugin
     services.AddNavisworksConverter();
 
     Container = services.BuildServiceProvider();
+    NavisworksEvents.Register(Container.GetRequiredService<IEventAggregator>());
     Container.UseDUI();
 
     var u = Container.GetRequiredService<DUI3ControlWebView>();
