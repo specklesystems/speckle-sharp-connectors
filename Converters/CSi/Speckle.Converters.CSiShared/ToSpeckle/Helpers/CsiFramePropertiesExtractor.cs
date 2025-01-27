@@ -26,12 +26,12 @@ public sealed class CsiFramePropertiesExtractor
 
   private static readonly string[] s_releaseKeys =
   [
-    "axial",
-    "minorShear",
-    "majorShear",
-    "torsion",
-    "minorBending",
-    "majorBending"
+    "Axial",
+    "Shear 2 (Major)",
+    "Shear 3 (Minor)",
+    "Torsion",
+    "Moment 22 (Minor)",
+    "Moment 33 (Major)"
   ]; // Note: caching keys for better performance
 
   public CsiFramePropertiesExtractor(
@@ -48,15 +48,14 @@ public sealed class CsiFramePropertiesExtractor
     frameData.ApplicationId = frame.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
 
     var geometry = DictionaryUtils.EnsureNestedDictionary(frameData.Properties, ObjectPropertyCategory.GEOMETRY);
-    (geometry["startJointName"], geometry["endJointName"]) = GetEndPointNames(frame);
+    (geometry["I-End Joint"], geometry["J-End Joint"]) = GetEndPointNames(frame);
 
     var assignments = DictionaryUtils.EnsureNestedDictionary(frameData.Properties, ObjectPropertyCategory.ASSIGNMENTS);
-    assignments["groups"] = new List<string>(GetGroupAssigns(frame));
-    assignments["materialOverwrite"] = GetMaterialOverwrite(frame);
-    assignments["localAxis"] = GetLocalAxes(frame);
-    assignments["propertyModifiers"] = GetModifiers(frame);
-    assignments["endReleases"] = GetReleases(frame);
-    assignments["path"] = GetPathType(frame);
+    assignments["Groups"] = new List<string>(GetGroupAssigns(frame));
+    assignments["Material Overwrite"] = GetMaterialOverwrite(frame);
+    assignments["Local Axis 2 Angle"] = GetLocalAxes(frame);
+    assignments["Property Modifiers"] = GetModifiers(frame);
+    assignments["End Releases"] = GetReleases(frame);
 
     // NOTE: sectionId and materialId a "quick-fix" to enable filtering in the viewer etc.
     // Assign sectionId to variable as this will be an argument for the GetMaterialName method
@@ -74,7 +73,7 @@ public sealed class CsiFramePropertiesExtractor
       }
       else
       {
-        _csiToSpeckleCacheSingleton.FrameSectionCache.Add(sectionId, new List<string>() { frameData.ApplicationId });
+        _csiToSpeckleCacheSingleton.FrameSectionCache.Add(sectionId, [frameData.ApplicationId]);
       }
 
       if (!string.IsNullOrEmpty(materialId))
@@ -90,7 +89,7 @@ public sealed class CsiFramePropertiesExtractor
         }
         else
         {
-          _csiToSpeckleCacheSingleton.MaterialCache.Add(materialId, new List<string>() { sectionId });
+          _csiToSpeckleCacheSingleton.MaterialCache.Add(materialId, [sectionId]);
         }
       }
     }
@@ -109,7 +108,15 @@ public sealed class CsiFramePropertiesExtractor
     double angle = 0;
     bool advanced = false;
     _ = _settingsStore.Current.SapModel.FrameObj.GetLocalAxes(frame.Name, ref angle, ref advanced);
-    return new Dictionary<string, object?> { ["angle"] = angle, ["advanced"] = advanced.ToString() };
+    Dictionary<string, object?> angleDictionary =
+      new()
+      {
+        ["name"] = "Angle",
+        ["value"] = angle,
+        ["units"] = "Degrees"
+      };
+
+    return new Dictionary<string, object?> { ["Angle"] = angleDictionary, ["Advanced"] = advanced.ToString() };
   }
 
   private string GetMaterialOverwrite(CsiFrameWrapper frame)
@@ -125,14 +132,14 @@ public sealed class CsiFramePropertiesExtractor
     _ = _settingsStore.Current.SapModel.FrameObj.GetModifiers(frame.Name, ref value);
     return new Dictionary<string, double?>
     {
-      ["crossSectionalAreaModifier"] = value[0],
-      ["shearAreaInLocal2DirectionModifier"] = value[1],
-      ["shearAreaInLocal3DirectionModifier"] = value[2],
-      ["torsionalConstantModifier"] = value[3],
-      ["momentOfInertiaAboutLocal2AxisModifier"] = value[4],
-      ["momentOfInertiaAboutLocal3AxisModifier"] = value[5],
-      ["mass"] = value[6],
-      ["weight"] = value[7]
+      ["Area"] = value[0],
+      ["As2"] = value[1],
+      ["As3"] = value[2],
+      ["Torsion"] = value[3],
+      ["I22"] = value[4],
+      ["I33"] = value[5],
+      ["Mass"] = value[6],
+      ["Weight"] = value[7]
     };
   }
 
@@ -153,28 +160,24 @@ public sealed class CsiFramePropertiesExtractor
 
     _ = _settingsStore.Current.SapModel.FrameObj.GetReleases(frame.Name, ref ii, ref jj, ref startValue, ref endValue);
 
-    var startNodes = s_releaseKeys
-      .Select(
-        (key, index) =>
-          new KeyValuePair<string, object?>(
-            $"{key}StartNode",
-            new Dictionary<string, object?> { ["release"] = ii[index], ["stiffness"] = startValue[index] }
-          )
-      )
-      .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-
-    var endNodes = s_releaseKeys
-      .Select(
-        (key, index) =>
-          new KeyValuePair<string, object?>(
-            $"{key}EndNode",
-            new Dictionary<string, object?> { ["release"] = jj[index], ["stiffness"] = endValue[index] }
-          )
-      )
-      .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-
-    return startNodes.Concat(endNodes).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+    return new Dictionary<string, object?>
+    {
+      ["End-I"] = CreateNodeReleases(ii, startValue),
+      ["End-J"] = CreateNodeReleases(jj, endValue),
+    };
   }
+
+  // NOTE: Avoid duplicate dictionary creation logic for End-I and End-J in GetReleases() method
+  private static Dictionary<string, object?> CreateNodeReleases(bool[] releases, double[] values) =>
+    s_releaseKeys
+      .Select(
+        (key, i) => // for each key, we want both the key (string) and index
+          new KeyValuePair<string, object?>( // for each key, create dictionary with Release and Stiffness
+            key,
+            new Dictionary<string, object?> { ["Release"] = releases[i], ["Stiffness"] = values[i] }
+          )
+      )
+      .ToDictionary(x => x.Key, x => x.Value);
 
   private string GetSectionName(CsiFrameWrapper frame)
   {
@@ -182,13 +185,6 @@ public sealed class CsiFramePropertiesExtractor
       sAuto = string.Empty;
     _ = _settingsStore.Current.SapModel.FrameObj.GetSection(frame.Name, ref sectionName, ref sAuto);
     return sectionName;
-  }
-
-  private string GetPathType(CsiFrameWrapper frame)
-  {
-    string pathType = string.Empty;
-    _ = _settingsStore.Current.SapModel.FrameObj.GetTypeOAPI(frame.Name, ref pathType);
-    return pathType;
   }
 
   // NOTE: This is a little convoluted as we aren't on the cFrameObj level, but one deeper.
