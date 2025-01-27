@@ -71,8 +71,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Connectors", "Connectors", 
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{59E8E8F3-4E42-4E92-83B3-B1C2AB901D18}"
 	ProjectSection(SolutionItems) = preProject
-		.github\workflows\ci.yml = .github\workflows\ci.yml
-		.github\workflows\main.yml = .github\workflows\main.yml
+		.github\workflows\pr.yml = .github\workflows\pr.yml
+		.github\workflows\release.yml = .github\workflows\release.yml
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Connectors.Civil3d2024", "Connectors\Autocad\Speckle.Connectors.Civil3d2024\Speckle.Connectors.Civil3d2024.csproj", "{CA8EAE01-AB9F-4EC1-B6F3-73721487E9E1}"
