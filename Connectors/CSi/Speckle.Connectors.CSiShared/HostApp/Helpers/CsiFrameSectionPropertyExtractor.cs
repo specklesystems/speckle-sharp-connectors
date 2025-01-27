@@ -38,7 +38,7 @@ public class CsiFrameSectionPropertyExtractor : IFrameSectionPropertyExtractor
       properties,
       SectionPropertyCategory.GENERAL_DATA
     );
-    generalData["material"] = materialName;
+    generalData["Material"] = materialName;
   }
 
   private void GetSectionProperties(string sectionName, Dictionary<string, object?> properties)
@@ -72,22 +72,27 @@ public class CsiFrameSectionPropertyExtractor : IFrameSectionPropertyExtractor
       ref radiusOfGyrationAboutMinorAxis
     );
 
+    string distanceUnit = _settingsStore.Current.SpeckleUnits;
+    string areaUnit = $"{distanceUnit}²"; // // TODO: Formalize this better
+    string modulusUnit = $"{distanceUnit}³"; // // TODO: Formalize this better
+    string inertiaUnit = $"{distanceUnit}\u2074"; // TODO: Formalize this better
+
     Dictionary<string, object?> mechanicalProperties = DictionaryUtils.EnsureNestedDictionary(
       properties,
       SectionPropertyCategory.SECTION_PROPERTIES
     );
-    mechanicalProperties["area"] = crossSectionalArea;
-    mechanicalProperties["As2"] = shearAreaInMajorAxisDirection;
-    mechanicalProperties["As3"] = shearAreaInMinorAxisDirection;
-    mechanicalProperties["torsion"] = torsionalConstant;
-    mechanicalProperties["I22"] = momentOfInertiaAboutMajorAxis;
-    mechanicalProperties["I33"] = momentOfInertiaAboutMinorAxis;
-    mechanicalProperties["S22"] = sectionModulusAboutMajorAxis;
-    mechanicalProperties["S33"] = sectionModulusAboutMinorAxis;
-    mechanicalProperties["Z22"] = plasticModulusAboutMajorAxis;
-    mechanicalProperties["Z33"] = plasticModulusAboutMinorAxis;
-    mechanicalProperties["R22"] = radiusOfGyrationAboutMajorAxis;
-    mechanicalProperties["R33"] = radiusOfGyrationAboutMinorAxis;
+    DictionaryUtils.AddValueWithUnits(mechanicalProperties, "Area", crossSectionalArea, areaUnit);
+    DictionaryUtils.AddValueWithUnits(mechanicalProperties, "As2", shearAreaInMajorAxisDirection, areaUnit);
+    DictionaryUtils.AddValueWithUnits(mechanicalProperties, "As3", shearAreaInMinorAxisDirection, areaUnit);
+    DictionaryUtils.AddValueWithUnits(mechanicalProperties, "J", torsionalConstant, inertiaUnit);
+    DictionaryUtils.AddValueWithUnits(mechanicalProperties, "I22", momentOfInertiaAboutMajorAxis, inertiaUnit);
+    DictionaryUtils.AddValueWithUnits(mechanicalProperties, "I33", momentOfInertiaAboutMinorAxis, inertiaUnit);
+    DictionaryUtils.AddValueWithUnits(mechanicalProperties, "S22", sectionModulusAboutMajorAxis, modulusUnit);
+    DictionaryUtils.AddValueWithUnits(mechanicalProperties, "S33", sectionModulusAboutMinorAxis, modulusUnit);
+    DictionaryUtils.AddValueWithUnits(mechanicalProperties, "Z22", plasticModulusAboutMajorAxis, modulusUnit);
+    DictionaryUtils.AddValueWithUnits(mechanicalProperties, "Z33", plasticModulusAboutMinorAxis, modulusUnit);
+    DictionaryUtils.AddValueWithUnits(mechanicalProperties, "R22", radiusOfGyrationAboutMajorAxis, distanceUnit);
+    DictionaryUtils.AddValueWithUnits(mechanicalProperties, "R33", radiusOfGyrationAboutMinorAxis, distanceUnit);
   }
 
   private void GetPropertyModifiers(string sectionName, Dictionary<string, object?> properties)
@@ -98,20 +103,20 @@ public class CsiFrameSectionPropertyExtractor : IFrameSectionPropertyExtractor
     Dictionary<string, object?> modifiers =
       new()
       {
-        ["crossSectionalAreaModifier"] = stiffnessModifiersArray[0],
-        ["shearAreaInLocal2DirectionModifier"] = stiffnessModifiersArray[1],
-        ["shearAreaInLocal3DirectionModifier"] = stiffnessModifiersArray[2],
-        ["torsionalConstantModifier"] = stiffnessModifiersArray[3],
-        ["momentOfInertiaAboutLocal2AxisModifier"] = stiffnessModifiersArray[4],
-        ["momentOfInertiaAboutLocal3AxisModifier"] = stiffnessModifiersArray[5],
-        ["mass"] = stiffnessModifiersArray[6],
-        ["weight"] = stiffnessModifiersArray[7],
+        ["Cross-section (Axial) Area"] = stiffnessModifiersArray[0],
+        ["Shear Area in 2 Direction"] = stiffnessModifiersArray[1],
+        ["Shear Area in 3 Direction"] = stiffnessModifiersArray[2],
+        ["Torsional Constant"] = stiffnessModifiersArray[3],
+        ["Moment of Inertia about 2 Axis"] = stiffnessModifiersArray[4],
+        ["Moment of Inertia about 3 Axis"] = stiffnessModifiersArray[5],
+        ["Mass"] = stiffnessModifiersArray[6],
+        ["Weight"] = stiffnessModifiersArray[7],
       };
 
     Dictionary<string, object?> generalData = DictionaryUtils.EnsureNestedDictionary(
       properties,
       SectionPropertyCategory.GENERAL_DATA
     );
-    generalData["modifiers"] = modifiers;
+    generalData["Modifiers"] = modifiers;
   }
 }

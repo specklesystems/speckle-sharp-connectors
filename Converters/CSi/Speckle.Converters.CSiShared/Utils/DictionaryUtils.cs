@@ -24,19 +24,18 @@ public static class DictionaryUtils
   }
 
   /// <summary>
-  /// Creates a standardized dictionary containing name, value and units.
+  /// Adds a value with its associated units to a parent dictionary using a standardized format.
+  /// Creates a nested dictionary with 'name', 'value', and 'units' keys.
   /// </summary>
-  /// <param name="name">The name of the value</param>
-  /// <param name="value">The numerical value</param>
-  /// <param name="units">The units of the value</param>
-  /// <returns>A dictionary with standardized keys for name, value and units</returns>
-  /// <remarks>
-  /// This just reduces repetion of creating dictionaries with the below keys.
-  /// </remarks>
-  public static Dictionary<string, object?> CreateValueUnitDictionary(string name, object value, string units) =>
-    new()
+  public static void AddValueWithUnits(
+    Dictionary<string, object?> parentDictionary,
+    string key,
+    object value,
+    string? units = null
+  ) =>
+    parentDictionary[key] = new Dictionary<string, object?>
     {
-      ["name"] = name,
+      ["name"] = key,
       ["value"] = value,
       ["units"] = units
     };

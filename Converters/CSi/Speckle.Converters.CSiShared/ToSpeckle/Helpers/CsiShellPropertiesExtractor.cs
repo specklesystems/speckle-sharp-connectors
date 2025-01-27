@@ -32,10 +32,10 @@ public sealed class CsiShellPropertiesExtractor
     shellData.ApplicationId = shell.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
 
     var geometry = DictionaryUtils.EnsureNestedDictionary(shellData.Properties, ObjectPropertyCategory.GEOMETRY);
-    geometry["Joints"] = GetPointNames(shell);
+    geometry["Joints"] = GetPointNames(shell); // TODO: 🪲 Viewer shows 4 but only displays 3
 
     var assignments = DictionaryUtils.EnsureNestedDictionary(shellData.Properties, ObjectPropertyCategory.ASSIGNMENTS);
-    assignments["Groups"] = new List<string>(GetGroupAssigns(shell));
+    assignments["Groups"] = GetGroupAssigns(shell);
     assignments["Local Axis 2 Angle"] = GetLocalAxes(shell);
     assignments["Material Overwrite"] = GetMaterialOverwrite(shell);
     assignments["Property Modifiers"] = GetModifiers(shell);
@@ -55,11 +55,11 @@ public sealed class CsiShellPropertiesExtractor
     bool advanced = false;
     _ = _settingsStore.Current.SapModel.AreaObj.GetLocalAxes(shell.Name, ref angle, ref advanced);
 
-    return new Dictionary<string, object?>
-    {
-      ["Angle"] = DictionaryUtils.CreateValueUnitDictionary("Angle", angle, "Degrees"),
-      ["Advanced"] = advanced.ToString()
-    };
+    Dictionary<string, object?> resultsDictionary = [];
+    DictionaryUtils.AddValueWithUnits(resultsDictionary, "Angle", angle, "Degrees");
+    resultsDictionary["Advanced"] = advanced.ToString();
+
+    return resultsDictionary;
   }
 
   private string GetMaterialOverwrite(CsiShellWrapper shell)

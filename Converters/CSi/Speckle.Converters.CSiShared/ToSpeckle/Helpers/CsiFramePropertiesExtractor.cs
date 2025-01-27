@@ -51,7 +51,7 @@ public sealed class CsiFramePropertiesExtractor
     (geometry["I-End Joint"], geometry["J-End Joint"]) = GetEndPointNames(frame);
 
     var assignments = DictionaryUtils.EnsureNestedDictionary(frameData.Properties, ObjectPropertyCategory.ASSIGNMENTS);
-    assignments["Groups"] = new List<string>(GetGroupAssigns(frame));
+    assignments["Groups"] = GetGroupAssigns(frame);
     assignments["Material Overwrite"] = GetMaterialOverwrite(frame);
     assignments["Local Axis 2 Angle"] = GetLocalAxes(frame);
     assignments["Property Modifiers"] = GetModifiers(frame);
@@ -109,11 +109,11 @@ public sealed class CsiFramePropertiesExtractor
     bool advanced = false;
     _ = _settingsStore.Current.SapModel.FrameObj.GetLocalAxes(frame.Name, ref angle, ref advanced);
 
-    return new Dictionary<string, object?>
-    {
-      ["Angle"] = DictionaryUtils.CreateValueUnitDictionary("Angle", angle, "Degrees"),
-      ["Advanced"] = advanced.ToString()
-    };
+    Dictionary<string, object?> resultsDictionary = [];
+    DictionaryUtils.AddValueWithUnits(resultsDictionary, "Angle", angle, "Degrees");
+    resultsDictionary["Advanced"] = advanced.ToString();
+
+    return resultsDictionary;
   }
 
   private string GetMaterialOverwrite(CsiFrameWrapper frame)
