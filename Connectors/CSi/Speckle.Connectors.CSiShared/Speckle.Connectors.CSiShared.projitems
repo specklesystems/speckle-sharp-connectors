@@ -9,6 +9,11 @@
     <Import_RootNamespace>Speckle.Connectors.CSiShared</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\et_element_Speckle.bmp">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\CsiSharedBasicConnectorBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\CsiSharedSelectionBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\CsiSharedSendBinding.cs" />
@@ -29,5 +34,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\CsiDocumentModelStore.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Utils\ObjectIdentifiers.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="$(MSBuildThisFileDirectory)Resources\et_element_Speckle.bmp" />
   </ItemGroup>
 </Project>
