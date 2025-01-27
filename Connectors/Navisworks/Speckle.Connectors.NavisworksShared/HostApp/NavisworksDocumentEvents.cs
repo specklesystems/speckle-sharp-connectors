@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connector.Navisworks.Bindings;
 using Speckle.Connectors.DUI.Bindings;
-using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 
 namespace Speckle.Connector.Navisworks.HostApp;
 
@@ -12,9 +12,7 @@ namespace Speckle.Connector.Navisworks.HostApp;
 public sealed class NavisworksDocumentEvents : IDisposable
 {
   private readonly IServiceProvider _serviceProvider;
-  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
-  private readonly IAppIdleManager _idleManager;
-  private readonly IBrowserBridge _parent;
+  private readonly IEventAggregator _eventAggregator;
   private readonly object _subscriptionLock = new();
 
   private bool _isSubscribed;
@@ -28,20 +26,11 @@ public sealed class NavisworksDocumentEvents : IDisposable
   /// Initializes a new instance of the <see cref="NavisworksDocumentEvents"/> class and subscribes to document events.
   /// </summary>
   /// <param name="serviceProvider">The service provider for dependency injection.</param>
-  /// <param name="topLevelExceptionHandler">Handles exceptions during event processing.</param>
-  /// <param name="idleManager">Manages idle processing.</param>
   public NavisworksDocumentEvents(
-    IServiceProvider serviceProvider,
-    ITopLevelExceptionHandler topLevelExceptionHandler,
-    IAppIdleManager idleManager,
-    IBrowserBridge parent
-  )
+    IServiceProvider serviceProvider, IEventAggregator eventAggregator)
   {
     _serviceProvider = serviceProvider;
-    _topLevelExceptionHandler = topLevelExceptionHandler;
-    _idleManager = idleManager;
-
-    _parent = parent;
+    _eventAggregator = eventAggregator;
 
     SubscribeToDocumentModelEvents();
   }
@@ -82,13 +71,12 @@ public sealed class NavisworksDocumentEvents : IDisposable
   {
     _finalModelCount = ((NAV.Document)sender).Models.Count;
 
-    _topLevelExceptionHandler.CatchUnhandled(
-      () =>
-        _idleManager.SubscribeToIdle(nameof(NavisworksDocumentEvents), async () => await ProcessModelStateChangeAsync())
-    );
+    _eventAggregator.GetEvent<IdleEvent>()
+      .OneTimeSubscribe(nameof(NavisworksDocumentEvents), ProcessModelStateChangeAsync);
+
   }
 
-  private async Task ProcessModelStateChangeAsync()
+  private async Task ProcessModelStateChangeAsync(object _)
   {
     if (_isProcessing)
     {
