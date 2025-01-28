@@ -6,7 +6,7 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad2023.ToHost.Geometry;
 
-[NameAndRankValue(nameof(SOG.Autocad.AutocadPolycurve), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(SOG.Autocad.AutocadPolycurve), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class AutocadPolycurveToHostConverter : ITypedConverter<SOG.Autocad.AutocadPolycurve, object>
 {
   private readonly ITypedConverter<SOG.Autocad.AutocadPolycurve, ADB.Polyline> _polylineConverter;

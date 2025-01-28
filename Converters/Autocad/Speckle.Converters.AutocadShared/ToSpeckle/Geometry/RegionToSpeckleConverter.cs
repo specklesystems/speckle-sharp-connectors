@@ -4,7 +4,7 @@ using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Autocad.Geometry;
 
-[NameAndRankValue(nameof(ADB.Region), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(ADB.Region), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class RegionToSpeckleConverter :  ITypedConverter<ADB.Region, SOG.Mesh>
 {
   private readonly ITypedConverter<ABR.Brep, SOG.Mesh> _brepConverter;

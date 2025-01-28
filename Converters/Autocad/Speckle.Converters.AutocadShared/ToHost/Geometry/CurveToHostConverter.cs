@@ -4,7 +4,7 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.AutocadShared.ToHost.Geometry;
 
-[NameAndRankValue(nameof(SOG.Curve), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(SOG.Curve), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class CurveToHostConverter :  ITypedConverter<SOG.Curve, ADB.Curve>
 {
   private readonly ITypedConverter<SOG.Curve, AG.NurbCurve3d> _curveConverter;

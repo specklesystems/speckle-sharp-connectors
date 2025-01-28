@@ -4,7 +4,7 @@ using Speckle.Sdk;
 
 namespace Speckle.Converters.Autocad.Geometry;
 
-[NameAndRankValue(nameof(ADB.SubDMesh), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(ADB.SubDMesh), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class DBSubDMeshToSpeckleConverter : ITypedConverter<ADB.SubDMesh, SOG.Mesh>
 {
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;

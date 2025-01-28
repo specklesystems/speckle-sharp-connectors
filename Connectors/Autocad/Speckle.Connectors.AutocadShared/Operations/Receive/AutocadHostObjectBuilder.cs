@@ -21,7 +21,7 @@ namespace Speckle.Connectors.Autocad.Operations.Receive;
 /// <para>Expects to be a scoped dependency per receive operation.</para>
 /// </summary>
 public class AutocadHostObjectBuilder(
-  IRootToHostConverter converter,
+  IHostConverter converter,
   AutocadLayerBaker layerBaker,
   AutocadGroupBaker groupBaker,
   AutocadInstanceBaker instanceBaker,
