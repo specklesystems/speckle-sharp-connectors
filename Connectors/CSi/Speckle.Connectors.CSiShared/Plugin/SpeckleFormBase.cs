@@ -16,6 +16,7 @@ public abstract class SpeckleFormBase : Form, ICsiApplicationService
 {
   private ElementHost Host { get; set; }
   private cPluginCallback _pluginCallback;
+  private bool _disposed;
 #pragma warning disable CA2213
   private ServiceProvider _container;
 #pragma warning restore CA2213
@@ -82,4 +83,18 @@ public abstract class SpeckleFormBase : Form, ICsiApplicationService
   }
 
   private void Form1Closing(object? sender, FormClosingEventArgs e) => _pluginCallback.Finish(0);
+
+  protected override void Dispose(bool disposing)
+  {
+    if (!_disposed)
+    {
+      if (disposing)
+      {
+        _container.Dispose();
+        Host.Dispose();
+        base.Dispose(disposing);
+      }
+      _disposed = true;
+    }
+  }
 }

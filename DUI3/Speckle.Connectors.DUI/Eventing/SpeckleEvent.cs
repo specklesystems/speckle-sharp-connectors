@@ -13,8 +13,6 @@ public abstract class SpeckleEvent<T>(IThreadContext threadContext, ITopLevelExc
 {
   public string Name { get; } = typeof(T).Name;
 
-  public virtual Task PublishAsync(T payload) => InternalPublish(payload);
-
   protected SubscriptionToken Subscribe(Func<T, Task> action, ThreadOption threadOption, EventFeatures features)
   {
     ValidateDelegate(action);
