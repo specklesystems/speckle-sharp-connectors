@@ -18,8 +18,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksColorUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksDocumentEvents.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksDocumentModelStore.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksMaterialUnpacker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)NavisworksEvents.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\NavisworksSavedSetsFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\GeometryNodeMerger.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\NavisworksRootObjectBuilder.cs" />
@@ -30,7 +30,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\VisualRepresentationSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\NavisworksSelectionFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)PathConstants.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Plugin\AppUtils.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\BrowserPane.xaml.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\Commands.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\DockableConnectorPane.cs" />

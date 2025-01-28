@@ -24,7 +24,7 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
 {
   private IDisposable? _disposableLogger;
 
-  protected override string LocalPlugInName => "Speckle (Beta) for Rhino";
+  protected override string LocalPlugInName => "Speckle (Beta)";
   public ServiceProvider? Container { get; private set; }
 
   public SpeckleConnectorsRhinoPlugin()
