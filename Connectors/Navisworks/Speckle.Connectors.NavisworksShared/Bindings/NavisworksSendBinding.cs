@@ -93,11 +93,11 @@ public class NavisworksSendBinding : ISendBinding
 
       InitializeConverterSettings(scope, modelCard);
 
-      CancellationToken token = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
       var navisworksModelItems = GetNavisworksModelItems(modelCard);
 
-      var sendResult = await ExecuteSendOperation(scope, modelCard, navisworksModelItems, token);
+      var sendResult = await ExecuteSendOperation(scope, modelCard, navisworksModelItems, cancellationItem.Token);
 
       await Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
     }
