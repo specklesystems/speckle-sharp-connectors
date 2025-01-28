@@ -46,9 +46,7 @@ public class CancellationManager : ICancellationManager
     foreach (var operation in _operationsInProgress)
     {
       operation.Value.Cancel();
-      operation.Value.Dispose();
     }
-    _operationsInProgress.Clear();
   }
 
   /// <summary>
@@ -78,7 +76,7 @@ public class CancellationManager : ICancellationManager
     }
   }
 
-  internal void DisposeOperation(string id)
+  private void DisposeOperation(string id)
   {
     if (_operationsInProgress.TryGetValue(id, out CancellationTokenSource? cts))
     {
