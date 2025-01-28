@@ -14,22 +14,21 @@ public class CancellationManagerTests
 
     var id = Guid.NewGuid().ToString();
     var item = manager.GetCancellationItem(id);
-    
-      manager.NumberOfOperations.Should().Be(1);
-      manager.IsExist(id).Should().BeTrue();
-      manager.CancelOperation(id);
-      item.Token.IsCancellationRequested.Should().BeTrue();
-      manager.IsCancellationRequested(id).Should().BeTrue();
-      manager.IsExist(id).Should().BeTrue();
-      item.Dispose();
-    
-    
+
+    manager.NumberOfOperations.Should().Be(1);
+    manager.IsExist(id).Should().BeTrue();
+    manager.CancelOperation(id);
+    item.Token.IsCancellationRequested.Should().BeTrue();
+    manager.IsCancellationRequested(id).Should().BeTrue();
+    manager.IsExist(id).Should().BeTrue();
+    item.Dispose();
+
     manager.IsExist(id).Should().BeFalse();
-    Assert.Throws<KeyNotFoundException>(() =>  item.Token.IsCancellationRequested.Should().BeTrue());
-    
-    Assert.Throws<KeyNotFoundException>(() =>  manager.IsCancellationRequested(id).Should().BeTrue());
+    Assert.Throws<KeyNotFoundException>(() => item.Token.IsCancellationRequested.Should().BeTrue());
+
+    Assert.Throws<KeyNotFoundException>(() => manager.IsCancellationRequested(id).Should().BeTrue());
   }
-  
+
   [Test]
   public void CancelTwo()
   {
@@ -40,7 +39,7 @@ public class CancellationManagerTests
     var id2 = Guid.NewGuid().ToString();
     var item1 = manager.GetCancellationItem(id1);
     var item2 = manager.GetCancellationItem(id2);
-    
+
     manager.NumberOfOperations.Should().Be(2);
     manager.IsExist(id1).Should().BeTrue();
     manager.CancelOperation(id1);
@@ -48,12 +47,12 @@ public class CancellationManagerTests
     manager.IsCancellationRequested(id1).Should().BeTrue();
     manager.IsExist(id1).Should().BeTrue();
     item1.Dispose();
-    
+
     manager.IsExist(id1).Should().BeFalse();
-    Assert.Throws<KeyNotFoundException>(() =>  item1.Token.IsCancellationRequested.Should().BeTrue());
-    
-    Assert.Throws<KeyNotFoundException>(() =>  manager.IsCancellationRequested(id1).Should().BeTrue());
-    
+    Assert.Throws<KeyNotFoundException>(() => item1.Token.IsCancellationRequested.Should().BeTrue());
+
+    Assert.Throws<KeyNotFoundException>(() => manager.IsCancellationRequested(id1).Should().BeTrue());
+
     manager.NumberOfOperations.Should().Be(1);
     manager.IsExist(id2).Should().BeTrue();
     manager.CancelOperation(id2);
@@ -61,15 +60,13 @@ public class CancellationManagerTests
     manager.IsCancellationRequested(id2).Should().BeTrue();
     manager.IsExist(id2).Should().BeTrue();
     item2.Dispose();
-    
-    manager.IsExist(id2).Should().BeFalse();
-    Assert.Throws<KeyNotFoundException>(() =>  item2.Token.IsCancellationRequested.Should().BeTrue());
-    
-    Assert.Throws<KeyNotFoundException>(() =>  manager.IsCancellationRequested(id2).Should().BeTrue());
 
+    manager.IsExist(id2).Should().BeFalse();
+    Assert.Throws<KeyNotFoundException>(() => item2.Token.IsCancellationRequested.Should().BeTrue());
+
+    Assert.Throws<KeyNotFoundException>(() => manager.IsCancellationRequested(id2).Should().BeTrue());
   }
-  
-  
+
   [Test]
   public void CancelAll()
   {
@@ -80,7 +77,7 @@ public class CancellationManagerTests
     var id2 = Guid.NewGuid().ToString();
     var item1 = manager.GetCancellationItem(id1);
     var item2 = manager.GetCancellationItem(id2);
-    
+
     manager.NumberOfOperations.Should().Be(2);
     manager.IsExist(id1).Should().BeTrue();
     manager.CancelAllOperations();
@@ -92,7 +89,7 @@ public class CancellationManagerTests
     manager.IsExist(id2).Should().BeTrue();
     item1.Dispose();
     item2.Dispose();
-    
+
     manager.IsExist(id1).Should().BeFalse();
     manager.IsExist(id2).Should().BeFalse();
   }
