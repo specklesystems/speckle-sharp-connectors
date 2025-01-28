@@ -76,13 +76,10 @@ public abstract class SpeckleFormBase : Form, ICsiApplicationService
     Host = new() { Child = webview, Dock = DockStyle.Fill };
     Controls.Add(Host);
     FormBorderStyle = FormBorderStyle.Sizable;
+    // this.TopLevel = true;
+    // TODO: Get IntrPtr for Csi window
     FormClosing += Form1Closing;
   }
 
-  private void Form1Closing(object? sender, FormClosingEventArgs e)
-  {
-    Host.Dispose();
-    _pluginCallback.Finish(0);
-    _container.Dispose();
-  }
+  private void Form1Closing(object? sender, FormClosingEventArgs e) => _pluginCallback.Finish(0);
 }
