@@ -32,7 +32,7 @@ public class AutocadCommand
       return;
     }
 
-    PaletteSet = new PaletteSet($"Speckle (Beta) for {AppUtils.App.Name}", s_id)
+    PaletteSet = new PaletteSet($"Speckle (Beta)", s_id)
     {
       Size = new Size(400, 500),
       DockEnabled = (DockSides)((int)DockSides.Left + (int)DockSides.Right)
@@ -54,7 +54,7 @@ public class AutocadCommand
 
     var panelWebView = Container.GetRequiredService<DUI3ControlWebView>();
 
-    PaletteSet.AddVisual($"Speckle (Beta) for {AppUtils.App.Name} WebView", panelWebView);
+    PaletteSet.AddVisual("Speckle (Beta)", panelWebView);
 
     FocusPalette();
   }
