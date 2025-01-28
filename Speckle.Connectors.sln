@@ -277,7 +277,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Importers", "Importers", "{
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Importers.Ifc.Tester", "Importers\Ifc\Speckle.Importers.Ifc.Tester\Speckle.Importers.Ifc.Tester.csproj", "{FCD6CB79-6B41-4448-99E1-787408AD24B0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Common.Tests", "Speckle.Connectors.Common.Tests\Speckle.Connectors.Common.Tests.csproj", "{F86DFA8A-E2E0-4EBE-9BAF-72AE2698EDC6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Common.Tests", "Sdk\Speckle.Connectors.Common.Tests\Speckle.Connectors.Common.Tests.csproj", "{F86DFA8A-E2E0-4EBE-9BAF-72AE2698EDC6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
