@@ -87,7 +87,7 @@ public class WallSectionResolver(IConverterSettingsStore<CsiConversionSettings> 
 
     Dictionary<string, object?> propertyData = [];
     propertyData["Type"] = "Wall";
-    DictionaryUtils.AddValueWithUnits(propertyData, "Thickness", thickness, settingsStore.Current.SpeckleUnits);
+    propertyData.AddWithUnits("Thickness", thickness, settingsStore.Current.SpeckleUnits);
 
     Dictionary<string, object?> properties = [];
     properties[SectionPropertyCategory.GENERAL_DATA] = generalData;
@@ -129,7 +129,7 @@ public class SlabSectionResolver(IConverterSettingsStore<CsiConversionSettings> 
 
     Dictionary<string, object?> propertyData = [];
     propertyData["Type"] = slabType.ToString();
-    DictionaryUtils.AddValueWithUnits(propertyData, "Thickness", thickness, settingsStore.Current.SpeckleUnits);
+    propertyData.AddWithUnits("Thickness", thickness, settingsStore.Current.SpeckleUnits);
 
     Dictionary<string, object?> properties = [];
     properties[SectionPropertyCategory.GENERAL_DATA] = generalData;
@@ -171,7 +171,7 @@ public class DeckSectionResolver(IConverterSettingsStore<CsiConversionSettings> 
     generalData["Notes"] = notes;
 
     Dictionary<string, object?> propertyData = [];
-    DictionaryUtils.AddValueWithUnits(propertyData, "Thickness", thickness, settingsStore.Current.SpeckleUnits);
+    propertyData.AddWithUnits("Thickness", thickness, settingsStore.Current.SpeckleUnits);
 
     Dictionary<string, object?> properties = [];
     properties[SectionPropertyCategory.GENERAL_DATA] = generalData;

@@ -33,14 +33,14 @@ public sealed class EtabsFramePropertiesExtractor
 
   public void ExtractProperties(CsiFrameWrapper frame, Dictionary<string, object?> properties)
   {
-    var objectId = DictionaryUtils.EnsureNestedDictionary(properties, ObjectPropertyCategory.OBJECT_ID);
+    var objectId = properties.EnsureNested(ObjectPropertyCategory.OBJECT_ID);
     objectId["Design Orientation"] = GetDesignOrientation(frame);
     (objectId["Label"], objectId["Level"]) = GetLabelAndLevel(frame);
 
-    var assignments = DictionaryUtils.EnsureNestedDictionary(properties, ObjectPropertyCategory.ASSIGNMENTS);
+    var assignments = properties.EnsureNested(ObjectPropertyCategory.ASSIGNMENTS);
     assignments["Spring Assignment"] = GetSpringAssignmentName(frame);
 
-    var design = DictionaryUtils.EnsureNestedDictionary(properties, ObjectPropertyCategory.DESIGN);
+    var design = properties.EnsureNested(ObjectPropertyCategory.DESIGN);
     design["Design Procedure"] = GetDesignProcedure(frame);
   }
 

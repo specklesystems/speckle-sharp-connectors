@@ -31,10 +31,10 @@ public sealed class CsiShellPropertiesExtractor
   {
     shellData.ApplicationId = shell.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
 
-    var geometry = DictionaryUtils.EnsureNestedDictionary(shellData.Properties, ObjectPropertyCategory.GEOMETRY);
+    var geometry = shellData.Properties.EnsureNested(ObjectPropertyCategory.GEOMETRY);
     geometry["Joints"] = GetPointNames(shell); // TODO: 🪲 Viewer shows 4 but only displays 3
 
-    var assignments = DictionaryUtils.EnsureNestedDictionary(shellData.Properties, ObjectPropertyCategory.ASSIGNMENTS);
+    var assignments = shellData.Properties.EnsureNested(ObjectPropertyCategory.ASSIGNMENTS);
     assignments["Groups"] = GetGroupAssigns(shell);
     assignments["Local Axis 2 Angle"] = GetLocalAxes(shell);
     assignments["Material Overwrite"] = GetMaterialOverwrite(shell);
@@ -56,7 +56,7 @@ public sealed class CsiShellPropertiesExtractor
     _ = _settingsStore.Current.SapModel.AreaObj.GetLocalAxes(shell.Name, ref angle, ref advanced);
 
     Dictionary<string, object?> resultsDictionary = [];
-    DictionaryUtils.AddValueWithUnits(resultsDictionary, "Angle", angle, "Degrees");
+    resultsDictionary.AddWithUnits("Angle", angle, "Degrees");
     resultsDictionary["Advanced"] = advanced.ToString();
 
     return resultsDictionary;

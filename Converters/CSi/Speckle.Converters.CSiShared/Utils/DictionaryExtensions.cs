@@ -1,9 +1,9 @@
 namespace Speckle.Converters.CSiShared.Utils;
 
 /// <summary>
-/// Provides utility methods for dictionary operations common across the CSI converter.
+/// Provides extension methods for dictionary operations common across the CSI converter.
 /// </summary>
-public static class DictionaryUtils
+public static class DictionaryExtensions
 {
   /// <summary>
   /// Ensures a nested dictionary exists at the specified key, creating it if necessary.
@@ -12,7 +12,7 @@ public static class DictionaryUtils
   /// <remarks>
   /// This pattern is used throughout property extractors to maintain consistent property organization.
   /// </remarks>
-  public static Dictionary<string, object?> EnsureNestedDictionary(Dictionary<string, object?> dictionary, string key)
+  public static Dictionary<string, object?> EnsureNested(this Dictionary<string, object?> dictionary, string key)
   {
     if (!dictionary.TryGetValue(key, out var obj) || obj is not Dictionary<string, object?> nestedDictionary)
     {
@@ -27,13 +27,13 @@ public static class DictionaryUtils
   /// Adds a value with its associated units to a parent dictionary using a standardized format.
   /// Creates a nested dictionary with 'name', 'value', and 'units' keys.
   /// </summary>
-  public static void AddValueWithUnits(
-    Dictionary<string, object?> parentDictionary,
+  public static void AddWithUnits(
+    this Dictionary<string, object?> dictionary,
     string key,
     object value,
     string? units = null
   ) =>
-    parentDictionary[key] = new Dictionary<string, object?>
+    dictionary[key] = new Dictionary<string, object?>
     {
       ["name"] = key,
       ["value"] = value,

@@ -58,7 +58,7 @@ public class CsiMaterialPropertyExtractor
         ref materialGuid
       );
 
-      var generalData = DictionaryUtils.EnsureNestedDictionary(properties, SectionPropertyCategory.GENERAL_DATA);
+      var generalData = properties.EnsureNested(SectionPropertyCategory.GENERAL_DATA);
       generalData["Name"] = materialName;
       generalData["Type"] = materialType.ToString();
       generalData["Notes"] = materialNotes;
@@ -76,7 +76,7 @@ public class CsiMaterialPropertyExtractor
       ref massPerUnitVolume
     );
 
-    var weightAndMass = DictionaryUtils.EnsureNestedDictionary(properties, "Weight and Mass");
+    var weightAndMass = properties.EnsureNested("Weight and Mass");
     weightAndMass["Weight per Unit Volume"] = weightPerUnitVolume;
     weightAndMass["Mass per Unit Volume"] = massPerUnitVolume;
   }
@@ -101,7 +101,7 @@ public class CsiMaterialPropertyExtractor
       _ => throw new ArgumentException($"Unknown symmetry type: {materialDirectionalSymmetryKey}")
     };
 
-    var mechanicalProperties = DictionaryUtils.EnsureNestedDictionary(properties, "Mechanical Properties");
+    var mechanicalProperties = properties.EnsureNested("Mechanical Properties");
     mechanicalProperties["Directional Symmetry Type"] = materialDirectionalSymmetryValue.ToString();
 
     GetMechanicalPropertiesByType(materialName, materialDirectionalSymmetryValue, mechanicalProperties);

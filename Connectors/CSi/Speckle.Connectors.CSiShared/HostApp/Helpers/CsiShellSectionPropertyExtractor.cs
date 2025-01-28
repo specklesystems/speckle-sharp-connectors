@@ -38,8 +38,8 @@ public class CsiShellSectionPropertyExtractor : IShellSectionPropertyExtractor
       _ => throw new ArgumentException($"Unknown property type: {propertyTypeKey}"),
     };
 
-    var generalData = DictionaryUtils.EnsureNestedDictionary(properties, SectionPropertyCategory.GENERAL_DATA);
-    generalData["Property Type"] = propertyTypeValue;
+    var generalData = properties.EnsureNested(SectionPropertyCategory.GENERAL_DATA);
+    generalData["Property Type"] = propertyTypeValue.ToString();
   }
 
   private void GetPropertyModifiers(string sectionName, Dictionary<string, object?> properties)
@@ -62,7 +62,7 @@ public class CsiShellSectionPropertyExtractor : IShellSectionPropertyExtractor
         ["Weight"] = stiffnessModifiersArray[8]
       };
 
-    var generalData = DictionaryUtils.EnsureNestedDictionary(properties, SectionPropertyCategory.GENERAL_DATA);
+    var generalData = properties.EnsureNested(SectionPropertyCategory.GENERAL_DATA);
     generalData["Modifiers"] = modifiers;
   }
 }

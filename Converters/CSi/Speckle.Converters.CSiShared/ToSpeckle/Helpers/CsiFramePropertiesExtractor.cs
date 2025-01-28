@@ -47,10 +47,10 @@ public sealed class CsiFramePropertiesExtractor
   {
     frameData.ApplicationId = frame.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
 
-    var geometry = DictionaryUtils.EnsureNestedDictionary(frameData.Properties, ObjectPropertyCategory.GEOMETRY);
+    var geometry = frameData.Properties.EnsureNested(ObjectPropertyCategory.GEOMETRY);
     (geometry["I-End Joint"], geometry["J-End Joint"]) = GetEndPointNames(frame);
 
-    var assignments = DictionaryUtils.EnsureNestedDictionary(frameData.Properties, ObjectPropertyCategory.ASSIGNMENTS);
+    var assignments = frameData.Properties.EnsureNested(ObjectPropertyCategory.ASSIGNMENTS);
     assignments["Groups"] = GetGroupAssigns(frame);
     assignments["Material Overwrite"] = GetMaterialOverwrite(frame);
     assignments["Local Axis 2 Angle"] = GetLocalAxes(frame);
@@ -110,7 +110,7 @@ public sealed class CsiFramePropertiesExtractor
     _ = _settingsStore.Current.SapModel.FrameObj.GetLocalAxes(frame.Name, ref angle, ref advanced);
 
     Dictionary<string, object?> resultsDictionary = [];
-    DictionaryUtils.AddValueWithUnits(resultsDictionary, "Angle", angle, "Degrees");
+    resultsDictionary.AddWithUnits("Angle", angle, "Degrees");
     resultsDictionary["Advanced"] = advanced.ToString();
 
     return resultsDictionary;
