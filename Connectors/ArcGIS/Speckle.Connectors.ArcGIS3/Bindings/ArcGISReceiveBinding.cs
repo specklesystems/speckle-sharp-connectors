@@ -60,7 +60,7 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
         throw new InvalidOperationException("No download model card was found.");
       }
 
-      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
       using var scope = _serviceProvider.CreateScope();
       scope
         .ServiceProvider.GetRequiredService<IConverterSettingsStore<ArcGISConversionSettings>>()
@@ -76,8 +76,8 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
         .ServiceProvider.GetRequiredService<ReceiveOperation>()
         .Execute(
           modelCard.GetReceiveInfo("ArcGIS"), // POC: get host app name from settings? same for GetSendInfo
-          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
-          cancellationToken
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),
+          cancellationItem.Token
         );
 
       modelCard.BakedObjectIds = receiveOperationResults.BakedObjectIds.ToList();
