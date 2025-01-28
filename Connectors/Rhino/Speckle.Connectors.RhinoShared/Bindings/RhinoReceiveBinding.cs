@@ -20,7 +20,7 @@ public class RhinoReceiveBinding : IReceiveBinding
   public string Name => "receiveBinding";
   public IBrowserBridge Parent { get; }
 
-  private readonly CancellationManager _cancellationManager;
+  private readonly ICancellationManager _cancellationManager;
   private readonly DocumentModelStore _store;
   private readonly IServiceProvider _serviceProvider;
   private readonly IOperationProgressManager _operationProgressManager;
@@ -31,7 +31,7 @@ public class RhinoReceiveBinding : IReceiveBinding
 
   public RhinoReceiveBinding(
     DocumentModelStore store,
-    CancellationManager cancellationManager,
+    ICancellationManager cancellationManager,
     IBrowserBridge parent,
     IOperationProgressManager operationProgressManager,
     ILogger<RhinoReceiveBinding> logger,

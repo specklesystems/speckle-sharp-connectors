@@ -29,7 +29,7 @@ public sealed class CsiSharedSendBinding : ISendBinding
   private readonly DocumentModelStore _store;
   private readonly IServiceProvider _serviceProvider;
   private readonly List<ISendFilter> _sendFilters;
-  private readonly CancellationManager _cancellationManager;
+  private readonly ICancellationManager _cancellationManager;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<CsiSharedSendBinding> _logger;
   private readonly ICsiApplicationService _csiApplicationService;
@@ -42,7 +42,7 @@ public sealed class CsiSharedSendBinding : ISendBinding
     IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     IServiceProvider serviceProvider,
-    CancellationManager cancellationManager,
+    ICancellationManager cancellationManager,
     IOperationProgressManager operationProgressManager,
     ILogger<CsiSharedSendBinding> logger,
     ICsiConversionSettingsFactory csiConversionSettingsFactory,

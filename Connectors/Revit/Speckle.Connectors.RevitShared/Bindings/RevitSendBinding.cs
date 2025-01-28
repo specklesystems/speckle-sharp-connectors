@@ -31,7 +31,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 {
   private readonly IRevitContext _revitContext;
   private readonly DocumentModelStore _store;
-  private readonly CancellationManager _cancellationManager;
+  private readonly ICancellationManager _cancellationManager;
   private readonly IServiceProvider _serviceProvider;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
@@ -53,7 +53,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   public RevitSendBinding(
     IRevitContext revitContext,
     DocumentModelStore store,
-    CancellationManager cancellationManager,
+    ICancellationManager cancellationManager,
     IBrowserBridge bridge,
     IServiceProvider serviceProvider,
     ISendConversionCache sendConversionCache,

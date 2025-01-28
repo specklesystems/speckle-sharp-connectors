@@ -19,7 +19,7 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
   public IBrowserBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly CancellationManager _cancellationManager;
+  private readonly ICancellationManager _cancellationManager;
   private readonly IServiceProvider _serviceProvider;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<AutocadReceiveBinding> _logger;
@@ -31,7 +31,7 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
   public AutocadReceiveBinding(
     DocumentModelStore store,
     IBrowserBridge parent,
-    CancellationManager cancellationManager,
+    ICancellationManager cancellationManager,
     IServiceProvider serviceProvider,
     IOperationProgressManager operationProgressManager,
     ILogger<AutocadReceiveBinding> logger,

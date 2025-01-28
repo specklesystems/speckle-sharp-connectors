@@ -21,7 +21,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
 
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<RevitReceiveBinding> _logger;
-  private readonly CancellationManager _cancellationManager;
+  private readonly ICancellationManager _cancellationManager;
   private readonly DocumentModelStore _store;
   private readonly IServiceProvider _serviceProvider;
   private readonly IRevitConversionSettingsFactory _revitConversionSettingsFactory;
@@ -30,7 +30,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
 
   public RevitReceiveBinding(
     DocumentModelStore store,
-    CancellationManager cancellationManager,
+    ICancellationManager cancellationManager,
     IBrowserBridge parent,
     IServiceProvider serviceProvider,
     IOperationProgressManager operationProgressManager,

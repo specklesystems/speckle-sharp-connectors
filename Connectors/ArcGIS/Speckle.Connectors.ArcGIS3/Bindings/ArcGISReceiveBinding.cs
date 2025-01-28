@@ -19,7 +19,7 @@ namespace Speckle.Connectors.ArcGIS.Bindings;
 public sealed class ArcGISReceiveBinding : IReceiveBinding
 {
   public string Name { get; } = "receiveBinding";
-  private readonly CancellationManager _cancellationManager;
+  private readonly ICancellationManager _cancellationManager;
   private readonly DocumentModelStore _store;
   private readonly IServiceProvider _serviceProvider;
   private readonly IOperationProgressManager _operationProgressManager;
@@ -32,7 +32,7 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
   public ArcGISReceiveBinding(
     DocumentModelStore store,
     IBrowserBridge parent,
-    CancellationManager cancellationManager,
+    ICancellationManager cancellationManager,
     IServiceProvider serviceProvider,
     IOperationProgressManager operationProgressManager,
     ILogger<ArcGISReceiveBinding> logger,
