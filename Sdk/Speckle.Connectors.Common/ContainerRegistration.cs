@@ -25,7 +25,7 @@ public static class ContainerRegistration
   public static void AddConnectorUtils(this IServiceCollection serviceCollection)
   {
     // send operation and dependencies
-    serviceCollection.AddSingleton<CancellationManager>();
+    serviceCollection.AddSingleton<ICancellationManager, CancellationManager>();
     serviceCollection.AddScoped<RootObjectUnpacker>();
     serviceCollection.AddScoped<ReceiveOperation>();
     serviceCollection.AddSingleton<AccountService>();

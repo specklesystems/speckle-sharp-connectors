@@ -57,7 +57,6 @@ public static class ServiceRegistration
 
     services.AddSingleton<ToSpeckleSettingsManager>();
 
-    services.AddTransient<CancellationManager>();
     services.AddSingleton<IOperationProgressManager, OperationProgressManager>();
 
     services.AddScoped<TraversalContext>();

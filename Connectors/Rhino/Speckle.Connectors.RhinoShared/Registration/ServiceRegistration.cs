@@ -47,8 +47,6 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<IBinding, RhinoSendBinding>();
     serviceCollection.AddSingleton<IBinding, RhinoReceiveBinding>();
 
-    // binding dependencies
-    serviceCollection.AddTransient<CancellationManager>();
 
     // register send filters
     serviceCollection.AddScoped<ISendFilter, RhinoSelectionFilter>();
