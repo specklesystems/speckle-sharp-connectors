@@ -1,4 +1,4 @@
-﻿using Speckle.Connectors.Common.Threading;
+﻿using Speckle.Connectors.CSiShared.Events;
 using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.CSiShared.Utils;
 using Speckle.Connectors.DUI.Bindings;
