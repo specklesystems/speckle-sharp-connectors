@@ -2,12 +2,11 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Utils;
 using Speckle.Sdk;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.Geometry;
 
 [NameAndRankValue(typeof(SOG.Mesh), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class MeshToHostConverter :  ITypedConverter<SOG.Mesh, ADB.PolyFaceMesh>
+public class MeshToHostConverter : ITypedConverter<SOG.Mesh, ADB.PolyFaceMesh>
 {
   private readonly ITypedConverter<SOG.Point, AG.Point3d> _pointConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
@@ -20,8 +19,6 @@ public class MeshToHostConverter :  ITypedConverter<SOG.Mesh, ADB.PolyFaceMesh>
     _pointConverter = pointConverter;
     _settingsStore = settingsStore;
   }
-
-  public object Convert(Base target) => Convert((SOG.Mesh)target);
 
   /// <remarks>
   /// Mesh conversion requires transaction since it's vertices needed to be added into database in advance..

@@ -1,5 +1,4 @@
 using Speckle.Converters.Common.Objects;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.ToHost.Raw;
 
@@ -16,8 +15,6 @@ public class PlaneToHostRawConverter : ITypedConverter<SOG.Plane, AG.Plane>
     _pointConverter = pointConverter;
     _vectorConverter = vectorConverter;
   }
-
-  public object Convert(Base target) => Convert((SOG.Plane)target);
 
   public AG.Plane Convert(SOG.Plane target) =>
     new(_pointConverter.Convert(target.origin), _vectorConverter.Convert(target.normal));

@@ -14,9 +14,7 @@ namespace Speckle.Converters.Autocad.Geometry;
 /// The IToSpeckleTopLevelConverter inheritance should only expect database-resident Polyline2d objects. IRawConversion inheritance can expect non database-resident objects, when generated from other converters.
 /// </remarks>
 [NameAndRankValue(typeof(ADB.Polyline3d), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class Polyline3dToSpeckleConverter
-  : 
-    ITypedConverter<ADB.Polyline3d, SOG.Autocad.AutocadPolycurve>
+public class Polyline3dToSpeckleConverter : ITypedConverter<ADB.Polyline3d, SOG.Autocad.AutocadPolycurve>
 {
   private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
   private readonly ITypedConverter<ADB.Spline, SOG.Curve> _splineConverter;

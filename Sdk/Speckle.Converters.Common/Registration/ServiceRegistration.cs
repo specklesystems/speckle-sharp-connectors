@@ -9,6 +9,7 @@ namespace Speckle.Converters.Common.Registration;
 public static class ServiceRegistration
 {
   private static readonly Type s_base = typeof(ISpeckleObject);
+
   public static void AddRootCommon<TRootToSpeckleConverter>(
     this IServiceCollection serviceCollection,
     Assembly converterAssembly
@@ -21,7 +22,7 @@ public static class ServiceRegistration
       This will require consolidating across other connectors.
     */
 
-    
+
     serviceCollection.AddScoped<IHostConverter, ConverterWithFallback>();
     serviceCollection.AddScoped<HostConverter>(); //Register as self, only the `ConverterWithFallback` needs it
     serviceCollection.AddConverters(converterAssembly);
@@ -49,10 +50,11 @@ public static class ServiceRegistration
         if (interfaceType.IsGenericType && interfaceType.GetGenericTypeDefinition() == typeof(ITypedConverter<,>))
         {
           var genericTypes = interfaceType.GenericTypeArguments;
-          if (s_base.IsAssignableFrom(genericTypes[0]) )
+          if (s_base.IsAssignableFrom(genericTypes[0]))
           {
             toHostConverters.Add((genericTypes[0], genericTypes[1]), type);
-          } else   if (s_base.IsAssignableFrom(genericTypes[1]))
+          }
+          else if (s_base.IsAssignableFrom(genericTypes[1]))
           {
             toSpeckleConverters.Add((genericTypes[0], genericTypes[1]), type);
           }
@@ -63,7 +65,11 @@ public static class ServiceRegistration
         }
       }
     }
-    serviceCollection.AddScoped<IConverterManager>(sp => new ConverterManager(toSpeckleConverters, toHostConverters, sp));
+    serviceCollection.AddScoped<IConverterManager>(sp => new ConverterManager(
+      toSpeckleConverters,
+      toHostConverters,
+      sp
+    ));
   }
 
   public static void RegisterRawConversions(this IServiceCollection serviceCollection, Assembly conversionAssembly)

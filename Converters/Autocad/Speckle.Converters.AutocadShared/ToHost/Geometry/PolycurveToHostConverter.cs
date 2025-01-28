@@ -23,7 +23,7 @@ public class PolycurveToHostConverter : ITypedConverter<SOG.Polycurve, object>
     _splineConverter = splineConverter;
   }
 
-  public object Convert( SOG.Polycurve polycurve)
+  public object Convert(SOG.Polycurve polycurve)
   {
     bool convertAsSpline = polycurve.segments.Any(s => s is not SOG.Line and not SOG.Arc);
     bool isPlanar = IsPolycurvePlanar(polycurve);

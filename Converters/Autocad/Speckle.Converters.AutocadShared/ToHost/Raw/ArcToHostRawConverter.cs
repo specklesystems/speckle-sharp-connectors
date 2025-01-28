@@ -1,6 +1,5 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.ToHost.Raw;
 
@@ -18,8 +17,6 @@ public class ArcToHostRowConverter : ITypedConverter<SOG.Arc, AG.CircularArc3d>
     _pointConverter = pointConverter;
     _vectorConverter = vectorConverter;
   }
-
-  public object Convert(Base target) => Convert((SOG.Arc)target);
 
   public AG.CircularArc3d Convert(SOG.Arc target)
   {

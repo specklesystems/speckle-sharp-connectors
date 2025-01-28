@@ -9,7 +9,6 @@ namespace Speckle.Converters.Common;
 [GenerateAutoInterface]
 public class HostConverter(IConverterManager converterManager) : ConverterBase(converterManager), IHostConverter
 {
-  
   public object Convert(Base target) => Convert(target, (manager, sourceType) => manager.GetHostConverter(sourceType));
 }
 
@@ -18,7 +17,7 @@ public abstract class ConverterBase(IConverterManager converterManager)
   private readonly Dictionary<Type, Type> _sourceTypeToInvokerType = new();
   private static readonly object s_emptyObject = new();
   private readonly object[] _invokerArgs = [s_emptyObject];
-  
+
   protected object Convert(object target, Func<IConverterManager, Type, (object, Type)> getConverter)
   {
     var type = target.GetType();

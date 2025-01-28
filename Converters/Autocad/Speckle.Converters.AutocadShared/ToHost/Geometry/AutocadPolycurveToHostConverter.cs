@@ -2,7 +2,6 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Geometry.Autocad;
 using Speckle.Sdk.Common.Exceptions;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad2023.ToHost.Geometry;
 
@@ -23,11 +22,9 @@ public class AutocadPolycurveToHostConverter : ITypedConverter<SOG.Autocad.Autoc
     _polyline2dConverter = polyline2dConverter;
     _polyline3dConverter = polyline3dConverter;
   }
-  
 
   public object Convert(AutocadPolycurve polycurve)
   {
-
     switch (polycurve.polyType)
     {
       case SOG.Autocad.AutocadPolyType.Light:
@@ -48,6 +45,4 @@ public class AutocadPolycurveToHostConverter : ITypedConverter<SOG.Autocad.Autoc
         throw new ValidationException("Unknown poly type for AutocadPolycurve");
     }
   }
-
-  public object Convert(Base target) => Convert( (SOG.Autocad.AutocadPolycurve)target);
 }

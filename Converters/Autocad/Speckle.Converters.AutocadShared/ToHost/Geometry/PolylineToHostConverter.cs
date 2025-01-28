@@ -1,11 +1,10 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.ToHost.Geometry;
 
 [NameAndRankValue(typeof(SOG.Polyline), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class PolylineToHostConverter :  ITypedConverter<SOG.Polyline, ADB.Polyline3d>
+public class PolylineToHostConverter : ITypedConverter<SOG.Polyline, ADB.Polyline3d>
 {
   private readonly ITypedConverter<SOG.Point, AG.Point3d> _pointConverter;
 
@@ -13,8 +12,6 @@ public class PolylineToHostConverter :  ITypedConverter<SOG.Polyline, ADB.Polyli
   {
     _pointConverter = pointConverter;
   }
-
-  public object Convert(Base target) => Convert((SOG.Polyline)target);
 
   public ADB.Polyline3d Convert(SOG.Polyline target)
   {

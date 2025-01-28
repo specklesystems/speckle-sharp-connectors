@@ -13,14 +13,14 @@ public class AutocadRootToSpeckleConverter : SpeckleConverter
   public AutocadRootToSpeckleConverter(
     IConverterManager toSpeckle,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
-  ) : base(toSpeckle)
+  )
+    : base(toSpeckle)
   {
     _settingsStore = settingsStore;
   }
 
   public override Base Convert(object target)
   {
-
     if (target is not DBObject)
     {
       Type type = target.GetType();
@@ -33,7 +33,7 @@ public class AutocadRootToSpeckleConverter : SpeckleConverter
     {
       using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
       {
-        var convertedObject=  base.Convert(target);
+        var convertedObject = base.Convert(target);
         tr.Commit();
         return convertedObject;
       }

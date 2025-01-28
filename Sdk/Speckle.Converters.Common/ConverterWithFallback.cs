@@ -35,12 +35,13 @@ public sealed class ConverterWithFallback : IHostConverter
     {
       // TODO: I'm not sure if this should be a ConversionNotSupported instead, but it kinda mixes support + validation so I went for normal conversion exception
       throw new ConversionException(
-        $"No direct conversion found for type { target.GetType()} and it's fallback display value was null/empty"
+        $"No direct conversion found for type {target.GetType()} and it's fallback display value was null/empty"
       );
     }
 
     return FallbackToDisplayValue(displayValue); // 1 - many mapping
   }
+
   private object FallbackToDisplayValue(IReadOnlyList<Base> displayValue)
   {
     var tempDisplayableObject = new DisplayableObject(displayValue);

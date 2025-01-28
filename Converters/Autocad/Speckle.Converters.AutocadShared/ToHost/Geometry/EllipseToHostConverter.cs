@@ -1,12 +1,11 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Common;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.ToHost.Geometry;
 
 [NameAndRankValue(typeof(SOG.Ellipse), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class EllipseToHostConverter :  ITypedConverter<SOG.Ellipse, ADB.Ellipse>
+public class EllipseToHostConverter : ITypedConverter<SOG.Ellipse, ADB.Ellipse>
 {
   private readonly ITypedConverter<SOG.Point, AG.Point3d> _pointConverter;
   private readonly ITypedConverter<SOG.Vector, AG.Vector3d> _vectorConverter;
@@ -22,8 +21,6 @@ public class EllipseToHostConverter :  ITypedConverter<SOG.Ellipse, ADB.Ellipse>
     _vectorConverter = vectorConverter;
     _settingsStore = settingsStore;
   }
-
-  public object Convert(Base target) => Convert((SOG.Ellipse)target);
 
   /// <exception cref="ArgumentNullException"> Throws if any ellipse radius value is null.</exception>
   public ADB.Ellipse Convert(SOG.Ellipse target)

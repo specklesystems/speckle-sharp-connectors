@@ -11,7 +11,7 @@ namespace Speckle.Converters.Autocad.Geometry;
 /// The IToSpeckleTopLevelConverter inheritance should only expect database-resident <see cref="ADB.PolyFaceMesh"/> objects. IRawConversion inheritance can expect non database-resident objects, when generated from other converters.
 /// </remarks>
 [NameAndRankValue(typeof(ADB.PolyFaceMesh), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class DBPolyfaceMeshToSpeckleConverter :  ITypedConverter<ADB.PolyFaceMesh, SOG.Mesh>
+public class DBPolyfaceMeshToSpeckleConverter : ITypedConverter<ADB.PolyFaceMesh, SOG.Mesh>
 {
   private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
   private readonly ITypedConverter<ADB.Extents3d, SOG.Box> _boxConverter;
@@ -27,8 +27,8 @@ public class DBPolyfaceMeshToSpeckleConverter :  ITypedConverter<ADB.PolyFaceMes
     _boxConverter = boxConverter;
     _settingsStore = settingsStore;
   }
-  
-  public SOG.Mesh Convert(ADB.PolyFaceMesh target) 
+
+  public SOG.Mesh Convert(ADB.PolyFaceMesh target)
   {
     List<Point3d> dbVertices = new();
     List<int> faces = new();

@@ -7,7 +7,7 @@ using Speckle.Sdk.Models;
 namespace Speckle.Converters.Rhino7.ToHost.TopLevel;
 
 [NameAndRankValue(typeof(DataObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<DataObject, List<(ADB.Entity a, Base b)>>
+public class DataObjectConverter : ITypedConverter<DataObject, List<(ADB.Entity a, Base b)>>
 {
   private readonly ITypedConverter<SOG.Line, ADB.Line> _lineConverter;
   private readonly ITypedConverter<SOG.Polyline, ADB.Polyline3d> _polylineConverter;
@@ -29,8 +29,6 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
     _arcConverter = arcConverter;
     _pointConverter = pointConverter;
   }
-
-  public object Convert(Base target) => Convert((DataObject)target);
 
   public List<(ADB.Entity a, Base b)> Convert(DataObject target)
   {

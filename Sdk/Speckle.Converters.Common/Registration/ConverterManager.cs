@@ -6,13 +6,15 @@ using Speckle.Sdk.Common.Exceptions;
 namespace Speckle.Converters.Common.Registration;
 
 [GenerateAutoInterface]
-public class ConverterManager(IReadOnlyDictionary<(Type, Type), Type> toSpeckleConverters,
+public class ConverterManager(
+  IReadOnlyDictionary<(Type, Type), Type> toSpeckleConverters,
   IReadOnlyDictionary<(Type, Type), Type> toHostConverters,
-  IServiceProvider serviceProvider) : IConverterManager
+  IServiceProvider serviceProvider
+) : IConverterManager
 {
   private readonly Dictionary<Type, (Type?, Type?)> _hostConverterCache = new();
   private readonly Dictionary<Type, (Type?, Type?)> _speckleConverterCache = new();
-  
+
   public (object, Type) GetSpeckleConverter(Type sourceType)
   {
     Type? destinationType;
@@ -29,8 +31,7 @@ public class ConverterManager(IReadOnlyDictionary<(Type, Type), Type> toSpeckleC
 
     if (converterType is null)
     {
-      throw new ConversionNotSupportedException(
-        $"No conversion found for {sourceType.Name}");
+      throw new ConversionNotSupportedException($"No conversion found for {sourceType.Name}");
     }
 
     return (ActivatorUtilities.CreateInstance(serviceProvider, converterType), destinationType.NotNull());
@@ -52,13 +53,12 @@ public class ConverterManager(IReadOnlyDictionary<(Type, Type), Type> toSpeckleC
 
     if (converterType is null)
     {
-      throw new ConversionNotSupportedException(
-        $"No conversion found for {sourceType.Name}");
+      throw new ConversionNotSupportedException($"No conversion found for {sourceType.Name}");
     }
 
     return (ActivatorUtilities.CreateInstance(serviceProvider, converterType), destinationType.NotNull());
   }
-  
+
   private (Type?, Type?) GetConverter(Type sourceType, IReadOnlyDictionary<(Type, Type), Type> converters)
   {
     Type? mostBasicDestinationType = null;
@@ -93,9 +93,7 @@ public class ConverterManager(IReadOnlyDictionary<(Type, Type), Type> toSpeckleC
         {
           break;
         }
-
       }
     }
   }
 }
-
