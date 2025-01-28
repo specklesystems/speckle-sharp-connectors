@@ -79,10 +79,10 @@ public class ConverterManager(
   {
     foreach (var (s, d) in converters.Keys)
     {
-      Type? currentSourceType = s;
+      Type? currentSourceType = sourceType;
       while (true)
       {
-        if (currentSourceType == sourceType)
+        if (currentSourceType == s)
         {
           yield return (d, converters[(s, d)]);
         }
