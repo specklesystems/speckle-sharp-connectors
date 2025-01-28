@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using OpenTelemetry.Trace;
 
 namespace Speckle.Connectors.Logging;
 
@@ -16,7 +15,7 @@ public readonly struct LoggingActivity
 
   public void SetTag(string key, object? value) => _activity.SetTag(key, value);
 
-  public void RecordException(Exception e) => _activity.RecordException(e);
+  public void RecordException(Exception e) => _activity.AddException(e);
 
   public string TraceId => _activity.TraceId.ToString();
 
