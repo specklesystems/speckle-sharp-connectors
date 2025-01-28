@@ -16,8 +16,10 @@ public class CancellationManager : ICancellationManager
   private sealed class CancellationItem(CancellationManager manager, string id) : ICancellationItem
   {
     public void Dispose() => manager.DisposeOperation(id);
+
     public CancellationToken Token => manager.GetToken(id);
   }
+
   /// <summary>
   /// Dictionary to relate <see cref="CancellationTokenSource"/> with registered id.
   /// </summary>
