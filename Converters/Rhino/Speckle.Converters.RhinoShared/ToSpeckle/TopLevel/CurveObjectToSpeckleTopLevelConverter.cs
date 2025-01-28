@@ -5,7 +5,7 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.TopLevel;
 
-[NameAndRankValue(nameof(CurveObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(CurveObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class CurveObjectToSpeckleTopLevelConverter : RhinoObjectToSpeckleTopLevelConverter<CurveObject, RG.Curve, Base>
 {
   public CurveObjectToSpeckleTopLevelConverter(ITypedConverter<RG.Curve, Base> conversion)

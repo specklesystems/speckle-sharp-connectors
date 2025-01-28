@@ -29,5 +29,8 @@
   </ItemGroup>
   
   <Import Project="..\Speckle.Connectors.RhinoShared\Speckle.Connectors.RhinoShared.projitems" Label="Shared" />
-  
+
+  <ItemGroup>
+    <None Include="..\Toolbars\Speckle.Connectors.Rhino.rui" Link="$(AssemblyName).rui" CopyToOutputDirectory="PreserveNewest"/>
+  </ItemGroup>
 </Project>

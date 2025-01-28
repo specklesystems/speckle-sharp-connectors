@@ -1,14 +1,11 @@
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.ExtensibleStorage;
-using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
-using Revit.Async;
-using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.HostApp;
 
@@ -18,49 +15,43 @@ internal sealed class RevitDocumentStore : DocumentModelStore
   // POC: move to somewhere central?
   private static readonly Guid s_revitDocumentStoreId = new("D35B3695-EDC9-4E15-B62A-D3FC2CB83FA3");
 
-  private readonly RevitContext _revitContext;
-  private readonly IRevitIdleManager _idleManager;
+  private readonly IRevitContext _revitContext;
   private readonly DocumentModelStorageSchema _documentModelStorageSchema;
   private readonly IdStorageSchema _idStorageSchema;
+  private readonly IEventAggregator _eventAggregator;
 
   public RevitDocumentStore(
-    IRevitIdleManager idleManager,
-    RevitContext revitContext,
+    IRevitContext revitContext,
     IJsonSerializer jsonSerializer,
     DocumentModelStorageSchema documentModelStorageSchema,
     IdStorageSchema idStorageSchema,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    IEventAggregator eventAggregator
   )
     : base(jsonSerializer)
   {
-    _idleManager = idleManager;
     _revitContext = revitContext;
     _documentModelStorageSchema = documentModelStorageSchema;
     _idStorageSchema = idStorageSchema;
+    _eventAggregator = eventAggregator;
 
-    _idleManager.RunAsync(() =>
-    {
-      UIApplication uiApplication = _revitContext.UIApplication.NotNull();
-
-      uiApplication.ViewActivated += (s, e) => topLevelExceptionHandler.CatchUnhandled(() => OnViewActivated(s, e));
-
-      uiApplication.Application.DocumentOpening += (_, _) =>
-        topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
-
-      uiApplication.Application.DocumentOpened += (_, _) =>
-        topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
-    });
+    eventAggregator.GetEvent<DocumentOpenedEvent>().Subscribe(OnDocumentOpen);
+    eventAggregator.GetEvent<DocumentOpeningEvent>().Subscribe(OnDocumentOpen);
+    eventAggregator.GetEvent<ViewActivatedEvent>().Subscribe(OnViewActivated);
 
     // There is no event that we can hook here for double-click file open...
     // It is kind of harmless since we create this object as "SingleInstance".
     LoadState();
-    OnDocumentChanged();
   }
+
+  private void OnDocumentOpen(object _) => IsDocumentInit = false;
+
+  public override Task OnDocumentStoreInitialized() =>
+    _eventAggregator.GetEvent<DocumentStoreChangedEvent>().PublishAsync(new object());
 
   /// <summary>
   /// This is the place where we track document switch for new document -> Responsible to Read from new doc
   /// </summary>
-  private void OnViewActivated(object? _, ViewActivatedEventArgs e)
+  private void OnViewActivated(ViewActivatedEventArgs e)
   {
     if (e.Document == null)
     {
@@ -74,14 +65,13 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     }
 
     IsDocumentInit = true;
-    _idleManager.SubscribeToIdle(
-      nameof(RevitDocumentStore),
-      () =>
-      {
-        LoadState();
-        OnDocumentChanged();
-      }
-    );
+    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RevitDocumentStore), OnIdleEvent);
+  }
+
+  private async Task OnIdleEvent(object _)
+  {
+    LoadState();
+    await _eventAggregator.GetEvent<DocumentStoreChangedEvent>().PublishAsync(new object());
   }
 
   protected override void HostAppSaveState(string modelCardState)
@@ -92,23 +82,21 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     {
       return;
     }
-    RevitTask.RunAsync(() =>
-    {
-      var doc = (_revitContext.UIApplication?.ActiveUIDocument?.Document).NotNull();
-      using Transaction t = new(doc, "Speckle Write State");
-      t.Start();
-      using DataStorage ds = GetSettingsDataStorage(doc) ?? DataStorage.Create(doc);
 
-      using Entity stateEntity = new(_documentModelStorageSchema.GetSchema());
-      stateEntity.Set("contents", modelCardState);
+    using Transaction t = new(doc, "Speckle Write State");
+    t.Start();
+    using DataStorage ds = GetSettingsDataStorage(doc) ?? DataStorage.Create(doc);
 
-      using Entity idEntity = new(_idStorageSchema.GetSchema());
-      idEntity.Set("Id", s_revitDocumentStoreId);
+    using Entity stateEntity = new(_documentModelStorageSchema.GetSchema());
+    string serializedModels = Serialize();
+    stateEntity.Set("contents", serializedModels);
 
-      ds.SetEntity(idEntity);
-      ds.SetEntity(stateEntity);
-      t.Commit();
-    });
+    using Entity idEntity = new(_idStorageSchema.GetSchema());
+    idEntity.Set("Id", s_revitDocumentStoreId);
+
+    ds.SetEntity(idEntity);
+    ds.SetEntity(stateEntity);
+    t.Commit();
   }
 
   protected override void LoadState()

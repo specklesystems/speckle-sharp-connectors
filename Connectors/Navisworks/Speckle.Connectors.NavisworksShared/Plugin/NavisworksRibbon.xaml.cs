@@ -7,18 +7,17 @@ using System.Text;
 namespace Speckle.Connector.Navisworks.Plugin;
 
 [
-  NAV.Plugins.Plugin("SpeckleNavisworksNextGen", "Speckle", DisplayName = "Speckle Next Gen"),
+  NAV.Plugins.Plugin("SpeckleNavisworksNextGen", "Speckle", DisplayName = "Speckle (Beta)"),
   NAV.Plugins.Strings("NavisworksRibbon.name"),
   NAV.Plugins.RibbonLayout("NavisworksRibbon.xaml"),
-  NAV.Plugins.RibbonTab("Speckle", DisplayName = "Speckle Next Gen", LoadForCanExecute = true),
+  NAV.Plugins.RibbonTab("Speckle", DisplayName = "Speckle", LoadForCanExecute = true),
   NAV.Plugins.Command(
     LaunchSpeckleConnector.COMMAND,
     LoadForCanExecute = true,
     Icon = "Resources/s2logo16.png",
     LargeIcon = "Resources/s2logo32.png",
-    Shortcut = "Ctrl+Shift+S",
-    ToolTip = "Next Gen Speckle Connector for Navisworks",
-    DisplayName = "Speckle\rConnector"
+    ToolTip = "Next Gen Speckle Connector (Beta) for Navisworks",
+    DisplayName = "Speckle (Beta)"
   ),
 ]
 [SuppressMessage(

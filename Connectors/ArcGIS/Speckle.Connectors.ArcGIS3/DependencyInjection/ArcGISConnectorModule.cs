@@ -27,7 +27,7 @@ public static class ArcGISConnectorModule
   public static void AddArcGIS(this IServiceCollection serviceCollection)
   {
     serviceCollection.AddConnectorUtils();
-    serviceCollection.AddDUI<ArcGISDocumentStore>();
+    serviceCollection.AddDUI<ArcGISThreadContext, ArcGISDocumentStore>();
     serviceCollection.AddDUIView();
 
     // Register bindings
@@ -37,7 +37,6 @@ public static class ArcGISConnectorModule
     serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
     serviceCollection.AddSingleton<IBasicConnectorBinding, BasicConnectorBinding>();
 
-    serviceCollection.RegisterTopLevelExceptionHandler();
     serviceCollection.AddSingleton(DefaultTraversal.CreateTraversalFunc());
 
     // register send operation and dependencies

@@ -57,13 +57,13 @@ public sealed class IdleCallManager : IIdleCallManager
   }
 
   public void AppOnIdle(Action removeEvent) =>
-    _topLevelExceptionHandler.FireAndForget(async () => await AppOnIdleInternal(removeEvent).ConfigureAwait(false));
+    _topLevelExceptionHandler.FireAndForget(async () => await AppOnIdleInternal(removeEvent));
 
   internal async Task AppOnIdleInternal(Action removeEvent)
   {
     foreach (KeyValuePair<string, Func<Task>> kvp in Calls)
     {
-      await _topLevelExceptionHandler.CatchUnhandledAsync(kvp.Value).ConfigureAwait(false);
+      await _topLevelExceptionHandler.CatchUnhandledAsync(kvp.Value);
     }
 
     Calls.Clear();

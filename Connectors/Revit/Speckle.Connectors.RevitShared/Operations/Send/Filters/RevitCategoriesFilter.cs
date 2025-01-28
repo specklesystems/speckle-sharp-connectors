@@ -11,8 +11,7 @@ public record CategoryData(string Name, string Id);
 
 public class RevitCategoriesFilter : DiscriminatedObject, ISendFilter, IRevitSendFilter
 {
-  private RevitContext _revitContext;
-  private APIContext _apiContext;
+  private IRevitContext _revitContext;
   private Document? _doc;
   public string Id { get; set; } = "revitCategories";
   public string Name { get; set; } = "Categories";
@@ -25,11 +24,10 @@ public class RevitCategoriesFilter : DiscriminatedObject, ISendFilter, IRevitSen
 
   public RevitCategoriesFilter() { }
 
-  public RevitCategoriesFilter(RevitContext revitContext, APIContext apiContext)
+  public RevitCategoriesFilter(IRevitContext revitContext)
   {
     _revitContext = revitContext;
-    _apiContext = apiContext;
-    _doc = _revitContext.UIApplication?.ActiveUIDocument.Document;
+    _doc = _revitContext.UIApplication.ActiveUIDocument.Document;
 
     GetCategories();
   }
@@ -72,7 +70,10 @@ public class RevitCategoriesFilter : DiscriminatedObject, ISendFilter, IRevitSen
 
     foreach (Category category in _doc.Settings.Categories)
     {
-      categories.Add(new CategoryData(category.Name, category.Id.ToString()));
+      if (SupportedCategoriesUtils.IsSupportedCategory(category))
+      {
+        categories.Add(new CategoryData(category.Name, category.Id.ToString()));
+      }
     }
 
     AvailableCategories = categories;
@@ -82,10 +83,9 @@ public class RevitCategoriesFilter : DiscriminatedObject, ISendFilter, IRevitSen
   /// NOTE: this is needed since we need doc on `GetObjectIds()` function after it deserialized.
   /// DI doesn't help here to pass RevitContext from constructor.
   /// </summary>
-  public void SetContext(RevitContext revitContext, APIContext apiContext)
+  public void SetContext(IRevitContext revitContext)
   {
     _revitContext = revitContext;
-    _apiContext = apiContext;
     _doc = _revitContext.UIApplication?.ActiveUIDocument.Document;
   }
 }

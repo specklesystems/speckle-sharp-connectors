@@ -15,7 +15,7 @@ public class IdleCallManagerTests : MoqTest
     var sut = new IdleCallManager(handler.Object);
     var action = Create<Action>();
     var addEvent = Create<Action>();
-    handler.Setup(x => x.CatchUnhandled(It.IsAny<Action>()));
+    handler.Setup(x => x.CatchUnhandled(It.IsAny<Action>())).Returns(new Result());
     sut.SubscribeToIdle("id", action.Object, addEvent.Object);
   }
 
@@ -56,7 +56,7 @@ public class IdleCallManagerTests : MoqTest
     handler
       .Setup(m => m.CatchUnhandledAsync(It.IsAny<Func<Task>>()))
       .Callback<Func<Task>>(a => a.Invoke())
-      .Returns(Task.CompletedTask);
+      .ReturnsAsync(new Result());
 
     var removeEvent = Create<Action>();
     removeEvent.Setup(x => x.Invoke());

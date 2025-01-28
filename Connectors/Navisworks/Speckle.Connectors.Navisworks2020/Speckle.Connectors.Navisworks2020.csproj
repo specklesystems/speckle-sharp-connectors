@@ -8,16 +8,7 @@
     <NavisworksBuildNumber>v17</NavisworksBuildNumber>
     <NavisworksVersion>2020</NavisworksVersion>
 
-    <UseWpf>true</UseWpf>
     <DefineConstants>$(DefineConstants);TRACE;NAVIS2020;NAVIS</DefineConstants>
-
-    <Description>NextGen Speckle Connector for Autodesk Navisworks Manage</Description>
-    <Authors>$(Authors) jonathon@speckle.systems</Authors>
-    <PackageTags>$(PackageTags) connector nwd nwc nwf navisworks manage</PackageTags>
-
-    <PluginBundleTarget>$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Navisworksv3.bundle</PluginBundleTarget>
-    <PluginVersionContentTarget>$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Navisworksv3.bundle\Contents\$(NavisworksVersion)</PluginVersionContentTarget>
-
   </PropertyGroup>
 
   <Import Project="..\Speckle.Connectors.NavisworksShared\Speckle.Connectors.NavisworksShared.projitems" Label="Shared"/>
@@ -32,25 +23,5 @@
     <ProjectReference Include="..\..\..\Converters\Navisworks\Speckle.Converters.Navisworks2020\Speckle.Converters.Navisworks2020.csproj" />
     <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj"/>
     <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj"/>
-
   </ItemGroup>
-
-  <!-- Post Builds -->
-  <ItemGroup>
-    <RibbonFiles Include="$(OutDir)Plugin\NavisworksRibbon.*"/>
-    <ResourceFiles Include="$(OutDir)Resources\**\*.png"/>
-    <ResourceFiles Include="$(OutDir)Resources\**\*.ico"/>
-    <AllFiles Include="$(OutDir)*"/>
-  </ItemGroup>
-
-  <Target Name="PostBuild" AfterTargets="Build">
-    <RemoveDir Directories="$(PluginVersionContentTarget)" Condition="Exists('$(PluginVersionContentTarget)')"/>
-
-    <Copy SourceFiles="$(OutDir)Plugin\PackageContents.xml" DestinationFolder="$(PluginBundleTarget)\"/>
-    <Copy SourceFiles="@(RibbonFiles)" DestinationFolder="$(PluginVersionContentTarget)\en-US\"/>
-    <Copy SourceFiles="@(ResourceFiles)" DestinationFolder="$(PluginVersionContentTarget)\Resources\"/>
-
-    <Copy SourceFiles="@(AllFiles)" DestinationFolder="$(PluginVersionContentTarget)\" />
-  </Target>
-
 </Project>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <PropertyGroup>
+    <UseWpf>true</UseWpf>
+
+    <Description>NextGen Speckle Connector for Autodesk Navisworks Manage</Description>
+    <Authors>$(Authors) jonathon@speckle.systems</Authors>
+    <PackageTags>$(PackageTags) connector nwd nwc nwf navisworks manage</PackageTags>
+
+    <PluginBundleTarget>$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Navisworks.bundle</PluginBundleTarget>
+    <PluginVersionContentTarget>$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Navisworks.bundle\Contents\$(NavisworksVersion)</PluginVersionContentTarget>
+    <RootNamespace>Speckle.Connector.Navisworks</RootNamespace>
+  </PropertyGroup>
+
+  <!-- Post Builds -->
+  <ItemGroup>
+    <RibbonFiles Include="$(OutDir)Plugin\NavisworksRibbon.*"/>
+    <ResourceFiles Include="$(OutDir)Resources\**\*.png"/>
+    <ResourceFiles Include="$(OutDir)Resources\**\*.ico"/>
+    <AllFiles Include="$(OutDir)*"/>
+  </ItemGroup>
+
+
+  <Target Name="PostBuild" AfterTargets="Build">
+    <Message Text="Navisworks Version $(NavisworksVersion)" Importance="high"/>
+    <RemoveDir Directories="$(PluginVersionContentTarget)" Condition="Exists('$(PluginVersionContentTarget)')"/>
+  
+    <Copy SourceFiles="$(OutDir)Plugin\PackageContents.xml" DestinationFolder="$(PluginBundleTarget)\"/>
+    <Copy SourceFiles="@(RibbonFiles)" DestinationFolder="$(PluginVersionContentTarget)\en-US\"/>
+    <Copy SourceFiles="@(ResourceFiles)" DestinationFolder="$(PluginVersionContentTarget)\Resources\"/>
+  
+    <Copy SourceFiles="@(AllFiles)" DestinationFolder="$(PluginVersionContentTarget)\" />
+  </Target>
+</Project>

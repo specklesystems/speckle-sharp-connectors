@@ -34,7 +34,7 @@ public sealed class CsiJointPropertiesExtractor
   {
     jointData.ApplicationId = joint.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
 
-    var assignments = DictionaryUtils.EnsureNestedDictionary(jointData.Properties, "Assignments");
+    var assignments = DictionaryUtils.EnsureNestedDictionary(jointData.Properties, ObjectPropertyCategory.ASSIGNMENTS);
     assignments["groups"] = new List<string>(GetGroupAssigns(joint));
     assignments["restraints"] = GetRestraints(joint);
   }
@@ -49,7 +49,7 @@ public sealed class CsiJointPropertiesExtractor
 
   private Dictionary<string, bool?> GetRestraints(CsiJointWrapper joint)
   {
-    bool[] restraints = Array.Empty<bool>();
+    bool[] restraints = [];
     _ = _settingsStore.Current.SapModel.PointObj.GetRestraint(joint.Name, ref restraints);
     return new Dictionary<string, bool?>
     {

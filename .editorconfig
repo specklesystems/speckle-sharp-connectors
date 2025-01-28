@@ -254,6 +254,9 @@ dotnet_diagnostic.ca1508.severity = warning # Avoid dead conditional code
 dotnet_diagnostic.ca1509.severity = warning # Invalid entry in code metrics configuration file
 dotnet_diagnostic.ca1861.severity = none # Prefer 'static readonly' fields over constant array arguments if the called method is called repeatedly and is not mutating the passed array (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1861)
 
+# CA2007: Consider calling ConfigureAwait on the awaited task (this is not needed for application code, in fact we don't want to call anything but ConfigureAwait(true) which is the default)
+dotnet_diagnostic.CA2007.severity = none
+
 dotnet_diagnostic.cs8618.severity = suggestion # nullable problem
 
 

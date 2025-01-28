@@ -6,6 +6,7 @@ using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
@@ -24,14 +25,13 @@ using Task = System.Threading.Tasks.Task;
 
 namespace Speckle.Connectors.TeklaShared.Bindings;
 
-public sealed class TeklaSendBinding : ISendBinding, IDisposable
+public sealed class TeklaSendBinding : ISendBinding
 {
   public string Name => "sendBinding";
   public SendBindingUICommands Commands { get; }
   public IBrowserBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly IAppIdleManager _idleManager;
   private readonly IServiceProvider _serviceProvider;
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
@@ -42,14 +42,12 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
   private readonly ISpeckleApplication _speckleApplication;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly Model _model;
-  private readonly Events _events;
   private readonly ToSpeckleSettingsManager _toSpeckleSettingsManager;
 
   private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
 
   public TeklaSendBinding(
     DocumentModelStore store,
-    IAppIdleManager idleManager,
     IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     IServiceProvider serviceProvider,
@@ -60,11 +58,11 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
     ITeklaConversionSettingsFactory teklaConversionSettingsFactory,
     ISpeckleApplication speckleApplication,
     ISdkActivityFactory activityFactory,
-    ToSpeckleSettingsManager toSpeckleSettingsManager
+    ToSpeckleSettingsManager toSpeckleSettingsManager,
+    IEventAggregator eventAggregator
   )
   {
     _store = store;
-    _idleManager = idleManager;
     _serviceProvider = serviceProvider;
     _sendFilters = sendFilters.ToList();
     _cancellationManager = cancellationManager;
@@ -79,14 +77,7 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
     _toSpeckleSettingsManager = toSpeckleSettingsManager;
 
     _model = new Model();
-    _events = new Events();
-    SubscribeToTeklaEvents();
-  }
-
-  private void SubscribeToTeklaEvents()
-  {
-    _events.ModelObjectChanged += ModelHandler_OnChange;
-    _events.Register();
+    eventAggregator.GetEvent<ModelObjectChangedEvent>().Subscribe(ModelHandler_OnChange);
   }
 
   // subscribes the all changes in a modelobject
@@ -150,12 +141,9 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
           modelCard.GetSendInfo(_speckleApplication.Slug),
           _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
           cancellationToken
-        )
-        .ConfigureAwait(false);
+        );
 
-      await Commands
-        .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
-        .ConfigureAwait(false);
+      await Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
     }
     catch (OperationCanceledException)
     {
@@ -164,7 +152,7 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
     catch (Exception ex) when (!ex.IsFatal())
     {
       _logger.LogModelCardHandledError(ex);
-      await Commands.SetModelError(modelCardId, ex).ConfigureAwait(false);
+      await Commands.SetModelError(modelCardId, ex);
     }
   }
 
@@ -194,19 +182,8 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
       }
     }
 
-    await Commands.SetModelsExpired(expiredSenderIds).ConfigureAwait(false);
+    await Commands.SetModelsExpired(expiredSenderIds);
 
     ChangedObjectIds = new ConcurrentDictionary<string, byte>();
-  }
-
-  private bool _disposed;
-
-  public void Dispose()
-  {
-    if (!_disposed)
-    {
-      _events.UnRegister();
-      _disposed = true;
-    }
   }
 }

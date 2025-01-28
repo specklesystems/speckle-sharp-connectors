@@ -2,7 +2,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Rhino.PlugIns;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.Rhino.DependencyInjection;
+using Speckle.Connectors.RhinoShared;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
 using Speckle.Sdk.Host;
@@ -20,10 +22,9 @@ namespace Speckle.Connectors.Rhino.Plugin;
 ///</summary>
 public class SpeckleConnectorsRhinoPlugin : PlugIn
 {
-  private IRhinoPlugin? _rhinoPlugin;
   private IDisposable? _disposableLogger;
 
-  protected override string LocalPlugInName => "Speckle (Beta) for Rhino";
+  protected override string LocalPlugInName => "Speckle (Beta)";
   public ServiceProvider? Container { get; private set; }
 
   public SpeckleConnectorsRhinoPlugin()
@@ -52,11 +53,8 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
 
       // but the Rhino connector has `.rhp` as it is extension.
       Container = services.BuildServiceProvider();
+      RhinoEvents.Register(Container.GetRequiredService<IEventAggregator>());
       Container.UseDUI();
-
-      // Resolve root plugin object and initialise.
-      _rhinoPlugin = Container.GetRequiredService<IRhinoPlugin>();
-      _rhinoPlugin.Initialise();
 
       return LoadReturnCode.Success;
     }
@@ -80,7 +78,6 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
 
   protected override void OnShutdown()
   {
-    _rhinoPlugin?.Shutdown();
     _disposableLogger?.Dispose();
     Container?.Dispose();
     base.OnShutdown();

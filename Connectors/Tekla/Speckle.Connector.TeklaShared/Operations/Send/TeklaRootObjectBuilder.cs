@@ -11,7 +11,6 @@ using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
-using Task = System.Threading.Tasks.Task;
 
 namespace Speckle.Connectors.TeklaShared.Operations.Send;
 
@@ -44,11 +43,11 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
     _materialUnpacker = materialUnpacker;
   }
 
-  public async Task<RootObjectBuilderResult> Build(
+  public async Task<RootObjectBuilderResult> BuildAsync(
     IReadOnlyList<TSM.ModelObject> teklaObjects,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
-    CancellationToken cancellationToken = default
+    CancellationToken cancellationToken
   )
   {
     using var activity = _activityFactory.Start("Build");
@@ -66,14 +65,15 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
     {
       foreach (TSM.ModelObject teklaObject in teklaObjects)
       {
-        using var _2 = _activityFactory.Start("Convert");
         cancellationToken.ThrowIfCancellationRequested();
+        using var _2 = _activityFactory.Start("Convert");
 
         var result = ConvertTeklaObject(teklaObject, rootObjectCollection, sendInfo.ProjectId);
         results.Add(result);
 
         ++count;
         onOperationProgressed.Report(new("Converting", (double)count / teklaObjects.Count));
+        await Task.Yield();
       }
     }
 
@@ -88,7 +88,6 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
       rootObjectCollection[ProxyKeys.RENDER_MATERIAL] = renderMaterialProxies;
     }
 
-    await Task.Yield();
     return new RootObjectBuilderResult(rootObjectCollection, results);
   }
 
