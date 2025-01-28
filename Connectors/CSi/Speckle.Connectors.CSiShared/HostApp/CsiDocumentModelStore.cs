@@ -53,15 +53,11 @@ public class CsiDocumentModelStore : DocumentModelStore, IDisposable
       return;
     }
 
-    _logger.LogInformation($"Model change detected. Old: {_lastModelFilename}, New: {currentFilename}");
-
     _lastModelFilename = currentFilename;
     SetPaths();
     LoadState();
 
     await _eventAggregator.GetEvent<DocumentStoreChangedEvent>().PublishAsync(new object());
-
-    _logger.LogInformation("State reload completed for new model");
   }
 
   public override Task OnDocumentStoreInitialized()
@@ -114,8 +110,6 @@ public class CsiDocumentModelStore : DocumentModelStore, IDisposable
 
   protected override void LoadState()
   {
-    _logger.LogInformation($"Loading state from: {DocumentStateFile}");
-
     try
     {
       if (!File.Exists(DocumentStateFile))
@@ -125,7 +119,6 @@ public class CsiDocumentModelStore : DocumentModelStore, IDisposable
       }
 
       string serializedState = File.ReadAllText(DocumentStateFile);
-      _logger.LogInformation($"Loaded state: {serializedState}");
       LoadFromString(serializedState);
     }
     catch (Exception ex) when (!ex.IsFatal())
