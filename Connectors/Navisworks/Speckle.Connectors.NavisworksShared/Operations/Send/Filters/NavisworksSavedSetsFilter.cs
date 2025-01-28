@@ -29,9 +29,11 @@ public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilter
 
   public List<string> RefreshObjectIds()
   {
-    List<string> objectIds = new List<string>();
+    List<string> objectIds = [];
 
-    if (SelectedSavedSets is null || SelectedSavedSets.Count == 0) { return objectIds; }
+    if (SelectedSavedSets is null || SelectedSavedSets.Count == 0) { 
+			return objectIds; 
+		}
 
     NAV.SavedItemCollection? selectionSets = NavisworksApp.ActiveDocument.SelectionSets.RootItem.Children;
 
