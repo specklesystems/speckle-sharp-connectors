@@ -1,11 +1,11 @@
 ﻿using FluentAssertions;
-using NUnit.Framework;
+using Xunit;
 
 namespace Speckle.Connectors.Tests;
 
 public class ActivityScopeTests
 {
-  [Test]
+  [Fact]
   public async Task TestAsyncLocal()
   {
     Logging.ActivityScope.SetTag("test", "me");

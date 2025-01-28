@@ -1,17 +1,17 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
-using NUnit.Framework;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Eventing;
 using Speckle.Testing;
+using Xunit;
 
 namespace Speckle.Connectors.DUI.Tests.Bridge;
 
 public class TopLevelExceptionHandlerTests : MoqTest
 {
-  [Test]
+  [Fact]
   public void CatchUnhandledAction_Happy()
   {
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
@@ -21,7 +21,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
     sut.CatchUnhandled(() => { });
   }
 
-  [Test]
+  [Fact]
   public void CatchUnhandledAction_Exception()
   {
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
@@ -36,7 +36,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
     sut.CatchUnhandled(() => throw new InvalidOperationException());
   }
 
-  [Test]
+  [Fact]
   public void CatchUnhandledFunc_Happy()
   {
     var val = 2;
@@ -50,7 +50,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
     returnVal.IsSuccess.Should().BeTrue();
   }
 
-  [Test]
+  [Fact]
   public void CatchUnhandledFunc_Exception()
   {
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
@@ -68,7 +68,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
     returnVal.IsSuccess.Should().BeFalse();
   }
 
-  [Test]
+  [Fact]
   public void CatchUnhandledFunc_Exception_Fatal()
   {
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
@@ -80,7 +80,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
     );
   }
 
-  [Test]
+  [Fact]
   public async Task CatchUnhandledFuncAsync_Happy()
   {
     var val = 2;
@@ -94,7 +94,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
     returnVal.IsSuccess.Should().BeTrue();
   }
 
-  [Test]
+  [Fact]
   public async Task CatchUnhandledFuncAsync_Exception()
   {
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
@@ -112,7 +112,7 @@ public class TopLevelExceptionHandlerTests : MoqTest
     returnVal.IsSuccess.Should().BeFalse();
   }
 
-  [Test]
+  [Fact]
   public void CatchUnhandledFuncAsync_Exception_Fatal()
   {
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);

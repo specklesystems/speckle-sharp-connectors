@@ -1,15 +1,15 @@
-﻿using NUnit.Framework;
-using Speckle.Converters.Common;
+﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Rhino;
 using Speckle.Converters.Rhino.ToSpeckle.Raw;
 using Speckle.Testing;
+using Xunit;
 
 namespace Speckle.Converters.Rhino7.Tests;
 
 public class EllipseToSpeckleConverterTests : MoqTest
 {
-  [Test]
+  [Fact]
   public void Convert_Test()
   {
     var mockContextStack = Create<IConverterSettingsStore<RhinoConversionSettings>>();

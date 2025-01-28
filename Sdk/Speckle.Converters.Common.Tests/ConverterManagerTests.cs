@@ -1,9 +1,9 @@
 ﻿using System.Collections.Concurrent;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using NUnit.Framework;
 using Speckle.Converters.Common.Registration;
 using Speckle.Sdk.Common.Exceptions;
+using Xunit;
 
 namespace Speckle.Converters.Common.Tests;
 
@@ -26,14 +26,14 @@ public class ConverterManagerTests
     return sut;
   }
 
-  [Test]
+  [Fact]
   public void Test_Null()
   {
     var sut = SetupManager("Test", typeof(TestConverter));
     Assert.Throws<ConversionNotSupportedException>(() => sut.ResolveConverter(typeof(string), false));
   }
 
-  [Test]
+  [Fact]
   public void Test_NoFallback()
   {
     var sut = SetupManager("System.String", typeof(TestConverter));
@@ -41,7 +41,7 @@ public class ConverterManagerTests
     converter.Should().NotBeNull();
   }
 
-  [Test]
+  [Fact]
   public void Test_Fallback()
   {
     var sut = SetupManager("System.Object", typeof(TestConverter));
@@ -49,7 +49,7 @@ public class ConverterManagerTests
     converter.Should().NotBeNull();
   }
 
-  [Test]
+  [Fact]
   public void Test_Fallback_Null()
   {
     var sut = SetupManager("Object", typeof(TestConverter));

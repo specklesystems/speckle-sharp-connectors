@@ -1,14 +1,14 @@
 ﻿using FluentAssertions;
 using Moq;
-using NUnit.Framework;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Testing;
+using Xunit;
 
 namespace Speckle.Connectors.DUI.Tests.Bridge;
 
 public class IdleCallManagerTests : MoqTest
 {
-  [Test]
+  [Fact]
   public void SubscribeToIdleTest()
   {
     var handler = Create<ITopLevelExceptionHandler>();
@@ -19,7 +19,7 @@ public class IdleCallManagerTests : MoqTest
     sut.SubscribeToIdle("id", action.Object, addEvent.Object);
   }
 
-  [Test]
+  [Fact]
   public void SubscribeInternalTest()
   {
     var handler = Create<ITopLevelExceptionHandler>();
@@ -35,7 +35,7 @@ public class IdleCallManagerTests : MoqTest
     sut.IdleSubscriptionCalled.Should().BeTrue();
   }
 
-  [Test]
+  [Fact]
   public void AppOnIdleTest()
   {
     var handler = Create<ITopLevelExceptionHandler>();
@@ -45,7 +45,7 @@ public class IdleCallManagerTests : MoqTest
     sut.AppOnIdle(removeEvent.Object);
   }
 
-  [Test]
+  [Fact]
   public async Task AppOnIdleInternalTest()
   {
     var handler = Create<ITopLevelExceptionHandler>();

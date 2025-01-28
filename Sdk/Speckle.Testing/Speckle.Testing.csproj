@@ -6,6 +6,6 @@
     </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Moq" />
-    <PackageReference Include="NUnit" />
+    <PackageReference Include="xunit" />
   </ItemGroup>
 </Project>

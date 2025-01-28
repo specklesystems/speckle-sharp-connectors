@@ -1,17 +1,22 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Moq;
-using NUnit.Framework;
 
 namespace Speckle.Testing;
 
 [ExcludeFromCodeCoverage]
-public abstract class MoqTest
+#pragma warning disable CA1063
+#pragma warning disable CA1012
+public abstract class MoqTest : IDisposable
+#pragma warning restore CA1012
+#pragma warning restore CA1063
 {
-  [SetUp]
-  public void Setup() => Repository = new(MockBehavior.Strict);
+  public MoqTest() => Repository = new(MockBehavior.Strict);
 
-  [TearDown]
-  public void Verify() => Repository.VerifyAll();
+#pragma warning disable CA1816
+#pragma warning disable CA1063
+  public void Dispose() => Repository.VerifyAll();
+#pragma warning restore CA1063
+#pragma warning restore CA1816
 
   protected MockRepository Repository { get; private set; } = new(MockBehavior.Strict);
 

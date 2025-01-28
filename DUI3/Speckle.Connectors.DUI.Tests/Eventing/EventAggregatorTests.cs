@@ -1,11 +1,11 @@
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using NUnit.Framework;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Eventing;
 using Speckle.Testing;
+using Xunit;
 
 namespace Speckle.Connectors.DUI.Tests.Eventing;
 
@@ -17,7 +17,7 @@ public class TestOneTimeEvent(IThreadContext threadContext, ITopLevelExceptionHa
 
 public class EventAggregatorTests : MoqTest
 {
-  [Test]
+  [Fact]
   public async Task Sub_Async_DisposeToken()
   {
     s_val = false;
@@ -54,7 +54,7 @@ public class EventAggregatorTests : MoqTest
     return subscriptionToken;
   }
 
-  [Test]
+  [Fact]
   public async Task Sub_Async_SubscribeToken()
   {
     s_val = false;
@@ -84,7 +84,7 @@ public class EventAggregatorTests : MoqTest
     subscriptionToken.IsActive.Should().BeFalse();
   }
 
-  [Test]
+  [Fact]
   public async Task Sub_Sync()
   {
     s_val = false;
@@ -121,7 +121,7 @@ public class EventAggregatorTests : MoqTest
     return subscriptionToken;
   }
 
-  [Test]
+  [Fact]
   public async Task Sub_Sync_Static()
   {
     s_val = false;
@@ -163,7 +163,7 @@ public class EventAggregatorTests : MoqTest
     s_val = true;
   }
 
-  [Test]
+  [Fact]
   public async Task Sub_Async_Static()
   {
     s_val = false;
@@ -212,7 +212,7 @@ public class EventAggregatorTests : MoqTest
     return Task.CompletedTask;
   }
 
-  [Test]
+  [Fact]
   public async Task Onetime_Async()
   {
     s_val = false;
@@ -266,7 +266,7 @@ public class EventAggregatorTests : MoqTest
     s_val = true;
   }
 
-  [Test]
+  [Fact]
   public async Task Onetime_Sync()
   {
     var services = new ServiceCollection();
@@ -301,7 +301,7 @@ public class EventAggregatorTests : MoqTest
 
   private static bool s_val;
 
-  [Test]
+  [Fact]
   public async Task Sub_WeakReference()
   {
     s_val = false;

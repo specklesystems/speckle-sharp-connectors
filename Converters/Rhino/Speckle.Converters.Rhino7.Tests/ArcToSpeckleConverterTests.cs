@@ -1,17 +1,17 @@
 using FluentAssertions;
 using Moq;
-using NUnit.Framework;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Rhino;
 using Speckle.Converters.Rhino.ToSpeckle.Raw;
 using Speckle.Testing;
+using Xunit;
 
 namespace Speckle.Converters.Rhino7.Tests;
 
 public class ArcToSpeckleConverterTests : MoqTest
 {
-  [Test]
+  [Fact]
   public void Convert_ShouldConvertArcCorrectly()
   {
     // Arrange

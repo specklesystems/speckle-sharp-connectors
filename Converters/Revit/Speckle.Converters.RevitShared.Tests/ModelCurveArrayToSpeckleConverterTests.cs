@@ -1,5 +1,4 @@
 ﻿using FluentAssertions;
-using NUnit.Framework;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Raw;
@@ -8,12 +7,13 @@ using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Testing;
+using Xunit;
 
 namespace Speckle.Converters.Revit2023.Tests;
 
 public class ModelCurveArrayToSpeckleConverterTests : MoqTest
 {
-  [Test]
+  [Fact]
   public void Convert_Empty()
   {
     var revitConversionContextStack = Create<IConverterSettingsStore<RevitConversionSettings>>();
@@ -30,7 +30,7 @@ public class ModelCurveArrayToSpeckleConverterTests : MoqTest
     Assert.Throws<ValidationException>(() => sut.Convert(array.Object));
   }
 
-  [Test]
+  [Fact]
   public void Convert()
   {
     var revitConversionContextStack = Create<IConverterSettingsStore<RevitConversionSettings>>();

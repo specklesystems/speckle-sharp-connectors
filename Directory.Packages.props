@@ -17,9 +17,6 @@
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="2.2.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="2.2.0" />
     <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.1938.49" />
-    <PackageVersion Include="NUnit" Version="4.3.2" />
-    <PackageVersion Include="NUnit.Analyzers" Version="4.6.0" />
-    <PackageVersion Include="NUnit3TestAdapter" version="4.6.0" />
     <PackageVersion Include="Revit.Async" Version="2.1.1" />
     <PackageVersion Include="RhinoCommon" Version="8.9.24194.18121" />
     <PackageVersion Include="RhinoWindows" Version="8.9.24194.18121" />
@@ -47,6 +44,8 @@
     <PackageVersion Include="Speckle.Sdk" Version="3.1.0-dev.249" />
     <PackageVersion Include="Speckle.Sdk.Dependencies" Version="3.1.0-dev.249" />
     <PackageVersion Include="SimpleExec" Version="12.0.0" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.0.1" />
     <GlobalPackageReference Include="PolySharp" Version="1.15.0" />
     <GlobalPackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <GlobalPackageReference Include="Speckle.InterfaceGenerator" Version="0.9.6" />
