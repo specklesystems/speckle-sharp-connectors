@@ -13,21 +13,7 @@ public abstract class PeriodicThreadedEvent(IThreadContext threadContext, ITopLe
   )
   {
     var token = Subscribe(action, threadOption, EventFeatures.IsAsync);
-    Task.Factory.StartNew(
-        async () =>
-        {
-          while (token.IsActive)
-          {
-            await Task.Delay(period);
-            await InternalPublish(new object());
-          }
-        },
-        default,
-        TaskCreationOptions.LongRunning,
-        TaskScheduler.Current
-      )
-      .Wait();
-
+    StartPeriodic(token, period);
     return token;
   }
 
@@ -38,7 +24,13 @@ public abstract class PeriodicThreadedEvent(IThreadContext threadContext, ITopLe
   )
   {
     var token = Subscribe(action, threadOption, EventFeatures.None);
-    Task.Factory.StartNew(
+    StartPeriodic(token, period);
+    return token;
+  }
+
+  private void StartPeriodic(SubscriptionToken token, TimeSpan period) =>
+    Task
+      .Factory.StartNew(
         async () =>
         {
           while (token.IsActive)
@@ -52,7 +44,4 @@ public abstract class PeriodicThreadedEvent(IThreadContext threadContext, ITopLe
         TaskScheduler.Current
       )
       .Wait();
-
-    return token;
-  }
 }
