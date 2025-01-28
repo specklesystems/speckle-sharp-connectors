@@ -8,9 +8,6 @@ using Speckle.Converters.CSiShared.Utils;
 
 namespace Speckle.Connectors.CSiShared.Bindings;
 
-public class SelectionBindingEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
-  : PeriodicThreadedEvent(threadContext, exceptionHandler);
-
 public sealed class CsiSharedSelectionBinding : ISelectionBinding
 {
   private readonly ICsiApplicationService _csiApplicationService;
