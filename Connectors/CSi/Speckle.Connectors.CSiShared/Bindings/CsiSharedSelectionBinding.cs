@@ -1,16 +1,18 @@
-﻿using Speckle.Connectors.CSiShared.HostApp;
+﻿using Speckle.Connectors.Common.Threading;
+using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.CSiShared.Utils;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Converters.CSiShared.Utils;
-using Timer = System.Timers.Timer;
 
 namespace Speckle.Connectors.CSiShared.Bindings;
 
-public class CsiSharedSelectionBinding : ISelectionBinding, IDisposable
+public class SelectionBindingEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
+  : PeriodicThreadedEvent(threadContext, exceptionHandler);
+
+public sealed class CsiSharedSelectionBinding : ISelectionBinding
 {
-  private bool _disposed;
-  private readonly Timer _selectionTimer;
   private readonly ICsiApplicationService _csiApplicationService;
   private HashSet<string> _lastSelection = new();
 
@@ -20,18 +22,16 @@ public class CsiSharedSelectionBinding : ISelectionBinding, IDisposable
   public CsiSharedSelectionBinding(
     IBrowserBridge parent,
     ICsiApplicationService csiApplicationService,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    IEventAggregator eventAggregator
   )
   {
     Parent = parent;
     _csiApplicationService = csiApplicationService;
 
-    _selectionTimer = new Timer(1000);
-    _selectionTimer.Elapsed += (_, _) => topLevelExceptionHandler.CatchUnhandled(CheckSelectionChanged);
-    _selectionTimer.Start();
+    eventAggregator.GetEvent<SelectionBindingEvent>().SubscribePeriodic(TimeSpan.FromSeconds(1), CheckSelectionChanged);
   }
 
-  private void CheckSelectionChanged()
+  private void CheckSelectionChanged(object _)
   {
     var currentSelection = GetSelection();
     var currentIds = new HashSet<string>(currentSelection.SelectedObjectIds);
@@ -41,24 +41,6 @@ public class CsiSharedSelectionBinding : ISelectionBinding, IDisposable
       _lastSelection = currentIds;
       Parent.Send(SelectionBindingEvents.SET_SELECTION, currentSelection);
     }
-  }
-
-  protected virtual void Dispose(bool disposing)
-  {
-    if (!_disposed)
-    {
-      if (disposing)
-      {
-        _selectionTimer?.Dispose();
-      }
-      _disposed = true;
-    }
-  }
-
-  public void Dispose()
-  {
-    Dispose(true);
-    GC.SuppressFinalize(this);
   }
 
   /// <summary>
