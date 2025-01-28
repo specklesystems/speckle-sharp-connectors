@@ -137,6 +137,7 @@ public class CsiDocumentModelStore : DocumentModelStore, IDisposable
 
     if (disposing)
     {
+      _modelCheckTimer.Stop();
       _modelCheckTimer.Dispose();
     }
 
