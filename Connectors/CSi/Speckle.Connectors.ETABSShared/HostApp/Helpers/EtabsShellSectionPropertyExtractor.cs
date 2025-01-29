@@ -54,7 +54,7 @@ public class EtabsShellSectionPropertyExtractor : IApplicationShellSectionProper
         continue;
       }
 
-      var nestedProperties = DictionaryUtils.EnsureNestedDictionary(properties, nestedDictionary.Key);
+      var nestedProperties = properties.EnsureNested(nestedDictionary.Key);
       foreach (var kvp in nestedValues)
       {
         nestedProperties[kvp.Key] = kvp.Value;

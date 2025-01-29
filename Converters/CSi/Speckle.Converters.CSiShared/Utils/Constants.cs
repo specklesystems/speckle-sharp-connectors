@@ -21,8 +21,8 @@ public static class ObjectPropertyCategory
 /// </summary>
 public static class ObjectPropertyKey
 {
-  public const string MATERIAL_ID = "materialId";
-  public const string SECTION_ID = "sectionId";
+  public const string MATERIAL_ID = "Material";
+  public const string SECTION_ID = "Section Property";
 }
 
 public static class SectionPropertyCategory

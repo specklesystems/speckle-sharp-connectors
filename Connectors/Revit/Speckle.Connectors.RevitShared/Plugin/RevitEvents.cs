@@ -25,19 +25,18 @@ public class SelectionChangedEvent(IThreadContext threadContext, ITopLevelExcept
 public class DocumentChangedEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
   : ThreadedEvent<Autodesk.Revit.DB.Events.DocumentChangedEventArgs>(threadContext, exceptionHandler);
 
+#if REVIT2022
+public class PeriodicSelectionEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
+  : PeriodicThreadedEvent(threadContext, exceptionHandler);
+#endif
+
 public static class RevitEvents
 {
-#if REVIT2022
-  private static readonly System.Timers.Timer s_selectionTimer = new(1000);
-#else
   private static IEventAggregator? s_eventAggregator;
-#endif
 
   public static void Register(IEventAggregator eventAggregator, UIControlledApplication application)
   {
-#if !REVIT2022
     s_eventAggregator = eventAggregator;
-#endif
     application.Idling += async (_, _) => await eventAggregator.GetEvent<IdleEvent>().PublishAsync(new object());
     application.ControlledApplication.ApplicationInitialized += async (sender, _) =>
       await eventAggregator
@@ -54,9 +53,7 @@ public static class RevitEvents
 
 #if REVIT2022
     // NOTE: getting the selection data should be a fast function all, even for '000s of elements - and having a timer hitting it every 1s is ok.
-    s_selectionTimer.Elapsed += async (_, _) =>
-      await eventAggregator.GetEvent<SelectionChangedEvent>().PublishAsync(new object());
-    s_selectionTimer.Start();
+    eventAggregator.GetEvent<PeriodicSelectionEvent>().SubscribePeriodic(TimeSpan.FromSeconds(1), OnSelectionChanged);
 #else
 
     application.SelectionChanged += (_, _) =>
@@ -64,7 +61,6 @@ public static class RevitEvents
 #endif
   }
 
-#if !REVIT2022
   private static async Task OnSelectionChanged(object _)
   {
     if (s_eventAggregator is null)
@@ -73,5 +69,4 @@ public static class RevitEvents
     }
     await s_eventAggregator.GetEvent<SelectionChangedEvent>().PublishAsync(new object());
   }
-#endif
 }

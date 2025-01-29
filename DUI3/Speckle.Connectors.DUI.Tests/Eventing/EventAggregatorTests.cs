@@ -15,6 +15,9 @@ public class TestEvent(IThreadContext threadContext, ITopLevelExceptionHandler e
 public class TestOneTimeEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
   : OneTimeThreadedEvent<object>(threadContext, exceptionHandler);
 
+public class TestPeriodicThreadedEvent(IThreadContext threadContext, ITopLevelExceptionHandler exceptionHandler)
+  : PeriodicThreadedEvent(threadContext, exceptionHandler);
+
 public class EventAggregatorTests : MoqTest
 {
   [Test]
@@ -347,5 +350,91 @@ public class EventAggregatorTests : MoqTest
     {
       action();
     }
+  }
+
+  [Test]
+  public async Task Periodic_Async()
+  {
+    s_val = false;
+    var services = new ServiceCollection();
+    var exceptionHandler = new TopLevelExceptionHandler(
+      Create<ILogger<TopLevelExceptionHandler>>().Object,
+      Create<IEventAggregator>().Object
+    );
+    services.AddSingleton(Create<IThreadContext>().Object);
+    services.AddSingleton<ITopLevelExceptionHandler>(exceptionHandler);
+    services.AddTransient<TestPeriodicThreadedEvent>();
+
+    services.AddSingleton<IEventAggregator, EventAggregator>();
+    var serviceProvider = services.BuildServiceProvider();
+
+    var subscriptionToken = Test_Periodic_Sub_Async(serviceProvider);
+    GC.Collect();
+    GC.WaitForPendingFinalizers();
+    subscriptionToken.IsActive.Should().BeTrue();
+
+    await Task.Delay(2000);
+    s_val.Should().BeTrue();
+    subscriptionToken.Unsubscribe();
+
+    GC.Collect();
+    GC.WaitForPendingFinalizers();
+    subscriptionToken.IsActive.Should().BeFalse();
+    subscriptionToken.Dispose();
+    GC.Collect();
+    GC.WaitForPendingFinalizers();
+    subscriptionToken.IsActive.Should().BeFalse();
+  }
+
+  private SubscriptionToken Test_Periodic_Sub_Async(IServiceProvider serviceProvider)
+  {
+    var eventAggregator = serviceProvider.GetRequiredService<IEventAggregator>();
+    var subscriptionToken = eventAggregator
+      .GetEvent<TestPeriodicThreadedEvent>()
+      .SubscribePeriodic(TimeSpan.FromSeconds(1), OnTestAsyncSubscribe);
+    return subscriptionToken;
+  }
+
+  [Test]
+  public async Task Periodic_Sync()
+  {
+    s_val = false;
+    var services = new ServiceCollection();
+    var exceptionHandler = new TopLevelExceptionHandler(
+      Create<ILogger<TopLevelExceptionHandler>>().Object,
+      Create<IEventAggregator>().Object
+    );
+    services.AddSingleton(Create<IThreadContext>().Object);
+    services.AddSingleton<ITopLevelExceptionHandler>(exceptionHandler);
+    services.AddTransient<TestPeriodicThreadedEvent>();
+
+    services.AddSingleton<IEventAggregator, EventAggregator>();
+    var serviceProvider = services.BuildServiceProvider();
+
+    var subscriptionToken = Test_Periodic_Sub_Sync(serviceProvider);
+    GC.Collect();
+    GC.WaitForPendingFinalizers();
+    subscriptionToken.IsActive.Should().BeTrue();
+
+    await Task.Delay(2000);
+    s_val.Should().BeTrue();
+    subscriptionToken.Unsubscribe();
+
+    GC.Collect();
+    GC.WaitForPendingFinalizers();
+    subscriptionToken.IsActive.Should().BeFalse();
+    subscriptionToken.Dispose();
+    GC.Collect();
+    GC.WaitForPendingFinalizers();
+    subscriptionToken.IsActive.Should().BeFalse();
+  }
+
+  private SubscriptionToken Test_Periodic_Sub_Sync(IServiceProvider serviceProvider)
+  {
+    var eventAggregator = serviceProvider.GetRequiredService<IEventAggregator>();
+    var subscriptionToken = eventAggregator
+      .GetEvent<TestPeriodicThreadedEvent>()
+      .SubscribePeriodic(TimeSpan.FromSeconds(1), OnTestSyncSubscribe);
+    return subscriptionToken;
   }
 }

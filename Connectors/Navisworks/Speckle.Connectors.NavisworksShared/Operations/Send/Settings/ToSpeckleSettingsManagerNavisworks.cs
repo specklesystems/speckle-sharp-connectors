@@ -73,6 +73,7 @@ public class ToSpeckleSettingsManagerNavisworks : IToSpeckleSettingsManagerNavis
           EvictCacheForModelCard(modelCard);
         }
       }
+
       _originModeCache[modelCard.ModelCardId.NotNull()] = origin;
       return origin;
     }
