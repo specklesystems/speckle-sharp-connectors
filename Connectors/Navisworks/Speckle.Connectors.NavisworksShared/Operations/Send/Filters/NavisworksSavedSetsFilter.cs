@@ -81,7 +81,8 @@ public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilter
   private void GetSavedSets()
   {
     List<NAV.SavedItem> savedSetRecords = NavisworksApp
-      .ActiveDocument.SelectionSets.RootItem.Children.Where(set => set.IsGroup).ToList();
+      .ActiveDocument.SelectionSets.RootItem.Children.Where(set => set.IsGroup)
+      .ToList();
 
     AvailableSavedSets = savedSetRecords.Select(setRecord =>
     {
