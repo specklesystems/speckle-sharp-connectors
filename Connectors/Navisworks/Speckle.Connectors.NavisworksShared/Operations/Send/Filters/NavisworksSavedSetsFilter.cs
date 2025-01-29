@@ -66,7 +66,8 @@ public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilter
   }
 
   private IEnumerable<string> ResolveSelectionSet(NAV.ModelItemCollection selectionSetExplicitModelItems) =>
-    selectionSetExplicitModelItems.Where(_selectionService.IsVisible) // Exclude hidden elements
+    selectionSetExplicitModelItems
+      .Where(_selectionService.IsVisible) // Exclude hidden elements
       .Select(_selectionService.GetModelItemPath) // Resolve to index paths
       .ToList();
 
