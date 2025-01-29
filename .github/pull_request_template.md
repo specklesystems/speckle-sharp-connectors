@@ -2,7 +2,7 @@
 
 Provide a short summary in the Title above. Use the following template:
 
-[category]([project]): [summary]
+category(project): summary
 
 Categories:
 
