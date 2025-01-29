@@ -1,25 +1,16 @@
 using Speckle.Converters.Common;
-using Speckle.Converters.Common.Objects;
+using static Speckle.Converters.Common.Result;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 
-public class CircularArc2dToSpeckleConverter : ITypedConverter<AG.CircularArc2d, SOG.Arc>
+public class CircularArc2dToSpeckleConverter(
+  ITypedConverter<AG.Plane, SOG.Plane> planeConverter,
+  IConverterSettingsStore<AutocadConversionSettings> settingsStore
+) : ITypedConverter<AG.CircularArc2d, SOG.Arc>
 {
-  private readonly ITypedConverter<AG.Plane, SOG.Plane> _planeConverter;
-  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
-
-  public CircularArc2dToSpeckleConverter(
-    ITypedConverter<AG.Plane, SOG.Plane> planeConverter,
-    IConverterSettingsStore<AutocadConversionSettings> settingsStore
-  )
+  public Result<SOG.Arc> Convert(AG.CircularArc2d target)
   {
-    _planeConverter = planeConverter;
-    _settingsStore = settingsStore;
-  }
-
-  public SOG.Arc Convert(AG.CircularArc2d target)
-  {
-    string units = _settingsStore.Current.SpeckleUnits;
+    string units = settingsStore.Current.SpeckleUnits;
 
     // find arc plane (normal is in counterclockwise dir)
     var center3 = new AG.Point3d(target.Center.X, target.Center.Y, 0);
@@ -31,10 +22,14 @@ public class CircularArc2dToSpeckleConverter : ITypedConverter<AG.CircularArc2d,
     double endParam = target.GetParameterOf(target.EndPoint);
     AG.Point2d midPoint = target.EvaluatePoint(target.StartAngle + (target.EndAngle - target.StartAngle) / 2);
 
+    if (!planeConverter.Try(plane, out var planeResult))
+    {
+      return planeResult.Failure<SOG.Arc>();
+    }
     // create arc
     var arc = new SOG.Arc()
     {
-      plane = _planeConverter.Convert(plane),
+      plane = planeResult.Value,
       startPoint = new()
       {
         x = target.StartPoint.X,
@@ -60,6 +55,6 @@ public class CircularArc2dToSpeckleConverter : ITypedConverter<AG.CircularArc2d,
       units = units
     };
 
-    return arc;
+    return Success(arc);
   }
 }

@@ -1,28 +1,31 @@
 ﻿using Speckle.Converters.Common;
-using Speckle.Converters.Common.Objects;
+using static Speckle.Converters.Common.Result;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 
-public class LineSegment3dToSpeckleRawConverter : ITypedConverter<AG.LineSegment3d, SOG.Line>
+public class LineSegment3dToSpeckleRawConverter(
+  ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
+  IConverterSettingsStore<AutocadConversionSettings> settingsStore
+) : ITypedConverter<AG.LineSegment3d, SOG.Line>
 {
-  private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
-  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
-
-  public LineSegment3dToSpeckleRawConverter(
-    ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
-    IConverterSettingsStore<AutocadConversionSettings> settingsStore
-  )
+  public Result<SOG.Line> Convert(AG.LineSegment3d target)
   {
-    _pointConverter = pointConverter;
-    _settingsStore = settingsStore;
-  }
-
-  public SOG.Line Convert(AG.LineSegment3d target) =>
-    new()
+    if (!pointConverter.Try(target.StartPoint, out var start))
     {
-      start = _pointConverter.Convert(target.StartPoint),
-      end = _pointConverter.Convert(target.EndPoint),
-      units = _settingsStore.Current.SpeckleUnits,
-      domain = new SOP.Interval { start = 0, end = target.Length },
-    };
+      return start.Failure<SOG.Line>();
+    }
+    if (!pointConverter.Try(target.EndPoint, out var end))
+    {
+      return end.Failure<SOG.Line>();
+    }
+    return Success(
+      new SOG.Line
+      {
+        start = start.Value,
+        end = end.Value,
+        units = settingsStore.Current.SpeckleUnits,
+        domain = new SOP.Interval { start = 0, end = target.Length },
+      }
+    );
+  }
 }

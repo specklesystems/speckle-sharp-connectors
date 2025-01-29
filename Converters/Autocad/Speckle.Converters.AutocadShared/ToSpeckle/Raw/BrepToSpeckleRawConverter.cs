@@ -1,7 +1,6 @@
 using Speckle.Converters.Common;
-using Speckle.Converters.Common.Objects;
 using Speckle.Sdk;
-using Speckle.Sdk.Common.Exceptions;
+using static Speckle.Converters.Common.Result;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 
@@ -14,11 +13,11 @@ public class BrepToSpeckleRawConverter : ITypedConverter<ABR.Brep, SOG.Mesh>
     _settingsStore = settingsStore;
   }
 
-  public SOG.Mesh Convert(ABR.Brep target)
+  public Result<SOG.Mesh> Convert(ABR.Brep target)
   {
     if (target.IsNull)
     {
-      throw new ConversionException("Brep was null.");
+      return Error<SOG.Mesh>("Brep was null.");
     }
 
     List<int> faces = new();
@@ -76,7 +75,7 @@ public class BrepToSpeckleRawConverter : ITypedConverter<ABR.Brep, SOG.Mesh>
       }
       catch (ABR.Exception e) when (!e.IsFatal()) { } // exceptions can be thrown for non-volumetric breps
 
-      return mesh;
+      return Success(mesh);
     }
   }
 }

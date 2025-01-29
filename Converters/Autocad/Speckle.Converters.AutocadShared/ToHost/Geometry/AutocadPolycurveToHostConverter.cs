@@ -1,5 +1,4 @@
 using Speckle.Converters.Common;
-using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Geometry.Autocad;
 using Speckle.Sdk.Common.Exceptions;
 
@@ -23,23 +22,23 @@ public class AutocadPolycurveToHostConverter : ITypedConverter<SOG.Autocad.Autoc
     _polyline3dConverter = polyline3dConverter;
   }
 
-  public object Convert(AutocadPolycurve polycurve)
+  public Result<object> Convert(AutocadPolycurve polycurve)
   {
     switch (polycurve.polyType)
     {
       case SOG.Autocad.AutocadPolyType.Light:
-        return _polylineConverter.Convert(polycurve);
+        return _polylineConverter.Convert(polycurve).To<ADB.Polyline, object>();
 
       case SOG.Autocad.AutocadPolyType.Simple2d:
       case SOG.Autocad.AutocadPolyType.FitCurve2d:
       case SOG.Autocad.AutocadPolyType.CubicSpline2d:
       case SOG.Autocad.AutocadPolyType.QuadSpline2d:
-        return _polyline2dConverter.Convert(polycurve);
+        return _polyline2dConverter.Convert(polycurve).To<ADB.Polyline2d, object>();
 
       case SOG.Autocad.AutocadPolyType.Simple3d:
       case SOG.Autocad.AutocadPolyType.CubicSpline3d:
       case SOG.Autocad.AutocadPolyType.QuadSpline3d:
-        return _polyline3dConverter.Convert(polycurve);
+        return _polyline3dConverter.Convert(polycurve).To<ADB.Polyline3d, object>();
 
       default:
         throw new ValidationException("Unknown poly type for AutocadPolycurve");

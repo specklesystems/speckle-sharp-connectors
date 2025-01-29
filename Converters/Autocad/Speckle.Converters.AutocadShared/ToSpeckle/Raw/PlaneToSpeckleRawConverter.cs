@@ -1,35 +1,42 @@
 using Speckle.Converters.Common;
-using Speckle.Converters.Common.Objects;
-using Speckle.Sdk.Models;
+using static Speckle.Converters.Common.Result;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 
-public class PlaneToSpeckleRawConverter : ITypedConverter<AG.Plane, SOG.Plane>
+public class PlaneToSpeckleRawConverter(
+  ITypedConverter<AG.Vector3d, SOG.Vector> vectorConverter,
+  ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
+  IConverterSettingsStore<AutocadConversionSettings> settingsStore
+) : ITypedConverter<AG.Plane, SOG.Plane>
 {
-  private readonly ITypedConverter<AG.Vector3d, SOG.Vector> _vectorConverter;
-  private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
-  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
-
-  public PlaneToSpeckleRawConverter(
-    ITypedConverter<AG.Vector3d, SOG.Vector> vectorConverter,
-    ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
-    IConverterSettingsStore<AutocadConversionSettings> settingsStore
-  )
+  public Result<SOG.Plane> Convert(AG.Plane target)
   {
-    _vectorConverter = vectorConverter;
-    _pointConverter = pointConverter;
-    _settingsStore = settingsStore;
-  }
-
-  public Base Convert(object target) => Convert((AG.Plane)target);
-
-  public SOG.Plane Convert(AG.Plane target) =>
-    new()
+    if (!pointConverter.Try(target.PointOnPlane, out var origin))
     {
-      origin = _pointConverter.Convert(target.PointOnPlane),
-      normal = _vectorConverter.Convert(target.Normal),
-      xdir = _vectorConverter.Convert(target.GetCoordinateSystem().Xaxis),
-      ydir = _vectorConverter.Convert(target.GetCoordinateSystem().Yaxis),
-      units = _settingsStore.Current.SpeckleUnits,
-    };
+      return origin.Failure<SOG.Plane>();
+    }
+    if (!vectorConverter.Try(target.Normal, out var normal))
+    {
+      return normal.Failure<SOG.Plane>();
+    }
+    var coo = target.GetCoordinateSystem();
+    if (!vectorConverter.Try(coo.Xaxis, out var xdir))
+    {
+      return normal.Failure<SOG.Plane>();
+    }
+    if (!vectorConverter.Try(coo.Yaxis, out var ydir))
+    {
+      return normal.Failure<SOG.Plane>();
+    }
+    return Success(
+      new SOG.Plane
+      {
+        origin = origin.Value,
+        normal = normal.Value,
+        xdir = xdir.Value,
+        ydir = ydir.Value,
+        units = settingsStore.Current.SpeckleUnits,
+      }
+    );
+  }
 }

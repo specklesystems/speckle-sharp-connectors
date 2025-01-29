@@ -1,31 +1,20 @@
 using Autodesk.AutoCAD.Geometry;
 using Speckle.Converters.Autocad.Extensions;
 using Speckle.Converters.Common;
-using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Models;
+using static Speckle.Converters.Common.Result;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 
-public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Curve>
+public class DBSplineToSpeckleRawConverter(
+  ITypedConverter<AG.Interval, SOP.Interval> intervalConverter,
+  ITypedConverter<ADB.Extents3d, SOG.Box> boxConverter,
+  IConverterSettingsStore<AutocadConversionSettings> settingsStore
+) : ITypedConverter<ADB.Spline, SOG.Curve>
 {
-  private readonly ITypedConverter<AG.Interval, SOP.Interval> _intervalConverter;
-  private readonly ITypedConverter<ADB.Extents3d, SOG.Box> _boxConverter;
-  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
+  public Result<Base> Convert(object target) => Convert((ADB.Spline)target).Base();
 
-  public DBSplineToSpeckleRawConverter(
-    ITypedConverter<AG.Interval, SOP.Interval> intervalConverter,
-    ITypedConverter<ADB.Extents3d, SOG.Box> boxConverter,
-    IConverterSettingsStore<AutocadConversionSettings> settingsStore
-  )
-  {
-    _intervalConverter = intervalConverter;
-    _boxConverter = boxConverter;
-    _settingsStore = settingsStore;
-  }
-
-  public Base Convert(object target) => Convert((ADB.Spline)target);
-
-  public SOG.Curve Convert(ADB.Spline target)
+  public Result<SOG.Curve> Convert(ADB.Spline target)
   {
     // get nurbs and geo data
     ADB.NurbsData data = target.NurbsData;
@@ -37,7 +26,11 @@ public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Cur
     if (target.GetGeCurve() is NurbCurve3d nurbs)
     {
       length = nurbs.GetLength(nurbs.StartParameter, nurbs.EndParameter, 0.001);
-      domain = _intervalConverter.Convert(nurbs.GetInterval());
+      if (intervalConverter.Try(nurbs.GetInterval(), out var domainResult))
+      {
+        return domainResult.Failure<SOG.Curve>();
+      }
+      domain = domainResult.Value;
       if (nurbs.Knots.Count < nurbs.NumberOfControlPoints + nurbs.Degree + 1 && target.IsPeriodic)
       {
         periodicClosed = true;
@@ -95,7 +88,10 @@ public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Cur
     {
       weights.AddRange(weights.GetRange(0, target.Degree));
     }
-
+    if (boxConverter.Try(target.GeometricExtents, out var bbox))
+    {
+      return bbox.Failure<SOG.Curve>();
+    }
     // set nurbs curve info
     var curve = new SOG.Curve
     {
@@ -108,15 +104,15 @@ public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Cur
       closed = periodicClosed || target.Closed,
       length = length,
       domain = domain,
-      bbox = _boxConverter.Convert(target.GeometricExtents),
-      units = _settingsStore.Current.SpeckleUnits,
+      bbox = bbox.Value,
+      units = settingsStore.Current.SpeckleUnits,
       displayValue = target.Database is not null ? GetDisplayValue(target) : null!, //TODO change?
     };
 
     // POC: get display value if this is a database-resident spline
     // POC: if this is called by another converter that has created a spline, assumes the display value is set by that converter
 
-    return curve;
+    return Success(curve);
   }
 
   // POC: we might have DisplayValue converter/mapper?
@@ -129,7 +125,7 @@ public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Cur
       case ADB.Polyline2d o:
         verticesList = o.GetSubEntities<ADB.Vertex2d>(
             ADB.OpenMode.ForRead,
-            _settingsStore.Current.Document.TransactionManager.TopTransaction
+            settingsStore.Current.Document.TransactionManager.TopTransaction
           )
           .Where(e => e.VertexType != ADB.Vertex2dType.SplineControlVertex) // POC: not validated yet!
           .SelectMany(o => o.Position.ToArray())
@@ -139,7 +135,7 @@ public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Cur
       case ADB.Polyline3d o:
         verticesList = o.GetSubEntities<ADB.PolylineVertex3d>(
             ADB.OpenMode.ForRead,
-            _settingsStore.Current.Document.TransactionManager.TopTransaction
+            settingsStore.Current.Document.TransactionManager.TopTransaction
           )
           .Where(e => e.VertexType != ADB.Vertex3dType.ControlVertex)
           .SelectMany(o => o.Position.ToArray())
@@ -147,6 +143,6 @@ public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Cur
         break;
     }
 
-    return verticesList.ConvertToSpecklePolyline(_settingsStore.Current.SpeckleUnits);
+    return verticesList.ConvertToSpecklePolyline(settingsStore.Current.SpeckleUnits);
   }
 }

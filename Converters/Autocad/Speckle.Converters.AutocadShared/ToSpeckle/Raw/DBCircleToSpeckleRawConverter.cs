@@ -1,41 +1,36 @@
 using Speckle.Converters.Common;
-using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Models;
+using static Speckle.Converters.Common.Result;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 
-public class DBCircleToSpeckleRawConverter : ITypedConverter<ADB.Circle, SOG.Circle>
+public class DBCircleToSpeckleRawConverter(
+  ITypedConverter<AG.Plane, SOG.Plane> planeConverter,
+  ITypedConverter<ADB.Extents3d, SOG.Box> boxConverter,
+  IConverterSettingsStore<AutocadConversionSettings> settingsStore
+) : ITypedConverter<ADB.Circle, SOG.Circle>
 {
-  private readonly ITypedConverter<AG.Plane, SOG.Plane> _planeConverter;
-  private readonly ITypedConverter<ADB.Extents3d, SOG.Box> _boxConverter;
-  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
+  public Result<Base> Convert(object target) => Convert((ADB.Circle)target).Base();
 
-  public DBCircleToSpeckleRawConverter(
-    ITypedConverter<AG.Plane, SOG.Plane> planeConverter,
-    ITypedConverter<ADB.Extents3d, SOG.Box> boxConverter,
-    IConverterSettingsStore<AutocadConversionSettings> settingsStore
-  )
+  public Result<SOG.Circle> Convert(ADB.Circle target)
   {
-    _planeConverter = planeConverter;
-    _boxConverter = boxConverter;
-    _settingsStore = settingsStore;
-  }
-
-  public Base Convert(object target) => Convert((ADB.Circle)target);
-
-  public SOG.Circle Convert(ADB.Circle target)
-  {
-    SOG.Plane plane = _planeConverter.Convert(target.GetPlane());
-    SOG.Box bbox = _boxConverter.Convert(target.GeometricExtents);
+    if (planeConverter.Try(target.GetPlane(), out var plane))
+    {
+      return plane.Failure<SOG.Circle>();
+    }
+    if (boxConverter.Try(target.GeometricExtents, out var bbox))
+    {
+      return plane.Failure<SOG.Circle>();
+    }
     SOG.Circle circle =
       new()
       {
-        plane = plane,
+        plane = plane.Value,
         radius = target.Radius,
-        units = _settingsStore.Current.SpeckleUnits,
-        bbox = bbox
+        units = settingsStore.Current.SpeckleUnits,
+        bbox = bbox.Value
       };
 
-    return circle;
+    return Success(circle);
   }
 }

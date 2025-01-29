@@ -1,71 +1,64 @@
 using Speckle.Converters.Autocad;
 using Speckle.Converters.Autocad.Extensions;
 using Speckle.Converters.Common;
-using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Common;
+using static Speckle.Converters.Common.Result;
 
 namespace Speckle.Converters.Autocad2023.ToHost.Raw;
 
-public class AutocadPolycurveToHostPolyline2dRawConverter
-  : ITypedConverter<SOG.Autocad.AutocadPolycurve, ADB.Polyline2d>
+public class AutocadPolycurveToHostPolyline2dRawConverter(
+  ITypedConverter<SOG.Vector, AG.Vector3d> vectorConverter,
+  IConverterSettingsStore<AutocadConversionSettings> settingsStore
+) : ITypedConverter<SOG.Autocad.AutocadPolycurve, ADB.Polyline2d>
 {
-  private readonly ITypedConverter<SOG.Vector, AG.Vector3d> _vectorConverter;
-  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
-
-  public AutocadPolycurveToHostPolyline2dRawConverter(
-    ITypedConverter<SOG.Vector, AG.Vector3d> vectorConverter,
-    IConverterSettingsStore<AutocadConversionSettings> settingsStore
-  )
-  {
-    _vectorConverter = vectorConverter;
-    _settingsStore = settingsStore;
-  }
-
-  public ADB.Polyline2d Convert(SOG.Autocad.AutocadPolycurve target)
+  public Result<ADB.Polyline2d> Convert(SOG.Autocad.AutocadPolycurve target)
   {
     // check for normal
     if (target.normal is not SOG.Vector normal)
     {
-      throw new System.ArgumentException($"Autocad polycurve of type {target.polyType} did not have a normal");
+      return Error<ADB.Polyline2d>($"Autocad polycurve of type {target.polyType} did not have a normal");
     }
 
     // check for elevation
     if (target.elevation is not double elevation)
     {
-      throw new System.ArgumentException($"Autocad polycurve of type {target.polyType} did not have an elevation");
+      return Error<ADB.Polyline2d>($"Autocad polycurve of type {target.polyType} did not have an elevation");
     }
 
     // get vertices
-    double f = Units.GetConversionFactor(target.units, _settingsStore.Current.SpeckleUnits);
+    double f = Units.GetConversionFactor(target.units, settingsStore.Current.SpeckleUnits);
     List<AG.Point3d> points = target.value.ConvertToPoint3d(f);
 
     // check for invalid bulges
     if (target.bulges is null || target.bulges.Count < points.Count)
     {
-      throw new System.ArgumentException($"Autocad polycurve of type {target.polyType} had null or malformed bulges");
+      return Error<ADB.Polyline2d>($"Autocad polycurve of type {target.polyType} had null or malformed bulges");
     }
 
     // check for invalid tangents
     if (target.tangents is null || target.tangents.Count < points.Count)
     {
-      throw new System.ArgumentException($"Autocad polycurve of type {target.polyType} had null or malformed tangents");
+      return Error<ADB.Polyline2d>($"Autocad polycurve of type {target.polyType} had null or malformed tangents");
     }
 
     // create the polyline2d using the empty constructor
-    AG.Vector3d convertedNormal = _vectorConverter.Convert(normal);
+    if (!vectorConverter.Try(normal, out Result<AG.Vector3d> convertedNormal))
+    {
+      return convertedNormal.Failure<ADB.Polyline2d>();
+    }
     double convertedElevation = elevation * f;
     ADB.Polyline2d polyline =
       new()
       {
         Elevation = convertedElevation,
-        Normal = convertedNormal,
+        Normal = convertedNormal.Value,
         Closed = target.closed
       };
 
     // add polyline2d to document
-    ADB.Transaction tr = _settingsStore.Current.Document.TransactionManager.TopTransaction;
+    ADB.Transaction tr = settingsStore.Current.Document.TransactionManager.TopTransaction;
     var btr = (ADB.BlockTableRecord)
-      tr.GetObject(_settingsStore.Current.Document.Database.CurrentSpaceId, ADB.OpenMode.ForWrite);
+      tr.GetObject(settingsStore.Current.Document.Database.CurrentSpaceId, ADB.OpenMode.ForWrite);
     btr.AppendEntity(polyline);
     tr.AddNewlyCreatedDBObject(polyline, true);
 
@@ -103,6 +96,6 @@ public class AutocadPolycurveToHostPolyline2dRawConverter
       polyline.ConvertToPolyType(polyType);
     }
 
-    return polyline;
+    return Success(polyline);
   }
 }

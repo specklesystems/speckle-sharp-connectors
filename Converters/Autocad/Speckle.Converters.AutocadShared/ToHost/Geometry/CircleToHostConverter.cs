@@ -1,34 +1,29 @@
 using Speckle.Converters.Common;
-using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Common;
+using static Speckle.Converters.Common.Result;
 
 namespace Speckle.Converters.Autocad.ToHost.Geometry;
 
 [NameAndRankValue(typeof(SOG.Circle), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class CircleToHostConverter : ITypedConverter<SOG.Circle, ADB.Circle>
+public class CircleToHostConverter(
+  ITypedConverter<SOG.Point, AG.Point3d> pointConverter,
+  ITypedConverter<SOG.Vector, AG.Vector3d> vectorConverter,
+  IConverterSettingsStore<AutocadConversionSettings> settingsStore
+) : ITypedConverter<SOG.Circle, ADB.Circle>
 {
-  private readonly ITypedConverter<SOG.Point, AG.Point3d> _pointConverter;
-  private readonly ITypedConverter<SOG.Vector, AG.Vector3d> _vectorConverter;
-  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
-
-  public CircleToHostConverter(
-    ITypedConverter<SOG.Point, AG.Point3d> pointConverter,
-    ITypedConverter<SOG.Vector, AG.Vector3d> vectorConverter,
-    IConverterSettingsStore<AutocadConversionSettings> settingsStore
-  )
+  public Result<ADB.Circle> Convert(SOG.Circle target)
   {
-    _pointConverter = pointConverter;
-    _vectorConverter = vectorConverter;
-    _settingsStore = settingsStore;
-  }
-
-  public ADB.Circle Convert(SOG.Circle target)
-  {
-    AG.Vector3d normal = _vectorConverter.Convert(target.plane.normal);
-    AG.Point3d origin = _pointConverter.Convert(target.plane.origin);
-    double f = Units.GetConversionFactor(target.units, _settingsStore.Current.SpeckleUnits);
+    if (!vectorConverter.Try(target.plane.normal, out Result<AG.Vector3d> normal))
+    {
+      return normal.Failure<ADB.Circle>();
+    }
+    if (!pointConverter.Try(target.plane.origin, out Result<AG.Point3d> origin))
+    {
+      return origin.Failure<ADB.Circle>();
+    }
+    double f = Units.GetConversionFactor(target.units, settingsStore.Current.SpeckleUnits);
 
     var radius = f * target.radius;
-    return new(origin, normal, radius);
+    return Success(new ADB.Circle(origin.Value, normal.Value, radius));
   }
 }

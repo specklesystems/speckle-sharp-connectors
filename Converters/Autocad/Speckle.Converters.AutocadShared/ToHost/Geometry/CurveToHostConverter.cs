@@ -1,17 +1,19 @@
 using Speckle.Converters.Common;
-using Speckle.Converters.Common.Objects;
+using static Speckle.Converters.Common.Result;
 
 namespace Speckle.Converters.AutocadShared.ToHost.Geometry;
 
 [NameAndRankValue(typeof(SOG.Curve), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class CurveToHostConverter : ITypedConverter<SOG.Curve, ADB.Curve>
+public class CurveToHostConverter(ITypedConverter<SOG.Curve, AG.NurbCurve3d> curveConverter)
+  : ITypedConverter<SOG.Curve, ADB.Curve>
 {
-  private readonly ITypedConverter<SOG.Curve, AG.NurbCurve3d> _curveConverter;
-
-  public CurveToHostConverter(ITypedConverter<SOG.Curve, AG.NurbCurve3d> curveConverter)
+  public Result<ADB.Curve> Convert(SOG.Curve target)
   {
-    _curveConverter = curveConverter;
-  }
+    if (!curveConverter.Try(target, out Result<AG.NurbCurve3d> normal))
+    {
+      return normal.Failure<ADB.Curve>();
+    }
 
-  public ADB.Curve Convert(SOG.Curve target) => ADB.Curve.CreateFromGeCurve(_curveConverter.Convert(target));
+    return Success(ADB.Curve.CreateFromGeCurve(normal.Value));
+  }
 }

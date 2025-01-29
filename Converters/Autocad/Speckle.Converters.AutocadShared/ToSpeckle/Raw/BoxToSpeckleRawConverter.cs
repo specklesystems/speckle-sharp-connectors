@@ -1,26 +1,14 @@
 using Speckle.Converters.Common;
-using Speckle.Converters.Common.Objects;
-using Speckle.Sdk.Models;
+using static Speckle.Converters.Common.Result;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 
-public class BoxToSpeckleRawConverter : ITypedConverter<ADB.Extents3d, SOG.Box>
+public class BoxToSpeckleRawConverter(
+  ITypedConverter<AG.Plane, SOG.Plane> planeConverter,
+  IConverterSettingsStore<AutocadConversionSettings> settingsStore
+) : ITypedConverter<ADB.Extents3d, SOG.Box>
 {
-  private readonly ITypedConverter<AG.Plane, SOG.Plane> _planeConverter;
-  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
-
-  public BoxToSpeckleRawConverter(
-    ITypedConverter<AG.Plane, SOG.Plane> planeConverter,
-    IConverterSettingsStore<AutocadConversionSettings> settingsStore
-  )
-  {
-    _planeConverter = planeConverter;
-    _settingsStore = settingsStore;
-  }
-
-  public Base Convert(object target) => Convert((ADB.Extents3d)target);
-
-  public SOG.Box Convert(ADB.Extents3d target)
+  public Result<SOG.Box> Convert(ADB.Extents3d target)
   {
     // get dimension intervals and volume
     SOP.Interval xSize = new() { start = target.MinPoint.X, end = target.MaxPoint.X };
@@ -28,20 +16,23 @@ public class BoxToSpeckleRawConverter : ITypedConverter<ADB.Extents3d, SOG.Box>
     SOP.Interval zSize = new() { start = target.MinPoint.Z, end = target.MaxPoint.Z };
 
     // get the base plane of the bounding box from extents and current UCS
-    var ucs = _settingsStore.Current.Document.Editor.CurrentUserCoordinateSystem.CoordinateSystem3d;
+    var ucs = settingsStore.Current.Document.Editor.CurrentUserCoordinateSystem.CoordinateSystem3d;
     AG.Plane acadPlane = new(target.MinPoint, ucs.Xaxis, ucs.Yaxis);
-    SOG.Plane plane = _planeConverter.Convert(acadPlane);
+    if (planeConverter.Try(acadPlane, out var plane))
+    {
+      return plane.Failure<SOG.Box>();
+    }
 
     SOG.Box box =
       new()
       {
-        plane = plane,
+        plane = plane.Value,
         xSize = xSize,
         ySize = ySize,
         zSize = zSize,
-        units = _settingsStore.Current.SpeckleUnits
+        units = settingsStore.Current.SpeckleUnits
       };
 
-    return box;
+    return Success(box);
   }
 }

@@ -1,5 +1,4 @@
-﻿using Speckle.Converters.Common.Objects;
-using Speckle.Converters.Common.Registration;
+﻿using Speckle.Converters.Common.Registration;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
