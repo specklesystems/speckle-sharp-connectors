@@ -150,7 +150,7 @@ internal sealed class RibbonHandler : NAV.Plugins.CommandHandlerPlugin
 
     MessageBox.Show(
       $"This Add-In was built for Navisworks {SpeckleV3Tool.Version}, "
-        + $"please contact support@speckle.systems for assistance...",
+      + $"please contact support@speckle.systems for assistance...",
       "Cannot Continue!",
       MessageBoxButtons.OK,
       MessageBoxIcon.Error
