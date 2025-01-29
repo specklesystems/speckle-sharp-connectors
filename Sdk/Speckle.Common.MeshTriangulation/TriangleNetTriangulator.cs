@@ -58,17 +58,18 @@ public class TriangleNetTriangulator : ITriangulator
       verts.Add(new Vertex(v.X, v.Y, 2));
     }
 
-    var left = GetLeftPoint(poly2.Vertices[0], poly2.Vertices[1], 0.01f);
-    p.Add(new Contour(verts, 2), new Point(left.X, left.Y));
+    // we need a point inside the hole to add it
+    var pointInHole = GetRightPointOfEdge(poly2.Vertices[0], poly2.Vertices[1]);
+    p.Add(new Contour(verts, 2), new Point(pointInHole.X, pointInHole.Y));
   }
 
-  private Vector2 GetLeftPoint(Vector2 a, Vector2 b, double distance)
+  // picks a point on the right side of the given edge
+  private Vector2 GetRightPointOfEdge(Vector2 a, Vector2 b)
   {
     Vector2 ab = b - a;
-    Vector2 leftVector = new Vector2(-ab.Y, ab.X);
-    var left = Vector2.Normalize(leftVector);
-    left *= distance;
-    var m = Vector2.Lerp(a, b, 0.5f);
-    return m + left;
+    var normal = Vector2.Normalize(new Vector2(-ab.Y, ab.X));
+    var right = -0.01 * normal;
+    var midPoint = Vector2.Lerp(a, b, 0.5f);
+    return midPoint + right;
   }
 }

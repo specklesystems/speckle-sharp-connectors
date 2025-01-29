@@ -13,6 +13,10 @@ public sealed class MeshGenerator
     _triangulator = triangulator;
   }
 
+  // creates a triangulated surface mesh from the given polygons
+  // each polygon has to contain at least 3 points
+  // the frist polygon is the contour of the mesh, it has to be clockwise
+  // the rest of the polygons define the holes, these have to be counterclockwise
   public Mesh3 TriangulateSurface(IReadOnlyList<Poly3> polygons)
   {
     _baseTransformer.SetTargetPlane(polygons[0]);
@@ -26,19 +30,35 @@ public sealed class MeshGenerator
     return _baseTransformer.Mesh2ToMesh3(mesh2);
   }
 
-  public Mesh3 ExtrudeMesh(IReadOnlyList<Poly3> polygons, double distance)
+  // creates an extruded triangle mesh from the given polygons
+  // each polygon has to contain at least 3 points
+  // the frist polygon is the contour of the mesh, it has to be clockwise
+  // the rest of the polygons define the holes, these have to be counterclockwise
+  // the mesh will be extruded in the normal direction by the given height
+  public Mesh3 ExtrudeMesh(IReadOnlyList<Poly3> polygons, double extrusionHeight)
   {
-    // TODO checks for polygons (first one should exist and should contain at least 3 vertices)
+    if (polygons.Count < 3)
+    {
+      throw new ArgumentException("No polygon was provided for extrusion");
+    }
 
     var vertices = new List<Vector3>();
     var triangles = new List<int>();
     var tc = 0;
 
-    // calculate normal
-    var v1 = polygons[0].Vertices[1] - polygons[0].Vertices[0];
-    var v2 = polygons[0].Vertices[2] - polygons[0].Vertices[0];
-    var normal = Vector3.Normalize(Vector3.Cross(v1, v2));
-    var offset = normal * distance;
+    var normal = polygons[0].GetNormal();
+    var offset = normal * extrusionHeight;
+
+    // the contour has to be clockwise and the holes have to be counterclockwise
+    // if any of the holes is clockwise then it has to be reversed
+    for (var i = 1; i < polygons.Count; i++)
+    {
+      var polyNormal = polygons[i].GetNormal();
+      if ((polyNormal + normal).Length() > 0.01f)
+      {
+        polygons[i].Reverse();
+      }
+    }
 
     foreach (var polygon in polygons)
     {
@@ -74,14 +94,21 @@ public sealed class MeshGenerator
       }
     }
 
-    // Add caps
     var cap = TriangulateSurface(polygons);
-    foreach (var vertex in cap.Vertices)
+
+    // Top cap triangles have to be in reverse order
+    for (var i = 0; i < cap.Vertices.Count; i += 3)
     {
-      vertices.Add(vertex);
+      vertices.Add(cap.Vertices[i + 2]);
+      vertices.Add(cap.Vertices[i + 1]);
+      vertices.Add(cap.Vertices[i]);
+
+      triangles.Add(tc++);
+      triangles.Add(tc++);
       triangles.Add(tc++);
     }
 
+    // Bottom cap
     foreach (var vertex in cap.Vertices)
     {
       var op = vertex + offset;

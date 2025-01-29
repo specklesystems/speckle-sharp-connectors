@@ -8,12 +8,10 @@ public class BaseTransformer : IBaseTransformer
   private Matrix4x4 _3DTo2DMatrix;
   private double _zOffset;
 
+  // creates a target coordinate system, where the Z axis is the plane normal
   public void SetTargetPlane(Poly3 plane)
   {
-    // TODO throw if plane contains less than 3 vectors
-    // TODO throw if vectors are on a line
-
-    Vector3 normal = GetPolygonNormal(plane);
+    Vector3 normal = plane.GetNormal();
     var (xBasis, yBasis) = ComputeBasisVectors(normal);
 
     _2DTo3DMatrix = GetTransformationMatrix(xBasis, yBasis, normal);
@@ -78,13 +76,6 @@ public class BaseTransformer : IBaseTransformer
     }
 
     return new Mesh2(vertices, new List<int>(mesh3.Triangles));
-  }
-
-  private Vector3 GetPolygonNormal(Poly3 polygon)
-  {
-    var v1 = polygon.Vertices[1] - polygon.Vertices[0];
-    var v2 = polygon.Vertices[2] - polygon.Vertices[0];
-    return Vector3.Normalize(Vector3.Cross(v1, v2));
   }
 
   private (Vector3 xBasis, Vector3 yBasis) ComputeBasisVectors(Vector3 normal)
