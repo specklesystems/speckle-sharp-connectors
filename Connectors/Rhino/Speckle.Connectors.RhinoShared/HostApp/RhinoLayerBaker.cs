@@ -123,6 +123,7 @@ public class RhinoLayerBaker : TraversalContextUnpacker
       }
 
       // set color
+      // TODO: debug this
       if (
         _colorBaker.ObjectColorsIdMap.TryGetValue(
           collection.applicationId ?? collection.id.NotNull(),
