@@ -78,16 +78,16 @@ public class WallSectionResolver(IConverterSettingsStore<CsiConversionSettings> 
     );
 
     Dictionary<string, object?> generalData = [];
-    generalData["name"] = sectionName;
-    generalData["type"] = wallPropType.ToString();
-    generalData["material"] = matProp;
-    generalData["modelingType"] = shellType.ToString();
-    generalData["color"] = color;
-    generalData["notes"] = notes;
+    generalData["Property Name"] = sectionName;
+    generalData["Property Type"] = wallPropType.ToString();
+    generalData["Material"] = matProp;
+    generalData["Modeling Type"] = shellType.ToString();
+    generalData["Display Color"] = color;
+    generalData["Notes"] = notes;
 
     Dictionary<string, object?> propertyData = [];
-    propertyData["type"] = "Wall";
-    propertyData["thickness"] = thickness;
+    propertyData["Type"] = "Wall";
+    propertyData.AddWithUnits("Thickness", thickness, settingsStore.Current.SpeckleUnits);
 
     Dictionary<string, object?> properties = [];
     properties[SectionPropertyCategory.GENERAL_DATA] = generalData;
@@ -121,15 +121,15 @@ public class SlabSectionResolver(IConverterSettingsStore<CsiConversionSettings> 
     );
 
     Dictionary<string, object?> generalData = [];
-    generalData["name"] = sectionName;
-    generalData["material"] = matProp;
-    generalData["modelingType"] = shellType.ToString();
-    generalData["color"] = color;
-    generalData["notes"] = notes;
+    generalData["Property Name"] = sectionName;
+    generalData["Material"] = matProp;
+    generalData["Modeling Type"] = shellType.ToString();
+    generalData["Display Color"] = color;
+    generalData["Notes"] = notes;
 
     Dictionary<string, object?> propertyData = [];
-    propertyData["type"] = slabType.ToString();
-    propertyData["thickness"] = thickness;
+    propertyData["Type"] = slabType.ToString();
+    propertyData.AddWithUnits("Thickness", thickness, settingsStore.Current.SpeckleUnits);
 
     Dictionary<string, object?> properties = [];
     properties[SectionPropertyCategory.GENERAL_DATA] = generalData;
@@ -163,15 +163,15 @@ public class DeckSectionResolver(IConverterSettingsStore<CsiConversionSettings> 
     );
 
     Dictionary<string, object?> generalData = [];
-    generalData["name"] = sectionName;
-    generalData["type"] = deckType.ToString();
-    generalData["material"] = deckMatProp;
-    generalData["modelingType"] = shellType.ToString();
-    generalData["color"] = color;
-    generalData["notes"] = notes;
+    generalData["Property Name"] = sectionName;
+    generalData["Property Type"] = deckType.ToString();
+    generalData["Material"] = deckMatProp;
+    generalData["Modeling Type"] = shellType.ToString();
+    generalData["Display Color"] = color;
+    generalData["Notes"] = notes;
 
     Dictionary<string, object?> propertyData = [];
-    propertyData["thickness"] = thickness;
+    propertyData.AddWithUnits("Thickness", thickness, settingsStore.Current.SpeckleUnits);
 
     Dictionary<string, object?> properties = [];
     properties[SectionPropertyCategory.GENERAL_DATA] = generalData;

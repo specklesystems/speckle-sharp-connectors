@@ -38,8 +38,8 @@ public class CsiShellSectionPropertyExtractor : IShellSectionPropertyExtractor
       _ => throw new ArgumentException($"Unknown property type: {propertyTypeKey}"),
     };
 
-    var generalData = DictionaryUtils.EnsureNestedDictionary(properties, SectionPropertyCategory.GENERAL_DATA);
-    generalData["propertyType"] = propertyTypeValue;
+    var generalData = properties.EnsureNested(SectionPropertyCategory.GENERAL_DATA);
+    generalData["Property Type"] = propertyTypeValue.ToString();
   }
 
   private void GetPropertyModifiers(string sectionName, Dictionary<string, object?> properties)
@@ -50,19 +50,19 @@ public class CsiShellSectionPropertyExtractor : IShellSectionPropertyExtractor
     Dictionary<string, object?> modifiers =
       new()
       {
-        ["f11"] = stiffnessModifiersArray[0],
-        ["f22"] = stiffnessModifiersArray[1],
-        ["f12"] = stiffnessModifiersArray[2],
-        ["m11"] = stiffnessModifiersArray[3],
-        ["m22"] = stiffnessModifiersArray[3],
-        ["m12"] = stiffnessModifiersArray[4],
-        ["v13"] = stiffnessModifiersArray[5],
-        ["v23"] = stiffnessModifiersArray[6],
-        ["mass"] = stiffnessModifiersArray[7],
-        ["weight"] = stiffnessModifiersArray[8]
+        ["Membrane f11 Direction"] = stiffnessModifiersArray[0],
+        ["Membrane f22 Direction"] = stiffnessModifiersArray[1],
+        ["Membrane f12 Direction"] = stiffnessModifiersArray[2],
+        ["Bending m11 Direction"] = stiffnessModifiersArray[3],
+        ["Bending m22 Direction"] = stiffnessModifiersArray[3],
+        ["Bending m12 Direction"] = stiffnessModifiersArray[4],
+        ["Shear v13 Direction"] = stiffnessModifiersArray[5],
+        ["Shear v23 Direction"] = stiffnessModifiersArray[6],
+        ["Mass"] = stiffnessModifiersArray[7],
+        ["Weight"] = stiffnessModifiersArray[8]
       };
 
-    var generalData = DictionaryUtils.EnsureNestedDictionary(properties, SectionPropertyCategory.GENERAL_DATA);
-    generalData["modifiers"] = modifiers;
+    var generalData = properties.EnsureNested(SectionPropertyCategory.GENERAL_DATA);
+    generalData["Modifiers"] = modifiers;
   }
 }
