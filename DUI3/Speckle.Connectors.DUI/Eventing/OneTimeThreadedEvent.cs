@@ -53,7 +53,7 @@ public abstract class OneTimeThreadedEvent<T>(IThreadContext threadContext, ITop
     }
   }
 
-  public override async Task PublishAsync(T payload)
+  public async Task PublishAsync(T payload)
   {
     SubscriptionToken[] tokensToDestory = [];
     lock (_activeTokens)
@@ -64,7 +64,7 @@ public abstract class OneTimeThreadedEvent<T>(IThreadContext threadContext, ITop
         _activeTokens.Clear();
       }
     }
-    await base.PublishAsync(payload);
+    await InternalPublish(payload);
     if (tokensToDestory.Length > 0)
     {
       foreach (var token in tokensToDestory)
