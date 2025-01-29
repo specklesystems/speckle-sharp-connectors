@@ -1,189 +1,173 @@
-using System.Diagnostics;
-using ArcGIS.Desktop.Framework.Threading.Tasks;
-using ArcGIS.Desktop.Mapping;
+using ArcGIS.Core.Data.Raster;
+using ArcGIS.Core.Geometry;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.ArcGIS.HostApp;
+using Speckle.Connectors.ArcGIS.HostApp.Extensions;
 using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.Common.Builders;
-using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.Common;
-using Speckle.Objects.GIS;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
-using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Connectors.ArcGis.Operations.Send;
 
 /// <summary>
 /// Stateless builder object to turn an ISendFilter into a <see cref="Base"/> object
 /// </summary>
-public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
+public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
 {
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
-  private readonly ISendConversionCache _sendConversionCache;
-  private readonly ArcGISColorManager _colorManager;
+  private readonly ArcGISLayerUnpacker _layerUnpacker;
+  private readonly ArcGISColorUnpacker _colorUnpacker;
   private readonly IConverterSettingsStore<ArcGISConversionSettings> _converterSettings;
-  private readonly MapMembersUtils _mapMemberUtils;
   private readonly ILogger<ArcGISRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
+  private readonly MapMembersUtils _mapMemberUtils;
 
   public ArcGISRootObjectBuilder(
-    ISendConversionCache sendConversionCache,
-    ArcGISColorManager colorManager,
+    ArcGISLayerUnpacker layerUnpacker,
+    ArcGISColorUnpacker colorUnpacker,
     IConverterSettingsStore<ArcGISConversionSettings> converterSettings,
     IRootToSpeckleConverter rootToSpeckleConverter,
-    MapMembersUtils mapMemberUtils,
     ILogger<ArcGISRootObjectBuilder> logger,
-    ISdkActivityFactory activityFactory
+    ISdkActivityFactory activityFactory,
+    MapMembersUtils mapMemberUtils
   )
   {
-    _sendConversionCache = sendConversionCache;
-    _colorManager = colorManager;
+    _layerUnpacker = layerUnpacker;
+    _colorUnpacker = colorUnpacker;
     _converterSettings = converterSettings;
     _rootToSpeckleConverter = rootToSpeckleConverter;
-    _mapMemberUtils = mapMemberUtils;
     _logger = logger;
     _activityFactory = activityFactory;
+    _mapMemberUtils = mapMemberUtils;
   }
 
-#pragma warning disable CA1506
-  public async Task<RootObjectBuilderResult> Build(
-#pragma warning restore CA1506
-    IReadOnlyList<MapMember> objects,
-    SendInfo sendInfo,
+  public async Task<RootObjectBuilderResult> BuildAsync(
+    IReadOnlyList<ADM.MapMember> layers,
+    SendInfo __,
     IProgress<CardProgress> onOperationProgressed,
-    CancellationToken ct = default
+    CancellationToken cancellationToken
   )
   {
     // TODO: add a warning if Geographic CRS is set
     // "Data has been sent in the units 'degrees'. It is advisable to set the project CRS to Projected type (e.g. EPSG:32631) to be able to receive geometry correctly in CAD/BIM software"
 
-    int count = 0;
 
-    Collection rootObjectCollection = new() { name = MapView.Active.Map.Name }; //TODO: Collections
-    rootObjectCollection["units"] = _converterSettings.Current.SpeckleUnits;
-
-    List<SendConversionResult> results = new(objects.Count);
-    var cacheHitCount = 0;
-    List<(ILayerContainer, Collection)> nestedGroups = new();
-
-    // reorder selected layers by Table of Content (TOC) order
-    List<(MapMember, int)> layersWithDisplayPriority = _mapMemberUtils.GetLayerDisplayPriority(
-      MapView.Active.Map,
-      objects
-    );
-
-    onOperationProgressed.Report(new("Converting", null));
-    using (var __ = _activityFactory.Start("Converting objects"))
-    {
-      foreach ((MapMember mapMember, _) in layersWithDisplayPriority)
+    // 0 - Create Root collection and attach CRS properties
+    // CRS properties are useful for data based workflows coming out of gis applications
+    SpatialReference sr = _converterSettings.Current.ActiveCRSoffsetRotation.SpatialReference;
+    Dictionary<string, object?> spatialReference =
+      new()
       {
-        ct.ThrowIfCancellationRequested();
+        ["name"] = sr.Name,
+        ["unit"] = sr.Unit.Name,
+        ["wkid"] = sr.Wkid,
+        ["wkt"] = sr.Wkt,
+      };
 
-        using (var convertingActivity = _activityFactory.Start("Converting object"))
+    Dictionary<string, object?> crs =
+      new()
+      {
+        ["trueNorthRadians"] = _converterSettings.Current.ActiveCRSoffsetRotation.TrueNorthRadians,
+        ["latOffset"] = _converterSettings.Current.ActiveCRSoffsetRotation.LatOffset,
+        ["lonOffset"] = _converterSettings.Current.ActiveCRSoffsetRotation.LonOffset,
+        ["spatialReference"] = spatialReference
+      };
+
+    Collection rootCollection =
+      new()
+      {
+        name = ADM.MapView.Active.Map.Name,
+        ["units"] = _converterSettings.Current.SpeckleUnits,
+        ["crs"] = crs
+      };
+
+    // 1 - Unpack the selected mapmembers
+    // In Arcgis, mapmembers are collections of other mapmember or objects.
+    // We need to unpack the selected mapmembers into all leaf-level mapmembers (containing just objects) and build the root collection structure during unpacking.
+    // Mapmember dynamically attached properties are also added at this step.
+    List<ADM.MapMember> unpackedLayers;
+    ADM.Map map = ADM.MapView.Active.Map;
+    IEnumerable<ADM.MapMember> layersOrdered = _mapMemberUtils.GetMapMembersInOrder(map, layers);
+    using (var _ = _activityFactory.Start("Unpacking selection"))
+    {
+      unpackedLayers = _layerUnpacker.UnpackSelection(layersOrdered, rootCollection);
+    }
+
+    List<SendConversionResult> results = new(unpackedLayers.Count);
+    onOperationProgressed.Report(new("Converting", null));
+    using (var convertingActivity = _activityFactory.Start("Converting objects"))
+    {
+      int count = 0;
+      foreach (ADM.MapMember layer in unpackedLayers)
+      {
+        cancellationToken.ThrowIfCancellationRequested();
+        string layerApplicationId = layer.GetSpeckleApplicationId();
+
+        try
         {
-          var collectionHost = rootObjectCollection;
-          string applicationId = mapMember.URI;
-          string sourceType = mapMember.GetType().Name;
-
-          Base converted;
-          try
+          // get the corresponding collection for this layer - we'll add all converted objects to the collection
+          if (_layerUnpacker.CollectionCache.TryGetValue(layerApplicationId, out Collection? layerCollection))
           {
-            int groupCount = nestedGroups.Count; // bake here, because count will change in the loop
-            // if the layer is not a part of the group, reset groups
-            for (int i = 0; i < groupCount; i++)
+            var status = Status.SUCCESS;
+            var sdkStatus = SdkActivityStatusCode.Ok;
+
+            // TODO: check cache first to see if this layer was previously converted
+            /*
+            if (_sendConversionCache.TryGetValue(
+              sendInfo.ProjectId,
+              layerApplicationId,
+              out ObjectReference? value
+            ))
             {
-              if (nestedGroups.Count > 0 && !nestedGroups[0].Item1.Layers.Select(x => x.URI).Contains(applicationId))
-              {
-                nestedGroups.RemoveAt(0);
-              }
-              else
-              {
-                // break at the first group, which contains current layer
+
+            }
+            */
+
+            switch (layer)
+            {
+              case ADM.FeatureLayer featureLayer:
+                List<Base> convertedFeatureLayerObjects = ConvertFeatureLayerObjects(featureLayer);
+                layerCollection.elements.AddRange(convertedFeatureLayerObjects);
                 break;
-              }
+              case ADM.RasterLayer rasterLayer:
+                List<Base> convertedRasterLayerObjects = ConvertRasterLayerObjects(rasterLayer);
+                layerCollection.elements.AddRange(convertedRasterLayerObjects);
+                break;
+              case ADM.LasDatasetLayer lasDatasetLayer:
+                List<Base> convertedLasDatasetObjects = ConvertLasDatasetLayerObjects(lasDatasetLayer);
+                layerCollection.elements.AddRange(convertedLasDatasetObjects);
+                break;
+              default:
+                status = Status.ERROR;
+                sdkStatus = SdkActivityStatusCode.Error;
+                break;
             }
-
-            // don't use cache for group layers
-            if (
-              mapMember is not ILayerContainer
-              && _sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value)
-            )
-            {
-              converted = value;
-              cacheHitCount++;
-            }
-            else
-            {
-              if (mapMember is ILayerContainer group)
-              {
-                // group layer will always come before it's contained layers
-                // keep active group last in the list
-                converted = new Collection();
-                nestedGroups.Insert(0, (group, (Collection)converted));
-              }
-              else
-              {
-                converted = await QueuedTask
-                  .Run(() => (Collection)_rootToSpeckleConverter.Convert(mapMember))
-                  .ConfigureAwait(false);
-
-                // get units & Active CRS (for writing geometry coords)
-                converted["units"] = _converterSettings.Current.SpeckleUnits;
-
-                var spatialRef = _converterSettings.Current.ActiveCRSoffsetRotation.SpatialReference;
-                converted["crs"] = new CRS
-                {
-                  wkt = spatialRef.Wkt,
-                  name = spatialRef.Name,
-                  offset_y = Convert.ToSingle(_converterSettings.Current.ActiveCRSoffsetRotation.LatOffset),
-                  offset_x = Convert.ToSingle(_converterSettings.Current.ActiveCRSoffsetRotation.LonOffset),
-                  rotation = Convert.ToSingle(_converterSettings.Current.ActiveCRSoffsetRotation.TrueNorthRadians),
-                  units_native = _converterSettings.Current.SpeckleUnits
-                };
-              }
-
-              // other common properties for layers and groups
-              converted["name"] = mapMember.Name;
-              converted.applicationId = applicationId;
-            }
-
-            if (
-              nestedGroups.Count == 0
-              || nestedGroups.Count == 1 && nestedGroups[0].Item2.applicationId == applicationId
-            )
-            {
-              // add to host if no groups, or current root group
-              collectionHost.elements.Add(converted);
-            }
-            else
-            {
-              // if we are adding a layer inside the group
-              var parentCollection = nestedGroups.FirstOrDefault(x =>
-                x.Item1.Layers.Select(y => y.URI).Contains(applicationId)
-              );
-              parentCollection.Item2.elements.Add(converted);
-            }
-
-            results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
-            convertingActivity?.SetStatus(SdkActivityStatusCode.Ok);
+            results.Add(new(status, layerApplicationId, layer.GetType().Name, layerCollection));
+            convertingActivity?.SetStatus(sdkStatus);
           }
-          catch (Exception ex) when (!ex.IsFatal())
+          else
           {
-            _logger.LogSendConversionError(ex, sourceType);
-            results.Add(new(Status.ERROR, applicationId, sourceType, null, ex));
-            convertingActivity?.SetStatus(SdkActivityStatusCode.Error);
-            convertingActivity?.RecordException(ex);
+            throw new SpeckleException($"No converted Collection found for layer {layerApplicationId}.");
           }
         }
+        catch (Exception ex) when (!ex.IsFatal())
+        {
+          _logger.LogSendConversionError(ex, layer.GetType().Name);
+          results.Add(new(Status.ERROR, layerApplicationId, layer.GetType().Name, null, ex));
+          convertingActivity?.SetStatus(SdkActivityStatusCode.Error);
+          convertingActivity?.RecordException(ex);
+        }
 
-        onOperationProgressed.Report(new("Converting", (double)++count / objects.Count));
+        onOperationProgressed.Report(new("Converting", (double)++count / layers.Count));
+        await Task.Yield();
       }
     }
 
@@ -192,15 +176,90 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<MapMember>
       throw new SpeckleException("Failed to convert all objects."); // fail fast instead creating empty commit! It will appear as model card error with red color.
     }
 
-    // POC: Add Color Proxies
-    List<ColorProxy> colorProxies = _colorManager.UnpackColors(layersWithDisplayPriority);
-    rootObjectCollection[ProxyKeys.COLOR] = colorProxies;
+    // 3 -  Add Color Proxies
+    rootCollection[ProxyKeys.COLOR] = _colorUnpacker.ColorProxyCache.Values.ToList();
 
-    // POC: Log would be nice, or can be removed.
-    Debug.WriteLine(
-      $"Cache hit count {cacheHitCount} out of {objects.Count} ({(double)cacheHitCount / objects.Count})"
-    );
+    return new RootObjectBuilderResult(rootCollection, results);
+  }
 
-    return new RootObjectBuilderResult(rootObjectCollection, results);
+  private List<Base> ConvertFeatureLayerObjects(ADM.FeatureLayer featureLayer)
+  {
+    string layerApplicationId = featureLayer.GetSpeckleApplicationId();
+    List<Base> convertedObjects = new();
+    // store the layer renderer for color unpacking
+    _colorUnpacker.StoreRendererAndFields(featureLayer);
+
+    // search the rows of the layer, where each row is treated like an object
+    // RowCursor is IDisposable but is not being correctly picked up by IDE warnings.
+    // This means we need to be carefully adding using statements based on the API documentation coming from each method/class
+    using (ACD.RowCursor rowCursor = featureLayer.Search())
+    {
+      while (rowCursor.MoveNext())
+      {
+        // Same IDisposable issue appears to happen on Row class too. Docs say it should always be disposed of manually by the caller.
+        using (ACD.Row row = rowCursor.Current)
+        {
+          // get application id. test for subtypes before defaulting to base type.
+          Base converted = _rootToSpeckleConverter.Convert(row);
+          string applicationId = row.GetSpeckleApplicationId(layerApplicationId);
+          converted.applicationId = applicationId;
+
+          convertedObjects.Add(converted);
+
+          // process the object color
+          _colorUnpacker.ProcessFeatureLayerColor(row, applicationId);
+        }
+      }
+    }
+
+    return convertedObjects;
+  }
+
+  // POC: raster colors are stored as mesh vertex colors in RasterToSpeckleConverter. Should probably move to color unpacker.
+  private List<Base> ConvertRasterLayerObjects(ADM.RasterLayer rasterLayer)
+  {
+    string layerApplicationId = rasterLayer.GetSpeckleApplicationId();
+    List<Base> convertedObjects = new();
+    Raster raster = rasterLayer.GetRaster();
+    Base converted = _rootToSpeckleConverter.Convert(raster);
+    string applicationId = raster.GetSpeckleApplicationId(layerApplicationId);
+    converted.applicationId = applicationId;
+    convertedObjects.Add(converted);
+    return convertedObjects;
+  }
+
+  private List<Base> ConvertLasDatasetLayerObjects(ADM.LasDatasetLayer lasDatasetLayer)
+  {
+    string layerApplicationId = lasDatasetLayer.GetSpeckleApplicationId();
+    List<Base> convertedObjects = new();
+
+    try
+    {
+      // store the layer renderer for color unpacking
+      _colorUnpacker.StoreRenderer(lasDatasetLayer);
+
+      using (ACD.Analyst3D.LasPointCursor ptCursor = lasDatasetLayer.SearchPoints(new ACD.Analyst3D.LasPointFilter()))
+      {
+        while (ptCursor.MoveNext())
+        {
+          using (ACD.Analyst3D.LasPoint pt = ptCursor.Current)
+          {
+            Base converted = _rootToSpeckleConverter.Convert(pt);
+            string applicationId = pt.GetSpeckleApplicationId(layerApplicationId);
+            converted.applicationId = applicationId;
+            convertedObjects.Add(converted);
+
+            // process the object color
+            _colorUnpacker.ProcessLasLayerColor(pt, applicationId);
+          }
+        }
+      }
+    }
+    catch (ACD.Exceptions.TinException ex)
+    {
+      throw new SpeckleException("3D analyst extension is not enabled for .las layer operations", ex);
+    }
+
+    return convertedObjects;
   }
 }

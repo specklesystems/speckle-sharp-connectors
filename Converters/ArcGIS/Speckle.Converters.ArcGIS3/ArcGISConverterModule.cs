@@ -1,6 +1,6 @@
 using System.Reflection;
-using ArcGIS.Core.Geometry;
 using Microsoft.Extensions.DependencyInjection;
+using Speckle.Converters.ArcGIS3.ToSpeckle.Helpers;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Registration;
@@ -20,14 +20,15 @@ public static class ArcGISConverterModule
     serviceCollection.AddRootCommon<RootToSpeckleConverter>(converterAssembly);
 
     // add application converters
-    serviceCollection.AddApplicationConverters<ArcGISToSpeckleUnitConverter, Unit>(converterAssembly);
+    serviceCollection.AddApplicationConverters<ArcGISToSpeckleUnitConverter, ACG.Unit>(converterAssembly);
 
     // most things should be InstancePerLifetimeScope so we get one per operation
     serviceCollection.AddScoped<IFeatureClassUtils, FeatureClassUtils>();
-    serviceCollection.AddScoped<ICrsUtils, CrsUtils>();
     serviceCollection.AddScoped<IArcGISFieldUtils, ArcGISFieldUtils>();
     serviceCollection.AddScoped<LocalToGlobalConverterUtils>();
     serviceCollection.AddScoped<ICharacterCleaner, CharacterCleaner>();
+    serviceCollection.AddScoped<DisplayValueExtractor>();
+    serviceCollection.AddScoped<PropertiesExtractor>();
 
     // single stack per conversion
     serviceCollection.AddScoped<

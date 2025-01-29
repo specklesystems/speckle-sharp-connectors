@@ -5,8 +5,10 @@ using Rhino.Commands;
 using Rhino.Input.Custom;
 using Rhino.UI;
 using Speckle.Connectors.Rhino.HostApp;
-
-// using Speckle.Connectorss.Rhino.Properties;
+#if RHINO8_OR_GREATER
+using Microsoft.Extensions.DependencyInjection;
+using Speckle.Connectors.DUI.WebView;
+#endif
 
 namespace Speckle.Connectors.Rhino.Plugin;
 
@@ -21,7 +23,7 @@ public class SpeckleConnectorsRhinoCommand : Command
     Panels.RegisterPanel(
       SpeckleConnectorsRhinoPlugin.Instance,
       typeof(SpeckleRhinoPanelHost),
-      "Speckle (Beta) for Rhino",
+      "Speckle (Beta)",
       new Icon(iconPath),
       PanelType.System
     );
@@ -65,6 +67,11 @@ public class SpeckleConnectorsRhinoCommand : Command
 
     if (mode == RunMode.Interactive)
     {
+#if RHINO8_OR_GREATER
+      SpeckleRhinoPanelHost.Reinitialize(
+        SpeckleConnectorsRhinoPlugin.Instance.Container?.GetRequiredService<DUI3ControlWebView>()
+      );
+#endif
       Panels.OpenPanel(panelId);
       return Result.Success;
     }

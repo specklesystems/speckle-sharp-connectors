@@ -19,10 +19,10 @@
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\SelectionBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RevitSendBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ElementIdHelper.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)HostApp\APIContext.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\DocumentModelStorageSchema.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Elements.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitMaterialBaker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\SupportedCategoriesUtils.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\HideWarningsFailuresPreprocessor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\IdStorageSchema.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\IStorageSchema.cs" />
@@ -44,10 +44,11 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ToSpeckleSettingsManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ReferencePointSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\DetailLevelSetting.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitEvents.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\IRevitPlugin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitCommand.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitExternalApplication.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitIdleManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitThreadContext.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitCefPlugin.cs" />
   </ItemGroup>
 </Project>

@@ -49,9 +49,12 @@ public sealed class ConverterWithFallback : IRootToHostConverter
     }
     catch (ConversionNotSupportedException e)
     {
+      // NOTE: `ConversionNotSupportedException` should not be an exception - we know what we can convert and what we can't; this is doubly true
+      // on hot paths where we *know* that we will fallback to a display value anyway.
       _logger.LogInformation(e, "Attempt to find conversion for type {type} failed", type);
     }
 
+    // NOTE: this section becomes a bit obsolete now, as we're implementing direct converters for data objects.
     // Fallback to display value if it exists.
     var displayValue = target.TryGetDisplayValue<Base>();
 
@@ -74,7 +77,9 @@ public sealed class ConverterWithFallback : IRootToHostConverter
     // if the host app returns a list of objects as the result of the fallback conversion, we zip them together with the original base display value objects that generated them.
     if (conversionResult is IEnumerable<object> result)
     {
-      return result.Zip(displayValue, (a, b) => (a, b)).ToList();
+      // Further note: this madness can now go away, as the actual direct converter for the host app can control what
+      // is being returned. In rhino, this map is done in the actual data object converter.
+      return result.Zip(displayValue, (a, b) => (a, b));
     }
 
     // if not, and the host app "merges" together somehow multiple display values into one entity, we return that.

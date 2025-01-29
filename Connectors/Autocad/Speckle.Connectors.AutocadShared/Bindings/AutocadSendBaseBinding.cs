@@ -1,15 +1,19 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
+using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.DatabaseServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
+using Speckle.Connectors.Autocad.Plugin;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
@@ -21,6 +25,7 @@ using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Autocad.Bindings;
 
+[SuppressMessage("ReSharper", "AsyncVoidMethod")]
 public abstract class AutocadSendBaseBinding : ISendBinding
 {
   public string Name => "sendBinding";
@@ -29,15 +34,15 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   public IBrowserBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly IAutocadIdleManager _idleManager;
   private readonly List<ISendFilter> _sendFilters;
   private readonly CancellationManager _cancellationManager;
   private readonly IServiceProvider _serviceProvider;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<AutocadSendBinding> _logger;
-  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly ISpeckleApplication _speckleApplication;
+  private readonly IThreadContext _threadContext;
+  private readonly IEventAggregator _eventAggregator;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -49,7 +54,6 @@ public abstract class AutocadSendBaseBinding : ISendBinding
 
   protected AutocadSendBaseBinding(
     DocumentModelStore store,
-    IAutocadIdleManager idleManager,
     IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     CancellationManager cancellationManager,
@@ -57,11 +61,12 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
     ILogger<AutocadSendBinding> logger,
-    ISpeckleApplication speckleApplication
+    ISpeckleApplication speckleApplication,
+    IThreadContext threadContext,
+    IEventAggregator eventAggregator
   )
   {
     _store = store;
-    _idleManager = idleManager;
     _serviceProvider = serviceProvider;
     _cancellationManager = cancellationManager;
     _sendFilters = sendFilters.ToList();
@@ -69,28 +74,47 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     _operationProgressManager = operationProgressManager;
     _logger = logger;
     _speckleApplication = speckleApplication;
-    _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
+    _threadContext = threadContext;
+    _eventAggregator = eventAggregator;
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
-
-    Application.DocumentManager.DocumentActivated += (_, args) =>
-      _topLevelExceptionHandler.CatchUnhandled(() => SubscribeToObjectChanges(args.Document));
 
     if (Application.DocumentManager.CurrentDocument != null)
     {
       // catches the case when autocad just opens up with a blank new doc
-      SubscribeToObjectChanges(Application.DocumentManager.CurrentDocument);
+      TryRegisterSubscribeToObjectChanges(Application.DocumentManager.CurrentDocument);
     }
     // Since ids of the objects generates from same seed, we should clear the cache always whenever doc swapped.
-    _store.DocumentChanged += (_, _) =>
-    {
-      _sendConversionCache.ClearCache();
-    };
+
+    eventAggregator.GetEvent<DocumentActivatedEvent>().Subscribe(SubscribeToObjectChanges);
+    eventAggregator.GetEvent<DocumentStoreChangedEvent>().Subscribe(OnDocumentStoreChangedEvent);
+    eventAggregator.GetEvent<DocumentToBeDestroyedEvent>().Subscribe(OnDocumentDestroyed);
+    eventAggregator.GetEvent<ObjectAppendedEvent>().Subscribe(OnObjectAppended);
+    eventAggregator.GetEvent<ObjectErasedEvent>().Subscribe(ObjectErased);
+    eventAggregator.GetEvent<ObjectModifiedEvent>().Subscribe(ObjectModified);
   }
+
+  private void OnDocumentDestroyed(DocumentCollectionEventArgs args)
+  {
+    Document doc = args.Document;
+    if (!_docSubsTracker.Contains(doc.Name))
+    {
+      doc.Database.ObjectAppended -= DatabaseOnObjectAppended;
+      doc.Database.ObjectErased -= DatabaseOnObjectErased;
+      doc.Database.ObjectModified -= DatabaseObjectModified;
+
+      _docSubsTracker.Remove(doc.Name);
+    }
+  }
+
+  private void OnDocumentStoreChangedEvent(object _) => _sendConversionCache.ClearCache();
 
   private readonly List<string> _docSubsTracker = new();
 
-  private void SubscribeToObjectChanges(Document doc)
+  private void SubscribeToObjectChanges(DocumentCollectionEventArgs e) =>
+    TryRegisterSubscribeToObjectChanges(e.Document);
+
+  private void TryRegisterSubscribeToObjectChanges(Document? doc)
   {
     if (doc == null || doc.Database == null || _docSubsTracker.Contains(doc.Name))
     {
@@ -98,26 +122,33 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     }
 
     _docSubsTracker.Add(doc.Name);
-    doc.Database.ObjectAppended += (_, e) => OnObjectChanged(e.DBObject);
-    doc.Database.ObjectErased += (_, e) => OnObjectChanged(e.DBObject);
-    doc.Database.ObjectModified += (_, e) => OnObjectChanged(e.DBObject);
+    doc.Database.ObjectAppended += DatabaseOnObjectAppended;
+    doc.Database.ObjectErased += DatabaseOnObjectErased;
+    doc.Database.ObjectModified += DatabaseObjectModified;
   }
 
-  private void OnObjectChanged(DBObject dbObject)
-  {
-    _topLevelExceptionHandler.CatchUnhandled(() => OnChangeChangedObjectIds(dbObject));
-  }
+  private async void DatabaseOnObjectAppended(object sender, ObjectEventArgs e) =>
+    await _eventAggregator.GetEvent<ObjectAppendedEvent>().PublishAsync(e);
+
+  private async void DatabaseOnObjectErased(object sender, ObjectErasedEventArgs e) =>
+    await _eventAggregator.GetEvent<ObjectErasedEvent>().PublishAsync(e);
+
+  private async void DatabaseObjectModified(object sender, ObjectEventArgs e) =>
+    await _eventAggregator.GetEvent<ObjectModifiedEvent>().PublishAsync(e);
+
+  private void OnObjectAppended(ObjectEventArgs e) => OnChangeChangedObjectIds(e.DBObject);
+
+  private void ObjectErased(ObjectErasedEventArgs e) => OnChangeChangedObjectIds(e.DBObject);
+
+  private void ObjectModified(ObjectEventArgs e) => OnChangeChangedObjectIds(e.DBObject);
 
   private void OnChangeChangedObjectIds(DBObject dBObject)
   {
     ChangedObjectIds[dBObject.GetSpeckleApplicationId()] = 1;
-    _idleManager.SubscribeToIdle(
-      nameof(AutocadSendBinding),
-      async () => await RunExpirationChecks().ConfigureAwait(false)
-    );
+    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(AutocadSendBinding), RunExpirationChecks);
   }
 
-  private async Task RunExpirationChecks()
+  private async Task RunExpirationChecks(object _)
   {
     var senders = _store.GetSenders();
     string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
@@ -135,7 +166,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
       }
     }
 
-    await Commands.SetModelsExpired(expiredSenderIds).ConfigureAwait(false);
+    await Commands.SetModelsExpired(expiredSenderIds);
     ChangedObjectIds = new();
   }
 
@@ -144,9 +175,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   public List<ICardSetting> GetSendSettings() => [];
 
   public async Task Send(string modelCardId) =>
-    await Parent
-      .RunOnMainThreadAsync(async () => await SendInternal(modelCardId).ConfigureAwait(false))
-      .ConfigureAwait(false);
+    await _threadContext.RunOnWorkerAsync(async () => await SendInternal(modelCardId));
 
   protected abstract void InitializeSettings(IServiceProvider serviceProvider);
 
@@ -188,12 +217,9 @@ public abstract class AutocadSendBaseBinding : ISendBinding
           modelCard.GetSendInfo(_speckleApplication.Slug),
           _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
           cancellationToken
-        )
-        .ConfigureAwait(false);
+        );
 
-      await Commands
-        .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
-        .ConfigureAwait(false);
+      await Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
     }
     catch (OperationCanceledException)
     {
@@ -205,7 +231,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
       _logger.LogModelCardHandledError(ex);
-      await Commands.SetModelError(modelCardId, ex).ConfigureAwait(false);
+      await Commands.SetModelError(modelCardId, ex);
     }
     finally
     {

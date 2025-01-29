@@ -1,9 +1,11 @@
+using Speckle.Converters.CSiShared.Utils;
+
 namespace Speckle.Converters.CSiShared;
 
 public interface ICsiWrapper
 {
   string Name { get; set; }
-  int ObjectType { get; }
+  ModelObjectType ObjectType { get; }
   string ObjectName { get; }
 }
 
@@ -18,50 +20,50 @@ public interface ICsiWrapper
 public abstract class CsiWrapperBase : ICsiWrapper
 {
   public required string Name { get; set; }
-  public abstract int ObjectType { get; }
+  public abstract ModelObjectType ObjectType { get; }
   public abstract string ObjectName { get; }
 }
 
 public class CsiJointWrapper : CsiWrapperBase
 {
-  public override int ObjectType => 1;
-  public override string ObjectName => "Joint";
+  public override ModelObjectType ObjectType => ModelObjectType.JOINT;
+  public override string ObjectName => ModelObjectType.JOINT.ToString();
 }
 
 public class CsiFrameWrapper : CsiWrapperBase
 {
-  public override int ObjectType => 2;
-  public override string ObjectName => "Frame";
+  public override ModelObjectType ObjectType => ModelObjectType.FRAME;
+  public override string ObjectName => ModelObjectType.FRAME.ToString();
 }
 
 public class CsiCableWrapper : CsiWrapperBase
 {
-  public override int ObjectType => 3;
-  public override string ObjectName => "Cable";
+  public override ModelObjectType ObjectType => ModelObjectType.CABLE;
+  public override string ObjectName => ModelObjectType.CABLE.ToString();
 }
 
 public class CsiTendonWrapper : CsiWrapperBase
 {
-  public override int ObjectType => 4;
-  public override string ObjectName => "Tendon";
+  public override ModelObjectType ObjectType => ModelObjectType.TENDON;
+  public override string ObjectName => ModelObjectType.TENDON.ToString();
 }
 
 public class CsiShellWrapper : CsiWrapperBase
 {
-  public override int ObjectType => 5;
-  public override string ObjectName => "Shell";
+  public override ModelObjectType ObjectType => ModelObjectType.SHELL;
+  public override string ObjectName => ModelObjectType.SHELL.ToString();
 }
 
 public class CsiSolidWrapper : CsiWrapperBase
 {
-  public override int ObjectType => 6;
-  public override string ObjectName => "Solid";
+  public override ModelObjectType ObjectType => ModelObjectType.SOLID;
+  public override string ObjectName => ModelObjectType.SOLID.ToString();
 }
 
 public class CsiLinkWrapper : CsiWrapperBase
 {
-  public override int ObjectType => 7;
-  public override string ObjectName => "Link";
+  public override ModelObjectType ObjectType => ModelObjectType.LINK;
+  public override string ObjectName => ModelObjectType.LINK.ToString();
 }
 
 /// <summary>

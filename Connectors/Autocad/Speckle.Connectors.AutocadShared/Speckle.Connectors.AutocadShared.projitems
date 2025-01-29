@@ -29,7 +29,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadContext.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadDocumentManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadDocumentModelStore.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadMaterialUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Extensions\DatabaseExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Extensions\DocumentExtensions.cs" />
@@ -41,6 +40,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\AutocadRootObject.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\AutocadRootObjectBaseBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\AutocadRootObjectBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\AutocadEvents.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\AutocadRibbon.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\AutocadExtensionApplication.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\AutocadCommand.cs" />

@@ -11,7 +11,7 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting> <!-- windows packs for .net core  -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
-  
+
   <PropertyGroup Label="Analyers">
     <EnableNetAnalyzers>true</EnableNetAnalyzers>
     <AnalysisLevel>latest-AllEnabledByDefault</AnalysisLevel>
@@ -19,7 +19,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    
+
     <!-- Ingored warnings, some aspirational but too noisy for now, some by design.  -->
     <NoWarn>
       <!--Disabled by design-->
@@ -43,19 +43,19 @@
     <RepositoryType>git</RepositoryType>
     <!-- Expose the repository root to all projects -->
     <RepositoryRoot>$(MSBuildThisFileDirectory)</RepositoryRoot>
-    
+
   </PropertyGroup>
-  
+
   <ItemGroup>
     <!-- This file contains the configuration for some analyzer warnings, such as cyclomatic
 complexity threshold -->
     <AdditionalFiles Include="$(RepositoryRoot)CodeMetricsConfig.txt"/>
   </ItemGroup>
-  
+
   <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
   </PropertyGroup>
-  
+
   <PropertyGroup>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>

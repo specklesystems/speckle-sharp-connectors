@@ -21,18 +21,25 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 public sealed class CsiFramePropertiesExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
+
+  private readonly CsiToSpeckleCacheSingleton _csiToSpeckleCacheSingleton;
+
   private static readonly string[] s_releaseKeys =
   [
-    "axial",
-    "minorShear",
-    "majorShear",
-    "torsion",
-    "minorBending",
-    "majorBending"
+    "Axial",
+    "Shear 2 (Major)",
+    "Shear 3 (Minor)",
+    "Torsion",
+    "Moment 22 (Minor)",
+    "Moment 33 (Major)"
   ]; // Note: caching keys for better performance
 
-  public CsiFramePropertiesExtractor(IConverterSettingsStore<CsiConversionSettings> settingsStore)
+  public CsiFramePropertiesExtractor(
+    CsiToSpeckleCacheSingleton csiToSpeckleCacheSingleton,
+    IConverterSettingsStore<CsiConversionSettings> settingsStore
+  )
   {
+    _csiToSpeckleCacheSingleton = csiToSpeckleCacheSingleton;
     _settingsStore = settingsStore;
   }
 
@@ -40,17 +47,52 @@ public sealed class CsiFramePropertiesExtractor
   {
     frameData.ApplicationId = frame.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
 
-    var geometry = DictionaryUtils.EnsureNestedDictionary(frameData.Properties, "Geometry");
-    (geometry["startJointName"], geometry["endJointName"]) = GetEndPointNames(frame);
+    var geometry = frameData.Properties.EnsureNested(ObjectPropertyCategory.GEOMETRY);
+    (geometry["I-End Joint"], geometry["J-End Joint"]) = GetEndPointNames(frame);
 
-    var assignments = DictionaryUtils.EnsureNestedDictionary(frameData.Properties, "Assignments");
-    assignments["groups"] = new List<string>(GetGroupAssigns(frame));
-    assignments["materialOverwrite"] = GetMaterialOverwrite(frame);
-    assignments["localAxis"] = GetLocalAxes(frame);
-    assignments["propertyModifiers"] = GetModifiers(frame);
-    assignments["endReleases"] = GetReleases(frame);
-    assignments["sectionProperty"] = GetSectionName(frame);
-    assignments["path"] = GetPathType(frame);
+    var assignments = frameData.Properties.EnsureNested(ObjectPropertyCategory.ASSIGNMENTS);
+    assignments["Groups"] = GetGroupAssigns(frame);
+    assignments["Material Overwrite"] = GetMaterialOverwrite(frame);
+    assignments["Local Axis 2 Angle"] = GetLocalAxes(frame);
+    assignments["Property Modifiers"] = GetModifiers(frame);
+    assignments["End Releases"] = GetReleases(frame);
+
+    // NOTE: sectionId and materialId a "quick-fix" to enable filtering in the viewer etc.
+    // Assign sectionId to variable as this will be an argument for the GetMaterialName method
+    string sectionId = GetSectionName(frame);
+    string materialId = GetMaterialName(sectionId);
+    assignments[ObjectPropertyKey.SECTION_ID] = sectionId;
+    assignments[ObjectPropertyKey.MATERIAL_ID] = materialId;
+
+    // store the object, section, and material id relationships in their corresponding caches to be accessed by the connector
+    if (!string.IsNullOrEmpty(sectionId))
+    {
+      if (_csiToSpeckleCacheSingleton.FrameSectionCache.TryGetValue(sectionId, out List<string>? frameIds))
+      {
+        frameIds.Add(frameData.ApplicationId);
+      }
+      else
+      {
+        _csiToSpeckleCacheSingleton.FrameSectionCache.Add(sectionId, [frameData.ApplicationId]);
+      }
+
+      if (!string.IsNullOrEmpty(materialId))
+      {
+        if (_csiToSpeckleCacheSingleton.MaterialCache.TryGetValue(materialId, out List<string>? sectionIds))
+        {
+          // Since this is happening on the object level, we could be processing the same sectionIds (from different
+          // objects) many times. This is not necessary since we just want a set of sectionId corresponding to material
+          if (!sectionIds.Contains(sectionId))
+          {
+            sectionIds.Add(sectionId);
+          }
+        }
+        else
+        {
+          _csiToSpeckleCacheSingleton.MaterialCache.Add(materialId, [sectionId]);
+        }
+      }
+    }
   }
 
   private string[] GetGroupAssigns(CsiFrameWrapper frame)
@@ -66,30 +108,35 @@ public sealed class CsiFramePropertiesExtractor
     double angle = 0;
     bool advanced = false;
     _ = _settingsStore.Current.SapModel.FrameObj.GetLocalAxes(frame.Name, ref angle, ref advanced);
-    return new Dictionary<string, object?> { ["angle"] = angle, ["advanced"] = advanced.ToString() };
+
+    Dictionary<string, object?> resultsDictionary = [];
+    resultsDictionary.AddWithUnits("Angle", angle, "Degrees");
+    resultsDictionary["Advanced"] = advanced.ToString();
+
+    return resultsDictionary;
   }
 
   private string GetMaterialOverwrite(CsiFrameWrapper frame)
   {
-    string propName = "None";
+    string propName = string.Empty;
     _ = _settingsStore.Current.SapModel.FrameObj.GetMaterialOverwrite(frame.Name, ref propName);
     return propName;
   }
 
   private Dictionary<string, double?> GetModifiers(CsiFrameWrapper frame)
   {
-    double[] value = Array.Empty<double>();
+    double[] value = [];
     _ = _settingsStore.Current.SapModel.FrameObj.GetModifiers(frame.Name, ref value);
     return new Dictionary<string, double?>
     {
-      ["crossSectionalAreaModifier"] = value[0],
-      ["shearAreaInLocal2DirectionModifier"] = value[1],
-      ["shearAreaInLocal3DirectionModifier"] = value[2],
-      ["torsionalConstantModifier"] = value[3],
-      ["momentOfInertiaAboutLocal2AxisModifier"] = value[4],
-      ["momentOfInertiaAboutLocal3AxisModifier"] = value[5],
-      ["massModifier"] = value[6],
-      ["weightModifier"] = value[7]
+      ["Area"] = value[0],
+      ["As2"] = value[1],
+      ["As3"] = value[2],
+      ["Torsion"] = value[3],
+      ["I22"] = value[4],
+      ["I33"] = value[5],
+      ["Mass"] = value[6],
+      ["Weight"] = value[7]
     };
   }
 
@@ -103,35 +150,31 @@ public sealed class CsiFramePropertiesExtractor
 
   private Dictionary<string, object?> GetReleases(CsiFrameWrapper frame)
   {
-    bool[] ii = Array.Empty<bool>(),
-      jj = Array.Empty<bool>();
-    double[] startValue = Array.Empty<double>(),
-      endValue = Array.Empty<double>();
+    bool[] ii = [],
+      jj = [];
+    double[] startValue = [],
+      endValue = [];
 
     _ = _settingsStore.Current.SapModel.FrameObj.GetReleases(frame.Name, ref ii, ref jj, ref startValue, ref endValue);
 
-    var startNodes = s_releaseKeys
-      .Select(
-        (key, index) =>
-          new KeyValuePair<string, object?>(
-            $"{key}StartNode",
-            new Dictionary<string, object?> { ["release"] = ii[index], ["stiffness"] = startValue[index] }
-          )
-      )
-      .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-
-    var endNodes = s_releaseKeys
-      .Select(
-        (key, index) =>
-          new KeyValuePair<string, object?>(
-            $"{key}EndNode",
-            new Dictionary<string, object?> { ["release"] = jj[index], ["stiffness"] = endValue[index] }
-          )
-      )
-      .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-
-    return startNodes.Concat(endNodes).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+    return new Dictionary<string, object?>
+    {
+      ["End-I"] = CreateNodeReleases(ii, startValue),
+      ["End-J"] = CreateNodeReleases(jj, endValue),
+    };
   }
+
+  // NOTE: Avoid duplicate dictionary creation logic for End-I and End-J in GetReleases() method
+  private static Dictionary<string, object?> CreateNodeReleases(bool[] releases, double[] values) =>
+    s_releaseKeys
+      .Select(
+        (key, i) => // for each key, we want both the key (string) and index
+          new KeyValuePair<string, object?>( // for each key, create dictionary with Release and Stiffness
+            key,
+            new Dictionary<string, object?> { ["Release"] = releases[i], ["Stiffness"] = values[i] }
+          )
+      )
+      .ToDictionary(x => x.Key, x => x.Value);
 
   private string GetSectionName(CsiFrameWrapper frame)
   {
@@ -141,10 +184,12 @@ public sealed class CsiFramePropertiesExtractor
     return sectionName;
   }
 
-  private string GetPathType(CsiFrameWrapper frame)
+  // NOTE: This is a little convoluted as we aren't on the cFrameObj level, but one deeper.
+  // As noted in ExtractProperties, this is just a quick-fix to get some displayable materialId parameter
+  private string GetMaterialName(string sectionName)
   {
-    string pathType = string.Empty;
-    _ = _settingsStore.Current.SapModel.FrameObj.GetTypeOAPI(frame.Name, ref pathType);
-    return pathType;
+    string materialName = string.Empty;
+    _ = _settingsStore.Current.SapModel.PropFrame.GetMaterial(sectionName, ref materialName);
+    return materialName;
   }
 }

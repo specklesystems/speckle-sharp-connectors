@@ -9,9 +9,9 @@ namespace Speckle.Connectors.Revit.HostApp;
 /// </summary>
 public class ElementUnpacker
 {
-  private readonly RevitContext _revitContext;
+  private readonly IRevitContext _revitContext;
 
-  public ElementUnpacker(RevitContext revitContext)
+  public ElementUnpacker(IRevitContext revitContext)
   {
     _revitContext = revitContext;
   }
@@ -31,7 +31,8 @@ public class ElementUnpacker
     // Step 2: pack curtain wall elements, once we know the full extent of our flattened item list.
     // The behaviour we're looking for:
     // If parent wall is part of selection, does not select individual elements out. Otherwise, selects individual elements (Panels, Mullions) as atomic objects.
-    return PackCurtainWallElements(atomicObjects);
+    // NOTE: this also conditionally "packs" stacked wall elements if their parent is present. See detailed note inside the function.
+    return PackCurtainWallElementsAndStackedWalls(atomicObjects);
   }
 
   /// <summary>
@@ -90,7 +91,7 @@ public class ElementUnpacker
     return unpackedElements.GroupBy(el => el.Id).Select(g => g.First()).ToList(); // no disinctBy in here sadly.
   }
 
-  private List<Element> PackCurtainWallElements(List<Element> elements)
+  private List<Element> PackCurtainWallElementsAndStackedWalls(List<Element> elements)
   {
     var ids = elements.Select(el => el.Id).ToArray();
     var doc = _revitContext.UIApplication?.ActiveUIDocument.Document!;
@@ -102,6 +103,12 @@ public class ElementUnpacker
         && doc.GetElement(f.Host.Id) is Wall { CurtainGrid: not null }
         && ids.Contains(f.Host.Id)
       )
+      // NOTE: It is required to explicitly skip stacked wall members because, when getting objects from a view,
+      // the api will return the wall parent and its stacked children walls separately. This does not happen
+      // via selection. Via category ("Walls") we do not get any parent wall, but just the components of the stacked wall separately.
+      // If you wonder why revit is driving people to insanity, this is one of those moments.
+      // See [CNX-851: Stacked Wall Duplicate Geometry or Materials not applied](https://linear.app/speckle/issue/CNX-851/stacked-wall-duplicate-geometry-or-materials-not-applied)
+      || (element is Wall { IsStackedWallMember: true } wall && ids.Contains(wall.StackedWallOwnerId))
     );
     return elements;
   }

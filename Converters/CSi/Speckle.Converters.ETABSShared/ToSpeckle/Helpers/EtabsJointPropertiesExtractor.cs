@@ -33,10 +33,10 @@ public sealed class EtabsJointPropertiesExtractor
 
   public void ExtractProperties(CsiJointWrapper joint, Dictionary<string, object?> properties)
   {
-    var objectId = DictionaryUtils.EnsureNestedDictionary(properties, "Object ID");
+    var objectId = properties.EnsureNested(ObjectPropertyCategory.OBJECT_ID);
     (objectId["label"], objectId["level"]) = GetLabelAndLevel(joint);
 
-    var assignments = DictionaryUtils.EnsureNestedDictionary(properties, "Assignments");
+    var assignments = properties.EnsureNested(ObjectPropertyCategory.ASSIGNMENTS);
     (assignments["diaphragmOption"], assignments["diaphragmName"]) = GetAssignedDiaphragm(joint);
     assignments["springAssignment"] = GetSpringAssignmentName(joint);
   }

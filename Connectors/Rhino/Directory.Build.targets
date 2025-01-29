@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <Target AfterTargets="Clean" Name="CleanAddinRhino" Condition="'$(RhinoVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
+    <RemoveDir Directories="$(AppData)\McNeel\Rhinoceros\$(RhinoVersion).0\Plug-ins\Speckle.Connectors.Rhino$(RhinoVersion) (8dd5f30b-a13d-4a24-abdc-3e05c8c87144)" />
+  </Target>
+
+  <Target AfterTargets="Build"  Name="AfterBuildRhino" Condition="'$(RhinoVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
+    <Message Text="Rhino Version $(RhinoVersion)" Importance="high"/>
+  </Target>
+</Project>

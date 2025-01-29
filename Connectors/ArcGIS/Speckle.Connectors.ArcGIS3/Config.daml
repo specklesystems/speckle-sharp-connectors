@@ -20,7 +20,7 @@
 <ArcGIS defaultAssembly="Speckle.Connectors.ArcGIS3.dll" defaultNamespace="Speckle.Connectors.ArcGIS" xmlns="http://schemas.esri.com/DADF/Registry" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://schemas.esri.com/DADF/Registry file:///C:/Program%20Files/ArcGIS/Pro/bin/ArcGIS.Desktop.Framework.xsd">
 	<AddInInfo id="{6CB1D25C-B8BF-4A33-9099-C1F8D1B32EFC}" version="1.0" desktopVersion="3.0.34047">
 		<Name>Speckle</Name>
-		<Description>Speckle connector for ArcGIS</Description>
+		<Description>Next Gen Speckle Connector (Beta) for ArcGIS</Description>
 		<Image>Images\AddinDesktop32.png</Image>
 		<Author>Speckle Systems</Author>
 		<Company>Speckle Systems</Company>
@@ -33,14 +33,14 @@
 		<insertModule id="ConnectorArcGIS_Module" className="SpeckleModule" autoLoad="false" caption="SpeckleModule">
 			<!-- uncomment to have the control hosted on a separate tab-->
 			<tabs>
-				<!--<tab id="Speckle_Tab1" caption="New Tab">
+				<tab id="Speckle_Tab1" caption="Speckle">
           <group refID="Speckle_Group1"/>
-        </tab>-->
+        </tab>
 			</tabs>
 			<groups>
 				<!-- comment this out if you have no controls on the Addin tab to avoid
-              an empty group-->
-				<group id="Speckle_Group1" caption="Speckle" appearsOnAddInTab="true" keytip="G1">
+              an empty group. change appearsOnAddinTab to "True" if control is to be in the addin tab-->
+				<group id="Speckle_Group1" caption="Speckle" appearsOnAddInTab="false" keytip="G1">
 					<!-- host controls within groups -->
 					<button refID="SpeckleDUI3_SpeckleDUI3OpenButton" size="large" />
 				</group>
@@ -59,7 +59,7 @@
 			</controls>
 
             <dockPanes>
-                <dockPane id="SpeckleDUI3_SpeckleDUI3" caption="Speckle (Beta) for ArcGIS" className="SpeckleDUI3ViewModel" keytip="DockPane" initiallyVisible="true" dock="group" dockWith="esri_core_projectDockPane">
+                <dockPane id="SpeckleDUI3_SpeckleDUI3" caption="Speckle (Beta)" className="SpeckleDUI3ViewModel" keytip="DockPane" initiallyVisible="true" dock="group" dockWith="esri_core_projectDockPane">
                     <content className="SpeckleDUI3Wrapper" />
                 </dockPane>
             </dockPanes>

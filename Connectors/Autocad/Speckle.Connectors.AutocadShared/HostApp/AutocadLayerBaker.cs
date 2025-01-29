@@ -12,15 +12,15 @@ public class AutocadLayerBaker : TraversalContextUnpacker
 {
   private readonly string _layerFilterName = "Speckle";
   private readonly AutocadContext _autocadContext;
-  private readonly AutocadMaterialBaker _materialBaker;
-  private readonly AutocadColorBaker _colorBaker;
+  private readonly IAutocadMaterialBaker _materialBaker;
+  private readonly IAutocadColorBaker _colorBaker;
   private Document Doc => Application.DocumentManager.MdiActiveDocument;
   private readonly HashSet<string> _uniqueLayerNames = new();
 
   public AutocadLayerBaker(
     AutocadContext autocadContext,
-    AutocadMaterialBaker materialBaker,
-    AutocadColorBaker colorBaker
+    IAutocadMaterialBaker materialBaker,
+    IAutocadColorBaker colorBaker
   )
   {
     _autocadContext = autocadContext;

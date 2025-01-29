@@ -4,7 +4,7 @@ using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
 
-[NameAndRankValue(nameof(RG.Mesh), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(RG.Mesh), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
 {
   private readonly ITypedConverter<RG.Point3d, SOG.Point> _pointConverter;

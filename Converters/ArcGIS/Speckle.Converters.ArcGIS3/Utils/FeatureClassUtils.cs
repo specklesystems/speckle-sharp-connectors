@@ -73,7 +73,7 @@ public class FeatureClassUtils : IFeatureClassUtils
     return geodatabase;
   }
 
-  public async Task<Dictionary<string, List<(TraversalContext, ObjectConversionTracker)>>> GroupConversionTrackers(
+  public Dictionary<string, List<(TraversalContext, ObjectConversionTracker)>> GroupConversionTrackers(
     Dictionary<TraversalContext, ObjectConversionTracker> conversionTracker,
     Action<string, double?> onOperationProgressed
   )
@@ -113,10 +113,12 @@ public class FeatureClassUtils : IFeatureClassUtils
         $"speckle_{speckleType}_SR_{activeSR.SpatialReference.Name[..Math.Min(15, activeSR.SpatialReference.Name.Length - 1)]}_X_{xOffset}_Y_{yOffset}_North_{trueNorth}_speckleID_{parentId}";
 
       // for gis elements, use a parent layer ID
-      if (item.Key.Parent?.Current is SGIS.VectorLayer vLayer)
+      /*
+      if (item.Key.Parent?.Current is SGIS.GisLayer vLayer)
       {
         uniqueKey = "speckleID_" + vLayer.id;
       }
+      */
 
       if (!geometryGroups.TryGetValue(uniqueKey, out _))
       {
@@ -132,13 +134,12 @@ public class FeatureClassUtils : IFeatureClassUtils
       ClearExistingDataset(uniqueKey);
 
       onOperationProgressed.Invoke("Grouping features into layers", count++ / conversionTracker.Count);
-      await Task.Yield();
     }
 
     return geometryGroups;
   }
 
-  public async Task CreateDatasets(
+  public void CreateDatasets(
     Dictionary<TraversalContext, ObjectConversionTracker> conversionTracker,
     Dictionary<string, List<(TraversalContext, ObjectConversionTracker)>> featureClassElements,
     Action<string, double?> onOperationProgressed
@@ -201,7 +202,6 @@ public class FeatureClassUtils : IFeatureClassUtils
       }
 
       onOperationProgressed.Invoke("Writing to Database", count++ / featureClassElements.Count);
-      await Task.Yield();
     }
   }
 
@@ -281,20 +281,23 @@ public class FeatureClassUtils : IFeatureClassUtils
   )
   {
     ACG.GeometryType geomType;
-    if (listOfContextAndTrackers.FirstOrDefault().Item1.Parent?.Current is SGIS.VectorLayer vLayer) // GIS
+    // remove all native geometry type checks for now
+    /*
+    if (
+      listOfContextAndTrackers.FirstOrDefault().Item1.Parent?.Current is SGIS.GisLayer vLayer
+      && vLayer["attributes"] is Base
+    ) // GIS
     {
       geomType = GISLayerGeometryType.GetNativeLayerGeometryType(vLayer);
-    }
-    else // non-GIS
+    }*/
+
+    var hostAppGeom = listOfContextAndTrackers[0].Item2.HostAppGeom;
+    if (hostAppGeom is null) // type check, should not happen
     {
-      var hostAppGeom = listOfContextAndTrackers[0].Item2.HostAppGeom;
-      if (hostAppGeom is null) // type check, should not happen
-      {
-        // TODO: Unsure about the type this exception should be.
-        throw new SpeckleException("Conversion failed");
-      }
-      geomType = hostAppGeom.GeometryType;
+      // TODO: Unsure about the type this exception should be.
+      throw new SpeckleException("Conversion failed");
     }
+    geomType = hostAppGeom.GeometryType;
 
     return geomType;
   }

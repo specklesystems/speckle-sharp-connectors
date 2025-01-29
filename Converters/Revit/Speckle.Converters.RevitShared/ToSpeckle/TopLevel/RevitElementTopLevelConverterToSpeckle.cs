@@ -10,7 +10,7 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
-[NameAndRankValue(nameof(DB.Element), 0)]
+[NameAndRankValue(typeof(DB.Element), 0)]
 public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
 {
   private readonly DisplayValueExtractor _displayValueExtractor;
@@ -73,7 +73,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
 
     // get location if any
     Base? convertedLocation = null;
-    if (target.Location is DB.Location location) // location can be null
+    if (target.Location is DB.Location location and (DB.LocationCurve or DB.LocationPoint)) // location can be null
     {
       try
       {
@@ -81,6 +81,9 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
       }
       catch (ValidationException)
       {
+        // NOTE: i've improved the if check above to make sure we never reach here
+        // we were throwing a lot here for various elements (e.g. floors) and we would
+        // be slowing things down
         // location was not a supported, do not attach to base element
       }
     }
@@ -104,7 +107,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
         category = category,
         location = convertedLocation,
         elements = children,
-        displayValue = displayValue,
+        displayValue = displayValue.Cast<Base>().ToList(),
         properties = properties,
         units = _converterSettings.Current.SpeckleUnits
       };
