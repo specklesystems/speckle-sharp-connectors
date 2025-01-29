@@ -16,6 +16,7 @@ public abstract class SpeckleFormBase : Form, ICsiApplicationService
 {
   private ElementHost Host { get; set; }
   private cPluginCallback _pluginCallback;
+  private bool _disposed;
 #pragma warning disable CA2213
   private ServiceProvider _container;
 #pragma warning restore CA2213
@@ -76,13 +77,24 @@ public abstract class SpeckleFormBase : Form, ICsiApplicationService
     Host = new() { Child = webview, Dock = DockStyle.Fill };
     Controls.Add(Host);
     FormBorderStyle = FormBorderStyle.Sizable;
+    // this.TopLevel = true;
+    // TODO: Get IntrPtr for Csi window
     FormClosing += Form1Closing;
   }
 
-  private void Form1Closing(object? sender, FormClosingEventArgs e)
+  private void Form1Closing(object? sender, FormClosingEventArgs e) => _pluginCallback.Finish(0);
+
+  protected override void Dispose(bool disposing)
   {
-    Host.Dispose();
-    _pluginCallback.Finish(0);
-    _container.Dispose();
+    if (!_disposed)
+    {
+      if (disposing)
+      {
+        _container.Dispose();
+        Host.Dispose();
+        base.Dispose(disposing);
+      }
+      _disposed = true;
+    }
   }
 }

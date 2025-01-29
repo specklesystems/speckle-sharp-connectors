@@ -33,15 +33,15 @@ public sealed class EtabsFramePropertiesExtractor
 
   public void ExtractProperties(CsiFrameWrapper frame, Dictionary<string, object?> properties)
   {
-    var objectId = DictionaryUtils.EnsureNestedDictionary(properties, ObjectPropertyCategory.OBJECT_ID);
-    objectId["designOrientation"] = GetDesignOrientation(frame);
-    (objectId["label"], objectId["level"]) = GetLabelAndLevel(frame);
+    var objectId = properties.EnsureNested(ObjectPropertyCategory.OBJECT_ID);
+    objectId[CommonObjectProperty.DESIGN_ORIENTATION] = GetDesignOrientation(frame);
+    (objectId[CommonObjectProperty.LABEL], objectId[CommonObjectProperty.LEVEL]) = GetLabelAndLevel(frame);
 
-    var assignments = DictionaryUtils.EnsureNestedDictionary(properties, ObjectPropertyCategory.ASSIGNMENTS);
-    assignments["springAssignment"] = GetSpringAssignmentName(frame);
+    var assignments = properties.EnsureNested(ObjectPropertyCategory.ASSIGNMENTS);
+    assignments[CommonObjectProperty.SPRING_ASSIGNMENT] = GetSpringAssignmentName(frame);
 
-    var design = DictionaryUtils.EnsureNestedDictionary(properties, ObjectPropertyCategory.DESIGN);
-    design["designProcedure"] = GetDesignProcedure(frame);
+    var design = properties.EnsureNested(ObjectPropertyCategory.DESIGN);
+    design["Design Procedure"] = GetDesignProcedure(frame);
   }
 
   private (string label, string level) GetLabelAndLevel(CsiFrameWrapper frame)
@@ -77,7 +77,7 @@ public sealed class EtabsFramePropertiesExtractor
 
   private string GetSpringAssignmentName(CsiFrameWrapper frame)
   {
-    string springPropertyName = "None"; // Is there a better way to handle null?
+    string springPropertyName = string.Empty;
     _ = _settingsStore.Current.SapModel.FrameObj.GetSpringAssignment(frame.Name, ref springPropertyName);
     return springPropertyName;
   }

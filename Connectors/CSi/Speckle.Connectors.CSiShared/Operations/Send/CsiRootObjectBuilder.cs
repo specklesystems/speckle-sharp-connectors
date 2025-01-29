@@ -1,12 +1,12 @@
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Builders;
-using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.CSiShared.HostApp.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
+using Speckle.Converters.CSiShared.Extensions;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -30,7 +30,6 @@ namespace Speckle.Connectors.CSiShared.Builders;
 public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
 {
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
-  private readonly ISendConversionCache _sendConversionCache;
   private readonly IConverterSettingsStore<CsiConversionSettings> _converterSettings;
   private readonly CsiSendCollectionManager _sendCollectionManager;
   private readonly MaterialUnpacker _materialUnpacker;
@@ -41,7 +40,6 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
 
   public CsiRootObjectBuilder(
     IRootToSpeckleConverter rootToSpeckleConverter,
-    ISendConversionCache sendConversionCache,
     IConverterSettingsStore<CsiConversionSettings> converterSettings,
     CsiSendCollectionManager sendCollectionManager,
     MaterialUnpacker materialUnpacker,
@@ -51,7 +49,6 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     ICsiApplicationService csiApplicationService
   )
   {
-    _sendConversionCache = sendConversionCache;
     _converterSettings = converterSettings;
     _sendCollectionManager = sendCollectionManager;
     _materialUnpacker = materialUnpacker;
@@ -94,7 +91,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
         cancellationToken.ThrowIfCancellationRequested();
         using var _2 = _activityFactory.Start("Convert");
 
-        var result = ConvertCsiObject(csiObject, rootObjectCollection, sendInfo.ProjectId);
+        var result = ConvertCsiObject(csiObject, rootObjectCollection);
         results.Add(result);
 
         count++;
@@ -123,22 +120,20 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
   /// <summary>
   /// Converts a single Csi wrapper "object" to a data object with appropriate collection management.
   /// </summary>
-  private SendConversionResult ConvertCsiObject(ICsiWrapper csiObject, Collection typeCollection, string projectId)
+  private SendConversionResult ConvertCsiObject(ICsiWrapper csiObject, Collection typeCollection)
   {
-    string applicationId = $"{csiObject.ObjectType}{csiObject.Name}"; // TODO: NO! Use GUID
     string sourceType = csiObject.ObjectName;
+    string applicationId = csiObject switch
+    {
+      CsiFrameWrapper frameWrapper => frameWrapper.GetSpeckleApplicationId(_csiApplicationService.SapModel),
+      CsiJointWrapper jointWrapper => jointWrapper.GetSpeckleApplicationId(_csiApplicationService.SapModel),
+      CsiShellWrapper shellWrapper => shellWrapper.GetSpeckleApplicationId(_csiApplicationService.SapModel),
+      _ => throw new ArgumentException($"Unsupported wrapper type: {csiObject.GetType()}", nameof(csiObject))
+    };
 
     try
     {
-      Base converted;
-      if (_sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value))
-      {
-        converted = value;
-      }
-      else
-      {
-        converted = _rootToSpeckleConverter.Convert(csiObject);
-      }
+      Base converted = _rootToSpeckleConverter.Convert(csiObject);
 
       var collection = _sendCollectionManager.AddObjectCollectionToRoot(converted, typeCollection);
       collection.elements.Add(converted);

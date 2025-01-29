@@ -69,8 +69,8 @@ public class SpeckleTeklaPanelHost : PluginFormBase
   {
     s_instance = this; // Assign the current instance to the static field
 
-    this.Text = "Speckle (Beta)";
-    this.Name = "Speckle (Beta)";
+    Text = "Speckle (Beta)";
+    Name = "Speckle (Beta)";
 
     string assemblyName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
     string resourcePath = $"{assemblyName}.Resources.et_element_Speckle.bmp";
@@ -82,7 +82,7 @@ public class SpeckleTeklaPanelHost : PluginFormBase
       }
 
       using var bmp = new Bitmap(stream);
-      this.Icon = Icon.FromHandle(bmp.GetHicon());
+      Icon = Icon.FromHandle(bmp.GetHicon());
     }
 
     var services = new ServiceCollection();
@@ -110,7 +110,7 @@ public class SpeckleTeklaPanelHost : PluginFormBase
     Controls.Add(Host);
     Operation.DisplayPrompt("Speckle connector initialized.");
 
-    this.TopLevel = true;
+    TopLevel = true;
     SetWindowLongPtr(Handle, GWL_HWNDPARENT, MainWindow.Frame.Handle);
     Show();
     Activate();
