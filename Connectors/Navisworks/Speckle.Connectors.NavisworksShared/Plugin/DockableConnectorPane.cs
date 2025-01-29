@@ -3,6 +3,7 @@ using System.Windows.Forms;
 using System.Windows.Forms.Integration;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connector.Navisworks.DependencyInjection;
+using Speckle.Connector.Navisworks.HostApp;
 using Speckle.Connector.Navisworks.Plugin.Tools;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI;
