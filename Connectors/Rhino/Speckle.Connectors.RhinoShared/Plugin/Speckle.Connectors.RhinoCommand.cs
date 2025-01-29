@@ -23,7 +23,7 @@ public class SpeckleConnectorsRhinoCommand : Command
     Panels.RegisterPanel(
       SpeckleConnectorsRhinoPlugin.Instance,
       typeof(SpeckleRhinoPanelHost),
-      "Speckle (Beta) for Rhino",
+      "Speckle (Beta)",
       new Icon(iconPath),
       PanelType.System
     );

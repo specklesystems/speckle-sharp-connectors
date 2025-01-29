@@ -7,7 +7,7 @@ public abstract class EtabsPluginBase : CSiPluginBase
 {
   public override int Info(ref string text)
   {
-    text = "Hey Speckler! This is our next-gen ETABS Connector.";
+    text = "Next Gen Speckle Connector for ETABS";
     return 0;
   }
 

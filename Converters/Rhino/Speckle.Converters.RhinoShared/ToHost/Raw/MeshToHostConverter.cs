@@ -22,8 +22,6 @@ public class MeshToHostConverter : ITypedConverter<SOG.Mesh, RG.Mesh>
   /// <remarks>⚠️ This conversion does NOT perform scaling.</remarks>
   public RG.Mesh Convert(SOG.Mesh target)
   {
-    target.AlignVerticesWithTexCoordsByIndex();
-
     RG.Mesh m = new();
 
     var vertices = _pointListConverter.Convert(target.vertices);

@@ -3,7 +3,10 @@ using System.Windows.Forms;
 using System.Windows.Forms.Integration;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connector.Navisworks.DependencyInjection;
+using Speckle.Connector.Navisworks.HostApp;
 using Speckle.Connectors.Common;
+using Speckle.Connectors.DUI;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Converter.Navisworks.DependencyInjection;
 using Speckle.Sdk.Host;
@@ -15,10 +18,10 @@ namespace Speckle.Connector.Navisworks.Plugin;
   NAV.Plugins.Plugin(
     LaunchSpeckleConnector.PLUGIN,
     "Speckle",
-    DisplayName = "Speckle",
+    DisplayName = "Speckle (Beta)",
     Options = NAV.Plugins.PluginOptions.None,
     ToolTip = "Speckle Connector for Navisworks",
-    ExtendedToolTip = "Speckle Connector for Navisworks"
+    ExtendedToolTip = "Next Gen Speckle Connector (Beta) for Navisworks"
   )
 ]
 [SuppressMessage(
@@ -42,6 +45,9 @@ internal sealed class Connector : NAV.Plugins.DockPanePlugin
     services.AddNavisworksConverter();
 
     Container = services.BuildServiceProvider();
+    NavisworksEvents.Register(Container.GetRequiredService<IEventAggregator>());
+    Container.UseDUI();
+    Container.GetRequiredService<NavisworksDocumentEvents>();
 
     var u = Container.GetRequiredService<DUI3ControlWebView>();
 

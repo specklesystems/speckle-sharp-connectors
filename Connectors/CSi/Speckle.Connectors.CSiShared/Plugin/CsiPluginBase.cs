@@ -10,8 +10,8 @@ public abstract class CSiPluginBase : cPluginContract, IDisposable
   public void Main(ref cSapModel sapModel, ref cPluginCallback pluginCallback)
   {
     _panel = CreateForm();
-    _panel.SetSapModel(ref sapModel, ref pluginCallback);
-    _panel.FormClosed += (s, e) => Dispose();
+    _panel.Initialize(ref sapModel, ref pluginCallback);
+    _panel.FormClosed += (_, _) => Dispose();
 
     if (string.Equals(s_modality, "Non-Modal", StringComparison.OrdinalIgnoreCase))
     {
