@@ -50,4 +50,5 @@ public static class CommonObjectProperty
   public const string PROPERTY_MODIFIERS = "Property Modifiers";
   public const string ANGLE = "Angle";
   public const string ADVANCED = "Advanced";
+  public const string DESIGN_ORIENTATION = "Design Orientation";
 }

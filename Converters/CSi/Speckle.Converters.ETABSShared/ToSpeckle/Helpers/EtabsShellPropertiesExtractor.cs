@@ -43,7 +43,7 @@ public sealed class EtabsShellPropertiesExtractor
   public void ExtractProperties(CsiShellWrapper shell, Dictionary<string, object?> properties)
   {
     var objectId = properties.EnsureNested(ObjectPropertyCategory.OBJECT_ID);
-    objectId["Design Orientation"] = GetDesignOrientation(shell);
+    objectId[CommonObjectProperty.DESIGN_ORIENTATION] = GetDesignOrientation(shell);
     (objectId[CommonObjectProperty.LABEL], objectId[CommonObjectProperty.LEVEL]) = GetLabelAndLevel(shell);
 
     var assignments = properties.EnsureNested(ObjectPropertyCategory.ASSIGNMENTS);
