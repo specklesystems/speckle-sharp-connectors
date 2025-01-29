@@ -84,18 +84,20 @@ public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilter
       .ActiveDocument.SelectionSets.RootItem.Children.Where(set => set.IsGroup)
       .ToList();
 
-    AvailableSavedSets = savedSetRecords.Select(setRecord =>
-    {
-      NAV.SavedItem? record = setRecord.CreateCopy();
-      string? name = record.DisplayName;
-
-      while (record.Parent != null)
+    AvailableSavedSets = savedSetRecords
+      .Select(setRecord =>
       {
-        name = record.Parent.DisplayName + "::" + name;
-        record = record.Parent;
-      }
+        NAV.SavedItem? record = setRecord.CreateCopy();
+        string? name = record.DisplayName;
 
-      return new NavisworksSavedSetsData(name, setRecord.Guid.ToString());
-    }).ToList();
+        while (record.Parent != null)
+        {
+          name = record.Parent.DisplayName + "::" + name;
+          record = record.Parent;
+        }
+
+        return new NavisworksSavedSetsData(name, setRecord.Guid.ToString());
+      })
+      .ToList();
   }
 }
