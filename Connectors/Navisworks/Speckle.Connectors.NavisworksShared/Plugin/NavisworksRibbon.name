@@ -4,7 +4,7 @@ $utf8
 
 DisplayName=Speckle
 Speckle.DisplayName=Speckle
-SpeckleV3.Title=Speckle v3
-SpeckleV2.Title=Legacy
-Speckle_Launch.DisplayName=Speckle v3
-Speckle_Launch_V2.DisplayName=Speckle v2
+SpeckleV3.Title=Speckle (Beta)
+SpeckleV2.Title=Speckle
+Speckle_Launch.DisplayName=Speckle (Beta)
+Speckle_Launch_V2.DisplayName=Speckle
