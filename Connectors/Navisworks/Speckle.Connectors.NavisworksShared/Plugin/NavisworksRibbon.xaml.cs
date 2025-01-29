@@ -1,171 +1,122 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Windows.Forms;
-#if DEBUG
-using System.Text;
-#endif
+using Speckle.Connector.Navisworks.Plugin.Tools;
 
 namespace Speckle.Connector.Navisworks.Plugin;
 
+/// <summary>
+/// Handles plugin state and ribbon management for the Speckle V3 and V2 connectors.
+/// </summary>
 [
-  NAV.Plugins.Plugin("SpeckleNavisworksNextGen", "Speckle", DisplayName = "Speckle (Beta)"),
-  NAV.Plugins.Strings("NavisworksRibbon.name"),
+  NAV.Plugins.Plugin(SpeckleV3Tool.PLUGIN_ID, SpeckleV3Tool.DEVELOPER_ID, DisplayName = SpeckleV3Tool.DISPLAY_NAME),
+  NAV.Plugins.Strings(SpeckleV3Tool.RIBBON_STRINGS),
   NAV.Plugins.RibbonLayout("NavisworksRibbon.xaml"),
-  NAV.Plugins.RibbonTab("Speckle", DisplayName = "Speckle", LoadForCanExecute = true),
-  NAV.Plugins.Command(
-    LaunchSpeckleConnector.COMMAND,
-    LoadForCanExecute = true,
-    Icon = "Resources/s2logo16.png",
-    LargeIcon = "Resources/s2logo32.png",
-    ToolTip = "Next Gen Speckle Connector (Beta) for Navisworks",
-    DisplayName = "Speckle (Beta)"
+  NAV.Plugins.RibbonTab(
+    SpeckleV3Tool.RIBBON_TAB_ID,
+    DisplayName = SpeckleV3Tool.RIBBON_TAB_DISPLAY_NAME,
+    LoadForCanExecute = true
   ),
+  NAV.Plugins.Command(
+    SpeckleV3Tool.COMMAND,
+    LoadForCanExecute = true,
+    Icon = "Resources/v3_logo16.png",
+    LargeIcon = "Resources/v3_logo32.png",
+    ToolTip = "Speckle Connector for Navisworks",
+    DisplayName = "$Speckle_Launch.DisplayName"
+  ),
+  NAV.Plugins.Command(
+    SpeckleV2Tool.COMMAND,
+    LoadForCanExecute = true,
+    Icon = "Resources/v2_logo16.png",
+    LargeIcon = "Resources/v2_logo32.png",
+    ToolTip = "Legacy Speckle v2 Connector",
+    DisplayName = "$Speckle_Launch_V2.DisplayName"
+  )
 ]
-[SuppressMessage(
-  "design",
-  "CA1812:Avoid uninstantiated internal classes",
-  Justification = "Instantiated by Navisworks"
-)]
 internal sealed class RibbonHandler : NAV.Plugins.CommandHandlerPlugin
 {
-  // ReSharper disable once CollectionNeverQueried.Local
-  private static readonly Dictionary<NAV.Plugins.Plugin, bool> s_loadedPlugins = [];
+  private static bool? s_isV2PluginAvailable; // Nullable to indicate uncached state.
+  private static bool s_isV2RibbonHidden; // Tracks if the ribbon tab is already hidden.
 
-  /// <summary>
-  /// Determines the state of a command in Navisworks.
-  /// </summary>
-  /// <param name="commandId">The ID of the command to check.</param>
-  /// <returns>The state of the command.</returns>
-  public override NAV.Plugins.CommandState CanExecuteCommand(string commandId) =>
-    commandId == LaunchSpeckleConnector.COMMAND
-      ? new NAV.Plugins.CommandState(true)
-      : new NAV.Plugins.CommandState(false);
-
-  /// <summary>
-  /// Loads a plugin in Navisworks.
-  /// </summary>
-  /// <param name="plugin">The name of the plugin to load.</param>
-  /// <param name="notAutomatedCheck">Optional. Specifies whether to check if the application is automated. Default is true.</param>
-  /// <param name="command">Optional. The command associated with the plugin. Default is an empty string.</param>
-  private static void LoadPlugin(string plugin, bool notAutomatedCheck = true, string command = "")
+  static RibbonHandler()
   {
-    if (ShouldSkipLoad(notAutomatedCheck))
-    {
-      return;
-    }
-
-    if (ShouldSkipPluginLoad(plugin, command))
-    {
-      return;
-    }
-
-    var pluginRecord = NavisworksApp.Plugins.FindPlugin(plugin + ".Speckle");
-    if (pluginRecord is null)
-    {
-      return;
-    }
-
-    var loadedPlugin = pluginRecord.LoadedPlugin ?? pluginRecord.LoadPlugin();
-
-    ActivatePluginPane(pluginRecord, loadedPlugin, command);
+    // Subscribe to the static PluginRecordsChanged event
+    NAV.ApplicationParts.ApplicationPlugins.PluginRecordsChanged += OnPluginRecordsChanged;
   }
 
-  /// <summary>
-  /// Checks whether the load should be skipped based on the notAutomatedCheck flag and application automation status.
-  /// </summary>
-  /// <param name="notAutomatedCheck">The flag indicating whether to check if the application is automated.</param>
-  /// <returns>True if the load should be skipped, False otherwise.</returns>
-  private static bool ShouldSkipLoad(bool notAutomatedCheck) => notAutomatedCheck && NavisworksApp.IsAutomated;
+  private static void OnPluginRecordsChanged(object sender, EventArgs e) => s_isV2PluginAvailable = null;
 
   /// <summary>
-  /// Checks whether the plugin load should be skipped based on the plugin and command values.
+  /// Determines whether a command can be executed and manages V2 plugin visibility.
   /// </summary>
-  /// <param name="plugin">The name of the plugin.</param>
-  /// <param name="command">The command associated with the plugin.</param>
-  /// <returns>True if the plugin load should be skipped, False otherwise.</returns>
-  private static bool ShouldSkipPluginLoad(string plugin, string command) =>
-    string.IsNullOrEmpty(plugin) || string.IsNullOrEmpty(command);
-
-  /// <summary>
-  /// Activates the plugin's pane if it is of the right type.
-  /// </summary>
-  /// <param name="pluginRecord">The plugin record.</param>
-  /// <param name="loadedPlugin">The loaded plugin instance.</param>
-  /// <param name="command">The command associated with the plugin.</param>
-  private static void ActivatePluginPane(NAV.Plugins.PluginRecord pluginRecord, object loadedPlugin, string command)
+  /// <param name="commandId">The command identifier to check.</param>
+  /// <returns>A CommandState indicating whether the command can be executed.</returns>
+  public override NAV.Plugins.CommandState CanExecuteCommand(string commandId)
   {
-    if (ShouldActivatePluginPane(pluginRecord))
+    switch (commandId)
     {
-      var dockPanePlugin = (NAV.Plugins.DockPanePlugin)loadedPlugin;
-      dockPanePlugin.ActivatePane();
+      case SpeckleV3Tool.COMMAND:
+        return new NAV.Plugins.CommandState(true);
+      case SpeckleV2Tool.COMMAND:
+      {
+        // Find the v2 plugin
+        NAV.Plugins.PluginRecord? v2Plugin = PluginUtilities.FindV2Plugin();
+        s_isV2PluginAvailable = v2Plugin != null;
 
-      s_loadedPlugins[dockPanePlugin] = true;
-    }
-    else
-    {
-#if DEBUG
-      ShowPluginInfoMessageBox();
-      ShowPluginNotLoadedMessageBox(command);
-#endif
+        // Pass the plugin to the method for managing ribbon visibility
+        HideV2RibbonTab();
+
+        return new NAV.Plugins.CommandState((bool)s_isV2PluginAvailable);
+      }
+      default:
+        return new NAV.Plugins.CommandState(false);
     }
   }
 
-  /// <summary>
-  /// Checks whether the plugin's pane should be activated based on the plugin record.
-  /// </summary>
-  /// <param name="pluginRecord">The plugin record.</param>
-  /// <returns>True if the plugin's pane should be activated, False otherwise.</returns>
-  private static bool ShouldActivatePluginPane(NAV.Plugins.PluginRecord pluginRecord) =>
-    pluginRecord.IsLoaded && pluginRecord is NAV.Plugins.DockPanePluginRecord && pluginRecord.IsEnabled;
+  private static void HideV2RibbonTab()
+  {
+    if (s_isV2RibbonHidden)
+    {
+      return; // Skip if already hidden.
+    }
 
+    var v2RibbonTab = Autodesk.Windows.ComponentManager.Ribbon.Tabs.FirstOrDefault(tab =>
+      tab.Id == SpeckleV2Tool.RIBBON_TAB_ID + SpeckleV2Tool.PLUGIN_SUFFIX
+    );
+
+    if (v2RibbonTab == null)
+    {
+      return;
+    }
+
+    Autodesk.Windows.ComponentManager.Ribbon.Tabs.Remove(v2RibbonTab);
+    s_isV2RibbonHidden = true; // Mark as hidden to avoid redundant calls.
+  }
+
+  /// <summary>
+  /// Executes the specified command after validating the Navisworks version.
+  /// </summary>
+  /// <param name="commandId">The command to execute.</param>
+  /// <param name="parameters">Additional command parameters.</param>
+  /// <returns>0 if successful, non-zero otherwise.</returns>
   public override int ExecuteCommand(string commandId, params string[] parameters)
   {
-    // ReSharper disable once RedundantAssignment
-    var buildVersion = string.Empty;
-
-#if NAVIS2020
-    buildVersion = "2020";
-#endif
-#if NAVIS2021
-    buildVersion = "2021";
-#endif
-#if NAVIS2022
-    buildVersion = "2022";
-#endif
-#if NAVIS2023
-    buildVersion = "2023";
-#endif
-#if NAVIS2024
-    buildVersion = "2024";
-#endif
-#if NAVIS2025
-    buildVersion = "2025";
-#endif
-
-    // Version
-    if (!NavisworksApp.Version.RuntimeProductName.Contains(buildVersion))
+    if (!IsValidVersion())
     {
-      MessageBox.Show(
-        "This Add-In was built for Navisworks "
-          + buildVersion
-          + ", please contact jonathon@speckle.systems for assistance...",
-        "Cannot Continue!",
-        MessageBoxButtons.OK,
-        MessageBoxIcon.Error
-      );
       return 0;
     }
 
     switch (commandId)
     {
-      case LaunchSpeckleConnector.COMMAND:
-      {
-        LoadPlugin(LaunchSpeckleConnector.PLUGIN, command: commandId);
+      case SpeckleV3Tool.COMMAND:
+        HandleCommand(SpeckleV3Tool.PLUGIN, commandId);
         break;
-      }
 
+      case SpeckleV2Tool.COMMAND:
+        HandleCommand(SpeckleV2Tool.PLUGIN, $"{SpeckleV2Tool.PLUGIN}.{SpeckleV2Tool.DEVELOPER_ID}");
+        break;
       default:
       {
-        MessageBox.Show("You have clicked on an unexpected command with ID = '" + commandId + "'");
+        MessageBox.Show($"You have clicked on an unexpected command with ID = '{commandId}'");
         break;
       }
     }
@@ -173,25 +124,37 @@ internal sealed class RibbonHandler : NAV.Plugins.CommandHandlerPlugin
     return 0;
   }
 
-#if DEBUG
-  /// <summary>
-  /// Shows a message box displaying plugin information.
-  /// </summary>
-  private static void ShowPluginInfoMessageBox()
+  private static void HandleCommand(string pluginId, string commandId)
   {
-    var sb = new StringBuilder();
-    foreach (var pr in NavisworksApp.Plugins.PluginRecords)
+    if (PluginUtilities.ShouldSkipLoad(pluginId, commandId, true))
     {
-      sb.AppendLine(pr.Name + ": " + pr.DisplayName + ", " + pr.Id);
+      return;
     }
 
-    MessageBox.Show(sb.ToString());
+    var pluginRecord = NavisworksApp.Plugins.FindPlugin(pluginId + SpeckleV3Tool.PLUGIN_SUFFIX);
+    if (pluginRecord == null)
+    {
+      return;
+    }
+
+    _ = pluginRecord.LoadedPlugin ?? pluginRecord.LoadPlugin();
+    PluginUtilities.ActivatePluginPane(pluginRecord);
   }
 
-  /// <summary>
-  /// Shows a message box indicating that the plugin was not loaded.
-  /// </summary>
-  /// <param name="command">The command associated with the plugin.</param>
-  private static void ShowPluginNotLoadedMessageBox(string command) => MessageBox.Show(command + " Plugin not loaded.");
-#endif
+  private static bool IsValidVersion()
+  {
+    if (NavisworksApp.Version.RuntimeProductName.Contains(SpeckleV3Tool.Version.ToString().Replace("v", "")))
+    {
+      return true;
+    }
+
+    MessageBox.Show(
+      $"This Add-In was built for Navisworks {SpeckleV3Tool.Version}, "
+        + $"please contact support@speckle.systems for assistance...",
+      "Cannot Continue!",
+      MessageBoxButtons.OK,
+      MessageBoxIcon.Error
+    );
+    return false;
+  }
 }
