@@ -4,6 +4,7 @@ using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Sdk;
@@ -31,6 +32,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
     IAccountManager accountManager,
     ISpeckleApplication speckleApplication,
     ILogger<AutocadBasicConnectorBinding> logger,
+    IEventAggregator eventAggregator,
     IThreadContext threadContext
   )
   {
@@ -39,14 +41,12 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
     _accountManager = accountManager;
     _speckleApplication = speckleApplication;
     Commands = new BasicConnectorBindingCommands(parent);
-    _store.DocumentChanged += (_, _) =>
-      parent.TopLevelExceptionHandler.FireAndForget(async () =>
-      {
-        await Commands.NotifyDocumentChanged();
-      });
+    eventAggregator.GetEvent<DocumentStoreChangedEvent>().Subscribe(OnDocumentStoreChangedEvent);
     _logger = logger;
     _threadContext = threadContext;
   }
+
+  private async Task OnDocumentStoreChangedEvent(object _) => await Commands.NotifyDocumentChanged();
 
   public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
 

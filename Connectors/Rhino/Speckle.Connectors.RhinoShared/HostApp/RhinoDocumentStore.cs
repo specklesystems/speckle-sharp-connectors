@@ -1,36 +1,42 @@
 using Rhino;
-using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
+using Speckle.Connectors.RhinoShared;
 
 namespace Speckle.Connectors.Rhino.HostApp;
 
 public class RhinoDocumentStore : DocumentModelStore
 {
+  private readonly IEventAggregator _eventAggregator;
   private const string SPECKLE_KEY = "Speckle_DUI3";
   public override bool IsDocumentInit { get; set; } = true; // Note: because of rhino implementation details regarding expiry checking of sender cards.
 
-  public RhinoDocumentStore(IJsonSerializer jsonSerializer, ITopLevelExceptionHandler topLevelExceptionHandler)
+  public RhinoDocumentStore(IJsonSerializer jsonSerializer, IEventAggregator eventAggregator)
     : base(jsonSerializer)
   {
-    RhinoDoc.BeginOpenDocument += (_, _) => topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
-    RhinoDoc.EndOpenDocument += (_, e) =>
-      topLevelExceptionHandler.CatchUnhandled(() =>
-      {
-        if (e.Merge)
-        {
-          return;
-        }
+    _eventAggregator = eventAggregator;
+    eventAggregator.GetEvent<BeginOpenDocument>().Subscribe(OnBeginOpenDocument);
+    eventAggregator.GetEvent<EndOpenDocument>().Subscribe(OnEndOpenDocument);
+  }
 
-        if (e.Document == null)
-        {
-          return;
-        }
+  private void OnBeginOpenDocument(object _) => IsDocumentInit = false;
 
-        IsDocumentInit = true;
-        LoadState();
-        OnDocumentChanged();
-      });
+  private async Task OnEndOpenDocument(DocumentOpenEventArgs e)
+  {
+    if (e.Merge)
+    {
+      return;
+    }
+
+    if (e.Document == null)
+    {
+      return;
+    }
+
+    IsDocumentInit = true;
+    LoadState();
+    await _eventAggregator.GetEvent<DocumentStoreChangedEvent>().PublishAsync(new object());
   }
 
   protected override void HostAppSaveState(string modelCardState)

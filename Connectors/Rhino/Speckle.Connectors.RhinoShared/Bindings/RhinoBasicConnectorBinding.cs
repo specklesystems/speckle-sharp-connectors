@@ -4,6 +4,7 @@ using Rhino.Geometry;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Rhino.Extensions;
@@ -26,7 +27,8 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
     DocumentModelStore store,
     IBrowserBridge parent,
     ISendConversionCache sendConversionCache,
-    ISpeckleApplication speckleApplication
+    ISpeckleApplication speckleApplication,
+    IEventAggregator eventAggregator
   )
   {
     _store = store;
@@ -35,13 +37,14 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
     _speckleApplication = speckleApplication;
     Commands = new BasicConnectorBindingCommands(parent);
 
-    _store.DocumentChanged += (_, _) =>
-      parent.TopLevelExceptionHandler.FireAndForget(async () =>
-      {
-        await Commands.NotifyDocumentChanged();
-        // Note: this prevents scaling issues when copy-pasting from one rhino doc to another in the same session.
-        _sendConversionCache.ClearCache();
-      });
+    eventAggregator.GetEvent<DocumentStoreChangedEvent>().Subscribe(OnDocumentStoreChangedEvent);
+  }
+
+  private async Task OnDocumentStoreChangedEvent(object _)
+  {
+    await Commands.NotifyDocumentChanged();
+    // Note: this prevents scaling issues when copy-pasting from one rhino doc to another in the same session.
+    _sendConversionCache.ClearCache();
   }
 
   public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;

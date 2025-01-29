@@ -23,6 +23,9 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<SharedPropertiesExtractor>();
     serviceCollection.AddScoped<DisplayValueExtractor>();
 
+    // Register connector caches
+    serviceCollection.AddScoped<CsiToSpeckleCacheSingleton>();
+
     // Settings and unit conversions
     serviceCollection.AddApplicationConverters<CsiToSpeckleUnitConverter, eUnits>(converterAssembly);
     serviceCollection.AddScoped<

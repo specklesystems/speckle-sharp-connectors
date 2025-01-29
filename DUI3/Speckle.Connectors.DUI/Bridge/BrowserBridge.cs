@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Newtonsoft.Json;
 using Speckle.Sdk.Common;
@@ -27,7 +28,8 @@ public sealed class BrowserBridge : IBrowserBridge
   /// </summary>
 
   private readonly ConcurrentDictionary<string, string?> _resultsStore = new();
-  public ITopLevelExceptionHandler TopLevelExceptionHandler { get; }
+
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IThreadContext _threadContext;
   private readonly IThreadOptions _threadOptions;
 
@@ -60,19 +62,34 @@ public sealed class BrowserBridge : IBrowserBridge
     IThreadContext threadContext,
     IJsonSerializer jsonSerializer,
     ILogger<BrowserBridge> logger,
-    ILogger<TopLevelExceptionHandler> topLogger,
     IBrowserScriptExecutor browserScriptExecutor,
-    IThreadOptions threadOptions
+    IThreadOptions threadOptions,
+    IEventAggregator eventAggregator,
+    ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
     _threadContext = threadContext;
     _jsonSerializer = jsonSerializer;
     _logger = logger;
-    TopLevelExceptionHandler = new TopLevelExceptionHandler(topLogger, this);
     // Capture the main thread's SynchronizationContext
     _browserScriptExecutor = browserScriptExecutor;
     _threadOptions = threadOptions;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
+    eventAggregator.GetEvent<ExceptionEvent>().Subscribe(OnExceptionEvent, ThreadOption.MainThread);
   }
+
+  private async Task OnExceptionEvent(Exception ex) =>
+    await Send(
+        BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION,
+        new
+        {
+          type = ToastNotificationType.DANGER,
+          title = "Unhandled Exception Occurred",
+          description = ex.ToFormattedString(),
+          autoClose = false
+        }
+      )
+      .ConfigureAwait(false);
 
   public void AssociateWithBinding(IBinding binding)
   {
@@ -110,12 +127,14 @@ public sealed class BrowserBridge : IBrowserBridge
       .RunOnThreadAsync(
         async () =>
         {
-          var task = await TopLevelExceptionHandler.CatchUnhandledAsync(async () =>
-          {
-            var result = await ExecuteMethod(methodName, methodArgs);
-            string resultJson = _jsonSerializer.Serialize(result);
-            NotifyUIMethodCallResultReady(requestId, resultJson);
-          });
+          var task = await _topLevelExceptionHandler
+            .CatchUnhandledAsync(async () =>
+            {
+              var result = await ExecuteMethod(methodName, methodArgs).ConfigureAwait(false);
+              string resultJson = _jsonSerializer.Serialize(result);
+              NotifyUIMethodCallResultReady(requestId, resultJson);
+            })
+            .ConfigureAwait(false);
           if (task.Exception is not null)
           {
             string resultJson = SerializeFormattedException(task.Exception);
