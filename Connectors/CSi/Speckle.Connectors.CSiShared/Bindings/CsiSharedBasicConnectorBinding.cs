@@ -1,5 +1,6 @@
 ﻿using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Sdk;
@@ -10,7 +11,7 @@ public class CsiSharedBasicConnectorBinding : IBasicConnectorBinding
 {
   private readonly ISpeckleApplication _speckleApplication;
   private readonly DocumentModelStore _store;
-
+  private readonly IEventAggregator _eventAggregator;
   public string Name => "baseBinding";
   public IBrowserBridge Parent { get; }
   public BasicConnectorBindingCommands Commands { get; }
@@ -18,14 +19,20 @@ public class CsiSharedBasicConnectorBinding : IBasicConnectorBinding
   public CsiSharedBasicConnectorBinding(
     IBrowserBridge parent,
     ISpeckleApplication speckleApplication,
-    DocumentModelStore store
+    DocumentModelStore store,
+    IEventAggregator eventAggregator
   )
   {
     Parent = parent;
     _speckleApplication = speckleApplication;
     _store = store;
-    Commands = new BasicConnectorBindingCommands(parent);
+    Commands = new BasicConnectorBindingCommands(Parent);
+    _eventAggregator = eventAggregator;
+
+    _eventAggregator.GetEvent<DocumentStoreChangedEvent>().Subscribe(OnDocumentStoreChangedEvent);
   }
+
+  private async Task OnDocumentStoreChangedEvent(object _) => await Commands.NotifyDocumentChanged();
 
   public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
 
@@ -33,7 +40,7 @@ public class CsiSharedBasicConnectorBinding : IBasicConnectorBinding
 
   public string GetSourceApplicationVersion() => _speckleApplication.HostApplicationVersion;
 
-  public DocumentInfo? GetDocumentInfo() => new DocumentInfo("ETABS Model", "ETABS Model", "1");
+  public DocumentInfo? GetDocumentInfo() => new("ETABS Model", "ETABS Model", "1");
 
   public DocumentModelStore GetDocumentState() => _store;
 

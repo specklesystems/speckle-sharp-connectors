@@ -34,9 +34,9 @@ public sealed class CsiJointPropertiesExtractor
   {
     jointData.ApplicationId = joint.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
 
-    var assignments = DictionaryUtils.EnsureNestedDictionary(jointData.Properties, "Assignments");
-    assignments["groups"] = new List<string>(GetGroupAssigns(joint));
-    assignments["restraints"] = GetRestraints(joint);
+    var assignments = jointData.Properties.EnsureNested(ObjectPropertyCategory.ASSIGNMENTS);
+    assignments[CommonObjectProperty.GROUPS] = new List<string>(GetGroupAssigns(joint));
+    assignments["Restraints"] = GetRestraints(joint);
   }
 
   private string[] GetGroupAssigns(CsiJointWrapper joint)
@@ -49,16 +49,16 @@ public sealed class CsiJointPropertiesExtractor
 
   private Dictionary<string, bool?> GetRestraints(CsiJointWrapper joint)
   {
-    bool[] restraints = Array.Empty<bool>();
+    bool[] restraints = [];
     _ = _settingsStore.Current.SapModel.PointObj.GetRestraint(joint.Name, ref restraints);
     return new Dictionary<string, bool?>
     {
-      ["U1"] = restraints[0],
-      ["U2"] = restraints[1],
-      ["U3"] = restraints[2],
-      ["R1"] = restraints[3],
-      ["R2"] = restraints[4],
-      ["R3"] = restraints[5],
+      ["UX Restrained"] = restraints[0],
+      ["UY Restrained"] = restraints[1],
+      ["UZ Restrained"] = restraints[2],
+      ["RX Restrained"] = restraints[3],
+      ["RY Restrained"] = restraints[4],
+      ["RZ Restrained"] = restraints[5],
     };
   }
 }
