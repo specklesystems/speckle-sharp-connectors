@@ -1,6 +1,5 @@
 using Speckle.DoubleNumerics;
 
-
 namespace Speckle.Common.MeshTriangulation;
 
 public interface IBaseTransformer

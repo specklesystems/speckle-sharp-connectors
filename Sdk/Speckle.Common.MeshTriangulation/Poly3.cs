@@ -16,7 +16,7 @@ public readonly struct Poly3
     Vertices = vertices ?? throw new ArgumentNullException(nameof(vertices));
   }
 
-  // helper function, only works on polygons with at least 3 vertices 
+  // helper function, only works on polygons with at least 3 vertices
   public Vector3 GetNormal()
   {
     if (Vertices.Count < 3)

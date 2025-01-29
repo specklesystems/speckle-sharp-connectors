@@ -99,9 +99,22 @@ public class BaseTransformer : IBaseTransformer
   private Matrix4x4 GetTransformationMatrix(Vector3 xBasis, Vector3 yBasis, Vector3 normal)
   {
     return new Matrix4x4(
-        xBasis.X, xBasis.Y, xBasis.Z, 0,
-        yBasis.X, yBasis.Y, yBasis.Z, 0,
-        normal.X, normal.Y, normal.Z, 0,
-        0, 0, 0, 1);
+      xBasis.X,
+      xBasis.Y,
+      xBasis.Z,
+      0,
+      yBasis.X,
+      yBasis.Y,
+      yBasis.Z,
+      0,
+      normal.X,
+      normal.Y,
+      normal.Z,
+      0,
+      0,
+      0,
+      0,
+      1
+    );
   }
 }
