@@ -72,7 +72,8 @@ public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilter
       .ToList();
 
   private IEnumerable<string> ResolveSearchSet(NAV.Search selectionSetSearch) =>
-    selectionSetSearch.FindAll(NavisworksApp.ActiveDocument, false)
+    selectionSetSearch
+      .FindAll(NavisworksApp.ActiveDocument, false)
       .Where(_selectionService.IsVisible) // Exclude hidden elements
       .Select(_selectionService.GetModelItemPath) // Resolve to index paths
       .ToList();
