@@ -44,14 +44,14 @@ public sealed class EtabsShellPropertiesExtractor
   {
     var objectId = properties.EnsureNested(ObjectPropertyCategory.OBJECT_ID);
     objectId["Design Orientation"] = GetDesignOrientation(shell);
-    (objectId["Label"], objectId["Level"]) = GetLabelAndLevel(shell);
+    (objectId[CommonObjectProperty.LABEL], objectId[CommonObjectProperty.LEVEL]) = GetLabelAndLevel(shell);
 
     var assignments = properties.EnsureNested(ObjectPropertyCategory.ASSIGNMENTS);
     assignments["Diaphragm"] = GetAssignedDiaphragmName(shell);
     assignments["Opening"] = IsOpening(shell);
     assignments["Pier"] = GetPierAssignmentName(shell);
     assignments["Spandrel"] = GetSpandrelAssignmentName(shell);
-    assignments["Spring Assignment"] = GetSpringAssignmentName(shell);
+    assignments[CommonObjectProperty.SPRING_ASSIGNMENT] = GetSpringAssignmentName(shell);
 
     // NOTE: Section Property and Material are a "quick-fix" to enable filtering in the viewer etc.
     // Assign Section Property to variable as this will be an argument for the GetMaterialName method

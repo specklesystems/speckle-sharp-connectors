@@ -25,10 +25,29 @@ public static class ObjectPropertyKey
   public const string SECTION_ID = "Section Property";
 }
 
+/// <summary>
+/// These strings are repeatedly used group properties (mimics the host app UI)
+/// </summary>
 public static class SectionPropertyCategory
 {
   public const string GENERAL_DATA = "General Data";
   public const string SECTION_PROPERTIES = "Section Properties";
   public const string SECTION_DIMENSIONS = "Section Dimensions";
   public const string PROPERTY_DATA = "Property Data";
+}
+
+/// <summary>
+/// These strings are properties repeated and common to various object types (joint, frame, shell etc.)
+/// </summary>
+public static class CommonObjectProperty
+{
+  public const string LABEL = "Label";
+  public const string LEVEL = "Level";
+  public const string GROUPS = "Groups";
+  public const string SPRING_ASSIGNMENT = "Spring Assignment";
+  public const string LOCAL_AXIS_2_ANGLE = "Local Axis 2 Angle";
+  public const string MATERIAL_OVERWRITE = "Material Overwrite";
+  public const string PROPERTY_MODIFIERS = "Property Modifiers";
+  public const string ANGLE = "Angle";
+  public const string ADVANCED = "Advanced";
 }
