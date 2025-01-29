@@ -48,9 +48,14 @@ public class EtabsSendCollectionManager : CsiSendCollectionManager
       return DEFAULT_LEVEL;
     }
 
-    if (properties.TryGetValue("Object ID", out var objectId) && objectId is Dictionary<string, object> parameters)
+    if (
+      properties.TryGetValue(ObjectPropertyCategory.OBJECT_ID, out var objectId)
+      && objectId is Dictionary<string, object> parameters
+    )
     {
-      return parameters.TryGetValue("level", out var level) ? level?.ToString() ?? DEFAULT_LEVEL : DEFAULT_LEVEL;
+      return parameters.TryGetValue(CommonObjectProperty.LEVEL, out var level)
+        ? level?.ToString() ?? DEFAULT_LEVEL
+        : DEFAULT_LEVEL;
     }
 
     return DEFAULT_LEVEL;
@@ -72,9 +77,12 @@ public class EtabsSendCollectionManager : CsiSendCollectionManager
       && obj["properties"] is Dictionary<string, object> properties
     )
     {
-      if (properties.TryGetValue("Object ID", out var objectId) && objectId is Dictionary<string, object> parameters)
+      if (
+        properties.TryGetValue(ObjectPropertyCategory.OBJECT_ID, out var objectId)
+        && objectId is Dictionary<string, object> parameters
+      )
       {
-        if (parameters.TryGetValue("designOrientation", out var orientation))
+        if (parameters.TryGetValue(CommonObjectProperty.DESIGN_ORIENTATION, out var orientation))
         {
           return GetCategoryFromDesignOrientation(orientation?.ToString(), type);
         }

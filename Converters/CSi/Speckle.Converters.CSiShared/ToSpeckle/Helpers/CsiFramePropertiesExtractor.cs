@@ -51,10 +51,10 @@ public sealed class CsiFramePropertiesExtractor
     (geometry["I-End Joint"], geometry["J-End Joint"]) = GetEndPointNames(frame);
 
     var assignments = frameData.Properties.EnsureNested(ObjectPropertyCategory.ASSIGNMENTS);
-    assignments["Groups"] = GetGroupAssigns(frame);
-    assignments["Material Overwrite"] = GetMaterialOverwrite(frame);
-    assignments["Local Axis 2 Angle"] = GetLocalAxes(frame);
-    assignments["Property Modifiers"] = GetModifiers(frame);
+    assignments[CommonObjectProperty.GROUPS] = GetGroupAssigns(frame);
+    assignments[CommonObjectProperty.MATERIAL_OVERWRITE] = GetMaterialOverwrite(frame);
+    assignments[CommonObjectProperty.LOCAL_AXIS_2_ANGLE] = GetLocalAxes(frame);
+    assignments[CommonObjectProperty.PROPERTY_MODIFIERS] = GetModifiers(frame);
     assignments["End Releases"] = GetReleases(frame);
 
     // NOTE: sectionId and materialId a "quick-fix" to enable filtering in the viewer etc.
@@ -110,8 +110,8 @@ public sealed class CsiFramePropertiesExtractor
     _ = _settingsStore.Current.SapModel.FrameObj.GetLocalAxes(frame.Name, ref angle, ref advanced);
 
     Dictionary<string, object?> resultsDictionary = [];
-    resultsDictionary.AddWithUnits("Angle", angle, "Degrees");
-    resultsDictionary["Advanced"] = advanced.ToString();
+    resultsDictionary.AddWithUnits(CommonObjectProperty.ANGLE, angle, "Degrees");
+    resultsDictionary[CommonObjectProperty.ADVANCED] = advanced.ToString();
 
     return resultsDictionary;
   }
