@@ -34,17 +34,17 @@ public sealed class EtabsJointPropertiesExtractor
   public void ExtractProperties(CsiJointWrapper joint, Dictionary<string, object?> properties)
   {
     var objectId = properties.EnsureNested(ObjectPropertyCategory.OBJECT_ID);
-    (objectId["label"], objectId["level"]) = GetLabelAndLevel(joint);
+    (objectId[CommonObjectProperty.LABEL], objectId[CommonObjectProperty.LEVEL]) = GetLabelAndLevel(joint);
 
     var assignments = properties.EnsureNested(ObjectPropertyCategory.ASSIGNMENTS);
-    (assignments["diaphragmOption"], assignments["diaphragmName"]) = GetAssignedDiaphragm(joint);
-    assignments["springAssignment"] = GetSpringAssignmentName(joint);
+    (assignments["Diaphragm Option"], assignments["Diaphragm Name"]) = GetAssignedDiaphragm(joint);
+    assignments[CommonObjectProperty.SPRING_ASSIGNMENT] = GetSpringAssignmentName(joint);
   }
 
   private (string diaphramOption, string diaphragmName) GetAssignedDiaphragm(CsiJointWrapper joint)
   {
     eDiaphragmOption diaphragmOption = eDiaphragmOption.Disconnect;
-    string diaphragmName = "None"; // Is there a better way to handle null?
+    string diaphragmName = string.Empty;
     _ = _settingsStore.Current.SapModel.PointObj.GetDiaphragm(joint.Name, ref diaphragmOption, ref diaphragmName);
     return (diaphragmOption.ToString(), diaphragmName);
   }
@@ -59,7 +59,7 @@ public sealed class EtabsJointPropertiesExtractor
 
   private string GetSpringAssignmentName(CsiJointWrapper joint)
   {
-    string springPropertyName = "None"; // Is there a better way to handle null?
+    string springPropertyName = string.Empty;
     _ = _settingsStore.Current.SapModel.PointObj.GetSpringAssignment(joint.Name, ref springPropertyName);
     return springPropertyName;
   }

@@ -222,7 +222,9 @@ public sealed class RhinoSendBinding : ISendBinding
     var layer = RhinoDoc.ActiveDoc.Layers[args.LayerIndex];
 
     // add all objects from the changed layers and sublayers to the non-destructively changed object list.
-    var allLayers = args.Document.Layers.Where(l => l.FullPath.Contains(layer.Name)); // not  e imperfect, but layer.GetChildren(true) is valid only in v8 and above; this filter will include the original layer.
+    var allLayers = args.Document.Layers.Where(l => /* NOTE: layer path may actually be null in some cases (rhino's fault, not ours) */
+      l.FullPath != null && l.FullPath.Contains(layer.Name)
+    ); // not  e imperfect, but layer.GetChildren(true) is valid only in v8 and above; this filter will include the original layer.
     foreach (var childLayer in allLayers)
     {
       var sublayerObjs = RhinoDoc.ActiveDoc.Objects.FindByLayer(childLayer) ?? [];

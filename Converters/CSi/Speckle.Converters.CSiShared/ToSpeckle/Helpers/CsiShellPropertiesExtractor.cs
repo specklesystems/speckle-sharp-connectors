@@ -35,10 +35,10 @@ public sealed class CsiShellPropertiesExtractor
     geometry["Joints"] = GetPointNames(shell); // TODO: 🪲 Viewer shows 4 but only displays 3
 
     var assignments = shellData.Properties.EnsureNested(ObjectPropertyCategory.ASSIGNMENTS);
-    assignments["Groups"] = GetGroupAssigns(shell);
-    assignments["Local Axis 2 Angle"] = GetLocalAxes(shell);
-    assignments["Material Overwrite"] = GetMaterialOverwrite(shell);
-    assignments["Property Modifiers"] = GetModifiers(shell);
+    assignments[CommonObjectProperty.GROUPS] = GetGroupAssigns(shell);
+    assignments[CommonObjectProperty.LOCAL_AXIS_2_ANGLE] = GetLocalAxes(shell);
+    assignments[CommonObjectProperty.MATERIAL_OVERWRITE] = GetMaterialOverwrite(shell);
+    assignments[CommonObjectProperty.PROPERTY_MODIFIERS] = GetModifiers(shell);
   }
 
   private string[] GetGroupAssigns(CsiShellWrapper shell)
@@ -56,8 +56,8 @@ public sealed class CsiShellPropertiesExtractor
     _ = _settingsStore.Current.SapModel.AreaObj.GetLocalAxes(shell.Name, ref angle, ref advanced);
 
     Dictionary<string, object?> resultsDictionary = [];
-    resultsDictionary.AddWithUnits("Angle", angle, "Degrees");
-    resultsDictionary["Advanced"] = advanced.ToString();
+    resultsDictionary.AddWithUnits(CommonObjectProperty.ANGLE, angle, "Degrees");
+    resultsDictionary[CommonObjectProperty.ADVANCED] = advanced.ToString();
 
     return resultsDictionary;
   }

@@ -54,14 +54,27 @@ public static class ContainerRegistration
   public static IServiceProvider UseDUI(this IServiceProvider serviceProvider, bool initializeDocumentStore = true)
   {
     //observe the unobserved!
-    TaskScheduler.UnobservedTaskException += async (_, args) =>
+    TaskScheduler.UnobservedTaskException += (_, args) =>
     {
-      await serviceProvider
-        .GetRequiredService<IEventAggregator>()
-        .GetEvent<ExceptionEvent>()
-        .PublishAsync(args.Exception);
-      serviceProvider.GetRequiredService<ILogger>().LogError(args.Exception, "Unobserved task exception");
-      args.SetObserved();
+      try
+      {
+        serviceProvider
+          .GetRequiredService<ILoggerFactory>()
+          .CreateLogger("UnobservedTaskException")
+          .LogError(args.Exception, "Unobserved task exception");
+      }
+#pragma warning disable CA1031
+      catch (Exception e)
+#pragma warning restore CA1031
+      {
+        Console.WriteLine("Error logging unobserved task exception");
+        Console.WriteLine(args.Exception);
+        Console.WriteLine(e);
+      }
+      finally
+      {
+        args.SetObserved();
+      }
     };
 
     if (initializeDocumentStore)
