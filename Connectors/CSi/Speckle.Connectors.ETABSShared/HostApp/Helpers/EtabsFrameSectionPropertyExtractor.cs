@@ -58,21 +58,19 @@ public class EtabsFrameSectionPropertyExtractor : IApplicationFrameSectionProper
     if (sectionIndex != -1)
     {
       // General Data
-      var generalData = DictionaryUtils.EnsureNestedDictionary(properties, SectionPropertyCategory.GENERAL_DATA);
-      generalData["type"] = propTypes[sectionIndex].ToString();
+      var generalData = properties.EnsureNested(SectionPropertyCategory.GENERAL_DATA);
+      generalData["Section Shape"] = propTypes[sectionIndex].ToString();
 
       // Section Dimensions
-      var sectionDimensions = DictionaryUtils.EnsureNestedDictionary(
-        properties,
-        SectionPropertyCategory.SECTION_DIMENSIONS
-      );
-      sectionDimensions["t3"] = t3[sectionIndex];
-      sectionDimensions["t2"] = t2[sectionIndex];
-      sectionDimensions["tf"] = tf[sectionIndex];
-      sectionDimensions["tw"] = tw[sectionIndex];
-      sectionDimensions["t2b"] = t2b[sectionIndex];
-      sectionDimensions["tfb"] = tfb[sectionIndex];
-      sectionDimensions["area"] = area[sectionIndex];
+      string unit = _settingsStore.Current.SpeckleUnits;
+      var sectionDimensions = properties.EnsureNested(SectionPropertyCategory.SECTION_DIMENSIONS);
+      sectionDimensions.AddWithUnits("t3", t3[sectionIndex], unit);
+      sectionDimensions.AddWithUnits("t2", t2[sectionIndex], unit);
+      sectionDimensions.AddWithUnits("tf", tf[sectionIndex], unit);
+      sectionDimensions.AddWithUnits("tw", tw[sectionIndex], unit);
+      sectionDimensions.AddWithUnits("t2b", t2b[sectionIndex], unit);
+      sectionDimensions.AddWithUnits("tfb", tfb[sectionIndex], unit);
+      sectionDimensions.AddWithUnits("Area", area[sectionIndex], $"{unit}²");
     }
   }
 }

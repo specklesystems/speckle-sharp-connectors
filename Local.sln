@@ -271,6 +271,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Importers.Ifc.Teste
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Common.Tests", "Sdk\Speckle.Connectors.Common.Tests\Speckle.Connectors.Common.Tests.csproj", "{C19C3EDF-D95D-4D22-9949-D99F91447AE7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Common.MeshTriangulation", "Sdk\Speckle.Common.MeshTriangulation\Speckle.Common.MeshTriangulation.csproj", "{20BB9687-2C92-44E9-9E2F-9D2F45641354}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -698,6 +700,12 @@ Global
 		{C19C3EDF-D95D-4D22-9949-D99F91447AE7}.Local|Any CPU.Build.0 = Local|Any CPU
 		{C19C3EDF-D95D-4D22-9949-D99F91447AE7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C19C3EDF-D95D-4D22-9949-D99F91447AE7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{20BB9687-2C92-44E9-9E2F-9D2F45641354}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{20BB9687-2C92-44E9-9E2F-9D2F45641354}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{20BB9687-2C92-44E9-9E2F-9D2F45641354}.Local|Any CPU.ActiveCfg = Debug|Any CPU
+		{20BB9687-2C92-44E9-9E2F-9D2F45641354}.Local|Any CPU.Build.0 = Debug|Any CPU
+		{20BB9687-2C92-44E9-9E2F-9D2F45641354}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{20BB9687-2C92-44E9-9E2F-9D2F45641354}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -822,6 +830,7 @@ Global
 		{9FD99F9B-8D50-4C7A-B3A6-22E28AB5F26B} = {0EF6C4D6-AC76-408F-8D32-2F9DA8006077}
 		{B3B126CA-A419-48D1-B117-6DEE1DE1AFAD} = {0EF6C4D6-AC76-408F-8D32-2F9DA8006077}
 		{C19C3EDF-D95D-4D22-9949-D99F91447AE7} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
+		{20BB9687-2C92-44E9-9E2F-9D2F45641354} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}
