@@ -47,7 +47,7 @@ using var process2 = new SerializeProcess(
   sqlite,
   new DummyServerObjectManager(),
   new BaseChildFinder(new BasePropertyGatherer()),
-  new ObjectSerializerFactory(new BasePropertyGatherer()),
+  new BaseSerializer(sqlite, new ObjectSerializerFactory(new BasePropertyGatherer())),
   new NullLoggerFactory(),
   default,
   new SerializeProcessOptions(SkipServer: true)
