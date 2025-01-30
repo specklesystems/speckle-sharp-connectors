@@ -125,9 +125,13 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     string sourceType = csiObject.ObjectName;
     string applicationId = csiObject switch
     {
-      CsiFrameWrapper frameWrapper => frameWrapper.GetSpeckleApplicationId(_csiApplicationService.SapModel),
       CsiJointWrapper jointWrapper => jointWrapper.GetSpeckleApplicationId(_csiApplicationService.SapModel),
+      CsiFrameWrapper frameWrapper => frameWrapper.GetSpeckleApplicationId(_csiApplicationService.SapModel),
+      CsiCableWrapper cableWrapper => cableWrapper.GetSpeckleApplicationId(_csiApplicationService.SapModel),
+      CsiTendonWrapper tendonWrapper => tendonWrapper.ObjectName, // No GetGUID method in the Csi API available
       CsiShellWrapper shellWrapper => shellWrapper.GetSpeckleApplicationId(_csiApplicationService.SapModel),
+      CsiSolidWrapper solidWrapper => solidWrapper.GetSpeckleApplicationId(_csiApplicationService.SapModel),
+      CsiLinkWrapper linkWrapper => linkWrapper.GetSpeckleApplicationId(_csiApplicationService.SapModel),
       _ => throw new ArgumentException($"Unsupported wrapper type: {csiObject.GetType()}", nameof(csiObject))
     };
 
@@ -139,6 +143,16 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
       collection.elements.Add(converted);
 
       return new(Status.SUCCESS, applicationId, sourceType, converted);
+    }
+    // Expected not implemented:
+    // TODO: SAP 2000: CsiCableWrapper, CsiSolidWrapper
+    // TODO: ETABS: CsiLinkWrapper, CsiTendonWrapper
+    // NOTE: CsiLinkWrapper - not important to data extraction workflow
+    // NOTE: CsiTendonWrapper - not typically modelled in ETABS, rather SAFE
+    catch (NotImplementedException ex)
+    {
+      _logger.LogError(ex, sourceType);
+      return new(Status.WARNING, applicationId, sourceType, null, ex);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
