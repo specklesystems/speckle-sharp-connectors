@@ -58,7 +58,9 @@ public static class ContainerRegistration
     {
       try
       {
-        serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("UnobservedTaskException")
+        serviceProvider
+          .GetRequiredService<ILoggerFactory>()
+          .CreateLogger("UnobservedTaskException")
           .LogError(args.Exception, "Unobserved task exception");
       }
 #pragma warning disable CA1031
