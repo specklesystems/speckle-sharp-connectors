@@ -59,6 +59,8 @@ public class RhinoReceiveBinding : IReceiveBinding
     scope
       .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
       .Initialize(_rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
+
+    uint undoRecord = 0;
     try
     {
       // Get receiver card
@@ -70,6 +72,7 @@ public class RhinoReceiveBinding : IReceiveBinding
 
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
+      undoRecord = RhinoDoc.ActiveDoc.BeginUndoRecord($"Receive Speckle model {modelCard.ModelName}");
       // Receive host objects
       HostObjectBuilderResult conversionResults = await scope
         .ServiceProvider.GetRequiredService<ReceiveOperation>()
@@ -97,6 +100,10 @@ public class RhinoReceiveBinding : IReceiveBinding
     {
       _logger.LogModelCardHandledError(ex);
       await Commands.SetModelError(modelCardId, ex);
+    }
+    finally
+    {
+      RhinoDoc.ActiveDoc.EndUndoRecord(undoRecord);
     }
   }
 
