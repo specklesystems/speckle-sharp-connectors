@@ -59,6 +59,8 @@ public class RhinoReceiveBinding : IReceiveBinding
     scope
       .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
       .Initialize(_rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
+    
+    uint undoRecord = 0;
     try
     {
       // Get receiver card
@@ -70,6 +72,7 @@ public class RhinoReceiveBinding : IReceiveBinding
 
       CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
 
+      undoRecord = RhinoDoc.ActiveDoc.BeginUndoRecord($"Receive Speckle model {modelCard.ModelName}");
       // Receive host objects
       HostObjectBuilderResult conversionResults = await scope
         .ServiceProvider.GetRequiredService<ReceiveOperation>()
@@ -93,10 +96,15 @@ public class RhinoReceiveBinding : IReceiveBinding
       // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
       return;
     }
-    catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
+    catch (Exception ex) when
+      (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
       _logger.LogModelCardHandledError(ex);
       await Commands.SetModelError(modelCardId, ex);
+    }
+    finally
+    {
+      RhinoDoc.ActiveDoc.EndUndoRecord(undoRecord);
     }
   }
 
