@@ -24,11 +24,6 @@ public class RhinoDocumentStore : DocumentModelStore
 
   private async Task OnEndOpenDocument(DocumentOpenEventArgs e)
   {
-    if (e.Merge)
-    {
-      return;
-    }
-
     if (e.Document == null)
     {
       return;
