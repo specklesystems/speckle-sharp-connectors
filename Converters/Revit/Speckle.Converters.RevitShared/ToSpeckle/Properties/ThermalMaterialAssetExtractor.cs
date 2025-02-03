@@ -16,13 +16,16 @@ public class ThermalMaterialAssetExtractor
   /// Extracts thermal asset properties from a material's thermal asset.
   /// </summary>
   /// <returns>Dictionary containing thermal properties</returns>
-  public Dictionary<string, object> GetProperties(DB.ElementId thermalAssetId)
+  public void GetProperties(DB.ElementId thermalAssetId, Dictionary<string, object> properties)
   {
-    var properties = new Dictionary<string, object>();
+    if (thermalAssetId != DB.ElementId.InvalidElementId)
+    {
+      if (_converterSettings.Current.Document.GetElement(thermalAssetId) is DB.PropertySetElement propertySet)
+      {
+        DB.ThermalAsset thermalAsset = propertySet.GetThermalAsset();
 
-    var thermalAsset = _converterSettings.Current.Document.GetElement(thermalAssetId);
-    properties["Name"] = thermalAsset.Name;
-
-    return properties;
+        properties["name"] = thermalAsset.Name;
+      }
+    }
   }
 }

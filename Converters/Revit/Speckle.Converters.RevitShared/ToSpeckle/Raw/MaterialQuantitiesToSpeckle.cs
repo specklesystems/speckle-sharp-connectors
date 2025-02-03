@@ -86,18 +86,8 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
     {
       Dictionary<string, object> materialAssetProperties = new();
 
-      DB.ElementId structuralAssetId = material.StructuralAssetId;
-      DB.ElementId thermalAssetId = material.ThermalAssetId;
-
-      if (structuralAssetId != DB.ElementId.InvalidElementId)
-      {
-        materialAssetProperties["Structural"] = _structuralAssetExtractor.GetProperties(structuralAssetId);
-      }
-
-      if (thermalAssetId != DB.ElementId.InvalidElementId)
-      {
-        materialAssetProperties["Thermal"] = _thermalAssetExtractor.GetProperties(thermalAssetId);
-      }
+      _structuralAssetExtractor.GetProperties(material.StructuralAssetId, materialAssetProperties);
+      _thermalAssetExtractor.GetProperties(material.ThermalAssetId, materialAssetProperties);
 
       materialProxy = new GroupProxy
       {
