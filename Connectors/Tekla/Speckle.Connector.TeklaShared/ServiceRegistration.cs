@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
-using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI;
@@ -57,7 +56,6 @@ public static class ServiceRegistration
 
     services.AddSingleton<ToSpeckleSettingsManager>();
 
-    services.AddTransient<CancellationManager>();
     services.AddSingleton<IOperationProgressManager, OperationProgressManager>();
 
     services.AddScoped<TraversalContext>();

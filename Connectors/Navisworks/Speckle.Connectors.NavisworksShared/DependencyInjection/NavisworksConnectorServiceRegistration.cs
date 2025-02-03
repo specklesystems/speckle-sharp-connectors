@@ -7,7 +7,6 @@ using Speckle.Connector.Navisworks.Operations.Send.Settings;
 using Speckle.Connector.Navisworks.Services;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
-using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI;
@@ -59,7 +58,6 @@ public static class NavisworksConnectorServiceRegistration
     serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();
 
     // Register Intercom/interop
-    serviceCollection.AddTransient<CancellationManager>();
     serviceCollection.AddSingleton<NavisworksDocumentModelStore>();
     serviceCollection.AddSingleton<DocumentModelStore>(sp => sp.GetRequiredService<NavisworksDocumentModelStore>());
     serviceCollection.AddSingleton<NavisworksDocumentEvents>();
