@@ -63,20 +63,6 @@ public class RevitRootObjectBuilder(
         continue;
       }
 
-      if (!SupportedCategoriesUtils.IsSupportedCategory(el.Category))
-      {
-        results.Add(
-          new(
-            Status.WARNING,
-            el.UniqueId,
-            el.Category.Name,
-            null,
-            new SpeckleException($"Category {el.Category.Name} is not supported.")
-          )
-        );
-        continue;
-      }
-
       revitElements.Add(el);
     }
 
@@ -98,6 +84,20 @@ public class RevitRootObjectBuilder(
       string sourceType = revitElement.GetType().Name;
       try
       {
+        if (!SupportedCategoriesUtils.IsSupportedCategory(revitElement.Category))
+        {
+          results.Add(
+            new(
+              Status.WARNING,
+              revitElement.UniqueId,
+              revitElement.Category.Name,
+              null,
+              new SpeckleException($"Category {revitElement.Category.Name} is not supported.")
+            )
+          );
+          continue;
+        }
+        
         Base converted;
         if (sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value))
         {
