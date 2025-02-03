@@ -130,8 +130,11 @@ public class RevitRootObjectBuilder(
     }
 
     var idsAndSubElementIds = elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(atomicObjects);
-    var materialProxies = revitToSpeckleCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds);
-    rootObject[ProxyKeys.RENDER_MATERIAL] = materialProxies;
+    var renderMaterialProxies = revitToSpeckleCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds);
+    rootObject[ProxyKeys.RENDER_MATERIAL] = renderMaterialProxies;
+
+    var materialProxies = revitToSpeckleCacheSingleton.GetMaterialProxyListForObjects(idsAndSubElementIds);
+    rootObject[ProxyKeys.MATERIAL] = materialProxies;
 
     // NOTE: these are currently not used anywhere, we'll skip them until someone calls for it back
     // rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;

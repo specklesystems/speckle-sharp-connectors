@@ -1,4 +1,5 @@
 using Speckle.Objects.Other;
+using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Converters.RevitShared.Helpers;
 
@@ -23,6 +24,14 @@ public class RevitToSpeckleCacheSingleton
   /// a per object map of material proxies. not the best way???
   /// </summary>
   public Dictionary<string, Dictionary<string, RenderMaterialProxy>> ObjectRenderMaterialProxiesMap { get; } = new();
+
+  /// <summary>
+  /// map(materialId, proxy)
+  /// </summary>
+  /// <remarks>
+  /// TODO: GroupProxy misuse? Formalize together with Etabs (claire and bjorn)
+  /// </remarks>
+  public Dictionary<string, GroupProxy> MaterialProxiesMap { get; } = new();
 
   /// <summary>
   /// Returns the merged material proxy list for the given object ids. Use this to get post conversion a correct list of material proxies for setting on the root commit object.
@@ -55,4 +64,12 @@ public class RevitToSpeckleCacheSingleton
     }
     return mergeTarget.Values.ToList();
   }
+
+  /// <summary>
+  /// Returns the material proxies for the given element IDs.
+  /// </summary>
+  /// <param name="elementIds">List of element IDs to get material proxies for</param>
+  /// <returns>List of material proxies that are associated with the given elements</returns>
+  public List<GroupProxy> GetMaterialProxyListForObjects(List<string> elementIds) =>
+    MaterialProxiesMap.Values.Where(proxy => proxy.objects.Any(elementIds.Contains)).ToList();
 }

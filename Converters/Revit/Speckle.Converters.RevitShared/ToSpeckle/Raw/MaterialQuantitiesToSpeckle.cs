@@ -1,7 +1,10 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Revit2023.ToSpeckle.Properties;
+using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -13,21 +16,34 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
 {
   private readonly ScalingServiceToSpeckle _scalingService;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
+  private readonly RevitToSpeckleCacheSingleton _revitToSpeckleCacheSingleton;
+  private readonly StructuralMaterialAssetExtractor _structuralAssetExtractor;
+  private readonly ThermalMaterialAssetExtractor _thermalAssetExtractor;
 
   public MaterialQuantitiesToSpeckleLite(
     ScalingServiceToSpeckle scalingService,
-    IConverterSettingsStore<RevitConversionSettings> converterSettings
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
+    RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton,
+    StructuralMaterialAssetExtractor structuralAssetExtractor,
+    ThermalMaterialAssetExtractor thermalAssetExtractor
   )
   {
     _scalingService = scalingService;
     _converterSettings = converterSettings;
+    _revitToSpeckleCacheSingleton = revitToSpeckleCacheSingleton;
+    _structuralAssetExtractor = structuralAssetExtractor;
+    _thermalAssetExtractor = thermalAssetExtractor;
   }
 
   /// <summary>
-  /// Lighter conversion of material quantities to speckle. For each material quantity available on the target element, it will return a dictionary containing: area, volume, units, material name, material class and material category.
+  /// Lighter conversion of material quantities to speckle. For each material quantity available on the target element,
+  /// it will return a dictionary containing: area, volume, units, material name and material id.
+  /// This conversion also manages material proxy creation in the cache for use by the root object builder.
   /// </summary>
   /// <param name="target"></param>
-  /// <returns></returns>
+  /// <remarks>
+  /// MaterialProxy and RenderMaterialProxy are completely separated in this regard.
+  /// </remarks>
   public Dictionary<string, object> Convert(DB.Element target)
   {
     Dictionary<string, object> quantities = new();
@@ -50,13 +66,49 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
         if (_converterSettings.Current.Document.GetElement(matId) is DB.Material material)
         {
           materialQuantity["materialName"] = material.Name;
-          materialQuantity["materialCategory"] = material.MaterialCategory;
-          materialQuantity["materialClass"] = material.MaterialClass;
+          materialQuantity["materialId"] = material.Id.ToString();
           quantities[material.Name] = materialQuantity;
+
+          CreateOrUpdateMaterialProxy(material, target.UniqueId);
         }
       }
     }
 
     return quantities;
+  }
+
+  private void CreateOrUpdateMaterialProxy(DB.Material material, string elementId)
+  {
+    var materialProxiesMap = _revitToSpeckleCacheSingleton.MaterialProxiesMap;
+    string materialIdString = material.Id.ToString();
+    Dictionary<string, object> materialAssetProperties = new();
+
+    if (material.StructuralAssetId != null)
+    {
+      materialAssetProperties["Structural"] = _structuralAssetExtractor.GetProperties(material.StructuralAssetId);
+    }
+
+    if (material.ThermalAssetId != null)
+    {
+      materialAssetProperties["Thermal"] = _thermalAssetExtractor.GetProperties(material.ThermalAssetId);
+    }
+
+    if (!materialProxiesMap.TryGetValue(materialIdString, out var materialProxy))
+    {
+      materialProxy = new GroupProxy
+      {
+        applicationId = materialIdString,
+        name = material.Name,
+        objects = new List<string>(),
+        ["category"] = material.MaterialCategory,
+        ["class"] = material.MaterialClass,
+        ["properties"] = materialAssetProperties,
+      };
+    }
+
+    if (!materialProxy.objects.Contains(elementId))
+    {
+      materialProxy.objects.Add(elementId);
+    }
   }
 }
