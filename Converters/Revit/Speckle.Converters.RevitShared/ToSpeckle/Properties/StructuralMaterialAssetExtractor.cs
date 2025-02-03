@@ -32,16 +32,22 @@ public class StructuralMaterialAssetExtractor
 
         properties["name"] = structuralAsset.Name;
 
+        // TODO: simplify? lot of code just for one property
+        // get unit forge type id
         DB.ForgeTypeId densityUnit = _converterSettings
           .Current.Document.GetUnits()
           .GetFormatOptions(DB.SpecTypeId.MassDensity)
           .GetUnitTypeId();
+
+        // scale from internal to model units
         double densityValue = _scalingService.Scale(structuralAsset.Density, densityUnit);
+
+        // write complete value
         properties["density"] = new Dictionary<string, object>
         {
           ["name"] = "density",
           ["value"] = densityValue,
-          ["units"] = densityUnit.ToString()
+          ["units"] = densityUnit
         };
       }
     }
