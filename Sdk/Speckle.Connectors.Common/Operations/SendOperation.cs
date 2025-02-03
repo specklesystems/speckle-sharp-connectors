@@ -3,6 +3,7 @@ using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Logging;
+using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Credentials;
@@ -21,7 +22,8 @@ public sealed class SendOperation<T>(
   IOperations operations,
   IClientFactory clientFactory,
   ISdkActivityFactory activityFactory,
-  IThreadContext threadContext
+  IThreadContext threadContext,
+  ISpeckleApplication speckleApplication
 )
 {
   public async Task<SendOperationResult> Execute(
@@ -39,6 +41,7 @@ public sealed class SendOperation<T>(
     // buildResult.RootObject["@report"] = new Report { ConversionResults = buildResult.ConversionResults };
 
     buildResult.RootObject["version"] = 3;
+    buildResult.RootObject["connector"] = $"{speckleApplication.ApplicationAndVersion} {speckleApplication.SpeckleVersion}";
     // base object handler is separated, so we can do some testing on non-production databases
     // exact interface may want to be tweaked when we implement this
     var (rootObjId, convertedReferences) = await threadContext.RunOnWorkerAsync(
