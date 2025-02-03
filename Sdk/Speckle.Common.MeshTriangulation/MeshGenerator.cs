@@ -15,7 +15,7 @@ public sealed class MeshGenerator
 
   // creates a triangulated surface mesh from the given polygons
   // each polygon has to contain at least 3 points
-  // the frist polygon is the contour of the mesh, it has to be clockwise
+  // the first polygon is the contour of the mesh, it has to be clockwise
   // the rest of the polygons define the holes, these have to be counterclockwise
   public Mesh3 TriangulateSurface(IReadOnlyList<Poly3> polygons)
   {
@@ -32,7 +32,7 @@ public sealed class MeshGenerator
 
   // creates an extruded triangle mesh from the given polygons
   // each polygon has to contain at least 3 points
-  // the frist polygon is the contour of the mesh, it has to be clockwise
+  // the first polygon is the contour of the mesh, it has to be clockwise
   // the rest of the polygons define the holes, these have to be counterclockwise
   // the mesh will be extruded in the normal direction by the given height
   public Mesh3 ExtrudeMesh(IReadOnlyList<Poly3> polygons, double extrusionHeight)
