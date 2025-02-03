@@ -9,9 +9,9 @@ namespace Speckle.Connectors.Revit.HostApp;
 /// </summary>
 public class ElementUnpacker
 {
-  private readonly RevitContext _revitContext;
+  private readonly IRevitContext _revitContext;
 
-  public ElementUnpacker(RevitContext revitContext)
+  public ElementUnpacker(IRevitContext revitContext)
   {
     _revitContext = revitContext;
   }
@@ -63,6 +63,13 @@ public class ElementUnpacker
         // POC: this might screw up generating hosting rel generation here, because nested families in groups get flattened out by GetMemberIds().
         var groupElements = g.GetMemberIds().Select(doc.GetElement);
         unpackedElements.AddRange(UnpackElements(groupElements));
+      }
+      else if (element is BaseArray baseArray)
+      {
+        var arrayElements = baseArray.GetCopiedMemberIds().Select(doc.GetElement);
+        var originalElements = baseArray.GetOriginalMemberIds().Select(doc.GetElement);
+        unpackedElements.AddRange(UnpackElements(arrayElements));
+        unpackedElements.AddRange(UnpackElements(originalElements));
       }
       // UNPACK: Family instances (as they potentially have nested families inside)
       else if (element is FamilyInstance familyInstance)

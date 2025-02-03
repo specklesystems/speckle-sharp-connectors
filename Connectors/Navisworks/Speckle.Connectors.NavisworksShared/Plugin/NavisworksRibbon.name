@@ -2,8 +2,9 @@
 # do NOT need translating.
 $utf8
 
-# DisplayName=
-# SpeckleNextGen
-
-# Speckle.DisplayName=
-# SpeckleNextGen
+DisplayName=Speckle
+Speckle.DisplayName=Speckle
+SpeckleV3.Title=Speckle (Beta)
+SpeckleV2.Title=Speckle
+Speckle_Launch.DisplayName=Speckle (Beta)
+Speckle_Launch_V2.DisplayName=Speckle

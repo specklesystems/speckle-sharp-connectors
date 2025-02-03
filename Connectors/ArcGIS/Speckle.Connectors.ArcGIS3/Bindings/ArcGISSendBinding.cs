@@ -15,6 +15,7 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
@@ -38,7 +39,7 @@ public sealed class ArcGISSendBinding : ISendBinding
   private readonly DocumentModelStore _store;
   private readonly IServiceProvider _serviceProvider;
   private readonly List<ISendFilter> _sendFilters;
-  private readonly CancellationManager _cancellationManager;
+  private readonly ICancellationManager _cancellationManager;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<ArcGISSendBinding> _logger;
@@ -63,13 +64,15 @@ public sealed class ArcGISSendBinding : ISendBinding
     IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     IServiceProvider serviceProvider,
-    CancellationManager cancellationManager,
+    ICancellationManager cancellationManager,
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
     ILogger<ArcGISSendBinding> logger,
     IArcGISConversionSettingsFactory arcGisConversionSettingsFactory,
     MapMembersUtils mapMemberUtils,
-    IThreadContext threadContext
+    IThreadContext threadContext,
+    IEventAggregator eventAggregator,
+    ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
     _store = store;
@@ -79,7 +82,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     _sendConversionCache = sendConversionCache;
     _operationProgressManager = operationProgressManager;
     _logger = logger;
-    _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
     _arcGISConversionSettingsFactory = arcGisConversionSettingsFactory;
     _mapMemberUtils = mapMemberUtils;
     _threadContext = threadContext;
@@ -87,11 +90,10 @@ public sealed class ArcGISSendBinding : ISendBinding
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
     SubscribeToArcGISEvents();
-    _store.DocumentChanged += (_, _) =>
-    {
-      _sendConversionCache.ClearCache();
-    };
+    eventAggregator.GetEvent<DocumentStoreChangedEvent>().Subscribe(OnDocumentStoreChangedEvent);
   }
+
+  private void OnDocumentStoreChangedEvent(object _) => _sendConversionCache.ClearCache();
 
   private void SubscribeToArcGISEvents()
   {
@@ -201,7 +203,7 @@ public sealed class ArcGISSendBinding : ISendBinding
   {
     RowCreatedEvent.Subscribe(
       (args) =>
-        Parent.TopLevelExceptionHandler.FireAndForget(async () =>
+        _topLevelExceptionHandler.FireAndForget(async () =>
         {
           await OnRowChanged(args);
         }),
@@ -209,7 +211,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     );
     RowChangedEvent.Subscribe(
       (args) =>
-        Parent.TopLevelExceptionHandler.FireAndForget(async () =>
+        _topLevelExceptionHandler.FireAndForget(async () =>
         {
           await OnRowChanged(args);
         }),
@@ -217,7 +219,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     );
     RowDeletedEvent.Subscribe(
       (args) =>
-        Parent.TopLevelExceptionHandler.FireAndForget(async () =>
+        _topLevelExceptionHandler.FireAndForget(async () =>
         {
           await OnRowChanged(args);
         }),
@@ -370,7 +372,7 @@ public sealed class ArcGISSendBinding : ISendBinding
         throw new InvalidOperationException("No publish model card was found.");
       }
 
-      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
       using var scope = _serviceProvider.CreateScope();
       scope
@@ -413,8 +415,8 @@ public sealed class ArcGISSendBinding : ISendBinding
         .Execute(
           mapMembers,
           modelCard.GetSendInfo("ArcGIS"), // POC: get host app name from settings? same for GetReceiveInfo
-          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
-          cancellationToken
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),
+          cancellationItem.Token
         );
 
       await Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);

@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
-using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI;
@@ -35,14 +34,10 @@ public static class ServiceRegistration
     services.AddDUI<DefaultThreadContext, TeklaDocumentModelStore>();
     services.AddDUIView();
 
-    services.AddSingleton<IAppIdleManager, TeklaIdleManager>();
-
     services.AddSingleton<IBinding, TestBinding>();
     services.AddSingleton<IBinding, ConfigBinding>();
     services.AddSingleton<IBinding, AccountBinding>();
     services.AddSingleton<IBasicConnectorBinding, TeklaBasicConnectorBinding>();
-
-    services.RegisterTopLevelExceptionHandler();
 
     services.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
     services.AddSingleton<IBinding, TeklaSendBinding>();
@@ -61,7 +56,6 @@ public static class ServiceRegistration
 
     services.AddSingleton<ToSpeckleSettingsManager>();
 
-    services.AddTransient<CancellationManager>();
     services.AddSingleton<IOperationProgressManager, OperationProgressManager>();
 
     services.AddScoped<TraversalContext>();

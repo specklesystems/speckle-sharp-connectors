@@ -2,8 +2,9 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
-using Speckle.Connectors.DUI.Bindings;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Eventing;
 using Speckle.Testing;
 
 namespace Speckle.Connectors.DUI.Tests.Bridge;
@@ -14,8 +15,8 @@ public class TopLevelExceptionHandlerTests : MoqTest
   public void CatchUnhandledAction_Happy()
   {
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
-    var bridge = Create<IBrowserBridge>();
-    var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
+    var eventAggregator = Create<IEventAggregator>();
+    var sut = new TopLevelExceptionHandler(logger.Object, eventAggregator.Object);
 
     sut.CatchUnhandled(() => { });
   }
@@ -24,13 +25,13 @@ public class TopLevelExceptionHandlerTests : MoqTest
   public void CatchUnhandledAction_Exception()
   {
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
-    var bridge = Create<IBrowserBridge>();
+    var eventAggregator = Create<IEventAggregator>();
 
-    bridge
-      .Setup(x => x.Send(BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, It.IsAny<object>(), default))
-      .Returns(Task.CompletedTask);
+    eventAggregator
+      .Setup(x => x.GetEvent<ExceptionEvent>())
+      .Returns(new ExceptionEvent(Create<IThreadContext>().Object, Create<ITopLevelExceptionHandler>().Object));
 
-    var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
+    var sut = new TopLevelExceptionHandler(logger.Object, eventAggregator.Object);
 
     sut.CatchUnhandled(() => throw new InvalidOperationException());
   }
@@ -40,8 +41,8 @@ public class TopLevelExceptionHandlerTests : MoqTest
   {
     var val = 2;
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
-    var bridge = Create<IBrowserBridge>();
-    var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
+    var eventAggregator = Create<IEventAggregator>();
+    var sut = new TopLevelExceptionHandler(logger.Object, eventAggregator.Object);
 
     var returnVal = sut.CatchUnhandled(() => val);
     returnVal.Value.Should().Be(val);
@@ -53,13 +54,13 @@ public class TopLevelExceptionHandlerTests : MoqTest
   public void CatchUnhandledFunc_Exception()
   {
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
-    var bridge = Create<IBrowserBridge>();
+    var eventAggregator = Create<IEventAggregator>();
 
-    bridge
-      .Setup(x => x.Send(BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, It.IsAny<object>(), default))
-      .Returns(Task.CompletedTask);
+    eventAggregator
+      .Setup(x => x.GetEvent<ExceptionEvent>())
+      .Returns(new ExceptionEvent(Create<IThreadContext>().Object, Create<ITopLevelExceptionHandler>().Object));
 
-    var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
+    var sut = new TopLevelExceptionHandler(logger.Object, eventAggregator.Object);
 
     var returnVal = sut.CatchUnhandled((Func<string>)(() => throw new InvalidOperationException()));
     returnVal.Value.Should().BeNull();
@@ -71,13 +72,12 @@ public class TopLevelExceptionHandlerTests : MoqTest
   public void CatchUnhandledFunc_Exception_Fatal()
   {
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
-    var bridge = Create<IBrowserBridge>();
-    var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
+    var eventAggregator = Create<IEventAggregator>();
+    var sut = new TopLevelExceptionHandler(logger.Object, eventAggregator.Object);
 
-    var exception = Assert.Throws<AggregateException>(
+    Assert.Throws<AppDomainUnloadedException>(
       () => sut.CatchUnhandled(new Func<string>(() => throw new AppDomainUnloadedException()))
     );
-    exception.InnerExceptions.Single().Should().BeOfType<AppDomainUnloadedException>();
   }
 
   [Test]
@@ -85,8 +85,8 @@ public class TopLevelExceptionHandlerTests : MoqTest
   {
     var val = 2;
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
-    var bridge = Create<IBrowserBridge>();
-    var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
+    var eventAggregator = Create<IEventAggregator>();
+    var sut = new TopLevelExceptionHandler(logger.Object, eventAggregator.Object);
 
     var returnVal = await sut.CatchUnhandledAsync(() => Task.FromResult(val));
     returnVal.Value.Should().Be(val);
@@ -98,13 +98,13 @@ public class TopLevelExceptionHandlerTests : MoqTest
   public async Task CatchUnhandledFuncAsync_Exception()
   {
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
-    var bridge = Create<IBrowserBridge>();
+    var eventAggregator = Create<IEventAggregator>();
 
-    bridge
-      .Setup(x => x.Send(BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, It.IsAny<object>(), default))
-      .Returns(Task.CompletedTask);
+    eventAggregator
+      .Setup(x => x.GetEvent<ExceptionEvent>())
+      .Returns(new ExceptionEvent(Create<IThreadContext>().Object, Create<ITopLevelExceptionHandler>().Object));
 
-    var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
+    var sut = new TopLevelExceptionHandler(logger.Object, eventAggregator.Object);
 
     var returnVal = await sut.CatchUnhandledAsync(new Func<Task<string>>(() => throw new InvalidOperationException()));
     returnVal.Value.Should().BeNull();
@@ -116,8 +116,8 @@ public class TopLevelExceptionHandlerTests : MoqTest
   public void CatchUnhandledFuncAsync_Exception_Fatal()
   {
     var logger = Create<ILogger<TopLevelExceptionHandler>>(MockBehavior.Loose);
-    var bridge = Create<IBrowserBridge>();
-    var sut = new TopLevelExceptionHandler(logger.Object, bridge.Object);
+    var eventAggregator = Create<IEventAggregator>();
+    var sut = new TopLevelExceptionHandler(logger.Object, eventAggregator.Object);
 
     var exception = Assert.ThrowsAsync<AppDomainUnloadedException>(
       async () => await sut.CatchUnhandledAsync(new Func<Task<string>>(() => throw new AppDomainUnloadedException()))

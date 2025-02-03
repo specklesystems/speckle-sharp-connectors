@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.DocObjects;
 using Speckle.Connectors.Rhino.Extensions;
@@ -99,7 +99,7 @@ public class RhinoColorUnpacker
   /// Iterates through a given set of rhino objects and layers to collect colors.
   /// </summary>
   /// <param name="atomicObjects">atomic root objects, including instance objects</param>
-  /// <param name="layers">layers used by atomic objects</param>
+  /// <param name="layers">the layers corresponding to collections on the root collection</param>
   /// <returns></returns>
   public List<ColorProxy> UnpackColors(List<RhinoObject> atomicObjects, List<Layer> layers)
   {

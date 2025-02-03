@@ -1,10 +1,25 @@
+using Speckle.InterfaceGenerator;
+
 namespace Speckle.Connectors.Common.Cancellation;
+
+public interface ICancellationItem : IDisposable
+{
+  CancellationToken Token { get; }
+}
 
 /// <summary>
 /// Util class to manage cancellations.
 /// </summary>
-public class CancellationManager
+[GenerateAutoInterface]
+public class CancellationManager : ICancellationManager
 {
+  private sealed class CancellationItem(CancellationManager manager, string id) : ICancellationItem
+  {
+    public void Dispose() => manager.DisposeOperation(id);
+
+    public CancellationToken Token => manager.GetToken(id);
+  }
+
   /// <summary>
   /// Dictionary to relate <see cref="CancellationTokenSource"/> with registered id.
   /// </summary>
@@ -17,29 +32,21 @@ public class CancellationManager
   /// </summary>
   /// <param name="id"> Id of the operation.</param>
   /// <returns> CancellationToken that belongs to operation.</returns>
-  public CancellationToken GetToken(string id)
-  {
-    return _operationsInProgress[id].Token;
-  }
+  public CancellationToken GetToken(string id) => _operationsInProgress[id].Token;
 
   /// <summary>
   /// Whether given id registered or not.
   /// </summary>
   /// <param name="id"> Id to check registration.</param>
   /// <returns> Whether given id registered or not.</returns>
-  public bool IsExist(string id)
-  {
-    return _operationsInProgress.ContainsKey(id);
-  }
+  public bool IsExist(string id) => _operationsInProgress.ContainsKey(id);
 
   public void CancelAllOperations()
   {
     foreach (var operation in _operationsInProgress)
     {
       operation.Value.Cancel();
-      operation.Value.Dispose();
     }
-    _operationsInProgress.Clear();
   }
 
   /// <summary>
@@ -48,16 +55,13 @@ public class CancellationManager
   /// </summary>
   /// <param name="id"> Id to register token.</param>
   /// <returns> Initialized cancellation token source.</returns>
-  public CancellationToken InitCancellationTokenSource(string id)
+  public ICancellationItem GetCancellationItem(string id)
   {
-    if (IsExist(id))
-    {
-      CancelOperation(id);
-    }
+    DisposeOperation(id);
 
     var cts = new CancellationTokenSource();
     _operationsInProgress[id] = cts;
-    return cts.Token;
+    return new CancellationItem(this, id);
   }
 
   /// <summary>
@@ -65,6 +69,14 @@ public class CancellationManager
   /// </summary>
   /// <param name="id">Id to cancel operation.</param>
   public void CancelOperation(string id)
+  {
+    if (_operationsInProgress.TryGetValue(id, out CancellationTokenSource? cts))
+    {
+      cts.Cancel();
+    }
+  }
+
+  private void DisposeOperation(string id)
   {
     if (_operationsInProgress.TryGetValue(id, out CancellationTokenSource? cts))
     {
@@ -79,8 +91,5 @@ public class CancellationManager
   /// </summary>
   /// <param name="id"> Id to check cancellation requested already or not.</param>
   /// <returns></returns>
-  public bool IsCancellationRequested(string id)
-  {
-    return _operationsInProgress[id].IsCancellationRequested;
-  }
+  public bool IsCancellationRequested(string id) => _operationsInProgress[id].IsCancellationRequested;
 }

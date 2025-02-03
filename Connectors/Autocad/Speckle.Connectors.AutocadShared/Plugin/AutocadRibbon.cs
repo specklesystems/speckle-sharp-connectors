@@ -46,20 +46,20 @@ public class AutocadRibbon
 
   private void Create()
   {
-    RibbonTab tab = FindOrMakeTab("Add-ins");
-    RibbonPanelSource source = new() { Title = "Speckle 2 (New Beta)" };
+    RibbonTab tab = FindOrMakeTab("Speckle");
+    RibbonPanelSource source = new() { Title = "Speckle (Beta)" };
     RibbonPanel panel = new() { Source = source };
     tab.Panels.Add(panel);
 
     RibbonToolTip speckleToolTip =
       new()
       {
-        Title = "Speckle 2 (New Beta)",
-        Content = "Speckle Connector for " + AppUtils.App.Name,
+        Title = "Speckle (Beta)",
+        Content = $"Next Gen Speckle Connector (Beta) for {AppUtils.App.Name}",
         IsHelpEnabled = true // Without this "Press F1 for help" does not appear in the tooltip
       };
 
-    _ = CreateSpeckleButton("Connector " + AppUtils.App.Name + " (New)", source, null, speckleToolTip, "logo");
+    _ = CreateSpeckleButton("Speckle (Beta)", source, null, speckleToolTip, "logo");
   }
 
   private void ComponentManager_ItemInitialized(object? sender, RibbonItemEventArgs e)

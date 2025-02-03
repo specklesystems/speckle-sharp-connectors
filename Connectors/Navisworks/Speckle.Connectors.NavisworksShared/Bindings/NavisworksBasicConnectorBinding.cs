@@ -1,5 +1,3 @@
-using Speckle.Connector.Navisworks.HostApp;
-using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
@@ -15,23 +13,17 @@ public class NavisworksBasicConnectorBinding : IBasicConnectorBinding
   public BasicConnectorBindingCommands Commands { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly ISendConversionCache _sendConversionCache;
   private readonly ISpeckleApplication _speckleApplication;
-  private readonly NavisworksDocumentEvents _documentEvents;
 
   public NavisworksBasicConnectorBinding(
     IBrowserBridge parent,
     DocumentModelStore store,
-    ISendConversionCache sendConversionCache,
-    ISpeckleApplication speckleApplication,
-    NavisworksDocumentEvents documentEvents
+    ISpeckleApplication speckleApplication
   )
   {
     Parent = parent;
     _store = store;
-    _sendConversionCache = sendConversionCache;
     _speckleApplication = speckleApplication;
-    _documentEvents = documentEvents;
     Commands = new BasicConnectorBindingCommands(parent);
   }
 

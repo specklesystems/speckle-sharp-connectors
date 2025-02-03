@@ -1,4 +1,4 @@
-﻿using Revit.Async;
+using Revit.Async;
 using Speckle.Connectors.Common.Threading;
 
 namespace Speckle.Connectors.Revit.Plugin;

@@ -5,13 +5,11 @@ using Rhino.PlugIns;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
-using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
-using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Connectors.Rhino.Bindings;
@@ -36,16 +34,10 @@ public static class ServiceRegistration
     serviceCollection.AddDUI<DefaultThreadContext, RhinoDocumentStore>();
     serviceCollection.AddDUIView();
 
-    // Register other connector specific types
-    serviceCollection.AddSingleton<IRhinoPlugin, RhinoPlugin>();
-    serviceCollection.AddSingleton<IAppIdleManager, RhinoIdleManager>();
-
     // Register bindings
     serviceCollection.AddSingleton<IBinding, TestBinding>();
     serviceCollection.AddSingleton<IBinding, ConfigBinding>(); // POC: Easier like this for now, should be cleaned up later
     serviceCollection.AddSingleton<IBinding, AccountBinding>();
-
-    serviceCollection.RegisterTopLevelExceptionHandler();
 
     serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
     serviceCollection.AddSingleton<IBasicConnectorBinding, RhinoBasicConnectorBinding>();
@@ -53,9 +45,6 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<IBinding, RhinoSelectionBinding>();
     serviceCollection.AddSingleton<IBinding, RhinoSendBinding>();
     serviceCollection.AddSingleton<IBinding, RhinoReceiveBinding>();
-
-    // binding dependencies
-    serviceCollection.AddTransient<CancellationManager>();
 
     // register send filters
     serviceCollection.AddScoped<ISendFilter, RhinoSelectionFilter>();

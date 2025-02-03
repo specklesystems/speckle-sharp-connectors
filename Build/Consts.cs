@@ -58,6 +58,13 @@ public static class Consts
         new("Connectors/Tekla/Speckle.Connector.Tekla2023", "net48"),
         new("Connectors/Tekla/Speckle.Connector.Tekla2024", "net48")
       ]
+    ),
+    new(
+      "etabs",
+      [
+        new("Connectors/CSi/Speckle.Connectors.ETABS21", "net48"),
+        new("Connectors/CSi/Speckle.Connectors.ETABS22", "net8.0-windows"),
+      ]
     )
   };
 }

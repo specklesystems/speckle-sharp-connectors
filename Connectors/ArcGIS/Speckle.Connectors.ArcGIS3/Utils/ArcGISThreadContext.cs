@@ -1,4 +1,4 @@
-﻿using ArcGIS.Desktop.Framework.Threading.Tasks;
+using ArcGIS.Desktop.Framework.Threading.Tasks;
 using Speckle.Connectors.Common.Threading;
 
 namespace Speckle.Connectors.ArcGIS.Utils;

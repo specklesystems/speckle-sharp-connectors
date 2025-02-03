@@ -173,11 +173,6 @@
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
       },
-      "Speckle.DoubleNumerics": {
-        "type": "Transitive",
-        "resolved": "4.0.1",
-        "contentHash": "MzEQ1Im0zTja+tEsdRIk/WlPiKqb22NmTOJcR1ZKm/mz46pezyyID3/wRz6vJUELMpSLnG7LhsxBL+nxbr7V0w=="
-      },
       "Speckle.Newtonsoft.Json": {
         "type": "Transitive",
         "resolved": "13.0.2",
@@ -273,9 +268,9 @@
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection": "[2.2.0, )",
           "Speckle.Connectors.Logging": "[1.0.0, )",
-          "Speckle.Objects": "[3.1.0-dev.234, )",
-          "Speckle.Sdk": "[3.1.0-dev.234, )",
-          "Speckle.Sdk.Dependencies": "[3.1.0-dev.234, )"
+          "Speckle.Objects": "[3.1.0-dev.252, )",
+          "Speckle.Sdk": "[3.1.0-dev.252, )",
+          "Speckle.Sdk.Dependencies": "[3.1.0-dev.252, )"
         }
       },
       "speckle.connectors.dui": {
@@ -283,8 +278,8 @@
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
           "Speckle.Connectors.Common": "[1.0.0, )",
-          "Speckle.Sdk": "[3.1.0-dev.234, )",
-          "Speckle.Sdk.Dependencies": "[3.1.0-dev.234, )"
+          "Speckle.Sdk": "[3.1.0-dev.252, )",
+          "Speckle.Sdk.Dependencies": "[3.1.0-dev.252, )"
         }
       },
       "speckle.connectors.dui.webview": {
@@ -301,7 +296,7 @@
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
-          "Speckle.Objects": "[3.1.0-dev.234, )"
+          "Speckle.Objects": "[3.1.0-dev.252, )"
         }
       },
       "speckle.converters.rhino7": {
@@ -344,20 +339,26 @@
         "resolved": "1.0.1938.49",
         "contentHash": "z8KnFnaTYzhA/ZnyRX0qGfS1NU5ZBJeClAH64F0fVDvdDJTvME7xl6zTJ0Jlfe1BtL3C0NH9xTy64shg2baKdw=="
       },
+      "Speckle.DoubleNumerics": {
+        "type": "CentralTransitive",
+        "requested": "[4.1.0, )",
+        "resolved": "4.0.1",
+        "contentHash": "MzEQ1Im0zTja+tEsdRIk/WlPiKqb22NmTOJcR1ZKm/mz46pezyyID3/wRz6vJUELMpSLnG7LhsxBL+nxbr7V0w=="
+      },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.234, )",
-        "resolved": "3.1.0-dev.234",
-        "contentHash": "vM/aRt+t3yB6JOk+2UdgD40yLiZRFlc5+bUf2dQLbgN4AciSMge3vU6cYnfeV/gMPnQM3XR3Lv9UP/VaLYDwkA==",
+        "requested": "[3.1.0-dev.252, )",
+        "resolved": "3.1.0-dev.252",
+        "contentHash": "S3+M5ikKhBHW7GNtJhXdXcuqs8jKLnZPPunLJ+8zl292F2itSLLhbUwmhhK47Di57J1aqKI6NHoGelXd5uXI5g==",
         "dependencies": {
-          "Speckle.Sdk": "3.1.0-dev.234"
+          "Speckle.Sdk": "3.1.0-dev.252"
         }
       },
       "Speckle.Sdk": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.234, )",
-        "resolved": "3.1.0-dev.234",
-        "contentHash": "9MRVpu0bFWeAWE5BFqc+W3eDFmRJPe46TcSFguYcBGebJzdWPgwqyZt4O0vNBXOuM3NSOz8UpZXe1H0vjX4jRg==",
+        "requested": "[3.1.0-dev.252, )",
+        "resolved": "3.1.0-dev.252",
+        "contentHash": "umEiRJC4hY/vA5corbQiBMQ6Hd3Tb0r0Pl8nARR+PcX6hsklzdGBwMYDkG3zi2DSlWuIJI0ttyldpn9tzU8ArA==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.Bcl.AsyncInterfaces": "[5.0.0]",
@@ -367,14 +368,14 @@
           "Microsoft.Extensions.Logging": "[2.2.0]",
           "Speckle.DoubleNumerics": "4.0.1",
           "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Dependencies": "3.1.0-dev.234"
+          "Speckle.Sdk.Dependencies": "3.1.0-dev.252"
         }
       },
       "Speckle.Sdk.Dependencies": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.234, )",
-        "resolved": "3.1.0-dev.234",
-        "contentHash": "wx++uIHVTiFEiAYoqhsTfN3yJOBiaV2doXP4pttPC52eWwvhOjThKrcRW/Lx2uWlUC8HcyBA3mBV9GaIl7n+1A=="
+        "requested": "[3.1.0-dev.252, )",
+        "resolved": "3.1.0-dev.252",
+        "contentHash": "EmnWPMi9OAgS/IcX3LEfYx5eNlQnbM5HmboRWu2s330kYJBMMho1AYox1cCYatil40mj8MexyF3B3AMq5jrhUQ=="
       }
     }
   }

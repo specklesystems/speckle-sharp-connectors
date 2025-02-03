@@ -86,9 +86,10 @@ public static class Import
       streamId,
       token,
       progress,
+      default,
       new SerializeProcessOptions(true, true, true, false)
     );
-    var (rootId, _) = await process.Serialize(b, default).ConfigureAwait(false);
+    var (rootId, _) = await process.Serialize(b).ConfigureAwait(false);
     Account account =
       new()
       {
@@ -101,12 +102,12 @@ public static class Import
 
     // 8 - Create the version (commit)
     using var apiClient = clientFactory.Create(account);
-    var commitId = await apiClient.Version.Create(
+    var commit = await apiClient.Version.Create(
       new CreateVersionInput(rootId, modelId, streamId, message: commitMessage)
     );
     ms = ms2;
     ms2 = stopwatch.ElapsedMilliseconds;
     Console.WriteLine($"Committed to Speckle: {ms2 - ms} ms");
-    return commitId;
+    return commit.id;
   }
 }

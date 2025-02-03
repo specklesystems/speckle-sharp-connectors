@@ -13,22 +13,4 @@ namespace Speckle.Connectors.CSiShared.HostApp;
 public interface ICsiApplicationService
 {
   cSapModel SapModel { get; }
-  void Initialize(cSapModel sapModel, cPluginCallback pluginCallback);
-}
-
-public class CsiApplicationService : ICsiApplicationService
-{
-  public cSapModel SapModel { get; private set; }
-  private cPluginCallback _pluginCallback;
-
-  public CsiApplicationService()
-  {
-    SapModel = null!;
-  }
-
-  public void Initialize(cSapModel sapModel, cPluginCallback pluginCallback)
-  {
-    SapModel = sapModel;
-    _pluginCallback = pluginCallback;
-  }
 }

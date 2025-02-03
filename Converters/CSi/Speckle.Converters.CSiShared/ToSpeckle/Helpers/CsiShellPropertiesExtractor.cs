@@ -31,15 +31,14 @@ public sealed class CsiShellPropertiesExtractor
   {
     shellData.ApplicationId = shell.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
 
-    var geometry = DictionaryUtils.EnsureNestedDictionary(shellData.Properties, "Geometry");
-    geometry["shellVerticesJointNames"] = GetPointNames(shell);
+    var geometry = shellData.Properties.EnsureNested(ObjectPropertyCategory.GEOMETRY);
+    geometry["Joints"] = GetPointNames(shell); // TODO: 🪲 Viewer shows 4 but only displays 3
 
-    var assignments = DictionaryUtils.EnsureNestedDictionary(shellData.Properties, "Assignments");
-    assignments["groups"] = new List<string>(GetGroupAssigns(shell));
-    assignments["localAxis"] = GetLocalAxes(shell);
-    assignments["materialOverwrite"] = GetMaterialOverwrite(shell);
-    assignments["propertyModifiers"] = GetModifiers(shell);
-    assignments["sectionProperty"] = GetSectionName(shell);
+    var assignments = shellData.Properties.EnsureNested(ObjectPropertyCategory.ASSIGNMENTS);
+    assignments[CommonObjectProperty.GROUPS] = GetGroupAssigns(shell);
+    assignments[CommonObjectProperty.LOCAL_AXIS_2_ANGLE] = GetLocalAxes(shell);
+    assignments[CommonObjectProperty.MATERIAL_OVERWRITE] = GetMaterialOverwrite(shell);
+    assignments[CommonObjectProperty.PROPERTY_MODIFIERS] = GetModifiers(shell);
   }
 
   private string[] GetGroupAssigns(CsiShellWrapper shell)
@@ -55,47 +54,45 @@ public sealed class CsiShellPropertiesExtractor
     double angle = 0;
     bool advanced = false;
     _ = _settingsStore.Current.SapModel.AreaObj.GetLocalAxes(shell.Name, ref angle, ref advanced);
-    return new Dictionary<string, object?> { ["angle"] = angle, ["advanced"] = advanced.ToString() };
+
+    Dictionary<string, object?> resultsDictionary = [];
+    resultsDictionary.AddWithUnits(CommonObjectProperty.ANGLE, angle, "Degrees");
+    resultsDictionary[CommonObjectProperty.ADVANCED] = advanced.ToString();
+
+    return resultsDictionary;
   }
 
   private string GetMaterialOverwrite(CsiShellWrapper shell)
   {
-    string propName = "None";
+    string propName = string.Empty;
     _ = _settingsStore.Current.SapModel.AreaObj.GetMaterialOverwrite(shell.Name, ref propName);
     return propName;
   }
 
   private Dictionary<string, double?> GetModifiers(CsiShellWrapper shell)
   {
-    double[] value = Array.Empty<double>();
+    double[] value = [];
     _ = _settingsStore.Current.SapModel.AreaObj.GetModifiers(shell.Name, ref value);
     return new Dictionary<string, double?>
     {
-      ["membraneF11Modifier"] = value[0],
-      ["membraneF22Modifier"] = value[1],
-      ["membraneF12Modifier"] = value[2],
-      ["bendingM11Modifier"] = value[3],
-      ["bendingM22Modifier"] = value[4],
-      ["bendingM12Modifier"] = value[5],
-      ["shearV13Modifier"] = value[6],
-      ["shearV23Modifier"] = value[7],
-      ["massModifier"] = value[8],
-      ["weightModifier"] = value[9]
+      ["Membrane F11 Modifier"] = value[0],
+      ["Membrane F22 Modifier"] = value[1],
+      ["Membrane F12 Modifier"] = value[2],
+      ["Bending M11 Modifier"] = value[3],
+      ["Bending M22 Modifier"] = value[4],
+      ["Bending M12 Modifier"] = value[5],
+      ["Shear V13 Modifier"] = value[6],
+      ["Shear V23 Modifier"] = value[7],
+      ["Mass"] = value[8],
+      ["Weight"] = value[9]
     };
   }
 
   private string[] GetPointNames(CsiShellWrapper shell)
   {
     int numberPoints = 0;
-    string[] pointNames = Array.Empty<string>();
+    string[] pointNames = [];
     _ = _settingsStore.Current.SapModel.AreaObj.GetPoints(shell.Name, ref numberPoints, ref pointNames);
     return pointNames;
-  }
-
-  private string GetSectionName(CsiShellWrapper shell)
-  {
-    string sectionName = string.Empty;
-    _ = _settingsStore.Current.SapModel.AreaObj.GetProperty(shell.Name, ref sectionName);
-    return sectionName;
   }
 }

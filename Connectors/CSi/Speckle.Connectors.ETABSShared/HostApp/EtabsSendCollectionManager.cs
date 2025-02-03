@@ -1,6 +1,7 @@
 using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
+using Speckle.Converters.CSiShared.Utils;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 
@@ -47,9 +48,14 @@ public class EtabsSendCollectionManager : CsiSendCollectionManager
       return DEFAULT_LEVEL;
     }
 
-    if (properties.TryGetValue("Object ID", out var objectId) && objectId is Dictionary<string, object> parameters)
+    if (
+      properties.TryGetValue(ObjectPropertyCategory.OBJECT_ID, out var objectId)
+      && objectId is Dictionary<string, object> parameters
+    )
     {
-      return parameters.TryGetValue("level", out var level) ? level?.ToString() ?? DEFAULT_LEVEL : DEFAULT_LEVEL;
+      return parameters.TryGetValue(CommonObjectProperty.LEVEL, out var level)
+        ? level?.ToString() ?? DEFAULT_LEVEL
+        : DEFAULT_LEVEL;
     }
 
     return DEFAULT_LEVEL;
@@ -66,11 +72,17 @@ public class EtabsSendCollectionManager : CsiSendCollectionManager
     }
 
     // For frames and shells, get design orientation from Object ID
-    if ((type == "Frame" || type == "Shell") && obj["properties"] is Dictionary<string, object> properties)
+    if (
+      (type == ModelObjectType.FRAME.ToString() || type == ModelObjectType.SHELL.ToString())
+      && obj["properties"] is Dictionary<string, object> properties
+    )
     {
-      if (properties.TryGetValue("Object ID", out var objectId) && objectId is Dictionary<string, object> parameters)
+      if (
+        properties.TryGetValue(ObjectPropertyCategory.OBJECT_ID, out var objectId)
+        && objectId is Dictionary<string, object> parameters
+      )
       {
-        if (parameters.TryGetValue("designOrientation", out var orientation))
+        if (parameters.TryGetValue(CommonObjectProperty.DESIGN_ORIENTATION, out var orientation))
         {
           return GetCategoryFromDesignOrientation(orientation?.ToString(), type);
         }
@@ -78,7 +90,7 @@ public class EtabsSendCollectionManager : CsiSendCollectionManager
     }
 
     // For joints, simply categorize as joints
-    return type == "Joint" ? ElementCategory.JOINT : ElementCategory.OTHER;
+    return type == ModelObjectType.JOINT.ToString() ? ElementCategory.JOINT : ElementCategory.OTHER;
   }
 
   private ElementCategory GetCategoryFromDesignOrientation(string? orientation, string type)
@@ -90,12 +102,12 @@ public class EtabsSendCollectionManager : CsiSendCollectionManager
 
     return (orientation, type) switch
     {
-      ("Column", "Frame") => ElementCategory.COLUMN,
-      ("Beam", "Frame") => ElementCategory.BEAM,
-      ("Brace", "Frame") => ElementCategory.BRACE,
-      ("Wall", "Shell") => ElementCategory.WALL,
-      ("Floor", "Shell") => ElementCategory.FLOOR,
-      ("Ramp", "Shell") => ElementCategory.RAMP,
+      ("Column", nameof(ModelObjectType.FRAME)) => ElementCategory.COLUMN,
+      ("Beam", nameof(ModelObjectType.FRAME)) => ElementCategory.BEAM,
+      ("Brace", nameof(ModelObjectType.FRAME)) => ElementCategory.BRACE,
+      ("Wall", nameof(ModelObjectType.SHELL)) => ElementCategory.WALL,
+      ("Floor", nameof(ModelObjectType.SHELL)) => ElementCategory.FLOOR,
+      ("Ramp", nameof(ModelObjectType.SHELL)) => ElementCategory.RAMP,
       _ => ElementCategory.OTHER
     };
   }
@@ -137,17 +149,5 @@ public class EtabsSendCollectionManager : CsiSendCollectionManager
     var categoryCollection = new Collection(_categoryNames[category]);
     levelCollection.elements.Add(categoryCollection);
     return categoryCollection;
-  }
-
-  private enum ElementCategory
-  {
-    COLUMN,
-    BEAM,
-    BRACE,
-    WALL,
-    FLOOR,
-    RAMP,
-    JOINT,
-    OTHER
   }
 }

@@ -8,7 +8,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{85A13E
 		.editorconfig = .editorconfig
 		codecov.yml = codecov.yml
 		Directory.Build.props = Directory.Build.props
-		Directory.Build.targets = Directory.Build.targets
 		Directory.Packages.props = Directory.Packages.props
 		global.json = global.json
 		README.md = README.md
@@ -62,8 +61,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "HostApps", "HostApps", "{42
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{59E8E8F3-4E42-4E92-83B3-B1C2AB901D18}"
 	ProjectSection(SolutionItems) = preProject
-		.github\workflows\ci.yml = .github\workflows\ci.yml
-		.github\workflows\main.yml = .github\workflows\main.yml
+		.github\workflows\pr.yml = .github\workflows\pr.yml
+		.github\workflows\release.yml = .github\workflows\release.yml
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Connectors.Civil3d2024", "Connectors\Autocad\Speckle.Connectors.Civil3d2024\Speckle.Connectors.Civil3d2024.csproj", "{CA8EAE01-AB9F-4EC1-B6F3-73721487E9E1}"
@@ -271,6 +270,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Importers.Ifc.Tester", "Importers\Ifc\Speckle.Importers.Ifc.Tester\Speckle.Importers.Ifc.Tester.csproj", "{B3B126CA-A419-48D1-B117-6DEE1DE1AFAD}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Importers.Ifc.Tester2", "Importers\Ifc\Speckle.Importers.Ifc.Tester2\Speckle.Importers.Ifc.Tester2.csproj", "{867DC1A5-A886-4F49-8665-793EB9832F9E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Common.Tests", "Sdk\Speckle.Connectors.Common.Tests\Speckle.Connectors.Common.Tests.csproj", "{C19C3EDF-D95D-4D22-9949-D99F91447AE7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Common.MeshTriangulation", "Sdk\Speckle.Common.MeshTriangulation\Speckle.Common.MeshTriangulation.csproj", "{20BB9687-2C92-44E9-9E2F-9D2F45641354}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -699,6 +701,18 @@ Global
 		{867DC1A5-A886-4F49-8665-793EB9832F9E}.Local|Any CPU.Build.0 = Debug|Any CPU
 		{867DC1A5-A886-4F49-8665-793EB9832F9E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{867DC1A5-A886-4F49-8665-793EB9832F9E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C19C3EDF-D95D-4D22-9949-D99F91447AE7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C19C3EDF-D95D-4D22-9949-D99F91447AE7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C19C3EDF-D95D-4D22-9949-D99F91447AE7}.Local|Any CPU.ActiveCfg = Local|Any CPU
+		{C19C3EDF-D95D-4D22-9949-D99F91447AE7}.Local|Any CPU.Build.0 = Local|Any CPU
+		{C19C3EDF-D95D-4D22-9949-D99F91447AE7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C19C3EDF-D95D-4D22-9949-D99F91447AE7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{20BB9687-2C92-44E9-9E2F-9D2F45641354}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{20BB9687-2C92-44E9-9E2F-9D2F45641354}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{20BB9687-2C92-44E9-9E2F-9D2F45641354}.Local|Any CPU.ActiveCfg = Debug|Any CPU
+		{20BB9687-2C92-44E9-9E2F-9D2F45641354}.Local|Any CPU.Build.0 = Debug|Any CPU
+		{20BB9687-2C92-44E9-9E2F-9D2F45641354}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{20BB9687-2C92-44E9-9E2F-9D2F45641354}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -823,6 +837,8 @@ Global
 		{9FD99F9B-8D50-4C7A-B3A6-22E28AB5F26B} = {0EF6C4D6-AC76-408F-8D32-2F9DA8006077}
 		{B3B126CA-A419-48D1-B117-6DEE1DE1AFAD} = {0EF6C4D6-AC76-408F-8D32-2F9DA8006077}
 		{867DC1A5-A886-4F49-8665-793EB9832F9E} = {0EF6C4D6-AC76-408F-8D32-2F9DA8006077}
+		{C19C3EDF-D95D-4D22-9949-D99F91447AE7} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
+		{20BB9687-2C92-44E9-9E2F-9D2F45641354} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}
