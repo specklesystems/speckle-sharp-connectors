@@ -35,7 +35,7 @@ public sealed class RhinoSendBinding : ISendBinding
   private readonly DocumentModelStore _store;
   private readonly IServiceProvider _serviceProvider;
   private readonly List<ISendFilter> _sendFilters;
-  private readonly CancellationManager _cancellationManager;
+  private readonly ICancellationManager _cancellationManager;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<RhinoSendBinding> _logger;
@@ -67,7 +67,7 @@ public sealed class RhinoSendBinding : ISendBinding
     IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     IServiceProvider serviceProvider,
-    CancellationManager cancellationManager,
+    ICancellationManager cancellationManager,
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
     ILogger<RhinoSendBinding> logger,
@@ -220,6 +220,10 @@ public sealed class RhinoSendBinding : ISendBinding
     }
 
     var layer = RhinoDoc.ActiveDoc.Layers[args.LayerIndex];
+    if (layer.Name is null)
+    {
+      return;
+    }
 
     // add all objects from the changed layers and sublayers to the non-destructively changed object list.
     var allLayers = args.Document.Layers.Where(l => /* NOTE: layer path may actually be null in some cases (rhino's fault, not ours) */
@@ -301,7 +305,7 @@ public sealed class RhinoSendBinding : ISendBinding
         throw new InvalidOperationException("No publish model card was found.");
       }
 
-      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
       List<RhinoObject> rhinoObjects = modelCard
         .SendFilter.NotNull()
@@ -321,8 +325,8 @@ public sealed class RhinoSendBinding : ISendBinding
         .Execute(
           rhinoObjects,
           modelCard.GetSendInfo(_speckleApplication.Slug),
-          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
-          cancellationToken
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),
+          cancellationItem.Token
         );
 
       await Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
