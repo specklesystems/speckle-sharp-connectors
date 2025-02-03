@@ -69,7 +69,7 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
           materialQuantity["materialId"] = material.Id.ToString();
           quantities[material.Name] = materialQuantity;
 
-          CreateOrUpdateMaterialProxy(material, target.UniqueId);
+          CreateOrUpdateMaterialProxy(material, target.Id.ToString());
         }
       }
     }
@@ -81,20 +81,24 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
   {
     var materialProxiesMap = _revitToSpeckleCacheSingleton.MaterialProxiesMap;
     string materialIdString = material.Id.ToString();
-    Dictionary<string, object> materialAssetProperties = new();
-
-    if (material.StructuralAssetId != null)
-    {
-      materialAssetProperties["Structural"] = _structuralAssetExtractor.GetProperties(material.StructuralAssetId);
-    }
-
-    if (material.ThermalAssetId != null)
-    {
-      materialAssetProperties["Thermal"] = _thermalAssetExtractor.GetProperties(material.ThermalAssetId);
-    }
 
     if (!materialProxiesMap.TryGetValue(materialIdString, out var materialProxy))
     {
+      Dictionary<string, object> materialAssetProperties = new();
+
+      DB.ElementId structuralAssetId = material.StructuralAssetId;
+      DB.ElementId thermalAssetId = material.ThermalAssetId;
+
+      if (structuralAssetId != DB.ElementId.InvalidElementId)
+      {
+        materialAssetProperties["Structural"] = _structuralAssetExtractor.GetProperties(structuralAssetId);
+      }
+
+      if (thermalAssetId != DB.ElementId.InvalidElementId)
+      {
+        materialAssetProperties["Thermal"] = _thermalAssetExtractor.GetProperties(thermalAssetId);
+      }
+
       materialProxy = new GroupProxy
       {
         applicationId = materialIdString,
@@ -104,6 +108,8 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
         ["class"] = material.MaterialClass,
         ["properties"] = materialAssetProperties,
       };
+
+      materialProxiesMap[materialIdString] = materialProxy;
     }
 
     if (!materialProxy.objects.Contains(elementId))

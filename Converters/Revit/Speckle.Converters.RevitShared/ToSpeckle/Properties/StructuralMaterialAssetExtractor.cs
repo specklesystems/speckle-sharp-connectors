@@ -21,7 +21,8 @@ public class StructuralMaterialAssetExtractor
     var properties = new Dictionary<string, object>();
 
     var structuralAsset = _converterSettings.Current.Document.GetElement(structuralAssetId);
-    properties["Name"] = structuralAsset.Name;
+    properties["name"] = structuralAsset.Name;
+    // properties["density"] = structuralAsset.Density;
 
     return properties;
   }

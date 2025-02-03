@@ -71,5 +71,5 @@ public class RevitToSpeckleCacheSingleton
   /// <param name="elementIds">List of element IDs to get material proxies for</param>
   /// <returns>List of material proxies that are associated with the given elements</returns>
   public List<GroupProxy> GetMaterialProxyListForObjects(List<string> elementIds) =>
-    MaterialProxiesMap.Values.Where(proxy => proxy.objects.Any(elementIds.Contains)).ToList();
+    MaterialProxiesMap.Values.Where(proxy => proxy.objects.Any(objectId => elementIds.Contains(objectId))).ToList();
 }
