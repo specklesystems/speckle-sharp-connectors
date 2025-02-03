@@ -89,7 +89,6 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
 
     // 3 - Convert atomic objects
     List<SendConversionResult> results = new(atomicObjects.Count);
-    HashSet<Layer> versionLayers = new();
     int count = 0;
     using (var _ = _activityFactory.Start("Convert all"))
     {
@@ -98,9 +97,9 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         cancellationToken.ThrowIfCancellationRequested();
         using var _2 = _activityFactory.Start("Convert");
 
-        // handle layer
+        // handle layer and store object layer *and all layer parents* to the version layers
+        // this is important because we need to unpack colors and materials on intermediate layers that do not have objects as well.
         Layer layer = _converterSettings.Current.Document.Layers[rhinoObject.Attributes.LayerIndex];
-        versionLayers.Add(layer);
         Collection collectionHost = _layerUnpacker.GetHostObjectCollection(layer, rootObjectCollection);
 
         var result = ConvertRhinoObject(rhinoObject, collectionHost, instanceProxies, sendInfo.ProjectId);
@@ -120,15 +119,18 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       throw new SpeckleException("Failed to convert all objects."); // fail fast instead creating empty commit! It will appear as model card error with red color.
     }
 
+    // Get all layers from the created collections on the root object commit for proxy processing
+    List<Layer> layers = _layerUnpacker.GetUsedLayers().ToList();
+
     using (var _ = _activityFactory.Start("UnpackRenderMaterials"))
     {
       // 4 - Unpack the render material proxies
-      rootObjectCollection[ProxyKeys.RENDER_MATERIAL] = _materialUnpacker.UnpackRenderMaterial(atomicObjects);
+      rootObjectCollection[ProxyKeys.RENDER_MATERIAL] = _materialUnpacker.UnpackRenderMaterials(atomicObjects, layers);
     }
     using (var _ = _activityFactory.Start("UnpackColors"))
     {
       // 5 - Unpack the color proxies
-      rootObjectCollection[ProxyKeys.COLOR] = _colorUnpacker.UnpackColors(atomicObjects, versionLayers.ToList());
+      rootObjectCollection[ProxyKeys.COLOR] = _colorUnpacker.UnpackColors(atomicObjects, layers);
     }
 
     return new RootObjectBuilderResult(rootObjectCollection, results);

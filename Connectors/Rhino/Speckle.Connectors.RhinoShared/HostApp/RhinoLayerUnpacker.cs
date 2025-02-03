@@ -1,4 +1,5 @@
 using Rhino;
+using Speckle.Sdk;
 using Speckle.Sdk.Models.Collections;
 using Layer = Rhino.DocObjects.Layer;
 using SpeckleLayer = Speckle.Sdk.Models.Collections.Layer;
@@ -22,6 +23,35 @@ public class RhinoLayerUnpacker
   Layer.PathSeparator;
 #endif
   private static readonly string[] s_pathSeparatorSplit = [s_pathSeparator];
+
+  /// <summary>
+  /// Use this method to get all of the layers that correspond to collection created in the root collection.
+  /// </summary>
+  /// <returns></returns>
+  /// <exception cref="SpeckleException">Throws when a layer could not be retrieved from a stored collection application id</exception>
+  public IEnumerable<Layer> GetUsedLayers()
+  {
+    var currentDoc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
+
+    foreach (string layerId in _layerCollectionCache.Values.Select(o => o.applicationId ?? string.Empty).ToList())
+    {
+      if (Guid.TryParse(layerId, out Guid layerGuid))
+      {
+        if (currentDoc.Layers.FindId(layerGuid) is Layer layer)
+        {
+          yield return layer;
+        }
+        else
+        {
+          throw new SpeckleException($"Could not retrieve layer with guid: {layerId}.");
+        }
+      }
+      else
+      {
+        throw new SpeckleException($"Invalid Collection Layer id: {layerId}. Should be convertible to a Guid.");
+      }
+    }
+  }
 
   /// <summary>
   /// <para>Use this method to construct the root commit object while converting objects.</para>
