@@ -397,7 +397,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       {
         continue;
       }
-      
+
       var selectedObjects = modelCard.SendFilter.NotNull().IdMap.NotNull().Values;
       var intersection = selectedObjects.Intersect(objUniqueIds).ToList();
       bool isExpired = intersection.Count != 0;
