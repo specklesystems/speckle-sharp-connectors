@@ -20,7 +20,7 @@ public class RhinoReceiveBinding : IReceiveBinding
   public string Name => "receiveBinding";
   public IBrowserBridge Parent { get; }
 
-  private readonly CancellationManager _cancellationManager;
+  private readonly ICancellationManager _cancellationManager;
   private readonly DocumentModelStore _store;
   private readonly IServiceProvider _serviceProvider;
   private readonly IOperationProgressManager _operationProgressManager;
@@ -31,7 +31,7 @@ public class RhinoReceiveBinding : IReceiveBinding
 
   public RhinoReceiveBinding(
     DocumentModelStore store,
-    CancellationManager cancellationManager,
+    ICancellationManager cancellationManager,
     IBrowserBridge parent,
     IOperationProgressManager operationProgressManager,
     ILogger<RhinoReceiveBinding> logger,
@@ -59,6 +59,8 @@ public class RhinoReceiveBinding : IReceiveBinding
     scope
       .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
       .Initialize(_rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
+
+    uint undoRecord = 0;
     try
     {
       // Get receiver card
@@ -68,15 +70,16 @@ public class RhinoReceiveBinding : IReceiveBinding
         throw new InvalidOperationException("No download model card was found.");
       }
 
-      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
+      undoRecord = RhinoDoc.ActiveDoc.BeginUndoRecord($"Receive Speckle model {modelCard.ModelName}");
       // Receive host objects
       HostObjectBuilderResult conversionResults = await scope
         .ServiceProvider.GetRequiredService<ReceiveOperation>()
         .Execute(
           modelCard.GetReceiveInfo(_speckleApplication.Slug),
-          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
-          cancellationToken
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),
+          cancellationItem.Token
         );
 
       modelCard.BakedObjectIds = conversionResults.BakedObjectIds.ToList();
@@ -97,6 +100,10 @@ public class RhinoReceiveBinding : IReceiveBinding
     {
       _logger.LogModelCardHandledError(ex);
       await Commands.SetModelError(modelCardId, ex);
+    }
+    finally
+    {
+      RhinoDoc.ActiveDoc.EndUndoRecord(undoRecord);
     }
   }
 

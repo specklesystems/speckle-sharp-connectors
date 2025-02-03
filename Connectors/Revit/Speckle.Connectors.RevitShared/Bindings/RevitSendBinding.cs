@@ -31,7 +31,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 {
   private readonly IRevitContext _revitContext;
   private readonly DocumentModelStore _store;
-  private readonly CancellationManager _cancellationManager;
+  private readonly ICancellationManager _cancellationManager;
   private readonly IServiceProvider _serviceProvider;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
@@ -53,7 +53,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   public RevitSendBinding(
     IRevitContext revitContext,
     DocumentModelStore store,
-    CancellationManager cancellationManager,
+    ICancellationManager cancellationManager,
     IBrowserBridge bridge,
     IServiceProvider serviceProvider,
     ISendConversionCache sendConversionCache,
@@ -119,7 +119,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         throw new InvalidOperationException("No publish model card was found.");
       }
 
-      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
       using var scope = _serviceProvider.CreateScope();
       scope
@@ -146,8 +146,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         .Execute(
           elementIds,
           modelCard.GetSendInfo(_speckleApplication.Slug),
-          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
-          cancellationToken
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),
+          cancellationItem.Token
         );
 
       await Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
