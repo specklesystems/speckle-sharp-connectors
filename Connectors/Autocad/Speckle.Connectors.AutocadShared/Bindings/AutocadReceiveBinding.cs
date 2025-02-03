@@ -19,7 +19,7 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
   public IBrowserBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly CancellationManager _cancellationManager;
+  private readonly ICancellationManager _cancellationManager;
   private readonly IServiceProvider _serviceProvider;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<AutocadReceiveBinding> _logger;
@@ -31,7 +31,7 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
   public AutocadReceiveBinding(
     DocumentModelStore store,
     IBrowserBridge parent,
-    CancellationManager cancellationManager,
+    ICancellationManager cancellationManager,
     IServiceProvider serviceProvider,
     IOperationProgressManager operationProgressManager,
     ILogger<AutocadReceiveBinding> logger,
@@ -67,7 +67,7 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
         throw new InvalidOperationException("No download model card was found.");
       }
 
-      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
       // Disable document activation (document creation and document switch)
       // Not disabling results in DUI model card being out of sync with the active document
@@ -79,8 +79,8 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
         .ServiceProvider.GetRequiredService<ReceiveOperation>()
         .Execute(
           modelCard.GetReceiveInfo(_speckleApplication.Slug),
-          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
-          cancellationToken
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),
+          cancellationItem.Token
         );
 
       await Commands.SetModelReceiveResult(

@@ -29,7 +29,7 @@ public sealed class CsiSharedSendBinding : ISendBinding
   private readonly DocumentModelStore _store;
   private readonly IServiceProvider _serviceProvider;
   private readonly List<ISendFilter> _sendFilters;
-  private readonly CancellationManager _cancellationManager;
+  private readonly ICancellationManager _cancellationManager;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<CsiSharedSendBinding> _logger;
   private readonly ICsiApplicationService _csiApplicationService;
@@ -42,7 +42,7 @@ public sealed class CsiSharedSendBinding : ISendBinding
     IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     IServiceProvider serviceProvider,
-    CancellationManager cancellationManager,
+    ICancellationManager cancellationManager,
     IOperationProgressManager operationProgressManager,
     ILogger<CsiSharedSendBinding> logger,
     ICsiConversionSettingsFactory csiConversionSettingsFactory,
@@ -84,7 +84,7 @@ public sealed class CsiSharedSendBinding : ISendBinding
         .ServiceProvider.GetRequiredService<IConverterSettingsStore<CsiConversionSettings>>()
         .Initialize(_csiConversionSettingsFactory.Create(_csiApplicationService.SapModel));
 
-      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
       List<ICsiWrapper> wrappers = modelCard
         .SendFilter.NotNull()
@@ -102,8 +102,8 @@ public sealed class CsiSharedSendBinding : ISendBinding
         .Execute(
           wrappers,
           modelCard.GetSendInfo(_speckleApplication.Slug),
-          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
-          cancellationToken
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),
+          cancellationItem.Token
         );
 
       await Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);

@@ -22,7 +22,7 @@ public sealed class AutocadSendBinding : AutocadSendBaseBinding
     DocumentModelStore store,
     IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
-    CancellationManager cancellationManager,
+    ICancellationManager cancellationManager,
     IServiceProvider serviceProvider,
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,

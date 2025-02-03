@@ -5,7 +5,6 @@ using Rhino.PlugIns;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
-using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
@@ -46,9 +45,6 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<IBinding, RhinoSelectionBinding>();
     serviceCollection.AddSingleton<IBinding, RhinoSendBinding>();
     serviceCollection.AddSingleton<IBinding, RhinoReceiveBinding>();
-
-    // binding dependencies
-    serviceCollection.AddTransient<CancellationManager>();
 
     // register send filters
     serviceCollection.AddScoped<ISendFilter, RhinoSelectionFilter>();

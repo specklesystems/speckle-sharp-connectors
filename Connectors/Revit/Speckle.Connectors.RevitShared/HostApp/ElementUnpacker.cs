@@ -64,6 +64,13 @@ public class ElementUnpacker
         var groupElements = g.GetMemberIds().Select(doc.GetElement);
         unpackedElements.AddRange(UnpackElements(groupElements));
       }
+      else if (element is BaseArray baseArray)
+      {
+        var arrayElements = baseArray.GetCopiedMemberIds().Select(doc.GetElement);
+        var originalElements = baseArray.GetOriginalMemberIds().Select(doc.GetElement);
+        unpackedElements.AddRange(UnpackElements(arrayElements));
+        unpackedElements.AddRange(UnpackElements(originalElements));
+      }
       // UNPACK: Family instances (as they potentially have nested families inside)
       else if (element is FamilyInstance familyInstance)
       {
