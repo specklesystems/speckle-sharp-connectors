@@ -93,7 +93,7 @@ public class SolidToSpeckleConverter : ITypedConverter<TSM.Solid, SOG.Mesh>
     };
   }
 
-  private static SOG.Mesh ExtrudeFromPolygons(List<Poly3> face1, List<Poly3> face2)
+  private SOG.Mesh ExtrudeFromPolygons(List<Poly3> face1, List<Poly3> face2)
   {
     var point = face2[0].Vertices[0];
     var generator = new MeshGenerator(new BaseTransformer(), new TriangleNetTriangulator());
@@ -102,7 +102,7 @@ public class SolidToSpeckleConverter : ITypedConverter<TSM.Solid, SOG.Mesh>
     return Mesh3ToSpeckleMesh(mesh3);
   }
 
-  private static SOG.Mesh Mesh3ToSpeckleMesh(Mesh3 mesh3)
+  private SOG.Mesh Mesh3ToSpeckleMesh(Mesh3 mesh3)
   {
     var vertices = new List<double>();
     var faces = new List<int>();
@@ -126,7 +126,7 @@ public class SolidToSpeckleConverter : ITypedConverter<TSM.Solid, SOG.Mesh>
     {
       vertices = vertices,
       faces = faces,
-      units = "mm"
+      units = _settingsStore.Current.SpeckleUnits
     };
 
     return mesh;
