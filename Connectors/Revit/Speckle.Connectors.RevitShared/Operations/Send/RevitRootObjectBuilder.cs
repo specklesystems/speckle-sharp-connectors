@@ -97,7 +97,7 @@ public class RevitRootObjectBuilder(
           );
           continue;
         }
-        
+
         Base converted;
         if (sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value))
         {

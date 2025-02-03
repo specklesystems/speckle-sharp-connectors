@@ -63,7 +63,7 @@ public class ElementUnpacker
         // POC: this might screw up generating hosting rel generation here, because nested families in groups get flattened out by GetMemberIds().
         var groupElements = g.GetMemberIds().Select(doc.GetElement);
         unpackedElements.AddRange(UnpackElements(groupElements));
-      } 
+      }
       else if (element is BaseArray baseArray)
       {
         var arrayElements = baseArray.GetCopiedMemberIds().Select(doc.GetElement);
