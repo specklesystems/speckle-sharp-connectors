@@ -3,6 +3,7 @@ using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Revit2023.ToSpeckle.Properties;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -14,7 +15,7 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dictionary<string, object>>
 {
   private readonly Dictionary<
-    string?,
+    string,
     (string name, double density, DB.ForgeTypeId unitId)
   > _structuralAssetDensityCache = new();
   private readonly ScalingServiceToSpeckle _scalingService;
@@ -48,7 +49,7 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
     Dictionary<string, object> quantities = new();
     if (target.Category?.HasMaterialQuantities ?? false) //category can be null
     {
-      foreach (DB.ElementId matId in target.GetMaterialIds(false))
+      foreach (DB.ElementId? matId in target.GetMaterialIds(false))
       {
         if (matId is null)
         {
@@ -103,22 +104,20 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
   private (string name, double density, DB.ForgeTypeId unitId)? TryExtractMaterialAssetParameters(DB.ElementId assetId)
   {
     // ensure safe string conversion
-    string assetIdString = assetId.ToString();
-    if (!string.IsNullOrEmpty(assetIdString))
-    {
-      // check cache if density has already been extracted
-      if (_structuralAssetDensityCache.TryGetValue(assetIdString, out var cachedDensity))
-      {
-        return cachedDensity;
-      }
+    string assetIdString = assetId.ToString().NotNull();
 
-      // if not in cache but structural asset id is valid => attempt extraction from StructuralMaterialAssertExtractor
-      var extractedDensity = _structuralAssetExtractor.GetProperties(assetId);
-      if (extractedDensity.HasValue)
-      {
-        _structuralAssetDensityCache[assetIdString] = extractedDensity.Value;
-        return extractedDensity.Value;
-      }
+    // check cache if density has already been extracted
+    if (_structuralAssetDensityCache.TryGetValue(assetIdString, out var cachedDensity))
+    {
+      return cachedDensity;
+    }
+
+    // if not in cache but structural asset id is valid => attempt extraction from StructuralMaterialAssertExtractor
+    var extractedDensity = _structuralAssetExtractor.GetProperties(assetId);
+    if (extractedDensity.HasValue)
+    {
+      _structuralAssetDensityCache[assetIdString] = extractedDensity.Value;
+      return extractedDensity.Value;
     }
 
     return null;
