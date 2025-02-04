@@ -254,7 +254,7 @@ public sealed class RhinoSendBinding : ISendBinding
     }
   }
 
-  // We are using this event to track changes to the material, material source, color, color source, layer, and user strings
+  // We are using this event to track changes to specific object attributes that impact the object props we are sending to speckle
   private void OnModifyObjectAttributes(RhinoModifyObjectAttributesEventArgs e)
   {
     if (!_store.IsDocumentInit)
@@ -262,8 +262,20 @@ public sealed class RhinoSendBinding : ISendBinding
       return;
     }
 
-    ChangedObjectIds[e.RhinoObject.Id.ToString()] = 1;
-    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
+    if (
+      e.OldAttributes.LayerIndex != e.NewAttributes.LayerIndex
+      || e.OldAttributes.MaterialSource != e.NewAttributes.MaterialSource
+      || e.OldAttributes.MaterialIndex != e.NewAttributes.MaterialIndex // NOTE: this does not work when swapping around from custom doc materials, it works when you swap TO/FROM default material
+      || e.OldAttributes.ColorSource != e.NewAttributes.ColorSource
+      || e.OldAttributes.ObjectColor != e.NewAttributes.ObjectColor
+      || e.OldAttributes.Name != e.NewAttributes.Name
+      || e.OldAttributes.UserStringCount != e.NewAttributes.UserStringCount
+      || e.OldAttributes.GetUserStrings() != e.NewAttributes.GetUserStrings()
+    )
+    {
+      ChangedObjectIds[e.RhinoObject.Id.ToString()] = 1;
+      _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
+    }
   }
 
   private void OnReplaceRhinoObject(RhinoReplaceObjectEventArgs e)
