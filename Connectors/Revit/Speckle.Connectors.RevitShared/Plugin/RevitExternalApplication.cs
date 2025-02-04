@@ -41,6 +41,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
   {
     try
     {
+      RevitTask.Initialize(application);
       // POC: not sure what this is doing...  could be messing up our Aliasing????
       AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<RevitExternalApplication>;
       var services = new ServiceCollection();
@@ -52,7 +53,6 @@ internal sealed class RevitExternalApplication : IExternalApplication
       _container = services.BuildServiceProvider();
       _container.UseDUI();
 
-      RevitTask.Initialize(application);
       RevitEvents.Register(_container.GetRequiredService<IEventAggregator>(), application);
       // resolve root object
       _revitPlugin = _container.GetRequiredService<IRevitPlugin>();
