@@ -15,7 +15,7 @@ public sealed class MeshGenerator
 
   // creates a triangulated surface mesh from the given polygons
   // each polygon has to contain at least 3 points
-  // the frist polygon is the contour of the mesh, it has to be clockwise
+  // the first polygon is the contour of the mesh, it has to be clockwise
   // the rest of the polygons define the holes, these have to be counterclockwise
   public Mesh3 TriangulateSurface(IReadOnlyList<Poly3> polygons)
   {
@@ -32,12 +32,12 @@ public sealed class MeshGenerator
 
   // creates an extruded triangle mesh from the given polygons
   // each polygon has to contain at least 3 points
-  // the frist polygon is the contour of the mesh, it has to be clockwise
+  // the first polygon is the contour of the mesh, it has to be clockwise
   // the rest of the polygons define the holes, these have to be counterclockwise
   // the mesh will be extruded in the normal direction by the given height
   public Mesh3 ExtrudeMesh(IReadOnlyList<Poly3> polygons, double extrusionHeight)
   {
-    if (polygons.Count < 3)
+    if (polygons.Count < 1)
     {
       throw new ArgumentException("No polygon was provided for extrusion");
     }
@@ -117,5 +117,27 @@ public sealed class MeshGenerator
     }
 
     return new Mesh3(vertices, triangles);
+  }
+
+  public Mesh3 ExtrudeMesh(IReadOnlyList<Poly3> polygons, Vector3 point)
+  {
+    var distance = GetDistanceToPlane(polygons[0], point);
+    return ExtrudeMesh(polygons, distance);
+  }
+
+  public static double GetDistanceToPlane(Poly3 plane, Vector3 point)
+  {
+    var p1 = plane.Vertices[0];
+    var p2 = plane.Vertices[1];
+    var p3 = plane.Vertices[2];
+
+    Vector3 v1 = p2 - p1;
+    Vector3 v2 = p3 - p1;
+    Vector3 normal = Vector3.Normalize(Vector3.Cross(v1, v2));
+
+    var dot = -Vector3.Dot(normal, p1);
+    var distance = Math.Abs(Vector3.Dot(normal, point) + dot);
+
+    return distance;
   }
 }
