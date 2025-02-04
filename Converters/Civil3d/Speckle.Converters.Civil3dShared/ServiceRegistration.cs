@@ -35,7 +35,8 @@ public static class ServiceRegistration
     >();
 
     // add other classes
-    serviceCollection.AddScoped<PropertiesExtractor>();
+    serviceCollection.AddScoped<Speckle.Converters.Civil3dShared.ToSpeckle.PropertiesExtractor>(); // for civil
+    serviceCollection.AddScoped<Speckle.Converters.AutocadShared.ToSpeckle.PropertiesExtractor>(); // for autocad
     serviceCollection.AddScoped<PartDataExtractor>();
     serviceCollection.AddScoped<DisplayValueExtractor>();
     serviceCollection.AddScoped<BaseCurveExtractor>();
