@@ -28,17 +28,21 @@ if (args.Length > 1)
   args = new[] { arguments.First() };
   //arguments = arguments.Skip(1).ToList();
 }*/
-
-Target(
-  CLEAN_LOCKS,
-  () =>
-  {
-    DeleteFiles("**/*.lock.json");
-    Console.WriteLine("Running restore now.");
-    Run("dotnet", "restore .\\Speckle.Connectors.sln --no-cache");
-  }
-);
-
+void Build(string solution, string configuration)
+{
+  Console.WriteLine();
+  Console.WriteLine();
+  Console.WriteLine($"Building solution '{solution}' as '{configuration}'");
+  Console.WriteLine();
+  Run("dotnet", $"build .\\{solution} --configuration {configuration} --no-restore");
+}
+void Restore(string solution)
+{
+  Console.WriteLine();
+  Console.WriteLine($"Restoring solution '{solution}'");
+  Console.WriteLine();
+  Run("dotnet", $"restore .\\{solution} --no-cache");
+}
 void DeleteFiles(string pattern)
 {
   foreach (var f in Glob.Files(".", pattern))
@@ -67,12 +71,18 @@ void CleanSolution(string solution, string configuration)
   DeleteDirectories("**/bin");
   DeleteDirectories("**/obj");
   DeleteFiles("**/*.lock.json");
-  Console.WriteLine();
-  Console.WriteLine($"Building solution {solution} as {configuration}");
-  Console.WriteLine();
-  Run("dotnet", $"restore .\\{solution} --no-cache");
-  Run("dotnet", $"build .\\{solution} --configuration {configuration} --no-restore");
+  Restore(solution);
+  Build(solution, configuration);
 }
+
+Target(
+  CLEAN_LOCKS,
+  () =>
+  {
+    DeleteFiles("**/*.lock.json");
+    Restore("Speckle.Connectors.sln");
+  }
+);
 
 Target(
   DEEP_CLEAN,
