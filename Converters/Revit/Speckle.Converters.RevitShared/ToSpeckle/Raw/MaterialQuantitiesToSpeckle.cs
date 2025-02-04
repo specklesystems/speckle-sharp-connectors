@@ -1,10 +1,8 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Revit2023.ToSpeckle.Properties;
-using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
-using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -14,25 +12,20 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 /// </summary>
 public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dictionary<string, object>>
 {
+  private readonly Dictionary<string, (double density, string units)> _structuralAssetDensityCache = new();
   private readonly ScalingServiceToSpeckle _scalingService;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
-  private readonly RevitToSpeckleCacheSingleton _revitToSpeckleCacheSingleton;
   private readonly StructuralMaterialAssetExtractor _structuralAssetExtractor;
-  private readonly ThermalMaterialAssetExtractor _thermalAssetExtractor;
 
   public MaterialQuantitiesToSpeckleLite(
     ScalingServiceToSpeckle scalingService,
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
-    RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton,
-    StructuralMaterialAssetExtractor structuralAssetExtractor,
-    ThermalMaterialAssetExtractor thermalAssetExtractor
+    StructuralMaterialAssetExtractor structuralAssetExtractor
   )
   {
     _scalingService = scalingService;
     _converterSettings = converterSettings;
-    _revitToSpeckleCacheSingleton = revitToSpeckleCacheSingleton;
     _structuralAssetExtractor = structuralAssetExtractor;
-    _thermalAssetExtractor = thermalAssetExtractor;
   }
 
   /// <summary>
@@ -66,10 +59,21 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
         if (_converterSettings.Current.Document.GetElement(matId) is DB.Material material)
         {
           materialQuantity["materialName"] = material.Name;
-          materialQuantity["materialId"] = material.Id.ToString();
-          quantities[material.Name] = materialQuantity;
+          materialQuantity["materialCategory"] = material.MaterialCategory;
+          materialQuantity["materialClass"] = material.MaterialClass;
 
-          CreateOrUpdateMaterialProxy(material, target.Id.ToString());
+          var density = TryGetDensity(material);
+          if (density.HasValue)
+          {
+            materialQuantity["density"] = new Dictionary<string, object>
+            {
+              ["name"] = "density",
+              ["value"] = density.Value.density,
+              ["units"] = density.Value.units
+            };
+          }
+
+          quantities[material.Name] = materialQuantity;
         }
       }
     }
@@ -77,34 +81,29 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
     return quantities;
   }
 
-  private void CreateOrUpdateMaterialProxy(DB.Material material, string elementId)
+  private (double density, string units)? TryGetDensity(DB.Material material)
   {
-    var materialProxiesMap = _revitToSpeckleCacheSingleton.MaterialProxiesMap;
-    string materialIdString = material.Id.ToString();
-
-    if (!materialProxiesMap.TryGetValue(materialIdString, out var materialProxy))
+    // get StructuralAssetId
+    DB.ElementId assetId = material.StructuralAssetId;
+    if (assetId == DB.ElementId.InvalidElementId)
     {
-      Dictionary<string, object> materialAssetProperties = new();
-
-      _structuralAssetExtractor.GetProperties(material.StructuralAssetId, materialAssetProperties);
-      _thermalAssetExtractor.GetProperties(material.ThermalAssetId, materialAssetProperties);
-
-      materialProxy = new GroupProxy
-      {
-        applicationId = materialIdString,
-        name = material.Name,
-        objects = new List<string>(),
-        ["category"] = material.MaterialCategory,
-        ["class"] = material.MaterialClass,
-        ["properties"] = materialAssetProperties,
-      };
-
-      materialProxiesMap[materialIdString] = materialProxy;
+      return null; // no structural asset => early break
     }
 
-    if (!materialProxy.objects.Contains(elementId))
+    // check cache if density has already been extracted
+    if (_structuralAssetDensityCache.TryGetValue(assetId.ToString(), out var cachedDensity))
     {
-      materialProxy.objects.Add(elementId);
+      return cachedDensity;
     }
+
+    // if not in cache but structural asset id is valid => attempt extraction from StructuralMaterialAssertExtractor
+    var extractedDensity = _structuralAssetExtractor.GetDensity(assetId);
+    if (extractedDensity.HasValue)
+    {
+      _structuralAssetDensityCache[assetId.ToString()] = extractedDensity.Value;
+      return extractedDensity;
+    }
+
+    return null;
   }
 }

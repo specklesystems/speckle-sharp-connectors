@@ -51,7 +51,6 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<ClassPropertiesExtractor>();
     serviceCollection.AddScoped<PropertiesExtractor>();
     serviceCollection.AddScoped<StructuralMaterialAssetExtractor>();
-    serviceCollection.AddScoped<ThermalMaterialAssetExtractor>();
 
     return serviceCollection;
   }

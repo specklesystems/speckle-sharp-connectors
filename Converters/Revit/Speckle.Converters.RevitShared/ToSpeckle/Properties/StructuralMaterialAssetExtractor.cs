@@ -19,37 +19,40 @@ public class StructuralMaterialAssetExtractor
   }
 
   /// <summary>
-  /// Extracts structural asset properties from a material's structural asset.
+  /// Gets the density of a structural asset and its accompanying units.
   /// </summary>
-  /// <returns>Dictionary containing structural properties</returns>
-  public void GetProperties(DB.ElementId structuralAssetId, Dictionary<string, object> properties)
+  /// <remarks>
+  /// Scaled from internal units to model units
+  /// </remarks>
+  public (double density, string units)? GetDensity(DB.ElementId structuralAssetId)
   {
-    if (structuralAssetId != DB.ElementId.InvalidElementId)
+    // NOTE: assetId != DB.ElementId.InvalidElementId checked in calling method. Assuming a valid StructuralAssetId
+    if (
+      _converterSettings.Current.Document.GetElement(structuralAssetId) is not DB.PropertySetElement propertySetElement
+    )
     {
-      if (_converterSettings.Current.Document.GetElement(structuralAssetId) is DB.PropertySetElement propertySetElement)
-      {
-        DB.StructuralAsset structuralAsset = propertySetElement.GetStructuralAsset();
-
-        properties["name"] = structuralAsset.Name;
-
-        // TODO: simplify? lot of code just for one property
-        // get unit forge type id
-        DB.ForgeTypeId densityUnit = _converterSettings
-          .Current.Document.GetUnits()
-          .GetFormatOptions(DB.SpecTypeId.MassDensity)
-          .GetUnitTypeId();
-
-        // scale from internal to model units
-        double densityValue = _scalingService.Scale(structuralAsset.Density, densityUnit);
-
-        // write complete value
-        properties["density"] = new Dictionary<string, object>
-        {
-          ["name"] = "density",
-          ["value"] = densityValue,
-          ["units"] = densityUnit
-        };
-      }
+      return null;
     }
+    DB.StructuralAsset structuralAsset = propertySetElement.GetStructuralAsset();
+
+    // get unit forge type id
+    DB.ForgeTypeId densityUnitId = _converterSettings
+      .Current.Document.GetUnits()
+      .GetFormatOptions(DB.SpecTypeId.MassDensity)
+      .GetUnitTypeId();
+
+    // get units string
+    string? densityUnitString = densityUnitId.ToString();
+
+    if (string.IsNullOrEmpty(densityUnitString))
+    {
+      return null; // .ToString() is nullable and if the units string is null I wouldn't trust the scaling
+    }
+
+    // scale from internal to model units
+    double densityValue = _scalingService.Scale(structuralAsset.Density, densityUnitId);
+
+    // return value and units
+    return (densityValue, densityUnitString);
   }
 }
