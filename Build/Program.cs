@@ -18,6 +18,7 @@ const string BUILD_SERVER_VERSION = "build-server-version";
 const string CLEAN_LOCKS = "clean-locks";
 const string CHECK_SOLUTIONS = "check-solutions";
 const string DEEP_CLEAN = "deep-clean";
+const string DEEP_CLEAN_LOCAL = "deep-clean-local";
 
 //need to pass arguments
 /*var arguments = new List<string>();
@@ -32,40 +33,59 @@ Target(
   CLEAN_LOCKS,
   () =>
   {
-    foreach (var f in Glob.Files(".", "**/*.lock.json"))
-    {
-      Console.WriteLine("Found and will delete: " + f);
-      File.Delete(f);
-    }
+    DeleteFiles("**/*.lock.json");
     Console.WriteLine("Running restore now.");
     Run("dotnet", "restore .\\Speckle.Connectors.sln --no-cache");
   }
 );
 
+void DeleteFiles(string pattern)
+{
+  foreach (var f in Glob.Files(".", pattern))
+  {
+    Console.WriteLine("Found and will delete: " + f);
+    File.Delete(f);
+  }
+}
+void DeleteDirectories(string pattern)
+{
+  foreach (var f in Glob.Directories(".", pattern))
+  {
+    if (f.StartsWith("Build"))
+    {
+      continue;
+    }
+    Console.WriteLine("Found and will delete: " + f);
+    Directory.Delete(f, true);
+  }
+}
+
+void CleanSolution(string solution, string configuration)
+{
+  Console.WriteLine("Cleaning solution: " + solution);
+
+  DeleteDirectories("**/bin");
+  DeleteDirectories("**/obj");
+  DeleteFiles("**/*.lock.json");
+  Console.WriteLine();
+  Console.WriteLine($"Building solution {solution} as {configuration}");
+  Console.WriteLine();
+  Run("dotnet", $"restore .\\{solution} --no-cache");
+  Run("dotnet", $"build .\\{solution} --configuration {configuration} --no-restore");
+}
+
 Target(
   DEEP_CLEAN,
   () =>
   {
-    foreach (var f in Glob.Directories(".", "**/bin"))
-    {
-      if (f.StartsWith("Build"))
-      {
-        continue;
-      }
-      Console.WriteLine("Found and will delete: " + f);
-      Directory.Delete(f, true);
-    }
-    foreach (var f in Glob.Directories(".", "**/obj"))
-    {
-      if (f.StartsWith("Build"))
-      {
-        continue;
-      }
-      Console.WriteLine("Found and will delete: " + f);
-      Directory.Delete(f, true);
-    }
-    Console.WriteLine("Running restore now.");
-    Run("dotnet", "restore .\\Speckle.Connectors.sln --no-cache");
+    CleanSolution("Speckle.Connectors.sln", "debug");
+  }
+);
+Target(
+  DEEP_CLEAN_LOCAL,
+  () =>
+  {
+    CleanSolution("Local.sln", "local");
   }
 );
 
