@@ -8,6 +8,7 @@ using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.Rhino.HostApp;
+using Speckle.Connectors.Rhino.HostApp.Properties;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
@@ -32,6 +33,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   private readonly RhinoGroupUnpacker _groupUnpacker;
   private readonly RhinoMaterialUnpacker _materialUnpacker;
   private readonly RhinoColorUnpacker _colorUnpacker;
+  private readonly PropertiesExtractor _propertiesExtractor;
   private readonly ILogger<RhinoRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
 
@@ -44,6 +46,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     RhinoGroupUnpacker groupUnpacker,
     RhinoMaterialUnpacker materialUnpacker,
     RhinoColorUnpacker colorUnpacker,
+    PropertiesExtractor propertiesExtractor,
     ILogger<RhinoRootObjectBuilder> logger,
     ISdkActivityFactory activityFactory
   )
@@ -56,6 +59,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     _rootToSpeckleConverter = rootToSpeckleConverter;
     _materialUnpacker = materialUnpacker;
     _colorUnpacker = colorUnpacker;
+    _propertiesExtractor = propertiesExtractor;
     _logger = logger;
     _activityFactory = activityFactory;
   }
@@ -163,6 +167,19 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       {
         converted = _rootToSpeckleConverter.Convert(rhinoObject);
         converted.applicationId = applicationId;
+      }
+
+      // add name and properties
+      // POC: this is NOT done in the converter because we don't have a RootToSpeckle converter that captures all top level converters
+      if (!string.IsNullOrEmpty(rhinoObject.Attributes.Name))
+      {
+        converted["name"] = rhinoObject.Attributes.Name;
+      }
+
+      var properties = _propertiesExtractor.GetProperties(rhinoObject);
+      if (properties.Count > 0)
+      {
+        converted["properties"] = properties;
       }
 
       // add to host
