@@ -102,8 +102,21 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
 
   private (string name, double density, DB.ForgeTypeId unitId)? TryExtractMaterialAssetParameters(DB.ElementId assetId)
   {
+    // validate input (unnecessary github actions flagged this?)
+    if (assetId == DB.ElementId.InvalidElementId || assetId == null)
+    {
+      return null;
+    }
+
+    // ensure safe string conversion
+    string assetIdString = assetId.ToString();
+    if (string.IsNullOrEmpty(assetIdString))
+    {
+      return null;
+    }
+
     // check cache if density has already been extracted
-    if (_structuralAssetDensityCache.TryGetValue(assetId.ToString(), out var cachedDensity))
+    if (_structuralAssetDensityCache.TryGetValue(assetIdString, out var cachedDensity))
     {
       return cachedDensity;
     }
