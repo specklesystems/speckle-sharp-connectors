@@ -1,26 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
-  <Target AfterTargets="Build"  Name="AfterBuildTekla" Condition="'$(TeklaVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
+  <Target AfterTargets="Build" Name="AfterBuildTekla" Condition="'$(TeklaVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
     <ItemGroup>
       <TeklaDlls Include="$(TargetDir)\**\*.*" Exclude="$(TargetDir)*.bmp" />
-      <TeklaBmp Include="$(TargetDir)\Assets\et_element_Speckle.bmp"/>
+      <TeklaBmp Include="$(TargetDir)\Resources\et_element_Speckle.bmp"/>
     </ItemGroup>
     <Message Text="Tekla Version $(TeklaVersion)" Importance="high"/>
+
+    <!-- Delete win-arm64 folder if it exists -->
+    <RemoveDir Condition="Exists('$(ProgramData)\Trimble\Tekla Structures\$(TeklaVersion).0\Environments\common\extensions\Speckle3TeklaStructures\runtimes\win-arm64\native')"
+               Directories="$(ProgramData)\Trimble\Tekla Structures\$(TeklaVersion).0\Environments\common\extensions\Speckle3TeklaStructures\runtimes\win-arm64\native" />
+
+    <RemoveDir Condition="Exists('C:\TeklaStructures\$(TeklaVersion).0\Environments\common\extensions\Speckle3TeklaStructures\runtimes\win-arm64\native')"
+               Directories="C:\TeklaStructures\$(TeklaVersion).0\Environments\common\extensions\Speckle3TeklaStructures\runtimes\win-arm64\native" />
+
+    <!-- ProgramData path -->
     <Copy Condition="Exists('$(ProgramData)\Trimble\Tekla Structures\$(TeklaVersion).0')"
           DestinationFolder="$(ProgramData)\Trimble\Tekla Structures\$(TeklaVersion).0\Environments\common\extensions\Speckle3TeklaStructures\%(RecursiveDir)"
           SourceFiles="@(TeklaDlls)" />
-    <ItemGroup Condition="'$(Configuration)' == 'Debug'">
-      <Copy Condition="Exists('$(ProgramData)\Trimble\Tekla Structures\$(TeklaVersion).0')"
-            DestinationFolder="$(ProgramData)\Trimble\Tekla Structures\$(TeklaVersion).0\Bitmaps"
-            SourceFiles="@(TeklaBmp)" />
-    </ItemGroup>
-    <Copy Condition="Exists('C:\TeklaStructures\2024.0')"
-          DestinationFolder="C:\TeklaStructures\2024.0\Environments\common\extensions\Speckle3TeklaStructures\%(RecursiveDir)"
+
+    <Copy Condition="Exists('$(ProgramData)\Trimble\Tekla Structures\$(TeklaVersion).0')"
+          DestinationFolder="$(ProgramData)\Trimble\Tekla Structures\$(TeklaVersion).0\Bitmaps"
+          SourceFiles="@(TeklaBmp)" />
+
+    <!-- TeklaStructures direct path -->
+    <Copy Condition="Exists('C:\TeklaStructures\$(TeklaVersion).0')"
+          DestinationFolder="C:\TeklaStructures\$(TeklaVersion).0\Environments\common\extensions\Speckle3TeklaStructures\%(RecursiveDir)"
           SourceFiles="@(TeklaDlls)" />
-    <ItemGroup Condition="'$(Configuration)' == 'Debug'">
-      <Copy Condition="Exists('C:\TeklaStructures\2024.0')"
-            DestinationFolder="$(ProgramFiles)\TeklaStructures\2024.0\bin\Env\Bitmaps"
-            SourceFiles="@(TeklaBmp)" />
-    </ItemGroup>
+
+    <Copy Condition="Exists('C:\TeklaStructures\$(TeklaVersion).0')"
+          DestinationFolder="C:\TeklaStructures\$(TeklaVersion).0\Bitmaps"
+          SourceFiles="@(TeklaBmp)" />
   </Target>
 </Project>
