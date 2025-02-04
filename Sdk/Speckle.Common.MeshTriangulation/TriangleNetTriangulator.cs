@@ -47,7 +47,7 @@ public class TriangleNetTriangulator : ITriangulator
       verts.Add(new Vertex(v.X, v.Y, 1));
     }
 
-    p.Add(new Contour(verts, 1));
+    p.Add(new TriangleNet.Geometry.Contour(verts, 1));
   }
 
   private void AddHole(Polygon p, Poly2 poly2)
@@ -60,7 +60,7 @@ public class TriangleNetTriangulator : ITriangulator
 
     // we need a point inside the hole to add it
     var pointInHole = GetRightPointOfEdge(poly2.Vertices[0], poly2.Vertices[1]);
-    p.Add(new Contour(verts, 2), new Point(pointInHole.X, pointInHole.Y));
+    p.Add(new TriangleNet.Geometry.Contour(verts, 2), new Point(pointInHole.X, pointInHole.Y));
   }
 
   // picks a point on the right side of the given edge
