@@ -5,8 +5,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="LibTessDotNet" />
     <PackageReference Include="Speckle.DoubleNumerics" />
-    <PackageReference Include="Speckle.Triangle" />
   </ItemGroup>
 
 </Project>
