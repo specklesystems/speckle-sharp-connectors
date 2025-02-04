@@ -96,7 +96,7 @@ public class SolidToSpeckleConverter : ITypedConverter<TSM.Solid, SOG.Mesh>
   private SOG.Mesh ExtrudeFromPolygons(List<Poly3> face1, List<Poly3> face2)
   {
     var point = face2[0].Vertices[0];
-    var generator = new MeshGenerator(new BaseTransformer(), new TriangleNetTriangulator());
+    var generator = new MeshGenerator(new BaseTransformer(), new LibTessTriangulator());
     var mesh3 = generator.ExtrudeMesh(face1, point);
 
     return Mesh3ToSpeckleMesh(mesh3);
