@@ -24,7 +24,7 @@ public class StructuralMaterialAssetExtractor
   /// <remarks>
   /// Scaled from internal units to model units
   /// </remarks>
-  public (double density, string units)? GetDensity(DB.ElementId structuralAssetId)
+  public (double density, DB.ForgeTypeId unitId)? GetDensity(DB.ElementId structuralAssetId)
   {
     // NOTE: assetId != DB.ElementId.InvalidElementId checked in calling method. Assuming a valid StructuralAssetId
     if (
@@ -41,18 +41,10 @@ public class StructuralMaterialAssetExtractor
       .GetFormatOptions(DB.SpecTypeId.MassDensity)
       .GetUnitTypeId();
 
-    // get units string
-    string? densityUnitString = densityUnitId.ToString();
-
-    if (string.IsNullOrEmpty(densityUnitString))
-    {
-      return null; // .ToString() is nullable and if the units string is null I wouldn't trust the scaling
-    }
-
     // scale from internal to model units
     double densityValue = _scalingService.Scale(structuralAsset.Density, densityUnitId);
 
     // return value and units
-    return (densityValue, densityUnitString);
+    return (densityValue, densityUnitId);
   }
 }
