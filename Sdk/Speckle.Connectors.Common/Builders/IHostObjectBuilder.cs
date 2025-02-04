@@ -28,15 +28,25 @@ public interface IHostObjectBuilder
 
 public abstract class HostObjectBuilderBase : IHostObjectBuilder
 {
-  public  Task<HostObjectBuilderResult> Build(Base rootObject, string projectName, string modelName, IProgress<CardProgress> onOperationProgressed,
-    CancellationToken cancellationToken)  {
-    var result = BuildBase(rootObject, projectName, modelName, onOperationProgressed, cancellationToken );
+  public Task<HostObjectBuilderResult> Build(
+    Base rootObject,
+    string projectName,
+    string modelName,
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken
+  )
+  {
+    var result = BuildBase(rootObject, projectName, modelName, onOperationProgressed, cancellationToken);
     return Task.FromResult(result);
   }
 
-  public abstract HostObjectBuilderResult BuildBase(Base rootObject, string projectName, string modelName,
+  public abstract HostObjectBuilderResult BuildBase(
+    Base rootObject,
+    string projectName,
+    string modelName,
     IProgress<CardProgress> onOperationProgressed,
-    CancellationToken cancellationToken);
+    CancellationToken cancellationToken
+  );
 }
 
 public record HostObjectBuilderResult(

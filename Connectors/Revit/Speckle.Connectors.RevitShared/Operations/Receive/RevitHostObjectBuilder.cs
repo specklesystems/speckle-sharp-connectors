@@ -49,28 +49,28 @@ public sealed class RevitHostObjectBuilder(
     CancellationToken cancellationToken
   )
   {
-   return RevitThreadContext.Run(() =>
+    return RevitThreadContext.Run(() =>
     {
       var baseGroupName = $"Project {projectName}: Model {modelName}"; // TODO: unify this across connectors!
 
-    onOperationProgressed.Report(new("Converting", null));
-    using var activity = activityFactory.Start("Build");
+      onOperationProgressed.Report(new("Converting", null));
+      using var activity = activityFactory.Start("Build");
 
-    // 0 - Clean then Rock n Roll! 🎸
-    {
-      activityFactory.Start("Pre receive clean");
-      transactionManager.StartTransaction(true, "Pre receive clean");
-      try
+      // 0 - Clean then Rock n Roll! 🎸
       {
-        PreReceiveDeepClean(baseGroupName);
+        activityFactory.Start("Pre receive clean");
+        transactionManager.StartTransaction(true, "Pre receive clean");
+        try
+        {
+          PreReceiveDeepClean(baseGroupName);
+        }
+        catch (Exception ex) when (!ex.IsFatal())
+        {
+          logger.LogError(ex, "Failed to clean up before receive in Revit");
+        }
       }
-      catch (Exception ex) when (!ex.IsFatal())
-      {
-        logger.LogError(ex, "Failed to clean up before receive in Revit");
-      }
-    }
 
-    // 1 - Unpack objects and proxies from root commit object
+      // 1 - Unpack objects and proxies from root commit object
       var unpackedRoot = rootObjectUnpacker.Unpack(rootObject);
       var localToGlobalMaps = localToGlobalUnpacker.Unpack(
         unpackedRoot.DefinitionProxies,
@@ -95,7 +95,7 @@ public sealed class RevitHostObjectBuilder(
       (
         HostObjectBuilderResult builderResult,
         List<(DirectShape res, string applicationId)> postBakePaintTargets
-        ) conversionResults;
+      ) conversionResults;
       {
         using var _ = activityFactory.Start("Baking objects");
         transactionManager.StartTransaction(true, "Baking objects");
@@ -121,8 +121,7 @@ public sealed class RevitHostObjectBuilder(
         return conversionResults.builderResult;
       }
     });
-    
-    }
+  }
 
   private (
     HostObjectBuilderResult builderResult,

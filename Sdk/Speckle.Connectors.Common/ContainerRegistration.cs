@@ -11,7 +11,7 @@ namespace Speckle.Connectors.Common;
 public static class ContainerRegistration
 {
   public static void AddConnectorUtils<T>(this IServiceCollection serviceCollection)
-  where T : class, IReceiveOperation
+    where T : class, IReceiveOperation
   {
     // send operation and dependencies
     serviceCollection.AddSingleton<ICancellationManager, CancellationManager>();
