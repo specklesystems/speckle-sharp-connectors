@@ -123,9 +123,9 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
 
     // if not in cache but structural asset id is valid => attempt extraction from StructuralMaterialAssertExtractor
     var extractedDensity = _structuralAssetExtractor.GetProperties(assetId);
-    if (extractedDensity.HasValue)
+    if (extractedDensity.HasValue && !string.IsNullOrEmpty(assetIdString))
     {
-      _structuralAssetDensityCache[assetId.ToString()] = extractedDensity.Value;
+      _structuralAssetDensityCache[assetIdString] = extractedDensity.Value;
       return extractedDensity.Value;
     }
 
