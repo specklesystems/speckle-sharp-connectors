@@ -1,7 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Rhino;
-using Speckle.Connectors.Rhino.HostApp.Properties;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Registration;
 using Speckle.Sdk;
@@ -24,10 +23,6 @@ public static class ServiceRegistration
       IConverterSettingsStore<RhinoConversionSettings>,
       ConverterSettingsStore<RhinoConversionSettings>
     >();
-
-    // register helper classes
-    serviceCollection.AddScoped<PropertiesExtractor>();
-    serviceCollection.AddScoped<UserStringsExtractor>();
 
     return serviceCollection;
   }
