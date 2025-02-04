@@ -406,8 +406,8 @@
       "speckle.common.meshtriangulation": {
         "type": "Project",
         "dependencies": {
-          "Speckle.DoubleNumerics": "[4.1.0, )",
-          "Speckle.Triangle": "[1.0.0, )"
+          "LibTessDotNet": "[1.1.15, )",
+          "Speckle.DoubleNumerics": "[4.1.0, )"
         }
       },
       "speckle.connectors.common": {
@@ -454,6 +454,12 @@
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
           "Speckle.Objects": "[3.1.0-dev.255, )"
         }
+      },
+      "LibTessDotNet": {
+        "type": "CentralTransitive",
+        "requested": "[1.1.15, )",
+        "resolved": "1.1.15",
+        "contentHash": "KuA7N3Nv/lIeawJdQBQJR6oqWD9KETHLbWzBqapwFs+Tby+R5I4crkKujKMm5bXcSuFZ8LNtflFQVadsWCbBjg=="
       },
       "Microsoft.Extensions.DependencyInjection": {
         "type": "CentralTransitive",
@@ -516,12 +522,6 @@
         "requested": "[3.1.0-dev.255, )",
         "resolved": "3.1.0-dev.255",
         "contentHash": "koFeWc/EB2XrMH2aKl2Hqwrqk/fAGYEVKgxFlFpnEAsbZf7Kk57gBQ3ViV5l6X9vqMHGWFc4dWUp24diq/XPtQ=="
-      },
-      "Speckle.Triangle": {
-        "type": "CentralTransitive",
-        "requested": "[1.0.0, )",
-        "resolved": "1.0.0",
-        "contentHash": "3fWYy5IG9EpkxvqSkRWtgWraYg7ylkg8Ea3WesIqAodjOySYzv+ntdcCP7EW7a5NB3nUhlp27woMAwyKFEF5XQ=="
       }
     }
   }
