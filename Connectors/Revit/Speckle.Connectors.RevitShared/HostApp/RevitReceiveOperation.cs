@@ -1,25 +1,21 @@
-using Speckle.Connectors.Common.Builders;
-using Speckle.Connectors.Common.Threading;
+﻿using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Logging;
-using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Extensions;
 
-namespace Speckle.Connectors.Common.Operations;
+namespace Speckle.Connectors.Revit.HostApp;
 
-[GenerateAutoInterface]
-public sealed class ReceiveOperation(
+public class RevitReceiveOperation(
   IHostObjectBuilder hostObjectBuilder,
   AccountService accountService,
   IReceiveProgress receiveProgress,
   ISdkActivityFactory activityFactory,
   IOperations operations,
-  IClientFactory clientFactory,
-  IThreadContext threadContext,
-  IThreadOptions threadOptions
+  IClientFactory clientFactory
 ) : IReceiveOperation
 {
   public async Task<HostObjectBuilderResult> Execute(
@@ -37,16 +33,15 @@ public sealed class ReceiveOperation(
 
     var version = await apiClient.Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ProjectId, cancellationToken);
 
-    var commitObject = await threadContext.RunOnWorkerAsync(
-      () => ReceiveData(account, version, receiveInfo, onOperationProgressed, cancellationToken)
-    );
+    var commitObject = await ReceiveData(account, version, receiveInfo, onOperationProgressed, cancellationToken);
 
     // 4 - Convert objects
-    HostObjectBuilderResult res = await threadContext.RunOnThreadAsync(
-      () => ConvertObjects(commitObject, receiveInfo, onOperationProgressed, cancellationToken),
-      threadOptions.RunReceiveBuildOnMainThread
+    HostObjectBuilderResult res = await ConvertObjects(
+      commitObject,
+      receiveInfo,
+      onOperationProgressed,
+      cancellationToken
     );
-
     await apiClient.Version.Received(
       new(version.id, receiveInfo.ProjectId, receiveInfo.SourceApplication),
       cancellationToken

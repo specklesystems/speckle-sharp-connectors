@@ -73,7 +73,7 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
         );
       // Receive host objects
       var receiveOperationResults = await scope
-        .ServiceProvider.GetRequiredService<ReceiveOperation>()
+        .ServiceProvider.GetRequiredService<IReceiveOperation>()
         .Execute(
           modelCard.GetReceiveInfo("ArcGIS"), // POC: get host app name from settings? same for GetSendInfo
           _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),

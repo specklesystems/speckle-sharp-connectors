@@ -6,6 +6,7 @@ using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.Revit.HostApp;
+using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared;
@@ -40,7 +41,7 @@ public sealed class RevitHostObjectBuilder(
   > localToGlobalDirectShapeConverter
 ) : IHostObjectBuilder, IDisposable
 {
-  public HostObjectBuilderResult Build(
+  public Task<HostObjectBuilderResult> Build(
     Base rootObject,
     string projectName,
     string modelName,
@@ -48,7 +49,9 @@ public sealed class RevitHostObjectBuilder(
     CancellationToken cancellationToken
   )
   {
-    var baseGroupName = $"Project {projectName}: Model {modelName}"; // TODO: unify this across connectors!
+   return RevitThreadContext.Run(() =>
+    {
+      var baseGroupName = $"Project {projectName}: Model {modelName}"; // TODO: unify this across connectors!
 
     onOperationProgressed.Report(new("Converting", null));
     using var activity = activityFactory.Start("Build");
@@ -65,60 +68,61 @@ public sealed class RevitHostObjectBuilder(
       {
         logger.LogError(ex, "Failed to clean up before receive in Revit");
       }
-
-      transactionManager.CommitTransaction();
     }
 
     // 1 - Unpack objects and proxies from root commit object
-    var unpackedRoot = rootObjectUnpacker.Unpack(rootObject);
-    var localToGlobalMaps = localToGlobalUnpacker.Unpack(
-      unpackedRoot.DefinitionProxies,
-      unpackedRoot.ObjectsToConvert.ToList()
-    );
+      var unpackedRoot = rootObjectUnpacker.Unpack(rootObject);
+      var localToGlobalMaps = localToGlobalUnpacker.Unpack(
+        unpackedRoot.DefinitionProxies,
+        unpackedRoot.ObjectsToConvert.ToList()
+      );
 
-    // 2 - Bake materials
-    if (unpackedRoot.RenderMaterialProxies != null)
-    {
-      transactionManager.StartTransaction(true, "Baking materials");
-      materialBaker.MapLayersRenderMaterials(unpackedRoot);
-      var map = materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseGroupName);
-      foreach (var kvp in map)
+      // 2 - Bake materials
+      if (unpackedRoot.RenderMaterialProxies != null)
       {
-        revitToHostCacheSingleton.MaterialsByObjectId.Add(kvp.Key, kvp.Value);
+        transactionManager.StartTransaction(true, "Baking materials");
+        materialBaker.MapLayersRenderMaterials(unpackedRoot);
+        var map = materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseGroupName);
+        foreach (var kvp in map)
+        {
+          revitToHostCacheSingleton.MaterialsByObjectId.Add(kvp.Key, kvp.Value);
+        }
+
+        transactionManager.CommitTransaction();
       }
-      transactionManager.CommitTransaction();
-    }
 
-    // 3 - Bake objects
-    (
-      HostObjectBuilderResult builderResult,
-      List<(DirectShape res, string applicationId)> postBakePaintTargets
-    ) conversionResults;
-    {
-      using var _ = activityFactory.Start("Baking objects");
-      transactionManager.StartTransaction(true, "Baking objects");
-      conversionResults = BakeObjects(localToGlobalMaps, onOperationProgressed, cancellationToken);
-      transactionManager.CommitTransaction();
-    }
+      // 3 - Bake objects
+      (
+        HostObjectBuilderResult builderResult,
+        List<(DirectShape res, string applicationId)> postBakePaintTargets
+        ) conversionResults;
+      {
+        using var _ = activityFactory.Start("Baking objects");
+        transactionManager.StartTransaction(true, "Baking objects");
+        conversionResults = BakeObjects(localToGlobalMaps, onOperationProgressed, cancellationToken);
+        transactionManager.CommitTransaction();
+      }
 
-    // 4 - Paint solids
-    {
-      using var _ = activityFactory.Start("Painting solids");
-      transactionManager.StartTransaction(true, "Painting solids");
-      PostBakePaint(conversionResults.postBakePaintTargets);
-      transactionManager.CommitTransaction();
-    }
+      // 4 - Paint solids
+      {
+        using var _ = activityFactory.Start("Painting solids");
+        transactionManager.StartTransaction(true, "Painting solids");
+        PostBakePaint(conversionResults.postBakePaintTargets);
+        transactionManager.CommitTransaction();
+      }
 
-    // 5 - Create group
-    {
-      using var _ = activityFactory.Start("Grouping");
-      transactionManager.StartTransaction(true, "Grouping");
-      groupManager.BakeGroupForTopLevel(baseGroupName);
-      transactionManager.CommitTransaction();
-    }
+      // 5 - Create group
+      {
+        using var _ = activityFactory.Start("Grouping");
+        transactionManager.StartTransaction(true, "Grouping");
+        groupManager.BakeGroupForTopLevel(baseGroupName);
+        transactionManager.CommitTransaction();
 
-    return conversionResults.builderResult;
-  }
+        return conversionResults.builderResult;
+      }
+    });
+    
+    }
 
   private (
     HostObjectBuilderResult builderResult,

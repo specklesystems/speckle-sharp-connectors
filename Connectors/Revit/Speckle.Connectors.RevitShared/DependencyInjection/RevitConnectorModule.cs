@@ -5,6 +5,7 @@ using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
@@ -25,8 +26,8 @@ public static class ServiceRegistration
 {
   public static void AddRevit(this IServiceCollection serviceCollection)
   {
-    serviceCollection.AddConnectorUtils();
-    serviceCollection.AddDUI<RevitThreadContext, RevitDocumentStore>();
+    serviceCollection.AddConnectorUtils<RevitReceiveOperation>();
+    serviceCollection.AddDUI<DefaultThreadContext, RevitDocumentStore>();
     RegisterUiDependencies(serviceCollection);
 
     // Storage Schema

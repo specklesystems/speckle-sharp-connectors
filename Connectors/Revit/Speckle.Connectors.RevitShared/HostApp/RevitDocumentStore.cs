@@ -1,6 +1,7 @@
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.ExtensibleStorage;
 using Autodesk.Revit.UI.Events;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
@@ -40,7 +41,8 @@ internal sealed class RevitDocumentStore : DocumentModelStore
 
     // There is no event that we can hook here for double-click file open...
     // It is kind of harmless since we create this object as "SingleInstance".
-    LoadState();
+
+    RevitThreadContext.Run(LoadState).FireAndForget();
   }
 
   private void OnDocumentOpen(object _) => IsDocumentInit = false;
@@ -83,20 +85,26 @@ internal sealed class RevitDocumentStore : DocumentModelStore
       return;
     }
 
-    using Transaction t = new(doc, "Speckle Write State");
-    t.Start();
-    using DataStorage ds = GetSettingsDataStorage(doc) ?? DataStorage.Create(doc);
+    RevitThreadContext
+      .Run(
+        () =>
+        {
+          using Transaction t = new(doc, "Speckle Write State");
+          t.Start();
+          using DataStorage ds = GetSettingsDataStorage(doc) ?? DataStorage.Create(doc);
 
-    using Entity stateEntity = new(_documentModelStorageSchema.GetSchema());
-    string serializedModels = Serialize();
-    stateEntity.Set("contents", serializedModels);
+          using Entity stateEntity = new(_documentModelStorageSchema.GetSchema());
+          string serializedModels = Serialize();
+          stateEntity.Set("contents", serializedModels);
 
-    using Entity idEntity = new(_idStorageSchema.GetSchema());
-    idEntity.Set("Id", s_revitDocumentStoreId);
+          using Entity idEntity = new(_idStorageSchema.GetSchema());
+          idEntity.Set("Id", s_revitDocumentStoreId);
 
-    ds.SetEntity(idEntity);
-    ds.SetEntity(stateEntity);
-    t.Commit();
+          ds.SetEntity(idEntity);
+          ds.SetEntity(stateEntity);
+          t.Commit();
+        }
+      ).FireAndForget();
   }
 
   protected override void LoadState()

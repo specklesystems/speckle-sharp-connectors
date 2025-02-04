@@ -75,7 +75,7 @@ public class RhinoReceiveBinding : IReceiveBinding
       undoRecord = RhinoDoc.ActiveDoc.BeginUndoRecord($"Receive Speckle model {modelCard.ModelName}");
       // Receive host objects
       HostObjectBuilderResult conversionResults = await scope
-        .ServiceProvider.GetRequiredService<ReceiveOperation>()
+        .ServiceProvider.GetRequiredService<IReceiveOperation>()
         .Execute(
           modelCard.GetReceiveInfo(_speckleApplication.Slug),
           _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),
