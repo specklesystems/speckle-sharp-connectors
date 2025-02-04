@@ -254,6 +254,7 @@ public sealed class RhinoSendBinding : ISendBinding
     }
   }
 
+  // We are using this event to track changes to the material, material source, color, color source, layer, and user strings
   private void OnModifyObjectAttributes(RhinoModifyObjectAttributesEventArgs e)
   {
     if (!_store.IsDocumentInit)
@@ -261,17 +262,8 @@ public sealed class RhinoSendBinding : ISendBinding
       return;
     }
 
-    // NOTE: not sure yet we want to track every attribute changes yet. TBD
-    // NOTE: we might want to track here user strings too (once we send them out), and more!
-    if (
-      e.OldAttributes.LayerIndex != e.NewAttributes.LayerIndex
-      || e.OldAttributes.MaterialSource != e.NewAttributes.MaterialSource
-      || e.OldAttributes.MaterialIndex != e.NewAttributes.MaterialIndex // NOTE: this does not work when swapping around from custom doc materials, it works when you swap TO/FROM default material
-    )
-    {
-      ChangedObjectIds[e.RhinoObject.Id.ToString()] = 1;
-      _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
-    }
+    ChangedObjectIds[e.RhinoObject.Id.ToString()] = 1;
+    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
   }
 
   private void OnReplaceRhinoObject(RhinoReplaceObjectEventArgs e)

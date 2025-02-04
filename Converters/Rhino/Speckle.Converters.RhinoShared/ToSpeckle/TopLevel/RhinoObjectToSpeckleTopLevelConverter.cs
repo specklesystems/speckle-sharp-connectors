@@ -1,3 +1,4 @@
+using Speckle.Connectors.Rhino.HostApp.Properties;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Models;
 using RhinoObject = Rhino.DocObjects.RhinoObject;
@@ -10,10 +11,15 @@ public abstract class RhinoObjectToSpeckleTopLevelConverter<TTopLevelIn, TInRaw,
   where TOutRaw : Base
 {
   public ITypedConverter<TInRaw, TOutRaw> Conversion { get; }
+  private readonly PropertiesExtractor _propertiesExtractor;
 
-  protected RhinoObjectToSpeckleTopLevelConverter(ITypedConverter<TInRaw, TOutRaw> conversion)
+  protected RhinoObjectToSpeckleTopLevelConverter(
+    ITypedConverter<TInRaw, TOutRaw> conversion,
+    PropertiesExtractor propertiesExtractor
+  )
   {
     Conversion = conversion;
+    _propertiesExtractor = propertiesExtractor;
   }
 
   // POC: IIndex would fix this as I would just request the type from `RhinoObject.Geometry` directly.
@@ -31,6 +37,12 @@ public abstract class RhinoObjectToSpeckleTopLevelConverter<TTopLevelIn, TInRaw,
     if (!string.IsNullOrEmpty(typedTarget.Attributes.Name))
     {
       result["name"] = typedTarget.Attributes.Name;
+    }
+
+    var properties = _propertiesExtractor.GetProperties(typedTarget);
+    if (properties.Count > 0)
+    {
+      result["properties"] = properties;
     }
 
     return result;
