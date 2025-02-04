@@ -14,7 +14,7 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dictionary<string, object>>
 {
   private readonly Dictionary<
-    string,
+    string?,
     (string name, double density, DB.ForgeTypeId unitId)
   > _structuralAssetDensityCache = new();
   private readonly ScalingServiceToSpeckle _scalingService;
@@ -102,31 +102,23 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
 
   private (string name, double density, DB.ForgeTypeId unitId)? TryExtractMaterialAssetParameters(DB.ElementId assetId)
   {
-    // validate input (unnecessary github actions flagged this?)
-    if (assetId == DB.ElementId.InvalidElementId)
-    {
-      return null;
-    }
-
     // ensure safe string conversion
     string assetIdString = assetId.ToString();
-    if (string.IsNullOrEmpty(assetIdString))
+    if (!string.IsNullOrEmpty(assetIdString))
     {
-      return null;
-    }
+      // check cache if density has already been extracted
+      if (_structuralAssetDensityCache.TryGetValue(assetIdString, out var cachedDensity))
+      {
+        return cachedDensity;
+      }
 
-    // check cache if density has already been extracted
-    if (_structuralAssetDensityCache.TryGetValue(assetIdString, out var cachedDensity))
-    {
-      return cachedDensity;
-    }
-
-    // if not in cache but structural asset id is valid => attempt extraction from StructuralMaterialAssertExtractor
-    var extractedDensity = _structuralAssetExtractor.GetProperties(assetId);
-    if (extractedDensity.HasValue && !string.IsNullOrEmpty(assetIdString))
-    {
-      _structuralAssetDensityCache[assetIdString] = extractedDensity.Value;
-      return extractedDensity.Value;
+      // if not in cache but structural asset id is valid => attempt extraction from StructuralMaterialAssertExtractor
+      var extractedDensity = _structuralAssetExtractor.GetProperties(assetId);
+      if (extractedDensity.HasValue)
+      {
+        _structuralAssetDensityCache[assetIdString] = extractedDensity.Value;
+        return extractedDensity.Value;
+      }
     }
 
     return null;
