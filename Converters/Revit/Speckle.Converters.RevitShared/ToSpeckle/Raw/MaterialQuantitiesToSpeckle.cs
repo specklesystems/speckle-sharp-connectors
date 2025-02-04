@@ -13,7 +13,10 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 /// </summary>
 public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dictionary<string, object>>
 {
-  private readonly Dictionary<string, (double density, DB.ForgeTypeId unitId)> _structuralAssetDensityCache = new();
+  private readonly Dictionary<
+    string,
+    (string name, double density, DB.ForgeTypeId unitId)
+  > _structuralAssetDensityCache = new();
   private readonly ScalingServiceToSpeckle _scalingService;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly StructuralMaterialAssetExtractor _structuralAssetExtractor;
@@ -77,10 +80,16 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
           materialQuantity["materialCategory"] = material.MaterialCategory;
           materialQuantity["materialClass"] = material.MaterialClass;
 
-          var density = TryGetDensity(material);
-          if (density.HasValue)
+          // get StructuralAssetId
+          DB.ElementId structuralAssetId = material.StructuralAssetId;
+          if (structuralAssetId != DB.ElementId.InvalidElementId)
           {
-            AddMaterialProperty(materialQuantity, "density", density.Value.density, density.Value.unitId);
+            var density = TryExtractMaterialAssetParameters(structuralAssetId);
+            if (density.HasValue)
+            {
+              materialQuantity["structuralAsset"] = density.Value.name;
+              AddMaterialProperty(materialQuantity, "density", density.Value.density, density.Value.unitId);
+            }
           }
 
           quantities[material.Name] = materialQuantity;
@@ -91,15 +100,8 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
     return quantities;
   }
 
-  private (double density, DB.ForgeTypeId unitId)? TryGetDensity(DB.Material material)
+  private (string name, double density, DB.ForgeTypeId unitId)? TryExtractMaterialAssetParameters(DB.ElementId assetId)
   {
-    // get StructuralAssetId
-    DB.ElementId assetId = material.StructuralAssetId;
-    if (assetId == DB.ElementId.InvalidElementId)
-    {
-      return null; // no structural asset => early break
-    }
-
     // check cache if density has already been extracted
     if (_structuralAssetDensityCache.TryGetValue(assetId.ToString(), out var cachedDensity))
     {
@@ -107,7 +109,7 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
     }
 
     // if not in cache but structural asset id is valid => attempt extraction from StructuralMaterialAssertExtractor
-    var extractedDensity = _structuralAssetExtractor.GetDensity(assetId);
+    var extractedDensity = _structuralAssetExtractor.GetProperties(assetId);
     if (extractedDensity.HasValue)
     {
       _structuralAssetDensityCache[assetId.ToString()] = extractedDensity.Value;

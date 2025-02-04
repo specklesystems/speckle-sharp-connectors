@@ -19,12 +19,12 @@ public class StructuralMaterialAssetExtractor
   }
 
   /// <summary>
-  /// Gets the density of a structural asset and its accompanying units.
+  /// Gets the name of a structural asset and its corresponding density with units.
   /// </summary>
   /// <remarks>
-  /// Scaled from internal units to model units
+  /// Density scaled from internal units to model units
   /// </remarks>
-  public (double density, DB.ForgeTypeId unitId)? GetDensity(DB.ElementId structuralAssetId)
+  public (string name, double density, DB.ForgeTypeId unitId)? GetProperties(DB.ElementId structuralAssetId)
   {
     // NOTE: assetId != DB.ElementId.InvalidElementId checked in calling method. Assuming a valid StructuralAssetId
     if (
@@ -45,6 +45,6 @@ public class StructuralMaterialAssetExtractor
     double densityValue = _scalingService.Scale(structuralAsset.Density, densityUnitId);
 
     // return value and units
-    return (densityValue, densityUnitId);
+    return (structuralAsset.Name, densityValue, densityUnitId);
   }
 }
