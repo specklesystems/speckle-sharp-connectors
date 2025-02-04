@@ -22,7 +22,7 @@ namespace Speckle.Connectors.Rhino.Operations.Receive;
 /// <summary>
 /// <para>Expects to be a scoped dependency per receive operation.</para>
 /// </summary>
-public class RhinoHostObjectBuilder : IHostObjectBuilder
+public class RhinoHostObjectBuilder : HostObjectBuilderBase
 {
   private readonly IRootToHostConverter _converter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _converterSettings;
@@ -61,7 +61,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   }
 
 #pragma warning disable CA1506
-  public HostObjectBuilderResult Build(
+  public override HostObjectBuilderResult BuildBase(
 #pragma warning restore CA1506
     Base rootObject,
     string projectName,

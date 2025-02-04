@@ -29,9 +29,9 @@ public class AutocadHostObjectBuilder(
   IAutocadColorBaker colorBaker,
   AutocadContext autocadContext,
   RootObjectUnpacker rootObjectUnpacker
-) : IHostObjectBuilder
+) : HostObjectBuilderBase
 {
-  public HostObjectBuilderResult Build(
+  public override HostObjectBuilderResult BuildBase(
     Base rootObject,
     string projectName,
     string modelName,

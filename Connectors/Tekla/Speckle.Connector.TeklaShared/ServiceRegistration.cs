@@ -30,7 +30,7 @@ public static class ServiceRegistration
 
     services.AddSingleton<IBrowserBridge, BrowserBridge>();
 
-    services.AddConnectorUtils();
+    services.AddConnectorUtils<ReceiveOperation>();
     services.AddDUI<DefaultThreadContext, TeklaDocumentModelStore>();
     services.AddDUIView();
 

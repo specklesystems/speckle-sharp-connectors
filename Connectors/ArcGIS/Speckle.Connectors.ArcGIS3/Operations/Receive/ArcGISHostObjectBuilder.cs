@@ -22,7 +22,7 @@ using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Connectors.ArcGIS.Operations.Receive;
 
-public class ArcGISHostObjectBuilder : IHostObjectBuilder
+public class ArcGISHostObjectBuilder : HostObjectBuilderBase
 {
   private readonly IRootToHostConverter _converter;
   private readonly IFeatureClassUtils _featureClassUtils;
@@ -53,7 +53,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     _colorManager = colorManager;
   }
 
-  public HostObjectBuilderResult Build(
+  public override HostObjectBuilderResult BuildBase(
     Base rootObject,
     string projectName,
     string modelName,
