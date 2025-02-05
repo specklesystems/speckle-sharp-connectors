@@ -28,10 +28,25 @@ public class DBSubDMeshToSpeckleConverter : IToSpeckleTopLevelConverter
       vertices.Add(vert.Z);
     }
 
+    var vertexNormals = new List<double>(target.VertexNormalArray.Count * 3);
+    foreach (AG.Vector3d normal in target.VertexNormalArray)
+    {
+      vertexNormals.Add(normal.X);
+      vertexNormals.Add(normal.Y);
+      vertexNormals.Add(normal.Z);
+    }
+
+    var textureCoordinates = new List<double>(target.VertexTextureArray.Count * 2);
+    foreach (AG.Point3d uv in target.VertexTextureArray)
+    {
+      textureCoordinates.Add(uv.X);
+      textureCoordinates.Add(uv.Y);
+    }
+
     // faces
     var faces = new List<int>();
     int[] faceArr = target.FaceArray.ToArray(); // contains vertex indices
-    int edgeCount = 0;
+    int edgeCount;
     for (int i = 0; i < faceArr.Length; i = i + edgeCount + 1)
     {
       List<int> faceVertices = new();
@@ -69,6 +84,8 @@ public class DBSubDMeshToSpeckleConverter : IToSpeckleTopLevelConverter
       {
         vertices = vertices,
         faces = faces,
+        vertexNormals = vertexNormals,
+        textureCoordinates = textureCoordinates,
         colors = colors,
         units = _settingsStore.Current.SpeckleUnits,
         area = target.ComputeSurfaceArea()

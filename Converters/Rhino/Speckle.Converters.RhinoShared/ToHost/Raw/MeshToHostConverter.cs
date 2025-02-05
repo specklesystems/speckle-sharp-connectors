@@ -2,6 +2,7 @@
 using Rhino.Collections;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Utils;
+using Speckle.Sdk;
 
 namespace Speckle.Converters.Rhino.ToHost.Raw;
 
@@ -25,23 +26,35 @@ public class MeshToHostConverter : ITypedConverter<SOG.Mesh, RG.Mesh>
     RG.Mesh m = new();
 
     var vertices = _pointListConverter.Convert(target.vertices);
-    var colors = target.colors.Select(Color.FromArgb).ToArray();
+    var colors = ConvertVertexColors(target.colors);
+    var vertexNormals = ConvertVertexNormals(target.vertexNormals);
+    var textureCoordinates = ConvertTextureCoordinates(target.textureCoordinates);
 
     m.Vertices.AddVertices(vertices);
-    m.VertexColors.SetColors(colors);
+
+    if (colors.Length != 0 && !m.VertexColors.SetColors(colors))
+    {
+      throw new SpeckleException("Failed to set Vertex Colors");
+    }
+
+    if (vertexNormals.Length != 0 && !m.Normals.SetNormals(vertexNormals))
+    {
+      throw new SpeckleException("Failed to set Vertex Normals");
+    }
+
+    if (textureCoordinates.Length != 0 && !m.TextureCoordinates.SetTextureCoordinates(textureCoordinates))
+    {
+      throw new SpeckleException("Failed to set Texture Coordinates");
+    }
 
     AssignMeshFaces(target, m);
-    AssignTextureCoordinates(target, m);
 
     // POC: CNX-9273 There was a piece of code here about Merging co-planar faces that I've removed for now as this setting does not exist yet.
 
     return m;
   }
 
-  // POC: CNX-9274 We should abstract this into the `Mesh` class, or some utility class adjacent to it
-  //      All converters need to do this so it's going to be a source of repetition
-  //      and it is directly tied to how we serialise the data in the mesh.
-  private void AssignMeshFaces(SOG.Mesh target, RG.Mesh m)
+  private static void AssignMeshFaces(SOG.Mesh target, RG.Mesh m)
   {
     int i = 0;
     while (i < target.faces.Count)
@@ -84,17 +97,40 @@ public class MeshToHostConverter : ITypedConverter<SOG.Mesh, RG.Mesh>
 
       i += n + 1;
     }
+
+    // Its important that this is the last step
     m.Faces.CullDegenerateFaces();
   }
 
-  private void AssignTextureCoordinates(SOG.Mesh target, RG.Mesh m)
+  private static RG.Point2f[] ConvertTextureCoordinates(IReadOnlyList<double> textureCoordinates)
   {
-    var textureCoordinates = new RG.Point2f[target.TextureCoordinatesCount];
-    for (int ti = 0; ti < target.TextureCoordinatesCount; ti++)
+    var converted = new RG.Point2f[textureCoordinates.Count / 2];
+    for (int i = 0, j = 0; i < textureCoordinates.Count; i += 2, j++)
     {
-      var (u, v) = target.GetTextureCoordinate(ti);
-      textureCoordinates[ti] = new RG.Point2f(u, v);
+      float u = (float)textureCoordinates[i];
+      float v = (float)textureCoordinates[i + 1];
+      converted[j] = new RG.Point2f(u, v);
     }
-    m.TextureCoordinates.SetTextureCoordinates(textureCoordinates);
+
+    return converted;
+  }
+
+  private static RG.Vector3f[] ConvertVertexNormals(IReadOnlyList<double> vertexNormals)
+  {
+    RG.Vector3f[] converted = new RG.Vector3f[vertexNormals.Count / 3];
+    for (int i = 0, j = 0; i < vertexNormals.Count; i += 3, j++)
+    {
+      var x = (float)vertexNormals[i + 0];
+      var y = (float)vertexNormals[i + 1];
+      var z = (float)vertexNormals[i + 2];
+      converted[j] = new RG.Vector3f(x, y, z);
+    }
+
+    return converted;
+  }
+
+  private static Color[] ConvertVertexColors(IReadOnlyList<int> vertexColors)
+  {
+    return Enumerable.Select(vertexColors, Color.FromArgb).ToArray();
   }
 }

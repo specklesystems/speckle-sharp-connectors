@@ -1,7 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Utils;
-using Speckle.Sdk;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.Geometry;
@@ -57,18 +56,8 @@ public class MeshToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG
       var vertex = new ADB.PolyFaceMeshVertex(points[i]);
       if (i < target.colors.Count)
       {
-        try
-        {
-          if (System.Drawing.Color.FromArgb(target.colors[i]) is System.Drawing.Color color)
-          {
-            vertex.Color = Autodesk.AutoCAD.Colors.Color.FromRgb(color.R, color.G, color.B);
-          }
-        }
-        catch (System.Exception e) when (!e.IsFatal())
-        {
-          // POC: should we warn user?
-          // Couldn't set vertex color, but this should not prevent conversion.
-        }
+        var color = System.Drawing.Color.FromArgb(target.colors[i]);
+        vertex.Color = Autodesk.AutoCAD.Colors.Color.FromRgb(color.R, color.G, color.B);
       }
 
       if (vertex.IsNewObject)
