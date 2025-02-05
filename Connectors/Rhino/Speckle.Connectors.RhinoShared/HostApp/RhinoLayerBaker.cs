@@ -1,5 +1,6 @@
 using Rhino;
 using Rhino.DocObjects;
+using Rhino.Render;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
@@ -115,11 +116,11 @@ public class RhinoLayerBaker : TraversalContextUnpacker
       if (
         _materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(
           collection.applicationId ?? collection.id.NotNull(),
-          out int mIndex
+          out RenderMaterial renderMaterial
         )
       )
       {
-        newLayer.RenderMaterialIndex = mIndex;
+        newLayer.RenderMaterial = renderMaterial;
       }
 
       // set color

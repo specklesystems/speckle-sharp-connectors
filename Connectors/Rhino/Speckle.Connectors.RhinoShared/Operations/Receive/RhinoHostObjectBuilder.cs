@@ -16,6 +16,7 @@ using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
+using RenderMaterial = Rhino.Render.RenderMaterial;
 
 namespace Speckle.Connectors.Rhino.Operations.Receive;
 
@@ -299,17 +300,17 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   {
     var objectId = originalObject.applicationId ?? originalObject.id.NotNull();
 
-    if (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(objectId, out int mIndex))
+    if (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(objectId, out RenderMaterial oRenderMaterial))
     {
-      atts.MaterialIndex = mIndex;
+      atts.RenderMaterial = oRenderMaterial;
       atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
     }
     else if (
       parentObjectId is not null
-      && (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(parentObjectId, out int mIndexSpeckleObj))
+      && (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(parentObjectId, out RenderMaterial pRenderMaterial))
     )
     {
-      atts.MaterialIndex = mIndexSpeckleObj;
+      atts.RenderMaterial = pRenderMaterial;
       atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
     }
 

@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Rhino;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
@@ -7,6 +7,7 @@ using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Material = Rhino.DocObjects.Material;
+using RenderMaterial = Rhino.Render.RenderMaterial;
 
 namespace Speckle.Connectors.Rhino.HostApp;
 
@@ -25,9 +26,9 @@ public class RhinoMaterialBaker
   }
 
   /// <summary>
-  /// A map keeping track of ids, <b>either layer id or object id</b>, and their material index. It's generated from the material proxy list as we bake materials; <see cref="BakeMaterials"/> must be called in advance for this to be populated with the correct data.
+  /// A map keeping track of ids, <b>either layer id or object id</b>, and their render material guid. It's generated from the material proxy list as we bake materials; <see cref="BakeMaterials"/> must be called in advance for this to be populated with the correct data.
   /// </summary>
-  public Dictionary<string, int> ObjectIdAndMaterialIndexMap { get; } = new();
+  public Dictionary<string, RenderMaterial> ObjectIdAndMaterialIndexMap { get; } = new();
 
   public void BakeMaterials(IReadOnlyCollection<RenderMaterialProxy> speckleRenderMaterialProxies, string baseLayerName)
   {
@@ -67,18 +68,22 @@ public class RhinoMaterialBaker
           rhinoMaterial.Shine = shine;
         }
 
-        int matIndex = doc.Materials.Add(rhinoMaterial);
+        // We are creating a render material and adding it to the render material table because render materials have a guid independent of objects they are applied to.
+        // Regular materials and the material table is populated by materials applied to objects: the same material can therefore have multiple entries in the material table if it is applied to multiple objects
+        // see: https://discourse.mcneel.com/t/render-material-events/99886/5
+        RenderMaterial rhinoRenderMaterial = RenderMaterial.FromMaterial(rhinoMaterial, doc);
 
-        // POC: check on matIndex -1, means we haven't created anything - this is most likely an recoverable error at this stage
-        if (matIndex == -1)
+        if (doc.RenderMaterials.Add(rhinoRenderMaterial))
+        {
+          // Create the object <> render material guid map
+          foreach (var objectId in proxy.objects)
+          {
+            ObjectIdAndMaterialIndexMap[objectId] = rhinoRenderMaterial;
+          }
+        }
+        else
         {
           throw new ConversionException("Failed to add a material to the document.");
-        }
-
-        // Create the object <> material index map
-        foreach (var objectId in proxy.objects)
-        {
-          ObjectIdAndMaterialIndexMap[objectId] = matIndex;
         }
       }
       catch (Exception ex) when (!ex.IsFatal())
