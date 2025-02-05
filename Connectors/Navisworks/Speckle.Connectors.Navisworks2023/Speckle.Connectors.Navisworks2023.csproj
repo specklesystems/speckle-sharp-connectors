@@ -16,7 +16,6 @@
 
   <ItemGroup>
     <Reference Include="WindowsFormsIntegration"/>
-    <PackageReference Include="Speckle.Objects"/>
     <PackageReference Include="Speckle.Navisworks.API" VersionOverride="2023.0.0"/>
   </ItemGroup>
 
