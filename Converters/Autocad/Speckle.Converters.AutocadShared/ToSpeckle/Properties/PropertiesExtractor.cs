@@ -1,7 +1,7 @@
 namespace Speckle.Converters.AutocadShared.ToSpeckle;
 
 /// <summary>
-/// Extracts properties for autocad entities.
+/// Extracts properties for autocad entities. NOTE: currently not in use in acad
 /// </summary>
 public class PropertiesExtractor
 {
