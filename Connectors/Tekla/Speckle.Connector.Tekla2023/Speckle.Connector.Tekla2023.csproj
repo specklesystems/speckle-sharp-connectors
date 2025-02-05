@@ -6,6 +6,7 @@
     <TeklaVersion>2023</TeklaVersion>
     <UseWpf>true</UseWpf>
     <DefineConstants>$(DefineConstants);TEKLA2023</DefineConstants>
+    <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="WindowsFormsIntegration" />

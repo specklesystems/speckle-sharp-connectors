@@ -9,6 +9,7 @@
     <NavisworksVersion>2025</NavisworksVersion>
 
     <DefineConstants>$(DefineConstants);TRACE;NAVIS2025;NAVIS</DefineConstants>
+    <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
 
   <Import Project="..\Speckle.Connectors.NavisworksShared\Speckle.Connectors.NavisworksShared.projitems" Label="Shared"/>
