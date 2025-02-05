@@ -339,21 +339,27 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   {
     List<Guid> objectIds = new();
     string parentId = originatingObject.applicationId ?? originatingObject.id.NotNull();
-
+    int objCount = 0;
     foreach (var (conversionResult, originalBaseObject) in fallbackConversionResult)
     {
       var id = BakeObject(conversionResult, originalBaseObject, parentId, atts);
       objectIds.Add(id);
+      objCount++;
     }
 
-    var groupIndex = _converterSettings.Current.Document.Groups.Add(
-      $@"{originatingObject.speckle_type.Split('.').Last()} - {parentId}  ({baseLayerName})",
-      objectIds
-    );
+    // only create groups if we really need to, ie if the fallback conversion result count is bigger than one.
+    if (objCount > 1)
+    {
+      var groupIndex = _converterSettings.Current.Document.Groups.Add(
+        $@"{originatingObject.speckle_type.Split('.').Last()} - {parentId}  ({baseLayerName})",
+        objectIds
+      );
 
-    var group = _converterSettings.Current.Document.Groups.FindIndex(groupIndex);
+      var group = _converterSettings.Current.Document.Groups.FindIndex(groupIndex);
 
-    objectIds.Insert(0, group.Id);
+      objectIds.Insert(0, group.Id);
+    }
+
     return objectIds;
   }
 }
