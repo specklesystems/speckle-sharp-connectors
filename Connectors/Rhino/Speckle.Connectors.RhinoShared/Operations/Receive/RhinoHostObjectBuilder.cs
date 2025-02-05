@@ -302,16 +302,14 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
     if (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(objectId, out RenderMaterial oRenderMaterial))
     {
-      atts.RenderMaterial = oRenderMaterial;
-      atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+      atts.RenderMaterial = oRenderMaterial; // no need to set source since setting render material handles this
     }
     else if (
       parentObjectId is not null
       && (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(parentObjectId, out RenderMaterial pRenderMaterial))
     )
     {
-      atts.RenderMaterial = pRenderMaterial;
-      atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+      atts.RenderMaterial = pRenderMaterial; // no need to set source since setting render material handles this
     }
 
     if (_colorBaker.ObjectColorsIdMap.TryGetValue(objectId, out (Color, ObjectColorSource) color))

@@ -100,18 +100,13 @@ public class RhinoMaterialBaker
   public void PurgeMaterials(string namePrefix)
   {
     var currentDoc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
-    foreach (Material material in currentDoc.Materials)
+    // POC: looping through the render material table somehow doesn't capture all render materials!! That's why we're doing it this way.
+    var materialsToDelete = currentDoc.RenderMaterials.Where(o => o.DisplayName.Contains(namePrefix)).ToList();
+    foreach (RenderMaterial materialToDelete in materialsToDelete)
     {
-      try
+      if (!currentDoc.RenderMaterials.Remove(materialToDelete))
       {
-        if (!material.IsDeleted && material.Name != null && material.Name.Contains(namePrefix))
-        {
-          currentDoc.Materials.Delete(material);
-        }
-      }
-      catch (Exception ex) when (!ex.IsFatal())
-      {
-        _logger.LogError(ex, "Failed to purge a material from the document");
+        _logger.LogError("Failed to purge a material from the document");
       }
     }
   }
