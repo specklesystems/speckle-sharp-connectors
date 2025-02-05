@@ -81,7 +81,6 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<RhinoColorUnpacker>();
 
     serviceCollection.AddScoped<PropertiesExtractor>();
-    serviceCollection.AddScoped<UserStringsExtractor>();
 
     // operation progress manager
     serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();
