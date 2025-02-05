@@ -3,10 +3,15 @@ namespace Speckle.Converters.TeklaShared.ToSpeckle.Helpers;
 public class PropertiesExtractor
 {
   private readonly ReportPropertyExtractor _reportPropertyExtractor;
+  private readonly UserDefinedAttributesExtractor _userDefinedAttributesExtractor;
 
-  public PropertiesExtractor(ReportPropertyExtractor reportPropertyExtractor)
+  public PropertiesExtractor(
+    ReportPropertyExtractor reportPropertyExtractor,
+    UserDefinedAttributesExtractor userDefinedAttributesExtractor
+  )
   {
     _reportPropertyExtractor = reportPropertyExtractor;
+    _userDefinedAttributesExtractor = userDefinedAttributesExtractor;
   }
 
   public Dictionary<string, object?> GetProperties(TSM.ModelObject modelObject)
@@ -17,6 +22,12 @@ public class PropertiesExtractor
     if (report.Count > 0)
     {
       properties.Add("Report", report);
+    }
+
+    Dictionary<string, object?> userDefinedAttributes = _userDefinedAttributesExtractor.GetUserDefinedAttributes(modelObject);
+    if (userDefinedAttributes.Count > 0)
+    {
+      properties.Add("UserDefinedAttributes", userDefinedAttributes);
     }
 
     return properties;
