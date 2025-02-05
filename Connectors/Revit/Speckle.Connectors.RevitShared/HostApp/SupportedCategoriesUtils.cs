@@ -13,7 +13,8 @@ public static class SupportedCategoriesUtils
   /// <returns></returns>
   public static bool IsSupportedCategory(Category category)
   {
-    return category is not null && (
+    return category is not null
+      && (
         category.CategoryType == CategoryType.Model
       // || category.CategoryType == CategoryType.AnalyticalModel
       )
