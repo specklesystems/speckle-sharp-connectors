@@ -19,9 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\Converters\Tekla\Speckle.Converter.Tekla2023\Speckle.Converter.Tekla2023.csproj" />
-    <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" > 
-      <SetPlatform>Platform=x64</SetPlatform>
-    </ProjectReference>
+    <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
   </ItemGroup>
 
   <Import Project="..\Speckle.Connector.TeklaShared\Speckle.Connectors.TeklaShared.projitems" Label="Shared" />
