@@ -11,9 +11,10 @@ public static class SupportedCategoriesUtils
   /// </summary>
   /// <param name="category"></param>
   /// <returns></returns>
-  public static bool IsSupportedCategory(Category category)
+  public static bool IsSupportedCategory(Category? category)
   {
-    return (
+    return category is not null
+      && (
         category.CategoryType == CategoryType.Model
       // || category.CategoryType == CategoryType.AnalyticalModel
       )

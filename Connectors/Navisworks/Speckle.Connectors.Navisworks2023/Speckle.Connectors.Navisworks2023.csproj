@@ -9,13 +9,13 @@
     <NavisworksVersion>2023</NavisworksVersion>
 
     <DefineConstants>$(DefineConstants);TRACE;NAVIS2023;NAVIS</DefineConstants>
+    <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
 
   <Import Project="..\Speckle.Connectors.NavisworksShared\Speckle.Connectors.NavisworksShared.projitems" Label="Shared"/>
 
   <ItemGroup>
     <Reference Include="WindowsFormsIntegration"/>
-    <PackageReference Include="Speckle.Objects"/>
     <PackageReference Include="Speckle.Navisworks.API" VersionOverride="2023.0.0"/>
   </ItemGroup>
 

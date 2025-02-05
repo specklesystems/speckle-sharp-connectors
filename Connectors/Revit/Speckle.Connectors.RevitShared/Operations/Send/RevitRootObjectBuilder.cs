@@ -86,13 +86,14 @@ public class RevitRootObjectBuilder(
       {
         if (!SupportedCategoriesUtils.IsSupportedCategory(revitElement.Category))
         {
+          var cat = revitElement.Category != null ? revitElement.Category.Name : "No category";
           results.Add(
             new(
               Status.WARNING,
               revitElement.UniqueId,
-              revitElement.Category.Name,
+              cat,
               null,
-              new SpeckleException($"Category {revitElement.Category.Name} is not supported.")
+              new SpeckleException($"Category {cat} is not supported.")
             )
           );
           continue;
