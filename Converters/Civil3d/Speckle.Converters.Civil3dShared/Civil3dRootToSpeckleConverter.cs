@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using Speckle.Converters.AutocadShared.ToSpeckle;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
@@ -12,12 +11,12 @@ public class Civil3dRootToSpeckleConverter : IRootToSpeckleConverter
 {
   private readonly IConverterManager<IToSpeckleTopLevelConverter> _toSpeckle;
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
-  private readonly PropertiesExtractor _propertiesExtractor;
+  private readonly ToSpeckle.PropertiesExtractor _propertiesExtractor;
 
   public Civil3dRootToSpeckleConverter(
     IConverterManager<IToSpeckleTopLevelConverter> toSpeckle,
     IConverterSettingsStore<Civil3dConversionSettings> settingsStore,
-    PropertiesExtractor propertiesExtractor
+    ToSpeckle.PropertiesExtractor propertiesExtractor
   )
   {
     _toSpeckle = toSpeckle;
@@ -54,15 +53,16 @@ public class Civil3dRootToSpeckleConverter : IRootToSpeckleConverter
         {
           var result = objectConverter.Convert(target);
 
-          // we need to capture properties on autocad entities
-          if (target is ADB.Entity autocadEntity)
-          {
-            var properties = _propertiesExtractor.GetProperties(autocadEntity);
-            if (properties.Count > 0)
-            {
-              result["properties"] = properties;
-            }
-          }
+          // NOTE: we can not test acad objects props, so commented out.
+          // // we need to capture properties on autocad entities
+          // if (target is ADB.Entity autocadEntity)
+          // {
+          //   var properties = _propertiesExtractor.GetProperties(autocadEntity);
+          //   if (properties.Count > 0)
+          //   {
+          //     result["properties"] = properties;
+          //   }
+          // }
 
           tr.Commit();
           return result;
