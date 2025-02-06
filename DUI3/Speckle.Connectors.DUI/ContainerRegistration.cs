@@ -51,7 +51,7 @@ public static class ContainerRegistration
     return serviceCollection;
   }
 
-  public static IServiceProvider UseDUI(this IServiceProvider serviceProvider, bool initializeDocumentStore = true)
+  public static IServiceProvider UseDUI(this IServiceProvider serviceProvider)
   {
     //observe the unobserved!
     TaskScheduler.UnobservedTaskException += (_, args) =>
@@ -76,11 +76,6 @@ public static class ContainerRegistration
         args.SetObserved();
       }
     };
-
-    if (initializeDocumentStore)
-    {
-      serviceProvider.GetRequiredService<DocumentModelStore>().OnDocumentStoreInitialized().Wait();
-    }
 
     return serviceProvider;
   }
