@@ -1,15 +1,16 @@
-﻿using Speckle.Connectors.CSiShared.Events;
-using Speckle.Connectors.CSiShared.HostApp;
+﻿using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.CSiShared.Utils;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Eventing;
 using Speckle.Converters.CSiShared.Utils;
+using Timer = System.Timers.Timer;
 
 namespace Speckle.Connectors.CSiShared.Bindings;
 
-public sealed class CsiSharedSelectionBinding : ISelectionBinding
+public class CsiSharedSelectionBinding : ISelectionBinding, IDisposable
 {
+  private bool _disposed;
+  private readonly Timer _selectionTimer;
   private readonly ICsiApplicationService _csiApplicationService;
   private HashSet<string> _lastSelection = new();
 
@@ -19,16 +20,17 @@ public sealed class CsiSharedSelectionBinding : ISelectionBinding
   public CsiSharedSelectionBinding(
     IBrowserBridge parent,
     ICsiApplicationService csiApplicationService,
-    IEventAggregator eventAggregator
+    ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
     Parent = parent;
     _csiApplicationService = csiApplicationService;
-
-    eventAggregator.GetEvent<SelectionBindingEvent>().SubscribePeriodic(TimeSpan.FromSeconds(1), CheckSelectionChanged);
+    _selectionTimer = new Timer(1000);
+    _selectionTimer.Elapsed += (_, _) => topLevelExceptionHandler.CatchUnhandled(CheckSelectionChanged);
+    _selectionTimer.Start();
   }
 
-  private void CheckSelectionChanged(object _)
+  private void CheckSelectionChanged()
   {
     var currentSelection = GetSelection();
     var currentIds = new HashSet<string>(currentSelection.SelectedObjectIds);
@@ -38,6 +40,24 @@ public sealed class CsiSharedSelectionBinding : ISelectionBinding
       _lastSelection = currentIds;
       Parent.Send(SelectionBindingEvents.SET_SELECTION, currentSelection);
     }
+  }
+
+  protected virtual void Dispose(bool disposing)
+  {
+    if (!_disposed)
+    {
+      if (disposing)
+      {
+        _selectionTimer?.Dispose();
+      }
+      _disposed = true;
+    }
+  }
+
+  public void Dispose()
+  {
+    Dispose(true);
+    GC.SuppressFinalize(this);
   }
 
   /// <summary>

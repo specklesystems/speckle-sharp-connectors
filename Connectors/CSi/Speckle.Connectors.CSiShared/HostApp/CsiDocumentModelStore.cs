@@ -1,22 +1,25 @@
 ﻿using System.IO;
+using System.Timers;
 using Microsoft.Extensions.Logging;
-using Speckle.Connectors.CSiShared.Events;
 using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Sdk;
 using Speckle.Sdk.Helpers;
 using Speckle.Sdk.Logging;
+using Timer = System.Timers.Timer;
 
 namespace Speckle.Connectors.CSiShared.HostApp;
 
-public class CsiDocumentModelStore : DocumentModelStore
+public class CsiDocumentModelStore : DocumentModelStore, IDisposable
 {
   private readonly ISpeckleApplication _speckleApplication;
   private readonly ILogger<CsiDocumentModelStore> _logger;
   private readonly ICsiApplicationService _csiApplicationService;
+  private readonly Timer _modelCheckTimer;
   private readonly IEventAggregator _eventAggregator;
   private string _lastModelFilename = string.Empty;
+  private bool _disposed;
   private string HostAppUserDataPath { get; set; }
   private string DocumentStateFile { get; set; }
   private string ModelPathHash { get; set; }
@@ -34,10 +37,14 @@ public class CsiDocumentModelStore : DocumentModelStore
     _logger = logger;
     _csiApplicationService = csiApplicationService;
     _eventAggregator = eventAggregator;
-    eventAggregator.GetEvent<ModelChangedEvent>().SubscribePeriodic(TimeSpan.FromSeconds(1), CheckModelChanges);
+
+    // initialize timer to check for model changes
+    _modelCheckTimer = new Timer(1000);
+    _modelCheckTimer.Elapsed += CheckModelChanges;
+    _modelCheckTimer.Start();
   }
 
-  private async Task CheckModelChanges(object _)
+  private async void CheckModelChanges(object? source, ElapsedEventArgs e)
   {
     string currentFilename = _csiApplicationService.SapModel.GetModelFilename();
 
@@ -119,5 +126,26 @@ public class CsiDocumentModelStore : DocumentModelStore
       _logger.LogError(ex, "Failed to load state, initializing empty state");
       ClearAndSave();
     }
+  }
+
+  protected virtual void Dispose(bool disposing)
+  {
+    if (_disposed)
+    {
+      return;
+    }
+
+    if (disposing)
+    {
+      _modelCheckTimer.Dispose();
+    }
+
+    _disposed = true;
+  }
+
+  public void Dispose()
+  {
+    Dispose(true);
+    GC.SuppressFinalize(this);
   }
 }
