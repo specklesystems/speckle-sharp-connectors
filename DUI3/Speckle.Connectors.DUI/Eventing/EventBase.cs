@@ -18,7 +18,7 @@ public abstract class EventBase
 
   protected async Task InternalPublish(params object[] arguments)
   {
-    var executionStrategies = PruneAndReturnStrategies();
+    var executionStrategies = PruneAndReturnStrategies().ToList();
     foreach (var executionStrategy in executionStrategies)
     {
       await executionStrategy(arguments);
