@@ -9,7 +9,7 @@ namespace Speckle.Connector.Navisworks.HostApp;
 /// Manages document and model state change notifications for the Navisworks connector.
 /// Coalesces various document events into batched updates to be processed during idle time.
 /// </summary>
-public sealed class NavisworksDocumentEvents: IDisposable
+public sealed class NavisworksDocumentEvents : IDisposable
 {
   private readonly IServiceProvider _serviceProvider;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
@@ -18,7 +18,7 @@ public sealed class NavisworksDocumentEvents: IDisposable
   private readonly object _subscriptionLock = new();
 
   private bool _isSubscribed;
-  private bool _isProcessing;  
+  private bool _isProcessing;
   private bool _disposed;
 
   private int _priorModelCount;
@@ -30,9 +30,12 @@ public sealed class NavisworksDocumentEvents: IDisposable
   /// <param name="serviceProvider">The service provider for dependency injection.</param>
   /// <param name="topLevelExceptionHandler">Handles exceptions during event processing.</param>
   /// <param name="idleManager">Manages idle processing.</param>
-  public NavisworksDocumentEvents(IServiceProvider serviceProvider,     ITopLevelExceptionHandler topLevelExceptionHandler,
+  public NavisworksDocumentEvents(
+    IServiceProvider serviceProvider,
+    ITopLevelExceptionHandler topLevelExceptionHandler,
     IAppIdleManager idleManager,
-    IBrowserBridge parent)
+    IBrowserBridge parent
+  )
   {
     _serviceProvider = serviceProvider;
     _topLevelExceptionHandler = topLevelExceptionHandler;
@@ -57,7 +60,8 @@ public sealed class NavisworksDocumentEvents: IDisposable
 
       var activeDocument = NavisworksApp.ActiveDocument;
       if (activeDocument != null)
-      {        activeDocument.Models.CollectionChanging += HandleDocumentModelCountChanging;
+      {
+        activeDocument.Models.CollectionChanging += HandleDocumentModelCountChanging;
         activeDocument.Models.CollectionChanged += HandleDocumentModelCountChanged;
       }
 
@@ -83,8 +87,7 @@ public sealed class NavisworksDocumentEvents: IDisposable
         _idleManager.SubscribeToIdle(nameof(NavisworksDocumentEvents), async () => await ProcessModelStateChangeAsync())
     );
   }
-  
-  
+
   private async Task ProcessModelStateChangeAsync()
   {
     if (_isProcessing)
@@ -174,7 +177,7 @@ public sealed class NavisworksDocumentEvents: IDisposable
   }
 
   private void UnsubscribeFromModelEvents(NAV.Document document)
-  {   
+  {
     document.Models.CollectionChanged -= HandleDocumentModelCountChanged;
     document.Models.CollectionChanging -= HandleDocumentModelCountChanging;
 
@@ -184,6 +187,7 @@ public sealed class NavisworksDocumentEvents: IDisposable
       .First();
     sendBinding.CancelAllSendOperations();
   }
+
   /// <summary>
   /// Disposes of resources and unsubscribes from events.
   /// </summary>

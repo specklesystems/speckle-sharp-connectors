@@ -14,20 +14,21 @@ public class NavisworksBasicConnectorBinding : IBasicConnectorBinding
   public IBrowserBridge Parent { get; }
   public BasicConnectorBindingCommands Commands { get; }
 
-  private readonly DocumentModelStore _store;  
+  private readonly DocumentModelStore _store;
   private readonly ISendConversionCache _sendConversionCache;
-  private readonly ISpeckleApplication _speckleApplication;  
+  private readonly ISpeckleApplication _speckleApplication;
   private readonly NavisworksDocumentEvents _documentEvents;
 
   public NavisworksBasicConnectorBinding(
     IBrowserBridge parent,
-    DocumentModelStore store,    ISendConversionCache sendConversionCache,
+    DocumentModelStore store,
+    ISendConversionCache sendConversionCache,
     ISpeckleApplication speckleApplication,
     NavisworksDocumentEvents documentEvents
   )
   {
     Parent = parent;
-    _store = store;   
+    _store = store;
     _sendConversionCache = sendConversionCache;
     _speckleApplication = speckleApplication;
     _documentEvents = documentEvents;

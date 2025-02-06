@@ -5,7 +5,8 @@ using Speckle.Connectors.DUI.Bridge;
 namespace Speckle.Connector.Navisworks.Bindings;
 
 public class NavisworksSelectionBinding : ISelectionBinding
-{  private readonly IAppIdleManager _appIdleManager;
+{
+  private readonly IAppIdleManager _appIdleManager;
   private readonly IElementSelectionService _selectionService;
   private const string SELECTION_EVENT = "setSelection";
   public string Name { get; } = "selectionBinding";
@@ -17,7 +18,8 @@ public class NavisworksSelectionBinding : ISelectionBinding
     IElementSelectionService selectionService
   )
   {
-    _selectionService = selectionService;    _appIdleManager = idleManager;
+    _selectionService = selectionService;
+    _appIdleManager = idleManager;
     Parent = parent;
 
     NavisworksApp.ActiveDocument.CurrentSelection.Changed += OnSelectionChange;

@@ -1,5 +1,4 @@
-﻿
-using Speckle.Connectors.DUI.Bridge;
+﻿using Speckle.Connectors.DUI.Bridge;
 
 namespace Speckle.Connector.Navisworks.HostApp;
 
