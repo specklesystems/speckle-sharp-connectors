@@ -29,7 +29,7 @@ public class PropertiesExtractor
     );
     if (userDefinedAttributes.Count > 0)
     {
-      properties.Add("UserDefinedAttributes", userDefinedAttributes);
+      properties.Add("User Defined Attributes", userDefinedAttributes);
     }
 
     return properties;

@@ -24,9 +24,7 @@ public class UserDefinedAttributesExtractor
 
         if (propertyName != null)
         {
-          var reportProperty = new Dictionary<string, object?> { ["name"] = propertyName, ["value"] = propertyValue };
-
-          userProperties[propertyName] = reportProperty;
+          userProperties[propertyName] = propertyValue;
         }
       }
     }
