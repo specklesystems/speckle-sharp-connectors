@@ -1,4 +1,5 @@
 using Autodesk.Revit.DB;
+using Revit.Async;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
@@ -129,38 +130,46 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
       return;
     }
 
-    HighlightObjectsOnView(elementIds);
+    await HighlightObjectsOnView(elementIds);
   }
 
   /// <summary>
   /// Highlights the objects from the given ids.
   /// </summary>
   /// <param name="objectIds"> UniqueId's of the DB.Elements.</param>
-  public Task HighlightObjects(IReadOnlyList<string> objectIds)
+  public async Task HighlightObjects(IReadOnlyList<string> objectIds)
   {
     var activeUIDoc =
       _revitContext.UIApplication?.ActiveUIDocument
       ?? throw new SpeckleException("Unable to retrieve active UI document");
 
-    HighlightObjectsOnView(
-      objectIds
-        .Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid))
-        .Where(el => el is not null)
-        .Cast<ElementId>()
-        .ToList()
-    );
-    return Task.CompletedTask;
+    await HighlightObjectsOnView(
+        objectIds
+          .Select(uid => ElementIdHelper.GetElementIdFromUniqueId(activeUIDoc.Document, uid))
+          .Where(el => el is not null)
+          .Cast<ElementId>()
+          .ToList()
+      )
+      .ConfigureAwait(false);
   }
 
-  private void HighlightObjectsOnView(List<ElementId> objectIds)
+  private async Task HighlightObjectsOnView(List<ElementId> objectIds)
   {
     // POC: don't know if we can rely on storing the ActiveUIDocument, hence getting it each time
     var activeUIDoc =
       _revitContext.UIApplication?.ActiveUIDocument
       ?? throw new SpeckleException("Unable to retrieve active UI document");
 
-    activeUIDoc.Selection.SetElementIds(objectIds);
-    activeUIDoc.ShowElements(objectIds);
-    ;
+    await RevitTask
+      .RunAsync(() =>
+      {
+        activeUIDoc.Selection.SetElementIds(objectIds);
+        activeUIDoc.ShowElements(objectIds);
+      })
+      .ConfigureAwait(false);
+
+    // activeUIDoc.Selection.SetElementIds(objectIds);
+    // activeUIDoc.ShowElements(objectIds);
+    // ;
   }
 }

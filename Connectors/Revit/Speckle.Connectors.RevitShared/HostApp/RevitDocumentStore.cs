@@ -1,6 +1,7 @@
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.ExtensibleStorage;
 using Autodesk.Revit.UI.Events;
+using Revit.Async;
 using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
@@ -83,20 +84,23 @@ internal sealed class RevitDocumentStore : DocumentModelStore
       return;
     }
 
-    using Transaction t = new(doc, "Speckle Write State");
-    t.Start();
-    using DataStorage ds = GetSettingsDataStorage(doc) ?? DataStorage.Create(doc);
+    RevitTask.RunAsync(() =>
+    {
+      using Transaction t = new(doc, "Speckle Write State");
+      t.Start();
+      using DataStorage ds = GetSettingsDataStorage(doc) ?? DataStorage.Create(doc);
 
-    using Entity stateEntity = new(_documentModelStorageSchema.GetSchema());
-    string serializedModels = Serialize();
-    stateEntity.Set("contents", serializedModels);
+      using Entity stateEntity = new(_documentModelStorageSchema.GetSchema());
+      string serializedModels = Serialize();
+      stateEntity.Set("contents", serializedModels);
 
-    using Entity idEntity = new(_idStorageSchema.GetSchema());
-    idEntity.Set("Id", s_revitDocumentStoreId);
+      using Entity idEntity = new(_idStorageSchema.GetSchema());
+      idEntity.Set("Id", s_revitDocumentStoreId);
 
-    ds.SetEntity(idEntity);
-    ds.SetEntity(stateEntity);
-    t.Commit();
+      ds.SetEntity(idEntity);
+      ds.SetEntity(stateEntity);
+      t.Commit();
+    });
   }
 
   protected override void LoadState()
