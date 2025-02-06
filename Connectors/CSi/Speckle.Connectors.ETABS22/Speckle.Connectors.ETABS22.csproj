@@ -2,14 +2,13 @@
 
     <PropertyGroup>
       <TargetFramework>net8.0-windows</TargetFramework>
-      <ImplicitUsings>enable</ImplicitUsings>
-      <Nullable>enable</Nullable>
       <Platforms>AnyCPU</Platforms>
       <UseWindowsForms>true</UseWindowsForms>
       <UseWPF>true</UseWPF>
       <ETABSVersion>22</ETABSVersion>
       <DefineConstants>$(DefineConstants);ETABS22;ETABS22_OR_GREATER</DefineConstants>
       <EnableDynamicLoading>true</EnableDynamicLoading>
+      <Configurations>Debug;Release;Local</Configurations>
     </PropertyGroup>
 
     <ItemGroup>
