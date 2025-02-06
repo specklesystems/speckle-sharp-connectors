@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Threading;
@@ -19,7 +20,7 @@ public sealed class AutocadSendBinding : AutocadSendBaseBinding
   private readonly IAutocadConversionSettingsFactory _autocadConversionSettingsFactory;
 
   public AutocadSendBinding(
-    DocumentModelStore store,
+    DocumentModelStore store,    IAutocadIdleManager idleManager,
     IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     ICancellationManager cancellationManager,
@@ -28,12 +29,13 @@ public sealed class AutocadSendBinding : AutocadSendBaseBinding
     IOperationProgressManager operationProgressManager,
     ILogger<AutocadSendBinding> logger,
     IAutocadConversionSettingsFactory autocadConversionSettingsFactory,
-    ISpeckleApplication speckleApplication,
+    ISpeckleApplication speckleApplication,    ITopLevelExceptionHandler topLevelExceptionHandler,
     IThreadContext threadContext,
     IEventAggregator eventAggregator
   )
     : base(
       store,
+      idleManager,
       parent,
       sendFilters,
       cancellationManager,
@@ -41,7 +43,7 @@ public sealed class AutocadSendBinding : AutocadSendBaseBinding
       sendConversionCache,
       operationProgressManager,
       logger,
-      speckleApplication,
+      speckleApplication,topLevelExceptionHandler,
       threadContext,
       eventAggregator
     )
