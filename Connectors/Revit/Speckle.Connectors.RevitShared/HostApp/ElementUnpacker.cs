@@ -103,8 +103,8 @@ public class ElementUnpacker
     var ids = elements.Select(el => el.Id).ToArray();
     var doc = _revitContext.UIApplication?.ActiveUIDocument.Document!;
     elements.RemoveAll(element =>
-      (element is Mullion m && ids.Contains(m.Host.Id))
-      || (element is Panel p && ids.Contains(p.Host.Id))
+      (element is Mullion { Host: not null } m && ids.Contains(m.Host.Id))
+      || (element is Panel { Host: not null } p && ids.Contains(p.Host.Id))
       || (
         element is FamilyInstance { Host: not null } f
         && doc.GetElement(f.Host.Id) is Wall { CurtainGrid: not null }

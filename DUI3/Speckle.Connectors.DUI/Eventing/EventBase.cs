@@ -21,14 +21,16 @@ public abstract class EventBase
     var executionStrategies = PruneAndReturnStrategies();
     foreach (var executionStrategy in executionStrategies)
     {
+      //It's important that we call executeStrategy outside of the lock(_subscription)
       await executionStrategy(arguments);
     }
   }
 
-  private IEnumerable<Func<object[], Task>> PruneAndReturnStrategies()
+  private List<Func<object[], Task>> PruneAndReturnStrategies()
   {
     lock (_subscriptions)
     {
+      List<Func<object[], Task>> ret = new();
       for (var i = _subscriptions.Count - 1; i >= 0; i--)
       {
         var listItem = _subscriptions[i].GetExecutionStrategy();
@@ -40,9 +42,11 @@ public abstract class EventBase
         }
         else
         {
-          yield return listItem;
+          ret.Add(listItem);
         }
       }
+
+      return ret;
     }
   }
 
