@@ -20,7 +20,8 @@ public sealed class AutocadSendBinding : AutocadSendBaseBinding
   private readonly IAutocadConversionSettingsFactory _autocadConversionSettingsFactory;
 
   public AutocadSendBinding(
-    DocumentModelStore store,    IAutocadIdleManager idleManager,
+    DocumentModelStore store,
+    IAutocadIdleManager idleManager,
     IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     ICancellationManager cancellationManager,
@@ -29,7 +30,8 @@ public sealed class AutocadSendBinding : AutocadSendBaseBinding
     IOperationProgressManager operationProgressManager,
     ILogger<AutocadSendBinding> logger,
     IAutocadConversionSettingsFactory autocadConversionSettingsFactory,
-    ISpeckleApplication speckleApplication,    ITopLevelExceptionHandler topLevelExceptionHandler,
+    ISpeckleApplication speckleApplication,
+    ITopLevelExceptionHandler topLevelExceptionHandler,
     IThreadContext threadContext,
     IEventAggregator eventAggregator
   )
@@ -43,7 +45,8 @@ public sealed class AutocadSendBinding : AutocadSendBaseBinding
       sendConversionCache,
       operationProgressManager,
       logger,
-      speckleApplication,topLevelExceptionHandler,
+      speckleApplication,
+      topLevelExceptionHandler,
       threadContext,
       eventAggregator
     )

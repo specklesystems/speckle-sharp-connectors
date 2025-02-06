@@ -23,7 +23,8 @@ public sealed class Civil3dSendBinding : AutocadSendBaseBinding
   private readonly IAutocadConversionSettingsFactory _autocadConversionSettingsFactory;
 
   public Civil3dSendBinding(
-    DocumentModelStore store,    IAutocadIdleManager idleManager,
+    DocumentModelStore store,
+    IAutocadIdleManager idleManager,
     IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     ICancellationManager cancellationManager,
@@ -33,12 +34,14 @@ public sealed class Civil3dSendBinding : AutocadSendBaseBinding
     ILogger<AutocadSendBinding> logger,
     ICivil3dConversionSettingsFactory civil3dConversionSettingsFactory,
     IAutocadConversionSettingsFactory autocadConversionSettingsFactory,
-    ISpeckleApplication speckleApplication,    ITopLevelExceptionHandler topLevelExceptionHandler,
+    ISpeckleApplication speckleApplication,
+    ITopLevelExceptionHandler topLevelExceptionHandler,
     IThreadContext threadContext,
     IEventAggregator eventAggregator
   )
     : base(
-      store,idleManager,
+      store,
+      idleManager,
       parent,
       sendFilters,
       cancellationManager,
@@ -46,7 +49,8 @@ public sealed class Civil3dSendBinding : AutocadSendBaseBinding
       sendConversionCache,
       operationProgressManager,
       logger,
-      speckleApplication,topLevelExceptionHandler,
+      speckleApplication,
+      topLevelExceptionHandler,
       threadContext,
       eventAggregator
     )

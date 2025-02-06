@@ -32,14 +32,14 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   private OperationProgressManager OperationProgressManager { get; }
   public IBrowserBridge Parent { get; }
 
-  private readonly DocumentModelStore _store;  
+  private readonly DocumentModelStore _store;
   private readonly IAutocadIdleManager _idleManager;
   private readonly List<ISendFilter> _sendFilters;
   private readonly ICancellationManager _cancellationManager;
   private readonly IServiceProvider _serviceProvider;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
-  private readonly ILogger<AutocadSendBinding> _logger;  
+  private readonly ILogger<AutocadSendBinding> _logger;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly ISpeckleApplication _speckleApplication;
   private readonly IThreadContext _threadContext;
@@ -69,7 +69,8 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     IEventAggregator eventAggregator
   )
   {
-    _store = store;    _idleManager = idleManager;
+    _store = store;
+    _idleManager = idleManager;
     _serviceProvider = serviceProvider;
     _cancellationManager = cancellationManager;
     _sendFilters = sendFilters.ToList();
@@ -77,14 +78,15 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     _operationProgressManager = operationProgressManager;
     _logger = logger;
     _speckleApplication = speckleApplication;
-    _threadContext = threadContext;    _topLevelExceptionHandler = topLevelExceptionHandler;
+    _threadContext = threadContext;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
     _eventAggregator = eventAggregator;
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
 
     Application.DocumentManager.DocumentActivated += (_, args) =>
       _topLevelExceptionHandler.CatchUnhandled(() => SubscribeToObjectChanges(args.Document));
-    
+
     if (Application.DocumentManager.CurrentDocument != null)
     {
       // catches the case when autocad just opens up with a blank new doc
@@ -95,11 +97,9 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     eventAggregator.GetEvent<DocumentStoreChangedEvent>().Subscribe(OnDocumentStoreChangedEvent);
   }
 
-
   private void OnDocumentStoreChangedEvent(object _) => _sendConversionCache.ClearCache();
 
   private readonly List<string> _docSubsTracker = new();
-
 
   private void SubscribeToObjectChanges(Document? doc)
   {
@@ -108,16 +108,16 @@ public abstract class AutocadSendBaseBinding : ISendBinding
       return;
     }
 
-    _docSubsTracker.Add(doc.Name);    
+    _docSubsTracker.Add(doc.Name);
     doc.Database.ObjectAppended += (_, e) => OnObjectChanged(e.DBObject);
     doc.Database.ObjectErased += (_, e) => OnObjectChanged(e.DBObject);
     doc.Database.ObjectModified += (_, e) => OnObjectChanged(e.DBObject);
   }
+
   private void OnObjectChanged(DBObject dbObject)
   {
     _topLevelExceptionHandler.CatchUnhandled(() => OnChangeChangedObjectIds(dbObject));
   }
-
 
   private void OnChangeChangedObjectIds(DBObject dBObject)
   {

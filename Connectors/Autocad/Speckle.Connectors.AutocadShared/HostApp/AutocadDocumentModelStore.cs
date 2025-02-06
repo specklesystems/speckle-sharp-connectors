@@ -14,7 +14,8 @@ public class AutocadDocumentStore : DocumentModelStore
 
   public AutocadDocumentStore(
     IJsonSerializer jsonSerializer,
-    AutocadDocumentManager autocadDocumentManager,    ITopLevelExceptionHandler topLevelExceptionHandler,
+    AutocadDocumentManager autocadDocumentManager,
+    ITopLevelExceptionHandler topLevelExceptionHandler,
     IEventAggregator eventAggregator
   )
     : base(jsonSerializer)
@@ -22,7 +23,7 @@ public class AutocadDocumentStore : DocumentModelStore
     _autocadDocumentManager = autocadDocumentManager;
     _eventAggregator = eventAggregator;
     _previousDocName = _nullDocumentName;
-    
+
     // POC: Will be addressed to move it into AutocadContext!
     if (Application.DocumentManager.MdiActiveDocument != null)
     {
@@ -30,9 +31,9 @@ public class AutocadDocumentStore : DocumentModelStore
       // POC: this logic might go when we have document management in context
       // It is with the case of if binding created with already a document
       // This is valid when user opens acad file directly double clicking
-       OnDocChangeInternal(Application.DocumentManager.MdiActiveDocument);
+      OnDocChangeInternal(Application.DocumentManager.MdiActiveDocument);
     }
-    
+
     Application.DocumentManager.DocumentActivated += (_, e) =>
       topLevelExceptionHandler.CatchUnhandled(() => OnDocChangeInternal(e.Document));
 
@@ -40,7 +41,7 @@ public class AutocadDocumentStore : DocumentModelStore
     // Autodesk.AutoCAD.ApplicationServices.Application.DocumentWindowCollection.DocumentWindowActivated += (_, args) =>
     //  OnDocChangeInternal((Document)args.DocumentWindow.Document);
   }
-  
+
   private async void OnDocChangeInternal(Document? doc)
   {
     var currentDocName = doc != null ? doc.Name : _nullDocumentName;

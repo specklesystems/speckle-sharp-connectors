@@ -9,7 +9,7 @@ namespace Speckle.Connectors.Autocad.Bindings;
 
 public class AutocadSelectionBinding : ISelectionBinding
 {
-  private const string SELECTION_EVENT = "setSelection";  
+  private const string SELECTION_EVENT = "setSelection";
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IThreadContext _threadContext;
   private readonly HashSet<Document> _visitedDocuments = new();
@@ -18,9 +18,11 @@ public class AutocadSelectionBinding : ISelectionBinding
 
   public IBrowserBridge Parent { get; }
 
-  public AutocadSelectionBinding(IBrowserBridge parent,
+  public AutocadSelectionBinding(
+    IBrowserBridge parent,
     IThreadContext threadContext,
-    ITopLevelExceptionHandler topLevelExceptionHandler)
+    ITopLevelExceptionHandler topLevelExceptionHandler
+  )
   {
     _topLevelExceptionHandler = topLevelExceptionHandler;
     Parent = parent;
@@ -29,9 +31,11 @@ public class AutocadSelectionBinding : ISelectionBinding
     // POC: Use here Context for doc. In converters it's OK but we are still lacking to use context into bindings.
     // It is with the case of if binding created with already a document
     // This is valid when user opens acad file directly double clicking
-    TryRegisterDocumentForSelection(Application.DocumentManager.MdiActiveDocument);   Application.DocumentManager.DocumentActivated += (_, e) =>
+    TryRegisterDocumentForSelection(Application.DocumentManager.MdiActiveDocument);
+    Application.DocumentManager.DocumentActivated += (_, e) =>
       _topLevelExceptionHandler.CatchUnhandled(() => OnDocumentChanged(e.Document));
   }
+
   private void OnDocumentChanged(Document? document) => TryRegisterDocumentForSelection(document);
 
   private void TryRegisterDocumentForSelection(Document? document)
@@ -41,12 +45,12 @@ public class AutocadSelectionBinding : ISelectionBinding
       return;
     }
 
-      if (!_visitedDocuments.Contains(document))
-      {
-        document.ImpliedSelectionChanged += (_, _) =>
-          _topLevelExceptionHandler.FireAndForget(async () => await _threadContext.RunOnMainAsync(OnSelectionChanged));
+    if (!_visitedDocuments.Contains(document))
+    {
+      document.ImpliedSelectionChanged += (_, _) =>
+        _topLevelExceptionHandler.FireAndForget(async () => await _threadContext.RunOnMainAsync(OnSelectionChanged));
 
-        _visitedDocuments.Add(document);
+      _visitedDocuments.Add(document);
     }
   }
 
