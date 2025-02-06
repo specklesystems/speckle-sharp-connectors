@@ -21,7 +21,7 @@ public abstract class EventBase
     var executionStrategies = PruneAndReturnStrategies();
     foreach (var executionStrategy in executionStrategies)
     {
-      //It's important that we can executeStrategy outside of the lock(_subscription)
+      //It's important that we call executeStrategy outside of the lock(_subscription)
       await executionStrategy(arguments);
     }
   }
