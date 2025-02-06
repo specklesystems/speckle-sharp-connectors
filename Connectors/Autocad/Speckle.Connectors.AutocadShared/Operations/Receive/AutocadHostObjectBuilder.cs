@@ -165,9 +165,9 @@ public class AutocadHostObjectBuilder(
       var bakedEntity = BakeObject(entity, obj, layerName);
       convertedEntities.Add(bakedEntity);
     }
-    else if (converted is List<(Entity, Base)> fallbackConversionResult)
+    else if (converted is List<(Entity, Base)> listConversionResult)
     {
-      var bakedFallbackEntities = BakeObjectsAsGroup(fallbackConversionResult, obj, layerName, baseLayerNamePrefix);
+      var bakedFallbackEntities = BakeObjectsAsGroup(listConversionResult, obj, layerName, baseLayerNamePrefix);
       convertedEntities.UnionWith(bakedFallbackEntities);
     }
 
@@ -206,6 +206,11 @@ public class AutocadHostObjectBuilder(
       BakeObject(conversionResult, originalObject, layerName, parentObject);
       ids.Add(conversionResult.ObjectId);
       entities.Add(conversionResult);
+    }
+
+    if (entities.Count <= 1) // return if empty list or only one, because we don't want to create empty or single item groups.
+    {
+      return entities;
     }
 
     var tr = Application.DocumentManager.CurrentDocument.Database.TransactionManager.TopTransaction;
