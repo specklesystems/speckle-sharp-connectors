@@ -24,7 +24,9 @@ public class PropertiesExtractor
       properties.Add("Report", report);
     }
 
-    Dictionary<string, object?> userDefinedAttributes = _userDefinedAttributesExtractor.GetUserDefinedAttributes(modelObject);
+    Dictionary<string, object?> userDefinedAttributes = _userDefinedAttributesExtractor.GetUserDefinedAttributes(
+      modelObject
+    );
     if (userDefinedAttributes.Count > 0)
     {
       properties.Add("UserDefinedAttributes", userDefinedAttributes);
