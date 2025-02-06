@@ -124,24 +124,22 @@ public sealed class BrowserBridge : IBrowserBridge
   //don't wait for browser runs on purpose
   public void RunMethod(string methodName, string requestId, string methodArgs) =>
     _threadContext
-      .RunOnWorkerAsync(
-        async () =>
-        {
-          var task = await _topLevelExceptionHandler
-            .CatchUnhandledAsync(async () =>
-            {
-              var result = await ExecuteMethod(methodName, methodArgs).ConfigureAwait(false);
-              string resultJson = _jsonSerializer.Serialize(result);
-              NotifyUIMethodCallResultReady(requestId, resultJson);
-            })
-            .ConfigureAwait(false);
-          if (task.Exception is not null)
+      .RunOnWorkerAsync(async () =>
+      {
+        var task = await _topLevelExceptionHandler
+          .CatchUnhandledAsync(async () =>
           {
-            string resultJson = SerializeFormattedException(task.Exception);
+            var result = await ExecuteMethod(methodName, methodArgs).ConfigureAwait(false);
+            string resultJson = _jsonSerializer.Serialize(result);
             NotifyUIMethodCallResultReady(requestId, resultJson);
-          }
+          })
+          .ConfigureAwait(false);
+        if (task.Exception is not null)
+        {
+          string resultJson = SerializeFormattedException(task.Exception);
+          NotifyUIMethodCallResultReady(requestId, resultJson);
         }
-      )
+      })
       .FireAndForget();
 
   /// <summary>

@@ -119,6 +119,7 @@ public abstract class ThreadContext : IThreadContext
   protected abstract Task<T> WorkerToMain<T>(Func<T> action);
 
   protected abstract Task<T> MainToWorker<T>(Func<T> action);
+
   protected virtual void RunWorkerInline(Action action) => action();
 
   protected virtual Task<T> RunWorkerInline<T>(Func<T> action) => Task.FromResult(action());
