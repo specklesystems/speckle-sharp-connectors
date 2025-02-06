@@ -124,7 +124,7 @@ public sealed class BrowserBridge : IBrowserBridge
   //don't wait for browser runs on purpose
   public void RunMethod(string methodName, string requestId, string methodArgs) =>
     _threadContext
-      .RunOnThreadAsync(
+      .RunOnWorkerAsync(
         async () =>
         {
           var task = await _topLevelExceptionHandler
@@ -140,8 +140,7 @@ public sealed class BrowserBridge : IBrowserBridge
             string resultJson = SerializeFormattedException(task.Exception);
             NotifyUIMethodCallResultReady(requestId, resultJson);
           }
-        },
-        _threadOptions.RunCommandsOnMainThread
+        }
       )
       .FireAndForget();
 
