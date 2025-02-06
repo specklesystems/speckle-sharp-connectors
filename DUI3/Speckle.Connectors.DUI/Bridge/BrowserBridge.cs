@@ -6,7 +6,6 @@ using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
-using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Newtonsoft.Json;
 using Speckle.Sdk.Common;
@@ -64,7 +63,6 @@ public sealed class BrowserBridge : IBrowserBridge
     ILogger<BrowserBridge> logger,
     IBrowserScriptExecutor browserScriptExecutor,
     IThreadOptions threadOptions,
-    IEventAggregator eventAggregator,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
@@ -75,7 +73,6 @@ public sealed class BrowserBridge : IBrowserBridge
     _browserScriptExecutor = browserScriptExecutor;
     _threadOptions = threadOptions;
     _topLevelExceptionHandler = topLevelExceptionHandler;
-    eventAggregator.GetEvent<ExceptionEvent>().Subscribe(OnExceptionEvent, ThreadOption.MainThread);
   }
 
   private async Task OnExceptionEvent(Exception ex) =>

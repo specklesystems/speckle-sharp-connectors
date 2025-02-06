@@ -2,32 +2,31 @@ using Rhino;
 using Rhino.DocObjects;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Eventing;
-using Speckle.Connectors.RhinoShared;
 
 namespace Speckle.Connectors.Rhino.Bindings;
 
 public class RhinoSelectionBinding : ISelectionBinding
 {
+  private readonly IAppIdleManager _idleManager;
   private const string SELECTION_EVENT = "setSelection";
-  private readonly IEventAggregator _eventAggregator;
 
   public string Name => "selectionBinding";
   public IBrowserBridge Parent { get; }
 
-  public RhinoSelectionBinding(IBrowserBridge parent, IEventAggregator eventAggregator)
+  public RhinoSelectionBinding(IAppIdleManager idleManager, IBrowserBridge parent)
   {
+    _idleManager = idleManager;
     Parent = parent;
-    _eventAggregator = eventAggregator;
-    eventAggregator.GetEvent<SelectObjects>().Subscribe(OnSelectionChange);
-    eventAggregator.GetEvent<DeselectObjects>().Subscribe(OnSelectionChange);
-    eventAggregator.GetEvent<DeselectAllObjects>().Subscribe(OnSelectionChange);
+
+    RhinoDoc.SelectObjects += OnSelectionChange;
+    RhinoDoc.DeselectObjects += OnSelectionChange;
+    RhinoDoc.DeselectAllObjects += OnSelectionChange;
   }
 
-  private void OnSelectionChange(EventArgs eventArgs) =>
-    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSelectionBinding), UpdateSelection);
+  private void OnSelectionChange(object? o, EventArgs eventArgs) =>
+    _idleManager.SubscribeToIdle(nameof(RhinoSelectionBinding), UpdateSelection);
 
-  private void UpdateSelection(object _)
+  private void UpdateSelection()
   {
     SelectionInfo selInfo = GetSelection();
     Parent.Send(SELECTION_EVENT, selInfo);
