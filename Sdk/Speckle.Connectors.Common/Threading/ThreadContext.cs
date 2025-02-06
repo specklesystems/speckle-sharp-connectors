@@ -14,7 +14,7 @@ public abstract class ThreadContext : IThreadContext
     {
       if (IsMainThread)
       {
-        RunMain(action);
+        RunMainInline(action);
       }
       else
       {
@@ -37,7 +37,7 @@ public abstract class ThreadContext : IThreadContext
       }
       else
       {
-        RunMain(action);
+        RunWorkerInline(action);
       }
     }
   }
@@ -48,7 +48,7 @@ public abstract class ThreadContext : IThreadContext
     {
       if (IsMainThread)
       {
-        return RunMainAsync(action);
+        return RunMainInline(action);
       }
 
       return WorkerToMain(action);
@@ -58,7 +58,7 @@ public abstract class ThreadContext : IThreadContext
       return MainToWorker(action);
     }
 
-    return RunMainAsync(action);
+    return RunWorkerInline(action);
   }
 
   public async Task RunOnThreadAsync(Func<Task> action, bool useMain)
@@ -67,7 +67,7 @@ public abstract class ThreadContext : IThreadContext
     {
       if (IsMainThread)
       {
-        await RunMainAsync(action);
+        await RunMainInline(action);
       }
       else
       {
@@ -90,7 +90,7 @@ public abstract class ThreadContext : IThreadContext
       }
       else
       {
-        await RunMainAsync(action);
+        await RunWorkerInline(action);
       }
     }
   }
@@ -101,7 +101,7 @@ public abstract class ThreadContext : IThreadContext
     {
       if (IsMainThread)
       {
-        return RunMainAsync(action);
+        return RunMainInline(action);
       }
 
       return WorkerToMainAsync(action);
@@ -110,7 +110,7 @@ public abstract class ThreadContext : IThreadContext
     {
       return MainToWorkerAsync(action);
     }
-    return RunMainAsync(action);
+    return RunWorkerInline(action);
   }
 
   protected abstract Task<T> WorkerToMainAsync<T>(Func<Task<T>> action);
@@ -119,12 +119,19 @@ public abstract class ThreadContext : IThreadContext
   protected abstract Task<T> WorkerToMain<T>(Func<T> action);
 
   protected abstract Task<T> MainToWorker<T>(Func<T> action);
+  protected virtual void RunWorkerInline(Action action) => action();
 
-  protected virtual void RunMain(Action action) => action();
+  protected virtual Task<T> RunWorkerInline<T>(Func<T> action) => Task.FromResult(action());
 
-  protected virtual Task<T> RunMainAsync<T>(Func<T> action) => Task.FromResult(action());
+  protected virtual Task RunWorkerInline(Func<Task> action) => Task.FromResult(action());
 
-  protected virtual Task RunMainAsync(Func<Task> action) => Task.FromResult(action());
+  protected virtual Task<T> RunWorkerInline<T>(Func<Task<T>> action) => action();
 
-  protected virtual Task<T> RunMainAsync<T>(Func<Task<T>> action) => action();
+  protected virtual void RunMainInline(Action action) => action();
+
+  protected virtual Task<T> RunMainInline<T>(Func<T> action) => Task.FromResult(action());
+
+  protected virtual Task RunMainInline(Func<Task> action) => Task.FromResult(action());
+
+  protected virtual Task<T> RunMainInline<T>(Func<Task<T>> action) => action();
 }
