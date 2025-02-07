@@ -1,7 +1,6 @@
 using Autodesk.Revit.DB;
 using Revit.Async;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.RevitShared;
@@ -21,15 +20,16 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
   public BasicConnectorBindingCommands Commands { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly IRevitContext _revitContext;
+  private readonly RevitContext _revitContext;
   private readonly ISpeckleApplication _speckleApplication;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   public BasicConnectorBindingRevit(
     DocumentModelStore store,
     IBrowserBridge parent,
-    IRevitContext revitContext,
+    RevitContext revitContext,
     ISpeckleApplication speckleApplication,
-    IEventAggregator eventAggregator
+    ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
     Name = "baseBinding";
@@ -37,12 +37,15 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     _store = store;
     _revitContext = revitContext;
     _speckleApplication = speckleApplication;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
     Commands = new BasicConnectorBindingCommands(parent);
 
-    eventAggregator.GetEvent<DocumentStoreChangedEvent>().Subscribe(OnDocumentStoreChangedEvent);
+    _store.DocumentChanged += (_, _) =>
+      _topLevelExceptionHandler.FireAndForget(async () =>
+      {
+        await Commands.NotifyDocumentChanged();
+      });
   }
-
-  private async Task OnDocumentStoreChangedEvent(object _) => await Commands.NotifyDocumentChanged();
 
   public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
 

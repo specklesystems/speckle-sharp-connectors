@@ -24,8 +24,6 @@ public static class ContainerRegistration
 
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetAssembly(typeof(IdleCallManager)));
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetAssembly(typeof(IServerTransportFactory)));
-    // serviceCollection.AddEventsAsTransient(Assembly.GetAssembly(typeof(TDocumentStore)));
-    // serviceCollection.AddEventsAsTransient(Assembly.GetAssembly(typeof(IdleCallManager)));
 
     serviceCollection.AddSingleton<IBinding, TopLevelExceptionHandlerBinding>(sp =>
       sp.GetRequiredService<TopLevelExceptionHandlerBinding>()
@@ -34,20 +32,7 @@ public static class ContainerRegistration
     serviceCollection.AddSingleton<ITopLevelExceptionHandler, TopLevelExceptionHandler>();
   }
 
-  // public static IServiceCollection AddEventsAsTransient(this IServiceCollection serviceCollection, Assembly assembly)
-  // {
-  //   foreach (var type in assembly.ExportedTypes.Where(t => t.IsNonAbstractClass()))
-  //   {
-  //     if (type.FindInterfaces((i, _) => i == typeof(ISpeckleEvent), null).Length != 0)
-  //     {
-  //       serviceCollection.TryAddTransient(type);
-  //     }
-  //   }
-  //
-  //   return serviceCollection;
-  // }
-
-  public static IServiceProvider UseDUI(this IServiceProvider serviceProvider, bool initializeDocumentStore = true)
+  public static void UseDUI(this IServiceProvider serviceProvider)
   {
     //observe the unobserved!
     TaskScheduler.UnobservedTaskException += (_, args) =>
@@ -72,12 +57,5 @@ public static class ContainerRegistration
         args.SetObserved();
       }
     };
-
-    if (initializeDocumentStore)
-    {
-      serviceProvider.GetRequiredService<DocumentModelStore>().OnDocumentStoreInitialized().Wait();
-    }
-
-    return serviceProvider;
   }
 }
