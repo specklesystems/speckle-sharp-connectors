@@ -1,19 +1,16 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
-using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.DatabaseServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
-using Speckle.Connectors.Autocad.Plugin;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
@@ -42,7 +39,8 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   private readonly ILogger<AutocadSendBinding> _logger;
   private readonly ISpeckleApplication _speckleApplication;
   private readonly IThreadContext _threadContext;
-  private readonly IEventAggregator _eventAggregator;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly IAppIdleManager _idleManager;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -63,7 +61,8 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     ILogger<AutocadSendBinding> logger,
     ISpeckleApplication speckleApplication,
     IThreadContext threadContext,
-    IEventAggregator eventAggregator
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    IAppIdleManager idleManager
   )
   {
     _store = store;
@@ -75,46 +74,29 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     _logger = logger;
     _speckleApplication = speckleApplication;
     _threadContext = threadContext;
-    _eventAggregator = eventAggregator;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
+    _idleManager = idleManager;
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
+
+    Application.DocumentManager.DocumentActivated += (_, args) =>
+      _topLevelExceptionHandler.CatchUnhandled(() => SubscribeToObjectChanges(args.Document));
 
     if (Application.DocumentManager.CurrentDocument != null)
     {
       // catches the case when autocad just opens up with a blank new doc
-      TryRegisterSubscribeToObjectChanges(Application.DocumentManager.CurrentDocument);
+      SubscribeToObjectChanges(Application.DocumentManager.CurrentDocument);
     }
     // Since ids of the objects generates from same seed, we should clear the cache always whenever doc swapped.
-
-    eventAggregator.GetEvent<DocumentActivatedEvent>().Subscribe(SubscribeToObjectChanges);
-    eventAggregator.GetEvent<DocumentStoreChangedEvent>().Subscribe(OnDocumentStoreChangedEvent);
-    eventAggregator.GetEvent<DocumentToBeDestroyedEvent>().Subscribe(OnDocumentDestroyed);
-    eventAggregator.GetEvent<ObjectAppendedEvent>().Subscribe(OnObjectAppended);
-    eventAggregator.GetEvent<ObjectErasedEvent>().Subscribe(ObjectErased);
-    eventAggregator.GetEvent<ObjectModifiedEvent>().Subscribe(ObjectModified);
-  }
-
-  private void OnDocumentDestroyed(DocumentCollectionEventArgs args)
-  {
-    Document doc = args.Document;
-    if (!_docSubsTracker.Contains(doc.Name))
+    _store.DocumentChanged += (_, _) =>
     {
-      doc.Database.ObjectAppended -= DatabaseOnObjectAppended;
-      doc.Database.ObjectErased -= DatabaseOnObjectErased;
-      doc.Database.ObjectModified -= DatabaseObjectModified;
-
-      _docSubsTracker.Remove(doc.Name);
-    }
+      _sendConversionCache.ClearCache();
+    };
   }
-
-  private void OnDocumentStoreChangedEvent(object _) => _sendConversionCache.ClearCache();
 
   private readonly List<string> _docSubsTracker = new();
 
-  private void SubscribeToObjectChanges(DocumentCollectionEventArgs e) =>
-    TryRegisterSubscribeToObjectChanges(e.Document);
-
-  private void TryRegisterSubscribeToObjectChanges(Document? doc)
+  private void SubscribeToObjectChanges(Document doc)
   {
     if (doc == null || doc.Database == null || _docSubsTracker.Contains(doc.Name))
     {
@@ -122,33 +104,21 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     }
 
     _docSubsTracker.Add(doc.Name);
-    doc.Database.ObjectAppended += DatabaseOnObjectAppended;
-    doc.Database.ObjectErased += DatabaseOnObjectErased;
-    doc.Database.ObjectModified += DatabaseObjectModified;
+    doc.Database.ObjectAppended += (_, e) => OnObjectChanged(e.DBObject);
+    doc.Database.ObjectErased += (_, e) => OnObjectChanged(e.DBObject);
+    doc.Database.ObjectModified += (_, e) => OnObjectChanged(e.DBObject);
   }
 
-  private async void DatabaseOnObjectAppended(object sender, ObjectEventArgs e) =>
-    await _eventAggregator.GetEvent<ObjectAppendedEvent>().PublishAsync(e);
-
-  private async void DatabaseOnObjectErased(object sender, ObjectErasedEventArgs e) =>
-    await _eventAggregator.GetEvent<ObjectErasedEvent>().PublishAsync(e);
-
-  private async void DatabaseObjectModified(object sender, ObjectEventArgs e) =>
-    await _eventAggregator.GetEvent<ObjectModifiedEvent>().PublishAsync(e);
-
-  private void OnObjectAppended(ObjectEventArgs e) => OnChangeChangedObjectIds(e.DBObject);
-
-  private void ObjectErased(ObjectErasedEventArgs e) => OnChangeChangedObjectIds(e.DBObject);
-
-  private void ObjectModified(ObjectEventArgs e) => OnChangeChangedObjectIds(e.DBObject);
+  private void OnObjectChanged(DBObject dbObject) =>
+    _topLevelExceptionHandler.CatchUnhandled(() => OnChangeChangedObjectIds(dbObject));
 
   private void OnChangeChangedObjectIds(DBObject dBObject)
   {
     ChangedObjectIds[dBObject.GetSpeckleApplicationId()] = 1;
-    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(AutocadSendBinding), RunExpirationChecks);
+    _idleManager.SubscribeToIdle(nameof(AutocadSendBinding), async () => await RunExpirationChecks());
   }
 
-  private async Task RunExpirationChecks(object _)
+  private async Task RunExpirationChecks()
   {
     var senders = _store.GetSenders();
     string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
