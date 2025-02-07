@@ -183,6 +183,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
             if (conversionIds.Count == 0)
             {
+              // TODO: add this condition to report object - same as in autocad
               throw new SpeckleException($"Failed to convert object.");
             }
 
