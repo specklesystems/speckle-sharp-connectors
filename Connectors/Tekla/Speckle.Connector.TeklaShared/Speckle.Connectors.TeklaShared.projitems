@@ -17,7 +17,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\TeklaBasicConnectorBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\TeklaSelectionBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\TeklaSendBinding.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Events.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\ModelObjectExtension.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\SpeckleApplicationIdExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Filters\TeklaSelectionFilter.cs" />
