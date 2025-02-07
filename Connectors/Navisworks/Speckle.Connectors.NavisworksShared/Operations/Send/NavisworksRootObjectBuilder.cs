@@ -41,7 +41,7 @@ public class NavisworksRootObjectBuilder(
   /// <param name="cancellationToken">Token to cancel the operation.</param>
   /// <returns>A result containing the root collection and conversion results.</returns>
   /// <exception cref="SpeckleException">Thrown when no objects can be converted.</exception>
-  public async Task<RootObjectBuilderResult> BuildAsync(
+  public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<NAV.ModelItem> navisworksModelItems,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
