@@ -4,6 +4,7 @@ using Speckle.Connector.Navisworks.Operations.Send.Settings;
 using Speckle.Connector.Navisworks.Services;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Exceptions;
@@ -38,6 +39,7 @@ public class NavisworksSendBinding : ISendBinding
   private readonly INavisworksConversionSettingsFactory _conversionSettingsFactory;
   private readonly ToSpeckleSettingsManagerNavisworks _toSpeckleSettingsManagerNavisworks;
   private readonly IElementSelectionService _selectionService;
+  private readonly IThreadContext _threadContext;
 
   public NavisworksSendBinding(
     DocumentModelStore store,
@@ -51,7 +53,8 @@ public class NavisworksSendBinding : ISendBinding
     ISdkActivityFactory activityFactory,
     INavisworksConversionSettingsFactory conversionSettingsFactory,
     ToSpeckleSettingsManagerNavisworks toSpeckleSettingsManagerNavisworks,
-    IElementSelectionService selectionService
+    IElementSelectionService selectionService,
+    IThreadContext threadContext
   )
   {
     Parent = parent;
@@ -67,6 +70,7 @@ public class NavisworksSendBinding : ISendBinding
     _conversionSettingsFactory = conversionSettingsFactory;
     _toSpeckleSettingsManagerNavisworks = toSpeckleSettingsManagerNavisworks;
     _selectionService = selectionService;
+    _threadContext = threadContext;
     SubscribeToNavisworksEvents();
   }
 
@@ -82,7 +86,10 @@ public class NavisworksSendBinding : ISendBinding
       new ConvertHiddenElementsSetting(false),
     ];
 
-  public async Task Send(string modelCardId)
+  public async Task Send(string modelCardId) =>
+    await _threadContext.RunOnMainAsync(async () => await SendInternal(modelCardId));
+
+  private async Task SendInternal(string modelCardId)
   {
     using var activity = _activityFactory.Start();
     try
