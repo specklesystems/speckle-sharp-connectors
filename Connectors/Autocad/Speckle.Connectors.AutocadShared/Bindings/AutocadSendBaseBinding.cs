@@ -145,7 +145,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   public List<ICardSetting> GetSendSettings() => [];
 
   public async Task Send(string modelCardId) =>
-    await _threadContext.RunOnWorkerAsync(async () => await SendInternal(modelCardId));
+    await _threadContext.RunOnMainAsync(async () => await SendInternal(modelCardId));
 
   protected abstract void InitializeSettings(IServiceProvider serviceProvider);
 
