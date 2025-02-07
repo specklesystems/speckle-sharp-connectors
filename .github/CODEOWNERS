@@ -4,33 +4,36 @@
 
 # * @specklesystems/connectors
 
-# Core
-# Not needed, falls back on team approval
-
-# Objects
-#   Converters require product owner approval, anything else falls back to team approval
-
-Objects/ConverterAutocadCivil/* @clairekuang @connorivy
-Objects/ConverterCSI/* @connorivy
-Objects/ConverterDynamo/* @teocomi @alanrynne
-Objects/ConverterMicrostation/* @connorivy
-Objects/ConverterRevit/* @connorivy @teocomi
-Objects/ConverterRhinoGh/* @alanrynne @clairekuang
-Objects/ConverterTeklaStructures/* @connorivy
-Objects/StructuralUtilities/PolygonMesher/* @connorivy
-
 # Connectors
 
-ConnectorAutocadCivil/* @clairekuang
-ConnectorArchicad/* @jozseflkiss
-ConnectorCSI/* @connorivy
-ConnectorDynamo/* @teocomi @alanrynne
-ConnectorGrasshopper/* @alanrynne @clairekuang
-ConnectorMicrostation/* @clairekuang
-ConnectorRevit/* @teocomi @connorivy
-ConnectorRhino/* @clairekuang @alanrynne
-ConnectorTeklaStructures/* @connorivy
+/Connectors/ArcGIS/* @KatKatKateryna
+/Connectors/Autocad/* @clairekaung @oguzhankoral @didimitrie
+/Connectors/Civil3d/* @clairekaung @oguzhankoral @didimitrie
+/Connectors/CSi/* @bjoernsteinhagen @dogukankaratas
+/Connectors/Navisworks/* @jsdbroughton
+/Connectors/Revit/* @clairekaung @oguzhankoral @didimitrie
+/Connectors/Rhino/* @clairekaung @oguzhankoral @didimitrie
+/Connectors/Tekla/* @bjoernsteinhagen @dogukankaratas
 
-# DesktopUI
+# Converters
+/Convertors/ArcGIS/* @KatKatKateryna
+/Convertors/Autocad/* @clairekaung @oguzhankoral @didimitrie
+/Convertors/Civil3d/* @clairekaung @oguzhankoral @didimitrie
+/Convertors/CSi/* @bjoernsteinhagen @dogukankaratas
+/Convertors/Navisworks/* @jsdbroughton
+/Convertors/Revit/* @clairekaung @oguzhankoral @didimitrie
+/Convertors/Rhino/* @clairekaung @oguzhankoral @didimitrie
+/Convertors/Tekla/* @bjoernsteinhagen @dogukankaratas
 
-DesktopUI2/* @teocomi @clairekuang
+# DUI
+
+/DUI3/* @clairekaung @oguzhankoral @didimitrie
+
+# Importers
+/Importers/* @JR-Morgan @didimitrie @oguzhankoral @adamhathcock
+
+# SDK
+/SDK/* @JR-Morgan @clairekaung @didimitrie @oguzhankoral @adamhathcock
+
+# Build
+/Build/* @JR-Morgan @oguzhankoral @adamhathcock
