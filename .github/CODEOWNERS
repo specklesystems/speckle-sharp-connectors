@@ -7,33 +7,33 @@
 # Connectors
 
 /Connectors/ArcGIS/* @KatKatKateryna
-/Connectors/Autocad/* @clairekaung @oguzhankoral @didimitrie
-/Connectors/Civil3d/* @clairekaung @oguzhankoral @didimitrie
+/Connectors/Autocad/* @clairekuang @oguzhankoral @didimitrie
+/Connectors/Civil3d/* @clairekuang @oguzhankoral @didimitrie
 /Connectors/CSi/* @bjoernsteinhagen @dogukankaratas
 /Connectors/Navisworks/* @jsdbroughton
-/Connectors/Revit/* @clairekaung @oguzhankoral @didimitrie
-/Connectors/Rhino/* @clairekaung @oguzhankoral @didimitrie
+/Connectors/Revit/* @clairekuang @oguzhankoral @didimitrie
+/Connectors/Rhino/* @clairekuang @oguzhankoral @didimitrie
 /Connectors/Tekla/* @bjoernsteinhagen @dogukankaratas
 
 # Converters
 /Convertors/ArcGIS/* @KatKatKateryna
-/Convertors/Autocad/* @clairekaung @oguzhankoral @didimitrie
-/Convertors/Civil3d/* @clairekaung @oguzhankoral @didimitrie
+/Convertors/Autocad/* @clairekuang @oguzhankoral @didimitrie
+/Convertors/Civil3d/* @clairekuang @oguzhankoral @didimitrie
 /Convertors/CSi/* @bjoernsteinhagen @dogukankaratas
 /Convertors/Navisworks/* @jsdbroughton
-/Convertors/Revit/* @clairekaung @oguzhankoral @didimitrie
-/Convertors/Rhino/* @clairekaung @oguzhankoral @didimitrie
+/Convertors/Revit/* @clairekuang @oguzhankoral @didimitrie
+/Convertors/Rhino/* @clairekuang @oguzhankoral @didimitrie
 /Convertors/Tekla/* @bjoernsteinhagen @dogukankaratas
 
 # DUI
 
-/DUI3/* @clairekaung @oguzhankoral @didimitrie
+/DUI3/* @clairekuang @oguzhankoral @didimitrie
 
 # Importers
 /Importers/* @JR-Morgan @didimitrie @oguzhankoral @adamhathcock
 
 # SDK
-/SDK/* @JR-Morgan @clairekaung @didimitrie @oguzhankoral @adamhathcock
+/SDK/* @JR-Morgan @clairekuang @didimitrie @oguzhankoral @adamhathcock
 
 # Build
 /Build/* @JR-Morgan @oguzhankoral @adamhathcock
