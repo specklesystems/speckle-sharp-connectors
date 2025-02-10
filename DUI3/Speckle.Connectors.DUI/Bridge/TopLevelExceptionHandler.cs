@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Speckle.Connectors.DUI.Eventing;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
 
@@ -22,15 +21,13 @@ namespace Speckle.Connectors.DUI.Bridge;
 public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
 {
   private readonly ILogger<TopLevelExceptionHandler> _logger;
-  private readonly IEventAggregator _eventAggregator;
   public string Name => nameof(TopLevelExceptionHandler);
 
   private const string UNHANDLED_LOGGER_TEMPLATE = "An unhandled Exception occured";
 
-  public TopLevelExceptionHandler(ILogger<TopLevelExceptionHandler> logger, IEventAggregator eventAggregator)
+  public TopLevelExceptionHandler(ILogger<TopLevelExceptionHandler> logger)
   {
     _logger = logger;
-    _eventAggregator = eventAggregator;
   }
 
   /// <summary>
@@ -66,7 +63,7 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
     catch (Exception ex) when (!ex.IsFatal())
     {
       _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
-      _eventAggregator.GetEvent<ExceptionEvent>().PublishAsync(ex).Wait();
+      // _eventAggregator.GetEvent<ExceptionEvent>().PublishAsync(ex).Wait();
       return new(ex);
     }
     catch (Exception ex)
@@ -104,7 +101,7 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
       catch (Exception ex) when (!ex.IsFatal())
       {
         _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
-        await _eventAggregator.GetEvent<ExceptionEvent>().PublishAsync(ex);
+        // await _eventAggregator.GetEvent<ExceptionEvent>().PublishAsync(ex);
         return new(ex);
       }
     }
