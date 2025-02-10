@@ -10,6 +10,7 @@
     <PackageVersion Include="FluentAssertions" Version="6.12.1" />
     <PackageVersion Include="Glob" Version="1.1.9" />
     <PackageVersion Include="ILRepack.FullAuto" Version="1.6.0" />
+    <PackageVersion Include="LibTessDotNet" Version="1.1.15" />
     <PackageVersion Include="Moq" Version="4.20.70" />
     <PackageVersion Include="Microsoft.Build" Version="17.11.4" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
@@ -45,9 +46,9 @@
     <PackageVersion Include="Speckle.Revit2023.Fakes" Version="0.3.1" />
     <PackageVersion Include="Speckle.Revit2024.Fakes" Version="0.3.1" />
     <PackageVersion Include="Speckle.Rhino7.Fakes" Version="0.3.1" />
-    <PackageVersion Include="Speckle.Objects" Version="3.1.0-dev.252" />
-    <PackageVersion Include="Speckle.Sdk" Version="3.1.0-dev.252" />
-    <PackageVersion Include="Speckle.Sdk.Dependencies" Version="3.1.0-dev.252" />
+    <PackageVersion Include="Speckle.Objects" Version="3.1.0-dev.255" />
+    <PackageVersion Include="Speckle.Sdk" Version="3.1.0-dev.255" />
+    <PackageVersion Include="Speckle.Sdk.Dependencies" Version="3.1.0-dev.255" />
     <PackageVersion Include="SimpleExec" Version="12.0.0" />
     <GlobalPackageReference Include="PolySharp" Version="1.14.1" />
     <GlobalPackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />

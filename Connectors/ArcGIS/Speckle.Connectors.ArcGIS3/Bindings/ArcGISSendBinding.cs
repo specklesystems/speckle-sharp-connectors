@@ -15,7 +15,6 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
@@ -71,7 +70,6 @@ public sealed class ArcGISSendBinding : ISendBinding
     IArcGISConversionSettingsFactory arcGisConversionSettingsFactory,
     MapMembersUtils mapMemberUtils,
     IThreadContext threadContext,
-    IEventAggregator eventAggregator,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
@@ -90,7 +88,10 @@ public sealed class ArcGISSendBinding : ISendBinding
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
     SubscribeToArcGISEvents();
-    eventAggregator.GetEvent<DocumentStoreChangedEvent>().Subscribe(OnDocumentStoreChangedEvent);
+    _store.DocumentChanged += (_, _) =>
+    {
+      _sendConversionCache.ClearCache();
+    };
   }
 
   private void OnDocumentStoreChangedEvent(object _) => _sendConversionCache.ClearCache();
