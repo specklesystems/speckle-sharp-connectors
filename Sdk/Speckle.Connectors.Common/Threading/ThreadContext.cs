@@ -8,6 +8,18 @@ public abstract class ThreadContext : IThreadContext
   private static readonly Task<object?> s_empty = Task.FromResult<object?>(null);
   public static bool IsMainThread => Environment.CurrentManagedThreadId == 1;
 
+  public Task<T> RunLongRunning<T>(Func<Task<T>> action)
+  {
+    
+    var t = Task.Factory.StartNew(action, default, TaskCreationOptions.AttachedToParent, TaskScheduler.Default);
+    return t.Unwrap();
+  }
+  public Task RunLongRunning(Func<Task> action)
+  {
+    
+    var t = Task.Factory.StartNew(action, default, TaskCreationOptions.AttachedToParent, TaskScheduler.Default);
+    return t.Unwrap();
+  }
   public async Task RunOnThread(Action action, bool useMain)
   {
     if (useMain)

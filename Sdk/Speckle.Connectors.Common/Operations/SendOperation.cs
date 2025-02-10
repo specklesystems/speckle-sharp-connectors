@@ -39,7 +39,7 @@ public sealed class SendOperation<T>(
     buildResult.RootObject["version"] = 3;
     // base object handler is separated, so we can do some testing on non-production databases
     // exact interface may want to be tweaked when we implement this
-    var (rootObjId, convertedReferences) = await threadContext.RunOnWorkerAsync(
+    var (rootObjId, convertedReferences) = await threadContext.RunLongRunning(
       () => Send(buildResult.RootObject, sendInfo, onOperationProgressed, ct)
     );
 

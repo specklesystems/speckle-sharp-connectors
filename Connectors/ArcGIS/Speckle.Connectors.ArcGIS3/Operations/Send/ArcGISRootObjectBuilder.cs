@@ -1,5 +1,6 @@
 using ArcGIS.Core.Data.Raster;
 using ArcGIS.Core.Geometry;
+using ArcGIS.Desktop.Framework.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.ArcGIS.HostApp;
 using Speckle.Connectors.ArcGIS.HostApp.Extensions;
@@ -50,6 +51,16 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
   }
 
   public async Task<RootObjectBuilderResult> Build(
+    IReadOnlyList<ADM.MapMember> layers,
+    SendInfo __,
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken
+  )
+  {
+    return await QueuedTask.Run(() => BuildInternal(layers, __, onOperationProgressed, cancellationToken));
+  }
+
+  private async Task<RootObjectBuilderResult> BuildInternal(
     IReadOnlyList<ADM.MapMember> layers,
     SendInfo __,
     IProgress<CardProgress> onOperationProgressed,
@@ -192,9 +203,9 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     // search the rows of the layer, where each row is treated like an object
     // RowCursor is IDisposable but is not being correctly picked up by IDE warnings.
     // This means we need to be carefully adding using statements based on the API documentation coming from each method/class
-    using (ACD.RowCursor rowCursor = featureLayer.Search())
+    using (ACD.RowCursor? rowCursor = featureLayer.Search())
     {
-      while (rowCursor.MoveNext())
+      while (rowCursor?.MoveNext() ?? false)
       {
         // Same IDisposable issue appears to happen on Row class too. Docs say it should always be disposed of manually by the caller.
         using (ACD.Row row = rowCursor.Current)
