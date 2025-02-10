@@ -10,14 +10,12 @@ using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
-using Speckle.Connectors.RhinoShared;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
@@ -42,7 +40,8 @@ public sealed class RhinoSendBinding : ISendBinding
   private readonly IRhinoConversionSettingsFactory _rhinoConversionSettingsFactory;
   private readonly ISpeckleApplication _speckleApplication;
   private readonly ISdkActivityFactory _activityFactory;
-  private readonly IEventAggregator _eventAggregator;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly IAppIdleManager _idleManager;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Objects in this list will be reconverted.
@@ -64,6 +63,7 @@ public sealed class RhinoSendBinding : ISendBinding
 
   public RhinoSendBinding(
     DocumentModelStore store,
+    IAppIdleManager idleManager,
     IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     IServiceProvider serviceProvider,
@@ -74,10 +74,11 @@ public sealed class RhinoSendBinding : ISendBinding
     IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
     ISpeckleApplication speckleApplication,
     ISdkActivityFactory activityFactory,
-    IEventAggregator eventAggregator
+    ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
     _store = store;
+    _idleManager = idleManager;
     _serviceProvider = serviceProvider;
     _sendFilters = sendFilters.ToList();
     _cancellationManager = cancellationManager;
@@ -87,203 +88,194 @@ public sealed class RhinoSendBinding : ISendBinding
     _rhinoConversionSettingsFactory = rhinoConversionSettingsFactory;
     _speckleApplication = speckleApplication;
     Parent = parent;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
     Commands = new SendBindingUICommands(parent); // POC: Commands are tightly coupled with their bindings, at least for now, saves us injecting a factory.
     _activityFactory = activityFactory;
-    _eventAggregator = eventAggregator;
     PreviousUnitSystem = RhinoDoc.ActiveDoc.ModelUnitSystem;
-    SubscribeToRhinoEvents(eventAggregator);
+    SubscribeToRhinoEvents();
   }
 
-  private void SubscribeToRhinoEvents(IEventAggregator eventAggregator)
+#pragma warning disable CA1502
+  private void SubscribeToRhinoEvents()
+#pragma warning restore CA1502
   {
-    eventAggregator.GetEvent<BeginCommandEvent>().Subscribe(OnBeginCommandEvent);
+    Command.BeginCommand += (_, e) =>
+    {
+      if (e.CommandEnglishName == "BlockEdit")
+      {
+        var selectedObject = RhinoDoc.ActiveDoc.Objects.GetSelectedObjects(false, false).First();
+        ChangedObjectIds[selectedObject.Id.ToString()] = 1;
+      }
 
-    eventAggregator.GetEvent<ActiveDocumentChanged>().Subscribe(OnActiveDocumentChanged);
+      if (e.CommandEnglishName == "Ungroup")
+      {
+        foreach (RhinoObject selectedObject in RhinoDoc.ActiveDoc.Objects.GetSelectedObjects(false, false))
+        {
+          ChangedObjectIdsInGroupsOrLayers[selectedObject.Id.ToString()] = 1;
+        }
+        _idleManager.SubscribeToIdle("a", RunExpirationChecks);
+        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+      }
+    };
+
+    RhinoDoc.ActiveDocumentChanged += (_, e) =>
+    {
+      PreviousUnitSystem = e.Document.ModelUnitSystem;
+    };
 
     // NOTE: BE CAREFUL handling things in this event handler since it is triggered whenever we save something into file!
-    eventAggregator.GetEvent<DocumentPropertiesChanged>().Subscribe(OnDocumentPropertiesChanged);
+    RhinoDoc.DocumentPropertiesChanged += async (_, e) =>
+    {
+      var newUnit = e.Document.ModelUnitSystem;
+      if (newUnit != PreviousUnitSystem)
+      {
+        PreviousUnitSystem = newUnit;
 
-    eventAggregator.GetEvent<AddRhinoObject>().Subscribe(OnAddRhinoObject);
+        await InvalidateAllSender();
+      }
+    };
 
-    eventAggregator.GetEvent<DeleteRhinoObject>().Subscribe(OnDeleteRhinoObject);
+    RhinoDoc.AddRhinoObject += (_, e) =>
+      _topLevelExceptionHandler.CatchUnhandled(() =>
+      {
+        if (!_store.IsDocumentInit)
+        {
+          return;
+        }
+
+        ChangedObjectIds[e.ObjectId.ToString()] = 1;
+        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+      });
+
+    RhinoDoc.DeleteRhinoObject += (_, e) =>
+      _topLevelExceptionHandler.CatchUnhandled(() =>
+      {
+        if (!_store.IsDocumentInit)
+        {
+          return;
+        }
+
+        ChangedObjectIds[e.ObjectId.ToString()] = 1;
+        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+      });
 
     // NOTE: Catches an object's material change from one user defined doc material to another. Does not catch (as the top event is not triggered) swapping material sources for an object or moving to/from the default material (this is handled below)!
-    eventAggregator.GetEvent<RenderMaterialsTableEvent>().Subscribe(OnRenderMaterialsTableEvent);
+    RhinoDoc.RenderMaterialsTableEvent += (_, args) =>
+      _topLevelExceptionHandler.CatchUnhandled(() =>
+      {
+        if (!_store.IsDocumentInit)
+        {
+          return;
+        }
 
-    eventAggregator.GetEvent<GroupTableEvent>().Subscribe(OnGroupTableEvent);
+        if (args is RhinoDoc.RenderMaterialAssignmentChangedEventArgs changedEventArgs)
+        {
+          ChangedObjectIds[changedEventArgs.ObjectId.ToString()] = 1;
+          _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        }
+      });
 
-    eventAggregator.GetEvent<LayerTableEvent>().Subscribe(OnLayerTableEvent);
+    RhinoDoc.GroupTableEvent += (_, args) =>
+      _topLevelExceptionHandler.CatchUnhandled(() =>
+      {
+        if (!_store.IsDocumentInit)
+        {
+          return;
+        }
+
+        foreach (var obj in RhinoDoc.ActiveDoc.Groups.GroupMembers(args.GroupIndex))
+        {
+          ChangedObjectIdsInGroupsOrLayers[obj.Id.ToString()] = 1;
+        }
+        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+      });
+
+    RhinoDoc.LayerTableEvent += (_, args) =>
+      _topLevelExceptionHandler.CatchUnhandled(() =>
+      {
+        if (!_store.IsDocumentInit)
+        {
+          return;
+        }
+
+        if (
+          args.EventType == LayerTableEventType.Deleted
+          || args.EventType == LayerTableEventType.Current
+          || args.EventType == LayerTableEventType.Added
+        )
+        {
+          return;
+        }
+
+        var layer = RhinoDoc.ActiveDoc.Layers[args.LayerIndex];
+
+        var allLayers = args.Document.Layers.Where(l => /* NOTE: layer path may actually be null in some cases (rhino's fault, not ours) */
+          l.FullPath != null && l.FullPath.Contains(layer.Name)
+        ); // not  e imperfect, but layer.GetChildren(true) is valid only in v8 and above; this filter will include the original layer.
+        foreach (var childLayer in allLayers)
+        {
+          var sublayerObjs = RhinoDoc.ActiveDoc.Objects.FindByLayer(childLayer) ?? [];
+          foreach (var obj in sublayerObjs)
+          {
+            ChangedObjectIdsInGroupsOrLayers[obj.Id.ToString()] = 1;
+          }
+        }
+        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+      });
 
     // Catches and stores changed material ids. These are then used in the expiry checks to invalidate all objects that have assigned any of those material ids.
-    eventAggregator.GetEvent<MaterialTableEvent>().Subscribe(OnMaterialTableEvent);
-
-    eventAggregator.GetEvent<ModifyObjectAttributes>().Subscribe(OnModifyObjectAttributes);
-
-    eventAggregator.GetEvent<ReplaceRhinoObject>().Subscribe(OnReplaceRhinoObject);
-  }
-
-  private void OnActiveDocumentChanged(DocumentEventArgs e) => PreviousUnitSystem = e.Document.ModelUnitSystem;
-
-  private async Task OnDocumentPropertiesChanged(DocumentEventArgs e)
-  {
-    var newUnit = e.Document.ModelUnitSystem;
-    if (newUnit != PreviousUnitSystem)
-    {
-      PreviousUnitSystem = newUnit;
-
-      await InvalidateAllSender();
-    }
-  }
-
-  private void OnBeginCommandEvent(CommandEventArgs e)
-  {
-    if (e.CommandEnglishName == "BlockEdit")
-    {
-      var selectedObject = RhinoDoc.ActiveDoc.Objects.GetSelectedObjects(false, false).First();
-      ChangedObjectIds[selectedObject.Id.ToString()] = 1;
-    }
-
-    if (e.CommandEnglishName == "Ungroup")
-    {
-      foreach (RhinoObject selectedObject in RhinoDoc.ActiveDoc.Objects.GetSelectedObjects(false, false))
+    RhinoDoc.MaterialTableEvent += (_, args) =>
+      _topLevelExceptionHandler.CatchUnhandled(() =>
       {
-        ChangedObjectIdsInGroupsOrLayers[selectedObject.Id.ToString()] = 1;
-      }
-      _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
-    }
-  }
+        if (!_store.IsDocumentInit)
+        {
+          return;
+        }
 
-  private void OnAddRhinoObject(RhinoObjectEventArgs e)
-  {
-    if (!_store.IsDocumentInit)
-    {
-      return;
-    }
+        if (args.EventType == MaterialTableEventType.Modified)
+        {
+          ChangedMaterialIndexes[args.Index] = 1;
+          _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        }
+      });
 
-    ChangedObjectIds[e.ObjectId.ToString()] = 1;
-    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
-  }
-
-  private void OnDeleteRhinoObject(RhinoObjectEventArgs e)
-  {
-    if (!_store.IsDocumentInit)
-    {
-      return;
-    }
-
-    ChangedObjectIds[e.ObjectId.ToString()] = 1;
-    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
-  }
-
-  private void OnRenderMaterialsTableEvent(RhinoDoc.RenderContentTableEventArgs e)
-  {
-    if (!_store.IsDocumentInit)
-    {
-      return;
-    }
-
-    if (e is RhinoDoc.RenderMaterialAssignmentChangedEventArgs changedEventArgs)
-    {
-      ChangedObjectIds[changedEventArgs.ObjectId.ToString()] = 1;
-      _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
-    }
-  }
-
-  private void OnGroupTableEvent(GroupTableEventArgs args)
-  {
-    if (!_store.IsDocumentInit)
-    {
-      return;
-    }
-
-    foreach (var obj in RhinoDoc.ActiveDoc.Groups.GroupMembers(args.GroupIndex))
-    {
-      ChangedObjectIdsInGroupsOrLayers[obj.Id.ToString()] = 1;
-    }
-    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
-  }
-
-  private void OnLayerTableEvent(LayerTableEventArgs args)
-  {
-    if (!_store.IsDocumentInit)
-    {
-      return;
-    }
-
-    if (
-      args.EventType == LayerTableEventType.Deleted
-      || args.EventType == LayerTableEventType.Current
-      || args.EventType == LayerTableEventType.Added
-    )
-    {
-      return;
-    }
-
-    var layer = RhinoDoc.ActiveDoc.Layers[args.LayerIndex];
-    if (layer.Name is null)
-    {
-      return;
-    }
-
-    // add all objects from the changed layers and sublayers to the non-destructively changed object list.
-    var allLayers = args.Document.Layers.Where(l => /* NOTE: layer path may actually be null in some cases (rhino's fault, not ours) */
-      l.FullPath != null && l.FullPath.Contains(layer.Name)
-    ); // not  e imperfect, but layer.GetChildren(true) is valid only in v8 and above; this filter will include the original layer.
-    foreach (var childLayer in allLayers)
-    {
-      var sublayerObjs = RhinoDoc.ActiveDoc.Objects.FindByLayer(childLayer) ?? [];
-      foreach (var obj in sublayerObjs)
+    RhinoDoc.ModifyObjectAttributes += (_, e) =>
+      _topLevelExceptionHandler.CatchUnhandled(() =>
       {
-        ChangedObjectIdsInGroupsOrLayers[obj.Id.ToString()] = 1;
-      }
-    }
-    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
-  }
+        if (!_store.IsDocumentInit)
+        {
+          return;
+        }
 
-  private void OnMaterialTableEvent(MaterialTableEventArgs args)
-  {
-    if (!_store.IsDocumentInit)
-    {
-      return;
-    }
+        // NOTE: not sure yet we want to track every attribute changes yet. Explicitly tracking atts that change commit data. TBD
+        if (
+          e.OldAttributes.LayerIndex != e.NewAttributes.LayerIndex
+          || e.OldAttributes.MaterialSource != e.NewAttributes.MaterialSource
+          || e.OldAttributes.MaterialIndex != e.NewAttributes.MaterialIndex // NOTE: this does not work when swapping around from custom doc materials, it works when you swap TO/FROM default material
+          || e.OldAttributes.ColorSource != e.NewAttributes.ColorSource
+          || e.OldAttributes.ObjectColor != e.NewAttributes.ObjectColor
+          || e.OldAttributes.Name != e.NewAttributes.Name
+          || e.OldAttributes.UserStringCount != e.NewAttributes.UserStringCount
+          || e.OldAttributes.GetUserStrings() != e.NewAttributes.GetUserStrings()
+        )
+        {
+          ChangedObjectIds[e.RhinoObject.Id.ToString()] = 1;
+          _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        }
+      });
 
-    if (args.EventType == MaterialTableEventType.Modified)
-    {
-      ChangedMaterialIndexes[args.Index] = 1;
-      _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
-    }
-  }
+    RhinoDoc.ReplaceRhinoObject += (_, e) =>
+      _topLevelExceptionHandler.CatchUnhandled(() =>
+      {
+        if (!_store.IsDocumentInit)
+        {
+          return;
+        }
 
-  private void OnModifyObjectAttributes(RhinoModifyObjectAttributesEventArgs e)
-  {
-    if (!_store.IsDocumentInit)
-    {
-      return;
-    }
-
-    // NOTE: not sure yet we want to track every attribute changes yet. TBD
-    // NOTE: we might want to track here user strings too (once we send them out), and more!
-    if (
-      e.OldAttributes.LayerIndex != e.NewAttributes.LayerIndex
-      || e.OldAttributes.MaterialSource != e.NewAttributes.MaterialSource
-      || e.OldAttributes.MaterialIndex != e.NewAttributes.MaterialIndex // NOTE: this does not work when swapping around from custom doc materials, it works when you swap TO/FROM default material
-    )
-    {
-      ChangedObjectIds[e.RhinoObject.Id.ToString()] = 1;
-      _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
-    }
-  }
-
-  private void OnReplaceRhinoObject(RhinoReplaceObjectEventArgs e)
-  {
-    if (!_store.IsDocumentInit)
-    {
-      return;
-    }
-
-    ChangedObjectIds[e.NewRhinoObject.Id.ToString()] = 1;
-    ChangedObjectIds[e.OldRhinoObject.Id.ToString()] = 1;
-    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RhinoSendBinding), RunExpirationChecks);
+        ChangedObjectIds[e.NewRhinoObject.Id.ToString()] = 1;
+        ChangedObjectIds[e.OldRhinoObject.Id.ToString()] = 1;
+        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+      });
   }
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
@@ -350,7 +342,7 @@ public sealed class RhinoSendBinding : ISendBinding
   /// <summary>
   /// Checks if any sender model cards contain any of the changed objects. If so, also updates the changed objects hashset for each model card - this last part is important for on send change detection.
   /// </summary>
-  private async Task RunExpirationChecks(object _)
+  private async Task RunExpirationChecks()
   {
     // Note: added here a guard against executing this if there's no active doc present.
     if (RhinoDoc.ActiveDoc == null)

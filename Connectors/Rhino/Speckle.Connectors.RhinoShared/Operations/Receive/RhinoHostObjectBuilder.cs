@@ -16,6 +16,7 @@ using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
+using RenderMaterial = Rhino.Render.RenderMaterial;
 
 namespace Speckle.Connectors.Rhino.Operations.Receive;
 
@@ -61,7 +62,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   }
 
 #pragma warning disable CA1506
-  public HostObjectBuilderResult Build(
+  public Task<HostObjectBuilderResult> Build(
 #pragma warning restore CA1506
     Base rootObject,
     string projectName,
@@ -183,6 +184,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
             if (conversionIds.Count == 0)
             {
+              // TODO: add this condition to report object - same as in autocad
               throw new SpeckleException($"Failed to convert object.");
             }
 
@@ -237,7 +239,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     }
 
     _converterSettings.Current.Document.Views.Redraw();
-    return new HostObjectBuilderResult(bakedObjectIds, conversionResults);
+    return Task.FromResult(new HostObjectBuilderResult(bakedObjectIds, conversionResults));
   }
 
   private void PreReceiveDeepClean(string baseLayerName)
@@ -299,18 +301,16 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   {
     var objectId = originalObject.applicationId ?? originalObject.id.NotNull();
 
-    if (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(objectId, out int mIndex))
+    if (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(objectId, out RenderMaterial oRenderMaterial))
     {
-      atts.MaterialIndex = mIndex;
-      atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+      atts.RenderMaterial = oRenderMaterial; // no need to set source since setting render material handles this
     }
     else if (
       parentObjectId is not null
-      && (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(parentObjectId, out int mIndexSpeckleObj))
+      && (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(parentObjectId, out RenderMaterial pRenderMaterial))
     )
     {
-      atts.MaterialIndex = mIndexSpeckleObj;
-      atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+      atts.RenderMaterial = pRenderMaterial; // no need to set source since setting render material handles this
     }
 
     if (_colorBaker.ObjectColorsIdMap.TryGetValue(objectId, out (Color, ObjectColorSource) color))

@@ -16,7 +16,7 @@ using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.Autocad.Operations.Send;
 
-public abstract class AutocadRootObjectBaseBuilder : RootObjectBuilderBase<AutocadRootObject>
+public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadRootObject>
 {
   private readonly IRootToSpeckleConverter _converter;
   private readonly string[] _documentPathSeparator = ["\\"];
@@ -58,7 +58,7 @@ public abstract class AutocadRootObjectBaseBuilder : RootObjectBuilderBase<Autoc
       proxy classes yet. So I'm supressing this one now!!!
       """
   )]
-  public override RootObjectBuilderResult Build(
+  public Task<RootObjectBuilderResult> Build(
     IReadOnlyList<AutocadRootObject> objects,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
@@ -133,7 +133,7 @@ public abstract class AutocadRootObjectBaseBuilder : RootObjectBuilderBase<Autoc
       // add any additional properties (most likely from verticals)
       AddAdditionalProxiesToRoot(root);
 
-      return new RootObjectBuilderResult(root, results);
+      return Task.FromResult(new RootObjectBuilderResult(root, results));
     }
   }
 
