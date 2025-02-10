@@ -31,9 +31,7 @@ public sealed class SendOperation<T>(
     CancellationToken ct = default
   )
   {
-    var buildResult = await threadContext.RunOnMainAsync(
-      async () => await rootObjectBuilder.BuildAsync(objects, sendInfo, onOperationProgressed, ct)
-    );
+    var buildResult = await rootObjectBuilder.Build(objects, sendInfo, onOperationProgressed, ct);
 
     // POC: Jonathon asks on behalf of willow twin - let's explore how this can work
     // buildResult.RootObject["@report"] = new Report { ConversionResults = buildResult.ConversionResults };

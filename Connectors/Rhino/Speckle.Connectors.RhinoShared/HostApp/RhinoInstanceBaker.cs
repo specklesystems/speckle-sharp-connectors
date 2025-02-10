@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
@@ -13,6 +13,7 @@ using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
+using RenderMaterial = Rhino.Render.RenderMaterial;
 
 namespace Speckle.Connectors.Rhino.HostApp;
 
@@ -128,9 +129,11 @@ public class RhinoInstanceBaker : IInstanceBaker<IReadOnlyCollection<string>>
           string instanceProxyId = instanceProxy.applicationId ?? instanceProxy.id.NotNull();
 
           ObjectAttributes atts = new() { LayerIndex = layerIndex };
-          if (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(instanceProxyId, out int mIndex))
+          if (
+            _materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(instanceProxyId, out RenderMaterial renderMaterial)
+          )
           {
-            atts.MaterialIndex = mIndex;
+            atts.RenderMaterial = renderMaterial;
             atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
           }
 

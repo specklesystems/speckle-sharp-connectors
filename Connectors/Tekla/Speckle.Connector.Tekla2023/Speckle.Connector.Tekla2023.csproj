@@ -7,10 +7,10 @@
     <TeklaVersion>2023</TeklaVersion>
     <UseWpf>true</UseWpf>
     <DefineConstants>$(DefineConstants);TEKLA2023</DefineConstants>
+    <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="WindowsFormsIntegration" />
-    <PackageReference Include="Speckle.Objects" />
     <PackageReference Include="Tekla.Structures.Dialog" IncludeAssets="compile; build" PrivateAssets="all" VersionOverride =" 2023.0.1" />
     <PackageReference Include="Tekla.Structures.Drawing" IncludeAssets="compile; build" PrivateAssets="all" VersionOverride =" 2023.0.1"/>
     <PackageReference Include="Tekla.Structures.Model" IncludeAssets="compile; build" PrivateAssets="all" VersionOverride =" 2023.0.1" />
