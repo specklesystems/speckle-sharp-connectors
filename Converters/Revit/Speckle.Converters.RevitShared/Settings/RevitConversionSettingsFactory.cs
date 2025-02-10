@@ -1,12 +1,13 @@
 ﻿using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.InterfaceGenerator;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.Settings;
 
 [GenerateAutoInterface]
 public class RevitConversionSettingsFactory(
-  IRevitContext revitContext,
+  RevitContext revitContext,
   IHostToSpeckleUnitConverter<DB.ForgeTypeId> unitConverter
 ) : IRevitConversionSettingsFactory
 {
@@ -17,7 +18,7 @@ public class RevitConversionSettingsFactory(
     double tolerance = 0.0164042 // 5mm in ft
   )
   {
-    var document = revitContext.UIApplication.ActiveUIDocument.Document;
+    var document = revitContext.UIApplication.NotNull().ActiveUIDocument.Document;
     return new(
       document,
       detailLevelType,

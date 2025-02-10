@@ -64,7 +64,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     _activityFactory = activityFactory;
   }
 
-  public async Task<RootObjectBuilderResult> BuildAsync(
+  public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<RhinoObject> rhinoObjects,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
