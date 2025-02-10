@@ -42,8 +42,6 @@ public class BasicConnectorBinding : IBasicConnectorBinding
       });
   }
 
-  private async Task OnDocumentStoreChangedEvent(object _) => await Commands.NotifyDocumentChanged();
-
   public string GetSourceApplicationName() => _speckleApplication.Slug;
 
   public string GetSourceApplicationVersion() => _speckleApplication.HostApplicationVersion;
