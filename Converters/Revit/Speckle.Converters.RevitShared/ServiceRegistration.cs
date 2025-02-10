@@ -26,6 +26,8 @@ public static class ServiceRegistration
     serviceCollection.AddApplicationConverters<RevitToSpeckleUnitConverter, DB.ForgeTypeId>(converterAssembly);
 
     serviceCollection.AddScoped<IRootToHostConverter, RevitRootToHostConverter>();
+    serviceCollection.AddSingleton(new RevitContext());
+
     serviceCollection.AddSingleton(new RevitToHostCacheSingleton());
     serviceCollection.AddSingleton(new RevitToSpeckleCacheSingleton());
 

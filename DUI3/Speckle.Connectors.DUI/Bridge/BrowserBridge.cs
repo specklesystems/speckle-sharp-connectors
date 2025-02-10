@@ -6,7 +6,6 @@ using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
-using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Newtonsoft.Json;
 using Speckle.Sdk.Common;
@@ -64,7 +63,6 @@ public sealed class BrowserBridge : IBrowserBridge
     ILogger<BrowserBridge> logger,
     IBrowserScriptExecutor browserScriptExecutor,
     IThreadOptions threadOptions,
-    IEventAggregator eventAggregator,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
@@ -75,7 +73,6 @@ public sealed class BrowserBridge : IBrowserBridge
     _browserScriptExecutor = browserScriptExecutor;
     _threadOptions = threadOptions;
     _topLevelExceptionHandler = topLevelExceptionHandler;
-    eventAggregator.GetEvent<ExceptionEvent>().Subscribe(OnExceptionEvent, ThreadOption.MainThread);
   }
 
   private async Task OnExceptionEvent(Exception ex) =>
@@ -124,25 +121,22 @@ public sealed class BrowserBridge : IBrowserBridge
   //don't wait for browser runs on purpose
   public void RunMethod(string methodName, string requestId, string methodArgs) =>
     _threadContext
-      .RunOnThreadAsync(
-        async () =>
-        {
-          var task = await _topLevelExceptionHandler
-            .CatchUnhandledAsync(async () =>
-            {
-              var result = await ExecuteMethod(methodName, methodArgs).ConfigureAwait(false);
-              string resultJson = _jsonSerializer.Serialize(result);
-              NotifyUIMethodCallResultReady(requestId, resultJson);
-            })
-            .ConfigureAwait(false);
-          if (task.Exception is not null)
+      .RunOnWorkerAsync(async () =>
+      {
+        var task = await _topLevelExceptionHandler
+          .CatchUnhandledAsync(async () =>
           {
-            string resultJson = SerializeFormattedException(task.Exception);
+            var result = await ExecuteMethod(methodName, methodArgs).ConfigureAwait(false);
+            string resultJson = _jsonSerializer.Serialize(result);
             NotifyUIMethodCallResultReady(requestId, resultJson);
-          }
-        },
-        _threadOptions.RunCommandsOnMainThread
-      )
+          })
+          .ConfigureAwait(false);
+        if (task.Exception is not null)
+        {
+          string resultJson = SerializeFormattedException(task.Exception);
+          NotifyUIMethodCallResultReady(requestId, resultJson);
+        }
+      })
       .FireAndForget();
 
   /// <summary>
