@@ -160,15 +160,21 @@ public class AutocadHostObjectBuilder(
     var converted = converter.Convert(obj);
 
     // 2: handle result
-    if (converted is Entity entity)
+    switch (converted)
     {
-      var bakedEntity = BakeObject(entity, obj, layerName);
-      convertedEntities.Add(bakedEntity);
-    }
-    else if (converted is List<(Entity, Base)> fallbackConversionResult)
-    {
-      var bakedFallbackEntities = BakeObjectsAsGroup(fallbackConversionResult, obj, layerName, baseLayerNamePrefix);
-      convertedEntities.UnionWith(bakedFallbackEntities);
+      case Entity entity:
+        var bakedEntity = BakeObject(entity, obj, layerName);
+        convertedEntities.Add(bakedEntity);
+        break;
+
+      case List<(Entity, Base)> listConversionResult: // this is from fallback conversion for brep/brepx/subdx/extrusionx
+        var bakedFallbackEntities = BakeObjectsAsGroup(listConversionResult, obj, layerName, baseLayerNamePrefix);
+        convertedEntities.UnionWith(bakedFallbackEntities);
+        break;
+
+      default:
+        // TODO: capture defualt case with report object here? Same as in Rhino
+        break;
     }
 
     tr.Commit();
@@ -206,6 +212,11 @@ public class AutocadHostObjectBuilder(
       BakeObject(conversionResult, originalObject, layerName, parentObject);
       ids.Add(conversionResult.ObjectId);
       entities.Add(conversionResult);
+    }
+
+    if (entities.Count <= 1) // return if empty list or only one, because we don't want to create empty or single item groups.
+    {
+      return entities;
     }
 
     var tr = Application.DocumentManager.CurrentDocument.Database.TransactionManager.TopTransaction;
