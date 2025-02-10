@@ -5,6 +5,7 @@ using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
@@ -33,6 +34,7 @@ public sealed class RevitHostObjectBuilder(
   RevitMaterialBaker materialBaker,
   RootObjectUnpacker rootObjectUnpacker,
   ILogger<RevitHostObjectBuilder> logger,
+  IThreadContext threadContext,
   RevitToHostCacheSingleton revitToHostCacheSingleton,
   ITypedConverter<
     (Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix),
@@ -40,7 +42,18 @@ public sealed class RevitHostObjectBuilder(
   > localToGlobalDirectShapeConverter
 ) : IHostObjectBuilder, IDisposable
 {
-  public HostObjectBuilderResult Build(
+  public Task<HostObjectBuilderResult> Build(
+    Base rootObject,
+    string projectName,
+    string modelName,
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken
+  ) =>
+    threadContext.RunOnMainAsync(
+      () => Task.FromResult(BuildSync(rootObject, projectName, modelName, onOperationProgressed, cancellationToken))
+    );
+
+  private HostObjectBuilderResult BuildSync(
     Base rootObject,
     string projectName,
     string modelName,
