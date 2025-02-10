@@ -63,20 +63,6 @@ public class RevitRootObjectBuilder(
         continue;
       }
 
-      if (!SupportedCategoriesUtils.IsSupportedCategory(el.Category))
-      {
-        results.Add(
-          new(
-            Status.WARNING,
-            el.UniqueId,
-            el.Category.Name,
-            null,
-            new SpeckleException($"Category {el.Category.Name} is not supported.")
-          )
-        );
-        continue;
-      }
-
       revitElements.Add(el);
     }
 
@@ -98,6 +84,21 @@ public class RevitRootObjectBuilder(
       string sourceType = revitElement.GetType().Name;
       try
       {
+        if (!SupportedCategoriesUtils.IsSupportedCategory(revitElement.Category))
+        {
+          var cat = revitElement.Category != null ? revitElement.Category.Name : "No category";
+          results.Add(
+            new(
+              Status.WARNING,
+              revitElement.UniqueId,
+              cat,
+              null,
+              new SpeckleException($"Category {cat} is not supported.")
+            )
+          );
+          continue;
+        }
+
         Base converted;
         if (sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value))
         {
@@ -130,8 +131,8 @@ public class RevitRootObjectBuilder(
     }
 
     var idsAndSubElementIds = elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(atomicObjects);
-    var materialProxies = revitToSpeckleCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds);
-    rootObject[ProxyKeys.RENDER_MATERIAL] = materialProxies;
+    var renderMaterialProxies = revitToSpeckleCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds);
+    rootObject[ProxyKeys.RENDER_MATERIAL] = renderMaterialProxies;
 
     // NOTE: these are currently not used anywhere, we'll skip them until someone calls for it back
     // rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;
