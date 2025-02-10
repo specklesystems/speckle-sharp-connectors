@@ -16,6 +16,7 @@ using Speckle.Connectors.DUI.WebView;
 using Speckle.Connectors.Rhino.Bindings;
 using Speckle.Connectors.Rhino.Filters;
 using Speckle.Connectors.Rhino.HostApp;
+using Speckle.Connectors.Rhino.HostApp.Properties;
 using Speckle.Connectors.Rhino.Operations.Receive;
 using Speckle.Connectors.Rhino.Operations.Send;
 using Speckle.Connectors.Rhino.Plugin;
@@ -80,6 +81,8 @@ public static class ServiceRegistration
 
     serviceCollection.AddScoped<RhinoColorBaker>();
     serviceCollection.AddScoped<RhinoColorUnpacker>();
+
+    serviceCollection.AddScoped<PropertiesExtractor>();
 
     // operation progress manager
     serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();
