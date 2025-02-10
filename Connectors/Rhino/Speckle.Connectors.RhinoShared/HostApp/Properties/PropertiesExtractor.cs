@@ -13,10 +13,13 @@ public class PropertiesExtractor
     var userStrings = rhObject.Attributes.GetUserStrings();
     foreach (var key in userStrings.AllKeys)
     {
+      // POC: could not determine how to extract the value of a formula user string.
+      // So for now we are skipping them
       if (userStrings[key].StartsWith("%<"))
       {
         continue;
       }
+
       properties[key] = userStrings[key];
     }
 
