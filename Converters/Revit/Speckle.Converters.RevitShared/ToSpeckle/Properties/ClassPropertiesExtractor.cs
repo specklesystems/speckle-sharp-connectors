@@ -28,15 +28,16 @@ public class ClassPropertiesExtractor
   public Dictionary<string, object?> GetClassProperties(DB.Element element)
   {
     Dictionary<string, object?> elementPropertiesDict = ExtractElementProperties(element);
+
+    // add type specific props not included in parameters.
+    // so far, no extra props are needed
+    /*
     switch (element)
     {
-      case DBA.Room room:
-        AddRoomProperties(room, elementPropertiesDict);
-        break;
-
       default:
         break;
     }
+    */
 
     return elementPropertiesDict;
   }
@@ -77,15 +78,5 @@ public class ClassPropertiesExtractor
     }
 
     return elementProperties;
-  }
-
-  // gets properties specific to room class
-  private void AddRoomProperties(DBA.Room room, Dictionary<string, object?> elementPropertiesDict)
-  {
-    string numberKey = "number";
-    if (!elementPropertiesDict.ContainsKey(numberKey))
-    {
-      elementPropertiesDict.Add(numberKey, room.Number);
-    }
   }
 }
