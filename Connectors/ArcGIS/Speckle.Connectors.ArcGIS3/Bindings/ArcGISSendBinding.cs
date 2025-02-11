@@ -102,7 +102,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     LayersRemovedEvent.Subscribe(
       a =>
         _topLevelExceptionHandler.FireAndForget(
-          async () => await _threadContext.RunOnWorkerAsync(async () => await GetIdsForLayersRemovedEvent(a))
+          async () => await QueuedTask.Run(async () => await GetIdsForLayersRemovedEvent(a))
         ),
       true
     );
@@ -110,7 +110,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     StandaloneTablesRemovedEvent.Subscribe(
       a =>
         _topLevelExceptionHandler.FireAndForget(
-          async () => await _threadContext.RunOnWorkerAsync(async () => await GetIdsForStandaloneTablesRemovedEvent(a))
+          async () => await QueuedTask.Run(async () => await GetIdsForStandaloneTablesRemovedEvent(a))
         ),
       true
     );
@@ -118,7 +118,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     MapPropertyChangedEvent.Subscribe(
       a =>
         _topLevelExceptionHandler.FireAndForget(
-          async () => await _threadContext.RunOnWorkerAsync(async () => await GetIdsForMapPropertyChangedEvent(a))
+          async () => await QueuedTask.Run(async () => await GetIdsForMapPropertyChangedEvent(a))
         ),
       true
     ); // Map units, CRS etc.
@@ -126,8 +126,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     MapMemberPropertiesChangedEvent.Subscribe(
       a =>
         _topLevelExceptionHandler.FireAndForget(
-          async () =>
-            await _threadContext.RunOnWorkerAsync(async () => await GetIdsForMapMemberPropertiesChangedEvent(a))
+          async () => await QueuedTask.Run(async () => await GetIdsForMapMemberPropertiesChangedEvent(a))
         ),
       true
     ); // e.g. Layer name
@@ -136,7 +135,7 @@ public sealed class ArcGISSendBinding : ISendBinding
       _ =>
         _topLevelExceptionHandler.FireAndForget(async () =>
         {
-          await _threadContext.RunOnWorker(SubscribeToMapMembersDataSourceChange);
+          await QueuedTask.Run(SubscribeToMapMembersDataSourceChange);
         }),
       true
     );
@@ -389,7 +388,7 @@ public sealed class ArcGISSendBinding : ISendBinding
             )
           );
 
-         return modelCard
+        return modelCard
           .SendFilter.NotNull()
           .RefreshObjectIds()
           .Select(id => (MapMember)MapView.Active.Map.FindLayer(id) ?? MapView.Active.Map.FindStandaloneTable(id))
@@ -397,7 +396,7 @@ public sealed class ArcGISSendBinding : ISendBinding
           .ToList();
       });
 
-    if (mapMembers.Count == 0)
+      if (mapMembers.Count == 0)
       {
         // Handle as CARD ERROR in this function
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");

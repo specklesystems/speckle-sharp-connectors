@@ -50,13 +50,12 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     _mapMemberUtils = mapMemberUtils;
   }
 
-  public  Task<RootObjectBuilderResult> Build(
+  public Task<RootObjectBuilderResult> Build(
     IReadOnlyList<ADM.MapMember> layers,
     SendInfo __,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
-  ) =>
-    QueuedTask.Run(() => BuildInternal(layers, __, onOperationProgressed, cancellationToken));
+  ) => QueuedTask.Run(() => BuildInternal(layers, __, onOperationProgressed, cancellationToken));
 
   private async Task<RootObjectBuilderResult> BuildInternal(
     IReadOnlyList<ADM.MapMember> layers,
