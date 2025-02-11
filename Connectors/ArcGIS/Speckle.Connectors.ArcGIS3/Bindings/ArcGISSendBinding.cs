@@ -101,7 +101,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     LayersRemovedEvent.Subscribe(
       a =>
         _topLevelExceptionHandler.FireAndForget(
-          async () => await _threadContext.RunOnWorkerAsync(async () => await GetIdsForLayersRemovedEvent(a))
+          async () => await _threadContext.AccessDataAsync(async () => await GetIdsForLayersRemovedEvent(a))
         ),
       true
     );
@@ -109,7 +109,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     StandaloneTablesRemovedEvent.Subscribe(
       a =>
         _topLevelExceptionHandler.FireAndForget(
-          async () => await _threadContext.RunOnWorkerAsync(async () => await GetIdsForStandaloneTablesRemovedEvent(a))
+          async () => await _threadContext.AccessDataAsync(async () => await GetIdsForStandaloneTablesRemovedEvent(a))
         ),
       true
     );
@@ -117,7 +117,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     MapPropertyChangedEvent.Subscribe(
       a =>
         _topLevelExceptionHandler.FireAndForget(
-          async () => await _threadContext.RunOnWorkerAsync(async () => await GetIdsForMapPropertyChangedEvent(a))
+          async () => await _threadContext.AccessDataAsync(async () => await GetIdsForMapPropertyChangedEvent(a))
         ),
       true
     ); // Map units, CRS etc.
@@ -126,7 +126,7 @@ public sealed class ArcGISSendBinding : ISendBinding
       a =>
         _topLevelExceptionHandler.FireAndForget(
           async () =>
-            await _threadContext.RunOnWorkerAsync(async () => await GetIdsForMapMemberPropertiesChangedEvent(a))
+            await _threadContext.AccessDataAsync(async () => await GetIdsForMapMemberPropertiesChangedEvent(a))
         ),
       true
     ); // e.g. Layer name
@@ -135,7 +135,7 @@ public sealed class ArcGISSendBinding : ISendBinding
       _ =>
         _topLevelExceptionHandler.FireAndForget(async () =>
         {
-          await _threadContext.RunOnWorker(SubscribeToMapMembersDataSourceChange);
+          await _threadContext.AccessData(SubscribeToMapMembersDataSourceChange);
         }),
       true
     );
