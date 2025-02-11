@@ -3,20 +3,13 @@ using Speckle.Connectors.Common.Threading;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
-public class RevitThreadContext : ThreadContext
+public class RevitThreadContext : DefaultThreadContext
 {
-  protected override Task<T> MainToWorkerAsync<T>(Func<Task<T>> action) => action();
+  public override Task AccessData(Action action) => RevitTask.RunAsync(action);
 
-  protected override Task<T> WorkerToMainAsync<T>(Func<Task<T>> action) =>
-    RevitTask.RunAsync(async () => await action());
+  public override Task<T> AccessDataAsync<T>(Func<T> action) => RevitTask.RunAsync(action);
 
-  protected override Task<T> MainToWorker<T>(Func<T> action) => Task.FromResult(action());
+  public override Task AccessDataAsync(Func<Task> action) => RevitTask.RunAsync(action);
 
-  protected override Task<T> WorkerToMain<T>(Func<T> action) => RevitTask.RunAsync(action);
-
-  protected override Task RunMainAsync(Func<Task> action) => RevitTask.RunAsync(action);
-
-  protected override Task<T> RunMainAsync<T>(Func<T> action) => RevitTask.RunAsync(action);
-
-  protected override Task<T> RunMainAsync<T>(Func<Task<T>> action) => RevitTask.RunAsync(action);
+  public override Task<T> AccessDataAsync<T>(Func<Task<T>> action) => RevitTask.RunAsync(action);
 }

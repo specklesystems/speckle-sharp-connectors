@@ -3,7 +3,6 @@ using System.Diagnostics.CodeAnalysis;
 using ArcGIS.Core.Data;
 using ArcGIS.Desktop.Core;
 using ArcGIS.Desktop.Editing.Events;
-using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using ArcGIS.Desktop.Mapping.Events;
 using Microsoft.Extensions.DependencyInjection;
@@ -377,22 +376,27 @@ public sealed class ArcGISSendBinding : ISendBinding
       using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
       using var scope = _serviceProvider.CreateScope();
-      await QueuedTask.Run(() =>
-      scope
-        .ServiceProvider.GetRequiredService<IConverterSettingsStore<ArcGISConversionSettings>>()
-        .Initialize(
-          _arcGISConversionSettingsFactory.Create(
-            Project.Current,
-            MapView.Active.Map,
-            new CRSoffsetRotation(MapView.Active.Map)
-          )
-        ));
-      List<MapMember> mapMembers = await QueuedTask.Run(() => modelCard
-        .SendFilter.NotNull()
-        .RefreshObjectIds()
-        .Select(id => (MapMember)MapView.Active.Map.FindLayer(id) ?? MapView.Active.Map.FindStandaloneTable(id))
-        .Where(obj => obj != null)
-        .ToList());
+      await _threadContext.AccessData(
+        () =>
+          scope
+            .ServiceProvider.GetRequiredService<IConverterSettingsStore<ArcGISConversionSettings>>()
+            .Initialize(
+              _arcGISConversionSettingsFactory.Create(
+                Project.Current,
+                MapView.Active.Map,
+                new CRSoffsetRotation(MapView.Active.Map)
+              )
+            )
+      );
+      List<MapMember> mapMembers = await _threadContext.AccessDataAsync(
+        () =>
+          modelCard
+            .SendFilter.NotNull()
+            .RefreshObjectIds()
+            .Select(id => (MapMember)MapView.Active.Map.FindLayer(id) ?? MapView.Active.Map.FindStandaloneTable(id))
+            .Where(obj => obj != null)
+            .ToList()
+      );
 
       if (mapMembers.Count == 0)
       {
@@ -400,7 +404,7 @@ public sealed class ArcGISSendBinding : ISendBinding
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
       }
 
-      await QueuedTask.Run(() =>
+      await _threadContext.AccessData(() =>
       {
         // subscribe to the selected layer events
         foreach (MapMember mapMember in mapMembers)
