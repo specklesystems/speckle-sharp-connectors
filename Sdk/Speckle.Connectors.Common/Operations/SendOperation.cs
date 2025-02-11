@@ -31,28 +31,21 @@ public sealed class SendOperation<T>(
     CancellationToken ct = default
   )
   {
-    try
-    {
-      var buildResult = await threadContext.AccessDataAsync(
-        () => rootObjectBuilder.Build(objects, sendInfo, onOperationProgressed, ct)
-      );
+    var buildResult = await threadContext.AccessDataAsync(
+      () => rootObjectBuilder.Build(objects, sendInfo, onOperationProgressed, ct)
+    );
 
-      // POC: Jonathon asks on behalf of willow twin - let's explore how this can work
-      // buildResult.RootObject["@report"] = new Report { ConversionResults = buildResult.ConversionResults };
+    // POC: Jonathon asks on behalf of willow twin - let's explore how this can work
+    // buildResult.RootObject["@report"] = new Report { ConversionResults = buildResult.ConversionResults };
 
-      buildResult.RootObject["version"] = 3;
-      // base object handler is separated, so we can do some testing on non-production databases
-      // exact interface may want to be tweaked when we implement this
-      var (rootObjId, convertedReferences) = await threadContext.RunOnWorkerAsync(
-        () => Send(buildResult.RootObject, sendInfo, onOperationProgressed, ct)
-      );
+    buildResult.RootObject["version"] = 3;
+    // base object handler is separated, so we can do some testing on non-production databases
+    // exact interface may want to be tweaked when we implement this
+    var (rootObjId, convertedReferences) = await threadContext.RunOnWorkerAsync(
+      () => Send(buildResult.RootObject, sendInfo, onOperationProgressed, ct)
+    );
 
-      return new(rootObjId, convertedReferences, buildResult.ConversionResults);
-    }
-    finally
-    {
-      Console.WriteLine("SendOperation.Execute.finally");
-    }
+    return new(rootObjId, convertedReferences, buildResult.ConversionResults);
   }
 
   private async Task<SerializeProcessResults> Send(
