@@ -29,17 +29,12 @@ public class RhinoMaterialUnpacker
   /// Processes an object's material and adds the object id to a material proxy in <see cref="RenderMaterialProxies"/> if object color is set ByObject or ByParent.
   /// </summary>
   /// <param name="objId"></param>
-  private void ProcessObjectMaterial(
-    string objId,
-    RenderMaterial? renderMaterial,
-    Material? material,
-    ObjectMaterialSource source
-  )
+  private void ProcessObjectMaterial(string objId, RenderMaterial renderMaterial, ObjectMaterialSource source)
   {
     switch (source)
     {
       case ObjectMaterialSource.MaterialFromObject:
-        AddObjectIdToRenderMaterialProxy(objId, renderMaterial, material);
+        AddObjectIdToRenderMaterialProxy(objId, renderMaterial);
         break;
 
       // POC: skip if object material source is *not* by object. we don't support render material inheritance atm bc alex disagrees with the concept
@@ -48,52 +43,29 @@ public class RhinoMaterialUnpacker
     }
   }
 
-  private void AddObjectIdToRenderMaterialProxy(string objectId, RenderMaterial? renderMaterial, Material? material)
+  private void AddObjectIdToRenderMaterialProxy(string objectId, RenderMaterial renderMaterial)
   {
-    string? renderMaterialId = renderMaterial?.Id.ToString() ?? material?.Id.ToString();
+    string? renderMaterialId = renderMaterial.Id.ToString();
 
-    if (renderMaterialId is not null)
+    if (RenderMaterialProxies.TryGetValue(renderMaterialId, out RenderMaterialProxy? proxy))
     {
-      if (RenderMaterialProxies.TryGetValue(renderMaterialId, out RenderMaterialProxy? proxy))
+      proxy.objects.Add(objectId);
+    }
+    else
+    {
+      if (
+        ConvertMaterialToRenderMaterialProxy(renderMaterialId, renderMaterial) is RenderMaterialProxy newRenderMaterial
+      )
       {
-        proxy.objects.Add(objectId);
-      }
-      else
-      {
-        if (
-          ConvertMaterialToRenderMaterialProxy(renderMaterialId, renderMaterial, material)
-          is RenderMaterialProxy newRenderMaterial
-        )
-        {
-          newRenderMaterial.objects.Add(objectId);
-          RenderMaterialProxies[renderMaterialId] = newRenderMaterial;
-        }
+        newRenderMaterial.objects.Add(objectId);
+        RenderMaterialProxies[renderMaterialId] = newRenderMaterial;
       }
     }
   }
 
-  private RenderMaterialProxy? ConvertMaterialToRenderMaterialProxy(
-    string materialId,
-    RenderMaterial? renderMaterial,
-    Material? material
-  )
+  private RenderMaterialProxy? ConvertMaterialToRenderMaterialProxy(string materialId, RenderMaterial renderMaterial)
   {
-    // TY Rhino api for being a bit confused about materials 💖
-    SpeckleRenderMaterial? myMaterial = null;
-    if (renderMaterial is not null)
-    {
-      myMaterial = ConvertRenderMaterialToSpeckle(renderMaterial);
-    }
-    else if (material is not null)
-    {
-      RenderMaterial convertedRender = ConvertMaterialToRenderMaterial(material);
-      myMaterial = ConvertRenderMaterialToSpeckle(convertedRender);
-    }
-
-    if (myMaterial is null)
-    {
-      return null;
-    }
+    SpeckleRenderMaterial myMaterial = ConvertRenderMaterialToSpeckle(renderMaterial);
 
     RenderMaterialProxy renderMaterialProxy =
       new()
@@ -120,18 +92,26 @@ public class RhinoMaterialUnpacker
     // Stage 1: unpack materials from objects
     foreach (RhinoObject rootObj in atomicObjects)
     {
-      // materials are confusing in rhino. we need both render material and material because objects can have either assigned
+      // materials are confusing in rhino - some objects can have render materials, other may only have a material.
+      // see: https://discourse.mcneel.com/t/getting-material-from-rhinoobject/114870/6
+      // basically, materials (old) are created PER OBJECT if they are assigned per object. This means the same material will have diff ids when called from the material table
+      // unfortunately, in the case where no rendermaterial exists, we'll have to create duplicate proxies.
       RenderMaterial? rhinoRenderMaterial = rootObj.GetRenderMaterial(true);
-      Material? rhinoMaterial = rootObj.GetMaterial(true);
+      if (rhinoRenderMaterial is null)
+      {
+        if (rootObj.GetMaterial(true) is Material rhinoMaterial)
+        {
+          rhinoRenderMaterial = RenderMaterial.FromMaterial(rhinoMaterial, currentDoc);
+        }
+        else // could not get rendermaterial or material
+        {
+          continue;
+        }
+      }
 
       try
       {
-        ProcessObjectMaterial(
-          rootObj.Id.ToString(),
-          rhinoRenderMaterial,
-          rhinoMaterial,
-          rootObj.Attributes.MaterialSource
-        );
+        ProcessObjectMaterial(rootObj.Id.ToString(), rhinoRenderMaterial, rootObj.Attributes.MaterialSource);
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
@@ -142,19 +122,29 @@ public class RhinoMaterialUnpacker
     // Stage 2: make sure we collect layer materials as well
     foreach (Layer layer in layers)
     {
-      // materials are confusing in rhino. we will first try to get layer render material and then material by index if null
+      // materials are confusing in rhino - some objects can have render materials, other may only have a material.
+      // see: https://discourse.mcneel.com/t/getting-material-from-rhinoobject/114870/6
+      // basically, materials (old) are created PER OBJECT if they are assigned per object. This means the same material will have diff ids when called from the material table
+      // unfortunately, in the case where no rendermaterial exists, we'll have to create duplicate proxies.
       RenderMaterial? rhinoRenderMaterial = layer.RenderMaterial;
-      Material? rhinoMaterial =
-        layer.RenderMaterialIndex == -1 ? null : currentDoc.Materials[layer.RenderMaterialIndex];
+      if (rhinoRenderMaterial is null)
+      {
+        if (layer.RenderMaterialIndex == -1) // no material assigned
+        {
+          continue;
+        }
+        else
+        {
+          rhinoRenderMaterial = RenderMaterial.FromMaterial(
+            currentDoc.Materials[layer.RenderMaterialIndex],
+            currentDoc
+          );
+        }
+      }
 
       try
       {
-        ProcessObjectMaterial(
-          layer.Id.ToString(),
-          rhinoRenderMaterial,
-          rhinoMaterial,
-          ObjectMaterialSource.MaterialFromObject
-        );
+        ProcessObjectMaterial(layer.Id.ToString(), rhinoRenderMaterial, ObjectMaterialSource.MaterialFromObject);
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
@@ -163,21 +153,6 @@ public class RhinoMaterialUnpacker
     }
 
     return RenderMaterialProxies.Values.ToList();
-  }
-
-  // converts a rhino material to a rhino render material
-  private RenderMaterial ConvertMaterialToRenderMaterial(Material material)
-  {
-    // get physically based render material
-    Material pbMaterial = material;
-    if (!material.IsPhysicallyBased)
-    {
-      pbMaterial = new();
-      pbMaterial.CopyFrom(material);
-      pbMaterial.ToPhysicallyBased();
-    }
-
-    return RenderMaterial.FromMaterial(pbMaterial, null);
   }
 
   private SpeckleRenderMaterial ConvertRenderMaterialToSpeckle(RenderMaterial renderMaterial)

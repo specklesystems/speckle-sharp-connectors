@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Rhino;
 using Speckle.Converters.Common;
@@ -23,6 +23,7 @@ public static class ServiceRegistration
       IConverterSettingsStore<RhinoConversionSettings>,
       ConverterSettingsStore<RhinoConversionSettings>
     >();
+
     return serviceCollection;
   }
 }
