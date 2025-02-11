@@ -1,6 +1,8 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Converters.RevitShared.ToSpeckle;
+using Speckle.Sdk;
 
 namespace Speckle.Converters.Revit2023.ToSpeckle.Properties;
 
@@ -19,19 +21,20 @@ public class StructuralMaterialAssetExtractor
   }
 
   /// <summary>
-  /// Gets the name of a structural asset and its corresponding density with units.
+  /// Gets the material properties from a structural asset including density, material type,
+  /// and material-specific properties like compressive strength for concrete.
   /// </summary>
   /// <remarks>
-  /// Density scaled from internal units to model units
+  /// All values are scaled from internal units to model units
   /// </remarks>
-  public (string name, double density, DB.ForgeTypeId unitId)? GetProperties(DB.ElementId structuralAssetId)
+  public StructuralAssetProperties GetProperties(DB.ElementId structuralAssetId)
   {
     // NOTE: assetId != DB.ElementId.InvalidElementId checked in calling method. Assuming a valid StructuralAssetId
     if (
       _converterSettings.Current.Document.GetElement(structuralAssetId) is not DB.PropertySetElement propertySetElement
     )
     {
-      return null;
+      throw new SpeckleException("Structural material asset is not of expected type.");
     }
     DB.StructuralAsset structuralAsset = propertySetElement.GetStructuralAsset();
 
@@ -44,7 +47,32 @@ public class StructuralMaterialAssetExtractor
     // scale from internal to model units
     double densityValue = _scalingService.Scale(structuralAsset.Density, densityUnitId);
 
+    // get material type
+    string materialType = structuralAsset.StructuralAssetClass.ToString();
+
+    // initialize optional concrete properties
+    double? compressiveStrength = null;
+    DB.ForgeTypeId? stressUnitId = null;
+
+    // if concrete, extract compressive strength
+    if (materialType == "Concrete")
+    {
+      stressUnitId = _converterSettings
+        .Current.Document.GetUnits()
+        .GetFormatOptions(DB.SpecTypeId.AreaForce)
+        .GetUnitTypeId();
+
+      compressiveStrength = _scalingService.Scale(structuralAsset.ConcreteCompression, stressUnitId);
+    }
+
     // return value and units
-    return (structuralAsset.Name, densityValue, densityUnitId);
+    return new StructuralAssetProperties(
+      name: structuralAsset.Name,
+      density: densityValue,
+      densityUnitId: densityUnitId,
+      materialType: materialType,
+      compressiveStrength: compressiveStrength,
+      compressiveStrengthUnitId: stressUnitId
+    );
   }
 }

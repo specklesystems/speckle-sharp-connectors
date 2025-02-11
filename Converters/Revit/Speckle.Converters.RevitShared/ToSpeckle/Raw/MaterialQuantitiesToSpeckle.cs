@@ -7,6 +7,33 @@ using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
+public readonly struct StructuralAssetProperties
+{
+  public string Name { get; init; }
+  public double Density { get; init; }
+  public DB.ForgeTypeId DensityUnitId { get; init; }
+  public string MaterialType { get; init; }
+  public double? CompressiveStrength { get; init; }
+  public DB.ForgeTypeId? CompressiveStrengthUnitId { get; init; }
+
+  public StructuralAssetProperties(
+    string name,
+    double density,
+    DB.ForgeTypeId densityUnitId,
+    string materialType,
+    double? compressiveStrength,
+    DB.ForgeTypeId? compressiveStrengthUnitId
+  )
+  {
+    Name = name;
+    Density = density;
+    DensityUnitId = densityUnitId;
+    MaterialType = materialType;
+    CompressiveStrength = compressiveStrength;
+    CompressiveStrengthUnitId = compressiveStrengthUnitId;
+  }
+}
+
 /// <summary>
 /// Lighter converter for material quantities. For each material quantity available on the target element, it will return a dictionary containing: area, volume, density, material name, material class and material category.
 /// POC: we need to validate this with user needs. It currently ONLY includes density from the material parameters - any other more complex props were dropped to ensure speedy sending of data and a lighter payload.
@@ -14,10 +41,7 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 /// </summary>
 public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dictionary<string, object>>
 {
-  private readonly Dictionary<
-    string,
-    (string name, double density, DB.ForgeTypeId unitId)
-  > _structuralAssetDensityCache = new();
+  private readonly Dictionary<string, StructuralAssetProperties> _structuralAssetCache = new();
   private readonly ScalingServiceToSpeckle _scalingService;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly StructuralMaterialAssetExtractor _structuralAssetExtractor;
@@ -57,7 +81,6 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
         }
 
         var materialQuantity = new Dictionary<string, object>();
-
         double factor = _scalingService.ScaleLength(1);
         var unitSettings = _converterSettings.Current.Document.GetUnits();
 
@@ -85,11 +108,31 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
           DB.ElementId structuralAssetId = material.StructuralAssetId;
           if (structuralAssetId != DB.ElementId.InvalidElementId)
           {
-            var density = TryExtractMaterialAssetParameters(structuralAssetId);
-            if (density.HasValue)
+            StructuralAssetProperties structuralAssetProperties = TryExtractStructuralAssetParameters(
+              structuralAssetId
+            );
+
+            materialQuantity["structuralAsset"] = structuralAssetProperties.Name;
+            AddMaterialProperty(
+              materialQuantity,
+              "density",
+              structuralAssetProperties.Density,
+              structuralAssetProperties.DensityUnitId
+            );
+            materialQuantity["materialType"] = structuralAssetProperties.MaterialType;
+
+            // Only add compressive strength for concrete materials
+            if (
+              structuralAssetProperties.MaterialType == "Concrete"
+              && structuralAssetProperties.CompressiveStrength.HasValue
+            )
             {
-              materialQuantity["structuralAsset"] = density.Value.name;
-              AddMaterialProperty(materialQuantity, "density", density.Value.density, density.Value.unitId);
+              AddMaterialProperty(
+                materialQuantity,
+                "compressiveStrength",
+                structuralAssetProperties.CompressiveStrength.Value,
+                structuralAssetProperties.CompressiveStrengthUnitId!
+              );
             }
           }
 
@@ -101,26 +144,21 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
     return quantities;
   }
 
-  private (string name, double density, DB.ForgeTypeId unitId)? TryExtractMaterialAssetParameters(DB.ElementId assetId)
+  private StructuralAssetProperties TryExtractStructuralAssetParameters(DB.ElementId assetId)
   {
     // ensure safe string conversion
     string assetIdString = assetId.ToString().NotNull();
 
     // check cache if density has already been extracted
-    if (_structuralAssetDensityCache.TryGetValue(assetIdString, out var cachedDensity))
+    if (_structuralAssetCache.TryGetValue(assetIdString, out var cachedProperties))
     {
-      return cachedDensity;
+      return cachedProperties;
     }
 
     // if not in cache but structural asset id is valid => attempt extraction from StructuralMaterialAssertExtractor
-    var extractedDensity = _structuralAssetExtractor.GetProperties(assetId);
-    if (extractedDensity.HasValue)
-    {
-      _structuralAssetDensityCache[assetIdString] = extractedDensity.Value;
-      return extractedDensity.Value;
-    }
-
-    return null;
+    var extractedProperties = _structuralAssetExtractor.GetProperties(assetId);
+    _structuralAssetCache[assetIdString] = extractedProperties;
+    return extractedProperties;
   }
 
   /// <summary>
