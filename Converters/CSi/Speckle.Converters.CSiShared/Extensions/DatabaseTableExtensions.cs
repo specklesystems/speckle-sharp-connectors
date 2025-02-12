@@ -98,4 +98,32 @@ public record TableData
       return _processedRows;
     }
   }
+
+  /// <summary>
+  /// Retrieves a string value from a specific row and column from the table data.
+  /// </summary>
+  /// <param name="rowKey">The unique identifier for the row, matching the value in the index column (e.g., "UniqueName")</param>
+  /// <param name="columnName">The name of the column containing the desired value</param>
+  /// <returns>The string value found at the specified row and column intersection</returns>
+  /// <exception cref="InvalidOperationException">Thrown when either the row or column is not found in the table</exception>
+  public string GetRowValue(string rowKey, string columnName)
+  {
+    if (TryGetValue(rowKey, columnName, out var value))
+    {
+      return value;
+    }
+
+    throw new InvalidOperationException($"Failed to get value for row '{rowKey}', column '{columnName}'");
+  }
+
+  private bool TryGetValue(string rowKey, string columnName, out string value)
+  {
+    if (Rows.TryGetValue(rowKey, out var row) && row.TryGetValue(columnName, out value!))
+    {
+      return true;
+    }
+
+    value = string.Empty;
+    return false;
+  }
 }

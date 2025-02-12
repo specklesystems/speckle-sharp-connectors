@@ -95,11 +95,11 @@ public sealed class EtabsFramePropertiesExtractor
   {
     // using the DatabaseTableExtractor fetch table with key "Frame Assignments - Summary"
     // limit query size to "UniqueName" and "Length" fields
-    var frameLengthData = _databaseTableExtractor
+    string length = _databaseTableExtractor
       .GetTableData("Frame Assignments - Summary", requestedColumns: ["UniqueName", "Length"])
-      .Rows[frame.Name];
+      .GetRowValue(frame.Name, "Length");
 
     // all database data is returned as strings
-    return double.TryParse(frameLengthData["Length"], out double result) ? result : double.NaN;
+    return double.TryParse(length, out double result) ? result : double.NaN;
   }
 }

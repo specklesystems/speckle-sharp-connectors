@@ -162,10 +162,10 @@ public sealed class EtabsShellPropertiesExtractor
     {
       return string.Empty;
     }
-    var sectionRowData = _databaseTableExtractor
+    string materialId = _databaseTableExtractor
       .GetTableData("Area Section Property Definitions - Summary", "Name", ["Name", "Material"])
-      .Rows[sectionName];
-    return sectionRowData["Material"];
+      .GetRowValue(sectionName, "Material");
+    return materialId;
   }
 
   private double GetArea(CsiShellWrapper shell, string designOrientation)
@@ -181,11 +181,11 @@ public sealed class EtabsShellPropertiesExtractor
 
     // using the DatabaseTableExtractor fetch table with key from the designOrientation
     // limit query size to "UniqueName" and "Area"
-    var geometricPropertiesData = _databaseTableExtractor
+    string area = _databaseTableExtractor
       .GetTableData(tableKey, requestedColumns: ["UniqueName", "Area"])
-      .Rows[shell.Name];
+      .GetRowValue(shell.Name, "Area");
 
     // all database data is returned as strings
-    return double.TryParse(geometricPropertiesData["Area"], out var result) ? result : double.NaN;
+    return double.TryParse(area, out var result) ? result : double.NaN;
   }
 }
