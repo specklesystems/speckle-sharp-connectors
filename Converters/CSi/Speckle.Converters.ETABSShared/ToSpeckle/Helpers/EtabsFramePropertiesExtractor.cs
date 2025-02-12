@@ -25,10 +25,15 @@ namespace Speckle.Converters.ETABSShared.ToSpeckle.Helpers;
 public sealed class EtabsFramePropertiesExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
+  private readonly DatabaseTableExtractor _databaseTableExtractor;
 
-  public EtabsFramePropertiesExtractor(IConverterSettingsStore<CsiConversionSettings> settingsStore)
+  public EtabsFramePropertiesExtractor(
+    IConverterSettingsStore<CsiConversionSettings> settingsStore,
+    DatabaseTableExtractor databaseTableExtractor
+  )
   {
     _settingsStore = settingsStore;
+    _databaseTableExtractor = databaseTableExtractor;
   }
 
   public void ExtractProperties(CsiFrameWrapper frame, Dictionary<string, object?> properties)
@@ -42,6 +47,10 @@ public sealed class EtabsFramePropertiesExtractor
 
     var design = properties.EnsureNested(ObjectPropertyCategory.DESIGN);
     design["Design Procedure"] = GetDesignProcedure(frame);
+
+    var geometry = properties.EnsureNested(ObjectPropertyCategory.GEOMETRY);
+    double length = GetLength(frame);
+    geometry.AddWithUnits("Length", length, _settingsStore.Current.SpeckleUnits);
   }
 
   private (string label, string level) GetLabelAndLevel(CsiFrameWrapper frame)
@@ -80,5 +89,17 @@ public sealed class EtabsFramePropertiesExtractor
     string springPropertyName = string.Empty;
     _ = _settingsStore.Current.SapModel.FrameObj.GetSpringAssignment(frame.Name, ref springPropertyName);
     return springPropertyName;
+  }
+
+  private double GetLength(CsiFrameWrapper frame)
+  {
+    // using the DatabaseTableExtractor
+    // The table with the key "Frame Assignments - Summary" has a "Length" key
+    // We fetch only "UniqueName" and "Length" to reduce cache size
+    var frameConnectivityData = _databaseTableExtractor
+      .GetTableData("Frame Assignments - Summary", ["UniqueName", "Length"])
+      .Rows[frame.Name];
+    double length = double.TryParse(frameConnectivityData["Length"], out double result) ? result : double.NaN;
+    return length;
   }
 }
