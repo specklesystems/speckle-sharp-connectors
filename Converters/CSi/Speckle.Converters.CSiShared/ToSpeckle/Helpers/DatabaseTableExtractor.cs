@@ -14,6 +14,7 @@ public class DatabaseTableExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
   private readonly Dictionary<string, TableData> _tableCache;
+  private const string DEFAULT_KEY_FIELD = "UniqueName";
 
   public DatabaseTableExtractor(IConverterSettingsStore<CsiConversionSettings> settingsStore)
   {
@@ -21,41 +22,51 @@ public class DatabaseTableExtractor
     _tableCache = [];
   }
 
-  public TableData GetTableData(string tableKey, string[]? fieldKeyList = null)
+  /// <summary>
+  /// Uses the cDatabaseTables.GetTableForDisplayArray() to request data for a specified table name.
+  /// Processes the one-dimensional array return with the <see cref="Speckle.Converters.CSiShared.Extensions.TableData"/>
+  /// extension for improved workability/reliability.
+  /// </summary>
+  /// <param name="tableName">String identifying the table to fetch. This typically matches the UI.</param>
+  /// <param name="indexingColumn">Key used to organize and (later) lookup specific rows of data. Optional argument, default is "UniqueName"</param>
+  /// <param name="requestedColumns">Optional list of specific fields to fetch. If null or empty, all fields will be returned. Ask Björn about how to determine these strings.</param>
+  /// <returns>TableData containing the requested fields and records</returns>
+  public TableData GetTableData(string tableName, string? indexingColumn = null, string[]? requestedColumns = null)
   {
-    if (_tableCache.TryGetValue(tableKey, out var cachedData))
+    string tableKeyField = indexingColumn ?? DEFAULT_KEY_FIELD; // most queries will use "UniqueName"
+    string cacheKey = $"{tableName}_{tableKeyField}";
+    if (_tableCache.TryGetValue(cacheKey, out var cachedData))
     {
       return cachedData;
     }
 
-    var tableData = FetchTableData(tableKey, fieldKeyList);
-    _tableCache[tableKey] = tableData;
+    var tableData = FetchTableData(tableName, tableKeyField, requestedColumns);
+    _tableCache[cacheKey] = tableData;
     return tableData;
   }
 
-  public void RefreshTable(string tableKey) => _tableCache.Remove(tableKey);
+  public void RefreshTable(string tableKey, string? keyField = null) =>
+    _tableCache.Remove($"{tableKey}_{keyField ?? DEFAULT_KEY_FIELD}");
 
   public void ClearCache() => _tableCache.Clear();
 
-  /// <summary>
-  /// Uses the cDatabaseTables.GetTableForDisplayArray() to request data for a specified table key.
-  /// Processes the one-dimensional array return with the <see cref="Speckle.Converters.CSiShared.Extensions.TableData"/>
-  /// extension for improved workability/reliability.
-  /// </summary>
-  /// <param name="tableKey">The key identifying the table to fetch. This typically matches the UI string.</param>
-  /// <param name="fieldKeyList">Optional list of specific fields to fetch. If null or empty, all fields will be returned. Ask Björn about how to determine these strings.</param>
-  /// <returns>TableData containing the requested fields and records</returns>
-  /// <exception cref="InvalidOperationException">Thrown when the database query fails</exception>
-  private TableData FetchTableData(string tableKey, string[]? fieldKeyList = null)
+  private TableData FetchTableData(string tableName, string indexingColumn, string[]? requestedColumns = null)
   {
-    string[] requestedFields = fieldKeyList ?? []; // only fetch the keys needed (memory reduction potential). Since we depend on "UniqueName", this should probably be in no matter what. i.e. check fieldKeyList for "UniqueName", if not there, add it.
+    string[] requestedFields = requestedColumns ?? []; // only fetch the keys needed (memory reduction potential)
     string[] fieldsKeysIncluded = [];
-    string[] tableData = [];
+    string[] tableData = []; // one-dimensional gross mess
     int tableVersion = 0;
     int numberOfRecords = 0;
 
+    // ensure indexingColumn is included in the requested fields
+    // if user forgets to include indexingColumn in requestedColumns => problem when it comes to creating dictionaries!
+    if (requestedFields != Array.Empty<string>() && !requestedFields.Contains(indexingColumn))
+    {
+      requestedFields = [.. requestedFields, indexingColumn];
+    }
+
     var result = _settingsStore.Current.SapModel.DatabaseTables.GetTableForDisplayArray(
-      tableKey,
+      tableName,
       ref requestedFields,
       string.Empty, // empty means all objects (not group-specific)
       ref tableVersion,
@@ -67,10 +78,10 @@ public class DatabaseTableExtractor
     if (result != 0)
     {
       throw new InvalidOperationException(
-        $"Failed to fetch table data for {tableKey}. Check correctness of tableKey and fieldKeyList."
+        $"Failed to fetch table data for {tableName}. Check correctness of tableName and requestedColumns."
       );
     }
 
-    return new TableData(fieldsKeysIncluded, tableData, numberOfRecords);
+    return new TableData(fieldsKeysIncluded, tableData, numberOfRecords, indexingColumn);
   }
 }

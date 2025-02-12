@@ -172,9 +172,9 @@ public sealed class EtabsShellPropertiesExtractor
 
     // using the DatabaseTableExtractor fetch table with key from the designOrientation
     // limit query size to "UniqueName" and "Area"
-    var geometricPropertiesData = _databaseTableExtractor.GetTableData(tableKey, ["UniqueName", "Area"]).Rows[
-      shell.Name
-    ];
+    var geometricPropertiesData = _databaseTableExtractor
+      .GetTableData(tableKey, requestedColumns: ["UniqueName", "Area"])
+      .Rows[shell.Name];
 
     // all database data is returned as strings
     return double.TryParse(geometricPropertiesData["Area"], out var result) ? result : double.NaN;

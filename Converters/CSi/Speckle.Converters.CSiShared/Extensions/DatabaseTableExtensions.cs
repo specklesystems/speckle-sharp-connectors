@@ -21,23 +21,23 @@ namespace Speckle.Converters.CSiShared.Extensions;
 /// </remarks>
 public record TableData
 {
-  private readonly string[] _fieldKeys; // Column names
-  private readonly string[] _data; // One-dimensional array of table data
-  private readonly int _numberRecords; // Number of rows
-  private IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>? _rows; // Cached data structure
+  private readonly string[] _columnNames; // "fieldKeys" in api docs
+  private readonly string[] _rawTableData; // indicating raw, one-dimensional array of table data (before processing)
+  private readonly int _rowCount; // Number of rows
+  private IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>? _processedRows; // Cached data structure
+  private readonly string _indexColumn; // column used to index/identify rows (typically, "UniqueName")
 
-  public TableData(string[] fieldKeys, string[] data, int numberRecords)
+  public TableData(string[] columnNames, string[] rawTableData, int rowCount, string indexColumn)
   {
-    _fieldKeys = fieldKeys;
-    _data = data;
-    _numberRecords = numberRecords;
+    _columnNames = columnNames;
+    _rawTableData = rawTableData;
+    _rowCount = rowCount;
+    _indexColumn = indexColumn;
   }
 
-  public IReadOnlyList<string> FieldKeys => _fieldKeys;
-
   /// <summary>
-  /// Gets table data as a dictionary mapping UniqueName to row data.
-  /// Each row is itself a dictionary mapping field keys to their values.
+  /// Gets table data as a dictionary mapping indexColumn (typically "UniqueName" to _processedRows).
+  /// Each row is itself a dictionary mapping column names to their values.
   /// Computed once on first access and cached.
   /// </summary>
   /// <remarks>
@@ -52,50 +52,50 @@ public record TableData
   {
     get
     {
-      if (_rows != null) // Lazy loading - only build dictionary when first accessed
+      if (_processedRows != null) // Lazy loading - only build dictionary when first accessed
       {
-        return _rows;
+        return _processedRows;
       }
 
-      var fieldsPerRow = _fieldKeys.Length;
-      var uniqueNameIndex = Array.IndexOf(_fieldKeys, "UniqueName");
+      var columnsPerRow = _columnNames.Length;
+      var indexColumnIndex = Array.IndexOf(_columnNames, _indexColumn);
 
-      if (uniqueNameIndex == -1)
+      if (indexColumnIndex == -1)
       {
         throw new InvalidOperationException(
-          "Row data structured according to 'UniqueName' field. This keys must be present in the database."
-        ); // TODO: Reassess when we get to analysis results
+          $"Row data structured according specified '{_indexColumn}' field. This was not found in the database."
+        );
       }
 
       // Pre-size dictionary with known capacity
-      var rows = new Dictionary<string, IReadOnlyDictionary<string, string>>(_numberRecords);
+      var rows = new Dictionary<string, IReadOnlyDictionary<string, string>>(_rowCount);
 
       // Create a field index lookup to avoid repeated Array.IndexOf calls
-      var fieldIndexLookup = new Dictionary<string, int>(fieldsPerRow);
-      for (int i = 0; i < _fieldKeys.Length; i++)
+      var fieldIndexLookup = new Dictionary<string, int>(columnsPerRow);
+      for (int i = 0; i < _columnNames.Length; i++)
       {
-        fieldIndexLookup[_fieldKeys[i]] = i;
+        fieldIndexLookup[_columnNames[i]] = i;
       }
 
       // Process each row
-      for (int rowStart = 0; rowStart < _data.Length; rowStart += fieldsPerRow)
+      for (int rowStart = 0; rowStart < _rawTableData.Length; rowStart += columnsPerRow)
       {
-        var uniqueName = _data[rowStart + uniqueNameIndex];
+        var keyValue = _rawTableData[rowStart + indexColumnIndex];
 
         // Pre-size the row dictionary
-        var row = new Dictionary<string, string>(fieldsPerRow, StringComparer.Ordinal);
+        var row = new Dictionary<string, string>(columnsPerRow, StringComparer.Ordinal);
 
         // Use index lookup instead of repeated string comparisons
         foreach (var kvp in fieldIndexLookup)
         {
-          row[kvp.Key] = _data[rowStart + kvp.Value];
+          row[kvp.Key] = _rawTableData[rowStart + kvp.Value];
         }
 
-        rows[uniqueName] = row;
+        rows[keyValue] = row;
       }
 
-      _rows = rows;
-      return _rows;
+      _processedRows = rows;
+      return _processedRows;
     }
   }
 }

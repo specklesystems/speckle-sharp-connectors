@@ -96,7 +96,7 @@ public sealed class EtabsFramePropertiesExtractor
     // using the DatabaseTableExtractor fetch table with key "Frame Assignments - Summary"
     // limit query size to "UniqueName" and "Length" fields
     var frameLengthData = _databaseTableExtractor
-      .GetTableData("Frame Assignments - Summary", ["UniqueName", "Length"])
+      .GetTableData("Frame Assignments - Summary", requestedColumns: ["UniqueName", "Length"])
       .Rows[frame.Name];
 
     // all database data is returned as strings
