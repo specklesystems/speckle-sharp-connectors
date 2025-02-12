@@ -29,21 +29,25 @@ public sealed class EtabsShellPropertiesExtractor
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
   private readonly MaterialNameLookup _materialNameLookup;
   private readonly CsiToSpeckleCacheSingleton _csiToSpeckleCacheSingleton;
+  private readonly DatabaseTableExtractor _databaseTableExtractor;
 
   public EtabsShellPropertiesExtractor(
     CsiToSpeckleCacheSingleton csiToSpeckleCacheSingleton,
-    IConverterSettingsStore<CsiConversionSettings> settingsStore
+    IConverterSettingsStore<CsiConversionSettings> settingsStore,
+    DatabaseTableExtractor databaseTableExtractor
   )
   {
     _settingsStore = settingsStore;
     _materialNameLookup = new MaterialNameLookup(settingsStore);
     _csiToSpeckleCacheSingleton = csiToSpeckleCacheSingleton;
+    _databaseTableExtractor = databaseTableExtractor;
   }
 
   public void ExtractProperties(CsiShellWrapper shell, Dictionary<string, object?> properties)
   {
     var objectId = properties.EnsureNested(ObjectPropertyCategory.OBJECT_ID);
-    objectId[CommonObjectProperty.DESIGN_ORIENTATION] = GetDesignOrientation(shell);
+    string designOrientation = GetDesignOrientation(shell);
+    objectId[CommonObjectProperty.DESIGN_ORIENTATION] = designOrientation;
     (objectId[CommonObjectProperty.LABEL], objectId[CommonObjectProperty.LEVEL]) = GetLabelAndLevel(shell);
 
     var assignments = properties.EnsureNested(ObjectPropertyCategory.ASSIGNMENTS);
@@ -60,6 +64,10 @@ public sealed class EtabsShellPropertiesExtractor
     string materialId = _materialNameLookup.GetMaterialForSection(sectionId);
     assignments[ObjectPropertyKey.SECTION_ID] = sectionId;
     assignments[ObjectPropertyKey.MATERIAL_ID] = materialId;
+
+    var geometry = properties.EnsureNested(ObjectPropertyCategory.GEOMETRY);
+    double area = GetArea(shell, designOrientation);
+    geometry.AddWithUnits("Area", area, $"{_settingsStore.Current.SpeckleUnits}²");
 
     // store the object, section, and material id relationships in their corresponding caches to be accessed by the connector
     if (!string.IsNullOrEmpty(sectionId))
@@ -149,6 +157,27 @@ public sealed class EtabsShellPropertiesExtractor
     string sectionName = string.Empty;
     _ = _settingsStore.Current.SapModel.AreaObj.GetProperty(shell.Name, ref sectionName);
     return sectionName;
+  }
+
+  private double GetArea(CsiShellWrapper shell, string designOrientation)
+  {
+    // database to use depends on sub shell-type
+    string tableKey = designOrientation switch
+    {
+      "Floor" => "Floor Object Connectivity",
+      "Wall" => "Wall Object Connectivity",
+      "Null" => "Null Area Object Connectivity",
+      _ => throw new ArgumentException($"Unexpected design orientation: {designOrientation}")
+    };
+
+    // using the DatabaseTableExtractor fetch table with key from the designOrientation
+    // limit query size to "UniqueName" and "Area"
+    var geometricPropertiesData = _databaseTableExtractor.GetTableData(tableKey, ["UniqueName", "Area"]).Rows[
+      shell.Name
+    ];
+
+    // all database data is returned as strings
+    return double.TryParse(geometricPropertiesData["Area"], out var result) ? result : double.NaN;
   }
 
   // TODO: This is a temporary solution until proper DatabaseTables implementation is available.

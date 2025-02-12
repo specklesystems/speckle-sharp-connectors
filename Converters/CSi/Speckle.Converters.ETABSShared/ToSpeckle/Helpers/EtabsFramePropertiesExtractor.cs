@@ -93,13 +93,13 @@ public sealed class EtabsFramePropertiesExtractor
 
   private double GetLength(CsiFrameWrapper frame)
   {
-    // using the DatabaseTableExtractor
-    // The table with the key "Frame Assignments - Summary" has a "Length" key
-    // We fetch only "UniqueName" and "Length" to reduce cache size
-    var frameConnectivityData = _databaseTableExtractor
+    // using the DatabaseTableExtractor fetch table with key "Frame Assignments - Summary"
+    // limit query size to "UniqueName" and "Length" fields
+    var frameLengthData = _databaseTableExtractor
       .GetTableData("Frame Assignments - Summary", ["UniqueName", "Length"])
       .Rows[frame.Name];
-    double length = double.TryParse(frameConnectivityData["Length"], out double result) ? result : double.NaN;
-    return length;
+
+    // all database data is returned as strings
+    return double.TryParse(frameLengthData["Length"], out double result) ? result : double.NaN;
   }
 }
