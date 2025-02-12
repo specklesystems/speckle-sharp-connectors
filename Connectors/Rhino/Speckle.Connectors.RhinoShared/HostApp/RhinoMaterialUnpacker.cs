@@ -50,7 +50,7 @@ public class RhinoMaterialUnpacker
 
   private void AddObjectIdToRenderMaterialProxy(string objectId, RenderMaterial? renderMaterial, Material? material)
   {
-    string? renderMaterialId = renderMaterial?.Id.ToString() ?? material?.Id.ToString();
+    string? renderMaterialId = renderMaterial?.Name ?? material?.Name; //renderMaterial?.Id.ToString() ?? material?.Id.ToString();
 
     if (renderMaterialId is not null)
     {
