@@ -58,7 +58,7 @@ public sealed class EtabsShellPropertiesExtractor
     // Assign Section Property to variable as this will be an argument for the GetMaterialName method
     string shellAppId = shell.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
     string sectionId = GetSectionName(shell);
-    string materialId = GetMaterialForSection(sectionId);
+    string materialId = GetMaterialForSection(sectionId, designOrientation);
     assignments[ObjectPropertyKey.SECTION_ID] = sectionId;
     assignments[ObjectPropertyKey.MATERIAL_ID] = materialId;
 
@@ -156,14 +156,15 @@ public sealed class EtabsShellPropertiesExtractor
     return sectionName;
   }
 
-  private string GetMaterialForSection(string sectionName)
+  private string GetMaterialForSection(string sectionName, string designOrientation)
   {
-    var sectionTableData = _databaseTableExtractor.GetTableData(
-      "Area Section Property Definitions - Summary",
-      "Name",
-      ["Name", "Material"]
-    );
-    var sectionRowData = sectionTableData.Rows[sectionName];
+    if (designOrientation == "Null") // openings don't have a material
+    {
+      return string.Empty;
+    }
+    var sectionRowData = _databaseTableExtractor
+      .GetTableData("Area Section Property Definitions - Summary", "Name", ["Name", "Material"])
+      .Rows[sectionName];
     return sectionRowData["Material"];
   }
 
