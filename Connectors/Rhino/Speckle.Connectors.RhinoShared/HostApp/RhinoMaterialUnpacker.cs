@@ -50,6 +50,9 @@ public class RhinoMaterialUnpacker
 
   private void AddObjectIdToRenderMaterialProxy(string objectId, RenderMaterial? renderMaterial, Material? material)
   {
+    // NOTE: material ids are not the same, even if the underlying material is. the number of materials in the mat table corresponds
+    // with the number of objects, and each material will get a new id, even if it is THE SAME. shockingly, TY bob, material names
+    // are unique so we use those for identity checks rather than the material's id.
     string? renderMaterialId = renderMaterial?.Name ?? material?.Name; //renderMaterial?.Id.ToString() ?? material?.Id.ToString();
 
     if (renderMaterialId is not null)
