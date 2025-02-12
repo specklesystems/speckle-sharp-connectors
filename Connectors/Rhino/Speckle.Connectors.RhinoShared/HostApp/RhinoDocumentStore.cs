@@ -19,11 +19,6 @@ public class RhinoDocumentStore : DocumentModelStore
     RhinoDoc.EndOpenDocument += (_, e) =>
       topLevelExceptionHandler.CatchUnhandled(() =>
       {
-        if (e.Merge)
-        {
-          return;
-        }
-
         if (e.Document == null)
         {
           return;
