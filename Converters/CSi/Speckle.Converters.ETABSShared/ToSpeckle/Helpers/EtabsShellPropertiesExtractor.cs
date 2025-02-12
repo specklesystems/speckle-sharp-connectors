@@ -12,17 +12,17 @@ namespace Speckle.Converters.ETABSShared.ToSpeckle.Helpers;
 /// </summary>
 /// <remarks>
 /// Responsibilities:
-/// - Extracts properties only available in ETABS (e.g., Label, Level)
-/// - Complements <see cref="CsiShellPropertiesExtractor"/> by adding product-specific data
-/// - Follows same pattern of single-purpose methods for clear API mapping
+/// <list type="bullet">
+///     <item><description>Extracts properties only available in ETABS (e.g., Label, Level)</description></item>
+///     <item><description>Complements <see cref="CsiShellPropertiesExtractor"/> by adding product-specific data</description></item>
+///     <item><description>Follows same pattern of single-purpose methods for clear API mapping</description></item>
+/// </list>
 ///
 /// Design Decisions:
-/// - Maintains separate methods for each property following CSI API structure
-/// - Properties are organized by their functional groups (Object ID, Assignments, Design)
-///
-/// Integration:
-/// - Used by <see cref="EtabsPropertiesExtractor"/> for shell-specific property extraction
-/// - Works alongside CsiShellPropertiesExtractor to build complete property set
+/// <list type="bullet">
+///     <item><description>Maintains separate methods for each property following CSI API structure</description></item>
+///     <item><description>Properties are organized by their functional groups (Object ID, Assignments, Design)</description></item>
+/// </list>
 /// </remarks>
 public sealed class EtabsShellPropertiesExtractor
 {
