@@ -2,7 +2,7 @@ using Speckle.InterfaceGenerator;
 
 namespace Speckle.Connectors.Common.Cancellation;
 
-public interface ICancellationItem : IDisposable
+public interface ICancellationItem
 {
   CancellationToken Token { get; }
 }
@@ -15,8 +15,6 @@ public class CancellationManager : ICancellationManager
 {
   private sealed class CancellationItem(CancellationManager manager, string id) : ICancellationItem
   {
-    public void Dispose() => manager.DisposeOperation(id);
-
     public CancellationToken Token => manager.GetToken(id);
   }
 
@@ -57,8 +55,6 @@ public class CancellationManager : ICancellationManager
   /// <returns> Initialized cancellation token source.</returns>
   public ICancellationItem GetCancellationItem(string id)
   {
-    DisposeOperation(id);
-
     var cts = new CancellationTokenSource();
     _operationsInProgress[id] = cts;
     return new CancellationItem(this, id);
@@ -73,16 +69,6 @@ public class CancellationManager : ICancellationManager
     if (_operationsInProgress.TryGetValue(id, out CancellationTokenSource? cts))
     {
       cts.Cancel();
-    }
-  }
-
-  private void DisposeOperation(string id)
-  {
-    if (_operationsInProgress.TryGetValue(id, out CancellationTokenSource? cts))
-    {
-      cts.Cancel();
-      cts.Dispose();
-      _operationsInProgress.Remove(id);
     }
   }
 

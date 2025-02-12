@@ -162,7 +162,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
       using var scope = _serviceProvider.CreateScope();
       InitializeSettings(scope.ServiceProvider);
 
-      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
+      var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
       // Disable document activation (document creation and document switch)
       // Not disabling results in DUI model card being out of sync with the active document

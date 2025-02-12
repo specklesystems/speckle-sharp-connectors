@@ -70,7 +70,7 @@ public class RhinoReceiveBinding : IReceiveBinding
         throw new InvalidOperationException("No download model card was found.");
       }
 
-      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
+      var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
       undoRecord = RhinoDoc.ActiveDoc.BeginUndoRecord($"Receive Speckle model {modelCard.ModelName}");
       // Receive host objects

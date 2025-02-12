@@ -84,7 +84,7 @@ public sealed class CsiSharedSendBinding : ISendBinding
         .ServiceProvider.GetRequiredService<IConverterSettingsStore<CsiConversionSettings>>()
         .Initialize(_csiConversionSettingsFactory.Create(_csiApplicationService.SapModel));
 
-      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
+      var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
       List<ICsiWrapper> wrappers = modelCard
         .SendFilter.NotNull()

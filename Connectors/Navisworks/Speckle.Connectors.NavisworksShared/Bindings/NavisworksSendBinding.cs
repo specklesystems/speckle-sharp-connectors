@@ -100,7 +100,7 @@ public class NavisworksSendBinding : ISendBinding
 
       InitializeConverterSettings(scope, modelCard);
 
-      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
+      var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
       var navisworksModelItems = GetNavisworksModelItems(modelCard);
 

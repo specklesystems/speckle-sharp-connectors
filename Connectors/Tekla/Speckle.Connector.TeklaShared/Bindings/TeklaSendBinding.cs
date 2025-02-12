@@ -126,7 +126,7 @@ public sealed class TeklaSendBinding : ISendBinding
           _teklaConversionSettingsFactory.Create(_model, _toSpeckleSettingsManager.GetSendRebarsAsSolid(modelCard))
         );
 
-      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
+      var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
       List<ModelObject> teklaObjects = modelCard
         .SendFilter.NotNull()
