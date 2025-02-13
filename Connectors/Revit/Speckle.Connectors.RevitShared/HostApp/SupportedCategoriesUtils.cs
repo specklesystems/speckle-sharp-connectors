@@ -22,7 +22,7 @@ public static class SupportedCategoriesUtils
     {
       case CategoryType.Annotation:
         return
-#if REVIT_2023_OR_GREATER
+#if REVIT2023_OR_GREATER
           category.BuiltInCategory == BuiltInCategory.OST_Grids;
 #else
           category.Name == "OST_Grids";
@@ -30,7 +30,7 @@ public static class SupportedCategoriesUtils
 
       case CategoryType.Model:
         return
-#if REVIT_2023_OR_GREATER
+#if REVIT2023_OR_GREATER
           category.BuiltInCategory != BuiltInCategory.OST_AreaSchemes
           && category.BuiltInCategory != BuiltInCategory.OST_AreaSchemeLines;
 #else
