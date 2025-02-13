@@ -28,7 +28,8 @@ public class CancellationManager : ICancellationManager
   public int NumberOfOperations => _operationsInProgress.Count;
 
   //if we can't find it then it must be cancelled
-  private CancellationToken GetToken(string id) => _operationsInProgress.TryGetValue(id, out var source) ? source.Token : new CancellationToken(true);
+  private CancellationToken GetToken(string id) =>
+    _operationsInProgress.TryGetValue(id, out var source) ? source.Token : new CancellationToken(true);
 
   public bool IsExist(string id) => _operationsInProgress.ContainsKey(id);
 
