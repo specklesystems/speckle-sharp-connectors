@@ -247,12 +247,16 @@ public sealed class RhinoSendBinding : ISendBinding
           return;
         }
 
-        // NOTE: not sure yet we want to track every attribute changes yet. TBD
-        // NOTE: we might want to track here user strings too (once we send them out), and more!
+        // NOTE: not sure yet we want to track every attribute changes yet. Explicitly tracking atts that change commit data. TBD
         if (
           e.OldAttributes.LayerIndex != e.NewAttributes.LayerIndex
           || e.OldAttributes.MaterialSource != e.NewAttributes.MaterialSource
           || e.OldAttributes.MaterialIndex != e.NewAttributes.MaterialIndex // NOTE: this does not work when swapping around from custom doc materials, it works when you swap TO/FROM default material
+          || e.OldAttributes.ColorSource != e.NewAttributes.ColorSource
+          || e.OldAttributes.ObjectColor != e.NewAttributes.ObjectColor
+          || e.OldAttributes.Name != e.NewAttributes.Name
+          || e.OldAttributes.UserStringCount != e.NewAttributes.UserStringCount
+          || e.OldAttributes.GetUserStrings() != e.NewAttributes.GetUserStrings()
         )
         {
           ChangedObjectIds[e.RhinoObject.Id.ToString()] = 1;

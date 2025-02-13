@@ -10,13 +10,18 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 /// </summary>
 /// <remarks>
 /// Design Decisions:
-/// - Individual methods preferred over batched calls due to:
-///   * Independent API calls with no performance gain from batching (?)
-///   * Easier debugging and error tracing
-///   * Simpler maintenance as each method maps to one API concept
-/// Integration:
-/// - Part of the property extraction hierarchy
-/// - Used by <see cref="SharedPropertiesExtractor"/> for delegating frame property extraction
+/// <list type="bullet">
+///     <item>
+///         <description>
+///             Individual methods preferred over batched calls due to:
+///             <list type="bullet">
+///                 <item><description>Independent API calls with no performance gain from batching (?)</description></item>
+///                 <item><description>Easier debugging and error tracing</description></item>
+///                 <item><description>Simpler maintenance as each method maps to one API concept</description></item>
+///             </list>
+///         </description>
+///     </item>
+/// </list>
 /// </remarks>
 public sealed class CsiFramePropertiesExtractor
 {

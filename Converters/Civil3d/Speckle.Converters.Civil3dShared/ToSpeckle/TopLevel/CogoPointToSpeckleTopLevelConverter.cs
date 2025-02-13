@@ -57,8 +57,6 @@ public class CogoPointToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     // add additional class properties
     civilObject["pointNumber"] = target.PointNumber;
     civilObject["northing"] = target.Northing;
-    //civilObject["latitude"] = target.Latitude; // might not be necessary, and also sometimes throws if transforms are not enabled
-    //civilObject["longitude"] = target.Longitude; // might not be necessary, and also sometimes throws if transforms are not enabled
 
     return civilObject;
   }

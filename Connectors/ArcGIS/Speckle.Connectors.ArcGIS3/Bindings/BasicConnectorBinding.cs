@@ -1,4 +1,5 @@
 using ArcGIS.Core.Data;
+using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.DUI.Bindings;
@@ -66,19 +67,18 @@ public class BasicConnectorBinding : IBasicConnectorBinding
 
   public void RemoveModel(ModelCard model) => _store.RemoveModel(model);
 
-  public Task HighlightObjects(IReadOnlyList<string> objectIds)
+  public async Task HighlightObjects(IReadOnlyList<string> objectIds)
   {
-    HighlightObjectsOnView(objectIds.Select(x => new ObjectID(x)).ToList());
-    return Task.CompletedTask;
+    await HighlightObjectsOnView(objectIds.Select(x => new ObjectID(x)).ToList());
   }
 
-  public Task HighlightModel(string modelCardId)
+  public async Task HighlightModel(string modelCardId)
   {
     var model = _store.GetModelById(modelCardId);
 
     if (model is null)
     {
-      return Task.CompletedTask;
+      return;
     }
 
     var objectIds = new List<ObjectID>();
@@ -95,22 +95,24 @@ public class BasicConnectorBinding : IBasicConnectorBinding
 
     if (objectIds is null)
     {
-      return Task.CompletedTask;
+      return;
     }
-    HighlightObjectsOnView(objectIds);
-    return Task.CompletedTask;
+    await HighlightObjectsOnView(objectIds);
   }
 
-  private void HighlightObjectsOnView(IReadOnlyList<ObjectID> objectIds)
+  private async Task HighlightObjectsOnView(IReadOnlyList<ObjectID> objectIds)
   {
-    MapView mapView = MapView.Active;
+    await QueuedTask.Run(() =>
+    {
+      MapView mapView = MapView.Active;
 
-    List<MapMemberFeature> mapMembersFeatures = GetMapMembers(objectIds, mapView);
-    ClearSelectionInTOC();
-    ClearSelection();
-    SelectMapMembersInTOC(mapMembersFeatures);
-    SelectMapMembersAndFeatures(mapMembersFeatures);
-    mapView.ZoomToSelected();
+      List<MapMemberFeature> mapMembersFeatures = GetMapMembers(objectIds, mapView);
+      ClearSelectionInTOC();
+      ClearSelection();
+      SelectMapMembersInTOC(mapMembersFeatures);
+      SelectMapMembersAndFeatures(mapMembersFeatures);
+      mapView.ZoomToSelected();
+    });
   }
 
   private List<MapMemberFeature> GetMapMembers(IReadOnlyList<ObjectID> objectIds, MapView mapView)

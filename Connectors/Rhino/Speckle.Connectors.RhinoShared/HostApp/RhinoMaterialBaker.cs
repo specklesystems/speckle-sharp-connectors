@@ -7,7 +7,6 @@ using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Material = Rhino.DocObjects.Material;
-using RenderMaterial = Rhino.Render.RenderMaterial;
 
 namespace Speckle.Connectors.Rhino.HostApp;
 
@@ -26,9 +25,9 @@ public class RhinoMaterialBaker
   }
 
   /// <summary>
-  /// A map keeping track of ids, <b>either layer id or object id</b>, and their render material guid. It's generated from the material proxy list as we bake materials; <see cref="BakeMaterials"/> must be called in advance for this to be populated with the correct data.
+  /// A map keeping track of ids, <b>either layer id or object id</b>, and their material index. It's generated from the material proxy list as we bake materials; <see cref="BakeMaterials"/> must be called in advance for this to be populated with the correct data.
   /// </summary>
-  public Dictionary<string, RenderMaterial> ObjectIdAndMaterialIndexMap { get; } = new();
+  public Dictionary<string, int> ObjectIdAndMaterialIndexMap { get; } = new();
 
   public void BakeMaterials(IReadOnlyCollection<RenderMaterialProxy> speckleRenderMaterialProxies, string baseLayerName)
   {
@@ -68,22 +67,18 @@ public class RhinoMaterialBaker
           rhinoMaterial.Shine = shine;
         }
 
-        // We are creating a render material and adding it to the render material table because render materials have a guid independent of objects they are applied to.
-        // Regular materials and the material table is populated by materials applied to objects: the same material can therefore have multiple entries in the material table if it is applied to multiple objects
-        // see: https://discourse.mcneel.com/t/render-material-events/99886/5
-        RenderMaterial rhinoRenderMaterial = RenderMaterial.FromMaterial(rhinoMaterial, doc);
+        int matIndex = doc.Materials.Add(rhinoMaterial);
 
-        if (doc.RenderMaterials.Add(rhinoRenderMaterial))
-        {
-          // Create the object <> render material guid map
-          foreach (var objectId in proxy.objects)
-          {
-            ObjectIdAndMaterialIndexMap[objectId] = rhinoRenderMaterial;
-          }
-        }
-        else
+        // POC: check on matIndex -1, means we haven't created anything - this is most likely an recoverable error at this stage
+        if (matIndex == -1)
         {
           throw new ConversionException("Failed to add a material to the document.");
+        }
+
+        // Create the object <> material index map
+        foreach (var objectId in proxy.objects)
+        {
+          ObjectIdAndMaterialIndexMap[objectId] = matIndex;
         }
       }
       catch (Exception ex) when (!ex.IsFatal())
@@ -100,13 +95,18 @@ public class RhinoMaterialBaker
   public void PurgeMaterials(string namePrefix)
   {
     var currentDoc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
-    // POC: looping through the render material table somehow doesn't capture all render materials!! That's why we're doing it this way.
-    var materialsToDelete = currentDoc.RenderMaterials.Where(o => o.DisplayName.Contains(namePrefix)).ToList();
-    foreach (RenderMaterial materialToDelete in materialsToDelete)
+    foreach (Material material in currentDoc.Materials)
     {
-      if (!currentDoc.RenderMaterials.Remove(materialToDelete))
+      try
       {
-        _logger.LogError("Failed to purge a material from the document");
+        if (!material.IsDeleted && material.Name != null && material.Name.Contains(namePrefix))
+        {
+          currentDoc.Materials.Delete(material);
+        }
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        _logger.LogError(ex, "Failed to purge a material from the document");
       }
     }
   }

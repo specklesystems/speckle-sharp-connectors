@@ -10,16 +10,24 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 /// </summary>
 /// <remarks>
 /// Design Decisions:
-/// - Individual methods preferred over batched calls due to:
-///   * Independent API calls with no performance gain from batching (?)
-///   * Easier debugging and error tracing
-///   * Simpler maintenance as each method maps to one API concept
+/// <list type="bullet">
+///     <item>
+///         <description>
+///             Individual methods preferred over batched calls due to:
+///             <list type="bullet">
+///                 <item><description>Independent API calls with no performance gain from batching (?)</description></item>
+///                 <item><description>Easier debugging and error tracing</description></item>
+///                 <item><description>Simpler maintenance as each method maps to one API concept</description></item>
+///             </list>
+///         </description>
+///     </item>
+/// </list>
+///
 /// Responsibilities:
-/// - Provides a focused interface for extracting properties specific to joint elements.
-/// - Ensures consistency in property extraction logic across supported CSi products.
-/// Integration:
-/// - Part of the property extraction hierarchy
-/// - Used by <see cref="SharedPropertiesExtractor"/> for delegating joint property extraction
+/// <list type="bullet">
+///     <item><description>Provides a focused interface for extracting properties specific to joint elements.</description></item>
+///     <item><description>Ensures consistency in property extraction logic across supported CSi products.</description></item>
+/// </list>
 /// </remarks>
 public sealed class CsiJointPropertiesExtractor
 {

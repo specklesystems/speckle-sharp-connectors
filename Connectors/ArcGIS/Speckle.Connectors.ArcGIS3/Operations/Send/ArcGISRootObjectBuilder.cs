@@ -1,5 +1,6 @@
 using ArcGIS.Core.Data.Raster;
 using ArcGIS.Core.Geometry;
+using ArcGIS.Desktop.Framework.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.ArcGIS.HostApp;
 using Speckle.Connectors.ArcGIS.HostApp.Extensions;
@@ -49,7 +50,14 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     _mapMemberUtils = mapMemberUtils;
   }
 
-  public async Task<RootObjectBuilderResult> Build(
+  public Task<RootObjectBuilderResult> Build(
+    IReadOnlyList<ADM.MapMember> layers,
+    SendInfo __,
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken
+  ) => QueuedTask.Run(() => BuildInternal(layers, __, onOperationProgressed, cancellationToken));
+
+  private async Task<RootObjectBuilderResult> BuildInternal(
     IReadOnlyList<ADM.MapMember> layers,
     SendInfo __,
     IProgress<CardProgress> onOperationProgressed,

@@ -74,7 +74,7 @@ We're using [CSharpier](https://github.com/belav/csharpier) to format our code. 
   For best DX, we recommend turning on CSharpier's `reformat on save` setting if you've installed it in your IDE.
 
 ### Clean Locks
-We're using npm package locks to store exact and versioned dependency trees. Occasionally you will need to clean your local package-lock files, eg when switching between `Speckle.Connectors.sln` and `local.sln`.
+We're using npm package locks to store exact and versioned dependency trees. Occasionally you will need to clean your local package-lock files, eg when switching between `Speckle.Connectors.sln` and `Local.sln`.
 Run this command in CLI to delete all package.lock.json files before a restore:
 ```
 .\build.ps1 clean-locks
@@ -84,6 +84,14 @@ Run this command in CLI to delete all package.lock.json files before a restore:
 To make sure your local environment is ready for a clean build, run this command to delete all `bin` and `obj` directories and restore all projects:
 ```
 .\build.ps1 deep-clean
+```
+### Deep Clean Local
+
+This is for users of the `Local.sln` solution:
+
+To make sure your local environment is ready for a clean build, run this command to delete all `bin` and `obj` directories and restore all projects:
+```
+.\build.ps1 deep-clean-local
 ```
 
 ## Local development with SDK changes

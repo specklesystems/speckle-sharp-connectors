@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using Speckle.Converters.AutocadShared.ToSpeckle;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Registration;
 using Speckle.Sdk;
@@ -23,5 +24,9 @@ public static class ServiceRegistration
       ConverterSettingsStore<AutocadConversionSettings>
     >();
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
+
+    // add other classes
+    // serviceCollection.AddScoped<PropertiesExtractor>(); // NOTE: commented out until we can test in acad
+    serviceCollection.AddScoped<ExtensionDictionaryExtractor>();
   }
 }

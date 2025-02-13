@@ -1,5 +1,6 @@
 using System.Xml.Linq;
 using ArcGIS.Desktop.Core.Events;
+using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using ArcGIS.Desktop.Mapping.Events;
 using Speckle.Connectors.Common.Threading;
@@ -82,8 +83,8 @@ public class ArcGISDocumentStore : DocumentModelStore
   }
 
   protected override void HostAppSaveState(string modelCardState) =>
-    _threadContext
-      .RunOnWorker(() =>
+    QueuedTask
+      .Run(() =>
       {
         Map map = MapView.Active.Map;
         // Read existing metadata - To prevent messing existing metadata. 🤞 Hope other add-in developers will do same :D
@@ -112,8 +113,8 @@ public class ArcGISDocumentStore : DocumentModelStore
       .FireAndForget();
 
   protected override void LoadState() =>
-    _threadContext
-      .RunOnWorker(() =>
+    QueuedTask
+      .Run(() =>
       {
         Map map = MapView.Active.Map;
         var metadata = map.GetMetadata();
