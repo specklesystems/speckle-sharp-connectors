@@ -1,32 +1,40 @@
+using System.Reflection;
+using Autodesk.Civil.Runtime;
 using Speckle.Converters.Civil3dShared.Extensions;
-using Speckle.Converters.Civil3dShared.Helpers;
-using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common;
 
 namespace Speckle.Converters.Civil3dShared.ToSpeckle;
 
 /// <summary>
-/// Extracts class properties deemed important from a civil entity.
+/// Extracts class properties deemed important for business intelligence workflows from a civil entity.
 /// Should not repeat any data that would be included on property sets and general properties on the object.
 /// Expects to be scoped per operation.
 /// </summary>
 public class ClassPropertiesExtractor
 {
-  private readonly ITypedConverter<AG.Point3dCollection, SOG.Polyline> _point3dCollectionConverter;
-  private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
-  private readonly CatchmentGroupHandler _catchmentGroupHandler;
-  private readonly PipeNetworkHandler _pipeNetworkHandler;
+  private const string ASSIGNMENT_PROP = "Assignments";
+  private const string DIMENSIONAL_PROP = "Dimensional Properties";
+  private const string SITEID_PROP = "siteId";
+  private const string SITENAME_PROP = "siteName";
+  private const string SURFACEID_PROP = "surfaceId";
+  private const string SURFACENAME_PROP = "surfaceName";
+  private const string NETWORKID_PROP = "networkId";
+  private const string NETWORKNAME_PROP = "networkName";
+  private const string ALIGNMENTID_PROP = "alignmentId";
+  private const string ALIGNMENTNAME_PROP = "alignmentName";
+  private const string CODES_PROP = "codes";
+  private const string SHAPES_PROP = "shapes";
+  private const string LINKS_PROP = "links";
+  private const string POINTS_PROP = "points";
 
-  public ClassPropertiesExtractor(
-    ITypedConverter<AG.Point3dCollection, SOG.Polyline> point3dCollectionConverter,
-    ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
-    CatchmentGroupHandler catchmentGroupHandler,
-    PipeNetworkHandler pipeNetworkHandler
-  )
+  private readonly IConverterSettingsStore<Civil3dConversionSettings> _converterSettings;
+
+  private readonly Dictionary<ADB.ObjectId, string> _catchmentGroupCache = new();
+  private readonly Dictionary<ADB.ObjectId, string> _networkCache = new();
+
+  public ClassPropertiesExtractor(IConverterSettingsStore<Civil3dConversionSettings> converterSettings)
   {
-    _point3dCollectionConverter = point3dCollectionConverter;
-    _pointConverter = pointConverter;
-    _catchmentGroupHandler = catchmentGroupHandler;
-    _pipeNetworkHandler = pipeNetworkHandler;
+    _converterSettings = converterSettings;
   }
 
   /// <summary>
@@ -34,16 +42,19 @@ public class ClassPropertiesExtractor
   /// </summary>
   /// <param name="entity"></param>
   /// <returns></returns>
-  public Dictionary<string, object?>? GetClassProperties(CDB.Entity entity)
+  public Dictionary<string, object?> GetClassProperties(CDB.Entity entity)
   {
     switch (entity)
     {
-      case CDB.Catchment catchment:
-        return ExtractCatchmentProperties(catchment);
+      // site
       case CDB.Site site:
         return ExtractSiteProperties(site);
+      case CDB.Catchment catchment:
+        return ExtractCatchmentProperties(catchment);
       case CDB.Parcel parcel:
         return ExtractParcelProperties(parcel);
+      case CDB.Surface surface:
+        return ExtractSurfaceProperties(surface);
 
       // pipe networks
       case CDB.Pipe pipe:
@@ -51,19 +62,125 @@ public class ClassPropertiesExtractor
       case CDB.Structure structure:
         return ExtractStructureProperties(structure);
 
-      // alignments
+      // corridors, alignments, profiles
+      case CDB.Corridor corridor:
+        return ExtractCorridorProperties(corridor);
       case CDB.Alignment alignment:
         return ExtractAlignmentProperties(alignment);
       case CDB.Profile profile:
         return ExtractProfileProperties(profile);
 
-      // assemblies
+      // assemblies, subassemblies
       case CDB.Subassembly subassembly:
         return ExtractSubassemblyProperties(subassembly);
 
       default:
-        return null;
+        return new();
     }
+  }
+
+  private Dictionary<string, object?> ExtractSiteProperties(CDB.Site site)
+  {
+    // get general props
+    Dictionary<string, object?> properties = new() { };
+
+    // get assignments like catchment group, reference surface, reference pipe networks
+    Dictionary<string, object?> assignmentProps = new();
+    if (site.GetAlignmentIds().Count > 0)
+    {
+      assignmentProps[ALIGNMENTID_PROP] = GetSpeckleApplicationIdsFromCollection(site.GetAlignmentIds());
+    }
+    if (site.GetFeatureLineIds().Count > 0)
+    {
+      assignmentProps["featureLineId"] = GetSpeckleApplicationIdsFromCollection(site.GetFeatureLineIds());
+    }
+
+    AddDictionaryToDictionary(assignmentProps, properties, ASSIGNMENT_PROP);
+    return properties;
+  }
+
+  private Dictionary<string, object?> ExtractCatchmentProperties(CDB.Catchment catchment)
+  {
+    // get general props
+    Dictionary<string, object?> properties = new() { };
+
+    // get assignments like catchment group, reference surface, reference pipe networks
+    Dictionary<string, object?> assignmentProps = new();
+    if (catchment.ContainingGroupId != ADB.ObjectId.Null)
+    {
+      assignmentProps["catchmentGroupId"] = catchment.ContainingGroupId.GetSpeckleApplicationId();
+      if (_catchmentGroupCache.TryGetValue(catchment.ContainingGroupId, out string? name))
+      {
+        assignmentProps["catchmentGroupName"] = name;
+      }
+      else
+      {
+        using (var tr = _converterSettings.Current.Document.Database.TransactionManager.StartTransaction())
+        {
+          var catchmentGroup = (CDB.CatchmentGroup)tr.GetObject(catchment.ContainingGroupId, ADB.OpenMode.ForRead);
+          _catchmentGroupCache[catchment.ContainingGroupId] = catchmentGroup.Name;
+          assignmentProps["catchmentGroupName"] = catchmentGroup.Name;
+          tr.Commit();
+        }
+      }
+    }
+
+    if (catchment.ReferenceSurfaceId != ADB.ObjectId.Null)
+    {
+      assignmentProps[SURFACEID_PROP] = catchment.ReferenceSurfaceId.GetSpeckleApplicationId();
+      assignmentProps[SURFACENAME_PROP] = catchment.ReferenceSurfaceName;
+    }
+
+    if (catchment.ReferencePipeNetworkId != ADB.ObjectId.Null)
+    {
+      assignmentProps[NETWORKID_PROP] = catchment.ReferencePipeNetworkId.GetSpeckleApplicationId();
+      assignmentProps[NETWORKNAME_PROP] = catchment.ReferencePipeNetworkName;
+    }
+
+    if (catchment.ReferencePipeNetworkStructureId != ADB.ObjectId.Null)
+    {
+      assignmentProps["networkStructureId"] = catchment.ReferencePipeNetworkStructureId.GetSpeckleApplicationId();
+      assignmentProps["networkStructureName"] = catchment.ReferencePipeNetworkStructureName;
+    }
+
+    AddDictionaryToDictionary(assignmentProps, properties, ASSIGNMENT_PROP);
+
+    // get dimensional props
+    properties[DIMENSIONAL_PROP] = new Dictionary<string, object?>()
+    {
+      ["area"] = catchment.Area,
+      ["area2d"] = catchment.Area2d,
+      ["imperviousArea"] = catchment.ImperviousArea,
+      ["perimeter2d"] = catchment.Perimeter2d
+    };
+
+    // get hydrological props
+    properties["Hydrological Properties"] = new Dictionary<string, object?>()
+    {
+      ["timeOfConcentration"] = catchment.TimeOfConcentration,
+      ["timeOfConcentrationCalculationMethod"] = catchment.TimeOfConcentrationCalculationMethod,
+      ["hydrologicallyMostDistantPoint"] = catchment.HydrologicallyMostDistantPoint.ToArray(),
+      ["hydrologicallyMostDistantLength"] = catchment.HydrologicallyMostDistantLength,
+      ["runoffCoefficient"] = catchment.RunoffCoefficient,
+      ["hydrologicalSoilGroup"] = catchment.HydrologicalSoilGroup.ToString(),
+      ["antecedentWetness"] = catchment.AntecedentWetness
+    };
+
+    // get hydraulic props
+    properties["Hydraulic Properties"] = new Dictionary<string, object?>()
+    {
+      ["manningsCoefficient"] = catchment.ManningsCoefficient,
+#if CIVIL3D2024_OR_GREATER
+      ["sheetFlowSegments"] = catchment.SheetFlowSegments,
+      ["sheetFlowTravelTime"] = catchment.SheetFlowTravelTime,
+      ["shallowFlowSegments"] = catchment.ShallowFlowSegments,
+      ["shallowFlowTravelTime"] = catchment.ShallowFlowTravelTime,
+      ["channelFlowSegments"] = catchment.ChannelFlowSegments,
+      ["channelFlowTravelTime"] = catchment.ChannelFlowTravelTime
+#endif
+    };
+
+    return properties;
   }
 
   private Dictionary<string, object?> ExtractParcelProperties(CDB.Parcel parcel)
@@ -75,58 +192,406 @@ public class ClassPropertiesExtractor
 #endif
   }
 
-  private Dictionary<string, object?> ExtractSubassemblyProperties(CDB.Subassembly subassembly)
+  private Dictionary<string, object?> ExtractSurfaceProperties(CDB.Surface surface)
   {
-    Dictionary<string, object?> subassemblyProperties = new();
+    // get general props
+    Dictionary<string, object?> properties = new() { };
 
-    subassemblyProperties["origin"] = _pointConverter.Convert(subassembly.Origin);
+    // get statistics props
+    Dictionary<string, object?> statisticsProps = ExtractPropertiesGeneric<CDB.GeneralSurfaceProperties>(
+      surface.GetGeneralProperties()
+    );
 
-    // get shapes > links > points info
-    Dictionary<string, object?> shapes = new();
-    int shapeCount = 0;
-    foreach (CDB.Shape shape in subassembly.Shapes)
+    switch (surface)
     {
-      Dictionary<string, object?> links = new();
-      int linkCount = 0;
-      foreach (CDB.Link link in shape.Links)
+      case CDB.TinSurface tinSurface:
+        AddDictionaryToDictionary(
+          ExtractPropertiesGeneric<CDB.TerrainSurfaceProperties>(tinSurface.GetTerrainProperties()),
+          statisticsProps,
+          "Terrain"
+        );
+        AddDictionaryToDictionary(
+          ExtractPropertiesGeneric<CDB.TinSurfaceProperties>(tinSurface.GetTinProperties()),
+          statisticsProps,
+          "TIN"
+        );
+        break;
+
+      case CDB.TinVolumeSurface tinVolumeSurface:
+        AddDictionaryToDictionary(
+          ExtractPropertiesGeneric<CDB.TinSurfaceProperties>(tinVolumeSurface.GetTinProperties()),
+          statisticsProps,
+          "TIN"
+        );
+        AddDictionaryToDictionary(
+          ExtractPropertiesGeneric<CDB.VolumeSurfaceProperties>(tinVolumeSurface.GetVolumeProperties()),
+          statisticsProps,
+          "Volume"
+        );
+        break;
+
+      case CDB.GridSurface gridSurface:
+        AddDictionaryToDictionary(
+          ExtractPropertiesGeneric<CDB.TerrainSurfaceProperties>(gridSurface.GetTerrainProperties()),
+          statisticsProps,
+          "Terrain"
+        );
+        AddDictionaryToDictionary(
+          ExtractPropertiesGeneric<CDB.GridSurfaceProperties>(gridSurface.GetGridProperties()),
+          statisticsProps,
+          "Grid"
+        );
+        break;
+
+      case CDB.GridVolumeSurface gridVolumeSurface:
+        AddDictionaryToDictionary(
+          ExtractPropertiesGeneric<CDB.GridSurfaceProperties>(gridVolumeSurface.GetGridProperties()),
+          statisticsProps,
+          "Grid"
+        );
+        AddDictionaryToDictionary(
+          ExtractPropertiesGeneric<CDB.VolumeSurfaceProperties>(gridVolumeSurface.GetVolumeProperties()),
+          statisticsProps,
+          "Volume"
+        );
+        break;
+    }
+
+    AddDictionaryToDictionary(statisticsProps, properties, "Statistics");
+    return properties;
+  }
+
+  private Dictionary<string, object?> ExtractPipeProperties(CDB.Pipe pipe)
+  {
+    // get general props
+    Dictionary<string, object?> properties =
+      new()
       {
-        Dictionary<string, object?> points = new();
-        int pointCount = 0;
-        foreach (CDB.Point point in link.Points)
+        ["domain"] = pipe.Domain.ToString(), // part prop
+        ["partType"] = pipe.PartType.ToString(), // part prop
+        ["bearing"] = pipe.Bearing,
+        ["slope"] = pipe.Slope,
+        ["shape"] = pipe.CrossSectionalShape.ToString(),
+        ["minimumCover"] = pipe.MinimumCover,
+        ["maximumCover"] = pipe.MaximumCover,
+        ["junctionLoss"] = pipe.JunctionLoss,
+        ["flowDirection"] = pipe.FlowDirection.ToString(),
+        ["flowRate"] = pipe.FlowRate
+      };
+
+    // get assignments like catchment group, reference surface, reference pipe networks
+    Dictionary<string, object?> assignmentProps = GetPartAssignments(pipe);
+
+    if (pipe.StartStructureId != ADB.ObjectId.Null)
+    {
+      assignmentProps["startStructureId"] = pipe.StartStructureId.GetSpeckleApplicationId();
+    }
+    if (pipe.EndStructureId != ADB.ObjectId.Null)
+    {
+      assignmentProps["endStructureId"] = pipe.EndStructureId.GetSpeckleApplicationId();
+    }
+
+    AddDictionaryToDictionary(assignmentProps, properties, ASSIGNMENT_PROP);
+
+    // get dimensional props
+    properties[DIMENSIONAL_PROP] = new Dictionary<string, object?>()
+    {
+      ["innerDiameterOrWidth"] = pipe.InnerDiameterOrWidth,
+      ["innerHeight"] = pipe.InnerHeight,
+#pragma warning disable CS0618 // Type or member is obsolete
+      ["length2d"] = pipe.Length2D, //Length2D was un-obsoleted in 2023, but is still marked obsolete in 2022
+#pragma warning restore CS0618 // Type or member is obsolete
+    };
+
+    return properties;
+  }
+
+  private Dictionary<string, object?> ExtractStructureProperties(CDB.Structure structure)
+  {
+    // get general props
+    Dictionary<string, object?> properties =
+      new()
+      {
+        ["domain"] = structure.Domain.ToString(), // part prop
+        ["partType"] = structure.PartType.ToString(), // part prop
+        ["northing"] = structure.Northing,
+        ["rotation"] = structure.Rotation,
+      };
+
+    // get assignments like catchment group, reference surface, reference pipe networks
+    Dictionary<string, object?> assignmentProps = GetPartAssignments(structure);
+    AddDictionaryToDictionary(assignmentProps, properties, ASSIGNMENT_PROP);
+
+    // get dimensional props
+    Dictionary<string, object?> dimensionalProps =
+      new()
+      {
+        ["sumpDepth"] = structure.SumpDepth,
+        ["sumpElevation"] = structure.SumpElevation,
+        ["innerDiameterOrWidth"] = structure.InnerDiameterOrWidth
+      };
+
+    if (structure.BoundingShape == CDB.BoundingShapeType.Box)
+    {
+      dimensionalProps["innerLength"] = structure.InnerLength;
+      dimensionalProps["length"] = structure.Length;
+    }
+    properties[DIMENSIONAL_PROP] = dimensionalProps;
+
+    // get location
+    properties["Location"] = new Dictionary<string, object?>()
+    {
+      ["x"] = structure.Location.X,
+      ["y"] = structure.Location.Y,
+      ["z"] = structure.Location.Z,
+    };
+
+    return properties;
+  }
+
+  private Dictionary<string, object?> GetPartAssignments(CDB.Part part)
+  {
+    Dictionary<string, object?> partAssignments = new();
+
+    // get part family
+    if (part.PartFamilyId != ADB.ObjectId.Null)
+    {
+      partAssignments["partFamilyId"] = part.PartFamilyId.GetSpeckleApplicationId();
+      partAssignments["partFamilyName"] = part.PartFamilyName;
+    }
+
+    // get network
+    if (part.NetworkId != ADB.ObjectId.Null)
+    {
+      partAssignments[NETWORKID_PROP] = part.NetworkId.GetSpeckleApplicationId();
+      if (_networkCache.TryGetValue(part.NetworkId, out string? name))
+      {
+        partAssignments[NETWORKNAME_PROP] = name;
+      }
+      else
+      {
+        using (var tr = _converterSettings.Current.Document.Database.TransactionManager.StartTransaction())
         {
-          points[pointCount.ToString()] = new Dictionary<string, object?>()
-          {
-            ["elevation"] = point.Elevation,
-            ["codes"] = point.Codes.ToList(),
-            ["offset"] = point.Offset,
-          };
-          pointCount++;
+          var network = (CDB.Network)tr.GetObject(part.NetworkId, ADB.OpenMode.ForRead);
+          _networkCache[part.NetworkId] = network.Name;
+          partAssignments[NETWORKNAME_PROP] = name;
+          tr.Commit();
         }
+      }
+    }
 
-        links[linkCount.ToString()] = new Dictionary<string, object?>()
+    // get surface
+    if (part.RefSurfaceId != ADB.ObjectId.Null)
+    {
+      partAssignments[SURFACEID_PROP] = part.RefSurfaceId.GetSpeckleApplicationId();
+      partAssignments[SURFACENAME_PROP] = part.RefSurfaceName;
+    }
+
+    // get alignment
+    if (part.RefAlignmentId != ADB.ObjectId.Null)
+    {
+      partAssignments[ALIGNMENTID_PROP] = part.RefAlignmentId.GetSpeckleApplicationId();
+      partAssignments[ALIGNMENTNAME_PROP] = part.RefAlignmentName;
+    }
+
+    return partAssignments;
+  }
+
+  private void ProcessCorridorFeaturelinePoints(
+    CDB.CorridorFeatureLine featureline,
+    Dictionary<string, Dictionary<string, object?>> featureLinesDict
+  )
+  {
+    if (featureLinesDict.TryGetValue(featureline.CodeName, out Dictionary<string, object?>? value))
+    {
+      Dictionary<string, object?> pointsDict = new(featureline.FeatureLinePoints.Count);
+      int pointCount = 0;
+      foreach (CDB.FeatureLinePoint point in featureline.FeatureLinePoints)
+      {
+        Dictionary<string, object?> pointPropertiesDict =
+          new()
+          {
+            ["station"] = point.Station,
+            ["x"] = point.XYZ.X,
+            ["y"] = point.XYZ.Y,
+            ["z"] = point.XYZ.Z,
+            ["isBreak"] = point.IsBreak
+          };
+
+        // not all points have offsets. Accessing the offset property in this case will throw.
+        try
         {
-          ["codes"] = link.Codes.ToList(),
-          ["points"] = points
-        };
+          pointPropertiesDict["offset"] = point.Offset;
+        }
+        catch (ArgumentException) { } // do nothing - offset property will not be included
 
-        linkCount++;
+        pointsDict[pointCount.ToString()] = pointPropertiesDict;
+        pointCount++;
       }
 
-      shapes[shapeCount.ToString()] = new Dictionary<string, object?>()
+      value["featureLinePoints"] = pointsDict;
+    }
+  }
+
+  private Dictionary<string, object?> ExtractCorridorProperties(CDB.Corridor corridor)
+  {
+    static void AddArrayToDict(string[] array, Dictionary<string, object?> dict, string key)
+    {
+      if (array.Length > 0)
       {
-        ["codes"] = shape.Codes.ToList(),
-        ["links"] = links
+        dict[key] = array;
+      }
+    }
+
+    // get general props
+    Dictionary<string, object?> properties = new();
+
+    // get codes
+    Dictionary<string, object?> codesDict = new();
+    AddArrayToDict(corridor.GetShapeCodes(), codesDict, SHAPES_PROP);
+    AddArrayToDict(corridor.GetLinkCodes(), codesDict, LINKS_PROP);
+    AddArrayToDict(corridor.GetPointCodes(), codesDict, POINTS_PROP);
+    AddDictionaryToDictionary(codesDict, properties, CODES_PROP);
+
+    // get feature lines props
+    // this is pretty complicated: need to extract featureline points as dicts, but can only do this by iterating through baselines. Need to match the iterated featurelines with the featureline code info.
+    Dictionary<string, Dictionary<string, object?>> featureLinesDict = new();
+    // first build dict from the code info
+    foreach (CDB.FeatureLineCodeInfo featureLineCode in corridor.FeatureLineCodeInfos)
+    {
+      featureLinesDict[featureLineCode.CodeName] = new Dictionary<string, object?>()
+      {
+        ["codeName"] = featureLineCode.CodeName,
+        ["isConnected"] = featureLineCode.IsConnected,
+        ["payItems"] = featureLineCode.PayItems
       };
     }
 
-    subassemblyProperties["shapes"] = shapes;
-
-    if (subassembly.HasSide)
+    // then iterate through baseline featurelines to populate point info
+    foreach (CDB.Baseline baseline in corridor.Baselines)
     {
-      subassemblyProperties["side"] = subassembly.Side;
+      // main featurelines
+      foreach (
+        CDB.FeatureLineCollection mainFeaturelineCollection in baseline
+          .MainBaselineFeatureLines
+          .FeatureLineCollectionMap
+      )
+      {
+        foreach (CDB.CorridorFeatureLine featureline in mainFeaturelineCollection)
+        {
+          ProcessCorridorFeaturelinePoints(featureline, featureLinesDict);
+        }
+      }
+
+      // offset featurelines
+      foreach (CDB.BaselineFeatureLines offsetFeaturelineCollection in baseline.OffsetBaselineFeatureLinesCol)
+      {
+        foreach (
+          CDB.FeatureLineCollection featurelineCollection in offsetFeaturelineCollection.FeatureLineCollectionMap
+        )
+        {
+          foreach (CDB.CorridorFeatureLine featureline in featurelineCollection)
+          {
+            ProcessCorridorFeaturelinePoints(featureline, featureLinesDict);
+          }
+        }
+      }
     }
 
-    return subassemblyProperties;
+    if (featureLinesDict.Count > 0)
+    {
+      properties["Feature Lines"] = featureLinesDict;
+    }
+
+    return properties;
+  }
+
+  private Dictionary<string, object?> ExtractAlignmentProperties(CDB.Alignment alignment)
+  {
+    // get general props
+    Dictionary<string, object?> properties =
+      new()
+      {
+        ["startingStation"] = alignment.StartingStation,
+        ["endingStation"] = alignment.EndingStation,
+        ["alignmentType"] = alignment.AlignmentType.ToString()
+      };
+
+    // get assignments
+    Dictionary<string, object?> assignmentProps = new();
+    if (!alignment.IsSiteless)
+    {
+      assignmentProps[SITEID_PROP] = alignment.SiteId.GetSpeckleApplicationId();
+      assignmentProps[SITENAME_PROP] = alignment.SiteName;
+    }
+    if (alignment.GetProfileIds().Count > 0)
+    {
+      assignmentProps["profileId"] = GetSpeckleApplicationIdsFromCollection(alignment.GetProfileIds());
+    }
+    AddDictionaryToDictionary(assignmentProps, properties, ASSIGNMENT_PROP);
+
+    // get station control props
+    Dictionary<string, object?> stationControlDict = new();
+
+    Dictionary<string, object?> stationEquationsDict = new();
+    int equationCount = 0;
+    foreach (var stationEquation in alignment.StationEquations)
+    {
+      stationEquationsDict[equationCount.ToString()] = new Dictionary<string, object>()
+      {
+        ["rawStationBack"] = stationEquation.RawStationBack,
+        ["stationBack"] = stationEquation.StationBack,
+        ["stationAhead"] = stationEquation.StationAhead,
+        ["equationType"] = stationEquation.EquationType.ToString()
+      };
+      equationCount++;
+    }
+    AddDictionaryToDictionary(stationEquationsDict, stationControlDict, "Station Equations");
+
+    stationControlDict["Reference Point"] = new Dictionary<string, object?>()
+    {
+      ["x"] = alignment.ReferencePoint.X,
+      ["y"] = alignment.ReferencePoint.Y,
+      ["station"] = alignment.ReferencePointStation
+    };
+
+    AddDictionaryToDictionary(stationControlDict, properties, "Station Control");
+
+    // get design speeds
+    Dictionary<string, object?> designSpeedsDict = new();
+    int speedsCount = 0;
+    foreach (CDB.DesignSpeed designSpeed in alignment.DesignSpeeds)
+    {
+      designSpeedsDict[speedsCount.ToString()] = new Dictionary<string, object>()
+      {
+        ["number"] = designSpeed.SpeedNumber,
+        ["station"] = designSpeed.Station,
+        ["value"] = designSpeed.Value
+      };
+      speedsCount++;
+    }
+    AddDictionaryToDictionary(designSpeedsDict, properties, "Design Speeds");
+
+    // get offset alignment props
+    if (alignment.IsOffsetAlignment)
+    {
+      try
+      {
+        // accessing "OffsetAlignmentInfo" on offset alignments will sometimes throw /shrug.
+        // this happens when an offset alignment is unlinked from the parent and the CreateMode is still set to "ManuallyCreation"
+        // https://help.autodesk.com/view/CIV3D/2024/ENU/?guid=2ecbe421-4c08-cbde-d078-56a9f03b93f9
+        var offsetInfo = alignment.OffsetAlignmentInfo;
+        properties["Offset Parameters"] = new Dictionary<string, object?>
+        {
+          ["side"] = offsetInfo.Side.ToString(),
+          ["parentAlignmentId"] = offsetInfo.ParentAlignmentId.GetSpeckleApplicationId(),
+          ["nominalOffset"] = offsetInfo.NominalOffset
+        };
+      }
+      catch (InvalidOperationException) { } // do nothing
+    }
+
+    return properties;
   }
 
   private Dictionary<string, object?> ExtractProfileProperties(CDB.Profile profile)
@@ -142,138 +607,94 @@ public class ClassPropertiesExtractor
     };
   }
 
-  private Dictionary<string, object?> ExtractAlignmentProperties(CDB.Alignment alignment)
+  private Dictionary<string, object?> ExtractSubassemblyProperties(CDB.Subassembly subassembly)
   {
-    Dictionary<string, object?> alignmentProperties =
-      new()
+    void AddCodesToDict(CDB.CodeCollection codes, Dictionary<string, object?> dict)
+    {
+      if (codes.Count > 0)
       {
-        ["startingStation"] = alignment.StartingStation,
-        ["endingStation"] = alignment.EndingStation,
-        ["alignmentType"] = alignment.AlignmentType.ToString()
-      };
-
-    if (!alignment.IsSiteless)
-    {
-      alignmentProperties["siteId"] = alignment.SiteId.GetSpeckleApplicationId();
+        dict[CODES_PROP] = codes.ToList();
+      }
     }
 
-    return alignmentProperties;
-  }
-
-  private Dictionary<string, object?> ExtractPipeProperties(CDB.Pipe pipe)
-  {
-    Dictionary<string, object?> pipeProperties =
-      new()
-      {
-        ["bearing"] = pipe.Bearing,
-        ["innerDiameterOrWidth"] = pipe.InnerDiameterOrWidth,
-        ["innerHeight"] = pipe.InnerHeight,
-        ["slope"] = pipe.Slope,
-        ["shape"] = pipe.CrossSectionalShape.ToString(),
-#pragma warning disable CS0618 // Type or member is obsolete
-        ["length2d"] = pipe.Length2D, //Length2D was un-obsoleted in 2023, but is still marked obsolete in 2022
-#pragma warning restore CS0618 // Type or member is obsolete
-        ["minimumCover"] = pipe.MinimumCover,
-        ["maximumCover"] = pipe.MaximumCover,
-        ["junctionLoss"] = pipe.JunctionLoss,
-        ["flowDirection"] = pipe.FlowDirection.ToString(),
-        ["flowRate"] = pipe.FlowRate
-      };
-
-    if (pipe.StartStructureId != ADB.ObjectId.Null)
+    // get general props
+    Dictionary<string, object?> properties = new();
+    if (subassembly.HasSide)
     {
-      pipeProperties["startStructureId"] = pipe.StartStructureId.GetSpeckleApplicationId();
+      properties["side"] = subassembly.Side.ToString();
     }
 
-    if (pipe.EndStructureId != ADB.ObjectId.Null)
+    // get assignments
+    Dictionary<string, object?> assignmentProps = new();
+    if (subassembly.AssemblyId != ADB.ObjectId.Null)
     {
-      pipeProperties["endStructureId"] = pipe.EndStructureId.GetSpeckleApplicationId();
+      assignmentProps["assemblyId"] = subassembly.AssemblyId.GetSpeckleApplicationId();
     }
+    AddDictionaryToDictionary(assignmentProps, properties, ASSIGNMENT_PROP);
 
-    ExtractPartProperties(pipe, pipeProperties);
-
-    return pipeProperties;
-  }
-
-  private Dictionary<string, object?> ExtractStructureProperties(CDB.Structure structure)
-  {
-    var location = _pointConverter.Convert(structure.Location);
-
-    Dictionary<string, object?> structureProperties =
-      new()
-      {
-        ["location"] = location,
-        ["northing"] = structure.Northing,
-        ["rotation"] = structure.Rotation,
-        ["sumpDepth"] = structure.SumpDepth,
-        ["sumpElevation"] = structure.SumpElevation,
-        ["innerDiameterOrWidth"] = structure.InnerDiameterOrWidth
-      };
-
-    if (structure.BoundingShape == CDB.BoundingShapeType.Box)
+    // get parameters
+    Dictionary<string, object?> parametersDict = new();
+    foreach (ParamBool p in subassembly.ParamsBool)
     {
-      structureProperties["innerLength"] = structure.InnerLength;
-      structureProperties["length"] = structure.Length;
+      parametersDict[p.DisplayName] = p.Value;
     }
-
-    ExtractPartProperties(structure, structureProperties);
-
-    return structureProperties;
-  }
-
-  private void ExtractPartProperties(CDB.Part part, Dictionary<string, object?> dict)
-  {
-    // process the part's pipe network with the pipe network handler
-    _pipeNetworkHandler.HandlePipeNetwork(part);
-
-    dict["domain"] = part.Domain.ToString();
-    dict["partType"] = part.PartType.ToString();
-    if (part.RefSurfaceId != ADB.ObjectId.Null)
+    foreach (ParamDouble p in subassembly.ParamsDouble)
     {
-      dict["surfaceId"] = part.RefSurfaceId.GetSpeckleApplicationId();
+      parametersDict[p.DisplayName] = p.Value;
     }
-
-    return;
-  }
-
-  private Dictionary<string, object?> ExtractSiteProperties(CDB.Site site)
-  {
-    Dictionary<string, object?> catchmentProperties = new();
-
-    if (site.GetAlignmentIds().Count > 0)
+    foreach (ParamString p in subassembly.ParamsString)
     {
-      catchmentProperties["alignmentIds"] = GetSpeckleApplicationIdsFromCollection(site.GetAlignmentIds());
+      parametersDict[p.DisplayName] = p.Value;
     }
-
-    if (site.GetFeatureLineIds().Count > 0)
+    foreach (ParamLong p in subassembly.ParamsLong)
     {
-      catchmentProperties["featureLineIds"] = GetSpeckleApplicationIdsFromCollection(site.GetFeatureLineIds());
+      parametersDict[p.DisplayName] = p.Value;
     }
+    AddDictionaryToDictionary(parametersDict, properties, "Parameters");
 
-    return catchmentProperties;
-  }
-
-  private Dictionary<string, object?> ExtractCatchmentProperties(CDB.Catchment catchment)
-  {
-    // get the bounding curve of the catchment
-    SOG.Polyline boundary = _point3dCollectionConverter.Convert(catchment.BoundaryPolyline3d);
-    boundary.closed = true;
-
-    // use the catchment group handler to process the catchment's group
-    _catchmentGroupHandler.HandleCatchmentGroup(catchment);
-
-    return new()
+    // get location
+    properties["Location"] = new Dictionary<string, object?>()
     {
-      ["antecedentWetness"] = catchment.AntecedentWetness,
-      ["area"] = catchment.Area,
-      ["area2d"] = catchment.Area2d,
-      ["boundary"] = boundary,
-      ["hydrologicalSoilGroup"] = catchment.HydrologicalSoilGroup.ToString(),
-      ["imperviousArea"] = catchment.ImperviousArea,
-      ["manningsCoefficient"] = catchment.ManningsCoefficient,
-      ["perimeter2d"] = catchment.Perimeter2d,
-      ["timeOfConcentration"] = catchment.TimeOfConcentration
+      ["x"] = subassembly.Origin.X,
+      ["y"] = subassembly.Origin.Y,
+      ["z"] = subassembly.Origin.Z
     };
+
+    // get shapes > links > points info
+    Dictionary<string, object?> shapes = new();
+    int shapeCount = 0;
+    foreach (CDB.Shape shape in subassembly.Shapes)
+    {
+      Dictionary<string, object?> shapeDict = new();
+      AddCodesToDict(shape.Codes, shapeDict);
+
+      Dictionary<string, object?> links = new();
+      int linkCount = 0;
+      foreach (CDB.Link link in shape.Links)
+      {
+        Dictionary<string, object?> linkDict = new();
+        AddCodesToDict(link.Codes, linkDict);
+
+        Dictionary<string, object?> points = new();
+        int pointCount = 0;
+        foreach (CDB.Point point in link.Points)
+        {
+          Dictionary<string, object?> pointDict = new() { ["elevation"] = point.Elevation, ["offset"] = point.Offset };
+          AddCodesToDict(point.Codes, pointDict);
+          pointCount++;
+        }
+
+        AddDictionaryToDictionary(points, linkDict, POINTS_PROP);
+        AddDictionaryToDictionary(linkDict, links, linkCount.ToString());
+        linkCount++;
+      }
+
+      AddDictionaryToDictionary(links, shapeDict, LINKS_PROP);
+      AddDictionaryToDictionary(shapeDict, shapes, shapeCount.ToString());
+    }
+    AddDictionaryToDictionary(shapes, properties, SHAPES_PROP);
+
+    return properties;
   }
 
   private List<string> GetSpeckleApplicationIdsFromCollection(ADB.ObjectIdCollection collection)
@@ -285,5 +706,46 @@ public class ClassPropertiesExtractor
     }
 
     return speckleAppIds;
+  }
+
+  // A generic method to create a dictionary from an object types's properties
+  private Dictionary<string, object?> ExtractPropertiesGeneric<T>(T obj)
+  {
+    Dictionary<string, object?> propertiesDict = new();
+
+    var type = typeof(T);
+    PropertyInfo[] properties = type.GetProperties();
+    foreach (PropertyInfo? property in properties)
+    {
+      var value = property.GetValue(obj);
+      if (value is ADB.ObjectId id)
+      {
+        value = id.GetSpeckleApplicationId();
+      }
+
+      propertiesDict[property.Name] = value;
+    }
+
+    return propertiesDict;
+  }
+
+  private void AddDictionaryToDictionary(
+    Dictionary<string, object?> dictionary,
+    Dictionary<string, object?> parentDictionary,
+    string name
+  )
+  {
+    if (dictionary.Count == 0)
+    {
+      return;
+    }
+
+    if (parentDictionary.ContainsKey(name))
+    {
+      // TODO: log this
+      return;
+    }
+
+    parentDictionary[name] = dictionary;
   }
 }
