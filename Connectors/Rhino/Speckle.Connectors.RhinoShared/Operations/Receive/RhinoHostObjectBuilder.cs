@@ -16,7 +16,6 @@ using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
-using RenderMaterial = Rhino.Render.RenderMaterial;
 
 namespace Speckle.Connectors.Rhino.Operations.Receive;
 
@@ -104,7 +103,10 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     if (unpackedRoot.RenderMaterialProxies != null)
     {
       using var _ = _activityFactory.Start("Render Materials");
-      _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseLayerName);
+      _threadContext.RunOnMain(() =>
+      {
+        _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseLayerName);
+      });
     }
 
     if (unpackedRoot.ColorProxies != null)
@@ -301,16 +303,18 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   {
     var objectId = originalObject.applicationId ?? originalObject.id.NotNull();
 
-    if (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(objectId, out RenderMaterial oRenderMaterial))
+    if (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(objectId, out int mIndex))
     {
-      atts.RenderMaterial = oRenderMaterial; // no need to set source since setting render material handles this
+      atts.MaterialIndex = mIndex;
+      atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
     }
     else if (
       parentObjectId is not null
-      && (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(parentObjectId, out RenderMaterial pRenderMaterial))
+      && (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(parentObjectId, out int mIndexSpeckleObj))
     )
     {
-      atts.RenderMaterial = pRenderMaterial; // no need to set source since setting render material handles this
+      atts.MaterialIndex = mIndexSpeckleObj;
+      atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
     }
 
     if (_colorBaker.ObjectColorsIdMap.TryGetValue(objectId, out (Color, ObjectColorSource) color))
