@@ -4,6 +4,7 @@ using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.RevitShared.Operations.Send.Filters;
 
@@ -11,7 +12,7 @@ public record CategoryData(string Name, string Id);
 
 public class RevitCategoriesFilter : DiscriminatedObject, ISendFilter, IRevitSendFilter
 {
-  private IRevitContext _revitContext;
+  private RevitContext _revitContext;
   private Document? _doc;
   public string Id { get; set; } = "revitCategories";
   public string Name { get; set; } = "Categories";
@@ -24,10 +25,10 @@ public class RevitCategoriesFilter : DiscriminatedObject, ISendFilter, IRevitSen
 
   public RevitCategoriesFilter() { }
 
-  public RevitCategoriesFilter(IRevitContext revitContext)
+  public RevitCategoriesFilter(RevitContext revitContext)
   {
     _revitContext = revitContext;
-    _doc = _revitContext.UIApplication.ActiveUIDocument.Document;
+    _doc = _revitContext.UIApplication.NotNull().ActiveUIDocument.Document;
 
     GetCategories();
   }
@@ -83,7 +84,7 @@ public class RevitCategoriesFilter : DiscriminatedObject, ISendFilter, IRevitSen
   /// NOTE: this is needed since we need doc on `GetObjectIds()` function after it deserialized.
   /// DI doesn't help here to pass RevitContext from constructor.
   /// </summary>
-  public void SetContext(IRevitContext revitContext)
+  public void SetContext(RevitContext revitContext)
   {
     _revitContext = revitContext;
     _doc = _revitContext.UIApplication?.ActiveUIDocument.Document;

@@ -2,6 +2,7 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Registration;
+using Speckle.Converters.Revit2023.ToSpeckle.Properties;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
@@ -25,6 +26,8 @@ public static class ServiceRegistration
     serviceCollection.AddApplicationConverters<RevitToSpeckleUnitConverter, DB.ForgeTypeId>(converterAssembly);
 
     serviceCollection.AddScoped<IRootToHostConverter, RevitRootToHostConverter>();
+    serviceCollection.AddSingleton(new RevitContext());
+
     serviceCollection.AddSingleton(new RevitToHostCacheSingleton());
     serviceCollection.AddSingleton(new RevitToSpeckleCacheSingleton());
 
@@ -42,13 +45,15 @@ public static class ServiceRegistration
 
     serviceCollection.AddScoped<IRevitVersionConversionHelper, RevitVersionConversionHelper>();
 
+    // register extractors
     serviceCollection.AddScoped<ParameterValueExtractor>();
     serviceCollection.AddScoped<DisplayValueExtractor>();
-
     serviceCollection.AddScoped<ParameterDefinitionHandler>();
     serviceCollection.AddScoped<ParameterExtractor>();
     serviceCollection.AddScoped<ClassPropertiesExtractor>();
     serviceCollection.AddScoped<PropertiesExtractor>();
+    serviceCollection.AddScoped<StructuralMaterialAssetExtractor>();
+
     return serviceCollection;
   }
 }

@@ -17,13 +17,13 @@
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\TeklaBasicConnectorBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\TeklaSelectionBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\TeklaSendBinding.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Events.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\ModelObjectExtension.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\SpeckleApplicationIdExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Filters\TeklaSelectionFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SendCollectionManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\TeklaDocumentModelStore.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\TeklaIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\TeklaMaterialUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendRebarsAsSolidSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ToSpeckleSettingsManager.cs" />

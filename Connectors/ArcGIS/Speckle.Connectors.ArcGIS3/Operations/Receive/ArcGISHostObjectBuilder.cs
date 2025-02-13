@@ -53,7 +53,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     _colorManager = colorManager;
   }
 
-  public HostObjectBuilderResult Build(
+  public Task<HostObjectBuilderResult> Build(
     Base rootObject,
     string projectName,
     string modelName,
@@ -226,7 +226,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     bakedObjectIds.AddRange(createdLayerGroups.Values.Select(x => x.URI));
 
     // TODO: validated a correct set regarding bakedobject ids
-    return new(bakedObjectIds, results);
+    return Task.FromResult(new HostObjectBuilderResult(bakedObjectIds, results));
   }
 
   private IReadOnlyCollection<LocalToGlobalMap> GetObjectsToConvert(Base rootObject)

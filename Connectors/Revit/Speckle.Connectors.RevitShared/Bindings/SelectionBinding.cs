@@ -1,27 +1,47 @@
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Eventing;
-using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.Bindings;
 
 // POC: we need a base a RevitBaseBinding
-internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding
+internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding, IDisposable
 {
-  private readonly IRevitContext _revitContext;
+#if REVIT2022
+  private readonly System.Timers.Timer _selectionTimer;
+#endif
+  private readonly RevitContext _revitContext;
+  private readonly IAppIdleManager _idleManager;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
-  public SelectionBinding(IRevitContext revitContext, IBrowserBridge parent, IEventAggregator eventAggregator)
+  public SelectionBinding(
+    RevitContext revitContext,
+    IBrowserBridge parent,
+    IAppIdleManager idleManager,
+    ITopLevelExceptionHandler topLevelExceptionHandler
+  )
     : base("selectionBinding", parent)
   {
     _revitContext = revitContext;
-    eventAggregator.GetEvent<SelectionChangedEvent>().Subscribe(OnSelectionChanged);
+    _idleManager = idleManager;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
+
+#if REVIT2022
+    // NOTE: getting the selection data should be a fast function all, even for '000s of elements - and having a timer hitting it every 1s is ok.
+    _selectionTimer = new System.Timers.Timer(1000);
+    _selectionTimer.Elapsed += (_, _) => _topLevelExceptionHandler.CatchUnhandled(OnSelectionChanged);
+    _selectionTimer.Start();
+#else
+
+    _revitContext.UIApplication.NotNull().SelectionChanged += (_, _) =>
+      _idleManager.SubscribeToIdle(nameof(SelectionBinding), OnSelectionChanged);
+#endif
   }
 
-  private void OnSelectionChanged(object _)
+  private void OnSelectionChanged()
   {
-    if (_revitContext.UIApplication.ActiveUIDocument == null)
+    if (_revitContext.UIApplication.NotNull().ActiveUIDocument == null)
     {
       return;
     }
@@ -30,7 +50,7 @@ internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding
 
   public SelectionInfo GetSelection()
   {
-    if (_revitContext.UIApplication.ActiveUIDocument == null)
+    if (_revitContext.UIApplication.NotNull().ActiveUIDocument == null)
     {
       return new SelectionInfo(Array.Empty<string>(), "No objects selected.");
     }
@@ -45,5 +65,12 @@ internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding
       .Select(eid => activeUIDoc.Document.GetElement(eid).UniqueId.ToString())
       .ToList();
     return new SelectionInfo(selectionIds, $"{selectionIds.Count} objects selected.");
+  }
+
+  public void Dispose()
+  {
+#if REVIT2022
+    _selectionTimer.Dispose();
+#endif
   }
 }

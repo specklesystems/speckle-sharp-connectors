@@ -90,7 +90,14 @@ public abstract class ThreadContext : IThreadContext
       }
       else
       {
-        await RunMainAsync(action);
+        if (useMain)
+        {
+          await RunMainAsync(action);
+        }
+        else
+        {
+          await action();
+        }
       }
     }
   }

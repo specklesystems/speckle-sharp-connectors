@@ -2,14 +2,13 @@
 
     <PropertyGroup>
       <TargetFramework>net48</TargetFramework>
-      <ImplicitUsings>enable</ImplicitUsings>
-      <Nullable>enable</Nullable>
       <Platforms>AnyCPU</Platforms>
       <UseWindowsForms>true</UseWindowsForms>
       <UseWPF>true</UseWPF>
       <ETABSVersion>21</ETABSVersion>
       <DefineConstants>$(DefineConstants);ETABS21</DefineConstants>
       <EnableDynamicLoading>true</EnableDynamicLoading>
+      <Configurations>Debug;Release;Local</Configurations>
     </PropertyGroup>
 
     <ItemGroup>

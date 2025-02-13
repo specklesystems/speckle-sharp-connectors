@@ -43,7 +43,7 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
     _materialUnpacker = materialUnpacker;
   }
 
-  public async Task<RootObjectBuilderResult> BuildAsync(
+  public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<TSM.ModelObject> teklaObjects,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,

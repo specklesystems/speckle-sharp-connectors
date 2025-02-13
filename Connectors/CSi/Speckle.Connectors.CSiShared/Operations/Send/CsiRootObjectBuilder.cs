@@ -68,7 +68,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
   /// 2. Converts each object with caching and progress tracking
   /// 3. Creates proxies for materials and sections
   /// </remarks>
-  public async Task<RootObjectBuilderResult> BuildAsync(
+  public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<ICsiWrapper> csiObjects,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,

@@ -1,8 +1,6 @@
-using Speckle.Converters.RevitShared.Helpers;
-
 namespace Speckle.Connectors.Revit.Plugin;
 
-internal interface IRevitPlugin : IRevitContext
+internal interface IRevitPlugin
 {
   void Initialise();
   void Shutdown();

@@ -18,8 +18,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksColorUnpacker.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksDocumentEvents.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksDocumentModelStore.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksMaterialUnpacker.cs"/>
-    <Compile Include="$(MSBuildThisFileDirectory)NavisworksEvents.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\GeometryNodeMerger.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\NavisworksRootObjectBuilder.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ConvertHiddenEleementsSetting.cs"/>

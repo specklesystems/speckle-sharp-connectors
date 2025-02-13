@@ -1,37 +1,38 @@
 using Rhino;
-using Speckle.Connectors.DUI.Eventing;
+using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
-using Speckle.Connectors.RhinoShared;
 
 namespace Speckle.Connectors.Rhino.HostApp;
 
 public class RhinoDocumentStore : DocumentModelStore
 {
-  private readonly IEventAggregator _eventAggregator;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private const string SPECKLE_KEY = "Speckle_DUI3";
   public override bool IsDocumentInit { get; set; } = true; // Note: because of rhino implementation details regarding expiry checking of sender cards.
 
-  public RhinoDocumentStore(IJsonSerializer jsonSerializer, IEventAggregator eventAggregator)
+  public RhinoDocumentStore(IJsonSerializer jsonSerializer, ITopLevelExceptionHandler topLevelExceptionHandler)
     : base(jsonSerializer)
   {
-    _eventAggregator = eventAggregator;
-    eventAggregator.GetEvent<BeginOpenDocument>().Subscribe(OnBeginOpenDocument);
-    eventAggregator.GetEvent<EndOpenDocument>().Subscribe(OnEndOpenDocument);
-  }
+    _topLevelExceptionHandler = topLevelExceptionHandler;
+    RhinoDoc.BeginOpenDocument += (_, _) => topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
+    RhinoDoc.EndOpenDocument += (_, e) =>
+      topLevelExceptionHandler.CatchUnhandled(() =>
+      {
+        if (e.Merge)
+        {
+          return;
+        }
 
-  private void OnBeginOpenDocument(object _) => IsDocumentInit = false;
+        if (e.Document == null)
+        {
+          return;
+        }
 
-  private async Task OnEndOpenDocument(DocumentOpenEventArgs e)
-  {
-    if (e.Document == null)
-    {
-      return;
-    }
-
-    IsDocumentInit = true;
-    LoadState();
-    await _eventAggregator.GetEvent<DocumentStoreChangedEvent>().PublishAsync(new object());
+        IsDocumentInit = true;
+        LoadState();
+        OnDocumentChanged();
+      });
   }
 
   protected override void HostAppSaveState(string modelCardState)

@@ -6,7 +6,6 @@ using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
@@ -43,6 +42,7 @@ public sealed class TeklaSendBinding : ISendBinding
   private readonly ISdkActivityFactory _activityFactory;
   private readonly Model _model;
   private readonly ToSpeckleSettingsManager _toSpeckleSettingsManager;
+  private readonly Events _events;
 
   private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
 
@@ -58,8 +58,7 @@ public sealed class TeklaSendBinding : ISendBinding
     ITeklaConversionSettingsFactory teklaConversionSettingsFactory,
     ISpeckleApplication speckleApplication,
     ISdkActivityFactory activityFactory,
-    ToSpeckleSettingsManager toSpeckleSettingsManager,
-    IEventAggregator eventAggregator
+    ToSpeckleSettingsManager toSpeckleSettingsManager
   )
   {
     _store = store;
@@ -77,11 +76,18 @@ public sealed class TeklaSendBinding : ISendBinding
     _toSpeckleSettingsManager = toSpeckleSettingsManager;
 
     _model = new Model();
-    eventAggregator.GetEvent<ModelObjectChangedEvent>().Subscribe(ModelHandler_OnChange);
+    _events = new Events();
+    SubscribeToTeklaEvents();
+  }
+
+  private void SubscribeToTeklaEvents()
+  {
+    _events.ModelObjectChanged += OnModelObjectChanged;
+    _events.Register();
   }
 
   // subscribes the all changes in a modelobject
-  private void ModelHandler_OnChange(List<ChangeData> changes)
+  private void OnModelObjectChanged(List<ChangeData> changes)
   {
     foreach (var change in changes)
     {

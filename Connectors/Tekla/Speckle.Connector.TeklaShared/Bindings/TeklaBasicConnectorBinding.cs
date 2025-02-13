@@ -2,7 +2,6 @@ using System.Collections;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Sdk;
@@ -20,14 +19,15 @@ public class TeklaBasicConnectorBinding : IBasicConnectorBinding
   public IBrowserBridge Parent { get; }
   private readonly ILogger<TeklaBasicConnectorBinding> _logger;
   private readonly TSM.Model _model;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   public TeklaBasicConnectorBinding(
     IBrowserBridge parent,
     ISpeckleApplication speckleApplication,
     DocumentModelStore store,
     ILogger<TeklaBasicConnectorBinding> logger,
-    IEventAggregator eventAggregator,
-    TSM.Model model
+    TSM.Model model,
+    ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
     _speckleApplication = speckleApplication;
@@ -35,11 +35,14 @@ public class TeklaBasicConnectorBinding : IBasicConnectorBinding
     Parent = parent;
     _logger = logger;
     _model = model;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
     Commands = new BasicConnectorBindingCommands(parent);
-    eventAggregator.GetEvent<DocumentStoreChangedEvent>().Subscribe(OnDocumentStoreChangedEvent);
+    _store.DocumentChanged += (_, _) =>
+      _topLevelExceptionHandler.FireAndForget(async () =>
+      {
+        await Commands.NotifyDocumentChanged();
+      });
   }
-
-  private async Task OnDocumentStoreChangedEvent(object _) => await Commands.NotifyDocumentChanged();
 
   public string GetSourceApplicationName() => _speckleApplication.Slug;
 

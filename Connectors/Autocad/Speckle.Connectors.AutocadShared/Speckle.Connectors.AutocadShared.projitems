@@ -21,6 +21,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadColorUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadGroupBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadGroupUnpacker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadInstanceBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadInstanceUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadLayerBaker.cs" />
@@ -40,7 +41,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\AutocadRootObject.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\AutocadRootObjectBaseBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\AutocadRootObjectBuilder.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Plugin\AutocadEvents.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\AutocadRibbon.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\AutocadExtensionApplication.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\AutocadCommand.cs" />

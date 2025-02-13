@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Logging;
@@ -25,6 +26,7 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
   private readonly ILogger<AutocadReceiveBinding> _logger;
   private readonly IAutocadConversionSettingsFactory _autocadConversionSettingsFactory;
   private readonly ISpeckleApplication _speckleApplication;
+  private readonly IThreadContext _threadContext;
 
   private ReceiveBindingUICommands Commands { get; }
 
@@ -36,7 +38,8 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
     IOperationProgressManager operationProgressManager,
     ILogger<AutocadReceiveBinding> logger,
     IAutocadConversionSettingsFactory autocadConversionSettingsFactory,
-    ISpeckleApplication speckleApplication
+    ISpeckleApplication speckleApplication,
+    IThreadContext threadContext
   )
   {
     _store = store;
@@ -46,13 +49,17 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
     _logger = logger;
     _autocadConversionSettingsFactory = autocadConversionSettingsFactory;
     _speckleApplication = speckleApplication;
+    _threadContext = threadContext;
     Parent = parent;
     Commands = new ReceiveBindingUICommands(parent);
   }
 
   public void CancelReceive(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
 
-  public async Task Receive(string modelCardId)
+  public async Task Receive(string modelCardId) =>
+    await _threadContext.RunOnMainAsync(async () => await ReceiveInternal(modelCardId));
+
+  public async Task ReceiveInternal(string modelCardId)
   {
     using var scope = _serviceProvider.CreateScope();
     scope

@@ -31,7 +31,7 @@ public class AutocadHostObjectBuilder(
   RootObjectUnpacker rootObjectUnpacker
 ) : IHostObjectBuilder
 {
-  public HostObjectBuilderResult Build(
+  public Task<HostObjectBuilderResult> Build(
     Base rootObject,
     string projectName,
     string modelName,
@@ -139,7 +139,7 @@ public class AutocadHostObjectBuilder(
       results.UnionWith(groupResults);
     }
 
-    return new HostObjectBuilderResult(bakedObjectIds, results);
+    return Task.FromResult(new HostObjectBuilderResult(bakedObjectIds, results));
   }
 
   private void PreReceiveDeepClean(string baseLayerPrefix)
