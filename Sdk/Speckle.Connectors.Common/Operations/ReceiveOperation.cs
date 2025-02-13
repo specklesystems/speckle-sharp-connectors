@@ -26,6 +26,7 @@ public sealed class ReceiveOperation(
   )
   {
     using var execute = activityFactory.Start("Receive Operation");
+    cancellationToken.ThrowIfCancellationRequested();
     execute?.SetTag("receiveInfo", receiveInfo);
     // 2 - Check account exist
     Account account = accountService.GetAccountWithServerUrlFallback(receiveInfo.AccountId, receiveInfo.ServerUrl);
@@ -34,6 +35,7 @@ public sealed class ReceiveOperation(
 
     var version = await apiClient.Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ProjectId, cancellationToken);
 
+    cancellationToken.ThrowIfCancellationRequested();
     var commitObject = await threadContext.RunOnWorkerAsync(
       () => ReceiveData(account, version, receiveInfo, onOperationProgressed, cancellationToken)
     );
@@ -47,6 +49,7 @@ public sealed class ReceiveOperation(
       )
       .ConfigureAwait(false);
 
+    cancellationToken.ThrowIfCancellationRequested();
     await apiClient.Version.Received(
       new(version.id, receiveInfo.ProjectId, receiveInfo.SourceApplication),
       cancellationToken
