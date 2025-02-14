@@ -21,7 +21,6 @@ public class ModelCurveToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
   public Base Convert(DB.ModelCurve target)
   {
     var curve = (Base)_curveConverter.Convert(target.GeometryCurve);
-    curve["category"] = target.Category?.Name;
     return curve;
   }
 }
