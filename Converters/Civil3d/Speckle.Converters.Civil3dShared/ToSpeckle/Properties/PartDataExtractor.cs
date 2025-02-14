@@ -32,7 +32,7 @@ public class PartDataExtractor
     {
       var value = GetValue(field);
 
-      if ( value is null)
+      if (value is null)
       {
         continue; // don't send null props
       }
