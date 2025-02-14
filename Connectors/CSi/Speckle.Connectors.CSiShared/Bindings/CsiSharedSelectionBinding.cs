@@ -1,4 +1,5 @@
-﻿using Speckle.Connectors.CSiShared.HostApp;
+﻿using Speckle.Connectors.Common.Threading;
+using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.CSiShared.Utils;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
@@ -12,6 +13,7 @@ public class CsiSharedSelectionBinding : ISelectionBinding, IDisposable
   private bool _disposed;
   private readonly Timer _selectionTimer;
   private readonly ICsiApplicationService _csiApplicationService;
+  private readonly IThreadContext _threadContext;
   private HashSet<string> _lastSelection = new();
 
   public IBrowserBridge Parent { get; }
@@ -20,14 +22,17 @@ public class CsiSharedSelectionBinding : ISelectionBinding, IDisposable
   public CsiSharedSelectionBinding(
     IBrowserBridge parent,
     ICsiApplicationService csiApplicationService,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    IThreadContext threadContext
   )
   {
+    _threadContext = threadContext;
     Parent = parent;
     _csiApplicationService = csiApplicationService;
 
     _selectionTimer = new Timer(1000);
-    _selectionTimer.Elapsed += (_, _) => topLevelExceptionHandler.CatchUnhandled(CheckSelectionChanged);
+    _selectionTimer.Elapsed += (_, _) =>
+      topLevelExceptionHandler.CatchUnhandled(() => _threadContext.RunOnMain(CheckSelectionChanged));
     _selectionTimer.Start();
   }
 
@@ -39,7 +44,7 @@ public class CsiSharedSelectionBinding : ISelectionBinding, IDisposable
     if (!_lastSelection.SetEquals(currentIds))
     {
       _lastSelection = currentIds;
-      Parent.Send(SelectionBindingEvents.SET_SELECTION, currentSelection);
+      _threadContext.RunOnMain(() => Parent.Send(SelectionBindingEvents.SET_SELECTION, currentSelection));
     }
   }
 

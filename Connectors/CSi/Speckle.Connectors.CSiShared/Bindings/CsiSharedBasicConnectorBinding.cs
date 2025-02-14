@@ -1,4 +1,5 @@
-﻿using Speckle.Connectors.DUI.Bindings;
+﻿using Speckle.Connectors.Common.Threading;
+using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
@@ -11,6 +12,7 @@ public class CsiSharedBasicConnectorBinding : IBasicConnectorBinding
   private readonly ISpeckleApplication _speckleApplication;
   private readonly DocumentModelStore _store;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly IThreadContext _threadContext;
   public string Name => "baseBinding";
   public IBrowserBridge Parent { get; }
   public BasicConnectorBindingCommands Commands { get; }
@@ -19,9 +21,11 @@ public class CsiSharedBasicConnectorBinding : IBasicConnectorBinding
     IBrowserBridge parent,
     ISpeckleApplication speckleApplication,
     DocumentModelStore store,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    IThreadContext threadContext
   )
   {
+    _threadContext = threadContext;
     Parent = parent;
     _speckleApplication = speckleApplication;
     _store = store;
@@ -31,7 +35,11 @@ public class CsiSharedBasicConnectorBinding : IBasicConnectorBinding
     _store.DocumentChanged += (_, _) =>
       _topLevelExceptionHandler.FireAndForget(async () =>
       {
-        await Commands.NotifyDocumentChanged();
+        // enforce main thread
+        await _threadContext.RunOnMainAsync(async () =>
+        {
+          await Commands.NotifyDocumentChanged();
+        });
       });
   }
 
@@ -45,11 +53,11 @@ public class CsiSharedBasicConnectorBinding : IBasicConnectorBinding
 
   public DocumentModelStore GetDocumentState() => _store;
 
-  public void AddModel(ModelCard model) => _store.AddModel(model);
+  public void AddModel(ModelCard model) => _threadContext.RunOnMain(() => _store.AddModel(model));
 
-  public void UpdateModel(ModelCard model) => _store.UpdateModel(model);
+  public void UpdateModel(ModelCard model) => _threadContext.RunOnMain(() => _store.UpdateModel(model));
 
-  public void RemoveModel(ModelCard model) => _store.RemoveModel(model);
+  public void RemoveModel(ModelCard model) => _threadContext.RunOnMain(() => _store.RemoveModel(model));
 
   public Task HighlightModel(string modelCardId) => Task.CompletedTask;
 
