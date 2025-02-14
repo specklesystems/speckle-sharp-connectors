@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using ArcGIS.Core.Data;
 using ArcGIS.Desktop.Core;
 using ArcGIS.Desktop.Editing.Events;
+using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using ArcGIS.Desktop.Mapping.Events;
 using Microsoft.Extensions.DependencyInjection;
@@ -101,7 +102,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     LayersRemovedEvent.Subscribe(
       a =>
         _topLevelExceptionHandler.FireAndForget(
-          async () => await _threadContext.RunOnWorkerAsync(async () => await GetIdsForLayersRemovedEvent(a))
+          async () => await QueuedTask.Run(async () => await GetIdsForLayersRemovedEvent(a))
         ),
       true
     );
@@ -109,7 +110,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     StandaloneTablesRemovedEvent.Subscribe(
       a =>
         _topLevelExceptionHandler.FireAndForget(
-          async () => await _threadContext.RunOnWorkerAsync(async () => await GetIdsForStandaloneTablesRemovedEvent(a))
+          async () => await QueuedTask.Run(async () => await GetIdsForStandaloneTablesRemovedEvent(a))
         ),
       true
     );
@@ -117,7 +118,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     MapPropertyChangedEvent.Subscribe(
       a =>
         _topLevelExceptionHandler.FireAndForget(
-          async () => await _threadContext.RunOnWorkerAsync(async () => await GetIdsForMapPropertyChangedEvent(a))
+          async () => await QueuedTask.Run(async () => await GetIdsForMapPropertyChangedEvent(a))
         ),
       true
     ); // Map units, CRS etc.
@@ -125,8 +126,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     MapMemberPropertiesChangedEvent.Subscribe(
       a =>
         _topLevelExceptionHandler.FireAndForget(
-          async () =>
-            await _threadContext.RunOnWorkerAsync(async () => await GetIdsForMapMemberPropertiesChangedEvent(a))
+          async () => await QueuedTask.Run(async () => await GetIdsForMapMemberPropertiesChangedEvent(a))
         ),
       true
     ); // e.g. Layer name
@@ -135,7 +135,7 @@ public sealed class ArcGISSendBinding : ISendBinding
       _ =>
         _topLevelExceptionHandler.FireAndForget(async () =>
         {
-          await _threadContext.RunOnWorker(SubscribeToMapMembersDataSourceChange);
+          await QueuedTask.Run(SubscribeToMapMembersDataSourceChange);
         }),
       true
     );
@@ -376,21 +376,25 @@ public sealed class ArcGISSendBinding : ISendBinding
       using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
       using var scope = _serviceProvider.CreateScope();
-      scope
-        .ServiceProvider.GetRequiredService<IConverterSettingsStore<ArcGISConversionSettings>>()
-        .Initialize(
-          _arcGISConversionSettingsFactory.Create(
-            Project.Current,
-            MapView.Active.Map,
-            new CRSoffsetRotation(MapView.Active.Map)
-          )
-        );
-      List<MapMember> mapMembers = modelCard
-        .SendFilter.NotNull()
-        .RefreshObjectIds()
-        .Select(id => (MapMember)MapView.Active.Map.FindLayer(id) ?? MapView.Active.Map.FindStandaloneTable(id))
-        .Where(obj => obj != null)
-        .ToList();
+      List<MapMember> mapMembers = await QueuedTask.Run(() =>
+      {
+        scope
+          .ServiceProvider.GetRequiredService<IConverterSettingsStore<ArcGISConversionSettings>>()
+          .Initialize(
+            _arcGISConversionSettingsFactory.Create(
+              Project.Current,
+              MapView.Active.Map,
+              new CRSoffsetRotation(MapView.Active.Map)
+            )
+          );
+
+        return modelCard
+          .SendFilter.NotNull()
+          .RefreshObjectIds()
+          .Select(id => (MapMember)MapView.Active.Map.FindLayer(id) ?? MapView.Active.Map.FindStandaloneTable(id))
+          .Where(obj => obj != null)
+          .ToList();
+      });
 
       if (mapMembers.Count == 0)
       {
@@ -398,18 +402,21 @@ public sealed class ArcGISSendBinding : ISendBinding
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
       }
 
-      // subscribe to the selected layer events
-      foreach (MapMember mapMember in mapMembers)
+      await QueuedTask.Run(() =>
       {
-        if (mapMember is FeatureLayer featureLayer)
+        // subscribe to the selected layer events
+        foreach (MapMember mapMember in mapMembers)
         {
-          SubscribeToFeatureLayerDataSourceChange(featureLayer);
+          if (mapMember is FeatureLayer featureLayer)
+          {
+            SubscribeToFeatureLayerDataSourceChange(featureLayer);
+          }
+          else if (mapMember is StandaloneTable table)
+          {
+            SubscribeToTableDataSourceChange(table);
+          }
         }
-        else if (mapMember is StandaloneTable table)
-        {
-          SubscribeToTableDataSourceChange(table);
-        }
-      }
+      });
 
       var sendResult = await scope
         .ServiceProvider.GetRequiredService<SendOperation<MapMember>>()
