@@ -77,8 +77,7 @@ public class DiscriminatedObjectConverter(IServiceProvider serviceProvider) : Js
 
   private Type? GetTypeByName(string name)
   {
-    _typeCache.TryGetValue(name, out Type myType);
-    if (myType != null)
+    if (_typeCache.TryGetValue(name, out Type? myType))
     {
       return myType;
     }
