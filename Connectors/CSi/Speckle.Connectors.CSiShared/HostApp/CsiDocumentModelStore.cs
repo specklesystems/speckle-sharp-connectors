@@ -43,6 +43,8 @@ public class CsiDocumentModelStore : DocumentModelStore, IDisposable
 
     // initialize timer to check for model changes
     _modelCheckTimer = new Timer(1000);
+
+    // timer runs on background thread but model checks must be on main thread
     _modelCheckTimer.Elapsed += (_, _) =>
       _topLevelExceptionHandler.CatchUnhandled(() => _threadContext.RunOnMain(CheckModelChanges));
     _modelCheckTimer.Start();

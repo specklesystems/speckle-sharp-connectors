@@ -38,12 +38,14 @@ public class CsiSharedSelectionBinding : ISelectionBinding, IDisposable
 
   private void CheckSelectionChanged()
   {
+    // timer callbacks are on a background thread, but CSI API calls must be on main thread
     var currentSelection = GetSelection();
     var currentIds = new HashSet<string>(currentSelection.SelectedObjectIds);
 
     if (!_lastSelection.SetEquals(currentIds))
     {
       _lastSelection = currentIds;
+      // ensure UI updates also run on main thread
       _threadContext.RunOnMain(() => Parent.Send(SelectionBindingEvents.SET_SELECTION, currentSelection));
     }
   }

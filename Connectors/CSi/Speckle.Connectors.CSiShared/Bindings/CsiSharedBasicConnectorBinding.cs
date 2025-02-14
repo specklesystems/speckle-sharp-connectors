@@ -53,11 +53,17 @@ public class CsiSharedBasicConnectorBinding : IBasicConnectorBinding
 
   public DocumentModelStore GetDocumentState() => _store;
 
-  public void AddModel(ModelCard model) => _threadContext.RunOnMain(() => _store.AddModel(model));
+  /// <remarks>Operations must run on the main thread for ETABS and SAP 2000</remarks>
+  public void AddModel(ModelCard model) =>
+    _topLevelExceptionHandler.CatchUnhandled(() => _threadContext.RunOnThread(() => _store.AddModel(model), true));
 
-  public void UpdateModel(ModelCard model) => _threadContext.RunOnMain(() => _store.UpdateModel(model));
+  /// <remarks>Operations must run on the main thread for ETABS and SAP 2000</remarks>
+  public void UpdateModel(ModelCard model) =>
+    _topLevelExceptionHandler.CatchUnhandled(() => _threadContext.RunOnThread(() => _store.UpdateModel(model), true));
 
-  public void RemoveModel(ModelCard model) => _threadContext.RunOnMain(() => _store.RemoveModel(model));
+  /// <remarks>Operations must run on the main thread for ETABS and SAP 2000</remarks>
+  public void RemoveModel(ModelCard model) =>
+    _topLevelExceptionHandler.CatchUnhandled(() => _threadContext.RunOnThread(() => _store.RemoveModel(model), true));
 
   public Task HighlightModel(string modelCardId) => Task.CompletedTask;
 
