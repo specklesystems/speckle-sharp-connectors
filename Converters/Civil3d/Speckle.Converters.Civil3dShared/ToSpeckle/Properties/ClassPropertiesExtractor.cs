@@ -609,7 +609,7 @@ public class ClassPropertiesExtractor
 
   private Dictionary<string, object?> ExtractSubassemblyProperties(CDB.Subassembly subassembly)
   {
-    void AddCodesToDict(CDB.CodeCollection codes, Dictionary<string, object?> dict)
+    static void AddCodesToDict(CDB.CodeCollection codes, Dictionary<string, object?> dict)
     {
       if (codes.Count > 0)
       {
