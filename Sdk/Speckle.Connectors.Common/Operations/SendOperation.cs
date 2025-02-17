@@ -31,8 +31,10 @@ public sealed class SendOperation<T>(
     CancellationToken ct = default
   )
   {
+    ct.ThrowIfCancellationRequested();
     var buildResult = await rootObjectBuilder.Build(objects, sendInfo, onOperationProgressed, ct);
 
+    ct.ThrowIfCancellationRequested();
     // POC: Jonathon asks on behalf of willow twin - let's explore how this can work
     // buildResult.RootObject["@report"] = new Report { ConversionResults = buildResult.ConversionResults };
 
@@ -42,6 +44,7 @@ public sealed class SendOperation<T>(
     var (rootObjId, convertedReferences) = await threadContext.RunOnWorkerAsync(
       () => Send(buildResult.RootObject, sendInfo, onOperationProgressed, ct)
     );
+    ct.ThrowIfCancellationRequested();
 
     return new(rootObjId, convertedReferences, buildResult.ConversionResults);
   }

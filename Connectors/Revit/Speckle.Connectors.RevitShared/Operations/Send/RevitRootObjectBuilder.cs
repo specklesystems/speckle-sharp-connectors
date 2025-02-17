@@ -85,7 +85,7 @@ public class RevitRootObjectBuilder(
 
     var countProgress = 0;
     var cacheHitCount = 0;
-
+    var skippedObjectCount = 0;
     foreach (Element revitElement in atomicObjects)
     {
       cancellationToken.ThrowIfCancellationRequested();
@@ -105,6 +105,7 @@ public class RevitRootObjectBuilder(
               new SpeckleException($"Category {cat} is not supported.")
             )
           );
+          skippedObjectCount++;
           continue;
         }
 
@@ -134,7 +135,7 @@ public class RevitRootObjectBuilder(
       onOperationProgressed.Report(new("Converting", (double)++countProgress / atomicObjects.Count));
     }
 
-    if (results.All(x => x.Status == Status.ERROR))
+    if (results.All(x => x.Status == Status.ERROR) || skippedObjectCount == atomicObjects.Count)
     {
       throw new SpeckleException("Failed to convert all objects.");
     }
