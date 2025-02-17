@@ -1,22 +1,26 @@
 ﻿using System.IO;
 using Microsoft.Extensions.Logging;
-using Speckle.Connectors.CSiShared.Events;
-using Speckle.Connectors.DUI.Eventing;
+using Speckle.Connectors.Common.Threading;
+using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Sdk;
 using Speckle.Sdk.Helpers;
 using Speckle.Sdk.Logging;
+using Timer = System.Timers.Timer;
 
 namespace Speckle.Connectors.CSiShared.HostApp;
 
-public class CsiDocumentModelStore : DocumentModelStore
+public class CsiDocumentModelStore : DocumentModelStore, IDisposable
 {
   private readonly ISpeckleApplication _speckleApplication;
   private readonly ILogger<CsiDocumentModelStore> _logger;
   private readonly ICsiApplicationService _csiApplicationService;
-  private readonly IEventAggregator _eventAggregator;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly IThreadContext _threadContext;
+  private readonly Timer _modelCheckTimer;
   private string _lastModelFilename = string.Empty;
+  private bool _disposed;
   private string HostAppUserDataPath { get; set; }
   private string DocumentStateFile { get; set; }
   private string ModelPathHash { get; set; }
@@ -26,18 +30,27 @@ public class CsiDocumentModelStore : DocumentModelStore
     ISpeckleApplication speckleApplication,
     ILogger<CsiDocumentModelStore> logger,
     ICsiApplicationService csiApplicationService,
-    IEventAggregator eventAggregator
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    IThreadContext threadContext
   )
     : base(jsonSerializer)
   {
+    _threadContext = threadContext;
     _speckleApplication = speckleApplication;
     _logger = logger;
     _csiApplicationService = csiApplicationService;
-    _eventAggregator = eventAggregator;
-    eventAggregator.GetEvent<ModelChangedEvent>().SubscribePeriodic(TimeSpan.FromSeconds(1), CheckModelChanges);
+    _topLevelExceptionHandler = topLevelExceptionHandler;
+
+    // initialize timer to check for model changes
+    _modelCheckTimer = new Timer(1000);
+
+    // timer runs on background thread but model checks must be on main thread
+    _modelCheckTimer.Elapsed += (_, _) =>
+      _topLevelExceptionHandler.CatchUnhandled(() => _threadContext.RunOnMain(CheckModelChanges));
+    _modelCheckTimer.Start();
   }
 
-  private async Task CheckModelChanges(object _)
+  private void CheckModelChanges()
   {
     string currentFilename = _csiApplicationService.SapModel.GetModelFilename();
 
@@ -49,8 +62,7 @@ public class CsiDocumentModelStore : DocumentModelStore
     _lastModelFilename = currentFilename;
     SetPaths();
     LoadState();
-
-    await _eventAggregator.GetEvent<DocumentStoreChangedEvent>().PublishAsync(new object());
+    OnDocumentChanged();
   }
 
   public override Task OnDocumentStoreInitialized()
@@ -119,5 +131,26 @@ public class CsiDocumentModelStore : DocumentModelStore
       _logger.LogError(ex, "Failed to load state, initializing empty state");
       ClearAndSave();
     }
+  }
+
+  protected virtual void Dispose(bool disposing)
+  {
+    if (_disposed)
+    {
+      return;
+    }
+
+    if (disposing)
+    {
+      _modelCheckTimer.Dispose();
+    }
+
+    _disposed = true;
+  }
+
+  public void Dispose()
+  {
+    Dispose(true);
+    GC.SuppressFinalize(this);
   }
 }

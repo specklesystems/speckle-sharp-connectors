@@ -1,8 +1,8 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
-using Speckle.Converters.RevitShared.Extensions;
-using Speckle.Converters.RevitShared.Settings;
+using Speckle.Converters.RevitShared.ToSpeckle.Properties;
+using Speckle.Objects.Data;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
@@ -11,17 +11,15 @@ namespace Speckle.Converters.RevitShared;
 public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
 {
   private readonly IConverterManager<IToSpeckleTopLevelConverter> _toSpeckle;
-  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
-
-  private readonly Dictionary<DB.WorksetId, string> _worksetCache = new();
+  private readonly PropertiesExtractor _propertiesExtractor;
 
   public RevitRootToSpeckleConverter(
     IConverterManager<IToSpeckleTopLevelConverter> toSpeckle,
-    IConverterSettingsStore<RevitConversionSettings> converterSettings
+    PropertiesExtractor propertiesExtractor
   )
   {
     _toSpeckle = toSpeckle;
-    _converterSettings = converterSettings;
+    _propertiesExtractor = propertiesExtractor;
   }
 
   public Base Convert(object target)
@@ -35,21 +33,18 @@ public class RevitRootToSpeckleConverter : IRootToSpeckleConverter
 
     Base result = objectConverter.Convert(target);
 
-    result.applicationId = element.UniqueId;
-
-    // Add ElementID to the converted objects
-    result["elementId"] = element.Id.ToString()!;
-
-    result["builtInCategory"] = element.Category?.GetBuiltInCategory().ToString();
-
-    result["worksetId"] = element.WorksetId.ToString();
-    if (!_worksetCache.TryGetValue(element.WorksetId, out var worksetName))
+    // add class properties here for non-dataobjects
+    // dataobject properties are already handled in their converter
+    if (result is not DataObject)
     {
-      DB.Workset workset = _converterSettings.Current.Document.GetWorksetTable().GetWorkset(element.WorksetId);
-      worksetName = workset.Name;
-      _worksetCache[element.WorksetId] = worksetName;
+      var properties = _propertiesExtractor.GetProperties(element);
+      if (properties.Count > 0)
+      {
+        result["properties"] = properties;
+      }
     }
-    result["worksetName"] = worksetName;
+
+    result.applicationId = element.UniqueId;
 
     return result;
   }

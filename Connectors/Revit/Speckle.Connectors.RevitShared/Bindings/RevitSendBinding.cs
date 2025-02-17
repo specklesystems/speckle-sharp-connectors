@@ -8,7 +8,6 @@ using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
@@ -17,7 +16,6 @@ using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
-using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.RevitShared.Operations.Send.Filters;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
@@ -29,7 +27,8 @@ namespace Speckle.Connectors.Revit.Bindings;
 
 internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 {
-  private readonly IRevitContext _revitContext;
+  private readonly IAppIdleManager _idleManager;
+  private readonly RevitContext _revitContext;
   private readonly DocumentModelStore _store;
   private readonly ICancellationManager _cancellationManager;
   private readonly IServiceProvider _serviceProvider;
@@ -40,7 +39,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly ElementUnpacker _elementUnpacker;
   private readonly IRevitConversionSettingsFactory _revitConversionSettingsFactory;
   private readonly ISpeckleApplication _speckleApplication;
-  private readonly IEventAggregator _eventAggregator;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -51,7 +50,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private ConcurrentDictionary<ElementId, byte> ChangedObjectIds { get; set; } = new();
 
   public RevitSendBinding(
-    IRevitContext revitContext,
+    IAppIdleManager idleManager,
+    RevitContext revitContext,
     DocumentModelStore store,
     ICancellationManager cancellationManager,
     IBrowserBridge bridge,
@@ -63,10 +63,11 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     ElementUnpacker elementUnpacker,
     IRevitConversionSettingsFactory revitConversionSettingsFactory,
     ISpeckleApplication speckleApplication,
-    IEventAggregator eventAggregator
+    ITopLevelExceptionHandler topLevelExceptionHandler
   )
     : base("sendBinding", bridge)
   {
+    _idleManager = idleManager;
     _revitContext = revitContext;
     _store = store;
     _cancellationManager = cancellationManager;
@@ -78,14 +79,15 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _elementUnpacker = elementUnpacker;
     _revitConversionSettingsFactory = revitConversionSettingsFactory;
     _speckleApplication = speckleApplication;
-    _eventAggregator = eventAggregator;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
 
     Commands = new SendBindingUICommands(bridge);
     // TODO expiry events
     // TODO filters need refresh events
 
-    eventAggregator.GetEvent<DocumentChangedEvent>().Subscribe(DocChangeHandler);
-    eventAggregator.GetEvent<DocumentStoreChangedEvent>().Subscribe(OnDocumentStoreChangedEvent);
+    revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
+      _topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
+    _store.DocumentChanged += (_, _) => topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged());
   }
 
   private async Task OnDocumentStoreChangedEvent(object _) => await Commands.NotifyDocumentChanged();
@@ -173,7 +175,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private async Task<List<Element>> RefreshElementsOnSender(SenderModelCard modelCard)
   {
     var activeUIDoc =
-      _revitContext.UIApplication.ActiveUIDocument
+      _revitContext.UIApplication.NotNull().ActiveUIDocument
       ?? throw new SpeckleException("Unable to retrieve active UI document");
 
     if (modelCard.SendFilter is IRevitSendFilter viewFilter)
@@ -249,7 +251,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     if (addedElementIds.Count > 0)
     {
-      _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(PostSetObjectIds), PostSetObjectIds);
+      _idleManager.SubscribeToIdle(nameof(PostSetObjectIds), PostSetObjectIds);
     }
 
     if (HaveUnitsChanged(e.GetDocument()))
@@ -269,8 +271,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       _sendConversionCache.EvictObjects(unpackedObjectIds);
     }
 
-    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(CheckFilterExpiration), CheckFilterExpiration);
-    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(RunExpirationChecks), RunExpirationChecks);
+    _idleManager.SubscribeToIdle(nameof(CheckFilterExpiration), CheckFilterExpiration);
+    _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
   }
 
   // Keeps track of doc and current units
@@ -307,7 +309,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     return false;
   }
 
-  private async Task PostSetObjectIds(object _)
+  private async Task PostSetObjectIds()
   {
     foreach (var sender in _store.GetSenders().ToList())
     {
@@ -318,7 +320,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   /// <summary>
   /// Notifies ui if any filters need refreshing. Currently, this only applies for view filters.
   /// </summary>
-  private async Task CheckFilterExpiration(object _)
+  private async Task CheckFilterExpiration()
   {
     // NOTE: below code seems like more make sense in terms of performance but it causes unmanaged exception on Revit
     // using var viewCollector = new FilteredElementCollector(RevitContext.UIApplication?.ActiveUIDocument.Document);
@@ -329,17 +331,21 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     //    await Commands.RefreshSendFilters();
     // }
 
-    if (ChangedObjectIds.Keys.Any(e => _revitContext.UIApplication.ActiveUIDocument.Document.GetElement(e) is View))
+    if (
+      ChangedObjectIds.Keys.Any(e =>
+        _revitContext.UIApplication.NotNull().ActiveUIDocument.Document.GetElement(e) is View
+      )
+    )
     {
       await Commands.RefreshSendFilters();
     }
   }
 
-  private async Task RunExpirationChecks(object _)
+  private async Task RunExpirationChecks()
   {
     var senders = _store.GetSenders().ToList();
     // string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
-    var doc = _revitContext.UIApplication.ActiveUIDocument.Document;
+    var doc = _revitContext.UIApplication.NotNull().ActiveUIDocument.Document;
 
     if (doc == null)
     {
@@ -391,6 +397,11 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       if (modelCard.SendFilter is IRevitSendFilter viewFilter)
       {
         viewFilter.SetContext(_revitContext);
+      }
+
+      if (modelCard.SendFilter is null || modelCard.SendFilter.IdMap is null)
+      {
+        continue;
       }
 
       var selectedObjects = modelCard.SendFilter.NotNull().IdMap.NotNull().Values;

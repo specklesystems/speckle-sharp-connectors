@@ -13,6 +13,7 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
+using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Sdk.Models.GraphTraversal;
@@ -47,6 +48,8 @@ public static class SharedRegistration
 
     serviceCollection.AddScoped<AutocadMaterialUnpacker>();
     serviceCollection.AddScoped<IAutocadMaterialBaker, AutocadMaterialBaker>();
+
+    serviceCollection.AddSingleton<IAppIdleManager, AutocadIdleManager>();
 
     // operation progress manager
     serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();

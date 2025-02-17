@@ -2,8 +2,7 @@
 
     <PropertyGroup>
         <TargetFramework>net48</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
+      <Configurations>Debug;Release;Local</Configurations>
     </PropertyGroup>
 
     <ItemGroup>
