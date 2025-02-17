@@ -3,7 +3,7 @@ using Speckle.InterfaceGenerator;
 namespace Speckle.Importers.Ifc.Types;
 
 [GenerateAutoInterface]
-public class IfcFactory : IIfcFactory
+public sealed class IfcFactory : IIfcFactory
 {
   //probably never disposing this
   private static readonly IntPtr _ptr = Importers.Ifc.Native.WebIfc.InitializeApi();
