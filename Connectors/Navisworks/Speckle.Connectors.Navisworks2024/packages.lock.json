@@ -259,9 +259,9 @@
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection": "[2.2.0, )",
           "Speckle.Connectors.Logging": "[1.0.0, )",
-          "Speckle.Objects": "[3.1.0-dev.257, )",
-          "Speckle.Sdk": "[3.1.0-dev.257, )",
-          "Speckle.Sdk.Dependencies": "[3.1.0-dev.257, )"
+          "Speckle.Objects": "[3.1.0-dev.267, )",
+          "Speckle.Sdk": "[3.1.0-dev.267, )",
+          "Speckle.Sdk.Dependencies": "[3.1.0-dev.267, )"
         }
       },
       "speckle.connectors.dui": {
@@ -269,8 +269,8 @@
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
           "Speckle.Connectors.Common": "[1.0.0, )",
-          "Speckle.Sdk": "[3.1.0-dev.257, )",
-          "Speckle.Sdk.Dependencies": "[3.1.0-dev.257, )"
+          "Speckle.Sdk": "[3.1.0-dev.267, )",
+          "Speckle.Sdk.Dependencies": "[3.1.0-dev.267, )"
         }
       },
       "speckle.connectors.dui.webview": {
@@ -287,7 +287,7 @@
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
-          "Speckle.Objects": "[3.1.0-dev.257, )"
+          "Speckle.Objects": "[3.1.0-dev.267, )"
         }
       },
       "speckle.converters.navisworks2024": {
@@ -334,40 +334,40 @@
       "Speckle.DoubleNumerics": {
         "type": "CentralTransitive",
         "requested": "[4.1.0, )",
-        "resolved": "4.0.1",
-        "contentHash": "MzEQ1Im0zTja+tEsdRIk/WlPiKqb22NmTOJcR1ZKm/mz46pezyyID3/wRz6vJUELMpSLnG7LhsxBL+nxbr7V0w=="
+        "resolved": "4.1.0",
+        "contentHash": "20DtS+FsDRsOD9+AU3TwNFZ0qrKo5f6f7B5ZR9wStsIHHHC9k7DpjbCvuNtmnSjx54MD+TJC7wV2f5iyGVPj1A=="
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.257, )",
-        "resolved": "3.1.0-dev.257",
-        "contentHash": "dGK6TX/Lk8BkHjYhDR47tRDXU97IfL5NOO9NPnqcFbAgQiFiHeFxP5ih645VIkyjZayHpxIqLgOfFo624B8kaQ==",
+        "requested": "[3.1.0-dev.267, )",
+        "resolved": "3.1.0-dev.267",
+        "contentHash": "+l/JJ/54RM/kdTg2E7qKM4joeLRzwgm2ewN0j4UGgt6SdpdJDhzztDxRr4LNQprWZd+TAqzpLBnSxwClA8oyHg==",
         "dependencies": {
-          "Speckle.Sdk": "3.1.0-dev.257"
+          "Speckle.Sdk": "3.1.0-dev.267"
         }
       },
       "Speckle.Sdk": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.257, )",
-        "resolved": "3.1.0-dev.257",
-        "contentHash": "kVKIvbr6qPdGZaoayGjiKzq7DXw24l/Hrp79t/q6XhwWhpa6pGQwbv4BATBNY82vlZlFK3c6HiOmncjcM/BlZQ==",
+        "requested": "[3.1.0-dev.267, )",
+        "resolved": "3.1.0-dev.267",
+        "contentHash": "54AaVCzMEkcR73o/QLX2dDC7B9rcuUP5uV2yHzGyA3eRMeZmPxrqPp8Dxg63dr0qOnKG8MFwFNLVHfgHyrDZQQ==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
-          "Microsoft.Bcl.AsyncInterfaces": "[5.0.0]",
+          "Microsoft.Bcl.AsyncInterfaces": "5.0.0",
           "Microsoft.CSharp": "4.7.0",
-          "Microsoft.Data.Sqlite": "[7.0.5]",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "[2.2.0]",
-          "Microsoft.Extensions.Logging": "[2.2.0]",
-          "Speckle.DoubleNumerics": "4.0.1",
+          "Microsoft.Data.Sqlite": "7.0.5",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "2.2.0",
+          "Microsoft.Extensions.Logging": "2.2.0",
+          "Speckle.DoubleNumerics": "4.1.0",
           "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Dependencies": "3.1.0-dev.257"
+          "Speckle.Sdk.Dependencies": "3.1.0-dev.267"
         }
       },
       "Speckle.Sdk.Dependencies": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.257, )",
-        "resolved": "3.1.0-dev.257",
-        "contentHash": "ZPMRaGZcRUpHurbE2TDqwHhVdIRbewGTSDA0LFALy2eIFoHPo8mdETQGw+rQePWLyYYRG/TfOnh3+fzVg/3+Rg=="
+        "requested": "[3.1.0-dev.267, )",
+        "resolved": "3.1.0-dev.267",
+        "contentHash": "wl9sak56PjdHN48avcbuV776XV9KxCJc0E8XOJ/QiipDo2cuhIl/rzVRkEgpMTkKghe4thCwNM16gQ0+ha5tbw=="
       }
     },
     ".NETFramework,Version=v4.8/win-x64": {
