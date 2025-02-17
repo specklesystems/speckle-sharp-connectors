@@ -1,6 +1,6 @@
-﻿using Speckle.Connectors.DUI.Bindings;
+﻿using Speckle.Connectors.Common.Threading;
+using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Sdk;
@@ -11,7 +11,8 @@ public class CsiSharedBasicConnectorBinding : IBasicConnectorBinding
 {
   private readonly ISpeckleApplication _speckleApplication;
   private readonly DocumentModelStore _store;
-  private readonly IEventAggregator _eventAggregator;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly IThreadContext _threadContext;
   public string Name => "baseBinding";
   public IBrowserBridge Parent { get; }
   public BasicConnectorBindingCommands Commands { get; }
@@ -20,19 +21,27 @@ public class CsiSharedBasicConnectorBinding : IBasicConnectorBinding
     IBrowserBridge parent,
     ISpeckleApplication speckleApplication,
     DocumentModelStore store,
-    IEventAggregator eventAggregator
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    IThreadContext threadContext
   )
   {
+    _threadContext = threadContext;
     Parent = parent;
     _speckleApplication = speckleApplication;
     _store = store;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
     Commands = new BasicConnectorBindingCommands(Parent);
-    _eventAggregator = eventAggregator;
 
-    _eventAggregator.GetEvent<DocumentStoreChangedEvent>().Subscribe(OnDocumentStoreChangedEvent);
+    _store.DocumentChanged += (_, _) =>
+      _topLevelExceptionHandler.FireAndForget(async () =>
+      {
+        // enforce main thread
+        await _threadContext.RunOnMainAsync(async () =>
+        {
+          await Commands.NotifyDocumentChanged();
+        });
+      });
   }
-
-  private async Task OnDocumentStoreChangedEvent(object _) => await Commands.NotifyDocumentChanged();
 
   public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
 
@@ -44,11 +53,17 @@ public class CsiSharedBasicConnectorBinding : IBasicConnectorBinding
 
   public DocumentModelStore GetDocumentState() => _store;
 
-  public void AddModel(ModelCard model) => _store.AddModel(model);
+  /// <remarks>Operations must run on the main thread for ETABS and SAP 2000</remarks>
+  public void AddModel(ModelCard model) =>
+    _topLevelExceptionHandler.CatchUnhandled(() => _threadContext.RunOnThread(() => _store.AddModel(model), true));
 
-  public void UpdateModel(ModelCard model) => _store.UpdateModel(model);
+  /// <remarks>Operations must run on the main thread for ETABS and SAP 2000</remarks>
+  public void UpdateModel(ModelCard model) =>
+    _topLevelExceptionHandler.CatchUnhandled(() => _threadContext.RunOnThread(() => _store.UpdateModel(model), true));
 
-  public void RemoveModel(ModelCard model) => _store.RemoveModel(model);
+  /// <remarks>Operations must run on the main thread for ETABS and SAP 2000</remarks>
+  public void RemoveModel(ModelCard model) =>
+    _topLevelExceptionHandler.CatchUnhandled(() => _threadContext.RunOnThread(() => _store.RemoveModel(model), true));
 
   public Task HighlightModel(string modelCardId) => Task.CompletedTask;
 

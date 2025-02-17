@@ -5,6 +5,7 @@ using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.Common;
@@ -21,14 +22,22 @@ public class RevitRootObjectBuilder(
   IConverterSettingsStore<RevitConversionSettings> converterSettings,
   ISendConversionCache sendConversionCache,
   ElementUnpacker elementUnpacker,
+  IThreadContext threadContext,
   SendCollectionManager sendCollectionManager,
   ILogger<RevitRootObjectBuilder> logger,
   RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton
-) : RootObjectBuilderBase<ElementId>
+) : IRootObjectBuilder<ElementId>
 {
   // POC: SendSelection and RevitConversionContextStack should be interfaces, former needs interfaces
 
-  public override RootObjectBuilderResult Build(
+  public Task<RootObjectBuilderResult> Build(
+    IReadOnlyList<ElementId> objects,
+    SendInfo sendInfo,
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken ct = default
+  ) => threadContext.RunOnMainAsync(() => Task.FromResult(BuildSync(objects, sendInfo, onOperationProgressed, ct)));
+
+  private RootObjectBuilderResult BuildSync(
     IReadOnlyList<ElementId> objects,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
@@ -76,7 +85,7 @@ public class RevitRootObjectBuilder(
 
     var countProgress = 0;
     var cacheHitCount = 0;
-
+    var skippedObjectCount = 0;
     foreach (Element revitElement in atomicObjects)
     {
       cancellationToken.ThrowIfCancellationRequested();
@@ -96,6 +105,7 @@ public class RevitRootObjectBuilder(
               new SpeckleException($"Category {cat} is not supported.")
             )
           );
+          skippedObjectCount++;
           continue;
         }
 
@@ -125,14 +135,14 @@ public class RevitRootObjectBuilder(
       onOperationProgressed.Report(new("Converting", (double)++countProgress / atomicObjects.Count));
     }
 
-    if (results.All(x => x.Status == Status.ERROR))
+    if (results.All(x => x.Status == Status.ERROR) || skippedObjectCount == atomicObjects.Count)
     {
       throw new SpeckleException("Failed to convert all objects.");
     }
 
     var idsAndSubElementIds = elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(atomicObjects);
-    var materialProxies = revitToSpeckleCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds);
-    rootObject[ProxyKeys.RENDER_MATERIAL] = materialProxies;
+    var renderMaterialProxies = revitToSpeckleCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds);
+    rootObject[ProxyKeys.RENDER_MATERIAL] = renderMaterialProxies;
 
     // NOTE: these are currently not used anywhere, we'll skip them until someone calls for it back
     // rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;

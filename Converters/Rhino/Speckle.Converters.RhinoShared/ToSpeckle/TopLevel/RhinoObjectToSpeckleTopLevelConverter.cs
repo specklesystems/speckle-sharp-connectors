@@ -26,12 +26,7 @@ public abstract class RhinoObjectToSpeckleTopLevelConverter<TTopLevelIn, TInRaw,
 
     var result = Conversion.Convert(typedGeometry);
 
-    // POC: Any common operations for all RhinoObjects should be done here, not on the specific implementer
-    // Things like user-dictionaries and other user-defined metadata.
-    if (!string.IsNullOrEmpty(typedTarget.Attributes.Name))
-    {
-      result["name"] = typedTarget.Attributes.Name;
-    }
+    // POC: Any common operations for all RhinoObjects should NOT be done here, because not all top level converters use this class sigh
 
     return result;
   }

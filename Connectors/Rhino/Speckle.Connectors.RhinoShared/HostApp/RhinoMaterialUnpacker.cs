@@ -50,7 +50,10 @@ public class RhinoMaterialUnpacker
 
   private void AddObjectIdToRenderMaterialProxy(string objectId, RenderMaterial? renderMaterial, Material? material)
   {
-    string? renderMaterialId = renderMaterial?.Id.ToString() ?? material?.Id.ToString();
+    // NOTE: material ids are not the same, even if the underlying material is. the number of materials in the mat table corresponds
+    // with the number of objects, and each material will get a new id, even if it is THE SAME. shockingly, TY bob, material names
+    // are unique so we use those for identity checks rather than the material's id.
+    string? renderMaterialId = renderMaterial?.Name ?? material?.Name; //renderMaterial?.Id.ToString() ?? material?.Id.ToString();
 
     if (renderMaterialId is not null)
     {
@@ -120,6 +123,11 @@ public class RhinoMaterialUnpacker
     // Stage 1: unpack materials from objects
     foreach (RhinoObject rootObj in atomicObjects)
     {
+      if (rootObj.Attributes.MaterialSource == ObjectMaterialSource.MaterialFromLayer)
+      {
+        continue;
+      }
+
       // materials are confusing in rhino. we need both render material and material because objects can have either assigned
       RenderMaterial? rhinoRenderMaterial = rootObj.GetRenderMaterial(true);
       Material? rhinoMaterial = rootObj.GetMaterial(true);

@@ -61,7 +61,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   }
 
 #pragma warning disable CA1506
-  public HostObjectBuilderResult Build(
+  public Task<HostObjectBuilderResult> Build(
 #pragma warning restore CA1506
     Base rootObject,
     string projectName,
@@ -103,7 +103,10 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     if (unpackedRoot.RenderMaterialProxies != null)
     {
       using var _ = _activityFactory.Start("Render Materials");
-      _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseLayerName);
+      _threadContext.RunOnMain(() =>
+      {
+        _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseLayerName);
+      });
     }
 
     if (unpackedRoot.ColorProxies != null)
@@ -183,6 +186,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
             if (conversionIds.Count == 0)
             {
+              // TODO: add this condition to report object - same as in autocad
               throw new SpeckleException($"Failed to convert object.");
             }
 
@@ -237,7 +241,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     }
 
     _converterSettings.Current.Document.Views.Redraw();
-    return new HostObjectBuilderResult(bakedObjectIds, conversionResults);
+    return Task.FromResult(new HostObjectBuilderResult(bakedObjectIds, conversionResults));
   }
 
   private void PreReceiveDeepClean(string baseLayerName)

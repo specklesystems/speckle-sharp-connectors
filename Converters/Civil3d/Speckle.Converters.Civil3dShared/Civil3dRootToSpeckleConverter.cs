@@ -11,14 +11,17 @@ public class Civil3dRootToSpeckleConverter : IRootToSpeckleConverter
 {
   private readonly IConverterManager<IToSpeckleTopLevelConverter> _toSpeckle;
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
+  private readonly ToSpeckle.PropertiesExtractor _propertiesExtractor;
 
   public Civil3dRootToSpeckleConverter(
     IConverterManager<IToSpeckleTopLevelConverter> toSpeckle,
-    IConverterSettingsStore<Civil3dConversionSettings> settingsStore
+    IConverterSettingsStore<Civil3dConversionSettings> settingsStore,
+    ToSpeckle.PropertiesExtractor propertiesExtractor
   )
   {
     _toSpeckle = toSpeckle;
     _settingsStore = settingsStore;
+    _propertiesExtractor = propertiesExtractor;
   }
 
   public Base Convert(object target)
@@ -31,7 +34,6 @@ public class Civil3dRootToSpeckleConverter : IRootToSpeckleConverter
     }
 
     Type type = dbObject.GetType();
-    object objectToConvert = dbObject;
 
     // check first for civil type objects
     // POC: some classes (eg Civil.DatabaseServices.CogoPoint) actually inherit from Autocad.DatabaseServices.Entity instead of Civil!!
@@ -39,7 +41,6 @@ public class Civil3dRootToSpeckleConverter : IRootToSpeckleConverter
     if (target is CDB.Entity civilEntity)
     {
       type = civilEntity.GetType();
-      objectToConvert = civilEntity;
     }
 
     var objectConverter = _toSpeckle.ResolveConverter(type);
@@ -50,7 +51,18 @@ public class Civil3dRootToSpeckleConverter : IRootToSpeckleConverter
       {
         using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
         {
-          var result = objectConverter.Convert(objectToConvert);
+          var result = objectConverter.Convert(target);
+
+          // NOTE: we can not test acad objects props, so commented out.
+          // // we need to capture properties on autocad entities
+          // if (target is ADB.Entity autocadEntity)
+          // {
+          //   var properties = _propertiesExtractor.GetProperties(autocadEntity);
+          //   if (properties.Count > 0)
+          //   {
+          //     result["properties"] = properties;
+          //   }
+          // }
 
           tr.Commit();
           return result;

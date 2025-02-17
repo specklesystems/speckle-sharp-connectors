@@ -16,8 +16,7 @@ public sealed class ReceiveOperation(
   ISdkActivityFactory activityFactory,
   IOperations operations,
   IClientFactory clientFactory,
-  IThreadContext threadContext,
-  IThreadOptions threadOptions
+  IThreadContext threadContext
 )
 {
   public async Task<HostObjectBuilderResult> Execute(
@@ -27,6 +26,7 @@ public sealed class ReceiveOperation(
   )
   {
     using var execute = activityFactory.Start("Receive Operation");
+    cancellationToken.ThrowIfCancellationRequested();
     execute?.SetTag("receiveInfo", receiveInfo);
     // 2 - Check account exist
     Account account = accountService.GetAccountWithServerUrlFallback(receiveInfo.AccountId, receiveInfo.ServerUrl);
@@ -35,16 +35,21 @@ public sealed class ReceiveOperation(
 
     var version = await apiClient.Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ProjectId, cancellationToken);
 
+    cancellationToken.ThrowIfCancellationRequested();
     var commitObject = await threadContext.RunOnWorkerAsync(
       () => ReceiveData(account, version, receiveInfo, onOperationProgressed, cancellationToken)
     );
 
     // 4 - Convert objects
-    HostObjectBuilderResult res = await threadContext.RunOnThread(
-      () => ConvertObjects(commitObject, receiveInfo, onOperationProgressed, cancellationToken),
-      threadOptions.RunReceiveBuildOnMainThread
-    );
+    HostObjectBuilderResult res = await ConvertObjects(
+        commitObject,
+        receiveInfo,
+        onOperationProgressed,
+        cancellationToken
+      )
+      .ConfigureAwait(false);
 
+    cancellationToken.ThrowIfCancellationRequested();
     await apiClient.Version.Received(
       new(version.id, receiveInfo.ProjectId, receiveInfo.SourceApplication),
       cancellationToken
@@ -75,7 +80,7 @@ public sealed class ReceiveOperation(
     return commitObject;
   }
 
-  private HostObjectBuilderResult ConvertObjects(
+  private async Task<HostObjectBuilderResult> ConvertObjects(
     Base commitObject,
     ReceiveInfo receiveInfo,
     IProgress<CardProgress> onOperationProgressed,
@@ -92,13 +97,9 @@ public sealed class ReceiveOperation(
 
     try
     {
-      HostObjectBuilderResult res = hostObjectBuilder.Build(
-        commitObject,
-        receiveInfo.ProjectName,
-        receiveInfo.ModelName,
-        onOperationProgressed,
-        cancellationToken
-      );
+      HostObjectBuilderResult res = await hostObjectBuilder
+        .Build(commitObject, receiveInfo.ProjectName, receiveInfo.ModelName, onOperationProgressed, cancellationToken)
+        .ConfigureAwait(false);
       conversionActivity?.SetStatus(SdkActivityStatusCode.Ok);
       return res;
     }
