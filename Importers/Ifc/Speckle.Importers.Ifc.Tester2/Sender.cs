@@ -4,6 +4,7 @@ using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models;
+using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
 namespace Speckle.Importers.Ifc.Tester2;
 
@@ -11,17 +12,24 @@ public class Sender(IClientFactory clientFactory, IAccountManager accountManager
 {
   public const string MODEL_NAME = "IFC Import";
 
-  public async Task<string> Send(Base rootObject, string projectId)
+  public async Task<Version> Send(Base rootObject, string projectId, CancellationToken cancellationToken = default)
   {
     var account = accountManager.GetDefaultAccount().NotNull();
     using var client = clientFactory.Create(account);
 
-    var res = await operations.Send2(new(account.serverInfo.url), projectId, account.token, rootObject);
+    var res = await operations.Send2(
+      new(account.serverInfo.url),
+      projectId,
+      account.token,
+      rootObject,
+      null,
+      cancellationToken
+    );
 
     var t = await GetOrCreateIfcModel(client, projectId);
 
     CreateVersionInput input = new(res.RootId, t.id, projectId);
-    return await client.Version.Create(input);
+    return await client.Version.Create(input, cancellationToken);
   }
 
   public async Task<Model> GetOrCreateIfcModel(Client client, string projectId)
