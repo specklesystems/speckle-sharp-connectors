@@ -1,4 +1,5 @@
-﻿using Speckle.Connectors.CSiShared.HostApp;
+﻿using Speckle.Connectors.Common.Threading;
+using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.CSiShared.Utils;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
@@ -12,7 +13,9 @@ public class CsiSharedSelectionBinding : ISelectionBinding, IDisposable
   private bool _disposed;
   private readonly Timer _selectionTimer;
   private readonly ICsiApplicationService _csiApplicationService;
+  private readonly IThreadContext _threadContext;
   private HashSet<string> _lastSelection = new();
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   public IBrowserBridge Parent { get; }
   public string Name => "selectionBinding";
@@ -20,26 +23,37 @@ public class CsiSharedSelectionBinding : ISelectionBinding, IDisposable
   public CsiSharedSelectionBinding(
     IBrowserBridge parent,
     ICsiApplicationService csiApplicationService,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    IThreadContext threadContext
   )
   {
+    _threadContext = threadContext;
     Parent = parent;
     _csiApplicationService = csiApplicationService;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
 
     _selectionTimer = new Timer(1000);
-    _selectionTimer.Elapsed += (_, _) => topLevelExceptionHandler.CatchUnhandled(CheckSelectionChanged);
+    _selectionTimer.Elapsed += (_, _) =>
+      _topLevelExceptionHandler.CatchUnhandled(() => _threadContext.RunOnMain(CheckSelectionChanged));
     _selectionTimer.Start();
   }
 
   private void CheckSelectionChanged()
   {
+    // timer callbacks are on a background thread, but CSI API calls must be on main thread
     var currentSelection = GetSelection();
     var currentIds = new HashSet<string>(currentSelection.SelectedObjectIds);
 
     if (!_lastSelection.SetEquals(currentIds))
     {
       _lastSelection = currentIds;
-      Parent.Send(SelectionBindingEvents.SET_SELECTION, currentSelection);
+      // ensure UI updates also run on main thread
+      _threadContext.RunOnMain(
+        () =>
+          _topLevelExceptionHandler.CatchUnhandled(
+            () => Parent.Send(SelectionBindingEvents.SET_SELECTION, currentSelection)
+          )
+      );
     }
   }
 
