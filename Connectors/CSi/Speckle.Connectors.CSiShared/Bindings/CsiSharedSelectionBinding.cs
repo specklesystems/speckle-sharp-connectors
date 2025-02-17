@@ -15,6 +15,7 @@ public class CsiSharedSelectionBinding : ISelectionBinding, IDisposable
   private readonly ICsiApplicationService _csiApplicationService;
   private readonly IThreadContext _threadContext;
   private HashSet<string> _lastSelection = new();
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   public IBrowserBridge Parent { get; }
   public string Name => "selectionBinding";
@@ -29,10 +30,11 @@ public class CsiSharedSelectionBinding : ISelectionBinding, IDisposable
     _threadContext = threadContext;
     Parent = parent;
     _csiApplicationService = csiApplicationService;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
 
     _selectionTimer = new Timer(1000);
     _selectionTimer.Elapsed += (_, _) =>
-      topLevelExceptionHandler.CatchUnhandled(() => _threadContext.RunOnMain(CheckSelectionChanged));
+      _topLevelExceptionHandler.CatchUnhandled(() => _threadContext.RunOnMain(CheckSelectionChanged));
     _selectionTimer.Start();
   }
 
@@ -46,7 +48,12 @@ public class CsiSharedSelectionBinding : ISelectionBinding, IDisposable
     {
       _lastSelection = currentIds;
       // ensure UI updates also run on main thread
-      _threadContext.RunOnMain(() => Parent.Send(SelectionBindingEvents.SET_SELECTION, currentSelection));
+      _threadContext.RunOnMain(
+        () =>
+          _topLevelExceptionHandler.CatchUnhandled(
+            () => Parent.Send(SelectionBindingEvents.SET_SELECTION, currentSelection)
+          )
+      );
     }
   }
 
