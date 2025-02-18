@@ -1,4 +1,6 @@
+using Rhino;
 using Rhino.DocObjects;
+using Speckle.Sdk;
 
 namespace Speckle.Connectors.Rhino.HostApp.Properties;
 
@@ -13,11 +15,18 @@ public class PropertiesExtractor
     var userStrings = rhObject.Attributes.GetUserStrings();
     foreach (var key in userStrings.AllKeys)
     {
-      // POC: could not determine how to extract the value of a formula user string.
-      // So for now we are skipping them
-      if (userStrings[key].StartsWith("%<"))
+      try
       {
-        continue;
+        if (userStrings[key].StartsWith("%<"))
+        {
+          var value = RhinoApp.ParseTextField(userStrings[key], rhObject, null);
+          properties[key] = value;
+          continue;
+        }
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        // Shh. We can fail silently here - it's not even worth logging. I expect users will complain properties are missing.
       }
 
       properties[key] = userStrings[key];
