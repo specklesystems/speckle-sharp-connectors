@@ -9,6 +9,7 @@ public interface IFlatPointListToHostConverter : ITypedConverter<IReadOnlyList<d
 {
   IEnumerable<RG.Point3d> ConvertToEnum(IReadOnlyList<double> target);
 }
+
 /// <summary>
 /// Converts a flat list of raw double values to a Point3dList.
 /// </summary>
@@ -35,7 +36,7 @@ public class FlatPointListToHostConverter : IFlatPointListToHostConverter
 
     for (int i = 2; i < target.Count; i += 3)
     {
-     yield return new RG.Point3d(target[i - 2], target[i - 1], target[i]);
+      yield return new RG.Point3d(target[i - 2], target[i - 1], target[i]);
     }
   }
 }

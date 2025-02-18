@@ -54,8 +54,7 @@ public class MeshToHostConverter(IFlatPointListToHostConverter pointListConverte
           break;
         case 4:
           // quad
-          m.Faces.AddFace(target.faces[i + 1], target.faces[i + 2], target.faces[i + 3], target.faces[i + 4]
-          );
+          m.Faces.AddFace(target.faces[i + 1], target.faces[i + 2], target.faces[i + 3], target.faces[i + 4]);
           break;
         default:
         {
