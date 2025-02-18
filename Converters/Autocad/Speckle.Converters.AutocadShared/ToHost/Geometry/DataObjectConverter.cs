@@ -55,64 +55,64 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
 
   public List<(ADB.Entity a, Base b)> Convert(DataObject target)
   {
-    var result = new List<ADB.Entity>();
+    var result = new List<(ADB.Entity a, Base b)>();
     foreach (var item in target.displayValue)
     {
       result.AddRange(ConvertDisplayObject(item));
     }
-    return result.Zip(target.displayValue, (a, b) => (a, b)).ToList();
+    return result;
   }
 
-  public IEnumerable<ADB.Entity> ConvertDisplayObject(Base displayObject)
+  public IEnumerable<(ADB.Entity a, Base b)> ConvertDisplayObject(Base displayObject)
   {
     switch (displayObject)
     {
       case SOG.Arc arc:
-        yield return _arcConverter.Convert(arc);
+        yield return (_arcConverter.Convert(arc), arc);
         break;
       case SOG.BrepX brepX:
         foreach (var i in _brepXConverter.Convert(brepX))
         {
-          yield return i.a;
+          yield return i;
         }
         break;
       case SOG.Circle circle:
-        yield return _circleConverter.Convert(circle);
+        yield return (_circleConverter.Convert(circle), circle);
         break;
       case SOG.Curve curve:
-        yield return _curveConverter.Convert(curve);
+        yield return (_curveConverter.Convert(curve), curve);
         break;
       case SOG.Ellipse ellipse:
-        yield return _ellipseConverter.Convert(ellipse);
+        yield return (_ellipseConverter.Convert(ellipse), ellipse);
         break;
       case SOG.ExtrusionX extrusionX:
         foreach (var i in _extrusionXConverter.Convert(extrusionX))
         {
-          yield return i.a;
+          yield return i;
         }
         break;
       case SOG.Line line:
-        yield return _lineConverter.Convert(line);
+        yield return (_lineConverter.Convert(line), line);
         break;
       case SOG.Mesh mesh:
-        yield return _meshConverter.Convert(mesh);
+        yield return (_meshConverter.Convert(mesh), mesh);
         break;
       case SOG.Point point:
-        yield return _pointConverter.Convert(point);
+        yield return (_pointConverter.Convert(point), point);
         break;
       case SOG.Polycurve polycurve:
         foreach (var i in _polycurveConverter.Convert(polycurve))
         {
-          yield return i.a;
+          yield return i;
         }
         break;
       case SOG.Polyline polyline:
-        yield return _polylineConverter.Convert(polyline);
+        yield return (_polylineConverter.Convert(polyline), polyline);
         break;
       case SOG.SubDX subDX:
         foreach (var i in _subDXConverter.Convert(subDX))
         {
-          yield return i.a;
+          yield return i;
         }
         break;
 
