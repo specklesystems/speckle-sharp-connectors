@@ -78,16 +78,6 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
         applicationId = target.GetSpeckleApplicationId()
       };
 
-    // add any additional class properties
-    Dictionary<string, object?>? classProperties = _classPropertiesExtractor.GetClassProperties(target);
-    if (classProperties is not null)
-    {
-      foreach (string key in classProperties.Keys)
-      {
-        civilObject[$"{key}"] = classProperties[key];
-      }
-    }
-
     return civilObject;
   }
 

@@ -1,15 +1,40 @@
+using System.Runtime.InteropServices;
+using Speckle.Importers.Ifc.Native;
+
 namespace Speckle.Importers.Ifc.Types;
 
-public class IfcMesh(IntPtr mesh)
+public sealed class IfcMesh(IntPtr mesh)
 {
-  public int VertexCount => Importers.Ifc.Native.WebIfc.GetNumVertices(mesh);
+  public int VerticesCount => WebIfc.GetNumVertices(mesh);
 
-  public unsafe IfcVertex* GetVertices() => (IfcVertex*)Importers.Ifc.Native.WebIfc.GetVertices(mesh);
+  public unsafe ReadOnlySpan<IfcVertex> Vertices
+  {
+    get
+    {
+      IfcVertex* ptr = (IfcVertex*)WebIfc.GetVertices(mesh);
+      return new ReadOnlySpan<IfcVertex>(ptr, VerticesCount);
+    }
+  }
 
-  public IntPtr Transform => Importers.Ifc.Native.WebIfc.GetTransform(mesh);
-  public int IndexCount => Importers.Ifc.Native.WebIfc.GetNumIndices(mesh);
+  public unsafe ReadOnlySpan<double> Transform
+  {
+    get
+    {
+      double* ptr = (double*)WebIfc.GetTransform(mesh);
+      return new ReadOnlySpan<double>(ptr, 16);
+    }
+  }
 
-  public unsafe int* GetIndexes() => (int*)Importers.Ifc.Native.WebIfc.GetIndices(mesh);
+  public int IndicesCount => WebIfc.GetNumIndices(mesh);
 
-  public unsafe IfcColor* GetColor() => (IfcColor*)Importers.Ifc.Native.WebIfc.GetColor(mesh);
+  public unsafe ReadOnlySpan<int> Indices
+  {
+    get
+    {
+      var ptr = (int*)WebIfc.GetIndices(mesh);
+      return new ReadOnlySpan<int>(ptr, IndicesCount);
+    }
+  }
+
+  public IfcColor Color => Marshal.PtrToStructure<IfcColor>(WebIfc.GetColor(mesh));
 }

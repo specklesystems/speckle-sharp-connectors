@@ -1,6 +1,6 @@
 namespace Speckle.Importers.Ifc.Types;
 
-public class IfcModel(IntPtr model)
+public sealed class IfcModel(IntPtr model)
 {
   public int GetNumGeometries() => Importers.Ifc.Native.WebIfc.GetNumGeometries(model);
 
