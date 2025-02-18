@@ -39,10 +39,15 @@ public static class Import
   {
     TypeLoader.Initialize(typeof(Base).Assembly, typeof(Point).Assembly);
     var serviceCollection = new ServiceCollection();
+    serviceCollection.AddIFCImporter();
+    return serviceCollection.BuildServiceProvider();
+  }
+
+  public static void AddIFCImporter(this ServiceCollection serviceCollection)
+  {
     serviceCollection.AddSpeckleSdk(HostApplications.Other, HostAppVersion.v2024, "IFC-Importer");
     serviceCollection.AddSpeckleWebIfc();
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
-    return serviceCollection.BuildServiceProvider();
   }
 
   public static async Task<string> Ifc(
