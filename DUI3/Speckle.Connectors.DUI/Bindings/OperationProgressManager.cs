@@ -31,6 +31,7 @@ public class OperationProgressManager : IOperationProgressManager
   {
     var progress = new NonUIThreadProgress<CardProgress>(args =>
     {
+      Console.WriteLine($"Progress: {args.Status} - {args.Progress}");
       SetModelProgress(
         bridge,
         modelCardId,
