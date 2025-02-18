@@ -65,6 +65,13 @@ public sealed class DisplayValueExtractor
         yield return gridSurfaceMesh;
         break;
 
+      // catchments
+      case CDB.Catchment catchment:
+        SOG.Polyline catchmentPolyline = _pointCollectionConverter.Convert(catchment.BoundaryPolyline3d);
+        catchmentPolyline.closed = true;
+        yield return catchmentPolyline;
+        break;
+
       // Corridors are complicated: their display values are extracted in the CorridorHandler when processing corridor children, since they are attached to the corridor subassemblies.
       case CDB.Corridor:
         yield break;

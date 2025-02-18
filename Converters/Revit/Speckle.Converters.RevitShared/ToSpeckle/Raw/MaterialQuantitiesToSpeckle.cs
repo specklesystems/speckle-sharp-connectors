@@ -3,21 +3,29 @@ using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Revit2023.ToSpeckle.Properties;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
-using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 /// <summary>
-/// Lighter converter for material quantities. For each material quantity available on the target element, it will return a dictionary containing: area, volume, density, material name, material class and material category.
-/// POC: we need to validate this with user needs. It currently ONLY includes density from the material parameters - any other more complex props were dropped to ensure speedy sending of data and a lighter payload.
-/// We're keen to re-add more data though, provided we can validate it. If more props come, then switch to MaterialProxy needs to be looked at in more detail.
+/// Lighter converter for material quantities.
 /// </summary>
+/// <remarks>
+/// We need to validate this with user needs. Currently limited to:
+/// <list type="bullet">
+///     <item><description>material category</description></item>
+///     <item><description>material class</description></item>
+///     <item><description>material name</description></item>
+///     <item><description>area</description></item>
+///     <item><description>volume</description></item>
+///     <item><description>density (if valid StructuralAssetId)</description></item>
+///     <item><description>type (if valid StructuralAssetId)</description></item>
+///     <item><description>concrete compressive strength (if valid StructuralAssetId and of type concrete)</description></item>
+/// </list>
+/// We're attaching density, type and concrete compression (if concrete) to all objects. This is still "lite". If we add
+/// more structural asset properties we should move to a proxy approach.
+/// </remarks>
 public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dictionary<string, object>>
 {
-  private readonly Dictionary<
-    string,
-    (string name, double density, DB.ForgeTypeId unitId)
-  > _structuralAssetDensityCache = new();
   private readonly ScalingServiceToSpeckle _scalingService;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly StructuralMaterialAssetExtractor _structuralAssetExtractor;
@@ -33,17 +41,6 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
     _structuralAssetExtractor = structuralAssetExtractor;
   }
 
-  /// <summary>
-  /// Lighter conversion of material quantities to speckle. For each material quantity available on the target element,
-  /// it will return a dictionary containing: area, volume, density, material name, material class and material category.
-  /// This conversion also manages a cache for the density retrieved from the material parameters.
-  /// </summary>
-  /// <param name="target"></param>
-  /// <remarks>
-  /// Request for densities => https://speckle.community/t/accessing-material-density-parameter-value/16026
-  /// Since we're only extracting density from the material parameters, it's acceptable to attach to objects.
-  /// If extracted material parameters grows, this will need to be relooked at!
-  /// </remarks>
   public Dictionary<string, object> Convert(DB.Element target)
   {
     Dictionary<string, object> quantities = new();
@@ -57,7 +54,6 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
         }
 
         var materialQuantity = new Dictionary<string, object>();
-
         double factor = _scalingService.ScaleLength(1);
         var unitSettings = _converterSettings.Current.Document.GetUnits();
 
@@ -81,15 +77,38 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
           materialQuantity["materialCategory"] = material.MaterialCategory;
           materialQuantity["materialClass"] = material.MaterialClass;
 
-          // get StructuralAssetId
+          // get StructuralAssetId (or try to)
           DB.ElementId structuralAssetId = material.StructuralAssetId;
           if (structuralAssetId != DB.ElementId.InvalidElementId)
           {
-            var density = TryExtractMaterialAssetParameters(structuralAssetId);
-            if (density.HasValue)
+            StructuralAssetProperties structuralAssetProperties = _structuralAssetExtractor.TryGetProperties(
+              structuralAssetId
+            );
+
+            materialQuantity["structuralAsset"] = structuralAssetProperties.Name;
+            AddMaterialProperty(
+              materialQuantity,
+              "density",
+              structuralAssetProperties.Density,
+              structuralAssetProperties.DensityUnitId
+            );
+
+            // more reliable way of determining material type (wood/concrete/type) as it uses Revit enum
+            // materialClass, materialCategory etc. are user string inputs
+            materialQuantity["materialType"] = structuralAssetProperties.MaterialType;
+
+            // Only add compressive strength for concrete materials (used by F+E for Automate)
+            if (
+              structuralAssetProperties.MaterialType == "Concrete"
+              && structuralAssetProperties.CompressiveStrength.HasValue
+            )
             {
-              materialQuantity["structuralAsset"] = density.Value.name;
-              AddMaterialProperty(materialQuantity, "density", density.Value.density, density.Value.unitId);
+              AddMaterialProperty(
+                materialQuantity,
+                "compressiveStrength",
+                structuralAssetProperties.CompressiveStrength.Value,
+                structuralAssetProperties.CompressiveStrengthUnitId!
+              );
             }
           }
 
@@ -101,28 +120,6 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
     return quantities;
   }
 
-  private (string name, double density, DB.ForgeTypeId unitId)? TryExtractMaterialAssetParameters(DB.ElementId assetId)
-  {
-    // ensure safe string conversion
-    string assetIdString = assetId.ToString().NotNull();
-
-    // check cache if density has already been extracted
-    if (_structuralAssetDensityCache.TryGetValue(assetIdString, out var cachedDensity))
-    {
-      return cachedDensity;
-    }
-
-    // if not in cache but structural asset id is valid => attempt extraction from StructuralMaterialAssertExtractor
-    var extractedDensity = _structuralAssetExtractor.GetProperties(assetId);
-    if (extractedDensity.HasValue)
-    {
-      _structuralAssetDensityCache[assetIdString] = extractedDensity.Value;
-      return extractedDensity.Value;
-    }
-
-    return null;
-  }
-
   /// <summary>
   /// Adds a material property to the given dictionary with standardized structure.
   /// </summary>
@@ -131,7 +128,7 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
   /// <param name="value">The numeric value of the property</param>
   /// <param name="unitId">The Forge type ID representing the units of the property</param>
   /// <remarks>
-  /// Etabs implements an extension method to dicts (see utils folder). May be worth exploring.
+  /// Saves code when used repeatedbly. Etabs implements an extension method to dicts (see utils folder). May be worth exploring.
   /// </remarks>
   private void AddMaterialProperty(
     Dictionary<string, object> materialQuantity,

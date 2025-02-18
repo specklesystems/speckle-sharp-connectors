@@ -4,6 +4,7 @@ using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.Helpers;
 
@@ -14,6 +15,8 @@ public sealed class DisplayValueExtractor
     (Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId, bool makeTransparent),
     List<SOG.Mesh>
   > _meshByMaterialConverter;
+  private readonly ITypedConverter<DB.Curve, Speckle.Objects.ICurve> _curveConverter;
+  private readonly ITypedConverter<IList<DB.BoundarySegment>, SOG.Polycurve> _boundarySegmentsConverter;
   private readonly ILogger<DisplayValueExtractor> _logger;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
@@ -22,16 +25,65 @@ public sealed class DisplayValueExtractor
       (Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId, bool makeTransparent),
       List<SOG.Mesh>
     > meshByMaterialConverter,
+    ITypedConverter<DB.Curve, Speckle.Objects.ICurve> curveConverter,
+    ITypedConverter<IList<DB.BoundarySegment>, SOG.Polycurve> boundarySegmentsConverter,
     ILogger<DisplayValueExtractor> logger,
     IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _meshByMaterialConverter = meshByMaterialConverter;
+    _curveConverter = curveConverter;
+    _boundarySegmentsConverter = boundarySegmentsConverter;
     _logger = logger;
     _converterSettings = converterSettings;
   }
 
-  public List<SOG.Mesh> GetDisplayValue(DB.Element element, DB.Options? options = null)
+  public List<Base> GetDisplayValue(DB.Element element)
+  {
+    switch (element)
+    {
+      // curtain and stacked walls should have their display values in their children
+      case DB.Wall wall:
+        return wall.CurtainGrid is not null || wall.IsStackedWall
+          ? new()
+          : GetMeshDisplayValue(element).Cast<Base>().ToList();
+
+      // railings should also include toprail which need to be retrieved separately
+      case DBA.Railing railing:
+        var railingDisplay = GetMeshDisplayValue(railing);
+        if (railing.TopRail != DB.ElementId.InvalidElementId)
+        {
+          var topRail = _converterSettings.Current.Document.GetElement(railing.TopRail);
+          railingDisplay.AddRange(GetMeshDisplayValue(topRail));
+        }
+        return railingDisplay.Cast<Base>().ToList();
+
+      // grids have curve display values
+      case DB.Grid grid:
+        return new() { (Base)_curveConverter.Convert(grid.Curve) };
+
+      // areas will use boundary segments for display
+      case DB.Area area:
+        List<Base> areaDisplay = new();
+        using (var options = new DB.SpatialElementBoundaryOptions())
+        {
+          var boundarySegments = area.GetBoundarySegments(options);
+          foreach (var boundarySegment in boundarySegments)
+          {
+            areaDisplay.Add(_boundarySegmentsConverter.Convert(boundarySegment));
+          }
+        }
+        return areaDisplay;
+
+      // POC: footprint roofs can have curtain walls in them. Need to check if they can also have non-curtain wall parts, bc currently not skipping anything.
+      // case DB.FootPrintRoof footPrintRoof:
+
+      default:
+        return GetMeshDisplayValue(element).Cast<Base>().ToList();
+    }
+  }
+
+  private List<SOG.Mesh> GetMeshDisplayValue(DB.Element element, DB.Options? options = null)
   {
     var (solids, meshes) = GetSolidsAndMeshesFromElement(element, options);
 

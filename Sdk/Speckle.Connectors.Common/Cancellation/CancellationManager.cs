@@ -27,18 +27,10 @@ public class CancellationManager : ICancellationManager
 
   public int NumberOfOperations => _operationsInProgress.Count;
 
-  /// <summary>
-  /// Get token with registered id.
-  /// </summary>
-  /// <param name="id"> Id of the operation.</param>
-  /// <returns> CancellationToken that belongs to operation.</returns>
-  public CancellationToken GetToken(string id) => _operationsInProgress[id].Token;
+  //if we can't find it then it must be cancelled
+  private CancellationToken GetToken(string id) =>
+    _operationsInProgress.TryGetValue(id, out var source) ? source.Token : new CancellationToken(true);
 
-  /// <summary>
-  /// Whether given id registered or not.
-  /// </summary>
-  /// <param name="id"> Id to check registration.</param>
-  /// <returns> Whether given id registered or not.</returns>
   public bool IsExist(string id) => _operationsInProgress.ContainsKey(id);
 
   public void CancelAllOperations()
@@ -91,5 +83,5 @@ public class CancellationManager : ICancellationManager
   /// </summary>
   /// <param name="id"> Id to check cancellation requested already or not.</param>
   /// <returns></returns>
-  public bool IsCancellationRequested(string id) => _operationsInProgress[id].IsCancellationRequested;
+  public bool IsCancellationRequested(string id) => GetToken(id).IsCancellationRequested;
 }

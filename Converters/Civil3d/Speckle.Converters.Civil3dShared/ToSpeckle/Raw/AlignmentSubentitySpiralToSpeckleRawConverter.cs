@@ -37,11 +37,10 @@ public class AlignmentSubentitySpiralToSpeckleRawConverter
     {
       double x = 0;
       double y = 0;
-      double z = 0;
-      alignment.PointLocation(spiral.StartStation + i * spiralSegmentLength, 0, 0.001, ref x, ref y, ref z);
+      alignment.PointLocation(spiral.StartStation + i * spiralSegmentLength, 0, ref x, ref y);
       polylineValue.Add(x);
       polylineValue.Add(y);
-      polylineValue.Add(z);
+      polylineValue.Add(0);
     }
     polylineValue.Add(spiral.EndPoint.X);
     polylineValue.Add(spiral.EndPoint.Y);
