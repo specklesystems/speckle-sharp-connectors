@@ -1,19 +1,11 @@
 ﻿using System.Drawing;
-using Rhino.Collections;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Utils;
 
 namespace Speckle.Converters.Rhino.ToHost.Raw;
 
-public class MeshToHostConverter : ITypedConverter<SOG.Mesh, RG.Mesh>
+public class MeshToHostConverter(IFlatPointListToHostConverter pointListConverter) : ITypedConverter<SOG.Mesh, RG.Mesh>
 {
-  private readonly ITypedConverter<IReadOnlyList<double>, Point3dList> _pointListConverter;
-
-  public MeshToHostConverter(ITypedConverter<IReadOnlyList<double>, Point3dList> pointListConverter)
-  {
-    _pointListConverter = pointListConverter;
-  }
-
   /// <summary>
   /// Converts a Speckle mesh object to a Rhino mesh object.
   /// </summary>
@@ -24,11 +16,11 @@ public class MeshToHostConverter : ITypedConverter<SOG.Mesh, RG.Mesh>
   {
     RG.Mesh m = new();
 
-    var vertices = _pointListConverter.Convert(target.vertices);
+    var vertices = pointListConverter.ConvertToEnum(target.vertices);
     var colors = target.colors.Select(Color.FromArgb).ToArray();
 
     m.Vertices.AddVertices(vertices);
-    m.VertexColors.SetColors(colors);
+    m.VertexColors.SetColors(colors); //internally converts to ARGB
 
     AssignMeshFaces(target, m);
     AssignTextureCoordinates(target, m);
@@ -54,32 +46,36 @@ public class MeshToHostConverter : ITypedConverter<SOG.Mesh, RG.Mesh>
         n += 3; // 0 -> 3, 1 -> 4
       }
 
-      if (n == 3)
+      switch (n)
       {
-        // triangle
-        m.Faces.AddFace(new RG.MeshFace(target.faces[i + 1], target.faces[i + 2], target.faces[i + 3]));
-      }
-      else if (n == 4)
-      {
-        // quad
-        m.Faces.AddFace(
-          new RG.MeshFace(target.faces[i + 1], target.faces[i + 2], target.faces[i + 3], target.faces[i + 4])
-        );
-      }
-      else
-      {
-        // n-gon
-        var triangles = MeshTriangulationHelper.TriangulateFace(i, target, false);
-
-        var faceIndices = new List<int>(triangles.Count);
-        for (int t = 0; t < triangles.Count; t += 3)
+        case 3:
+          // triangle
+          m.Faces.AddFace(target.faces[i + 1], target.faces[i + 2], target.faces[i + 3]);
+          break;
+        case 4:
+          // quad
+          m.Faces.AddFace(target.faces[i + 1], target.faces[i + 2], target.faces[i + 3], target.faces[i + 4]
+          );
+          break;
+        default:
         {
-          var face = new RG.MeshFace(triangles[t], triangles[t + 1], triangles[t + 2]);
-          faceIndices.Add(m.Faces.AddFace(face));
-        }
+          // n-gon
+          var triangles = MeshTriangulationHelper.TriangulateFace(i, target, false);
 
-        RG.MeshNgon ngon = RG.MeshNgon.Create(target.faces.GetRange(i + 1, n), faceIndices);
-        m.Ngons.AddNgon(ngon);
+          var faceIndices = RhinoPools.IntListPool.Get();
+          for (int t = 0; t < triangles.Count; t += 3)
+          {
+            faceIndices.Add(m.Faces.AddFace(triangles[t], triangles[t + 1], triangles[t + 2]));
+          }
+
+          var faces = RhinoPools.IntArrayPool.Rent(n);
+          target.faces.CopyTo(i + 1, faces, 0, n);
+          RG.MeshNgon ngon = RG.MeshNgon.Create(target.faces.GetRange(i + 1, n), faceIndices);
+          RhinoPools.IntListPool.Return(faceIndices); //safe because MeshNgon.Create uses the list but doesn't keep it
+          RhinoPools.IntArrayPool.Return(faces); //safe because MeshNgon.Create uses the list but doesn't keep it
+          m.Ngons.AddNgon(ngon);
+          break;
+        }
       }
 
       i += n + 1;
