@@ -33,6 +33,11 @@ public class Civil3dRootToSpeckleConverter : IRootToSpeckleConverter
       );
     }
 
+    if (target is CDB.AlignmentLabelGroup) // TODO: this should not throw and be reported from connector instead, similar to supported categories in Revit.
+    {
+      throw new ValidationException($"Conversion of {target.GetType().Name} to Speckle is not supported yet.");
+    }
+
     Type type = dbObject.GetType();
 
     // check first for civil type objects
