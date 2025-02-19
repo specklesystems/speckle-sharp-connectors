@@ -3,7 +3,6 @@
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <TeklaVersion>2023</TeklaVersion>
     <UseWpf>true</UseWpf>
     <DefineConstants>$(DefineConstants);TEKLA2023</DefineConstants>
