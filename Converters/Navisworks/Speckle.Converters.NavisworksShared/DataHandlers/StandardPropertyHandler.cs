@@ -25,4 +25,16 @@ public class StandardPropertyHandler(
 
     speckleObject["properties"] = propertyDictionary;
   }
+
+  public override Dictionary<string, object?> GetProperties(NAV.ModelItem modelItem)
+  {
+    Dictionary<string, object?> categoryDictionaries = ProcessPropertySets(modelItem);
+
+    foreach (var kvp in categoryDictionaries)
+    {
+      categoryDictionaries[$"{kvp.Key}"] = kvp.Value;
+    }
+
+    return categoryDictionaries;
+  }
 }
