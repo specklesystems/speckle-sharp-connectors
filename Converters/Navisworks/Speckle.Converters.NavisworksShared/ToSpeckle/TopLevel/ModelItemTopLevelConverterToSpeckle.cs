@@ -1,4 +1,4 @@
-using Speckle.Converter.Navisworks.Settings;
+﻿using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converter.Navisworks.ToSpeckle.PropertyHandlers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
