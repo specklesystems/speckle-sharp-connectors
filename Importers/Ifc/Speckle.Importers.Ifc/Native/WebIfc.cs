@@ -4,12 +4,11 @@ using System.Runtime.InteropServices;
 namespace Speckle.Importers.Ifc.Native;
 
 [SuppressMessage("Globalization", "CA2101:Specify marshaling for P/Invoke string arguments")]
-[SuppressMessage("Interoperability", "CA1401:P/Invokes should not be visible")]
 [SuppressMessage("Security", "CA5393:Do not use unsafe DllImportSearchPath value")]
-public static class WebIfc
+internal static class WebIfc
 {
 #if WINDOWS
-  private const string DllName = "web-ifc.dll";
+  private const string DllName = "Native/web-ifc.dll";
   private const CharSet Set = CharSet.Ansi;
 #else
   private const string DllName = "libweb-ifc.so";

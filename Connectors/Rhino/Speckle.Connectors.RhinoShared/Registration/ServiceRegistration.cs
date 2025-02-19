@@ -10,11 +10,13 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
+using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Connectors.Rhino.Bindings;
 using Speckle.Connectors.Rhino.Filters;
 using Speckle.Connectors.Rhino.HostApp;
+using Speckle.Connectors.Rhino.HostApp.Properties;
 using Speckle.Connectors.Rhino.Operations.Receive;
 using Speckle.Connectors.Rhino.Operations.Send;
 using Speckle.Connectors.Rhino.Plugin;
@@ -52,6 +54,7 @@ public static class ServiceRegistration
 
     // register send conversion cache
     serviceCollection.AddSingleton<ISendConversionCache, SendConversionCache>();
+    serviceCollection.AddSingleton<IAppIdleManager, RhinoIdleManager>();
 
     // register send operation and dependencies
     serviceCollection.AddScoped<SendOperation<RhinoObject>>();
@@ -78,6 +81,8 @@ public static class ServiceRegistration
 
     serviceCollection.AddScoped<RhinoColorBaker>();
     serviceCollection.AddScoped<RhinoColorUnpacker>();
+
+    serviceCollection.AddScoped<PropertiesExtractor>();
 
     // operation progress manager
     serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();

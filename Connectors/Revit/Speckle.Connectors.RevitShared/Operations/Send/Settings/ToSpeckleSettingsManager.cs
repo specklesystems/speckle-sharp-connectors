@@ -13,7 +13,7 @@ namespace Speckle.Connectors.Revit.Operations.Send.Settings;
 [GenerateAutoInterface]
 public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 {
-  private readonly IRevitContext _revitContext;
+  private readonly RevitContext _revitContext;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ElementUnpacker _elementUnpacker;
 
@@ -23,7 +23,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
   private readonly Dictionary<string, bool?> _sendNullParamsCache = new();
 
   public ToSpeckleSettingsManager(
-    IRevitContext revitContext,
+    RevitContext revitContext,
     ISendConversionCache sendConversionCache,
     ElementUnpacker elementUnpacker
   )

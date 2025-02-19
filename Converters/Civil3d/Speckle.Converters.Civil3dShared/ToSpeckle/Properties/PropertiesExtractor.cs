@@ -5,19 +5,19 @@ namespace Speckle.Converters.Civil3dShared.ToSpeckle;
 /// </summary>
 public class PropertiesExtractor
 {
-  private readonly GeneralPropertiesExtractor _generalPropertiesExtractor;
+  private readonly ClassPropertiesExtractor _classPropertiesExtractor;
   private readonly PartDataExtractor _partDataExtractor;
   private readonly PropertySetExtractor _propertySetExtractor;
   private readonly ExtensionDictionaryExtractor _extensionDictionaryExtractor;
 
   public PropertiesExtractor(
-    GeneralPropertiesExtractor generalPropertiesExtractor,
+    ClassPropertiesExtractor classPropertiesExtractor,
     PartDataExtractor partDataExtractor,
     PropertySetExtractor propertySetExtractor,
     ExtensionDictionaryExtractor extensionDictionaryExtractor
   )
   {
-    _generalPropertiesExtractor = generalPropertiesExtractor;
+    _classPropertiesExtractor = classPropertiesExtractor;
     _partDataExtractor = partDataExtractor;
     _propertySetExtractor = propertySetExtractor;
     _extensionDictionaryExtractor = extensionDictionaryExtractor;
@@ -25,13 +25,10 @@ public class PropertiesExtractor
 
   public Dictionary<string, object?> GetProperties(CDB.Entity entity)
   {
-    Dictionary<string, object?> properties = new();
+    // first get all class properties, which will be at the root level of props dictionary
+    Dictionary<string, object?> properties = _classPropertiesExtractor.GetClassProperties(entity);
 
-    AddDictionaryToPropertyDictionary(
-      _generalPropertiesExtractor.GetGeneralProperties(entity),
-      "General Properties",
-      properties
-    );
+    // add part data, property sets, and extension dictionaries to the properties dict
     AddDictionaryToPropertyDictionary(_partDataExtractor.GetPartData(entity), "Part Data", properties);
     AddDictionaryToPropertyDictionary(_propertySetExtractor.GetPropertySets(entity), "Property Sets", properties);
     AddDictionaryToPropertyDictionary(
