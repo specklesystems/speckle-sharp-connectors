@@ -47,7 +47,22 @@ public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
   }
 
   // Converts a Navisworks ModelItem into a Speckle Base object
-  private Base Convert(NAV.ModelItem target)
+  private Base Convert(NAV.ModelItem target) =>
+    target.HasGeometry ? CreateGeometryObject(target) : CreateNonGeometryObject(target);
+
+  private NavisworksObject CreateGeometryObject(NAV.ModelItem target)
+  {
+    IPropertyHandler handler = ShouldMergeProperties(target) ? _hierarchicalHandler : _standardHandler;
+    var name = GetObjectName(target);
+    return new NavisworksObject()
+    {
+      displayValue = _displayValueExtractor.GetDisplayValue(target),
+      name = name,
+      properties = _settingsStore.Current.User.ExcludeProperties ? [] : handler.GetProperties(target),
+      units = _settingsStore.Current.Derived.SpeckleUnits,
+    };
+  }
+
   private static Collection CreateNonGeometryObject(NAV.ModelItem target)
   {
     var name = GetObjectName(target);
