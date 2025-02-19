@@ -8,30 +8,6 @@ public abstract class BasePropertyHandler(
   ModelPropertiesExtractor modelPropertiesExtractor
 ) : IPropertyHandler
 {
-  public void AssignProperties(SSM.Base speckleObject, NAV.ModelItem modelItem)
-  {
-    AssignClassProperties(speckleObject, modelItem);
-    AssignPropertySets(speckleObject, modelItem);
-  }
-
-  private static void AssignClassProperties(SSM.Base speckleObject, NAV.ModelItem modelItem)
-  {
-    var classProperties = ClassPropertiesExtractor.GetClassProperties(modelItem);
-    if (classProperties == null)
-    {
-      return;
-    }
-
-    foreach (var kvp in classProperties)
-    {
-      if (speckleObject != null)
-      {
-        speckleObject[kvp.Key] = kvp.Value;
-      }
-    }
-  }
-
-  protected abstract void AssignPropertySets(SSM.Base speckleObject, NAV.ModelItem modelItem);
   public abstract Dictionary<string, object?> GetProperties(NAV.ModelItem modelItem);
 
   protected Dictionary<string, object?> ProcessPropertySets(NAV.ModelItem modelItem)
