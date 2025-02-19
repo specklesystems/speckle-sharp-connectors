@@ -1,4 +1,4 @@
-namespace Speckle.Converter.Navisworks.ToSpeckle.PropertyHandlers;
+﻿namespace Speckle.Converter.Navisworks.ToSpeckle.PropertyHandlers;
 
 /// <summary>
 /// Base property handler providing common functionality for property assignment.

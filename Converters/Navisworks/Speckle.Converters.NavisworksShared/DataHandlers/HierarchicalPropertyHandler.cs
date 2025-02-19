@@ -1,4 +1,4 @@
-namespace Speckle.Converter.Navisworks.ToSpeckle.PropertyHandlers;
+﻿namespace Speckle.Converter.Navisworks.ToSpeckle.PropertyHandlers;
 
 /// <summary>
 /// Handles property assignment with hierarchy merging for objects that require ancestor properties.
