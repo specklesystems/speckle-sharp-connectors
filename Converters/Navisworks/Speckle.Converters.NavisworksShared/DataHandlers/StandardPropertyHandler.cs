@@ -35,6 +35,26 @@ public class StandardPropertyHandler(
       categoryDictionaries[$"{kvp.Key}"] = kvp.Value;
     }
 
+    var classProperties = ClassPropertiesExtractor.GetClassProperties(modelItem);
+
+    // for each of the the keys of classProperties, add them to the propertyDict
+    if (classProperties == null)
+    {
+      return categoryDictionaries;
+    }
+
+    foreach (var kvp in classProperties)
+    {
+      if (categoryDictionaries.ContainsKey(kvp.Key))
+      {
+        categoryDictionaries[kvp.Key] = kvp.Value;
+      }
+      else
+      {
+        categoryDictionaries.Add(kvp.Key, kvp.Value);
+      }
+    }
+
     return categoryDictionaries;
   }
 }

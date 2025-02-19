@@ -48,6 +48,26 @@ public class HierarchicalPropertyHandler(
 
     ApplyFilteredProperties(propertyDict, propertyCollection);
 
+    var classProperties = ClassPropertiesExtractor.GetClassProperties(modelItem);
+
+    // for each of the the keys of classProperties, add them to the propertyDict
+    if (classProperties == null)
+    {
+      return propertyDict;
+    }
+
+    foreach (var kvp in classProperties)
+    {
+      if (propertyDict.ContainsKey(kvp.Key))
+      {
+        propertyDict[kvp.Key] = kvp.Value;
+      }
+      else
+      {
+        propertyDict.Add(kvp.Key, kvp.Value);
+      }
+    }
+
     return propertyDict;
   }
 
