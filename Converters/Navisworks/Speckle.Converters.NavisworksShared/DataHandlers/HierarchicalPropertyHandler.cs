@@ -5,38 +5,13 @@
 /// </summary>
 public class HierarchicalPropertyHandler(
   PropertySetsExtractor propertySetsExtractor,
-  ModelPropertiesExtractor modelPropertiesExtractor
+  ModelPropertiesExtractor modelPropertiesExtractor,
+  ClassPropertiesExtractor classPropertiesExtractor
 ) : BasePropertyHandler(propertySetsExtractor, modelPropertiesExtractor)
 {
-  protected override void AssignPropertySets(SSM.Base speckleObject, NAV.ModelItem modelItem)
-  {
-    if (speckleObject == null)
-    {
-      throw new ArgumentNullException(nameof(speckleObject));
-    }
-    var propertyDict = speckleObject["properties"] as Dictionary<string, object?> ?? new Dictionary<string, object?>();
-
-    if (modelItem == null)
-    {
-      throw new ArgumentNullException(nameof(modelItem));
-    }
-
-    var hierarchy = GetObjectHierarchy(modelItem);
-    var propertyCollection = new Dictionary<string, Dictionary<string, HashSet<object?>>>();
-
-    foreach (var item in hierarchy)
-    {
-      CollectHierarchicalProperties(item, propertyCollection);
-    }
-
-    ApplyFilteredProperties(propertyDict, propertyCollection);
-
-    speckleObject["properties"] = propertyDict;
-  }
-
   public override Dictionary<string, object?> GetProperties(NAV.ModelItem modelItem)
   {
-    var propertyDict = new Dictionary<string, object?>();
+    var propertyDict = classPropertiesExtractor.GetClassProperties(modelItem) ?? new Dictionary<string, object?>();
 
     var hierarchy = GetObjectHierarchy(modelItem);
     var propertyCollection = new Dictionary<string, Dictionary<string, HashSet<object?>>>();
@@ -47,26 +22,6 @@ public class HierarchicalPropertyHandler(
     }
 
     ApplyFilteredProperties(propertyDict, propertyCollection);
-
-    var classProperties = ClassPropertiesExtractor.GetClassProperties(modelItem);
-
-    // for each of the the keys of classProperties, add them to the propertyDict
-    if (classProperties == null)
-    {
-      return propertyDict;
-    }
-
-    foreach (var kvp in classProperties)
-    {
-      if (propertyDict.ContainsKey(kvp.Key))
-      {
-        propertyDict[kvp.Key] = kvp.Value;
-      }
-      else
-      {
-        propertyDict.Add(kvp.Key, kvp.Value);
-      }
-    }
 
     return propertyDict;
   }
