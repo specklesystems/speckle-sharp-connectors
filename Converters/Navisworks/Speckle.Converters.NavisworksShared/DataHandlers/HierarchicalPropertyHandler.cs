@@ -34,6 +34,23 @@ public class HierarchicalPropertyHandler(
     speckleObject["properties"] = propertyDict;
   }
 
+  public override Dictionary<string, object?> GetProperties(NAV.ModelItem modelItem)
+  {
+    var propertyDict = new Dictionary<string, object?>();
+
+    var hierarchy = GetObjectHierarchy(modelItem);
+    var propertyCollection = new Dictionary<string, Dictionary<string, HashSet<object?>>>();
+
+    foreach (var item in hierarchy)
+    {
+      CollectHierarchicalProperties(item, propertyCollection);
+    }
+
+    ApplyFilteredProperties(propertyDict, propertyCollection);
+
+    return propertyDict;
+  }
+
   private static List<NAV.ModelItem> GetObjectHierarchy(NAV.ModelItem target)
   {
     var hierarchy = new List<NAV.ModelItem>();
