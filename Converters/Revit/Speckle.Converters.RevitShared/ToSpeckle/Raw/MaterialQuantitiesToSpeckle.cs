@@ -54,21 +54,22 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
         }
 
         var materialQuantity = new Dictionary<string, object>();
-        double factor = _scalingService.ScaleLength(1);
         var unitSettings = _converterSettings.Current.Document.GetUnits();
 
+        var areaUnitType = unitSettings.GetFormatOptions(DB.SpecTypeId.Area).GetUnitTypeId();
         AddMaterialProperty(
           materialQuantity,
           "area",
-          factor * factor * target.GetMaterialArea(matId, false),
-          unitSettings.GetFormatOptions(DB.SpecTypeId.Area).GetUnitTypeId()
+          _scalingService.Scale(target.GetMaterialArea(matId, false), areaUnitType),
+          areaUnitType
         );
 
+        var volumeUnitType = unitSettings.GetFormatOptions(DB.SpecTypeId.Volume).GetUnitTypeId();
         AddMaterialProperty(
           materialQuantity,
           "volume",
-          factor * factor * factor * target.GetMaterialVolume(matId),
-          unitSettings.GetFormatOptions(DB.SpecTypeId.Volume).GetUnitTypeId()
+          _scalingService.Scale(target.GetMaterialVolume(matId), volumeUnitType),
+          volumeUnitType
         );
 
         if (_converterSettings.Current.Document.GetElement(matId) is DB.Material material)
