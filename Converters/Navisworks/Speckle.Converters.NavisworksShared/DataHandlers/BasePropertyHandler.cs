@@ -32,10 +32,11 @@ public abstract class BasePropertyHandler(
   }
 
   protected abstract void AssignPropertySets(SSM.Base speckleObject, NAV.ModelItem modelItem);
+  public abstract Dictionary<string, object?> GetProperties(NAV.ModelItem modelItem);
 
-  protected Dictionary<string, Dictionary<string, object?>> ProcessPropertySets(NAV.ModelItem modelItem)
+  protected Dictionary<string, object?> ProcessPropertySets(NAV.ModelItem modelItem)
   {
-    var categorizedProperties = new Dictionary<string, Dictionary<string, object?>>();
+    var categorizedProperties = new Dictionary<string, object?>();
     var propertySets = propertySetsExtractor.GetPropertySets(modelItem);
 
     if (propertySets != null)
