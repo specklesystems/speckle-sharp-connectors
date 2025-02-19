@@ -1,4 +1,4 @@
-﻿using Speckle.Converter.Navisworks.Settings;
+using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converter.Navisworks.ToSpeckle.PropertyHandlers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
@@ -48,18 +48,15 @@ public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
 
   // Converts a Navisworks ModelItem into a Speckle Base object
   private Base Convert(NAV.ModelItem target)
+  private static Collection CreateNonGeometryObject(NAV.ModelItem target)
   {
     var name = GetObjectName(target);
-
-    Base navisworksObject = target.HasGeometry ? CreateGeometryObject(target, name) : CreateNonGeometryObject(name);
-
-    IPropertyHandler handler = ShouldMergeProperties(target) ? _hierarchicalHandler : _standardHandler;
-    if (!_settingsStore.Current.User.ExcludeProperties)
+    return new Collection
     {
-      handler.AssignProperties(navisworksObject, target);
-    }
-
-    return navisworksObject;
+      name = name,
+      elements = [],
+      ["properties"] = new Dictionary<string, object?>()
+    };
   }
 
   /// <summary>
