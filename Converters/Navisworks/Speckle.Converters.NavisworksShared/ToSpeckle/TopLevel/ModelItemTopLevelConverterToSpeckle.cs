@@ -76,25 +76,9 @@ public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
 
   /// <summary>
   /// Determines whether properties should be merged from ancestors.
-  /// Only geometry objects should have their properties merged.
+  /// Only geometry objects should have their properties merged.... For now.
   /// </summary>
   private static bool ShouldMergeProperties(NAV.ModelItem target) => target.HasGeometry;
-
-  private Base CreateGeometryObject(NAV.ModelItem target, string name) =>
-    new()
-    {
-      ["name"] = name,
-      ["displayValue"] = _displayValueExtractor.GetDisplayValue(target),
-      ["properties"] = new Dictionary<string, object?>()
-    };
-
-  private static Collection CreateNonGeometryObject(string name) =>
-    new()
-    {
-      ["name"] = name,
-      ["elements"] = new List<Base>(),
-      ["properties"] = new Dictionary<string, object?>()
-    };
 
   private static string GetObjectName(NAV.ModelItem target)
   {
