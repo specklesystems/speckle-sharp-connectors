@@ -1,4 +1,4 @@
-﻿namespace Speckle.Converter.Navisworks.ToSpeckle.PropertyHandlers;
+namespace Speckle.Converter.Navisworks.ToSpeckle.PropertyHandlers;
 
 /// <summary>
 /// Handles property assignment with hierarchy merging for objects that require ancestor properties.
@@ -75,7 +75,12 @@ public class HierarchicalPropertyHandler(
         propertyCollection.Add(kvp.Key, categoryProperties);
       }
 
-      foreach (var prop in kvp.Value.Where(prop => IsValidPropertyValue(prop.Value)))
+      if (kvp.Value is not Dictionary<string, object?> properties)
+      {
+        continue;
+      }
+
+      foreach (var prop in properties.Where(prop => IsValidPropertyValue(prop.Value)))
       {
         if (!categoryProperties.TryGetValue(prop.Key, out var valueSet))
         {
