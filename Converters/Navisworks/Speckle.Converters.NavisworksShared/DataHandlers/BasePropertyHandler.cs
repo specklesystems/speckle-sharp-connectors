@@ -1,4 +1,4 @@
-﻿namespace Speckle.Converter.Navisworks.ToSpeckle.PropertyHandlers;
+namespace Speckle.Converter.Navisworks.ToSpeckle.PropertyHandlers;
 
 /// <summary>
 /// Base property handler providing common functionality for property assignment.
@@ -64,10 +64,7 @@ public abstract class BasePropertyHandler(
     return categorizedProperties;
   }
 
-  private void AddModelProperties(
-    NAV.ModelItem modelItem,
-    Dictionary<string, Dictionary<string, object?>> categorizedProperties
-  )
+  private void AddModelProperties(NAV.ModelItem modelItem, Dictionary<string, object?> categorizedProperties)
   {
     if (!modelItem.HasModel)
     {
