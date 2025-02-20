@@ -6,7 +6,7 @@
 public interface IPropertyHandler
 {
   /// <summary>
-  /// Processes and adds properties to a Speckle object from a Navisworks model item.
+  /// Gets the properties from a Navisworks model item.
   /// </summary>
-  void AssignProperties(SSM.Base speckleObject, NAV.ModelItem modelItem);
+  Dictionary<string, object?> GetProperties(NAV.ModelItem modelItem);
 }
