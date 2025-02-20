@@ -142,7 +142,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
             switch (layer)
             {
               case ADM.FeatureLayer featureLayer:
-                List<Base> convertedFeatureLayerObjects = ConvertFeatureLayerObjects(featureLayer);
+                List<Base> convertedFeatureLayerObjects = ConvertFeatureLayerObjects(featureLayer, cancellationToken);
                 layerCollection.elements.AddRange(convertedFeatureLayerObjects);
                 break;
               case ADM.RasterLayer rasterLayer:
@@ -150,7 +150,10 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
                 layerCollection.elements.AddRange(convertedRasterLayerObjects);
                 break;
               case ADM.LasDatasetLayer lasDatasetLayer:
-                List<Base> convertedLasDatasetObjects = ConvertLasDatasetLayerObjects(lasDatasetLayer);
+                List<Base> convertedLasDatasetObjects = ConvertLasDatasetLayerObjects(
+                  lasDatasetLayer,
+                  cancellationToken
+                );
                 layerCollection.elements.AddRange(convertedLasDatasetObjects);
                 break;
               default:
@@ -190,7 +193,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     return new RootObjectBuilderResult(rootCollection, results);
   }
 
-  private List<Base> ConvertFeatureLayerObjects(ADM.FeatureLayer featureLayer)
+  private List<Base> ConvertFeatureLayerObjects(ADM.FeatureLayer featureLayer, CancellationToken cancellationToken)
   {
     string layerApplicationId = featureLayer.GetSpeckleApplicationId();
     List<Base> convertedObjects = new();
@@ -204,6 +207,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     {
       while (rowCursor.MoveNext())
       {
+        cancellationToken.ThrowIfCancellationRequested();
         // Same IDisposable issue appears to happen on Row class too. Docs say it should always be disposed of manually by the caller.
         using (ACD.Row row = rowCursor.Current)
         {
@@ -236,7 +240,10 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     return convertedObjects;
   }
 
-  private List<Base> ConvertLasDatasetLayerObjects(ADM.LasDatasetLayer lasDatasetLayer)
+  private List<Base> ConvertLasDatasetLayerObjects(
+    ADM.LasDatasetLayer lasDatasetLayer,
+    CancellationToken cancellationToken
+  )
   {
     string layerApplicationId = lasDatasetLayer.GetSpeckleApplicationId();
     List<Base> convertedObjects = new();
@@ -250,6 +257,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
       {
         while (ptCursor.MoveNext())
         {
+          cancellationToken.ThrowIfCancellationRequested();
           using (ACD.Analyst3D.LasPoint pt = ptCursor.Current)
           {
             Base converted = _rootToSpeckleConverter.Convert(pt);
