@@ -7,7 +7,7 @@ namespace Speckle.Connectors.DUI.Bridge;
 [GenerateAutoInterface]
 public sealed class IdleCallManager(ITopLevelExceptionHandler topLevelExceptionHandler) : IIdleCallManager
 {
-  private readonly ConcurrentDictionary<string, Func<Task>> _calls = new();
+  internal ConcurrentDictionary<string, Func<Task>> Calls { get; } = new();
   private readonly object _lock = new();
   public bool IdleSubscriptionCalled { get; private set; }
 
@@ -24,7 +24,7 @@ public sealed class IdleCallManager(ITopLevelExceptionHandler topLevelExceptionH
 
   public void SubscribeToIdle(string id, Func<Task> action, Action addEvent)
   {
-    if (!_calls.TryAdd(id, action))
+    if (!Calls.TryAdd(id, action))
     {
       return;
     }
@@ -47,12 +47,12 @@ public sealed class IdleCallManager(ITopLevelExceptionHandler topLevelExceptionH
 
   internal async Task AppOnIdleInternal(Action removeEvent)
   {
-    foreach (KeyValuePair<string, Func<Task>> kvp in _calls.ToList())
+    foreach (KeyValuePair<string, Func<Task>> kvp in Calls)
     {
       await topLevelExceptionHandler.CatchUnhandledAsync(kvp.Value);
     }
 
-    _calls.Clear();
+    Calls.Clear();
     if (IdleSubscriptionCalled)
     {
       lock (_lock)
