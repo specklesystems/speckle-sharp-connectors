@@ -12,6 +12,7 @@ public class SendCollectionManager
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly Dictionary<string, Collection> _collectionCache = new();
+  private readonly Dictionary<ElementId, (string name, Dictionary<string, object?> props)> _levelCache = new(); // stores level id and its properties
 
   public SendCollectionManager(IConverterSettingsStore<RevitConversionSettings> converterSettings)
   {
@@ -30,9 +31,29 @@ public class SendCollectionManager
     var doc = _converterSettings.Current.Document;
     var path = new List<string>();
 
+    // Step 0: get the level and its properties
+    string levelName = "No Level";
+    Dictionary<string, object?> levelProperties = new();
+    if (element.LevelId != ElementId.InvalidElementId)
+    {
+      if (_levelCache.TryGetValue(element.LevelId, out var cachedLevel))
+      {
+        levelName = cachedLevel.name;
+        levelProperties = cachedLevel.props;
+      }
+      else
+      {
+        var level = (Level)doc.GetElement(element.LevelId);
+        levelName = level.Name;
+        levelProperties.Add("elevation", level.Elevation);
+        levelProperties.Add("units", _converterSettings.Current.SpeckleUnits);
+        _levelCache.Add(element.LevelId, (levelName, levelProperties));
+      }
+    }
+
     // Step 1: create path components. Currently, this is
     // level > category > type
-    path.Add(doc.GetElement(element.LevelId) is not Level level ? "No level" : level.Name);
+    path.Add(levelName);
     path.Add(element.Category?.Name ?? "No category");
     var typeId = element.GetTypeId();
     if (typeId != ElementId.InvalidElementId)
@@ -57,8 +78,9 @@ public class SendCollectionManager
     string flatPathName = "";
     Collection previousCollection = rootObject;
 
-    foreach (var pathItem in path)
+    for (int i = 0; i < path.Count; i++)
     {
+      var pathItem = path[i];
       flatPathName += pathItem;
       Collection childCollection;
       if (_collectionCache.TryGetValue(flatPathName, out Collection? collection))
@@ -68,6 +90,13 @@ public class SendCollectionManager
       else
       {
         childCollection = new Collection(pathItem);
+        // add props if it's the 1st path item, representing level
+        // if the structure ever changes from level > category > type, this needs to be changed
+        if (i == 0 && levelProperties.Count > 0)
+        {
+          childCollection["properties"] = levelProperties;
+        }
+
         previousCollection.elements.Add(childCollection);
         _collectionCache[flatPathName] = childCollection;
       }
