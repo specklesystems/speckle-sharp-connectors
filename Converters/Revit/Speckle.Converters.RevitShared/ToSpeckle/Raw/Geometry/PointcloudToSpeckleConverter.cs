@@ -5,14 +5,13 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
-[NameAndRankValue(typeof(DB.PointCloudInstance), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public sealed class PointcloudTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
+public sealed class PointcloudToSpeckleConverter : ITypedConverter<DB.PointCloudInstance, SOG.Pointcloud>
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<DB.XYZ, SOG.Point> _xyzToPointConverter;
   private readonly ITypedConverter<DB.BoundingBoxXYZ, SOG.Box> _boundingBoxConverter;
 
-  public PointcloudTopLevelConverterToSpeckle(
+  public PointcloudToSpeckleConverter(
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ITypedConverter<DB.XYZ, SOG.Point> xyzToPointConverter,
     ITypedConverter<DB.BoundingBoxXYZ, SOG.Box> boundingBoxConverter
@@ -34,7 +33,6 @@ public sealed class PointcloudTopLevelConverterToSpeckle : IToSpeckleTopLevelCon
       var filter = DB.PointClouds.PointCloudFilterFactory.CreateMultiPlaneFilter(new List<DB.Plane>() { minPlane });
       var points = target.GetPoints(filter, 0.0001, 999999); // max limit is 1 mil but 1000000 throws error
 
-      // POC: complaining about nullability
       var specklePointCloud = new SOG.Pointcloud
       {
         points = points
@@ -45,8 +43,6 @@ public sealed class PointcloudTopLevelConverterToSpeckle : IToSpeckleTopLevelCon
         units = _converterSettings.Current.SpeckleUnits,
         bbox = _boundingBoxConverter.Convert(boundingBox)
       };
-
-      specklePointCloud["category"] = target.Category?.Name;
 
       return specklePointCloud;
     }
