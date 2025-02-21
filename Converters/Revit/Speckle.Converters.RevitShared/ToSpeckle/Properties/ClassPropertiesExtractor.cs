@@ -1,5 +1,4 @@
 using Speckle.Converters.Common;
-using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Settings;
 
@@ -10,18 +9,12 @@ namespace Speckle.Converters.RevitShared.ToSpeckle.Properties;
 /// </summary>
 public class ClassPropertiesExtractor
 {
-  private readonly ITypedConverter<DB.Level, Dictionary<string, object>> _levelConverter;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   private readonly Dictionary<DB.WorksetId, string> _worksetCache = new();
-  private readonly Dictionary<DB.ElementId, Dictionary<string, object>> _levelCache = new();
 
-  public ClassPropertiesExtractor(
-    ITypedConverter<DB.Level, Dictionary<string, object>> levelConverter,
-    IConverterSettingsStore<RevitConversionSettings> converterSettings
-  )
+  public ClassPropertiesExtractor(IConverterSettingsStore<RevitConversionSettings> converterSettings)
   {
-    _levelConverter = levelConverter;
     _converterSettings = converterSettings;
   }
 
@@ -61,21 +54,6 @@ public class ClassPropertiesExtractor
       _worksetCache[element.WorksetId] = worksetName;
     }
     elementProperties.Add("worksetName", worksetName);
-
-    // get level, if any
-    if (element.LevelId != DB.ElementId.InvalidElementId)
-    {
-      if (
-        !_levelCache.TryGetValue(element.LevelId, out var convertedLevel)
-        && element.Document.GetElement(element.LevelId) is DB.Level level
-      )
-      {
-        convertedLevel = _levelConverter.Convert(level);
-        _levelCache[element.LevelId] = convertedLevel;
-      }
-
-      elementProperties.Add("Level", convertedLevel);
-    }
 
     return elementProperties;
   }
