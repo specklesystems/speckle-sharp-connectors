@@ -49,7 +49,7 @@ jobs:
     needs: build-windows
     env:
       IS_TAG_BUILD: ${{ github.ref_type == 'tag' }}
-      IS_RELEASE_BRANCH: ${{ startsWith(github.ref_name, 'release/') || github.ref_name == 'main'}}
+      IS_RELEASE_BRANCH: ${{ startsWith(github.ref_name, 'jedd/') || startsWith(github.ref_name, 'release/') || github.ref_name == 'main'}}
     steps:
       - name: 🔫 Trigger Build Installers
         uses: ALEEF02/workflow-dispatch@v3.0.0
