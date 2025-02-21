@@ -23,5 +23,6 @@ public record User(
   bool ConvertHiddenElements, // Whether to include hidden elements during the conversion process.
   RepresentationMode VisualRepresentationMode, // Specifies the visual representation mode.
   bool CoalescePropertiesFromFirstObjectAncestor, // Whether to merge properties from the first object ancestor.
-  bool ExcludeProperties // Whether to exclude properties from the output.
+  bool ExcludeProperties, // Whether to exclude properties from the output.
+  bool PreserveModelHierarchy // Whether to maintain the full model hierarchy during conversion.
 );
