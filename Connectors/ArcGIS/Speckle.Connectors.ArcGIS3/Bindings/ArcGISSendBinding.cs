@@ -46,6 +46,7 @@ public sealed class ArcGISSendBinding : ISendBinding
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IArcGISConversionSettingsFactory _arcGISConversionSettingsFactory;
   private readonly IThreadContext _threadContext;
+  private readonly ISpeckleApplication _speckleApplication;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -71,6 +72,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     IArcGISConversionSettingsFactory arcGisConversionSettingsFactory,
     MapMembersUtils mapMemberUtils,
     IThreadContext threadContext,
+    ISpeckleApplication speckleApplication,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
@@ -85,6 +87,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     _arcGISConversionSettingsFactory = arcGisConversionSettingsFactory;
     _mapMemberUtils = mapMemberUtils;
     _threadContext = threadContext;
+    _speckleApplication = speckleApplication;
 
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
@@ -422,7 +425,7 @@ public sealed class ArcGISSendBinding : ISendBinding
         .ServiceProvider.GetRequiredService<SendOperation<MapMember>>()
         .Execute(
           mapMembers,
-          modelCard.GetSendInfo("ArcGIS"), // POC: get host app name from settings? same for GetReceiveInfo
+          modelCard.GetSendInfo(_speckleApplication.ApplicationAndVersion),
           _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),
           cancellationItem.Token
         );
