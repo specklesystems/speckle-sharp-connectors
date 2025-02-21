@@ -113,6 +113,9 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     onOperationProgressed.Report(new("Converting", null));
     using (var convertingActivity = _activityFactory.Start("Converting objects"))
     {
+      // count number of features to convert. Raster layers are counter as 1 feature for now (not ideal)
+      long allFeaturesCount = CountAllFeaturesInLayers(unpackedLayers);
+
       int count = 0;
       foreach (ADM.MapMember layer in unpackedLayers)
       {
@@ -142,7 +145,13 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
             switch (layer)
             {
               case ADM.FeatureLayer featureLayer:
-                List<Base> convertedFeatureLayerObjects = ConvertFeatureLayerObjects(featureLayer, cancellationToken);
+                List<Base> convertedFeatureLayerObjects = ConvertFeatureLayerObjects(
+                  featureLayer,
+                  onOperationProgressed,
+                  count,
+                  allFeaturesCount,
+                  cancellationToken
+                );
                 layerCollection.elements.AddRange(convertedFeatureLayerObjects);
                 break;
               case ADM.RasterLayer rasterLayer:
@@ -152,6 +161,9 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
               case ADM.LasDatasetLayer lasDatasetLayer:
                 List<Base> convertedLasDatasetObjects = ConvertLasDatasetLayerObjects(
                   lasDatasetLayer,
+                  onOperationProgressed,
+                  count,
+                  allFeaturesCount,
                   cancellationToken
                 );
                 layerCollection.elements.AddRange(convertedLasDatasetObjects);
@@ -177,7 +189,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
           convertingActivity?.RecordException(ex);
         }
 
-        onOperationProgressed.Report(new("Converting", (double)++count / layers.Count));
+        onOperationProgressed.Report(new("Converting", (double)++count / allFeaturesCount));
         await Task.Yield();
       }
     }
@@ -193,7 +205,36 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     return new RootObjectBuilderResult(rootCollection, results);
   }
 
-  private List<Base> ConvertFeatureLayerObjects(ADM.FeatureLayer featureLayer, CancellationToken cancellationToken)
+  private long CountAllFeaturesInLayers(List<ADM.MapMember> unpackedLayers)
+  {
+    long allFeaturesCount = 0;
+    foreach (ADM.MapMember layer in unpackedLayers)
+    {
+      switch (layer)
+      {
+        case ADM.FeatureLayer featureLayer:
+          var featClass = featureLayer.GetFeatureClass();
+          allFeaturesCount += featClass.GetCount();
+          break;
+        case ADM.RasterLayer:
+          allFeaturesCount += 1;
+          break;
+        case ADM.LasDatasetLayer lasDatasetLayer:
+          var lasDefinition = lasDatasetLayer.GetLasDataset().GetDefinition();
+          allFeaturesCount += lasDefinition.GetPointCount();
+          break;
+      }
+    }
+    return allFeaturesCount;
+  }
+
+  private List<Base> ConvertFeatureLayerObjects(
+    ADM.FeatureLayer featureLayer,
+    IProgress<CardProgress> onOperationProgressed,
+    int count,
+    long progressCount,
+    CancellationToken cancellationToken
+  )
   {
     string layerApplicationId = featureLayer.GetSpeckleApplicationId();
     List<Base> convertedObjects = new();
@@ -208,6 +249,8 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
       while (rowCursor.MoveNext())
       {
         cancellationToken.ThrowIfCancellationRequested();
+        count += 1;
+
         // Same IDisposable issue appears to happen on Row class too. Docs say it should always be disposed of manually by the caller.
         using (ACD.Row row = rowCursor.Current)
         {
@@ -221,6 +264,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
           // process the object color
           _colorUnpacker.ProcessFeatureLayerColor(row, applicationId);
         }
+        onOperationProgressed.Report(new("Converting", (double)count / progressCount));
       }
     }
 
@@ -242,6 +286,9 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
 
   private List<Base> ConvertLasDatasetLayerObjects(
     ADM.LasDatasetLayer lasDatasetLayer,
+    IProgress<CardProgress> onOperationProgressed,
+    int count,
+    long progressCount,
     CancellationToken cancellationToken
   )
   {
@@ -258,6 +305,8 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
         while (ptCursor.MoveNext())
         {
           cancellationToken.ThrowIfCancellationRequested();
+          count += 1;
+
           using (ACD.Analyst3D.LasPoint pt = ptCursor.Current)
           {
             Base converted = _rootToSpeckleConverter.Convert(pt);
@@ -268,6 +317,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
             // process the object color
             _colorUnpacker.ProcessLasLayerColor(pt, applicationId);
           }
+          onOperationProgressed.Report(new("Converting", (double)count / progressCount));
         }
       }
     }
