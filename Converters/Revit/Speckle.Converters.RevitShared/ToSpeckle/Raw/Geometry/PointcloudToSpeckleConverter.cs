@@ -26,17 +26,17 @@ public sealed class PointcloudToSpeckleConverter : ITypedConverter<DB.PointCloud
 
   public SOG.Pointcloud Convert(DB.PointCloudInstance target)
   {
-    var boundingBox = target.get_BoundingBox(null!);
+    var boundingBox = target.get_BoundingBox(null!); // the bounding box in the parent document
+    var minPlane = DB.Plane.CreateByNormalAndOrigin(DB.XYZ.BasisZ, boundingBox.Min); // the lowest z plane from the bounding box min, in the parent doc
     using DB.Transform transform = target.GetTransform();
     {
-      var minPlane = DB.Plane.CreateByNormalAndOrigin(DB.XYZ.BasisZ, transform.OfPoint(boundingBox.Min));
       var filter = DB.PointClouds.PointCloudFilterFactory.CreateMultiPlaneFilter(new List<DB.Plane>() { minPlane });
       var points = target.GetPoints(filter, 0.0001, 999999); // max limit is 1 mil but 1000000 throws error
 
       var specklePointCloud = new SOG.Pointcloud
       {
         points = points
-          .Select(o => _xyzToPointConverter.Convert(transform.OfPoint(o)))
+          .Select(o => _xyzToPointConverter.Convert(transform.OfPoint(o))) // these points need to be transformed, since coords are in the pointcloud linked doc
           .SelectMany(o => new List<double>() { o.x, o.y, o.z })
           .ToList(),
         colors = points.Select(o => o.Color).ToList(),
