@@ -67,19 +67,28 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
 
     // get location if any
     Base? convertedLocation = null;
-    if (target.Location is DB.Location location and (DB.LocationCurve or DB.LocationPoint)) // location can be null
+    switch (target)
     {
-      try
-      {
-        convertedLocation = _locationConverter.Convert(location);
-      }
-      catch (ValidationException)
-      {
-        // NOTE: i've improved the if check above to make sure we never reach here
-        // we were throwing a lot here for various elements (e.g. floors) and we would
-        // be slowing things down
-        // location was not a supported, do not attach to base element
-      }
+      // skip these objects, if location is redundant
+      case DB.ModelCurve:
+        break;
+
+      default:
+        if (target.Location is DB.Location location and (DB.LocationCurve or DB.LocationPoint)) // location can be null
+        {
+          try
+          {
+            convertedLocation = _locationConverter.Convert(location);
+          }
+          catch (ValidationException)
+          {
+            // NOTE: i've improved the if check above to make sure we never reach here
+            // we were throwing a lot here for various elements (e.g. floors) and we would
+            // be slowing things down
+            // location was not a supported, do not attach to base element
+          }
+        }
+        break;
     }
 
     // get the display value
