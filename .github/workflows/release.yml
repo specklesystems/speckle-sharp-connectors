@@ -66,9 +66,9 @@ jobs:
           display-workflow-run-url: true
           display-workflow-run-url-interval: 10s
 
-      - uses: geekyeggo/delete-artifact@v5
-        with:
-          name: output-*
+#      - uses: geekyeggo/delete-artifact@v5
+#        with:
+#          name: output-*
 
   build-linux:
     runs-on: ubuntu-latest
