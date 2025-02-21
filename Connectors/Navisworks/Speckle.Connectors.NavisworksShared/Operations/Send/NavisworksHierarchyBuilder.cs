@@ -117,44 +117,11 @@ public class NavisworksHierarchyBuilder
 
       // Navisworks API: Resolve ModelItem from path string
       var parentModelItem = _selectionService.GetModelItemFromPath(parentPath);
-      var parentConverted = ConvertAndWrap(parentModelItem);
+      var parentConverted = _converter.Convert(parentModelItem);
       _allNodes[parentPath] = parentConverted;
 
       currentPath = parentPath;
     }
-  }
-
-  /// <summary>
-  /// Converts a Navisworks ModelItem to a Speckle Collection if not already a collection type.
-  /// </summary>
-  private Base ConvertAndWrap(NAV.ModelItem modelItem)
-  {
-    // Navisworks API: Convert ModelItem to Speckle Base
-    var converted = _converter.Convert(modelItem);
-
-    if (converted is not Collection collection) // Something must have gone wrong for this to happen
-    {
-      collection = new Collection { name = modelItem.DisplayName ?? "Unnamed", elements = [] };
-
-      if (converted["properties"] is Dictionary<string, object?> props)
-      {
-        collection["properties"] = props;
-      }
-
-      foreach (var key in converted.GetDynamicMemberNames())
-      {
-        collection[key] = converted[key];
-      }
-
-      return collection;
-    }
-
-    if (string.IsNullOrEmpty(collection.name))
-    {
-      collection.name = modelItem.DisplayName ?? "Unnamed";
-    }
-
-    return collection;
   }
 
   private static string GetParentPath(string path)
