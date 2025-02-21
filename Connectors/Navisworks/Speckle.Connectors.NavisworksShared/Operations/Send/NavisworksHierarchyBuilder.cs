@@ -115,7 +115,6 @@ public class NavisworksHierarchyBuilder
         continue;
       }
 
-      // Navisworks API: Resolve ModelItem from path string
       var parentModelItem = _selectionService.GetModelItemFromPath(parentPath);
       var parentConverted = _converter.Convert(parentModelItem);
       _allNodes[parentPath] = parentConverted;
