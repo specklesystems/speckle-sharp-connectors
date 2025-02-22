@@ -6,7 +6,7 @@ using Speckle.Converters.RevitShared.Helpers;
 
 namespace Speckle.Connectors.RevitShared.Operations.Send.Filters;
 
-public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilter
+public class RevitViewsFilter : DiscriminatedObject, ISendFilterSelect, IRevitSendFilter
 {
   private RevitContext _revitContext;
   private Document? _doc;
@@ -19,10 +19,15 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
   public Dictionary<string, string>? IdMap { get; set; } = new();
   public List<string>? AvailableViews { get; set; }
 
+  public bool IsMultiSelectable { get; set; }
+  public List<SendFilterSelectItem> SelectedItems { get; set; }
+  public List<SendFilterSelectItem> Items { get; set; }
+
   public RevitViewsFilter() { }
 
   public RevitViewsFilter(RevitContext revitContext)
   {
+    IsMultiSelectable = false;
     _revitContext = revitContext;
     _doc = _revitContext.UIApplication?.ActiveUIDocument.Document;
 
@@ -31,11 +36,15 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
 
   public View? GetView()
   {
-    if (SelectedView is null)
+    if (SelectedItems is null)
     {
       return null;
     }
-    string[] result = SelectedView.Split(new string[] { " - " }, 2, StringSplitOptions.None);
+    if (SelectedItems.Count == 0)
+    {
+      return null;
+    }
+    string[] result = SelectedItems.First().Name.Split(new string[] { " - " }, 2, StringSplitOptions.None);
     var viewFamilyString = result[0];
     var viewString = result[1];
 
@@ -54,13 +63,17 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
   public List<string> RefreshObjectIds()
   {
     var objectIds = new List<string>();
-    if (SelectedView is null)
+    if (SelectedItems is null)
+    {
+      return objectIds;
+    }
+    if (SelectedItems.Count == 0)
     {
       return objectIds;
     }
 
     // Paşa Bilal wants it like this... (three dots = important meaning for ogu)
-    string[] result = SelectedView.Split(new string[] { " - " }, 2, StringSplitOptions.None);
+    string[] result = SelectedItems.First().Name.Split(new string[] { " - " }, 2, StringSplitOptions.None);
     var viewFamilyString = result[0];
     var viewString = result[1];
 
@@ -102,6 +115,25 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
       )
       .Select(v => v.ViewType.ToString() + " - " + v.Name.ToString())
       .ToList();
+    var viewItems = collector
+      .OfClass(typeof(View))
+      .Cast<View>()
+      .Where(v => !v.IsTemplate)
+      .Where(v => !v.IsAssemblyView)
+      .Where(v =>
+        v.ViewType
+          is ViewType.FloorPlan
+            or ViewType.Elevation
+            or ViewType.Rendering
+            or ViewType.Section
+            or ViewType.ThreeD
+            or ViewType.Detail
+            or ViewType.CeilingPlan
+            or ViewType.AreaPlan
+      )
+      .Select(v => new SendFilterSelectItem(v.UniqueId.ToString(), v.ViewType + " - " + v.Name.ToString()))
+      .ToList();
+    Items = viewItems;
     AvailableViews = views;
   }
 
