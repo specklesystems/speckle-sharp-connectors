@@ -20,8 +20,9 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<CsiFramePropertiesExtractor>();
     serviceCollection.AddScoped<CsiJointPropertiesExtractor>();
     serviceCollection.AddScoped<CsiShellPropertiesExtractor>();
-    serviceCollection.AddScoped<SharedPropertiesExtractor>();
+    serviceCollection.AddScoped<DatabaseTableExtractor>();
     serviceCollection.AddScoped<DisplayValueExtractor>();
+    serviceCollection.AddScoped<SharedPropertiesExtractor>();
 
     // Register connector caches
     serviceCollection.AddScoped<CsiToSpeckleCacheSingleton>();

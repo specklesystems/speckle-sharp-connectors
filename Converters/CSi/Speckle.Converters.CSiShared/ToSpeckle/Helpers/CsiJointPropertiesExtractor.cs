@@ -10,16 +10,24 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 /// </summary>
 /// <remarks>
 /// Design Decisions:
-/// - Individual methods preferred over batched calls due to:
-///   * Independent API calls with no performance gain from batching (?)
-///   * Easier debugging and error tracing
-///   * Simpler maintenance as each method maps to one API concept
+/// <list type="bullet">
+///     <item>
+///         <description>
+///             Individual methods preferred over batched calls due to:
+///             <list type="bullet">
+///                 <item><description>Independent API calls with no performance gain from batching (?)</description></item>
+///                 <item><description>Easier debugging and error tracing</description></item>
+///                 <item><description>Simpler maintenance as each method maps to one API concept</description></item>
+///             </list>
+///         </description>
+///     </item>
+/// </list>
+///
 /// Responsibilities:
-/// - Provides a focused interface for extracting properties specific to joint elements.
-/// - Ensures consistency in property extraction logic across supported CSi products.
-/// Integration:
-/// - Part of the property extraction hierarchy
-/// - Used by <see cref="SharedPropertiesExtractor"/> for delegating joint property extraction
+/// <list type="bullet">
+///     <item><description>Provides a focused interface for extracting properties specific to joint elements.</description></item>
+///     <item><description>Ensures consistency in property extraction logic across supported CSi products.</description></item>
+/// </list>
 /// </remarks>
 public sealed class CsiJointPropertiesExtractor
 {
@@ -34,9 +42,9 @@ public sealed class CsiJointPropertiesExtractor
   {
     jointData.ApplicationId = joint.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
 
-    var assignments = DictionaryUtils.EnsureNestedDictionary(jointData.Properties, ObjectPropertyCategory.ASSIGNMENTS);
-    assignments["groups"] = new List<string>(GetGroupAssigns(joint));
-    assignments["restraints"] = GetRestraints(joint);
+    var assignments = jointData.Properties.EnsureNested(ObjectPropertyCategory.ASSIGNMENTS);
+    assignments[CommonObjectProperty.GROUPS] = new List<string>(GetGroupAssigns(joint));
+    assignments["Restraints"] = GetRestraints(joint);
   }
 
   private string[] GetGroupAssigns(CsiJointWrapper joint)
@@ -53,12 +61,12 @@ public sealed class CsiJointPropertiesExtractor
     _ = _settingsStore.Current.SapModel.PointObj.GetRestraint(joint.Name, ref restraints);
     return new Dictionary<string, bool?>
     {
-      ["U1"] = restraints[0],
-      ["U2"] = restraints[1],
-      ["U3"] = restraints[2],
-      ["R1"] = restraints[3],
-      ["R2"] = restraints[4],
-      ["R3"] = restraints[5],
+      ["UX Restrained"] = restraints[0],
+      ["UY Restrained"] = restraints[1],
+      ["UZ Restrained"] = restraints[2],
+      ["RX Restrained"] = restraints[3],
+      ["RY Restrained"] = restraints[4],
+      ["RZ Restrained"] = restraints[5],
     };
   }
 }

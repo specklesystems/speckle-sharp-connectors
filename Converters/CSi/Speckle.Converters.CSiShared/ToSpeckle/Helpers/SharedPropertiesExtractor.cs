@@ -57,15 +57,22 @@ public class SharedPropertiesExtractor
 
     switch (wrapper)
     {
-      case CsiFrameWrapper frame:
-        _csiFramePropertiesExtractor.ExtractProperties(frame, objectData);
-        break;
       case CsiJointWrapper joint:
         _csiJointPropertiesExtractor.ExtractProperties(joint, objectData);
+        break;
+      case CsiFrameWrapper frame:
+        _csiFramePropertiesExtractor.ExtractProperties(frame, objectData);
         break;
       case CsiShellWrapper shell:
         _csiShellPropertiesExtractor.ExtractProperties(shell, objectData);
         break;
+      case CsiTendonWrapper:
+      case CsiLinkWrapper:
+      case CsiCableWrapper:
+      case CsiSolidWrapper:
+        throw new NotImplementedException($"Data extraction for {wrapper.ObjectName} not yet supported.");
+      default:
+        throw new ArgumentException($"Unsupported wrapper type: {nameof(wrapper)}");
     }
 
     return objectData;

@@ -1,4 +1,5 @@
-﻿using Speckle.Connectors.CSiShared.HostApp;
+﻿using Speckle.Connectors.Common.Threading;
+using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.CSiShared.Utils;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
@@ -12,7 +13,9 @@ public class CsiSharedSelectionBinding : ISelectionBinding, IDisposable
   private bool _disposed;
   private readonly Timer _selectionTimer;
   private readonly ICsiApplicationService _csiApplicationService;
+  private readonly IThreadContext _threadContext;
   private HashSet<string> _lastSelection = new();
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   public IBrowserBridge Parent { get; }
   public string Name => "selectionBinding";
@@ -20,26 +23,37 @@ public class CsiSharedSelectionBinding : ISelectionBinding, IDisposable
   public CsiSharedSelectionBinding(
     IBrowserBridge parent,
     ICsiApplicationService csiApplicationService,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    IThreadContext threadContext
   )
   {
+    _threadContext = threadContext;
     Parent = parent;
     _csiApplicationService = csiApplicationService;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
 
     _selectionTimer = new Timer(1000);
-    _selectionTimer.Elapsed += (_, _) => topLevelExceptionHandler.CatchUnhandled(CheckSelectionChanged);
+    _selectionTimer.Elapsed += (_, _) =>
+      _topLevelExceptionHandler.CatchUnhandled(() => _threadContext.RunOnMain(CheckSelectionChanged));
     _selectionTimer.Start();
   }
 
   private void CheckSelectionChanged()
   {
+    // timer callbacks are on a background thread, but CSI API calls must be on main thread
     var currentSelection = GetSelection();
     var currentIds = new HashSet<string>(currentSelection.SelectedObjectIds);
 
     if (!_lastSelection.SetEquals(currentIds))
     {
       _lastSelection = currentIds;
-      Parent.Send(SelectionBindingEvents.SET_SELECTION, currentSelection);
+      // ensure UI updates also run on main thread
+      _threadContext.RunOnMain(
+        () =>
+          _topLevelExceptionHandler.CatchUnhandled(
+            () => Parent.Send(SelectionBindingEvents.SET_SELECTION, currentSelection)
+          )
+      );
     }
   }
 
@@ -77,22 +91,18 @@ public class CsiSharedSelectionBinding : ISelectionBinding, IDisposable
 
     var encodedIds = new List<string>(numberItems);
     var typeCounts = new Dictionary<string, int>();
-
     for (int i = 0; i < numberItems; i++)
     {
       var typeKey = (ModelObjectType)objectType[i];
       var typeName = typeKey.ToString();
-
       encodedIds.Add(ObjectIdentifier.Encode(objectType[i], objectName[i]));
       typeCounts[typeName] = (typeCounts.TryGetValue(typeName, out var count) ? count : 0) + 1; // NOTE: Cross-framework compatibility (net 48 and net8)
     }
-
     var summary =
       encodedIds.Count == 0
         ? "No objects selected."
         : $"{encodedIds.Count} objects ({string.Join(", ", 
             typeCounts.Select(kv => $"{kv.Value} {kv.Key}"))})";
-
     return new SelectionInfo(encodedIds, summary);
   }
 }

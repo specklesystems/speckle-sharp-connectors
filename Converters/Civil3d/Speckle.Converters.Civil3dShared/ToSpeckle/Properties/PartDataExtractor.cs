@@ -31,6 +31,12 @@ public class PartDataExtractor
     foreach (CDB.PartDataField field in partData.GetAllDataFields())
     {
       var value = GetValue(field);
+
+      if (value is null)
+      {
+        continue; // don't send null props
+      }
+
       string fieldName = field.Context.ToString(); // we're using the context for the field name because it is more human-readable than the name prop
 
       var fieldDictionary = new Dictionary<string, object?>()

@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Logging;
@@ -19,24 +20,26 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
   public IBrowserBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly CancellationManager _cancellationManager;
+  private readonly ICancellationManager _cancellationManager;
   private readonly IServiceProvider _serviceProvider;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<AutocadReceiveBinding> _logger;
   private readonly IAutocadConversionSettingsFactory _autocadConversionSettingsFactory;
   private readonly ISpeckleApplication _speckleApplication;
+  private readonly IThreadContext _threadContext;
 
   private ReceiveBindingUICommands Commands { get; }
 
   public AutocadReceiveBinding(
     DocumentModelStore store,
     IBrowserBridge parent,
-    CancellationManager cancellationManager,
+    ICancellationManager cancellationManager,
     IServiceProvider serviceProvider,
     IOperationProgressManager operationProgressManager,
     ILogger<AutocadReceiveBinding> logger,
     IAutocadConversionSettingsFactory autocadConversionSettingsFactory,
-    ISpeckleApplication speckleApplication
+    ISpeckleApplication speckleApplication,
+    IThreadContext threadContext
   )
   {
     _store = store;
@@ -46,13 +49,17 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
     _logger = logger;
     _autocadConversionSettingsFactory = autocadConversionSettingsFactory;
     _speckleApplication = speckleApplication;
+    _threadContext = threadContext;
     Parent = parent;
     Commands = new ReceiveBindingUICommands(parent);
   }
 
   public void CancelReceive(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
 
-  public async Task Receive(string modelCardId)
+  public async Task Receive(string modelCardId) =>
+    await _threadContext.RunOnMainAsync(async () => await ReceiveInternal(modelCardId));
+
+  public async Task ReceiveInternal(string modelCardId)
   {
     using var scope = _serviceProvider.CreateScope();
     scope
@@ -67,7 +74,7 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
         throw new InvalidOperationException("No download model card was found.");
       }
 
-      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
       // Disable document activation (document creation and document switch)
       // Not disabling results in DUI model card being out of sync with the active document
@@ -79,8 +86,8 @@ public sealed class AutocadReceiveBinding : IReceiveBinding
         .ServiceProvider.GetRequiredService<ReceiveOperation>()
         .Execute(
           modelCard.GetReceiveInfo(_speckleApplication.Slug),
-          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
-          cancellationToken
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),
+          cancellationItem.Token
         );
 
       await Commands.SetModelReceiveResult(

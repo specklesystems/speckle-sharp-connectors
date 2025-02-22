@@ -6,8 +6,6 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 public class ICurveConverterToHost : ITypedConverter<ICurve, DB.CurveArray>
 {
-  private readonly ITypedConverter<SOG.Point, DB.XYZ> _pointConverter;
-  private readonly ITypedConverter<SOG.Vector, DB.XYZ> _vectorConverter;
   private readonly ITypedConverter<SOG.Arc, DB.Arc> _arcConverter;
   private readonly ITypedConverter<SOG.Line, DB.Line> _lineConverter;
   private readonly ITypedConverter<SOG.Circle, DB.Arc> _circleConverter;
@@ -16,8 +14,6 @@ public class ICurveConverterToHost : ITypedConverter<ICurve, DB.CurveArray>
   private readonly ITypedConverter<SOG.Curve, DB.Curve> _curveConverter;
 
   public ICurveConverterToHost(
-    ITypedConverter<SOG.Point, DB.XYZ> pointConverter,
-    ITypedConverter<SOG.Vector, DB.XYZ> vectorConverter,
     ITypedConverter<SOG.Arc, DB.Arc> arcConverter,
     ITypedConverter<SOG.Line, DB.Line> lineConverter,
     ITypedConverter<SOG.Circle, DB.Arc> circleConverter,
@@ -26,8 +22,6 @@ public class ICurveConverterToHost : ITypedConverter<ICurve, DB.CurveArray>
     ITypedConverter<SOG.Curve, DB.Curve> curveConverter
   )
   {
-    _pointConverter = pointConverter;
-    _vectorConverter = vectorConverter;
     _arcConverter = arcConverter;
     _lineConverter = lineConverter;
     _circleConverter = circleConverter;

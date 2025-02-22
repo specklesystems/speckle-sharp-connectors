@@ -9,9 +9,9 @@ namespace Speckle.Connectors.Revit.HostApp;
 /// </summary>
 public class ElementUnpacker
 {
-  private readonly IRevitContext _revitContext;
+  private readonly RevitContext _revitContext;
 
-  public ElementUnpacker(IRevitContext revitContext)
+  public ElementUnpacker(RevitContext revitContext)
   {
     _revitContext = revitContext;
   }
@@ -64,6 +64,13 @@ public class ElementUnpacker
         var groupElements = g.GetMemberIds().Select(doc.GetElement);
         unpackedElements.AddRange(UnpackElements(groupElements));
       }
+      else if (element is BaseArray baseArray)
+      {
+        var arrayElements = baseArray.GetCopiedMemberIds().Select(doc.GetElement);
+        var originalElements = baseArray.GetOriginalMemberIds().Select(doc.GetElement);
+        unpackedElements.AddRange(UnpackElements(arrayElements));
+        unpackedElements.AddRange(UnpackElements(originalElements));
+      }
       // UNPACK: Family instances (as they potentially have nested families inside)
       else if (element is FamilyInstance familyInstance)
       {
@@ -96,8 +103,8 @@ public class ElementUnpacker
     var ids = elements.Select(el => el.Id).ToArray();
     var doc = _revitContext.UIApplication?.ActiveUIDocument.Document!;
     elements.RemoveAll(element =>
-      (element is Mullion m && ids.Contains(m.Host.Id))
-      || (element is Panel p && ids.Contains(p.Host.Id))
+      (element is Mullion { Host: not null } m && ids.Contains(m.Host.Id))
+      || (element is Panel { Host: not null } p && ids.Contains(p.Host.Id))
       || (
         element is FamilyInstance { Host: not null } f
         && doc.GetElement(f.Host.Id) is Wall { CurtainGrid: not null }

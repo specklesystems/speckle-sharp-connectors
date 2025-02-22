@@ -4,7 +4,6 @@ using Rhino.Geometry;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Rhino.Extensions;
@@ -22,29 +21,32 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
   private readonly DocumentModelStore _store;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ISpeckleApplication _speckleApplication;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   public RhinoBasicConnectorBinding(
     DocumentModelStore store,
     IBrowserBridge parent,
     ISendConversionCache sendConversionCache,
     ISpeckleApplication speckleApplication,
-    IEventAggregator eventAggregator
+    ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
     _store = store;
     Parent = parent;
     _sendConversionCache = sendConversionCache;
     _speckleApplication = speckleApplication;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
     Commands = new BasicConnectorBindingCommands(parent);
 
-    eventAggregator.GetEvent<DocumentStoreChangedEvent>().Subscribe(OnDocumentStoreChangedEvent);
-  }
+    _store.DocumentChanged += (_, _) =>
+      _topLevelExceptionHandler.FireAndForget(async () =>
+      {
+        await Commands.NotifyDocumentChanged();
+        // Note: this prevents scaling issues when copy-pasting from one rhino doc to another in the same session.
+        _sendConversionCache.ClearCache();
+      });
 
-  private async Task OnDocumentStoreChangedEvent(object _)
-  {
-    await Commands.NotifyDocumentChanged();
-    // Note: this prevents scaling issues when copy-pasting from one rhino doc to another in the same session.
-    _sendConversionCache.ClearCache();
+    // eventAggregator.GetEvent<DocumentStoreChangedEvent>().Subscribe(OnDocumentStoreChangedEvent);
   }
 
   public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;

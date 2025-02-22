@@ -10,38 +10,47 @@ namespace Speckle.Converters.ETABSShared.ToSpeckle.Helpers;
 /// </summary>
 /// <remarks>
 /// Responsibilities:
-/// - Extracts properties only available in ETABS (e.g., Label, Level)
-/// - Complements <see cref="CsiFramePropertiesExtractor"/> by adding product-specific data
-/// - Follows same pattern of single-purpose methods for clear API mapping
+/// <list type="bullet">
+///     <item><description>Extracts properties only available in ETABS (e.g., Label, Level)</description></item>
+///     <item><description>Complements <see cref="CsiFramePropertiesExtractor"/> by adding product-specific data</description></item>
+///     <item><description>Follows same pattern of single-purpose methods for clear API mapping</description></item>
+/// </list>
 ///
 /// Design Decisions:
-/// - Maintains separate methods for each property following CSI API structure
-/// - Properties are organized by their functional groups (Object ID, Assignments, Design)
-///
-/// Integration:
-/// - Used by <see cref="EtabsPropertiesExtractor"/> for frame-specific property extraction
-/// - Works alongside CsiFramePropertiesExtractor to build complete property set
+/// <list type="bullet">
+///     <item><description>Maintains separate methods for each property following CSI API structure</description></item>
+///     <item><description>Properties are organized by their functional groups (Object ID, Assignments, Design)</description></item>
+/// </list>
 /// </remarks>
 public sealed class EtabsFramePropertiesExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
+  private readonly DatabaseTableExtractor _databaseTableExtractor;
 
-  public EtabsFramePropertiesExtractor(IConverterSettingsStore<CsiConversionSettings> settingsStore)
+  public EtabsFramePropertiesExtractor(
+    IConverterSettingsStore<CsiConversionSettings> settingsStore,
+    DatabaseTableExtractor databaseTableExtractor
+  )
   {
     _settingsStore = settingsStore;
+    _databaseTableExtractor = databaseTableExtractor;
   }
 
   public void ExtractProperties(CsiFrameWrapper frame, Dictionary<string, object?> properties)
   {
-    var objectId = DictionaryUtils.EnsureNestedDictionary(properties, ObjectPropertyCategory.OBJECT_ID);
-    objectId["designOrientation"] = GetDesignOrientation(frame);
-    (objectId["label"], objectId["level"]) = GetLabelAndLevel(frame);
+    var objectId = properties.EnsureNested(ObjectPropertyCategory.OBJECT_ID);
+    objectId[CommonObjectProperty.DESIGN_ORIENTATION] = GetDesignOrientation(frame);
+    (objectId[CommonObjectProperty.LABEL], objectId[CommonObjectProperty.LEVEL]) = GetLabelAndLevel(frame);
 
-    var assignments = DictionaryUtils.EnsureNestedDictionary(properties, ObjectPropertyCategory.ASSIGNMENTS);
-    assignments["springAssignment"] = GetSpringAssignmentName(frame);
+    var assignments = properties.EnsureNested(ObjectPropertyCategory.ASSIGNMENTS);
+    assignments[CommonObjectProperty.SPRING_ASSIGNMENT] = GetSpringAssignmentName(frame);
 
-    var design = DictionaryUtils.EnsureNestedDictionary(properties, ObjectPropertyCategory.DESIGN);
-    design["designProcedure"] = GetDesignProcedure(frame);
+    var design = properties.EnsureNested(ObjectPropertyCategory.DESIGN);
+    design["Design Procedure"] = GetDesignProcedure(frame);
+
+    var geometry = properties.EnsureNested(ObjectPropertyCategory.GEOMETRY);
+    double length = GetLength(frame);
+    geometry.AddWithUnits("Length", length, _settingsStore.Current.SpeckleUnits);
   }
 
   private (string label, string level) GetLabelAndLevel(CsiFrameWrapper frame)
@@ -77,8 +86,20 @@ public sealed class EtabsFramePropertiesExtractor
 
   private string GetSpringAssignmentName(CsiFrameWrapper frame)
   {
-    string springPropertyName = "None"; // Is there a better way to handle null?
+    string springPropertyName = string.Empty;
     _ = _settingsStore.Current.SapModel.FrameObj.GetSpringAssignment(frame.Name, ref springPropertyName);
     return springPropertyName;
+  }
+
+  private double GetLength(CsiFrameWrapper frame)
+  {
+    // using the DatabaseTableExtractor fetch table with key "Frame Assignments - Summary"
+    // limit query size to "UniqueName" and "Length" fields
+    string length = _databaseTableExtractor
+      .GetTableData("Frame Assignments - Summary", requestedColumns: ["UniqueName", "Length"])
+      .GetRowValue(frame.Name, "Length");
+
+    // all database data is returned as strings
+    return double.TryParse(length, out double result) ? result : double.NaN;
   }
 }

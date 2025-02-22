@@ -1,7 +1,7 @@
 ﻿using System.IO;
-using System.Timers;
 using Microsoft.Extensions.Logging;
-using Speckle.Connectors.DUI.Eventing;
+using Speckle.Connectors.Common.Threading;
+using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Sdk;
@@ -16,8 +16,9 @@ public class CsiDocumentModelStore : DocumentModelStore, IDisposable
   private readonly ISpeckleApplication _speckleApplication;
   private readonly ILogger<CsiDocumentModelStore> _logger;
   private readonly ICsiApplicationService _csiApplicationService;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly IThreadContext _threadContext;
   private readonly Timer _modelCheckTimer;
-  private readonly IEventAggregator _eventAggregator;
   private string _lastModelFilename = string.Empty;
   private bool _disposed;
   private string HostAppUserDataPath { get; set; }
@@ -29,22 +30,27 @@ public class CsiDocumentModelStore : DocumentModelStore, IDisposable
     ISpeckleApplication speckleApplication,
     ILogger<CsiDocumentModelStore> logger,
     ICsiApplicationService csiApplicationService,
-    IEventAggregator eventAggregator
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    IThreadContext threadContext
   )
     : base(jsonSerializer)
   {
+    _threadContext = threadContext;
     _speckleApplication = speckleApplication;
     _logger = logger;
     _csiApplicationService = csiApplicationService;
-    _eventAggregator = eventAggregator;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
 
     // initialize timer to check for model changes
     _modelCheckTimer = new Timer(1000);
-    _modelCheckTimer.Elapsed += CheckModelChanges;
+
+    // timer runs on background thread but model checks must be on main thread
+    _modelCheckTimer.Elapsed += (_, _) =>
+      _topLevelExceptionHandler.CatchUnhandled(() => _threadContext.RunOnMain(CheckModelChanges));
     _modelCheckTimer.Start();
   }
 
-  private async void CheckModelChanges(object? source, ElapsedEventArgs e)
+  private void CheckModelChanges()
   {
     string currentFilename = _csiApplicationService.SapModel.GetModelFilename();
 
@@ -56,8 +62,7 @@ public class CsiDocumentModelStore : DocumentModelStore, IDisposable
     _lastModelFilename = currentFilename;
     SetPaths();
     LoadState();
-
-    await _eventAggregator.GetEvent<DocumentStoreChangedEvent>().PublishAsync(new object());
+    OnDocumentChanged();
   }
 
   public override Task OnDocumentStoreInitialized()

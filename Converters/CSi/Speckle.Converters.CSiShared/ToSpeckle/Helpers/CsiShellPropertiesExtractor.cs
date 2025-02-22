@@ -10,13 +10,18 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 /// </summary>
 /// <remarks>
 /// Design Decisions:
-/// - Individual methods preferred over batched calls due to:
-///   * Independent API calls with no performance gain from batching (?)
-///   * Easier debugging and error tracing
-///   * Simpler maintenance as each method maps to one API concept
-/// Integration:
-/// - Part of the property extraction hierarchy
-/// - Used by <see cref="SharedPropertiesExtractor"/> for delegating shell property extraction
+/// <list type="bullet">
+///     <item>
+///         <description>
+///             Individual methods preferred over batched calls due to:
+///             <list type="bullet">
+///                 <item><description>Independent API calls with no performance gain from batching (?)</description></item>
+///                 <item><description>Easier debugging and error tracing</description></item>
+///                 <item><description>Simpler maintenance as each method maps to one API concept</description></item>
+///             </list>
+///         </description>
+///     </item>
+/// </list>
 /// </remarks>
 public sealed class CsiShellPropertiesExtractor
 {
@@ -31,14 +36,14 @@ public sealed class CsiShellPropertiesExtractor
   {
     shellData.ApplicationId = shell.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
 
-    var geometry = DictionaryUtils.EnsureNestedDictionary(shellData.Properties, ObjectPropertyCategory.GEOMETRY);
-    geometry["shellVerticesJointNames"] = GetPointNames(shell);
+    var geometry = shellData.Properties.EnsureNested(ObjectPropertyCategory.GEOMETRY);
+    geometry["Joints"] = GetPointNames(shell); // TODO: 🪲 Viewer shows 4 but only displays 3
 
-    var assignments = DictionaryUtils.EnsureNestedDictionary(shellData.Properties, ObjectPropertyCategory.ASSIGNMENTS);
-    assignments["groups"] = new List<string>(GetGroupAssigns(shell));
-    assignments["localAxis"] = GetLocalAxes(shell);
-    assignments["materialOverwrite"] = GetMaterialOverwrite(shell);
-    assignments["propertyModifiers"] = GetModifiers(shell);
+    var assignments = shellData.Properties.EnsureNested(ObjectPropertyCategory.ASSIGNMENTS);
+    assignments[CommonObjectProperty.GROUPS] = GetGroupAssigns(shell);
+    assignments[CommonObjectProperty.LOCAL_AXIS_2_ANGLE] = GetLocalAxes(shell);
+    assignments[CommonObjectProperty.MATERIAL_OVERWRITE] = GetMaterialOverwrite(shell);
+    assignments[CommonObjectProperty.PROPERTY_MODIFIERS] = GetModifiers(shell);
   }
 
   private string[] GetGroupAssigns(CsiShellWrapper shell)
@@ -54,7 +59,12 @@ public sealed class CsiShellPropertiesExtractor
     double angle = 0;
     bool advanced = false;
     _ = _settingsStore.Current.SapModel.AreaObj.GetLocalAxes(shell.Name, ref angle, ref advanced);
-    return new Dictionary<string, object?> { ["angle"] = angle, ["advanced"] = advanced.ToString() };
+
+    Dictionary<string, object?> resultsDictionary = [];
+    resultsDictionary.AddWithUnits(CommonObjectProperty.ANGLE, angle, "Degrees");
+    resultsDictionary[CommonObjectProperty.ADVANCED] = advanced.ToString();
+
+    return resultsDictionary;
   }
 
   private string GetMaterialOverwrite(CsiShellWrapper shell)
@@ -70,16 +80,16 @@ public sealed class CsiShellPropertiesExtractor
     _ = _settingsStore.Current.SapModel.AreaObj.GetModifiers(shell.Name, ref value);
     return new Dictionary<string, double?>
     {
-      ["f11"] = value[0],
-      ["f22"] = value[1],
-      ["f12"] = value[2],
-      ["m11"] = value[3],
-      ["m22"] = value[4],
-      ["m12"] = value[5],
-      ["v13"] = value[6],
-      ["v23"] = value[7],
-      ["mass"] = value[8],
-      ["weight"] = value[9]
+      ["Membrane F11 Modifier"] = value[0],
+      ["Membrane F22 Modifier"] = value[1],
+      ["Membrane F12 Modifier"] = value[2],
+      ["Bending M11 Modifier"] = value[3],
+      ["Bending M22 Modifier"] = value[4],
+      ["Bending M12 Modifier"] = value[5],
+      ["Shear V13 Modifier"] = value[6],
+      ["Shear V23 Modifier"] = value[7],
+      ["Mass"] = value[8],
+      ["Weight"] = value[9]
     };
   }
 

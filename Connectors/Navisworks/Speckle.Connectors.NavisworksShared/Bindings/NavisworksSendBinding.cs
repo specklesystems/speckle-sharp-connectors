@@ -4,6 +4,7 @@ using Speckle.Connector.Navisworks.Operations.Send.Settings;
 using Speckle.Connector.Navisworks.Services;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Exceptions;
@@ -30,7 +31,7 @@ public class NavisworksSendBinding : ISendBinding
   private readonly DocumentModelStore _store;
   private readonly IServiceProvider _serviceProvider;
   private readonly List<ISendFilter> _sendFilters;
-  private readonly CancellationManager _cancellationManager;
+  private readonly ICancellationManager _cancellationManager;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<NavisworksSendBinding> _logger;
   private readonly ISpeckleApplication _speckleApplication;
@@ -38,20 +39,22 @@ public class NavisworksSendBinding : ISendBinding
   private readonly INavisworksConversionSettingsFactory _conversionSettingsFactory;
   private readonly ToSpeckleSettingsManagerNavisworks _toSpeckleSettingsManagerNavisworks;
   private readonly IElementSelectionService _selectionService;
+  private readonly IThreadContext _threadContext;
 
   public NavisworksSendBinding(
     DocumentModelStore store,
     IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     IServiceProvider serviceProvider,
-    CancellationManager cancellationManager,
+    ICancellationManager cancellationManager,
     IOperationProgressManager operationProgressManager,
     ILogger<NavisworksSendBinding> logger,
     ISpeckleApplication speckleApplication,
     ISdkActivityFactory activityFactory,
     INavisworksConversionSettingsFactory conversionSettingsFactory,
     ToSpeckleSettingsManagerNavisworks toSpeckleSettingsManagerNavisworks,
-    IElementSelectionService selectionService
+    IElementSelectionService selectionService,
+    IThreadContext threadContext
   )
   {
     Parent = parent;
@@ -67,6 +70,7 @@ public class NavisworksSendBinding : ISendBinding
     _conversionSettingsFactory = conversionSettingsFactory;
     _toSpeckleSettingsManagerNavisworks = toSpeckleSettingsManagerNavisworks;
     _selectionService = selectionService;
+    _threadContext = threadContext;
     SubscribeToNavisworksEvents();
   }
 
@@ -82,7 +86,10 @@ public class NavisworksSendBinding : ISendBinding
       new ConvertHiddenElementsSetting(false),
     ];
 
-  public async Task Send(string modelCardId)
+  public async Task Send(string modelCardId) =>
+    await _threadContext.RunOnMainAsync(async () => await SendInternal(modelCardId));
+
+  private async Task SendInternal(string modelCardId)
   {
     using var activity = _activityFactory.Start();
     try
@@ -93,11 +100,11 @@ public class NavisworksSendBinding : ISendBinding
 
       InitializeConverterSettings(scope, modelCard);
 
-      CancellationToken token = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
       var navisworksModelItems = GetNavisworksModelItems(modelCard);
 
-      var sendResult = await ExecuteSendOperation(scope, modelCard, navisworksModelItems, token);
+      var sendResult = await ExecuteSendOperation(scope, modelCard, navisworksModelItems, cancellationItem.Token);
 
       await Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
     }
@@ -162,7 +169,7 @@ public class NavisworksSendBinding : ISendBinding
       .ServiceProvider.GetRequiredService<SendOperation<NAV.ModelItem>>()
       .Execute(
         navisworksModelItems,
-        modelCard.GetSendInfo(_speckleApplication.Slug),
+        modelCard.GetSendInfo(_speckleApplication.ApplicationAndVersion),
         _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCard.ModelCardId.NotNull(), token),
         token
       );

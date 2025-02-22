@@ -18,14 +18,14 @@ public class CsiMaterialPropertyExtractor
   /// </summary>
   private static class MechanicalPropertyNames
   {
-    public const string MODULUS_OF_ELASTICITY = "modulusOfElasticity";
-    public const string MODULUS_OF_ELASTICITY_ARRAY = "modulusOfElasticityArray";
-    public const string POISSON_RATIO = "poissonRatio";
-    public const string POISSON_RATIO_ARRAY = "poissonRatioArray";
-    public const string THERMAL_COEFFICIENT = "thermalCoefficient";
-    public const string THERMAL_COEFFICIENT_ARRAY = "thermalCoefficientArray";
-    public const string SHEAR_MODULUS = "shearModulus";
-    public const string SHEAR_MODULUS_ARRAY = "shearModulusArray";
+    public const string MODULUS_OF_ELASTICITY = "Modulus of Elasticity, E";
+    public const string MODULUS_OF_ELASTICITY_ARRAY = "Modulus of Elasticity Array, E";
+    public const string POISSON_RATIO = "Poisson's Ratio, U";
+    public const string POISSON_RATIO_ARRAY = "Poisson's Ratio Array, U";
+    public const string THERMAL_COEFFICIENT = "Coefficient of Thermal Expansion, A";
+    public const string THERMAL_COEFFICIENT_ARRAY = "Coefficient of Thermal Expansion Array, A";
+    public const string SHEAR_MODULUS = "Shear Modulus, G";
+    public const string SHEAR_MODULUS_ARRAY = "Shear Modulus Array, G";
   }
 
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
@@ -38,8 +38,8 @@ public class CsiMaterialPropertyExtractor
   public void ExtractProperties(string materialName, Dictionary<string, object?> properties)
   {
     GetGeneralProperties(materialName, properties);
-    GetWeightAndMassProperties(materialName, properties);
-    GetMechanicalProperties(materialName, properties);
+    GetWeightAndMassProperties(materialName, properties); // TODO: Add units
+    GetMechanicalProperties(materialName, properties); // TODO: Add units
   }
 
   private void GetGeneralProperties(string materialName, Dictionary<string, object?> properties)
@@ -58,10 +58,10 @@ public class CsiMaterialPropertyExtractor
         ref materialGuid
       );
 
-      var generalData = DictionaryUtils.EnsureNestedDictionary(properties, SectionPropertyCategory.GENERAL_DATA);
-      generalData["name"] = materialName;
-      generalData["type"] = materialType.ToString();
-      generalData["notes"] = materialNotes;
+      var generalData = properties.EnsureNested(SectionPropertyCategory.GENERAL_DATA);
+      generalData["Name"] = materialName;
+      generalData["Type"] = materialType.ToString();
+      generalData["Notes"] = materialNotes;
     }
   }
 
@@ -76,9 +76,9 @@ public class CsiMaterialPropertyExtractor
       ref massPerUnitVolume
     );
 
-    var weightAndMass = DictionaryUtils.EnsureNestedDictionary(properties, "Weight and Mass");
-    weightAndMass["w"] = weightPerUnitVolume;
-    weightAndMass["m"] = massPerUnitVolume;
+    var weightAndMass = properties.EnsureNested("Weight and Mass");
+    weightAndMass["Weight per Unit Volume"] = weightPerUnitVolume;
+    weightAndMass["Mass per Unit Volume"] = massPerUnitVolume;
   }
 
   private void GetMechanicalProperties(string materialName, Dictionary<string, object?> properties)
@@ -101,8 +101,8 @@ public class CsiMaterialPropertyExtractor
       _ => throw new ArgumentException($"Unknown symmetry type: {materialDirectionalSymmetryKey}")
     };
 
-    var mechanicalProperties = DictionaryUtils.EnsureNestedDictionary(properties, "Mechanical Properties");
-    mechanicalProperties["directionalSymmetryType"] = materialDirectionalSymmetryValue.ToString();
+    var mechanicalProperties = properties.EnsureNested("Mechanical Properties");
+    mechanicalProperties["Directional Symmetry Type"] = materialDirectionalSymmetryValue.ToString();
 
     GetMechanicalPropertiesByType(materialName, materialDirectionalSymmetryValue, mechanicalProperties);
   }
