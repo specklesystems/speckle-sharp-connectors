@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Speckle.Connector.Navisworks.Operations.Send.Filters;
 using Speckle.Connector.Navisworks.Operations.Send.Settings;
 using Speckle.Connector.Navisworks.Services;
 using Speckle.Connectors.Common.Cancellation;
@@ -76,7 +77,11 @@ public class NavisworksSendBinding : ISendBinding
 
   private static void SubscribeToNavisworksEvents() { }
 
-  public List<ISendFilter> GetSendFilters() => _sendFilters;
+  public List<ISendFilter> GetSendFilters() =>
+    [
+      new NavisworksSelectionFilter() { IsDefault = true },
+      new NavisworksSavedSetsFilter(new ElementSelectionService())
+    ];
 
   public List<ICardSetting> GetSendSettings() =>
     [
