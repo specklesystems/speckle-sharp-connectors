@@ -7,7 +7,7 @@ namespace Speckle.Connector.Navisworks.Operations.Send.Filters;
 
 public record NavisworksSavedSetsData(string Name, string Id);
 
-public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilter
+public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilterSelect
 {
   private readonly IElementSelectionService _selectionService;
 
@@ -27,20 +27,24 @@ public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilter
   public List<string>? SelectedSavedSets { get; set; }
   public List<NavisworksSavedSetsData>? AvailableSavedSets { get; set; }
 
+  public bool IsMultiSelectable { get; set; } = true;
+  public List<SendFilterSelectItem> SelectedItems { get; set; }
+  public List<SendFilterSelectItem> Items { get; set; }
+
   public List<string> RefreshObjectIds()
   {
     List<string> objectIds = [];
 
-    if (SelectedSavedSets is null || SelectedSavedSets.Count == 0)
+    if (SelectedItems is null || SelectedItems.Count == 0)
     {
       return objectIds;
     }
 
     NAV.SavedItemCollection? selectionSets = NavisworksApp.ActiveDocument.SelectionSets.RootItem.Children;
 
-    foreach (var selectedSetGuid in SelectedSavedSets)
+    foreach (var selectedSetGuid in SelectedItems)
     {
-      var guid = new Guid(selectedSetGuid);
+      var guid = new Guid(selectedSetGuid.Id);
       var index = selectionSets.IndexOfGuid(guid);
 
       if (index == -1)
@@ -84,7 +88,7 @@ public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilter
       .ActiveDocument.SelectionSets.RootItem.Children.Where(set => set.IsGroup)
       .ToList();
 
-    AvailableSavedSets = savedSetRecords
+    Items = savedSetRecords
       .Select(setRecord =>
       {
         NAV.SavedItem? record = setRecord.CreateCopy();
@@ -96,7 +100,7 @@ public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilter
           record = record.Parent;
         }
 
-        return new NavisworksSavedSetsData(name, setRecord.Guid.ToString());
+        return new SendFilterSelectItem(setRecord.Guid.ToString(), name);
       })
       .ToList();
   }
