@@ -3,9 +3,6 @@ using Speckle.Connectors.Common.Threading;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
-#pragma warning disable CA1032
-#pragma warning restore CA1032
-
 public class RevitThreadContext : ThreadContext
 {
   protected override Task<T> MainToWorkerAsync<T>(Func<Task<T>> action) => action();
@@ -25,6 +22,7 @@ public class RevitThreadContext : ThreadContext
   private static async Task<T> CatchExceptions<T>(Func<T> action)
   {
     Exception? ex = null;
+    //force the usage of the application overload
     var ret = await RevitTask.RunAsync(_ =>
     {
       try
@@ -49,6 +47,7 @@ public class RevitThreadContext : ThreadContext
   private static async Task<T> CatchExceptions<T>(Func<Task<T>> action)
   {
     Exception? ex = null;
+    //force the usage of the application overload
     var ret = await RevitTask.RunAsync(async _ =>
     {
       try
@@ -73,6 +72,7 @@ public class RevitThreadContext : ThreadContext
   private static async Task CatchExceptions(Func<Task> action)
   {
     Exception? ex = null;
+    //force the usage of the application overload
     await RevitTask.RunAsync(async _ =>
     {
       try

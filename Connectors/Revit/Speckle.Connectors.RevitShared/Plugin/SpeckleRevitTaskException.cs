@@ -23,15 +23,16 @@ public class SpeckleRevitTaskException(Exception exception) : SpeckleException("
     {
       e = srte.InnerException.NotNull();
     }
-    if (ex.InnerException is OperationCanceledException)
+    if (e is OperationCanceledException)
     {
       // SWALLOW -> UI handles it immediately, so we do not need to handle anything for now!
       // Idea for later -> when cancel called, create promise from UI to solve it later with this catch block.
       // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
       return;
     }
-    //always process the inner exception
+    //log everything though
     logger.LogModelCardHandledError(ex);
+    //always process the inner exception
     await commands.SetModelError(modelCardId, e);
   }
 }
