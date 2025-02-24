@@ -8,34 +8,11 @@ public abstract class BasePropertyHandler(
   ModelPropertiesExtractor modelPropertiesExtractor
 ) : IPropertyHandler
 {
-  public void AssignProperties(SSM.Base speckleObject, NAV.ModelItem modelItem)
+  public abstract Dictionary<string, object?> GetProperties(NAV.ModelItem modelItem);
+
+  protected Dictionary<string, object?> ProcessPropertySets(NAV.ModelItem modelItem)
   {
-    AssignClassProperties(speckleObject, modelItem);
-    AssignPropertySets(speckleObject, modelItem);
-  }
-
-  private static void AssignClassProperties(SSM.Base speckleObject, NAV.ModelItem modelItem)
-  {
-    var classProperties = ClassPropertiesExtractor.GetClassProperties(modelItem);
-    if (classProperties == null)
-    {
-      return;
-    }
-
-    foreach (var kvp in classProperties)
-    {
-      if (speckleObject != null)
-      {
-        speckleObject[kvp.Key] = kvp.Value;
-      }
-    }
-  }
-
-  protected abstract void AssignPropertySets(SSM.Base speckleObject, NAV.ModelItem modelItem);
-
-  protected Dictionary<string, Dictionary<string, object?>> ProcessPropertySets(NAV.ModelItem modelItem)
-  {
-    var categorizedProperties = new Dictionary<string, Dictionary<string, object?>>();
+    var categorizedProperties = new Dictionary<string, object?>();
     var propertySets = propertySetsExtractor.GetPropertySets(modelItem);
 
     if (propertySets != null)
@@ -64,10 +41,7 @@ public abstract class BasePropertyHandler(
     return categorizedProperties;
   }
 
-  private void AddModelProperties(
-    NAV.ModelItem modelItem,
-    Dictionary<string, Dictionary<string, object?>> categorizedProperties
-  )
+  private void AddModelProperties(NAV.ModelItem modelItem, Dictionary<string, object?> categorizedProperties)
   {
     if (!modelItem.HasModel)
     {

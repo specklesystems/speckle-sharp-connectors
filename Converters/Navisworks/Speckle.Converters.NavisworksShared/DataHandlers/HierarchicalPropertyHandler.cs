@@ -5,21 +5,13 @@
 /// </summary>
 public class HierarchicalPropertyHandler(
   PropertySetsExtractor propertySetsExtractor,
-  ModelPropertiesExtractor modelPropertiesExtractor
+  ModelPropertiesExtractor modelPropertiesExtractor,
+  ClassPropertiesExtractor classPropertiesExtractor
 ) : BasePropertyHandler(propertySetsExtractor, modelPropertiesExtractor)
 {
-  protected override void AssignPropertySets(SSM.Base speckleObject, NAV.ModelItem modelItem)
+  public override Dictionary<string, object?> GetProperties(NAV.ModelItem modelItem)
   {
-    if (speckleObject == null)
-    {
-      throw new ArgumentNullException(nameof(speckleObject));
-    }
-    var propertyDict = speckleObject["properties"] as Dictionary<string, object?> ?? new Dictionary<string, object?>();
-
-    if (modelItem == null)
-    {
-      throw new ArgumentNullException(nameof(modelItem));
-    }
+    var propertyDict = classPropertiesExtractor.GetClassProperties(modelItem) ?? new Dictionary<string, object?>();
 
     var hierarchy = GetObjectHierarchy(modelItem);
     var propertyCollection = new Dictionary<string, Dictionary<string, HashSet<object?>>>();
@@ -31,7 +23,7 @@ public class HierarchicalPropertyHandler(
 
     ApplyFilteredProperties(propertyDict, propertyCollection);
 
-    speckleObject["properties"] = propertyDict;
+    return propertyDict;
   }
 
   private static List<NAV.ModelItem> GetObjectHierarchy(NAV.ModelItem target)
@@ -75,7 +67,12 @@ public class HierarchicalPropertyHandler(
         propertyCollection.Add(kvp.Key, categoryProperties);
       }
 
-      foreach (var prop in kvp.Value.Where(prop => IsValidPropertyValue(prop.Value)))
+      if (kvp.Value is not Dictionary<string, object?> properties)
+      {
+        continue;
+      }
+
+      foreach (var prop in properties.Where(prop => IsValidPropertyValue(prop.Value)))
       {
         if (!categoryProperties.TryGetValue(prop.Key, out var valueSet))
         {

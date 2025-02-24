@@ -316,7 +316,7 @@ public sealed class RhinoSendBinding : ISendBinding
         .ServiceProvider.GetRequiredService<SendOperation<RhinoObject>>()
         .Execute(
           rhinoObjects,
-          modelCard.GetSendInfo(_speckleApplication.Slug),
+          modelCard.GetSendInfo(_speckleApplication.ApplicationAndVersion),
           _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),
           cancellationItem.Token
         );

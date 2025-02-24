@@ -1,11 +1,13 @@
+using Autodesk.AutoCAD.DatabaseServices;
 using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.AutocadShared.ToHost.Raw;
 
 /// <summary>
 /// Polycurve segments might appear in different ICurve types which requires to handle separately for each segment.
 /// </summary>
-public class PolycurveToHostSplineRawConverter : ITypedConverter<SOG.Polycurve, List<ADB.Entity>>
+public class PolycurveToHostSplineRawConverter : ITypedConverter<SOG.Polycurve, List<(Entity, Base)>>
 {
   private readonly ITypedConverter<SOG.Line, ADB.Line> _lineConverter;
   private readonly ITypedConverter<SOG.Polyline, ADB.Polyline3d> _polylineConverter;
@@ -25,7 +27,7 @@ public class PolycurveToHostSplineRawConverter : ITypedConverter<SOG.Polycurve, 
     _curveConverter = curveConverter;
   }
 
-  public List<ADB.Entity> Convert(SOG.Polycurve target)
+  public List<(Entity, Base)> Convert(SOG.Polycurve target)
   {
     // POC: We can improve this once we have IIndex of raw converters and we can get rid of case converters?
     // POC: Should we join entities?
@@ -52,6 +54,6 @@ public class PolycurveToHostSplineRawConverter : ITypedConverter<SOG.Polycurve, 
       }
     }
 
-    return list;
+    return list.Zip(target.segments, (a, b) => ((ADB.Entity)a, (Base)b)).ToList();
   }
 }

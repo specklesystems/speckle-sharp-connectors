@@ -147,7 +147,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         .ServiceProvider.GetRequiredService<SendOperation<ElementId>>()
         .Execute(
           elementIds,
-          modelCard.GetSendInfo(_speckleApplication.Slug),
+          modelCard.GetSendInfo(_speckleApplication.ApplicationAndVersion),
           _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),
           cancellationItem.Token
         );
