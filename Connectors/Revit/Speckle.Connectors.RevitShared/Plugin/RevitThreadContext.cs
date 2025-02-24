@@ -1,8 +1,10 @@
 using Revit.Async;
 using Speckle.Connectors.Common.Threading;
-using Speckle.Sdk;
 
 namespace Speckle.Connectors.Revit.Plugin;
+
+#pragma warning disable CA1032
+#pragma warning restore CA1032
 
 public class RevitThreadContext : ThreadContext
 {
@@ -39,7 +41,7 @@ public class RevitThreadContext : ThreadContext
     });
     if (ex is not null)
     {
-      throw new SpeckleException("Revit operation failed", ex);
+      throw new SpeckleRevitTaskException(ex);
     }
     return ret!;
   }
@@ -63,7 +65,7 @@ public class RevitThreadContext : ThreadContext
     });
     if (ex is not null)
     {
-      throw new SpeckleException("Revit operation failed", ex);
+      throw new SpeckleRevitTaskException(ex);
     }
     return ret!;
   }
@@ -86,7 +88,7 @@ public class RevitThreadContext : ThreadContext
     });
     if (ex is not null)
     {
-      throw new SpeckleException("Revit operation failed", ex);
+      throw new SpeckleRevitTaskException(ex);
     }
   }
 }
