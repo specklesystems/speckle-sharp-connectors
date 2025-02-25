@@ -5,8 +5,6 @@ using Speckle.Connectors.DUI.Utils;
 
 namespace Speckle.Connector.Navisworks.Operations.Send.Filters;
 
-public record NavisworksSavedSetsData(string Name, string Id);
-
 public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilterSelect
 {
   private readonly IElementSelectionService _selectionService;
@@ -24,8 +22,6 @@ public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilterSelect
   public bool IsDefault { get; set; }
   public List<string> SelectedObjectIds { get; set; } = [];
   public Dictionary<string, string>? IdMap { get; set; }
-  public List<string>? SelectedSavedSets { get; set; }
-  public List<NavisworksSavedSetsData>? AvailableSavedSets { get; set; }
 
   public bool IsMultiSelectable { get; set; } = true;
   public List<SendFilterSelectItem> SelectedItems { get; set; }
@@ -82,6 +78,10 @@ public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilterSelect
       .Select(_selectionService.GetModelItemPath) // Resolve to index paths
       .ToList();
 
+  /// <summary>
+  /// Since it is called from constructor, it is re-called whenever UI calls SendBinding.GetSendFilters() on SendFilter dialog.
+  /// Do not change the behavior/scope of this class on send binding unless make sure the behavior is same. Otherwise we might not be able to update list of saved sets.
+  /// </summary>
   private void GetSavedSets()
   {
     List<NAV.SavedItem> savedSetRecords = NavisworksApp

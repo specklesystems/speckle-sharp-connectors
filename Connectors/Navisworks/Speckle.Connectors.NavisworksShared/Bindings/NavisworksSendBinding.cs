@@ -77,6 +77,7 @@ public class NavisworksSendBinding : ISendBinding
 
   private static void SubscribeToNavisworksEvents() { }
 
+  // Do not change the behavior/scope of this class on send binding unless make sure the behavior is same. Otherwise we might not be able to update list of saved sets.
   public List<ISendFilter> GetSendFilters() =>
     [
       new NavisworksSelectionFilter() { IsDefault = true },
