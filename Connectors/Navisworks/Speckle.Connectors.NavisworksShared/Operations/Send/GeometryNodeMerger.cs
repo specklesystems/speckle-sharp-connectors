@@ -1,4 +1,4 @@
-using Speckle.Connector.Navisworks.Services;
+﻿using Speckle.Connector.Navisworks.Services;
 using Speckle.Converter.Navisworks.Constants;
 
 namespace Speckle.Connector.Navisworks.Operations.Send;

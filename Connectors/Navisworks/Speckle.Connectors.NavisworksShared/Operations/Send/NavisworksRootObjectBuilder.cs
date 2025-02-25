@@ -221,10 +221,8 @@ public class NavisworksRootObjectBuilder(
   /// </remarks>
   private NavisworksObject CreateNavisworksObject(string groupKey, List<Base> siblingBases)
   {
-    // Extract the parent path from the potentially composite key
-    string parentPath = GetParentPathFromKey(groupKey);
-
-    (string name, string path) = GetContext(groupKey);
+    string cleanParentPath = ElementSelectionHelper.GetCleanPath(groupKey);
+    (string name, string path) = GetContext(cleanParentPath);
 
     return new NavisworksObject
     {
@@ -232,7 +230,7 @@ public class NavisworksRootObjectBuilder(
       displayValue = siblingBases.SelectMany(b => b["displayValue"] as List<Base> ?? []).ToList(),
       properties = siblingBases.First()["properties"] as Dictionary<string, object?> ?? [],
       units = converterSettings.Current.Derived.SpeckleUnits,
-      applicationId = parentPath, // Use the parent path as the applicationId
+      applicationId = groupKey, // Use the full composite key as applicationId to preserve uniqueness
       ["path"] = path
     };
   }
