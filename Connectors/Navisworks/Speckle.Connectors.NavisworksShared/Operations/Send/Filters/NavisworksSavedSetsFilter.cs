@@ -1,13 +1,11 @@
-﻿using Speckle.Connector.Navisworks.Services;
+using Speckle.Connector.Navisworks.Services;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Utils;
 
 namespace Speckle.Connector.Navisworks.Operations.Send.Filters;
 
-public record NavisworksSavedSetsData(string Name, string Id);
-
-public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilter
+public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilterSelect
 {
   private readonly IElementSelectionService _selectionService;
 
@@ -24,23 +22,25 @@ public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilter
   public bool IsDefault { get; set; }
   public List<string> SelectedObjectIds { get; set; } = [];
   public Dictionary<string, string>? IdMap { get; set; }
-  public List<string>? SelectedSavedSets { get; set; }
-  public List<NavisworksSavedSetsData>? AvailableSavedSets { get; set; }
+
+  public bool IsMultiSelectable { get; set; } = true;
+  public List<SendFilterSelectItem> SelectedItems { get; set; }
+  public List<SendFilterSelectItem> Items { get; set; }
 
   public List<string> RefreshObjectIds()
   {
     List<string> objectIds = [];
 
-    if (SelectedSavedSets is null || SelectedSavedSets.Count == 0)
+    if (SelectedItems.Count == 0)
     {
       return objectIds;
     }
 
     NAV.SavedItemCollection? selectionSets = NavisworksApp.ActiveDocument.SelectionSets.RootItem.Children;
 
-    foreach (var selectedSetGuid in SelectedSavedSets)
+    foreach (var selectedSetGuid in SelectedItems)
     {
-      var guid = new Guid(selectedSetGuid);
+      var guid = new Guid(selectedSetGuid.Id);
       var index = selectionSets.IndexOfGuid(guid);
 
       if (index == -1)
@@ -78,13 +78,17 @@ public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilter
       .Select(_selectionService.GetModelItemPath) // Resolve to index paths
       .ToList();
 
+  /// <summary>
+  /// Since it is called from constructor, it is re-called whenever UI calls SendBinding.GetSendFilters() on SendFilter dialog.
+  /// Do not change the behavior/scope of this class on send binding unless make sure the behavior is same. Otherwise we might not be able to update list of saved sets.
+  /// </summary>
   private void GetSavedSets()
   {
     List<NAV.SavedItem> savedSetRecords = NavisworksApp
-      .ActiveDocument.SelectionSets.RootItem.Children.Where(set => set.IsGroup)
+      .ActiveDocument.SelectionSets.RootItem.Children.Where(set => !set.IsGroup)
       .ToList();
 
-    AvailableSavedSets = savedSetRecords
+    Items = savedSetRecords
       .Select(setRecord =>
       {
         NAV.SavedItem? record = setRecord.CreateCopy();
@@ -96,7 +100,7 @@ public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilter
           record = record.Parent;
         }
 
-        return new NavisworksSavedSetsData(name, setRecord.Guid.ToString());
+        return new SendFilterSelectItem(setRecord.Guid.ToString(), name);
       })
       .ToList();
   }
