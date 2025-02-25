@@ -27,6 +27,7 @@ public class FlatPointListToHostConverter : IFlatPointListToHostConverter
   /// <exception cref="SpeckleException">Throws when the input list count is not a multiple of 3.</exception>
   public Point3dList Convert(IReadOnlyList<double> target) => new(ConvertToEnum(target));
 
+  //avoids temporary collection by using this when necessary
   public IEnumerable<RG.Point3d> ConvertToEnum(IReadOnlyList<double> target)
   {
     if (target.Count % 3 != 0)

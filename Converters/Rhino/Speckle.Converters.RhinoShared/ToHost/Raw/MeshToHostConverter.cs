@@ -1,4 +1,4 @@
-using System.Drawing;
+﻿using System.Drawing;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Utils;
 using Speckle.Sdk;
@@ -17,28 +17,35 @@ public class MeshToHostConverter(IFlatPointListToHostConverter pointListConverte
   {
     RG.Mesh m = new();
 
-    var vertices = _pointListConverter.Convert(target.vertices);
-    var colors = ConvertVertexColors(target.colors);
-    var vertexNormals = ConvertVertexNormals(target.vertexNormals);
-    var textureCoordinates = ConvertTextureCoordinates(target.textureCoordinates);
     var vertices = pointListConverter.ConvertToEnum(target.vertices);
-    var colors = target.colors.Select(Color.FromArgb).ToArray();
 
     m.Vertices.AddVertices(vertices);
 
-    if (colors.Length != 0 && !m.VertexColors.SetColors(colors))
+    if (target.colors.Count != 0)
     {
-      throw new SpeckleException("Failed to set Vertex Colors");
+      var colors = ConvertVertexColors(target.colors);
+      if (!m.VertexColors.SetColors(colors))
+      {
+        throw new SpeckleException("Failed to set Vertex Colors");
+      }
     }
 
-    if (vertexNormals.Length != 0 && !m.Normals.SetNormals(vertexNormals))
+    if (target.vertexNormals.Count != 0)
     {
-      throw new SpeckleException("Failed to set Vertex Normals");
+      var vertexNormals = ConvertVertexNormals(target.vertexNormals);
+      if (!m.Normals.SetNormals(vertexNormals))
+      {
+        throw new SpeckleException("Failed to set Vertex Normals");
+      }
     }
 
-    if (textureCoordinates.Length != 0 && !m.TextureCoordinates.SetTextureCoordinates(textureCoordinates))
+    if (target.textureCoordinates.Count != 0)
     {
-      throw new SpeckleException("Failed to set Texture Coordinates");
+      var textureCoordinates = ConvertTextureCoordinates(target.textureCoordinates);
+      if (!m.TextureCoordinates.SetTextureCoordinates(textureCoordinates))
+      {
+        throw new SpeckleException("Failed to set Texture Coordinates");
+      }
     }
 
     AssignMeshFaces(target, m);
