@@ -8,6 +8,7 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
+using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
@@ -97,6 +98,10 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
       // SWALLOW -> UI handles it immediately, so we do not need to handle anything for now!
       // Idea for later -> when cancel called, create promise from UI to solve it later with this catch block.
       // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
+    }
+    catch (SpeckleRevitTaskException ex)
+    {
+      await SpeckleRevitTaskException.ProcessException(modelCardId, ex, _logger, Commands);
     }
     catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
