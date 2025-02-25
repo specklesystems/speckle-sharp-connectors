@@ -17,6 +17,7 @@ public class ToSpeckleSettingsManagerNavisworks : IToSpeckleSettingsManagerNavis
   private readonly Dictionary<string, OriginMode> _originModeCache = [];
   private readonly Dictionary<string, bool?> _convertHiddenElementsCache = [];
   private readonly Dictionary<string, bool?> _includeInternalPropertiesCache = [];
+  private readonly Dictionary<string, bool?> _preserveModelHierarchyCache = [];
 
   public ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConversionCache)
   {
@@ -117,6 +118,23 @@ public class ToSpeckleSettingsManagerNavisworks : IToSpeckleSettingsManagerNavis
     }
 
     _includeInternalPropertiesCache[modelCard.ModelCardId] = returnValue;
+    return returnValue;
+  }
+
+  public bool GetPreserveModelHierarchy([NotNull] SenderModelCard modelCard)
+  {
+    var value = modelCard.Settings?.FirstOrDefault(s => s.Id == "preserveModelHierarchy")?.Value as bool?;
+
+    var returnValue = value != null && value.NotNull();
+    if (_preserveModelHierarchyCache.TryGetValue(modelCard.ModelCardId.NotNull(), out var previousValue))
+    {
+      if (previousValue != returnValue)
+      {
+        EvictCacheForModelCard(modelCard);
+      }
+    }
+
+    _preserveModelHierarchyCache[modelCard.ModelCardId] = returnValue;
     return returnValue;
   }
 
