@@ -1,4 +1,5 @@
 ﻿using Speckle.Connector.Navisworks.Services;
+using Speckle.Converter.Navisworks.Constants;
 using Speckle.Converters.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
