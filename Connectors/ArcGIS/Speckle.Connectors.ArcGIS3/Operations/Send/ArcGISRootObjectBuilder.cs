@@ -116,7 +116,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
       // count number of features to convert. Raster layers are counter as 1 feature for now (not ideal)
       long allFeaturesCount = CountAllFeaturesInLayers(unpackedLayers);
 
-      int count = 0;
+      long count = 0;
       foreach (ADM.MapMember layer in unpackedLayers)
       {
         cancellationToken.ThrowIfCancellationRequested();
@@ -153,6 +153,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
                   cancellationToken
                 );
                 layerCollection.elements.AddRange(convertedFeatureLayerObjects);
+                count += featureLayer.GetFeatureClass().GetCount();
                 break;
               case ADM.RasterLayer rasterLayer:
                 // Don't pass count and cancellation token to layer conversion here, because Raster layer is counted as 1 object for now
@@ -169,6 +170,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
                   cancellationToken
                 );
                 layerCollection.elements.AddRange(convertedLasDatasetObjects);
+                count += lasDatasetLayer.GetLasDataset().GetDefinition().GetPointCount();
                 break;
               default:
                 status = Status.ERROR;
@@ -214,15 +216,14 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
       switch (layer)
       {
         case ADM.FeatureLayer featureLayer:
-          var featClass = featureLayer.GetFeatureClass();
-          allFeaturesCount += featClass.GetCount();
+          allFeaturesCount += featureLayer.GetFeatureClass().GetCount();
           break;
         case ADM.RasterLayer:
+          // count Raster layer as 1 feature: not optimal but this is the approach for now
           allFeaturesCount += 1;
           break;
         case ADM.LasDatasetLayer lasDatasetLayer:
-          var lasDefinition = lasDatasetLayer.GetLasDataset().GetDefinition();
-          allFeaturesCount += lasDefinition.GetPointCount();
+          allFeaturesCount += lasDatasetLayer.GetLasDataset().GetDefinition().GetPointCount();
           break;
       }
     }
@@ -232,7 +233,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
   private List<Base> ConvertFeatureLayerObjects(
     ADM.FeatureLayer featureLayer,
     IProgress<CardProgress> onOperationProgressed,
-    int count,
+    long count,
     long allFeaturesCount,
     CancellationToken cancellationToken
   )
@@ -287,7 +288,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
   private List<Base> ConvertLasDatasetLayerObjects(
     ADM.LasDatasetLayer lasDatasetLayer,
     IProgress<CardProgress> onOperationProgressed,
-    int count,
+    long count,
     long allFeaturesCount,
     CancellationToken cancellationToken
   )
