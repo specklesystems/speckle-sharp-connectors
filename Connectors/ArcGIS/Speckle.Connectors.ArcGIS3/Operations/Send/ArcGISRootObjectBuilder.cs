@@ -113,10 +113,10 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     onOperationProgressed.Report(new("Converting", null));
     using (var convertingActivity = _activityFactory.Start("Converting objects"))
     {
+      long count = 0;
       // count number of features to convert. Raster layers are counter as 1 feature for now (not ideal)
       long allFeaturesCount = CountAllFeaturesInLayers(unpackedLayers);
 
-      long count = 0;
       foreach (ADM.MapMember layer in unpackedLayers)
       {
         cancellationToken.ThrowIfCancellationRequested();
@@ -147,9 +147,9 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
               case ADM.FeatureLayer featureLayer:
                 List<Base> convertedFeatureLayerObjects = ConvertFeatureLayerObjects(
                   featureLayer,
-                  onOperationProgressed,
                   count,
                   allFeaturesCount,
+                  onOperationProgressed,
                   cancellationToken
                 );
                 layerCollection.elements.AddRange(convertedFeatureLayerObjects);
@@ -164,9 +164,9 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
               case ADM.LasDatasetLayer lasDatasetLayer:
                 List<Base> convertedLasDatasetObjects = ConvertLasDatasetLayerObjects(
                   lasDatasetLayer,
-                  onOperationProgressed,
                   count,
                   allFeaturesCount,
+                  onOperationProgressed,
                   cancellationToken
                 );
                 layerCollection.elements.AddRange(convertedLasDatasetObjects);
@@ -232,9 +232,9 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
 
   private List<Base> ConvertFeatureLayerObjects(
     ADM.FeatureLayer featureLayer,
-    IProgress<CardProgress> onOperationProgressed,
     long count,
     long allFeaturesCount,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
@@ -250,6 +250,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     {
       while (rowCursor.MoveNext())
       {
+        // allow cancellation before every feature
         cancellationToken.ThrowIfCancellationRequested();
 
         // Same IDisposable issue appears to happen on Row class too. Docs say it should always be disposed of manually by the caller.
@@ -287,9 +288,9 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
 
   private List<Base> ConvertLasDatasetLayerObjects(
     ADM.LasDatasetLayer lasDatasetLayer,
-    IProgress<CardProgress> onOperationProgressed,
     long count,
     long allFeaturesCount,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
@@ -305,6 +306,7 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
       {
         while (ptCursor.MoveNext())
         {
+          // allow cancellation before every point
           cancellationToken.ThrowIfCancellationRequested();
 
           using (ACD.Analyst3D.LasPoint pt = ptCursor.Current)
