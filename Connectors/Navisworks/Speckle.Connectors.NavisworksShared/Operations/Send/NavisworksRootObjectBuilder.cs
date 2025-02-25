@@ -144,12 +144,27 @@ public class NavisworksRootObjectBuilder(
     Dictionary<string, List<NAV.ModelItem>> groupedNodes
   )
   {
+    // First build the grouped nodes as before
     var finalElements = new List<Base>();
     var processedPaths = new HashSet<string>();
-
     AddGroupedElements(finalElements, convertedBases, groupedNodes, processedPaths);
-    AddRemainingElements(finalElements, convertedBases, processedPaths);
 
+    // If hierarchy mode is enabled, reorganize into proper nested structure
+    if (converterSettings.Current.User.PreserveModelHierarchy)
+    {
+      var hierarchyBuilder = new NavisworksHierarchyBuilder(
+        convertedBases,
+        rootToSpeckleConverter,
+        elementSelectionService
+      );
+
+      var hierarchy = hierarchyBuilder.BuildHierarchy();
+
+      return hierarchy;
+    }
+
+    // Otherwise continue with flat mode
+    AddRemainingElements(finalElements, convertedBases, processedPaths);
     return finalElements;
   }
 
