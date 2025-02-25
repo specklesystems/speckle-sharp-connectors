@@ -35,7 +35,7 @@ public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilterSelect
   {
     List<string> objectIds = [];
 
-    if (SelectedItems is null || SelectedItems.Count == 0)
+    if (SelectedItems.Count == 0)
     {
       return objectIds;
     }
