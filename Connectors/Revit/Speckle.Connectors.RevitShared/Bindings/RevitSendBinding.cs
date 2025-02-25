@@ -16,6 +16,7 @@ using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
+using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.RevitShared.Operations.Send.Filters;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
@@ -159,6 +160,10 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       // SWALLOW -> UI handles it immediately, so we do not need to handle anything for now!
       // Idea for later -> when cancel called, create promise from UI to solve it later with this catch block.
       // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
+    }
+    catch (SpeckleRevitTaskException ex)
+    {
+      await SpeckleRevitTaskException.ProcessException(modelCardId, ex, _logger, Commands);
     }
     catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
