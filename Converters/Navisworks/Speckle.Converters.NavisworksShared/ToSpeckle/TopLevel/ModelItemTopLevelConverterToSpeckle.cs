@@ -2,6 +2,7 @@
 using Speckle.Converter.Navisworks.ToSpeckle.PropertyHandlers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Objects.Data;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 
@@ -36,53 +37,42 @@ public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
   /// </summary>
   /// <param name="target">The object to convert.</param>
   /// <returns>The converted Speckle Base object.</returns>
-  public Base Convert(object target)
-  {
-    if (target == null)
-    {
-      throw new ArgumentNullException(nameof(target));
-    }
-
-    return Convert((NAV.ModelItem)target);
-  }
+  public Base Convert(object target) =>
+    target == null ? throw new ArgumentNullException(nameof(target)) : Convert((NAV.ModelItem)target);
 
   // Converts a Navisworks ModelItem into a Speckle Base object
-  private Base Convert(NAV.ModelItem target)
+  private Base Convert(NAV.ModelItem target) =>
+    target.HasGeometry ? CreateGeometryObject(target) : CreateNonGeometryObject(target);
+
+  private NavisworksObject CreateGeometryObject(NAV.ModelItem target)
+  {
+    IPropertyHandler handler = ShouldMergeProperties(target) ? _hierarchicalHandler : _standardHandler;
+    var name = GetObjectName(target);
+    return new NavisworksObject()
+    {
+      displayValue = _displayValueExtractor.GetDisplayValue(target),
+      name = name,
+      properties = _settingsStore.Current.User.ExcludeProperties ? [] : handler.GetProperties(target),
+      units = _settingsStore.Current.Derived.SpeckleUnits,
+    };
+  }
+
+  private static Collection CreateNonGeometryObject(NAV.ModelItem target)
   {
     var name = GetObjectName(target);
-
-    Base navisworksObject = target.HasGeometry ? CreateGeometryObject(target, name) : CreateNonGeometryObject(name);
-
-    IPropertyHandler handler = ShouldMergeProperties(target) ? _hierarchicalHandler : _standardHandler;
-    if (!_settingsStore.Current.User.ExcludeProperties)
+    return new Collection
     {
-      handler.AssignProperties(navisworksObject, target);
-    }
-
-    return navisworksObject;
+      name = name,
+      elements = [],
+      ["properties"] = new Dictionary<string, object?>()
+    };
   }
 
   /// <summary>
   /// Determines whether properties should be merged from ancestors.
-  /// Only geometry objects should have their properties merged.
+  /// Only geometry objects should have their properties merged.... For now.
   /// </summary>
   private static bool ShouldMergeProperties(NAV.ModelItem target) => target.HasGeometry;
-
-  private Base CreateGeometryObject(NAV.ModelItem target, string name) =>
-    new()
-    {
-      ["name"] = name,
-      ["displayValue"] = _displayValueExtractor.GetDisplayValue(target),
-      ["properties"] = new Dictionary<string, object?>()
-    };
-
-  private static Collection CreateNonGeometryObject(string name) =>
-    new()
-    {
-      ["name"] = name,
-      ["elements"] = new List<Base>(),
-      ["properties"] = new Dictionary<string, object?>()
-    };
 
   private static string GetObjectName(NAV.ModelItem target)
   {

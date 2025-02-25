@@ -12,27 +12,42 @@ public class DataObjectConverter
   : IToHostTopLevelConverter,
     ITypedConverter<DataObject, List<(RG.GeometryBase a, Base b)>>
 {
-  private readonly ITypedConverter<SOG.Point, RG.Point> _pointConverter;
-  private readonly ITypedConverter<SOG.Line, RG.LineCurve> _lineConverter;
-  private readonly ITypedConverter<SOG.Polyline, RG.PolylineCurve> _polylineConverter;
   private readonly ITypedConverter<SOG.Arc, RG.ArcCurve> _arcConverter;
+  private readonly ITypedConverter<SOG.Circle, RG.ArcCurve> _circleConverter;
+  private readonly ITypedConverter<SOG.Curve, RG.NurbsCurve> _curveConverter;
+  private readonly ITypedConverter<SOG.Ellipse, RG.NurbsCurve> _ellipseConverter;
+  private readonly ITypedConverter<SOG.Line, RG.LineCurve> _lineConverter;
   private readonly ITypedConverter<SOG.Mesh, RG.Mesh> _meshConverter;
+  private readonly ITypedConverter<SOG.Pointcloud, RG.PointCloud> _pointcloudConverter;
+  private readonly ITypedConverter<SOG.Point, RG.Point> _pointConverter;
+  private readonly ITypedConverter<SOG.Polycurve, RG.PolyCurve> _polycurveConverter;
+  private readonly ITypedConverter<SOG.Polyline, RG.PolylineCurve> _polylineConverter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   public DataObjectConverter(
-    ITypedConverter<SOG.Point, RG.Point> pointConverter,
-    ITypedConverter<SOG.Line, RG.LineCurve> lineConverter,
-    ITypedConverter<SOG.Polyline, RG.PolylineCurve> polylineConverter,
     ITypedConverter<SOG.Arc, RG.ArcCurve> arcConverter,
+    ITypedConverter<SOG.Circle, RG.ArcCurve> circleConverter,
+    ITypedConverter<SOG.Curve, RG.NurbsCurve> curveConverter,
+    ITypedConverter<SOG.Ellipse, RG.NurbsCurve> ellipseConverter,
+    ITypedConverter<SOG.Line, RG.LineCurve> lineConverter,
     ITypedConverter<SOG.Mesh, RG.Mesh> meshConverter,
+    ITypedConverter<SOG.Pointcloud, RG.PointCloud> pointcloudConverter,
+    ITypedConverter<SOG.Point, RG.Point> pointConverter,
+    ITypedConverter<SOG.Polyline, RG.PolylineCurve> polylineConverter,
+    ITypedConverter<SOG.Polycurve, RG.PolyCurve> polycurveConverter,
     IConverterSettingsStore<RhinoConversionSettings> settingsStore
   )
   {
-    _pointConverter = pointConverter;
-    _lineConverter = lineConverter;
-    _polylineConverter = polylineConverter;
     _arcConverter = arcConverter;
+    _circleConverter = circleConverter;
+    _curveConverter = curveConverter;
+    _ellipseConverter = ellipseConverter;
+    _lineConverter = lineConverter;
     _meshConverter = meshConverter;
+    _pointcloudConverter = pointcloudConverter;
+    _pointConverter = pointConverter;
+    _polycurveConverter = polycurveConverter;
+    _polylineConverter = polylineConverter;
     _settingsStore = settingsStore;
   }
 
@@ -45,11 +60,16 @@ public class DataObjectConverter
     {
       RG.GeometryBase x = item switch
       {
-        SOG.Line line => _lineConverter.Convert(line),
-        SOG.Polyline polyline => _polylineConverter.Convert(polyline),
         SOG.Arc arc => _arcConverter.Convert(arc),
+        SOG.Circle circle => _circleConverter.Convert(circle),
+        SOG.Curve curve => _curveConverter.Convert(curve),
+        SOG.Ellipse ellipse => _ellipseConverter.Convert(ellipse),
+        SOG.Line line => _lineConverter.Convert(line),
         SOG.Mesh mesh => _meshConverter.Convert(mesh),
+        SOG.Pointcloud pointcloud => _pointcloudConverter.Convert(pointcloud),
         SOG.Point point => _pointConverter.Convert(point),
+        SOG.Polycurve polycurve => _polycurveConverter.Convert(polycurve),
+        SOG.Polyline polyline => _polylineConverter.Convert(polyline),
         _ => throw new ConversionException($"Found unsupported fallback geometry: {item.GetType()}")
       };
       x.Transform(GetUnitsTransform(item));
