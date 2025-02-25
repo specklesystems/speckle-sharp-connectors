@@ -9,6 +9,7 @@ public abstract class BasePropertyHandler(
 ) : IPropertyHandler
 {
   public abstract Dictionary<string, object?> GetProperties(NAV.ModelItem modelItem);
+  private readonly List<string> _excludedProperties = ["Hidden", "Required", "Internal_Type"];
 
   protected Dictionary<string, object?> ProcessPropertySets(NAV.ModelItem modelItem)
   {
@@ -19,8 +20,6 @@ public abstract class BasePropertyHandler(
     {
       foreach (var category in propertySets.Where(c => c.Key != "Internal" && c.Key != "Transform"))
       {
-        var excludedProperties = new List<string> { "Hidden", "Required", "Internal_Type" };
-
         if (category.Value is not Dictionary<string, object?> properties)
         {
           continue;
@@ -35,7 +34,7 @@ public abstract class BasePropertyHandler(
           }
 
           // add all non-excluded properties in the Item category to the root level
-          foreach (var prop in itemProps.Where(prop => !excludedProperties.Contains(prop.Key)))
+          foreach (var prop in itemProps.Where(prop => !_excludedProperties.Contains(prop.Key)))
           {
             categorizedProperties[prop.Key] = prop.Value;
           }
