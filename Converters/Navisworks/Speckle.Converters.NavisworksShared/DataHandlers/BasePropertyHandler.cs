@@ -18,7 +18,7 @@ public abstract class BasePropertyHandler(
 
     if (propertySets != null)
     {
-      foreach (var category in propertySets.Where(c => c.Key != "Internal" && c.Key != "Transform"))
+      foreach (var category in propertySets.Where(c => c.Key is not "Internal" and not "Transform"))
       {
         if (category.Value is not Dictionary<string, object?> properties)
         {
