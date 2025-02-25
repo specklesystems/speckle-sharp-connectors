@@ -1,5 +1,6 @@
 using Revit.Async;
 using Speckle.Connectors.Common.Threading;
+using Speckle.Sdk;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
@@ -29,9 +30,7 @@ public class RevitThreadContext : ThreadContext
       {
         return action();
       }
-#pragma warning disable CA1031
-      catch (Exception e)
-#pragma warning restore CA1031
+      catch (Exception e) when (!e.IsFatal())
       {
         ex = e;
         return default;
@@ -54,9 +53,7 @@ public class RevitThreadContext : ThreadContext
       {
         return await action();
       }
-#pragma warning disable CA1031
-      catch (Exception e)
-#pragma warning restore CA1031
+      catch (Exception e) when (!e.IsFatal())
       {
         ex = e;
         return default;
@@ -79,9 +76,7 @@ public class RevitThreadContext : ThreadContext
       {
         await action();
       }
-#pragma warning disable CA1031
-      catch (Exception e)
-#pragma warning restore CA1031
+      catch (Exception e) when (!e.IsFatal())
       {
         ex = e;
       }
