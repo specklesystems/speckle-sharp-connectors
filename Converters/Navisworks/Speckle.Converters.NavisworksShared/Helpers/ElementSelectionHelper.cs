@@ -1,4 +1,6 @@
-﻿namespace Speckle.Converter.Navisworks.Helpers;
+﻿using Speckle.Converter.Navisworks.Constants;
+
+namespace Speckle.Converter.Navisworks.Helpers;
 
 /// <summary>
 /// Provides extension methods for working with Navisworks ModelItem selections.
@@ -32,6 +34,22 @@ public static class ElementSelectionHelper
     return pathIndex;
   }
 
+  /// <summary>
+  /// Extracts just the path part if the indexPath contains a material signature.
+  /// </summary>
+  /// <param name="indexPath">The potentially composite path that might include a material signature</param>
+  /// <returns>The clean path without any material signature</returns>
+  public static string GetCleanPath(string indexPath)
+  {
+    if (indexPath == null)
+    {
+      throw new ArgumentNullException(nameof(indexPath));
+    }
+
+    int separatorIndex = indexPath.IndexOf(PathConstants.MATERIAL_SEPARATOR, StringComparison.Ordinal);
+    return separatorIndex > 0 ? indexPath[..separatorIndex] : indexPath;
+  }
+
   public static NAV.ModelItem ResolveIndexPathToModelItem(string indexPath)
   {
     if (indexPath == null)
@@ -39,7 +57,10 @@ public static class ElementSelectionHelper
       throw new ArgumentNullException(nameof(indexPath));
     }
 
-    var indexPathParts = indexPath.Split(PathConstants.SEPARATOR);
+    // Extract just the path part if the indexPath contains a material signature
+    string pathToResolve = GetCleanPath(indexPath);
+
+    var indexPathParts = pathToResolve.Split(PathConstants.SEPARATOR);
 
     var modelIndex = int.Parse(indexPathParts[0]);
     var pathId = string.Join(PathConstants.SEPARATOR.ToString(), indexPathParts.Skip(1));
@@ -68,13 +89,6 @@ public static class ElementSelectionHelper
     return modelItem.AncestorsAndSelf.All(item => !item.IsHidden);
   }
 
-  public static IReadOnlyCollection<NAV.ModelItem> ResolveGeometryLeafNodes(NAV.ModelItem modelItem)
-  {
-    if (modelItem == null)
-    {
-      throw new ArgumentNullException(nameof(modelItem));
-    }
-
-    return modelItem.DescendantsAndSelf.Where(x => x.HasGeometry).ToList();
-  }
+  public static List<NAV.ModelItem> ResolveGeometryLeafNodes(NAV.ModelItem modelItem) =>
+    modelItem.DescendantsAndSelf.Where(x => x.HasGeometry).ToList();
 }

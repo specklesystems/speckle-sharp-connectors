@@ -43,12 +43,13 @@ public class NavisworksMaterialUnpacker(
     Dictionary<string, RenderMaterialProxy> renderMaterialProxies = [];
     Dictionary<string, string> mergedIds = [];
 
-    // Build mergedIds map once
     foreach (var group in groupedNodes)
     {
-      foreach (var node in group.Value)
+      string groupKey = group.Key;
+
+      foreach (var nodePath in group.Value.Select(selectionService.GetModelItemPath))
       {
-        mergedIds[selectionService.GetModelItemPath(node)] = group.Key;
+        mergedIds[nodePath] = groupKey;
       }
     }
 
@@ -63,7 +64,6 @@ public class NavisworksMaterialUnpacker(
 
         var navisworksObjectId = selectionService.GetModelItemPath(navisworksObject);
         var finalId = mergedIds.TryGetValue(navisworksObjectId, out var mergedId) ? mergedId : navisworksObjectId;
-
         var geometry = navisworksObject.Geometry;
         var mode = converterSettings.Current.User.VisualRepresentationMode;
 
@@ -76,7 +76,6 @@ public class NavisworksMaterialUnpacker(
           geometry.OriginalColor,
           defaultColor
         );
-
         var renderTransparency = Select(
           mode,
           geometry.ActiveTransparency,
@@ -84,7 +83,6 @@ public class NavisworksMaterialUnpacker(
           geometry.OriginalTransparency,
           0.0
         );
-
         var renderMaterialId = Select(
           mode,
           $"{geometry.ActiveColor.GetHashCode()}_{geometry.ActiveTransparency}".GetHashCode(),

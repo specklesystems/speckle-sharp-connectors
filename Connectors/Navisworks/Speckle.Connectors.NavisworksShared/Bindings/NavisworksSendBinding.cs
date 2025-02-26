@@ -31,7 +31,6 @@ public class NavisworksSendBinding : ISendBinding
 
   private readonly DocumentModelStore _store;
   private readonly IServiceProvider _serviceProvider;
-  private readonly List<ISendFilter> _sendFilters;
   private readonly ICancellationManager _cancellationManager;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<NavisworksSendBinding> _logger;
@@ -45,7 +44,6 @@ public class NavisworksSendBinding : ISendBinding
   public NavisworksSendBinding(
     DocumentModelStore store,
     IBrowserBridge parent,
-    IEnumerable<ISendFilter> sendFilters,
     IServiceProvider serviceProvider,
     ICancellationManager cancellationManager,
     IOperationProgressManager operationProgressManager,
@@ -62,7 +60,6 @@ public class NavisworksSendBinding : ISendBinding
     Commands = new SendBindingUICommands(parent);
     _store = store;
     _serviceProvider = serviceProvider;
-    _sendFilters = sendFilters.ToList();
     _cancellationManager = cancellationManager;
     _operationProgressManager = operationProgressManager;
     _logger = logger;
@@ -77,7 +74,7 @@ public class NavisworksSendBinding : ISendBinding
 
   private static void SubscribeToNavisworksEvents() { }
 
-  // Do not change the behavior/scope of this class on send binding unless make sure the behavior is same. Otherwise we might not be able to update list of saved sets.
+  // Do not change the behavior/scope of this class on send binding unless make sure the behavior is same. Otherwise, we might not be able to update list of saved sets.
   public List<ISendFilter> GetSendFilters() =>
     [
       new NavisworksSelectionFilter() { IsDefault = true },
