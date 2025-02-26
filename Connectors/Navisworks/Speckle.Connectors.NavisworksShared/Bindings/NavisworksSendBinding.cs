@@ -90,6 +90,7 @@ public class NavisworksSendBinding : ISendBinding
       new OriginModeSetting(OriginMode.ModelOrigin),
       new IncludeInternalPropertiesSetting(false),
       new ConvertHiddenElementsSetting(false),
+      new PreserveModelHierarchySetting(false),
     ];
 
   public async Task Send(string modelCardId) =>
@@ -140,7 +141,8 @@ public class NavisworksSendBinding : ISendBinding
           originMode: _toSpeckleSettingsManagerNavisworks.GetOriginMode(modelCard),
           visualRepresentationMode: _toSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(modelCard),
           convertHiddenElements: _toSpeckleSettingsManagerNavisworks.GetConvertHiddenElements(modelCard),
-          includeInternalProperties: _toSpeckleSettingsManagerNavisworks.GetIncludeInternalProperties(modelCard)
+          includeInternalProperties: _toSpeckleSettingsManagerNavisworks.GetIncludeInternalProperties(modelCard),
+          preserveModelHierarchy: _toSpeckleSettingsManagerNavisworks.GetPreserveModelHierarchy(modelCard)
         )
       );
 
