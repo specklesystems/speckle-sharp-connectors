@@ -31,10 +31,6 @@
     <PropertyGroup>
       <TeklaInstallPath Condition="Exists('$(ProgramDataTeklaPath)')">$(ProgramDataTeklaPath)</TeklaInstallPath>
       <TeklaInstallPath Condition="Exists('$(DirectTeklaPath)')">$(DirectTeklaPath)</TeklaInstallPath>
-
-      <!-- Set the correct ribbon path based on installation -->
-      <RibbonInstallPath Condition="Exists('$(ProgramDataTeklaPath)')">$(ProgramDataRibbonPath)</RibbonInstallPath>
-      <RibbonInstallPath Condition="Exists('$(DirectTeklaPath)')">$(DirectRibbonPath)</RibbonInstallPath>
     </PropertyGroup>
 
     <!-- Copy DLLs to extension folder -->
@@ -55,34 +51,30 @@
       DestinationFolder="$(TeklaInstallPath)\Bitmaps"
       SourceFiles="@(TeklaBmp)" />
 
-    <!-- Create Ribbon directory if it doesn't exist -->
-    <MakeDir Directories="$(RibbonInstallPath)"
-             Condition="'$(RibbonInstallPath)' != '' And !Exists('$(RibbonInstallPath)')" />
+    <!-- Create Ribbon directories if they don't exist -->
+    <MakeDir Directories="$(ProgramDataRibbonPath)"
+             Condition="Exists('$(ProgramDataTeklaPath)') And !Exists('$(ProgramDataRibbonPath)')" />
+    <MakeDir Directories="$(DirectRibbonPath)"
+             Condition="Exists('$(DirectTeklaPath)') And !Exists('$(DirectRibbonPath)')" />
 
-    <!-- Copy the XML file to destination -->
+    <!-- Copy the XML file to both possible destinations -->
     <Copy
       SourceFiles="@(TeklaRibbonXml)"
-      DestinationFolder="$(RibbonInstallPath)"
-      Condition="'$(RibbonInstallPath)' != ''" />
+      DestinationFolder="$(ProgramDataRibbonPath)"
+      Condition="Exists('$(ProgramDataTeklaPath)')" />
+    <Copy
+      SourceFiles="@(TeklaRibbonXml)"
+      DestinationFolder="$(DirectRibbonPath)"
+      Condition="Exists('$(DirectTeklaPath)')" />
 
-    <!-- Read the copied file -->
-    <ReadLinesFromFile
-      File="$(RibbonInstallPath)\Speckle-Ribbon.xml"
-      Condition="'$(RibbonInstallPath)' != ''">
-      <Output TaskParameter="Lines" ItemName="XmlContent"/>
-    </ReadLinesFromFile>
-
-    <!-- Update XML content with correct icon path -->
-    <PropertyGroup>
-      <UpdatedXmlContent>@(XmlContent->'%(Identity)'->Replace('Icon=""', 'Icon="$(SpeckleExtensionPath)\Resources\speckle.svg"'))</UpdatedXmlContent>
-    </PropertyGroup>
-
-    <!-- Write back the updated content -->
-    <WriteLinesToFile
-      File="$(RibbonInstallPath)\Speckle-Ribbon.xml"
-      Lines="$(UpdatedXmlContent)"
-      Overwrite="true"
-      Condition="'$(RibbonInstallPath)' != ''" />
-
+    <!-- Copy the SVG file to both possible ribbon destinations -->
+    <Copy
+      SourceFiles="@(TeklaSvg)"
+      DestinationFolder="$(ProgramDataRibbonPath)"
+      Condition="Exists('$(ProgramDataTeklaPath)')" />
+    <Copy
+      SourceFiles="@(TeklaSvg)"
+      DestinationFolder="$(DirectRibbonPath)"
+      Condition="Exists('$(DirectTeklaPath)')" />
   </Target>
 </Project>
