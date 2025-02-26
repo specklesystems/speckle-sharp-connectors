@@ -69,12 +69,13 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
       colors[x++] = c.ToArgb();
     }
 
-    List<double> vertexNormals = new(target.Normals.Count * 3);
+    Span<double> vertexNormals = stackalloc double[target.Normals.Count * 3];
+    x = 0;
     foreach (var n in target.Normals)
     {
-      vertexNormals.Add(n.X);
-      vertexNormals.Add(n.Y);
-      vertexNormals.Add(n.Z);
+      vertexNormals[x++] = n.X;
+      vertexNormals[x++] = n.Y;
+      vertexNormals[x++] = n.Z;
     }
 
     double volume = target.IsClosed ? target.Volume() : 0;
@@ -86,9 +87,7 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
       faces = faces,
       colors = new(colors.ToArray()),
       textureCoordinates = new(textureCoordinates.ToArray()),
-      colors = colors,
-      textureCoordinates = textureCoordinates,
-      vertexNormals = vertexNormals,
+      vertexNormals = new(vertexNormals.ToArray()),
       units = _settingsStore.Current.SpeckleUnits,
       volume = volume,
       bbox = bbox
