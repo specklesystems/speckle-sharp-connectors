@@ -4,19 +4,23 @@ public class PropertiesExtractor
 {
   private readonly ReportPropertyExtractor _reportPropertyExtractor;
   private readonly UserDefinedAttributesExtractor _userDefinedAttributesExtractor;
+  private readonly ClassPropertyExtractor _classPropertyExtractor;
 
   public PropertiesExtractor(
     ReportPropertyExtractor reportPropertyExtractor,
-    UserDefinedAttributesExtractor userDefinedAttributesExtractor
+    UserDefinedAttributesExtractor userDefinedAttributesExtractor,
+    ClassPropertyExtractor classPropertyExtractor
   )
   {
     _reportPropertyExtractor = reportPropertyExtractor;
     _userDefinedAttributesExtractor = userDefinedAttributesExtractor;
+    _classPropertyExtractor = classPropertyExtractor;
   }
 
   public Dictionary<string, object?> GetProperties(TSM.ModelObject modelObject)
   {
-    Dictionary<string, object?> properties = new();
+    // get the top level class properties first
+    Dictionary<string, object?> properties = _classPropertyExtractor.GetProperties(modelObject);
 
     Dictionary<string, object?> report = _reportPropertyExtractor.GetReportProperties(modelObject);
     if (report.Count > 0)
