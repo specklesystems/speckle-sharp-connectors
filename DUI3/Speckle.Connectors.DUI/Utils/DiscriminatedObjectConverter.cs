@@ -95,7 +95,6 @@ public class DiscriminatedObjectConverter(IServiceProvider serviceProvider) : Js
             var type = assembly.DefinedTypes.FirstOrDefault(t => !string.IsNullOrEmpty(t?.Name) && t?.Name == name);
             if (type != null)
             {
-              s_typeCache[name] = type;
               return type;
             }
           }
