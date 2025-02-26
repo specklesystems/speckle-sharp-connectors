@@ -102,11 +102,17 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     // We need to unpack the selected mapmembers into all leaf-level mapmembers (containing just objects) and build the root collection structure during unpacking.
     // Mapmember dynamically attached properties are also added at this step.
     List<ADM.MapMember> unpackedLayers;
+    Dictionary<ADM.MapMember, long> layersWithFeatureCount;
+    long allFeaturesCount;
     ADM.Map map = ADM.MapView.Active.Map;
     IEnumerable<ADM.MapMember> layersOrdered = _mapMemberUtils.GetMapMembersInOrder(map, layers);
     using (var _ = _activityFactory.Start("Unpacking selection"))
     {
       unpackedLayers = _layerUnpacker.UnpackSelection(layersOrdered, rootCollection);
+
+      // count number of features to convert. Raster layers are counter as 1 feature for now (not ideal)
+      layersWithFeatureCount = CountAllFeaturesInLayers(unpackedLayers);
+      allFeaturesCount = layersWithFeatureCount.Values.Sum();
     }
 
     List<SendConversionResult> results = new(unpackedLayers.Count);
@@ -114,9 +120,6 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     using (var convertingActivity = _activityFactory.Start("Converting objects"))
     {
       long count = 0;
-      // count number of features to convert. Raster layers are counter as 1 feature for now (not ideal)
-      Dictionary<ADM.MapMember, long> layersWithFeatureCount = CountAllFeaturesInLayers(unpackedLayers);
-      long allFeaturesCount = layersWithFeatureCount.Values.Sum();
 
       foreach (var (layer, layerFeatureCount) in layersWithFeatureCount)
       {
@@ -181,6 +184,8 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
                 sdkStatus = SdkActivityStatusCode.Error;
                 break;
             }
+
+            count += layerFeatureCount;
             results.Add(new(status, layerApplicationId, layer.GetType().Name, layerCollection));
             convertingActivity?.SetStatus(sdkStatus);
           }
