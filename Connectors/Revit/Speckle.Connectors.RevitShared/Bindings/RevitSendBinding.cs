@@ -337,9 +337,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     // }
 
     if (
-      ChangedObjectIds.Any(e =>
-        _revitContext.UIApplication.NotNull().ActiveUIDocument.Document.GetElement(e) is View
-      )
+      ChangedObjectIds.Any(e => _revitContext.UIApplication.NotNull().ActiveUIDocument.Document.GetElement(e) is View)
     )
     {
       await Commands.RefreshSendFilters();
