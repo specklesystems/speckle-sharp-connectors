@@ -115,9 +115,10 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     {
       long count = 0;
       // count number of features to convert. Raster layers are counter as 1 feature for now (not ideal)
-      long allFeaturesCount = CountAllFeaturesInLayers(unpackedLayers);
+      Dictionary<ADM.MapMember, long> layersWithFeatureCount = CountAllFeaturesInLayers(unpackedLayers);
+      long allFeaturesCount = layersWithFeatureCount.Values.Sum();
 
-      foreach (ADM.MapMember layer in unpackedLayers)
+      foreach (var (layer, layerFeatureCount) in layersWithFeatureCount)
       {
         cancellationToken.ThrowIfCancellationRequested();
         string layerApplicationId = layer.GetSpeckleApplicationId();
@@ -153,13 +154,17 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
                   cancellationToken
                 );
                 layerCollection.elements.AddRange(convertedFeatureLayerObjects);
-                count += featureLayer.GetFeatureClass().GetCount();
                 break;
               case ADM.RasterLayer rasterLayer:
                 // Don't pass count and cancellation token to layer conversion here, because Raster layer is counted as 1 object for now
-                List<Base> convertedRasterLayerObjects = ConvertRasterLayerObjects(rasterLayer);
+                List<Base> convertedRasterLayerObjects = ConvertRasterLayerObjects(
+                  rasterLayer,
+                  count,
+                  allFeaturesCount,
+                  onOperationProgressed,
+                  cancellationToken
+                );
                 layerCollection.elements.AddRange(convertedRasterLayerObjects);
-                onOperationProgressed.Report(new("Converting", ++count / allFeaturesCount));
                 break;
               case ADM.LasDatasetLayer lasDatasetLayer:
                 List<Base> convertedLasDatasetObjects = ConvertLasDatasetLayerObjects(
@@ -170,7 +175,6 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
                   cancellationToken
                 );
                 layerCollection.elements.AddRange(convertedLasDatasetObjects);
-                count += lasDatasetLayer.GetLasDataset().GetDefinition().GetPointCount();
                 break;
               default:
                 status = Status.ERROR;
@@ -208,26 +212,32 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
     return new RootObjectBuilderResult(rootCollection, results);
   }
 
-  private long CountAllFeaturesInLayers(List<ADM.MapMember> unpackedLayers)
+  private Dictionary<ADM.MapMember, long> CountAllFeaturesInLayers(List<ADM.MapMember> unpackedLayers)
   {
-    long allFeaturesCount = 0;
+    Dictionary<ADM.MapMember, long> layersFeatureCount = new();
+
     foreach (ADM.MapMember layer in unpackedLayers)
     {
       switch (layer)
       {
         case ADM.FeatureLayer featureLayer:
-          allFeaturesCount += featureLayer.GetFeatureClass().GetCount();
+          layersFeatureCount.Add(featureLayer, featureLayer.GetFeatureClass().GetCount());
           break;
-        case ADM.RasterLayer:
+        case ADM.RasterLayer rasterLayer:
           // count Raster layer as 1 feature: not optimal but this is the approach for now
-          allFeaturesCount += 1;
+          layersFeatureCount.Add(rasterLayer, 1);
           break;
         case ADM.LasDatasetLayer lasDatasetLayer:
-          allFeaturesCount += lasDatasetLayer.GetLasDataset().GetDefinition().GetPointCount();
+          var dataset = lasDatasetLayer.GetLasDataset();
+          // simple dataset.GetPointCount() keeps returning null, so switched to EstimatePointCount
+          layersFeatureCount.Add(
+            lasDatasetLayer,
+            (long)dataset.EstimatePointCount(dataset.GetDefinition().GetExtent())
+          );
           break;
       }
     }
-    return allFeaturesCount;
+    return layersFeatureCount;
   }
 
   private List<Base> ConvertFeatureLayerObjects(
@@ -266,7 +276,8 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
           // process the object color
           _colorUnpacker.ProcessFeatureLayerColor(row, applicationId);
         }
-        onOperationProgressed.Report(new("Converting", ++count / allFeaturesCount));
+        // update report
+        onOperationProgressed.Report(new("Converting", (double)++count / allFeaturesCount));
       }
     }
 
@@ -274,15 +285,28 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
   }
 
   // POC: raster colors are stored as mesh vertex colors in RasterToSpeckleConverter. Should probably move to color unpacker.
-  private List<Base> ConvertRasterLayerObjects(ADM.RasterLayer rasterLayer)
+  private List<Base> ConvertRasterLayerObjects(
+    ADM.RasterLayer rasterLayer,
+    long count,
+    long allFeaturesCount,
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken
+  )
   {
     string layerApplicationId = rasterLayer.GetSpeckleApplicationId();
     List<Base> convertedObjects = new();
     Raster raster = rasterLayer.GetRaster();
+
+    // check cancellation token before conversion
+    cancellationToken.ThrowIfCancellationRequested();
     Base converted = _rootToSpeckleConverter.Convert(raster);
     string applicationId = raster.GetSpeckleApplicationId(layerApplicationId);
     converted.applicationId = applicationId;
     convertedObjects.Add(converted);
+
+    // update report
+    onOperationProgressed.Report(new("Converting", (double)++count / allFeaturesCount));
+
     return convertedObjects;
   }
 
@@ -319,7 +343,8 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
             // process the object color
             _colorUnpacker.ProcessLasLayerColor(pt, applicationId);
           }
-          onOperationProgressed.Report(new("Converting", ++count / allFeaturesCount));
+          // update report
+          onOperationProgressed.Report(new("Converting", (double)++count / allFeaturesCount));
         }
       }
     }
