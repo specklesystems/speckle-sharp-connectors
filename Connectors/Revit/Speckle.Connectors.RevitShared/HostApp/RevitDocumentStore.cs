@@ -2,7 +2,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.ExtensibleStorage;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
-using Revit.Async;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
@@ -22,6 +22,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
   private readonly DocumentModelStorageSchema _documentModelStorageSchema;
   private readonly IdStorageSchema _idStorageSchema;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly IThreadContext _threadContext;
 
   public RevitDocumentStore(
     IAppIdleManager idleManager,
@@ -29,7 +30,8 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     IJsonSerializer jsonSerializer,
     DocumentModelStorageSchema documentModelStorageSchema,
     IdStorageSchema idStorageSchema,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    IThreadContext threadContext
   )
     : base(jsonSerializer)
   {
@@ -38,6 +40,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     _documentModelStorageSchema = documentModelStorageSchema;
     _idStorageSchema = idStorageSchema;
     _topLevelExceptionHandler = topLevelExceptionHandler;
+    _threadContext = threadContext;
 
     UIApplication uiApplication = _revitContext.UIApplication.NotNull();
 
@@ -91,23 +94,25 @@ internal sealed class RevitDocumentStore : DocumentModelStore
       return;
     }
 
-    RevitTask.RunAsync(() =>
-    {
-      using Transaction t = new(doc, "Speckle Write State");
-      t.Start();
-      using DataStorage ds = GetSettingsDataStorage(doc) ?? DataStorage.Create(doc);
+    _threadContext
+      .RunOnMain(() =>
+      {
+        using Transaction t = new(doc, "Speckle Write State");
+        t.Start();
+        using DataStorage ds = GetSettingsDataStorage(doc) ?? DataStorage.Create(doc);
 
-      using Entity stateEntity = new(_documentModelStorageSchema.GetSchema());
-      string serializedModels = Serialize();
-      stateEntity.Set("contents", serializedModels);
+        using Entity stateEntity = new(_documentModelStorageSchema.GetSchema());
+        string serializedModels = Serialize();
+        stateEntity.Set("contents", serializedModels);
 
-      using Entity idEntity = new(_idStorageSchema.GetSchema());
-      idEntity.Set("Id", s_revitDocumentStoreId);
+        using Entity idEntity = new(_idStorageSchema.GetSchema());
+        idEntity.Set("Id", s_revitDocumentStoreId);
 
-      ds.SetEntity(idEntity);
-      ds.SetEntity(stateEntity);
-      t.Commit();
-    });
+        ds.SetEntity(idEntity);
+        ds.SetEntity(stateEntity);
+        t.Commit();
+      })
+      .FireAndForget();
   }
 
   protected override void LoadState()

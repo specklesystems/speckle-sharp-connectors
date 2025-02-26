@@ -2,6 +2,7 @@
 using Speckle.Converter.Navisworks.ToSpeckle.PropertyHandlers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Objects.Data;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 
@@ -36,53 +37,43 @@ public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
   /// </summary>
   /// <param name="target">The object to convert.</param>
   /// <returns>The converted Speckle Base object.</returns>
-  public Base Convert(object target)
-  {
-    if (target == null)
-    {
-      throw new ArgumentNullException(nameof(target));
-    }
-
-    return Convert((NAV.ModelItem)target);
-  }
+  public Base Convert(object target) =>
+    target == null ? throw new ArgumentNullException(nameof(target)) : Convert((NAV.ModelItem)target);
 
   // Converts a Navisworks ModelItem into a Speckle Base object
   private Base Convert(NAV.ModelItem target)
   {
+    IPropertyHandler handler = ShouldMergeProperties(target) ? _hierarchicalHandler : _standardHandler;
     var name = GetObjectName(target);
 
-    Base navisworksObject = target.HasGeometry ? CreateGeometryObject(target, name) : CreateNonGeometryObject(name);
-
-    IPropertyHandler handler = ShouldMergeProperties(target) ? _hierarchicalHandler : _standardHandler;
-    if (!_settingsStore.Current.User.ExcludeProperties)
-    {
-      handler.AssignProperties(navisworksObject, target);
-    }
-
-    return navisworksObject;
+    return target.HasGeometry
+      ? CreateGeometryObject(target, name, handler)
+      : CreateNonGeometryObject(target, name, handler);
   }
+
+  // There are in fact only two types of objects: geometry and non-geometry, the latter being collections of other objects
+  private NavisworksObject CreateGeometryObject(NAV.ModelItem target, string name, IPropertyHandler propertyHandler) =>
+    new()
+    {
+      name = name,
+      displayValue = _displayValueExtractor.GetDisplayValue(target),
+      properties = _settingsStore.Current.User.ExcludeProperties ? [] : propertyHandler.GetProperties(target),
+      units = _settingsStore.Current.Derived.SpeckleUnits,
+    };
+
+  private Collection CreateNonGeometryObject(NAV.ModelItem target, string name, IPropertyHandler propertyHandler) =>
+    new()
+    {
+      name = name,
+      elements = [],
+      ["properties"] = _settingsStore.Current.User.ExcludeProperties ? [] : propertyHandler.GetProperties(target),
+    };
 
   /// <summary>
   /// Determines whether properties should be merged from ancestors.
-  /// Only geometry objects should have their properties merged.
+  /// Only geometry objects should have their properties merged.... For now.
   /// </summary>
   private static bool ShouldMergeProperties(NAV.ModelItem target) => target.HasGeometry;
-
-  private Base CreateGeometryObject(NAV.ModelItem target, string name) =>
-    new()
-    {
-      ["name"] = name,
-      ["displayValue"] = _displayValueExtractor.GetDisplayValue(target),
-      ["properties"] = new Dictionary<string, object?>()
-    };
-
-  private static Collection CreateNonGeometryObject(string name) =>
-    new()
-    {
-      ["name"] = name,
-      ["elements"] = new List<Base>(),
-      ["properties"] = new Dictionary<string, object?>()
-    };
 
   private static string GetObjectName(NAV.ModelItem target)
   {

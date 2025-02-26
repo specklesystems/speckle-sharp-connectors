@@ -183,7 +183,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
         .ServiceProvider.GetRequiredService<SendOperation<AutocadRootObject>>()
         .Execute(
           autocadObjects,
-          modelCard.GetSendInfo(_speckleApplication.Slug),
+          modelCard.GetSendInfo(_speckleApplication.ApplicationAndVersion),
           _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),
           cancellationItem.Token
         );

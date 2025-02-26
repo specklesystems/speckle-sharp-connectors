@@ -167,7 +167,7 @@ public class AutocadHostObjectBuilder(
         convertedEntities.Add(bakedEntity);
         break;
 
-      case List<(Entity, Base)> listConversionResult: // this is from fallback conversion for brep/brepx/subdx/extrusionx
+      case List<(Entity, Base)> listConversionResult: // this is from fallback conversion for brep/brepx/subdx/extrusionx/polycurve
         var bakedFallbackEntities = BakeObjectsAsGroup(listConversionResult, obj, layerName, baseLayerNamePrefix);
         convertedEntities.UnionWith(bakedFallbackEntities);
         break;
