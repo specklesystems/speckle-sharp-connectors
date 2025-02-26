@@ -101,7 +101,7 @@ public sealed class CsiSharedSendBinding : ISendBinding
         .ServiceProvider.GetRequiredService<SendOperation<ICsiWrapper>>()
         .Execute(
           wrappers,
-          modelCard.GetSendInfo(_speckleApplication.Slug),
+          modelCard.GetSendInfo(_speckleApplication.ApplicationAndVersion),
           _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),
           cancellationItem.Token
         );

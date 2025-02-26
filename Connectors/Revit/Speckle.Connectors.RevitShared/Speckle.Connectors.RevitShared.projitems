@@ -50,5 +50,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitThreadContext.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitCefPlugin.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\SpeckleRevitTaskException.cs" />
   </ItemGroup>
 </Project>
