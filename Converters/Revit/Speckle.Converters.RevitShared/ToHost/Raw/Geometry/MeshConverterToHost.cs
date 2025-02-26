@@ -10,8 +10,8 @@ namespace Speckle.Converters.RevitShared.ToHost.TopLevel;
 
 public class MeshConverterToHost(
   RevitToHostCacheSingleton revitToHostCacheSingleton,
-  ScalingServiceToHost scalingServiceToHost)
-  : ITypedConverter<SOG.Mesh, List<DB.GeometryObject>>
+  ScalingServiceToHost scalingServiceToHost
+) : ITypedConverter<SOG.Mesh, List<DB.GeometryObject>>
 {
   public List<DB.GeometryObject> Convert(SOG.Mesh mesh)
   {
@@ -20,7 +20,7 @@ public class MeshConverterToHost(
 
     using var tsb = new TessellatedShapeBuilder()
     {
-      Fallback = fallback,  
+      Fallback = fallback,
       Target = target,
       GraphicsStyleId = ElementId.InvalidElementId
     };
