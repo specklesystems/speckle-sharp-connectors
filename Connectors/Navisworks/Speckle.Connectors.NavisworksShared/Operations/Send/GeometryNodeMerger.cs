@@ -118,19 +118,21 @@ public static class GeometryNodeMerger
       }
     }
 
-    return hashInput.Length == 0 ? "empty" : GetHash(hashInput.ToString(), hashLength);
-  }
+    if (hashInput.Length == 0)
+    {
+      return "empty";
+    }
 
-  /// <summary>
-  /// Generates a non-cryptographic hash from the input string. Mostly to avoid MD5.Create() warnings.
-  /// </summary>
-  /// <param name="input">The input string to hash.</param>
-  /// <param name="length">The length of the returned hash string (default: 8 characters).</param>
-  /// <returns>A non-cryptographic hash string of the specified length.</returns>
-  private static string GetHash(string input, int length = 8) =>
-    Math.Abs(input.Aggregate(0, (ct, c) => ct * 31 + c)).ToString("X").PadLeft(length, '0')[
-      ..Math.Min(length, Math.Abs(input.Aggregate(0, (ct, c) => ct * 31 + c)).ToString("X").Length)
-    ];
+    // Use MD5 hash with warning suppression
+#pragma warning disable CA5351 // Do Not Use Broken Cryptographic Algorithms
+    using var md5 = System.Security.Cryptography.MD5.Create();
+    var inputBytes = System.Text.Encoding.UTF8.GetBytes(hashInput.ToString());
+    var hashBytes = md5.ComputeHash(inputBytes);
+#pragma warning restore CA5351
+
+    var fullHashString = BitConverter.ToString(hashBytes).Replace("-", "");
+    return fullHashString[..Math.Min(hashLength, fullHashString.Length)];
+  }
 
   /// <summary>
   /// Extracts material name from a node if available.
