@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Speckle.Importers.Ifc.Services;
 using Speckle.Importers.Ifc.Types;
 using Speckle.Sdk;
 
@@ -11,6 +12,7 @@ public static class ServiceRegistration
   public static void AddSpeckleWebIfc(this IServiceCollection services)
   {
     services.AddSingleton<IIfcFactory, IfcFactory>();
+    services.AddSingleton<IRenderMaterialProxyManager, RenderMaterialProxyManager>();
   }
 
   public static IServiceCollection AddMatchingInterfacesAsTransient(

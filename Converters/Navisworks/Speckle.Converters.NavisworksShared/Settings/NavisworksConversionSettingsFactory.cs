@@ -44,7 +44,8 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
     OriginMode originMode,
     RepresentationMode visualRepresentationMode,
     bool convertHiddenElements,
-    bool includeInternalProperties
+    bool includeInternalProperties,
+    bool preserveModelHierarchy
   )
   {
     _convertHiddenElements = convertHiddenElements;
@@ -84,7 +85,8 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
         ConvertHiddenElements: _convertHiddenElements,
         VisualRepresentationMode: visualRepresentationMode,
         CoalescePropertiesFromFirstObjectAncestor: false, // Not yet exposed in the UI
-        ExcludeProperties: false // Not yet exposed in the UI
+        ExcludeProperties: false, // Not yet exposed in the UI
+        PreserveModelHierarchy: preserveModelHierarchy
       )
     );
   }
