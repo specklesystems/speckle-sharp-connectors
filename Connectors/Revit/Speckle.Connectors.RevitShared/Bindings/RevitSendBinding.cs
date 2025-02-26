@@ -48,7 +48,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   /// As to why a concurrent dictionary, it's because it's the cheapest/easiest way to do so.
   /// https://stackoverflow.com/questions/18922985/concurrent-hashsett-in-net-framework
   /// </summary>
-  private ConcurrentDictionary<ElementId, byte> ChangedObjectIds { get; set; } = new();
+  private ConcurrentBag<ElementId> ChangedObjectIds { get; set; } = new();
 
   public RevitSendBinding(
     IAppIdleManager idleManager,
@@ -241,17 +241,17 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     foreach (ElementId elementId in addedElementIds)
     {
-      ChangedObjectIds[elementId] = 1;
+      ChangedObjectIds.Add(elementId);
     }
 
     foreach (ElementId elementId in deletedElementIds)
     {
-      ChangedObjectIds[elementId] = 1;
+      ChangedObjectIds.Add(elementId);
     }
 
     foreach (ElementId elementId in modifiedElementIds)
     {
-      ChangedObjectIds[elementId] = 1;
+      ChangedObjectIds.Add(elementId);
     }
 
     if (addedElementIds.Count > 0)
@@ -272,7 +272,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         var selectedObjects = sender.SendFilter.NotNull().SelectedObjectIds;
         objectIds.AddRange(selectedObjects);
       }
-      var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds.ToList());
+      var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds);
       _sendConversionCache.EvictObjects(unpackedObjectIds);
     }
 
@@ -337,7 +337,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     // }
 
     if (
-      ChangedObjectIds.Keys.Any(e =>
+      ChangedObjectIds.Any(e =>
         _revitContext.UIApplication.NotNull().ActiveUIDocument.Document.GetElement(e) is View
       )
     )
@@ -358,7 +358,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     }
 
     var objUniqueIds = new List<string>();
-    var changedIds = ChangedObjectIds.Keys.ToList();
+    var changedIds = ChangedObjectIds.ToList();
 
     // Handling type changes: if an element's type is changed, we need to mark as changed all objects that have that type.
     // Step 1: get any changed types
@@ -366,10 +366,10 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       .Select(e => doc.GetElement(e))
       .OfType<ElementType>()
       .Select(el => el.Id)
-      .ToArray();
+      .ToHashSet(); // ToHashSet() for faster Contains
 
     // Step 2: Find all elements of the changed types, and add them to the changed ids list.
-    if (elementTypeIdsList.Length != 0)
+    if (elementTypeIdsList.Count != 0)
     {
       using var collector = new FilteredElementCollector(doc);
       var collectorElements = collector
