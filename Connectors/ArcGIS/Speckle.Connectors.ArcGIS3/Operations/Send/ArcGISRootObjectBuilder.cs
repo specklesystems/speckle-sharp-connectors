@@ -159,7 +159,6 @@ public class ArcGISRootObjectBuilder : IRootObjectBuilder<ADM.MapMember>
                 layerCollection.elements.AddRange(convertedFeatureLayerObjects);
                 break;
               case ADM.RasterLayer rasterLayer:
-                // Don't pass count and cancellation token to layer conversion here, because Raster layer is counted as 1 object for now
                 List<Base> convertedRasterLayerObjects = ConvertRasterLayerObjects(
                   rasterLayer,
                   count,
