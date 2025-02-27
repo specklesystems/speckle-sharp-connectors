@@ -2,7 +2,6 @@
 
 namespace Speckle.Performance;
 
-
 public static class JetbrainsProfiler
 {
   private sealed class CpuClass : IDisposable
