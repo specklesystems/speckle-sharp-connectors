@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Speckle.Connector.Navisworks.Operations.Send.Filters;
 using Speckle.Connector.Navisworks.Operations.Send.Settings;
 using Speckle.Connector.Navisworks.Services;
 using Speckle.Connectors.Common.Cancellation;
@@ -30,7 +31,6 @@ public class NavisworksSendBinding : ISendBinding
 
   private readonly DocumentModelStore _store;
   private readonly IServiceProvider _serviceProvider;
-  private readonly List<ISendFilter> _sendFilters;
   private readonly ICancellationManager _cancellationManager;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<NavisworksSendBinding> _logger;
@@ -44,7 +44,6 @@ public class NavisworksSendBinding : ISendBinding
   public NavisworksSendBinding(
     DocumentModelStore store,
     IBrowserBridge parent,
-    IEnumerable<ISendFilter> sendFilters,
     IServiceProvider serviceProvider,
     ICancellationManager cancellationManager,
     IOperationProgressManager operationProgressManager,
@@ -61,7 +60,6 @@ public class NavisworksSendBinding : ISendBinding
     Commands = new SendBindingUICommands(parent);
     _store = store;
     _serviceProvider = serviceProvider;
-    _sendFilters = sendFilters.ToList();
     _cancellationManager = cancellationManager;
     _operationProgressManager = operationProgressManager;
     _logger = logger;
@@ -76,7 +74,12 @@ public class NavisworksSendBinding : ISendBinding
 
   private static void SubscribeToNavisworksEvents() { }
 
-  public List<ISendFilter> GetSendFilters() => _sendFilters;
+  // Do not change the behavior/scope of this class on send binding unless make sure the behavior is same. Otherwise, we might not be able to update list of saved sets.
+  public List<ISendFilter> GetSendFilters() =>
+    [
+      new NavisworksSelectionFilter() { IsDefault = true },
+      new NavisworksSavedSetsFilter(new ElementSelectionService())
+    ];
 
   public List<ICardSetting> GetSendSettings() =>
     [
@@ -84,6 +87,7 @@ public class NavisworksSendBinding : ISendBinding
       new OriginModeSetting(OriginMode.ModelOrigin),
       new IncludeInternalPropertiesSetting(false),
       new ConvertHiddenElementsSetting(false),
+      new PreserveModelHierarchySetting(false),
     ];
 
   public async Task Send(string modelCardId) =>
@@ -134,7 +138,8 @@ public class NavisworksSendBinding : ISendBinding
           originMode: _toSpeckleSettingsManagerNavisworks.GetOriginMode(modelCard),
           visualRepresentationMode: _toSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(modelCard),
           convertHiddenElements: _toSpeckleSettingsManagerNavisworks.GetConvertHiddenElements(modelCard),
-          includeInternalProperties: _toSpeckleSettingsManagerNavisworks.GetIncludeInternalProperties(modelCard)
+          includeInternalProperties: _toSpeckleSettingsManagerNavisworks.GetIncludeInternalProperties(modelCard),
+          preserveModelHierarchy: _toSpeckleSettingsManagerNavisworks.GetPreserveModelHierarchy(modelCard)
         )
       );
 
@@ -146,17 +151,23 @@ public class NavisworksSendBinding : ISendBinding
       throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
     }
 
-    var modelItems = modelCard
-      .SendFilter.NotNull()
-      .RefreshObjectIds()
+    var modelItems = selectedPaths
       .Select(_selectionService.GetModelItemFromPath)
       .SelectMany(_selectionService.GetGeometryNodes)
       .Where(_selectionService.IsVisible)
       .ToList();
 
-    return modelItems.Count == 0
-      ? throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!")
-      : modelItems;
+    if (modelItems.Count != 0)
+    {
+      return modelItems;
+    }
+
+    var convertHiddenElementsSetting =
+      modelCard.Settings!.FirstOrDefault(s => s.Id == "convertHiddenElements")?.Value as bool? ?? false;
+    var message = convertHiddenElementsSetting
+      ? "No visible objects were found to convert. Please update your publish filter!"
+      : "No objects were found to convert. Please update your publish filter, or check items are visible!";
+    throw new SpeckleSendFilterException(message);
   }
 
   private async Task<SendOperationResult> ExecuteSendOperation(
@@ -169,7 +180,7 @@ public class NavisworksSendBinding : ISendBinding
       .ServiceProvider.GetRequiredService<SendOperation<NAV.ModelItem>>()
       .Execute(
         navisworksModelItems,
-        modelCard.GetSendInfo(_speckleApplication.Slug),
+        modelCard.GetSendInfo(_speckleApplication.ApplicationAndVersion),
         _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCard.ModelCardId.NotNull(), token),
         token
       );
