@@ -41,32 +41,33 @@ public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
     target == null ? throw new ArgumentNullException(nameof(target)) : Convert((NAV.ModelItem)target);
 
   // Converts a Navisworks ModelItem into a Speckle Base object
-  private Base Convert(NAV.ModelItem target) =>
-    target.HasGeometry ? CreateGeometryObject(target) : CreateNonGeometryObject(target);
-
-  private NavisworksObject CreateGeometryObject(NAV.ModelItem target)
+  private Base Convert(NAV.ModelItem target)
   {
     IPropertyHandler handler = ShouldMergeProperties(target) ? _hierarchicalHandler : _standardHandler;
     var name = GetObjectName(target);
-    return new NavisworksObject()
-    {
-      displayValue = _displayValueExtractor.GetDisplayValue(target),
-      name = name,
-      properties = _settingsStore.Current.User.ExcludeProperties ? [] : handler.GetProperties(target),
-      units = _settingsStore.Current.Derived.SpeckleUnits,
-    };
+
+    return target.HasGeometry
+      ? CreateGeometryObject(target, name, handler)
+      : CreateNonGeometryObject(target, name, handler);
   }
 
-  private static Collection CreateNonGeometryObject(NAV.ModelItem target)
-  {
-    var name = GetObjectName(target);
-    return new Collection
+  // There are in fact only two types of objects: geometry and non-geometry, the latter being collections of other objects
+  private NavisworksObject CreateGeometryObject(NAV.ModelItem target, string name, IPropertyHandler propertyHandler) =>
+    new()
+    {
+      name = name,
+      displayValue = _displayValueExtractor.GetDisplayValue(target),
+      properties = _settingsStore.Current.User.ExcludeProperties ? [] : propertyHandler.GetProperties(target),
+      units = _settingsStore.Current.Derived.SpeckleUnits,
+    };
+
+  private Collection CreateNonGeometryObject(NAV.ModelItem target, string name, IPropertyHandler propertyHandler) =>
+    new()
     {
       name = name,
       elements = [],
-      ["properties"] = new Dictionary<string, object?>()
+      ["properties"] = _settingsStore.Current.User.ExcludeProperties ? [] : propertyHandler.GetProperties(target),
     };
-  }
 
   /// <summary>
   /// Determines whether properties should be merged from ancestors.
