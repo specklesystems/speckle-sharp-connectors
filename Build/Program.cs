@@ -1,7 +1,6 @@
 using System.IO.Compression;
 using Build;
 using GlobExpressions;
-using Microsoft.Build.Construction;
 using static Bullseye.Targets;
 using static SimpleExec.Command;
 
@@ -75,51 +74,8 @@ void CleanSolution(string solution, string configuration)
   Restore(solution);
   Build(solution, configuration);
 }
-
-string[] GetInstallerProjects()
-{
-  var root = Environment.CurrentDirectory;
-  var projFile = Path.Combine(root, "affected.proj");
-  Console.WriteLine("Affected project file: " + projFile);
-  if (File.Exists(projFile))
-  {
-    var project = ProjectRootElement.Open(projFile);
-    var references = project.ItemGroups.SelectMany(x => x.Items).Where(x => x.ItemType == "ProjectReference").ToList();
-    var projs = new List<string>();
-    foreach (var refe in references)
-    {
-      Console.WriteLine($"Candidate project: {refe.Include}");
-      var referencePath = refe.Include[(root.Length + 1)..];
-      referencePath = Path.GetDirectoryName(referencePath) ?? throw new InvalidOperationException();
-      if (Path.DirectorySeparatorChar != '/')
-      {
-        referencePath = referencePath.Replace(Path.DirectorySeparatorChar, '/');
-      }
-
-      foreach (var proj in Consts.InstallerManifests.SelectMany(x => x.Projects))
-      {
-        if (proj.ProjectPath.Contains(referencePath))
-        {
-          projs.Add(refe.Include);
-        }
-      }
-    }
-
-    foreach (var proj in projs)
-    {
-      Console.WriteLine("Affected project being built: " + proj);
-    }
-
-    if (projs.Count > 0)
-    {
-      return projs.ToArray();
-    }
-  }
-
-  return Consts.Solutions;
-}
-
-var projects = GetInstallerProjects();
+var solutions = Affected.GetSolutions();
+var projects = Affected.GetInstallerProjects();
 
 Target(
   CLEAN_LOCKS,
@@ -202,7 +158,7 @@ Target(
 Target(
   RESTORE,
   DependsOn(FORMAT),
-  projects,
+  solutions,
   s =>
   {
     Run("dotnet", $"restore {s} --locked-mode");
@@ -221,7 +177,7 @@ Target(
 Target(
   BUILD,
   DependsOn(RESTORE),
-  projects,
+  solutions,
   s =>
   {
     var version = Environment.GetEnvironmentVariable("GitVersion_FullSemVer") ?? "3.0.0-localBuild";
@@ -229,7 +185,7 @@ Target(
     Console.WriteLine($"Version: {version} & {fileVersion}");
     Run(
       "dotnet",
-      $"build {s} -c Release --no-restore -warnaserror -p:Version={version} -p:FileVersion={fileVersion} -v:m"
+      $"build {s} -c Release --no-restore --no-incremental -warnaserror -p:Version={version} -p:FileVersion={fileVersion} -v:m"
     );
   }
 );
@@ -242,7 +198,8 @@ Target(
   Glob.Files(".", "**/*.Tests.csproj"),
   file =>
   {
-    Run("dotnet", $"test {file} -c Release --no-build --no-restore --verbosity=minimal");
+    Run("dotnet", $"build {file} -c Release --no-incremental");
+    Run("dotnet", $"test {file} -c Release --no-build --verbosity=minimal");
   }
 );
 
@@ -285,7 +242,7 @@ Target(
 Target(
   ZIP,
   DependsOn(TEST),
-  Consts.InstallerManifests,
+  projects,
   x =>
   {
     var outputDir = Path.Combine(".", "output");
