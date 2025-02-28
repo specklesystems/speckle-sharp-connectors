@@ -109,7 +109,11 @@ string[] GetInstallerProjects()
     {
       Console.WriteLine("Affected project being built: " + proj);
     }
-    return projs.ToArray();
+
+    if (projs.Count > 0)
+    {
+      return projs.ToArray();
+    }
   }
 
   return Consts.Solutions;

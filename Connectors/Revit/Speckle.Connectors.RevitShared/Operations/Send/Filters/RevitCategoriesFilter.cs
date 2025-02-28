@@ -46,7 +46,7 @@ public class RevitCategoriesFilter : DiscriminatedObject, ISendFilter, IRevitSen
       return objectIds;
     }
 
-    var elementIds = SelectedCategories.Select(c => ElementIdHelper.GetElementId(c)).Where(e => e is not null).ToList();
+    var elementIds = SelectedCategories.Select(ElementIdHelper.GetElementId2).Where(e => e is not null).ToList();
 
     using var categoryFilter = new ElementMulticategoryFilter(elementIds);
     using var collector = new FilteredElementCollector(_doc);
