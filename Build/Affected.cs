@@ -4,7 +4,7 @@ namespace Build;
 
 public static class Affected
 {
-  public static readonly string Root = "C:\\Users\\adam\\Git\\speckle-sharp-connectors";
+  public static readonly string Root = Environment.CurrentDirectory;
 
   public static string[] GetSolutions()
   {
