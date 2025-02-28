@@ -83,12 +83,12 @@ string[] GetInstallerProjects()
   Console.WriteLine("Affected project file: " + projFile);
   if (File.Exists(projFile))
   {
-    Console.WriteLine(Environment.CurrentDirectory);
     var project = ProjectRootElement.Open(projFile);
     var references = project.ItemGroups.SelectMany(x => x.Items).Where(x => x.ItemType == "ProjectReference").ToList();
     var projs = new List<string>();
     foreach (var refe in references)
     {
+      Console.WriteLine($"Candidate project: {refe.Include}");
       var referencePath = refe.Include[(root.Length + 1)..];
       referencePath = Path.GetDirectoryName(referencePath) ?? throw new InvalidOperationException();
       if (Path.DirectorySeparatorChar != '/')
