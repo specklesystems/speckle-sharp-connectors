@@ -42,10 +42,6 @@
     <PackageVersion Include="Speckle.Civil3D.API" Version="2022.0.2" />
     <PackageVersion Include="Speckle.Revit.API" Version="2023.0.0" />
     <PackageVersion Include="Speckle.Navisworks.API" Version="2024.0.0" />
-    <PackageVersion Include="Speckle.Revit2022.Fakes" Version="0.3.1" />
-    <PackageVersion Include="Speckle.Revit2023.Fakes" Version="0.3.1" />
-    <PackageVersion Include="Speckle.Revit2024.Fakes" Version="0.3.1" />
-    <PackageVersion Include="Speckle.Rhino7.Fakes" Version="0.3.1" />
     <PackageVersion Include="Speckle.Objects" Version="3.1.0-dev.270" />
     <PackageVersion Include="Speckle.Sdk" Version="3.1.0-dev.270" />
     <PackageVersion Include="Speckle.Sdk.Dependencies" Version="3.1.0-dev.270" />
