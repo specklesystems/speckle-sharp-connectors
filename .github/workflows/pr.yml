@@ -31,8 +31,9 @@ jobs:
         uses: leonardochaia/dotnet-affected-action@v1
         id: dotnet_affected
         with:
-          from: ${{ github.head_ref }}
-          to: ${{ github.base_ref }}
+          from: origin/${{ github.head_ref }}
+          to: origin/${{ github.base_ref }}
+          output-format: traversal
 
       - name: ⚒️ Run build
         run: ./build.ps1 test
