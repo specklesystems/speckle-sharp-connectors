@@ -25,6 +25,13 @@ jobs:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
 
+      - name: Affected
+        uses: leonardochaia/dotnet-affected-action@v1
+        id: dotnet_affected
+        with:
+          from: ${{ github.head_ref }}
+          to: ${{ github.base_ref }}
+
       - name: ⚒️ Run build
         run: ./build.ps1 test
   test:

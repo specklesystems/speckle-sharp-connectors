@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using Build;
 using GlobExpressions;
+using Microsoft.Build.Construction;
 using static Bullseye.Targets;
 using static SimpleExec.Command;
 
@@ -74,6 +75,46 @@ void CleanSolution(string solution, string configuration)
   Restore(solution);
   Build(solution, configuration);
 }
+
+string[] GetInstallerProjects()
+{
+  var root = "C:\\Users\\adam\\Git\\speckle-sharp-connectors";
+  var projFile = Path.Combine(root, "affected.proj");
+  if (File.Exists(projFile))
+  {
+    Console.WriteLine(Environment.CurrentDirectory);
+    var project = ProjectRootElement.Open(projFile);
+    var references = project.ItemGroups.SelectMany(x => x.Items).Where(x => x.ItemType == "ProjectReference").ToList();
+    var projs = new List<string>();
+    foreach (var refe in references)
+    {
+      var referencePath = refe.Include[(root.Length + 1)..];
+      referencePath = Path.GetDirectoryName(referencePath) ?? throw new InvalidOperationException();
+      if (Path.DirectorySeparatorChar != '/')
+      {
+        referencePath = referencePath.Replace(Path.DirectorySeparatorChar, '/');
+      }
+
+      foreach (var proj in Consts.InstallerManifests.SelectMany(x => x.Projects))
+      {
+        if (proj.ProjectPath.Contains(referencePath))
+        {
+          projs.Add(refe.Include);
+        }
+      }
+    }
+
+    foreach (var proj in projs)
+    {
+      Console.WriteLine("Affected project being built: " + proj);
+    }
+    return projs.ToArray();
+  }
+
+  return Consts.Solutions;
+}
+
+var projects = GetInstallerProjects();
 
 Target(
   CLEAN_LOCKS,
@@ -156,7 +197,7 @@ Target(
 Target(
   RESTORE,
   DependsOn(FORMAT),
-  Consts.Solutions,
+  projects,
   s =>
   {
     Run("dotnet", $"restore {s} --locked-mode");
@@ -175,7 +216,7 @@ Target(
 Target(
   BUILD,
   DependsOn(RESTORE),
-  Consts.Solutions,
+  projects,
   s =>
   {
     var version = Environment.GetEnvironmentVariable("GitVersion_FullSemVer") ?? "3.0.0-localBuild";

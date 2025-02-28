@@ -10,7 +10,7 @@ public static class ElementIdHelper
     return element?.Id;
   }
 
-  public static ElementId? GetElementId2(string elementId)
+  public static ElementId? GetElementId(string elementId)
   {
 #if REVIT2024_OR_GREATER
     if (long.TryParse(elementId, out long elementIdInt))
@@ -29,7 +29,3 @@ public static class ElementIdHelper
     }
   }
 }
-
-
-
-
