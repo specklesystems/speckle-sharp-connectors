@@ -78,8 +78,9 @@ void CleanSolution(string solution, string configuration)
 
 string[] GetInstallerProjects()
 {
-  var root = "C:\\Users\\adam\\Git\\speckle-sharp-connectors";
+  var root = Environment.CurrentDirectory;
   var projFile = Path.Combine(root, "affected.proj");
+  Console.WriteLine("Affected project file: " + projFile);
   if (File.Exists(projFile))
   {
     Console.WriteLine(Environment.CurrentDirectory);

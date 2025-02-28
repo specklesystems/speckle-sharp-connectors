@@ -33,7 +33,6 @@ jobs:
         with:
           from: origin/${{ github.head_ref }}
           to: origin/${{ github.base_ref }}
-          output-format: traversal
 
       - name: ⚒️ Run build
         run: ./build.ps1 test
