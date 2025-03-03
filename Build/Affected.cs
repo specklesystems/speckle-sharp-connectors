@@ -5,25 +5,27 @@ namespace Build;
 public static class Affected
 {
   public static readonly string Root = Environment.CurrentDirectory;
+  public const string AFFECTED_PROJECT = "affected.proj";
 
   public static string[] GetSolutions()
   {
-    var projFile = Path.Combine(Root, "affected.proj");
-    Console.WriteLine("Affected project file: " + projFile);
+    var projFile = Path.Combine(Root, AFFECTED_PROJECT);
     if (File.Exists(projFile))
     {
+      Console.WriteLine("Affected project file: " + projFile);
       return [projFile];
     }
 
+    Console.WriteLine("Using solutions: " + string.Join(',', Consts.Solutions));
     return Consts.Solutions;
   }
 
   public static InstallerProject[] GetInstallerProjects()
   {
-    var projFile = Path.Combine(Root, "affected.proj");
-    Console.WriteLine("Affected project file: " + projFile);
+    var projFile = Path.Combine(Root, AFFECTED_PROJECT);
     if (File.Exists(projFile))
     {
+      Console.WriteLine("Affected project file: " + projFile);
       var project = ProjectRootElement.Open(projFile) ?? throw new InvalidOperationException();
       var references = project
         .ItemGroups.SelectMany(x => x.Items)
@@ -74,6 +76,7 @@ public static class Affected
       }
     }
 
+    Console.WriteLine("Using all installer manifests: " + string.Join(',', Consts.InstallerManifests));
     return Consts.InstallerManifests;
   }
 }

@@ -74,8 +74,8 @@ void CleanSolution(string solution, string configuration)
   Restore(solution);
   Build(solution, configuration);
 }
-var solutions = Affected.GetSolutions();
-var projects = Affected.GetInstallerProjects();
+var solutions = Affected.GetSolutions;
+var projects = Affected.GetInstallerProjects;
 
 Target(
   CLEAN_LOCKS,
@@ -158,7 +158,7 @@ Target(
 Target(
   RESTORE,
   DependsOn(FORMAT),
-  solutions,
+  solutions(),
   s =>
   {
     Run("dotnet", $"restore {s} --locked-mode");
@@ -177,7 +177,7 @@ Target(
 Target(
   BUILD,
   DependsOn(RESTORE),
-  solutions,
+  solutions(),
   s =>
   {
     var version = Environment.GetEnvironmentVariable("GitVersion_FullSemVer") ?? "3.0.0-localBuild";
@@ -242,7 +242,7 @@ Target(
 Target(
   ZIP,
   DependsOn(TEST),
-  projects,
+  projects(),
   x =>
   {
     var outputDir = Path.Combine(".", "output");
