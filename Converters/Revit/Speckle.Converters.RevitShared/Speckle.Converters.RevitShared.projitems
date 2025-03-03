@@ -11,7 +11,6 @@
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\RevitToHostCacheSingleton.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\RevitToSpeckleCacheSingleton.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)IReferencePointConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\CategoryExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\DefinitionExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\ElementExtensions.cs" />
