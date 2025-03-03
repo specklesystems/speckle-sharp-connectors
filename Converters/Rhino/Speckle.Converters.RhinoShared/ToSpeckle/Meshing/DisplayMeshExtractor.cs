@@ -19,6 +19,20 @@ public static class DisplayMeshExtractor
         case ExtrusionObject extrusion:
           renderMeshes = RG.Mesh.CreateFromBrep(extrusion.ExtrusionGeometry.ToBrep(), new(0.05, 0.05));
           break;
+        case HatchObject hatchObject:
+          List<RG.Curve> displayCurves = new();
+          foreach (var rhinoCurve in ((RG.Hatch)hatchObject.Geometry).Get3dCurves(true))
+          {
+            displayCurves.Add(rhinoCurve);
+          }
+
+          foreach (var rhinoCurve in ((RG.Hatch)hatchObject.Geometry).Get3dCurves(false))
+          {
+            displayCurves.Add(rhinoCurve);
+          }
+
+          renderMeshes = new[] { RG.Mesh.CreateFromLines(displayCurves.ToArray(), 3, 0.05) };
+          break;
         case SubDObject subDObject:
 #pragma warning disable CA2000
           var mesh = RG.Mesh.CreateFromSubD(subDObject.Geometry as RG.SubD, 0);

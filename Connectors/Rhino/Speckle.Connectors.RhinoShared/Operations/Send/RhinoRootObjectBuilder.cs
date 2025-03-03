@@ -13,6 +13,7 @@ using Speckle.Connectors.Rhino.HostApp.Properties;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Rhino;
+using Speckle.Converters.Rhino.ToSpeckle.Meshing;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -166,6 +167,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       }
       else if (rhinoObject is HatchObject hatchObject)
       {
+        // boundary and inner curves
         List<Base> displayCurves = new();
         foreach (var rhinoCurve in ((Hatch)hatchObject.Geometry).Get3dCurves(true))
         {
@@ -176,8 +178,11 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
           displayCurves.Add(_nurbsConverter.Convert((NurbsCurve)rhinoCurve));
         }
 
+        // display mesh
+        var meshes = DisplayMeshExtractor.GetDisplayMesh(rhinoObject);
+
         converted = new();
-        converted["displayValue"] = displayCurves;
+        converted["displayValue"] = meshes;
       }
       else if (_sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value))
       {
