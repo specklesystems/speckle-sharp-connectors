@@ -29,6 +29,8 @@ jobs:
           
       - uses: nrwl/nx-set-shas@v4
         id: set_shas
+        with:
+          main-branch-name: ${{ github.head_ref_name }}
 
       - name: Affected
         uses: leonardochaia/dotnet-affected-action@v1
