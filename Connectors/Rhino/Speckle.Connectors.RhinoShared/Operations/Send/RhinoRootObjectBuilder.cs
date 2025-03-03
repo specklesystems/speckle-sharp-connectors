@@ -13,7 +13,6 @@ using Speckle.Connectors.Rhino.HostApp.Properties;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Rhino;
-using Speckle.Converters.Rhino.ToSpeckle.Meshing;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -179,10 +178,10 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         }
 
         // display mesh
-        var meshes = DisplayMeshExtractor.GetDisplayMesh(rhinoObject);
+        // var meshes = DisplayMeshExtractor.GetDisplayMesh(rhinoObject);
 
         converted = new();
-        converted["displayValue"] = meshes;
+        converted["displayValue"] = displayCurves;
       }
       else if (_sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value))
       {
