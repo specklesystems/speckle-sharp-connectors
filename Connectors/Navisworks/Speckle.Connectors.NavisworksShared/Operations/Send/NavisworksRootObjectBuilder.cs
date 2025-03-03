@@ -236,7 +236,8 @@ public class NavisworksRootObjectBuilder(
   /// </remarks>
   private NavisworksObject CreateNavisworksObject(string groupKey, List<Base> siblingBases)
   {
-    (string name, string path) = GetContext(groupKey);
+    string cleanParentPath = ElementSelectionHelper.GetCleanPath(groupKey);
+    (string name, string path) = GetContext(cleanParentPath);
 
     return new NavisworksObject
     {
@@ -244,7 +245,7 @@ public class NavisworksRootObjectBuilder(
       displayValue = siblingBases.SelectMany(b => b["displayValue"] as List<Base> ?? []).ToList(),
       properties = siblingBases.First()["properties"] as Dictionary<string, object?> ?? [],
       units = converterSettings.Current.Derived.SpeckleUnits,
-      applicationId = groupKey,
+      applicationId = groupKey, // Use the full composite key as applicationId to preserve uniqueness
       ["path"] = path
     };
   }

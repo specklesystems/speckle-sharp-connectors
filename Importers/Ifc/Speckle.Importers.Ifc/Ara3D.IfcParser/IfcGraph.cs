@@ -9,7 +9,7 @@ namespace Speckle.Importers.Ifc.Ara3D.IfcParser;
 /// This is a high-level representation of an IFC model as a graph of nodes and relations.
 /// It also contains the  properties, and property sets.
 /// </summary>
-public class IfcGraph
+public sealed class IfcGraph
 {
   public static IfcGraph Load(FilePath fp, ILogger? logger = null) =>
     new IfcGraph(new StepDocument(fp, logger), logger);
@@ -21,7 +21,7 @@ public class IfcGraph
   public Dictionary<uint, List<IfcRelation>> RelationsByNode { get; } = new Dictionary<uint, List<IfcRelation>>();
   public Dictionary<uint, List<IfcPropSet>> PropertySetsByNode { get; } = new Dictionary<uint, List<IfcPropSet>>();
 
-  public IReadOnlyList<uint> RootIds { get; }
+  public IReadOnlySet<uint> RootIds { get; }
 
   public IfcNode AddNode(IfcNode n) => Nodes[n.Id] = n;
 
@@ -36,6 +36,7 @@ public class IfcGraph
   {
     Document = d;
 
+    HashSet<uint> rootIds = new(1);
     logger?.Log("Computing entities");
     foreach (var inst in Document.RawInstances)
     {
@@ -153,14 +154,17 @@ public class IfcGraph
       // Everything else
       else
       {
+        //Special case for IFC Projects, track them as a root node.
+        if (inst.Type.Equals("IFCPROJECT"))
+          rootIds.Add(inst.Id);
+
         // Simple IFC node: without step entity data.
         var e = d.GetInstanceWithData(inst);
         AddNode(new IfcNode(this, e));
       }
     }
 
-    logger?.Log("Retrieving the roots of all of the spatial relationship");
-    RootIds = GetSpatialRelations().Where(r => r.From != null).Select(r => r.From.Id).Distinct().ToList();
+    RootIds = rootIds;
 
     logger?.Log("Creating lookup of property sets");
 
