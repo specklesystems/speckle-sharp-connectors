@@ -74,6 +74,8 @@ void CleanSolution(string solution, string configuration)
   Restore(solution);
   Build(solution, configuration);
 }
+var solutions = Affected.GetSolutions();
+var projects = Affected.GetInstallerProjects();
 
 Target(
   CLEAN_LOCKS,
@@ -156,7 +158,7 @@ Target(
 Target(
   RESTORE,
   DependsOn(FORMAT),
-  Consts.Solutions,
+  solutions,
   s =>
   {
     Run("dotnet", $"restore {s} --locked-mode");
@@ -175,7 +177,7 @@ Target(
 Target(
   BUILD,
   DependsOn(RESTORE),
-  Consts.Solutions,
+  solutions,
   s =>
   {
     var version = Environment.GetEnvironmentVariable("GitVersion_FullSemVer") ?? "3.0.0-localBuild";
@@ -183,7 +185,7 @@ Target(
     Console.WriteLine($"Version: {version} & {fileVersion}");
     Run(
       "dotnet",
-      $"build {s} -c Release --no-restore -warnaserror -p:Version={version} -p:FileVersion={fileVersion} -v:m"
+      $"build {s} -c Release --no-restore --no-incremental -warnaserror -p:Version={version} -p:FileVersion={fileVersion} -v:m"
     );
   }
 );
@@ -196,7 +198,8 @@ Target(
   Glob.Files(".", "**/*.Tests.csproj"),
   file =>
   {
-    Run("dotnet", $"test {file} -c Release --no-build --no-restore --verbosity=minimal");
+    Run("dotnet", $"build {file} -c Release --no-incremental");
+    Run("dotnet", $"test {file} -c Release --no-build --verbosity=minimal");
   }
 );
 
@@ -239,7 +242,7 @@ Target(
 Target(
   ZIP,
   DependsOn(TEST),
-  Consts.InstallerManifests,
+  projects,
   x =>
   {
     var outputDir = Path.Combine(".", "output");

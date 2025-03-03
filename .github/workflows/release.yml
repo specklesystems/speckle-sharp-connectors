@@ -26,6 +26,16 @@ jobs:
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+          
+      - uses: nrwl/nx-set-shas@v4
+        id: set_shas
+
+      - name: Affected
+        uses: leonardochaia/dotnet-affected-action@v1
+        id: dotnet_affected
+        with:
+          from: ${{ steps.set_shas.outputs.base }}
+          to: ${{ steps.set_shas.outputs.head }}
 
       - name: ⚒️ Run GitVersion on Windows
         run: ./build.ps1 build-server-version

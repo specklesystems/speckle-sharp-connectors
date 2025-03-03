@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -24,6 +26,13 @@ jobs:
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+
+      - name: Affected
+        uses: leonardochaia/dotnet-affected-action@v1
+        id: dotnet_affected
+        with:
+          from: origin/${{ github.head_ref }}
+          to: origin/${{ github.base_ref }}
 
       - name: ⚒️ Run build
         run: ./build.ps1 test
