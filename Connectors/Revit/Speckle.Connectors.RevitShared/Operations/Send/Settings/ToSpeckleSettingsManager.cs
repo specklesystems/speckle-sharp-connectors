@@ -103,6 +103,8 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     return returnValue;
   }
 
+  // NOTE: Cache invalidation currently a placeholder until we have more understanding on the sends
+  // TODO: Evaluate cache invalidation for GetLinkedModelsSetting
   public bool GetLinkedModelsSetting(SenderModelCard modelCard)
   {
     var value = modelCard.Settings?.First(s => s.Id == "includeLinkedModels").Value as bool?;
