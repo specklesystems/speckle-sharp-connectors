@@ -64,8 +64,8 @@ jobs:
         uses: ALEEF02/workflow-dispatch@v3.0.0
         with:
           workflow: Build Installers
-          repo: specklesystems/connector-installers
-          token: ${{ secrets.CONNECTORS_GH_TOKEN }}
+          repo: specklesystems/https-github.com-specklesystems-connector-installers-affected
+          token: ${{ secrets.CONNECTORS_GH_TOKEN_AFFECTED }}
           inputs: '{ "run_id": "${{ github.run_id }}", "version": "${{ needs.build-windows.outputs.version }}", "public_release": ${{ env.IS_TAG_BUILD }}, "store_artifacts": ${{ env.IS_RELEASE_BRANCH }} }'
           ref: main
           wait-for-completion: true
