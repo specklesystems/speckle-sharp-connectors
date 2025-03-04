@@ -74,6 +74,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
           _revitConversionSettingsFactory.Create(
             DetailLevelType.Coarse, //TODO figure out
             null,
+            false,
             false
           )
         );
