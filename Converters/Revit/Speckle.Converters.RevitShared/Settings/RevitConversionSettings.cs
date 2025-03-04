@@ -6,5 +6,6 @@ public record RevitConversionSettings(
   DB.Transform? ReferencePointTransform,
   string SpeckleUnits,
   bool SendParameterNullOrEmptyStrings,
+  bool SendLinkedModels,
   double Tolerance = 0.0164042 // 5mm in ft
 );
