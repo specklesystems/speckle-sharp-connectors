@@ -2,7 +2,7 @@ name: .NET Build and Publish
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "adam/*"]
     tags: ["v3.*"] # Manual delivery on every 3.x tag
 
 jobs:
