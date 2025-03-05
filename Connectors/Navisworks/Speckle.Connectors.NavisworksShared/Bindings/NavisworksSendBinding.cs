@@ -146,9 +146,15 @@ public class NavisworksSendBinding : ISendBinding
   private List<NAV.ModelItem> GetNavisworksModelItems(SenderModelCard modelCard)
   {
     var selectedPaths = modelCard.SendFilter.NotNull().RefreshObjectIds();
+    var convertHiddenElementsSetting =
+      modelCard.Settings!.FirstOrDefault(s => s.Id == "convertHiddenElements")?.Value as bool? ?? false;
+    var message = convertHiddenElementsSetting
+      ? "No visible objects were found to convert. Please update your publish filter!"
+      : "No objects were found to convert. Please update your publish filter, or check items are visible!";
+
     if (selectedPaths.Count == 0)
     {
-      throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
+      throw new SpeckleSendFilterException(message);
     }
 
     var modelItems = selectedPaths
@@ -157,17 +163,7 @@ public class NavisworksSendBinding : ISendBinding
       .Where(_selectionService.IsVisible)
       .ToList();
 
-    if (modelItems.Count != 0)
-    {
-      return modelItems;
-    }
-
-    var convertHiddenElementsSetting =
-      modelCard.Settings!.FirstOrDefault(s => s.Id == "convertHiddenElements")?.Value as bool? ?? false;
-    var message = convertHiddenElementsSetting
-      ? "No visible objects were found to convert. Please update your publish filter!"
-      : "No objects were found to convert. Please update your publish filter, or check items are visible!";
-    throw new SpeckleSendFilterException(message);
+    return modelItems.Count == 0 ? throw new SpeckleSendFilterException(message) : modelItems;
   }
 
   private async Task<SendOperationResult> ExecuteSendOperation(

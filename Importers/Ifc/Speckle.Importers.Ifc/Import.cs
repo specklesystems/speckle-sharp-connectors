@@ -87,7 +87,7 @@ public static class Import
       token,
       progress,
       default,
-      new SerializeProcessOptions(true, true, true, false)
+      new SerializeProcessOptions(true, true, false, progress is null)
     );
     var (rootId, _) = await process.Serialize(b).ConfigureAwait(false);
     Account account =
@@ -98,7 +98,7 @@ public static class Import
       };
     ms = ms2;
     ms2 = stopwatch.ElapsedMilliseconds;
-    Console.WriteLine($"Uploaded to Speckle: {ms2 - ms} ms");
+    Console.WriteLine($"Uploaded to Speckle: {ms2 - ms} ms. Root id: {rootId}");
 
     // 8 - Create the version (commit)
     using var apiClient = clientFactory.Create(account);
