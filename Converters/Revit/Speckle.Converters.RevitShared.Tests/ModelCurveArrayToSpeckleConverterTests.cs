@@ -54,7 +54,7 @@ public class ModelCurveArrayToSpeckleConverterTests : MoqTest
     var units = "units";
     revitConversionContextStack
       .Setup(x => x.Current)
-      .Returns(new RevitConversionSettings(null!, DetailLevelType.Coarse, null, units, false, false));
+      .Returns(new RevitConversionSettings(null!, DetailLevelType.Coarse, null, units, false));
 
     var scaleLength = 2.2;
     scalingServiceToSpeckle.Setup(x => x.ScaleLength(2 + 3)).Returns(scaleLength);
