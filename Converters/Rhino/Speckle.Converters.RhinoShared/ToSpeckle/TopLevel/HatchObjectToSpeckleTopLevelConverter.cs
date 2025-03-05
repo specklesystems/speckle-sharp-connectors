@@ -1,7 +1,6 @@
 ﻿using Rhino.DocObjects;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.Rhino.ToSpeckle.Meshing;
 using Speckle.Objects;
 using Speckle.Sdk.Models;
 
@@ -11,16 +10,13 @@ namespace Speckle.Converters.Rhino.ToSpeckle.TopLevel;
 public class HatchObjectToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
 {
   private readonly ITypedConverter<RG.NurbsCurve, SOG.Curve> _nurbsConverter;
-  private readonly ITypedConverter<RG.Mesh, SOG.Mesh> _meshConverter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   public HatchObjectToSpeckleTopLevelConverter(
-    ITypedConverter<RG.Mesh, SOG.Mesh> meshConverter,
     IConverterSettingsStore<RhinoConversionSettings> settingsStore,
     ITypedConverter<RG.NurbsCurve, SOG.Curve> nurbsConverter
   )
   {
-    _meshConverter = meshConverter;
     _settingsStore = settingsStore;
     _nurbsConverter = nurbsConverter;
   }
@@ -36,9 +32,8 @@ public class HatchObjectToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     SOG.Curve boundary = _nurbsConverter.Convert((RG.NurbsCurve)rhinoBoundary);
     List<SOG.Curve> innerLoops = rhinoLoops.Select(x => _nurbsConverter.Convert((RG.NurbsCurve)x)).ToList();
 
-    // get displayValue
-    var rhinoMesh = DisplayMeshExtractor.GetDisplayMesh(hatchObject);
-    List<SOG.Mesh> displayValue = new() { _meshConverter.Convert(rhinoMesh) };
+    List<ICurve> allCurves = new() { boundary };
+    allCurves.AddRange(innerLoops);
 
     var region = new SOG.Region
     {
@@ -46,7 +41,7 @@ public class HatchObjectToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
       innerLoops = innerLoops.Cast<ICurve>().ToList(),
       hasHatchPattern = true,
       bbox = null,
-      displayValue = displayValue,
+      displayValue = allCurves,
       units = _settingsStore.Current.SpeckleUnits,
     };
 

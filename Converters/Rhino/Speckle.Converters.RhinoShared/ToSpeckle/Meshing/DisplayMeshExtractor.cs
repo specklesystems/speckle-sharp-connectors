@@ -19,15 +19,6 @@ public static class DisplayMeshExtractor
         case ExtrusionObject extrusion:
           renderMeshes = RG.Mesh.CreateFromBrep(extrusion.ExtrusionGeometry.ToBrep(), new(0.05, 0.05));
           break;
-        case HatchObject hatchObject:
-          // get boundary and inner curves: already done in converter, might find a way to pass them here
-          List<RG.Curve> allCurves = new() { ((RG.Hatch)hatchObject.Geometry).Get3dCurves(true)[0] };
-          allCurves.AddRange(((RG.Hatch)hatchObject.Geometry).Get3dCurves(false));
-
-          // construct a planar Brep, so Rhino native API can create a mesh from it
-          var planarBreps = RG.Brep.CreatePlanarBreps(allCurves, 0.05);
-          renderMeshes = planarBreps.SelectMany(x => RG.Mesh.CreateFromBrep(x, new(0.05, 0.05))).ToArray();
-          break;
         case SubDObject subDObject:
 #pragma warning disable CA2000
           var mesh = RG.Mesh.CreateFromSubD(subDObject.Geometry as RG.SubD, 0);
