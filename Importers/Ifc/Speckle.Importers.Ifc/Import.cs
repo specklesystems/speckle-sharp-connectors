@@ -45,7 +45,7 @@ public static class Import
 
   public static void AddIFCImporter(this ServiceCollection serviceCollection)
   {
-    serviceCollection.AddSpeckleSdk(HostApplications.Other, HostAppVersion.v2024, "IFC-Importer");
+    serviceCollection.AddSpeckleSdk(new("IFC", "ifc"), HostAppVersion.v2024, "IFC-Importer");
     serviceCollection.AddSpeckleWebIfc();
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
   }
@@ -103,7 +103,7 @@ public static class Import
     // 8 - Create the version (commit)
     using var apiClient = clientFactory.Create(account);
     var commit = await apiClient.Version.Create(
-      new CreateVersionInput(rootId, modelId, streamId, message: commitMessage)
+      new CreateVersionInput(rootId, modelId, streamId, message: commitMessage, sourceApplication: "IFC")
     );
     ms = ms2;
     ms2 = stopwatch.ElapsedMilliseconds;
