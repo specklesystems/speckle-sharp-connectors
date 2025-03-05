@@ -57,7 +57,7 @@ public abstract class AutocadReceiveBaseBinding : IReceiveBinding
   public async Task Receive(string modelCardId) =>
     await _threadContext.RunOnMainAsync(async () => await ReceiveInternal(modelCardId));
 
-  public async Task ReceiveInternal(string modelCardId)
+  private async Task ReceiveInternal(string modelCardId)
   {
     using var scope = _serviceProvider.CreateScope();
     InitializeSettings(scope.ServiceProvider);
