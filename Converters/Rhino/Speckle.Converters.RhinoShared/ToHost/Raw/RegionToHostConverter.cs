@@ -37,8 +37,9 @@ public class RegionToHostConverter : ITypedConverter<SOG.Region, RG.Hatch>
       rhinoCurves.Add(ConvertAndValidateICurve(loop));
     }
     var tolerance = _settingsStore.Current.Document.ModelAbsoluteTolerance;
-    RG.Hatch[] results = RG.Hatch.Create(rhinoCurves, 0, 0, 1, tolerance);
-    return results[0];
+    // .Create method returns array, but in case of Speckle Region we always expect only 1 converted Hatch
+    RG.Hatch result = RG.Hatch.Create(rhinoCurves, 0, 0, 1, tolerance)[0];
+    return result;
   }
 
   private RG.Curve ConvertAndValidateICurve(ICurve curve)
