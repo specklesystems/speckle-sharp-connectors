@@ -19,30 +19,6 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
 
   public SOG.Mesh Convert(ADB.Region target)
   {
-    /*
-    Autodesk.AutoCAD.DatabaseServices.DBObjectCollection curves = new();
-    target.Explode(curves);
-    Autodesk.AutoCAD.DatabaseServices.DBObjectCollection loops = target.GetRegionSection();
-
-    for (int i = 0; i < loops.Count; i++)
-    {
-      ADB.Polyline? polyline = loops[i] as ADB.Polyline;
-      if (polyline != null)
-      {
-        if (i == 0)
-        {
-          // Outer loop
-          // Do something with the outer loop
-        }
-        else
-        {
-          // Inner loops
-          // Do something with the inner loops
-        }
-      }
-    }
-    */
-
     using ABR.Brep brep = new(target);
     if (brep.IsNull)
     {
