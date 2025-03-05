@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using Rhino.DocObjects;
-using Rhino.Geometry;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
@@ -11,7 +10,6 @@ using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Rhino.HostApp.Properties;
 using Speckle.Converters.Common;
-using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
@@ -38,7 +36,6 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   private readonly PropertiesExtractor _propertiesExtractor;
   private readonly ILogger<RhinoRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
-  private readonly ITypedConverter<global::Rhino.Geometry.NurbsCurve, Objects.Geometry.Curve> _nurbsConverter;
 
   public RhinoRootObjectBuilder(
     IRootToSpeckleConverter rootToSpeckleConverter,
@@ -51,8 +48,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     RhinoColorUnpacker colorUnpacker,
     PropertiesExtractor propertiesExtractor,
     ILogger<RhinoRootObjectBuilder> logger,
-    ISdkActivityFactory activityFactory,
-    ITypedConverter<global::Rhino.Geometry.NurbsCurve, Objects.Geometry.Curve> nurbsConverter
+    ISdkActivityFactory activityFactory
   )
   {
     _sendConversionCache = sendConversionCache;
@@ -66,7 +62,6 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     _propertiesExtractor = propertiesExtractor;
     _logger = logger;
     _activityFactory = activityFactory;
-    _nurbsConverter = nurbsConverter;
   }
 
   public async Task<RootObjectBuilderResult> Build(
@@ -163,25 +158,6 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       if (rhinoObject is InstanceObject)
       {
         converted = instanceProxies[applicationId];
-      }
-      else if (rhinoObject is HatchObject hatchObject)
-      {
-        // boundary and inner curves
-        List<Base> displayCurves = new();
-        foreach (var rhinoCurve in ((Hatch)hatchObject.Geometry).Get3dCurves(true))
-        {
-          displayCurves.Add(_nurbsConverter.Convert((NurbsCurve)rhinoCurve));
-        }
-        foreach (var rhinoCurve in ((Hatch)hatchObject.Geometry).Get3dCurves(false))
-        {
-          displayCurves.Add(_nurbsConverter.Convert((NurbsCurve)rhinoCurve));
-        }
-
-        // display mesh
-        // var meshes = DisplayMeshExtractor.GetDisplayMesh(rhinoObject);
-
-        converted = new();
-        converted["displayValue"] = displayCurves;
       }
       else if (_sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value))
       {
