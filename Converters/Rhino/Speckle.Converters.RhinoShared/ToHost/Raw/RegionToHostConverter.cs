@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
 using Speckle.Sdk.Common.Exceptions;
@@ -9,12 +10,15 @@ public class RegionToHostConverter : ITypedConverter<SOG.Region, RG.Hatch>
 {
   private readonly ITypedConverter<SOP.Interval, RG.Interval> _intervalConverter;
   private readonly IServiceProvider _serviceProvider;
+  private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   public RegionToHostConverter(
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore,
     ITypedConverter<SOP.Interval, RG.Interval> intervalConverter,
     IServiceProvider serviceProvider
   )
   {
+    _settingsStore = settingsStore;
     _intervalConverter = intervalConverter;
     _serviceProvider = serviceProvider;
   }
@@ -32,8 +36,8 @@ public class RegionToHostConverter : ITypedConverter<SOG.Region, RG.Hatch>
     {
       rhinoCurves.Add(ConvertAndValidateICurve(loop));
     }
-
-    RG.Hatch[] results = RG.Hatch.Create(rhinoCurves, 0, 0, 1, 0.05);
+    var tolerance = _settingsStore.Current.Document.ModelAbsoluteTolerance;
+    RG.Hatch[] results = RG.Hatch.Create(rhinoCurves, 0, 0, 1, tolerance);
     return results[0];
   }
 
