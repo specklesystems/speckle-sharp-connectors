@@ -1,13 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Cancellation;
-using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
-using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Converters.Autocad;
 using Speckle.Converters.Common;
 using Speckle.Sdk;

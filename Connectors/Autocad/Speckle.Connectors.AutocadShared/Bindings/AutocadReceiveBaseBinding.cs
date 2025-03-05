@@ -8,7 +8,6 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Converters.Common;
 using Speckle.Sdk;
 
 namespace Speckle.Connectors.Autocad.Bindings;
