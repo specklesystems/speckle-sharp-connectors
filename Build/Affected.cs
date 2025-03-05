@@ -85,14 +85,16 @@ public static class Affected
   public static async Task<string> ComputeVersionAndAffected()
   {
     var (currentTag, _) = await ReadAsync("git", "describe --tags");
+    currentTag = currentTag.Trim();
 
-    if (!SemVersion.TryParse(currentTag.Trim(), SemVersionStyles.AllowLowerV, out var currentVersion))
+    if (!SemVersion.TryParse(currentTag, SemVersionStyles.AllowLowerV, out var currentVersion))
     {
       throw new InvalidOperationException($"Could not parse version: '{currentTag}'");
     }
-    var (lastTag, _) = await ReadAsync("git", $"describe --abbrev=0 --tags {currentTag.Trim()}^");
+    var (lastTag, _) = await ReadAsync("git", $"describe --abbrev=0 --tags {currentTag}^");
+    lastTag = lastTag.Trim();
 
-    if (!SemVersion.TryParse(lastTag.Trim(), SemVersionStyles.AllowLowerV, out var lastVersion))
+    if (!SemVersion.TryParse(lastTag, SemVersionStyles.AllowLowerV, out var lastVersion))
     {
       throw new InvalidOperationException($"Could not parse version: '{lastTag}'");
     }
@@ -103,6 +105,10 @@ public static class Affected
     Console.WriteLine($"Last parsed version: {lastVersion}, Current parsed version: {currentVersion}");
     var sort = currentVersion.CompareSortOrderTo(lastVersion);
     Console.WriteLine($"Sort: {sort}");
+    if (sort == 0)
+    {
+      throw new InvalidOperationException($"Current version {currentVersion} is equal to: {lastVersion}");
+    }
     if (sort != 1)
     {
       throw new InvalidOperationException($"Current version {currentVersion} is not greater than: {lastVersion}");
