@@ -21,6 +21,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
   private readonly Dictionary<string, DetailLevelType> _detailLevelCache = new();
   private readonly Dictionary<string, Transform?> _referencePointCache = new();
   private readonly Dictionary<string, bool?> _sendNullParamsCache = new();
+  private readonly Dictionary<string, bool?> _sendLinkedModelsCache = new();
 
   public ToSpeckleSettingsManager(
     RevitContext revitContext,
@@ -99,6 +100,24 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     }
 
     _sendNullParamsCache[modelCard.ModelCardId] = returnValue;
+    return returnValue;
+  }
+
+  // NOTE: Cache invalidation currently a placeholder until we have more understanding on the sends
+  // TODO: Evaluate cache invalidation for GetLinkedModelsSetting
+  public bool GetLinkedModelsSetting(SenderModelCard modelCard)
+  {
+    var value = modelCard.Settings?.First(s => s.Id == "includeLinkedModels").Value as bool?;
+    var returnValue = value != null && value.NotNull();
+
+    if (_sendLinkedModelsCache.TryGetValue(modelCard.ModelCardId.NotNull(), out bool? previousValue))
+    {
+      if (previousValue != returnValue)
+      {
+        EvictCacheForModelCard(modelCard);
+      }
+    }
+    _sendLinkedModelsCache[modelCard.ModelCardId] = returnValue;
     return returnValue;
   }
 
