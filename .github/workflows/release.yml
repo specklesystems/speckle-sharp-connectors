@@ -38,6 +38,8 @@ jobs:
         with:
           name: output-${{ env.GitVersion_FullSemVer }}
           path: output/*.*
+          if-no-files-found: error
+          retention-days: 1
           compression-level: 0 # no compression
 
       - id: set-version
@@ -53,7 +55,6 @@ jobs:
     steps:
       - name: 🔫 Trigger Build Installers
         uses: ALEEF02/workflow-dispatch@v3.0.0
-        continue-on-error: true
         with:
           workflow: Build Installers
           repo: specklesystems/connector-installers
@@ -105,4 +106,5 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Push to nuget.org
+        if: ${{ github.ref_type == 'tag' }}
         run: dotnet nuget push output/*.nupkg --source "https://api.nuget.org/v3/index.json" --api-key ${{secrets.CONNECTORS_NUGET_TOKEN }} --skip-duplicate
