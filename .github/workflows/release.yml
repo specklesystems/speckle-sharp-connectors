@@ -2,7 +2,7 @@ name: .NET Build and Publish
 
 on:
   push:
-    branches: ["main", "dev", "release/*"] # Continuous delivery on every long-lived branch
+    branches: ["main"]
     tags: ["v3.*"] # Manual delivery on every 3.x tag
 
 jobs:
@@ -26,9 +26,6 @@ jobs:
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
-
-      - name: ⚒️ Run GitVersion on Windows
-        run: ./build.ps1 build-server-version
 
       - name: ⚒️ Run build on Windows
         run: ./build.ps1

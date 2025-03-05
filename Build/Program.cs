@@ -12,9 +12,7 @@ const string TEST = "test";
 const string TEST_ONLY = "test-only";
 const string FORMAT = "format";
 const string ZIP = "zip";
-const string VERSION = "version";
 const string RESTORE_TOOLS = "restore-tools";
-const string BUILD_SERVER_VERSION = "build-server-version";
 const string CLEAN_LOCKS = "clean-locks";
 const string CHECK_SOLUTIONS = "check-solutions";
 const string DEEP_CLEAN = "deep-clean";
@@ -75,6 +73,10 @@ void CleanSolution(string solution, string configuration)
   Build(solution, configuration);
 }
 
+var version = await Affected.ComputeVersionAndAffected();
+var solutions = Affected.GetSolutions;
+var projects = Affected.GetInstallerProjects;
+
 Target(
   CLEAN_LOCKS,
   () =>
@@ -126,17 +128,6 @@ Target(
 );
 
 Target(
-  VERSION,
-  async () =>
-  {
-    var (output, _) = await ReadAsync("dotnet", "minver -v w");
-    output = output.Trim();
-    Console.WriteLine($"Version: {output}");
-    Run("echo", $"\"version={output}\" >> $GITHUB_OUTPUT");
-  }
-);
-
-Target(
   RESTORE_TOOLS,
   () =>
   {
@@ -156,7 +147,7 @@ Target(
 Target(
   RESTORE,
   DependsOn(FORMAT),
-  Consts.Solutions,
+  solutions(),
   s =>
   {
     Run("dotnet", $"restore {s} --locked-mode");
@@ -164,18 +155,9 @@ Target(
 );
 
 Target(
-  BUILD_SERVER_VERSION,
-  DependsOn(RESTORE_TOOLS),
-  () =>
-  {
-    Run("dotnet", "tool run dotnet-gitversion /output json /output buildserver");
-  }
-);
-
-Target(
   BUILD,
   DependsOn(RESTORE),
-  Consts.Solutions,
+  solutions(),
   s =>
   {
     var version = Environment.GetEnvironmentVariable("GitVersion_FullSemVer") ?? "3.0.0-localBuild";
@@ -239,9 +221,10 @@ Target(
 Target(
   ZIP,
   DependsOn(TEST),
-  Consts.InstallerManifests,
+  projects(),
   x =>
   {
+    Console.WriteLine("Zipping..." + version);
     var outputDir = Path.Combine(".", "output");
     var slugDir = Path.Combine(outputDir, x.HostAppSlug);
 
