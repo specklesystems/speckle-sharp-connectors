@@ -55,11 +55,18 @@ public class MeshConverterToHost(
       {
         // Non-planar quads will be triangulated as it's more desirable than `TessellatedShapeBuilder.Build`'s attempt to make them planar.
         // TODO consider triangulating all n > 3 polygons that are non-planar
-        points.AsSpan()[..3].CopyTo(triPoints);
+        //faster inline as a span
+        var pointSpan = points.AsSpan();
+        triPoints[0] = pointSpan[0];
+        triPoints[1] = pointSpan[1];
+        triPoints[2] = pointSpan[3];
         //TessellatedFace copies the values so don't allocate if we don't have to
         //example shows this https://www.revitapidocs.com/2024/a144b0e3-c997-eac1-5c00-51c56d9e66f2.htm
         var face1 = new TessellatedFace(triPoints, materialId);
         tsb.AddFace(face1);
+        triPoints[0] = pointSpan[1];
+        triPoints[1] = pointSpan[2];
+        triPoints[2] = pointSpan[3];
         var face2 = new TessellatedFace(triPoints, materialId);
         tsb.AddFace(face2);
       }
