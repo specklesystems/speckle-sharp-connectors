@@ -1,61 +1,66 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.Revit.Plugin;
-using Speckle.Converters.Common;
-using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
 
-namespace Speckle.Connectors.Revit.Bindings;
+namespace Speckle.Connectors.Autocad.Bindings;
 
-internal sealed class RevitReceiveBinding : IReceiveBinding
+public abstract class AutocadReceiveBaseBinding : IReceiveBinding
 {
   public string Name => "receiveBinding";
   public IBrowserBridge Parent { get; }
 
-  private readonly IOperationProgressManager _operationProgressManager;
-  private readonly ILogger<RevitReceiveBinding> _logger;
-  private readonly ICancellationManager _cancellationManager;
   private readonly DocumentModelStore _store;
+  private readonly ICancellationManager _cancellationManager;
   private readonly IServiceProvider _serviceProvider;
-  private readonly IRevitConversionSettingsFactory _revitConversionSettingsFactory;
+  private readonly IOperationProgressManager _operationProgressManager;
+  private readonly ILogger<AutocadReceiveBinding> _logger;
   private readonly ISpeckleApplication _speckleApplication;
+  private readonly IThreadContext _threadContext;
+
   private ReceiveBindingUICommands Commands { get; }
 
-  public RevitReceiveBinding(
+  protected AutocadReceiveBaseBinding(
     DocumentModelStore store,
-    ICancellationManager cancellationManager,
     IBrowserBridge parent,
+    ICancellationManager cancellationManager,
     IServiceProvider serviceProvider,
     IOperationProgressManager operationProgressManager,
-    ILogger<RevitReceiveBinding> logger,
-    IRevitConversionSettingsFactory revitConversionSettingsFactory,
-    ISpeckleApplication speckleApplication
+    ILogger<AutocadReceiveBinding> logger,
+    ISpeckleApplication speckleApplication,
+    IThreadContext threadContext
   )
   {
-    Parent = parent;
     _store = store;
+    _cancellationManager = cancellationManager;
     _serviceProvider = serviceProvider;
     _operationProgressManager = operationProgressManager;
     _logger = logger;
-    _revitConversionSettingsFactory = revitConversionSettingsFactory;
     _speckleApplication = speckleApplication;
-    _cancellationManager = cancellationManager;
-
+    _threadContext = threadContext;
+    Parent = parent;
     Commands = new ReceiveBindingUICommands(parent);
   }
 
+  protected abstract void InitializeSettings(IServiceProvider serviceProvider);
+
   public void CancelReceive(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
 
-  public async Task Receive(string modelCardId)
+  public async Task Receive(string modelCardId) =>
+    await _threadContext.RunOnMainAsync(async () => await ReceiveInternal(modelCardId));
+
+  private async Task ReceiveInternal(string modelCardId)
   {
+    using var scope = _serviceProvider.CreateScope();
+    InitializeSettings(scope.ServiceProvider);
+
     try
     {
       // Get receiver card
@@ -67,18 +72,13 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
 
       using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
-      using var scope = _serviceProvider.CreateScope();
-      scope
-        .ServiceProvider.GetRequiredService<IConverterSettingsStore<RevitConversionSettings>>()
-        .Initialize(
-          _revitConversionSettingsFactory.Create(
-            DetailLevelType.Coarse, //TODO figure out
-            null,
-            false
-          )
-        );
+      // Disable document activation (document creation and document switch)
+      // Not disabling results in DUI model card being out of sync with the active document
+      // The DocumentActivated event isn't usable probably because it is pushed to back of main thread queue
+      Application.DocumentManager.DocumentActivationEnabled = false;
+
       // Receive host objects
-      HostObjectBuilderResult conversionResults = await scope
+      var operationResults = await scope
         .ServiceProvider.GetRequiredService<ReceiveOperation>()
         .Execute(
           modelCard.GetReceiveInfo(_speckleApplication.Slug),
@@ -86,11 +86,10 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
           cancellationItem.Token
         );
 
-      modelCard.BakedObjectIds = conversionResults.BakedObjectIds.ToList();
       await Commands.SetModelReceiveResult(
         modelCardId,
-        conversionResults.BakedObjectIds,
-        conversionResults.ConversionResults
+        operationResults.BakedObjectIds,
+        operationResults.ConversionResults
       );
     }
     catch (OperationCanceledException)
@@ -98,10 +97,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
       // SWALLOW -> UI handles it immediately, so we do not need to handle anything for now!
       // Idea for later -> when cancel called, create promise from UI to solve it later with this catch block.
       // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
-    }
-    catch (SpeckleRevitTaskException ex)
-    {
-      await SpeckleRevitTaskException.ProcessException(modelCardId, ex, _logger, Commands);
+      return;
     }
     catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
@@ -110,8 +106,8 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
     }
     finally
     {
-      // otherwise the id of the operation persists on the cancellation manager and triggers 'Operations cancelled because of document swap!' message to UI.
-      _cancellationManager.CancelOperation(modelCardId);
+      // reenable document activation
+      Application.DocumentManager.DocumentActivationEnabled = true;
     }
   }
 }

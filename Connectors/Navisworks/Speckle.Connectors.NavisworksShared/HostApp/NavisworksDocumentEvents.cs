@@ -77,7 +77,10 @@ public sealed class NavisworksDocumentEvents
 
     _topLevelExceptionHandler.CatchUnhandled(
       () =>
-        _idleManager.SubscribeToIdle(nameof(NavisworksDocumentEvents), async () => await ProcessModelStateChangeAsync())
+        _idleManager.SubscribeToIdle(
+          nameof(ProcessModelStateChangeAsync),
+          async () => await ProcessModelStateChangeAsync()
+        )
     );
   }
 

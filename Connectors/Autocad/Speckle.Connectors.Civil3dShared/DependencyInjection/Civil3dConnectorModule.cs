@@ -16,16 +16,20 @@ public static class Civil3dConnectorModule
   public static void AddCivil3d(this IServiceCollection serviceCollection)
   {
     serviceCollection.AddAutocadBase();
-    serviceCollection.LoadSend();
 
-    // register civil specific send classes
+    // add send
+    serviceCollection.LoadSend();
     serviceCollection.AddScoped<IRootObjectBuilder<AutocadRootObject>, Civil3dRootObjectBuilder>();
     serviceCollection.AddSingleton<IBinding, Civil3dSendBinding>();
 
-    // automatically detects the Class:IClass interface pattern to register all generated interfaces
-    serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
+    // add receive
+    serviceCollection.LoadReceive();
+    serviceCollection.AddSingleton<IBinding, Civil3dReceiveBinding>();
 
     // additional classes
     serviceCollection.AddScoped<PropertySetDefinitionHandler>();
+
+    // automatically detects the Class:IClass interface pattern to register all generated interfaces
+    serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
   }
 }
