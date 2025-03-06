@@ -48,7 +48,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   /// As to why a concurrent dictionary, it's because it's the cheapest/easiest way to do so.
   /// https://stackoverflow.com/questions/18922985/concurrent-hashsett-in-net-framework
   /// </summary>
-  private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
+  private ConcurrentBag<string> ChangedObjectIds { get; set; } = new();
 
   protected AutocadSendBaseBinding(
     DocumentModelStore store,
@@ -114,21 +114,20 @@ public abstract class AutocadSendBaseBinding : ISendBinding
 
   private void OnChangeChangedObjectIds(DBObject dBObject)
   {
-    ChangedObjectIds[dBObject.GetSpeckleApplicationId()] = 1;
-    _idleManager.SubscribeToIdle(nameof(AutocadSendBinding), async () => await RunExpirationChecks());
+    ChangedObjectIds.Add(dBObject.GetSpeckleApplicationId());
+    _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), async () => await RunExpirationChecks());
   }
 
   private async Task RunExpirationChecks()
   {
     var senders = _store.GetSenders();
-    string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
     List<string> expiredSenderIds = new();
 
-    _sendConversionCache.EvictObjects(objectIdsList);
+    _sendConversionCache.EvictObjects(ChangedObjectIds);
 
     foreach (SenderModelCard modelCard in senders)
     {
-      var intersection = modelCard.SendFilter.NotNull().RefreshObjectIds().Intersect(objectIdsList).ToList();
+      var intersection = modelCard.SendFilter.NotNull().RefreshObjectIds().Intersect(ChangedObjectIds).ToList();
       bool isExpired = intersection.Count != 0;
       if (isExpired)
       {
