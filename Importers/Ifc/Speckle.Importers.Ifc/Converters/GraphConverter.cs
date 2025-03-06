@@ -3,7 +3,6 @@ using Speckle.Importers.Ifc.Services;
 using Speckle.Importers.Ifc.Types;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Models;
-using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Importers.Ifc.Converters;
 
@@ -12,14 +11,11 @@ public class GraphConverter(INodeConverter nodeConverter, IRenderMaterialProxyMa
 {
   public Base Convert(IfcModel model, IfcGraph graph)
   {
-    var collection = new Collection();
-
-    var children = graph.GetSources().Select(x => nodeConverter.Convert(model, x)).ToList();
-    collection.elements = children;
+    Base rootCollection = nodeConverter.Convert(model, graph.GetIfcProject());
 
     //Grabing materials from ProxyManager
-    collection["renderMaterialProxies"] = proxyManager.RenderMaterialProxies.Values.ToList();
+    rootCollection["renderMaterialProxies"] = proxyManager.RenderMaterialProxies.Values.ToList();
 
-    return collection;
+    return rootCollection;
   }
 }

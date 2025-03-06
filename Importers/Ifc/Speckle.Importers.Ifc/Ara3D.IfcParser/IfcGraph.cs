@@ -21,7 +21,7 @@ public sealed class IfcGraph
   public Dictionary<uint, List<IfcRelation>> RelationsByNode { get; } = new Dictionary<uint, List<IfcRelation>>();
   public Dictionary<uint, List<IfcPropSet>> PropertySetsByNode { get; } = new Dictionary<uint, List<IfcPropSet>>();
 
-  public IReadOnlySet<uint> RootIds { get; }
+  public uint IfcProjectId { get; }
 
   public IfcNode AddNode(IfcNode n) => Nodes[n.Id] = n;
 
@@ -36,7 +36,7 @@ public sealed class IfcGraph
   {
     Document = d;
 
-    HashSet<uint> rootIds = new(1);
+    uint ifcProjectId = 0;
     logger?.Log("Computing entities");
     foreach (var inst in Document.RawInstances)
     {
@@ -156,7 +156,7 @@ public sealed class IfcGraph
       {
         //Special case for IFC Projects, track them as a root node.
         if (inst.Type.Equals("IFCPROJECT"))
-          rootIds.Add(inst.Id);
+          ifcProjectId = inst.Id;
 
         // Simple IFC node: without step entity data.
         var e = d.GetInstanceWithData(inst);
@@ -164,7 +164,10 @@ public sealed class IfcGraph
       }
     }
 
-    RootIds = rootIds;
+    if (ifcProjectId <= 0)
+      throw new SpeckleIfcException("There was no IfcProject in the file");
+
+    IfcProjectId = ifcProjectId;
 
     logger?.Log("Creating lookup of property sets");
 
@@ -221,7 +224,7 @@ public sealed class IfcGraph
     return r;
   }
 
-  public IEnumerable<IfcNode> GetSources() => RootIds.Select(GetNode);
+  public IfcNode GetIfcProject() => GetNode(IfcProjectId);
 
   public IEnumerable<IfcPropSet> GetPropSets() => GetNodes().OfType<IfcPropSet>();
 
