@@ -26,7 +26,7 @@ public class NavisworksSelectionBinding : ISelectionBinding
   }
 
   private void OnSelectionChange(object? o, EventArgs eventArgs) =>
-    _idleManager.SubscribeToIdle(nameof(NavisworksSelectionBinding), async () => await UpdateSelectionAsync());
+    _idleManager.SubscribeToIdle(nameof(UpdateSelectionAsync), async () => await UpdateSelectionAsync());
 
   private async Task UpdateSelectionAsync()
   {

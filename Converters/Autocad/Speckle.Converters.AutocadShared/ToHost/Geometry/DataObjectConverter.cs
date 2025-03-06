@@ -4,7 +4,7 @@ using Speckle.Objects.Data;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
-namespace Speckle.Converters.Autocad.ToHost.Geometry;
+namespace Speckle.Converters.AutocadShared.ToHost.Geometry;
 
 [NameAndRankValue(typeof(DataObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<DataObject, List<(ADB.Entity a, Base b)>>
