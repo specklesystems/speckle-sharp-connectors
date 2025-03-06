@@ -73,9 +73,6 @@ void CleanSolution(string solution, string configuration)
   Build(solution, configuration);
 }
 
-var solutions = await Affected.GetSolutions();
-var projects = await Affected.GetInstallerProjects();
-
 Target(
   CLEAN_LOCKS,
   () =>
@@ -146,29 +143,33 @@ Target(
 Target(
   RESTORE,
   DependsOn(FORMAT),
-  solutions,
-  async s =>
+  async () =>
   {
     var version = await Affected.ComputeVersion();
     var fileVersion = await Affected.ComputeFileVersion();
-    Console.WriteLine($"Version: {version} & {fileVersion}");
-    Run("dotnet", $"restore {s} --locked-mode");
+    foreach (var s in await Affected.GetSolutions())
+    {
+      Console.WriteLine($"Restoring: {s} - Version: {version} & {fileVersion}");
+      await RunAsync("dotnet", $"restore {s} --locked-mode");
+    }
   }
 );
 
 Target(
   BUILD,
   DependsOn(RESTORE),
-  solutions,
-  async s =>
+  async () =>
   {
     var version = await Affected.ComputeVersion();
     var fileVersion = await Affected.ComputeFileVersion();
-    Console.WriteLine($"Version: {version} & {fileVersion}");
-    await RunAsync(
-      "dotnet",
-      $"build {s} -c Release --no-restore -warnaserror -p:Version={version} -p:FileVersion={fileVersion} -v:m"
-    );
+    foreach (var s in await Affected.GetSolutions())
+    {
+      Console.WriteLine($"Restoring: {s} - Version: {version} & {fileVersion}");
+      await RunAsync(
+        "dotnet",
+        $"build {s} -c Release --no-restore -warnaserror -p:Version={version} -p:FileVersion={fileVersion} -v:m"
+      );
+    }
   }
 );
 
@@ -223,47 +224,49 @@ Target(
 Target(
   ZIP,
   DependsOn(TEST),
-  projects,
-  async x =>
+  async () =>
   {
     await Affected.ComputeAffected();
     var version = await Affected.ComputeVersion();
-    Console.WriteLine("Zipping..." + version);
-    var outputDir = Path.Combine(".", "output");
-    var slugDir = Path.Combine(outputDir, x.HostAppSlug);
-
-    Directory.CreateDirectory(outputDir);
-    Directory.CreateDirectory(slugDir);
-
-    foreach (var asset in x.Projects)
+    foreach (var x in await Affected.GetInstallerProjects())
     {
-      var fullPath = Path.Combine(".", asset.ProjectPath, "bin", "Release", asset.TargetName);
-      if (!Directory.Exists(fullPath))
+      Console.WriteLine($"Zipping: {x} as {version}");
+      var outputDir = Path.Combine(".", "output");
+      var slugDir = Path.Combine(outputDir, x.HostAppSlug);
+
+      Directory.CreateDirectory(outputDir);
+      Directory.CreateDirectory(slugDir);
+
+      foreach (var asset in x.Projects)
       {
-        throw new InvalidOperationException("Could not find: " + fullPath);
+        var fullPath = Path.Combine(".", asset.ProjectPath, "bin", "Release", asset.TargetName);
+        if (!Directory.Exists(fullPath))
+        {
+          throw new InvalidOperationException("Could not find: " + fullPath);
+        }
+
+        var assetName = Path.GetFileName(asset.ProjectPath);
+        var connectorDir = Path.Combine(slugDir, assetName);
+
+        Directory.CreateDirectory(connectorDir);
+        foreach (var directory in Directory.EnumerateDirectories(fullPath, "*", SearchOption.AllDirectories))
+        {
+          Directory.CreateDirectory(directory.Replace(fullPath, connectorDir));
+        }
+
+        foreach (var file in Directory.EnumerateFiles(fullPath, "*", SearchOption.AllDirectories))
+        {
+          Console.WriteLine(file);
+          File.Copy(file, file.Replace(fullPath, connectorDir), true);
+        }
       }
 
-      var assetName = Path.GetFileName(asset.ProjectPath);
-      var connectorDir = Path.Combine(slugDir, assetName);
-
-      Directory.CreateDirectory(connectorDir);
-      foreach (var directory in Directory.EnumerateDirectories(fullPath, "*", SearchOption.AllDirectories))
-      {
-        Directory.CreateDirectory(directory.Replace(fullPath, connectorDir));
-      }
-
-      foreach (var file in Directory.EnumerateFiles(fullPath, "*", SearchOption.AllDirectories))
-      {
-        Console.WriteLine(file);
-        File.Copy(file, file.Replace(fullPath, connectorDir), true);
-      }
+      var outputPath = Path.Combine(outputDir, $"{x.HostAppSlug}.zip");
+      File.Delete(outputPath);
+      Console.WriteLine($"Zipping: '{slugDir}' to '{outputPath}'");
+      ZipFile.CreateFromDirectory(slugDir, outputPath);
+      // Directory.Delete(slugDir, true);
     }
-
-    var outputPath = Path.Combine(outputDir, $"{x.HostAppSlug}.zip");
-    File.Delete(outputPath);
-    Console.WriteLine($"Zipping: '{slugDir}' to '{outputPath}'");
-    ZipFile.CreateFromDirectory(slugDir, outputPath);
-    // Directory.Delete(slugDir, true);
   }
 );
 
