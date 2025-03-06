@@ -145,8 +145,8 @@ Target(
   DependsOn(FORMAT),
   async () =>
   {
-    var version = await Affected.ComputeVersion();
-    var fileVersion = await Affected.ComputeFileVersion();
+    var version = await Versions.ComputeVersion();
+    var fileVersion = await Versions.ComputeFileVersion();
     foreach (var s in await Affected.GetSolutions())
     {
       Console.WriteLine($"Restoring: {s} - Version: {version} & {fileVersion}");
@@ -160,8 +160,8 @@ Target(
   DependsOn(RESTORE),
   async () =>
   {
-    var version = await Affected.ComputeVersion();
-    var fileVersion = await Affected.ComputeFileVersion();
+    var version = await Versions.ComputeVersion();
+    var fileVersion = await Versions.ComputeFileVersion();
     foreach (var s in await Affected.GetSolutions())
     {
       Console.WriteLine($"Restoring: {s} - Version: {version} & {fileVersion}");
@@ -178,13 +178,16 @@ Target(CHECK_SOLUTIONS, Solutions.CompareConnectorsToLocal);
 Target(
   TEST,
   DependsOn(BUILD, CHECK_SOLUTIONS),
-  Glob.Files(".", "**/*.Tests.csproj"),
-  file =>
+  async () =>
   {
-    Run("dotnet", $"test {file} -c Release --no-build --no-restore --verbosity=minimal");
+    foreach (var file in await Affected.GetProjects())
+    {
+      await RunAsync("dotnet", $"test {file} -c Release --no-build --no-restore --verbosity=minimal");
+    }
   }
 );
 
+//all tests on purpose
 Target(
   TEST_ONLY,
   DependsOn(FORMAT),
@@ -206,8 +209,8 @@ Target(
   async file =>
   {
     await RunAsync("dotnet", $"restore {file} --locked-mode");
-    var version = await Affected.ComputeVersion();
-    var fileVersion = await Affected.ComputeFileVersion();
+    var version = await Versions.ComputeVersion();
+    var fileVersion = await Versions.ComputeFileVersion();
     Console.WriteLine($"Version: {version} & {fileVersion}");
     await RunAsync(
       "dotnet",
@@ -226,8 +229,7 @@ Target(
   DependsOn(TEST),
   async () =>
   {
-    await Affected.ComputeAffected();
-    var version = await Affected.ComputeVersion();
+    var version = await Versions.ComputeVersion();
     foreach (var x in await Affected.GetInstallerProjects())
     {
       Console.WriteLine($"Zipping: {x} as {version}");

@@ -1,3 +1,4 @@
+using GlobExpressions;
 using Microsoft.Build.Construction;
 using Semver;
 using static SimpleExec.Command;
@@ -9,6 +10,26 @@ public static class Affected
   public static readonly string Root = Environment.CurrentDirectory;
   public const string AFFECTED_PROJECT = "affected.proj";
 
+  private static IEnumerable<string> GetAffectedProjects()
+  {
+    var projFile = Path.Combine(Root, AFFECTED_PROJECT);
+    Console.WriteLine("Affected project file: " + projFile);
+    var project = ProjectRootElement.Open(projFile) ?? throw new InvalidOperationException();
+    var references = project.ItemGroups.SelectMany(x => x.Items).Where(x => x.ItemType == "ProjectReference");
+
+    foreach (var refe in references)
+    {
+      var referencePath = refe.Include[(Root.Length + 1)..];
+      referencePath = Path.GetDirectoryName(referencePath) ?? throw new InvalidOperationException();
+      if (Path.DirectorySeparatorChar != '/')
+      {
+        referencePath = referencePath.Replace(Path.DirectorySeparatorChar, '/');
+      }
+
+      yield return referencePath;
+    }
+  }
+  
   public static async Task<string[]> GetSolutions()
   {
     await ComputeAffected();
@@ -23,37 +44,37 @@ public static class Affected
     return Consts.Solutions;
   }
 
+  public static async Task<IEnumerable<string>> GetProjects()
+  {
+    await ComputeAffected();
+    var projFile = Path.Combine(Root, AFFECTED_PROJECT);
+    if (File.Exists(projFile))
+    {
+      var references = GetAffectedProjects();
+      return references.Where(x => x.EndsWith(".Tests.csproj")); 
+    }
+    return Glob.Files(Root, "**/*.Tests.csproj");
+  }
+
   public static async Task<InstallerProject[]> GetInstallerProjects()
   {
     await ComputeAffected();
     var projFile = Path.Combine(Root, AFFECTED_PROJECT);
     if (File.Exists(projFile))
     {
-      Console.WriteLine("Affected project file: " + projFile);
-      var project = ProjectRootElement.Open(projFile) ?? throw new InvalidOperationException();
-      var references = project
-        .ItemGroups.SelectMany(x => x.Items)
-        .Where(x => x.ItemType == "ProjectReference")
-        .ToList();
+      var references = GetAffectedProjects().ToList();
       var projs = new List<InstallerProject>();
 
-      foreach (var refe in references)
+      foreach (var referencePath in references)
       {
-        Console.WriteLine($"Candidate project: {refe.Include}");
+        Console.WriteLine($"Candidate project: {referencePath}");
       }
 
       foreach (var manifest in Consts.InstallerManifests)
       {
         var assets = new List<InstallerAsset>();
-        foreach (var refe in references)
+        foreach (var referencePath in references)
         {
-          var referencePath = refe.Include[(Root.Length + 1)..];
-          referencePath = Path.GetDirectoryName(referencePath) ?? throw new InvalidOperationException();
-          if (Path.DirectorySeparatorChar != '/')
-          {
-            referencePath = referencePath.Replace(Path.DirectorySeparatorChar, '/');
-          }
-
           foreach (var proj in manifest.Projects)
           {
             if (proj.ProjectPath.Contains(referencePath))
@@ -84,16 +105,18 @@ public static class Affected
     return Consts.InstallerManifests;
   }
 
+  private static bool s_affectedComputed;
+
   public static async Task ComputeAffected()
   {
-    var projFile = Path.Combine(Root, AFFECTED_PROJECT);
-    if (File.Exists(projFile))
+    if (s_affectedComputed)
     {
       return;
     }
+
     var (currentTag, _) = await ReadAsync("git", "describe --tags");
     currentTag = currentTag.Trim();
-    var version = await Affected.ComputeVersion();
+    var version = await Versions.ComputeVersion();
     var currentVersion = SemVersion.Parse(version).WithoutPrereleaseOrMetadata();
     var (lastTag, _) = await ReadAsync("git", $"describe --abbrev=0 --tags {currentTag}^");
     lastTag = lastTag.Trim();
@@ -101,8 +124,10 @@ public static class Affected
     if (!SemVersion.TryParse(lastTag, SemVersionStyles.AllowLowerV, out var lastVersion))
     {
       Console.WriteLine($"Could not parse version: '{lastTag}'");
+      s_affectedComputed = true;
       return;
     }
+
     Console.WriteLine($"Last tag: {lastTag}, Current tag: {currentTag}");
 
     lastVersion = lastVersion.WithoutPrereleaseOrMetadata();
@@ -113,11 +138,14 @@ public static class Affected
     if (sort == 0)
     {
       Console.WriteLine($"Current version {currentVersion} is equal to: {lastVersion}");
+      s_affectedComputed = true;
       return;
     }
+
     if (sort != 1)
     {
       Console.WriteLine($"Current version {currentVersion} is not greater than: {lastVersion}");
+      s_affectedComputed = true;
       return;
     }
 
@@ -126,6 +154,7 @@ public static class Affected
     if (!majorEquals)
     {
       Console.WriteLine($"Current version {currentVersion} is not matching major version: {lastVersion}");
+      s_affectedComputed = true;
       return;
     }
 
@@ -135,38 +164,7 @@ public static class Affected
       var (lastCommit, _) = await ReadAsync("git", $"rev-list -n 1 {lastTag.Trim()}");
       await RunAsync("dotnet", $"affected --from {currentCommit.Trim()} --to {lastCommit.Trim()}", Root);
     }
-  }
 
-  private static string? s_currentVersion;
-
-  public static async Task<string> ComputeVersion()
-  {
-    if (s_currentVersion is not null)
-    {
-      return s_currentVersion;
-    }
-    var (currentTag, _) = await ReadAsync("git", "describe --tags");
-    currentTag = currentTag.Trim();
-
-    if (!SemVersion.TryParse(currentTag, SemVersionStyles.AllowLowerV, out var currentVersion))
-    {
-      throw new InvalidOperationException($"Could not parse version: '{currentTag}'");
-    }
-    s_currentVersion = currentVersion.ToString();
-    return s_currentVersion;
-  }
-
-  private static string? s_currentFileVersion;
-
-  public static async Task<string> ComputeFileVersion()
-  {
-    if (s_currentFileVersion is not null)
-    {
-      return s_currentFileVersion;
-    }
-    var version = await Affected.ComputeVersion();
-    var currentVersion = SemVersion.Parse(version).WithoutPrereleaseOrMetadata();
-    s_currentFileVersion = currentVersion.ToString() + ".0";
-    return s_currentFileVersion;
+    s_affectedComputed = true;
   }
 }
