@@ -7,17 +7,14 @@ namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
 [NameAndRankValue(typeof(RG.Mesh), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
 {
-  private readonly ITypedConverter<RG.Point3d, SOG.Point> _pointConverter;
   private readonly ITypedConverter<RG.Box, SOG.Box> _boxConverter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   public MeshToSpeckleConverter(
-    ITypedConverter<RG.Point3d, SOG.Point> pointConverter,
     ITypedConverter<RG.Box, SOG.Box> boxConverter,
     IConverterSettingsStore<RhinoConversionSettings> settingsStore
   )
   {
-    _pointConverter = pointConverter;
     _boxConverter = boxConverter;
     _settingsStore = settingsStore;
   }
@@ -34,43 +31,51 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
     {
       throw new ValidationException("Cannot convert a mesh with 0 vertices/faces");
     }
-
-    List<double> vertexCoordinates = new(target.Vertices.Count * 3);
-    foreach (var v in target.Vertices)
+    Span<double> vertexCoordinates = stackalloc double[target.Vertices.Count * 3];
+    var x = 0;
+    for (int i = 0; i < target.Vertices.Count; i++)
     {
-      vertexCoordinates.Add(v.X);
-      vertexCoordinates.Add(v.Y);
-      vertexCoordinates.Add(v.Z);
+      var v = target.Vertices[i];
+      vertexCoordinates[x++] = v.X;
+      vertexCoordinates[x++] = v.Y;
+      vertexCoordinates[x++] = v.Z;
     }
 
     List<int> faces = new();
+
     foreach (RG.MeshNgon polygon in target.GetNgonAndFacesEnumerable())
     {
       var vertIndices = polygon.BoundaryVertexIndexList();
       int n = vertIndices.Length;
       faces.Add(n);
-      faces.AddRange(vertIndices.Select(vertIndex => (int)vertIndex));
+      for (int i = 0; i < n; i++)
+      {
+        faces.Add((int)vertIndices[i]);
+      }
     }
 
-    List<double> textureCoordinates = new(target.TextureCoordinates.Count * 2);
+    Span<double> textureCoordinates = stackalloc double[target.TextureCoordinates.Count * 2];
+    x = 0;
     foreach (var textureCoord in target.TextureCoordinates)
     {
-      textureCoordinates.Add(textureCoord.X);
-      textureCoordinates.Add(textureCoord.Y);
+      textureCoordinates[x++] = textureCoord.X;
+      textureCoordinates[x++] = textureCoord.Y;
     }
 
-    List<int> colors = new(target.VertexColors.Count);
+    Span<int> colors = stackalloc int[target.VertexColors.Count];
+    x = 0;
     foreach (var c in target.VertexColors)
     {
-      colors.Add(c.ToArgb());
+      colors[x++] = c.ToArgb();
     }
 
-    List<double> vertexNormals = new(target.Normals.Count * 3);
+    Span<double> vertexNormals = stackalloc double[target.Normals.Count * 3];
+    x = 0;
     foreach (var n in target.Normals)
     {
-      vertexNormals.Add(n.X);
-      vertexNormals.Add(n.Y);
-      vertexNormals.Add(n.Z);
+      vertexNormals[x++] = n.X;
+      vertexNormals[x++] = n.Y;
+      vertexNormals[x++] = n.Z;
     }
 
     double volume = target.IsClosed ? target.Volume() : 0;
@@ -78,11 +83,11 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
 
     return new SOG.Mesh
     {
-      vertices = vertexCoordinates,
+      vertices = new(vertexCoordinates.ToArray()),
       faces = faces,
-      colors = colors,
-      textureCoordinates = textureCoordinates,
-      vertexNormals = vertexNormals,
+      colors = new(colors.ToArray()),
+      textureCoordinates = new(textureCoordinates.ToArray()),
+      vertexNormals = new(vertexNormals.ToArray()),
       units = _settingsStore.Current.SpeckleUnits,
       volume = volume,
       bbox = bbox
