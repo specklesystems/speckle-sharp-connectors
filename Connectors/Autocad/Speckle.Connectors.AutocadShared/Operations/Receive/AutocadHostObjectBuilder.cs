@@ -139,9 +139,6 @@ public class AutocadHostObjectBuilder(
       results.UnionWith(groupResults);
     }
 
-    // 7 - Regenerate doc to flush graphics
-    Application.DocumentManager.CurrentDocument.Editor.Regen();
-
     return Task.FromResult(new HostObjectBuilderResult(bakedObjectIds, results));
   }
 
