@@ -270,9 +270,12 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Importers.Ifc.Tester", "Importers\Ifc\Speckle.Importers.Ifc.Tester\Speckle.Importers.Ifc.Tester.csproj", "{B3B126CA-A419-48D1-B117-6DEE1DE1AFAD}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Importers.Ifc.Tester2", "Importers\Ifc\Speckle.Importers.Ifc.Tester2\Speckle.Importers.Ifc.Tester2.csproj", "{867DC1A5-A886-4F49-8665-793EB9832F9E}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Common.Tests", "Sdk\Speckle.Connectors.Common.Tests\Speckle.Connectors.Common.Tests.csproj", "{C19C3EDF-D95D-4D22-9949-D99F91447AE7}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Common.MeshTriangulation", "Sdk\Speckle.Common.MeshTriangulation\Speckle.Common.MeshTriangulation.csproj", "{20BB9687-2C92-44E9-9E2F-9D2F45641354}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Performance", "Sdk\Speckle.Performance\Speckle.Performance.csproj", "{54C21396-EFCA-446B-BFBA-2139B0D29ED8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -713,6 +716,12 @@ Global
 		{20BB9687-2C92-44E9-9E2F-9D2F45641354}.Local|Any CPU.Build.0 = Debug|Any CPU
 		{20BB9687-2C92-44E9-9E2F-9D2F45641354}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{20BB9687-2C92-44E9-9E2F-9D2F45641354}.Release|Any CPU.Build.0 = Release|Any CPU
+		{54C21396-EFCA-446B-BFBA-2139B0D29ED8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{54C21396-EFCA-446B-BFBA-2139B0D29ED8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{54C21396-EFCA-446B-BFBA-2139B0D29ED8}.Local|Any CPU.ActiveCfg = Debug|Any CPU
+		{54C21396-EFCA-446B-BFBA-2139B0D29ED8}.Local|Any CPU.Build.0 = Debug|Any CPU
+		{54C21396-EFCA-446B-BFBA-2139B0D29ED8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{54C21396-EFCA-446B-BFBA-2139B0D29ED8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -839,6 +848,7 @@ Global
 		{867DC1A5-A886-4F49-8665-793EB9832F9E} = {0EF6C4D6-AC76-408F-8D32-2F9DA8006077}
 		{C19C3EDF-D95D-4D22-9949-D99F91447AE7} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
 		{20BB9687-2C92-44E9-9E2F-9D2F45641354} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
+		{54C21396-EFCA-446B-BFBA-2139B0D29ED8} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}
