@@ -106,4 +106,5 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Push to nuget.org
+        if: ${{ github.ref_type == 'tag' }}
         run: dotnet nuget push output/*.nupkg --source "https://api.nuget.org/v3/index.json" --api-key ${{secrets.CONNECTORS_NUGET_TOKEN }} --skip-duplicate
