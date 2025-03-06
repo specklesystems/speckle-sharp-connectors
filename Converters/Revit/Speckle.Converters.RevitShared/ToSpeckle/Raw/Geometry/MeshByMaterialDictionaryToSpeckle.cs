@@ -61,7 +61,15 @@ public class MeshByMaterialDictionaryToSpeckle
     List<SOG.Mesh> result = new(args.target.Keys.Count);
     var objectRenderMaterialProxiesMap = _revitToSpeckleCacheSingleton.ObjectRenderMaterialProxiesMap;
     var materialProxyMap = new Dictionary<string, RenderMaterialProxy>();
-    objectRenderMaterialProxiesMap[args.parentElementId.ToString().NotNull()] = materialProxyMap;
+    var key = args.parentElementId.ToString();
+    if (objectRenderMaterialProxiesMap.TryGetValue(key, out var cachedMaterialProxy))
+    {
+      materialProxyMap = cachedMaterialProxy;
+    }
+    else
+    {
+      objectRenderMaterialProxiesMap[key] = materialProxyMap;
+    }
 
     if (args.target.Count == 0)
     {
