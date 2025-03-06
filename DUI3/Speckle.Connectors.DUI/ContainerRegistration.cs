@@ -6,6 +6,7 @@ using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Transports;
 
 namespace Speckle.Connectors.DUI;
@@ -22,8 +23,8 @@ public static class ContainerRegistration
 
     serviceCollection.AddTransient<IBrowserBridge, BrowserBridge>(); // POC: Each binding should have it's own bridge instance
 
-    serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetAssembly(typeof(IdleCallManager)));
-    serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetAssembly(typeof(IServerTransportFactory)));
+    serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetAssembly(typeof(IdleCallManager)).NotNull());
+    serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetAssembly(typeof(IServerTransportFactory)).NotNull());
 
     serviceCollection.AddSingleton<IBinding, TopLevelExceptionHandlerBinding>(sp =>
       sp.GetRequiredService<TopLevelExceptionHandlerBinding>()

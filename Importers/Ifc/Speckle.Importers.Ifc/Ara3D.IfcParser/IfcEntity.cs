@@ -58,7 +58,7 @@ public class IfcEntity
   public IEnumerable<IfcNode> GetSpatialChildren() =>
     GetOutgoingRelations().OfType<IfcRelationSpatial>().SelectMany(r => r.GetRelatedNodes());
 
-  public IEnumerable<IfcNode> GetChildren() => GetAggregatedChildren().Concat(GetSpatialChildren());
+  public IEnumerable<IfcNode> GetChildren() => GetAggregatedChildren().Concat(GetSpatialChildren()).Distinct();
 
   public IReadOnlyList<IfcPropSet> GetPropSets() =>
     Graph.PropertySetsByNode.TryGetValue(Id, out var list) ? list : Array.Empty<IfcPropSet>();

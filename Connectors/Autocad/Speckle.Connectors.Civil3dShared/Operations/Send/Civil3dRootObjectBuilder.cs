@@ -50,7 +50,6 @@ public sealed class Civil3dRootObjectBuilder : AutocadRootObjectBaseBuilder
     return (layer, autocadLayer);
   }
 
-  // POC: probably will need to add Network proxies as well
   public override void AddAdditionalProxiesToRoot(Collection rootObject)
   {
     rootObject[ProxyKeys.PROPERTYSET_DEFINITIONS] = _propertySetDefinitionHandler.Definitions;
