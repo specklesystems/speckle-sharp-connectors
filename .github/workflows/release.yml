@@ -7,14 +7,12 @@ on:
 
 jobs:
   build-windows:
+    #if tag and it's main branch (and adam test branch)
+    if: github.ref_type == 'tag' && startsWith(github.ref, 'refs/tags/v3.') && (github.event.base_ref == 'refs/heads/main' || startsWith(github.event.base_ref, 'refs/heads/adam/'))
     runs-on: windows-latest
     outputs:
       version: ${{ steps.set-version.outputs.version }}
     steps:
-      - name: Check if both branch and tag exist
-        if: github.ref_type == 'tag' && startsWith(github.ref, 'refs/tags/v3.') && (github.event.base_ref == 'refs/heads/main' || startsWith(github.event.base_ref, 'refs/heads/adam/'))
-        run: echo "Both branch and tag match, proceeding..."
-      
       - name: Checkout
         uses: actions/checkout@v4
         with:
