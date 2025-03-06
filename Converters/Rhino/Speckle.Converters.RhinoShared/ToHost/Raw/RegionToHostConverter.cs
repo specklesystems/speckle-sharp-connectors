@@ -8,18 +8,15 @@ namespace Speckle.Converters.Rhino.ToHost.Raw;
 
 public class RegionToHostConverter : ITypedConverter<SOG.Region, RG.Hatch>
 {
-  private readonly ITypedConverter<SOP.Interval, RG.Interval> _intervalConverter;
   private readonly IServiceProvider _serviceProvider;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   public RegionToHostConverter(
     IConverterSettingsStore<RhinoConversionSettings> settingsStore,
-    ITypedConverter<SOP.Interval, RG.Interval> intervalConverter,
     IServiceProvider serviceProvider
   )
   {
     _settingsStore = settingsStore;
-    _intervalConverter = intervalConverter;
     _serviceProvider = serviceProvider;
   }
 
