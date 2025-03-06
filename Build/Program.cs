@@ -73,9 +73,8 @@ void CleanSolution(string solution, string configuration)
   Build(solution, configuration);
 }
 
-var version = await Affected.ComputeVersionAndAffected();
-var solutions = Affected.GetSolutions;
-var projects = Affected.GetInstallerProjects;
+var solutions = await Affected.GetSolutions();
+var projects = await Affected.GetInstallerProjects();
 
 Target(
   CLEAN_LOCKS,
@@ -147,9 +146,12 @@ Target(
 Target(
   RESTORE,
   DependsOn(FORMAT),
-  solutions(),
-  s =>
+  solutions,
+  async s =>
   {
+    var version = await Affected.ComputeVersion();
+    var fileVersion = await Affected.ComputeFileVersion();
+    Console.WriteLine($"Version: {version} & {fileVersion}");
     Run("dotnet", $"restore {s} --locked-mode");
   }
 );
@@ -157,13 +159,13 @@ Target(
 Target(
   BUILD,
   DependsOn(RESTORE),
-  solutions(),
-  s =>
+  solutions,
+  async s =>
   {
-    var version = Environment.GetEnvironmentVariable("GitVersion_FullSemVer") ?? "3.0.0-localBuild";
-    var fileVersion = Environment.GetEnvironmentVariable("GitVersion_AssemblySemFileVer") ?? "3.0.0.0";
+    var version = await Affected.ComputeVersion();
+    var fileVersion = await Affected.ComputeFileVersion();
     Console.WriteLine($"Version: {version} & {fileVersion}");
-    Run(
+    await RunAsync(
       "dotnet",
       $"build {s} -c Release --no-restore -warnaserror -p:Version={version} -p:FileVersion={fileVersion} -v:m"
     );
@@ -200,18 +202,18 @@ Target(
   BUILD_LINUX,
   DependsOn(FORMAT),
   Glob.Files(".", "**/Speckle.Importers.Ifc.csproj"),
-  file =>
+  async file =>
   {
-    Run("dotnet", $"restore {file} --locked-mode");
-    var version = Environment.GetEnvironmentVariable("GitVersion_FullSemVer") ?? "3.0.0-localBuild";
-    var fileVersion = Environment.GetEnvironmentVariable("GitVersion_AssemblySemFileVer") ?? "3.0.0.0";
+    await RunAsync("dotnet", $"restore {file} --locked-mode");
+    var version = await Affected.ComputeVersion();
+    var fileVersion = await Affected.ComputeFileVersion();
     Console.WriteLine($"Version: {version} & {fileVersion}");
-    Run(
+    await RunAsync(
       "dotnet",
       $"build {file} -c Release --no-restore -warnaserror -p:Version={version} -p:FileVersion={fileVersion} -v:m"
     );
 
-    RunAsync(
+    await RunAsync(
       "dotnet",
       $"pack {file} -c Release -o output --no-build -p:Version={version} -p:FileVersion={fileVersion} -v:m"
     );
@@ -221,9 +223,11 @@ Target(
 Target(
   ZIP,
   DependsOn(TEST),
-  projects(),
-  x =>
+  projects,
+  async x =>
   {
+    await Affected.ComputeAffected();
+    var version = await Affected.ComputeVersion();
     Console.WriteLine("Zipping..." + version);
     var outputDir = Path.Combine(".", "output");
     var slugDir = Path.Combine(outputDir, x.HostAppSlug);
@@ -263,6 +267,6 @@ Target(
   }
 );
 
-Target("default", DependsOn(FORMAT, ZIP), () => Console.WriteLine("Done!"));
+Target("default", DependsOn(TEST), () => Console.WriteLine("Done!"));
 
 await RunTargetsAndExitAsync(args).ConfigureAwait(true);
