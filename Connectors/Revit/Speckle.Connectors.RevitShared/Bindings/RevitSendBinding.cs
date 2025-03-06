@@ -91,8 +91,6 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _store.DocumentChanged += (_, _) => topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged());
   }
 
-  private async Task OnDocumentStoreChangedEvent(object _) => await Commands.NotifyDocumentChanged();
-
   public List<ISendFilter> GetSendFilters() =>
     [
       new RevitSelectionFilter() { IsDefault = true },
@@ -137,8 +135,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
           )
         );
 
-      List<Element> elements = await RefreshElementsOnSender(modelCard.NotNull());
-      List<ElementId> elementIds = elements.Select(el => el.Id).ToList();
+      List<ElementId> elementIds = await RefreshElementsIdsOnSender(modelCard.NotNull());
 
       if (elementIds.Count == 0)
       {
@@ -179,7 +176,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     }
   }
 
-  private async Task<List<Element>> RefreshElementsOnSender(SenderModelCard modelCard)
+  private async Task<List<ElementId>> RefreshElementsIdsOnSender(SenderModelCard modelCard)
   {
     var activeUIDoc =
       _revitContext.UIApplication.NotNull().ActiveUIDocument
@@ -214,7 +211,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       );
     }
 
-    return elements;
+    return elements.Select(el => el.Id).ToList();
   }
 
   /// <summary>
@@ -320,7 +317,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   {
     foreach (var sender in _store.GetSenders().ToList())
     {
-      await RefreshElementsOnSender(sender);
+      await RefreshElementsIdsOnSender(sender);
     }
   }
 
