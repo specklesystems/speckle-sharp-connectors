@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.ExtensibleStorage;
 using Microsoft.Extensions.DependencyInjection;
@@ -48,7 +47,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   /// As to why a concurrent dictionary, it's because it's the cheapest/easiest way to do so.
   /// https://stackoverflow.com/questions/18922985/concurrent-hashsett-in-net-framework
   /// </summary>
-  private ConcurrentBag<ElementId> ChangedObjectIds { get; set; } = new();
+  private ConcurrentHashSet<ElementId> ChangedObjectIds { get; set; } = new();
 
   public RevitSendBinding(
     IAppIdleManager idleManager,
