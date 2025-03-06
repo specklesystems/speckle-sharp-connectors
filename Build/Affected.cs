@@ -29,7 +29,7 @@ public static class Affected
       yield return referencePath;
     }
   }
-  
+
   public static async Task<string[]> GetSolutions()
   {
     await ComputeAffected();
@@ -51,7 +51,7 @@ public static class Affected
     if (File.Exists(projFile))
     {
       var references = GetAffectedProjects();
-      return references.Where(x => x.EndsWith(".Tests.csproj")); 
+      return references.Where(x => x.EndsWith(".Tests.csproj"));
     }
     return Glob.Files(Root, "**/*.Tests.csproj");
   }
