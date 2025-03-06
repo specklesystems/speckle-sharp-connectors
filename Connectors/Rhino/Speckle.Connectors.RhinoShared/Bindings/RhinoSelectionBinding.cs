@@ -24,7 +24,7 @@ public class RhinoSelectionBinding : ISelectionBinding
   }
 
   private void OnSelectionChange(object? o, EventArgs eventArgs) =>
-    _idleManager.SubscribeToIdle(nameof(RhinoSelectionBinding), UpdateSelection);
+    _idleManager.SubscribeToIdle(nameof(UpdateSelection), UpdateSelection);
 
   private void UpdateSelection()
   {

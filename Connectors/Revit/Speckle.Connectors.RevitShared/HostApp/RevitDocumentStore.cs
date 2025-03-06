@@ -76,7 +76,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
 
     IsDocumentInit = true;
     _idleManager.SubscribeToIdle(
-      nameof(RevitDocumentStore),
+      nameof(LoadState) + nameof(OnDocumentChanged),
       () =>
       {
         LoadState();
