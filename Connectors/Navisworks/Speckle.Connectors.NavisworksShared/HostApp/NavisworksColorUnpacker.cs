@@ -43,12 +43,13 @@ public class NavisworksColorUnpacker(
     Dictionary<string, ColorProxy> colorProxies = [];
     Dictionary<string, string> mergedIds = [];
 
-    // Build mergedIds map once
     foreach (var group in groupedNodes)
     {
-      foreach (var node in group.Value)
+      string groupKey = group.Key;
+
+      foreach (var nodePath in group.Value.Select(selectionService.GetModelItemPath))
       {
-        mergedIds[selectionService.GetModelItemPath(node)] = group.Key;
+        mergedIds[nodePath] = groupKey;
       }
     }
 
@@ -56,13 +57,13 @@ public class NavisworksColorUnpacker(
     {
       try
       {
-        // Skip non-2D elements
         if (!Is2DElement(navisworksObject))
         {
           continue;
         }
 
         var navisworksObjectId = selectionService.GetModelItemPath(navisworksObject);
+
         var finalId = mergedIds.TryGetValue(navisworksObjectId, out var mergedId) ? mergedId : navisworksObjectId;
 
         var geometry = navisworksObject.Geometry;
@@ -77,7 +78,6 @@ public class NavisworksColorUnpacker(
           geometry.OriginalColor,
           defaultColor
         );
-
         var colorId = Select(
           mode,
           $"{geometry.ActiveColor.GetHashCode()}_{geometry.ActiveTransparency}".GetHashCode(),

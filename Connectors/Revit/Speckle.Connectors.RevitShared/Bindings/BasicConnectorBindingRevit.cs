@@ -103,7 +103,12 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
         var view = revitViewsFilter.GetView();
         if (view is not null)
         {
-          _revitContext.UIApplication.ActiveUIDocument.ActiveView = view;
+          await RevitTask
+            .RunAsync(() =>
+            {
+              _revitContext.UIApplication.ActiveUIDocument.ActiveView = view;
+            })
+            .ConfigureAwait(false);
         }
         return;
       }

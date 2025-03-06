@@ -91,7 +91,7 @@ public sealed class CorridorHandler
       }
       if (mainFeatureLines.Count > 0)
       {
-        convertedBaseline["mainBaselineFeatureLines"] = mainFeatureLines;
+        convertedBaseline["@mainBaselineFeatureLines"] = mainFeatureLines;
       }
 
       List<Base> offsetFeatureLines = new();
@@ -109,7 +109,7 @@ public sealed class CorridorHandler
       }
       if (offsetFeatureLines.Count > 0)
       {
-        convertedBaseline["offsetBaselineFeatureLines"] = mainFeatureLines;
+        convertedBaseline["@offsetBaselineFeatureLines"] = mainFeatureLines;
       }
 
       // get the baseline regions
@@ -220,7 +220,7 @@ public sealed class CorridorHandler
           {
             string subassemblyId = appliedSubassembly.SubassemblyId.GetSpeckleApplicationId();
             string name = subassemblyNameCache.TryGetValue(appliedSubassembly.SubassemblyId, out string? cachedName)
-              ? cachedName
+              ? cachedName!
               : subassemblyId;
 
             Dictionary<string, object?> appliedSubassemblyDict =

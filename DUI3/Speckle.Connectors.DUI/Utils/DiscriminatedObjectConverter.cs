@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,9 +13,12 @@ namespace Speckle.Connectors.DUI.Utils;
 /// This converter ensures we can do polymorphic deserialization to concrete types. This converter is intended
 /// for use only with UI bound types, not Speckle Bases.
 /// </summary>
+//this is effectively a singleton because BrowserBridge and TopLevelExceptionHandler use it
 public class DiscriminatedObjectConverter(IServiceProvider serviceProvider) : JsonConverter<DiscriminatedObject>
 {
-  private readonly Speckle.Newtonsoft.Json.JsonSerializer _localSerializer =
+  // POC: remove, replace with DI
+  private static readonly ConcurrentDictionary<string, Type?> s_typeCache = new();
+  private static readonly Speckle.Newtonsoft.Json.JsonSerializer s_localSerializer =
     new()
     {
       DefaultValueHandling = DefaultValueHandling.Ignore,
@@ -32,7 +36,7 @@ public class DiscriminatedObjectConverter(IServiceProvider serviceProvider) : Js
     {
       return;
     }
-    var jo = JObject.FromObject(value, _localSerializer);
+    var jo = JObject.FromObject(value, s_localSerializer);
     jo.WriteTo(writer);
   }
 
@@ -72,50 +76,44 @@ public class DiscriminatedObjectConverter(IServiceProvider serviceProvider) : Js
     return obj as DiscriminatedObject;
   }
 
-  // POC: remove, replace with DI
-  private readonly Dictionary<string, Type> _typeCache = new();
-
-  private Type? GetTypeByName(string name)
-  {
-    _typeCache.TryGetValue(name, out Type myType);
-    if (myType != null)
-    {
-      return myType;
-    }
-
-    // POC: why does this exist like this?
-    // The assemblies within the CurrentDomain are not necessarily loaded
-    // probably we can leverage DI here so we already know the types, possibly DI plus an attribute
-    // then we can cache everything on startup
-    foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies().Reverse())
-    {
-      try
+  private static Type? GetTypeByName(string typeName) =>
+    s_typeCache.GetOrAdd(
+      typeName,
+      name =>
       {
-        // POC: contains is weak
-        // working by accident, ModelCard is contained within SenderModelCard :O
-        // comparisons :D
-        var type = assembly.DefinedTypes.FirstOrDefault(t => !string.IsNullOrEmpty(t?.Name) && t?.Name == name);
-        if (type != null)
+        //POC: why does this exist like this?
+        // The assemblies within the CurrentDomain are not necessarily loaded
+        // probably we can leverage DI here so we already know the types, possibly DI plus an attribute
+        // then we can cache everything on startup
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies().Reverse())
         {
-          _typeCache[name] = type;
-          return type;
+          try
+          {
+            // POC: contains is weak
+            // working by accident, ModelCard is contained within SenderModelCard :O
+            // comparisons :D
+            var type = assembly.DefinedTypes.FirstOrDefault(t => !string.IsNullOrEmpty(t?.Name) && t?.Name == name);
+            if (type != null)
+            {
+              return type;
+            }
+          }
+          // POC: this Exception pattern is too broad and should be resticted but fixes the above issues
+          // the call above is causing load of all assemblies (which is also possibly not good)
+          // AND it explodes for me loading an exception, so at the last this should
+          // catch System.Reflection.ReflectionTypeLoadException (and anthing else DefinedTypes might throw)
+          // LATER COMMENT: Since discriminated object is only used in DUI3 models, we could restrict to only "this" assembly?
+          catch (ReflectionTypeLoadException ex)
+          {
+            // POC: logging
+            Debug.WriteLine("***" + ex.Message);
+          }
         }
-      }
-      // POC: this Exception pattern is too broad and should be resticted but fixes the above issues
-      // the call above is causing load of all assemblies (which is also possibly not good)
-      // AND it explodes for me loading an exception, so at the last this should
-      // catch System.Reflection.ReflectionTypeLoadException (and anthing else DefinedTypes might throw)
-      // LATER COMMENT: Since discriminated object is only used in DUI3 models, we could restrict to only "this" assembly?
-      catch (ReflectionTypeLoadException ex)
-      {
-        // POC: logging
-        Debug.WriteLine("***" + ex.Message);
-      }
-    }
 
-    // should this throw instead? :/
-    return null;
-  }
+        // should this throw instead? :/
+        return null;
+      }
+    );
 }
 
 public class AbstractConverter<TReal, TAbstract> : JsonConverter
