@@ -113,8 +113,7 @@ public sealed class RhinoSendBinding : ISendBinding
         {
           ChangedObjectIdsInGroupsOrLayers[selectedObject.Id.ToString()] = 1;
         }
-        _idleManager.SubscribeToIdle("a", RunExpirationChecks);
-        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
       }
     };
 
@@ -144,7 +143,7 @@ public sealed class RhinoSendBinding : ISendBinding
         }
 
         ChangedObjectIds[e.ObjectId.ToString()] = 1;
-        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
       });
 
     RhinoDoc.DeleteRhinoObject += (_, e) =>
@@ -156,7 +155,7 @@ public sealed class RhinoSendBinding : ISendBinding
         }
 
         ChangedObjectIds[e.ObjectId.ToString()] = 1;
-        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
       });
 
     // NOTE: Catches an object's material change from one user defined doc material to another. Does not catch (as the top event is not triggered) swapping material sources for an object or moving to/from the default material (this is handled below)!
@@ -171,7 +170,7 @@ public sealed class RhinoSendBinding : ISendBinding
         if (args is RhinoDoc.RenderMaterialAssignmentChangedEventArgs changedEventArgs)
         {
           ChangedObjectIds[changedEventArgs.ObjectId.ToString()] = 1;
-          _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+          _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
         }
       });
 
@@ -187,7 +186,7 @@ public sealed class RhinoSendBinding : ISendBinding
         {
           ChangedObjectIdsInGroupsOrLayers[obj.Id.ToString()] = 1;
         }
-        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
       });
 
     RhinoDoc.LayerTableEvent += (_, args) =>
@@ -220,7 +219,7 @@ public sealed class RhinoSendBinding : ISendBinding
             ChangedObjectIdsInGroupsOrLayers[obj.Id.ToString()] = 1;
           }
         }
-        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
       });
 
     // Catches and stores changed material ids. These are then used in the expiry checks to invalidate all objects that have assigned any of those material ids.
@@ -235,7 +234,7 @@ public sealed class RhinoSendBinding : ISendBinding
         if (args.EventType == MaterialTableEventType.Modified)
         {
           ChangedMaterialIndexes[args.Index] = 1;
-          _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+          _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
         }
       });
 
@@ -260,7 +259,7 @@ public sealed class RhinoSendBinding : ISendBinding
         )
         {
           ChangedObjectIds[e.RhinoObject.Id.ToString()] = 1;
-          _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+          _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
         }
       });
 
@@ -274,7 +273,7 @@ public sealed class RhinoSendBinding : ISendBinding
 
         ChangedObjectIds[e.NewRhinoObject.Id.ToString()] = 1;
         ChangedObjectIds[e.OldRhinoObject.Id.ToString()] = 1;
-        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
       });
   }
 
