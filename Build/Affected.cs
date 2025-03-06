@@ -162,7 +162,7 @@ public static class Affected
     {
       var (currentCommit, _) = await ReadAsync("git", $"rev-list -n 1 {currentTag.Trim()}");
       var (lastCommit, _) = await ReadAsync("git", $"rev-list -n 1 {lastTag.Trim()}");
-      await RunAsync("dotnet", $"affected --from {currentCommit.Trim()} --to {lastCommit.Trim()}", Root);
+      await RunAsync("dotnet", $"affected -v --from {currentCommit.Trim()} --to {lastCommit.Trim()}", Root);
     }
 
     s_affectedComputed = true;
