@@ -1,6 +1,8 @@
+using System.IO;
 using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Sdk;
 using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.Revit.HostApp;
@@ -30,6 +32,8 @@ public class SendCollectionManager
   {
     var doc = _converterSettings.Current.Document;
     var path = new List<string>();
+    string fileName = Path.GetFileNameWithoutExtension(doc.PathName);
+    path.Add(fileName);
 
     // Step 0: get the level and its properties
     string levelName = "No Level";
@@ -43,11 +47,15 @@ public class SendCollectionManager
       }
       else
       {
-        var level = (Level)doc.GetElement(element.LevelId);
-        levelName = level.Name;
-        levelProperties.Add("elevation", level.Elevation);
-        levelProperties.Add("units", _converterSettings.Current.SpeckleUnits);
-        _levelCache.Add(element.LevelId, (levelName, levelProperties));
+        try
+        {
+          var level = (Level)doc.GetElement(element.LevelId);
+          levelName = level.Name;
+          levelProperties.Add("elevation", level.Elevation);
+          levelProperties.Add("units", _converterSettings.Current.SpeckleUnits);
+          _levelCache.Add(element.LevelId, (levelName, levelProperties));
+        }
+        catch (Exception e) when (!e.IsFatal()) { }
       }
     }
 

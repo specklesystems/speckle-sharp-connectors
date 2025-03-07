@@ -91,8 +91,6 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _store.DocumentChanged += (_, _) => topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged());
   }
 
-  private async Task OnDocumentStoreChangedEvent(object _) => await Commands.NotifyDocumentChanged();
-
   public List<ISendFilter> GetSendFilters() =>
     [
       new RevitSelectionFilter() { IsDefault = true },
@@ -137,19 +135,18 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
           )
         );
 
-      List<Element> elements = await RefreshElementsOnSender(modelCard.NotNull());
-      List<ElementId> elementIds = elements.Select(el => el.Id).ToList();
+      var elementsByTransform = await RefreshElementsIdsOnSender(modelCard.NotNull());
 
-      if (elementIds.Count == 0)
+      if (elementsByTransform.Count == 0)
       {
         // Handle as CARD ERROR in this function
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
       }
 
       var sendResult = await scope
-        .ServiceProvider.GetRequiredService<SendOperation<ElementId>>()
+        .ServiceProvider.GetRequiredService<SendOperation<DocumentToConvert>>()
         .Execute(
-          elementIds,
+          elementsByTransform,
           modelCard.GetSendInfo(_speckleApplication.ApplicationAndVersion),
           _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),
           cancellationItem.Token
@@ -179,7 +176,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     }
   }
 
-  private async Task<List<Element>> RefreshElementsOnSender(SenderModelCard modelCard)
+  private async Task<List<DocumentToConvert>> RefreshElementsIdsOnSender(SenderModelCard modelCard)
   {
     var activeUIDoc =
       _revitContext.UIApplication.NotNull().ActiveUIDocument
@@ -192,15 +189,31 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     var selectedObjects = modelCard.SendFilter.NotNull().RefreshObjectIds();
 
-    List<Element> elements = selectedObjects
+    List<Element> elementsOnMainModel = selectedObjects
       .Select(uid => activeUIDoc.Document.GetElement(uid))
       .Where(el => el is not null)
       .ToList();
 
+    // TODO: currently below part suits only for selection, need more work to see how align with other filters
+    List<DocumentToConvert> elementsByTransform = [new(null, activeUIDoc.Document, elementsOnMainModel)];
+
+    var linkedModels = elementsOnMainModel.Where(el => el is RevitLinkInstance).Cast<RevitLinkInstance>().ToList();
+    foreach (var linkedModel in linkedModels)
+    {
+      var linkedDoc = linkedModel.GetLinkDocument();
+      var transform = linkedModel.GetTotalTransform();
+      if (linkedDoc != null)
+      {
+        using var collector = new FilteredElementCollector(linkedDoc);
+        var linkedElements = collector.WhereElementIsNotElementType().WhereElementIsViewIndependent().ToList();
+        elementsByTransform.Add(new(transform, linkedDoc, linkedElements));
+      }
+    }
+
     if (modelCard.SendFilter is not null && modelCard.SendFilter.IdMap is not null)
     {
       var newSelectedObjectIds = new List<string>();
-      foreach (Element element in elements)
+      foreach (Element element in elementsOnMainModel)
       {
         modelCard.SendFilter.IdMap[element.Id.ToString()] = element.UniqueId;
         newSelectedObjectIds.Add(element.UniqueId);
@@ -214,7 +227,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       );
     }
 
-    return elements;
+    return elementsByTransform;
   }
 
   /// <summary>
@@ -320,7 +333,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   {
     foreach (var sender in _store.GetSenders().ToList())
     {
-      await RefreshElementsOnSender(sender);
+      await RefreshElementsIdsOnSender(sender);
     }
   }
 
