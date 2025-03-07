@@ -62,6 +62,7 @@ public class MeshByMaterialDictionaryToSpeckle
     var objectRenderMaterialProxiesMap = _revitToSpeckleCacheSingleton.ObjectRenderMaterialProxiesMap;
     var materialProxyMap = new Dictionary<string, RenderMaterialProxy>();
     var key = args.parentElementId.ToString();
+    // ids are same in copy pasted linked models, otherwise we reset the materialProxyMap in cache and only one of the linked model is having the render materials
     if (objectRenderMaterialProxiesMap.TryGetValue(key, out var cachedMaterialProxy))
     {
       materialProxyMap = cachedMaterialProxy;
