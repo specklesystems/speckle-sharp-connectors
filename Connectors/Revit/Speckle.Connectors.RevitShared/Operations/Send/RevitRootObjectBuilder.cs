@@ -105,7 +105,7 @@ public class RevitRootObjectBuilder(
 
     foreach (var atomicObjectByDocumentAndTransform in atomicObjectsByDocumentAndTransform)
     {
-      // here we do magic for changing the transform according to model. first one is always the main model.
+      // here we do magic for changing the transform and the related document according to model. first one is always the main model.
       using (
         converterSettings.Push(currentSettings =>
           currentSettings with

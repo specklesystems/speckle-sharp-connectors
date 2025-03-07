@@ -1,3 +1,4 @@
+using System.IO;
 using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Settings;
@@ -31,6 +32,8 @@ public class SendCollectionManager
   {
     var doc = _converterSettings.Current.Document;
     var path = new List<string>();
+    string fileName = Path.GetFileNameWithoutExtension(doc.PathName);
+    path.Add(fileName);
 
     // Step 0: get the level and its properties
     string levelName = "No Level";
