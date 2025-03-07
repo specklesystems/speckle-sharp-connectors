@@ -32,7 +32,6 @@ public sealed class BrowserBridge : IBrowserBridge
 
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IThreadContext _threadContext;
-  private readonly IThreadOptions _threadOptions;
 
   private readonly IBrowserScriptExecutor _browserScriptExecutor;
   private readonly IJsonSerializer _jsonSerializer;
@@ -64,16 +63,13 @@ public sealed class BrowserBridge : IBrowserBridge
     IJsonSerializer jsonSerializer,
     ILogger<BrowserBridge> logger,
     IBrowserScriptExecutor browserScriptExecutor,
-    IThreadOptions threadOptions,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
     _threadContext = threadContext;
     _jsonSerializer = jsonSerializer;
     _logger = logger;
-    // Capture the main thread's SynchronizationContext
     _browserScriptExecutor = browserScriptExecutor;
-    _threadOptions = threadOptions;
     _topLevelExceptionHandler = topLevelExceptionHandler;
   }
 

@@ -1,5 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Speckle.Connectors.Common.Threading;
 
+[ExcludeFromCodeCoverage]
 public class DefaultThreadContext : ThreadContext
 {
   //should be always newed up on the host app's main thread
