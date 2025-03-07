@@ -194,6 +194,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       .Where(el => el is not null)
       .ToList();
 
+    // TODO: currently below part suits only for selection, need more work to see how align with other filters
     List<DocumentToConvert> elementsByTransform = [new(null, activeUIDoc.Document, elementsOnMainModel)];
 
     var linkedModels = elementsOnMainModel.Where(el => el is RevitLinkInstance).Cast<RevitLinkInstance>().ToList();
