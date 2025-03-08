@@ -202,8 +202,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     // are there linked models selected but the setting is deactivated? then we should notify the user
     if (linkedModels.Count > 0 && !_toSpeckleSettingsManager.GetLinkedModelsSetting(modelCard))
     {
-      // TODO: log as warning possible in this context?
-      throw new SpeckleException("Linked models detected but UI setting not activated. ");
+      // TODO: not the correct thing to throw. ideally log as warning like results. is this possible?
+      throw new SpeckleException("Enable linked model support from the settings to send this object");
     }
 
     foreach (var linkedModel in linkedModels)

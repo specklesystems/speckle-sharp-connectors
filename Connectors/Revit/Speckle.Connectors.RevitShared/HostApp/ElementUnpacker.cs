@@ -1,6 +1,8 @@
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
+using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Connectors.Revit.HostApp;
 
@@ -10,10 +12,12 @@ namespace Speckle.Connectors.Revit.HostApp;
 public class ElementUnpacker
 {
   private readonly RevitContext _revitContext;
+  private IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
-  public ElementUnpacker(RevitContext revitContext)
+  public ElementUnpacker(RevitContext revitContext, IConverterSettingsStore<RevitConversionSettings> converterSettings)
   {
     _revitContext = revitContext;
+    _converterSettings = converterSettings;
   }
 
   /// <summary>
@@ -53,7 +57,7 @@ public class ElementUnpacker
   private List<Element> UnpackElements(IEnumerable<Element> elements)
   {
     var unpackedElements = new List<Element>(); // note: could be a hashset/map so we prevent duplicates (?)
-    var doc = _revitContext.UIApplication?.ActiveUIDocument.Document!;
+    var doc = _converterSettings.Current.Document;
 
     foreach (var element in elements)
     {
@@ -101,7 +105,7 @@ public class ElementUnpacker
   private List<Element> PackCurtainWallElementsAndStackedWalls(List<Element> elements)
   {
     var ids = elements.Select(el => el.Id).ToArray();
-    var doc = _revitContext.UIApplication?.ActiveUIDocument.Document!;
+    var doc = _converterSettings.Current.Document;
     elements.RemoveAll(element =>
       (element is Mullion { Host: not null } m && ids.Contains(m.Host.Id))
       || (element is Panel { Host: not null } p && ids.Contains(p.Host.Id))

@@ -67,7 +67,6 @@ public class RevitRootObjectBuilder(
       var elementsInTransform = new List<Element>();
       foreach (var el in documentElementContext.Elements)
       {
-        // var el = converterSettings.Current.Document.GetElement(id);
         if (el == null)
         {
           continue;
@@ -94,9 +93,14 @@ public class RevitRootObjectBuilder(
     var atomicObjectCount = 0;
     foreach (var filteredDocumentToConvert in filteredDocumentsToConvert)
     {
-      var atomicObjects = elementUnpacker.UnpackSelectionForConversion(filteredDocumentToConvert.Elements).ToList();
-      atomicObjectsByDocumentAndTransform.Add(filteredDocumentToConvert with { Elements = atomicObjects });
-      atomicObjectCount += atomicObjects.Count;
+      using (
+        converterSettings.Push(currentSettings => currentSettings with { Document = filteredDocumentToConvert.Doc })
+      )
+      {
+        var atomicObjects = elementUnpacker.UnpackSelectionForConversion(filteredDocumentToConvert.Elements).ToList();
+        atomicObjectsByDocumentAndTransform.Add(filteredDocumentToConvert with { Elements = atomicObjects });
+        atomicObjectCount += atomicObjects.Count;
+      }
     }
 
     var countProgress = 0;
