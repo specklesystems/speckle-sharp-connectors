@@ -194,10 +194,18 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       .Where(el => el is not null)
       .ToList();
 
-    // TODO: currently below part suits only for selection, need more work to see how align with other filters
-    List<DocumentToConvert> elementsByTransform = [new(null, activeUIDoc.Document, elementsOnMainModel)];
+    // TODO: [CNX-1377] currently below part suits only for selection, need more work to see how align with other filters
+    List<DocumentToConvert> documentElementContexts = [new(null, activeUIDoc.Document, elementsOnMainModel)];
 
     var linkedModels = elementsOnMainModel.Where(el => el is RevitLinkInstance).Cast<RevitLinkInstance>().ToList();
+
+    // are there linked models selected but the setting is deactivated? then we should notify the user
+    if (linkedModels.Count > 0 && !_toSpeckleSettingsManager.GetLinkedModelsSetting(modelCard))
+    {
+      // TODO: log as warning possible in this context?
+      throw new SpeckleException("Linked models detected but UI setting not activated. ");
+    }
+
     foreach (var linkedModel in linkedModels)
     {
       var linkedDoc = linkedModel.GetLinkDocument();
@@ -206,7 +214,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       {
         using var collector = new FilteredElementCollector(linkedDoc);
         var linkedElements = collector.WhereElementIsNotElementType().WhereElementIsViewIndependent().ToList();
-        elementsByTransform.Add(new(transform, linkedDoc, linkedElements));
+        documentElementContexts.Add(new(transform, linkedDoc, linkedElements));
       }
     }
 
@@ -227,7 +235,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       );
     }
 
-    return elementsByTransform;
+    return documentElementContexts;
   }
 
   /// <summary>

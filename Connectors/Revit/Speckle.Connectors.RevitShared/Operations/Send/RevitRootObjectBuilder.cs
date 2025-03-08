@@ -31,17 +31,17 @@ public class RevitRootObjectBuilder(
   // POC: SendSelection and RevitConversionContextStack should be interfaces, former needs interfaces
 
   public Task<RootObjectBuilderResult> Build(
-    IReadOnlyList<DocumentToConvert> elementsByTransform,
+    IReadOnlyList<DocumentToConvert> documentElementContexts,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
   ) =>
     threadContext.RunOnMainAsync(
-      () => Task.FromResult(BuildSync(elementsByTransform, sendInfo, onOperationProgressed, ct))
+      () => Task.FromResult(BuildSync(documentElementContexts, sendInfo, onOperationProgressed, ct))
     );
 
   private RootObjectBuilderResult BuildSync(
-    IReadOnlyList<DocumentToConvert> documentsToConvert,
+    IReadOnlyList<DocumentToConvert> documentElementContexts,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
@@ -62,10 +62,10 @@ public class RevitRootObjectBuilder(
     var filteredDocumentsToConvert = new List<DocumentToConvert>();
     List<SendConversionResult> results = new();
     // Convert ids to actual revit elements
-    foreach (var documentToConvert in documentsToConvert)
+    foreach (var documentElementContext in documentElementContexts)
     {
       var elementsInTransform = new List<Element>();
-      foreach (var el in documentToConvert.Elements)
+      foreach (var el in documentElementContext.Elements)
       {
         // var el = converterSettings.Current.Document.GetElement(id);
         if (el == null)
@@ -80,7 +80,7 @@ public class RevitRootObjectBuilder(
 
         elementsInTransform.Add(el);
       }
-      filteredDocumentsToConvert.Add(documentToConvert with { Elements = elementsInTransform });
+      filteredDocumentsToConvert.Add(documentElementContext with { Elements = elementsInTransform });
     }
 
     // TODO: check the exception!!!!
