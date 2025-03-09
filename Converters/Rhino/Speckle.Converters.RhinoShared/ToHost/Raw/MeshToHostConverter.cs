@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Utils;
 using Speckle.Sdk;
@@ -61,6 +61,7 @@ public class MeshToHostConverter(IFlatPointListToHostConverter pointListConverte
     while (i < target.faces.Count)
     {
       int n = target.faces[i];
+
       // For backwards compatibility. Old meshes will have "0" for triangle face, "1" for quad face.
       // Newer meshes have "3" for triangle face, "4" for quad" face and "5...n" for n-gon face.
       if (n < 3)
@@ -81,19 +82,9 @@ public class MeshToHostConverter(IFlatPointListToHostConverter pointListConverte
         default:
         {
           // n-gon
-          var triangles = MeshTriangulationHelper.TriangulateFace(i, target, false);
-
-          var faceIndices = RhinoPools.IntListPool.Get();
-          for (int t = 0; t < triangles.Count; t += 3)
-          {
-            faceIndices.Add(m.Faces.AddFace(triangles[t], triangles[t + 1], triangles[t + 2]));
-          }
-
-          var faces = RhinoPools.IntArrayPool.Rent(n);
-          target.faces.CopyTo(i + 1, faces, 0, n);
-          RG.MeshNgon ngon = RG.MeshNgon.Create(target.faces.GetRange(i + 1, n), faceIndices);
-          RhinoPools.IntListPool.Return(faceIndices); //safe because MeshNgon.Create uses the list but doesn't keep it
-          RhinoPools.IntArrayPool.Return(faces); //safe because MeshNgon.Create uses the list but doesn't keep it
+          var faceIndices = GetNgonFaceIndices(target, i, m).ToList();
+          var vertexIndices = GetNgonVertexIndices(target.faces, i, n).ToList();
+          RG.MeshNgon ngon = RG.MeshNgon.Create(vertexIndices, faceIndices);
           m.Ngons.AddNgon(ngon);
           break;
         }
@@ -104,6 +95,24 @@ public class MeshToHostConverter(IFlatPointListToHostConverter pointListConverte
 
     // Its important that this is the last step
     m.Faces.CullDegenerateFaces();
+  }
+
+  private static IEnumerable<int> GetNgonFaceIndices(SOG.Mesh target, int start, RG.Mesh m)
+  {
+    var triangles = MeshTriangulationHelper.TriangulateFace(start, target, false);
+    for (int t = 0; t < triangles.Count; t += 3)
+    {
+      int faceIndex = m.Faces.AddFace(triangles[t], triangles[t + 1], triangles[t + 2]);
+      yield return faceIndex;
+    }
+  }
+
+  private static IEnumerable<int> GetNgonVertexIndices(List<int> faces, int start, int vertexCount)
+  {
+    for (int n = 0; n < vertexCount; n++)
+    {
+      yield return faces[start + 1 + n];
+    }
   }
 
   private static RG.Point2f[] ConvertTextureCoordinates(IReadOnlyList<double> textureCoordinates)
