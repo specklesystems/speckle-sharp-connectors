@@ -55,7 +55,7 @@ public class SendCollectionManager
           levelProperties.Add("units", _converterSettings.Current.SpeckleUnits);
           _levelCache.Add(element.LevelId, (levelName, levelProperties));
         }
-        catch (Exception e) when (!e.IsFatal()) { }
+        catch (Exception e) when (!e.IsFatal()) { } // TODO: CNX-1376
       }
     }
 
