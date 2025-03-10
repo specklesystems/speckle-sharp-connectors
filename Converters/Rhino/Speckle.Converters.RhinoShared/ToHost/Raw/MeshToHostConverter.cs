@@ -1,20 +1,12 @@
-﻿using System.Drawing;
-using Rhino.Collections;
+using System.Drawing;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Utils;
 using Speckle.Sdk;
 
 namespace Speckle.Converters.Rhino.ToHost.Raw;
 
-public class MeshToHostConverter : ITypedConverter<SOG.Mesh, RG.Mesh>
+public class MeshToHostConverter(IFlatPointListToHostConverter pointListConverter) : ITypedConverter<SOG.Mesh, RG.Mesh>
 {
-  private readonly ITypedConverter<IReadOnlyList<double>, Point3dList> _pointListConverter;
-
-  public MeshToHostConverter(ITypedConverter<IReadOnlyList<double>, Point3dList> pointListConverter)
-  {
-    _pointListConverter = pointListConverter;
-  }
-
   /// <summary>
   /// Converts a Speckle mesh object to a Rhino mesh object.
   /// </summary>
@@ -25,26 +17,35 @@ public class MeshToHostConverter : ITypedConverter<SOG.Mesh, RG.Mesh>
   {
     RG.Mesh m = new();
 
-    var vertices = _pointListConverter.Convert(target.vertices);
-    var colors = ConvertVertexColors(target.colors);
-    var vertexNormals = ConvertVertexNormals(target.vertexNormals);
-    var textureCoordinates = ConvertTextureCoordinates(target.textureCoordinates);
+    var vertices = pointListConverter.ConvertToEnum(target.vertices);
 
     m.Vertices.AddVertices(vertices);
 
-    if (colors.Length != 0 && !m.VertexColors.SetColors(colors))
+    if (target.colors.Count != 0)
     {
-      throw new SpeckleException("Failed to set Vertex Colors");
+      var colors = ConvertVertexColors(target.colors);
+      if (!m.VertexColors.SetColors(colors))
+      {
+        throw new SpeckleException("Failed to set Vertex Colors");
+      }
     }
 
-    if (vertexNormals.Length != 0 && !m.Normals.SetNormals(vertexNormals))
+    if (target.vertexNormals.Count != 0)
     {
-      throw new SpeckleException("Failed to set Vertex Normals");
+      var vertexNormals = ConvertVertexNormals(target.vertexNormals);
+      if (!m.Normals.SetNormals(vertexNormals))
+      {
+        throw new SpeckleException("Failed to set Vertex Normals");
+      }
     }
 
-    if (textureCoordinates.Length != 0 && !m.TextureCoordinates.SetTextureCoordinates(textureCoordinates))
+    if (target.textureCoordinates.Count != 0)
     {
-      throw new SpeckleException("Failed to set Texture Coordinates");
+      var textureCoordinates = ConvertTextureCoordinates(target.textureCoordinates);
+      if (!m.TextureCoordinates.SetTextureCoordinates(textureCoordinates))
+      {
+        throw new SpeckleException("Failed to set Texture Coordinates");
+      }
     }
 
     AssignMeshFaces(target, m);
@@ -60,6 +61,7 @@ public class MeshToHostConverter : ITypedConverter<SOG.Mesh, RG.Mesh>
     while (i < target.faces.Count)
     {
       int n = target.faces[i];
+
       // For backwards compatibility. Old meshes will have "0" for triangle face, "1" for quad face.
       // Newer meshes have "3" for triangle face, "4" for quad" face and "5...n" for n-gon face.
       if (n < 3)
@@ -67,32 +69,25 @@ public class MeshToHostConverter : ITypedConverter<SOG.Mesh, RG.Mesh>
         n += 3; // 0 -> 3, 1 -> 4
       }
 
-      if (n == 3)
+      switch (n)
       {
-        // triangle
-        m.Faces.AddFace(new RG.MeshFace(target.faces[i + 1], target.faces[i + 2], target.faces[i + 3]));
-      }
-      else if (n == 4)
-      {
-        // quad
-        m.Faces.AddFace(
-          new RG.MeshFace(target.faces[i + 1], target.faces[i + 2], target.faces[i + 3], target.faces[i + 4])
-        );
-      }
-      else
-      {
-        // n-gon
-        var triangles = MeshTriangulationHelper.TriangulateFace(i, target, false);
-
-        var faceIndices = new List<int>(triangles.Count);
-        for (int t = 0; t < triangles.Count; t += 3)
+        case 3:
+          // triangle
+          m.Faces.AddFace(target.faces[i + 1], target.faces[i + 2], target.faces[i + 3]);
+          break;
+        case 4:
+          // quad
+          m.Faces.AddFace(target.faces[i + 1], target.faces[i + 2], target.faces[i + 3], target.faces[i + 4]);
+          break;
+        default:
         {
-          var face = new RG.MeshFace(triangles[t], triangles[t + 1], triangles[t + 2]);
-          faceIndices.Add(m.Faces.AddFace(face));
+          // n-gon
+          var faceIndices = GetNgonFaceIndices(target, i, m).ToList();
+          var vertexIndices = GetNgonVertexIndices(target.faces, i, n).ToList();
+          RG.MeshNgon ngon = RG.MeshNgon.Create(vertexIndices, faceIndices);
+          m.Ngons.AddNgon(ngon);
+          break;
         }
-
-        RG.MeshNgon ngon = RG.MeshNgon.Create(target.faces.GetRange(i + 1, n), faceIndices);
-        m.Ngons.AddNgon(ngon);
       }
 
       i += n + 1;
@@ -100,6 +95,24 @@ public class MeshToHostConverter : ITypedConverter<SOG.Mesh, RG.Mesh>
 
     // Its important that this is the last step
     m.Faces.CullDegenerateFaces();
+  }
+
+  private static IEnumerable<int> GetNgonFaceIndices(SOG.Mesh target, int start, RG.Mesh m)
+  {
+    var triangles = MeshTriangulationHelper.TriangulateFace(start, target, false);
+    for (int t = 0; t < triangles.Count; t += 3)
+    {
+      int faceIndex = m.Faces.AddFace(triangles[t], triangles[t + 1], triangles[t + 2]);
+      yield return faceIndex;
+    }
+  }
+
+  private static IEnumerable<int> GetNgonVertexIndices(List<int> faces, int start, int vertexCount)
+  {
+    for (int n = 0; n < vertexCount; n++)
+    {
+      yield return faces[start + 1 + n];
+    }
   }
 
   private static RG.Point2f[] ConvertTextureCoordinates(IReadOnlyList<double> textureCoordinates)
