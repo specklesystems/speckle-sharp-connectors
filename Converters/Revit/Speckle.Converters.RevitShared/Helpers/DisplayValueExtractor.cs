@@ -399,6 +399,7 @@ public sealed class DisplayValueExtractor
         or DB.BuiltInCategory.OST_StructConnectionShearStuds
     )
     {
+      // try-catch is not pretty. we need to understand this better.
       try
       {
         // try to create options with the active view - this will work for the main document

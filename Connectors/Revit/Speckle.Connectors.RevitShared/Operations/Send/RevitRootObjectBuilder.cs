@@ -109,7 +109,7 @@ public class RevitRootObjectBuilder(
 
     foreach (var atomicObjectByDocumentAndTransform in atomicObjectsByDocumentAndTransform)
     {
-      // here we do magic for changing the transform and the related document according to model. first one is always the main model.
+      // if user doesn't have send linked models enabled, don't convert ...
       if (atomicObjectByDocumentAndTransform.Doc.IsLinked && !converterSettings.Current.SendLinkedModels)
       {
         results.Add(
@@ -124,6 +124,7 @@ public class RevitRootObjectBuilder(
         continue;
       }
 
+      // here we do magic for changing the transform and the related document according to model. first one is always the main model.
       using (
         converterSettings.Push(currentSettings =>
           currentSettings with
