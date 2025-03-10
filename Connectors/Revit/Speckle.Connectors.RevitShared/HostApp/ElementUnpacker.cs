@@ -12,7 +12,7 @@ namespace Speckle.Connectors.Revit.HostApp;
 public class ElementUnpacker
 {
   private readonly RevitContext _revitContext;
-  private IConverterSettingsStore<RevitConversionSettings> _converterSettings;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public ElementUnpacker(RevitContext revitContext, IConverterSettingsStore<RevitConversionSettings> converterSettings)
   {
