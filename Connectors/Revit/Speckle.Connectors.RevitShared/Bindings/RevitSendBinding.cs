@@ -207,8 +207,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     foreach (var linkedModel in linkedModels)
     {
+      // invert transform to convert FROM host model TO linked model coordinate system (reverse of GetTotalTransform)
       var linkedDoc = linkedModel.GetLinkDocument();
-      var transform = linkedModel.GetTotalTransform();
+      var transform = linkedModel.GetTotalTransform().Inverse;
       if (linkedDoc != null)
       {
         using var collector = new FilteredElementCollector(linkedDoc);
