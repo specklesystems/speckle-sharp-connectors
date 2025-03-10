@@ -1,6 +1,5 @@
 using GlobExpressions;
 using Microsoft.Build.Construction;
-using Semver;
 using static SimpleExec.Command;
 
 namespace Build;
@@ -114,37 +113,18 @@ public static class Affected
       return;
     }
 
-    var (currentTag, _) = await ReadAsync("git", "describe --tags");
-    currentTag = currentTag.Trim();
-    var version = await Versions.ComputeVersion();
-    var currentVersion = SemVersion.Parse(version).WithoutPrereleaseOrMetadata();
-    var (lastTag, _) = await ReadAsync("git", $"describe --abbrev=0 --tags {currentTag}^");
-    lastTag = lastTag.Trim();
-
-    if (!SemVersion.TryParse(lastTag, SemVersionStyles.AllowLowerV, out var lastVersion))
-    {
-      Console.WriteLine($"Could not parse version: '{lastTag}'");
-      s_affectedComputed = true;
-      return;
-    }
+    var currentTag = await Versions.GetCurrentTag();
+    var currentVersion = await Versions.ComputeVersion();
+    var lastTag = await Versions.GetPreviousTag(currentTag);
+    var lastVersion = await Versions.ComputePreviousVersion(currentTag);
 
     Console.WriteLine($"Last tag: {lastTag}, Current tag: {currentTag}");
-
-    lastVersion = lastVersion.WithoutPrereleaseOrMetadata();
-    currentVersion = currentVersion.WithoutPrereleaseOrMetadata();
     Console.WriteLine($"Last parsed version: {lastVersion}, Current parsed version: {currentVersion}");
-    var sort = currentVersion.CompareSortOrderTo(lastVersion);
-    Console.WriteLine($"Sort: {sort}");
-    if (sort == 0)
-    {
-      Console.WriteLine($"Current version {currentVersion} is equal to: {lastVersion}");
-      s_affectedComputed = true;
-      return;
-    }
 
-    if (sort != 1)
+    var sort = currentVersion.CompareSortOrderTo(lastVersion);
+    if (sort == -1)
     {
-      Console.WriteLine($"Current version {currentVersion} is not greater than: {lastVersion}");
+      Console.WriteLine($"Current version {currentVersion} is less than: {lastVersion}");
       s_affectedComputed = true;
       return;
     }
@@ -160,8 +140,8 @@ public static class Affected
 
     if (minorEquals)
     {
-      var (currentCommit, _) = await ReadAsync("git", $"rev-list -n 1 {currentTag.Trim()}");
-      var (lastCommit, _) = await ReadAsync("git", $"rev-list -n 1 {lastTag.Trim()}");
+      var (currentCommit, _) = await ReadAsync("git", $"rev-list -n 1 {currentTag}");
+      var (lastCommit, _) = await ReadAsync("git", $"rev-list -n 1 {lastTag}");
       await RunAsync("dotnet", $"affected -v --from {currentCommit.Trim()} --to {lastCommit.Trim()}", Root);
     }
 

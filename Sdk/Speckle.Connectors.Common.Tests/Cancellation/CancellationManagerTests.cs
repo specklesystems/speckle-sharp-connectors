@@ -7,7 +7,7 @@ namespace Speckle.Connectors.Common.Tests.Cancellation;
 public class CancellationManagerTests
 {
   [Test]
-  public void CancelOne2()
+  public void CancelOne()
   {
     var manager = new CancellationManager();
     manager.NumberOfOperations.Should().Be(0);
