@@ -205,13 +205,6 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     // TODO: [CNX-1377] currently below part suits only for selection, need more work to see how align with other filters
     List<DocumentToConvert> documentElementContexts = [new(null, activeUIDoc.Document, elementsOnMainModel)];
 
-    // are there linked models selected but the setting is deactivated? then we should notify the user
-    if (linkedModels.Count > 0 && !_toSpeckleSettingsManager.GetLinkedModelsSetting(modelCard))
-    {
-      // TODO: not the correct thing to throw. ideally log as warning like results. is this possible?
-      throw new SpeckleException("Enable linked model support from the settings to send this object");
-    }
-
     foreach (var linkedModel in linkedModels)
     {
       var linkedDoc = linkedModel.GetLinkDocument();

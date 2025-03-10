@@ -61,7 +61,7 @@ public class RevitRootObjectBuilder(
 
     var filteredDocumentsToConvert = new List<DocumentToConvert>();
     List<SendConversionResult> results = new();
-    // Convert ids to actual revit elements
+
     foreach (var documentElementContext in documentElementContexts)
     {
       var elementsInTransform = new List<Element>();
@@ -110,6 +110,20 @@ public class RevitRootObjectBuilder(
     foreach (var atomicObjectByDocumentAndTransform in atomicObjectsByDocumentAndTransform)
     {
       // here we do magic for changing the transform and the related document according to model. first one is always the main model.
+      if (atomicObjectByDocumentAndTransform.Doc.IsLinked && !converterSettings.Current.SendLinkedModels)
+      {
+        results.Add(
+          new(
+            Status.WARNING,
+            atomicObjectByDocumentAndTransform.Doc.PathName, // TODO: User won't be able to highlight linked model from report.
+            typeof(RevitLinkInstance).ToString(),
+            null,
+            new SpeckleException("Enable linked model support from the settings to send this object")
+          )
+        );
+        continue;
+      }
+
       using (
         converterSettings.Push(currentSettings =>
           currentSettings with
@@ -167,7 +181,7 @@ public class RevitRootObjectBuilder(
             results.Add(new(Status.ERROR, applicationId, sourceType, null, ex));
           }
 
-          onOperationProgressed.Report(new("Converting", (double)++countProgress / atomicObjects.Count));
+          onOperationProgressed.Report(new("Converting", (double)++countProgress / atomicObjectCount));
         }
       }
     }
