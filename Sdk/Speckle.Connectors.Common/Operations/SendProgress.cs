@@ -11,7 +11,8 @@ public class SendProgressState : ISendProgressState
 }
 
 [GenerateAutoInterface]
-public class SendProgress(IProgressDisplayManager progressDisplayManager, ISendProgressState sendProgressState) : ISendProgress
+public class SendProgress(IProgressDisplayManager progressDisplayManager, ISendProgressState sendProgressState)
+  : ISendProgress
 {
   private string? _previousSpeed;
 
@@ -29,7 +30,7 @@ public class SendProgress(IProgressDisplayManager progressDisplayManager, ISendP
     }
     else if (args.ProgressEvent == ProgressEvent.UploadBytes)
     {
-        _previousSpeed = progressDisplayManager.CalculateSpeed(args);
+      _previousSpeed = progressDisplayManager.CalculateSpeed(args);
     }
     if (!progressDisplayManager.ShouldUpdate())
     {

@@ -17,7 +17,6 @@ public class SendProgressTests : MoqTest
     progress.Begin();
   }
 
-  
   [Test]
   [TestCaseSource(nameof(ReportCases))]
   public void Report_Tests(ProgressEvent e, bool shouldUpdate, bool previousFromCacheOrSerialized)
@@ -29,7 +28,7 @@ public class SendProgressTests : MoqTest
     {
       case ProgressEvent.UploadBytes:
         displayManager.Setup(x => x.CalculateSpeed(args)).Returns("asdf");
-        break;    
+        break;
       case ProgressEvent.FromCacheOrSerialized:
         sendProgressState.SetupSet(x => x.PreviouslyFromCacheOrSerialized = false);
         break;
@@ -75,13 +74,15 @@ public class SendProgressTests : MoqTest
 #pragma warning disable IDE1006
   private static readonly object[] ReportCases = GenerateReportCases().ToArray();
 #pragma warning restore IDE1006
-  
-  private static IEnumerable<object> GenerateReportCases() {
-    foreach(var e in Enum.GetValues(typeof(ProgressEvent))) {
-      yield return new object[] { e, true, true };
-      yield return new object[] { e, false, true };
-      yield return new object[] { e, true, false };
-      yield return new object[] { e, false, false };
+
+  private static IEnumerable<object> GenerateReportCases()
+  {
+    foreach (var e in Enum.GetValues(typeof(ProgressEvent)))
+    {
+      yield return new[] { e, true, true };
+      yield return new[] { e, false, true };
+      yield return new[] { e, true, false };
+      yield return new[] { e, false, false };
     }
   }
 }

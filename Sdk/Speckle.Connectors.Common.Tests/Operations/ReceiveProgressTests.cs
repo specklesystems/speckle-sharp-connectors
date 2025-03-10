@@ -6,7 +6,7 @@ using Speckle.Testing;
 
 namespace Speckle.Connectors.Common.Tests.Operations;
 
-public class ReceiveProgressTests: MoqTest
+public class ReceiveProgressTests : MoqTest
 {
   [Test]
   public void Begin()
@@ -16,7 +16,7 @@ public class ReceiveProgressTests: MoqTest
     var progress = new ReceiveProgress(displayManager.Object);
     progress.Begin();
   }
-  
+
   [Test]
   [TestCaseSource(nameof(ReportCases))]
   public void Report_Tests(ProgressEvent e, bool shouldUpdate)
@@ -44,9 +44,9 @@ public class ReceiveProgressTests: MoqTest
       switch (e)
       {
         case ProgressEvent.CacheCheck:
-          case ProgressEvent.DownloadBytes:
-          case ProgressEvent.DownloadObjects:
-            case ProgressEvent.DeserializeObject:
+        case ProgressEvent.DownloadBytes:
+        case ProgressEvent.DownloadObjects:
+        case ProgressEvent.DeserializeObject:
           cardProgress.Setup(x => x.Report(It.IsAny<CardProgress>()));
           break;
       }
@@ -63,11 +63,13 @@ public class ReceiveProgressTests: MoqTest
 #pragma warning disable IDE1006
   private static readonly object[] ReportCases = GenerateReportCases().ToArray();
 #pragma warning restore IDE1006
-  
-  private static IEnumerable<object> GenerateReportCases() {
-    foreach(var e in Enum.GetValues(typeof(ProgressEvent))) {
-      yield return new object[] { e, true };
-      yield return new object[] { e, false };
+
+  private static IEnumerable<object> GenerateReportCases()
+  {
+    foreach (var e in Enum.GetValues(typeof(ProgressEvent)))
+    {
+      yield return new[] { e, true };
+      yield return new[] { e, false };
     }
   }
 }
