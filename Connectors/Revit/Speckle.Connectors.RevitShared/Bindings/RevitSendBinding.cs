@@ -195,8 +195,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       .Where(el => el is not null)
       .ToList();
 
-    // elementsOnMainModel shouldn't include linked instances
-    // we need to remove from elementsOnMainModel, otherwise when processing, we're still trying to convert the link
+    // elementsOnMainModel shouldn't include linked instances otherwise when processing, we're still trying to convert link
     var elementsOnMainModel = allElements.Where(el => el is not RevitLinkInstance).ToList();
 
     // treat linked instances on their own. Collector focuses on decomposing the linked instances
