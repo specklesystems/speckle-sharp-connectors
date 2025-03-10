@@ -1,5 +1,4 @@
-﻿using Speckle.InterfaceGenerator;
-using Speckle.Sdk.Credentials;
+﻿using Speckle.Sdk.Credentials;
 
 namespace Speckle.Connectors.Common.Operations;
 
@@ -8,8 +7,7 @@ namespace Speckle.Connectors.Common.Operations;
 /// Note: Be sure it is registered on refactorings. Otherwise, we won't be able to do any send/receive ops.
 /// This can safely be registered as singleton.
 /// </summary>
-[GenerateAutoInterface]
-public class AccountService(IAccountManager accountManager) : IAccountService
+public class AccountService(IAccountManager accountManager)
 {
   /// <summary>
   /// Account to retrieve with its id, if not exist try to retrieve from matching serverUrl.

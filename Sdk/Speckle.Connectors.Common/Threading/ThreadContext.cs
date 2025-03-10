@@ -6,7 +6,7 @@ namespace Speckle.Connectors.Common.Threading;
 public abstract class ThreadContext : IThreadContext
 {
   private static readonly Task<object?> s_empty = Task.FromResult<object?>(null);
-  public virtual bool IsMainThread => Environment.CurrentManagedThreadId == 1;
+  public static bool IsMainThread => Environment.CurrentManagedThreadId == 1;
 
   public async Task RunOnThread(Action action, bool useMain)
   {
@@ -18,7 +18,7 @@ public abstract class ThreadContext : IThreadContext
       }
       else
       {
-        await WorkerToMain(() =>
+        await WorkerToMainAsync(() =>
         {
           action();
           return s_empty;
@@ -29,7 +29,7 @@ public abstract class ThreadContext : IThreadContext
     {
       if (IsMainThread)
       {
-        await MainToWorker(() =>
+        await MainToWorkerAsync(() =>
         {
           action();
           return s_empty;
@@ -37,12 +37,12 @@ public abstract class ThreadContext : IThreadContext
       }
       else
       {
-        RunWorker(action);
+        RunMain(action);
       }
     }
   }
 
-  public Task<T> RunOnThread<T>(Func<T> action, bool useMain)
+  public virtual Task<T> RunOnThread<T>(Func<T> action, bool useMain)
   {
     if (useMain)
     {
@@ -58,7 +58,7 @@ public abstract class ThreadContext : IThreadContext
       return MainToWorker(action);
     }
 
-    return RunWorkerAsync(action);
+    return RunMainAsync(action);
   }
 
   public async Task RunOnThreadAsync(Func<Task> action, bool useMain)
@@ -74,7 +74,7 @@ public abstract class ThreadContext : IThreadContext
         await WorkerToMainAsync<object?>(async () =>
         {
           await action();
-          return s_empty;
+          return Task.FromResult<object?>(null);
         });
       }
     }
@@ -85,7 +85,7 @@ public abstract class ThreadContext : IThreadContext
         await MainToWorkerAsync<object?>(async () =>
         {
           await action();
-          return s_empty;
+          return Task.FromResult<object?>(null);
         });
       }
       else
@@ -96,7 +96,7 @@ public abstract class ThreadContext : IThreadContext
         }
         else
         {
-          await RunWorkerAsync(action);
+          await action();
         }
       }
     }
@@ -117,7 +117,7 @@ public abstract class ThreadContext : IThreadContext
     {
       return MainToWorkerAsync(action);
     }
-    return RunWorkerAsync(action);
+    return RunMainAsync(action);
   }
 
   protected abstract Task<T> WorkerToMainAsync<T>(Func<Task<T>> action);
@@ -129,17 +129,9 @@ public abstract class ThreadContext : IThreadContext
 
   protected virtual void RunMain(Action action) => action();
 
-  protected virtual void RunWorker(Action action) => action();
-
   protected virtual Task<T> RunMainAsync<T>(Func<T> action) => Task.FromResult(action());
-
-  protected virtual Task<T> RunWorkerAsync<T>(Func<T> action) => Task.FromResult(action());
 
   protected virtual Task RunMainAsync(Func<Task> action) => Task.FromResult(action());
 
-  protected virtual Task RunWorkerAsync(Func<Task> action) => Task.FromResult(action());
-
   protected virtual Task<T> RunMainAsync<T>(Func<Task<T>> action) => action();
-
-  protected virtual Task<T> RunWorkerAsync<T>(Func<Task<T>> action) => action();
 }

@@ -83,7 +83,7 @@ public class AutocadHostObjectBuilder(
       colorBaker.ParseColors(unpackedRoot.ColorProxies, onOperationProgressed);
     }
 
-    // 4 - Convert atomic objects
+    // 5 - Convert atomic objects
     HashSet<ReceiveConversionResult> results = new();
     HashSet<string> bakedObjectIds = new();
     Dictionary<string, IReadOnlyCollection<Entity>> applicationIdMap = new();
@@ -116,7 +116,7 @@ public class AutocadHostObjectBuilder(
       }
     }
 
-    // 5 - Convert instances
+    // 6 - Convert instances
     var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = instanceBaker.BakeInstances(
       instanceComponentsWithPath,
       applicationIdMap,
@@ -129,7 +129,7 @@ public class AutocadHostObjectBuilder(
     results.RemoveWhere(result => result.ResultId != null && consumedObjectIds.Contains(result.ResultId));
     results.UnionWith(instanceConversionResults);
 
-    // 6 - Create groups
+    // 7 - Create groups
     if (unpackedRoot.GroupProxies != null)
     {
       IReadOnlyCollection<ReceiveConversionResult> groupResults = groupBaker.CreateGroups(

@@ -4,6 +4,7 @@ using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Logging;
 using Speckle.Sdk.Api;
+using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -15,10 +16,10 @@ namespace Speckle.Connectors.Common.Operations;
 public sealed class SendOperation<T>(
   IRootObjectBuilder<T> rootObjectBuilder,
   ISendConversionCache sendConversionCache,
-  IAccountService accountService,
+  AccountService accountService,
   ISendProgress sendProgress,
   IOperations operations,
-  ISendOperationVersionRecorder sendOperationVersionRecorder,
+  IClientFactory clientFactory,
   ISdkActivityFactory activityFactory,
   IThreadContext threadContext
 )
@@ -48,7 +49,7 @@ public sealed class SendOperation<T>(
     return new(rootObjId, convertedReferences, buildResult.ConversionResults);
   }
 
-  public async Task<SerializeProcessResults> Send(
+  private async Task<SerializeProcessResults> Send(
     Base commitObject,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
@@ -80,7 +81,18 @@ public sealed class SendOperation<T>(
     onOperationProgressed.Report(new("Linking version to model...", null));
 
     // 8 - Create the version (commit)
-    await sendOperationVersionRecorder.RecordVersion(sendResult.RootId, sendInfo, account, ct);
+    using var apiClient = clientFactory.Create(account);
+    _ = await apiClient
+      .Version.Create(
+        new CreateVersionInput(
+          sendResult.RootId,
+          sendInfo.ModelId,
+          sendInfo.ProjectId,
+          sourceApplication: sendInfo.SourceApplication
+        ),
+        ct
+      )
+      .ConfigureAwait(true);
 
     return sendResult;
   }

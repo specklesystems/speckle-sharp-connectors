@@ -2,7 +2,7 @@
 using NUnit.Framework;
 using Speckle.Connectors.Common.Cancellation;
 
-namespace Speckle.Connectors.Common.Tests.Cancellation;
+namespace Speckle.Connectors.Common.Tests;
 
 public class CancellationManagerTests
 {
