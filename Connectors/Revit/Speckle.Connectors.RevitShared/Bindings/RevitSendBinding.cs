@@ -189,15 +189,22 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     var selectedObjects = modelCard.SendFilter.NotNull().RefreshObjectIds();
 
-    List<Element> elementsOnMainModel = selectedObjects
+    // all elements is a mix of regular elements and linked models
+    var allElements = selectedObjects
       .Select(uid => activeUIDoc.Document.GetElement(uid))
       .Where(el => el is not null)
       .ToList();
 
-    // TODO: currently below part suits only for selection, need more work to see how align with other filters
-    List<DocumentToConvert> elementsByTransform = [new(null, activeUIDoc.Document, elementsOnMainModel)];
+    // elementsOnMainModel shouldn't include linked instances
+    // we need to remove from elementsOnMainModel, otherwise when processing, we're still trying to convert the link
+    var elementsOnMainModel = allElements.Where(el => el is not RevitLinkInstance).ToList();
 
-    var linkedModels = elementsOnMainModel.Where(el => el is RevitLinkInstance).Cast<RevitLinkInstance>().ToList();
+    // treat linked instances on their own. Collector focuses on decomposing the linked instances
+    var linkedModels = allElements.OfType<RevitLinkInstance>().ToList();
+
+    // TODO: [CNX-1377] currently below part suits only for selection, need more work to see how align with other filters
+    List<DocumentToConvert> documentElementContexts = [new(null, activeUIDoc.Document, elementsOnMainModel)];
+
     foreach (var linkedModel in linkedModels)
     {
       var linkedDoc = linkedModel.GetLinkDocument();
@@ -206,7 +213,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       {
         using var collector = new FilteredElementCollector(linkedDoc);
         var linkedElements = collector.WhereElementIsNotElementType().WhereElementIsViewIndependent().ToList();
-        elementsByTransform.Add(new(transform, linkedDoc, linkedElements));
+        documentElementContexts.Add(new(transform, linkedDoc, linkedElements));
       }
     }
 
@@ -227,7 +234,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       );
     }
 
-    return elementsByTransform;
+    return documentElementContexts;
   }
 
   /// <summary>

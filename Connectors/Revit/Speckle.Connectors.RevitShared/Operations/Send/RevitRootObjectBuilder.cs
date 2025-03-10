@@ -31,17 +31,17 @@ public class RevitRootObjectBuilder(
   // POC: SendSelection and RevitConversionContextStack should be interfaces, former needs interfaces
 
   public Task<RootObjectBuilderResult> Build(
-    IReadOnlyList<DocumentToConvert> elementsByTransform,
+    IReadOnlyList<DocumentToConvert> documentElementContexts,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
   ) =>
     threadContext.RunOnMainAsync(
-      () => Task.FromResult(BuildSync(elementsByTransform, sendInfo, onOperationProgressed, ct))
+      () => Task.FromResult(BuildSync(documentElementContexts, sendInfo, onOperationProgressed, ct))
     );
 
   private RootObjectBuilderResult BuildSync(
-    IReadOnlyList<DocumentToConvert> documentsToConvert,
+    IReadOnlyList<DocumentToConvert> documentElementContexts,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
@@ -61,13 +61,12 @@ public class RevitRootObjectBuilder(
 
     var filteredDocumentsToConvert = new List<DocumentToConvert>();
     List<SendConversionResult> results = new();
-    // Convert ids to actual revit elements
-    foreach (var documentToConvert in documentsToConvert)
+
+    foreach (var documentElementContext in documentElementContexts)
     {
       var elementsInTransform = new List<Element>();
-      foreach (var el in documentToConvert.Elements)
+      foreach (var el in documentElementContext.Elements)
       {
-        // var el = converterSettings.Current.Document.GetElement(id);
         if (el == null)
         {
           continue;
@@ -80,7 +79,7 @@ public class RevitRootObjectBuilder(
 
         elementsInTransform.Add(el);
       }
-      filteredDocumentsToConvert.Add(documentToConvert with { Elements = elementsInTransform });
+      filteredDocumentsToConvert.Add(documentElementContext with { Elements = elementsInTransform });
     }
 
     // TODO: check the exception!!!!
@@ -94,9 +93,14 @@ public class RevitRootObjectBuilder(
     var atomicObjectCount = 0;
     foreach (var filteredDocumentToConvert in filteredDocumentsToConvert)
     {
-      var atomicObjects = elementUnpacker.UnpackSelectionForConversion(filteredDocumentToConvert.Elements).ToList();
-      atomicObjectsByDocumentAndTransform.Add(filteredDocumentToConvert with { Elements = atomicObjects });
-      atomicObjectCount += atomicObjects.Count;
+      using (
+        converterSettings.Push(currentSettings => currentSettings with { Document = filteredDocumentToConvert.Doc })
+      )
+      {
+        var atomicObjects = elementUnpacker.UnpackSelectionForConversion(filteredDocumentToConvert.Elements).ToList();
+        atomicObjectsByDocumentAndTransform.Add(filteredDocumentToConvert with { Elements = atomicObjects });
+        atomicObjectCount += atomicObjects.Count;
+      }
     }
 
     var countProgress = 0;
@@ -105,6 +109,21 @@ public class RevitRootObjectBuilder(
 
     foreach (var atomicObjectByDocumentAndTransform in atomicObjectsByDocumentAndTransform)
     {
+      // if user doesn't have send linked models enabled, don't convert ...
+      if (atomicObjectByDocumentAndTransform.Doc.IsLinked && !converterSettings.Current.SendLinkedModels)
+      {
+        results.Add(
+          new(
+            Status.WARNING,
+            atomicObjectByDocumentAndTransform.Doc.PathName, // TODO: User won't be able to highlight linked model from report.
+            typeof(RevitLinkInstance).ToString(),
+            null,
+            new SpeckleException("Enable linked model support from the settings to send this object")
+          )
+        );
+        continue;
+      }
+
       // here we do magic for changing the transform and the related document according to model. first one is always the main model.
       using (
         converterSettings.Push(currentSettings =>
@@ -163,7 +182,7 @@ public class RevitRootObjectBuilder(
             results.Add(new(Status.ERROR, applicationId, sourceType, null, ex));
           }
 
-          onOperationProgressed.Report(new("Converting", (double)++countProgress / atomicObjects.Count));
+          onOperationProgressed.Report(new("Converting", (double)++countProgress / atomicObjectCount));
         }
       }
     }
