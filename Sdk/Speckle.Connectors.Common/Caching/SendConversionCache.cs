@@ -7,9 +7,7 @@ namespace Speckle.Connectors.Common.Caching;
 ///<inheritdoc/>
 public class SendConversionCache : ISendConversionCache
 {
-  public SendConversionCache() { }
-
-  private Dictionary<(string applicationId, string projectId), ObjectReference> Cache { get; set; } = new(); // NOTE: as this dude's accessed from potentially more operations at the same time, it might be safer to bless him as a concurrent dictionary.
+  public Dictionary<(string applicationId, string projectId), ObjectReference> Cache { get; set; } = new(); // NOTE: as this dude's accessed from potentially more operations at the same time, it might be safer to bless him as a concurrent dictionary.
 
   public void StoreSendResult(string projectId, IReadOnlyDictionary<Id, ObjectReference> convertedReferences)
   {
