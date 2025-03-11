@@ -28,7 +28,7 @@ jobs:
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
 
       - name: ⚒️ Run build on Windows
-        run: ./build.ps1
+        run: ./build.ps1 zip
 
       - name: ⬆️ Upload artifacts
         #if tag and it's main branch (or installer-test branch)
