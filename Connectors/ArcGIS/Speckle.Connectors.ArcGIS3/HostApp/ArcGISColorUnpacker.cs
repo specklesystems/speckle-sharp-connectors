@@ -184,6 +184,7 @@ public class ArcGISColorUnpacker
     if (StoredColor is int existingColorProxyId)
     {
       AddObjectIdToColorProxyCache(rowApplicationId, existingColorProxyId);
+      return;
     }
 
     // get the color from the renderer and row

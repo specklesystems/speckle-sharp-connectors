@@ -2,6 +2,7 @@
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Utils;
+using Speckle.Converter.Navisworks.Constants;
 
 namespace Speckle.Connector.Navisworks.Operations.Send.Filters;
 
@@ -12,6 +13,9 @@ public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilterSelect
   public NavisworksSavedSetsFilter(IElementSelectionService selectionService)
   {
     _selectionService = selectionService;
+
+    Items = [];
+    SelectedItems = [];
 
     GetSavedSets();
   }
@@ -36,21 +40,15 @@ public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilterSelect
       return objectIds;
     }
 
-    NAV.SavedItemCollection? selectionSets = NavisworksApp.ActiveDocument.SelectionSets.RootItem.Children;
+    var selectionSets = NavisworksApp.ActiveDocument.SelectionSets;
 
     foreach (var selectedSetGuid in SelectedItems)
     {
       var guid = new Guid(selectedSetGuid.Id);
-      var index = selectionSets.IndexOfGuid(guid);
-
-      if (index == -1)
-      {
-        throw new SpeckleSendFilterException($"Selection set with GUID {guid} not found.");
-      }
-
-      var selectionSetItem = selectionSets[index];
+      var selectionSetItem =
+        selectionSets.ResolveGuid(guid)
+        ?? throw new SpeckleSendFilterException($"Selection set with GUID {guid} not found.");
       var selectionSet = (NAV.SelectionSet)selectionSetItem;
-
       if (selectionSet.HasSearch)
       {
         objectIds.AddRange(ResolveSearchSet(selectionSet.Search));
@@ -74,34 +72,60 @@ public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilterSelect
   private IEnumerable<string> ResolveSearchSet(NAV.Search selectionSetSearch) =>
     selectionSetSearch
       .FindAll(NavisworksApp.ActiveDocument, false)
-      .Where(_selectionService.IsVisible) // Exclude hidden elements
-      .Select(_selectionService.GetModelItemPath) // Resolve to index paths
+      .Where(_selectionService.IsVisible)
+      .Select(_selectionService.GetModelItemPath)
       .ToList();
 
   /// <summary>
   /// Since it is called from constructor, it is re-called whenever UI calls SendBinding.GetSendFilters() on SendFilter dialog.
-  /// Do not change the behavior/scope of this class on send binding unless make sure the behavior is same. Otherwise we might not be able to update list of saved sets.
+  /// Do not change the behavior/scope of this class on send binding unless make sure the behavior is same. Otherwise, we might not be able to update list of saved sets.
   /// </summary>
   private void GetSavedSets()
   {
-    List<NAV.SavedItem> savedSetRecords = NavisworksApp
-      .ActiveDocument.SelectionSets.RootItem.Children.Where(set => !set.IsGroup)
-      .ToList();
+    List<NAV.SelectionSet> savedSetRecords = [];
+
+    CollectSavedSets(NavisworksApp.ActiveDocument.SelectionSets.RootItem, savedSetRecords);
 
     Items = savedSetRecords
       .Select(setRecord =>
       {
-        NAV.SavedItem? record = setRecord.CreateCopy();
-        string? name = record.DisplayName;
-
-        while (record.Parent != null)
-        {
-          name = record.Parent.DisplayName + "::" + name;
-          record = record.Parent;
-        }
-
-        return new SendFilterSelectItem(setRecord.Guid.ToString(), name);
+        string hierarchicalName = BuildHierarchicalName(setRecord);
+        return new SendFilterSelectItem(setRecord.Guid.ToString(), hierarchicalName);
       })
       .ToList();
+  }
+
+  private static void CollectSavedSets(NAV.SavedItem parentItem, List<NAV.SelectionSet> collectedSets)
+  {
+    if (!parentItem.IsGroup)
+    {
+      return;
+    }
+
+    foreach (NAV.SavedItem item in ((NAV.FolderItem)parentItem).Children)
+    {
+      if (item.IsGroup)
+      {
+        CollectSavedSets(item, collectedSets);
+      }
+      else
+      {
+        collectedSets.Add((NAV.SelectionSet)item);
+      }
+    }
+  }
+
+  private static string BuildHierarchicalName(NAV.SavedItem item)
+  {
+    var pathParts = new List<string> { item.DisplayName };
+
+    var current = item.Parent;
+    while (current != null && current != NavisworksApp.ActiveDocument.SelectionSets.RootItem)
+    {
+      pathParts.Insert(0, current.DisplayName);
+      current = current.Parent;
+    }
+
+    return string.Join(PathConstants.SET_SEPARATOR, pathParts);
   }
 }

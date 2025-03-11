@@ -35,7 +35,7 @@ public class TeklaSelectionBinding : ISelectionBinding
   {
     lock (_selectionEventHandlerLock)
     {
-      _idleManager.SubscribeToIdle(nameof(TeklaSelectionBinding), UpdateSelection);
+      _idleManager.SubscribeToIdle(nameof(UpdateSelection), UpdateSelection);
       UpdateSelection();
     }
   }
