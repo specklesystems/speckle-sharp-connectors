@@ -31,7 +31,7 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
     {
       throw new ValidationException("Cannot convert a mesh with 0 vertices/faces");
     }
-    Span<double> vertexCoordinates = stackalloc double[target.Vertices.Count * 3];
+    var vertexCoordinates = new double[target.Vertices.Count * 3];
     var x = 0;
     for (int i = 0; i < target.Vertices.Count; i++)
     {
@@ -54,7 +54,7 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
       }
     }
 
-    Span<double> textureCoordinates = stackalloc double[target.TextureCoordinates.Count * 2];
+    var textureCoordinates = new double[target.TextureCoordinates.Count * 2];
     x = 0;
     foreach (var textureCoord in target.TextureCoordinates)
     {
@@ -62,14 +62,14 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
       textureCoordinates[x++] = textureCoord.Y;
     }
 
-    Span<int> colors = stackalloc int[target.VertexColors.Count];
+    var colors = new int[target.VertexColors.Count];
     x = 0;
     foreach (var c in target.VertexColors)
     {
       colors[x++] = c.ToArgb();
     }
 
-    Span<double> vertexNormals = stackalloc double[target.Normals.Count * 3];
+    var vertexNormals = new double[target.Normals.Count * 3];
     x = 0;
     foreach (var n in target.Normals)
     {
@@ -83,11 +83,11 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
 
     return new SOG.Mesh
     {
-      vertices = new(vertexCoordinates.ToArray()),
+      vertices = new(vertexCoordinates),
       faces = faces,
-      colors = new(colors.ToArray()),
-      textureCoordinates = new(textureCoordinates.ToArray()),
-      vertexNormals = new(vertexNormals.ToArray()),
+      colors = new(colors),
+      textureCoordinates = new(textureCoordinates),
+      vertexNormals = new(vertexNormals),
       units = _settingsStore.Current.SpeckleUnits,
       volume = volume,
       bbox = bbox
