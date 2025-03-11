@@ -188,6 +188,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       viewFilter.SetContext(_revitContext);
     }
 
+    // decomposing into elementsOnMainModel and linkedElements happens after this method call
+    // therefore, RefreshObjectIds was modified to not filter RevitLinkInstances out!
     var selectedObjects = modelCard.SendFilter.NotNull().RefreshObjectIds();
 
     // all elements is a mix of regular elements and linked models
@@ -203,6 +205,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     var linkedModels = allElements.OfType<RevitLinkInstance>().ToList();
     List<DocumentToConvert> documentElementContexts = [new(null, activeUIDoc.Document, elementsOnMainModel)];
 
+    // TODO: wrap RevitLinkInstance stuff in some helper classes. This is getting long
     foreach (var linkedModel in linkedModels)
     {
       var linkedDoc = linkedModel.GetLinkDocument();
@@ -211,7 +214,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       {
         List<Element> linkedElements;
 
-        // sending via 1 of 2 (or 3) modes (selection / categories) for linked models is very rough atm - poc
+        // sending via 1 of 2 modes (selection / categories) for linked models is very rough atm - poc
         // send option 1 - categories
         if (modelCard.SendFilter is RevitCategoriesFilter categoryFilter && categoryFilter.SelectedCategories != null)
         {
