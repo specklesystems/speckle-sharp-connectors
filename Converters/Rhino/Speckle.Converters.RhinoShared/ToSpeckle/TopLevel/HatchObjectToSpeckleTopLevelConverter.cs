@@ -51,7 +51,7 @@ public class HatchObjectToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
       innerLoops = innerLoops,
       hasHatchPattern = true,
       bbox = bbox,
-      displayValue = allCurves,
+      displayValue = allCurves.Cast<Base>().ToList(),
       units = _settingsStore.Current.SpeckleUnits,
     };
   }
