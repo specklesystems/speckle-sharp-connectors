@@ -42,8 +42,11 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
   // In theory this should never really happen, but if it does
   public ModelCard GetModelById(string id)
   {
-    var model = _models.First(model => model.ModelCardId == id) ?? throw new ModelNotFoundException();
-    return model;
+    lock (_models)
+    {
+      var model = _models.FirstOrDefault(model => model.ModelCardId == id) ?? throw new ModelNotFoundException();
+      return model;
+    }
   }
 
   public void AddModel(ModelCard model)
