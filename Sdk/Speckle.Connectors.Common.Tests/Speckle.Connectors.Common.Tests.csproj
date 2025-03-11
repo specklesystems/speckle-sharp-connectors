@@ -11,13 +11,12 @@
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
-    <PackageReference Include="Moq" />
-    <PackageReference Include="NUnit" />
     <PackageReference Include="NUnit.Analyzers" />
     <PackageReference Include="NUnit3TestAdapter" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+    <ProjectReference Include="..\Speckle.Testing\Speckle.Testing.csproj" />
   </ItemGroup>
 
 </Project>
