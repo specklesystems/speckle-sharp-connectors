@@ -130,7 +130,6 @@ public static class Affected
     }
 
     var majorEquals = currentVersion.Major == lastVersion.Major;
-    var minorEquals = currentVersion.Minor == lastVersion.Minor;
     if (!majorEquals)
     {
       Console.WriteLine($"Current version {currentVersion} is not matching major version: {lastVersion}");
@@ -138,12 +137,10 @@ public static class Affected
       return;
     }
 
-    if (minorEquals)
-    {
-      var (currentCommit, _) = await ReadAsync("git", $"rev-list -n 1 {currentTag}");
-      var (lastCommit, _) = await ReadAsync("git", $"rev-list -n 1 {lastTag}");
-      await RunAsync("dotnet", $"affected -v --from {currentCommit.Trim()} --to {lastCommit.Trim()}", Root);
-    }
+    //use tags no matter the version if major versions match
+    var (currentCommit, _) = await ReadAsync("git", $"rev-list -n 1 {currentTag}");
+    var (lastCommit, _) = await ReadAsync("git", $"rev-list -n 1 {lastTag}");
+    await RunAsync("dotnet", $"affected -v --from {currentCommit.Trim()} --to {lastCommit.Trim()}", Root);
 
     s_affectedComputed = true;
   }

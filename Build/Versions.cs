@@ -14,6 +14,7 @@ public static class Versions
     {
       return s_currentTag;
     }
+    //finds current tag or makes one
     var (currentTag, _) = await ReadAsync("git", "describe --tags");
     currentTag = currentTag.Trim();
     s_currentTag = currentTag;
@@ -51,6 +52,7 @@ public static class Versions
 
   public static async Task<string> GetPreviousTag(string currentTag)
   {
+    //finds a tag starting with current tag and adds no abbrevation
     var (lastTag, _) = await ReadAsync("git", $"describe --abbrev=0 --tags {currentTag}^");
     lastTag = lastTag.Trim();
 
