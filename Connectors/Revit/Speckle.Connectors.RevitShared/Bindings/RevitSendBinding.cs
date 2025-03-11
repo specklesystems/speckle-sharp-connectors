@@ -208,8 +208,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     // TODO: wrap RevitLinkInstance stuff in some helper classes. This is getting long
     foreach (var linkedModel in linkedModels)
     {
+      // invert transform to convert FROM host model TO linked model coordinate system (reverse of GetTotalTransform)
       var linkedDoc = linkedModel.GetLinkDocument();
-      var transform = linkedModel.GetTotalTransform();
+      var transform = linkedModel.GetTotalTransform().Inverse;
       if (linkedDoc != null)
       {
         List<Element> linkedElements;
