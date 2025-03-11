@@ -7,7 +7,8 @@ using Speckle.Sdk.Models;
 namespace Speckle.Importers.Ifc.Converters;
 
 [GenerateAutoInterface]
-public class GraphConverter(INodeConverter nodeConverter, IRenderMaterialProxyManager proxyManager) : IGraphConverter
+public sealed class GraphConverter(INodeConverter nodeConverter, IRenderMaterialProxyManager proxyManager)
+  : IGraphConverter
 {
   public Base Convert(IfcModel model, IfcGraph graph)
   {
