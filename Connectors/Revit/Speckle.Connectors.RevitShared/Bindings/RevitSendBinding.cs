@@ -17,6 +17,7 @@ using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
+using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.RevitShared.Operations.Send.Filters;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
@@ -200,8 +201,6 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     // treat linked instances on their own. Collector focuses on decomposing the linked instances
     var linkedModels = allElements.OfType<RevitLinkInstance>().ToList();
-
-    // TODO: [CNX-1377] currently below part suits only for selection, need more work to see how align with other filters
     List<DocumentToConvert> documentElementContexts = [new(null, activeUIDoc.Document, elementsOnMainModel)];
 
     foreach (var linkedModel in linkedModels)
@@ -210,8 +209,41 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       var transform = linkedModel.GetTotalTransform();
       if (linkedDoc != null)
       {
-        using var collector = new FilteredElementCollector(linkedDoc);
-        var linkedElements = collector.WhereElementIsNotElementType().WhereElementIsViewIndependent().ToList();
+        List<Element> linkedElements;
+
+        // sending via 1 of 2 (or 3) modes (selection / categories) for linked models is very rough atm - poc
+        // send option 1 - categories
+        if (modelCard.SendFilter is RevitCategoriesFilter categoryFilter && categoryFilter.SelectedCategories != null)
+        {
+          var categoryIds = categoryFilter
+            .SelectedCategories.Select(c => ElementIdHelper.GetElementId(c))
+            .Where(id => id != null)
+            .ToList();
+
+          if (categoryIds.Count > 0)
+          {
+            // use the same category filter for linked document(s)
+            using var multicategoryFilter = new ElementMulticategoryFilter(categoryIds);
+            using var collector = new FilteredElementCollector(linkedDoc);
+            linkedElements = collector
+              .WhereElementIsNotElementType()
+              .WhereElementIsViewIndependent()
+              .WherePasses(multicategoryFilter)
+              .ToList();
+          }
+          else
+          {
+            // no categories selected so return empty list
+            linkedElements = new List<Element>();
+          }
+        }
+        // send option 2 - selection
+        else
+        {
+          using var collector = new FilteredElementCollector(linkedDoc);
+          linkedElements = collector.WhereElementIsNotElementType().WhereElementIsViewIndependent().ToList();
+        }
+
         documentElementContexts.Add(new(transform, linkedDoc, linkedElements));
       }
     }
