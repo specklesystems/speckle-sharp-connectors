@@ -43,6 +43,7 @@ public class RegionToHostConverter : ITypedConverter<SOG.Region, RG.Hatch>
   {
     RG.Curve rhinoCurve = _serviceProvider.GetRequiredService<ITypedConverter<ICurve, RG.Curve>>().Convert(curve);
 
+    // the following check is done for Polycurve conversion, not sure why only polycurve? Maybe not needed here
     if (!rhinoCurve.IsValid)
     {
       throw new ConversionException($"Failed to convert hatch curve {curve}");
