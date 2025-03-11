@@ -2,12 +2,14 @@ name: .NET Build and Publish
 
 on:
   push:
-    branches: ["main", "installer-test/*"]
+    branches: ["main", "installer-test/**"]
     tags: ["v3.*"] # Manual delivery on every 3.x tag
 
 jobs:
   build-windows:
     runs-on: windows-latest
+    env:
+      SPECKLE_VERSION: "unset"
     outputs:
       version: ${{ steps.set-version.outputs.version }}
     steps:
@@ -35,7 +37,7 @@ jobs:
         if: (github.ref_type == 'tag' && startsWith(github.ref, 'refs/tags/v3.') && github.event.base_ref == 'refs/heads/main') || startsWith(github.event.base_ref, 'refs/heads/installer-test/')
         uses: actions/upload-artifact@v4
         with:
-          name: output-${{ env.GitVersion_FullSemVer }}
+          name: output-${{ env.SPECKLE_VERSION }}
           path: output/*.*
           if-no-files-found: error
           retention-days: 1
@@ -43,7 +45,7 @@ jobs:
 
       - id: set-version
         name: Set version to output
-        run: echo "version=${{ env.GitVersion_FullSemVer }}" >> "$Env:GITHUB_OUTPUT"
+        run: echo "version=${{ env.SPECKLE_VERSION }}" >> "$Env:GITHUB_OUTPUT"
 
   deploy-installers:
     runs-on: ubuntu-latest

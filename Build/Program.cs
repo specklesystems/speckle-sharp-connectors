@@ -269,6 +269,7 @@ Target(
       ZipFile.CreateFromDirectory(slugDir, outputPath);
       // Directory.Delete(slugDir, true);
     }
+    Environment.SetEnvironmentVariable("SPECKLE_VERSION", version);
   }
 );
 
