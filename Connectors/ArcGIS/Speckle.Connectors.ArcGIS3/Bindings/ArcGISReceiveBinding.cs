@@ -19,7 +19,7 @@ namespace Speckle.Connectors.ArcGIS.Bindings;
 public sealed class ArcGISReceiveBinding : IReceiveBinding
 {
   public string Name { get; } = "receiveBinding";
-  private readonly CancellationManager _cancellationManager;
+  private readonly ICancellationManager _cancellationManager;
   private readonly DocumentModelStore _store;
   private readonly IServiceProvider _serviceProvider;
   private readonly IOperationProgressManager _operationProgressManager;
@@ -32,7 +32,7 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
   public ArcGISReceiveBinding(
     DocumentModelStore store,
     IBrowserBridge parent,
-    CancellationManager cancellationManager,
+    ICancellationManager cancellationManager,
     IServiceProvider serviceProvider,
     IOperationProgressManager operationProgressManager,
     ILogger<ArcGISReceiveBinding> logger,
@@ -60,7 +60,7 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
         throw new InvalidOperationException("No download model card was found.");
       }
 
-      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
       using var scope = _serviceProvider.CreateScope();
       scope
         .ServiceProvider.GetRequiredService<IConverterSettingsStore<ArcGISConversionSettings>>()
@@ -76,19 +76,16 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
         .ServiceProvider.GetRequiredService<ReceiveOperation>()
         .Execute(
           modelCard.GetReceiveInfo("ArcGIS"), // POC: get host app name from settings? same for GetSendInfo
-          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
-          cancellationToken
-        )
-        .ConfigureAwait(false);
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),
+          cancellationItem.Token
+        );
 
       modelCard.BakedObjectIds = receiveOperationResults.BakedObjectIds.ToList();
-      await Commands
-        .SetModelReceiveResult(
-          modelCardId,
-          receiveOperationResults.BakedObjectIds,
-          receiveOperationResults.ConversionResults
-        )
-        .ConfigureAwait(false);
+      await Commands.SetModelReceiveResult(
+        modelCardId,
+        receiveOperationResults.BakedObjectIds,
+        receiveOperationResults.ConversionResults
+      );
     }
     catch (OperationCanceledException)
     {
@@ -100,7 +97,7 @@ public sealed class ArcGISReceiveBinding : IReceiveBinding
     catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
       _logger.LogModelCardHandledError(ex);
-      await Commands.SetModelError(modelCardId, ex).ConfigureAwait(false);
+      await Commands.SetModelError(modelCardId, ex);
     }
   }
 

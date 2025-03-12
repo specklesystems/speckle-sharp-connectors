@@ -1,6 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using Autodesk.AutoCAD.DatabaseServices;
-using Speckle.Converters.Civil3dShared.ToSpeckle;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
@@ -13,49 +11,41 @@ public class Civil3dRootToSpeckleConverter : IRootToSpeckleConverter
 {
   private readonly IConverterManager<IToSpeckleTopLevelConverter> _toSpeckle;
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
-  private readonly PartDataExtractor _partDataExtractor;
-  private readonly PropertySetExtractor _propertySetExtractor;
-  private readonly GeneralPropertiesExtractor _generalPropertiesExtractor;
-  private readonly ExtensionDictionaryExtractor _extensionDictionaryExtractor;
+  private readonly ToSpeckle.PropertiesExtractor _propertiesExtractor;
 
   public Civil3dRootToSpeckleConverter(
     IConverterManager<IToSpeckleTopLevelConverter> toSpeckle,
     IConverterSettingsStore<Civil3dConversionSettings> settingsStore,
-    PartDataExtractor partDataExtractor,
-    PropertySetExtractor propertySetExtractor,
-    GeneralPropertiesExtractor generalPropertiesExtractor,
-    ExtensionDictionaryExtractor extensionDictionaryExtractor
+    ToSpeckle.PropertiesExtractor propertiesExtractor
   )
   {
     _toSpeckle = toSpeckle;
     _settingsStore = settingsStore;
-    _partDataExtractor = partDataExtractor;
-    _propertySetExtractor = propertySetExtractor;
-    _generalPropertiesExtractor = generalPropertiesExtractor;
-    _extensionDictionaryExtractor = extensionDictionaryExtractor;
+    _propertiesExtractor = propertiesExtractor;
   }
 
   public Base Convert(object target)
   {
-    if (target is not DBObject dbObject)
+    if (target is not ADB.DBObject dbObject)
     {
       throw new ValidationException(
         $"Conversion of {target.GetType().Name} to Speckle is not supported. Only objects that inherit from DBObject are."
       );
     }
 
+    if (target is CDB.AlignmentLabelGroup) // TODO: this should not throw and be reported from connector instead, similar to supported categories in Revit.
+    {
+      throw new ValidationException($"Conversion of {target.GetType().Name} to Speckle is not supported yet.");
+    }
+
     Type type = dbObject.GetType();
-    object objectToConvert = dbObject;
-    Dictionary<string, object?> properties = new();
 
     // check first for civil type objects
+    // POC: some classes (eg Civil.DatabaseServices.CogoPoint) actually inherit from Autocad.DatabaseServices.Entity instead of Civil!!
+    // These need top level converters in Civil for now, but in the future we should implement a EntityToSpeckleTopLevelConverter for Autocad as well.
     if (target is CDB.Entity civilEntity)
     {
       type = civilEntity.GetType();
-      objectToConvert = civilEntity;
-
-      // get properties like partdata, property sets, general properties
-      properties = GetCivilEntityProperties(civilEntity);
     }
 
     var objectConverter = _toSpeckle.ResolveConverter(type);
@@ -66,12 +56,18 @@ public class Civil3dRootToSpeckleConverter : IRootToSpeckleConverter
       {
         using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
         {
-          var result = objectConverter.Convert(objectToConvert);
+          var result = objectConverter.Convert(target);
 
-          if (properties.Count > 0)
-          {
-            result["properties"] = properties;
-          }
+          // NOTE: we can not test acad objects props, so commented out.
+          // // we need to capture properties on autocad entities
+          // if (target is ADB.Entity autocadEntity)
+          // {
+          //   var properties = _propertiesExtractor.GetProperties(autocadEntity);
+          //   if (properties.Count > 0)
+          //   {
+          //     result["properties"] = properties;
+          //   }
+          // }
 
           tr.Commit();
           return result;
@@ -82,38 +78,6 @@ public class Civil3dRootToSpeckleConverter : IRootToSpeckleConverter
     {
       Console.WriteLine(e);
       throw; // Just rethrowing for now, Logs may be needed here.
-    }
-  }
-
-  private Dictionary<string, object?> GetCivilEntityProperties(CDB.Entity entity)
-  {
-    Dictionary<string, object?> properties = new();
-
-    AddDictionaryToPropertyDictionary(
-      _generalPropertiesExtractor.GetGeneralProperties(entity),
-      "General Properties",
-      properties
-    );
-    AddDictionaryToPropertyDictionary(_partDataExtractor.GetPartData(entity), "Part Data", properties);
-    AddDictionaryToPropertyDictionary(_propertySetExtractor.GetPropertySets(entity), "Property Sets", properties);
-    AddDictionaryToPropertyDictionary(
-      _extensionDictionaryExtractor.GetExtensionDictionary(entity),
-      "Extension Dictionary",
-      properties
-    );
-
-    return properties;
-  }
-
-  private void AddDictionaryToPropertyDictionary(
-    Dictionary<string, object?>? entryDictionary,
-    string entryName,
-    Dictionary<string, object?> propertyDictionary
-  )
-  {
-    if (entryDictionary is not null && entryDictionary.Count > 0)
-    {
-      propertyDictionary.Add(entryName, entryDictionary);
     }
   }
 }

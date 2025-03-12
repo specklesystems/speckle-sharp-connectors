@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Speckle.Connector.Tekla2024.Operations.Send.Settings;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
@@ -13,8 +12,9 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
-using Speckle.Converter.Tekla2024;
+using Speckle.Connectors.TeklaShared.Operations.Send.Settings;
 using Speckle.Converters.Common;
+using Speckle.Converters.TeklaShared;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Logging;
@@ -22,19 +22,18 @@ using Tekla.Structures;
 using Tekla.Structures.Model;
 using Task = System.Threading.Tasks.Task;
 
-namespace Speckle.Connector.Tekla2024.Bindings;
+namespace Speckle.Connectors.TeklaShared.Bindings;
 
-public sealed class TeklaSendBinding : ISendBinding, IDisposable
+public sealed class TeklaSendBinding : ISendBinding
 {
   public string Name => "sendBinding";
   public SendBindingUICommands Commands { get; }
   public IBrowserBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly IAppIdleManager _idleManager;
   private readonly IServiceProvider _serviceProvider;
   private readonly List<ISendFilter> _sendFilters;
-  private readonly CancellationManager _cancellationManager;
+  private readonly ICancellationManager _cancellationManager;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<TeklaSendBinding> _logger;
@@ -42,18 +41,17 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
   private readonly ISpeckleApplication _speckleApplication;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly Model _model;
-  private readonly Events _events;
   private readonly ToSpeckleSettingsManager _toSpeckleSettingsManager;
+  private readonly Events _events;
 
   private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
 
   public TeklaSendBinding(
     DocumentModelStore store,
-    IAppIdleManager idleManager,
     IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     IServiceProvider serviceProvider,
-    CancellationManager cancellationManager,
+    ICancellationManager cancellationManager,
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
     ILogger<TeklaSendBinding> logger,
@@ -64,7 +62,6 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
   )
   {
     _store = store;
-    _idleManager = idleManager;
     _serviceProvider = serviceProvider;
     _sendFilters = sendFilters.ToList();
     _cancellationManager = cancellationManager;
@@ -85,12 +82,12 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
 
   private void SubscribeToTeklaEvents()
   {
-    _events.ModelObjectChanged += ModelHandler_OnChange;
+    _events.ModelObjectChanged += OnModelObjectChanged;
     _events.Register();
   }
 
   // subscribes the all changes in a modelobject
-  private void ModelHandler_OnChange(List<ChangeData> changes)
+  private void OnModelObjectChanged(List<ChangeData> changes)
   {
     foreach (var change in changes)
     {
@@ -129,7 +126,7 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
           _teklaConversionSettingsFactory.Create(_model, _toSpeckleSettingsManager.GetSendRebarsAsSolid(modelCard))
         );
 
-      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
       List<ModelObject> teklaObjects = modelCard
         .SendFilter.NotNull()
@@ -147,15 +144,12 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
         .ServiceProvider.GetRequiredService<SendOperation<ModelObject>>()
         .Execute(
           teklaObjects,
-          modelCard.GetSendInfo(_speckleApplication.Slug),
-          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
-          cancellationToken
-        )
-        .ConfigureAwait(false);
+          modelCard.GetSendInfo(_speckleApplication.ApplicationAndVersion),
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),
+          cancellationItem.Token
+        );
 
-      await Commands
-        .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
-        .ConfigureAwait(false);
+      await Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
     }
     catch (OperationCanceledException)
     {
@@ -164,7 +158,7 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
     catch (Exception ex) when (!ex.IsFatal())
     {
       _logger.LogModelCardHandledError(ex);
-      await Commands.SetModelError(modelCardId, ex).ConfigureAwait(false);
+      await Commands.SetModelError(modelCardId, ex);
     }
   }
 
@@ -194,19 +188,8 @@ public sealed class TeklaSendBinding : ISendBinding, IDisposable
       }
     }
 
-    await Commands.SetModelsExpired(expiredSenderIds).ConfigureAwait(false);
+    await Commands.SetModelsExpired(expiredSenderIds);
 
     ChangedObjectIds = new ConcurrentDictionary<string, byte>();
-  }
-
-  private bool _disposed;
-
-  public void Dispose()
-  {
-    if (!_disposed)
-    {
-      _events.UnRegister();
-      _disposed = true;
-    }
   }
 }

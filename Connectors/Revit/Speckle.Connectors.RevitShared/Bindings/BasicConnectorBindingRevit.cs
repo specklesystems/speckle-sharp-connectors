@@ -1,10 +1,8 @@
 using Autodesk.Revit.DB;
-using Microsoft.Extensions.Logging;
 using Revit.Async;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.RevitShared.Operations.Send.Filters;
 using Speckle.Converters.RevitShared.Helpers;
@@ -21,35 +19,31 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
   public BasicConnectorBindingCommands Commands { get; }
 
-  private readonly APIContext _apiContext;
   private readonly DocumentModelStore _store;
   private readonly RevitContext _revitContext;
   private readonly ISpeckleApplication _speckleApplication;
-  private readonly ILogger<BasicConnectorBindingRevit> _logger;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   public BasicConnectorBindingRevit(
-    APIContext apiContext,
     DocumentModelStore store,
     IBrowserBridge parent,
     RevitContext revitContext,
     ISpeckleApplication speckleApplication,
-    ILogger<BasicConnectorBindingRevit> logger
+    ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
     Name = "baseBinding";
     Parent = parent;
-    _apiContext = apiContext;
     _store = store;
     _revitContext = revitContext;
     _speckleApplication = speckleApplication;
-    _logger = logger;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
     Commands = new BasicConnectorBindingCommands(parent);
 
-    // POC: event binding?
     _store.DocumentChanged += (_, _) =>
-      parent.TopLevelExceptionHandler.FireAndForget(async () =>
+      _topLevelExceptionHandler.FireAndForget(async () =>
       {
-        await Commands.NotifyDocumentChanged().ConfigureAwait(false);
+        await Commands.NotifyDocumentChanged();
       });
   }
 
@@ -82,7 +76,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
   public DocumentModelStore GetDocumentState() => _store;
 
-  public void AddModel(ModelCard model) => _store.Models.Add(model);
+  public void AddModel(ModelCard model) => _store.AddModel(model);
 
   public void UpdateModel(ModelCard model) => _store.UpdateModel(model);
 
@@ -91,13 +85,6 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
   public async Task HighlightModel(string modelCardId)
   {
     var model = _store.GetModelById(modelCardId);
-
-    if (model is null)
-    {
-      _logger.LogError("Model was null when highlighting received model");
-      return;
-    }
-
     var activeUIDoc =
       _revitContext.UIApplication?.ActiveUIDocument
       ?? throw new SpeckleException("Unable to retrieve active UI document");
@@ -108,21 +95,21 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     {
       if (senderModelCard.SendFilter is IRevitSendFilter revitFilter)
       {
-        revitFilter.SetContext(_revitContext, _apiContext);
+        revitFilter.SetContext(_revitContext);
       }
 
       if (senderModelCard.SendFilter is RevitViewsFilter revitViewsFilter)
       {
-        await _apiContext
-          .Run(() =>
-          {
-            var view = revitViewsFilter.GetView();
-            if (view is not null)
+        var view = revitViewsFilter.GetView();
+        if (view is not null)
+        {
+          await RevitTask
+            .RunAsync(() =>
             {
               _revitContext.UIApplication.ActiveUIDocument.ActiveView = view;
-            }
-          })
-          .ConfigureAwait(false);
+            })
+            .ConfigureAwait(false);
+        }
         return;
       }
 
@@ -147,13 +134,11 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
     if (elementIds.Count == 0)
     {
-      await Commands
-        .SetModelError(modelCardId, new InvalidOperationException("No objects found to highlight."))
-        .ConfigureAwait(false);
+      await Commands.SetModelError(modelCardId, new InvalidOperationException("No objects found to highlight."));
       return;
     }
 
-    await HighlightObjectsOnView(elementIds).ConfigureAwait(false);
+    await HighlightObjectsOnView(elementIds);
   }
 
   /// <summary>
@@ -174,7 +159,6 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
           .ToList()
       )
       .ConfigureAwait(false);
-    ;
   }
 
   private async Task HighlightObjectsOnView(List<ElementId> objectIds)
@@ -184,7 +168,6 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
       _revitContext.UIApplication?.ActiveUIDocument
       ?? throw new SpeckleException("Unable to retrieve active UI document");
 
-    // UiDocument operations should be wrapped into RevitTask, otherwise doesn't work on other tasks.
     await RevitTask
       .RunAsync(() =>
       {
@@ -192,6 +175,9 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
         activeUIDoc.ShowElements(objectIds);
       })
       .ConfigureAwait(false);
-    ;
+
+    // activeUIDoc.Selection.SetElementIds(objectIds);
+    // activeUIDoc.ShowElements(objectIds);
+    // ;
   }
 }

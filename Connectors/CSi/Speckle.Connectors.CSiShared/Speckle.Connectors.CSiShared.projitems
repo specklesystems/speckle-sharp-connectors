@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>a8e949b8-aa55-4909-99f0-8b551791a1f8</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>Speckle.Connectors.CSiShared</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\et_element_Speckle.bmp">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\CsiSharedBasicConnectorBinding.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\CsiSharedSelectionBinding.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\CsiSharedSendBinding.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Filters\CsiSharedSelectionFilter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\MaterialUnpacker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\CsiSendCollectionManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\CsiFrameSectionPropertyExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\CsiMaterialPropertyExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\CsiShellSectionPropertyExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\IApplicationSectionPropertyExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\ISectionPropertyExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\ISectionUnpacker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\CsiRootObjectBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\CsiPluginBase.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\SpeckleFormBase.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\CsiApplicationService.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\CsiDocumentModelStore.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Utils\ObjectIdentifiers.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="$(MSBuildThisFileDirectory)Resources\et_element_Speckle.bmp" />
+  </ItemGroup>
+</Project>

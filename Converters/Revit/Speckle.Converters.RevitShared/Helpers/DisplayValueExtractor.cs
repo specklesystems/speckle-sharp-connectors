@@ -1,8 +1,11 @@
 using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Objects;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.Helpers;
 
@@ -13,6 +16,10 @@ public sealed class DisplayValueExtractor
     (Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId, bool makeTransparent),
     List<SOG.Mesh>
   > _meshByMaterialConverter;
+  private readonly ITypedConverter<DB.Curve, ICurve> _curveConverter;
+  private readonly ITypedConverter<DB.PolyLine, SOG.Polyline> _polylineConverter;
+  private readonly ITypedConverter<DB.Point, SOG.Point> _pointConverter;
+  private readonly ITypedConverter<DB.PointCloudInstance, SOG.Pointcloud> _pointcloudConverter;
   private readonly ILogger<DisplayValueExtractor> _logger;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
@@ -21,26 +28,99 @@ public sealed class DisplayValueExtractor
       (Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId, bool makeTransparent),
       List<SOG.Mesh>
     > meshByMaterialConverter,
+    ITypedConverter<DB.Curve, ICurve> curveConverter,
+    ITypedConverter<DB.PolyLine, SOG.Polyline> polylineConverter,
+    ITypedConverter<DB.Point, SOG.Point> pointConverter,
+    ITypedConverter<DB.PointCloudInstance, SOG.Pointcloud> pointcloudConverter,
     ILogger<DisplayValueExtractor> logger,
     IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _meshByMaterialConverter = meshByMaterialConverter;
+    _curveConverter = curveConverter;
+    _polylineConverter = polylineConverter;
+    _pointConverter = pointConverter;
+    _pointcloudConverter = pointcloudConverter;
     _logger = logger;
     _converterSettings = converterSettings;
   }
 
-  public List<SOG.Mesh> GetDisplayValue(DB.Element element, DB.Options? options = null)
+  public List<Base> GetDisplayValue(DB.Element element)
   {
-    var (solids, meshes) = GetSolidsAndMeshesFromElement(element, options);
+    switch (element)
+    {
+      // get custom (anything not using element.get_geometry) display values
+      case DB.PointCloudInstance pointcloud:
+        return new() { _pointcloudConverter.Convert(pointcloud) };
+      case DB.ModelCurve modelCurve:
+        return new() { GetCurveDisplayValue(modelCurve.GeometryCurve) };
+      case DB.Grid grid:
+        return new() { GetCurveDisplayValue(grid.Curve) };
+      case DB.Area area:
+        List<Base> areaDisplay = new();
+        using (var options = new DB.SpatialElementBoundaryOptions())
+        {
+          foreach (IList<DB.BoundarySegment> boundarySegmentGroup in area.GetBoundarySegments(options))
+          {
+            foreach (DB.BoundarySegment boundarySegment in boundarySegmentGroup)
+            {
+              areaDisplay.Add(GetCurveDisplayValue(boundarySegment.GetCurve()));
+            }
+          }
+        }
+        return areaDisplay;
 
+      // handle specific types of objects with multiple parts or children
+      // curtain and stacked walls should have their display values in their children
+      case DB.Wall wall:
+        return wall.CurtainGrid is not null || wall.IsStackedWall ? new() : GetGeometryDisplayValue(element);
+      // railings should also include toprail which need to be retrieved separately
+      case DBA.Railing railing:
+        List<Base> railingDisplay = GetGeometryDisplayValue(railing);
+        if (railing.TopRail != DB.ElementId.InvalidElementId)
+        {
+          var topRail = _converterSettings.Current.Document.GetElement(railing.TopRail);
+          railingDisplay.AddRange(GetGeometryDisplayValue(topRail));
+        }
+        return railingDisplay;
+
+      // POC: footprint roofs can have curtain walls in them. Need to check if they can also have non-curtain wall parts, bc currently not skipping anything.
+      // case DB.FootPrintRoof footPrintRoof:
+
+      default:
+        return GetGeometryDisplayValue(element);
+    }
+  }
+
+  private Base GetCurveDisplayValue(DB.Curve curve) => (Base)_curveConverter.Convert(curve);
+
+  private List<Base> GetGeometryDisplayValue(DB.Element element, DB.Options? options = null)
+  {
+    List<Base> displayValue = new();
+    var (solids, meshes, curves, polylines, points) = GetSortedGeometryFromElement(element, options);
+
+    // handle all solids and meshes by their material
     var meshesByMaterial = GetMeshesByMaterial(meshes, solids);
-
     List<SOG.Mesh> displayMeshes = _meshByMaterialConverter.Convert(
       (meshesByMaterial, element.Id, ShouldSetElementDisplayToTransparent(element))
     );
+    displayValue.AddRange(displayMeshes);
 
-    return displayMeshes;
+    // add rest of geometry
+    foreach (var curve in curves)
+    {
+      displayValue.Add(GetCurveDisplayValue(curve));
+    }
+    foreach (var polyline in polylines)
+    {
+      displayValue.Add(_polylineConverter.Convert(polyline));
+    }
+    foreach (var point in points)
+    {
+      displayValue.Add(_pointConverter.Convert(point));
+    }
+
+    return displayValue;
   }
 
   private static Dictionary<DB.ElementId, List<DB.Mesh>> GetMeshesByMaterial(
@@ -93,10 +173,17 @@ public sealed class DisplayValueExtractor
       { DetailLevelType.Fine, DB.ViewDetailLevel.Fine }
     };
 
-  private (List<DB.Solid>, List<DB.Mesh>) GetSolidsAndMeshesFromElement(DB.Element element, DB.Options? options)
+  private (
+    List<DB.Solid>,
+    List<DB.Mesh>,
+    List<DB.Curve>,
+    List<DB.PolyLine>,
+    List<DB.Point>
+  ) GetSortedGeometryFromElement(DB.Element element, DB.Options? options)
   {
     //options = ViewSpecificOptions ?? options ?? new Options() { DetailLevel = DetailLevelSetting };
     options ??= new DB.Options { DetailLevel = _detailLevelMap[_converterSettings.Current.DetailLevel] };
+    options = OverrideViewOptions(element, options);
 
     DB.GeometryElement geom;
     try
@@ -110,16 +197,19 @@ public sealed class DisplayValueExtractor
       geom = element.get_Geometry(options);
     }
 
-    var solids = new List<DB.Solid>();
-    var meshes = new List<DB.Mesh>();
+    List<DB.Solid> solids = new();
+    List<DB.Mesh> meshes = new();
+    List<DB.Curve> curves = new();
+    List<DB.PolyLine> polylines = new();
+    List<DB.Point> points = new();
 
-    if (geom != null)
+    if (geom != null && geom.Any())
     {
       // retrieves all meshes and solids from a geometry element
-      SortGeometry(element, solids, meshes, geom);
+      SortGeometry(element, solids, meshes, curves, polylines, points, geom);
     }
 
-    return (solids, meshes);
+    return (solids, meshes, curves, polylines, points);
   }
 
   /// <summary>
@@ -138,8 +228,19 @@ public sealed class DisplayValueExtractor
   /// <param name="element"></param>
   /// <param name="solids"></param>
   /// <param name="meshes"></param>
+  /// <param name="curves"></param>
+  /// <param name="polylines"></param>
+  /// <param name="points"></param>
   /// <param name="geom"></param>
-  private void SortGeometry(DB.Element element, List<DB.Solid> solids, List<DB.Mesh> meshes, DB.GeometryElement geom)
+  private void SortGeometry(
+    DB.Element element,
+    List<DB.Solid> solids,
+    List<DB.Mesh> meshes,
+    List<DB.Curve> curves,
+    List<DB.PolyLine> polylines,
+    List<DB.Point> points,
+    DB.GeometryElement geom
+  )
   {
     foreach (DB.GeometryObject geomObj in geom)
     {
@@ -156,20 +257,33 @@ public sealed class DisplayValueExtractor
           {
             continue;
           }
-
           solids.Add(solid);
           break;
-        case DB.Mesh mesh:
 
+        case DB.Mesh mesh:
           meshes.Add(mesh);
           break;
+
+        case DB.Curve curve:
+          curves.Add(curve);
+          break;
+
+        case DB.PolyLine polyline:
+          polylines.Add(polyline);
+          break;
+
+        case DB.Point point:
+          points.Add(point);
+          break;
+
         case DB.GeometryInstance instance:
           // element transforms should not be carried down into nested geometryInstances.
           // Nested geomInstances should have their geom retreived with GetInstanceGeom, not GetSymbolGeom
-          SortGeometry(element, solids, meshes, instance.GetInstanceGeometry());
+          SortGeometry(element, solids, meshes, curves, polylines, points, instance.GetInstanceGeometry());
           break;
+
         case DB.GeometryElement geometryElement:
-          SortGeometry(element, solids, meshes, geometryElement);
+          SortGeometry(element, solids, meshes, curves, polylines, points, geometryElement);
           break;
       }
     }
@@ -229,5 +343,55 @@ public sealed class DisplayValueExtractor
 #else
     return false;
 #endif
+  }
+
+  /// <summary>
+  /// Overrides current view options to extract meaningful geometry for various elements. E.g., pipes, plumbing fixtures, steel elements
+  /// </summary>
+  /// <param name="element"></param>
+  /// <returns></returns>
+  private DB.Options OverrideViewOptions(DB.Element element, DB.Options currentOptions)
+  {
+    // there is no point to progress if element category already null
+    if (element.Category is null)
+    {
+      return currentOptions;
+    }
+
+    var elementBuiltInCategory = element.Category.GetBuiltInCategory();
+
+    // Note: some elements do not get display values (you get invalid solids) unless we force the view detail level to be fine. This is annoying, but it's bad ux: people think the
+    // elements are not there (they are, just invisible).
+    if (
+      elementBuiltInCategory == DB.BuiltInCategory.OST_PipeFitting
+      || elementBuiltInCategory == DB.BuiltInCategory.OST_PipeAccessory
+      || elementBuiltInCategory == DB.BuiltInCategory.OST_PlumbingFixtures
+#if REVIT2024_OR_GREATER
+      || element is DB.Toposolid // note, brought back from 2.x.x.
+#endif
+    )
+    {
+      currentOptions.DetailLevel = DB.ViewDetailLevel.Fine; // Force detail level to be fine
+      return currentOptions;
+    }
+    // NOTE: On steel elements. This is an incomplete solution.
+    // If steel element proxies will be sucked in via category selection, and they are not visible in the current view, they will not be extracted out.
+    // I'm inclined to go with this as a semi-permanent limitation. See:
+    // https://speckle.community/t/revit-2025-2-missing-elements-and-colors/14073
+    // and https://forums.autodesk.com/t5/revit-api-forum/how-to-get-steelproxyelement-geometry/td-p/10347898
+    if (
+      elementBuiltInCategory
+      is DB.BuiltInCategory.OST_StructConnections
+        or DB.BuiltInCategory.OST_StructConnectionPlates
+        or DB.BuiltInCategory.OST_StructuralFraming
+        or DB.BuiltInCategory.OST_StructuralColumns
+        or DB.BuiltInCategory.OST_StructConnectionBolts
+        or DB.BuiltInCategory.OST_StructConnectionWelds
+        or DB.BuiltInCategory.OST_StructConnectionShearStuds
+    )
+    {
+      return new DB.Options() { View = _converterSettings.Current.Document.NotNull().ActiveView }; // TODO/NOTE: in case it's a view filter, it should use that specific view. This is a limiting partial fix.
+    }
+    return currentOptions;
   }
 }

@@ -7,53 +7,42 @@ namespace Speckle.Connectors.Rhino.HostApp;
 
 public class RhinoDocumentStore : DocumentModelStore
 {
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private const string SPECKLE_KEY = "Speckle_DUI3";
   public override bool IsDocumentInit { get; set; } = true; // Note: because of rhino implementation details regarding expiry checking of sender cards.
 
   public RhinoDocumentStore(IJsonSerializer jsonSerializer, ITopLevelExceptionHandler topLevelExceptionHandler)
-    : base(jsonSerializer, true)
+    : base(jsonSerializer)
   {
+    _topLevelExceptionHandler = topLevelExceptionHandler;
     RhinoDoc.BeginOpenDocument += (_, _) => topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
     RhinoDoc.EndOpenDocument += (_, e) =>
       topLevelExceptionHandler.CatchUnhandled(() =>
       {
-        if (e.Merge)
-        {
-          return;
-        }
-
         if (e.Document == null)
         {
           return;
         }
 
         IsDocumentInit = true;
-        ReadFromFile();
+        LoadState();
         OnDocumentChanged();
       });
   }
 
-  public override void WriteToFile()
+  protected override void HostAppSaveState(string modelCardState)
   {
     if (RhinoDoc.ActiveDoc == null)
     {
       return; // Should throw
     }
-
     RhinoDoc.ActiveDoc.Strings.Delete(SPECKLE_KEY);
-
-    string serializedState = Serialize();
-    RhinoDoc.ActiveDoc.Strings.SetString(SPECKLE_KEY, SPECKLE_KEY, serializedState);
+    RhinoDoc.ActiveDoc.Strings.SetString(SPECKLE_KEY, SPECKLE_KEY, modelCardState);
   }
 
-  public override void ReadFromFile()
+  protected override void LoadState()
   {
     string stateString = RhinoDoc.ActiveDoc.Strings.GetValue(SPECKLE_KEY, SPECKLE_KEY);
-    if (stateString == null)
-    {
-      Models = new();
-      return;
-    }
-    Models = Deserialize(stateString) ?? new();
+    LoadFromString(stateString);
   }
 }

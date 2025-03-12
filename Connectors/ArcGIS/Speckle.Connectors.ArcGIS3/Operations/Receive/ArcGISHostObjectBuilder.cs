@@ -12,7 +12,7 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.ArcGIS3;
 using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
-using Speckle.Objects.GIS;
+using Speckle.Objects.Data;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
@@ -20,7 +20,6 @@ using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
 using Speckle.Sdk.Models.Proxies;
-using RasterLayer = Speckle.Objects.GIS.RasterLayer;
 
 namespace Speckle.Connectors.ArcGIS.Operations.Receive;
 
@@ -30,7 +29,6 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
   private readonly IFeatureClassUtils _featureClassUtils;
   private readonly ILocalToGlobalUnpacker _localToGlobalUnpacker;
   private readonly LocalToGlobalConverterUtils _localToGlobalConverterUtils;
-  private readonly ICrsUtils _crsUtils;
 
   // POC: figure out the correct scope to only initialize on Receive
   private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
@@ -43,7 +41,6 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     IFeatureClassUtils featureClassUtils,
     ILocalToGlobalUnpacker localToGlobalUnpacker,
     LocalToGlobalConverterUtils localToGlobalConverterUtils,
-    ICrsUtils crsUtils,
     GraphTraversal traverseFunction,
     ArcGISColorManager colorManager
   )
@@ -55,10 +52,22 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     _localToGlobalConverterUtils = localToGlobalConverterUtils;
     _traverseFunction = traverseFunction;
     _colorManager = colorManager;
-    _crsUtils = crsUtils;
   }
 
-  public async Task<HostObjectBuilderResult> Build(
+  public Task<HostObjectBuilderResult> Build(
+    Base rootObject,
+    string projectName,
+    string modelName,
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken
+  )
+  {
+    return QueuedTask.Run(
+      () => BuildInternal(rootObject, projectName, modelName, onOperationProgressed, cancellationToken)
+    );
+  }
+
+  private HostObjectBuilderResult BuildInternal(
     Base rootObject,
     string projectName,
     string modelName,
@@ -78,18 +87,18 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       .ToList();
     if (materials != null)
     {
-      await _colorManager.ParseMaterials(materials, onOperationProgressed).ConfigureAwait(false);
+      _colorManager.ParseMaterials(materials, onOperationProgressed);
     }
 
     // get colors
     List<ColorProxy>? colors = (rootObject[ProxyKeys.COLOR] as List<object>)?.Cast<ColorProxy>().ToList();
     if (colors != null)
     {
-      await _colorManager.ParseColors(colors, onOperationProgressed).ConfigureAwait(false);
+      _colorManager.ParseColors(colors, onOperationProgressed);
     }
 
     int count = 0;
-    List<LocalToGlobalMap> objectsToConvert = GetObjectsToConvert(rootObject);
+    IReadOnlyCollection<LocalToGlobalMap> objectsToConvert = GetObjectsToConvert(rootObject);
     Dictionary<TraversalContext, ObjectConversionTracker> conversionTracker = new();
 
     // 1. convert everything
@@ -104,13 +113,15 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       try
       {
         obj = _localToGlobalConverterUtils.TransformObjects(objectToConvert.AtomicObject, objectToConvert.Matrix);
-        object? conversionResult =
-          obj is GisNonGeometricFeature
-            ? null
-            : await QueuedTask.Run(() => _converter.Convert(obj)).ConfigureAwait(false);
+        object conversionResult = _converter.Convert(obj);
 
         string nestedLayerPath = $"{string.Join("\\", path)}";
-        if (objectToConvert.TraversalContext.Parent?.Current is not VectorLayer)
+
+        if (obj is ArcgisObject gisObj)
+        {
+          nestedLayerPath += $"\\{gisObj.name}";
+        }
+        else
         {
           nestedLayerPath += $"\\{obj.speckle_type.Split(".")[^1]}"; // add sub-layer by speckleType, for non-GIS objects
         }
@@ -130,29 +141,20 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
 
     // 2.1. Group conversionTrackers (to write into datasets)
     onOperationProgressed.Report(new("Grouping features into layers", null));
-    Dictionary<string, List<(TraversalContext, ObjectConversionTracker)>> convertedGroups = await QueuedTask
-      .Run(async () =>
-      {
-        return await _featureClassUtils
-          .GroupConversionTrackers(conversionTracker, (s, progres) => onOperationProgressed.Report(new(s, progres)))
-          .ConfigureAwait(false);
-      })
-      .ConfigureAwait(false);
+    Dictionary<string, List<(TraversalContext, ObjectConversionTracker)>> convertedGroups =
+      _featureClassUtils.GroupConversionTrackers(
+        conversionTracker,
+        (s, progres) => onOperationProgressed.Report(new(s, progres))
+      );
 
     // 2.2. Write groups of objects to Datasets
     onOperationProgressed.Report(new("Writing to Database", null));
-    await QueuedTask
-      .Run(async () =>
-      {
-        await _featureClassUtils
-          .CreateDatasets(
-            conversionTracker,
-            convertedGroups,
-            (s, progres) => onOperationProgressed.Report(new(s, progres))
-          )
-          .ConfigureAwait(false);
-      })
-      .ConfigureAwait(false);
+
+    _featureClassUtils.CreateDatasets(
+      conversionTracker,
+      convertedGroups,
+      (s, progres) => onOperationProgressed.Report(new(s, progres))
+    );
 
     // 3. add layer and tables to the Map and Table Of Content
 
@@ -204,8 +206,7 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       else
       {
         // no layer yet, create and add layer to Map
-        MapMember mapMember = await AddDatasetsToMap(trackerItem, createdLayerGroups, projectName, modelName)
-          .ConfigureAwait(false);
+        MapMember mapMember = AddDatasetsToMap(trackerItem, createdLayerGroups, projectName, modelName);
 
         // add layer and layer URI to tracker
         trackerItem.AddConvertedMapMember(mapMember);
@@ -233,23 +234,19 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
       if (bakedMember.Value.Item1 is FeatureLayer fLayer)
       {
         // Set the feature layer's renderer.
-        await QueuedTask.Run(() => fLayer.SetRenderer(bakedMember.Value.Item2)).ConfigureAwait(false);
+        fLayer.SetRenderer(bakedMember.Value.Item2);
       }
     }
     bakedObjectIds.AddRange(createdLayerGroups.Values.Select(x => x.URI));
 
     // TODO: validated a correct set regarding bakedobject ids
-    return new(bakedObjectIds, results);
+    return new HostObjectBuilderResult(bakedObjectIds, results);
   }
 
-  private List<LocalToGlobalMap> GetObjectsToConvert(Base rootObject)
+  private IReadOnlyCollection<LocalToGlobalMap> GetObjectsToConvert(Base rootObject)
   {
     // keep GISlayers in the list, because they are still needed to extract CRS of the commit (code below)
     List<TraversalContext> objectsToConvertTc = _traverseFunction.Traverse(rootObject).ToList();
-
-    // get CRS from any present VectorLayer
-    Base? vLayer = objectsToConvertTc.FirstOrDefault(x => x.Current is VectorLayer)?.Current;
-    using var crs = _crsUtils.FindSetCrsDataOnReceive(vLayer); // TODO help
 
     // now filter the objects
     objectsToConvertTc = objectsToConvertTc.Where(ctx => ctx.Current is not Collection).ToList();
@@ -304,80 +301,72 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
     }
   }
 
-  private async Task<MapMember> AddDatasetsToMap(
+  private MapMember AddDatasetsToMap(
     ObjectConversionTracker trackerItem,
     Dictionary<string, GroupLayer> createdLayerGroups,
     string projectName,
     string modelName
   )
   {
-    return await QueuedTask
-      .Run(() =>
+    // get layer details
+    string? datasetId = trackerItem.DatasetId; // should not be null here
+    Uri uri = new($"{_settingsStore.Current.SpeckleDatabasePath.AbsolutePath.Replace('/', '\\')}\\{datasetId}");
+    string nestedLayerName = trackerItem.NestedLayerName;
+
+    // add group for the current layer
+    string shortName = nestedLayerName.Split("\\")[^1];
+    string nestedLayerPath = string.Join("\\", nestedLayerName.Split("\\").SkipLast(1));
+
+    // if no general group layer found
+    if (createdLayerGroups.Count == 0)
+    {
+      Map map = _settingsStore.Current.Map;
+      GroupLayer mainGroupLayer = LayerFactory.Instance.CreateGroupLayer(map, 0, $"{projectName}: {modelName}");
+      mainGroupLayer.SetExpanded(true);
+      createdLayerGroups["Basic Speckle Group"] = mainGroupLayer; // key doesn't really matter here
+    }
+
+    var groupLayer = CreateNestedGroupLayer(nestedLayerPath, createdLayerGroups);
+
+    // Most of the Speckle-written datasets will be containing geometry and added as Layers
+    // although, some datasets might be just tables (e.g. native GIS Tables, in the future maybe Revit schedules etc.
+    // We can create a connection to the dataset in advance and determine its type, but this will be more
+    // expensive, than assuming by default that it's a layer with geometry (which in most cases it's expected to be)
+    try
+    {
+      var layer = LayerFactory.Instance.CreateLayer(uri, groupLayer, layerName: shortName);
+      if (layer == null)
       {
-        // get layer details
-        string? datasetId = trackerItem.DatasetId; // should not be null here
-        Uri uri = new($"{_settingsStore.Current.SpeckleDatabasePath.AbsolutePath.Replace('/', '\\')}\\{datasetId}");
-        string nestedLayerName = trackerItem.NestedLayerName;
+        throw new SpeckleException($"Layer '{shortName}' was not created");
+      }
+      layer.SetExpanded(false);
 
-        // add group for the current layer
-        string shortName = nestedLayerName.Split("\\")[^1];
-        string nestedLayerPath = string.Join("\\", nestedLayerName.Split("\\").SkipLast(1));
+      // if Scene
+      // https://community.esri.com/t5/arcgis-pro-sdk-questions/sdk-equivalent-to-changing-layer-s-elevation/td-p/1346139
+      if (_settingsStore.Current.Map.IsScene)
+      {
+        var groundSurfaceLayer = _settingsStore.Current.Map.GetGroundElevationSurfaceLayer();
+        var layerElevationSurface = new CIMLayerElevationSurface { ElevationSurfaceLayerURI = groundSurfaceLayer.URI, };
 
-        // if no general group layer found
-        if (createdLayerGroups.Count == 0)
+        // for Feature Layers
+        if (layer.GetDefinition() is CIMFeatureLayer cimLyr)
         {
-          Map map = _settingsStore.Current.Map;
-          GroupLayer mainGroupLayer = LayerFactory.Instance.CreateGroupLayer(map, 0, $"{projectName}: {modelName}");
-          mainGroupLayer.SetExpanded(true);
-          createdLayerGroups["Basic Speckle Group"] = mainGroupLayer; // key doesn't really matter here
+          cimLyr.LayerElevation = layerElevationSurface;
+          layer.SetDefinition(cimLyr);
         }
+      }
 
-        var groupLayer = CreateNestedGroupLayer(nestedLayerPath, createdLayerGroups);
-
-        // Most of the Speckle-written datasets will be containing geometry and added as Layers
-        // although, some datasets might be just tables (e.g. native GIS Tables, in the future maybe Revit schedules etc.
-        // We can create a connection to the dataset in advance and determine its type, but this will be more
-        // expensive, than assuming by default that it's a layer with geometry (which in most cases it's expected to be)
-        try
-        {
-          var layer = LayerFactory.Instance.CreateLayer(uri, groupLayer, layerName: shortName);
-          if (layer == null)
-          {
-            throw new SpeckleException($"Layer '{shortName}' was not created");
-          }
-          layer.SetExpanded(false);
-
-          // if Scene
-          // https://community.esri.com/t5/arcgis-pro-sdk-questions/sdk-equivalent-to-changing-layer-s-elevation/td-p/1346139
-          if (_settingsStore.Current.Map.IsScene)
-          {
-            var groundSurfaceLayer = _settingsStore.Current.Map.GetGroundElevationSurfaceLayer();
-            var layerElevationSurface = new CIMLayerElevationSurface
-            {
-              ElevationSurfaceLayerURI = groundSurfaceLayer.URI,
-            };
-
-            // for Feature Layers
-            if (layer.GetDefinition() is CIMFeatureLayer cimLyr)
-            {
-              cimLyr.LayerElevation = layerElevationSurface;
-              layer.SetDefinition(cimLyr);
-            }
-          }
-
-          return (MapMember)layer;
-        }
-        catch (ArgumentException)
-        {
-          StandaloneTable table = StandaloneTableFactory.Instance.CreateStandaloneTable(
-            uri,
-            groupLayer,
-            tableName: shortName
-          );
-          return table;
-        }
-      })
-      .ConfigureAwait(false);
+      return layer;
+    }
+    catch (ArgumentException)
+    {
+      StandaloneTable table = StandaloneTableFactory.Instance.CreateStandaloneTable(
+        uri,
+        groupLayer,
+        tableName: shortName
+      );
+      return table;
+    }
   }
 
   private GroupLayer CreateNestedGroupLayer(string nestedLayerPath, Dictionary<string, GroupLayer> createdLayerGroups)
@@ -418,18 +407,5 @@ public class ArcGISHostObjectBuilder : IHostObjectBuilder
 
     var originalPath = reverseOrderPath.Reverse().ToArray();
     return originalPath.Where(x => !string.IsNullOrEmpty(x)).ToArray();
-  }
-
-  [Pure]
-  private static bool HasGISParent(TraversalContext context)
-  {
-    List<Base> gisLayers = context.GetAscendants().Where(IsGISType).Where(obj => obj != context.Current).ToList();
-    return gisLayers.Count > 0;
-  }
-
-  [Pure]
-  private static bool IsGISType(Base obj)
-  {
-    return obj is RasterLayer or VectorLayer;
   }
 }

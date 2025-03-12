@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>1b5c5fb2-3b22-4371-9aa5-3edf3b4d62de</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>Speckle.Converters.CSiShared</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)CsiConversionSettings.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)CsiConversionSettingsFactory.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)CsiRootToSpeckleConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)CsiToSpeckleUnitConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)CsiWrappers.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Extensions\DatabaseTableExtensions.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Extensions\SpeckleApplicationIdExtensions.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CsiFramePropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CsiJointPropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CsiShellPropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CsiToSpeckleCacheSingleton.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\DatabaseTableExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\LineToSpeckleConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\MeshToSpeckleConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\PointToSpeckleConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\SharedPropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\DisplayValueExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\IApplicationPropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\CsiObjectToSpeckleConverterBase.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Utils\Constants.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Utils\DictionaryExtensions.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Utils\Enums.cs" />
+  </ItemGroup>
+</Project>

@@ -9,6 +9,7 @@
     <Import_RootNamespace>Speckle.Connectors.AutocadShared</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\AutocadReceiveBaseBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\AutocadSelectionBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\AutocadReceiveBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\AutocadSendBinding.cs" />
@@ -21,6 +22,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadColorUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadGroupBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadGroupUnpacker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadInstanceBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadInstanceUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadLayerBaker.cs" />
@@ -29,7 +31,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadContext.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadDocumentManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadDocumentModelStore.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadMaterialUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Extensions\DatabaseExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Extensions\DocumentExtensions.cs" />

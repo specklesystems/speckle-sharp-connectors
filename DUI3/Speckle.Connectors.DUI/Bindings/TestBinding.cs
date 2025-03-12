@@ -46,22 +46,20 @@ public class TestBinding : IBinding
     switch (eventName)
     {
       case "emptyTestEvent":
-        await Parent.Send("emptyTestEvent").ConfigureAwait(false);
+        await Parent.Send("emptyTestEvent");
 
         break;
       case "testEvent":
       default:
-        await Parent
-          .Send(
-            "testEvent",
-            new
-            {
-              IsOk = true,
-              Name = "foo",
-              Count = 42
-            }
-          )
-          .ConfigureAwait(false);
+        await Parent.Send(
+          "testEvent",
+          new
+          {
+            IsOk = true,
+            Name = "foo",
+            Count = 42
+          }
+        );
         break;
     }
   }

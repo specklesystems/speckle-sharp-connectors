@@ -21,27 +21,32 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
   private readonly DocumentModelStore _store;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ISpeckleApplication _speckleApplication;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   public RhinoBasicConnectorBinding(
     DocumentModelStore store,
     IBrowserBridge parent,
     ISendConversionCache sendConversionCache,
-    ISpeckleApplication speckleApplication
+    ISpeckleApplication speckleApplication,
+    ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
     _store = store;
     Parent = parent;
     _sendConversionCache = sendConversionCache;
     _speckleApplication = speckleApplication;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
     Commands = new BasicConnectorBindingCommands(parent);
 
     _store.DocumentChanged += (_, _) =>
-      parent.TopLevelExceptionHandler.FireAndForget(async () =>
+      _topLevelExceptionHandler.FireAndForget(async () =>
       {
-        await Commands.NotifyDocumentChanged().ConfigureAwait(false);
+        await Commands.NotifyDocumentChanged();
         // Note: this prevents scaling issues when copy-pasting from one rhino doc to another in the same session.
         _sendConversionCache.ClearCache();
       });
+
+    // eventAggregator.GetEvent<DocumentStoreChangedEvent>().Subscribe(OnDocumentStoreChangedEvent);
   }
 
   public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
@@ -61,7 +66,7 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
 
   public DocumentModelStore GetDocumentState() => _store;
 
-  public void AddModel(ModelCard model) => _store.Models.Add(model);
+  public void AddModel(ModelCard model) => _store.AddModel(model);
 
   public void UpdateModel(ModelCard model) => _store.UpdateModel(model);
 
@@ -100,9 +105,7 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
 
     if (objectIds.Count == 0)
     {
-      await Commands
-        .SetModelError(modelCardId, new OperationCanceledException("No objects found to highlight."))
-        .ConfigureAwait(false);
+      await Commands.SetModelError(modelCardId, new OperationCanceledException("No objects found to highlight."));
       return;
     }
 
@@ -112,9 +115,7 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
 
     if (objects.rhinoObjects.Count == 0 && objects.groups.Count == 0)
     {
-      await Commands
-        .SetModelError(modelCardId, new OperationCanceledException("No objects found to highlight."))
-        .ConfigureAwait(false);
+      await Commands.SetModelError(modelCardId, new OperationCanceledException("No objects found to highlight."));
       return;
     }
 

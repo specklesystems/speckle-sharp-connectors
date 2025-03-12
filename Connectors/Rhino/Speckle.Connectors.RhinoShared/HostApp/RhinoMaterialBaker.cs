@@ -1,9 +1,10 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Rhino;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Material = Rhino.DocObjects.Material;
 
@@ -28,7 +29,7 @@ public class RhinoMaterialBaker
   /// </summary>
   public Dictionary<string, int> ObjectIdAndMaterialIndexMap { get; } = new();
 
-  public void BakeMaterials(List<RenderMaterialProxy> speckleRenderMaterialProxies, string baseLayerName)
+  public void BakeMaterials(IReadOnlyCollection<RenderMaterialProxy> speckleRenderMaterialProxies, string baseLayerName)
   {
     var doc = _converterSettings.Current.Document; // POC: too much right now to interface around
     // List<ReceiveConversionResult> conversionResults = new(); // TODO: return this guy
@@ -40,7 +41,7 @@ public class RhinoMaterialBaker
       try
       {
         // POC: Currently we're relying on the render material name for identification if it's coming from speckle and from which model; could we do something else?
-        string materialId = speckleRenderMaterial.applicationId ?? speckleRenderMaterial.id;
+        string materialId = speckleRenderMaterial.applicationId ?? speckleRenderMaterial.id.NotNull();
         string matName = $"{speckleRenderMaterial.name}-({materialId})-{baseLayerName}";
         matName = matName.Replace("[", "").Replace("]", ""); // "Material" doesn't like square brackets if we create from here. Once they created from Rhino UI, all good..
         Color diffuse = Color.FromArgb(speckleRenderMaterial.diffuse);

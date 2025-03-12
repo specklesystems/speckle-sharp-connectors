@@ -16,6 +16,11 @@ public static class DisplayMeshExtractor
       joinedMesh.Append(renderMeshes);
       return joinedMesh;
     }
+    if (renderMeshes == null)
+    {
+      //MeshingParametrs with small minimumEdgeLength often leads to `CreateFromBrep` returning null
+      throw new ConversionException($"Failed to meshify {obj.GetType()} (perhaps the brep is too small?)");
+    }
 
     return GetDisplayMeshFromGeometry(obj.Geometry);
   }

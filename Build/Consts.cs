@@ -42,10 +42,28 @@ public static class Consts
       ]
     ),
     new(
-      "tekla-structures",
+      "navisworks",
+      [
+        new("Connectors/Navisworks/Speckle.Connectors.Navisworks2020", "net48"),
+        new("Connectors/Navisworks/Speckle.Connectors.Navisworks2021", "net48"),
+        new("Connectors/Navisworks/Speckle.Connectors.Navisworks2022", "net48"),
+        new("Connectors/Navisworks/Speckle.Connectors.Navisworks2023", "net48"),
+        new("Connectors/Navisworks/Speckle.Connectors.Navisworks2024", "net48"),
+        new("Connectors/Navisworks/Speckle.Connectors.Navisworks2025", "net48")
+      ]
+    ),
+    new(
+      "teklastructures",
       [
         new("Connectors/Tekla/Speckle.Connector.Tekla2023", "net48"),
         new("Connectors/Tekla/Speckle.Connector.Tekla2024", "net48")
+      ]
+    ),
+    new(
+      "etabs",
+      [
+        new("Connectors/CSi/Speckle.Connectors.ETABS21", "net48"),
+        new("Connectors/CSi/Speckle.Connectors.ETABS22", "net8.0-windows"),
       ]
     )
   };

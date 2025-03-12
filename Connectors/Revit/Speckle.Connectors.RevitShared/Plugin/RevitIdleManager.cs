@@ -6,12 +6,7 @@ using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
-public interface IRevitIdleManager : IAppIdleManager
-{
-  public void RunAsync(Action action);
-}
-
-public sealed class RevitIdleManager : AppIdleManager, IRevitIdleManager
+public sealed class RevitIdleManager : AppIdleManager
 {
   private readonly UIApplication _uiApplication;
   private readonly IIdleCallManager _idleCallManager;
@@ -42,13 +37,4 @@ public sealed class RevitIdleManager : AppIdleManager, IRevitIdleManager
 
   private void RevitAppOnIdle(object? sender, IdlingEventArgs e) =>
     _idleCallManager.AppOnIdle(() => OnIdle -= RevitAppOnIdle);
-
-  public void RunAsync(Action action)
-  {
-#if REVIT2025
-    global::Revit.Async.RevitTask.RunAsync(action);
-#else
-    action();
-#endif
-  }
 }

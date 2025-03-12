@@ -23,7 +23,7 @@ public class MeshByMaterialDictionaryToSpeckle
     {
       name = "Transparent",
       diffuse = System.Drawing.Color.Transparent.ToArgb(),
-      opacity = 0,
+      opacity = 0.3,
       applicationId = "material_Transparent"
     };
 

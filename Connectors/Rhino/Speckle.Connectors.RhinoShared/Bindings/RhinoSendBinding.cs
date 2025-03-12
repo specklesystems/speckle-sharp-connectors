@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.Commands;
 using Rhino.DocObjects;
+using Rhino.DocObjects.Tables;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
@@ -30,25 +31,33 @@ public sealed class RhinoSendBinding : ISendBinding
   public IBrowserBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly IAppIdleManager _idleManager;
   private readonly IServiceProvider _serviceProvider;
   private readonly List<ISendFilter> _sendFilters;
-  private readonly CancellationManager _cancellationManager;
+  private readonly ICancellationManager _cancellationManager;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<RhinoSendBinding> _logger;
-  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IRhinoConversionSettingsFactory _rhinoConversionSettingsFactory;
   private readonly ISpeckleApplication _speckleApplication;
   private readonly ISdkActivityFactory _activityFactory;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly IAppIdleManager _idleManager;
 
   /// <summary>
-  /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
+  /// Used internally to aggregate the changed objects' id. Objects in this list will be reconverted.
+  ///
+  /// Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
   /// [CNX-202: Unhandled Exception Occurred when receiving in Rhino](https://linear.app/speckle/issue/CNX-202/unhandled-exception-occurred-when-receiving-in-rhino)
   /// As to why a concurrent dictionary, it's because it's the cheapest/easiest way to do so.
   /// https://stackoverflow.com/questions/18922985/concurrent-hashsett-in-net-framework
   /// </summary>
   private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
+
+  /// <summary>
+  /// Stores objects that have "changed" only the commit structure/proxies - they do not need to be reconverted.
+  /// </summary>
+  private ConcurrentDictionary<string, byte> ChangedObjectIdsInGroupsOrLayers { get; set; } = new();
+  private ConcurrentDictionary<int, byte> ChangedMaterialIndexes { get; set; } = new();
 
   private UnitSystem PreviousUnitSystem { get; set; }
 
@@ -58,13 +67,14 @@ public sealed class RhinoSendBinding : ISendBinding
     IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     IServiceProvider serviceProvider,
-    CancellationManager cancellationManager,
+    ICancellationManager cancellationManager,
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
     ILogger<RhinoSendBinding> logger,
     IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
     ISpeckleApplication speckleApplication,
-    ISdkActivityFactory activityFactory
+    ISdkActivityFactory activityFactory,
+    ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
     _store = store;
@@ -77,15 +87,17 @@ public sealed class RhinoSendBinding : ISendBinding
     _logger = logger;
     _rhinoConversionSettingsFactory = rhinoConversionSettingsFactory;
     _speckleApplication = speckleApplication;
-    _topLevelExceptionHandler = parent.TopLevelExceptionHandler.Parent.TopLevelExceptionHandler;
     Parent = parent;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
     Commands = new SendBindingUICommands(parent); // POC: Commands are tightly coupled with their bindings, at least for now, saves us injecting a factory.
     _activityFactory = activityFactory;
     PreviousUnitSystem = RhinoDoc.ActiveDoc.ModelUnitSystem;
     SubscribeToRhinoEvents();
   }
 
+#pragma warning disable CA1502
   private void SubscribeToRhinoEvents()
+#pragma warning restore CA1502
   {
     Command.BeginCommand += (_, e) =>
     {
@@ -93,6 +105,15 @@ public sealed class RhinoSendBinding : ISendBinding
       {
         var selectedObject = RhinoDoc.ActiveDoc.Objects.GetSelectedObjects(false, false).First();
         ChangedObjectIds[selectedObject.Id.ToString()] = 1;
+      }
+
+      if (e.CommandEnglishName == "Ungroup")
+      {
+        foreach (RhinoObject selectedObject in RhinoDoc.ActiveDoc.Objects.GetSelectedObjects(false, false))
+        {
+          ChangedObjectIdsInGroupsOrLayers[selectedObject.Id.ToString()] = 1;
+        }
+        _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
       }
     };
 
@@ -109,69 +130,150 @@ public sealed class RhinoSendBinding : ISendBinding
       {
         PreviousUnitSystem = newUnit;
 
-        await InvalidateAllSender().ConfigureAwait(false);
+        await InvalidateAllSender();
       }
     };
 
     RhinoDoc.AddRhinoObject += (_, e) =>
       _topLevelExceptionHandler.CatchUnhandled(() =>
       {
-        // NOTE: This does not work if rhino starts and opens a blank doc;
-        // These events always happen in a doc. Why guard agains a null doc?
-        // if (!_store.IsDocumentInit)
-        // {
-        //   return;
-        // }
+        if (!_store.IsDocumentInit)
+        {
+          return;
+        }
 
         ChangedObjectIds[e.ObjectId.ToString()] = 1;
-        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
       });
 
     RhinoDoc.DeleteRhinoObject += (_, e) =>
       _topLevelExceptionHandler.CatchUnhandled(() =>
       {
-        // NOTE: This does not work if rhino starts and opens a blank doc;
-        // These events always happen in a doc. Why guard agains a null doc?
-        // if (!_store.IsDocumentInit)
-        // {
-        //   return;
-        // }
+        if (!_store.IsDocumentInit)
+        {
+          return;
+        }
 
         ChangedObjectIds[e.ObjectId.ToString()] = 1;
-        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
+      });
+
+    // NOTE: Catches an object's material change from one user defined doc material to another. Does not catch (as the top event is not triggered) swapping material sources for an object or moving to/from the default material (this is handled below)!
+    RhinoDoc.RenderMaterialsTableEvent += (_, args) =>
+      _topLevelExceptionHandler.CatchUnhandled(() =>
+      {
+        if (!_store.IsDocumentInit)
+        {
+          return;
+        }
+
+        if (args is RhinoDoc.RenderMaterialAssignmentChangedEventArgs changedEventArgs)
+        {
+          ChangedObjectIds[changedEventArgs.ObjectId.ToString()] = 1;
+          _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
+        }
+      });
+
+    RhinoDoc.GroupTableEvent += (_, args) =>
+      _topLevelExceptionHandler.CatchUnhandled(() =>
+      {
+        if (!_store.IsDocumentInit)
+        {
+          return;
+        }
+
+        foreach (var obj in RhinoDoc.ActiveDoc.Groups.GroupMembers(args.GroupIndex))
+        {
+          ChangedObjectIdsInGroupsOrLayers[obj.Id.ToString()] = 1;
+        }
+        _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
+      });
+
+    RhinoDoc.LayerTableEvent += (_, args) =>
+      _topLevelExceptionHandler.CatchUnhandled(() =>
+      {
+        if (!_store.IsDocumentInit)
+        {
+          return;
+        }
+
+        if (
+          args.EventType == LayerTableEventType.Deleted
+          || args.EventType == LayerTableEventType.Current
+          || args.EventType == LayerTableEventType.Added
+        )
+        {
+          return;
+        }
+
+        var layer = RhinoDoc.ActiveDoc.Layers[args.LayerIndex];
+
+        var allLayers = args.Document.Layers.Where(l => /* NOTE: layer path may actually be null in some cases (rhino's fault, not ours) */
+          l.FullPath != null && l.FullPath.Contains(layer.Name)
+        ); // not  e imperfect, but layer.GetChildren(true) is valid only in v8 and above; this filter will include the original layer.
+        foreach (var childLayer in allLayers)
+        {
+          var sublayerObjs = RhinoDoc.ActiveDoc.Objects.FindByLayer(childLayer) ?? [];
+          foreach (var obj in sublayerObjs)
+          {
+            ChangedObjectIdsInGroupsOrLayers[obj.Id.ToString()] = 1;
+          }
+        }
+        _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
+      });
+
+    // Catches and stores changed material ids. These are then used in the expiry checks to invalidate all objects that have assigned any of those material ids.
+    RhinoDoc.MaterialTableEvent += (_, args) =>
+      _topLevelExceptionHandler.CatchUnhandled(() =>
+      {
+        if (!_store.IsDocumentInit)
+        {
+          return;
+        }
+
+        if (args.EventType == MaterialTableEventType.Modified)
+        {
+          ChangedMaterialIndexes[args.Index] = 1;
+          _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
+        }
       });
 
     RhinoDoc.ModifyObjectAttributes += (_, e) =>
       _topLevelExceptionHandler.CatchUnhandled(() =>
       {
-        // NOTE: This does not work if rhino starts and opens a blank doc;
-        // These events always happen in a doc. Why guard agains a null doc?
-        // if (!_store.IsDocumentInit)
-        // {
-        //   return;
-        // }
+        if (!_store.IsDocumentInit)
+        {
+          return;
+        }
 
-        // NOTE: not sure yet we want to track every attribute changes yet. TBD
-        if (e.OldAttributes.LayerIndex != e.NewAttributes.LayerIndex)
+        // NOTE: not sure yet we want to track every attribute changes yet. Explicitly tracking atts that change commit data. TBD
+        if (
+          e.OldAttributes.LayerIndex != e.NewAttributes.LayerIndex
+          || e.OldAttributes.MaterialSource != e.NewAttributes.MaterialSource
+          || e.OldAttributes.MaterialIndex != e.NewAttributes.MaterialIndex // NOTE: this does not work when swapping around from custom doc materials, it works when you swap TO/FROM default material
+          || e.OldAttributes.ColorSource != e.NewAttributes.ColorSource
+          || e.OldAttributes.ObjectColor != e.NewAttributes.ObjectColor
+          || e.OldAttributes.Name != e.NewAttributes.Name
+          || e.OldAttributes.UserStringCount != e.NewAttributes.UserStringCount
+          || e.OldAttributes.GetUserStrings() != e.NewAttributes.GetUserStrings()
+        )
         {
           ChangedObjectIds[e.RhinoObject.Id.ToString()] = 1;
-          _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+          _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
         }
       });
 
     RhinoDoc.ReplaceRhinoObject += (_, e) =>
       _topLevelExceptionHandler.CatchUnhandled(() =>
       {
-        // NOTE: This does not work if rhino starts and opens a blank doc;
-        // These events always happen in a doc. Why guard agains a null doc?
-        // if (!_store.IsDocumentInit)
-        // {
-        //   return;
-        // }
+        if (!_store.IsDocumentInit)
+        {
+          return;
+        }
 
         ChangedObjectIds[e.NewRhinoObject.Id.ToString()] = 1;
         ChangedObjectIds[e.OldRhinoObject.Id.ToString()] = 1;
-        _idleManager.SubscribeToIdle(nameof(RhinoSendBinding), RunExpirationChecks);
+        _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
       });
   }
 
@@ -194,7 +296,7 @@ public sealed class RhinoSendBinding : ISendBinding
         throw new InvalidOperationException("No publish model card was found.");
       }
 
-      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
       List<RhinoObject> rhinoObjects = modelCard
         .SendFilter.NotNull()
@@ -213,15 +315,12 @@ public sealed class RhinoSendBinding : ISendBinding
         .ServiceProvider.GetRequiredService<SendOperation<RhinoObject>>()
         .Execute(
           rhinoObjects,
-          modelCard.GetSendInfo(_speckleApplication.Slug),
-          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
-          cancellationToken
-        )
-        .ConfigureAwait(false);
+          modelCard.GetSendInfo(_speckleApplication.ApplicationAndVersion),
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),
+          cancellationItem.Token
+        );
 
-      await Commands
-        .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
-        .ConfigureAwait(false);
+      await Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
     }
     catch (OperationCanceledException)
     {
@@ -233,7 +332,7 @@ public sealed class RhinoSendBinding : ISendBinding
     catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
       _logger.LogModelCardHandledError(ex);
-      await Commands.SetModelError(modelCardId, ex).ConfigureAwait(false);
+      await Commands.SetModelError(modelCardId, ex);
     }
   }
 
@@ -250,30 +349,61 @@ public sealed class RhinoSendBinding : ISendBinding
       _logger.LogError("Rhino expiration checks were running without an active doc.");
       return;
     }
-    var senders = _store.GetSenders();
-    string[] objectIdsList = ChangedObjectIds.Keys.ToArray(); // NOTE: could not copy to array happens here
-    List<string> expiredSenderIds = new();
 
-    _sendConversionCache.EvictObjects(objectIdsList);
-
-    foreach (SenderModelCard modelCard in senders)
+    // Invalidate any objects whose materials have changed
+    if (!ChangedMaterialIndexes.IsEmpty)
     {
-      var intersection = modelCard.SendFilter.NotNull().SelectedObjectIds.Intersect(objectIdsList).ToList();
-      var isExpired = intersection.Count != 0;
-      if (isExpired)
+      var changedMaterialIndexes = ChangedMaterialIndexes.Keys.ToArray();
+      foreach (var rhinoObject in RhinoDoc.ActiveDoc.Objects)
       {
-        expiredSenderIds.Add(modelCard.ModelCardId.NotNull());
+        if (changedMaterialIndexes.Contains(rhinoObject.Attributes.MaterialIndex))
+        {
+          ChangedObjectIds[rhinoObject.Id.ToString()] = 1;
+        }
       }
     }
 
-    await Commands.SetModelsExpired(expiredSenderIds).ConfigureAwait(false);
+    if (ChangedObjectIds.IsEmpty && ChangedObjectIdsInGroupsOrLayers.IsEmpty)
+    {
+      return;
+    }
+
+    // Actual model card invalidation
+    string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
+    var changedObjectIdsInGroupsOrLayers = ChangedObjectIdsInGroupsOrLayers.Keys.ToArray();
+    _sendConversionCache.EvictObjects(objectIdsList);
+    var senders = _store.GetSenders();
+    List<string> expiredSenderIds = new();
+
+    foreach (SenderModelCard modelCard in senders)
+    {
+      var intersection = modelCard.SendFilter.NotNull().SelectedObjectIds.Intersect(objectIdsList);
+      if (intersection.Any())
+      {
+        expiredSenderIds.Add(modelCard.ModelCardId.NotNull());
+        continue;
+      }
+
+      var groupOrLayerIntersection = modelCard
+        .SendFilter.NotNull()
+        .SelectedObjectIds.Intersect(changedObjectIdsInGroupsOrLayers);
+      if (groupOrLayerIntersection.Any())
+      {
+        expiredSenderIds.Add(modelCard.ModelCardId.NotNull());
+        continue;
+      }
+    }
+
+    await Commands.SetModelsExpired(expiredSenderIds);
     ChangedObjectIds = new();
+    ChangedObjectIdsInGroupsOrLayers = new();
+    ChangedMaterialIndexes = new();
   }
 
   private async Task InvalidateAllSender()
   {
     _sendConversionCache.ClearCache();
     var senderModelCardIds = _store.GetSenders().Select(s => s.ModelCardId.NotNull());
-    await Commands.SetModelsExpired(senderModelCardIds).ConfigureAwait(false);
+    await Commands.SetModelsExpired(senderModelCardIds);
   }
 }

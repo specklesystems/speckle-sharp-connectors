@@ -15,12 +15,12 @@ public class IdleCallManagerTests : MoqTest
     var sut = new IdleCallManager(handler.Object);
     var action = Create<Action>();
     var addEvent = Create<Action>();
-    handler.Setup(x => x.CatchUnhandled(It.IsAny<Action>()));
+    handler.Setup(x => x.CatchUnhandled(It.IsAny<Action>())).Returns(new Result());
     sut.SubscribeToIdle("id", action.Object, addEvent.Object);
   }
 
   [Test]
-  public void SubscribeInternalTest()
+  public void SubscribeToIdleTest_2()
   {
     var handler = Create<ITopLevelExceptionHandler>();
     var sut = new IdleCallManager(handler.Object);
@@ -28,8 +28,11 @@ public class IdleCallManagerTests : MoqTest
     var addEvent = Create<Action>();
     addEvent.Setup(x => x.Invoke());
 
+    //add
+    handler.Setup(m => m.CatchUnhandled(It.IsAny<Action>())).Callback<Action>(a => a.Invoke()).Returns(new Result());
+
     sut.IdleSubscriptionCalled.Should().BeFalse();
-    sut.SubscribeInternal("id", action.Object, addEvent.Object);
+    sut.SubscribeToIdle("id", action.Object, addEvent.Object);
     sut.Calls.Count.Should().Be(1);
     sut.Calls.Should().ContainKey("id");
     sut.IdleSubscriptionCalled.Should().BeTrue();
@@ -53,15 +56,18 @@ public class IdleCallManagerTests : MoqTest
     var expectedAction = Create<Func<Task>>();
     expectedAction.Setup(x => x.Invoke()).Returns(Task.CompletedTask);
 
+    //add
+    handler.Setup(m => m.CatchUnhandled(It.IsAny<Action>())).Returns(new Result());
+    //idle
     handler
       .Setup(m => m.CatchUnhandledAsync(It.IsAny<Func<Task>>()))
       .Callback<Func<Task>>(a => a.Invoke())
-      .Returns(Task.CompletedTask);
+      .ReturnsAsync(new Result());
 
     var removeEvent = Create<Action>();
     removeEvent.Setup(x => x.Invoke());
 
-    sut.SubscribeInternal("Test", expectedAction.Object, () => { });
+    sut.SubscribeToIdle("Test", expectedAction.Object, () => { });
     sut.IdleSubscriptionCalled.Should().BeTrue();
     sut.Calls.Count.Should().Be(1);
 

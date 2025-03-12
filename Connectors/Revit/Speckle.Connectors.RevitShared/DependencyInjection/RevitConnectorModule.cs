@@ -8,7 +8,6 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.Revit.Bindings;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Revit.Operations.Receive;
@@ -26,11 +25,8 @@ public static class ServiceRegistration
   public static void AddRevit(this IServiceCollection serviceCollection)
   {
     serviceCollection.AddConnectorUtils();
-    serviceCollection.AddDUI();
+    serviceCollection.AddDUI<RevitThreadContext, RevitDocumentStore>();
     RegisterUiDependencies(serviceCollection);
-
-    // register
-    serviceCollection.AddSingleton<DocumentModelStore, RevitDocumentStore>();
 
     // Storage Schema
     serviceCollection.AddScoped<DocumentModelStorageSchema>();
@@ -45,12 +41,11 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<IBinding, SelectionBinding>();
     serviceCollection.AddSingleton<IBinding, RevitSendBinding>();
     serviceCollection.AddSingleton<IBinding, RevitReceiveBinding>();
-    serviceCollection.AddSingleton<IRevitIdleManager, RevitIdleManager>();
-
-    serviceCollection.RegisterTopLevelExceptionHandler();
 
     serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
     serviceCollection.AddSingleton<IBasicConnectorBinding, BasicConnectorBindingRevit>();
+
+    serviceCollection.AddSingleton<IAppIdleManager, RevitIdleManager>();
 
     // send operation and dependencies
     serviceCollection.AddScoped<SendOperation<ElementId>>();
@@ -73,9 +68,6 @@ public static class ServiceRegistration
 
     // operation progress manager
     serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();
-
-    // API context helps us to run functions on Revit UI Thread (main)
-    serviceCollection.AddSingleton<APIContext>();
   }
 
   public static void RegisterUiDependencies(IServiceCollection serviceCollection)

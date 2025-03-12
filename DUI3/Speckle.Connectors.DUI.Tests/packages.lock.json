@@ -231,11 +231,6 @@
         "resolved": "13.0.1",
         "contentHash": "ppPFpBcvxdsfUonNcvITKqLl3bqxWbDCZIzDWHzjpdAHRFfZe0Dw9HmA0+za13IdyrgJwpkDTDA9fHaxOrt20A=="
       },
-      "Speckle.DoubleNumerics": {
-        "type": "Transitive",
-        "resolved": "4.0.1",
-        "contentHash": "MzEQ1Im0zTja+tEsdRIk/WlPiKqb22NmTOJcR1ZKm/mz46pezyyID3/wRz6vJUELMpSLnG7LhsxBL+nxbr7V0w=="
-      },
       "Speckle.Newtonsoft.Json": {
         "type": "Transitive",
         "resolved": "13.0.2",
@@ -319,9 +314,9 @@
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection": "[2.2.0, )",
           "Speckle.Connectors.Logging": "[1.0.0, )",
-          "Speckle.Objects": "[3.1.0-dev.191, )",
-          "Speckle.Sdk": "[3.1.0-dev.191, )",
-          "Speckle.Sdk.Dependencies": "[3.1.0-dev.191, )"
+          "Speckle.Objects": "[3.1.1, )",
+          "Speckle.Sdk": "[3.1.1, )",
+          "Speckle.Sdk.Dependencies": "[3.1.1, )"
         }
       },
       "speckle.connectors.dui": {
@@ -329,9 +324,8 @@
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
           "Speckle.Connectors.Common": "[1.0.0, )",
-          "Speckle.Sdk": "[3.1.0-dev.191, )",
-          "Speckle.Sdk.Dependencies": "[3.1.0-dev.191, )",
-          "System.Threading.Tasks.Dataflow": "[6.0.0, )"
+          "Speckle.Sdk": "[3.1.1, )",
+          "Speckle.Sdk.Dependencies": "[3.1.1, )"
         }
       },
       "speckle.connectors.logging": {
@@ -377,42 +371,42 @@
         "resolved": "2.2.0",
         "contentHash": "B2WqEox8o+4KUOpL7rZPyh6qYjik8tHi2tN8Z9jZkHzED8ElYgZa/h6K+xliB435SqUcWT290Fr2aa8BtZjn8A=="
       },
+      "Speckle.DoubleNumerics": {
+        "type": "CentralTransitive",
+        "requested": "[4.1.0, )",
+        "resolved": "4.1.0",
+        "contentHash": "20DtS+FsDRsOD9+AU3TwNFZ0qrKo5f6f7B5ZR9wStsIHHHC9k7DpjbCvuNtmnSjx54MD+TJC7wV2f5iyGVPj1A=="
+      },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.191, )",
-        "resolved": "3.1.0-dev.191",
-        "contentHash": "+m7jRFm0ABbkcSz2UphdxAsislY10IpQ1u79c8a3aVvegLjnsVQZ1sXfRIRO1aFdulkhjYKXYpB3N9M8Z+epgQ==",
+        "requested": "[3.1.1, )",
+        "resolved": "3.1.1",
+        "contentHash": "eap7OfzVjaC7ls47uNDSJm4I/oOxBn7OzN9GrZn/HEg7lahAUsASnijHcD7aDmq/j+EeyoyBwQOKLLlJ9G/2sw==",
         "dependencies": {
-          "Speckle.Sdk": "3.1.0-dev.191"
+          "Speckle.Sdk": "3.1.1"
         }
       },
       "Speckle.Sdk": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.191, )",
-        "resolved": "3.1.0-dev.191",
-        "contentHash": "VVT3LJiYlhqnggxxdeTt1QLrqfxDb044x0yX6kxS9b5MRzeDvK2Vz86pLDfuHs+SXvDimRVfYx1M42IW/aPcTQ==",
+        "requested": "[3.1.1, )",
+        "resolved": "3.1.1",
+        "contentHash": "4oVDt8u9ifHDiK+gOW+YKSmA6QtHI1+FHlgM+ezG7z1Zgm1tLnu/zIo8x7F8G3sQiw8yBx7Nli6mn1Y5YuIorg==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.CSharp": "4.7.0",
           "Microsoft.Data.Sqlite": "7.0.5",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "2.2.0",
           "Microsoft.Extensions.Logging": "2.2.0",
-          "Speckle.DoubleNumerics": "4.0.1",
+          "Speckle.DoubleNumerics": "4.1.0",
           "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Dependencies": "3.1.0-dev.191"
+          "Speckle.Sdk.Dependencies": "3.1.1"
         }
       },
       "Speckle.Sdk.Dependencies": {
         "type": "CentralTransitive",
-        "requested": "[3.1.0-dev.191, )",
-        "resolved": "3.1.0-dev.191",
-        "contentHash": "EmEOyjsGsNi56Z/ZoBOn8WirTmIT2yqWvlUeUh0BSPX2TDMZXHTKOM/kHmP6HSd10KVFn2Zo/ItY7/K9iRtL1Q=="
-      },
-      "System.Threading.Tasks.Dataflow": {
-        "type": "CentralTransitive",
-        "requested": "[6.0.0, )",
-        "resolved": "6.0.0",
-        "contentHash": "+tyDCU3/B1lDdOOAJywHQoFwyXIUghIaP2BxG79uvhfTnO+D9qIgjVlL/JV2NTliYbMHpd6eKDmHp2VHpij7MA=="
+        "requested": "[3.1.1, )",
+        "resolved": "3.1.1",
+        "contentHash": "7RuD2i35uRbvgNR3vY8m5CdqnYJMdI2JWlrJ8kDw+wjKQWZ9JfpjAt0fd+jSijLO0nERNl172EfAOvcPvdGCgQ=="
       }
     }
   }

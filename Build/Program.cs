@@ -7,6 +7,7 @@ using static SimpleExec.Command;
 const string CLEAN = "clean";
 const string RESTORE = "restore";
 const string BUILD = "build";
+const string BUILD_LINUX = "build-linux";
 const string TEST = "test";
 const string TEST_ONLY = "test-only";
 const string FORMAT = "format";
@@ -17,6 +18,7 @@ const string BUILD_SERVER_VERSION = "build-server-version";
 const string CLEAN_LOCKS = "clean-locks";
 const string CHECK_SOLUTIONS = "check-solutions";
 const string DEEP_CLEAN = "deep-clean";
+const string DEEP_CLEAN_LOCAL = "deep-clean-local";
 
 //need to pass arguments
 /*var arguments = new List<string>();
@@ -26,18 +28,59 @@ if (args.Length > 1)
   args = new[] { arguments.First() };
   //arguments = arguments.Skip(1).ToList();
 }*/
+void Build(string solution, string configuration)
+{
+  Console.WriteLine();
+  Console.WriteLine();
+  Console.WriteLine($"Building solution '{solution}' as '{configuration}'");
+  Console.WriteLine();
+  Run("dotnet", $"build .\\{solution} --configuration {configuration} --no-restore");
+}
+void Restore(string solution)
+{
+  Console.WriteLine();
+  Console.WriteLine($"Restoring solution '{solution}'");
+  Console.WriteLine();
+  Run("dotnet", $"restore .\\{solution} --no-cache");
+}
+void DeleteFiles(string pattern)
+{
+  foreach (var f in Glob.Files(".", pattern))
+  {
+    Console.WriteLine("Found and will delete: " + f);
+    File.Delete(f);
+  }
+}
+void DeleteDirectories(string pattern)
+{
+  foreach (var f in Glob.Directories(".", pattern))
+  {
+    if (f.StartsWith("Build"))
+    {
+      continue;
+    }
+    Console.WriteLine("Found and will delete: " + f);
+    Directory.Delete(f, true);
+  }
+}
+
+void CleanSolution(string solution, string configuration)
+{
+  Console.WriteLine("Cleaning solution: " + solution);
+
+  DeleteDirectories("**/bin");
+  DeleteDirectories("**/obj");
+  DeleteFiles("**/*.lock.json");
+  Restore(solution);
+  Build(solution, configuration);
+}
 
 Target(
   CLEAN_LOCKS,
   () =>
   {
-    foreach (var f in Glob.Files(".", "**/*.lock.json"))
-    {
-      Console.WriteLine("Found and will delete: " + f);
-      File.Delete(f);
-    }
-    Console.WriteLine("Running restore now.");
-    Run("dotnet", "restore .\\Speckle.Connectors.sln --no-cache");
+    DeleteFiles("**/*.lock.json");
+    Restore("Speckle.Connectors.sln");
   }
 );
 
@@ -45,26 +88,14 @@ Target(
   DEEP_CLEAN,
   () =>
   {
-    foreach (var f in Glob.Directories(".", "**/bin"))
-    {
-      if (f.StartsWith("Build"))
-      {
-        continue;
-      }
-      Console.WriteLine("Found and will delete: " + f);
-      Directory.Delete(f, true);
-    }
-    foreach (var f in Glob.Directories(".", "**/obj"))
-    {
-      if (f.StartsWith("Build"))
-      {
-        continue;
-      }
-      Console.WriteLine("Found and will delete: " + f);
-      Directory.Delete(f, true);
-    }
-    Console.WriteLine("Running restore now.");
-    Run("dotnet", "restore .\\Speckle.Connectors.sln --no-cache");
+    CleanSolution("Speckle.Connectors.sln", "debug");
+  }
+);
+Target(
+  DEEP_CLEAN_LOCAL,
+  () =>
+  {
+    CleanSolution("Local.sln", "local");
   }
 );
 
@@ -98,7 +129,7 @@ Target(
   VERSION,
   async () =>
   {
-    var (output, _) = await ReadAsync("dotnet", "minver -v w").ConfigureAwait(false);
+    var (output, _) = await ReadAsync("dotnet", "minver -v w");
     output = output.Trim();
     Console.WriteLine($"Version: {output}");
     Run("echo", $"\"version={output}\" >> $GITHUB_OUTPUT");
@@ -175,10 +206,32 @@ Target(
   Glob.Files(".", "**/*.Tests.csproj"),
   file =>
   {
-    Run("dotnet", $"restore {file} --locked-mode");
+    Run("dotnet", $"build {file} -c Release --no-incremental");
     Run(
       "dotnet",
-      $"test {file} -c Release --no-restore --verbosity=minimal  /p:AltCover=true /p:AltCoverAttributeFilter=ExcludeFromCodeCoverage /p:AltCoverVerbosity=Warning"
+      $"test {file} -c Release --no-build --verbosity=minimal /p:AltCover=true /p:AltCoverAttributeFilter=ExcludeFromCodeCoverage /p:AltCoverVerbosity=Warning"
+    );
+  }
+);
+
+Target(
+  BUILD_LINUX,
+  DependsOn(FORMAT),
+  Glob.Files(".", "**/Speckle.Importers.Ifc.csproj"),
+  file =>
+  {
+    Run("dotnet", $"restore {file} --locked-mode");
+    var version = Environment.GetEnvironmentVariable("GitVersion_FullSemVer") ?? "3.0.0-localBuild";
+    var fileVersion = Environment.GetEnvironmentVariable("GitVersion_AssemblySemFileVer") ?? "3.0.0.0";
+    Console.WriteLine($"Version: {version} & {fileVersion}");
+    Run(
+      "dotnet",
+      $"build {file} -c Release --no-restore -warnaserror -p:Version={version} -p:FileVersion={fileVersion} -v:m"
+    );
+
+    RunAsync(
+      "dotnet",
+      $"pack {file} -c Release -o output --no-build -p:Version={version} -p:FileVersion={fileVersion} -v:m"
     );
   }
 );

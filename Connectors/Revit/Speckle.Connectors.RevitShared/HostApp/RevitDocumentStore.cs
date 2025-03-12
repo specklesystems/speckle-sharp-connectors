@@ -1,15 +1,12 @@
-using System.Diagnostics;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.ExtensibleStorage;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
-using Revit.Async;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
-using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.HostApp;
@@ -20,44 +17,44 @@ internal sealed class RevitDocumentStore : DocumentModelStore
   // POC: move to somewhere central?
   private static readonly Guid s_revitDocumentStoreId = new("D35B3695-EDC9-4E15-B62A-D3FC2CB83FA3");
 
+  private readonly IAppIdleManager _idleManager;
   private readonly RevitContext _revitContext;
-  private readonly IRevitIdleManager _idleManager;
   private readonly DocumentModelStorageSchema _documentModelStorageSchema;
   private readonly IdStorageSchema _idStorageSchema;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly IThreadContext _threadContext;
 
   public RevitDocumentStore(
-    IRevitIdleManager idleManager,
+    IAppIdleManager idleManager,
     RevitContext revitContext,
     IJsonSerializer jsonSerializer,
     DocumentModelStorageSchema documentModelStorageSchema,
     IdStorageSchema idStorageSchema,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    IThreadContext threadContext
   )
-    : base(jsonSerializer, true)
+    : base(jsonSerializer)
   {
     _idleManager = idleManager;
     _revitContext = revitContext;
     _documentModelStorageSchema = documentModelStorageSchema;
     _idStorageSchema = idStorageSchema;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
+    _threadContext = threadContext;
 
-    _idleManager.RunAsync(() =>
-    {
-      UIApplication uiApplication = _revitContext.UIApplication.NotNull();
+    UIApplication uiApplication = _revitContext.UIApplication.NotNull();
 
-      uiApplication.ViewActivated += (s, e) => topLevelExceptionHandler.CatchUnhandled(() => OnViewActivated(s, e));
+    uiApplication.ViewActivated += (s, e) => _topLevelExceptionHandler.CatchUnhandled(() => OnViewActivated(s, e));
 
-      uiApplication.Application.DocumentOpening += (_, _) =>
-        topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
+    uiApplication.Application.DocumentOpening += (_, _) =>
+      _topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
 
-      uiApplication.Application.DocumentOpened += (_, _) =>
-        topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
-    });
-
-    Models.CollectionChanged += (_, _) => topLevelExceptionHandler.CatchUnhandled(WriteToFile);
+    uiApplication.Application.DocumentOpened += (_, _) =>
+      _topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
 
     // There is no event that we can hook here for double-click file open...
     // It is kind of harmless since we create this object as "SingleInstance".
-    ReadFromFile();
+    LoadState();
     OnDocumentChanged();
   }
 
@@ -79,62 +76,56 @@ internal sealed class RevitDocumentStore : DocumentModelStore
 
     IsDocumentInit = true;
     _idleManager.SubscribeToIdle(
-      nameof(RevitDocumentStore),
+      nameof(LoadState) + nameof(OnDocumentChanged),
       () =>
       {
-        ReadFromFile();
+        LoadState();
         OnDocumentChanged();
       }
     );
   }
 
-  public override void WriteToFile()
+  protected override void HostAppSaveState(string modelCardState)
   {
-    var doc = _revitContext.UIApplication?.ActiveUIDocument.Document;
-    // POC: this can happen? A: Not really, imho (dim)
+    var doc = _revitContext.UIApplication?.ActiveUIDocument?.Document;
+    // POC: this can happen? A: Not really, imho (dim) (Adam seyz yes it can if loading also triggers a save)
     if (doc == null)
     {
       return;
     }
 
-    RevitTask.RunAsync(() =>
-    {
-      using Transaction t = new(doc, "Speckle Write State");
-      t.Start();
-      using DataStorage ds = GetSettingsDataStorage(doc) ?? DataStorage.Create(doc);
+    _threadContext
+      .RunOnMain(() =>
+      {
+        using Transaction t = new(doc, "Speckle Write State");
+        t.Start();
+        using DataStorage ds = GetSettingsDataStorage(doc) ?? DataStorage.Create(doc);
 
-      using Entity stateEntity = new(_documentModelStorageSchema.GetSchema());
-      string serializedModels = Serialize();
-      stateEntity.Set("contents", serializedModels);
+        using Entity stateEntity = new(_documentModelStorageSchema.GetSchema());
+        string serializedModels = Serialize();
+        stateEntity.Set("contents", serializedModels);
 
-      using Entity idEntity = new(_idStorageSchema.GetSchema());
-      idEntity.Set("Id", s_revitDocumentStoreId);
+        using Entity idEntity = new(_idStorageSchema.GetSchema());
+        idEntity.Set("Id", s_revitDocumentStoreId);
 
-      ds.SetEntity(idEntity);
-      ds.SetEntity(stateEntity);
-      t.Commit();
-    });
+        ds.SetEntity(idEntity);
+        ds.SetEntity(stateEntity);
+        t.Commit();
+      })
+      .FireAndForget();
   }
 
-  public override void ReadFromFile()
+  protected override void LoadState()
   {
-    try
+    var stateEntity = GetSpeckleEntity(_revitContext.UIApplication?.ActiveUIDocument?.Document);
+    if (stateEntity == null || !stateEntity.IsValid())
     {
-      var stateEntity = GetSpeckleEntity(_revitContext.UIApplication?.ActiveUIDocument?.Document);
-      if (stateEntity == null || !stateEntity.IsValid())
-      {
-        Models = new();
-        return;
-      }
+      ClearAndSave();
+      return;
+    }
 
-      string modelsString = stateEntity.Get<string>("contents");
-      Models = Deserialize(modelsString).NotNull();
-    }
-    catch (Exception ex) when (!ex.IsFatal())
-    {
-      Models = new();
-      Debug.WriteLine(ex.Message); // POC: Log here error and notify UI that cards not read succesfully
-    }
+    string modelsString = stateEntity.Get<string>("contents");
+    LoadFromString(modelsString);
   }
 
   private DataStorage? GetSettingsDataStorage(Document doc)

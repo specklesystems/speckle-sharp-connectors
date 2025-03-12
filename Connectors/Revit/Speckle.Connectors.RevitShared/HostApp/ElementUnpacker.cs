@@ -31,7 +31,8 @@ public class ElementUnpacker
     // Step 2: pack curtain wall elements, once we know the full extent of our flattened item list.
     // The behaviour we're looking for:
     // If parent wall is part of selection, does not select individual elements out. Otherwise, selects individual elements (Panels, Mullions) as atomic objects.
-    return PackCurtainWallElements(atomicObjects);
+    // NOTE: this also conditionally "packs" stacked wall elements if their parent is present. See detailed note inside the function.
+    return PackCurtainWallElementsAndStackedWalls(atomicObjects);
   }
 
   /// <summary>
@@ -63,6 +64,13 @@ public class ElementUnpacker
         var groupElements = g.GetMemberIds().Select(doc.GetElement);
         unpackedElements.AddRange(UnpackElements(groupElements));
       }
+      else if (element is BaseArray baseArray)
+      {
+        var arrayElements = baseArray.GetCopiedMemberIds().Select(doc.GetElement);
+        var originalElements = baseArray.GetOriginalMemberIds().Select(doc.GetElement);
+        unpackedElements.AddRange(UnpackElements(arrayElements));
+        unpackedElements.AddRange(UnpackElements(originalElements));
+      }
       // UNPACK: Family instances (as they potentially have nested families inside)
       else if (element is FamilyInstance familyInstance)
       {
@@ -90,18 +98,24 @@ public class ElementUnpacker
     return unpackedElements.GroupBy(el => el.Id).Select(g => g.First()).ToList(); // no disinctBy in here sadly.
   }
 
-  private List<Element> PackCurtainWallElements(List<Element> elements)
+  private List<Element> PackCurtainWallElementsAndStackedWalls(List<Element> elements)
   {
     var ids = elements.Select(el => el.Id).ToArray();
     var doc = _revitContext.UIApplication?.ActiveUIDocument.Document!;
     elements.RemoveAll(element =>
-      (element is Mullion m && ids.Contains(m.Host.Id))
-      || (element is Panel p && ids.Contains(p.Host.Id))
+      (element is Mullion { Host: not null } m && ids.Contains(m.Host.Id))
+      || (element is Panel { Host: not null } p && ids.Contains(p.Host.Id))
       || (
         element is FamilyInstance { Host: not null } f
         && doc.GetElement(f.Host.Id) is Wall { CurtainGrid: not null }
         && ids.Contains(f.Host.Id)
       )
+      // NOTE: It is required to explicitly skip stacked wall members because, when getting objects from a view,
+      // the api will return the wall parent and its stacked children walls separately. This does not happen
+      // via selection. Via category ("Walls") we do not get any parent wall, but just the components of the stacked wall separately.
+      // If you wonder why revit is driving people to insanity, this is one of those moments.
+      // See [CNX-851: Stacked Wall Duplicate Geometry or Materials not applied](https://linear.app/speckle/issue/CNX-851/stacked-wall-duplicate-geometry-or-materials-not-applied)
+      || (element is Wall { IsStackedWallMember: true } wall && ids.Contains(wall.StackedWallOwnerId))
     );
     return elements;
   }

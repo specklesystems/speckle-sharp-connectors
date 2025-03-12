@@ -13,6 +13,7 @@ using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Exceptions;
@@ -38,12 +39,14 @@ public sealed class ArcGISSendBinding : ISendBinding
   private readonly DocumentModelStore _store;
   private readonly IServiceProvider _serviceProvider;
   private readonly List<ISendFilter> _sendFilters;
-  private readonly CancellationManager _cancellationManager;
+  private readonly ICancellationManager _cancellationManager;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<ArcGISSendBinding> _logger;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IArcGISConversionSettingsFactory _arcGISConversionSettingsFactory;
+  private readonly IThreadContext _threadContext;
+  private readonly ISpeckleApplication _speckleApplication;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -62,12 +65,15 @@ public sealed class ArcGISSendBinding : ISendBinding
     IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     IServiceProvider serviceProvider,
-    CancellationManager cancellationManager,
+    ICancellationManager cancellationManager,
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
     ILogger<ArcGISSendBinding> logger,
     IArcGISConversionSettingsFactory arcGisConversionSettingsFactory,
-    MapMembersUtils mapMemberUtils
+    MapMembersUtils mapMemberUtils,
+    IThreadContext threadContext,
+    ISpeckleApplication speckleApplication,
+    ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
     _store = store;
@@ -77,9 +83,11 @@ public sealed class ArcGISSendBinding : ISendBinding
     _sendConversionCache = sendConversionCache;
     _operationProgressManager = operationProgressManager;
     _logger = logger;
-    _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
     _arcGISConversionSettingsFactory = arcGisConversionSettingsFactory;
     _mapMemberUtils = mapMemberUtils;
+    _threadContext = threadContext;
+    _speckleApplication = speckleApplication;
 
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
@@ -90,18 +98,22 @@ public sealed class ArcGISSendBinding : ISendBinding
     };
   }
 
+  private void OnDocumentStoreChangedEvent(object _) => _sendConversionCache.ClearCache();
+
   private void SubscribeToArcGISEvents()
   {
     LayersRemovedEvent.Subscribe(
       a =>
-        _topLevelExceptionHandler.FireAndForget(async () => await GetIdsForLayersRemovedEvent(a).ConfigureAwait(false)),
+        _topLevelExceptionHandler.FireAndForget(
+          async () => await QueuedTask.Run(async () => await GetIdsForLayersRemovedEvent(a))
+        ),
       true
     );
 
     StandaloneTablesRemovedEvent.Subscribe(
       a =>
         _topLevelExceptionHandler.FireAndForget(
-          async () => await GetIdsForStandaloneTablesRemovedEvent(a).ConfigureAwait(false)
+          async () => await QueuedTask.Run(async () => await GetIdsForStandaloneTablesRemovedEvent(a))
         ),
       true
     );
@@ -109,7 +121,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     MapPropertyChangedEvent.Subscribe(
       a =>
         _topLevelExceptionHandler.FireAndForget(
-          async () => await GetIdsForMapPropertyChangedEvent(a).ConfigureAwait(false)
+          async () => await QueuedTask.Run(async () => await GetIdsForMapPropertyChangedEvent(a))
         ),
       true
     ); // Map units, CRS etc.
@@ -117,13 +129,17 @@ public sealed class ArcGISSendBinding : ISendBinding
     MapMemberPropertiesChangedEvent.Subscribe(
       a =>
         _topLevelExceptionHandler.FireAndForget(
-          async () => await GetIdsForMapMemberPropertiesChangedEvent(a).ConfigureAwait(false)
+          async () => await QueuedTask.Run(async () => await GetIdsForMapMemberPropertiesChangedEvent(a))
         ),
       true
     ); // e.g. Layer name
 
     ActiveMapViewChangedEvent.Subscribe(
-      _ => _topLevelExceptionHandler.CatchUnhandled(SubscribeToMapMembersDataSourceChange),
+      _ =>
+        _topLevelExceptionHandler.FireAndForget(async () =>
+        {
+          await QueuedTask.Run(SubscribeToMapMembersDataSourceChange);
+        }),
       true
     );
 
@@ -139,28 +155,24 @@ public sealed class ArcGISSendBinding : ISendBinding
 
   private void SubscribeToMapMembersDataSourceChange()
   {
-    var task = QueuedTask.Run(() =>
+    if (MapView.Active == null)
     {
-      if (MapView.Active == null)
-      {
-        return;
-      }
+      return;
+    }
 
-      // subscribe to layers
-      foreach (Layer layer in MapView.Active.Map.Layers)
+    // subscribe to layers
+    foreach (Layer layer in MapView.Active.Map.Layers)
+    {
+      if (layer is FeatureLayer featureLayer)
       {
-        if (layer is FeatureLayer featureLayer)
-        {
-          SubscribeToFeatureLayerDataSourceChange(featureLayer);
-        }
+        SubscribeToFeatureLayerDataSourceChange(featureLayer);
       }
-      // subscribe to tables
-      foreach (StandaloneTable table in MapView.Active.Map.StandaloneTables)
-      {
-        SubscribeToTableDataSourceChange(table);
-      }
-    });
-    task.Wait();
+    }
+    // subscribe to tables
+    foreach (StandaloneTable table in MapView.Active.Map.StandaloneTables)
+    {
+      SubscribeToTableDataSourceChange(table);
+    }
   }
 
   private void SubscribeToFeatureLayerDataSourceChange(FeatureLayer layer)
@@ -195,25 +207,25 @@ public sealed class ArcGISSendBinding : ISendBinding
   {
     RowCreatedEvent.Subscribe(
       (args) =>
-        Parent.TopLevelExceptionHandler.FireAndForget(async () =>
+        _topLevelExceptionHandler.FireAndForget(async () =>
         {
-          await OnRowChanged(args).ConfigureAwait(false);
+          await OnRowChanged(args);
         }),
       layerTable
     );
     RowChangedEvent.Subscribe(
       (args) =>
-        Parent.TopLevelExceptionHandler.FireAndForget(async () =>
+        _topLevelExceptionHandler.FireAndForget(async () =>
         {
-          await OnRowChanged(args).ConfigureAwait(false);
+          await OnRowChanged(args);
         }),
       layerTable
     );
     RowDeletedEvent.Subscribe(
       (args) =>
-        Parent.TopLevelExceptionHandler.FireAndForget(async () =>
+        _topLevelExceptionHandler.FireAndForget(async () =>
         {
-          await OnRowChanged(args).ConfigureAwait(false);
+          await OnRowChanged(args);
         }),
       layerTable
     );
@@ -258,7 +270,7 @@ public sealed class ArcGISSendBinding : ISendBinding
       }
     }
 
-    await RunExpirationChecks(false).ConfigureAwait(false);
+    await RunExpirationChecks(false);
   }
 
   private async Task GetIdsForLayersRemovedEvent(LayerEventsArgs args)
@@ -267,7 +279,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     {
       ChangedObjectIds[layer.URI] = 1;
     }
-    await RunExpirationChecks(true).ConfigureAwait(false);
+    await RunExpirationChecks(true);
   }
 
   private async Task GetIdsForStandaloneTablesRemovedEvent(StandaloneTableEventArgs args)
@@ -276,7 +288,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     {
       ChangedObjectIds[table.URI] = 1;
     }
-    await RunExpirationChecks(true).ConfigureAwait(false);
+    await RunExpirationChecks(true);
   }
 
   private async Task GetIdsForMapPropertyChangedEvent(MapPropertyChangedEventArgs args)
@@ -289,7 +301,7 @@ public sealed class ArcGISSendBinding : ISendBinding
         ChangedObjectIds[member.URI] = 1;
       }
     }
-    await RunExpirationChecks(false).ConfigureAwait(false);
+    await RunExpirationChecks(false);
   }
 
   private void GetIdsForLayersAddedEvent(LayerEventsArgs args)
@@ -339,7 +351,7 @@ public sealed class ArcGISSendBinding : ISendBinding
       {
         ChangedObjectIds[member.URI] = 1;
       }
-      await RunExpirationChecks(false).ConfigureAwait(false);
+      await RunExpirationChecks(false);
     }
   }
 
@@ -364,66 +376,61 @@ public sealed class ArcGISSendBinding : ISendBinding
         throw new InvalidOperationException("No publish model card was found.");
       }
 
-      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
-      var sendResult = await QueuedTask
-        .Run(async () =>
-        {
-          using var scope = _serviceProvider.CreateScope();
-          scope
-            .ServiceProvider.GetRequiredService<IConverterSettingsStore<ArcGISConversionSettings>>()
-            .Initialize(
-              _arcGISConversionSettingsFactory.Create(
-                Project.Current,
-                MapView.Active.Map,
-                new CRSoffsetRotation(MapView.Active.Map)
-              )
-            );
-          List<MapMember> mapMembers = modelCard
-            .SendFilter.NotNull()
-            .RefreshObjectIds()
-            .Select(id => (MapMember)MapView.Active.Map.FindLayer(id) ?? MapView.Active.Map.FindStandaloneTable(id))
-            .Where(obj => obj != null)
-            .ToList();
-
-          if (mapMembers.Count == 0)
-          {
-            // Handle as CARD ERROR in this function
-            throw new SpeckleSendFilterException(
-              "No objects were found to convert. Please update your publish filter!"
-            );
-          }
-
-          // subscribe to the selected layer events
-          foreach (MapMember mapMember in mapMembers)
-          {
-            if (mapMember is FeatureLayer featureLayer)
-            {
-              SubscribeToFeatureLayerDataSourceChange(featureLayer);
-            }
-            else if (mapMember is StandaloneTable table)
-            {
-              SubscribeToTableDataSourceChange(table);
-            }
-          }
-
-          var result = await scope
-            .ServiceProvider.GetRequiredService<SendOperation<MapMember>>()
-            .Execute(
-              mapMembers,
-              modelCard.GetSendInfo("ArcGIS"), // POC: get host app name from settings? same for GetReceiveInfo
-              _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
-              cancellationToken
+      using var scope = _serviceProvider.CreateScope();
+      List<MapMember> mapMembers = await QueuedTask.Run(() =>
+      {
+        scope
+          .ServiceProvider.GetRequiredService<IConverterSettingsStore<ArcGISConversionSettings>>()
+          .Initialize(
+            _arcGISConversionSettingsFactory.Create(
+              Project.Current,
+              MapView.Active.Map,
+              new CRSoffsetRotation(MapView.Active.Map)
             )
-            .ConfigureAwait(false);
+          );
 
-          return result;
-        })
-        .ConfigureAwait(false);
+        return modelCard
+          .SendFilter.NotNull()
+          .RefreshObjectIds()
+          .Select(id => (MapMember)MapView.Active.Map.FindLayer(id) ?? MapView.Active.Map.FindStandaloneTable(id))
+          .Where(obj => obj != null)
+          .ToList();
+      });
 
-      await Commands
-        .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
-        .ConfigureAwait(false);
+      if (mapMembers.Count == 0)
+      {
+        // Handle as CARD ERROR in this function
+        throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
+      }
+
+      await QueuedTask.Run(() =>
+      {
+        // subscribe to the selected layer events
+        foreach (MapMember mapMember in mapMembers)
+        {
+          if (mapMember is FeatureLayer featureLayer)
+          {
+            SubscribeToFeatureLayerDataSourceChange(featureLayer);
+          }
+          else if (mapMember is StandaloneTable table)
+          {
+            SubscribeToTableDataSourceChange(table);
+          }
+        }
+      });
+
+      var sendResult = await scope
+        .ServiceProvider.GetRequiredService<SendOperation<MapMember>>()
+        .Execute(
+          mapMembers,
+          modelCard.GetSendInfo(_speckleApplication.ApplicationAndVersion),
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),
+          cancellationItem.Token
+        );
+
+      await Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
     }
     catch (OperationCanceledException)
     {
@@ -435,7 +442,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
       _logger.LogModelCardHandledError(ex);
-      await Commands.SetModelError(modelCardId, ex).ConfigureAwait(false);
+      await Commands.SetModelError(modelCardId, ex);
     }
   }
 
@@ -470,7 +477,7 @@ public sealed class ArcGISSendBinding : ISendBinding
       }
     }
 
-    await Commands.SetModelsExpired(expiredSenderIds).ConfigureAwait(false);
+    await Commands.SetModelsExpired(expiredSenderIds);
     ChangedObjectIds = new();
   }
 }

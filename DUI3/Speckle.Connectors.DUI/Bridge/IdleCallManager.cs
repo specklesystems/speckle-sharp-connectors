@@ -1,30 +1,15 @@
 using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
+using Speckle.InterfaceGenerator;
 
 namespace Speckle.Connectors.DUI.Bridge;
 
-public interface IIdleCallManager
-{
-  void SubscribeToIdle(string id, Action action, Action addEvent);
-  void SubscribeToIdle(string id, Func<Task> asyncAction, Action addEvent);
-  void AppOnIdle(Action removeEvent);
-}
-
 //should be registered as singleton
-[SuppressMessage("ReSharper", "InconsistentlySynchronizedField")]
-public sealed class IdleCallManager : IIdleCallManager
+[GenerateAutoInterface]
+public sealed class IdleCallManager(ITopLevelExceptionHandler topLevelExceptionHandler) : IIdleCallManager
 {
   internal ConcurrentDictionary<string, Func<Task>> Calls { get; } = new();
-
   private readonly object _lock = new();
   public bool IdleSubscriptionCalled { get; private set; }
-
-  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
-
-  public IdleCallManager(ITopLevelExceptionHandler topLevelExceptionHandler)
-  {
-    _topLevelExceptionHandler = topLevelExceptionHandler;
-  }
 
   public void SubscribeToIdle(string id, Action action, Action addEvent) =>
     SubscribeToIdle(
@@ -37,19 +22,20 @@ public sealed class IdleCallManager : IIdleCallManager
       addEvent
     );
 
-  public void SubscribeToIdle(string id, Func<Task> asyncAction, Action addEvent) =>
-    _topLevelExceptionHandler.CatchUnhandled(() => SubscribeInternal(id, asyncAction, addEvent));
-
-  internal void SubscribeInternal(string id, Func<Task> action, Action addEvent)
+  public void SubscribeToIdle(string id, Func<Task> action, Action addEvent)
   {
-    Calls.TryAdd(id, action);
+    if (!Calls.TryAdd(id, action))
+    {
+      return;
+    }
+
     if (!IdleSubscriptionCalled)
     {
       lock (_lock)
       {
         if (!IdleSubscriptionCalled)
         {
-          addEvent.Invoke();
+          topLevelExceptionHandler.CatchUnhandled(addEvent.Invoke);
           IdleSubscriptionCalled = true;
         }
       }
@@ -57,17 +43,16 @@ public sealed class IdleCallManager : IIdleCallManager
   }
 
   public void AppOnIdle(Action removeEvent) =>
-    _topLevelExceptionHandler.FireAndForget(async () => await AppOnIdleInternal(removeEvent).ConfigureAwait(false));
+    topLevelExceptionHandler.FireAndForget(async () => await AppOnIdleInternal(removeEvent));
 
   internal async Task AppOnIdleInternal(Action removeEvent)
   {
     foreach (KeyValuePair<string, Func<Task>> kvp in Calls)
     {
-      await _topLevelExceptionHandler.CatchUnhandledAsync(kvp.Value).ConfigureAwait(false);
+      await topLevelExceptionHandler.CatchUnhandledAsync(kvp.Value);
     }
 
     Calls.Clear();
-
     if (IdleSubscriptionCalled)
     {
       lock (_lock)

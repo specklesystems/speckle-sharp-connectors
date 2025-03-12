@@ -3,10 +3,13 @@ using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Dependencies;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
@@ -17,84 +20,44 @@ namespace Speckle.Connectors.Autocad.Operations.Receive;
 /// <summary>
 /// <para>Expects to be a scoped dependency per receive operation.</para>
 /// </summary>
-public class AutocadHostObjectBuilder : IHostObjectBuilder
+public class AutocadHostObjectBuilder(
+  IRootToHostConverter converter,
+  AutocadLayerBaker layerBaker,
+  AutocadGroupBaker groupBaker,
+  AutocadInstanceBaker instanceBaker,
+  IAutocadMaterialBaker materialBaker,
+  IAutocadColorBaker colorBaker,
+  AutocadContext autocadContext,
+  RootObjectUnpacker rootObjectUnpacker
+) : IHostObjectBuilder
 {
-  private readonly AutocadLayerBaker _layerBaker;
-  private readonly IRootToHostConverter _converter;
-  private readonly ISyncToThread _syncToThread;
-  private readonly AutocadGroupBaker _groupBaker;
-  private readonly AutocadMaterialBaker _materialBaker;
-  private readonly AutocadColorBaker _colorBaker;
-  private readonly AutocadInstanceBaker _instanceBaker;
-  private readonly AutocadContext _autocadContext;
-  private readonly RootObjectUnpacker _rootObjectUnpacker;
-
-  public AutocadHostObjectBuilder(
-    IRootToHostConverter converter,
-    AutocadLayerBaker layerBaker,
-    AutocadGroupBaker groupBaker,
-    AutocadInstanceBaker instanceBaker,
-    AutocadMaterialBaker materialBaker,
-    AutocadColorBaker colorBaker,
-    ISyncToThread syncToThread,
-    AutocadContext autocadContext,
-    RootObjectUnpacker rootObjectUnpacker
-  )
-  {
-    _converter = converter;
-    _layerBaker = layerBaker;
-    _groupBaker = groupBaker;
-    _instanceBaker = instanceBaker;
-    _materialBaker = materialBaker;
-    _colorBaker = colorBaker;
-    _syncToThread = syncToThread;
-    _autocadContext = autocadContext;
-    _rootObjectUnpacker = rootObjectUnpacker;
-  }
-
-  public async Task<HostObjectBuilderResult> Build(
+  public Task<HostObjectBuilderResult> Build(
     Base rootObject,
     string projectName,
     string modelName,
     IProgress<CardProgress> onOperationProgressed,
-    CancellationToken _
-  )
-  {
-    // NOTE: This is the only place we apply ISyncToThread across connectors. We need to sync up with main thread here
-    //  after GetObject and Deserialization. It is anti-pattern now. Happiness level 3/10 but works.
-    return await _syncToThread
-      .RunOnThread(
-        async () => await BuildImpl(rootObject, projectName, modelName, onOperationProgressed).ConfigureAwait(false)
-      )
-      .ConfigureAwait(false);
-  }
-
-  private async Task<HostObjectBuilderResult> BuildImpl(
-    Base rootObject,
-    string projectName,
-    string modelName,
-    IProgress<CardProgress> onOperationProgressed
+    CancellationToken cancellationToken
   )
   {
     // Prompt the UI conversion started. Progress bar will swoosh.
     onOperationProgressed.Report(new("Converting", null));
 
     // Layer filter for received commit with project and model name
-    _layerBaker.CreateLayerFilter(projectName, modelName);
+    layerBaker.CreateLayerFilter(projectName, modelName);
 
     // 0 - Clean then Rock n Roll!
-    string baseLayerPrefix = _autocadContext.RemoveInvalidChars($"SPK-{projectName}-{modelName}-");
+    string baseLayerPrefix = autocadContext.RemoveInvalidChars($"SPK-{projectName}-{modelName}-");
     PreReceiveDeepClean(baseLayerPrefix);
 
     // 1 - Unpack objects and proxies from root commit object
-    var unpackedRoot = _rootObjectUnpacker.Unpack(rootObject);
+    var unpackedRoot = rootObjectUnpacker.Unpack(rootObject);
 
     // 2 - Split atomic objects and instance components with their path
-    var (atomicObjects, instanceComponents) = _rootObjectUnpacker.SplitAtomicObjectsAndInstances(
+    var (atomicObjects, instanceComponents) = rootObjectUnpacker.SplitAtomicObjectsAndInstances(
       unpackedRoot.ObjectsToConvert
     );
-    var atomicObjectsWithPath = _layerBaker.GetAtomicObjectsWithPath(atomicObjects);
-    var instanceComponentsWithPath = _layerBaker.GetInstanceComponentsWithPath(instanceComponents);
+    var atomicObjectsWithPath = layerBaker.GetAtomicObjectsWithPath(atomicObjects);
+    var instanceComponentsWithPath = layerBaker.GetInstanceComponentsWithPath(instanceComponents);
 
     // POC: these are not captured by traversal, so we need to re-add them here
     if (unpackedRoot.DefinitionProxies != null && unpackedRoot.DefinitionProxies.Count > 0)
@@ -108,33 +71,35 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     // 3 - Bake materials and colors, as they are used later down the line by layers and objects
     if (unpackedRoot.RenderMaterialProxies != null)
     {
-      await _materialBaker
-        .ParseAndBakeRenderMaterials(unpackedRoot.RenderMaterialProxies, baseLayerPrefix, onOperationProgressed)
-        .ConfigureAwait(true);
+      materialBaker.ParseAndBakeRenderMaterials(
+        unpackedRoot.RenderMaterialProxies,
+        baseLayerPrefix,
+        onOperationProgressed
+      );
     }
 
     if (unpackedRoot.ColorProxies != null)
     {
-      await _colorBaker.ParseColors(unpackedRoot.ColorProxies, onOperationProgressed).ConfigureAwait(true);
+      colorBaker.ParseColors(unpackedRoot.ColorProxies, onOperationProgressed);
     }
 
-    // 5 - Convert atomic objects
-    List<ReceiveConversionResult> results = new();
-    List<string> bakedObjectIds = new();
-    Dictionary<string, List<Entity>> applicationIdMap = new();
+    // 4 - Convert atomic objects
+    HashSet<ReceiveConversionResult> results = new();
+    HashSet<string> bakedObjectIds = new();
+    Dictionary<string, IReadOnlyCollection<Entity>> applicationIdMap = new();
     var count = 0;
     foreach (var (layerPath, atomicObject) in atomicObjectsWithPath)
     {
-      string objectId = atomicObject.applicationId ?? atomicObject.id;
+      string objectId = atomicObject.applicationId ?? atomicObject.id.NotNull();
       onOperationProgressed.Report(new("Converting objects", (double)++count / atomicObjects.Count));
+      cancellationToken.ThrowIfCancellationRequested();
       try
       {
-        List<Entity> convertedObjects = await ConvertObject(atomicObject, layerPath, baseLayerPrefix)
-          .ConfigureAwait(true);
+        IReadOnlyCollection<Entity> convertedObjects = ConvertObject(atomicObject, layerPath, baseLayerPrefix);
 
         applicationIdMap[objectId] = convertedObjects;
 
-        results.AddRange(
+        results.UnionWith(
           convertedObjects.Select(e => new ReceiveConversionResult(
             Status.SUCCESS,
             atomicObject,
@@ -143,7 +108,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
           ))
         );
 
-        bakedObjectIds.AddRange(convertedObjects.Select(e => e.GetSpeckleApplicationId()));
+        bakedObjectIds.UnionWith(convertedObjects.Select(e => e.GetSpeckleApplicationId()));
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
@@ -151,72 +116,80 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
       }
     }
 
-    // 6 - Convert instances
-    var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = await _instanceBaker
-      .BakeInstances(instanceComponentsWithPath, applicationIdMap, baseLayerPrefix, onOperationProgressed)
-      .ConfigureAwait(true);
+    // 5 - Convert instances
+    var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = instanceBaker.BakeInstances(
+      instanceComponentsWithPath,
+      applicationIdMap,
+      baseLayerPrefix,
+      onOperationProgressed
+    );
 
-    bakedObjectIds.RemoveAll(id => consumedObjectIds.Contains(id));
-    bakedObjectIds.AddRange(createdInstanceIds);
-    results.RemoveAll(result => result.ResultId != null && consumedObjectIds.Contains(result.ResultId));
-    results.AddRange(instanceConversionResults);
+    bakedObjectIds.RemoveWhere(id => consumedObjectIds.Contains(id));
+    bakedObjectIds.UnionWith(createdInstanceIds);
+    results.RemoveWhere(result => result.ResultId != null && consumedObjectIds.Contains(result.ResultId));
+    results.UnionWith(instanceConversionResults);
 
-    // 7 - Create groups
+    // 6 - Create groups
     if (unpackedRoot.GroupProxies != null)
     {
-      List<ReceiveConversionResult> groupResults = _groupBaker.CreateGroups(
+      IReadOnlyCollection<ReceiveConversionResult> groupResults = groupBaker.CreateGroups(
         unpackedRoot.GroupProxies,
         applicationIdMap
       );
-      results.AddRange(groupResults);
+      results.UnionWith(groupResults);
     }
 
-    return new HostObjectBuilderResult(bakedObjectIds, results);
+    return Task.FromResult(new HostObjectBuilderResult(bakedObjectIds, results));
   }
 
   private void PreReceiveDeepClean(string baseLayerPrefix)
   {
-    _layerBaker.DeleteAllLayersByPrefix(baseLayerPrefix);
-    _instanceBaker.PurgeInstances(baseLayerPrefix);
-    _materialBaker.PurgeMaterials(baseLayerPrefix);
+    layerBaker.DeleteAllLayersByPrefix(baseLayerPrefix);
+    instanceBaker.PurgeInstances(baseLayerPrefix);
+    materialBaker.PurgeMaterials(baseLayerPrefix);
   }
 
-  private async Task<List<Entity>> ConvertObject(Base obj, Collection[] layerPath, string baseLayerNamePrefix)
+  private IReadOnlyCollection<Entity> ConvertObject(Base obj, Collection[] layerPath, string baseLayerNamePrefix)
   {
-    string layerName = _layerBaker.CreateLayerForReceive(layerPath, baseLayerNamePrefix);
-    var convertedEntities = new List<Entity>();
+    string layerName = layerBaker.CreateLayerForReceive(layerPath, baseLayerNamePrefix);
+    var convertedEntities = new HashSet<Entity>();
 
     using var tr = Application.DocumentManager.CurrentDocument.Database.TransactionManager.StartTransaction();
 
     // 1: convert
-    var converted = _converter.Convert(obj);
+    var converted = converter.Convert(obj);
 
     // 2: handle result
-    if (converted is Entity entity)
+    switch (converted)
     {
-      var bakedEntity = BakeObject(entity, obj, layerName);
-      convertedEntities.Add(bakedEntity);
-    }
-    else if (converted is IEnumerable<(object, Base)> fallbackConversionResult)
-    {
-      var bakedFallbackEntities = BakeObjectsAsGroup(fallbackConversionResult, obj, layerName, baseLayerNamePrefix);
-      convertedEntities.AddRange(bakedFallbackEntities);
+      case Entity entity:
+        var bakedEntity = BakeObject(entity, obj, layerName);
+        convertedEntities.Add(bakedEntity);
+        break;
+
+      case List<(Entity, Base)> listConversionResult: // this is from fallback conversion for brep/brepx/subdx/extrusionx/polycurve
+        var bakedFallbackEntities = BakeObjectsAsGroup(listConversionResult, obj, layerName, baseLayerNamePrefix);
+        convertedEntities.UnionWith(bakedFallbackEntities);
+        break;
+
+      default:
+        // TODO: capture defualt case with report object here? Same as in Rhino
+        break;
     }
 
     tr.Commit();
-    await Task.Delay(10).ConfigureAwait(true);
-    return convertedEntities;
+    return convertedEntities.Freeze();
   }
 
   private Entity BakeObject(Entity entity, Base originalObject, string layerName, Base? parentObject = null)
   {
-    var objId = originalObject.applicationId ?? originalObject.id;
-    if (_colorBaker.ObjectColorsIdMap.TryGetValue(objId, out AutocadColor? color))
+    var objId = originalObject.applicationId ?? originalObject.id.NotNull();
+    if (colorBaker.ObjectColorsIdMap.TryGetValue(objId, out AutocadColor? color))
     {
       entity.Color = color;
     }
 
-    if (_materialBaker.TryGetMaterialId(originalObject, parentObject, out ObjectId matId))
+    if (materialBaker.TryGetMaterialId(originalObject, parentObject, out ObjectId matId))
     {
       entity.MaterialId = matId;
     }
@@ -226,7 +199,7 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
   }
 
   private List<Entity> BakeObjectsAsGroup(
-    IEnumerable<(object, Base)> fallbackConversionResult,
+    List<(Entity, Base)> fallbackConversionResult,
     Base parentObject,
     string layerName,
     string baseLayerName
@@ -236,22 +209,21 @@ public class AutocadHostObjectBuilder : IHostObjectBuilder
     var entities = new List<Entity>();
     foreach (var (conversionResult, originalObject) in fallbackConversionResult)
     {
-      if (conversionResult is not Entity entity)
-      {
-        // TODO: throw?
-        continue;
-      }
+      BakeObject(conversionResult, originalObject, layerName, parentObject);
+      ids.Add(conversionResult.ObjectId);
+      entities.Add(conversionResult);
+    }
 
-      BakeObject(entity, originalObject, layerName, parentObject);
-      ids.Add(entity.ObjectId);
-      entities.Add(entity);
+    if (entities.Count <= 1) // return if empty list or only one, because we don't want to create empty or single item groups.
+    {
+      return entities;
     }
 
     var tr = Application.DocumentManager.CurrentDocument.Database.TransactionManager.TopTransaction;
     var groupDictionary = (DBDictionary)
       tr.GetObject(Application.DocumentManager.CurrentDocument.Database.GroupDictionaryId, OpenMode.ForWrite);
 
-    var groupName = _autocadContext.RemoveInvalidChars(
+    var groupName = autocadContext.RemoveInvalidChars(
       $@"{parentObject.speckle_type.Split('.').Last()} - {parentObject.applicationId ?? parentObject.id}  ({baseLayerName})"
     );
 

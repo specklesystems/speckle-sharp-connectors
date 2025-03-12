@@ -12,15 +12,18 @@ public class ArcGISSelectionBinding : ISelectionBinding
   public string Name => "selectionBinding";
   public IBrowserBridge Parent { get; }
 
-  public ArcGISSelectionBinding(IBrowserBridge parent, MapMembersUtils mapMemberUtils)
+  public ArcGISSelectionBinding(
+    IBrowserBridge parent,
+    MapMembersUtils mapMemberUtils,
+    ITopLevelExceptionHandler topLevelExceptionHandler
+  )
   {
     _mapMemberUtils = mapMemberUtils;
     Parent = parent;
-    var topLevelHandler = parent.TopLevelExceptionHandler;
 
     // example: https://github.com/Esri/arcgis-pro-sdk-community-samples/blob/master/Map-Authoring/QueryBuilderControl/DefinitionQueryDockPaneViewModel.cs
     // MapViewEventArgs args = new(MapView.Active);
-    TOCSelectionChangedEvent.Subscribe(_ => topLevelHandler.CatchUnhandled(OnSelectionChanged), true);
+    TOCSelectionChangedEvent.Subscribe(_ => topLevelExceptionHandler.CatchUnhandled(OnSelectionChanged), true);
   }
 
   private void OnSelectionChanged()
@@ -53,11 +56,8 @@ public class ArcGISSelectionBinding : ISelectionBinding
     selectedMembers.AddRange(mapView.GetSelectedStandaloneTables());
 
     List<MapMember> allNestedMembers = new();
-    foreach (MapMember member in selectedMembers)
-    {
-      var layerMapMembers = _mapMemberUtils.UnpackMapLayers(selectedMembers);
-      allNestedMembers.AddRange(layerMapMembers);
-    }
+    var layerMapMembers = _mapMemberUtils.UnpackMapLayers(selectedMembers);
+    allNestedMembers.AddRange(layerMapMembers);
 
     List<string> objectTypes = allNestedMembers
       .Select(o => o.GetType().ToString().Split(".").Last())

@@ -1,13 +1,14 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using Autodesk.AutoCAD.DatabaseServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Exceptions;
@@ -21,6 +22,7 @@ using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Autocad.Bindings;
 
+[SuppressMessage("ReSharper", "AsyncVoidMethod")]
 public abstract class AutocadSendBaseBinding : ISendBinding
 {
   public string Name => "sendBinding";
@@ -29,15 +31,16 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   public IBrowserBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly IAutocadIdleManager _idleManager;
   private readonly List<ISendFilter> _sendFilters;
-  private readonly CancellationManager _cancellationManager;
+  private readonly ICancellationManager _cancellationManager;
   private readonly IServiceProvider _serviceProvider;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<AutocadSendBinding> _logger;
-  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly ISpeckleApplication _speckleApplication;
+  private readonly IThreadContext _threadContext;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly IAppIdleManager _idleManager;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -45,23 +48,24 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   /// As to why a concurrent dictionary, it's because it's the cheapest/easiest way to do so.
   /// https://stackoverflow.com/questions/18922985/concurrent-hashsett-in-net-framework
   /// </summary>
-  private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
+  private ConcurrentBag<string> ChangedObjectIds { get; set; } = new();
 
   protected AutocadSendBaseBinding(
     DocumentModelStore store,
-    IAutocadIdleManager idleManager,
     IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
-    CancellationManager cancellationManager,
+    ICancellationManager cancellationManager,
     IServiceProvider serviceProvider,
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
     ILogger<AutocadSendBinding> logger,
-    ISpeckleApplication speckleApplication
+    ISpeckleApplication speckleApplication,
+    IThreadContext threadContext,
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    IAppIdleManager idleManager
   )
   {
     _store = store;
-    _idleManager = idleManager;
     _serviceProvider = serviceProvider;
     _cancellationManager = cancellationManager;
     _sendFilters = sendFilters.ToList();
@@ -69,7 +73,9 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     _operationProgressManager = operationProgressManager;
     _logger = logger;
     _speckleApplication = speckleApplication;
-    _topLevelExceptionHandler = parent.TopLevelExceptionHandler;
+    _threadContext = threadContext;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
+    _idleManager = idleManager;
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
 
@@ -103,31 +109,25 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     doc.Database.ObjectModified += (_, e) => OnObjectChanged(e.DBObject);
   }
 
-  private void OnObjectChanged(DBObject dbObject)
-  {
+  private void OnObjectChanged(DBObject dbObject) =>
     _topLevelExceptionHandler.CatchUnhandled(() => OnChangeChangedObjectIds(dbObject));
-  }
 
   private void OnChangeChangedObjectIds(DBObject dBObject)
   {
-    ChangedObjectIds[dBObject.GetSpeckleApplicationId()] = 1;
-    _idleManager.SubscribeToIdle(
-      nameof(AutocadSendBinding),
-      async () => await RunExpirationChecks().ConfigureAwait(false)
-    );
+    ChangedObjectIds.Add(dBObject.GetSpeckleApplicationId());
+    _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), async () => await RunExpirationChecks());
   }
 
   private async Task RunExpirationChecks()
   {
     var senders = _store.GetSenders();
-    string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
     List<string> expiredSenderIds = new();
 
-    _sendConversionCache.EvictObjects(objectIdsList);
+    _sendConversionCache.EvictObjects(ChangedObjectIds);
 
     foreach (SenderModelCard modelCard in senders)
     {
-      var intersection = modelCard.SendFilter.NotNull().RefreshObjectIds().Intersect(objectIdsList).ToList();
+      var intersection = modelCard.SendFilter.NotNull().RefreshObjectIds().Intersect(ChangedObjectIds).ToList();
       bool isExpired = intersection.Count != 0;
       if (isExpired)
       {
@@ -135,7 +135,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
       }
     }
 
-    await Commands.SetModelsExpired(expiredSenderIds).ConfigureAwait(false);
+    await Commands.SetModelsExpired(expiredSenderIds);
     ChangedObjectIds = new();
   }
 
@@ -144,9 +144,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   public List<ICardSetting> GetSendSettings() => [];
 
   public async Task Send(string modelCardId) =>
-    await Parent
-      .RunOnMainThreadAsync(async () => await SendInternal(modelCardId).ConfigureAwait(false))
-      .ConfigureAwait(false);
+    await _threadContext.RunOnMainAsync(async () => await SendInternal(modelCardId));
 
   protected abstract void InitializeSettings(IServiceProvider serviceProvider);
 
@@ -163,7 +161,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
       using var scope = _serviceProvider.CreateScope();
       InitializeSettings(scope.ServiceProvider);
 
-      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
       // Disable document activation (document creation and document switch)
       // Not disabling results in DUI model card being out of sync with the active document
@@ -185,15 +183,12 @@ public abstract class AutocadSendBaseBinding : ISendBinding
         .ServiceProvider.GetRequiredService<SendOperation<AutocadRootObject>>()
         .Execute(
           autocadObjects,
-          modelCard.GetSendInfo(_speckleApplication.Slug),
-          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
-          cancellationToken
-        )
-        .ConfigureAwait(false);
+          modelCard.GetSendInfo(_speckleApplication.ApplicationAndVersion),
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),
+          cancellationItem.Token
+        );
 
-      await Commands
-        .SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults)
-        .ConfigureAwait(false);
+      await Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
     }
     catch (OperationCanceledException)
     {
@@ -205,7 +200,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
     {
       _logger.LogModelCardHandledError(ex);
-      await Commands.SetModelError(modelCardId, ex).ConfigureAwait(false);
+      await Commands.SetModelError(modelCardId, ex);
     }
     finally
     {

@@ -21,18 +21,25 @@ public class BasicConnectorBinding : IBasicConnectorBinding
   public BasicConnectorBindingCommands Commands { get; }
   private readonly DocumentModelStore _store;
   private readonly ISpeckleApplication _speckleApplication;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
-  public BasicConnectorBinding(DocumentModelStore store, IBrowserBridge parent, ISpeckleApplication speckleApplication)
+  public BasicConnectorBinding(
+    DocumentModelStore store,
+    IBrowserBridge parent,
+    ISpeckleApplication speckleApplication,
+    ITopLevelExceptionHandler topLevelExceptionHandler
+  )
   {
     _store = store;
     _speckleApplication = speckleApplication;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
     Parent = parent;
     Commands = new BasicConnectorBindingCommands(parent);
 
     _store.DocumentChanged += (_, _) =>
-      parent.TopLevelExceptionHandler.FireAndForget(async () =>
+      _topLevelExceptionHandler.FireAndForget(async () =>
       {
-        await Commands.NotifyDocumentChanged().ConfigureAwait(false);
+        await Commands.NotifyDocumentChanged();
       });
   }
 
@@ -54,14 +61,16 @@ public class BasicConnectorBinding : IBasicConnectorBinding
 
   public DocumentModelStore GetDocumentState() => _store;
 
-  public void AddModel(ModelCard model) => _store.Models.Add(model);
+  public void AddModel(ModelCard model) => _store.AddModel(model);
 
   public void UpdateModel(ModelCard model) => _store.UpdateModel(model);
 
   public void RemoveModel(ModelCard model) => _store.RemoveModel(model);
 
-  public async Task HighlightObjects(IReadOnlyList<string> objectIds) =>
-    await HighlightObjectsOnView(objectIds.Select(x => new ObjectID(x)).ToList()).ConfigureAwait(false);
+  public async Task HighlightObjects(IReadOnlyList<string> objectIds)
+  {
+    await HighlightObjectsOnView(objectIds.Select(x => new ObjectID(x)).ToList());
+  }
 
   public async Task HighlightModel(string modelCardId)
   {
@@ -88,24 +97,22 @@ public class BasicConnectorBinding : IBasicConnectorBinding
     {
       return;
     }
-    await HighlightObjectsOnView(objectIds).ConfigureAwait(false);
+    await HighlightObjectsOnView(objectIds);
   }
 
   private async Task HighlightObjectsOnView(IReadOnlyList<ObjectID> objectIds)
   {
-    MapView mapView = MapView.Active;
+    await QueuedTask.Run(() =>
+    {
+      MapView mapView = MapView.Active;
 
-    await QueuedTask
-      .Run(async () =>
-      {
-        List<MapMemberFeature> mapMembersFeatures = GetMapMembers(objectIds, mapView);
-        ClearSelectionInTOC();
-        ClearSelection();
-        await SelectMapMembersInTOC(mapMembersFeatures).ConfigureAwait(false);
-        SelectMapMembersAndFeatures(mapMembersFeatures);
-        mapView.ZoomToSelected();
-      })
-      .ConfigureAwait(false);
+      List<MapMemberFeature> mapMembersFeatures = GetMapMembers(objectIds, mapView);
+      ClearSelectionInTOC();
+      ClearSelection();
+      SelectMapMembersInTOC(mapMembersFeatures);
+      SelectMapMembersAndFeatures(mapMembersFeatures);
+      mapView.ZoomToSelected();
+    });
   }
 
   private List<MapMemberFeature> GetMapMembers(IReadOnlyList<ObjectID> objectIds, MapView mapView)
@@ -171,7 +178,7 @@ public class BasicConnectorBinding : IBasicConnectorBinding
     }
   }
 
-  private async Task SelectMapMembersInTOC(IReadOnlyList<MapMemberFeature> mapMembersFeatures)
+  private void SelectMapMembersInTOC(IReadOnlyList<MapMemberFeature> mapMembersFeatures)
   {
     List<Layer> layers = new();
     List<StandaloneTable> tables = new();
@@ -187,7 +194,7 @@ public class BasicConnectorBinding : IBasicConnectorBinding
         }
         else
         {
-          await QueuedTask.Run(() => layer.SetExpanded(true)).ConfigureAwait(false);
+          layer.SetExpanded(true);
         }
       }
       else if (member is StandaloneTable table)

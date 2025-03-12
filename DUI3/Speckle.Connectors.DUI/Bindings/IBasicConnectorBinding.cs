@@ -53,8 +53,7 @@ public class BasicConnectorBindingCommands
     Bridge = bridge;
   }
 
-  public async Task NotifyDocumentChanged() =>
-    await Bridge.Send(NOTIFY_DOCUMENT_CHANGED_EVENT_NAME).ConfigureAwait(false);
+  public async Task NotifyDocumentChanged() => await Bridge.Send(NOTIFY_DOCUMENT_CHANGED_EVENT_NAME);
 
   /// <summary>
   /// Use it whenever you want to send global toast notification to UI.
@@ -69,21 +68,17 @@ public class BasicConnectorBindingCommands
     string message,
     bool autoClose = true
   ) =>
-    await Bridge
-      .Send(
-        SET_GLOBAL_NOTIFICATION,
-        new
-        {
-          type,
-          title,
-          description = message,
-          autoClose
-        }
-      )
-      .ConfigureAwait(false);
+    await Bridge.Send(
+      SET_GLOBAL_NOTIFICATION,
+      new
+      {
+        type,
+        title,
+        description = message,
+        autoClose
+      }
+    );
 
   public async Task SetModelError(string modelCardId, Exception error) =>
-    await Bridge
-      .Send(SET_MODEL_ERROR_UI_COMMAND_NAME, new { modelCardId, error = error.Message })
-      .ConfigureAwait(false);
+    await Bridge.Send(SET_MODEL_ERROR_UI_COMMAND_NAME, new { modelCardId, error = error.Message });
 }

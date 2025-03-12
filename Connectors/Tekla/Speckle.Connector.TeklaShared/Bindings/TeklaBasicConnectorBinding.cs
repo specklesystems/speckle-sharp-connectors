@@ -8,7 +8,7 @@ using Speckle.Sdk;
 using Tekla.Structures;
 using Tekla.Structures.Geometry3d;
 
-namespace Speckle.Connector.Tekla2024.Bindings;
+namespace Speckle.Connectors.TeklaShared.Bindings;
 
 public class TeklaBasicConnectorBinding : IBasicConnectorBinding
 {
@@ -19,13 +19,15 @@ public class TeklaBasicConnectorBinding : IBasicConnectorBinding
   public IBrowserBridge Parent { get; }
   private readonly ILogger<TeklaBasicConnectorBinding> _logger;
   private readonly TSM.Model _model;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   public TeklaBasicConnectorBinding(
     IBrowserBridge parent,
     ISpeckleApplication speckleApplication,
     DocumentModelStore store,
     ILogger<TeklaBasicConnectorBinding> logger,
-    TSM.Model model
+    TSM.Model model,
+    ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
     _speckleApplication = speckleApplication;
@@ -33,11 +35,12 @@ public class TeklaBasicConnectorBinding : IBasicConnectorBinding
     Parent = parent;
     _logger = logger;
     _model = model;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
     Commands = new BasicConnectorBindingCommands(parent);
     _store.DocumentChanged += (_, _) =>
-      parent.TopLevelExceptionHandler.FireAndForget(async () =>
+      _topLevelExceptionHandler.FireAndForget(async () =>
       {
-        await Commands.NotifyDocumentChanged().ConfigureAwait(false);
+        await Commands.NotifyDocumentChanged();
       });
   }
 
@@ -51,7 +54,7 @@ public class TeklaBasicConnectorBinding : IBasicConnectorBinding
 
   public DocumentModelStore GetDocumentState() => _store;
 
-  public void AddModel(ModelCard model) => _store.Models.Add(model);
+  public void AddModel(ModelCard model) => _store.AddModel(model);
 
   public void UpdateModel(ModelCard model) => _store.UpdateModel(model);
 
@@ -80,18 +83,16 @@ public class TeklaBasicConnectorBinding : IBasicConnectorBinding
 
       if (objectIds.Count == 0)
       {
-        await Commands
-          .SetModelError(modelCardId, new OperationCanceledException("No objects found to highlight."))
-          .ConfigureAwait(false);
+        await Commands.SetModelError(modelCardId, new OperationCanceledException("No objects found to highlight."));
         return;
       }
 
-      await HighlightObjects(objectIds).ConfigureAwait(false);
+      await HighlightObjects(objectIds);
     }
     catch (InvalidOperationException ex)
     {
       _logger.LogError(ex, "Failed to highlight model");
-      await Commands.SetModelError(modelCardId, ex).ConfigureAwait(false);
+      await Commands.SetModelError(modelCardId, ex);
     }
   }
 
@@ -100,48 +101,47 @@ public class TeklaBasicConnectorBinding : IBasicConnectorBinding
     try
     {
       await Task.Run(() =>
+      {
+        // passing an empty list to create current selection
+        var selector = new TSMUI.ModelObjectSelector();
+        selector.Select(new ArrayList());
+
+        if (objectIds.Count > 0)
         {
-          // passing an empty list to create current selection
-          var selector = new TSMUI.ModelObjectSelector();
-          selector.Select(new ArrayList());
+          var modelObjects = objectIds
+            .Select(id => _model.SelectModelObject(new Identifier(new Guid(id))))
+            .Where(obj => obj != null)
+            .ToList();
 
-          if (objectIds.Count > 0)
+          selector.Select(new ArrayList(modelObjects));
+
+          // to find the min and max coordinates of the selected objects
+          // with that we can create a bounding box and zoom selected
+          var points = new List<Point>();
+          foreach (var obj in modelObjects)
           {
-            var modelObjects = objectIds
-              .Select(id => _model.SelectModelObject(new Identifier(new Guid(id))))
-              .Where(obj => obj != null)
-              .ToList();
-
-            selector.Select(new ArrayList(modelObjects));
-
-            // to find the min and max coordinates of the selected objects
-            // with that we can create a bounding box and zoom selected
-            var points = new List<Point>();
-            foreach (var obj in modelObjects)
+            points.Add(obj.GetCoordinateSystem().Origin);
+            foreach (TSM.ModelObject child in obj.GetChildren())
             {
-              points.Add(obj.GetCoordinateSystem().Origin);
-              foreach (TSM.ModelObject child in obj.GetChildren())
-              {
-                points.Add(child.GetCoordinateSystem().Origin);
-              }
+              points.Add(child.GetCoordinateSystem().Origin);
             }
-
-            var minX = points.Min(p => p.X);
-            var minY = points.Min(p => p.Y);
-            var minZ = points.Min(p => p.Z);
-            var maxX = points.Max(p => p.X);
-            var maxY = points.Max(p => p.Y);
-            var maxZ = points.Max(p => p.Z);
-
-            // create the bounding box
-            var bounds = new AABB { MinPoint = new Point(minX, minY, minZ), MaxPoint = new Point(maxX, maxY, maxZ) };
-
-            // zoom in to bounding box
-            TSMUI.ViewHandler.ZoomToBoundingBox(bounds);
           }
-          _model.CommitChanges();
-        })
-        .ConfigureAwait(false);
+
+          var minX = points.Min(p => p.X);
+          var minY = points.Min(p => p.Y);
+          var minZ = points.Min(p => p.Z);
+          var maxX = points.Max(p => p.X);
+          var maxY = points.Max(p => p.Y);
+          var maxZ = points.Max(p => p.Z);
+
+          // create the bounding box
+          var bounds = new AABB { MinPoint = new Point(minX, minY, minZ), MaxPoint = new Point(maxX, maxY, maxZ) };
+
+          // zoom in to bounding box
+          TSMUI.ViewHandler.ZoomToBoundingBox(bounds);
+        }
+        _model.CommitChanges();
+      });
     }
     catch (InvalidOperationException ex)
     {

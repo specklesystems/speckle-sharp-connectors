@@ -12,10 +12,7 @@ public sealed class AutocadIdleManager(IIdleCallManager idleCallManager)
 {
   private readonly IIdleCallManager _idleCallManager = idleCallManager;
 
-  protected override void AddEvent()
-  {
-    Application.Idle += AutocadAppOnIdle;
-  }
+  protected override void AddEvent() => Application.Idle += AutocadAppOnIdle;
 
   private void AutocadAppOnIdle(object? sender, EventArgs e) =>
     _idleCallManager.AppOnIdle(() => Application.Idle -= AutocadAppOnIdle);

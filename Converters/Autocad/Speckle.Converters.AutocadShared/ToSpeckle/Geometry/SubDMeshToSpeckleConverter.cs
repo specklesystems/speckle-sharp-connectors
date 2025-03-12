@@ -1,24 +1,17 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Sdk;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.Geometry;
 
-[NameAndRankValue(nameof(ADB.SubDMesh), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(ADB.SubDMesh), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class DBSubDMeshToSpeckleConverter : IToSpeckleTopLevelConverter
 {
-  private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
-  private readonly ITypedConverter<ADB.Extents3d, SOG.Box> _boxConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
-  public DBSubDMeshToSpeckleConverter(
-    ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
-    ITypedConverter<ADB.Extents3d, SOG.Box> boxConverter,
-    IConverterSettingsStore<AutocadConversionSettings> settingsStore
-  )
+  public DBSubDMeshToSpeckleConverter(IConverterSettingsStore<AutocadConversionSettings> settingsStore)
   {
-    _pointConverter = pointConverter;
-    _boxConverter = boxConverter;
     _settingsStore = settingsStore;
   }
 
@@ -71,9 +64,6 @@ public class DBSubDMeshToSpeckleConverter : IToSpeckleTopLevelConverter
       )
       .ToList();
 
-    // bbox
-    SOG.Box bbox = _boxConverter.Convert(target.GeometricExtents);
-
     SOG.Mesh speckleMesh =
       new()
       {
@@ -81,8 +71,14 @@ public class DBSubDMeshToSpeckleConverter : IToSpeckleTopLevelConverter
         faces = faces,
         colors = colors,
         units = _settingsStore.Current.SpeckleUnits,
-        bbox = bbox
+        area = target.ComputeSurfaceArea()
       };
+
+    try
+    {
+      speckleMesh.volume = target.ComputeVolume();
+    }
+    catch (Exception e) when (!e.IsFatal()) { } // for non-volumetric meshes
 
     return speckleMesh;
   }

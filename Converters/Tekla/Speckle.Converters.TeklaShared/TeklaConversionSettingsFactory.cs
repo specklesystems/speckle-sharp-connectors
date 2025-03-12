@@ -3,7 +3,7 @@ using Speckle.InterfaceGenerator;
 using Tekla.Structures.Datatype;
 using Tekla.Structures.Model;
 
-namespace Speckle.Converter.Tekla2024;
+namespace Speckle.Converters.TeklaShared;
 
 [GenerateAutoInterface]
 public class TeklaConversionSettingsFactory(

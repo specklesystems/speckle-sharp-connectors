@@ -1,4 +1,4 @@
-namespace Speckle.Converter.Tekla2024.ToSpeckle.Helpers;
+namespace Speckle.Converters.TeklaShared.ToSpeckle.Helpers;
 
 public class ClassPropertyExtractor
 {
@@ -10,11 +10,9 @@ public class ClassPropertyExtractor
 
     switch (modelObject)
     {
-      case TSM.Beam beam:
-        AddBeamProperties(beam, properties);
-        break;
-      case TSM.ContourPlate plate:
-        AddContourPlateProperties(plate, properties);
+      // includes beams and contour plates
+      case TSM.Part part:
+        AddPartProperties(part, properties);
         break;
       case TSM.BoltArray boltArray:
         AddBoltArrayProperties(boltArray, properties);
@@ -33,18 +31,10 @@ public class ClassPropertyExtractor
     return properties;
   }
 
-  private void AddBeamProperties(TSM.Beam beam, Dictionary<string, object?> properties)
+  private void AddPartProperties(TSM.Part part, Dictionary<string, object?> properties)
   {
-    properties["name"] = beam.Name;
-    properties["profile"] = beam.Profile.ProfileString;
-    properties["material"] = beam.Material.MaterialString;
-  }
-
-  private void AddContourPlateProperties(TSM.ContourPlate plate, Dictionary<string, object?> properties)
-  {
-    properties["name"] = plate.Name;
-    properties["profile"] = plate.Profile.ProfileString;
-    properties["material"] = plate.Material.MaterialString;
+    properties["profile"] = part.Profile.ProfileString;
+    properties["material"] = part.Material.MaterialString;
   }
 
   private void AddBoltArrayProperties(TSM.BoltArray boltArray, Dictionary<string, object?> properties)
@@ -56,20 +46,17 @@ public class ClassPropertyExtractor
 
   private void AddSingleRebarProperties(TSM.SingleRebar singleRebar, Dictionary<string, object?> properties)
   {
-    properties["name"] = singleRebar.Name;
     properties["grade"] = singleRebar.Grade;
     properties["size"] = singleRebar.Size;
   }
 
   private void AddRebarMeshProperties(TSM.RebarMesh rebarMesh, Dictionary<string, object?> properties)
   {
-    properties["name"] = rebarMesh.Name;
     properties["grade"] = rebarMesh.Grade;
   }
 
   private void AddRebarGroupProperties(TSM.RebarGroup rebarGroup, Dictionary<string, object?> properties)
   {
-    properties["name"] = rebarGroup.Name;
     properties["grade"] = rebarGroup.Grade;
     properties["size"] = rebarGroup.Size;
   }

@@ -36,6 +36,11 @@ public sealed class DisplayValueExtractor
   {
     switch (entity)
     {
+      // POC: we are sending featurelines as approximated polylines because they are 2.5d curves:
+      // they can have line or arc segments, and each vertex can have different elevations.
+      // there is no native type that can capture the full 3d representation of these curves.
+      // if this becomes essential, can explore a hack where each point is converted to 2d, and separate line/arc segments are calculated, and then their points readjusted with 3d z values
+      // SurveyFigures inherit from featureline
       case CDB.FeatureLine featureline:
         SOG.Polyline featurelinePolyline = _pointCollectionConverter.Convert(
           featureline.GetPoints(Autodesk.Civil.FeatureLinePointType.PIPoint)
@@ -58,6 +63,13 @@ public sealed class DisplayValueExtractor
       case CDB.GridSurface gridSurface:
         SOG.Mesh gridSurfaceMesh = _gridSurfaceConverter.Convert(gridSurface);
         yield return gridSurfaceMesh;
+        break;
+
+      // catchments
+      case CDB.Catchment catchment:
+        SOG.Polyline catchmentPolyline = _pointCollectionConverter.Convert(catchment.BoundaryPolyline3d);
+        catchmentPolyline.closed = true;
+        yield return catchmentPolyline;
         break;
 
       // Corridors are complicated: their display values are extracted in the CorridorHandler when processing corridor children, since they are attached to the corridor subassemblies.
