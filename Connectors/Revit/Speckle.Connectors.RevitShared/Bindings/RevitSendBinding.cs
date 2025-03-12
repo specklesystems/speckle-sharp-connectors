@@ -17,6 +17,7 @@ using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
+using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.RevitShared.Operations.Send.Filters;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
@@ -187,6 +188,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       viewFilter.SetContext(_revitContext);
     }
 
+    // decomposing into elementsOnMainModel and linkedElements happens after this method call
+    // therefore, RefreshObjectIds was modified to not filter RevitLinkInstances out!
     var selectedObjects = modelCard.SendFilter.NotNull().RefreshObjectIds();
 
     // all elements is a mix of regular elements and linked models
@@ -195,16 +198,14 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       .Where(el => el is not null)
       .ToList();
 
-    // elementsOnMainModel shouldn't include linked instances
-    // we need to remove from elementsOnMainModel, otherwise when processing, we're still trying to convert the link
+    // elementsOnMainModel shouldn't include linked instances otherwise when processing, we're still trying to convert link
     var elementsOnMainModel = allElements.Where(el => el is not RevitLinkInstance).ToList();
 
     // treat linked instances on their own. Collector focuses on decomposing the linked instances
     var linkedModels = allElements.OfType<RevitLinkInstance>().ToList();
-
-    // TODO: [CNX-1377] currently below part suits only for selection, need more work to see how align with other filters
     List<DocumentToConvert> documentElementContexts = [new(null, activeUIDoc.Document, elementsOnMainModel)];
 
+    // TODO: wrap RevitLinkInstance stuff in some helper classes. This is getting long
     foreach (var linkedModel in linkedModels)
     {
       // invert transform to convert FROM host model TO linked model coordinate system (reverse of GetTotalTransform)
@@ -212,8 +213,41 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       var transform = linkedModel.GetTotalTransform().Inverse;
       if (linkedDoc != null)
       {
-        using var collector = new FilteredElementCollector(linkedDoc);
-        var linkedElements = collector.WhereElementIsNotElementType().WhereElementIsViewIndependent().ToList();
+        List<Element> linkedElements;
+
+        // sending via 1 of 2 modes (selection / categories) for linked models is very rough atm - poc
+        // send option 1 - categories
+        if (modelCard.SendFilter is RevitCategoriesFilter categoryFilter && categoryFilter.SelectedCategories != null)
+        {
+          var categoryIds = categoryFilter
+            .SelectedCategories.Select(c => ElementIdHelper.GetElementId(c))
+            .Where(id => id != null)
+            .ToList();
+
+          if (categoryIds.Count > 0)
+          {
+            // use the same category filter for linked document(s)
+            using var multicategoryFilter = new ElementMulticategoryFilter(categoryIds);
+            using var collector = new FilteredElementCollector(linkedDoc);
+            linkedElements = collector
+              .WhereElementIsNotElementType()
+              .WhereElementIsViewIndependent()
+              .WherePasses(multicategoryFilter)
+              .ToList();
+          }
+          else
+          {
+            // no categories selected so return empty list
+            linkedElements = new List<Element>();
+          }
+        }
+        // send option 2 - selection
+        else
+        {
+          using var collector = new FilteredElementCollector(linkedDoc);
+          linkedElements = collector.WhereElementIsNotElementType().WhereElementIsViewIndependent().ToList();
+        }
+
         documentElementContexts.Add(new(transform, linkedDoc, linkedElements));
       }
     }
