@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Ara3D.Logging;
 using Ara3D.Utils;
+using Speckle.Importers.Ifc.Ara3D.IfcParser.Schema;
 using Speckle.Importers.Ifc.Ara3D.StepParser;
 
 namespace Speckle.Importers.Ifc.Ara3D.IfcParser;
@@ -21,14 +22,17 @@ public sealed class IfcGraph
   public Dictionary<uint, List<IfcRelation>> RelationsByNode { get; } = new Dictionary<uint, List<IfcRelation>>();
   public Dictionary<uint, List<IfcPropSet>> PropertySetsByNode { get; } = new Dictionary<uint, List<IfcPropSet>>();
 
-  public IReadOnlySet<uint> RootIds { get; }
+  public uint IfcProjectId { get; }
 
   public IfcNode AddNode(IfcNode n) => Nodes[n.Id] = n;
 
   public IfcRelation AddRelation(IfcRelation r)
   {
     Relations.Add(r);
-    RelationsByNode.Add(r.From.Id, r);
+    var id = r.From.Id;
+    if (!RelationsByNode.ContainsKey(id))
+      RelationsByNode[id] = new();
+    RelationsByNode[id].Add(r);
     return r;
   }
 
@@ -36,15 +40,12 @@ public sealed class IfcGraph
   {
     Document = d;
 
-    HashSet<uint> rootIds = new(1);
+    uint ifcProjectId = 0;
     logger?.Log("Computing entities");
     foreach (var inst in Document.RawInstances)
     {
       if (!inst.IsValid())
         continue;
-
-      // TODO: converting entities into numerical hashes would likely improve performance significantly.
-      // Here we are doing a lot of comparisons.
 
       // Property Values
       if (inst.Type.Equals("IFCPROPERTYSINGLEVALUE"))
@@ -151,20 +152,41 @@ public sealed class IfcGraph
         var e = d.GetInstanceWithData(inst);
         AddRelation(new IfcRelationType(this, e, (StepId)e[5], (StepList)e[4]));
       }
+      else if (inst.Type.Equals("IFCPROJECT"))
+      {
+        //Special case for IFC Projects, track them as a root node.
+        var e = d.GetInstanceWithData(inst);
+        ifcProjectId = inst.Id;
+        AddNode(new IfcProject(this, e));
+      }
+      else if (
+        inst.Type.Equals("IFCSITE")
+        || inst.Type.Equals("IFCBUILDING")
+        || inst.Type.Equals("IFCBUILDINGSTOREY")
+        || inst.Type.Equals("IFCFACILITY")
+        || inst.Type.Equals("IFCFACILITYPART")
+        || inst.Type.Equals("IFCBRIDGE")
+        || inst.Type.Equals("IFCROAD")
+        || inst.Type.Equals("IFCRAILWAY")
+        || inst.Type.Equals("IFCMARINEFACILITY")
+      )
+      {
+        var e = d.GetInstanceWithData(inst);
+        AddNode(new IfcSpatialStructureElement(this, e));
+      }
       // Everything else
       else
       {
-        //Special case for IFC Projects, track them as a root node.
-        if (inst.Type.Equals("IFCPROJECT"))
-          rootIds.Add(inst.Id);
-
         // Simple IFC node: without step entity data.
         var e = d.GetInstanceWithData(inst);
         AddNode(new IfcNode(this, e));
       }
     }
 
-    RootIds = rootIds;
+    if (ifcProjectId <= 0)
+      throw new SpeckleIfcException("There was no IfcProject in the file");
+
+    IfcProjectId = ifcProjectId;
 
     logger?.Log("Creating lookup of property sets");
 
@@ -173,7 +195,9 @@ public sealed class IfcGraph
       var ps = psr.PropSet;
       foreach (var id in psr.GetRelatedIds())
       {
-        PropertySetsByNode.Add(id, ps);
+        if (!PropertySetsByNode.ContainsKey(id))
+          PropertySetsByNode[id] = [];
+        PropertySetsByNode[id].Add(ps);
       }
     }
 
@@ -221,7 +245,7 @@ public sealed class IfcGraph
     return r;
   }
 
-  public IEnumerable<IfcNode> GetSources() => RootIds.Select(GetNode);
+  public IfcNode GetIfcProject() => GetNode(IfcProjectId);
 
   public IEnumerable<IfcPropSet> GetPropSets() => GetNodes().OfType<IfcPropSet>();
 

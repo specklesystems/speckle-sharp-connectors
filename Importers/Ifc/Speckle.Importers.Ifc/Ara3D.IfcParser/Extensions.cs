@@ -6,13 +6,6 @@ namespace Speckle.Importers.Ifc.Ara3D.IfcParser;
 
 public static class IfcExtensions
 {
-  public static void Add<TKey, TValue>(this IDictionary<TKey, List<TValue>> self, TKey key, TValue value)
-  {
-    if (!self.ContainsKey(key))
-      self[key] = new List<TValue>();
-    self[key].Add(value);
-  }
-
   public static uint AsId(this StepValue value) => value is StepUnassigned ? 0u : ((StepId)value).Id;
 
   public static string AsString(this StepValue value) =>

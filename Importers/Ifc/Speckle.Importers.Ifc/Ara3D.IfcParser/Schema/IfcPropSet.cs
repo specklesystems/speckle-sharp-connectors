@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using Speckle.Importers.Ifc.Ara3D.StepParser;
 
-namespace Speckle.Importers.Ifc.Ara3D.IfcParser;
+namespace Speckle.Importers.Ifc.Ara3D.IfcParser.Schema;
 
 // This merges two separate entity types: IfcPropertySet and IfcElementQuantity.
 // Both of which are derived from IfcPropertySetDefinition.
