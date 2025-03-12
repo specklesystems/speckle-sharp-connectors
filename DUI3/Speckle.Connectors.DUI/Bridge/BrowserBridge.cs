@@ -6,7 +6,6 @@ using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
-using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Newtonsoft.Json;
 using Speckle.Sdk.Common;
@@ -18,7 +17,9 @@ namespace Speckle.Connectors.DUI.Bridge;
 /// Wraps a binding class, and manages its calls from the Frontend to .NET, and sending events from .NET to the the Frontend.
 /// <para>Initially inspired by: https://github.com/johot/WebView2-better-bridge</para>
 /// </summary>
+#pragma warning disable CS0618 // Type or member is obsolete
 [ClassInterface(ClassInterfaceType.AutoDual)]
+#pragma warning restore CS0618 // Type or member is obsolete
 [ComVisible(true)]
 public sealed class BrowserBridge : IBrowserBridge
 {
@@ -31,7 +32,6 @@ public sealed class BrowserBridge : IBrowserBridge
 
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IThreadContext _threadContext;
-  private readonly IThreadOptions _threadOptions;
 
   private readonly IBrowserScriptExecutor _browserScriptExecutor;
   private readonly IJsonSerializer _jsonSerializer;
@@ -63,19 +63,14 @@ public sealed class BrowserBridge : IBrowserBridge
     IJsonSerializer jsonSerializer,
     ILogger<BrowserBridge> logger,
     IBrowserScriptExecutor browserScriptExecutor,
-    IThreadOptions threadOptions,
-    IEventAggregator eventAggregator,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
     _threadContext = threadContext;
     _jsonSerializer = jsonSerializer;
     _logger = logger;
-    // Capture the main thread's SynchronizationContext
     _browserScriptExecutor = browserScriptExecutor;
-    _threadOptions = threadOptions;
     _topLevelExceptionHandler = topLevelExceptionHandler;
-    eventAggregator.GetEvent<ExceptionEvent>().Subscribe(OnExceptionEvent, ThreadOption.MainThread);
   }
 
   private async Task OnExceptionEvent(Exception ex) =>
@@ -124,25 +119,22 @@ public sealed class BrowserBridge : IBrowserBridge
   //don't wait for browser runs on purpose
   public void RunMethod(string methodName, string requestId, string methodArgs) =>
     _threadContext
-      .RunOnThreadAsync(
-        async () =>
-        {
-          var task = await _topLevelExceptionHandler
-            .CatchUnhandledAsync(async () =>
-            {
-              var result = await ExecuteMethod(methodName, methodArgs).ConfigureAwait(false);
-              string resultJson = _jsonSerializer.Serialize(result);
-              NotifyUIMethodCallResultReady(requestId, resultJson);
-            })
-            .ConfigureAwait(false);
-          if (task.Exception is not null)
+      .RunOnWorkerAsync(async () =>
+      {
+        var task = await _topLevelExceptionHandler
+          .CatchUnhandledAsync(async () =>
           {
-            string resultJson = SerializeFormattedException(task.Exception);
+            var result = await ExecuteMethod(methodName, methodArgs).ConfigureAwait(false);
+            string resultJson = _jsonSerializer.Serialize(result);
             NotifyUIMethodCallResultReady(requestId, resultJson);
-          }
-        },
-        _threadOptions.RunCommandsOnMainThread
-      )
+          })
+          .ConfigureAwait(false);
+        if (task.Exception is not null)
+        {
+          string resultJson = SerializeFormattedException(task.Exception);
+          NotifyUIMethodCallResultReady(requestId, resultJson);
+        }
+      })
       .FireAndForget();
 
   /// <summary>
@@ -161,7 +153,7 @@ public sealed class BrowserBridge : IBrowserBridge
       throw new InvalidOperationException("Bridge was not initialized with a binding");
     }
 
-    if (!_bindingMethodCache.TryGetValue(methodName, out MethodInfo method))
+    if (!_bindingMethodCache.TryGetValue(methodName, out MethodInfo? method))
     {
       throw new ArgumentException(
         $"Cannot find method {methodName} in bindings class {_bindingType.NotNull().AssemblyQualifiedName}.",

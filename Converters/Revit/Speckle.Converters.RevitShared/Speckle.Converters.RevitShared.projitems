@@ -49,7 +49,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\ClassPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\ParameterDefinitionHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\ParameterExtractor.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\BoundarySegmentConversionToSpeckle.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\StructuralMaterialAssetExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\ArcToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\BoundingBoxXYZToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\CircleToSpeckleConverter.cs" />
@@ -69,13 +69,11 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\XyzConversionToPoint.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\MaterialAsSpeckleMaterialConversionToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\MaterialQuantitiesToSpeckle.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\PointcloudTopLevelConverterToSpeckle.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\LevelToSpeckleConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\PointcloudToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\LocationToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\ModelCurveArrArrayToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\ModelCurveArrayToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\RevitElementTopLevelConverterToSpeckle.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\ModelCurveToSpeckleTopLevelConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\ParameterValueExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\RevitContext.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)\Helpers\SendSelection.cs" />

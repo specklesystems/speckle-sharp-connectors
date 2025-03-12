@@ -10,13 +10,18 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 /// </summary>
 /// <remarks>
 /// Design Decisions:
-/// - Individual methods preferred over batched calls due to:
-///   * Independent API calls with no performance gain from batching (?)
-///   * Easier debugging and error tracing
-///   * Simpler maintenance as each method maps to one API concept
-/// Integration:
-/// - Part of the property extraction hierarchy
-/// - Used by <see cref="SharedPropertiesExtractor"/> for delegating frame property extraction
+/// <list type="bullet">
+///     <item>
+///         <description>
+///             Individual methods preferred over batched calls due to:
+///             <list type="bullet">
+///                 <item><description>Independent API calls with no performance gain from batching (?)</description></item>
+///                 <item><description>Easier debugging and error tracing</description></item>
+///                 <item><description>Simpler maintenance as each method maps to one API concept</description></item>
+///             </list>
+///         </description>
+///     </item>
+/// </list>
 /// </remarks>
 public sealed class CsiFramePropertiesExtractor
 {
@@ -51,10 +56,10 @@ public sealed class CsiFramePropertiesExtractor
     (geometry["I-End Joint"], geometry["J-End Joint"]) = GetEndPointNames(frame);
 
     var assignments = frameData.Properties.EnsureNested(ObjectPropertyCategory.ASSIGNMENTS);
-    assignments["Groups"] = GetGroupAssigns(frame);
-    assignments["Material Overwrite"] = GetMaterialOverwrite(frame);
-    assignments["Local Axis 2 Angle"] = GetLocalAxes(frame);
-    assignments["Property Modifiers"] = GetModifiers(frame);
+    assignments[CommonObjectProperty.GROUPS] = GetGroupAssigns(frame);
+    assignments[CommonObjectProperty.MATERIAL_OVERWRITE] = GetMaterialOverwrite(frame);
+    assignments[CommonObjectProperty.LOCAL_AXIS_2_ANGLE] = GetLocalAxes(frame);
+    assignments[CommonObjectProperty.PROPERTY_MODIFIERS] = GetModifiers(frame);
     assignments["End Releases"] = GetReleases(frame);
 
     // NOTE: sectionId and materialId a "quick-fix" to enable filtering in the viewer etc.
@@ -110,8 +115,8 @@ public sealed class CsiFramePropertiesExtractor
     _ = _settingsStore.Current.SapModel.FrameObj.GetLocalAxes(frame.Name, ref angle, ref advanced);
 
     Dictionary<string, object?> resultsDictionary = [];
-    resultsDictionary.AddWithUnits("Angle", angle, "Degrees");
-    resultsDictionary["Advanced"] = advanced.ToString();
+    resultsDictionary.AddWithUnits(CommonObjectProperty.ANGLE, angle, "Degrees");
+    resultsDictionary[CommonObjectProperty.ADVANCED] = advanced.ToString();
 
     return resultsDictionary;
   }

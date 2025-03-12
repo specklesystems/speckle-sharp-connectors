@@ -1,6 +1,6 @@
 namespace Speckle.Importers.Ifc.Types;
 
-public class IfcGeometry(IntPtr geometry)
+public sealed class IfcGeometry(IntPtr geometry)
 {
   public IfcMesh GetMesh(int i) => new(Importers.Ifc.Native.WebIfc.GetMesh(geometry, i));
 

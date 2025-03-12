@@ -42,12 +42,12 @@ Console.WriteLine($"Converted to Speckle Bases: {ms2 - ms} ms");
 
 var cache = $"C:\\Users\\adam\\Git\\temp\\{Guid.NewGuid()}.db";
 using var sqlite = new SqLiteJsonCacheManager($"Data Source={cache};", 2);
-using var process2 = new SerializeProcess(
+await using var process2 = new SerializeProcess(
   new Progress(true),
   sqlite,
   new DummyServerObjectManager(),
   new BaseChildFinder(new BasePropertyGatherer()),
-  new ObjectSerializerFactory(new BasePropertyGatherer()),
+  new BaseSerializer(sqlite, new ObjectSerializerFactory(new BasePropertyGatherer())),
   new NullLoggerFactory(),
   default,
   new SerializeProcessOptions(SkipServer: true)

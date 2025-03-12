@@ -10,13 +10,18 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 /// </summary>
 /// <remarks>
 /// Design Decisions:
-/// - Individual methods preferred over batched calls due to:
-///   * Independent API calls with no performance gain from batching (?)
-///   * Easier debugging and error tracing
-///   * Simpler maintenance as each method maps to one API concept
-/// Integration:
-/// - Part of the property extraction hierarchy
-/// - Used by <see cref="SharedPropertiesExtractor"/> for delegating shell property extraction
+/// <list type="bullet">
+///     <item>
+///         <description>
+///             Individual methods preferred over batched calls due to:
+///             <list type="bullet">
+///                 <item><description>Independent API calls with no performance gain from batching (?)</description></item>
+///                 <item><description>Easier debugging and error tracing</description></item>
+///                 <item><description>Simpler maintenance as each method maps to one API concept</description></item>
+///             </list>
+///         </description>
+///     </item>
+/// </list>
 /// </remarks>
 public sealed class CsiShellPropertiesExtractor
 {
@@ -35,10 +40,10 @@ public sealed class CsiShellPropertiesExtractor
     geometry["Joints"] = GetPointNames(shell); // TODO: 🪲 Viewer shows 4 but only displays 3
 
     var assignments = shellData.Properties.EnsureNested(ObjectPropertyCategory.ASSIGNMENTS);
-    assignments["Groups"] = GetGroupAssigns(shell);
-    assignments["Local Axis 2 Angle"] = GetLocalAxes(shell);
-    assignments["Material Overwrite"] = GetMaterialOverwrite(shell);
-    assignments["Property Modifiers"] = GetModifiers(shell);
+    assignments[CommonObjectProperty.GROUPS] = GetGroupAssigns(shell);
+    assignments[CommonObjectProperty.LOCAL_AXIS_2_ANGLE] = GetLocalAxes(shell);
+    assignments[CommonObjectProperty.MATERIAL_OVERWRITE] = GetMaterialOverwrite(shell);
+    assignments[CommonObjectProperty.PROPERTY_MODIFIERS] = GetModifiers(shell);
   }
 
   private string[] GetGroupAssigns(CsiShellWrapper shell)
@@ -56,8 +61,8 @@ public sealed class CsiShellPropertiesExtractor
     _ = _settingsStore.Current.SapModel.AreaObj.GetLocalAxes(shell.Name, ref angle, ref advanced);
 
     Dictionary<string, object?> resultsDictionary = [];
-    resultsDictionary.AddWithUnits("Angle", angle, "Degrees");
-    resultsDictionary["Advanced"] = advanced.ToString();
+    resultsDictionary.AddWithUnits(CommonObjectProperty.ANGLE, angle, "Degrees");
+    resultsDictionary[CommonObjectProperty.ADVANCED] = advanced.ToString();
 
     return resultsDictionary;
   }

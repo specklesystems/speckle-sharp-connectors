@@ -6,7 +6,6 @@ using System.Windows.Forms.Integration;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI;
-using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Converters.TeklaShared;
 using Speckle.Sdk.Host;
@@ -91,7 +90,6 @@ public class SpeckleTeklaPanelHost : PluginFormBase
     services.AddTeklaConverters();
 
     Container = services.BuildServiceProvider();
-    TeklaEvents.Register(Container.GetRequiredService<Events>(), Container.GetRequiredService<IEventAggregator>());
     Container.UseDUI();
 
     Model = new Model();

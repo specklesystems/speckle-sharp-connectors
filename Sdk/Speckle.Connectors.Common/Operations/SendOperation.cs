@@ -4,7 +4,6 @@ using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Logging;
 using Speckle.Sdk.Api;
-using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -16,10 +15,10 @@ namespace Speckle.Connectors.Common.Operations;
 public sealed class SendOperation<T>(
   IRootObjectBuilder<T> rootObjectBuilder,
   ISendConversionCache sendConversionCache,
-  AccountService accountService,
+  IAccountService accountService,
   ISendProgress sendProgress,
   IOperations operations,
-  IClientFactory clientFactory,
+  ISendOperationVersionRecorder sendOperationVersionRecorder,
   ISdkActivityFactory activityFactory,
   IThreadContext threadContext
 )
@@ -31,10 +30,10 @@ public sealed class SendOperation<T>(
     CancellationToken ct = default
   )
   {
-    var buildResult = await threadContext.RunOnMainAsync(
-      async () => await rootObjectBuilder.BuildAsync(objects, sendInfo, onOperationProgressed, ct)
-    );
+    ct.ThrowIfCancellationRequested();
+    var buildResult = await rootObjectBuilder.Build(objects, sendInfo, onOperationProgressed, ct);
 
+    ct.ThrowIfCancellationRequested();
     // POC: Jonathon asks on behalf of willow twin - let's explore how this can work
     // buildResult.RootObject["@report"] = new Report { ConversionResults = buildResult.ConversionResults };
 
@@ -44,11 +43,12 @@ public sealed class SendOperation<T>(
     var (rootObjId, convertedReferences) = await threadContext.RunOnWorkerAsync(
       () => Send(buildResult.RootObject, sendInfo, onOperationProgressed, ct)
     );
+    ct.ThrowIfCancellationRequested();
 
     return new(rootObjId, convertedReferences, buildResult.ConversionResults);
   }
 
-  private async Task<SerializeProcessResults> Send(
+  public async Task<SerializeProcessResults> Send(
     Base commitObject,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
@@ -80,18 +80,7 @@ public sealed class SendOperation<T>(
     onOperationProgressed.Report(new("Linking version to model...", null));
 
     // 8 - Create the version (commit)
-    using var apiClient = clientFactory.Create(account);
-    _ = await apiClient
-      .Version.Create(
-        new CreateVersionInput(
-          sendResult.RootId,
-          sendInfo.ModelId,
-          sendInfo.ProjectId,
-          sourceApplication: sendInfo.SourceApplication
-        ),
-        ct
-      )
-      .ConfigureAwait(true);
+    await sendOperationVersionRecorder.RecordVersion(sendResult.RootId, sendInfo, account, ct);
 
     return sendResult;
   }

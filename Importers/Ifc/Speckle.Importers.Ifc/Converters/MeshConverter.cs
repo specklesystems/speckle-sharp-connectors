@@ -1,31 +1,35 @@
+using System.Drawing;
+using Speckle.Importers.Ifc.Services;
 using Speckle.Importers.Ifc.Types;
 using Speckle.InterfaceGenerator;
 using Speckle.Objects.Geometry;
+using Speckle.Objects.Other;
 
 namespace Speckle.Importers.Ifc.Converters;
 
 [GenerateAutoInterface]
-public class MeshConverter : IMeshConverter
+public sealed class MeshConverter(IRenderMaterialProxyManager renderMaterialManager) : IMeshConverter
 {
-  public unsafe Mesh Convert(IfcMesh mesh)
+  public Mesh Convert(IfcMesh mesh)
   {
-    var m = (double*)mesh.Transform;
-    var vp = mesh.GetVertices();
-    var ip = mesh.GetIndexes();
+    var m = mesh.Transform;
+    var vp = mesh.Vertices;
+    var ip = mesh.Indices;
 
-    var vertices = new List<double>(mesh.VertexCount * 3);
-    for (var i = 0; i < mesh.VertexCount; i++)
+    var vertices = new List<double>(vp.Length * 3);
+    foreach (var vertex in vp)
     {
-      var x = vp[i].PX;
-      var y = vp[i].PY;
-      var z = vp[i].PZ;
+      var x = vertex.PX;
+      var y = vertex.PY;
+      var z = vertex.PZ;
+
       vertices.Add(m[0] * x + m[4] * y + m[8] * z + m[12]);
       vertices.Add(-(m[2] * x + m[6] * y + m[10] * z + m[14]));
       vertices.Add(m[1] * x + m[5] * y + m[9] * z + m[13]);
     }
 
-    var faces = new List<int>(mesh.IndexCount * 4);
-    for (var i = 0; i < mesh.IndexCount; i += 3)
+    var faces = new List<int>(ip.Length * 4);
+    for (var i = 0; i < ip.Length; i += 3)
     {
       var a = ip[i];
       var b = ip[i + 1];
@@ -36,14 +40,35 @@ public class MeshConverter : IMeshConverter
       faces.Add(c);
     }
 
-    var color = mesh.GetColor();
-    List<int> colors = [(int)(color->A * 255), (int)(color->R * 255), (int)(color->G * 255), (int)(color->B * 255),];
-    return new Mesh()
+    RenderMaterial renderMaterial = ConvertRenderMaterial(mesh);
+    Mesh converted =
+      new()
+      {
+        applicationId = Guid.NewGuid().ToString(),
+        vertices = vertices,
+        faces = faces,
+        units = "m",
+      };
+
+    renderMaterialManager.AddMeshMapping(renderMaterial, converted);
+
+    return converted;
+  }
+
+  private static RenderMaterial ConvertRenderMaterial(IfcMesh mesh)
+  {
+    var color = mesh.Color;
+    var diffuse = Color.FromArgb(1, To8BitValue(color.R), To8BitValue(color.G), To8BitValue(color.B));
+
+    var name = $"IFC_MATERIAL:{(color.A, color.R, color.G, color.B).GetHashCode()}";
+
+    return new RenderMaterial()
     {
-      colors = colors,
-      vertices = vertices,
-      faces = faces,
-      units = "m",
+      applicationId = name,
+      name = name,
+      diffuse = diffuse.ToArgb(),
+      opacity = color.A
     };
+    static int To8BitValue(double value) => (int)(value * 255);
   }
 }

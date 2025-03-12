@@ -41,7 +41,7 @@ public class NavisworksRootObjectBuilder(
   /// <param name="cancellationToken">Token to cancel the operation.</param>
   /// <returns>A result containing the root collection and conversion results.</returns>
   /// <exception cref="SpeckleException">Thrown when no objects can be converted.</exception>
-  public async Task<RootObjectBuilderResult> BuildAsync(
+  public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<NAV.ModelItem> navisworksModelItems,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
@@ -144,12 +144,27 @@ public class NavisworksRootObjectBuilder(
     Dictionary<string, List<NAV.ModelItem>> groupedNodes
   )
   {
+    // First build the grouped nodes as before
     var finalElements = new List<Base>();
     var processedPaths = new HashSet<string>();
-
     AddGroupedElements(finalElements, convertedBases, groupedNodes, processedPaths);
-    AddRemainingElements(finalElements, convertedBases, processedPaths);
 
+    // If hierarchy mode is enabled, reorganize into proper nested structure
+    if (converterSettings.Current.User.PreserveModelHierarchy)
+    {
+      var hierarchyBuilder = new NavisworksHierarchyBuilder(
+        convertedBases,
+        rootToSpeckleConverter,
+        elementSelectionService
+      );
+
+      var hierarchy = hierarchyBuilder.BuildHierarchy();
+
+      return hierarchy;
+    }
+
+    // Otherwise continue with flat mode
+    AddRemainingElements(finalElements, convertedBases, processedPaths);
     return finalElements;
   }
 
@@ -221,7 +236,8 @@ public class NavisworksRootObjectBuilder(
   /// </remarks>
   private NavisworksObject CreateNavisworksObject(string groupKey, List<Base> siblingBases)
   {
-    (string name, string path) = GetContext(groupKey);
+    string cleanParentPath = ElementSelectionHelper.GetCleanPath(groupKey);
+    (string name, string path) = GetContext(cleanParentPath);
 
     return new NavisworksObject
     {
@@ -229,7 +245,7 @@ public class NavisworksRootObjectBuilder(
       displayValue = siblingBases.SelectMany(b => b["displayValue"] as List<Base> ?? []).ToList(),
       properties = siblingBases.First()["properties"] as Dictionary<string, object?> ?? [],
       units = converterSettings.Current.Derived.SpeckleUnits,
-      applicationId = groupKey,
+      applicationId = groupKey, // Use the full composite key as applicationId to preserve uniqueness
       ["path"] = path
     };
   }

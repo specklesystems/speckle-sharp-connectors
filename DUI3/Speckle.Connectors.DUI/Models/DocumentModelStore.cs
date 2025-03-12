@@ -13,6 +13,12 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
 {
   private readonly List<ModelCard> _models = new();
 
+  /// <summary>
+  /// This event is triggered by each specific host app implementation of the document model store.
+  /// </summary>
+  // POC: unsure about the PublicAPI annotation, unsure if this changed handle should live here on the store...  :/
+  public event EventHandler? DocumentChanged;
+
   //needed for javascript UI
   public IReadOnlyList<ModelCard> Models
   {
@@ -25,6 +31,8 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
     }
   }
 
+  protected void OnDocumentChanged() => DocumentChanged?.Invoke(this, EventArgs.Empty);
+
   public virtual Task OnDocumentStoreInitialized() => Task.CompletedTask;
 
   public virtual bool IsDocumentInit { get; set; }
@@ -34,8 +42,11 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
   // In theory this should never really happen, but if it does
   public ModelCard GetModelById(string id)
   {
-    var model = _models.First(model => model.ModelCardId == id) ?? throw new ModelNotFoundException();
-    return model;
+    lock (_models)
+    {
+      var model = _models.FirstOrDefault(model => model.ModelCardId == id) ?? throw new ModelNotFoundException();
+      return model;
+    }
   }
 
   public void AddModel(ModelCard model)

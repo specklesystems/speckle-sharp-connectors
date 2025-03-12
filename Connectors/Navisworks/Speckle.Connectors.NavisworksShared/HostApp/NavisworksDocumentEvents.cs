@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connector.Navisworks.Bindings;
 using Speckle.Connectors.DUI.Bindings;
-using Speckle.Connectors.DUI.Eventing;
+using Speckle.Connectors.DUI.Bridge;
 
 namespace Speckle.Connector.Navisworks.HostApp;
 
@@ -12,7 +12,8 @@ namespace Speckle.Connector.Navisworks.HostApp;
 public sealed class NavisworksDocumentEvents
 {
   private readonly IServiceProvider _serviceProvider;
-  private readonly IEventAggregator _eventAggregator;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly IAppIdleManager _idleManager;
   private readonly object _subscriptionLock = new();
 
   private bool _isSubscribed;
@@ -25,22 +26,23 @@ public sealed class NavisworksDocumentEvents
   /// Initializes a new instance of the <see cref="NavisworksDocumentEvents"/> class and subscribes to document events.
   /// </summary>
   /// <param name="serviceProvider">The service provider for dependency injection.</param>
-  public NavisworksDocumentEvents(IServiceProvider serviceProvider, IEventAggregator eventAggregator)
+  public NavisworksDocumentEvents(
+    IServiceProvider serviceProvider,
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    IAppIdleManager idleManager
+  )
   {
     _serviceProvider = serviceProvider;
-    _eventAggregator = eventAggregator;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
+    _idleManager = idleManager;
 
-    _eventAggregator.GetEvent<ActiveDocumentChangingEvent>().Subscribe(UnsubscribeFromDocumentModelEvents);
-    _eventAggregator.GetEvent<ActiveDocumentChangedEvent>().Subscribe(SubscribeToDocumentModelEvents);
-    _eventAggregator.GetEvent<CollectionChangingEvent>().Subscribe(HandleDocumentModelCountChanging);
-    _eventAggregator.GetEvent<CollectionChangedEvent>().Subscribe(HandleDocumentModelCountChanged);
-    SubscribeToDocumentModelEvents(new object());
+    SubscribeToDocumentModelEvents();
   }
 
   /// <summary>
   /// Subscribes to document-level events to monitor model state changes.
   /// </summary>
-  private void SubscribeToDocumentModelEvents(object _)
+  private void SubscribeToDocumentModelEvents()
   {
     lock (_subscriptionLock)
     {
@@ -52,39 +54,37 @@ public sealed class NavisworksDocumentEvents
       var activeDocument = NavisworksApp.ActiveDocument;
       if (activeDocument != null)
       {
-        activeDocument.Models.CollectionChanged += OnCollectionChanged;
-        activeDocument.Models.CollectionChanging += OnCollectionChanging;
+        activeDocument.Models.CollectionChanged += HandleDocumentModelCountChanged;
+        activeDocument.Models.CollectionChanging += HandleDocumentModelCountChanging;
       }
 
       _isSubscribed = true;
     }
   }
 
-  private async void OnCollectionChanged(object sender, EventArgs _) =>
-    await _eventAggregator.GetEvent<CollectionChangedEvent>().PublishAsync(sender);
-
-  private async void OnCollectionChanging(object sender, EventArgs _) =>
-    await _eventAggregator.GetEvent<CollectionChangingEvent>().PublishAsync(sender);
-
   /// <summary>
   /// Tracks the current model count before changes occur.
   /// </summary>
-  private void HandleDocumentModelCountChanging(object sender) =>
+  private void HandleDocumentModelCountChanging(object sender, EventArgs e) =>
     _priorModelCount = ((NAV.Document)sender).Models.Count;
 
   /// <summary>
   /// Schedules processing of model count changes during idle time.
   /// </summary>
-  private void HandleDocumentModelCountChanged(object sender)
+  private void HandleDocumentModelCountChanged(object sender, EventArgs e)
   {
     _finalModelCount = ((NAV.Document)sender).Models.Count;
 
-    _eventAggregator
-      .GetEvent<IdleEvent>()
-      .OneTimeSubscribe(nameof(NavisworksDocumentEvents), ProcessModelStateChangeAsync);
+    _topLevelExceptionHandler.CatchUnhandled(
+      () =>
+        _idleManager.SubscribeToIdle(
+          nameof(ProcessModelStateChangeAsync),
+          async () => await ProcessModelStateChangeAsync()
+        )
+    );
   }
 
-  private async Task ProcessModelStateChangeAsync(object _)
+  private async Task ProcessModelStateChangeAsync()
   {
     if (_isProcessing)
     {
@@ -133,8 +133,8 @@ public sealed class NavisworksDocumentEvents
 
   private void UnsubscribeFromModelEvents(NAV.Document document)
   {
-    document.Models.CollectionChanged -= OnCollectionChanged;
-    document.Models.CollectionChanging -= OnCollectionChanging;
+    document.Models.CollectionChanged -= HandleDocumentModelCountChanged;
+    document.Models.CollectionChanging -= HandleDocumentModelCountChanging;
 
     var sendBinding = _serviceProvider
       .GetRequiredService<IEnumerable<IBinding>>()

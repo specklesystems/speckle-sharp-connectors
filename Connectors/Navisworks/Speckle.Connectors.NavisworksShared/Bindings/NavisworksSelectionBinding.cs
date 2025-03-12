@@ -1,35 +1,34 @@
 using Speckle.Connector.Navisworks.Services;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Eventing;
 
 namespace Speckle.Connector.Navisworks.Bindings;
 
 public class NavisworksSelectionBinding : ISelectionBinding
 {
+  private readonly IAppIdleManager _idleManager;
   private readonly IElementSelectionService _selectionService;
-  private readonly IEventAggregator _eventAggregator;
   private const string SELECTION_EVENT = "setSelection";
   public string Name { get; } = "selectionBinding";
   public IBrowserBridge Parent { get; }
 
   public NavisworksSelectionBinding(
+    IAppIdleManager idleManager,
     IBrowserBridge parent,
-    IElementSelectionService selectionService,
-    IEventAggregator eventAggregator
+    IElementSelectionService selectionService
   )
   {
+    _idleManager = idleManager;
     _selectionService = selectionService;
-    _eventAggregator = eventAggregator;
     Parent = parent;
 
-    eventAggregator.GetEvent<SelectionChangedEvent>().Subscribe(OnSelectionChange);
+    NavisworksApp.ActiveDocument.CurrentSelection.Changed += OnSelectionChange;
   }
 
-  private void OnSelectionChange(object _) =>
-    _eventAggregator.GetEvent<IdleEvent>().OneTimeSubscribe(nameof(NavisworksSelectionBinding), UpdateSelectionAsync);
+  private void OnSelectionChange(object? o, EventArgs eventArgs) =>
+    _idleManager.SubscribeToIdle(nameof(UpdateSelectionAsync), async () => await UpdateSelectionAsync());
 
-  private async Task UpdateSelectionAsync(object _)
+  private async Task UpdateSelectionAsync()
   {
     var selInfo = GetSelection();
     await Parent.Send(SELECTION_EVENT, selInfo);

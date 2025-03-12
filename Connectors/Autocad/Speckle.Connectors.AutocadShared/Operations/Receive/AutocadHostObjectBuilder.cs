@@ -31,7 +31,7 @@ public class AutocadHostObjectBuilder(
   RootObjectUnpacker rootObjectUnpacker
 ) : IHostObjectBuilder
 {
-  public HostObjectBuilderResult Build(
+  public Task<HostObjectBuilderResult> Build(
     Base rootObject,
     string projectName,
     string modelName,
@@ -83,7 +83,7 @@ public class AutocadHostObjectBuilder(
       colorBaker.ParseColors(unpackedRoot.ColorProxies, onOperationProgressed);
     }
 
-    // 5 - Convert atomic objects
+    // 4 - Convert atomic objects
     HashSet<ReceiveConversionResult> results = new();
     HashSet<string> bakedObjectIds = new();
     Dictionary<string, IReadOnlyCollection<Entity>> applicationIdMap = new();
@@ -116,7 +116,7 @@ public class AutocadHostObjectBuilder(
       }
     }
 
-    // 6 - Convert instances
+    // 5 - Convert instances
     var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = instanceBaker.BakeInstances(
       instanceComponentsWithPath,
       applicationIdMap,
@@ -129,7 +129,7 @@ public class AutocadHostObjectBuilder(
     results.RemoveWhere(result => result.ResultId != null && consumedObjectIds.Contains(result.ResultId));
     results.UnionWith(instanceConversionResults);
 
-    // 7 - Create groups
+    // 6 - Create groups
     if (unpackedRoot.GroupProxies != null)
     {
       IReadOnlyCollection<ReceiveConversionResult> groupResults = groupBaker.CreateGroups(
@@ -139,7 +139,7 @@ public class AutocadHostObjectBuilder(
       results.UnionWith(groupResults);
     }
 
-    return new HostObjectBuilderResult(bakedObjectIds, results);
+    return Task.FromResult(new HostObjectBuilderResult(bakedObjectIds, results));
   }
 
   private void PreReceiveDeepClean(string baseLayerPrefix)
@@ -160,15 +160,21 @@ public class AutocadHostObjectBuilder(
     var converted = converter.Convert(obj);
 
     // 2: handle result
-    if (converted is Entity entity)
+    switch (converted)
     {
-      var bakedEntity = BakeObject(entity, obj, layerName);
-      convertedEntities.Add(bakedEntity);
-    }
-    else if (converted is List<(Entity, Base)> fallbackConversionResult)
-    {
-      var bakedFallbackEntities = BakeObjectsAsGroup(fallbackConversionResult, obj, layerName, baseLayerNamePrefix);
-      convertedEntities.UnionWith(bakedFallbackEntities);
+      case Entity entity:
+        var bakedEntity = BakeObject(entity, obj, layerName);
+        convertedEntities.Add(bakedEntity);
+        break;
+
+      case List<(Entity, Base)> listConversionResult: // this is from fallback conversion for brep/brepx/subdx/extrusionx/polycurve
+        var bakedFallbackEntities = BakeObjectsAsGroup(listConversionResult, obj, layerName, baseLayerNamePrefix);
+        convertedEntities.UnionWith(bakedFallbackEntities);
+        break;
+
+      default:
+        // TODO: capture defualt case with report object here? Same as in Rhino
+        break;
     }
 
     tr.Commit();
@@ -206,6 +212,11 @@ public class AutocadHostObjectBuilder(
       BakeObject(conversionResult, originalObject, layerName, parentObject);
       ids.Add(conversionResult.ObjectId);
       entities.Add(conversionResult);
+    }
+
+    if (entities.Count <= 1) // return if empty list or only one, because we don't want to create empty or single item groups.
+    {
+      return entities;
     }
 
     var tr = Application.DocumentManager.CurrentDocument.Database.TransactionManager.TopTransaction;

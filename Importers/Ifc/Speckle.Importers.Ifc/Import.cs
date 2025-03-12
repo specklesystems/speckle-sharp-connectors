@@ -39,10 +39,15 @@ public static class Import
   {
     TypeLoader.Initialize(typeof(Base).Assembly, typeof(Point).Assembly);
     var serviceCollection = new ServiceCollection();
-    serviceCollection.AddSpeckleSdk(HostApplications.Other, HostAppVersion.v2024, "IFC-Importer");
+    serviceCollection.AddIFCImporter();
+    return serviceCollection.BuildServiceProvider();
+  }
+
+  public static void AddIFCImporter(this ServiceCollection serviceCollection)
+  {
+    serviceCollection.AddSpeckleSdk(new("IFC", "ifc"), HostAppVersion.v2024, "IFC-Importer");
     serviceCollection.AddSpeckleWebIfc();
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
-    return serviceCollection.BuildServiceProvider();
   }
 
   public static async Task<string> Ifc(
@@ -82,7 +87,7 @@ public static class Import
       token,
       progress,
       default,
-      new SerializeProcessOptions(true, true, true, false)
+      new SerializeProcessOptions(true, true, false, progress is null)
     );
     var (rootId, _) = await process.Serialize(b).ConfigureAwait(false);
     Account account =
@@ -93,12 +98,12 @@ public static class Import
       };
     ms = ms2;
     ms2 = stopwatch.ElapsedMilliseconds;
-    Console.WriteLine($"Uploaded to Speckle: {ms2 - ms} ms");
+    Console.WriteLine($"Uploaded to Speckle: {ms2 - ms} ms. Root id: {rootId}");
 
     // 8 - Create the version (commit)
     using var apiClient = clientFactory.Create(account);
     var commit = await apiClient.Version.Create(
-      new CreateVersionInput(rootId, modelId, streamId, message: commitMessage)
+      new CreateVersionInput(rootId, modelId, streamId, message: commitMessage, sourceApplication: "IFC")
     );
     ms = ms2;
     ms2 = stopwatch.ElapsedMilliseconds;

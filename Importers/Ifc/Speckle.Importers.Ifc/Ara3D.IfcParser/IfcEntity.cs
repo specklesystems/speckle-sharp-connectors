@@ -1,4 +1,6 @@
-﻿using Speckle.Importers.Ifc.Ara3D.StepParser;
+﻿using System.Diagnostics.CodeAnalysis;
+using Speckle.Importers.Ifc.Ara3D.IfcParser.Schema;
+using Speckle.Importers.Ifc.Ara3D.StepParser;
 
 namespace Speckle.Importers.Ifc.Ara3D.IfcParser;
 
@@ -32,13 +34,14 @@ public class IfcEntity
 
   public override string ToString() => $"{Type}#{Id}";
 
+  [MemberNotNullWhen(true, nameof(Guid))]
   public bool IsIfcRoot => Count >= 4 && this[0] is StepString && (this[1] is StepId) || (this[1] is StepUnassigned);
 
   // Modern IFC files conform to this, but older ones have been observed to have different length IDs.
   // Leaving as a comment for now.
   //&& str.Value.Length == 22;
 
-  public string? Guid => IsIfcRoot ? (this[0] as StepString)?.Value.ToString() : null;
+  public string? Guid => IsIfcRoot ? ((StepString)this[0]).Value.ToString() : null;
 
   public uint OwnerId => IsIfcRoot ? (this[1] as StepId)?.Id ?? 0 : 0;
 
@@ -58,7 +61,7 @@ public class IfcEntity
   public IEnumerable<IfcNode> GetSpatialChildren() =>
     GetOutgoingRelations().OfType<IfcRelationSpatial>().SelectMany(r => r.GetRelatedNodes());
 
-  public IEnumerable<IfcNode> GetChildren() => GetAggregatedChildren().Concat(GetSpatialChildren());
+  public IEnumerable<IfcNode> GetChildren() => GetAggregatedChildren().Concat(GetSpatialChildren()).Distinct();
 
   public IReadOnlyList<IfcPropSet> GetPropSets() =>
     Graph.PropertySetsByNode.TryGetValue(Id, out var list) ? list : Array.Empty<IfcPropSet>();

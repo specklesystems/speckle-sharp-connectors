@@ -41,6 +41,9 @@ public class CogoPointToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     // extract display value as point
     SOG.Point displayPoint = _pointConverter.Convert(target.Location);
 
+    // get additional class properties
+    Dictionary<string, object?> props = new() { ["number"] = target.PointNumber, ["northing"] = target.Northing };
+
     Civil3dObject civilObject =
       new()
       {
@@ -49,16 +52,10 @@ public class CogoPointToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
         baseCurves = null,
         elements = new(),
         displayValue = new() { displayPoint },
-        properties = new(),
+        properties = props,
         units = _settingsStore.Current.SpeckleUnits,
         applicationId = target.Id.GetSpeckleApplicationId()
       };
-
-    // add additional class properties
-    civilObject["pointNumber"] = target.PointNumber;
-    civilObject["northing"] = target.Northing;
-    //civilObject["latitude"] = target.Latitude; // might not be necessary, and also sometimes throws if transforms are not enabled
-    //civilObject["longitude"] = target.Longitude; // might not be necessary, and also sometimes throws if transforms are not enabled
 
     return civilObject;
   }

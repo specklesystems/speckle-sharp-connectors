@@ -1,9 +1,9 @@
 using ArcGIS.Core.Data;
+using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Sdk;
@@ -21,23 +21,27 @@ public class BasicConnectorBinding : IBasicConnectorBinding
   public BasicConnectorBindingCommands Commands { get; }
   private readonly DocumentModelStore _store;
   private readonly ISpeckleApplication _speckleApplication;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   public BasicConnectorBinding(
     DocumentModelStore store,
     IBrowserBridge parent,
     ISpeckleApplication speckleApplication,
-    IEventAggregator eventAggregator
+    ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
     _store = store;
     _speckleApplication = speckleApplication;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
     Parent = parent;
     Commands = new BasicConnectorBindingCommands(parent);
 
-    eventAggregator.GetEvent<DocumentStoreChangedEvent>().Subscribe(OnDocumentStoreChangedEvent);
+    _store.DocumentChanged += (_, _) =>
+      _topLevelExceptionHandler.FireAndForget(async () =>
+      {
+        await Commands.NotifyDocumentChanged();
+      });
   }
-
-  private async Task OnDocumentStoreChangedEvent(object _) => await Commands.NotifyDocumentChanged();
 
   public string GetSourceApplicationName() => _speckleApplication.Slug;
 
@@ -63,19 +67,18 @@ public class BasicConnectorBinding : IBasicConnectorBinding
 
   public void RemoveModel(ModelCard model) => _store.RemoveModel(model);
 
-  public Task HighlightObjects(IReadOnlyList<string> objectIds)
+  public async Task HighlightObjects(IReadOnlyList<string> objectIds)
   {
-    HighlightObjectsOnView(objectIds.Select(x => new ObjectID(x)).ToList());
-    return Task.CompletedTask;
+    await HighlightObjectsOnView(objectIds.Select(x => new ObjectID(x)).ToList());
   }
 
-  public Task HighlightModel(string modelCardId)
+  public async Task HighlightModel(string modelCardId)
   {
     var model = _store.GetModelById(modelCardId);
 
     if (model is null)
     {
-      return Task.CompletedTask;
+      return;
     }
 
     var objectIds = new List<ObjectID>();
@@ -92,22 +95,24 @@ public class BasicConnectorBinding : IBasicConnectorBinding
 
     if (objectIds is null)
     {
-      return Task.CompletedTask;
+      return;
     }
-    HighlightObjectsOnView(objectIds);
-    return Task.CompletedTask;
+    await HighlightObjectsOnView(objectIds);
   }
 
-  private void HighlightObjectsOnView(IReadOnlyList<ObjectID> objectIds)
+  private async Task HighlightObjectsOnView(IReadOnlyList<ObjectID> objectIds)
   {
-    MapView mapView = MapView.Active;
+    await QueuedTask.Run(() =>
+    {
+      MapView mapView = MapView.Active;
 
-    List<MapMemberFeature> mapMembersFeatures = GetMapMembers(objectIds, mapView);
-    ClearSelectionInTOC();
-    ClearSelection();
-    SelectMapMembersInTOC(mapMembersFeatures);
-    SelectMapMembersAndFeatures(mapMembersFeatures);
-    mapView.ZoomToSelected();
+      List<MapMemberFeature> mapMembersFeatures = GetMapMembers(objectIds, mapView);
+      ClearSelectionInTOC();
+      ClearSelection();
+      SelectMapMembersInTOC(mapMembersFeatures);
+      SelectMapMembersAndFeatures(mapMembersFeatures);
+      mapView.ZoomToSelected();
+    });
   }
 
   private List<MapMemberFeature> GetMapMembers(IReadOnlyList<ObjectID> objectIds, MapView mapView)

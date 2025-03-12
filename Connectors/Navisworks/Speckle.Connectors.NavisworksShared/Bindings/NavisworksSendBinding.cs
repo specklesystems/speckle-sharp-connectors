@@ -1,9 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Speckle.Connector.Navisworks.Operations.Send.Filters;
 using Speckle.Connector.Navisworks.Operations.Send.Settings;
 using Speckle.Connector.Navisworks.Services;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Exceptions;
@@ -29,8 +31,7 @@ public class NavisworksSendBinding : ISendBinding
 
   private readonly DocumentModelStore _store;
   private readonly IServiceProvider _serviceProvider;
-  private readonly List<ISendFilter> _sendFilters;
-  private readonly CancellationManager _cancellationManager;
+  private readonly ICancellationManager _cancellationManager;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<NavisworksSendBinding> _logger;
   private readonly ISpeckleApplication _speckleApplication;
@@ -38,27 +39,27 @@ public class NavisworksSendBinding : ISendBinding
   private readonly INavisworksConversionSettingsFactory _conversionSettingsFactory;
   private readonly ToSpeckleSettingsManagerNavisworks _toSpeckleSettingsManagerNavisworks;
   private readonly IElementSelectionService _selectionService;
+  private readonly IThreadContext _threadContext;
 
   public NavisworksSendBinding(
     DocumentModelStore store,
     IBrowserBridge parent,
-    IEnumerable<ISendFilter> sendFilters,
     IServiceProvider serviceProvider,
-    CancellationManager cancellationManager,
+    ICancellationManager cancellationManager,
     IOperationProgressManager operationProgressManager,
     ILogger<NavisworksSendBinding> logger,
     ISpeckleApplication speckleApplication,
     ISdkActivityFactory activityFactory,
     INavisworksConversionSettingsFactory conversionSettingsFactory,
     ToSpeckleSettingsManagerNavisworks toSpeckleSettingsManagerNavisworks,
-    IElementSelectionService selectionService
+    IElementSelectionService selectionService,
+    IThreadContext threadContext
   )
   {
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
     _store = store;
     _serviceProvider = serviceProvider;
-    _sendFilters = sendFilters.ToList();
     _cancellationManager = cancellationManager;
     _operationProgressManager = operationProgressManager;
     _logger = logger;
@@ -67,12 +68,18 @@ public class NavisworksSendBinding : ISendBinding
     _conversionSettingsFactory = conversionSettingsFactory;
     _toSpeckleSettingsManagerNavisworks = toSpeckleSettingsManagerNavisworks;
     _selectionService = selectionService;
+    _threadContext = threadContext;
     SubscribeToNavisworksEvents();
   }
 
   private static void SubscribeToNavisworksEvents() { }
 
-  public List<ISendFilter> GetSendFilters() => _sendFilters;
+  // Do not change the behavior/scope of this class on send binding unless make sure the behavior is same. Otherwise, we might not be able to update list of saved sets.
+  public List<ISendFilter> GetSendFilters() =>
+    [
+      new NavisworksSelectionFilter() { IsDefault = true },
+      new NavisworksSavedSetsFilter(new ElementSelectionService())
+    ];
 
   public List<ICardSetting> GetSendSettings() =>
     [
@@ -80,9 +87,13 @@ public class NavisworksSendBinding : ISendBinding
       new OriginModeSetting(OriginMode.ModelOrigin),
       new IncludeInternalPropertiesSetting(false),
       new ConvertHiddenElementsSetting(false),
+      new PreserveModelHierarchySetting(false),
     ];
 
-  public async Task Send(string modelCardId)
+  public async Task Send(string modelCardId) =>
+    await _threadContext.RunOnMainAsync(async () => await SendInternal(modelCardId));
+
+  private async Task SendInternal(string modelCardId)
   {
     using var activity = _activityFactory.Start();
     try
@@ -93,11 +104,11 @@ public class NavisworksSendBinding : ISendBinding
 
       InitializeConverterSettings(scope, modelCard);
 
-      CancellationToken token = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
       var navisworksModelItems = GetNavisworksModelItems(modelCard);
 
-      var sendResult = await ExecuteSendOperation(scope, modelCard, navisworksModelItems, token);
+      var sendResult = await ExecuteSendOperation(scope, modelCard, navisworksModelItems, cancellationItem.Token);
 
       await Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
     }
@@ -127,29 +138,32 @@ public class NavisworksSendBinding : ISendBinding
           originMode: _toSpeckleSettingsManagerNavisworks.GetOriginMode(modelCard),
           visualRepresentationMode: _toSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(modelCard),
           convertHiddenElements: _toSpeckleSettingsManagerNavisworks.GetConvertHiddenElements(modelCard),
-          includeInternalProperties: _toSpeckleSettingsManagerNavisworks.GetIncludeInternalProperties(modelCard)
+          includeInternalProperties: _toSpeckleSettingsManagerNavisworks.GetIncludeInternalProperties(modelCard),
+          preserveModelHierarchy: _toSpeckleSettingsManagerNavisworks.GetPreserveModelHierarchy(modelCard)
         )
       );
 
   private List<NAV.ModelItem> GetNavisworksModelItems(SenderModelCard modelCard)
   {
     var selectedPaths = modelCard.SendFilter.NotNull().RefreshObjectIds();
+    var convertHiddenElementsSetting =
+      modelCard.Settings!.FirstOrDefault(s => s.Id == "convertHiddenElements")?.Value as bool? ?? false;
+    var message = convertHiddenElementsSetting
+      ? "No visible objects were found to convert. Please update your publish filter!"
+      : "No objects were found to convert. Please update your publish filter, or check items are visible!";
+
     if (selectedPaths.Count == 0)
     {
-      throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
+      throw new SpeckleSendFilterException(message);
     }
 
-    var modelItems = modelCard
-      .SendFilter.NotNull()
-      .RefreshObjectIds()
+    var modelItems = selectedPaths
       .Select(_selectionService.GetModelItemFromPath)
       .SelectMany(_selectionService.GetGeometryNodes)
       .Where(_selectionService.IsVisible)
       .ToList();
 
-    return modelItems.Count == 0
-      ? throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!")
-      : modelItems;
+    return modelItems.Count == 0 ? throw new SpeckleSendFilterException(message) : modelItems;
   }
 
   private async Task<SendOperationResult> ExecuteSendOperation(
@@ -162,7 +176,7 @@ public class NavisworksSendBinding : ISendBinding
       .ServiceProvider.GetRequiredService<SendOperation<NAV.ModelItem>>()
       .Execute(
         navisworksModelItems,
-        modelCard.GetSendInfo(_speckleApplication.Slug),
+        modelCard.GetSendInfo(_speckleApplication.ApplicationAndVersion),
         _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCard.ModelCardId.NotNull(), token),
         token
       );

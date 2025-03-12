@@ -1,48 +1,42 @@
-using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
-using Speckle.Connectors.Autocad.Plugin;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Eventing;
 
 namespace Speckle.Connectors.Autocad.Bindings;
 
 public class AutocadSelectionBinding : ISelectionBinding
 {
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly IThreadContext _threadContext;
   private const string SELECTION_EVENT = "setSelection";
-  private readonly IEventAggregator _eventAggregator;
-  private readonly HashSet<string> _visitedDocuments = new();
+  private readonly HashSet<Document> _visitedDocuments = new();
 
   public string Name => "selectionBinding";
 
   public IBrowserBridge Parent { get; }
 
-  public AutocadSelectionBinding(IBrowserBridge parent, IEventAggregator eventAggregator)
+  public AutocadSelectionBinding(
+    IBrowserBridge parent,
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    IThreadContext threadContext
+  )
   {
-    _eventAggregator = eventAggregator;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
+    _threadContext = threadContext;
     Parent = parent;
 
     // POC: Use here Context for doc. In converters it's OK but we are still lacking to use context into bindings.
     // It is with the case of if binding created with already a document
     // This is valid when user opens acad file directly double clicking
     TryRegisterDocumentForSelection(Application.DocumentManager.MdiActiveDocument);
-    eventAggregator.GetEvent<DocumentActivatedEvent>().Subscribe(OnDocumentChanged);
-    eventAggregator.GetEvent<ImpliedSelectionChangedEvent>().Subscribe(OnSelectionChanged);
-    eventAggregator.GetEvent<DocumentToBeDestroyedEvent>().Subscribe(OnDocumentDestroyed);
+    Application.DocumentManager.DocumentActivated += (_, e) =>
+      _topLevelExceptionHandler.CatchUnhandled(() => OnDocumentChanged(e.Document));
   }
 
-  private void OnDocumentDestroyed(DocumentCollectionEventArgs e)
-  {
-    if (!_visitedDocuments.Contains(e.Document.Name))
-    {
-      e.Document.ImpliedSelectionChanged -= DocumentOnImpliedSelectionChanged;
-      _visitedDocuments.Remove(e.Document.Name);
-    }
-  }
-
-  private void OnDocumentChanged(DocumentCollectionEventArgs e) => TryRegisterDocumentForSelection(e.Document);
+  private void OnDocumentChanged(Document? document) => TryRegisterDocumentForSelection(document);
 
   private void TryRegisterDocumentForSelection(Document? document)
   {
@@ -51,24 +45,21 @@ public class AutocadSelectionBinding : ISelectionBinding
       return;
     }
 
-    if (!_visitedDocuments.Contains(document.Name))
+    if (!_visitedDocuments.Contains(document))
     {
-      document.ImpliedSelectionChanged += DocumentOnImpliedSelectionChanged;
+      document.ImpliedSelectionChanged += (_, _) =>
+        _topLevelExceptionHandler.FireAndForget(async () => await _threadContext.RunOnMainAsync(OnSelectionChanged));
 
-      _visitedDocuments.Add(document.Name);
+      _visitedDocuments.Add(document);
     }
   }
-
-  // ReSharper disable once AsyncVoidMethod
-  private async void DocumentOnImpliedSelectionChanged(object? sender, EventArgs e) =>
-    await _eventAggregator.GetEvent<ImpliedSelectionChangedEvent>().PublishAsync(e);
 
   // NOTE: Autocad 2022 caused problems, so we need to refactor things a bit in here to always store
   // selection info locally (and get it updated by the event, which we can control to run on the main thread).
   // Ui requests to GetSelection() should just return this local copy that is kept up to date by the event handler.
   private SelectionInfo _selectionInfo;
 
-  private async Task OnSelectionChanged(EventArgs _)
+  private async Task OnSelectionChanged()
   {
     _selectionInfo = GetSelectionInternal();
     await Parent.Send(SELECTION_EVENT, _selectionInfo);

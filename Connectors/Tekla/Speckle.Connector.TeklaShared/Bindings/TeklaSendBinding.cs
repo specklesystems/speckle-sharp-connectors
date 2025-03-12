@@ -6,7 +6,6 @@ using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Eventing;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
@@ -34,7 +33,7 @@ public sealed class TeklaSendBinding : ISendBinding
   private readonly DocumentModelStore _store;
   private readonly IServiceProvider _serviceProvider;
   private readonly List<ISendFilter> _sendFilters;
-  private readonly CancellationManager _cancellationManager;
+  private readonly ICancellationManager _cancellationManager;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<TeklaSendBinding> _logger;
@@ -43,6 +42,7 @@ public sealed class TeklaSendBinding : ISendBinding
   private readonly ISdkActivityFactory _activityFactory;
   private readonly Model _model;
   private readonly ToSpeckleSettingsManager _toSpeckleSettingsManager;
+  private readonly Events _events;
 
   private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
 
@@ -51,15 +51,14 @@ public sealed class TeklaSendBinding : ISendBinding
     IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     IServiceProvider serviceProvider,
-    CancellationManager cancellationManager,
+    ICancellationManager cancellationManager,
     ISendConversionCache sendConversionCache,
     IOperationProgressManager operationProgressManager,
     ILogger<TeklaSendBinding> logger,
     ITeklaConversionSettingsFactory teklaConversionSettingsFactory,
     ISpeckleApplication speckleApplication,
     ISdkActivityFactory activityFactory,
-    ToSpeckleSettingsManager toSpeckleSettingsManager,
-    IEventAggregator eventAggregator
+    ToSpeckleSettingsManager toSpeckleSettingsManager
   )
   {
     _store = store;
@@ -77,11 +76,18 @@ public sealed class TeklaSendBinding : ISendBinding
     _toSpeckleSettingsManager = toSpeckleSettingsManager;
 
     _model = new Model();
-    eventAggregator.GetEvent<ModelObjectChangedEvent>().Subscribe(ModelHandler_OnChange);
+    _events = new Events();
+    SubscribeToTeklaEvents();
+  }
+
+  private void SubscribeToTeklaEvents()
+  {
+    _events.ModelObjectChanged += OnModelObjectChanged;
+    _events.Register();
   }
 
   // subscribes the all changes in a modelobject
-  private void ModelHandler_OnChange(List<ChangeData> changes)
+  private void OnModelObjectChanged(List<ChangeData> changes)
   {
     foreach (var change in changes)
     {
@@ -120,7 +126,7 @@ public sealed class TeklaSendBinding : ISendBinding
           _teklaConversionSettingsFactory.Create(_model, _toSpeckleSettingsManager.GetSendRebarsAsSolid(modelCard))
         );
 
-      CancellationToken cancellationToken = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
       List<ModelObject> teklaObjects = modelCard
         .SendFilter.NotNull()
@@ -138,9 +144,9 @@ public sealed class TeklaSendBinding : ISendBinding
         .ServiceProvider.GetRequiredService<SendOperation<ModelObject>>()
         .Execute(
           teklaObjects,
-          modelCard.GetSendInfo(_speckleApplication.Slug),
-          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationToken),
-          cancellationToken
+          modelCard.GetSendInfo(_speckleApplication.ApplicationAndVersion),
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),
+          cancellationItem.Token
         );
 
       await Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);

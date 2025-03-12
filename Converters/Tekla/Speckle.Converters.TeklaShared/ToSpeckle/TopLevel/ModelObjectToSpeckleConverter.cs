@@ -72,13 +72,6 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
       units = _settingsStore.Current.SpeckleUnits
     };
 
-    // add dynamic class properties
-    var classProperties = _classPropertyExtractor.GetProperties(target);
-    foreach (var prop in classProperties)
-    {
-      result[prop.Key] = prop.Value;
-    }
-
     return result;
   }
 }
