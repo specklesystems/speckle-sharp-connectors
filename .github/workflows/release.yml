@@ -11,7 +11,7 @@ jobs:
     env:
       SPECKLE_VERSION: "unset"
     outputs:
-      version: ${{ steps.set-version.outputs.SPECKLE_VERSION }}
+      version: ${{ steps.set-version.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,7 +41,10 @@ jobs:
           path: output/*.*
           if-no-files-found: error
           retention-days: 1
-          compression-level: 0 # no compression
+          compression-level: 0 # no compression      
+      - id: set-version
+        name: Set version to output
+        run: echo "version=${{ env.SPECKLE_VERSION }}" >> "$Env:GITHUB_OUTPUT"
 
   deploy-installers:
     runs-on: ubuntu-latest
