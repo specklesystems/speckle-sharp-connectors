@@ -192,7 +192,7 @@ public class GeometryToSpeckleConverter
           (triangle.Vertex3.Z + _transformVector.Z) * SCALE
         ]
       );
-      faces.AddRange([0, t * 3, t * 3 + 1, t * 3 + 2]);
+      faces.AddRange([3, t * 3, t * 3 + 1, t * 3 + 2]);
     }
 
     return new Mesh
