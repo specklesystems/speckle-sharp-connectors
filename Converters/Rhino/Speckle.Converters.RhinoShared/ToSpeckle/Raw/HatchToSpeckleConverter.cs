@@ -1,7 +1,6 @@
 ﻿using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
 
@@ -43,7 +42,6 @@ public class HatchToSpeckleConverter : ITypedConverter<RG.Hatch, SOG.Region>
       innerLoops = innerLoops,
       hasHatchPattern = true,
       bbox = null,
-      displayValue = allCurves.Cast<Base>().ToList(),
       units = _settingsStore.Current.SpeckleUnits,
     };
   }
