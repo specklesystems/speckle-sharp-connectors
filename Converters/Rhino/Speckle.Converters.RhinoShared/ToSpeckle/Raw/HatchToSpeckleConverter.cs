@@ -41,7 +41,6 @@ public class HatchToSpeckleConverter : ITypedConverter<RG.Hatch, SOG.Region>
       boundary = boundary,
       innerLoops = innerLoops,
       hasHatchPattern = true,
-      bbox = null,
       units = _settingsStore.Current.SpeckleUnits,
     };
   }
