@@ -138,7 +138,7 @@ public sealed class CorridorDisplayValueExtractor
   private SubassemblyCorridorKey? GetSubassemblyKeyFromDBObject(ADB.DBObject obj, ADB.Transaction tr)
   {
     ADB.ObjectIdCollection? propertySetIds;
-
+    
     try
     {
       propertySetIds = AAECPDB.PropertyDataServices.GetPropertySets(obj);
@@ -157,7 +157,17 @@ public sealed class CorridorDisplayValueExtractor
     {
       AAECPDB.PropertySet propertySet = (AAECPDB.PropertySet)tr.GetObject(id, ADB.OpenMode.ForRead);
 
-      if (propertySet.PropertySetDefinitionName == "Corridor Identity")
+      string? propSetName;
+      try
+      {
+        propSetName = propertySet.PropertySetDefinitionName;
+      }
+      catch (Autodesk.AutoCAD.Runtime.Exception)
+      {        
+        continue; // Skip to next property set  
+      }
+
+      if (propSetName == "Corridor Identity")
       {
         if (propertySet.PropertySetData[_corridorHandleIndex].GetData() is not string corridorHandle)
         {
