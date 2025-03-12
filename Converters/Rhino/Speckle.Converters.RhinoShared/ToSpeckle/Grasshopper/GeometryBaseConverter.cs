@@ -5,7 +5,7 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Grasshopper;
 
-[NameAndRankValue(nameof(RG.GeometryBase), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(RG.GeometryBase), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class GeometryBaseConverter : IToSpeckleTopLevelConverter
 {
   private readonly ITypedConverter<RG.Point, SOG.Point> _pointConverter;

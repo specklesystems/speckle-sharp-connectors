@@ -1,4 +1,4 @@
-﻿using Grasshopper.Kernel;
+using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
 using Rhino.Geometry;
 using Speckle.Connectors.Common.Instances;
@@ -172,7 +172,7 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
 
 // NOTE: We will need GrasshopperCollections (with an extra path element)
 // these will need to be handled now
-sealed class CollectionRebuilder
+internal sealed class CollectionRebuilder
 {
   public Collection RootCollection { get; }
 

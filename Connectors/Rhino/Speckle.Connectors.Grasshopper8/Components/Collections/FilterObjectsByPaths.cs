@@ -62,8 +62,7 @@ public class FilterObjectsByPaths : GH_Component
     }
 
     var targetCollection = FindCollection(collectionGoo.Value, path);
-    var topology = targetCollection["topology"] as string;
-    if (topology is null)
+    if (targetCollection["topology"] is not string topology)
     {
       dataAccess.SetDataList(0, targetCollection.elements);
     }

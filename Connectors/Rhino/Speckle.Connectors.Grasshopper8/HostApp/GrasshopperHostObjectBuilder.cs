@@ -1,6 +1,7 @@
-﻿using Rhino.Geometry;
+using Rhino.Geometry;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Converters.Common;

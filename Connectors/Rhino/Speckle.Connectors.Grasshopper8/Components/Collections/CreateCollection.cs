@@ -1,10 +1,10 @@
-using ConnectorGrasshopper.Extras;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
 using Grasshopper.Kernel.Types;
 using Grasshopper.Rhinoceros.Model;
 using Rhino;
 using Speckle.Connectors.Grasshopper8.HostApp;
+using Speckle.Connectors.Grasshopper8.HostApp.Extras;
 using Speckle.Connectors.Grasshopper8.Parameters;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
@@ -18,7 +18,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
 {
   public override Guid ComponentGuid => new("BDCE743E-7BDB-479B-AA81-19854AB5A254");
 
-  private DebounceDispatcher _debounceDispatcher = new();
+  private readonly DebounceDispatcher _debounceDispatcher = new();
 
   public CreateCollection()
     : base("Create collection", "Create collection", "Creates a new collection", "Speckle", "Collections") { }

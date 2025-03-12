@@ -1118,12 +1118,12 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
       base.Render(canvas, graphics, channel);
     }
 
-    static readonly Guid s_genericDataParamComponentGuid = new Guid("{8EC86459-BF01-4409-BAEE-174D0D2B13D0}");
-    static readonly Bitmap s_defaultItemIcon = Instances.ComponentServer.EmitObjectIcon(
+    private static readonly Guid s_genericDataParamComponentGuid = new Guid("{8EC86459-BF01-4409-BAEE-174D0D2B13D0}");
+    private static readonly Bitmap s_defaultItemIcon = Instances.ComponentServer.EmitObjectIcon(
       s_genericDataParamComponentGuid
     );
 
-    void RenderItem(
+    private void RenderItem(
       ListItem item,
       Graphics graphics,
       SizeF itemSize,
@@ -1188,7 +1188,7 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
       }
     }
 
-    void RenderScrollBar(Graphics graphics, Color color)
+    private void RenderScrollBar(Graphics graphics, Color color)
     {
       var total = Owner._listItems.Count * ItemHeight;
       if (total > 0)
@@ -1384,9 +1384,9 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
       return base.RespondToKeyDown(sender, e);
     }
 
-    sealed class SearchInputBox : Grasshopper.GUI.Base.GH_TextBoxInputBase
+    private sealed class SearchInputBox : Grasshopper.GUI.Base.GH_TextBoxInputBase
     {
-      readonly ResizableAttributes _parentAttributes;
+      private readonly ResizableAttributes _parentAttributes;
 
       public SearchInputBox(ResizableAttributes parentAttributes)
       {
@@ -1659,7 +1659,7 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
     }
   }
 
-  static (int Match, double Ratio) FuzzyPartialMatch(string key, string value)
+  private static (int Match, double Ratio) FuzzyPartialMatch(string key, string value)
   {
     var shortText = key.Length <= value.Length ? key : value;
     var longText = value.Length >= key.Length ? value : key;
@@ -1678,7 +1678,7 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
     return (maxMatch, maxMatch / (double)longText.Length);
   }
 
-  static (int Match, double TokenRatio) FuzzyTokenMatch(string key, string value)
+  private static (int Match, double TokenRatio) FuzzyTokenMatch(string key, string value)
   {
     var keys = key.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
     var values = value.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
@@ -1703,7 +1703,7 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
     return (match, ratio / keys.Length);
   }
 
-  static (double Match, double TokenRatio, double Ratio) FuzzyTokenMatchRatio(
+  private static (double Match, double TokenRatio, double Ratio) FuzzyTokenMatchRatio(
     string key,
     string value,
     bool caseSensitive

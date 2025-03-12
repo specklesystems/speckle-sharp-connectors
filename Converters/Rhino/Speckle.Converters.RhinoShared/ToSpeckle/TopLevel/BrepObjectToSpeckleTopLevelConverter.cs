@@ -1,4 +1,4 @@
-﻿using Rhino.DocObjects;
+using Rhino.DocObjects;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Rhino.ToSpeckle.Encoding;
@@ -7,7 +7,7 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.TopLevel;
 
-[NameAndRankValue(nameof(BrepObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(BrepObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class BrepObjectToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter, ITypedConverter<RG.Brep, SOG.BrepX>
 {
   private readonly ITypedConverter<RG.Mesh, SOG.Mesh> _meshConverter;

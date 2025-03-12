@@ -1,6 +1,6 @@
 using System.Windows.Threading;
 
-namespace ConnectorGrasshopper.Extras;
+namespace Speckle.Connectors.Grasshopper8.HostApp.Extras;
 
 /// <summary>
 /// Provides Debounce() and Throttle() methods.
