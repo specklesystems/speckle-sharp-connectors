@@ -37,7 +37,7 @@ jobs:
         if: (github.ref_type == 'tag' && startsWith(github.ref, 'refs/tags/v3.') && github.ref == 'refs/heads/main') || startsWith(github.ref, 'refs/heads/installer-test/')
         uses: actions/upload-artifact@v4
         with:
-          name: output-${{ SPECKLE_VERSION }}
+          name: output-${{ env.SPECKLE_VERSION }}
           path: output/*.*
           if-no-files-found: error
           retention-days: 1
