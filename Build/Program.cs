@@ -269,7 +269,10 @@ Target(
       ZipFile.CreateFromDirectory(slugDir, outputPath);
       // Directory.Delete(slugDir, true);
     }
-    Environment.SetEnvironmentVariable("SPECKLE_VERSION", version.ToString());
+    
+    string githubEnv = Environment.GetEnvironmentVariable("GITHUB_ENV") ?? "Unset";
+    Console.WriteLine($"GITHUB_ENV: {githubEnv}");
+    File.AppendAllText(githubEnv, $"SPECKLE_VERSION={version}{Environment.NewLine}");
   }
 );
 
