@@ -10,8 +10,9 @@ using Speckle.Sdk.Host;
 using Speckle.Sdk.Models;
 
 // Settings
-// var filePath = new FilePath(@"C:\Users\Jedd\Desktop\GRAPHISOFT_Archicad_Sample_Project-S-Office_v1.0_AC25.ifc");
-var filePath = new FilePath(@"C:\Users\Jedd\Desktop\BIM_Projekt_Golden_Nugget-Architektur_und_Ingenieurbau.ifc");
+var filePath = new FilePath(@"C:\Users\Jedd\Desktop\KLY-ZHQ-B-CPL1_CPL4-0-ELV-SD-210.ifc");
+
+// var filePath = new FilePath(@"C:\Users\Jedd\Desktop\BIM_Projekt_Golden_Nugget-Architektur_und_Ingenieurbau.ifc");
 const string PROJECT_ID = "f3a42bdf24";
 
 // Setup
