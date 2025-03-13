@@ -16,23 +16,25 @@ using Speckle.Sdk.Models;
 using Speckle.Sdk.Serialisation.V2;
 using Speckle.Sdk.Serialisation.V2.Send;
 using Speckle.Sdk.Transports;
+using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
 namespace Speckle.Importers.Ifc;
 
 public static class Import
 {
-  public static async Task<string> Ifc(
-    string url,
+  public static async Task<Version> Ifc(
+    Uri url,
     string filePath,
     string streamId,
-    string modelId,
-    string commitMessage,
+    string? modelId,
+    string modelName,
+    string versionMessage,
     string token,
     IProgress<ProgressArgs>? progress = null
   )
   {
     var serviceProvider = GetServiceProvider();
-    return await Ifc(serviceProvider, url, filePath, streamId, modelId, commitMessage, token, progress);
+    return await Ifc(serviceProvider, url, filePath, streamId, modelId, modelName, versionMessage, token, progress);
   }
 
   public static ServiceProvider GetServiceProvider()
@@ -50,23 +52,23 @@ public static class Import
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
   }
 
-  public static async Task<string> Ifc(
+  public static async Task<Version> Ifc(
     IServiceProvider serviceProvider,
-    string url,
+    Uri url,
     string filePath,
-    string streamId,
-    string modelId,
-    string commitMessage,
+    string projectId,
+    string? modelId,
+    string modelName,
+    string versionMessage,
     string token,
     IProgress<ProgressArgs>? progress = null
   )
   {
     var ifcFactory = serviceProvider.GetRequiredService<IIfcFactory>();
     var clientFactory = serviceProvider.GetRequiredService<IClientFactory>();
-    var baseUri = new Uri(url);
     var stopwatch = Stopwatch.StartNew();
 
-    var model = ifcFactory.Open(filePath);
+    var ifcModel = ifcFactory.Open(filePath);
     var ms = stopwatch.ElapsedMilliseconds;
     Console.WriteLine($"Opened with WebIFC: {ms} ms");
 
@@ -75,15 +77,15 @@ public static class Import
     Console.WriteLine($"Loaded with StepParser: {ms2 - ms} ms");
 
     var converter = serviceProvider.GetRequiredService<IGraphConverter>();
-    var b = converter.Convert(model, graph);
+    var b = converter.Convert(ifcModel, graph);
     ms = ms2;
     ms2 = stopwatch.ElapsedMilliseconds;
     Console.WriteLine($"Converted to Speckle Bases: {ms2 - ms} ms");
 
     var serializeProcessFactory = serviceProvider.GetRequiredService<ISerializeProcessFactory>();
     var process = serializeProcessFactory.CreateSerializeProcess(
-      baseUri,
-      streamId,
+      url,
+      projectId,
       token,
       progress,
       default,
@@ -94,7 +96,7 @@ public static class Import
       new()
       {
         token = token,
-        serverInfo = new ServerInfo { url = baseUri.ToString() },
+        serverInfo = new ServerInfo { url = url.ToString() },
       };
     ms = ms2;
     ms2 = stopwatch.ElapsedMilliseconds;
@@ -102,12 +104,22 @@ public static class Import
 
     // 8 - Create the version (commit)
     using var apiClient = clientFactory.Create(account);
-    var commit = await apiClient.Version.Create(
-      new CreateVersionInput(rootId, modelId, streamId, message: commitMessage, sourceApplication: "IFC")
+
+    if (string.IsNullOrEmpty(modelId))
+    {
+      // Project level import, currently we're expecting the parsers to create the branch
+      // Quite smelly imo...
+      var input = new CreateModelInput(modelName, null, projectId);
+      var model = await apiClient.Model.Create(input);
+      modelId = model.id;
+    }
+
+    var speckleVersion = await apiClient.Version.Create(
+      new CreateVersionInput(rootId, modelId, projectId, message: versionMessage, sourceApplication: "IFC")
     );
     ms = ms2;
     ms2 = stopwatch.ElapsedMilliseconds;
     Console.WriteLine($"Committed to Speckle: {ms2 - ms} ms");
-    return commit.id;
+    return speckleVersion;
   }
 }
