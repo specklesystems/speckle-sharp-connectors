@@ -65,6 +65,9 @@ public class CsiSharedBasicConnectorBinding : IBasicConnectorBinding
   public void RemoveModel(ModelCard model) =>
     _topLevelExceptionHandler.CatchUnhandled(() => _threadContext.RunOnThread(() => _store.RemoveModel(model), true));
 
+  public void RemoveModels(List<ModelCard> models) =>
+    _topLevelExceptionHandler.CatchUnhandled(() => _threadContext.RunOnThread(() => _store.RemoveModels(models), true));
+
   public Task HighlightModel(string modelCardId) => Task.CompletedTask;
 
   public Task HighlightObjects(IReadOnlyList<string> objectIds) => Task.CompletedTask;
