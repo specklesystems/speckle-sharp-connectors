@@ -15,6 +15,7 @@ public class ArcConverterToHost : ITypedConverter<SOG.Arc, DB.Arc>
     ITypedConverter<SOG.Plane, DB.Plane> planeConverter
   )
   {
+    _ = 0;
     _pointToXyzConverter = pointToXyzConverter;
     _scalingService = scalingService;
     _planeConverter = planeConverter;
