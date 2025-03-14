@@ -157,8 +157,34 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
             using ObjectAttributes atts = new() { LayerIndex = layerIndex, Name = name };
 
             // 2: convert
-            var result = _converter.Convert(obj);
+            object result;
+            if (obj is Speckle.Objects.IDataObject dataObj)
+            {
+              var resultSimple = new List<GeometryBase>();
+              var resultFallback = new List<(GeometryBase, Base)>();
 
+              foreach (var value in dataObj.displayValue)
+              {
+                var converted = _converter.Convert(value);
+                switch (converted)
+                {
+                  case GeometryBase geomBase:
+                    resultSimple.Add(geomBase);
+                    break;
+                  case List<GeometryBase> geomBaseList:
+                    resultSimple.AddRange(geomBaseList);
+                    break;
+                  case List<(GeometryBase, Base)> fallbackGeomList:
+                    resultFallback.AddRange(fallbackGeomList);
+                    break;
+                }
+              }
+              result = resultSimple.Count > 0 ? resultSimple : resultFallback;
+            }
+            else
+            {
+              result = _converter.Convert(obj);
+            }
             // 3: bake
             var conversionIds = new List<string>();
             if (result is GeometryBase geometryBase)
