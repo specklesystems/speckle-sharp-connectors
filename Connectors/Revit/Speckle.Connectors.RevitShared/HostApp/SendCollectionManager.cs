@@ -99,7 +99,8 @@ public class SendCollectionManager
           levelProperties.Add("units", _converterSettings.Current.SpeckleUnits);
           _levelCache.Add(element.LevelId, (levelName, levelProperties));
         }
-        catch (Exception e) when (!e.IsFatal()) { } // TODO: CNX-1376
+        // the exception is swallowed since if an exception occurs, we fall back to "No Level" for the element
+        catch (Exception e) when (!e.IsFatal()) { }
       }
     }
 
