@@ -11,6 +11,7 @@ public static class ToHostTopLevelConverterExtension
   {
     try
     {
+      _ = 0;
       return converter.Convert(target);
     }
     catch (Exception ex)
