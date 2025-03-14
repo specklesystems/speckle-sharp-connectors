@@ -15,18 +15,18 @@ public class SendCollectionManager
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly Dictionary<string, Collection> _collectionCache = new();
   private readonly Dictionary<ElementId, (string name, Dictionary<string, object?> props)> _levelCache = new(); // stores level id and its properties
-  private readonly Dictionary<string, Collection> _linkedModelCollections = new(); // Cache for linked model collections
-  private Collection? _mainModelCollection; // Specific collection for main model elements
-  private string _mainModelName; // Store the main model name
+  private readonly Dictionary<string, Collection> _linkedModelCollections = new(); // cache for linked model collections
+  private Collection? _mainModelCollection; // collection for main model elements
 
   public SendCollectionManager(IConverterSettingsStore<RevitConversionSettings> converterSettings)
   {
     _converterSettings = converterSettings;
-    _mainModelName = Path.GetFileNameWithoutExtension(converterSettings.Current.Document.PathName);
   }
 
   /// <summary>
-  /// Returns the element's host collection based on level, category and optional type. Additionally, places the host collection on the provided root object.
+  /// Returns the element's host collection based on level, category and optional type if the main model only is sent.
+  /// The host collection is placed on the provided root object.
+  /// If linked models are being sent, nested collections are sent under the provided root object.
   /// Note, it's not nice we're mutating the root object in this function.
   /// </summary>
   /// <param name="element"></param>
@@ -41,29 +41,28 @@ public class SendCollectionManager
     string modelName = Path.GetFileNameWithoutExtension(doc.PathName);
     bool isLinkedModel = doc.IsLinked;
 
-    // Set up the correct hierarchy based on whether we have linked models
+    // Set up the correct hierarchy based on whether we have linked models or not
     Collection startingCollection;
 
-    if (sendWithLinkedModels)
+    if (sendWithLinkedModels) // this arg comes from RevitRootObjectBuilder and check is setting enabled and linked models present
     {
-      // If we're sending linked models, create a nested structure
-
-      // For the main model
+      // if we're sending linked models, create a nested structure
+      // for the main model
       if (!isLinkedModel)
       {
-        // Create main model collection if it doesn't exist yet
+        // create main model collection if it doesn't exist yet
         if (_mainModelCollection == null)
         {
-          _mainModelCollection = new Collection(_mainModelName);
+          _mainModelCollection = new Collection(rootObject.name);
           rootObject.elements.Add(_mainModelCollection);
         }
 
         startingCollection = _mainModelCollection;
       }
-      // For linked models
+      // for linked models
       else
       {
-        // Get or create a collection for this linked model
+        // get or create a collection for this linked model
         if (!_linkedModelCollections.TryGetValue(modelName, out Collection linkedModelCollection))
         {
           linkedModelCollection = new Collection(modelName);
@@ -76,11 +75,11 @@ public class SendCollectionManager
     }
     else
     {
-      // If we don't have linked models, use the root directly
+      // if we don't have linked models, use the root directly
       startingCollection = rootObject;
     }
 
-    // Step 0: get the level and its properties
+    // get the level and its properties
     string levelName = "No Level";
     Dictionary<string, object?> levelProperties = new();
     if (element.LevelId != ElementId.InvalidElementId)
@@ -104,7 +103,7 @@ public class SendCollectionManager
       }
     }
 
-    // Step 1: create path components. Currently, this is
+    // create path components. Currently, this is
     // level > category > type
     path.Add(levelName);
     path.Add(element.Category?.Name ?? "No category");
@@ -122,7 +121,7 @@ public class SendCollectionManager
       path.Add("No type");
     }
 
-    // Create a model-specific key for the collection cache
+    // create a model-specific key for the collection cache
     string fullPathName = $"{modelName}:{string.Join(":", path)}";
     if (_collectionCache.TryGetValue(fullPathName, out Collection? value))
     {
@@ -144,7 +143,7 @@ public class SendCollectionManager
       else
       {
         childCollection = new Collection(pathItem);
-        // Add properties to level collection
+        // add properties to level collection
         if (i == 0 && levelProperties.Count > 0)
         {
           childCollection["properties"] = levelProperties;
