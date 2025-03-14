@@ -32,14 +32,14 @@ void Build(string solution, string configuration)
   Console.WriteLine();
   Console.WriteLine($"Building solution '{solution}' as '{configuration}'");
   Console.WriteLine();
-  Run("dotnet", $"build .\\{solution} --configuration {configuration} --no-restore");
+  Run("dotnet", $"build \".\\{solution}\" --configuration {configuration} --no-restore");
 }
 void Restore(string solution)
 {
   Console.WriteLine();
   Console.WriteLine($"Restoring solution '{solution}'");
   Console.WriteLine();
-  Run("dotnet", $"restore .\\{solution} --no-cache");
+  Run("dotnet", $"restore \".\\{solution}\" --no-cache");
 }
 void DeleteFiles(string pattern)
 {
@@ -150,7 +150,7 @@ Target(
     foreach (var s in await Affected.GetSolutions())
     {
       Console.WriteLine($"Restoring: {s} - Version: {version} & {fileVersion}");
-      await RunAsync("dotnet", $"restore {s} --locked-mode");
+      await RunAsync("dotnet", $"restore \"{s}\" --locked-mode");
     }
   }
 );
@@ -167,7 +167,7 @@ Target(
       Console.WriteLine($"Restoring: {s} - Version: {version} & {fileVersion}");
       await RunAsync(
         "dotnet",
-        $"build {s} -c Release --no-restore -warnaserror -p:Version={version} -p:FileVersion={fileVersion} -v:m"
+        $"build \"{s}\" -c Release --no-restore -warnaserror -p:Version={version} -p:FileVersion={fileVersion} -v:m"
       );
     }
   }
@@ -182,7 +182,7 @@ Target(
   {
     foreach (var file in await Affected.GetProjects())
     {
-      await RunAsync("dotnet", $"test {file} -c Release --no-build --no-restore --verbosity=minimal");
+      await RunAsync("dotnet", $"test \"{file}\" -c Release --no-build --no-restore --verbosity=minimal");
     }
   }
 );
@@ -194,10 +194,10 @@ Target(
   Glob.Files(".", "**/*.Tests.csproj"),
   file =>
   {
-    Run("dotnet", $"build {file} -c Release --no-incremental");
+    Run("dotnet", $"build \"{file}\" -c Release --no-incremental");
     Run(
       "dotnet",
-      $"test {file} -c Release --no-build --verbosity=minimal /p:AltCover=true /p:AltCoverAttributeFilter=ExcludeFromCodeCoverage /p:AltCoverVerbosity=Warning"
+      $"test \"{file}\" -c Release --no-build --verbosity=minimal /p:AltCover=true /p:AltCoverAttributeFilter=ExcludeFromCodeCoverage /p:AltCoverVerbosity=Warning"
     );
   }
 );
@@ -208,18 +208,18 @@ Target(
   Glob.Files(".", "**/Speckle.Importers.Ifc.csproj"),
   async file =>
   {
-    await RunAsync("dotnet", $"restore {file} --locked-mode");
+    await RunAsync("dotnet", $"restore \"{file}\" --locked-mode");
     var version = await Versions.ComputeVersion();
     var fileVersion = await Versions.ComputeFileVersion();
     Console.WriteLine($"Version: {version} & {fileVersion}");
     await RunAsync(
       "dotnet",
-      $"build {file} -c Release --no-restore -warnaserror -p:Version={version} -p:FileVersion={fileVersion} -v:m"
+      $"build \"{file}\" -c Release --no-restore -warnaserror -p:Version={version} -p:FileVersion={fileVersion} -v:m"
     );
 
     await RunAsync(
       "dotnet",
-      $"pack {file} -c Release -o output --no-build -p:Version={version} -p:FileVersion={fileVersion} -v:m"
+      $"pack \"{file}\" -c Release -o output --no-build -p:Version={version} -p:FileVersion={fileVersion} -v:m"
     );
   }
 );
