@@ -15,10 +15,14 @@ public class SendCollectionManager
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly Dictionary<string, Collection> _collectionCache = new();
   private readonly Dictionary<ElementId, (string name, Dictionary<string, object?> props)> _levelCache = new(); // stores level id and its properties
+  private readonly Dictionary<string, Collection> _linkedModelCollections = new(); // Cache for linked model collections
+  private Collection? _mainModelCollection; // Specific collection for main model elements
+  private string _mainModelName; // Store the main model name
 
   public SendCollectionManager(IConverterSettingsStore<RevitConversionSettings> converterSettings)
   {
     _converterSettings = converterSettings;
+    _mainModelName = Path.GetFileNameWithoutExtension(converterSettings.Current.Document.PathName);
   }
 
   /// <summary>
@@ -28,12 +32,53 @@ public class SendCollectionManager
   /// <param name="element"></param>
   /// <param name="rootObject"></param>
   /// <returns></returns>
-  public Collection GetAndCreateObjectHostCollection(Element element, Collection rootObject)
+  public Collection GetAndCreateObjectHostCollection(Element element, Collection rootObject, bool sendWithLinkedModels)
   {
     var doc = _converterSettings.Current.Document;
     var path = new List<string>();
-    string fileName = Path.GetFileNameWithoutExtension(doc.PathName);
-    path.Add(fileName);
+
+    // Get model name (filename without extension)
+    string modelName = Path.GetFileNameWithoutExtension(doc.PathName);
+    bool isLinkedModel = doc.IsLinked;
+
+    // Set up the correct hierarchy based on whether we have linked models
+    Collection startingCollection;
+
+    if (sendWithLinkedModels)
+    {
+      // If we're sending linked models, create a nested structure
+
+      // For the main model
+      if (!isLinkedModel)
+      {
+        // Create main model collection if it doesn't exist yet
+        if (_mainModelCollection == null)
+        {
+          _mainModelCollection = new Collection(_mainModelName);
+          rootObject.elements.Add(_mainModelCollection);
+        }
+
+        startingCollection = _mainModelCollection;
+      }
+      // For linked models
+      else
+      {
+        // Get or create a collection for this linked model
+        if (!_linkedModelCollections.TryGetValue(modelName, out Collection linkedModelCollection))
+        {
+          linkedModelCollection = new Collection(modelName);
+          rootObject.elements.Add(linkedModelCollection);
+          _linkedModelCollections[modelName] = linkedModelCollection;
+        }
+
+        startingCollection = linkedModelCollection;
+      }
+    }
+    else
+    {
+      // If we don't have linked models, use the root directly
+      startingCollection = rootObject;
+    }
 
     // Step 0: get the level and its properties
     string levelName = "No Level";
@@ -77,19 +122,20 @@ public class SendCollectionManager
       path.Add("No type");
     }
 
-    string fullPathName = string.Concat(path);
+    // Create a model-specific key for the collection cache
+    string fullPathName = $"{modelName}:{string.Join(":", path)}";
     if (_collectionCache.TryGetValue(fullPathName, out Collection? value))
     {
       return value;
     }
 
-    string flatPathName = "";
-    Collection previousCollection = rootObject;
+    string flatPathName = modelName;
+    Collection previousCollection = startingCollection;
 
     for (int i = 0; i < path.Count; i++)
     {
       var pathItem = path[i];
-      flatPathName += pathItem;
+      flatPathName += ":" + pathItem;
       Collection childCollection;
       if (_collectionCache.TryGetValue(flatPathName, out Collection? collection))
       {
@@ -98,8 +144,7 @@ public class SendCollectionManager
       else
       {
         childCollection = new Collection(pathItem);
-        // add props if it's the 1st path item, representing level
-        // if the structure ever changes from level > category > type, this needs to be changed
+        // Add properties to level collection
         if (i == 0 && levelProperties.Count > 0)
         {
           childCollection["properties"] = levelProperties;

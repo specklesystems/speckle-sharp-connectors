@@ -60,10 +60,22 @@ public class RevitRootObjectBuilder(
     rootObject["units"] = converterSettings.Current.SpeckleUnits;
 
     var filteredDocumentsToConvert = new List<DocumentToConvert>();
+    bool sendWithLinkedModels = false;
     List<SendConversionResult> results = new();
 
     foreach (var documentElementContext in documentElementContexts)
     {
+      if (documentElementContext.Doc.IsLinked)
+      {
+        if (converterSettings.Current.SendLinkedModels)
+        {
+          sendWithLinkedModels = true;
+        }
+        else
+        {
+          continue;
+        }
+      }
       var elementsInTransform = new List<Element>();
       foreach (var el in documentElementContext.Elements)
       {
@@ -171,7 +183,11 @@ public class RevitRootObjectBuilder(
               converted.applicationId = applicationId;
             }
 
-            var collection = sendCollectionManager.GetAndCreateObjectHostCollection(revitElement, rootObject);
+            var collection = sendCollectionManager.GetAndCreateObjectHostCollection(
+              revitElement,
+              rootObject,
+              sendWithLinkedModels
+            );
 
             collection.elements.Add(converted);
             results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
