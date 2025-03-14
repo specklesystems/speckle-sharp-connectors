@@ -14,6 +14,7 @@ namespace Speckle.Connectors.Rhino.Bindings;
 
 public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
 {
+  //This is a change!!
   public string Name => "baseBinding";
   public IBrowserBridge Parent { get; }
   public BasicConnectorBindingCommands Commands { get; }
