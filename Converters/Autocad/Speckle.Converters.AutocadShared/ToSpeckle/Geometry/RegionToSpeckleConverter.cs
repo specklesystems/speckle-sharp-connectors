@@ -88,8 +88,11 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
             throw new ConversionException("Unsupported curve type for Region conversion");
           }
         }
-        // reverse segment collection, otherwise end-start points of subsequent segments don't match
-        segments.Reverse();
+        // reverse segment collection with arcs, otherwise end-start points of subsequent segments don't match
+        if (segments.Any(x => x is AG.CircularArc3d))
+        {
+          segments.Reverse();
+        }
 
         // convert segments to Speckle Polycurve or Circle
         var convertedLoop = ConvertSegmentsToICurve(segments);
