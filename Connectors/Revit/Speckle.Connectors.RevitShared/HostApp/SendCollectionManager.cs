@@ -63,7 +63,7 @@ public class SendCollectionManager
       else
       {
         // get or create a collection for this linked model
-        if (!_linkedModelCollections.TryGetValue(modelName, out Collection linkedModelCollection))
+        if (!_linkedModelCollections.TryGetValue(modelName, out Collection? linkedModelCollection))
         {
           linkedModelCollection = new Collection(modelName);
           rootObject.elements.Add(linkedModelCollection);
