@@ -12,6 +12,5 @@ public class ElementSelectionService : IElementSelectionService
 
   public bool IsVisible(NAV.ModelItem modelItem) => IsElementVisible(modelItem);
 
-  public IEnumerable<NAV.ModelItem> GetGeometryNodes(NAV.ModelItem modelItem) =>
-    ResolveGeometryLeafNodes(modelItem);
+  public IEnumerable<NAV.ModelItem> GetGeometryNodes(NAV.ModelItem modelItem) => ResolveGeometryLeafNodes(modelItem);
 }

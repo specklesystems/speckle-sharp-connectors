@@ -70,7 +70,6 @@ public class NavisworksSendBinding : ISendBinding
     _selectionService = selectionService;
     _threadContext = threadContext;
     SubscribeToNavisworksEvents();
-    
   }
 
   private static void SubscribeToNavisworksEvents() { }
@@ -107,13 +106,21 @@ public class NavisworksSendBinding : ISendBinding
 
       using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
-      var progress =
-        _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCard.ModelCardId.NotNull(),
-          cancellationItem.Token);
+      var progress = _operationProgressManager.CreateOperationProgressEventHandler(
+        Parent,
+        modelCard.ModelCardId.NotNull(),
+        cancellationItem.Token
+      );
 
       var navisworksModelItems = await GetNavisworksModelItems(modelCard, progress);
 
-      var sendResult = await ExecuteSendOperation(scope, modelCard, navisworksModelItems, progress, cancellationItem.Token);
+      var sendResult = await ExecuteSendOperation(
+        scope,
+        modelCard,
+        navisworksModelItems,
+        progress,
+        cancellationItem.Token
+      );
 
       await Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
     }
@@ -136,7 +143,8 @@ public class NavisworksSendBinding : ISendBinding
   }
 
   private SenderModelCard GetModelCard(string modelCardId) =>
-    _store.GetModelById(modelCardId) as SenderModelCard ?? throw new InvalidOperationException("No publish model card was found.");
+    _store.GetModelById(modelCardId) as SenderModelCard
+    ?? throw new InvalidOperationException("No publish model card was found.");
 
   private void InitializeConverterSettings(IServiceScope scope, SenderModelCard modelCard) =>
     scope
@@ -151,8 +159,10 @@ public class NavisworksSendBinding : ISendBinding
         )
       );
 
-  private async Task<List<NAV.ModelItem>> GetNavisworksModelItems(SenderModelCard modelCard, 
-    IProgress<CardProgress> onOperationProgressed)
+  private async Task<List<NAV.ModelItem>> GetNavisworksModelItems(
+    SenderModelCard modelCard,
+    IProgress<CardProgress> onOperationProgressed
+  )
   {
     var selectedPaths = modelCard.SendFilter.NotNull().RefreshObjectIds();
     var convertHiddenElementsSetting =
@@ -192,7 +202,8 @@ public class NavisworksSendBinding : ISendBinding
       .ServiceProvider.GetRequiredService<SendOperation<NAV.ModelItem>>()
       .Execute(
         navisworksModelItems,
-        modelCard.GetSendInfo(_speckleApplication.ApplicationAndVersion),onOperationProgressed,
+        modelCard.GetSendInfo(_speckleApplication.ApplicationAndVersion),
+        onOperationProgressed,
         token
       );
 
