@@ -1,5 +1,7 @@
+using Speckle.Common.MeshTriangulation;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.DoubleNumerics;
 using Speckle.Objects;
 using Speckle.Sdk.Common.Exceptions;
 
@@ -34,8 +36,8 @@ public class PolygonFeatureToSpeckleConverter : ITypedConverter<ACG.Polygon, IRe
 
     // declare Region elements
     List<SOG.Region> regions = new();
-    ICurve? boundary = null;
-    List<ICurve> innerLoops = new();
+    SOG.Polyline? boundary = null;
+    List<SOG.Polyline> innerLoops = new();
 
     // iterate through polugon parts: can be inner or outer curves,
     // can be multiple outer curves too (if multipolygon).
@@ -70,17 +72,72 @@ public class PolygonFeatureToSpeckleConverter : ITypedConverter<ACG.Polygon, IRe
     return regions;
   }
 
-  private SOG.Region CreateRegion(ICurve boundary, List<ICurve> innerLoops)
+  private SOG.Region CreateRegion(SOG.Polyline boundary, List<SOG.Polyline> innerLoops)
   {
+    // create display mesh from region loops
+    var allLoops = new List<SOG.Polyline>() { boundary };
+    allLoops.AddRange(innerLoops);
+    SOG.Mesh displayMesh = MeshFromLoops(allLoops);
+
     SOG.Region newRegion =
       new()
       {
         boundary = boundary,
-        innerLoops = innerLoops,
+        innerLoops = innerLoops.Cast<ICurve>().ToList(),
         hasHatchPattern = false,
-        displayValue = [],
+        displayValue = [displayMesh],
         units = _settingsStore.Current.SpeckleUnits
       };
     return newRegion;
+  }
+
+  private SOG.Mesh MeshFromLoops(List<SOG.Polyline> loops)
+  {
+    // turn Polylines into Polyfaces (boundary will be the first in the list)
+    var polyFaces = new List<Poly3>();
+    foreach (var loop in loops)
+    {
+      var vertices = new List<Vector3>();
+      for (int i = 0; i < loop.value.Count; i += 3)
+      {
+        vertices.Add(new Vector3(loop.value[i], loop.value[i + 1], loop.value[i + 2]));
+      }
+      polyFaces.Add(new Poly3(vertices));
+    }
+
+    var generator = new MeshGenerator(new BaseTransformer(), new LibTessTriangulator());
+    var mesh3 = generator.TriangulateSurface(polyFaces);
+
+    return Mesh3ToSpeckleMesh(mesh3);
+  }
+
+  private SOG.Mesh Mesh3ToSpeckleMesh(Mesh3 mesh3)
+  {
+    var vertices = new List<double>();
+    var faces = new List<int>();
+
+    foreach (var v in mesh3.Vertices)
+    {
+      vertices.Add(v.X);
+      vertices.Add(v.Y);
+      vertices.Add(v.Z);
+    }
+
+    for (int i = 0; i < mesh3.Triangles.Count; i += 3)
+    {
+      faces.Add(3);
+      faces.Add(mesh3.Triangles[i]);
+      faces.Add(mesh3.Triangles[i + 1]);
+      faces.Add(mesh3.Triangles[i + 2]);
+    }
+
+    var mesh = new SOG.Mesh
+    {
+      vertices = vertices,
+      faces = faces,
+      units = _settingsStore.Current.SpeckleUnits
+    };
+
+    return mesh;
   }
 }
