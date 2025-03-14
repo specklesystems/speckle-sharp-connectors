@@ -134,6 +134,7 @@ Target(
 
 Target(
   DETECT_AFFECTED,
+  DependsOn(FORMAT),
   await Affected.GetAffectedProjectGroups(),
   group =>
   {
@@ -152,7 +153,7 @@ Target(
 
 Target(
   RESTORE,
-  DependsOn(DETECT_AFFECTED, FORMAT),
+  DependsOn(DETECT_AFFECTED),
   Consts.Solutions,
   async s =>
   {
