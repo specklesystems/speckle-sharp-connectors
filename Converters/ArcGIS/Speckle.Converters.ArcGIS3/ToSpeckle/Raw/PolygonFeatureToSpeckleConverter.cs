@@ -113,6 +113,7 @@ public class PolygonFeatureToSpeckleConverter : ITypedConverter<ACG.Polygon, IRe
 
   private SOG.Mesh Mesh3ToSpeckleMesh(Mesh3 mesh3)
   {
+    // copied from Tekla Solid converter, possibly to be moved to Speckle.Common
     var vertices = new List<double>();
     var faces = new List<int>();
 
