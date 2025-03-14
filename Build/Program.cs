@@ -135,10 +135,12 @@ Target(
 Target(
   DETECT_AFFECTED,
   DependsOn(RESTORE_TOOLS),
-  await Affected.GetAffectedProjectGroups(),
-  group =>
+  async () =>
   {
-    Console.WriteLine("Affected project group being built: " + group.HostAppSlug);
+    foreach (var group in await Affected.GetAffectedProjectGroups())
+    {
+      Console.WriteLine("Affected project group being built: " + group.HostAppSlug);
+    }
   }
 );
 
@@ -185,10 +187,12 @@ Target(CHECK_SOLUTIONS, Solutions.CompareConnectorsToLocal);
 Target(
   TEST,
   DependsOn(BUILD, CHECK_SOLUTIONS),
-  await Affected.GetTestProjects(),
-  async s =>
+  async () =>
   {
-    await RunAsync("dotnet", $"test \"{s}\" -c Release --no-build --no-restore --verbosity=minimal");
+    foreach (var s in await Affected.GetTestProjects())
+    {
+      await RunAsync("dotnet", $"test \"{s}\" -c Release --no-build --no-restore --verbosity=minimal");
+    }
   }
 );
 
