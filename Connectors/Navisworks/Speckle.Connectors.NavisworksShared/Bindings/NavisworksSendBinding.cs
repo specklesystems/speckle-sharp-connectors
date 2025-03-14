@@ -70,6 +70,7 @@ public class NavisworksSendBinding : ISendBinding
     _selectionService = selectionService;
     _threadContext = threadContext;
     SubscribeToNavisworksEvents();
+    
   }
 
   private static void SubscribeToNavisworksEvents() { }
@@ -106,9 +107,13 @@ public class NavisworksSendBinding : ISendBinding
 
       using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
-      var navisworksModelItems = GetNavisworksModelItems(modelCard);
+      var progress =
+        _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCard.ModelCardId.NotNull(),
+          cancellationItem.Token);
 
-      var sendResult = await ExecuteSendOperation(scope, modelCard, navisworksModelItems, cancellationItem.Token);
+      var navisworksModelItems = await GetNavisworksModelItems(modelCard, progress);
+
+      var sendResult = await ExecuteSendOperation(scope, modelCard, navisworksModelItems, progress, cancellationItem.Token);
 
       await Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
     }
@@ -123,12 +128,15 @@ public class NavisworksSendBinding : ISendBinding
       _logger.LogModelCardHandledError(ex);
       await Commands.SetModelError(modelCardId, ex);
     }
+    finally
+    {
+      // otherwise the id of the operation persists on the cancellation manager and triggers 'Operations cancelled because of document swap!' message to UI.
+      _cancellationManager.CancelOperation(modelCardId);
+    }
   }
 
   private SenderModelCard GetModelCard(string modelCardId) =>
-    _store.GetModelById(modelCardId) is not SenderModelCard modelCard
-      ? throw new InvalidOperationException("No publish model card was found.")
-      : modelCard;
+    _store.GetModelById(modelCardId) as SenderModelCard ?? throw new InvalidOperationException("No publish model card was found.");
 
   private void InitializeConverterSettings(IServiceScope scope, SenderModelCard modelCard) =>
     scope
@@ -143,7 +151,8 @@ public class NavisworksSendBinding : ISendBinding
         )
       );
 
-  private List<NAV.ModelItem> GetNavisworksModelItems(SenderModelCard modelCard)
+  private async Task<List<NAV.ModelItem>> GetNavisworksModelItems(SenderModelCard modelCard, 
+    IProgress<CardProgress> onOperationProgressed)
   {
     var selectedPaths = modelCard.SendFilter.NotNull().RefreshObjectIds();
     var convertHiddenElementsSetting =
@@ -156,13 +165,19 @@ public class NavisworksSendBinding : ISendBinding
     {
       throw new SpeckleSendFilterException(message);
     }
+    onOperationProgressed.Report(new CardProgress("Getting selection...", null));
+    await Task.CompletedTask;
 
-    var modelItems = selectedPaths
-      .Select(_selectionService.GetModelItemFromPath)
-      .SelectMany(_selectionService.GetGeometryNodes)
-      .Where(_selectionService.IsVisible)
-      .ToList();
-
+    var modelItems = new List<NAV.ModelItem>();
+    double count = 0;
+    foreach (var path in selectedPaths)
+    {
+      onOperationProgressed.Report(new CardProgress("Getting selection...", count / selectedPaths.Count));
+      await Task.CompletedTask;
+      var modelItem = _selectionService.GetModelItemFromPath(path);
+      modelItems.AddRange(_selectionService.GetGeometryNodes(modelItem).Where(_selectionService.IsVisible));
+      count++;
+    }
     return modelItems.Count == 0 ? throw new SpeckleSendFilterException(message) : modelItems;
   }
 
@@ -170,14 +185,14 @@ public class NavisworksSendBinding : ISendBinding
     IServiceScope scope,
     SenderModelCard modelCard,
     List<NAV.ModelItem> navisworksModelItems,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken token
   ) =>
     await scope
       .ServiceProvider.GetRequiredService<SendOperation<NAV.ModelItem>>()
       .Execute(
         navisworksModelItems,
-        modelCard.GetSendInfo(_speckleApplication.ApplicationAndVersion),
-        _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCard.ModelCardId.NotNull(), token),
+        modelCard.GetSendInfo(_speckleApplication.ApplicationAndVersion),onOperationProgressed,
         token
       );
 
