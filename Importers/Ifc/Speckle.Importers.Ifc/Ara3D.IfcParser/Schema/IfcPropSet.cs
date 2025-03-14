@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using Speckle.Importers.Ifc.Ara3D.StepParser;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Importers.Ifc.Ara3D.IfcParser.Schema;
 
@@ -11,9 +13,9 @@ namespace Speckle.Importers.Ifc.Ara3D.IfcParser.Schema;
 // https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcproductextension/lexical/ifcelementquantity.htm
 public class IfcPropSet : IfcNode
 {
-  public readonly StepList PropertyIdList;
+  public readonly StepList? PropertyIdList;
 
-  public IfcPropSet(IfcGraph graph, StepInstance lineData, StepList propertyIdList)
+  public IfcPropSet(IfcGraph graph, StepInstance lineData, StepList? propertyIdList)
     : base(graph, lineData)
   {
     Debug.Assert(IsIfcRoot);
@@ -36,7 +38,8 @@ public class IfcPropSet : IfcNode
 
   public bool IsQuantity => LineData.AttributeValues.Count == 6;
   public string? MethodOfMeasurement => IsQuantity ? this[4]?.AsString() : null;
-  public int NumProperties => PropertyIdList.Values.Count;
+  public int NumProperties => PropertyIdList?.Values.Count ?? 0;
 
-  public uint PropertyId(int i) => PropertyIdList.Values[i].AsId();
+  [MemberNotNull(nameof(PropertyIdList))]
+  public uint PropertyId(int i) => PropertyIdList.NotNull().Values[i].AsId();
 }
