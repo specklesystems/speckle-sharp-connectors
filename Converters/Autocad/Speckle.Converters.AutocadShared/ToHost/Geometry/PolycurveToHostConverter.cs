@@ -16,15 +16,10 @@ public class PolycurveToHostConverter
     ITypedConverter<SOG.Polycurve, List<(Entity a, Base b)>>
 {
   private readonly ITypedConverter<SOG.Polycurve, ADB.Polyline> _polylineConverter;
-  private readonly ITypedConverter<SOG.Polycurve, List<(Entity, Base)>> _splineConverter;
 
-  public PolycurveToHostConverter(
-    ITypedConverter<SOG.Polycurve, ADB.Polyline> polylineConverter,
-    ITypedConverter<SOG.Polycurve, List<(Entity, Base)>> splineConverter
-  )
+  public PolycurveToHostConverter(ITypedConverter<SOG.Polycurve, ADB.Polyline> polylineConverter)
   {
     _polylineConverter = polylineConverter;
-    _splineConverter = splineConverter;
   }
 
   public object Convert(Base target) => Convert((SOG.Polycurve)target);
@@ -36,7 +31,7 @@ public class PolycurveToHostConverter
 
     if (convertAsSpline || !isPlanar)
     {
-      return _splineConverter.Convert(target);
+      return Convert(target);
     }
     else
     {
