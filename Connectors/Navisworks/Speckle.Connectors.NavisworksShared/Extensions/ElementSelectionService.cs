@@ -7,6 +7,7 @@ namespace Speckle.Connector.Navisworks.Services;
 public class ElementSelectionService : IElementSelectionService
 {
   private readonly Dictionary<Guid, bool> _visibleCache = new();
+
   public string GetModelItemPath(NAV.ModelItem modelItem) => ResolveModelItemToIndexPath(modelItem);
 
   public NAV.ModelItem GetModelItemFromPath(string path) => ResolveIndexPathToModelItem(path);
