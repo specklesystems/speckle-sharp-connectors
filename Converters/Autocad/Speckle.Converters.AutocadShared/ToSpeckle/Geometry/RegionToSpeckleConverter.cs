@@ -50,22 +50,24 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
       .SelectMany(shell => shell.Faces)
       .SelectMany(face => face.Loops);
 
+    // Get and convert boundary and inner loops
     var boundary = GetConvertedLoops(brepLoops, true)[0];
+    var innerLoops = GetConvertedLoops(brepLoops, false);
 
     return new SOG.Region()
     {
       boundary = boundary,
-      innerLoops = [],
+      innerLoops = innerLoops,
       hasHatchPattern = false,
       displayValue = [mesh],
       units = _settingsStore.Current.SpeckleUnits
     };
   }
 
-  private List<ICurve> GetConvertedLoops(IEnumerable<ABR.BoundaryLoop> boundaryLoops, bool getOuterLoop)
+  private List<ICurve> GetConvertedLoops(IEnumerable<ABR.BoundaryLoop> brepLoops, bool getOuterLoop)
   {
     var loops = new List<ICurve>();
-    foreach (var loop in boundaryLoops)
+    foreach (var loop in brepLoops)
     {
       bool outer = loop.LoopType == ABR.LoopType.LoopExterior;
 
