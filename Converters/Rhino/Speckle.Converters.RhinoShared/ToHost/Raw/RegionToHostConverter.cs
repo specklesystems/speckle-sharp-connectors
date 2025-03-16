@@ -29,7 +29,6 @@ public class RegionToHostConverter : ITypedConverter<SOG.Region, RG.Hatch>
     List<RG.Curve> rhinoCurves = new() { _curveConverter.Convert(target.boundary) };
     foreach (var loop in target.innerLoops)
     {
-      // TODO: add extra checks depending on edge case Regions sent from other apps (e.g. not closed)
       rhinoCurves.Add(_curveConverter.Convert(loop));
     }
     var tolerance = _settingsStore.Current.Document.ModelAbsoluteTolerance;

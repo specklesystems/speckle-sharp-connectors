@@ -32,10 +32,6 @@ public class HatchToSpeckleConverter : ITypedConverter<RG.Hatch, SOG.Region>
     ICurve boundary = _curveConverter.Convert(rhinoBoundary);
     List<ICurve> innerLoops = rhinoLoops.Select(x => _curveConverter.Convert(x)).ToList();
 
-    List<ICurve> allCurves = new List<ICurve> { boundary }
-      .Concat(innerLoops)
-      .ToList();
-
     return new SOG.Region
     {
       boundary = boundary,
