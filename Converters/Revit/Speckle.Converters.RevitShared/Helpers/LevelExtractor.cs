@@ -7,7 +7,7 @@ public sealed class LevelExtractor
 
   public LevelExtractor() { }
 
-  public string GetLevel(DB.Element element)
+  public string? GetLevel(DB.Element element)
   {
     // get level, if any
     if (element.LevelId != DB.ElementId.InvalidElementId)
@@ -24,6 +24,6 @@ public sealed class LevelExtractor
       }
     }
 
-    return "none";
+    return null;
   }
 }
