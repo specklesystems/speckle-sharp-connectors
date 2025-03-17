@@ -48,6 +48,7 @@ public static class ServiceRegistration
     // register extractors
     serviceCollection.AddScoped<ParameterValueExtractor>();
     serviceCollection.AddScoped<DisplayValueExtractor>();
+    serviceCollection.AddScoped<LevelExtractor>();
     serviceCollection.AddScoped<ParameterDefinitionHandler>();
     serviceCollection.AddScoped<ParameterExtractor>();
     serviceCollection.AddScoped<ClassPropertiesExtractor>();
