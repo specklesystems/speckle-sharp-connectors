@@ -205,6 +205,20 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     var linkedModels = allElements.OfType<RevitLinkInstance>().ToList();
     List<DocumentToConvert> documentElementContexts = [new(null, activeUIDoc.Document, elementsOnMainModel)];
 
+    // pre-process category IDs outside the loop - only do this work once
+    List<ElementId> categoryIds = new List<ElementId>();
+    if (
+      includeLinkedModels
+      && modelCard.SendFilter is RevitCategoriesFilter categoryFilter
+      && categoryFilter.SelectedCategories != null
+    )
+    {
+      categoryIds = categoryFilter
+        .SelectedCategories.Select(c => ElementIdHelper.GetElementId(c))
+        .OfType<ElementId>() // this filters out nulls and casts to non-nullable ElementId
+        .ToList();
+    }
+
     // only process linked models if setting is enabled
     if (includeLinkedModels)
     {
@@ -220,33 +234,25 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
           // sending via 1 of 2 modes (selection / categories) for linked models is very rough atm - poc
           // send option 1 - category filtering processing
-          if (modelCard.SendFilter is RevitCategoriesFilter categoryFilter && categoryFilter.SelectedCategories != null)
+          if (modelCard.SendFilter is RevitCategoriesFilter && categoryIds.Count > 0)
           {
-            var categoryIds = categoryFilter
-              .SelectedCategories.Select(c => ElementIdHelper.GetElementId(c))
-              .Where(id => id != null)
+            // Use the pre-processed category IDs
+            using var multicategoryFilter = new ElementMulticategoryFilter(categoryIds);
+            using var collector = new FilteredElementCollector(linkedDoc);
+            linkedElements = collector
+              .WhereElementIsNotElementType()
+              .WhereElementIsViewIndependent()
+              .WherePasses(multicategoryFilter)
               .ToList();
-
-            if (categoryIds.Count > 0)
-            {
-              // use the same category filter for linked document(s)
-              using var multicategoryFilter = new ElementMulticategoryFilter(categoryIds);
-              using var collector = new FilteredElementCollector(linkedDoc);
-              linkedElements = collector
-                .WhereElementIsNotElementType()
-                .WhereElementIsViewIndependent()
-                .WherePasses(multicategoryFilter)
-                .ToList();
-            }
-            else
-            {
-              // no categories selected so return empty list
-              linkedElements = new List<Element>();
-            }
           }
-          // send option 2 - selection processing
+          else if (modelCard.SendFilter is RevitCategoriesFilter)
+          {
+            // No categories selected, empty list
+            linkedElements = new List<Element>();
+          }
           else
           {
+            // Selection filter processing
             using var collector = new FilteredElementCollector(linkedDoc);
             linkedElements = collector.WhereElementIsNotElementType().WhereElementIsViewIndependent().ToList();
           }
