@@ -54,44 +54,48 @@ public class RevitRootObjectBuilder(
       throw new SpeckleException("Family Environment documents are not supported.");
     }
 
-    // 0 - Init the root
+    // init the root
     Collection rootObject =
       new() { name = converterSettings.Current.Document.PathName.Split('\\').Last().Split('.').First() };
     rootObject["units"] = converterSettings.Current.SpeckleUnits;
 
     var filteredDocumentsToConvert = new List<DocumentToConvert>();
-    bool sendWithLinkedModels = false;
+    bool sendWithLinkedModels = converterSettings.Current.SendLinkedModels;
     List<SendConversionResult> results = new();
 
     foreach (var documentElementContext in documentElementContexts)
     {
-      if (documentElementContext.Doc.IsLinked)
+      // add appropriate warnings for linked documents
+      if (documentElementContext.IsLinkedDocument && !sendWithLinkedModels)
       {
-        if (converterSettings.Current.SendLinkedModels)
-        {
-          sendWithLinkedModels = true;
-        }
-        else
-        {
-          continue;
-        }
+        results.Add(
+          new(
+            Status.WARNING,
+            documentElementContext.Doc.PathName,
+            typeof(RevitLinkInstance).ToString(),
+            null,
+            new SpeckleException("Enable linked model support from the settings to send this object")
+          )
+        );
+        continue;
       }
+
+      // filter for valid elements
       var elementsInTransform = new List<Element>();
       foreach (var el in documentElementContext.Elements)
       {
-        if (el == null)
+        if (el == null || el.Category == null)
         {
           continue;
         }
-
-        if (el.Category == null)
-        {
-          continue;
-        }
-
         elementsInTransform.Add(el);
       }
-      filteredDocumentsToConvert.Add(documentElementContext with { Elements = elementsInTransform });
+
+      // only add contexts with elements
+      if (elementsInTransform.Count > 0)
+      {
+        filteredDocumentsToConvert.Add(documentElementContext with { Elements = elementsInTransform });
+      }
     }
 
     // TODO: check the exception!!!!
