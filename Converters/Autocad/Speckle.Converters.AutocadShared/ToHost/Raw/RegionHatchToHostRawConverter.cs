@@ -55,33 +55,58 @@ public class RegionHatchToHostRawConverter : ITypedConverter<SOG.Region, ADB.Hat
       throw new ConversionException();
     }
 
-    // Add the new curve object to the block table record and the transaction
-    ADB.Entity boundaryEntity = _curveConverter.Convert(target.boundary);
-    acBlkTblRec.AppendEntity(boundaryEntity);
-    acTrans.AddNewlyCreatedDBObject(boundaryEntity, true);
+    // initialize Hatch, only once, with the boundary
+    ADB.Hatch acHatch = InitializeHatchObject(acBlkTblRec, acTrans);
 
-    // Adds the circle to an object id array
-    ADB.ObjectIdCollection boundaryDBObjColl = new();
-    boundaryDBObjColl.Add(boundaryEntity.ObjectId);
+    // convert boundary, add to ObjectIdCollection
+    var boundary = _curveConverter.Convert(target.boundary);
+    ADB.ObjectIdCollection boundaryDBObjColl = CreateTempObjectIdCollection(acBlkTblRec, acTrans, boundary);
 
-    //using ()
-    //{
-    ADB.Hatch acHatch = new();
-    acBlkTblRec.AppendEntity(acHatch);
-    acTrans.AddNewlyCreatedDBObject(acHatch, true);
-
-    // Set the properties of the hatch object: Associative must be set after the hatch object is
-    // appended to the block table record and before AppendLoop
-    acHatch.SetHatchPattern(ADB.HatchPatternType.PreDefined, "ANSI31");
-    acHatch.Associative = true;
+    // append boundary loop
     acHatch.AppendLoop(ADB.HatchLoopTypes.Outermost, boundaryDBObjColl);
     acHatch.EvaluateHatch(true);
+
+    //foreach (var loop in target.innerLoops)
+    //{
+    //  acHatch.AppendLoop(ADB.HatchLoopTypes.Polyline, boundaryDBObjColl);
+    //  acHatch.EvaluateHatch(true);
+    //}
 
     // Save the new object to the database
     acTrans.Commit();
 
     return acHatch;
-    //}
-    //}
+  }
+
+  private ADB.ObjectIdCollection CreateTempObjectIdCollection(
+    ADB.BlockTableRecord acBlkTblRec,
+    ADB.Transaction acTrans,
+    ADB.Curve curve
+  )
+  {
+    // Add the new curve object to the block table record and the transaction
+    ADB.Entity boundaryEntity = curve;
+    acBlkTblRec.AppendEntity(boundaryEntity);
+    acTrans.AddNewlyCreatedDBObject(boundaryEntity, true);
+
+    // Adds the entity to an object id array
+    ADB.ObjectIdCollection boundaryDBObjColl = new();
+    boundaryDBObjColl.Add(boundaryEntity.ObjectId);
+
+    return boundaryDBObjColl;
+  }
+
+  private ADB.Hatch InitializeHatchObject(ADB.BlockTableRecord acBlkTblRec, ADB.Transaction acTrans)
+  {
+    ADB.Hatch acHatch = new();
+    acBlkTblRec.AppendEntity(acHatch);
+    acTrans.AddNewlyCreatedDBObject(acHatch, true);
+
+    // Set essential properties of the hatch object: Associative must be set after the hatch object is
+    // appended to the block table record and before AppendLoop
+    acHatch.SetHatchPattern(ADB.HatchPatternType.PreDefined, "ANSI31");
+    acHatch.Associative = true;
+
+    return acHatch;
   }
 }
