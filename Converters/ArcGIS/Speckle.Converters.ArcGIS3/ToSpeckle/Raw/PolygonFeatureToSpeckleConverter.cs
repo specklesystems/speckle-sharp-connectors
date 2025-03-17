@@ -39,7 +39,7 @@ public class PolygonFeatureToSpeckleConverter : ITypedConverter<ACG.Polygon, IRe
     SOG.Polyline? boundary = null;
     List<SOG.Polyline> innerLoops = new();
 
-    // iterate through polugon parts: can be inner or outer curves,
+    // iterate through polygon parts: can be inner or outer curves,
     // can be multiple outer curves too (if multipolygon).
     for (int i = 0; i < partCount; i++)
     {
