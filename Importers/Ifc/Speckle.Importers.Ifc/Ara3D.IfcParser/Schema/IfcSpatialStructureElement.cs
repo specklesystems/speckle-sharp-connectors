@@ -9,7 +9,7 @@ namespace Speckle.Importers.Ifc.Ara3D.IfcParser.Schema;
 /// <param name="lineData"></param>
 public class IfcSpatialStructureElement(IfcGraph graph, StepInstance lineData) : IfcNode(graph, lineData)
 {
-  public string? ObjectType => (LineData[5] as StepString)?.AsString();
-  public string? LongName => (LineData[8] as StepString)?.AsString();
-  public string? CompositionType => (LineData[9] as StepString)?.AsString();
+  public string? ObjectType => (LineData[4] as StepString)?.AsString();
+  public string? LongName => (LineData[7] as StepString)?.AsString();
+  public string? CompositionType => (LineData[8] as StepString)?.AsString();
 }
