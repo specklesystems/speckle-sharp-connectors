@@ -8,10 +8,15 @@ namespace Speckle.Converters.Autocad.ToHost.Geometry;
 public class RegionToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG.Region, ADB.Entity>
 {
   private readonly ITypedConverter<SOG.Region, ADB.Region> _regionConverter;
+  private readonly ITypedConverter<SOG.Region, ADB.Hatch> _regionHatchConverter;
 
-  public RegionToHostConverter(ITypedConverter<SOG.Region, ADB.Region> regionConverter)
+  public RegionToHostConverter(
+    ITypedConverter<SOG.Region, ADB.Region> regionConverter,
+    ITypedConverter<SOG.Region, ADB.Hatch> regionHatchConverter
+  )
   {
     _regionConverter = regionConverter;
+    _regionHatchConverter = regionHatchConverter;
   }
 
   public object Convert(Base target) => Convert((SOG.Region)target);
@@ -21,12 +26,8 @@ public class RegionToHostConverter : IToHostTopLevelConverter, ITypedConverter<S
     // Generalizing return type as Entity, because it can be a simple Region, or a Hatch
     if (target.hasHatchPattern)
     {
-      // TODO: change to hatch converter
-      return _regionConverter.Convert(target);
+      return _regionHatchConverter.Convert(target);
     }
-    else
-    {
-      return _regionConverter.Convert(target);
-    }
+    return _regionConverter.Convert(target);
   }
 }

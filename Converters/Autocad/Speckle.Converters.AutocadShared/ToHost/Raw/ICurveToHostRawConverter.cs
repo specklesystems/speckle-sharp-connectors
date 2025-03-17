@@ -11,6 +11,7 @@ public class ICurveToHostRawConverter : ITypedConverter<ICurve, ADB.Curve>
   private readonly ITypedConverter<SOG.Ellipse, ADB.Ellipse> _ellipseConverter;
   private readonly ITypedConverter<SOG.Circle, ADB.Circle> _circleConverter;
   private readonly ITypedConverter<SOG.Polyline, ADB.Polyline3d> _polylineConverter;
+  private readonly ITypedConverter<SOG.Polycurve, ADB.Polyline> _polycurveConverter;
   private readonly ITypedConverter<SOG.Curve, ADB.Curve> _curveConverter;
 
   public ICurveToHostRawConverter(
@@ -19,6 +20,7 @@ public class ICurveToHostRawConverter : ITypedConverter<ICurve, ADB.Curve>
     ITypedConverter<SOG.Ellipse, ADB.Ellipse> ellipseConverter,
     ITypedConverter<SOG.Circle, ADB.Circle> circleConverter,
     ITypedConverter<SOG.Polyline, ADB.Polyline3d> polylineConverter,
+    ITypedConverter<SOG.Polycurve, ADB.Polyline> polycurveConverter,
     ITypedConverter<SOG.Curve, ADB.Curve> curveConverter
   )
   {
@@ -27,6 +29,7 @@ public class ICurveToHostRawConverter : ITypedConverter<ICurve, ADB.Curve>
     _ellipseConverter = ellipseConverter;
     _circleConverter = circleConverter;
     _polylineConverter = polylineConverter;
+    _polycurveConverter = polycurveConverter;
     _curveConverter = curveConverter;
   }
 
@@ -46,8 +49,7 @@ public class ICurveToHostRawConverter : ITypedConverter<ICurve, ADB.Curve>
       SOG.Ellipse ellipse => _ellipseConverter.Convert(ellipse),
       SOG.Polyline polyline => _polylineConverter.Convert(polyline),
       SOG.Curve curve => _curveConverter.Convert(curve),
-      SOG.Polycurve
-        => throw new ConversionException($"Use direct Polycurve converter for type {target.GetType().Name}"),
+      SOG.Polycurve polycurve => _polycurveConverter.Convert(polycurve),
       _ => throw new ValidationException($"Unable to convert curves of type {target.GetType().Name}")
     };
 }
