@@ -1,6 +1,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Rhino.ToHost.Raw;
 
@@ -33,7 +34,13 @@ public class RegionToHostConverter : ITypedConverter<SOG.Region, RG.Hatch>
     }
     var tolerance = _settingsStore.Current.Document.ModelAbsoluteTolerance;
     // .Create method returns array, but in case of Speckle Region we always expect only 1 converted Hatch
-    RG.Hatch result = RG.Hatch.Create(rhinoCurves, 0, 0, 1, tolerance)[0];
-    return result;
+    RG.Hatch[] result = RG.Hatch.Create(rhinoCurves, 0, 0, 1, tolerance);
+    if (result.Length != 1)
+    {
+      throw new ConversionException(
+        $"Hatch conversion failed for {target}: unexpected number of shapes generated ({result.Length}). Make sure that input loops are planar, closed, non self-intersecting curves."
+      );
+    }
+    return result[0];
   }
 }
