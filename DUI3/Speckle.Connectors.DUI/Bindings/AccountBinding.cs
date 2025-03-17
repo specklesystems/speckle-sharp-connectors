@@ -1,17 +1,22 @@
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Core.Credentials;
+using Speckle.Sdk.Credentials;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
 public class AccountBinding : IBinding
 {
   public string Name => "accountsBinding";
-  public IBridge Parent { get; }
+  public IBrowserBridge Parent { get; }
 
-  public AccountBinding(IBridge bridge)
+  private readonly IAccountManager _accountManager;
+
+  public AccountBinding(IBrowserBridge bridge, IAccountManager accountManager)
   {
     Parent = bridge;
+    _accountManager = accountManager;
   }
 
-  public Account[] GetAccounts() => AccountManager.GetAccounts().ToArray();
+  public Account[] GetAccounts() => _accountManager.GetAccounts().ToArray();
+
+  public void RemoveAccount(string accountId) => _accountManager.RemoveAccount(accountId);
 }

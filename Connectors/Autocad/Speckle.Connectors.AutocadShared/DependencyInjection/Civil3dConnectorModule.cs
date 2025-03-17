@@ -1,37 +1,19 @@
 #if CIVIL3D
-using Speckle.Autofac.DependencyInjection;
-using Speckle.Connectors.Autocad.Bindings;
-using Speckle.Connectors.Autocad.Filters;
+using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Autocad.Operations.Send;
-using Speckle.Connectors.DUI.Bindings;
-using Speckle.Connectors.DUI.Models.Card.SendFilter;
-using Speckle.Connectors.Utils.Builders;
-using Speckle.Connectors.Utils.Caching;
-using Speckle.Connectors.Utils.Operations;
+using Speckle.Connectors.Common.Builders;
 
 namespace Speckle.Connectors.Autocad.DependencyInjection;
 
-public class Civil3dConnectorModule : ISpeckleModule
+public static class Civil3dConnectorModule
 {
-  public void Load(SpeckleContainerBuilder builder)
+  public static void AddCivil3d(this IServiceCollection serviceCollection)
   {
-    SharedConnectorModule.LoadShared(builder);
+    serviceCollection.AddAutocadBase();
 
-    // Operations
-    builder.AddScoped<SendOperation<AutocadRootObject>>();
-
-    // Object Builders
-    builder.AddScoped<IRootObjectBuilder<AutocadRootObject>, AutocadRootObjectBuilder>();
-
-    // Register bindings
-    builder.AddSingleton<IBinding, ConfigBinding>("connectorName", "Civil3d"); // POC: Easier like this for now, should be cleaned up later
-    builder.AddSingleton<IBinding, AutocadSendBinding>();
-
-    // register send filters
-    builder.AddTransient<ISendFilter, AutocadSelectionFilter>();
-
-    // register send conversion cache
-    builder.AddSingleton<ISendConversionCache, SendConversionCache>();
+    // send
+    serviceCollection.LoadSend();
+    serviceCollection.AddScoped<IRootObjectBuilder<AutocadRootObject>, Civil3dRootObjectBuilder>();
   }
 }
 #endif

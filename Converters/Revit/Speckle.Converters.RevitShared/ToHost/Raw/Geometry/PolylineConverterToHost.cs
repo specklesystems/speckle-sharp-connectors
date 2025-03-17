@@ -1,8 +1,9 @@
 using Autodesk.Revit.DB;
-using Objects.Geometry;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Converters.RevitShared.Settings;
+using Speckle.Objects.Geometry;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -10,17 +11,17 @@ public class PolylineConverterToHost : ITypedConverter<SOG.Polyline, DB.CurveArr
 {
   private readonly ITypedConverter<SOG.Line, DB.Line> _lineConverter;
   private readonly ScalingServiceToHost _scalingService;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public PolylineConverterToHost(
     ITypedConverter<SOG.Line, DB.Line> lineConverter,
     ScalingServiceToHost scalingService,
-    IRevitConversionContextStack contextStack
+    IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _lineConverter = lineConverter;
     _scalingService = scalingService;
-    _contextStack = contextStack;
+    _converterSettings = converterSettings;
   }
 
   public CurveArray Convert(Polyline target)
@@ -37,7 +38,15 @@ public class PolylineConverterToHost : ITypedConverter<SOG.Polyline, DB.CurveArr
       var lastPt = pts[0];
       for (var i = 1; i < pts.Count; i++)
       {
-        var success = TryAppendLineSafely(curveArray, new SOG.Line(lastPt, pts[i], target.units));
+        var success = TryAppendLineSafely(
+          curveArray,
+          new SOG.Line
+          {
+            start = lastPt,
+            end = pts[i],
+            units = target.units
+          }
+        );
         if (success)
         {
           lastPt = pts[i];
@@ -46,7 +55,15 @@ public class PolylineConverterToHost : ITypedConverter<SOG.Polyline, DB.CurveArr
 
       if (target.closed)
       {
-        TryAppendLineSafely(curveArray, new SOG.Line(pts[^1], pts[0], target.units));
+        TryAppendLineSafely(
+          curveArray,
+          new SOG.Line
+          {
+            start = pts[^1],
+            end = pts[0],
+            units = target.units
+          }
+        );
       }
     }
     return curveArray;
@@ -63,7 +80,7 @@ public class PolylineConverterToHost : ITypedConverter<SOG.Polyline, DB.CurveArr
   public bool IsLineTooShort(SOG.Line line)
   {
     var scaleToNative = _scalingService.ScaleToNative(SOG.Point.Distance(line.start, line.end), line.units);
-    return scaleToNative < _contextStack.Current.Document.Application.ShortCurveTolerance;
+    return scaleToNative < _converterSettings.Current.Document.Application.ShortCurveTolerance;
   }
 
   /// <summary>

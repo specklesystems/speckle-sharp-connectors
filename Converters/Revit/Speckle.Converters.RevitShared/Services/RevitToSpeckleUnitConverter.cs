@@ -1,6 +1,6 @@
 using Speckle.Converters.Common;
-using Speckle.Core.Kits;
-using Speckle.Core.Logging;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.RevitShared.Services;
 
@@ -23,12 +23,11 @@ public sealed class RevitToSpeckleUnitConverter : IHostToSpeckleUnitConverter<DB
   // POC: maybe just convert, it's not a Try method
   public string ConvertOrThrow(DB.ForgeTypeId hostUnit)
   {
-    if (_unitMapping.TryGetValue(hostUnit, out string value))
+    if (_unitMapping.TryGetValue(hostUnit, out string? value))
     {
       return value;
     }
 
-    // POC: probably would prefer something more specific
-    throw new SpeckleException($"The Unit System \"{hostUnit}\" is unsupported.");
+    throw new UnitNotSupportedException($"The Unit System \"{hostUnit}\" is unsupported.");
   }
 }

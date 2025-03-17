@@ -1,39 +1,54 @@
-using ArcGIS.Core.Geometry;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
 
-public class PointToSpeckleConverter : ITypedConverter<MapPoint, SOG.Point>
+public class PointToSpeckleConverter : ITypedConverter<ACG.MapPoint, SOG.Point>
 {
-  private readonly IConversionContextStack<ArcGISDocument, Unit> _contextStack;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
 
-  public PointToSpeckleConverter(IConversionContextStack<ArcGISDocument, Unit> contextStack)
+  public PointToSpeckleConverter(IConverterSettingsStore<ArcGISConversionSettings> settingsStore)
   {
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
-  public SOG.Point Convert(MapPoint target)
+  public SOG.Point Convert(ACG.MapPoint target)
   {
+    ACG.MapPoint point;
     try
     {
-      if (
-        GeometryEngine.Instance.Project(target, _contextStack.Current.Document.Map.SpatialReference)
-        is not MapPoint reprojectedPt
-      )
-      {
-        throw new SpeckleConversionException(
-          $"Conversion to Spatial Reference {_contextStack.Current.Document.Map.SpatialReference.Name} failed"
-        );
-      }
-      return new(reprojectedPt.X, reprojectedPt.Y, reprojectedPt.Z, _contextStack.Current.SpeckleUnits);
+      // reproject to Active CRS
+      point = (ACG.MapPoint)
+        ACG.GeometryEngine.Instance.Project(target, _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference);
     }
-    catch (ArgumentException ex)
+    catch (ArgumentNullException anEx)
     {
-      throw new SpeckleConversionException(
-        $"Conversion to Spatial Reference {_contextStack.Current.Document.Map.SpatialReference} failed",
-        ex
+      throw new ConversionException("MapPoint was null", anEx);
+    }
+    catch (ArgumentException aEx)
+    {
+      throw new ConversionException("Spatial reference was not supported", aEx);
+    }
+    catch (NotImplementedException niEx)
+    {
+      throw new ConversionException("", niEx);
+    }
+
+    if (double.IsNaN(point.X) || double.IsInfinity(point.X) || double.IsNaN(point.Y) || double.IsInfinity(point.Y))
+    {
+      throw new ConversionException(
+        $"Conversion to Spatial Reference {_settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference.Name} failed: coordinates undefined"
       );
     }
+
+    // convert to Speckle Pt
+    SOG.Point reprojectedSpecklePt = new(point.X, point.Y, point.Z, _settingsStore.Current.SpeckleUnits);
+    SOG.Point scaledMovedRotatedPoint = _settingsStore.Current.ActiveCRSoffsetRotation.OffsetRotateOnSend(
+      reprojectedSpecklePt,
+      _settingsStore.Current.SpeckleUnits
+    );
+
+    return scaledMovedRotatedPoint;
   }
 }

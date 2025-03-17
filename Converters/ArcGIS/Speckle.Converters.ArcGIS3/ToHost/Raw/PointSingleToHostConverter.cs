@@ -1,29 +1,31 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Kits;
-using Speckle.Core.Models;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.Raw;
 
 public class PointToHostConverter : ITypedConverter<SOG.Point, ACG.MapPoint>
 {
-  private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
 
-  public PointToHostConverter(IConversionContextStack<ArcGISDocument, ACG.Unit> contextStack)
+  public PointToHostConverter(IConverterSettingsStore<ArcGISConversionSettings> settingsStore)
   {
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public object Convert(Base target) => Convert((SOG.Point)target);
 
   public ACG.MapPoint Convert(SOG.Point target)
   {
-    double scaleFactor = Units.GetConversionFactor(target.units, _contextStack.Current.SpeckleUnits);
+    SOG.Point scaledMovedRotatedPoint = _settingsStore.Current.ActiveCRSoffsetRotation.OffsetRotateOnReceive(
+      target,
+      _settingsStore.Current.SpeckleUnits
+    );
     return new ACG.MapPointBuilderEx(
-      target.x * scaleFactor,
-      target.y * scaleFactor,
-      target.z * scaleFactor,
-      _contextStack.Current.Document.Map.SpatialReference
+      scaledMovedRotatedPoint.x,
+      scaledMovedRotatedPoint.y,
+      scaledMovedRotatedPoint.z,
+      _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference
     ).ToGeometry();
   }
 }

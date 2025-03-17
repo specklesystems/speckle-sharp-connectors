@@ -212,6 +212,7 @@ dotnet_diagnostic.ide0058.severity = none # Remove unnecessary expression value:
 dotnet_diagnostic.ide0010.severity = none # Add missing cases to switch statement: Too verbose
 dotnet_diagnostic.ide0200.severity = none # Remove unnecessary lambda expression: may be performance reasons not to
 dotnet_diagnostic.ide0058.severity = none # Remove unnecessary expression value: Subjective
+dotnet_diagnostic.ide0305.severity = none # Use collection expression for fluent: Can obfuscate intent
 dotnet_diagnostic.ide0001.severity = suggestion # Name can be simplified: Non enforceable in build
 dotnet_diagnostic.ide0046.severity = suggestion # Use conditional expression for return: Subjective
 dotnet_diagnostic.ide0045.severity = suggestion # Use conditional expression for assignment: Subjective
@@ -233,6 +234,15 @@ dotnet_diagnostic.ide0042.severity = suggestion # Deconstruct variable declarati
 dotnet_diagnostic.ide0028.severity = suggestion # Use collection initializers: Subjective
 dotnet_diagnostic.ide0072.severity = suggestion # Populate switch statement: Subjective
 dotnet_diagnostic.ide0074.severity = suggestion # Use compound assignment: Subjective
+dotnet_diagnostic.ide0300.severity = suggestion # Use collection expression for array: Subjective, maybe aspirational
+dotnet_diagnostic.ide0290.severity = suggestion # primary constructors: subjective, and readonly properties are not a thing
+dotnet_diagnostic.ide0290.severity = suggestion # Use primary constructor: Subjective
+dotnet_diagnostic.ide0037.severity = suggestion # Use inferred member names: Sometimes its nice to be explicit
+dotnet_diagnostic.ide0301.severity = suggestion # Use collection expression for empty: Subjective, intent
+dotnet_diagnostic.ide0021.severity = suggestion # Use expression body for constructors : Subjective
+dotnet_diagnostic.ide0090.severity = suggestion # Simplify new expression : Subjective
+
+dotnet_diagnostic.ide0047.severity = suggestion # Parentheses preferences: IDEs don't properly pick it up
 
 # Maintainability rules
 dotnet_diagnostic.ca1501.severity = warning # Avoid excessive inheritance
@@ -244,9 +254,10 @@ dotnet_diagnostic.ca1508.severity = warning # Avoid dead conditional code
 dotnet_diagnostic.ca1509.severity = warning # Invalid entry in code metrics configuration file
 dotnet_diagnostic.ca1861.severity = none # Prefer 'static readonly' fields over constant array arguments if the called method is called repeatedly and is not mutating the passed array (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1861)
 
+# CA2007: Consider calling ConfigureAwait on the awaited task (this is not needed for application code, in fact we don't want to call anything but ConfigureAwait(true) which is the default)
+dotnet_diagnostic.CA2007.severity = none
+
 dotnet_diagnostic.cs8618.severity = suggestion # nullable problem
-dotnet_diagnostic.CS0809.severity = suggestion # obsolete errors
-dotnet_diagnostic.CS0618.severity = suggestion # obsolete errors
 
 
 # Performance rules

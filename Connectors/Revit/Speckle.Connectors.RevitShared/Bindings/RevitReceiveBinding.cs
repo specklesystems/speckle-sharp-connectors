@@ -1,36 +1,54 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Cancellation;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Models.Card;
+using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
-using Speckle.Connectors.Utils.Builders;
-using Speckle.Connectors.Utils.Cancellation;
-using Speckle.Connectors.Utils.Operations;
-using Speckle.Autofac.DependencyInjection;
-using Speckle.Connectors.Utils;
+using Speckle.Connectors.DUI.Models.Card;
+using Speckle.Connectors.Revit.Plugin;
+using Speckle.Converters.Common;
+using Speckle.Converters.RevitShared.Settings;
+using Speckle.Sdk;
 
 namespace Speckle.Connectors.Revit.Bindings;
 
-internal class RevitReceiveBinding : IReceiveBinding
+internal sealed class RevitReceiveBinding : IReceiveBinding
 {
   public string Name => "receiveBinding";
-  public IBridge Parent { get; }
+  public IBrowserBridge Parent { get; }
 
-  private readonly CancellationManager _cancellationManager;
+  private readonly IOperationProgressManager _operationProgressManager;
+  private readonly ILogger<RevitReceiveBinding> _logger;
+  private readonly ICancellationManager _cancellationManager;
   private readonly DocumentModelStore _store;
-  private readonly IUnitOfWorkFactory _unitOfWorkFactory;
-  public ReceiveBindingUICommands Commands { get; }
+  private readonly IServiceProvider _serviceProvider;
+  private readonly IRevitConversionSettingsFactory _revitConversionSettingsFactory;
+  private readonly ISpeckleApplication _speckleApplication;
+  private ReceiveBindingUICommands Commands { get; }
 
   public RevitReceiveBinding(
     DocumentModelStore store,
-    CancellationManager cancellationManager,
-    IBridge parent,
-    IUnitOfWorkFactory unitOfWorkFactory
+    ICancellationManager cancellationManager,
+    IBrowserBridge parent,
+    IServiceProvider serviceProvider,
+    IOperationProgressManager operationProgressManager,
+    ILogger<RevitReceiveBinding> logger,
+    IRevitConversionSettingsFactory revitConversionSettingsFactory,
+    ISpeckleApplication speckleApplication
   )
   {
     Parent = parent;
     _store = store;
-    _unitOfWorkFactory = unitOfWorkFactory;
+    _serviceProvider = serviceProvider;
+    _operationProgressManager = operationProgressManager;
+    _logger = logger;
+    _revitConversionSettingsFactory = revitConversionSettingsFactory;
+    _speckleApplication = speckleApplication;
     _cancellationManager = cancellationManager;
+
     Commands = new ReceiveBindingUICommands(parent);
   }
 
@@ -38,7 +56,6 @@ internal class RevitReceiveBinding : IReceiveBinding
 
   public async Task Receive(string modelCardId)
   {
-    using var unitOfWork = _unitOfWorkFactory.Resolve<ReceiveOperation>();
     try
     {
       // Get receiver card
@@ -48,35 +65,53 @@ internal class RevitReceiveBinding : IReceiveBinding
         throw new InvalidOperationException("No download model card was found.");
       }
 
-      // Init cancellation token source -> Manager also cancel it if exist before
-      CancellationTokenSource cts = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
+      using var scope = _serviceProvider.CreateScope();
+      scope
+        .ServiceProvider.GetRequiredService<IConverterSettingsStore<RevitConversionSettings>>()
+        .Initialize(
+          _revitConversionSettingsFactory.Create(
+            DetailLevelType.Coarse, //TODO figure out
+            null,
+            false
+          )
+        );
       // Receive host objects
-      HostObjectBuilderResult conversionResults = await unitOfWork.Service
+      HostObjectBuilderResult conversionResults = await scope
+        .ServiceProvider.GetRequiredService<ReceiveOperation>()
         .Execute(
-          modelCard.AccountId.NotNull(), // POC: I hear -you are saying why we're passing them separately. Not sure pass the DUI3-> Connectors.DUI project dependency to the SDK-> Connector.Utils
-          modelCard.ProjectId.NotNull(),
-          modelCard.ProjectName.NotNull(),
-          modelCard.ModelName.NotNull(),
-          modelCard.SelectedVersionId.NotNull(),
-          cts.Token,
-          (status, progress) =>
-            Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts)
-        )
-        .ConfigureAwait(false);
+          modelCard.GetReceiveInfo(_speckleApplication.Slug),
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),
+          cancellationItem.Token
+        );
 
       modelCard.BakedObjectIds = conversionResults.BakedObjectIds.ToList();
-      Commands.SetModelReceiveResult(
+      await Commands.SetModelReceiveResult(
         modelCardId,
         conversionResults.BakedObjectIds,
         conversionResults.ConversionResults
       );
     }
-    // Catch here specific exceptions if they related to model card.
     catch (OperationCanceledException)
     {
-      // SWALLOW -> UI handles it immediately, so we do not need to handle anything
-      return;
+      // SWALLOW -> UI handles it immediately, so we do not need to handle anything for now!
+      // Idea for later -> when cancel called, create promise from UI to solve it later with this catch block.
+      // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
+    }
+    catch (SpeckleRevitTaskException ex)
+    {
+      await SpeckleRevitTaskException.ProcessException(modelCardId, ex, _logger, Commands);
+    }
+    catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
+    {
+      _logger.LogModelCardHandledError(ex);
+      await Commands.SetModelError(modelCardId, ex);
+    }
+    finally
+    {
+      // otherwise the id of the operation persists on the cancellation manager and triggers 'Operations cancelled because of document swap!' message to UI.
+      _cancellationManager.CancelOperation(modelCardId);
     }
   }
 }

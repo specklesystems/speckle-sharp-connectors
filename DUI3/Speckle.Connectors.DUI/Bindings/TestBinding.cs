@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Core.Logging;
+using Speckle.Sdk;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
@@ -10,9 +10,9 @@ namespace Speckle.Connectors.DUI.Bindings;
 public class TestBinding : IBinding
 {
   public string Name => "testBinding";
-  public IBridge Parent { get; }
+  public IBrowserBridge Parent { get; }
 
-  public TestBinding(IBridge bridge)
+  public TestBinding(IBrowserBridge bridge)
   {
     Parent = bridge;
   }
@@ -41,16 +41,17 @@ public class TestBinding : IBinding
       thisIsABoolean = false
     };
 
-  public void TriggerEvent(string eventName)
+  public async Task TriggerEvent(string eventName)
   {
     switch (eventName)
     {
       case "emptyTestEvent":
-        Parent.Send("emptyTestEvent");
+        await Parent.Send("emptyTestEvent");
+
         break;
       case "testEvent":
       default:
-        Parent.Send(
+        await Parent.Send(
           "testEvent",
           new
           {

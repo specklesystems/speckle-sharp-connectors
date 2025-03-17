@@ -1,10 +1,10 @@
 using Autodesk.Revit.DB;
-using Objects.Geometry;
 using Speckle.Converters.Common.Objects;
+using Speckle.Objects.Geometry;
 
 namespace Speckle.Converters.RevitShared.Raw;
 
-internal sealed class ModelCurveArrArrayConverterToSpeckle : ITypedConverter<DB.ModelCurveArrArray, SOG.Polycurve[]>
+public sealed class ModelCurveArrArrayConverterToSpeckle : ITypedConverter<DB.ModelCurveArrArray, SOG.Polycurve[]>
 {
   private readonly ITypedConverter<DB.ModelCurveArray, SOG.Polycurve> _modelCurveArrayConverter;
 

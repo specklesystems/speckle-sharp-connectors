@@ -1,9 +1,13 @@
 using Autodesk.Revit.UI;
-using Speckle.Autofac.DependencyInjection;
-using System.IO;
-using System.Reflection;
-using Speckle.Autofac;
-using Speckle.Connectors.Utils;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Revit.Async;
+using Speckle.Connectors.Common;
+using Speckle.Connectors.DUI;
+using Speckle.Connectors.Revit.DependencyInjection;
+using Speckle.Converters.RevitShared;
+using Speckle.Sdk;
+using Speckle.Sdk.Host;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
@@ -11,31 +15,25 @@ internal sealed class RevitExternalApplication : IExternalApplication
 {
   private IRevitPlugin? _revitPlugin;
 
-  private SpeckleContainer? _container;
-
-  // POC: this is getting hard coded - need a way of injecting it
-  //      I am beginning to think the shared project is not the way
-  //      and an assembly which is invoked with some specialisation is the right way to go
-  //      maybe subclassing, or some hook to inject som configuration
-  private readonly RevitSettings _revitSettings;
+  private ServiceProvider? _container;
+  private IDisposable? _disposableLogger;
 
   // POC: move to somewhere central?
-  public static readonly DockablePaneId DoackablePanelId = new(new Guid("{f7b5da7c-366c-4b13-8455-b56f433f461e}"));
+  public static readonly DockablePaneId DockablePanelId = new(new Guid("{f7b5da7c-366c-4b13-8455-b56f433f461e}"));
 
-  public RevitExternalApplication()
+  private static HostAppVersion GetVersion()
   {
-    // POC: load from JSON file?
-    _revitSettings = new RevitSettings(
-      "Speckle New UI",
-      "Speckle",
-      "Speckle New UI",
-      "2023",
-      "Speckle New UI",
-      "Revit",
-      new[] { Path.GetDirectoryName(typeof(RevitExternalApplication).Assembly.Location) },
-      "Revit Connector",
-      "2023" //POC: app version?
-    );
+#if REVIT2022
+    return HostAppVersion.v2022;
+#elif REVIT2023
+    return HostAppVersion.v2023;
+#elif REVIT2024
+    return HostAppVersion.v2024;
+#elif REVIT2025
+    return HostAppVersion.v2025;
+#else
+    throw new NotImplementedException();
+#endif
   }
 
   public Result OnStartup(UIControlledApplication application)
@@ -44,20 +42,26 @@ internal sealed class RevitExternalApplication : IExternalApplication
     {
       // POC: not sure what this is doing...  could be messing up our Aliasing????
       AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<RevitExternalApplication>;
-      var containerBuilder = SpeckleContainerBuilder.CreateInstance();
+      var services = new ServiceCollection();
       // init DI
-      _container = containerBuilder
-        .LoadAutofacModules(Assembly.GetExecutingAssembly(), _revitSettings.ModuleFolders.NotNull())
-        .AddSingleton(_revitSettings) // apply revit settings into DI
-        .AddSingleton(application) // inject UIControlledApplication application
-        .Build();
+      _disposableLogger = services.Initialize(HostApplications.Revit, GetVersion());
+      services.AddRevit();
+      services.AddRevitConverters();
+      services.AddSingleton(application);
+      _container = services.BuildServiceProvider();
+      _container.UseDUI();
 
+      RevitTask.Initialize(application);
       // resolve root object
-      _revitPlugin = _container.Resolve<IRevitPlugin>();
+      _revitPlugin = _container.GetRequiredService<IRevitPlugin>();
       _revitPlugin.Initialise();
     }
     catch (Exception e) when (!e.IsFatal())
     {
+      _container
+        .GetRequiredService<ILoggerFactory>()
+        .CreateLogger<RevitExternalApplication>()
+        .LogCritical(e, "Unhandled exception");
       // POC: feedback?
       return Result.Failed;
     }
@@ -73,6 +77,8 @@ internal sealed class RevitExternalApplication : IExternalApplication
       // possibly with injected pieces or with some abstract methods?
       // need to look for commonality
       _revitPlugin?.Shutdown();
+      _disposableLogger?.Dispose();
+      _container?.Dispose();
     }
     catch (Exception e) when (!e.IsFatal())
     {

@@ -1,10 +1,10 @@
-using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common;
-using Speckle.Core.Models;
+using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Geometry;
 
-[NameAndRankValue(nameof(ADB.DBPoint), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(ADB.DBPoint), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class PointToSpeckleConverter : IToSpeckleTopLevelConverter
 {
   private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;

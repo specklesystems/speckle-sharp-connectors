@@ -1,13 +1,17 @@
 using System.Collections;
 using ArcGIS.Core.Data;
 using ArcGIS.Core.Data.Exceptions;
-using Objects.GIS;
-using Speckle.Core.Logging;
-using Speckle.Core.Models;
+using Speckle.InterfaceGenerator;
+using Speckle.Sdk;
+using Speckle.Sdk.Common.Exceptions;
+using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.GraphTraversal;
 using FieldDescription = ArcGIS.Core.Data.DDL.FieldDescription;
 
 namespace Speckle.Converters.ArcGIS3.Utils;
 
+[GenerateAutoInterface]
 public class ArcGISFieldUtils : IArcGISFieldUtils
 {
   private readonly ICharacterCleaner _characterCleaner;
@@ -16,6 +20,26 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
   public ArcGISFieldUtils(ICharacterCleaner characterCleaner)
   {
     _characterCleaner = characterCleaner;
+  }
+
+  public Dictionary<string, object?> GetAttributesViaFunction(
+    ObjectConversionTracker trackerItem,
+    List<(FieldDescription, Func<Base, object?>)> fieldsAndFunctions
+  )
+  {
+    // set and pass attributes
+    Dictionary<string, object?> attributes = new();
+    foreach ((FieldDescription field, Func<Base, object?> function) in fieldsAndFunctions)
+    {
+      string key = field.AliasName;
+      attributes[key] = function(trackerItem.Base);
+      if (attributes[key] is null && key == "Speckle_ID")
+      {
+        attributes[key] = trackerItem.Base.id;
+      }
+    }
+
+    return attributes;
   }
 
   public RowBuffer AssignFieldValuesToRow(
@@ -56,40 +80,54 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
     return rowBuffer;
   }
 
-  public List<FieldDescription> GetFieldsFromSpeckleLayer(VectorLayer target)
+  public List<FieldDescription> GetFieldsFromSpeckleLayer(Collection target)
   {
-    List<FieldDescription> fields = new();
-    List<string> fieldAdded = new();
-
-    foreach (var field in target.attributes.GetMembers(DynamicBaseMemberType.Dynamic))
+    if (target["fields"] is Dictionary<string, string> attributes)
     {
-      if (!fieldAdded.Contains(field.Key) && field.Key != FID_FIELD_NAME)
-      {
-        // POC: TODO check for the forbidden characters/combinations: https://support.esri.com/en-us/knowledge-base/what-characters-should-not-be-used-in-arcgis-for-field--000005588
-        try
-        {
-          if (field.Value is not null)
-          {
-            string key = field.Key;
-            FieldType fieldType = GISAttributeFieldType.FieldTypeToNative(field.Value);
+      List<FieldDescription> fields = new();
+      List<string> fieldAdded = new();
 
-            FieldDescription fieldDescription =
-              new(_characterCleaner.CleanCharacters(key), fieldType) { AliasName = key };
-            fields.Add(fieldDescription);
-            fieldAdded.Add(key);
+      foreach (var field in attributes)
+      {
+        if (!fieldAdded.Contains(field.Key) && field.Key != FID_FIELD_NAME)
+        {
+          // POC: TODO check for the forbidden characters/combinations: https://support.esri.com/en-us/knowledge-base/what-characters-should-not-be-used-in-arcgis-for-field--000005588
+          try
+          {
+            if (field.Value is not null)
+            {
+              string key = field.Key;
+              FieldType fieldType = GISAttributeFieldType.FieldTypeToNative(field.Value);
+
+              FieldDescription fieldDescription =
+                new(_characterCleaner.CleanCharacters(key), fieldType) { AliasName = key };
+              fields.Add(fieldDescription);
+              fieldAdded.Add(key);
+            }
+            else
+            {
+              // log missing field
+            }
           }
-          else
+          catch (GeodatabaseFieldException)
           {
             // log missing field
           }
         }
-        catch (GeodatabaseFieldException)
-        {
-          // log missing field
-        }
       }
+
+      // every feature needs Speckle_ID to be colored (before we implement native GIS renderers on Receive)
+      if (!fieldAdded.Contains("Speckle_ID"))
+      {
+        FieldDescription fieldDescriptionId =
+          new(_characterCleaner.CleanCharacters("Speckle_ID"), FieldType.String) { AliasName = "Speckle_ID" };
+        fields.Add(fieldDescriptionId);
+      }
+
+      return fields;
     }
-    return fields;
+
+    throw new ValidationException("Creation of the custom fields failed: provided object is not a valid Vector Layer");
   }
 
   public List<(FieldDescription, Func<Base, object?>)> CreateFieldsFromListOfBase(List<Base> target)
@@ -101,6 +139,7 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
     {
       // get all members by default, but only Dynamic ones from the basic geometry
       Dictionary<string, object?> members = new();
+      members["Speckle_ID"] = baseObj.id; // to use for unique color values
 
       // leave out until we decide which properties to support on Receive
       /*
@@ -117,7 +156,12 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
       foreach (KeyValuePair<string, object?> field in members)
       {
         // POC: TODO check for the forbidden characters/combinations: https://support.esri.com/en-us/knowledge-base/what-characters-should-not-be-used-in-arcgis-for-field--000005588
-        Func<Base, object?> function = x => x[field.Key];
+        string key = field.Key;
+        if (field.Key == "Speckle_ID")
+        {
+          key = "id";
+        }
+        Func<Base, object?> function = x => x[key];
         TraverseAttributes(field, function, fieldsAndFunctions, fieldAdded);
       }
     }
@@ -148,49 +192,10 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
   {
     if (field.Value is Base attributeBase)
     {
-      // only traverse Base if it's Rhino userStrings, or Revit parameter, or Base containing Revit parameters
-      if (field.Key == "parameters")
-      {
-        foreach (KeyValuePair<string, object?> attributField in attributeBase.GetMembers(DynamicBaseMemberType.Dynamic))
-        {
-          // only iterate through elements if they are actually Revit Parameters or parameter IDs
-          if (
-            attributField.Value is Objects.BuiltElements.Revit.Parameter
-            || attributField.Key == "applicationId"
-            || attributField.Key == "id"
-          )
-          {
-            KeyValuePair<string, object?> newAttributField =
-              new($"{field.Key}.{attributField.Key}", attributField.Value);
-            Func<Base, object?> functionAdded = x => (function(x) as Base)?[attributField.Key];
-            TraverseAttributes(newAttributField, functionAdded, fieldsAndFunctions, fieldAdded);
-          }
-        }
-      }
-      else if (field.Key == "userStrings")
-      {
-        foreach (KeyValuePair<string, object?> attributField in attributeBase.GetMembers(DynamicBaseMemberType.Dynamic))
-        {
-          KeyValuePair<string, object?> newAttributField = new($"{field.Key}.{attributField.Key}", attributField.Value);
-          Func<Base, object?> functionAdded = x => (function(x) as Base)?[attributField.Key];
-          TraverseAttributes(newAttributField, functionAdded, fieldsAndFunctions, fieldAdded);
-        }
-      }
-      else if (field.Value is Objects.BuiltElements.Revit.Parameter)
-      {
-        foreach (
-          KeyValuePair<string, object?> attributField in attributeBase.GetMembers(DynamicBaseMemberType.Instance)
-        )
-        {
-          KeyValuePair<string, object?> newAttributField = new($"{field.Key}.{attributField.Key}", attributField.Value);
-          Func<Base, object?> functionAdded = x => (function(x) as Base)?[attributField.Key];
-          TraverseAttributes(newAttributField, functionAdded, fieldsAndFunctions, fieldAdded);
-        }
-      }
-      else
-      {
-        // for now, ignore all other properties of Base type
-      }
+      // Revit parameters are sent under the `properties` field as a `Dictionary<string,object?>`.
+      // This is the same for attributes from other applications. No Speckle objects should have attributes of type `Base`.
+      // Currently we are not sending any rhino user strings.
+      // TODO: add support for attributes of type `Dictionary<string,object?>`
     }
     else if (field.Value is IList attributeList)
     {
@@ -258,7 +263,7 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
         // 2. change to NewType if it's String (and the old one is not)
         if (
           newFieldType != FieldType.Blob && existingFieldType == FieldType.Blob
-          || (newFieldType == FieldType.String && existingFieldType != FieldType.String)
+          || newFieldType == FieldType.String && existingFieldType != FieldType.String
         )
         {
           fieldsAndFunctions[index] = (
@@ -272,5 +277,31 @@ public class ArcGISFieldUtils : IArcGISFieldUtils
     {
       // do nothing
     }
+  }
+
+  public List<(FieldDescription, Func<Base, object?>)> GetFieldsAndAttributeFunctions(
+    List<(TraversalContext, ObjectConversionTracker)> listOfContextAndTrackers
+  )
+  {
+    List<(FieldDescription, Func<Base, object?>)> fieldsAndFunctions = new();
+    List<FieldDescription> fields = new();
+
+    // Get Fields, geomType and attributeFunction - separately for GIS and non-GIS
+    if (
+      listOfContextAndTrackers.FirstOrDefault().Item1.Parent?.Current is Collection vLayer
+      && vLayer["fields"] is Dictionary<string, string>
+    ) // GIS
+    {
+      fields = GetFieldsFromSpeckleLayer(vLayer);
+      fieldsAndFunctions = fields
+        .Select(x => (x, (Func<Base, object?>)(y => (y?["properties"] as Base)?[x.Name])))
+        .ToList();
+    }
+    else // non-GIS
+    {
+      fieldsAndFunctions = CreateFieldsFromListOfBase(listOfContextAndTrackers.Select(x => x.Item2.Base).ToList());
+    }
+
+    return fieldsAndFunctions;
   }
 }

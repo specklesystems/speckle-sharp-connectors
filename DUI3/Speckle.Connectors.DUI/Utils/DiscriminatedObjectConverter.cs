@@ -1,9 +1,11 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
-using Speckle.Core.Serialisation;
+using Microsoft.Extensions.DependencyInjection;
 using Speckle.Newtonsoft.Json;
 using Speckle.Newtonsoft.Json.Linq;
 using Speckle.Newtonsoft.Json.Serialization;
+using Speckle.Sdk.Serialisation;
 
 namespace Speckle.Connectors.DUI.Utils;
 
@@ -11,10 +13,12 @@ namespace Speckle.Connectors.DUI.Utils;
 /// This converter ensures we can do polymorphic deserialization to concrete types. This converter is intended
 /// for use only with UI bound types, not Speckle Bases.
 /// </summary>
-// POC: automatic registration of compatible objects
-public class DiscriminatedObjectConverter : JsonConverter<DiscriminatedObject>
+//this is effectively a singleton because BrowserBridge and TopLevelExceptionHandler use it
+public class DiscriminatedObjectConverter(IServiceProvider serviceProvider) : JsonConverter<DiscriminatedObject>
 {
-  private readonly JsonSerializer _localSerializer =
+  // POC: remove, replace with DI
+  private static readonly ConcurrentDictionary<string, Type?> s_typeCache = new();
+  private static readonly Speckle.Newtonsoft.Json.JsonSerializer s_localSerializer =
     new()
     {
       DefaultValueHandling = DefaultValueHandling.Ignore,
@@ -22,13 +26,17 @@ public class DiscriminatedObjectConverter : JsonConverter<DiscriminatedObject>
       NullValueHandling = NullValueHandling.Ignore
     };
 
-  public override void WriteJson(JsonWriter writer, DiscriminatedObject? value, JsonSerializer serializer)
+  public override void WriteJson(
+    JsonWriter writer,
+    DiscriminatedObject? value,
+    Speckle.Newtonsoft.Json.JsonSerializer serializer
+  )
   {
     if (value is null)
     {
       return;
     }
-    var jo = JObject.FromObject(value, _localSerializer);
+    var jo = JObject.FromObject(value, s_localSerializer);
     jo.WriteTo(writer);
   }
 
@@ -37,7 +45,7 @@ public class DiscriminatedObjectConverter : JsonConverter<DiscriminatedObject>
     Type objectType,
     DiscriminatedObject? existingValue,
     bool hasExistingValue,
-    JsonSerializer serializer
+    Speckle.Newtonsoft.Json.JsonSerializer serializer
   )
   {
     JObject jsonObject = JObject.Load(reader);
@@ -52,7 +60,7 @@ public class DiscriminatedObjectConverter : JsonConverter<DiscriminatedObject>
       ?? throw new SpeckleDeserializeException(
         "DUI3 Discriminator converter deserialization failed, type not found: " + typeName
       );
-    var obj = Activator.CreateInstance(type, true);
+    var obj = ActivatorUtilities.CreateInstance(serviceProvider, type);
     serializer.Populate(jsonObject.CreateReader(), obj);
 
     // Store the JSON property names in the object for later comparison
@@ -68,50 +76,44 @@ public class DiscriminatedObjectConverter : JsonConverter<DiscriminatedObject>
     return obj as DiscriminatedObject;
   }
 
-  // POC: remove, replace with DI
-  private readonly Dictionary<string, Type> _typeCache = new();
-
-  private Type? GetTypeByName(string name)
-  {
-    _typeCache.TryGetValue(name, out Type myType);
-    if (myType != null)
-    {
-      return myType;
-    }
-
-    // POC: why does this exist like this?
-    // The assemblies within the CurrentDomain are not necessarily loaded
-    // probably we can leverage DI here so we already know the types, possibly DI plus an attribute
-    // then we can cache everything on startup
-    foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies().Reverse())
-    {
-      try
+  private static Type? GetTypeByName(string typeName) =>
+    s_typeCache.GetOrAdd(
+      typeName,
+      name =>
       {
-        // POC: contains is weak
-        // working by accident, ModelCard is contained within SenderModelCard :O
-        // comparisons :D
-        var type = assembly.DefinedTypes.FirstOrDefault(t => !string.IsNullOrEmpty(t?.Name) && t?.Name == name);
-        if (type != null)
+        //POC: why does this exist like this?
+        // The assemblies within the CurrentDomain are not necessarily loaded
+        // probably we can leverage DI here so we already know the types, possibly DI plus an attribute
+        // then we can cache everything on startup
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies().Reverse())
         {
-          _typeCache[name] = type;
-          return type;
+          try
+          {
+            // POC: contains is weak
+            // working by accident, ModelCard is contained within SenderModelCard :O
+            // comparisons :D
+            var type = assembly.DefinedTypes.FirstOrDefault(t => !string.IsNullOrEmpty(t?.Name) && t?.Name == name);
+            if (type != null)
+            {
+              return type;
+            }
+          }
+          // POC: this Exception pattern is too broad and should be resticted but fixes the above issues
+          // the call above is causing load of all assemblies (which is also possibly not good)
+          // AND it explodes for me loading an exception, so at the last this should
+          // catch System.Reflection.ReflectionTypeLoadException (and anthing else DefinedTypes might throw)
+          // LATER COMMENT: Since discriminated object is only used in DUI3 models, we could restrict to only "this" assembly?
+          catch (ReflectionTypeLoadException ex)
+          {
+            // POC: logging
+            Debug.WriteLine("***" + ex.Message);
+          }
         }
-      }
-      // POC: this Exception pattern is too broad and should be resticted but fixes the above issues
-      // the call above is causing load of all assemblies (which is also possibly not good)
-      // AND it explodes for me loading an exception, so at the last this should
-      // catch System.Reflection.ReflectionTypeLoadException (and anthing else DefinedTypes might throw)
-      // LATER COMMENT: Since discriminated object is only used in DUI3 models, we could restrict to only "this" assembly?
-      catch (ReflectionTypeLoadException ex)
-      {
-        // POC: logging
-        Debug.WriteLine("***" + ex.Message);
-      }
-    }
 
-    // should this throw instead? :/
-    return null;
-  }
+        // should this throw instead? :/
+        return null;
+      }
+    );
 }
 
 public class AbstractConverter<TReal, TAbstract> : JsonConverter
@@ -122,9 +124,9 @@ public class AbstractConverter<TReal, TAbstract> : JsonConverter
     JsonReader reader,
     Type objectType,
     object? existingValue,
-    JsonSerializer serializer
+    Speckle.Newtonsoft.Json.JsonSerializer serializer
   ) => serializer.Deserialize<TReal>(reader);
 
-  public override void WriteJson(JsonWriter writer, object? value, JsonSerializer serializer) =>
+  public override void WriteJson(JsonWriter writer, object? value, Speckle.Newtonsoft.Json.JsonSerializer serializer) =>
     serializer.Serialize(writer, value);
 }

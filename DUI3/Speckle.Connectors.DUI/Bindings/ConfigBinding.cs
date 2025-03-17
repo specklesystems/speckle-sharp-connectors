@@ -1,7 +1,8 @@
 using System.Runtime.Serialization;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Core.Transports;
-using Speckle.Newtonsoft.Json;
+using Speckle.Connectors.DUI.Utils;
+using Speckle.Sdk;
+using Speckle.Sdk.SQLite;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
@@ -15,22 +16,38 @@ namespace Speckle.Connectors.DUI.Bindings;
 public class ConfigBinding : IBinding
 {
   public string Name => "configBinding";
-  public IBridge Parent { get; }
-  private SQLiteTransport ConfigStorage { get; }
-  private readonly string _connectorName;
-  private readonly JsonSerializerSettings _serializerOptions;
+  public IBrowserBridge Parent { get; }
+  private readonly ISqLiteJsonCacheManager _jsonCacheManager;
+  private readonly ISpeckleApplication _speckleApplication;
+  private readonly IJsonSerializer _serializer;
 
-  public ConfigBinding(IBridge bridge, JsonSerializerSettings serializerOptions, string connectorName)
+  public ConfigBinding(
+    IJsonSerializer serializer,
+    ISpeckleApplication speckleApplication,
+    IBrowserBridge bridge,
+    ISqLiteJsonCacheManagerFactory sqLiteJsonCacheManagerFactory
+  )
   {
     Parent = bridge;
-    ConfigStorage = new SQLiteTransport(scope: "DUI3Config"); // POC: maybe inject? (if we ever want to use a different storage for configs later down the line)
-    _connectorName = connectorName;
-    _serializerOptions = serializerOptions;
+    _jsonCacheManager = sqLiteJsonCacheManagerFactory.CreateForUser("DUI3Config"); // POC: maybe inject? (if we ever want to use a different storage for configs later down the line)
+    _speckleApplication = speckleApplication;
+    _serializer = serializer;
+  }
+
+#pragma warning disable CA1024
+  public bool GetIsDevMode()
+#pragma warning restore CA1024
+  {
+#if DEBUG || LOCAL
+    return true;
+#else
+    return false;
+#endif
   }
 
   public ConnectorConfig GetConfig()
   {
-    var rawConfig = ConfigStorage.GetObject(_connectorName);
+    var rawConfig = _jsonCacheManager.GetObject(_speckleApplication.HostApplication);
     if (rawConfig is null)
     {
       return SeedConfig();
@@ -38,7 +55,7 @@ public class ConfigBinding : IBinding
 
     try
     {
-      var config = JsonConvert.DeserializeObject<ConnectorConfig>(rawConfig, _serializerOptions);
+      var config = _serializer.Deserialize<ConnectorConfig>(rawConfig);
       if (config is null)
       {
         throw new SerializationException("Failed to deserialize config");
@@ -61,8 +78,38 @@ public class ConfigBinding : IBinding
 
   public void UpdateConfig(ConnectorConfig config)
   {
-    var str = JsonConvert.SerializeObject(config, _serializerOptions);
-    ConfigStorage.UpdateObject(_connectorName, str);
+    var str = _serializer.Serialize(config);
+    _jsonCacheManager.UpdateObject(_speckleApplication.HostApplication, str);
+  }
+
+  public void SetUserSelectedAccountId(string userSelectedAccountId)
+  {
+    var str = _serializer.Serialize(new AccountsConfig() { UserSelectedAccountId = userSelectedAccountId });
+    _jsonCacheManager.UpdateObject("accounts", str);
+  }
+
+  public AccountsConfig? GetUserSelectedAccountId()
+  {
+    var rawConfig = _jsonCacheManager.GetObject("accounts");
+    if (rawConfig is null)
+    {
+      return null;
+    }
+
+    try
+    {
+      var config = _serializer.Deserialize<AccountsConfig>(rawConfig);
+      if (config is null)
+      {
+        throw new SerializationException("Failed to deserialize accounts config");
+      }
+
+      return config;
+    }
+    catch (SerializationException)
+    {
+      return null;
+    }
   }
 }
 
@@ -72,4 +119,9 @@ public class ConfigBinding : IBinding
 public class ConnectorConfig
 {
   public bool DarkTheme { get; set; } = true;
+}
+
+public class AccountsConfig
+{
+  public string? UserSelectedAccountId { get; set; }
 }

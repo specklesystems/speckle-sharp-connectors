@@ -1,9 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net48;net6.0-windows</TargetFrameworks>
+    <TargetFrameworks>net48;net6.0-windows;net8.0-windows</TargetFrameworks>
+    <!-- we're doing it because tekla is complaning about arm dlls -->
+    <!-- we don't really want to support windows arm for now -->
+    <PlatformTarget>x64</PlatformTarget> 
     <UseWpf>true</UseWpf>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,6 +15,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj"/>
+    <ProjectReference Include="..\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
   </ItemGroup>
 </Project>

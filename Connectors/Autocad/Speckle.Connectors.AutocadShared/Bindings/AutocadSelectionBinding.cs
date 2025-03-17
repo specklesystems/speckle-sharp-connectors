@@ -1,23 +1,31 @@
 using Autodesk.AutoCAD.DatabaseServices;
+using Autodesk.AutoCAD.EditorInput;
+using Speckle.Connectors.Autocad.HostApp.Extensions;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Autodesk.AutoCAD.EditorInput;
 
 namespace Speckle.Connectors.Autocad.Bindings;
 
 public class AutocadSelectionBinding : ISelectionBinding
 {
-  private const string SELECTION_EVENT = "setSelection";
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly IThreadContext _threadContext;
+  private const string SELECTION_EVENT = "setSelection";
   private readonly HashSet<Document> _visitedDocuments = new();
 
   public string Name => "selectionBinding";
 
-  public IBridge Parent { get; }
+  public IBrowserBridge Parent { get; }
 
-  public AutocadSelectionBinding(IBridge parent, ITopLevelExceptionHandler topLevelExceptionHandler)
+  public AutocadSelectionBinding(
+    IBrowserBridge parent,
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    IThreadContext threadContext
+  )
   {
     _topLevelExceptionHandler = topLevelExceptionHandler;
+    _threadContext = threadContext;
     Parent = parent;
 
     // POC: Use here Context for doc. In converters it's OK but we are still lacking to use context into bindings.
@@ -40,19 +48,26 @@ public class AutocadSelectionBinding : ISelectionBinding
     if (!_visitedDocuments.Contains(document))
     {
       document.ImpliedSelectionChanged += (_, _) =>
-        _topLevelExceptionHandler.CatchUnhandled(() => Parent.RunOnMainThread(OnSelectionChanged));
+        _topLevelExceptionHandler.FireAndForget(async () => await _threadContext.RunOnMainAsync(OnSelectionChanged));
 
       _visitedDocuments.Add(document);
     }
   }
 
-  private void OnSelectionChanged()
+  // NOTE: Autocad 2022 caused problems, so we need to refactor things a bit in here to always store
+  // selection info locally (and get it updated by the event, which we can control to run on the main thread).
+  // Ui requests to GetSelection() should just return this local copy that is kept up to date by the event handler.
+  private SelectionInfo _selectionInfo;
+
+  private async Task OnSelectionChanged()
   {
-    SelectionInfo selInfo = GetSelection();
-    Parent.Send(SELECTION_EVENT, selInfo);
+    _selectionInfo = GetSelectionInternal();
+    await Parent.Send(SELECTION_EVENT, _selectionInfo);
   }
 
-  public SelectionInfo GetSelection()
+  public SelectionInfo GetSelection() => _selectionInfo;
+
+  private SelectionInfo GetSelectionInternal()
   {
     // POC: Will be addressed to move it into AutocadContext! https://spockle.atlassian.net/browse/CNX-9319
     Document? doc = Application.DocumentManager.MdiActiveDocument;
@@ -60,10 +75,10 @@ public class AutocadSelectionBinding : ISelectionBinding
     List<string> objectTypes = new();
     if (doc != null)
     {
+      using var tr = doc.TransactionManager.StartTransaction();
       PromptSelectionResult selection = doc.Editor.SelectImplied();
       if (selection.Status == PromptStatus.OK)
       {
-        using var tr = doc.TransactionManager.StartTransaction();
         foreach (SelectedObject obj in selection.Value)
         {
           var dbObject = tr.GetObject(obj.ObjectId, OpenMode.ForRead);
@@ -72,9 +87,8 @@ public class AutocadSelectionBinding : ISelectionBinding
             continue;
           }
 
-          var handleString = dbObject.Handle.Value.ToString();
           objectTypes.Add(dbObject.GetType().Name);
-          objs.Add(handleString);
+          objs.Add(dbObject.GetSpeckleApplicationId());
         }
 
         tr.Commit();

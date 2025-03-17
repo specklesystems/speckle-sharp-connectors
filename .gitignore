@@ -19,3 +19,5 @@ tools
 .DS_Store
 *.snupkg
 coverage.xml
+output/
+Images/Thumbs.db

@@ -1,36 +1,44 @@
 using System.Windows.Controls;
 using System.Windows.Threading;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Web.WebView2.Core;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 
 namespace Speckle.Connectors.DUI.WebView;
 
-public sealed partial class DUI3ControlWebView : UserControl
+public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExecutor, IDisposable
 {
-  private readonly IEnumerable<Lazy<IBinding>> _bindings;
-  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly IServiceProvider _serviceProvider;
 
-  public DUI3ControlWebView(IEnumerable<Lazy<IBinding>> bindings, ITopLevelExceptionHandler topLevelExceptionHandler)
+  public DUI3ControlWebView(IServiceProvider serviceProvider)
   {
-    _bindings = bindings;
-    _topLevelExceptionHandler = topLevelExceptionHandler;
+    _serviceProvider = serviceProvider;
     InitializeComponent();
 
     Browser.CoreWebView2InitializationCompleted += (sender, args) =>
-      _topLevelExceptionHandler.CatchUnhandled(() => OnInitialized(sender, args));
+      _serviceProvider
+        .GetRequiredService<ITopLevelExceptionHandler>()
+        .CatchUnhandled(() => OnInitialized(sender, args));
   }
 
-  private void ShowDevToolsMethod() => Browser.CoreWebView2.OpenDevToolsWindow();
+  public bool IsBrowserInitialized => Browser.IsInitialized;
 
-  private void ExecuteScriptAsyncMethod(string script)
+  public object BrowserElement => Browser;
+
+  public void ExecuteScript(string script)
   {
     if (!Browser.IsInitialized)
     {
       throw new InvalidOperationException("Failed to execute script, Webview2 is not initialized yet.");
     }
 
-    Browser.Dispatcher.Invoke(() => Browser.ExecuteScriptAsync(script), DispatcherPriority.Background);
+    //always invoke even on the main thread because it's better somehow
+    Browser.Dispatcher.Invoke(
+      //fire and forget
+      () => Browser.ExecuteScriptAsync(script),
+      DispatcherPriority.Background
+    );
   }
 
   private void OnInitialized(object? sender, CoreWebView2InitializationCompletedEventArgs e)
@@ -42,15 +50,23 @@ public sealed partial class DUI3ControlWebView : UserControl
 
     // We use Lazy here to delay creating the binding until after the Browser is fully initialized.
     // Otherwise the Browser cannot respond to any requests to ExecuteScriptAsyncMethod
-    foreach (Lazy<IBinding> lazyBinding in _bindings)
+    foreach (var binding in _serviceProvider.GetRequiredService<IEnumerable<IBinding>>())
     {
-      SetupBinding(lazyBinding.Value);
+      SetupBinding(binding);
     }
   }
 
+  /// <remark>
+  /// This must be called on the Main thread
+  /// </remark>
   private void SetupBinding(IBinding binding)
   {
-    binding.Parent.AssociateWithBinding(binding, ExecuteScriptAsyncMethod, Browser, ShowDevToolsMethod);
+    binding.Parent.AssociateWithBinding(binding);
     Browser.CoreWebView2.AddHostObjectToScript(binding.Name, binding.Parent);
   }
+
+  public void ShowDevTools() => Browser.CoreWebView2.OpenDevToolsWindow();
+
+  //https://github.com/MicrosoftEdge/WebView2Feedback/issues/2161
+  public void Dispose() => Browser.Dispatcher.Invoke(() => Browser.Dispose(), DispatcherPriority.Send);
 }

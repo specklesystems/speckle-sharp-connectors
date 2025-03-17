@@ -1,29 +1,31 @@
-using Speckle.Converters.ArcGIS3.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Models;
+using ValidationException = System.ComponentModel.DataAnnotations.ValidationException;
 
 namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
 
-public class MultipatchFeatureToSpeckleConverter : ITypedConverter<ACG.Multipatch, IReadOnlyList<Base>>
+/// <summary>
+/// Converts Multipatch objects into Meshes
+/// </summary>
+public class MultipatchFeatureToSpeckleConverter : ITypedConverter<ACG.Multipatch, IReadOnlyList<SOG.Mesh>>
 {
-  private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
   private readonly ITypedConverter<ACG.MapPoint, SOG.Point> _pointConverter;
 
   public MultipatchFeatureToSpeckleConverter(
-    IConversionContextStack<ArcGISDocument, ACG.Unit> contextStack,
+    IConverterSettingsStore<ArcGISConversionSettings> settingsStore,
     ITypedConverter<ACG.MapPoint, SOG.Point> pointConverter
   )
   {
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
     _pointConverter = pointConverter;
   }
 
-  public IReadOnlyList<Base> Convert(ACG.Multipatch target)
+  public IReadOnlyList<SOG.Mesh> Convert(ACG.Multipatch target)
   {
-    List<Base> converted = new();
+    List<SOG.Mesh> converted = new();
     // placeholder, needs to be declared in order to be used in the Ring patch type
-    SGIS.PolygonGeometry3d polygonGeom = new() { };
+    //SOG.Polygon polygonGeom = new() { units = _settingsStore.Current.SpeckleUnits };
 
     // convert and store all multipatch points per Part
     List<List<SOG.Point>> allPoints = new();
@@ -39,83 +41,128 @@ public class MultipatchFeatureToSpeckleConverter : ITypedConverter<ACG.Multipatc
       allPoints.Add(pointList);
     }
 
-    for (int idx = 0; idx < target.PartCount; idx++)
+    // convert all parts
+    for (int i = 0; i < target.PartCount; i++)
     {
-      // get the patch type to get the point arrangement in the mesh
+      // get the patch type to get the point arrangement
       // https://pro.arcgis.com/en/pro-app/latest/sdk/api-reference/topic27403.html
-      ACG.PatchType patchType = target.GetPatchType(idx);
-      int ptCount = target.GetPatchPointCount(idx);
+      ACG.PatchType patchType = target.GetPatchType(i);
 
-      if (patchType == ACG.PatchType.TriangleStrip)
+      // get the points in the patch
+      List<ACG.MapPoint> points = new();
+      int ptStartIndex = target.GetPatchStartPointIndex(i);
+      for (int ptIdx = ptStartIndex; ptIdx < ptStartIndex + target.GetPatchPointCount(i); ptIdx++)
       {
-        SGIS.GisMultipatchGeometry multipatch = target.CompleteMultipatchTriangleStrip(allPoints, idx);
-        multipatch.units = _contextStack.Current.SpeckleUnits;
-        converted.Add(multipatch);
+        points.Add(target.Points[ptIdx]);
       }
-      else if (patchType == ACG.PatchType.Triangles)
-      {
-        SGIS.GisMultipatchGeometry multipatch = target.CompleteMultipatchTriangles(allPoints, idx);
-        multipatch.units = _contextStack.Current.SpeckleUnits;
-        converted.Add(multipatch);
-      }
-      else if (patchType == ACG.PatchType.TriangleFan)
-      {
-        SGIS.GisMultipatchGeometry multipatch = target.CompleteMultipatchTriangleFan(allPoints, idx);
-        multipatch.units = _contextStack.Current.SpeckleUnits;
-        converted.Add(multipatch);
-      }
-      // in case of RingMultipatch - return PolygonGeometry3d
-      // the following Patch Parts cannot be pushed to external method, as they will possibly, add voids/rings to the same GisPolygon
-      else if (patchType == ACG.PatchType.FirstRing)
-      {
-        // chech if there were already Polygons, add them to list
-        if (polygonGeom.boundary != null)
-        {
-          converted.Add(polygonGeom);
-        }
 
-        // first ring means a start of a new PolygonGeometry3d
-        polygonGeom = new() { voids = new List<SOG.Polyline>() };
-        List<double> pointCoords = allPoints[idx].SelectMany(x => new List<double>() { x.x, x.y, x.z }).ToList();
-
-        SOG.Polyline polyline = new(pointCoords, _contextStack.Current.SpeckleUnits) { };
-        polygonGeom.boundary = polyline;
-
-        // if it's already the last part, add to list
-        if (idx == target.PartCount - 1)
-        {
-          converted.Add(polygonGeom);
-        }
-      }
-      else if (patchType == ACG.PatchType.Ring)
+      switch (patchType)
       {
-        List<double> pointCoords = allPoints[idx].SelectMany(x => new List<double>() { x.x, x.y, x.z }).ToList();
-        SOG.Polyline polyline = new(pointCoords, _contextStack.Current.SpeckleUnits) { };
+        case ACG.PatchType.TriangleStrip:
+          SOG.Mesh triangleStripPatch = GetMeshFromTriangleStripPatch(points);
+          converted.Add(triangleStripPatch);
+          break;
+        case ACG.PatchType.Triangles:
+          SOG.Mesh trianglesPatch = GetMeshFromTrianglesPatch(points);
+          converted.Add(trianglesPatch);
+          break;
+        case ACG.PatchType.TriangleFan:
+          SOG.Mesh triangleFanPatch = GetMeshFromTriangleFanPatch(points);
+          converted.Add(triangleFanPatch);
+          break;
+        case ACG.PatchType.FirstRing:
+          SOG.Mesh firstRingPatch = GetMeshFromFirstRingPatch(points);
+          converted.Add(firstRingPatch);
+          break;
 
-        // every outer ring is oriented clockwise
-        bool isClockwise = polyline.IsClockwisePolygon();
-        if (!isClockwise)
-        {
-          // add void to existing polygon
-          polygonGeom.voids.Add(polyline);
-        }
-        else
-        {
-          // add existing polygon to list, start a new polygon with a boundary
-          converted.Add(polygonGeom);
-          polygonGeom = new() { voids = new List<SOG.Polyline>(), boundary = polyline };
-        }
-        // if it's already the last part, add to list
-        if (idx == target.PartCount - 1)
-        {
-          converted.Add(polygonGeom);
-        }
-      }
-      else
-      {
-        throw new NotSupportedException($"Patch type {patchType} is not supported");
+        default:
+          throw new ValidationException($"{patchType} patch type is not supported");
       }
     }
     return converted;
+  }
+
+  private SOG.Mesh GetMeshFromTriangleStripPatch(List<ACG.MapPoint> points)
+  {
+    List<double> pointCoords = points.SelectMany(x => new List<double>() { x.X, x.Y, x.Z }).ToList();
+    List<int> faces = new();
+    List<double> vertices = new();
+
+    for (int i = 0; i < points.Count; i++)
+    {
+      if (i >= 2) // every new point adds a triangle
+      {
+        faces.AddRange(new List<int>() { 3, i - 2, i - 1, i });
+        vertices.AddRange(pointCoords.GetRange(3 * (i - 2), 9).ToList());
+      }
+    }
+
+    return new()
+    {
+      faces = faces,
+      vertices = vertices,
+      units = _settingsStore.Current.SpeckleUnits
+    };
+  }
+
+  private SOG.Mesh GetMeshFromTrianglesPatch(List<ACG.MapPoint> points)
+  {
+    List<double> pointCoords = points.SelectMany(x => new List<double>() { x.X, x.Y, x.Z }).ToList();
+    List<int> faces = new();
+    List<double> vertices = new();
+
+    for (int i = 0; i < points.Count; i++)
+    {
+      if (i >= 2 && (i + 1) % 3 == 0) // every 3 new points is a new triangle
+      {
+        faces.AddRange(new List<int>() { 3, i - 2, i - 1, i });
+        vertices.AddRange(pointCoords.GetRange(3 * (i - 2), 9).ToList());
+      }
+    }
+
+    return new()
+    {
+      faces = faces,
+      vertices = vertices,
+      units = _settingsStore.Current.SpeckleUnits
+    };
+  }
+
+  private SOG.Mesh GetMeshFromTriangleFanPatch(List<ACG.MapPoint> points)
+  {
+    List<double> pointCoords = points.SelectMany(x => new List<double>() { x.X, x.Y, x.Z }).ToList();
+    List<int> faces = new();
+    List<double> vertices = new();
+
+    for (int i = 0; i < points.Count; i++)
+    {
+      if (i >= 2) // every new point adds a triangle (originates from 0)
+      {
+        faces.AddRange(new List<int>() { 3, 0, i - 1, i });
+        vertices.AddRange(pointCoords.GetRange(2 * (i - 2), 6).ToList());
+      }
+    }
+
+    return new()
+    {
+      faces = faces,
+      vertices = vertices,
+      units = _settingsStore.Current.SpeckleUnits
+    };
+  }
+
+  // first ring means a start of a new PolygonGeometry3d
+  // POC: guess we are skipping inner rings for now, though we could send as polylines
+  private SOG.Mesh GetMeshFromFirstRingPatch(List<ACG.MapPoint> points)
+  {
+    List<double> pointCoords = points.SelectMany(x => new List<double>() { x.X, x.Y, x.Z }).ToList();
+    List<int> faces = Enumerable.Range(0, pointCoords.Count).ToList();
+
+    return new()
+    {
+      faces = faces,
+      vertices = pointCoords,
+      units = _settingsStore.Current.SpeckleUnits
+    };
   }
 }

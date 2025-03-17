@@ -1,22 +1,32 @@
+using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
-using Speckle.Autofac.DependencyInjection;
+using ArcGIS.Core.Data;
+using ArcGIS.Desktop.Core;
+using ArcGIS.Desktop.Editing.Events;
+using ArcGIS.Desktop.Framework.Threading.Tasks;
+using ArcGIS.Desktop.Mapping;
+using ArcGIS.Desktop.Mapping.Events;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Speckle.Connectors.ArcGIS.Filters;
+using Speckle.Connectors.ArcGIS.Utils;
+using Speckle.Connectors.Common.Caching;
+using Speckle.Connectors.Common.Cancellation;
+using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.Utils.Cancellation;
+using Speckle.Connectors.DUI.Exceptions;
+using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
-using ArcGIS.Desktop.Mapping.Events;
-using ArcGIS.Desktop.Mapping;
-using Speckle.Connectors.ArcGIS.Filters;
-using ArcGIS.Desktop.Editing.Events;
-using ArcGIS.Desktop.Framework.Threading.Tasks;
-using ArcGIS.Core.Data;
-using Speckle.Connectors.DUI.Exceptions;
-using Speckle.Connectors.Utils;
-using Speckle.Connectors.Utils.Caching;
-using Speckle.Connectors.Utils.Operations;
+using Speckle.Converters.ArcGIS3;
+using Speckle.Converters.ArcGIS3.Utils;
+using Speckle.Converters.Common;
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.ArcGIS.Bindings;
 
@@ -24,102 +34,145 @@ public sealed class ArcGISSendBinding : ISendBinding
 {
   public string Name => "sendBinding";
   public SendBindingUICommands Commands { get; }
-  public IBridge Parent { get; }
+  public IBrowserBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly IUnitOfWorkFactory _unitOfWorkFactory; // POC: unused? :D
+  private readonly IServiceProvider _serviceProvider;
   private readonly List<ISendFilter> _sendFilters;
-  private readonly CancellationManager _cancellationManager;
+  private readonly ICancellationManager _cancellationManager;
   private readonly ISendConversionCache _sendConversionCache;
+  private readonly IOperationProgressManager _operationProgressManager;
+  private readonly ILogger<ArcGISSendBinding> _logger;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly IArcGISConversionSettingsFactory _arcGISConversionSettingsFactory;
+  private readonly IThreadContext _threadContext;
+  private readonly ISpeckleApplication _speckleApplication;
 
   /// <summary>
-  /// Used internally to aggregate the changed objects' id.
+  /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
+  /// [CNX-202: Unhandled Exception Occurred when receiving in Rhino](https://linear.app/speckle/issue/CNX-202/unhandled-exception-occurred-when-receiving-in-rhino)
+  /// As to why a concurrent dictionary, it's because it's the cheapest/easiest way to do so.
+  /// https://stackoverflow.com/questions/18922985/concurrent-hashsett-in-net-framework
   /// </summary>
-  private HashSet<string> ChangedObjectIds { get; set; } = new();
+  private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
+
   private List<FeatureLayer> SubscribedLayers { get; set; } = new();
   private List<StandaloneTable> SubscribedTables { get; set; } = new();
+  private readonly MapMembersUtils _mapMemberUtils;
 
   public ArcGISSendBinding(
     DocumentModelStore store,
-    IBridge parent,
+    IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
-    IUnitOfWorkFactory unitOfWorkFactory,
-    CancellationManager cancellationManager,
+    IServiceProvider serviceProvider,
+    ICancellationManager cancellationManager,
     ISendConversionCache sendConversionCache,
+    IOperationProgressManager operationProgressManager,
+    ILogger<ArcGISSendBinding> logger,
+    IArcGISConversionSettingsFactory arcGisConversionSettingsFactory,
+    MapMembersUtils mapMemberUtils,
+    IThreadContext threadContext,
+    ISpeckleApplication speckleApplication,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
   {
     _store = store;
-    _unitOfWorkFactory = unitOfWorkFactory;
+    _serviceProvider = serviceProvider;
     _sendFilters = sendFilters.ToList();
     _cancellationManager = cancellationManager;
     _sendConversionCache = sendConversionCache;
+    _operationProgressManager = operationProgressManager;
+    _logger = logger;
     _topLevelExceptionHandler = topLevelExceptionHandler;
+    _arcGISConversionSettingsFactory = arcGisConversionSettingsFactory;
+    _mapMemberUtils = mapMemberUtils;
+    _threadContext = threadContext;
+    _speckleApplication = speckleApplication;
+
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
     SubscribeToArcGISEvents();
+    _store.DocumentChanged += (_, _) =>
+    {
+      _sendConversionCache.ClearCache();
+    };
   }
+
+  private void OnDocumentStoreChangedEvent(object _) => _sendConversionCache.ClearCache();
 
   private void SubscribeToArcGISEvents()
   {
     LayersRemovedEvent.Subscribe(
-      a => _topLevelExceptionHandler.CatchUnhandled(() => GetIdsForLayersRemovedEvent(a)),
+      a =>
+        _topLevelExceptionHandler.FireAndForget(
+          async () => await QueuedTask.Run(async () => await GetIdsForLayersRemovedEvent(a))
+        ),
       true
     );
 
     StandaloneTablesRemovedEvent.Subscribe(
-      a => _topLevelExceptionHandler.CatchUnhandled(() => GetIdsForStandaloneTablesRemovedEvent(a)),
+      a =>
+        _topLevelExceptionHandler.FireAndForget(
+          async () => await QueuedTask.Run(async () => await GetIdsForStandaloneTablesRemovedEvent(a))
+        ),
       true
     );
 
     MapPropertyChangedEvent.Subscribe(
-      a => _topLevelExceptionHandler.CatchUnhandled(() => GetIdsForMapPropertyChangedEvent(a)),
+      a =>
+        _topLevelExceptionHandler.FireAndForget(
+          async () => await QueuedTask.Run(async () => await GetIdsForMapPropertyChangedEvent(a))
+        ),
       true
     ); // Map units, CRS etc.
 
     MapMemberPropertiesChangedEvent.Subscribe(
-      a => _topLevelExceptionHandler.CatchUnhandled(() => GetIdsForMapMemberPropertiesChangedEvent(a)),
+      a =>
+        _topLevelExceptionHandler.FireAndForget(
+          async () => await QueuedTask.Run(async () => await GetIdsForMapMemberPropertiesChangedEvent(a))
+        ),
       true
     ); // e.g. Layer name
 
     ActiveMapViewChangedEvent.Subscribe(
-      _ => _topLevelExceptionHandler.CatchUnhandled(SubscribeToMapMembersDataSourceChange),
+      _ =>
+        _topLevelExceptionHandler.FireAndForget(async () =>
+        {
+          await QueuedTask.Run(SubscribeToMapMembersDataSourceChange);
+        }),
       true
     );
 
+    /*
     LayersAddedEvent.Subscribe(a => _topLevelExceptionHandler.CatchUnhandled(() => GetIdsForLayersAddedEvent(a)), true);
 
     StandaloneTablesAddedEvent.Subscribe(
       a => _topLevelExceptionHandler.CatchUnhandled(() => GetIdsForStandaloneTablesAddedEvent(a)),
       true
     );
+    */
   }
 
   private void SubscribeToMapMembersDataSourceChange()
   {
-    var task = QueuedTask.Run(() =>
+    if (MapView.Active == null)
     {
-      if (MapView.Active == null)
-      {
-        return;
-      }
+      return;
+    }
 
-      // subscribe to layers
-      foreach (Layer layer in MapView.Active.Map.Layers)
+    // subscribe to layers
+    foreach (Layer layer in MapView.Active.Map.Layers)
+    {
+      if (layer is FeatureLayer featureLayer)
       {
-        if (layer is FeatureLayer featureLayer)
-        {
-          SubscribeToFeatureLayerDataSourceChange(featureLayer);
-        }
+        SubscribeToFeatureLayerDataSourceChange(featureLayer);
       }
-      // subscribe to tables
-      foreach (StandaloneTable table in MapView.Active.Map.StandaloneTables)
-      {
-        SubscribeToTableDataSourceChange(table);
-      }
-    });
-    task.Wait();
+    }
+    // subscribe to tables
+    foreach (StandaloneTable table in MapView.Active.Map.StandaloneTables)
+    {
+      SubscribeToTableDataSourceChange(table);
+    }
   }
 
   private void SubscribeToFeatureLayerDataSourceChange(FeatureLayer layer)
@@ -154,28 +207,31 @@ public sealed class ArcGISSendBinding : ISendBinding
   {
     RowCreatedEvent.Subscribe(
       (args) =>
-      {
-        OnRowChanged(args);
-      },
+        _topLevelExceptionHandler.FireAndForget(async () =>
+        {
+          await OnRowChanged(args);
+        }),
       layerTable
     );
     RowChangedEvent.Subscribe(
       (args) =>
-      {
-        OnRowChanged(args);
-      },
+        _topLevelExceptionHandler.FireAndForget(async () =>
+        {
+          await OnRowChanged(args);
+        }),
       layerTable
     );
     RowDeletedEvent.Subscribe(
       (args) =>
-      {
-        OnRowChanged(args);
-      },
+        _topLevelExceptionHandler.FireAndForget(async () =>
+        {
+          await OnRowChanged(args);
+        }),
       layerTable
     );
   }
 
-  private void OnRowChanged(RowChangedEventArgs args)
+  private async Task OnRowChanged(RowChangedEventArgs args)
   {
     if (args == null || MapView.Active == null)
     {
@@ -183,54 +239,69 @@ public sealed class ArcGISSendBinding : ISendBinding
     }
 
     // get the path of the edited dataset
-    var datasetURI = args.Row.GetTable().GetPath();
+    Uri datasetPath = args.Row.GetTable().GetPath();
 
-    // find all layers & tables reading from the dataset
     foreach (Layer layer in MapView.Active.Map.Layers)
     {
-      if (layer.GetPath() == datasetURI)
+      try
       {
-        ChangedObjectIds.Add(layer.URI);
+        if (layer.GetPath() == datasetPath)
+        {
+          ChangedObjectIds[layer.URI] = 1;
+        }
+      }
+      catch (UriFormatException) // layer.GetPath() or table.GetPath() can throw this error, if data source was removed from the hard drive
+      {
+        // ignore layers with invalid source URI
       }
     }
     foreach (StandaloneTable table in MapView.Active.Map.StandaloneTables)
     {
-      if (table.GetPath() == datasetURI)
+      try
       {
-        ChangedObjectIds.Add(table.URI);
+        if (table.GetPath() == datasetPath)
+        {
+          ChangedObjectIds[table.URI] = 1;
+        }
+      }
+      catch (UriFormatException) // layer.GetPath() or table.GetPath() can throw this error, if data source was removed from the hard drive
+      {
+        // ignore layers with invalid source URI
       }
     }
-    RunExpirationChecks(false);
+
+    await RunExpirationChecks(false);
   }
 
-  private void GetIdsForLayersRemovedEvent(LayerEventsArgs args)
+  private async Task GetIdsForLayersRemovedEvent(LayerEventsArgs args)
   {
     foreach (Layer layer in args.Layers)
     {
-      ChangedObjectIds.Add(layer.URI);
+      ChangedObjectIds[layer.URI] = 1;
     }
-    RunExpirationChecks(true);
+    await RunExpirationChecks(true);
   }
 
-  private void GetIdsForStandaloneTablesRemovedEvent(StandaloneTableEventArgs args)
+  private async Task GetIdsForStandaloneTablesRemovedEvent(StandaloneTableEventArgs args)
   {
     foreach (StandaloneTable table in args.Tables)
     {
-      ChangedObjectIds.Add(table.URI);
+      ChangedObjectIds[table.URI] = 1;
     }
-    RunExpirationChecks(true);
+    await RunExpirationChecks(true);
   }
 
-  private void GetIdsForMapPropertyChangedEvent(MapPropertyChangedEventArgs args)
+  private async Task GetIdsForMapPropertyChangedEvent(MapPropertyChangedEventArgs args)
   {
     foreach (Map map in args.Maps)
     {
-      foreach (MapMember member in map.Layers)
+      List<MapMember> allMapMembers = _mapMemberUtils.GetAllMapMembers(map);
+      foreach (MapMember member in allMapMembers)
       {
-        ChangedObjectIds.Add(member.URI);
+        ChangedObjectIds[member.URI] = 1;
       }
     }
-    RunExpirationChecks(false);
+    await RunExpirationChecks(false);
   }
 
   private void GetIdsForLayersAddedEvent(LayerEventsArgs args)
@@ -252,7 +323,7 @@ public sealed class ArcGISSendBinding : ISendBinding
     }
   }
 
-  private void GetIdsForMapMemberPropertiesChangedEvent(MapMemberPropertiesChangedEventArgs args)
+  private async Task GetIdsForMapMemberPropertiesChangedEvent(MapMemberPropertiesChangedEventArgs args)
   {
     // don't subscribe to all events (e.g. expanding group, changing visibility etc.)
     bool validEvent = false;
@@ -278,28 +349,15 @@ public sealed class ArcGISSendBinding : ISendBinding
     {
       foreach (MapMember member in args.MapMembers)
       {
-        ChangedObjectIds.Add(member.URI);
+        ChangedObjectIds[member.URI] = 1;
       }
-      RunExpirationChecks(false);
+      await RunExpirationChecks(false);
     }
   }
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
 
-  // POC: delete this
-  public List<CardSetting> GetSendSettings()
-  {
-    return new List<CardSetting>
-    {
-      new()
-      {
-        Id = "includeAttributes",
-        Title = "Include Attributes",
-        Value = true,
-        Type = "boolean"
-      },
-    };
-  }
+  public List<ICardSetting> GetSendSettings() => [];
 
   [SuppressMessage(
     "Maintainability",
@@ -309,7 +367,7 @@ public sealed class ArcGISSendBinding : ISendBinding
   public async Task Send(string modelCardId)
   {
     //poc: dupe code between connectors
-    using var unitOfWork = _unitOfWorkFactory.Resolve<SendOperation<MapMember>>();
+
     try
     {
       if (_store.GetModelById(modelCardId) is not SenderModelCard modelCard)
@@ -318,59 +376,73 @@ public sealed class ArcGISSendBinding : ISendBinding
         throw new InvalidOperationException("No publish model card was found.");
       }
 
-      // Init cancellation token source -> Manager also cancel it if exist before
-      CancellationTokenSource cts = _cancellationManager.InitCancellationTokenSource(modelCardId);
+      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
-      var sendInfo = new SendInfo(
-        modelCard.AccountId.NotNull(),
-        modelCard.ProjectId.NotNull(),
-        modelCard.ModelId.NotNull(),
-        "ArcGIS"
-      );
-
-      var sendResult = await QueuedTask
-        .Run(async () =>
-        {
-          List<MapMember> mapMembers = modelCard.SendFilter
-            .NotNull()
-            .GetObjectIds()
-            .Select(id => (MapMember)MapView.Active.Map.FindLayer(id) ?? MapView.Active.Map.FindStandaloneTable(id))
-            .Where(obj => obj != null)
-            .ToList();
-
-          if (mapMembers.Count == 0)
-          {
-            // Handle as CARD ERROR in this function
-            throw new SpeckleSendFilterException(
-              "No objects were found to convert. Please update your publish filter!"
-            );
-          }
-
-          var result = await unitOfWork.Service
-            .Execute(
-              mapMembers,
-              sendInfo,
-              (status, progress) =>
-                Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts),
-              cts.Token
+      using var scope = _serviceProvider.CreateScope();
+      List<MapMember> mapMembers = await QueuedTask.Run(() =>
+      {
+        scope
+          .ServiceProvider.GetRequiredService<IConverterSettingsStore<ArcGISConversionSettings>>()
+          .Initialize(
+            _arcGISConversionSettingsFactory.Create(
+              Project.Current,
+              MapView.Active.Map,
+              new CRSoffsetRotation(MapView.Active.Map)
             )
-            .ConfigureAwait(false);
+          );
 
-          return result;
-        })
-        .ConfigureAwait(false);
+        return modelCard
+          .SendFilter.NotNull()
+          .RefreshObjectIds()
+          .Select(id => (MapMember)MapView.Active.Map.FindLayer(id) ?? MapView.Active.Map.FindStandaloneTable(id))
+          .Where(obj => obj != null)
+          .ToList();
+      });
 
-      Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
-    }
-    // Catch here specific exceptions if they related to model card.
-    catch (SpeckleSendFilterException e)
-    {
-      Commands.SetModelError(modelCardId, e);
+      if (mapMembers.Count == 0)
+      {
+        // Handle as CARD ERROR in this function
+        throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
+      }
+
+      await QueuedTask.Run(() =>
+      {
+        // subscribe to the selected layer events
+        foreach (MapMember mapMember in mapMembers)
+        {
+          if (mapMember is FeatureLayer featureLayer)
+          {
+            SubscribeToFeatureLayerDataSourceChange(featureLayer);
+          }
+          else if (mapMember is StandaloneTable table)
+          {
+            SubscribeToTableDataSourceChange(table);
+          }
+        }
+      });
+
+      var sendResult = await scope
+        .ServiceProvider.GetRequiredService<SendOperation<MapMember>>()
+        .Execute(
+          mapMembers,
+          modelCard.GetSendInfo(_speckleApplication.ApplicationAndVersion),
+          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),
+          cancellationItem.Token
+        );
+
+      await Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
     }
     catch (OperationCanceledException)
     {
-      // SWALLOW -> UI handles it immediately, so we do not need to handle anything
+      // SWALLOW -> UI handles it immediately, so we do not need to handle anything for now!
+      // Idea for later -> when cancel called, create promise from UI to solve it later with this catch block.
+      // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
       return;
+    }
+    catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
+    {
+      _logger.LogModelCardHandledError(ex);
+      await Commands.SetModelError(modelCardId, ex);
     }
   }
 
@@ -379,19 +451,19 @@ public sealed class ArcGISSendBinding : ISendBinding
   /// <summary>
   /// Checks if any sender model cards contain any of the changed objects. If so, also updates the changed objects hashset for each model card - this last part is important for on send change detection.
   /// </summary>
-  private void RunExpirationChecks(bool idsDeleted)
+  private async Task RunExpirationChecks(bool idsDeleted)
   {
     var senders = _store.GetSenders();
     List<string> expiredSenderIds = new();
-    string[] objectIdsList = ChangedObjectIds.ToArray();
+    string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
 
     _sendConversionCache.EvictObjects(objectIdsList);
 
     foreach (SenderModelCard sender in senders)
     {
-      var objIds = sender.SendFilter.NotNull().GetObjectIds();
+      var objIds = sender.SendFilter.NotNull().RefreshObjectIds();
       var intersection = objIds.Intersect(objectIdsList).ToList();
-      bool isExpired = sender.SendFilter.NotNull().CheckExpiry(ChangedObjectIds.ToArray());
+      bool isExpired = intersection.Count != 0;
       if (isExpired)
       {
         expiredSenderIds.Add(sender.ModelCardId.NotNull());
@@ -405,7 +477,7 @@ public sealed class ArcGISSendBinding : ISendBinding
       }
     }
 
-    Commands.SetModelsExpired(expiredSenderIds);
-    ChangedObjectIds = new HashSet<string>();
+    await Commands.SetModelsExpired(expiredSenderIds);
+    ChangedObjectIds = new();
   }
 }

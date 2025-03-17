@@ -1,14 +1,15 @@
 using System.Collections.Concurrent;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using Speckle.Newtonsoft.Json;
-using Speckle.Connectors.DUI.Bindings;
-using System.Threading.Tasks.Dataflow;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
-using Speckle.Connectors.Utils;
-using Speckle.Core.Models.Extensions;
+using Speckle.Connectors.Common.Threading;
+using Speckle.Connectors.DUI.Bindings;
+using Speckle.Connectors.DUI.Utils;
+using Speckle.Newtonsoft.Json;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Models.Extensions;
 
 namespace Speckle.Connectors.DUI.Bridge;
 
@@ -16,38 +17,32 @@ namespace Speckle.Connectors.DUI.Bridge;
 /// Wraps a binding class, and manages its calls from the Frontend to .NET, and sending events from .NET to the the Frontend.
 /// <para>Initially inspired by: https://github.com/johot/WebView2-better-bridge</para>
 /// </summary>
+#pragma warning disable CS0618 // Type or member is obsolete
 [ClassInterface(ClassInterfaceType.AutoDual)]
+#pragma warning restore CS0618 // Type or member is obsolete
 [ComVisible(true)]
-public sealed class BrowserBridge : IBridge
+public sealed class BrowserBridge : IBrowserBridge
 {
   /// <summary>
   /// The name under which we expect the frontend to hoist this bindings class to the global scope.
   /// e.g., `receiveBindings` should be available as `window.receiveBindings`.
   /// </summary>
 
-  private readonly JsonSerializerSettings _serializerOptions;
   private readonly ConcurrentDictionary<string, string?> _resultsStore = new();
-  private readonly SynchronizationContext _mainThreadContext;
+
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly IThreadContext _threadContext;
+
+  private readonly IBrowserScriptExecutor _browserScriptExecutor;
+  private readonly IJsonSerializer _jsonSerializer;
 
   private IReadOnlyDictionary<string, MethodInfo> _bindingMethodCache = new Dictionary<string, MethodInfo>();
-
-  private ActionBlock<RunMethodArgs>? _actionBlock;
-  private Action<string>? _scriptMethod;
-
   private IBinding? _binding;
   private Type? _bindingType;
 
   private readonly ILogger _logger;
 
-  /// <summary>
-  /// Action that opens up the developer tools of the respective browser we're using. While webview2 allows for "right click, inspect", cefsharp does not - hence the need for this.
-  /// </summary>
-  public Action? ShowDevToolsAction { get; set; }
-
   public string FrontendBoundName { get; private set; } = "Unknown";
-
-  public object? Browser { get; private set; }
 
   public IBinding? Binding
   {
@@ -63,42 +58,41 @@ public sealed class BrowserBridge : IBridge
     }
   }
 
-  private struct RunMethodArgs
-  {
-    public string MethodName;
-    public string RequestId;
-    public string MethodArgs;
-  }
-
-  /// <summary>
-  /// Initializes a new instance of the <see cref="BrowserBridge"/> class.
-  /// </summary>
-  /// <param name="jsonSerializerSettings">The settings to use for JSON serialization and deserialization.</param>
-  /// <param name="loggerFactory">The factory to create a logger for <see cref="BrowserBridge"/>.</param>
-  public BrowserBridge(JsonSerializerSettings jsonSerializerSettings, ILoggerFactory loggerFactory)
-  {
-    _serializerOptions = jsonSerializerSettings;
-    _logger = loggerFactory.CreateLogger<BrowserBridge>();
-    _topLevelExceptionHandler = new TopLevelExceptionHandler(loggerFactory, this); //TODO: Probably we could inject this with a Lazy somewhere
-    // Capture the main thread's SynchronizationContext
-    _mainThreadContext = SynchronizationContext.Current;
-  }
-
-  public void AssociateWithBinding(
-    IBinding binding,
-    Action<string> scriptMethod,
-    object browser,
-    Action showDevToolsAction
+  public BrowserBridge(
+    IThreadContext threadContext,
+    IJsonSerializer jsonSerializer,
+    ILogger<BrowserBridge> logger,
+    IBrowserScriptExecutor browserScriptExecutor,
+    ITopLevelExceptionHandler topLevelExceptionHandler
   )
+  {
+    _threadContext = threadContext;
+    _jsonSerializer = jsonSerializer;
+    _logger = logger;
+    _browserScriptExecutor = browserScriptExecutor;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
+  }
+
+  private async Task OnExceptionEvent(Exception ex) =>
+    await Send(
+        BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION,
+        new
+        {
+          type = ToastNotificationType.DANGER,
+          title = "Unhandled Exception Occurred",
+          description = ex.ToFormattedString(),
+          autoClose = false
+        }
+      )
+      .ConfigureAwait(false);
+
+  public void AssociateWithBinding(IBinding binding)
   {
     // set via binding property to ensure explosion if already bound
     Binding = binding;
     FrontendBoundName = binding.Name;
-    Browser = browser;
-    _scriptMethod = scriptMethod;
 
     _bindingType = binding.GetType();
-    ShowDevToolsAction = showDevToolsAction;
 
     // Note: we need to filter out getter and setter methods here because they are not really nicely
     // supported across browsers, hence the !method.IsSpecialName.
@@ -108,32 +102,7 @@ public sealed class BrowserBridge : IBridge
       bindingMethodCache[m.Name] = m;
     }
     _bindingMethodCache = bindingMethodCache;
-
-    // Whenever the ui will call run method inside .net, it will post a message to this action block.
-    // This conveniently executes the code outside the UI thread and does not block during long operations (such as sending).
-    _actionBlock = new ActionBlock<RunMethodArgs>(
-      OnActionBlock,
-      new ExecutionDataflowBlockOptions
-      {
-        MaxDegreeOfParallelism = 1000,
-        CancellationToken = new CancellationTokenSource(TimeSpan.FromHours(3)).Token // Not sure we need such a long time. //TODO: This token source is not disposed....
-      }
-    );
-
     _logger.LogInformation("Bridge bound to front end name {FrontEndName}", binding.Name);
-  }
-
-  private async Task OnActionBlock(RunMethodArgs args)
-  {
-    Result<object?> result = await _topLevelExceptionHandler
-      .CatchUnhandled(async () => await ExecuteMethod(args.MethodName, args.MethodArgs).ConfigureAwait(false))
-      .ConfigureAwait(false);
-
-    string resultJson = result.IsSuccess
-      ? JsonConvert.SerializeObject(result.Value, _serializerOptions)
-      : SerializeFormattedException(result.Exception);
-
-    NotifyUIMethodCallResultReady(args.RequestId, resultJson);
   }
 
   /// <summary>
@@ -147,66 +116,47 @@ public sealed class BrowserBridge : IBridge
     return bindingNames;
   }
 
-  /// <summary>
-  /// This method posts the requested call to our action block executor.
-  /// </summary>
-  /// <param name="methodName"></param>
-  /// <param name="requestId"></param>
-  /// <param name="args"></param>
-  public void RunMethod(string methodName, string requestId, string args)
-  {
-    _topLevelExceptionHandler.CatchUnhandled(Post);
-    return;
-
-    void Post()
-    {
-      bool wasAccepted = _actionBlock
-        .NotNull()
-        .Post(
-          new RunMethodArgs
+  //don't wait for browser runs on purpose
+  public void RunMethod(string methodName, string requestId, string methodArgs) =>
+    _threadContext
+      .RunOnWorkerAsync(async () =>
+      {
+        var task = await _topLevelExceptionHandler
+          .CatchUnhandledAsync(async () =>
           {
-            MethodName = methodName,
-            RequestId = requestId,
-            MethodArgs = args
-          }
-        );
-      if (!wasAccepted)
-      {
-        throw new InvalidOperationException($"Action block declined to Post ({methodName} {requestId} {args})");
-      }
-    }
-  }
-
-  /// <summary>
-  /// Run actions on main thread.
-  /// </summary>
-  /// <param name="action"> Action to run on main thread.</param>
-  public void RunOnMainThread(Action action)
-  {
-    _mainThreadContext.Post(
-      _ =>
-      {
-        // Execute the action on the main thread
-        action.Invoke();
-      },
-      null
-    );
-  }
+            var result = await ExecuteMethod(methodName, methodArgs).ConfigureAwait(false);
+            string resultJson = _jsonSerializer.Serialize(result);
+            NotifyUIMethodCallResultReady(requestId, resultJson);
+          })
+          .ConfigureAwait(false);
+        if (task.Exception is not null)
+        {
+          string resultJson = SerializeFormattedException(task.Exception);
+          NotifyUIMethodCallResultReady(requestId, resultJson);
+        }
+      })
+      .FireAndForget();
 
   /// <summary>
   /// Used by the action block to invoke the actual method called by the UI.
   /// </summary>
   /// <param name="methodName"></param>
   /// <param name="args"></param>
+  /// <exception cref="InvalidOperationException">The <see cref="BrowserBridge"/> was not initialized with an <see cref="IBinding"/> (see <see cref="AssociateWithBinding"/>)</exception>
   /// <exception cref="ArgumentException">The <paramref name="methodName"/> was not found or the given <paramref name="args"/> were not valid for the method call</exception>
   /// <exception cref="TargetInvocationException">The invoked method throws an exception</exception>
   /// <returns>The Json</returns>
   private async Task<object?> ExecuteMethod(string methodName, string args)
   {
-    if (!_bindingMethodCache.TryGetValue(methodName, out MethodInfo method))
+    if (_binding is null)
+    {
+      throw new InvalidOperationException("Bridge was not initialized with a binding");
+    }
+
+    if (!_bindingMethodCache.TryGetValue(methodName, out MethodInfo? method))
     {
       throw new ArgumentException(
-        $"Cannot find method {methodName} in bindings class {_bindingType?.AssemblyQualifiedName}.",
+        $"Cannot find method {methodName} in bindings class {_bindingType.NotNull().AssemblyQualifiedName}.",
         nameof(methodName)
       );
     }
@@ -225,7 +175,7 @@ public sealed class BrowserBridge : IBridge
 
     for (int i = 0; i < typedArgs.Length; i++)
     {
-      var ccc = JsonConvert.DeserializeObject(jsonArgsArray[i], parameters[i].ParameterType, _serializerOptions);
+      var ccc = _jsonSerializer.Deserialize(jsonArgsArray[i], parameters[i].ParameterType);
       typedArgs[i] = ccc;
     }
 
@@ -247,7 +197,7 @@ public sealed class BrowserBridge : IBridge
     }
 
     // It's an async call
-    await resultTypedTask.ConfigureAwait(false);
+    await resultTypedTask;
 
     // If has a "Result" property return the value otherwise null (Task<void> etc)
     PropertyInfo? resultProperty = resultTypedTask.GetType().GetProperty(nameof(Task<object>.Result));
@@ -268,7 +218,7 @@ public sealed class BrowserBridge : IBridge
       StackTrace = e.ToString(),
     };
 
-    return JsonConvert.SerializeObject(errorDetails, _serializerOptions);
+    return _jsonSerializer.Serialize(errorDetails);
   }
 
   /// <summary>
@@ -277,17 +227,19 @@ public sealed class BrowserBridge : IBridge
   /// </summary>
   /// <param name="requestId"></param>
   /// <param name="serializedData"></param>
+  /// <exception cref="InvalidOperationException"><inheritdoc cref="IBrowserScriptExecutor.ExecuteScript"/></exception>
   private void NotifyUIMethodCallResultReady(string requestId, string? serializedData = null)
   {
     _resultsStore[requestId] = serializedData;
     string script = $"{FrontendBoundName}.responseReady('{requestId}')";
-    _scriptMethod.NotNull().Invoke(script);
+    _browserScriptExecutor.ExecuteScript(script);
   }
 
   /// <summary>
   /// Called by the ui to get back the serialized result of the method. See comments above for why.
   /// </summary>
   /// <param name="requestId"></param>
+  /// <exception cref="ArgumentException">No result for the given <paramref name="requestId"/> was found</exception>
   /// <returns></returns>
   public string? GetCallResult(string requestId)
   {
@@ -305,7 +257,7 @@ public sealed class BrowserBridge : IBridge
   /// </summary>
   public void ShowDevTools()
   {
-    ShowDevToolsAction?.Invoke();
+    _browserScriptExecutor.ShowDevTools();
   }
 
   [SuppressMessage("Design", "CA1054:URI-like parameters should not be strings", Justification = "Url run as process")]
@@ -314,30 +266,47 @@ public sealed class BrowserBridge : IBridge
     Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
   }
 
-  public void Send(string eventName)
+  public Task Send(string eventName, CancellationToken cancellationToken = default)
   {
     if (_binding is null)
     {
-      throw new InvalidOperationException("Bridge was not Initialized");
+      throw new InvalidOperationException("Bridge was not initialized with a binding");
     }
 
     var script = $"{FrontendBoundName}.emit('{eventName}')";
 
-    _scriptMethod.NotNull().Invoke(script);
+    _browserScriptExecutor.ExecuteScript(script);
+    return Task.CompletedTask;
   }
 
-  public void Send<T>(string eventName, T data)
+  public Task Send<T>(string eventName, T data, CancellationToken cancellationToken = default)
     where T : class
   {
     if (_binding is null)
     {
-      throw new InvalidOperationException("Bridge was not associated with a binding");
+      throw new InvalidOperationException("Bridge was not initialized with a binding");
     }
 
-    string payload = JsonConvert.SerializeObject(data, _serializerOptions);
+    string payload = _jsonSerializer.Serialize(data);
     string requestId = $"{Guid.NewGuid()}_{eventName}";
     _resultsStore[requestId] = payload;
     var script = $"{FrontendBoundName}.emitResponseReady('{eventName}', '{requestId}')";
-    _scriptMethod.NotNull().Invoke(script);
+    _browserScriptExecutor.ExecuteScript(script);
+    return Task.CompletedTask;
+  }
+
+  public void Send2<T>(string eventName, T data)
+    where T : class
+  {
+    if (_binding is null)
+    {
+      throw new InvalidOperationException("Bridge was not initialized with a binding");
+    }
+
+    string payload = _jsonSerializer.Serialize(data);
+    string requestId = $"{Guid.NewGuid()}_{eventName}";
+    _resultsStore[requestId] = payload;
+    var script = $"{FrontendBoundName}.emitResponseReady('{eventName}', '{requestId}')";
+    _browserScriptExecutor.ExecuteScript(script);
   }
 }

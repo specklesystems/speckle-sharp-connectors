@@ -1,10 +1,10 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Models;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.ToHost.Geometry;
 
-[NameAndRankValue(nameof(SOG.Line), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(SOG.Line), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class LineToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG.Line, ADB.Line>
 {
   private readonly ITypedConverter<SOG.Point, AG.Point3d> _pointConverter;

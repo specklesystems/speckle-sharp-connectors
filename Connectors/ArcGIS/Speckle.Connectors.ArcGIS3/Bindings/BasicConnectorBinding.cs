@@ -1,15 +1,14 @@
-using System.Reflection;
 using ArcGIS.Core.Data;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
-using Speckle.Connectors.ArcGIS.HostApp;
 using Speckle.Connectors.ArcGIS.Utils;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.Utils;
-using Speckle.Connectors.Utils.Reflection;
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
+using ArcProject = ArcGIS.Desktop.Core.Project;
 
 namespace Speckle.Connectors.ArcGIS.Bindings;
 
@@ -17,30 +16,38 @@ namespace Speckle.Connectors.ArcGIS.Bindings;
 public class BasicConnectorBinding : IBasicConnectorBinding
 {
   public string Name => "baseBinding";
-  public IBridge Parent { get; }
+  public IBrowserBridge Parent { get; }
 
   public BasicConnectorBindingCommands Commands { get; }
   private readonly DocumentModelStore _store;
-  private readonly ArcGISSettings _settings;
+  private readonly ISpeckleApplication _speckleApplication;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
-  public BasicConnectorBinding(DocumentModelStore store, ArcGISSettings settings, IBridge parent)
+  public BasicConnectorBinding(
+    DocumentModelStore store,
+    IBrowserBridge parent,
+    ISpeckleApplication speckleApplication,
+    ITopLevelExceptionHandler topLevelExceptionHandler
+  )
   {
     _store = store;
-    _settings = settings;
+    _speckleApplication = speckleApplication;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
     Parent = parent;
     Commands = new BasicConnectorBindingCommands(parent);
 
     _store.DocumentChanged += (_, _) =>
-    {
-      Commands.NotifyDocumentChanged();
-    };
+      _topLevelExceptionHandler.FireAndForget(async () =>
+      {
+        await Commands.NotifyDocumentChanged();
+      });
   }
 
-  public string GetSourceApplicationName() => _settings.HostAppInfo.Slug;
+  public string GetSourceApplicationName() => _speckleApplication.Slug;
 
-  public string GetSourceApplicationVersion() => _settings.HostAppInfo.GetVersion(_settings.HostAppVersion);
+  public string GetSourceApplicationVersion() => _speckleApplication.HostApplicationVersion;
 
-  public string GetConnectorVersion() => Assembly.GetAssembly(GetType()).NotNull().GetVersion();
+  public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
 
   public DocumentInfo? GetDocumentInfo()
   {
@@ -49,21 +56,25 @@ public class BasicConnectorBinding : IBasicConnectorBinding
       return null;
     }
 
-    return new DocumentInfo(MapView.Active.Map.URI, MapView.Active.Map.Name, MapView.Active.Map.Name);
+    return new DocumentInfo(ArcProject.Current.URI, MapView.Active.Map.Name, MapView.Active.Map.URI);
   }
 
   public DocumentModelStore GetDocumentState() => _store;
 
-  public void AddModel(ModelCard model) => _store.Models.Add(model);
+  public void AddModel(ModelCard model) => _store.AddModel(model);
 
   public void UpdateModel(ModelCard model) => _store.UpdateModel(model);
 
   public void RemoveModel(ModelCard model) => _store.RemoveModel(model);
 
-  public void HighlightObjects(List<string> objectIds) =>
-    HighlightObjectsOnView(objectIds.Select(x => new ObjectID(x)).ToList());
+  public void RemoveModels(List<ModelCard> models) => _store.RemoveModels(models);
 
-  public void HighlightModel(string modelCardId)
+  public async Task HighlightObjects(IReadOnlyList<string> objectIds)
+  {
+    await HighlightObjectsOnView(objectIds.Select(x => new ObjectID(x)).ToList());
+  }
+
+  public async Task HighlightModel(string modelCardId)
   {
     var model = _store.GetModelById(modelCardId);
 
@@ -76,7 +87,7 @@ public class BasicConnectorBinding : IBasicConnectorBinding
 
     if (model is SenderModelCard senderModelCard)
     {
-      objectIds = senderModelCard.SendFilter.NotNull().GetObjectIds().Select(x => new ObjectID(x)).ToList();
+      objectIds = senderModelCard.SendFilter.NotNull().RefreshObjectIds().Select(x => new ObjectID(x)).ToList();
     }
 
     if (model is ReceiverModelCard receiverModelCard)
@@ -88,27 +99,25 @@ public class BasicConnectorBinding : IBasicConnectorBinding
     {
       return;
     }
-    HighlightObjectsOnView(objectIds);
+    await HighlightObjectsOnView(objectIds);
   }
 
-  private async void HighlightObjectsOnView(List<ObjectID> objectIds)
+  private async Task HighlightObjectsOnView(IReadOnlyList<ObjectID> objectIds)
   {
-    MapView mapView = MapView.Active;
+    await QueuedTask.Run(() =>
+    {
+      MapView mapView = MapView.Active;
 
-    await QueuedTask
-      .Run(() =>
-      {
-        List<MapMemberFeature> mapMembersFeatures = GetMapMembers(objectIds, mapView);
-        ClearSelectionInTOC();
-        ClearSelection();
-        SelectMapMembersInTOC(mapMembersFeatures);
-        SelectMapMembersAndFeatures(mapMembersFeatures);
-        mapView.ZoomToSelected();
-      })
-      .ConfigureAwait(false);
+      List<MapMemberFeature> mapMembersFeatures = GetMapMembers(objectIds, mapView);
+      ClearSelectionInTOC();
+      ClearSelection();
+      SelectMapMembersInTOC(mapMembersFeatures);
+      SelectMapMembersAndFeatures(mapMembersFeatures);
+      mapView.ZoomToSelected();
+    });
   }
 
-  private List<MapMemberFeature> GetMapMembers(List<ObjectID> objectIds, MapView mapView)
+  private List<MapMemberFeature> GetMapMembers(IReadOnlyList<ObjectID> objectIds, MapView mapView)
   {
     // find the layer on the map (from the objectID) and add the featureID is available
     List<MapMemberFeature> mapMembersFeatures = new();
@@ -146,7 +155,7 @@ public class BasicConnectorBinding : IBasicConnectorBinding
     MapView.Active.ClearTOCSelection();
   }
 
-  private void SelectMapMembersAndFeatures(List<MapMemberFeature> mapMembersFeatures)
+  private void SelectMapMembersAndFeatures(IReadOnlyList<MapMemberFeature> mapMembersFeatures)
   {
     foreach (MapMemberFeature mapMemberFeat in mapMembersFeatures)
     {
@@ -171,7 +180,7 @@ public class BasicConnectorBinding : IBasicConnectorBinding
     }
   }
 
-  private void SelectMapMembersInTOC(List<MapMemberFeature> mapMembersFeatures)
+  private void SelectMapMembersInTOC(IReadOnlyList<MapMemberFeature> mapMembersFeatures)
   {
     List<Layer> layers = new();
     List<StandaloneTable> tables = new();
@@ -184,6 +193,10 @@ public class BasicConnectorBinding : IBasicConnectorBinding
         if (member is not GroupLayer) // group layer selection clears other layers selection
         {
           layers.Add(layer);
+        }
+        else
+        {
+          layer.SetExpanded(true);
         }
       }
       else if (member is StandaloneTable table)

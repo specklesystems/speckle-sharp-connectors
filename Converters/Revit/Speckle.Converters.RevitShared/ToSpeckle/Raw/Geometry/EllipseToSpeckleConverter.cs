@@ -1,23 +1,24 @@
-using Objects.Primitive;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Converters.RevitShared.Settings;
+using Speckle.Objects.Primitive;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 public class EllipseToSpeckleConverter : ITypedConverter<DB.Ellipse, SOG.Ellipse>
 {
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<DB.Plane, SOG.Plane> _planeConverter;
   private readonly ScalingServiceToSpeckle _scalingService;
 
   public EllipseToSpeckleConverter(
-    IRevitConversionContextStack contextStack,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ITypedConverter<DB.Plane, SOG.Plane> planeConverter,
     ScalingServiceToSpeckle scalingService
   )
   {
-    _contextStack = contextStack;
+    _converterSettings = converterSettings;
     _planeConverter = planeConverter;
     _scalingService = scalingService;
   }
@@ -26,7 +27,9 @@ public class EllipseToSpeckleConverter : ITypedConverter<DB.Ellipse, SOG.Ellipse
   {
     using (DB.Plane basePlane = DB.Plane.CreateByOriginAndBasis(target.Center, target.XDirection, target.YDirection))
     {
-      var trim = target.IsBound ? new Interval(target.GetEndParameter(0), target.GetEndParameter(1)) : null;
+      var trim = target.IsBound
+        ? new Interval { start = target.GetEndParameter(0), end = target.GetEndParameter(1) }
+        : null;
 
       return new SOG.Ellipse()
       {
@@ -35,10 +38,10 @@ public class EllipseToSpeckleConverter : ITypedConverter<DB.Ellipse, SOG.Ellipse
         firstRadius = _scalingService.ScaleLength(target.RadiusX),
         secondRadius = _scalingService.ScaleLength(target.RadiusY),
         // POC: original EllipseToSpeckle() method was setting this twice
-        domain = new Interval(0, 1),
+        domain = Interval.UnitInterval,
         trimDomain = trim,
         length = _scalingService.ScaleLength(target.Length),
-        units = _contextStack.Current.SpeckleUnits
+        units = _converterSettings.Current.SpeckleUnits
       };
     }
   }

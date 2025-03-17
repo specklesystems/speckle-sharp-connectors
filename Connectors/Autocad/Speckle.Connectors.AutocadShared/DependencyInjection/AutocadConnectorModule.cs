@@ -1,69 +1,30 @@
 #if AUTOCAD
-using Autodesk.AutoCAD.DatabaseServices;
-using Speckle.Autofac;
-using Speckle.Autofac.DependencyInjection;
+using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Autocad.Bindings;
-using Speckle.Connectors.Autocad.Filters;
-using Speckle.Connectors.Autocad.HostApp;
-using Speckle.Connectors.Autocad.Interfaces;
-using Speckle.Connectors.Autocad.Operations.Receive;
 using Speckle.Connectors.Autocad.Operations.Send;
-using Speckle.Connectors.Autocad.Plugin;
-using Speckle.Connectors.DUI;
+using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.DUI.Bindings;
-using Speckle.Connectors.DUI.Models;
-using Speckle.Connectors.DUI.Models.Card.SendFilter;
-using Speckle.Connectors.DUI.WebView;
-using Speckle.Connectors.Utils;
-using Speckle.Connectors.Utils.Builders;
-using Speckle.Connectors.Utils.Caching;
-using Speckle.Connectors.Utils.Instances;
-using Speckle.Connectors.Utils.Operations;
-using Speckle.Core.Models.GraphTraversal;
+using Speckle.Sdk;
 
 namespace Speckle.Connectors.Autocad.DependencyInjection;
 
-public class AutocadConnectorModule : ISpeckleModule
+public static class AutocadConnectorModule
 {
-  public void Load(SpeckleContainerBuilder builder)
+  public static void AddAutocad(this IServiceCollection serviceCollection)
   {
-    builder.AddAutofac();
-    builder.AddConnectorUtils();
-    builder.AddDUI();
-    builder.AddDUIView();
+    serviceCollection.AddAutocadBase();
 
-    // Register other connector specific types
-    builder.AddSingleton<IAutocadPlugin, AutocadPlugin>();
-    builder.AddTransient<TransactionContext>();
-    builder.AddSingleton(new AutocadDocumentManager()); // TODO: Dependent to TransactionContext, can be moved to AutocadContext
-    builder.AddSingleton<DocumentModelStore, AutocadDocumentStore>();
-    builder.AddSingleton<AutocadContext>();
-    builder.AddSingleton<AutocadIdleManager>();
+    // Send
+    serviceCollection.LoadSend();
+    serviceCollection.AddScoped<IRootObjectBuilder<AutocadRootObject>, AutocadRootObjectBuilder>();
 
-    SharedConnectorModule.LoadShared(builder);
+    // Receive
+    serviceCollection.LoadReceive();
 
-
-    builder.AddScoped<AutocadLayerManager>();
-
-    // Operations
-    builder.AddScoped<SendOperation<AutocadRootObject>>();
-    builder.AddSingleton(DefaultTraversal.CreateTraversalFunc());
-
-    // Object Builders
-    builder.AddScoped<IHostObjectBuilder, AutocadHostObjectBuilder>();
-    builder.AddScoped<IRootObjectBuilder<AutocadRootObject>, AutocadRootObjectBuilder>();
-
-    // Register bindings
-    builder.AddSingleton<IBinding, ConfigBinding>("connectorName", "Autocad"); // POC: Easier like this for now, should be cleaned up later
-    builder.AddSingleton<IBinding, AutocadSendBinding>();
-    builder.AddSingleton<IBinding, AutocadReceiveBinding>();
-
-    // register send filters
-    builder.AddTransient<ISendFilter, AutocadSelectionFilter>();
-
-    // register send conversion cache
-    builder.AddSingleton<ISendConversionCache, SendConversionCache>();
-    builder.AddScoped<IInstanceObjectsManager<AutocadRootObject, List<Entity>>, AutocadInstanceObjectManager>();
+    // Register vertical specific bindings
+    serviceCollection.AddSingleton<IBinding, AutocadSendBinding>();
+    serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
   }
 }
 #endif

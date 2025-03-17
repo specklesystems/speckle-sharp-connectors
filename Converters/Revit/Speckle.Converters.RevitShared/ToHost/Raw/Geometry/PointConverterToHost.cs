@@ -22,6 +22,6 @@ public class PointConverterToHost : ITypedConverter<SOG.Point, DB.XYZ>
       _scalingService.ScaleToNative(target.y, target.units),
       _scalingService.ScaleToNative(target.z, target.units)
     );
-    return _referencePointConverter.ToInternalCoordinates(revitPoint, true);
+    return _referencePointConverter.ConvertToInternalCoordinates(revitPoint, true);
   }
 }

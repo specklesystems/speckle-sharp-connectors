@@ -1,25 +1,23 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Models;
+using Speckle.Sdk.Common.Exceptions;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.TopLevel;
 
-[NameAndRankValue(nameof(SOG.Polycurve), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(SOG.Polycurve), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class PolycurveToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG.Polycurve, ACG.Polyline>
 {
-  private readonly ITypedConverter<SOG.Point, ACG.MapPoint> _pointConverter;
   private readonly IRootToHostConverter _converter;
-  private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
 
   public PolycurveToHostConverter(
-    ITypedConverter<SOG.Point, ACG.MapPoint> pointConverter,
     IRootToHostConverter converter,
-    IConversionContextStack<ArcGISDocument, ACG.Unit> contextStack
+    IConverterSettingsStore<ArcGISConversionSettings> settingsStore
   )
   {
-    _pointConverter = pointConverter;
     _converter = converter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public object Convert(Base target) => Convert((SOG.Polycurve)target);
@@ -44,7 +42,7 @@ public class PolycurveToHostConverter : IToHostTopLevelConverter, ITypedConverte
         )
       )
       {
-        throw new SpeckleConversionException("Polycurve segments are not in a correct sequence/orientation");
+        throw new ValidationException("Polycurve segments are not in a correct sequence/orientation");
       }
 
       lastConvertedPt = segmentPts[^1];
@@ -54,7 +52,7 @@ public class PolycurveToHostConverter : IToHostTopLevelConverter, ITypedConverte
     return new ACG.PolylineBuilderEx(
       segments,
       ACG.AttributeFlags.HasZ,
-      _contextStack.Current.Document.Map.SpatialReference
+      _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference
     ).ToGeometry();
   }
 }

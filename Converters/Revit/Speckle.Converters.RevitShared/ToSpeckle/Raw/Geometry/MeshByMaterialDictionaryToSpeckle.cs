@@ -1,31 +1,49 @@
-﻿using Objects.Other;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
+using Speckle.Objects.Other;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 public class MeshByMaterialDictionaryToSpeckle
-  : ITypedConverter<Dictionary<DB.ElementId, List<DB.Mesh>>, List<SOG.Mesh>>
+  : ITypedConverter<
+    (Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId, bool makeTransparent),
+    List<SOG.Mesh>
+  >
 {
-  private readonly IRevitConversionContextStack _contextStack;
-  private readonly ITypedConverter<DB.XYZ, SOG.Point> _xyzToPointConverter;
-  private readonly ITypedConverter<DB.Material, RenderMaterial> _materialConverter;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
+  private readonly ITypedConverter<DB.Material, RenderMaterial> _speckleRenderMaterialConverter;
+  private readonly ITypedConverter<List<DB.Mesh>, SOG.Mesh> _meshListConverter;
+  private readonly RevitToSpeckleCacheSingleton _revitToSpeckleCacheSingleton;
+
+  private readonly RenderMaterial _transparentMaterial =
+    new()
+    {
+      name = "Transparent",
+      diffuse = System.Drawing.Color.Transparent.ToArgb(),
+      opacity = 0.3,
+      applicationId = "material_Transparent"
+    };
 
   public MeshByMaterialDictionaryToSpeckle(
-    ITypedConverter<DB.Material, RenderMaterial> materialConverter,
-    IRevitConversionContextStack contextStack,
-    ITypedConverter<DB.XYZ, SOG.Point> xyzToPointConverter
+    ITypedConverter<List<DB.Mesh>, SOG.Mesh> meshListConverter,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
+    RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton,
+    ITypedConverter<DB.Material, RenderMaterial> speckleRenderMaterialConverter
   )
   {
-    _materialConverter = materialConverter;
-    _contextStack = contextStack;
-    _xyzToPointConverter = xyzToPointConverter;
+    _meshListConverter = meshListConverter;
+    _converterSettings = converterSettings;
+    _revitToSpeckleCacheSingleton = revitToSpeckleCacheSingleton;
+    _speckleRenderMaterialConverter = speckleRenderMaterialConverter;
   }
 
   /// <summary>
   /// Converts a dictionary of Revit meshes, where key is MaterialId, into a list of Speckle meshes.
   /// </summary>
-  /// <param name="target">A dictionary with DB.ElementId keys and List of DB.Mesh values.</param>
+  /// <param name="args">A tuple consisting of (1) a dictionary with DB.ElementId keys and List of DB.Mesh values and (2) the root element id (the one generating all the meshes).</param>
   /// <returns>
   /// Returns a list of <see cref="SOG.Mesh"/> objects where each mesh represents one unique material in the input dictionary.
   /// </returns>
@@ -34,82 +52,61 @@ public class MeshByMaterialDictionaryToSpeckle
   /// These meshes are created with an initial capacity based on the size of the vertex and face arrays to avoid unnecessary resizing.
   /// Also note that, for each unique material, the method tries to retrieve the related DB.Material from the current document and convert it. If the conversion is successful,
   /// the material is added to the corresponding Speckle mesh. If the conversion fails, the operation simply continues without the material.
+  /// TODO: update description
   /// </remarks>
-  public List<SOG.Mesh> Convert(Dictionary<DB.ElementId, List<DB.Mesh>> target)
+  public List<SOG.Mesh> Convert(
+    (Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId, bool makeTransparent) args
+  )
   {
-    var result = new List<SOG.Mesh>(target.Keys.Count);
+    List<SOG.Mesh> result = new(args.target.Keys.Count);
+    var objectRenderMaterialProxiesMap = _revitToSpeckleCacheSingleton.ObjectRenderMaterialProxiesMap;
+    var materialProxyMap = new Dictionary<string, RenderMaterialProxy>();
+    objectRenderMaterialProxiesMap[args.parentElementId.ToString().NotNull()] = materialProxyMap;
 
-    foreach (var meshData in target)
+    if (args.target.Count == 0)
     {
-      DB.ElementId materialId = meshData.Key;
-      List<DB.Mesh> meshes = meshData.Value;
+      return new();
+    }
 
-      // We compute the final size of the arrays to prevent unnecessary resizing.
-      (int verticesSize, int facesSize) = GetVertexAndFaceListSize(meshes);
+    foreach (var keyValuePair in args.target)
+    {
+      DB.ElementId materialId = keyValuePair.Key;
+      string materialIdString = args.makeTransparent
+        ? _transparentMaterial.applicationId.NotNull()
+        : materialId.ToString().NotNull();
+      List<DB.Mesh> meshes = keyValuePair.Value;
 
-      // Initialise a new empty mesh with units and material
-      var speckleMesh = new SOG.Mesh(
-        new List<double>(verticesSize),
-        new List<int>(facesSize),
-        units: _contextStack.Current.SpeckleUnits
-      );
+      // use the meshlist converter to convert the mesh values into a single speckle mesh
+      SOG.Mesh speckleMesh = _meshListConverter.Convert(meshes);
+      speckleMesh.applicationId = Guid.NewGuid().ToString(); // NOTE: as we are composing meshes out of multiple ones for the same material, we need to generate our own application id. c'est la vie.
 
-      var doc = _contextStack.Current.Document;
-      if (doc.GetElement(materialId) is DB.Material material)
+      // get the speckle render material
+      RenderMaterial? renderMaterial = args.makeTransparent
+        ? _transparentMaterial
+        : _converterSettings.Current.Document.GetElement(materialId) is DB.Material material
+          ? _speckleRenderMaterialConverter.Convert(material)
+          : null;
+
+      // get the render material if any
+      if (renderMaterial is not null)
       {
-        speckleMesh["renderMaterial"] = _materialConverter.Convert(material);
-      }
+        if (!materialProxyMap.TryGetValue(materialIdString, out RenderMaterialProxy? renderMaterialProxy))
+        {
+          renderMaterialProxy = new RenderMaterialProxy()
+          {
+            value = renderMaterial,
+            applicationId = materialId.ToString(),
+            objects = []
+          };
+          materialProxyMap[materialIdString] = renderMaterialProxy;
+        }
 
-      // Append the revit mesh data to the speckle mesh
-      foreach (var mesh in meshes)
-      {
-        AppendToSpeckleMesh(mesh, speckleMesh);
+        renderMaterialProxy.objects.Add(speckleMesh.applicationId);
       }
 
       result.Add(speckleMesh);
     }
 
     return result;
-  }
-
-  private void AppendToSpeckleMesh(DB.Mesh mesh, SOG.Mesh speckleMesh)
-  {
-    int faceIndexOffset = speckleMesh.vertices.Count / 3;
-
-    foreach (var vert in mesh.Vertices)
-    {
-      var (x, y, z) = _xyzToPointConverter.Convert(vert);
-      speckleMesh.vertices.Add(x);
-      speckleMesh.vertices.Add(y);
-      speckleMesh.vertices.Add(z);
-    }
-
-    for (int i = 0; i < mesh.NumTriangles; i++)
-    {
-      var triangle = mesh.get_Triangle(i);
-
-      speckleMesh.faces.Add(3); // TRIANGLE flag
-      speckleMesh.faces.Add((int)triangle.get_Index(0) + faceIndexOffset);
-      speckleMesh.faces.Add((int)triangle.get_Index(1) + faceIndexOffset);
-      speckleMesh.faces.Add((int)triangle.get_Index(2) + faceIndexOffset);
-    }
-  }
-
-  private static (int vertexCount, int) GetVertexAndFaceListSize(List<DB.Mesh> meshes)
-  {
-    int numberOfVertices = 0;
-    int numberOfFaces = 0;
-    foreach (var mesh in meshes)
-    {
-      if (mesh == null)
-      {
-        continue;
-      }
-
-      numberOfVertices += mesh.Vertices.Count * 3;
-      numberOfFaces += mesh.NumTriangles * 4;
-    }
-
-    return (numberOfVertices, numberOfFaces);
   }
 }

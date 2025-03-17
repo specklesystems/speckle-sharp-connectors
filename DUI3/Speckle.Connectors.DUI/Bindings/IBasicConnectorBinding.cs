@@ -14,14 +14,15 @@ public interface IBasicConnectorBinding : IBinding
   public void AddModel(ModelCard model);
   public void UpdateModel(ModelCard model);
   public void RemoveModel(ModelCard model);
+  public void RemoveModels(List<ModelCard> models);
 
   /// <summary>
   /// Highlights the objects attached to this sender in the host application.
   /// </summary>
   /// <param name="modelCardId"></param>
-  public void HighlightModel(string modelCardId);
+  public Task HighlightModel(string modelCardId);
 
-  public void HighlightObjects(List<string> objectIds);
+  public Task HighlightObjects(IReadOnlyList<string> objectIds);
 
   public BasicConnectorBindingCommands Commands { get; }
 }
@@ -43,18 +44,17 @@ public enum ToastNotificationType
 public class BasicConnectorBindingCommands
 {
   private const string NOTIFY_DOCUMENT_CHANGED_EVENT_NAME = "documentChanged";
-  private const string SET_MODEL_PROGRESS_UI_COMMAND_NAME = "setModelProgress";
   private const string SET_MODEL_ERROR_UI_COMMAND_NAME = "setModelError";
-  internal const string SET_GLOBAL_NOTIFICATION = "setGlobalNotification";
+  public const string SET_GLOBAL_NOTIFICATION = "setGlobalNotification";
 
-  protected IBridge Bridge { get; }
+  protected IBrowserBridge Bridge { get; }
 
-  public BasicConnectorBindingCommands(IBridge bridge)
+  public BasicConnectorBindingCommands(IBrowserBridge bridge)
   {
     Bridge = bridge;
   }
 
-  public void NotifyDocumentChanged() => Bridge.Send(NOTIFY_DOCUMENT_CHANGED_EVENT_NAME);
+  public async Task NotifyDocumentChanged() => await Bridge.Send(NOTIFY_DOCUMENT_CHANGED_EVENT_NAME);
 
   /// <summary>
   /// Use it whenever you want to send global toast notification to UI.
@@ -63,8 +63,13 @@ public class BasicConnectorBindingCommands
   /// <param name="title"> Title of the notification</param>
   /// <param name="message"> Message in the toast notification.</param>
   /// <param name="autoClose"> Closes toast notification in set timeout in UI. Default is true.</param>
-  public void SetGlobalNotification(ToastNotificationType type, string title, string message, bool autoClose = true) =>
-    Bridge.Send(
+  public async Task SetGlobalNotification(
+    ToastNotificationType type,
+    string title,
+    string message,
+    bool autoClose = true
+  ) =>
+    await Bridge.Send(
       SET_GLOBAL_NOTIFICATION,
       new
       {
@@ -75,17 +80,6 @@ public class BasicConnectorBindingCommands
       }
     );
 
-  public void SetModelProgress(string modelCardId, ModelCardProgress progress, CancellationTokenSource cts)
-  {
-    // NOTE: To prevent potential race condition
-    // After cancelling operation some parts could still send last progress update which was set progress on UI
-    // after it forced to be undefined. This is the safest way to prevent any case like this.
-    if (!cts.IsCancellationRequested)
-    {
-      Bridge.Send(SET_MODEL_PROGRESS_UI_COMMAND_NAME, new { modelCardId, progress });
-    }
-  }
-
-  public void SetModelError(string modelCardId, Exception error) =>
-    Bridge.Send(SET_MODEL_ERROR_UI_COMMAND_NAME, new { modelCardId, error = error.Message });
+  public async Task SetModelError(string modelCardId, Exception error) =>
+    await Bridge.Send(SET_MODEL_ERROR_UI_COMMAND_NAME, new { modelCardId, error = error.Message });
 }

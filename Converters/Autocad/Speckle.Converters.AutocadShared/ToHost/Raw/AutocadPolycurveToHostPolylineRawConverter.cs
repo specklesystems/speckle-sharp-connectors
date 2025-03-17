@@ -1,22 +1,23 @@
+using Speckle.Converters.Autocad;
 using Speckle.Converters.Autocad.Extensions;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Kits;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.Autocad2023.ToHost.Raw;
 
 public class AutocadPolycurveToHostPolylineRawConverter : ITypedConverter<SOG.Autocad.AutocadPolycurve, ADB.Polyline>
 {
   private readonly ITypedConverter<SOG.Vector, AG.Vector3d> _vectorConverter;
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public AutocadPolycurveToHostPolylineRawConverter(
     ITypedConverter<SOG.Vector, AG.Vector3d> vectorConverter,
-    IConversionContextStack<Document, ADB.UnitsValue> contextStack
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _vectorConverter = vectorConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public ADB.Polyline Convert(SOG.Autocad.AutocadPolycurve target)
@@ -28,7 +29,7 @@ public class AutocadPolycurveToHostPolylineRawConverter : ITypedConverter<SOG.Au
       );
     }
 
-    double f = Units.GetConversionFactor(target.units, _contextStack.Current.SpeckleUnits);
+    double f = Units.GetConversionFactor(target.units, _settingsStore.Current.SpeckleUnits);
     List<AG.Point2d> points2d = target.value.ConvertToPoint2d(f);
 
     ADB.Polyline polyline =

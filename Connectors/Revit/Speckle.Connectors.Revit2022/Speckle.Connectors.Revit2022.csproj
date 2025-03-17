@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <UseWpf>true</UseWpf>
+    <RevitVersion>2022</RevitVersion>
+    <DefineConstants>$(DefineConstants);REVIT2022;REVIT2022_OR_GREATER</DefineConstants>
+    <CefSharpAnyCpuSupport>true</CefSharpAnyCpuSupport>
+    <Prefer32bit>false</Prefer32bit>
+    <Configurations>Debug;Release;Local</Configurations>
+  </PropertyGroup>
+
+  <Import Project="..\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems" Label="Shared" />
+
+  <Import Project="..\Speckle.Connectors.RevitShared.Cef\Speckle.Connectors.RevitShared.Cef.projitems" Label="Shared" />
+
+  <ItemGroup>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="WindowsBase" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Converters\Revit\Speckle.Converters.Revit2022\Speckle.Converters.Revit2022.csproj" />
+    <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CefSharp.Wpf" NoWarn="NU1903, NU1902" VersionOverride="65.0.1" />
+    <PackageReference Include="Revit.Async" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Plugin\Speckle.Connectors.Revit2022.addin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

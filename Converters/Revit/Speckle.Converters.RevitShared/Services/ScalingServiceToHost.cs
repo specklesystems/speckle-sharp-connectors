@@ -1,5 +1,5 @@
 using Autodesk.Revit.DB;
-using Speckle.Converters.Common;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.RevitShared.Services;
 
@@ -12,21 +12,27 @@ public sealed class ScalingServiceToHost
       return value;
     }
 
-    return UnitUtils.ConvertToInternalUnits(value, UnitsToNative(units));
+    return ScaleToNative(value, UnitsToNative(units));
   }
 
+  public double ScaleToNative(double value, ForgeTypeId typeId)
+  {
+    return UnitUtils.ConvertToInternalUnits(value, typeId);
+  }
+
+  /// <exception cref="UnitNotSupportedException">Throws if unit is not supported</exception>
   public ForgeTypeId UnitsToNative(string units)
   {
-    var u = Core.Kits.Units.GetUnitsFromString(units);
+    var u = Sdk.Common.Units.GetUnitsFromString(units);
 
     return u switch
     {
-      Core.Kits.Units.Millimeters => UnitTypeId.Millimeters,
-      Core.Kits.Units.Centimeters => UnitTypeId.Centimeters,
-      Core.Kits.Units.Meters => UnitTypeId.Meters,
-      Core.Kits.Units.Inches => UnitTypeId.Inches,
-      Core.Kits.Units.Feet => UnitTypeId.Feet,
-      _ => throw new SpeckleConversionException($"The Unit System \"{units}\" is unsupported."),
+      Sdk.Common.Units.Millimeters => UnitTypeId.Millimeters,
+      Sdk.Common.Units.Centimeters => UnitTypeId.Centimeters,
+      Sdk.Common.Units.Meters => UnitTypeId.Meters,
+      Sdk.Common.Units.Inches => UnitTypeId.Inches,
+      Sdk.Common.Units.Feet => UnitTypeId.Feet,
+      _ => throw new UnitNotSupportedException($"The Unit System \"{units}\" is unsupported."),
     };
   }
 }

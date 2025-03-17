@@ -1,87 +1,49 @@
-using Speckle.Autofac.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Speckle.Connectors.Common.Cancellation;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
-using Speckle.Connectors.Utils.Cancellation;
-using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.Utils;
-using Speckle.Connectors.Utils.Operations;
+using Speckle.Converters.Autocad;
+using Speckle.Converters.Common;
+using Speckle.Sdk;
 
 namespace Speckle.Connectors.Autocad.Bindings;
 
-public sealed class AutocadReceiveBinding : IReceiveBinding
+public sealed class AutocadReceiveBinding : AutocadReceiveBaseBinding
 {
-  public string Name => "receiveBinding";
-  public IBridge Parent { get; }
-
-  private readonly DocumentModelStore _store;
-  private readonly CancellationManager _cancellationManager;
-  private readonly IUnitOfWorkFactory _unitOfWorkFactory;
-
-  public ReceiveBindingUICommands Commands { get; }
+  private readonly IAutocadConversionSettingsFactory _autocadConversionSettingsFactory;
 
   public AutocadReceiveBinding(
     DocumentModelStore store,
-    IBridge parent,
-    CancellationManager cancellationManager,
-    IUnitOfWorkFactory unitOfWorkFactory
+    IBrowserBridge parent,
+    ICancellationManager cancellationManager,
+    IServiceProvider serviceProvider,
+    IOperationProgressManager operationProgressManager,
+    ILogger<AutocadReceiveBinding> logger,
+    IAutocadConversionSettingsFactory autocadConversionSettingsFactory,
+    ISpeckleApplication speckleApplication,
+    IThreadContext threadContext
   )
+    : base(
+      store,
+      parent,
+      cancellationManager,
+      serviceProvider,
+      operationProgressManager,
+      logger,
+      speckleApplication,
+      threadContext
+    )
   {
-    _store = store;
-    _cancellationManager = cancellationManager;
-    _unitOfWorkFactory = unitOfWorkFactory;
-    Parent = parent;
-    Commands = new ReceiveBindingUICommands(parent);
+    _autocadConversionSettingsFactory = autocadConversionSettingsFactory;
   }
 
-  public void CancelReceive(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
-
-  public async Task Receive(string modelCardId)
+  protected override void InitializeSettings(IServiceProvider serviceProvider)
   {
-    using var unitOfWork = _unitOfWorkFactory.Resolve<ReceiveOperation>();
-    try
-    {
-      // Get receiver card
-      if (_store.GetModelById(modelCardId) is not ReceiverModelCard modelCard)
-      {
-        // Handle as GLOBAL ERROR at BrowserBridge
-        throw new InvalidOperationException("No download model card was found.");
-      }
-
-      // Init cancellation token source -> Manager also cancel it if exist before
-      CancellationTokenSource cts = _cancellationManager.InitCancellationTokenSource(modelCardId);
-
-      // Disable document activation (document creation and document switch)
-      // Not disabling results in DUI model card being out of sync with the active document
-      // The DocumentActivated event isn't usable probably because it is pushed to back of main thread queue
-      Application.DocumentManager.DocumentActivationEnabled = false;
-
-      // Receive host objects
-      var operationResults = await unitOfWork.Service
-        .Execute(
-          modelCard.AccountId.NotNull(), // POC: I hear -you are saying why we're passing them separately. Not sure pass the DUI3-> Connectors.DUI project dependency to the SDK-> Connector.Utils
-          modelCard.ProjectId.NotNull(),
-          modelCard.ProjectName.NotNull(),
-          modelCard.ModelName.NotNull(),
-          modelCard.SelectedVersionId.NotNull(),
-          cts.Token,
-          (status, progress) =>
-            Commands.SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, status, progress), cts)
-        )
-        .ConfigureAwait(false);
-
-      Commands.SetModelReceiveResult(modelCardId, operationResults.BakedObjectIds, operationResults.ConversionResults);
-    }
-    // Catch here specific exceptions if they related to model card.
-    catch (OperationCanceledException)
-    {
-      // SWALLOW -> UI handles it immediately, so we do not need to handle anything
-      return;
-    }
-    finally
-    {
-      // renable document activation
-      Application.DocumentManager.DocumentActivationEnabled = true;
-    }
+    serviceProvider
+      .GetRequiredService<IConverterSettingsStore<AutocadConversionSettings>>()
+      .Initialize(_autocadConversionSettingsFactory.Create(Application.DocumentManager.CurrentDocument));
   }
 }

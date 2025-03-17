@@ -1,6 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Models;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.Geometry;
 
@@ -10,7 +10,7 @@ namespace Speckle.Converters.Autocad.Geometry;
 /// <remarks>
 /// <see cref="ADB.Polyline"/> is of type <see cref="SOG.Autocad.AutocadPolyType.Light"/> and will have only <see cref="SOG.Line"/>s and <see cref="SOG.Arc"/>s in <see cref="SOG.Polycurve.segments"/>.
 /// </remarks>
-[NameAndRankValue(nameof(ADB.Polyline), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(ADB.Polyline), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class PolylineToSpeckleConverter
   : IToSpeckleTopLevelConverter,
     ITypedConverter<ADB.Polyline, SOG.Autocad.AutocadPolycurve>
@@ -19,21 +19,21 @@ public class PolylineToSpeckleConverter
   private readonly ITypedConverter<AG.CircularArc3d, SOG.Arc> _arcConverter;
   private readonly ITypedConverter<AG.Vector3d, SOG.Vector> _vectorConverter;
   private readonly ITypedConverter<ADB.Extents3d, SOG.Box> _boxConverter;
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public PolylineToSpeckleConverter(
     ITypedConverter<AG.LineSegment3d, SOG.Line> lineConverter,
     ITypedConverter<AG.CircularArc3d, SOG.Arc> arcConverter,
     ITypedConverter<AG.Vector3d, SOG.Vector> vectorConverter,
     ITypedConverter<ADB.Extents3d, SOG.Box> boxConverter,
-    IConversionContextStack<Document, ADB.UnitsValue> contextStack
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _lineConverter = lineConverter;
     _arcConverter = arcConverter;
     _vectorConverter = vectorConverter;
     _boxConverter = boxConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public Base Convert(object target) => Convert((ADB.Polyline)target);
@@ -80,13 +80,14 @@ public class PolylineToSpeckleConverter
         value = value,
         bulges = bulges,
         normal = normal,
+        tangents = null,
         elevation = target.Elevation,
         polyType = SOG.Autocad.AutocadPolyType.Light,
         closed = target.Closed,
         length = target.Length,
         area = target.Area,
         bbox = bbox,
-        units = _contextStack.Current.SpeckleUnits
+        units = _settingsStore.Current.SpeckleUnits
       };
 
     return polycurve;

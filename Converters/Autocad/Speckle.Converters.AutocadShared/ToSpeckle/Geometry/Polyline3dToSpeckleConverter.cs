@@ -1,7 +1,7 @@
+using Speckle.Converters.Autocad.Extensions;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Models;
-using Speckle.Converters.Autocad.Extensions;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.Geometry;
 
@@ -13,30 +13,32 @@ namespace Speckle.Converters.Autocad.Geometry;
 /// <see cref="ADB.Polyline3d"/> of type <see cref="ADB.Poly2dType.CubicSplinePoly"/> and <see cref="ADB.Poly2dType.QuadSplinePoly"/> will have only one <see cref="SOG.Curve"/> in <see cref="SOG.Polycurve.segments"/>.
 /// The IToSpeckleTopLevelConverter inheritance should only expect database-resident Polyline2d objects. IRawConversion inheritance can expect non database-resident objects, when generated from other converters.
 /// </remarks>
-[NameAndRankValue(nameof(ADB.Polyline3d), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class Polyline3dToSpeckleConverter : IToSpeckleTopLevelConverter
+[NameAndRankValue(typeof(ADB.Polyline3d), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+public class Polyline3dToSpeckleConverter
+  : IToSpeckleTopLevelConverter,
+    ITypedConverter<ADB.Polyline3d, SOG.Autocad.AutocadPolycurve>
 {
   private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
   private readonly ITypedConverter<ADB.Spline, SOG.Curve> _splineConverter;
   private readonly ITypedConverter<ADB.Extents3d, SOG.Box> _boxConverter;
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public Polyline3dToSpeckleConverter(
     ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
     ITypedConverter<ADB.Spline, SOG.Curve> splineConverter,
     ITypedConverter<ADB.Extents3d, SOG.Box> boxConverter,
-    IConversionContextStack<Document, ADB.UnitsValue> contextStack
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _pointConverter = pointConverter;
     _splineConverter = splineConverter;
     _boxConverter = boxConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
-  public Base Convert(object target) => RawConvert((ADB.Polyline3d)target);
+  public Base Convert(object target) => Convert((ADB.Polyline3d)target);
 
-  public SOG.Autocad.AutocadPolycurve RawConvert(ADB.Polyline3d target)
+  public SOG.Autocad.AutocadPolycurve Convert(ADB.Polyline3d target)
   {
     // get the poly type
     var polyType = SOG.Autocad.AutocadPolyType.Unknown;
@@ -58,7 +60,7 @@ public class Polyline3dToSpeckleConverter : IToSpeckleTopLevelConverter
     List<ADB.PolylineVertex3d> vertices = target
       .GetSubEntities<ADB.PolylineVertex3d>(
         ADB.OpenMode.ForRead,
-        _contextStack.Current.Document.TransactionManager.TopTransaction
+        _settingsStore.Current.Document.TransactionManager.TopTransaction
       )
       .Where(e => e.VertexType != ADB.Vertex3dType.FitVertex) // Do not collect fit vertex points, they are not used for creation
       .ToList();
@@ -92,7 +94,7 @@ public class Polyline3dToSpeckleConverter : IToSpeckleTopLevelConverter
         }
       }
 
-      SOG.Polyline displayValue = segmentValues.ConvertToSpecklePolyline(_contextStack.Current.SpeckleUnits);
+      SOG.Polyline displayValue = segmentValues.ConvertToSpecklePolyline(_settingsStore.Current.SpeckleUnits);
       if (displayValue != null)
       {
         spline.displayValue = displayValue;
@@ -103,7 +105,7 @@ public class Polyline3dToSpeckleConverter : IToSpeckleTopLevelConverter
     // for simple polyline3ds just get the polyline segment from the value
     else
     {
-      SOG.Polyline polyline = value.ConvertToSpecklePolyline(_contextStack.Current.SpeckleUnits);
+      SOG.Polyline polyline = value.ConvertToSpecklePolyline(_settingsStore.Current.SpeckleUnits);
       if (target.Closed)
       {
         polyline.closed = true;
@@ -118,12 +120,15 @@ public class Polyline3dToSpeckleConverter : IToSpeckleTopLevelConverter
       new()
       {
         segments = segments,
+        bulges = null,
+        tangents = null,
+        normal = null,
         value = value,
         polyType = polyType,
         closed = target.Closed,
         length = target.Length,
         bbox = bbox,
-        units = _contextStack.Current.SpeckleUnits
+        units = _settingsStore.Current.SpeckleUnits
       };
 
     return polycurve;

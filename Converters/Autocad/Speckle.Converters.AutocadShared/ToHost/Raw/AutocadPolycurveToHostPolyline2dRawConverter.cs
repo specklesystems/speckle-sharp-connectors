@@ -1,7 +1,8 @@
+using Speckle.Converters.Autocad;
 using Speckle.Converters.Autocad.Extensions;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Kits;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.Autocad2023.ToHost.Raw;
 
@@ -9,15 +10,15 @@ public class AutocadPolycurveToHostPolyline2dRawConverter
   : ITypedConverter<SOG.Autocad.AutocadPolycurve, ADB.Polyline2d>
 {
   private readonly ITypedConverter<SOG.Vector, AG.Vector3d> _vectorConverter;
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public AutocadPolycurveToHostPolyline2dRawConverter(
     ITypedConverter<SOG.Vector, AG.Vector3d> vectorConverter,
-    IConversionContextStack<Document, ADB.UnitsValue> contextStack
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _vectorConverter = vectorConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public ADB.Polyline2d Convert(SOG.Autocad.AutocadPolycurve target)
@@ -35,7 +36,7 @@ public class AutocadPolycurveToHostPolyline2dRawConverter
     }
 
     // get vertices
-    double f = Units.GetConversionFactor(target.units, _contextStack.Current.SpeckleUnits);
+    double f = Units.GetConversionFactor(target.units, _settingsStore.Current.SpeckleUnits);
     List<AG.Point3d> points = target.value.ConvertToPoint3d(f);
 
     // check for invalid bulges
@@ -62,9 +63,9 @@ public class AutocadPolycurveToHostPolyline2dRawConverter
       };
 
     // add polyline2d to document
-    ADB.Transaction tr = _contextStack.Current.Document.TransactionManager.TopTransaction;
+    ADB.Transaction tr = _settingsStore.Current.Document.TransactionManager.TopTransaction;
     var btr = (ADB.BlockTableRecord)
-      tr.GetObject(_contextStack.Current.Document.Database.CurrentSpaceId, ADB.OpenMode.ForWrite);
+      tr.GetObject(_settingsStore.Current.Document.Database.CurrentSpaceId, ADB.OpenMode.ForWrite);
     btr.AppendEntity(polyline);
     tr.AddNewlyCreatedDBObject(polyline, true);
 

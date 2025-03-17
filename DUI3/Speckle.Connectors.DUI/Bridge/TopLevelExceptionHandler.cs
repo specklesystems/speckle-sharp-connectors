@@ -1,45 +1,8 @@
-﻿using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
-using Speckle.Connectors.DUI.Bindings;
-using Speckle.Connectors.Utils;
-using Speckle.Core.Logging;
-using Speckle.Core.Models.Extensions;
 using Speckle.InterfaceGenerator;
+using Speckle.Sdk;
 
 namespace Speckle.Connectors.DUI.Bridge;
-
-/// <summary>
-/// Result Pattern struct
-/// </summary>
-/// <typeparam name="T"></typeparam>
-public readonly struct Result<T>
-{
-  //Don't add new members to this struct, it is perfect.
-  public T? Value { get; }
-  public Exception? Exception { get; }
-
-  [MemberNotNullWhen(false, nameof(Exception))]
-  public bool IsSuccess => Exception is null;
-
-  /// <summary>
-  /// Create a successful result
-  /// </summary>
-  /// <param name="result"></param>
-  public Result(T result)
-  {
-    Value = result;
-  }
-
-  /// <summary>
-  /// Create a non-sucessful result
-  /// </summary>
-  /// <param name="result"></param>
-  /// <exception cref="ArgumentNullException"><paramref name="result"/> was null</exception>
-  public Result([NotNull] Exception? result)
-  {
-    Exception = result.NotNull();
-  }
-}
 
 /// <summary>
 /// The functions provided by this class are designed to be used in all "top level" scenarios (e.g. Plugin, UI, and Event callbacks)
@@ -58,30 +21,34 @@ public readonly struct Result<T>
 public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
 {
   private readonly ILogger<TopLevelExceptionHandler> _logger;
-  private readonly IBridge _bridge;
+  public string Name => nameof(TopLevelExceptionHandler);
 
   private const string UNHANDLED_LOGGER_TEMPLATE = "An unhandled Exception occured";
 
-  public TopLevelExceptionHandler(ILoggerFactory loggerFactory, IBridge bridge)
+  public TopLevelExceptionHandler(ILogger<TopLevelExceptionHandler> logger)
   {
-    _logger = loggerFactory.CreateLogger<TopLevelExceptionHandler>();
-    _bridge = bridge;
+    _logger = logger;
   }
 
   /// <summary>
-  /// Invokes the given function <paramref name="function"/> within a <see langword="try"/>/<see langword="catch"/> block,
+  /// Invokes the given <paramref name="function"/> within a <see langword="try"/>/<see langword="catch"/> block,
   /// and provides exception handling for unexpected exceptions that have not been handled.<br/>
   /// </summary>
   /// <param name="function">The function to invoke and provide error handling for</param>
   /// <exception cref="Exception"><see cref="ExceptionHelpers.IsFatal"/> will be rethrown, these should be allowed to bubble up to the host app</exception>
   /// <seealso cref="ExceptionHelpers.IsFatal"/>
-  public void CatchUnhandled(Action function)
+  public Result CatchUnhandled(Action function)
   {
-    CatchUnhandled(() =>
+    var r = CatchUnhandled(() =>
     {
-      function.Invoke();
-      return (object?)null;
+      function();
+      return true;
     });
+    if (r.IsSuccess)
+    {
+      return new Result();
+    }
+    return new Result(r.Exception);
   }
 
   /// <inheritdoc cref="CatchUnhandled(Action)"/>
@@ -89,28 +56,52 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
   /// <returns>A result pattern struct (where exceptions have been handled)</returns>
   public Result<T> CatchUnhandled<T>(Func<T> function)
   {
-    return CatchUnhandled(() => Task.FromResult(function.Invoke())).Result;
+    try
+    {
+      return new Result<T>(function());
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
+      // _eventAggregator.GetEvent<ExceptionEvent>().PublishAsync(ex).Wait();
+      return new(ex);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogCritical(ex, UNHANDLED_LOGGER_TEMPLATE);
+      throw;
+    }
+  }
+
+  /// <inheritdoc cref="CatchUnhandled(Action)"/>
+  /// <returns>A result pattern struct (where exceptions have been handled)</returns>
+  public async Task<Result> CatchUnhandledAsync(Func<Task> function)
+  {
+    var r = await CatchUnhandledAsync(async () =>
+    {
+      await function();
+      return true;
+    });
+    if (r.IsSuccess)
+    {
+      return new Result();
+    }
+    return new Result(r.Exception);
   }
 
   ///<inheritdoc cref="CatchUnhandled{T}(Func{T})"/>
-  public async Task<Result<T>> CatchUnhandled<T>(Func<Task<T>> function)
+  public async Task<Result<T>> CatchUnhandledAsync<T>(Func<Task<T>> function)
   {
     try
     {
       try
       {
-        return new(await function.Invoke().ConfigureAwait(false));
+        return new(await function.Invoke());
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
         _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
-
-        SetGlobalNotification(
-          ToastNotificationType.DANGER,
-          "Unhandled Exception Occured",
-          ex.ToFormattedString(),
-          false
-        );
+        // await _eventAggregator.GetEvent<ExceptionEvent>().PublishAsync(ex);
         return new(ex);
       }
     }
@@ -121,15 +112,14 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
     }
   }
 
-  private void SetGlobalNotification(ToastNotificationType type, string title, string message, bool autoClose) =>
-    _bridge.Send(
-      BasicConnectorBindingCommands.SET_GLOBAL_NOTIFICATION, //TODO: We could move these constants into a DUI3 constants static class
-      new
-      {
-        type,
-        title,
-        description = message,
-        autoClose
-      }
-    );
+  /// <summary>
+  /// Triggers an async action without explicitly needing to await it. <br/>
+  /// Any <see cref="Exception"/> thrown by invoking <paramref name="function"/> will be handled by the <see cref="ITopLevelExceptionHandler"/><br/>
+  /// </summary>
+  /// <remarks>
+  /// This <see langword="async"/> <see langword="void"/> function should only be used as an event handler that doesn't allow for handlers to return a <see cref="Task"/>
+  /// In cases where you can use <see langword="await"/> keyword, you should prefer using <see cref="CatchUnhandledAsync"/>
+  /// </remarks>
+  /// <param name="function"><inheritdoc cref="CatchUnhandled{T}(Func{T})"/></param>
+  public async void FireAndForget(Func<Task> function) => await CatchUnhandledAsync(function).ConfigureAwait(false);
 }

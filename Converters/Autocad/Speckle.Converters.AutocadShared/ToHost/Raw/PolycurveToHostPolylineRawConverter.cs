@@ -1,3 +1,4 @@
+using Speckle.Converters.Autocad;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
@@ -8,15 +9,15 @@ namespace Speckle.Converters.AutocadShared.ToHost.Raw;
 /// </summary>
 public class PolycurveToHostPolylineRawConverter : ITypedConverter<SOG.Polycurve, ADB.Polyline>
 {
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
   private readonly ITypedConverter<SOG.Point, AG.Point3d> _pointConverter;
 
   public PolycurveToHostPolylineRawConverter(
-    IConversionContextStack<Document, ADB.UnitsValue> contextStack,
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore,
     ITypedConverter<SOG.Point, AG.Point3d> pointConverter
   )
   {
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
     _pointConverter = pointConverter;
   }
 
@@ -26,7 +27,7 @@ public class PolycurveToHostPolylineRawConverter : ITypedConverter<SOG.Polycurve
     AG.Plane plane =
       new(
         AG.Point3d.Origin,
-        AG.Vector3d.ZAxis.TransformBy(_contextStack.Current.Document.Editor.CurrentUserCoordinateSystem)
+        AG.Vector3d.ZAxis.TransformBy(_settingsStore.Current.Document.Editor.CurrentUserCoordinateSystem)
       );
 
     int count = 0;
@@ -45,14 +46,13 @@ public class PolycurveToHostPolylineRawConverter : ITypedConverter<SOG.Polycurve
           break;
         case SOG.Arc arc:
           // POC: possibly endAngle and startAngle null?
-          double? angle = arc.endAngle - arc.startAngle;
-          angle = angle < 0 ? angle + 2 * Math.PI : angle;
-          if (angle is null)
+          double measure = arc.measure;
+          if (measure <= 0 || measure >= 2 * Math.PI)
           {
-            throw new ArgumentNullException(nameof(target), "Cannot convert arc without angle value.");
+            throw new ArgumentOutOfRangeException(nameof(target), "Cannot convert arc with measure <= 0 or >= 2 pi");
           }
 
-          var bulge = Math.Tan((double)angle / 4) * BulgeDirection(arc.startPoint, arc.midPoint, arc.endPoint);
+          var bulge = Math.Tan(measure / 4) * BulgeDirection(arc.startPoint, arc.midPoint, arc.endPoint);
           polyline.AddVertexAt(count, _pointConverter.Convert(arc.startPoint).Convert2d(plane), bulge, 0, 0);
           if (!target.closed && count == target.segments.Count - 1)
           {

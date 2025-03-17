@@ -1,33 +1,34 @@
-using Objects.Primitive;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Converters.RevitShared.Settings;
+using Speckle.Objects.Primitive;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 public class NurbsSplineToSpeckleConverter : ITypedConverter<DB.NurbSpline, SOG.Curve>
 {
   private readonly IRevitVersionConversionHelper _conversionHelper;
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<DB.XYZ, SOG.Point> _xyzToPointConverter;
   private readonly ScalingServiceToSpeckle _scalingService;
 
   public NurbsSplineToSpeckleConverter(
     IRevitVersionConversionHelper conversionHelper,
-    IRevitConversionContextStack contextStack,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ITypedConverter<DB.XYZ, SOG.Point> xyzToPointConverter,
     ScalingServiceToSpeckle scalingService
   )
   {
     _conversionHelper = conversionHelper;
-    _contextStack = contextStack;
+    _converterSettings = converterSettings;
     _xyzToPointConverter = xyzToPointConverter;
     _scalingService = scalingService;
   }
 
   public SOG.Curve Convert(DB.NurbSpline target)
   {
-    var units = _contextStack.Current.SpeckleUnits;
+    var units = _converterSettings.Current.SpeckleUnits;
 
     var points = new List<double>();
     foreach (var p in target.CtrlPoints)
@@ -38,19 +39,19 @@ public class NurbsSplineToSpeckleConverter : ITypedConverter<DB.NurbSpline, SOG.
 
     var coords = target.Tessellate().SelectMany(xyz => _xyzToPointConverter.Convert(xyz).ToList()).ToList();
 
-    return new SOG.Curve()
+    return new SOG.Curve
     {
       weights = target.Weights.Cast<double>().ToList(),
       points = points,
       knots = target.Knots.Cast<double>().ToList(),
       degree = target.Degree,
-      //speckleCurve.periodic = revitCurve.Period; // POC: already commented out, remove?
+      periodic = false,
       rational = target.isRational,
       closed = _conversionHelper.IsCurveClosed(target),
       units = units,
-      domain = new Interval(target.GetEndParameter(0), target.GetEndParameter(1)),
+      domain = new Interval { start = target.GetEndParameter(0), end = target.GetEndParameter(1) },
       length = _scalingService.ScaleLength(target.Length),
-      displayValue = new SOG.Polyline(coords, units)
+      displayValue = new SOG.Polyline { value = coords, units = units }
     };
   }
 }

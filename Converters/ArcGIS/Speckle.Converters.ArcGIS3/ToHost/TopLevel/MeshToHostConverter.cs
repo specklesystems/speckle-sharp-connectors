@@ -1,10 +1,10 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Models;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.ArcGIS3.ToHost.TopLevel;
 
-[NameAndRankValue(nameof(SOG.Mesh), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(SOG.Mesh), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class MeshToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG.Mesh, ACG.Multipatch>
 {
   private readonly ITypedConverter<List<SOG.Mesh>, ACG.Multipatch> _meshConverter;

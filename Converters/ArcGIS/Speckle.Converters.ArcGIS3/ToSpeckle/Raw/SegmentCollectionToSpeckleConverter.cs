@@ -5,15 +5,15 @@ namespace Speckle.Converters.ArcGIS3.ToSpeckle.Raw;
 
 public class SegmentCollectionToSpeckleConverter : ITypedConverter<ACG.ReadOnlySegmentCollection, SOG.Polyline>
 {
-  private readonly IConversionContextStack<ArcGISDocument, ACG.Unit> _contextStack;
+  private readonly IConverterSettingsStore<ArcGISConversionSettings> _settingsStore;
   private readonly ITypedConverter<ACG.MapPoint, SOG.Point> _pointConverter;
 
   public SegmentCollectionToSpeckleConverter(
-    IConversionContextStack<ArcGISDocument, ACG.Unit> contextStack,
+    IConverterSettingsStore<ArcGISConversionSettings> settingsStore,
     ITypedConverter<ACG.MapPoint, SOG.Point> pointConverter
   )
   {
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
     _pointConverter = pointConverter;
   }
 
@@ -33,11 +33,16 @@ public class SegmentCollectionToSpeckleConverter : ITypedConverter<ACG.ReadOnlyS
         ACG.Polyline polylineFromSegment = new ACG.PolylineBuilderEx(
           segment,
           ACG.AttributeFlags.HasZ,
-          _contextStack.Current.Document.Map.SpatialReference
+          _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference
         ).ToGeometry();
 
-        double tolerance = _contextStack.Current.Document.Map.SpatialReference.XYTolerance;
-        double conversionFactorToMeter = _contextStack.Current.Document.Map.SpatialReference.Unit.ConversionFactor;
+        double tolerance = _settingsStore.Current.ActiveCRSoffsetRotation.SpatialReference.XYTolerance;
+        double conversionFactorToMeter = _settingsStore
+          .Current
+          .ActiveCRSoffsetRotation
+          .SpatialReference
+          .Unit
+          .ConversionFactor;
         var densifiedPolyline = ACG.GeometryEngine.Instance.DensifyByDeviation(
           polylineFromSegment,
           tolerance * conversionFactorToMeter
@@ -54,20 +59,32 @@ public class SegmentCollectionToSpeckleConverter : ITypedConverter<ACG.ReadOnlyS
         {
           foreach (ACG.Segment? subSegment in subSegments)
           {
-            points = AddPtsToPolylinePts(
+            // The reason for this is that as geometry is being split down into parts and densified,
+            // the information of Spatial Reference (Coordinate System) is messed up and shows different information
+            // from the parent geometry.
+            ACG.MapPoint startPt = new ACG.MapPointBuilderEx(
+              subSegment.StartPoint.X,
+              subSegment.StartPoint.Y,
+              subSegment.StartPoint.Z,
+              target.SpatialReference
+            ).ToGeometry();
+            ACG.MapPoint endPt = new ACG.MapPointBuilderEx(
+              subSegment.EndPoint.X,
+              subSegment.EndPoint.Y,
+              subSegment.EndPoint.Z,
+              target.SpatialReference
+            ).ToGeometry();
+
+            AddPtsToPolylinePts(
               points,
-              new List<SOG.Point>()
-              {
-                _pointConverter.Convert(subSegment.StartPoint),
-                _pointConverter.Convert(subSegment.EndPoint)
-              }
+              new List<SOG.Point>() { _pointConverter.Convert(startPt), _pointConverter.Convert(endPt) }
             );
           }
         }
       }
       else
       {
-        points = AddPtsToPolylinePts(
+        AddPtsToPolylinePts(
           points,
           new List<SOG.Point>()
           {
@@ -77,15 +94,39 @@ public class SegmentCollectionToSpeckleConverter : ITypedConverter<ACG.ReadOnlyS
         );
       }
     }
+
+    // check the last point, remove if coincides with the first. Assign as Closed instead
+    bool closed = false;
+    if (
+      Math.Round(points[^1].x, 6) == Math.Round(points[0].x, 6)
+      && Math.Round(points[^1].y, 6) == Math.Round(points[0].y, 6)
+      && Math.Round(points[^1].z, 6) == Math.Round(points[0].z, 6)
+    )
+    {
+      closed = true;
+      points.RemoveAt(points.Count - 1);
+    }
+
     SOG.Polyline polyline =
-      new(points.SelectMany(pt => new[] { pt.x, pt.y, pt.z }).ToList(), _contextStack.Current.SpeckleUnits) { };
+      new()
+      {
+        value = points.SelectMany(pt => new[] { pt.x, pt.y, pt.z, }).ToList(),
+        closed = closed,
+        units = _settingsStore.Current.SpeckleUnits
+      };
 
     return polyline;
   }
 
   private List<SOG.Point> AddPtsToPolylinePts(List<SOG.Point> points, List<SOG.Point> newSegmentPts)
   {
-    if (points.Count == 0 || points[^1] != newSegmentPts[0])
+    // don't add the same Point as the previous one
+    if (
+      points.Count == 0
+      || Math.Round(points[^1].x, 6) != Math.Round(newSegmentPts[0].x, 6)
+      || Math.Round(points[^1].y, 6) != Math.Round(newSegmentPts[0].y, 6)
+      || Math.Round(points[^1].z, 6) != Math.Round(newSegmentPts[0].z, 6)
+    )
     {
       points.AddRange(newSegmentPts);
     }

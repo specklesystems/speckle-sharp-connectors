@@ -4,10 +4,13 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
+    <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Bullseye" />
     <PackageReference Include="Glob" />
+    <PackageReference Include="Microsoft.Build" />
+    <PackageReference Include="Semver" />
     <PackageReference Include="SimpleExec" />
   </ItemGroup>
 </Project>

@@ -1,47 +1,63 @@
 using Autodesk.AutoCAD.DatabaseServices;
-using Sentry.Reflection;
-using Speckle.Connectors.Autocad.HostApp;
+using Microsoft.Extensions.Logging;
+using Speckle.Connectors.Autocad.HostApp.Extensions;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Core.Credentials;
-using Speckle.Connectors.Autocad.HostApp.Extensions;
-using Speckle.Connectors.Utils;
-using Speckle.Core.Logging;
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Credentials;
 
 namespace Speckle.Connectors.Autocad.Bindings;
 
 public class AutocadBasicConnectorBinding : IBasicConnectorBinding
 {
+  private readonly IAccountManager _accountManager;
   public string Name { get; set; } = "baseBinding";
-  public IBridge Parent { get; }
+  public IBrowserBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly AutocadSettings _settings;
+  private readonly ISpeckleApplication _speckleApplication;
+  private readonly IThreadContext _threadContext;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly ILogger<AutocadBasicConnectorBinding> _logger;
 
   public BasicConnectorBindingCommands Commands { get; }
 
-  public AutocadBasicConnectorBinding(DocumentModelStore store, AutocadSettings settings, IBridge parent)
+  public AutocadBasicConnectorBinding(
+    DocumentModelStore store,
+    IBrowserBridge parent,
+    IAccountManager accountManager,
+    ISpeckleApplication speckleApplication,
+    ILogger<AutocadBasicConnectorBinding> logger,
+    IThreadContext threadContext,
+    ITopLevelExceptionHandler topLevelExceptionHandler
+  )
   {
     _store = store;
-    _settings = settings;
     Parent = parent;
+    _accountManager = accountManager;
+    _speckleApplication = speckleApplication;
     Commands = new BasicConnectorBindingCommands(parent);
+    _logger = logger;
+    _threadContext = threadContext;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
     _store.DocumentChanged += (_, _) =>
-    {
-      Commands.NotifyDocumentChanged();
-    };
+      _topLevelExceptionHandler.FireAndForget(async () =>
+      {
+        await Commands.NotifyDocumentChanged();
+      });
   }
 
-  public string GetConnectorVersion() =>
-    typeof(AutocadBasicConnectorBinding).Assembly.GetNameAndVersion().Version ?? "No version";
+  public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
 
-  public string GetSourceApplicationName() => _settings.HostAppInfo.Slug;
+  public string GetSourceApplicationName() => _speckleApplication.Slug;
 
-  public string GetSourceApplicationVersion() => _settings.HostAppVersion.ToString();
+  public string GetSourceApplicationVersion() => _speckleApplication.HostApplicationVersion;
 
-  public Account[] GetAccounts() => AccountManager.GetAccounts().ToArray();
+  public Account[] GetAccounts() => _accountManager.GetAccounts().ToArray();
 
   public DocumentInfo? GetDocumentInfo()
   {
@@ -57,23 +73,25 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
 
   public DocumentModelStore GetDocumentState() => _store;
 
-  public void AddModel(ModelCard model) => _store.Models.Add(model);
+  public void AddModel(ModelCard model) => _store.AddModel(model);
 
   public void UpdateModel(ModelCard model) => _store.UpdateModel(model);
 
   public void RemoveModel(ModelCard model) => _store.RemoveModel(model);
 
-  public void HighlightObjects(List<string> objectIds)
+  public void RemoveModels(List<ModelCard> models) => _store.RemoveModels(models);
+
+  public async Task HighlightObjects(IReadOnlyList<string> objectIds)
   {
     // POC: Will be addressed to move it into AutocadContext!
     var doc = Application.DocumentManager.MdiActiveDocument;
 
     var dbObjects = doc.GetObjects(objectIds);
     var acadObjectIds = dbObjects.Select(tuple => tuple.Root.Id).ToArray();
-    HighlightObjectsOnView(acadObjectIds);
+    await HighlightObjectsOnView(acadObjectIds);
   }
 
-  public void HighlightModel(string modelCardId)
+  public async Task HighlightModel(string modelCardId)
   {
     // POC: Will be addressed to move it into AutocadContext!
     var doc = Application.DocumentManager.MdiActiveDocument;
@@ -86,14 +104,16 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
     var objectIds = Array.Empty<ObjectId>();
 
     var model = _store.GetModelById(modelCardId);
+
     if (model == null)
     {
+      _logger.LogError("Model was null when highlighting received model");
       return;
     }
 
     if (model is SenderModelCard senderModelCard)
     {
-      var dbObjects = doc.GetObjects(senderModelCard.SendFilter.NotNull().GetObjectIds());
+      var dbObjects = doc.GetObjects(senderModelCard.SendFilter.NotNull().RefreshObjectIds());
       objectIds = dbObjects.Select(tuple => tuple.Root.Id).ToArray();
     }
 
@@ -105,23 +125,33 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
 
     if (objectIds.Length == 0)
     {
-      Commands.SetModelError(modelCardId, new OperationCanceledException("No objects found to highlight."));
+      await Commands.SetModelError(modelCardId, new OperationCanceledException("No objects found to highlight."));
       return;
     }
 
-    HighlightObjectsOnView(objectIds, modelCardId);
+    await HighlightObjectsOnView(objectIds, modelCardId);
   }
 
-  private void HighlightObjectsOnView(ObjectId[] objectIds, string? modelCardId = null)
+  private async Task HighlightObjectsOnView(ObjectId[] objectIds, string? modelCardId = null)
   {
     var doc = Application.DocumentManager.MdiActiveDocument;
 
-    Parent.RunOnMainThread(() =>
+    await _threadContext.RunOnMainAsync(async () =>
     {
       try
       {
-        doc.Editor.SetImpliedSelection(Array.Empty<ObjectId>()); // Deselects
-        doc.Editor.SetImpliedSelection(objectIds); // Selects
+        doc.Editor.SetImpliedSelection([]); // Deselects
+        try
+        {
+          doc.Editor.SetImpliedSelection(objectIds);
+        }
+        catch (Exception e) when (!e.IsFatal())
+        {
+          // SWALLOW REASON:
+          // If the objects under the blocks, it won't be able to select them.
+          // If we try, API will throw the invalid input error, because we request something from API that Autocad doesn't
+          // handle it on its current canvas. Block elements only selectable when in its scope.
+        }
         doc.Editor.UpdateScreen();
 
         Extents3d selectedExtents = new();
@@ -129,10 +159,19 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
         var tr = doc.TransactionManager.StartTransaction();
         foreach (ObjectId objectId in objectIds)
         {
-          var entity = (Entity)tr.GetObject(objectId, OpenMode.ForRead);
-          if (entity != null)
+          try
           {
-            selectedExtents.AddExtents(entity.GeometricExtents);
+            var entity = (Entity?)tr.GetObject(objectId, OpenMode.ForRead);
+            if (entity?.GeometricExtents != null)
+            {
+              selectedExtents.AddExtents(entity.GeometricExtents);
+            }
+          }
+          catch (Exception e) when (!e.IsFatal())
+          {
+            // Note: we're swallowing exeptions here because of a weird case when receiving blocks, we would have
+            // acad api throw an error on accessing entity.GeometricExtents.
+            // may also throw Autodesk.AutoCAD.Runtime.Exception for invalid extents on objects like rays and xlines
           }
         }
 
@@ -144,7 +183,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
       {
         if (modelCardId != null)
         {
-          Commands.SetModelError(modelCardId, new OperationCanceledException("Failed to highlight objects."));
+          await Commands.SetModelError(modelCardId, new OperationCanceledException("Failed to highlight objects."));
         }
         else
         {

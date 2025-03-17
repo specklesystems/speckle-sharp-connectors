@@ -1,7 +1,10 @@
+using System.Diagnostics.CodeAnalysis;
 using Autodesk.Revit.DB;
-using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.RevitShared.Helpers;
 
@@ -31,10 +34,10 @@ public class ParameterValueExtractor
       StorageType.Double => GetValueAsDouble(parameter),
       StorageType.Integer => GetValueAsInt(parameter),
       StorageType.String => GetValueAsString(parameter),
-      StorageType.ElementId => GetValueAsElementId(parameter)?.ToString(),
+      StorageType.ElementId => GetValueAsElementNameOrId(parameter),
       StorageType.None
       or _
-        => throw new SpeckleConversionException($"Unsupported parameter storage type {parameter.StorageType}")
+        => throw new ValidationException($"Unsupported parameter storage type {parameter.StorageType}")
     };
   }
 
@@ -42,7 +45,7 @@ public class ParameterValueExtractor
   {
     if (!TryGetValueAsDouble(element, builtInParameter, out double? value))
     {
-      throw new SpeckleConversionException($"Failed to get {builtInParameter} as double.");
+      throw new ValidationException($"Failed to get {builtInParameter} as double.");
     }
 
     return value!.Value; // If TryGet returns true, we succeeded in obtaining the value, and it will not be null.
@@ -78,7 +81,7 @@ public class ParameterValueExtractor
   public int GetValueAsInt(Element element, BuiltInParameter builtInParameter)
   {
     return GetValueGeneric<int?>(element, builtInParameter, StorageType.Integer, (parameter) => parameter.AsInteger())
-      ?? throw new SpeckleConversionException(
+      ?? throw new SpeckleException(
         $"Expected int but got null for property {builtInParameter} on element of type {element.GetType()}"
       );
   }
@@ -110,18 +113,11 @@ public class ParameterValueExtractor
     return GetValueGeneric(parameter, StorageType.String, (parameter) => parameter.AsString());
   }
 
-  public ElementId GetValueAsElementId(Element element, BuiltInParameter builtInParameter)
-  {
-    if (TryGetValueAsElementId(element, builtInParameter, out var elementId))
-    {
-      return elementId!;
-    }
-    throw new SpeckleConversionException(
-      $"Failed to get {builtInParameter} on element of type {element.GetType()} as ElementId"
-    );
-  }
-
-  public bool TryGetValueAsElementId(Element element, BuiltInParameter builtInParameter, out ElementId? elementId)
+  public bool TryGetValueAsElementId(
+    Element element,
+    BuiltInParameter builtInParameter,
+    [NotNullWhen(true)] out ElementId? elementId
+  )
   {
     if (
       GetValueGeneric(element, builtInParameter, StorageType.ElementId, (parameter) => parameter.AsElementId())
@@ -136,12 +132,25 @@ public class ParameterValueExtractor
     return false;
   }
 
-  public ElementId? GetValueAsElementId(Parameter parameter)
+  public string? GetValueAsElementNameOrId(Parameter parameter)
   {
-    return GetValueGeneric(parameter, StorageType.ElementId, (parameter) => parameter.AsElementId());
+    if (
+      GetValueGeneric(parameter, StorageType.ElementId, (parameter) => parameter.AsElementId()) is ElementId elementId
+    )
+    {
+      Element element = parameter.Element.Document.GetElement(elementId);
+      return element?.Name ?? elementId.ToString();
+    }
+
+    return null;
   }
 
-  public bool TryGetValueAsDocumentObject<T>(Element element, BuiltInParameter builtInParameter, out T? value)
+  public bool TryGetValueAsDocumentObject<T>(
+    Element element,
+    BuiltInParameter builtInParameter,
+    [NotNullWhen(true)] out T? value
+  )
+    where T : class
   {
     if (!TryGetValueAsElementId(element, builtInParameter, out var elementId))
     {
@@ -149,10 +158,10 @@ public class ParameterValueExtractor
       return false;
     }
 
-    Element paramElement = element.Document.GetElement(elementId);
+    Element paramElement = element.Document.GetElement(elementId.NotNull());
     if (paramElement is not T typedElement)
     {
-      value = default;
+      value = null;
       return false;
     }
 
@@ -165,10 +174,10 @@ public class ParameterValueExtractor
   {
     if (!TryGetValueAsDocumentObject<T>(element, builtInParameter, out var value))
     {
-      throw new SpeckleConversionException($"Failed to get {builtInParameter} as an element of type {typeof(T)}");
+      throw new SpeckleException($"Failed to get {builtInParameter} as an element of type {typeof(T)}");
     }
 
-    return value!; // If TryGet returns true, we succeeded in obtaining the value, and it will not be null.
+    return value;
   }
 
   private TResult? GetValueGeneric<TResult>(
@@ -178,7 +187,7 @@ public class ParameterValueExtractor
     Func<DB.Parameter, TResult> getParamValue
   )
   {
-    if (!_uniqueIdToUsedParameterSetMap.TryGetValue(element.UniqueId, out HashSet<BuiltInParameter> usedParameters))
+    if (!_uniqueIdToUsedParameterSetMap.TryGetValue(element.UniqueId, out HashSet<BuiltInParameter>? usedParameters))
     {
       usedParameters = new();
       _uniqueIdToUsedParameterSetMap[element.UniqueId] = usedParameters;
@@ -201,7 +210,7 @@ public class ParameterValueExtractor
 
     if (parameter.StorageType != expectedStorageType)
     {
-      throw new SpeckleConversionException(
+      throw new SpeckleException(
         $"Expected parameter of storage type {expectedStorageType} but got parameter of storage type {parameter.StorageType}"
       );
     }
@@ -237,10 +246,5 @@ public class ParameterValueExtractor
 
       paramDict[internalName] = param;
     }
-  }
-
-  public void RemoveUniqueId(string uniqueId)
-  {
-    _uniqueIdToUsedParameterSetMap.Remove(uniqueId);
   }
 }

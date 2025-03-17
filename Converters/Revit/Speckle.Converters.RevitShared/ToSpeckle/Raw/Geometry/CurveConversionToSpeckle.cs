@@ -1,6 +1,6 @@
-using Objects;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.Common;
+using Speckle.Objects;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -40,8 +40,7 @@ public class CurveConversionToSpeckle : ITypedConverter<DB.Curve, ICurve>
       DB.Ellipse ellipse => _ellipseConverter.Convert(ellipse),
       DB.NurbSpline nurbs => _nurbsConverter.Convert(nurbs),
       DB.HermiteSpline hermite => _hermiteConverter.Convert(hermite),
-
-      _ => throw new SpeckleConversionException($"Unsupported curve type {target.GetType()}")
+      _ => throw new ValidationException($"Unsupported curve type {target.GetType()}")
     };
   }
 }

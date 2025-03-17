@@ -1,33 +1,34 @@
+using Speckle.Converters.Autocad;
 using Speckle.Converters.Autocad.Extensions;
-using Speckle.Converters.Common.Objects;
-using Speckle.Core.Kits;
 using Speckle.Converters.Common;
+using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.Autocad2023.ToHost.Raw;
 
 public class AutocadPolycurveToHostPolyline3dRawConverter
   : ITypedConverter<SOG.Autocad.AutocadPolycurve, ADB.Polyline3d>
 {
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
-  public AutocadPolycurveToHostPolyline3dRawConverter(IConversionContextStack<Document, ADB.UnitsValue> contextStack)
+  public AutocadPolycurveToHostPolyline3dRawConverter(IConverterSettingsStore<AutocadConversionSettings> settingsStore)
   {
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public ADB.Polyline3d Convert(SOG.Autocad.AutocadPolycurve target)
   {
     // get vertices
-    double f = Units.GetConversionFactor(target.units, _contextStack.Current.SpeckleUnits);
+    double f = Units.GetConversionFactor(target.units, _settingsStore.Current.SpeckleUnits);
     List<AG.Point3d> points = target.value.ConvertToPoint3d(f);
 
     // create the polyline3d using the empty constructor
     ADB.Polyline3d polyline = new() { Closed = target.closed };
 
     // add polyline3d to document
-    ADB.Transaction tr = _contextStack.Current.Document.TransactionManager.TopTransaction;
+    ADB.Transaction tr = _settingsStore.Current.Document.TransactionManager.TopTransaction;
     var btr = (ADB.BlockTableRecord)
-      tr.GetObject(_contextStack.Current.Document.Database.CurrentSpaceId, ADB.OpenMode.ForWrite);
+      tr.GetObject(_settingsStore.Current.Document.Database.CurrentSpaceId, ADB.OpenMode.ForWrite);
     btr.AppendEntity(polyline);
     tr.AddNewlyCreatedDBObject(polyline, true);
 

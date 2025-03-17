@@ -1,22 +1,23 @@
-using Objects.Primitive;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
+using Speckle.Objects.Primitive;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 public class BoundingBoxXYZToSpeckleConverter : ITypedConverter<DB.BoundingBoxXYZ, SOG.Box>
 {
-  private readonly IRevitConversionContextStack _contextStack;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<DB.XYZ, SOG.Point> _xyzToPointConverter;
   private readonly ITypedConverter<DB.Plane, SOG.Plane> _planeConverter;
 
   public BoundingBoxXYZToSpeckleConverter(
-    IRevitConversionContextStack contextStack,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
     ITypedConverter<DB.XYZ, SOG.Point> xyzToPointConverter,
     ITypedConverter<DB.Plane, SOG.Plane> planeConverter
   )
   {
-    _contextStack = contextStack;
+    _converterSettings = converterSettings;
     _xyzToPointConverter = xyzToPointConverter;
     _planeConverter = planeConverter;
   }
@@ -37,11 +38,11 @@ public class BoundingBoxXYZToSpeckleConverter : ITypedConverter<DB.BoundingBoxXY
 
     var box = new SOG.Box()
     {
-      xSize = new Interval(min.x, max.x),
-      ySize = new Interval(min.y, max.y),
-      zSize = new Interval(min.z, max.z),
-      basePlane = _planeConverter.Convert(plane),
-      units = _contextStack.Current.SpeckleUnits
+      xSize = new Interval { start = min.x, end = max.x },
+      ySize = new Interval { start = min.y, end = max.y },
+      zSize = new Interval { start = min.z, end = max.z },
+      plane = _planeConverter.Convert(plane),
+      units = _converterSettings.Current.SpeckleUnits
     };
 
     return box;

@@ -1,25 +1,18 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Core.Models;
+using Speckle.Sdk;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.Geometry;
 
-[NameAndRankValue(nameof(ADB.SubDMesh), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[NameAndRankValue(typeof(ADB.SubDMesh), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class DBSubDMeshToSpeckleConverter : IToSpeckleTopLevelConverter
 {
-  private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
-  private readonly ITypedConverter<ADB.Extents3d, SOG.Box> _boxConverter;
-  private readonly IConversionContextStack<Document, ADB.UnitsValue> _contextStack;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
-  public DBSubDMeshToSpeckleConverter(
-    ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
-    ITypedConverter<ADB.Extents3d, SOG.Box> boxConverter,
-    IConversionContextStack<Document, ADB.UnitsValue> contextStack
-  )
+  public DBSubDMeshToSpeckleConverter(IConverterSettingsStore<AutocadConversionSettings> settingsStore)
   {
-    _pointConverter = pointConverter;
-    _boxConverter = boxConverter;
-    _contextStack = contextStack;
+    _settingsStore = settingsStore;
   }
 
   public Base Convert(object target) => RawConvert((ADB.SubDMesh)target);
@@ -30,7 +23,9 @@ public class DBSubDMeshToSpeckleConverter : IToSpeckleTopLevelConverter
     var vertices = new List<double>(target.Vertices.Count * 3);
     foreach (AG.Point3d vert in target.Vertices)
     {
-      vertices.AddRange(_pointConverter.Convert(vert).ToList());
+      vertices.Add(vert.X);
+      vertices.Add(vert.Y);
+      vertices.Add(vert.Z);
     }
 
     // faces
@@ -57,19 +52,33 @@ public class DBSubDMeshToSpeckleConverter : IToSpeckleTopLevelConverter
     }
 
     // colors
-    var colors = target.VertexColorArray
-      .Select(
-        o =>
-          System.Drawing.Color
-            .FromArgb(System.Convert.ToInt32(o.Red), System.Convert.ToInt32(o.Green), System.Convert.ToInt32(o.Blue))
-            .ToArgb()
+    var colors = target
+      .VertexColorArray.Select(o =>
+        System
+          .Drawing.Color.FromArgb(
+            System.Convert.ToInt32(o.Red),
+            System.Convert.ToInt32(o.Green),
+            System.Convert.ToInt32(o.Blue)
+          )
+          .ToArgb()
       )
       .ToList();
 
-    // bbox
-    SOG.Box bbox = _boxConverter.Convert(target.GeometricExtents);
+    SOG.Mesh speckleMesh =
+      new()
+      {
+        vertices = vertices,
+        faces = faces,
+        colors = colors,
+        units = _settingsStore.Current.SpeckleUnits,
+        area = target.ComputeSurfaceArea()
+      };
 
-    SOG.Mesh speckleMesh = new(vertices, faces, colors, null, _contextStack.Current.SpeckleUnits) { bbox = bbox };
+    try
+    {
+      speckleMesh.volume = target.ComputeVolume();
+    }
+    catch (Exception e) when (!e.IsFatal()) { } // for non-volumetric meshes
 
     return speckleMesh;
   }

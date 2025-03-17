@@ -1,7 +1,7 @@
 using ArcGIS.Core.Geometry;
 using Speckle.Converters.Common;
-using Speckle.Core.Kits;
-using Speckle.Core.Logging; // POC: boy do I think this is the wrong place for SpeckleException!
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.ArcGIS3;
 
@@ -22,12 +22,17 @@ public class ArcGISToSpeckleUnitConverter : IHostToSpeckleUnitConverter<Unit>
     dict[LinearUnit.Feet.FactoryCode] = Units.Feet;
     dict[LinearUnit.Yards.FactoryCode] = Units.Yards;
     dict[LinearUnit.Miles.FactoryCode] = Units.Miles;
-    dict[9003] = Units.USFeet;
     return dict;
   }
 
   public string ConvertOrThrow(Unit hostUnit)
   {
+    // allow to send data in degrees (RootObjBuilder will send a warning)
+    if (hostUnit.UnitType == UnitType.Angular && hostUnit.FactoryCode == 9102)
+    {
+      return Units.Meters;
+    }
+
     int linearUnit = LinearUnit.CreateLinearUnit(hostUnit.Wkt).FactoryCode;
 
     if (s_unitMapping.TryGetValue(linearUnit, out string? value))
@@ -35,7 +40,6 @@ public class ArcGISToSpeckleUnitConverter : IHostToSpeckleUnitConverter<Unit>
       return value;
     }
 
-    // POC: probably would prefer something more specific
-    throw new SpeckleException($"The Unit System \"{hostUnit}\" is unsupported.");
+    throw new UnitNotSupportedException($"The Unit System \"{hostUnit}\" is unsupported.");
   }
 }

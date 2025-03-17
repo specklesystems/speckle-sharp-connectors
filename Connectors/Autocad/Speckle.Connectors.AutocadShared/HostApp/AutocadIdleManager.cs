@@ -1,38 +1,19 @@
-using System.Collections.Concurrent;
+using Speckle.Connectors.DUI.Bridge;
+using Speckle.InterfaceGenerator;
 
 namespace Speckle.Connectors.Autocad.HostApp;
 
-public class AutocadIdleManager
+public partial interface IAutocadIdleManager : IAppIdleManager;
+
+[GenerateAutoInterface]
+public sealed class AutocadIdleManager(IIdleCallManager idleCallManager)
+  : AppIdleManager(idleCallManager),
+    IAutocadIdleManager
 {
-  private readonly ConcurrentDictionary<string, Action> _sCalls = new();
-  private bool _hasSubscribed;
+  private readonly IIdleCallManager _idleCallManager = idleCallManager;
 
-  /// <summary>
-  /// Subscribe deferred action to AutocadIdle event to run it whenever Autocad become idle.
-  /// </summary>
-  /// <param name="action"> Action to call whenever Autocad become Idle.</param>
-  public void SubscribeToIdle(Action action)
-  {
-    _sCalls[action.Method.Name] = action;
+  protected override void AddEvent() => Application.Idle += AutocadAppOnIdle;
 
-    if (_hasSubscribed)
-    {
-      return;
-    }
-
-    _hasSubscribed = true;
-    Application.Idle += OnIdleHandler;
-  }
-
-  private void OnIdleHandler(object sender, EventArgs e)
-  {
-    foreach (var kvp in _sCalls)
-    {
-      kvp.Value();
-    }
-
-    _sCalls.Clear();
-    _hasSubscribed = false;
-    Application.Idle -= OnIdleHandler;
-  }
+  private void AutocadAppOnIdle(object? sender, EventArgs e) =>
+    _idleCallManager.AppOnIdle(() => Application.Idle -= AutocadAppOnIdle);
 }

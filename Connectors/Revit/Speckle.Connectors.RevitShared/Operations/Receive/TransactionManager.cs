@@ -1,5 +1,6 @@
 using Autodesk.Revit.DB;
-using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.Common;
+using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Connectors.Revit.Operations.Receive;
 
@@ -9,12 +10,17 @@ namespace Speckle.Connectors.Revit.Operations.Receive;
 /// </summary>
 public sealed class TransactionManager : ITransactionManager
 {
-  private readonly IRevitConversionContextStack _contextStack;
-  private Document Document => _contextStack.Current.Document;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
+  private readonly IFailuresPreprocessor _errorPreprocessingService;
+  private Document Document => _converterSettings.Current.Document;
 
-  public TransactionManager(IRevitConversionContextStack contextStack)
+  public TransactionManager(
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
+    IFailuresPreprocessor errorPreprocessingService
+  )
   {
-    _contextStack = contextStack;
+    _converterSettings = converterSettings;
+    _errorPreprocessingService = errorPreprocessingService;
   }
 
   // poc : these are being disposed. I'm not sure why I need to supress this warning
@@ -23,17 +29,21 @@ public sealed class TransactionManager : ITransactionManager
   private SubTransaction? _subTransaction;
 #pragma warning restore CA2213 // Disposable fields should be disposed
 
-  public void StartTransaction()
+  // POC find a better way to use IFailuresPreprocessor
+  public void StartTransaction(bool enableFailurePreprocessor = false, string name = "Speckle Transaction")
   {
     if (_transaction == null || !_transaction.IsValidObject || _transaction.GetStatus() != TransactionStatus.Started)
     {
-      _transaction = new Transaction(Document, "Speckle Transaction");
-      var failOpts = _transaction.GetFailureHandlingOptions();
-      // POC: make sure to implement and add the failure preprocessor
-      // https://spockle.atlassian.net/browse/DUI3-461
-      //failOpts.SetFailuresPreprocessor(_errorPreprocessingService);
-      failOpts.SetClearAfterRollback(true);
-      _transaction.SetFailureHandlingOptions(failOpts);
+      _transaction = new Transaction(Document, name);
+
+      if (enableFailurePreprocessor)
+      {
+        var failOpts = _transaction.GetFailureHandlingOptions();
+        failOpts.SetFailuresPreprocessor(_errorPreprocessingService);
+        failOpts.SetClearAfterRollback(true);
+        _transaction.SetFailureHandlingOptions(failOpts);
+      }
+
       _transaction.Start();
     }
   }

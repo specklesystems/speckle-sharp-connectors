@@ -1,44 +1,62 @@
-﻿using Speckle.Autofac.DependencyInjection;
+using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Speckle.Connectors.Common.Threading;
+using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Models.Card.SendFilter;
-using Speckle.Connectors.DUI.Utils;
-using Speckle.Connectors.Utils.Operations;
-using Speckle.Core.Transports;
-using Speckle.Newtonsoft.Json;
-using Speckle.Newtonsoft.Json.Serialization;
+using Speckle.Connectors.DUI.Models;
+using Speckle.Sdk;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Transports;
 
 namespace Speckle.Connectors.DUI;
 
 public static class ContainerRegistration
 {
-  public static void AddDUI(this SpeckleContainerBuilder speckleContainerBuilder)
+  public static void AddDUI<TThreadContext, TDocumentStore>(this IServiceCollection serviceCollection)
+    where TDocumentStore : DocumentModelStore
+    where TThreadContext : IThreadContext, new()
   {
-    // send operation and dependencies
-    speckleContainerBuilder.AddSingletonInstance<ISyncToThread, SyncToUIThread>();
-    speckleContainerBuilder.AddTransient<ITransport, ServerTransport>();
-    speckleContainerBuilder.AddSingleton<IRootObjectSender, RootObjectSender>();
-    speckleContainerBuilder.AddTransient<IBridge, BrowserBridge>(); // POC: Each binding should have it's own bridge instance
-    speckleContainerBuilder.AddSingleton<ITopLevelExceptionHandler, TopLevelExceptionHandler>();
-    speckleContainerBuilder.AddSingleton(GetJsonSerializerSettings());
+    // context always newed up on host app's main/ui thread
+    serviceCollection.AddSingleton<IThreadContext>(new TThreadContext());
+    serviceCollection.AddSingleton<DocumentModelStore, TDocumentStore>();
+
+    serviceCollection.AddTransient<IBrowserBridge, BrowserBridge>(); // POC: Each binding should have it's own bridge instance
+
+    serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetAssembly(typeof(IdleCallManager)).NotNull());
+    serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetAssembly(typeof(IServerTransportFactory)).NotNull());
+
+    serviceCollection.AddSingleton<IBinding, TopLevelExceptionHandlerBinding>(sp =>
+      sp.GetRequiredService<TopLevelExceptionHandlerBinding>()
+    );
+    serviceCollection.AddSingleton<TopLevelExceptionHandlerBinding>();
+    serviceCollection.AddSingleton<ITopLevelExceptionHandler, TopLevelExceptionHandler>();
   }
 
-  private static JsonSerializerSettings GetJsonSerializerSettings()
+  public static void UseDUI(this IServiceProvider serviceProvider)
   {
-    // Register WebView2 panel stuff
-    JsonSerializerSettings settings =
-      new()
+    //observe the unobserved!
+    TaskScheduler.UnobservedTaskException += (_, args) =>
+    {
+      try
       {
-        Error = (_, args) =>
-        {
-          // POC: we should probably do a bit more than just swallowing this!
-          Console.WriteLine("*** JSON ERROR: " + args.ErrorContext);
-        },
-        ContractResolver = new CamelCasePropertyNamesContractResolver(),
-        NullValueHandling = NullValueHandling.Ignore,
-        ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-        DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate,
-        Converters = { new DiscriminatedObjectConverter(), new AbstractConverter<DiscriminatedObject, ISendFilter>() }
-      };
-    return settings;
+        serviceProvider
+          .GetRequiredService<ILoggerFactory>()
+          .CreateLogger("UnobservedTaskException")
+          .LogError(args.Exception, "Unobserved task exception");
+      }
+#pragma warning disable CA1031
+      catch (Exception e)
+#pragma warning restore CA1031
+      {
+        Console.WriteLine("Error logging unobserved task exception");
+        Console.WriteLine(args.Exception);
+        Console.WriteLine(e);
+      }
+      finally
+      {
+        args.SetObserved();
+      }
+    };
   }
 }

@@ -16,26 +16,7 @@ public static class GISAttributeFieldType
   public const string DATEONLY = "DateOnly";
   public const string TIMEONLY = "TimeOnly";
   public const string TIMESTAMPOFFSET = "TimeStampOffset";
-
-  public static string FieldTypeToSpeckle(FieldType fieldType)
-  {
-    return fieldType switch
-    {
-      FieldType.GUID => GUID_TYPE,
-      FieldType.OID => OID,
-      FieldType.String => STRING_TYPE,
-      FieldType.Single => FLOAT_TYPE,
-      FieldType.Integer => INTEGER_TYPE,
-      FieldType.BigInteger => BIGINTEGER,
-      FieldType.SmallInteger => SMALLINTEGER,
-      FieldType.Double => DOUBLE_TYPE,
-      FieldType.Date => DATETIME,
-      FieldType.DateOnly => DATEONLY,
-      FieldType.TimeOnly => TIMEONLY,
-      FieldType.TimestampOffset => TIMESTAMPOFFSET,
-      _ => throw new ArgumentOutOfRangeException(nameof(fieldType)),
-    };
-  }
+  public const string BOOL = "Bool"; // not supported in ArcGIS, only in QGIS
 
   public static FieldType FieldTypeToNative(object fieldType)
   {
@@ -55,27 +36,12 @@ public static class GISAttributeFieldType
         DATEONLY => FieldType.DateOnly,
         TIMEONLY => FieldType.TimeOnly,
         TIMESTAMPOFFSET => FieldType.String, // sending and receiving as stings
+        BOOL => FieldType.String, // not supported in ArcGIS, converting to string
         _ => throw new ArgumentOutOfRangeException(nameof(fieldType)),
       };
     }
     // old way:
     return (FieldType)(int)(long)fieldType;
-  }
-
-  public static object? FieldValueToSpeckle(Row row, Field field)
-  {
-    if (
-      field.FieldType == FieldType.DateOnly
-      || field.FieldType == FieldType.TimeOnly
-      || field.FieldType == FieldType.TimestampOffset
-    )
-    {
-      return row[field.Name]?.ToString();
-    }
-    else
-    {
-      return row[field.Name];
-    }
   }
 
   public static object? SpeckleValueToNativeFieldType(FieldType fieldType, object? value)

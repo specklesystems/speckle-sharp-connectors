@@ -1,66 +1,40 @@
-using System.Collections.Concurrent;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
-// POC: needs interface
-// is probably misnamed, perhaps OnIdleCallbackManager
-internal sealed class RevitIdleManager : IRevitIdleManager
+public sealed class RevitIdleManager : AppIdleManager
 {
-  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly UIApplication _uiApplication;
+  private readonly IIdleCallManager _idleCallManager;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
-  private readonly ConcurrentDictionary<string, Action> _calls = new();
+  private event EventHandler<IdlingEventArgs>? OnIdle;
 
-  // POC: still not thread safe
-  private volatile bool _hasSubscribed;
-
-  public RevitIdleManager(RevitContext revitContext, ITopLevelExceptionHandler topLevelExceptionHandler)
+  public RevitIdleManager(
+    RevitContext revitContext,
+    IIdleCallManager idleCallManager,
+    ITopLevelExceptionHandler topLevelExceptionHandler
+  )
+    : base(idleCallManager)
   {
     _topLevelExceptionHandler = topLevelExceptionHandler;
-    _uiApplication = revitContext.UIApplication!;
+    _uiApplication = revitContext.UIApplication.NotNull();
+    _idleCallManager = idleCallManager;
+    _uiApplication.Idling += (s, e) => OnIdle?.Invoke(s, e); // will be called on the main thread always and fixing the Revit exceptions on subscribing/unsubscribing Idle events
   }
 
-  /// <summary>
-  /// Subscribe deferred action to Idling event to run it whenever Revit becomes idle.
-  /// </summary>
-  /// <param name="action"> Action to call whenever Revit becomes Idle.</param>
-  /// some events in host app are trigerred many times, we might get 10x per object
-  /// Making this more like a deferred action, so we don't update the UI many times
-  public void SubscribeToIdle(Action action)
-  {
-    // POC: key for method is brittle | thread safe is not this is
-    // I want to be called back ONCE when the host app has become idle once more
-    // would this work "action.Method.Name" with anonymous function, including the SAME function
-    // does this work across class instances? Should it? What about functions of the same name? Fully qualified name might be better
-    _calls[action.Method.Name] = action;
-
-    if (_hasSubscribed)
-    {
-      return;
-    }
-
-    _hasSubscribed = true;
-    _uiApplication.Idling += RevitAppOnIdle;
-  }
-
-  private void RevitAppOnIdle(object sender, IdlingEventArgs e)
+  protected override void AddEvent()
   {
     _topLevelExceptionHandler.CatchUnhandled(() =>
     {
-      foreach (KeyValuePair<string, Action> kvp in _calls)
-      {
-        kvp.Value.Invoke();
-      }
-
-      _calls.Clear();
-      _uiApplication.Idling -= RevitAppOnIdle;
-
-      // setting last will delay ntering re-subscritption
-      _hasSubscribed = false;
+      OnIdle += RevitAppOnIdle;
     });
   }
+
+  private void RevitAppOnIdle(object? sender, IdlingEventArgs e) =>
+    _idleCallManager.AppOnIdle(() => OnIdle -= RevitAppOnIdle);
 }

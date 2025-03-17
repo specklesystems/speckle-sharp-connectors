@@ -3,21 +3,25 @@ using ArcGIS.Desktop.Core.Events;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using ArcGIS.Desktop.Mapping.Events;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
-using Speckle.Connectors.Utils;
-using Speckle.Newtonsoft.Json;
+using Speckle.Connectors.DUI.Utils;
 
 namespace Speckle.Connectors.ArcGIS.Utils;
 
 public class ArcGISDocumentStore : DocumentModelStore
 {
+  private readonly IThreadContext _threadContext;
+
   public ArcGISDocumentStore(
-    JsonSerializerSettings serializerOption,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    IJsonSerializer jsonSerializer,
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    IThreadContext threadContext
   )
-    : base(serializerOption, true)
+    : base(jsonSerializer)
   {
+    _threadContext = threadContext;
     ActiveMapViewChangedEvent.Subscribe(a => topLevelExceptionHandler.CatchUnhandled(() => OnMapViewChanged(a)), true);
     ProjectSavingEvent.Subscribe(
       _ =>
@@ -37,10 +41,10 @@ public class ArcGISDocumentStore : DocumentModelStore
     );
 
     // in case plugin was loaded into already opened Map, read metadata from the current Map
-    if (IsDocumentInit == false && MapView.Active != null)
+    if (!IsDocumentInit && MapView.Active != null)
     {
       IsDocumentInit = true;
-      ReadFromFile();
+      LoadState();
       OnDocumentChanged();
     }
   }
@@ -52,14 +56,14 @@ public class ArcGISDocumentStore : DocumentModelStore
       return;
     }
 
-    WriteToFile();
+    SaveState();
   }
 
   private void OnProjectSaving()
   {
     if (MapView.Active is not null)
     {
-      WriteToFile();
+      SaveState();
     }
   }
 
@@ -74,58 +78,56 @@ public class ArcGISDocumentStore : DocumentModelStore
     }
 
     IsDocumentInit = true;
-    ReadFromFile();
+    LoadState();
     OnDocumentChanged();
   }
 
-  public override void WriteToFile()
-  {
-    Map map = MapView.Active.Map;
-    QueuedTask.Run(() =>
-    {
-      // Read existing metadata - To prevent messing existing metadata. 🤞 Hope other add-in developers will do same :D
-      var existingMetadata = map.GetMetadata();
-
-      // Parse existing metadata
-      XDocument existingXmlDocument = !string.IsNullOrEmpty(existingMetadata)
-        ? XDocument.Parse(existingMetadata)
-        : new XDocument(new XElement("metadata"));
-
-      string serializedModels = Serialize();
-
-      XElement xmlModelCards = new("SpeckleModelCards", serializedModels);
-
-      // Check if SpeckleModelCards element already exists at root and update it
-      var speckleModelCardsElement = existingXmlDocument.Root?.Element("SpeckleModelCards");
-      if (speckleModelCardsElement != null)
+  protected override void HostAppSaveState(string modelCardState) =>
+    QueuedTask
+      .Run(() =>
       {
-        speckleModelCardsElement.ReplaceWith(xmlModelCards);
-      }
-      else
+        Map map = MapView.Active.Map;
+        // Read existing metadata - To prevent messing existing metadata. 🤞 Hope other add-in developers will do same :D
+        var existingMetadata = map.GetMetadata();
+
+        // Parse existing metadata
+        XDocument existingXmlDocument = !string.IsNullOrEmpty(existingMetadata)
+          ? XDocument.Parse(existingMetadata)
+          : new XDocument(new XElement("metadata"));
+
+        XElement xmlModelCards = new("SpeckleModelCards", modelCardState);
+
+        // Check if SpeckleModelCards element already exists at root and update it
+        var speckleModelCardsElement = existingXmlDocument.Root?.Element("SpeckleModelCards");
+        if (speckleModelCardsElement != null)
+        {
+          speckleModelCardsElement.ReplaceWith(xmlModelCards);
+        }
+        else
+        {
+          existingXmlDocument.Root?.Add(xmlModelCards);
+        }
+
+        map.SetMetadata(existingXmlDocument.ToString());
+      })
+      .FireAndForget();
+
+  protected override void LoadState() =>
+    QueuedTask
+      .Run(() =>
       {
-        existingXmlDocument.Root?.Add(xmlModelCards);
-      }
+        Map map = MapView.Active.Map;
+        var metadata = map.GetMetadata();
+        var root = XDocument.Parse(metadata).Root;
+        var element = root?.Element("SpeckleModelCards");
+        if (element is null)
+        {
+          ClearAndSave();
+          return;
+        }
 
-      map.SetMetadata(existingXmlDocument.ToString());
-    });
-  }
-
-  public override void ReadFromFile()
-  {
-    Map map = MapView.Active.Map;
-    QueuedTask.Run(() =>
-    {
-      var metadata = map.GetMetadata();
-      var root = XDocument.Parse(metadata).Root;
-      var element = root?.Element("SpeckleModelCards");
-      if (element is null)
-      {
-        Models = new();
-        return;
-      }
-
-      string modelsString = element.Value;
-      Models = Deserialize(modelsString).NotNull();
-    });
-  }
+        string modelsString = element.Value;
+        LoadFromString(modelsString);
+      })
+      .FireAndForget();
 }

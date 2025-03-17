@@ -1,25 +1,26 @@
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
-using Speckle.Connectors.Utils;
-using Speckle.Newtonsoft.Json;
+using Speckle.Connectors.DUI.Utils;
 
 namespace Speckle.Connectors.Autocad.HostApp;
 
 public class AutocadDocumentStore : DocumentModelStore
 {
-  private readonly string _nullDocumentName = "Null Doc";
+  private const string NULL_DOCUMENT_NAME = "Null Doc";
   private string _previousDocName;
   private readonly AutocadDocumentManager _autocadDocumentManager;
+  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   public AutocadDocumentStore(
-    JsonSerializerSettings jsonSerializerSettings,
+    IJsonSerializer jsonSerializer,
     AutocadDocumentManager autocadDocumentManager,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
-    : base(jsonSerializerSettings, true)
+    : base(jsonSerializer)
   {
     _autocadDocumentManager = autocadDocumentManager;
-    _previousDocName = _nullDocumentName;
+    _topLevelExceptionHandler = topLevelExceptionHandler;
+    _previousDocName = NULL_DOCUMENT_NAME;
 
     // POC: Will be addressed to move it into AutocadContext!
     if (Application.DocumentManager.MdiActiveDocument != null)
@@ -41,39 +42,38 @@ public class AutocadDocumentStore : DocumentModelStore
 
   private void OnDocChangeInternal(Document? doc)
   {
-    var currentDocName = doc != null ? doc.Name : _nullDocumentName;
+    var currentDocName = doc != null ? doc.Name : NULL_DOCUMENT_NAME;
     if (_previousDocName == currentDocName)
     {
       return;
     }
 
     _previousDocName = currentDocName;
-    ReadFromFile();
+    LoadState();
     OnDocumentChanged();
   }
 
-  public override void ReadFromFile()
+  protected override void LoadState()
   {
-    Models = new();
-
     // POC: Will be addressed to move it into AutocadContext!
     Document? doc = Application.DocumentManager.MdiActiveDocument;
 
     if (doc == null)
     {
+      ClearAndSave();
       return;
     }
 
     string? serializedModelCards = _autocadDocumentManager.ReadModelCards(doc);
     if (serializedModelCards == null)
     {
+      ClearAndSave();
       return;
     }
-
-    Models = Deserialize(serializedModelCards).NotNull();
+    LoadFromString(serializedModelCards);
   }
 
-  public override void WriteToFile()
+  protected override void HostAppSaveState(string modelCardState)
   {
     // POC: Will be addressed to move it into AutocadContext!
     Document doc = Application.DocumentManager.MdiActiveDocument;
@@ -83,7 +83,6 @@ public class AutocadDocumentStore : DocumentModelStore
       return;
     }
 
-    string modelCardsString = Serialize();
-    _autocadDocumentManager.WriteModelCards(doc, modelCardsString);
+    _autocadDocumentManager.WriteModelCards(doc, modelCardState);
   }
 }

@@ -1,0 +1,6 @@
+workflow: GitFlow/v1
+next-version: 3.0.0
+branches:
+  release:
+    prevent-increment:
+      when-current-commit-tagged: true
