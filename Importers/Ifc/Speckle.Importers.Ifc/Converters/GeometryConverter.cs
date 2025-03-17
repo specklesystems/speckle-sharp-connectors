@@ -5,9 +5,9 @@ using Speckle.Sdk.Models;
 namespace Speckle.Importers.Ifc.Converters;
 
 [GenerateAutoInterface]
-public class GeometryConverter(IMeshConverter meshConverter) : IGeometryConverter
+public sealed class GeometryConverter(IMeshConverter meshConverter) : IGeometryConverter
 {
-  public IList<Base> Convert(IfcGeometry geometry)
+  public List<Base> Convert(IfcGeometry geometry)
   {
     List<Base> ret = new();
     foreach (var mesh in geometry.GetMeshes())

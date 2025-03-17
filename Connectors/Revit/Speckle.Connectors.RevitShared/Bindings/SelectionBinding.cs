@@ -56,15 +56,16 @@ internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding, ID
     }
 
     var activeUIDoc = _revitContext.UIApplication.ActiveUIDocument.NotNull();
+    var doc = activeUIDoc.Document;
 
     // POC: this was also being called on shutdown
     // probably the bridge needs to be able to know if the plugin has been terminated
     // also on termination the OnSelectionChanged event needs unwinding
-    var selectionIds = activeUIDoc
-      .Selection.GetElementIds()
-      .Select(eid => activeUIDoc.Document.GetElement(eid).UniqueId.ToString())
-      .ToList();
-    return new SelectionInfo(selectionIds, $"{selectionIds.Count} objects selected.");
+    var selectionIds = activeUIDoc.Selection.GetElementIds();
+    //reduce allocates by allocating what we need.
+    var selectionUniqueIds = new List<string>(selectionIds.Count);
+    selectionUniqueIds.AddRange(selectionIds.Select(eid => doc.GetElement(eid).UniqueId));
+    return new SelectionInfo(selectionUniqueIds, $"{selectionIds.Count} objects selected.");
   }
 
   public void Dispose()
