@@ -188,70 +188,89 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       viewFilter.SetContext(_revitContext);
     }
 
-    // decomposing into elementsOnMainModel and linkedElements happens after this method call
-    // therefore, RefreshObjectIds was modified to not filter RevitLinkInstances out!
-    var selectedObjects = modelCard.SendFilter.NotNull().RefreshObjectIds();
+    // get linked models setting early to avoid unncessary work in unpacking
+    bool includeLinkedModels = _toSpeckleSettingsManager.GetLinkedModelsSetting(modelCard);
 
-    // all elements is a mix of regular elements and linked models
+    // selectedObjects = elementsOnMainModel OR elementsOnMainModel + linkedElements
+    var selectedObjects = modelCard.SendFilter.NotNull().RefreshObjectIds();
     var allElements = selectedObjects
       .Select(uid => activeUIDoc.Document.GetElement(uid))
       .Where(el => el is not null)
       .ToList();
 
-    // elementsOnMainModel shouldn't include linked instances otherwise when processing, we're still trying to convert link
+    // elementsOnMainModel shouldn't include linked instances
     var elementsOnMainModel = allElements.Where(el => el is not RevitLinkInstance).ToList();
 
-    // treat linked instances on their own. Collector focuses on decomposing the linked instances
+    // linkedModel instances
     var linkedModels = allElements.OfType<RevitLinkInstance>().ToList();
     List<DocumentToConvert> documentElementContexts = [new(null, activeUIDoc.Document, elementsOnMainModel)];
 
-    // TODO: wrap RevitLinkInstance stuff in some helper classes. This is getting long
-    foreach (var linkedModel in linkedModels)
+    // only process linked models if setting is enabled
+    if (includeLinkedModels)
     {
-      // invert transform to convert FROM host model TO linked model coordinate system (reverse of GetTotalTransform)
-      var linkedDoc = linkedModel.GetLinkDocument();
-      var transform = linkedModel.GetTotalTransform().Inverse;
-      if (linkedDoc != null)
+      // process linked models to get their elements
+      foreach (var linkedModel in linkedModels)
       {
-        List<Element> linkedElements;
-
-        // sending via 1 of 2 modes (selection / categories) for linked models is very rough atm - poc
-        // send option 1 - categories
-        if (modelCard.SendFilter is RevitCategoriesFilter categoryFilter && categoryFilter.SelectedCategories != null)
+        // invert transform to convert FROM host model TO linked model coordinate system (reverse of GetTotalTransform)
+        var linkedDoc = linkedModel.GetLinkDocument();
+        var transform = linkedModel.GetTotalTransform().Inverse;
+        if (linkedDoc != null)
         {
-          var categoryIds = categoryFilter
-            .SelectedCategories.Select(c => ElementIdHelper.GetElementId(c))
-            .Where(id => id != null)
-            .ToList();
+          List<Element> linkedElements;
 
-          if (categoryIds.Count > 0)
+          // sending via 1 of 2 modes (selection / categories) for linked models is very rough atm - poc
+          // send option 1 - category filtering processing
+          if (modelCard.SendFilter is RevitCategoriesFilter categoryFilter && categoryFilter.SelectedCategories != null)
           {
-            // use the same category filter for linked document(s)
-            using var multicategoryFilter = new ElementMulticategoryFilter(categoryIds);
-            using var collector = new FilteredElementCollector(linkedDoc);
-            linkedElements = collector
-              .WhereElementIsNotElementType()
-              .WhereElementIsViewIndependent()
-              .WherePasses(multicategoryFilter)
+            var categoryIds = categoryFilter
+              .SelectedCategories.Select(c => ElementIdHelper.GetElementId(c))
+              .Where(id => id != null)
               .ToList();
+
+            if (categoryIds.Count > 0)
+            {
+              // use the same category filter for linked document(s)
+              using var multicategoryFilter = new ElementMulticategoryFilter(categoryIds);
+              using var collector = new FilteredElementCollector(linkedDoc);
+              linkedElements = collector
+                .WhereElementIsNotElementType()
+                .WhereElementIsViewIndependent()
+                .WherePasses(multicategoryFilter)
+                .ToList();
+            }
+            else
+            {
+              // no categories selected so return empty list
+              linkedElements = new List<Element>();
+            }
           }
+          // send option 2 - selection processing
           else
           {
-            // no categories selected so return empty list
-            linkedElements = new List<Element>();
+            using var collector = new FilteredElementCollector(linkedDoc);
+            linkedElements = collector.WhereElementIsNotElementType().WhereElementIsViewIndependent().ToList();
           }
-        }
-        // send option 2 - selection
-        else
-        {
-          using var collector = new FilteredElementCollector(linkedDoc);
-          linkedElements = collector.WhereElementIsNotElementType().WhereElementIsViewIndependent().ToList();
-        }
 
-        documentElementContexts.Add(new(transform, linkedDoc, linkedElements));
+          documentElementContexts.Add(new(transform, linkedDoc, linkedElements));
+        }
+      }
+    }
+    else if (linkedModels.Count > 0)
+    {
+      // HACK ALERT: add empty document contexts for linked models when the setting is disabled
+      // this allows RevitRootObjectBuilder to generate warnings without duplicating logic
+      foreach (var linkedModel in linkedModels)
+      {
+        var linkedDoc = linkedModel.GetLinkDocument();
+        if (linkedDoc != null)
+        {
+          // add empty context so we know about the link but don't waste time processing elements
+          documentElementContexts.Add(new(linkedModel.GetTotalTransform().Inverse, linkedDoc, new List<Element>()));
+        }
       }
     }
 
+    // update ID map
     if (modelCard.SendFilter is not null && modelCard.SendFilter.IdMap is not null)
     {
       var newSelectedObjectIds = new List<string>();
