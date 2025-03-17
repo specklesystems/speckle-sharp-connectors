@@ -11,20 +11,24 @@ namespace Speckle.Converters.AutocadShared.ToHost.Geometry;
 /// Otherwise we convert it as spline (list of ADB.Entity) that switch cases according to each segment type.
 /// </summary>
 [NameAndRankValue(typeof(SOG.Polycurve), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class PolycurveToHostConverter
-  : IToHostTopLevelConverter,
-    ITypedConverter<SOG.Polycurve, List<(Entity a, Base b)>>
+public class PolycurveToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG.Polycurve, List<(Entity, Base)>>
 {
   private readonly ITypedConverter<SOG.Polycurve, ADB.Polyline> _polylineConverter;
-  private readonly ITypedConverter<SOG.Polycurve, List<(Entity, Base)>> _splineConverter;
+  private readonly ITypedConverter<SOG.Line, ADB.Line> _lineConverter;
+  private readonly ITypedConverter<SOG.Arc, ADB.Arc> _arcConverter;
+  private readonly ITypedConverter<SOG.Curve, ADB.Curve> _curveConverter;
 
   public PolycurveToHostConverter(
     ITypedConverter<SOG.Polycurve, ADB.Polyline> polylineConverter,
-    ITypedConverter<SOG.Polycurve, List<(Entity, Base)>> splineConverter
+    ITypedConverter<SOG.Line, ADB.Line> lineConverter,
+    ITypedConverter<SOG.Arc, ADB.Arc> arcConverter,
+    ITypedConverter<SOG.Curve, ADB.Curve> curveConverter
   )
   {
     _polylineConverter = polylineConverter;
-    _splineConverter = splineConverter;
+    _lineConverter = lineConverter;
+    _arcConverter = arcConverter;
+    _curveConverter = curveConverter;
   }
 
   public object Convert(Base target) => Convert((SOG.Polycurve)target);
@@ -36,7 +40,7 @@ public class PolycurveToHostConverter
 
     if (convertAsSpline || !isPlanar)
     {
-      return _splineConverter.Convert(target);
+      return ConvertAsCurveSegments(target);
     }
     else
     {
@@ -89,5 +93,35 @@ public class PolycurveToHostConverter
       }
     }
     return true;
+  }
+
+  private List<(Entity, Base)> ConvertAsCurveSegments(SOG.Polycurve target)
+  {
+    // POC: We can improve this once we have IIndex of raw converters and we can get rid of case converters?
+    // POC: Should we join entities?
+    var list = new List<ADB.Entity>();
+
+    foreach (var segment in target.segments)
+    {
+      switch (segment)
+      {
+        case SOG.Arc arc:
+          list.Add(_arcConverter.Convert(arc));
+          break;
+        case SOG.Line line:
+          list.Add(_lineConverter.Convert(line));
+          break;
+        case SOG.Polyline polyline:
+          list.Add(_polylineConverter.Convert(polyline));
+          break;
+        case SOG.Curve curve:
+          list.Add(_curveConverter.Convert(curve));
+          break;
+        default:
+          break;
+      }
+    }
+
+    return list.Zip(target.segments, (a, b) => ((ADB.Entity)a, (Base)b)).ToList();
   }
 }

@@ -10,13 +10,13 @@ public static class NodeExtensions
     var result = new Dictionary<string, object?>();
     foreach (var p in node.GetPropSets())
     {
-      if (p.NumProperties <= 0)
-        continue;
-
       var name = p.Name;
       if (string.IsNullOrWhiteSpace(name))
         name = $"#{p.Id}";
-      result[name] = ToSpeckleDictionary(p);
+
+      var dict = ToSpeckleDictionary(p);
+      if (dict.Count > 0) //Ignore any empty psets, since they can bloat the data size
+        result[name] = dict;
     }
 
     return result;
@@ -26,7 +26,16 @@ public static class NodeExtensions
   {
     var d = new Dictionary<string, object?>();
     foreach (var p in ps.GetProperties())
-      d[p.Name] = p.Value.ToJsonObject();
+    {
+      var value = p.Value.ToJsonObject();
+
+      if (value is not null)
+      {
+        // Ignoring null values since they'd otherwise bloat the data size of speckle models.
+        // Semantically, "null valued" and "not there" are different, but very few users care about the distinction.
+        d[p.Name] = value;
+      }
+    }
     return d;
   }
 }

@@ -2,12 +2,14 @@ name: .NET Build and Publish
 
 on:
   push:
-    branches: ["main", "dev", "release/*"] # Continuous delivery on every long-lived branch
+    branches: ["main", "installer-test/**"]
     tags: ["v3.*"] # Manual delivery on every 3.x tag
 
 jobs:
   build-windows:
     runs-on: windows-latest
+    env:
+      SPECKLE_VERSION: "unset"
     outputs:
       version: ${{ steps.set-version.outputs.version }}
     steps:
@@ -27,31 +29,27 @@ jobs:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
 
-      - name: ⚒️ Run GitVersion on Windows
-        run: ./build.ps1 build-server-version
-
       - name: ⚒️ Run build on Windows
-        run: ./build.ps1
+        run: ./build.ps1 zip
 
       - name: ⬆️ Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: output-${{ env.GitVersion_FullSemVer }}
+          name: output-${{ env.SPECKLE_VERSION }}
           path: output/*.*
           if-no-files-found: error
           retention-days: 1
-          compression-level: 0 # no compression
-
+          compression-level: 0 # no compression      
       - id: set-version
         name: Set version to output
-        run: echo "version=${{ env.GitVersion_FullSemVer }}" >> "$Env:GITHUB_OUTPUT"
+        run: echo "version=${{ env.SPECKLE_VERSION }}" >> "$Env:GITHUB_OUTPUT"
 
   deploy-installers:
     runs-on: ubuntu-latest
     needs: build-windows
     env:
-      IS_TAG_BUILD: ${{ github.ref_type == 'tag' }}
-      IS_RELEASE_BRANCH: ${{ startsWith(github.ref_name, 'release/') || github.ref_name == 'main'}}
+      IS_PUBLIC_RELEASE: ${{ github.ref_type == 'tag' }}
+      IS_TEST_INSTALLER: ${{ github.ref_type != 'tag' }}
     steps:
       - name: 🔫 Trigger Build Installers
         uses: ALEEF02/workflow-dispatch@v3.0.0
@@ -59,7 +57,7 @@ jobs:
           workflow: Build Installers
           repo: specklesystems/connector-installers
           token: ${{ secrets.CONNECTORS_GH_TOKEN }}
-          inputs: '{ "run_id": "${{ github.run_id }}", "version": "${{ needs.build-windows.outputs.version }}", "public_release": ${{ env.IS_TAG_BUILD }}, "store_artifacts": ${{ env.IS_RELEASE_BRANCH }} }'
+          inputs: '{ "run_id": "${{ github.run_id }}", "version": "${{ needs.build-windows.outputs.version }}", "public_release": ${{ env.IS_PUBLIC_RELEASE }}, "store_artifacts": ${{ env.IS_TEST_INSTALLER }} }'
           ref: main
           wait-for-completion: true
           wait-for-completion-interval: 10s
@@ -90,9 +88,6 @@ jobs:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
 
-      - name: ⚒️ Run GitVersion on Linux
-        run: ./build.sh build-server-version
-
       - name: ⚒️ Run tests on Linux
         run: ./build.sh test-only
 
@@ -106,5 +101,5 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Push to nuget.org
-        if: ${{ github.ref_type == 'tag' }}
+        if: (github.ref_type == 'tag')
         run: dotnet nuget push output/*.nupkg --source "https://api.nuget.org/v3/index.json" --api-key ${{secrets.CONNECTORS_NUGET_TOKEN }} --skip-duplicate
