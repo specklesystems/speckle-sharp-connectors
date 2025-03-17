@@ -12,13 +12,12 @@ const string TEST = "test";
 const string TEST_ONLY = "test-only";
 const string FORMAT = "format";
 const string ZIP = "zip";
-const string VERSION = "version";
 const string RESTORE_TOOLS = "restore-tools";
-const string BUILD_SERVER_VERSION = "build-server-version";
 const string CLEAN_LOCKS = "clean-locks";
 const string CHECK_SOLUTIONS = "check-solutions";
 const string DEEP_CLEAN = "deep-clean";
 const string DEEP_CLEAN_LOCAL = "deep-clean-local";
+const string DETECT_AFFECTED = "detect-affected";
 
 //need to pass arguments
 /*var arguments = new List<string>();
@@ -34,14 +33,14 @@ void Build(string solution, string configuration)
   Console.WriteLine();
   Console.WriteLine($"Building solution '{solution}' as '{configuration}'");
   Console.WriteLine();
-  Run("dotnet", $"build .\\{solution} --configuration {configuration} --no-restore");
+  Run("dotnet", $"build \".\\{solution}\" --configuration {configuration} --no-restore");
 }
 void Restore(string solution)
 {
   Console.WriteLine();
   Console.WriteLine($"Restoring solution '{solution}'");
   Console.WriteLine();
-  Run("dotnet", $"restore .\\{solution} --no-cache");
+  Run("dotnet", $"restore \".\\{solution}\" --no-cache");
 }
 void DeleteFiles(string pattern)
 {
@@ -126,21 +125,22 @@ Target(
 );
 
 Target(
-  VERSION,
-  async () =>
-  {
-    var (output, _) = await ReadAsync("dotnet", "minver -v w");
-    output = output.Trim();
-    Console.WriteLine($"Version: {output}");
-    Run("echo", $"\"version={output}\" >> $GITHUB_OUTPUT");
-  }
-);
-
-Target(
   RESTORE_TOOLS,
   () =>
   {
     Run("dotnet", "tool restore");
+  }
+);
+
+Target(
+  DETECT_AFFECTED,
+  DependsOn(RESTORE_TOOLS),
+  async () =>
+  {
+    foreach (var group in await Affected.GetAffectedProjectGroups())
+    {
+      Console.WriteLine("Affected project group being built: " + group.HostAppSlug);
+    }
   }
 );
 
@@ -155,20 +155,14 @@ Target(
 
 Target(
   RESTORE,
-  DependsOn(FORMAT),
+  DependsOn(FORMAT, DETECT_AFFECTED),
   Consts.Solutions,
-  s =>
+  async s =>
   {
-    Run("dotnet", $"restore {s} --locked-mode");
-  }
-);
-
-Target(
-  BUILD_SERVER_VERSION,
-  DependsOn(RESTORE_TOOLS),
-  () =>
-  {
-    Run("dotnet", "tool run dotnet-gitversion /output json /output buildserver");
+    var version = await Versions.ComputeVersion();
+    var fileVersion = await Versions.ComputeFileVersion();
+    Console.WriteLine($"Restoring: {s} - Version: {version} & {fileVersion}");
+    await RunAsync("dotnet", $"restore \"{s}\" --locked-mode");
   }
 );
 
@@ -176,14 +170,14 @@ Target(
   BUILD,
   DependsOn(RESTORE),
   Consts.Solutions,
-  s =>
+  async s =>
   {
-    var version = Environment.GetEnvironmentVariable("GitVersion_FullSemVer") ?? "3.0.0-localBuild";
-    var fileVersion = Environment.GetEnvironmentVariable("GitVersion_AssemblySemFileVer") ?? "3.0.0.0";
-    Console.WriteLine($"Version: {version} & {fileVersion}");
-    Run(
+    var version = await Versions.ComputeVersion();
+    var fileVersion = await Versions.ComputeFileVersion();
+    Console.WriteLine($"Restoring: {s} - Version: {version} & {fileVersion}");
+    await RunAsync(
       "dotnet",
-      $"build {s} -c Release --no-restore -warnaserror -p:Version={version} -p:FileVersion={fileVersion} -v:m"
+      $"build \"{s}\" -c Release --no-restore -warnaserror -p:Version={version} -p:FileVersion={fileVersion} -v:m"
     );
   }
 );
@@ -193,23 +187,26 @@ Target(CHECK_SOLUTIONS, Solutions.CompareConnectorsToLocal);
 Target(
   TEST,
   DependsOn(BUILD, CHECK_SOLUTIONS),
-  Glob.Files(".", "**/*.Tests.csproj"),
-  file =>
+  async () =>
   {
-    Run("dotnet", $"test {file} -c Release --no-build --no-restore --verbosity=minimal");
+    foreach (var s in await Affected.GetTestProjects())
+    {
+      await RunAsync("dotnet", $"test \"{s}\" -c Release --no-build --no-restore --verbosity=minimal");
+    }
   }
 );
 
+//all tests on purpose
 Target(
   TEST_ONLY,
   DependsOn(FORMAT),
   Glob.Files(".", "**/*.Tests.csproj"),
   file =>
   {
-    Run("dotnet", $"build {file} -c Release --no-incremental");
+    Run("dotnet", $"build \"{file}\" -c Release --no-incremental");
     Run(
       "dotnet",
-      $"test {file} -c Release --no-build --verbosity=minimal /p:AltCover=true /p:AltCoverAttributeFilter=ExcludeFromCodeCoverage /p:AltCoverVerbosity=Warning"
+      $"test \"{file}\" -c Release --no-build --verbosity=minimal /p:AltCover=true /p:AltCoverAttributeFilter=ExcludeFromCodeCoverage /p:AltCoverVerbosity=Warning"
     );
   }
 );
@@ -218,20 +215,20 @@ Target(
   BUILD_LINUX,
   DependsOn(FORMAT),
   Glob.Files(".", "**/Speckle.Importers.Ifc.csproj"),
-  file =>
+  async file =>
   {
-    Run("dotnet", $"restore {file} --locked-mode");
-    var version = Environment.GetEnvironmentVariable("GitVersion_FullSemVer") ?? "3.0.0-localBuild";
-    var fileVersion = Environment.GetEnvironmentVariable("GitVersion_AssemblySemFileVer") ?? "3.0.0.0";
+    await RunAsync("dotnet", $"restore \"{file}\" --locked-mode");
+    var version = await Versions.ComputeVersion();
+    var fileVersion = await Versions.ComputeFileVersion();
     Console.WriteLine($"Version: {version} & {fileVersion}");
-    Run(
+    await RunAsync(
       "dotnet",
-      $"build {file} -c Release --no-restore -warnaserror -p:Version={version} -p:FileVersion={fileVersion} -v:m"
+      $"build \"{file}\" -c Release --no-restore -warnaserror -p:Version={version} -p:FileVersion={fileVersion} -v:m"
     );
 
-    RunAsync(
+    await RunAsync(
       "dotnet",
-      $"pack {file} -c Release -o output --no-build -p:Version={version} -p:FileVersion={fileVersion} -v:m"
+      $"pack \"{file}\" -c Release -o output --no-build -p:Version={version} -p:FileVersion={fileVersion} -v:m"
     );
   }
 );
@@ -239,47 +236,54 @@ Target(
 Target(
   ZIP,
   DependsOn(TEST),
-  Consts.InstallerManifests,
-  x =>
+  async () =>
   {
-    var outputDir = Path.Combine(".", "output");
-    var slugDir = Path.Combine(outputDir, x.HostAppSlug);
-
-    Directory.CreateDirectory(outputDir);
-    Directory.CreateDirectory(slugDir);
-
-    foreach (var asset in x.Projects)
+    var version = await Versions.ComputeVersion();
+    foreach (var group in await Affected.GetAffectedProjectGroups())
     {
-      var fullPath = Path.Combine(".", asset.ProjectPath, "bin", "Release", asset.TargetName);
-      if (!Directory.Exists(fullPath))
+      Console.WriteLine($"Zipping: {group.HostAppSlug} as {version}");
+      var outputDir = Path.Combine(".", "output");
+      var slugDir = Path.Combine(outputDir, group.HostAppSlug);
+
+      Directory.CreateDirectory(outputDir);
+      Directory.CreateDirectory(slugDir);
+
+      foreach (var asset in group.Projects)
       {
-        throw new InvalidOperationException("Could not find: " + fullPath);
+        var fullPath = Path.Combine(".", asset.ProjectPath, "bin", "Release", asset.TargetName);
+        if (!Directory.Exists(fullPath))
+        {
+          throw new InvalidOperationException("Could not find: " + fullPath);
+        }
+
+        var assetName = Path.GetFileName(asset.ProjectPath);
+        var connectorDir = Path.Combine(slugDir, assetName);
+
+        Directory.CreateDirectory(connectorDir);
+        foreach (var directory in Directory.EnumerateDirectories(fullPath, "*", SearchOption.AllDirectories))
+        {
+          Directory.CreateDirectory(directory.Replace(fullPath, connectorDir));
+        }
+
+        foreach (var file in Directory.EnumerateFiles(fullPath, "*", SearchOption.AllDirectories))
+        {
+          Console.WriteLine(file);
+          File.Copy(file, file.Replace(fullPath, connectorDir), true);
+        }
       }
 
-      var assetName = Path.GetFileName(asset.ProjectPath);
-      var connectorDir = Path.Combine(slugDir, assetName);
-
-      Directory.CreateDirectory(connectorDir);
-      foreach (var directory in Directory.EnumerateDirectories(fullPath, "*", SearchOption.AllDirectories))
-      {
-        Directory.CreateDirectory(directory.Replace(fullPath, connectorDir));
-      }
-
-      foreach (var file in Directory.EnumerateFiles(fullPath, "*", SearchOption.AllDirectories))
-      {
-        Console.WriteLine(file);
-        File.Copy(file, file.Replace(fullPath, connectorDir), true);
-      }
+      var outputPath = Path.Combine(outputDir, $"{group.HostAppSlug}.zip");
+      File.Delete(outputPath);
+      Console.WriteLine($"Zipping: '{slugDir}' to '{outputPath}'");
+      ZipFile.CreateFromDirectory(slugDir, outputPath);
     }
 
-    var outputPath = Path.Combine(outputDir, $"{x.HostAppSlug}.zip");
-    File.Delete(outputPath);
-    Console.WriteLine($"Zipping: '{slugDir}' to '{outputPath}'");
-    ZipFile.CreateFromDirectory(slugDir, outputPath);
-    // Directory.Delete(slugDir, true);
+    string githubEnv = Environment.GetEnvironmentVariable("GITHUB_ENV") ?? "Unset";
+    Console.WriteLine($"GITHUB_ENV: {githubEnv}");
+    File.AppendAllText(githubEnv, $"SPECKLE_VERSION={version}{Environment.NewLine}");
   }
 );
 
-Target("default", DependsOn(FORMAT, ZIP), () => Console.WriteLine("Done!"));
+Target("default", DependsOn(TEST), () => Console.WriteLine("Done!"));
 
 await RunTargetsAndExitAsync(args).ConfigureAwait(true);

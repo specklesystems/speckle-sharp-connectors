@@ -20,7 +20,7 @@ public interface ISendConversionCache
   /// <para><b>Failure to do so correctly will result in cache poisoning and incorrect version creation (stale objects).</b></para>
   /// </summary>
   /// <param name="objectIds"></param>
-  public void EvictObjects(IEnumerable<string> objectIds);
-  public void ClearCache();
+  void EvictObjects(IEnumerable<string> objectIds);
+  void ClearCache();
   bool TryGetValue(string projectId, string applicationId, [NotNullWhen(true)] out ObjectReference? objectReference);
 }

@@ -1,73 +1,44 @@
-using System.Reflection;
-using Speckle.Importers.Ifc.Ara3D.IfcParser;
+using Speckle.Importers.Ifc.Ara3D.IfcParser.Schema;
 using Speckle.Importers.Ifc.Types;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Importers.Ifc.Converters;
 
+/// <summary>
+/// This is the main "recursive" converter for converting all IfcTypes to Speckle
+/// </summary>
 [GenerateAutoInterface]
-public class NodeConverter(IGeometryConverter geometryConverter) : INodeConverter
+public sealed class NodeConverter(
+  IDataObjectConverter dataObjectConverter,
+  IIfcSpatialStructureElementConverter spatialStructureConverter,
+  IProjectConverter projectConverter
+) : INodeConverter
 {
+  /// <summary>
+  /// Converts Ifc nodes that inherits IfcRoot class To Speckle)
+  /// </summary>
+  /// <param name="model"></param>
+  /// <param name="node"></param>
+  /// <returns></returns>
   public Base Convert(IfcModel model, IfcNode node)
   {
-    var b = new Base();
-    if (node is IfcPropSet ps)
+    if (!node.IsIfcRoot)
+      throw new ArgumentException("Expected to be an IfcRoot", paramName: nameof(node));
+
+    return node switch
     {
-      b["Name"] = ps.Name;
-      b["GlobalId"] = ps.Guid;
-    }
-
-    // https://github.com/specklesystems/speckle-server/issues/1180
-    b["ifc_type"] = node.Type;
-
-    // This is required because "speckle_type" has no setter, but is backed by a private field.
-    var baseType = typeof(Base);
-    var typeField = baseType.GetField("_type", BindingFlags.Instance | BindingFlags.NonPublic);
-    typeField?.SetValue(b, node.Type);
-
-    // Guid is null for property values, and other Ifc entities not derived from IfcRoot
-    b.applicationId = node.Guid;
-
-    // This is the express ID used to identify an entity wihtin a file.
-    b["expressID"] = node.Id;
-
-    // Even if there is no geometry, this will return an empty collection.
-    var geo = model.GetGeometry(node.Id);
-    if (geo != null)
-    {
-      var c = geometryConverter.Convert(geo);
-      if (c.Count > 0)
-        b["@displayValue"] = c;
-    }
-
-    // Create the children
-    var children = node.GetChildren().Select(x => Convert(model, x)).ToList();
-    b["@elements"] = children;
-
-    // Add the properties
-    foreach (var p in node.GetPropSets())
-    {
-      // Only when there are actually some properties.
-      if (p.NumProperties > 0)
-      {
-        var name = p.Name;
-        if (string.IsNullOrWhiteSpace(name))
-          name = $"#{p.Id}";
-        b[name] = ToSpeckleDictionary(p);
-      }
-    }
-
-    // TODO: add the "type" properties
-
-    return b;
+      IfcProject project => projectConverter.Convert(model, project, this),
+      //Note: we're only expecting IfcSite, IfcBuilding, and IfcBuildingStory's here...
+      //but I cba to add full classes + inheritance, so IfcSpatialStructureElements is the closest common class
+      IfcSpatialStructureElement structure => spatialStructureConverter.Convert(model, structure, this),
+      IfcPropSet => throw new NotImplementedException("We didn't expect IfcPropSets here!"),
+      _ => dataObjectConverter.Convert(model, node, this)
+    };
   }
 
-  public static Dictionary<string, object?> ToSpeckleDictionary(IfcPropSet ps)
+  public List<Base> ConvertChildren(IfcModel model, IfcNode node)
   {
-    var d = new Dictionary<string, object?>();
-    foreach (var p in ps.GetProperties())
-      d[p.Name] = p.Value.ToJsonObject();
-    return d;
+    return node.GetChildren().Where(x => x.IsIfcRoot).Select(x => Convert(model, x)).ToList();
   }
 }

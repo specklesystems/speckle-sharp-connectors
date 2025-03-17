@@ -17,4 +17,6 @@ public class AccountBinding : IBinding
   }
 
   public Account[] GetAccounts() => _accountManager.GetAccounts().ToArray();
+
+  public void RemoveAccount(string accountId) => _accountManager.RemoveAccount(accountId);
 }

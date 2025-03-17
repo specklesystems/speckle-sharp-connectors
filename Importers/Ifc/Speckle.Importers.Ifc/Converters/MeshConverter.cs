@@ -8,7 +8,7 @@ using Speckle.Objects.Other;
 namespace Speckle.Importers.Ifc.Converters;
 
 [GenerateAutoInterface]
-public class MeshConverter(IRenderMaterialProxyManager renderMaterialManager) : IMeshConverter
+public sealed class MeshConverter(IRenderMaterialProxyManager renderMaterialManager) : IMeshConverter
 {
   public Mesh Convert(IfcMesh mesh)
   {
