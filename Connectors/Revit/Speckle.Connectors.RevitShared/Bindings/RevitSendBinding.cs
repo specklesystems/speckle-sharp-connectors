@@ -126,6 +126,13 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
       using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
+      // Get the linked models setting early and explicitly
+      bool includeLinkedModels = _toSpeckleSettingsManager.GetLinkedModelsSetting(modelCard);
+
+      // Explicitly handle cache invalidation
+      _toSpeckleSettingsManager.InvalidateCacheIfSettingsChanged(modelCard, includeLinkedModels);
+
+      // Initialize settings with the explicitly obtained value
       using var scope = _serviceProvider.CreateScope();
       scope
         .ServiceProvider.GetRequiredService<IConverterSettingsStore<RevitConversionSettings>>()
@@ -134,7 +141,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
             _toSpeckleSettingsManager.GetDetailLevelSetting(modelCard),
             _toSpeckleSettingsManager.GetReferencePointSetting(modelCard),
             _toSpeckleSettingsManager.GetSendParameterNullOrEmptyStringsSetting(modelCard),
-            _toSpeckleSettingsManager.GetLinkedModelsSetting(modelCard)
+            includeLinkedModels
           )
         );
 
@@ -484,6 +491,30 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         "Document Switch",
         "Operations cancelled because of document swap!"
       );
+    }
+  }
+
+  private async Task<List<DocumentToConvert>> ProcessForLinkedModels(SenderModelCard modelCard)
+  {
+    // Get the setting directly
+    bool includeLinkedModels = _toSpeckleSettingsManager.GetLinkedModelsSetting(modelCard);
+
+    // Initialize converter settings at the right time
+    using (var scope = _serviceProvider.CreateScope())
+    {
+      scope
+        .ServiceProvider.GetRequiredService<IConverterSettingsStore<RevitConversionSettings>>()
+        .Initialize(
+          _revitConversionSettingsFactory.Create(
+            _toSpeckleSettingsManager.GetDetailLevelSetting(modelCard),
+            _toSpeckleSettingsManager.GetReferencePointSetting(modelCard),
+            _toSpeckleSettingsManager.GetSendParameterNullOrEmptyStringsSetting(modelCard),
+            includeLinkedModels
+          )
+        );
+
+      // Now do the element ID refreshing
+      return await RefreshElementsIdsOnSender(modelCard.NotNull());
     }
   }
 }

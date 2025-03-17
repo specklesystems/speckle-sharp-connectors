@@ -108,17 +108,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
   public bool GetLinkedModelsSetting(SenderModelCard modelCard)
   {
     var value = modelCard.Settings?.First(s => s.Id == "includeLinkedModels").Value as bool?;
-    var returnValue = value != null && value.NotNull();
-
-    if (_sendLinkedModelsCache.TryGetValue(modelCard.ModelCardId.NotNull(), out bool? previousValue))
-    {
-      if (previousValue != returnValue)
-      {
-        EvictCacheForModelCard(modelCard);
-      }
-    }
-    _sendLinkedModelsCache[modelCard.ModelCardId] = returnValue;
-    return returnValue;
+    return value != null && value.NotNull();
   }
 
   private void EvictCacheForModelCard(SenderModelCard modelCard)
@@ -185,5 +175,20 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     throw new InvalidOperationException(
       "Revit Context UI Application was null when retrieving reference point transform."
     );
+  }
+
+  public void InvalidateCacheIfSettingsChanged(SenderModelCard modelCard, bool newLinkedModelValue)
+  {
+    if (
+      _sendLinkedModelsCache.TryGetValue(modelCard.ModelCardId.NotNull(), out bool? previousValue)
+      && previousValue != newLinkedModelValue
+    )
+    {
+      // Simple cache invalidation that doesn't depend on converter settings
+      var objectIds = modelCard.SendFilter?.SelectedObjectIds ?? new List<string>();
+      _sendConversionCache.EvictObjects(objectIds);
+    }
+
+    _sendLinkedModelsCache[modelCard.ModelCardId] = newLinkedModelValue;
   }
 }
