@@ -45,22 +45,19 @@ public class RegionToHostRawConverter : ITypedConverter<SOG.Region, ADB.Region>
     {
       if (outerRegionColl[0] is ADB.Region adbRegion)
       {
-        // Create and subtract the inner loops regions
-        // iterate through each loop
+        // Create and subtract the inner loops' regions, iterate through each
         foreach (var loopSegmentCollection in loopsSegmentCollection)
         {
           // add loop segments to the ADB.DBObjectCollection
           ADB.DBObjectCollection loopDBObjColl = new();
-          foreach (var segment in loopSegmentCollection)
-          {
-            loopDBObjColl.Add(segment);
-          }
+          loopSegmentCollection.ForEach(x => loopDBObjColl.Add(x));
 
           // Same as above: calculate the inner region, method should return an array with 1 region
           using (ADB.DBObjectCollection innerRegionColl = ADB.Region.CreateFromCurves(loopDBObjColl))
           {
             if (innerRegionColl[0] is ADB.Region adbInnerRegion)
             {
+              // substract region from Boundary region
               adbRegion.BooleanOperation(ADB.BooleanOperationType.BoolSubtract, adbInnerRegion);
               adbInnerRegion.Dispose();
             }
