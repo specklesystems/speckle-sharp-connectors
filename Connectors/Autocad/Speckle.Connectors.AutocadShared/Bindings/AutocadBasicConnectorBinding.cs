@@ -79,6 +79,8 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
 
   public void RemoveModel(ModelCard model) => _store.RemoveModel(model);
 
+  public void RemoveModels(List<ModelCard> models) => _store.RemoveModels(models);
+
   public async Task HighlightObjects(IReadOnlyList<string> objectIds)
   {
     // POC: Will be addressed to move it into AutocadContext!
