@@ -40,22 +40,17 @@ public class RevitCategoriesFilter : DiscriminatedObject, ISendFilter, IRevitSen
   /// <exception cref="SpeckleSendFilterException">Whenever no view is found.</exception>
   public List<string> RefreshObjectIds()
   {
-    var objectIds = new List<string>();
     if (SelectedCategories is null)
     {
-      return objectIds;
+      return [];
     }
 
     var elementIds = SelectedCategories.Select(c => ElementIdHelper.GetElementId(c)).Where(e => e is not null).ToList();
 
     using var categoryFilter = new ElementMulticategoryFilter(elementIds);
     using var collector = new FilteredElementCollector(_doc);
-    var elements = collector
-      .WhereElementIsNotElementType()
-      .WhereElementIsViewIndependent()
-      .WherePasses(categoryFilter)
-      .ToList();
-    objectIds = elements.Select(e => e.UniqueId).ToList();
+    var elements = collector.WhereElementIsNotElementType().WhereElementIsViewIndependent().WherePasses(categoryFilter);
+    var objectIds = elements.Select(e => e.UniqueId).ToList();
     SelectedObjectIds = objectIds;
     return objectIds;
   }

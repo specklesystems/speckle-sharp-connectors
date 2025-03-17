@@ -16,17 +16,20 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly PropertiesExtractor _propertiesExtractor;
   private readonly ITypedConverter<DB.Location, Base> _locationConverter;
+  private readonly LevelExtractor _levelExtractor;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public ElementTopLevelConverterToSpeckle(
     DisplayValueExtractor displayValueExtractor,
     PropertiesExtractor propertiesExtractor,
+    LevelExtractor levelExtractor,
     ITypedConverter<DB.Location, Base> locationConverter,
     IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _displayValueExtractor = displayValueExtractor;
     _propertiesExtractor = propertiesExtractor;
+    _levelExtractor = levelExtractor;
     _locationConverter = locationConverter;
     _converterSettings = converterSettings;
   }
@@ -94,6 +97,9 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
     // get the display value
     List<Base> displayValue = _displayValueExtractor.GetDisplayValue(target);
 
+    // get level
+    string? level = _levelExtractor.GetLevel(target);
+
     // get children elements
     // this is a bespoke method by class type.
     var children = GetElementChildren(target).ToList();
@@ -107,6 +113,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
         name = name,
         type = typeName,
         family = familyName,
+        level = level,
         category = category,
         location = convertedLocation,
         elements = children,
