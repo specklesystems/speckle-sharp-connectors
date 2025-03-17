@@ -72,6 +72,8 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
 
   public void RemoveModel(ModelCard model) => _store.RemoveModel(model);
 
+  public void RemoveModels(List<ModelCard> models) => _store.RemoveModels(models);
+
   public Task HighlightObjects(IReadOnlyList<string> objectIds)
   {
     var objects = GetObjectsFromIds(objectIds);
