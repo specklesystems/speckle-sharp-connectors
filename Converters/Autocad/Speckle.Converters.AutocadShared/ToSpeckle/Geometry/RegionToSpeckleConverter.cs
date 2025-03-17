@@ -107,7 +107,8 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
   {
     ICurve convertedLoop;
 
-    // handle edge case: if the segment is a closed Arc, then use Circle conversion
+    // Handle edge case: if the segment is a closed Arc, then use Circle conversion to create a valid shape.
+    // Also, closed arcs cause errors when receiving in other host apps, like Rhino.
     if (segments.Count == 1 && segments[0] is AG.CircularArc3d arc && arc.StartAngle + arc.EndAngle == 0)
     {
       convertedLoop = _circleConverter.Convert(

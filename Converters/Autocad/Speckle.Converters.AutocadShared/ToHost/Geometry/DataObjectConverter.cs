@@ -21,6 +21,7 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
   private readonly ITypedConverter<SOG.Polycurve, List<(ADB.Entity a, Base b)>> _polycurveConverter;
   private readonly ITypedConverter<SOG.Polyline, ADB.Polyline3d> _polylineConverter;
   private readonly ITypedConverter<SOG.SubDX, List<(ADB.Entity a, Base b)>> _subDXConverter;
+  private readonly ITypedConverter<SOG.Region, ADB.Entity> _regionConverter;
 
   public DataObjectConverter(
     ITypedConverter<SOG.Arc, ADB.Arc> arcConverter,
@@ -34,7 +35,8 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
     ITypedConverter<SOG.Point, ADB.DBPoint> pointConverter,
     ITypedConverter<SOG.Polycurve, List<(ADB.Entity, Base)>> polycurveConverter,
     ITypedConverter<SOG.Polyline, ADB.Polyline3d> polylineConverter,
-    ITypedConverter<SOG.SubDX, List<(ADB.Entity a, Base b)>> subDXConverter
+    ITypedConverter<SOG.SubDX, List<(ADB.Entity a, Base b)>> subDXConverter,
+    ITypedConverter<SOG.Region, ADB.Entity> regionConverter
   )
   {
     _arcConverter = arcConverter;
@@ -49,6 +51,7 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
     _polycurveConverter = polycurveConverter;
     _polylineConverter = polylineConverter;
     _subDXConverter = subDXConverter;
+    _regionConverter = regionConverter;
   }
 
   public object Convert(Base target) => Convert((DataObject)target);
@@ -114,6 +117,9 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
         {
           yield return i;
         }
+        break;
+      case SOG.Region region:
+        yield return (_regionConverter.Convert(region), region);
         break;
 
       default:
