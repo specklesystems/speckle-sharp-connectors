@@ -67,6 +67,8 @@ public class BasicConnectorBinding : IBasicConnectorBinding
 
   public void RemoveModel(ModelCard model) => _store.RemoveModel(model);
 
+  public void RemoveModels(List<ModelCard> models) => _store.RemoveModels(models);
+
   public async Task HighlightObjects(IReadOnlyList<string> objectIds)
   {
     await HighlightObjectsOnView(objectIds.Select(x => new ObjectID(x)).ToList());
