@@ -84,15 +84,15 @@ public class RegionHatchToHostRawConverter : ITypedConverter<SOG.Region, ADB.Hat
   )
   {
     // Add the new curve object to the block table record and the transaction
-    ADB.Entity boundaryEntity = curve;
-    acBlkTblRec.AppendEntity(boundaryEntity);
-    acTrans.AddNewlyCreatedDBObject(boundaryEntity, true);
+    ADB.Entity loopEntity = curve;
+    acBlkTblRec.AppendEntity(loopEntity);
+    acTrans.AddNewlyCreatedDBObject(loopEntity, true);
 
     // Adds the entity to an object id array
-    ADB.ObjectIdCollection boundaryDBObjColl = new();
-    boundaryDBObjColl.Add(boundaryEntity.ObjectId);
+    ADB.ObjectIdCollection tempDBObjColl = new();
+    tempDBObjColl.Add(loopEntity.ObjectId);
 
-    return boundaryDBObjColl;
+    return tempDBObjColl;
   }
 
   private ADB.Hatch InitializeHatchObject(ADB.BlockTableRecord acBlkTblRec, ADB.Transaction acTrans)
