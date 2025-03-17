@@ -1,15 +1,9 @@
-﻿using static Speckle.Converter.Navisworks.Helpers.ElementSelectionHelper;
+﻿using Speckle.InterfaceGenerator;
+using static Speckle.Converter.Navisworks.Helpers.ElementSelectionHelper;
 
 namespace Speckle.Connector.Navisworks.Services;
 
-public interface IElementSelectionService
-{
-  string GetModelItemPath(NAV.ModelItem modelItem);
-  NAV.ModelItem GetModelItemFromPath(string path);
-  bool IsVisible(NAV.ModelItem modelItem);
-  IReadOnlyCollection<NAV.ModelItem> GetGeometryNodes(NAV.ModelItem modelItem);
-}
-
+[GenerateAutoInterface]
 public class ElementSelectionService : IElementSelectionService
 {
   public string GetModelItemPath(NAV.ModelItem modelItem) => ResolveModelItemToIndexPath(modelItem);
@@ -18,6 +12,5 @@ public class ElementSelectionService : IElementSelectionService
 
   public bool IsVisible(NAV.ModelItem modelItem) => IsElementVisible(modelItem);
 
-  public IReadOnlyCollection<NAV.ModelItem> GetGeometryNodes(NAV.ModelItem modelItem) =>
-    ResolveGeometryLeafNodes(modelItem);
+  public IEnumerable<NAV.ModelItem> GetGeometryNodes(NAV.ModelItem modelItem) => ResolveGeometryLeafNodes(modelItem);
 }

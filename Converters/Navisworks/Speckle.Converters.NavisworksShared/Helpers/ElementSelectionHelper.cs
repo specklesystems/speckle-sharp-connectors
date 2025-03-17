@@ -89,6 +89,6 @@ public static class ElementSelectionHelper
     return modelItem.AncestorsAndSelf.All(item => !item.IsHidden);
   }
 
-  public static List<NAV.ModelItem> ResolveGeometryLeafNodes(NAV.ModelItem modelItem) =>
-    modelItem.DescendantsAndSelf.Where(x => x.HasGeometry).ToList();
+  public static IEnumerable<NAV.ModelItem> ResolveGeometryLeafNodes(NAV.ModelItem modelItem) =>
+    modelItem.DescendantsAndSelf.Where(x => x.HasGeometry);
 }
