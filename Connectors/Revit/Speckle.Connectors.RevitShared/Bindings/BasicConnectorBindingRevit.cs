@@ -82,6 +82,8 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
   public void RemoveModel(ModelCard model) => _store.RemoveModel(model);
 
+  public void RemoveModels(List<ModelCard> models) => _store.RemoveModels(models);
+
   public async Task HighlightModel(string modelCardId)
   {
     var model = _store.GetModelById(modelCardId);
