@@ -14,6 +14,7 @@ public interface IBasicConnectorBinding : IBinding
   public void AddModel(ModelCard model);
   public void UpdateModel(ModelCard model);
   public void RemoveModel(ModelCard model);
+  public void RemoveModels(List<ModelCard> models);
 
   /// <summary>
   /// Highlights the objects attached to this sender in the host application.

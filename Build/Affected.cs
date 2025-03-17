@@ -29,79 +29,51 @@ public static class Affected
     }
   }
 
-  public static async Task<string[]> GetSolutions()
-  {
-    await ComputeAffected();
-    var projFile = Path.Combine(Root, AFFECTED_PROJECT);
-    if (File.Exists(projFile))
-    {
-      Console.WriteLine("Affected project file: " + projFile);
-      return [projFile];
-    }
-
-    Console.WriteLine("Using solutions: " + string.Join(',', Consts.Solutions));
-    return Consts.Solutions;
-  }
-
-  public static async Task<IEnumerable<string>> GetProjects()
+  public static async Task<IEnumerable<string>> GetTestProjects()
   {
     await ComputeAffected();
     var projFile = Path.Combine(Root, AFFECTED_PROJECT);
     if (File.Exists(projFile))
     {
       var references = GetAffectedProjects();
-      return references.Where(x => x.EndsWith(".Tests.csproj"));
+      return references.Where(x => x.Contains("Tests"));
     }
     return Glob.Files(Root, "**/*.Tests.csproj");
   }
 
-  public static async Task<InstallerProject[]> GetInstallerProjects()
+  public static async Task<ProjectGroup[]> GetAffectedProjectGroups()
   {
     await ComputeAffected();
     var projFile = Path.Combine(Root, AFFECTED_PROJECT);
     if (File.Exists(projFile))
     {
       var references = GetAffectedProjects().ToList();
-      var projs = new List<InstallerProject>();
-
-      foreach (var referencePath in references)
+      var groups = new List<ProjectGroup>();
+      foreach (var projectGroup in Consts.ProjectGroups)
       {
-        Console.WriteLine($"Candidate project: {referencePath}");
-      }
-
-      foreach (var manifest in Consts.InstallerManifests)
-      {
-        var assets = new List<InstallerAsset>();
         foreach (var referencePath in references)
         {
-          foreach (var proj in manifest.Projects)
+          if (projectGroup.Projects.Any(x => x.ProjectPath.Contains(referencePath)))
           {
-            if (proj.ProjectPath.Contains(referencePath))
-            {
-              assets.Add(proj);
-            }
+            groups.Add(projectGroup);
+            break;
           }
         }
-
-        if (assets.Count > 0)
-        {
-          projs.Add(manifest with { Projects = assets });
-        }
       }
 
-      foreach (var proj in projs.SelectMany(x => x.Projects))
+      foreach (var group in groups)
       {
-        Console.WriteLine("Affected project being built: " + proj);
+        Console.WriteLine("Affected project group being built: " + group.HostAppSlug);
       }
 
-      if (projs.Count > 0)
+      if (groups.Count > 0)
       {
-        return projs.ToArray();
+        return groups.ToArray();
       }
     }
 
-    Console.WriteLine("Using all installer manifests: " + string.Join(',', Consts.InstallerManifests));
-    return Consts.InstallerManifests;
+    Console.WriteLine("Using all project groups: " + string.Join(',', Consts.ProjectGroups));
+    return Consts.ProjectGroups;
   }
 
   private static bool s_affectedComputed;

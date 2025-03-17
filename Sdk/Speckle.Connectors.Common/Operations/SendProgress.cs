@@ -4,12 +4,17 @@ using Speckle.Sdk.Transports;
 namespace Speckle.Connectors.Common.Operations;
 
 [GenerateAutoInterface]
-public class SendProgress(IProgressDisplayManager progressDisplayManager) : ISendProgress
+public class SendProgressState : ISendProgressState
+{
+  public bool PreviouslyFromCacheOrSerialized { get; set; }
+  public long Total { get; set; }
+}
+
+[GenerateAutoInterface]
+public class SendProgress(IProgressDisplayManager progressDisplayManager, ISendProgressState sendProgressState)
+  : ISendProgress
 {
   private string? _previousSpeed;
-  private bool _serializeIsDone;
-  private long _serialized;
-  private long _total;
 
   public void Begin() => progressDisplayManager.Begin();
 
@@ -17,21 +22,15 @@ public class SendProgress(IProgressDisplayManager progressDisplayManager) : ISen
   {
     if (args.ProgressEvent == ProgressEvent.FromCacheOrSerialized)
     {
-      _serialized = args.Count;
-      _serializeIsDone = args.Count >= args.Total;
+      sendProgressState.PreviouslyFromCacheOrSerialized = args.Count >= args.Total;
     }
     else if (args.ProgressEvent == ProgressEvent.FindingChildren)
     {
-      _total = args.Count;
+      sendProgressState.Total = args.Count;
     }
     else if (args.ProgressEvent == ProgressEvent.UploadBytes)
     {
-      switch (args.ProgressEvent)
-      {
-        case ProgressEvent.UploadBytes:
-          _previousSpeed = progressDisplayManager.CalculateSpeed(args);
-          break;
-      }
+      _previousSpeed = progressDisplayManager.CalculateSpeed(args);
     }
     if (!progressDisplayManager.ShouldUpdate())
     {
@@ -41,7 +40,7 @@ public class SendProgress(IProgressDisplayManager progressDisplayManager) : ISen
     switch (args.ProgressEvent)
     {
       case ProgressEvent.CachedToLocal:
-        if (!_serializeIsDone)
+        if (!sendProgressState.PreviouslyFromCacheOrSerialized)
         {
           return;
         }
@@ -50,14 +49,14 @@ public class SendProgress(IProgressDisplayManager progressDisplayManager) : ISen
         );
         break;
       case ProgressEvent.UploadBytes:
-        if (!_serializeIsDone)
+        if (!sendProgressState.PreviouslyFromCacheOrSerialized)
         {
           return;
         }
         onOperationProgressed.Report(new($"Uploading... ({_previousSpeed})", null));
         break;
       case ProgressEvent.FromCacheOrSerialized:
-        var message = $"Serializing... ({_serialized} / {_total} found objects)";
+        var message = $"Serializing... ({args.Count} / {sendProgressState.Total} found objects)";
         onOperationProgressed.Report(new(message, progressDisplayManager.CalculatePercentage(args)));
         break;
     }
