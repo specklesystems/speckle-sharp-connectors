@@ -42,8 +42,11 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
   // In theory this should never really happen, but if it does
   public ModelCard GetModelById(string id)
   {
-    var model = _models.First(model => model.ModelCardId == id) ?? throw new ModelNotFoundException();
-    return model;
+    lock (_models)
+    {
+      var model = _models.FirstOrDefault(model => model.ModelCardId == id) ?? throw new ModelNotFoundException();
+      return model;
+    }
   }
 
   public void AddModel(ModelCard model)
@@ -89,6 +92,28 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
       }
       _models.RemoveAt(index);
       SaveState();
+    }
+  }
+
+  public void RemoveModels(List<ModelCard> models)
+  {
+    lock (_models)
+    {
+      var listForMissingModelCards = new List<string>();
+      foreach (var model in models)
+      {
+        var index = _models.FindIndex(m => m.ModelCardId == model.ModelCardId);
+        if (index == -1)
+        {
+          listForMissingModelCards.Add(model.ModelCardId.NotNull());
+        }
+        _models.RemoveAt(index);
+      }
+      SaveState();
+      if (listForMissingModelCards.Count > 0)
+      {
+        throw new ModelNotFoundException($"Model cards with IDs {listForMissingModelCards} not found to remove.");
+      }
     }
   }
 
