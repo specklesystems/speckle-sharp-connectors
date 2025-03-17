@@ -66,7 +66,7 @@ public class RevitRootObjectBuilder(
     foreach (var documentElementContext in documentElementContexts)
     {
       // add appropriate warnings for linked documents
-      if (documentElementContext.IsLinkedDocument && !sendWithLinkedModels)
+      if (documentElementContext.Doc.IsLinked && !sendWithLinkedModels)
       {
         results.Add(
           new(
