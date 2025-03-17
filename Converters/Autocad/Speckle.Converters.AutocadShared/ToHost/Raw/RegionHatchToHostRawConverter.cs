@@ -24,22 +24,11 @@ public class RegionHatchToHostRawConverter : ITypedConverter<SOG.Region, ADB.Hat
 
   public ADB.Hatch Convert(SOG.Region target)
   {
-    // Add converted loops to the list if segmentCollections
-    /*
-    var loopsCurves = new List<ADB.Curve>();
-    foreach (var loop in target.innerLoops)
-    {
-      loopsCurves.Add(_curveConverter.Convert(loop));
-    }
-    */
-
     // Get the current document and database
     Document acDoc = _settingsStore.Current.Document;
     ADB.Database acCurDb = acDoc.Database;
 
     // Start a transaction
-    //using (ADB.Transaction acTrans = acCurDb.TransactionManager.StartTransaction())
-    //{
     ADB.Transaction acTrans = acCurDb.TransactionManager.StartTransaction();
     // Open the Block table for read
     ADB.BlockTable? acBlkTbl = acTrans.GetObject(acCurDb.BlockTableId, ADB.OpenMode.ForRead) as ADB.BlockTable;
@@ -58,24 +47,34 @@ public class RegionHatchToHostRawConverter : ITypedConverter<SOG.Region, ADB.Hat
     // initialize Hatch, only once, with the boundary
     ADB.Hatch acHatch = InitializeHatchObject(acBlkTblRec, acTrans);
 
-    // convert boundary, add to ObjectIdCollection
-    var boundary = _curveConverter.Convert(target.boundary);
-    ADB.ObjectIdCollection boundaryDBObjColl = CreateTempObjectIdCollection(acBlkTblRec, acTrans, boundary);
-
-    // append boundary loop
-    acHatch.AppendLoop(ADB.HatchLoopTypes.Outermost, boundaryDBObjColl);
-    acHatch.EvaluateHatch(true);
-
-    //foreach (var loop in target.innerLoops)
-    //{
-    //  acHatch.AppendLoop(ADB.HatchLoopTypes.Polyline, boundaryDBObjColl);
-    //  acHatch.EvaluateHatch(true);
-    //}
+    // convert and assign boundary loop
+    ConvertAndAssignHatchLoop(acBlkTblRec, acTrans, acHatch, target.boundary, ADB.HatchLoopTypes.Outermost);
+    foreach (var _ in target.innerLoops)
+    {
+      // ConvertAndAssignHatchLoop(acBlkTblRec, acTrans, acHatch, loop, ADB.HatchLoopTypes.Polyline);
+    }
 
     // Save the new object to the database
     acTrans.Commit();
 
     return acHatch;
+  }
+
+  private void ConvertAndAssignHatchLoop(
+    ADB.BlockTableRecord acBlkTblRec,
+    ADB.Transaction acTrans,
+    ADB.Hatch hatch,
+    ICurve curve,
+    ADB.HatchLoopTypes loopType
+  )
+  {
+    // convert loop, add to ObjectIdCollection
+    var convertedCurve = _curveConverter.Convert(curve);
+    ADB.ObjectIdCollection tempDBObjColl = CreateTempObjectIdCollection(acBlkTblRec, acTrans, convertedCurve);
+
+    // append loop
+    hatch.AppendLoop(loopType, tempDBObjColl);
+    hatch.EvaluateHatch(true);
   }
 
   private ADB.ObjectIdCollection CreateTempObjectIdCollection(
