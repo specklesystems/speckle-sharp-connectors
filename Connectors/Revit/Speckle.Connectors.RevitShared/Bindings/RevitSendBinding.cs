@@ -224,15 +224,16 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         var transform = linkedModel.GetTotalTransform().Inverse;
 
         // decision about whether to process elements is made here, not in the handler
+        // only collects elements from linked models when the setting is enabled
         if (includeLinkedModels)
         {
           // handler is only responsible for element collection mechanics
           var linkedElements = _linkedModelHandler.GetLinkedModelElements(modelCard.SendFilter, linkedDoc);
           linkedDocumentContexts.Add(new(transform, linkedDoc, linkedElements));
         }
+        // ⚠️ when disabled, still adds empty contexts to maintain warning generation in RevitRootObjectBuilder
         else
         {
-          // ⚠️ HACK ALERT: empty element list when user has disabled linked model processing (in order to add warning in results of RevitRootObjectBuilder)
           linkedDocumentContexts.Add(new(transform, linkedDoc, new List<Element>()));
         }
       }

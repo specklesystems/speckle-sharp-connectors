@@ -81,6 +81,7 @@ public class RevitRootObjectBuilder(
       }
 
       // filter for valid elements
+      // if send linked models setting is disabled List<Elements> will be empty, and we won't enter foreach loop
       var elementsInTransform = new List<Element>();
       foreach (var el in documentElementContext.Elements)
       {
@@ -125,21 +126,6 @@ public class RevitRootObjectBuilder(
 
     foreach (var atomicObjectByDocumentAndTransform in atomicObjectsByDocumentAndTransform)
     {
-      // if user doesn't have send linked models enabled, don't convert ...
-      if (atomicObjectByDocumentAndTransform.Doc.IsLinked && !converterSettings.Current.SendLinkedModels)
-      {
-        results.Add(
-          new(
-            Status.WARNING,
-            atomicObjectByDocumentAndTransform.Doc.PathName, // TODO: User won't be able to highlight linked model from report.
-            typeof(RevitLinkInstance).ToString(),
-            null,
-            new SpeckleException("Enable linked model support from the settings to send this object")
-          )
-        );
-        continue;
-      }
-
       // here we do magic for changing the transform and the related document according to model. first one is always the main model.
       using (
         converterSettings.Push(currentSettings =>
