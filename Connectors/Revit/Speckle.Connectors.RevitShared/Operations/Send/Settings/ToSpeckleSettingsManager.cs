@@ -22,6 +22,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
   private readonly Dictionary<string, Transform?> _referencePointCache = new();
   private readonly Dictionary<string, bool?> _sendNullParamsCache = new();
   private readonly Dictionary<string, bool?> _sendLinkedModelsCache = new();
+  private readonly Dictionary<string, HashSet<string>> _linkedModelElementIds = new();
 
   public ToSpeckleSettingsManager(
     RevitContext revitContext,
@@ -103,12 +104,30 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     return returnValue;
   }
 
-  // NOTE: Cache invalidation currently a placeholder until we have more understanding on the sends
   // TODO: Evaluate cache invalidation for GetLinkedModelsSetting
   public bool GetLinkedModelsSetting(SenderModelCard modelCard)
   {
     var value = modelCard.Settings?.First(s => s.Id == "includeLinkedModels").Value as bool?;
-    return value != null && value.NotNull();
+    var returnValue = value != null && value.NotNull();
+
+    var modelCardId = modelCard.ModelCardId.NotNull();
+    if (_sendLinkedModelsCache.TryGetValue(modelCardId, out bool? previousValue))
+    {
+      if (previousValue != returnValue)
+      {
+        if (_linkedModelElementIds.TryGetValue(modelCardId, out var elementIds) && elementIds.Count > 0)
+        {
+          _sendConversionCache.EvictObjects(elementIds.ToList());
+        }
+        _sendLinkedModelsCache[modelCardId] = returnValue;
+      }
+    }
+    else
+    {
+      _sendLinkedModelsCache[modelCardId] = returnValue;
+    }
+
+    return returnValue;
   }
 
   private void EvictCacheForModelCard(SenderModelCard modelCard)
@@ -190,5 +209,19 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     }
 
     _sendLinkedModelsCache[modelCard.ModelCardId] = newLinkedModelValue;
+  }
+
+  public void TrackLinkedModelElements(string modelCardId, IEnumerable<string> elementIds)
+  {
+    if (!_linkedModelElementIds.TryGetValue(modelCardId, out var elementSet))
+    {
+      elementSet = new HashSet<string>();
+      _linkedModelElementIds[modelCardId] = elementSet;
+    }
+
+    foreach (var id in elementIds)
+    {
+      elementSet.Add(id);
+    }
   }
 }

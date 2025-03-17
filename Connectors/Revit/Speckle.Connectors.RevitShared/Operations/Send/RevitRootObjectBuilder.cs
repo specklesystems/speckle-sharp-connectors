@@ -162,7 +162,15 @@ public class RevitRootObjectBuilder(
             }
 
             Base converted;
-            if (sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value))
+            bool isFromLinkedModelWithTransform = atomicObjectByDocumentAndTransform.Transform != null;
+
+            // for linked model elements with transforms, we don't use the cached version (it could be instances)
+            // elements from linked models need to be converted with their specific transform
+            // TODO: CNX-1385 Use converted object and apply transformation instead of re-converting!
+            if (
+              sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value)
+              && !isFromLinkedModelWithTransform
+            )
             {
               converted = value;
               cacheHitCount++;
@@ -171,6 +179,11 @@ public class RevitRootObjectBuilder(
             {
               converted = converter.Convert(revitElement);
               converted.applicationId = applicationId;
+
+              if (isFromLinkedModelWithTransform && value != null)
+              {
+                cacheHitCount++;
+              }
             }
 
             var collection = sendCollectionManager.GetAndCreateObjectHostCollection(

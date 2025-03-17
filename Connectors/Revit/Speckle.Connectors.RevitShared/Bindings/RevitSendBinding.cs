@@ -214,6 +214,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     // get the linked models setting - this decision belongs at this level
     bool includeLinkedModels = _toSpeckleSettingsManager.GetLinkedModelsSetting(modelCard);
 
+    var linkedModelElementIds = new List<string>();
+
     // ⚠️ process linked models - RevitSendBinding controls the flow based on settings!
     // If setting not enabled, we won't unpack (see if-else block)
     if (linkedModels.Count > 0)
@@ -237,6 +239,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
           // handler is only responsible for element collection mechanics
           var linkedElements = _linkedModelHandler.GetLinkedModelElements(modelCard.SendFilter, linkedDoc);
           linkedDocumentContexts.Add(new(transform, linkedDoc, linkedElements));
+          linkedModelElementIds.AddRange(linkedElements.Select(element => element.UniqueId));
         }
         // ⚠️ when disabled, still adds empty contexts to maintain warning generation in RevitRootObjectBuilder
         // this approach (to signal that warnings are needed) relies on empty element lists which smells and is a bit of an implicit mechanism
@@ -247,6 +250,12 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         }
       }
       documentElementContexts.AddRange(linkedDocumentContexts);
+
+      // Register linked model elements with the settings manager
+      if (linkedModelElementIds.Count > 0)
+      {
+        _toSpeckleSettingsManager.TrackLinkedModelElements(modelCard.ModelCardId.NotNull(), linkedModelElementIds);
+      }
     }
 
     // update ID map
