@@ -43,6 +43,12 @@ public class RegionToHostRawConverter : ITypedConverter<SOG.Region, ADB.Region>
     // https://help.autodesk.com/view/OARX/2025/ENU/?guid=GUID-684E602E-3555-4370-BCDC-1CE594676C43
     using (ADB.DBObjectCollection outerRegionColl = ADB.Region.CreateFromCurves(boundaryDBObjColl))
     {
+      if (outerRegionColl.Count != 1)
+      {
+        throw new ConversionException(
+          $"Region conversion failed for {target}: unexpected number of shapes generated ({outerRegionColl.Count})."
+        );
+      }
       if (outerRegionColl[0] is ADB.Region adbRegion)
       {
         // Create and subtract the inner loops' regions, iterate through each
@@ -55,6 +61,12 @@ public class RegionToHostRawConverter : ITypedConverter<SOG.Region, ADB.Region>
           // Same as above: calculate the inner region, method should return an array with 1 region
           using (ADB.DBObjectCollection innerRegionColl = ADB.Region.CreateFromCurves(loopDBObjColl))
           {
+            if (innerRegionColl.Count != 1)
+            {
+              throw new ConversionException(
+                $"Region conversion failed for {target}: unexpected number of shapes generated ({innerRegionColl.Count})."
+              );
+            }
             if (innerRegionColl[0] is ADB.Region adbInnerRegion)
             {
               // substract region from Boundary region
