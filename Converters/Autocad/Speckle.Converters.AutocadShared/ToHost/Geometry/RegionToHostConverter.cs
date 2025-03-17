@@ -26,7 +26,7 @@ public class RegionToHostConverter : IToHostTopLevelConverter, ITypedConverter<S
     // Generalizing return type as Entity, because it can be a simple Region, or a Hatch
     if (target.hasHatchPattern)
     {
-      return _regionConverter.Convert(target);
+      return _regionHatchConverter.Convert(target);
     }
     return _regionConverter.Convert(target);
   }
