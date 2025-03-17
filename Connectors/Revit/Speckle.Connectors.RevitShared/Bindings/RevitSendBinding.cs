@@ -17,7 +17,6 @@ using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
-using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.RevitShared.Operations.Send.Filters;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
@@ -42,6 +41,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly IRevitConversionSettingsFactory _revitConversionSettingsFactory;
   private readonly ISpeckleApplication _speckleApplication;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly LinkedModelHandler _linkedModelHandler;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -65,7 +65,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     ElementUnpacker elementUnpacker,
     IRevitConversionSettingsFactory revitConversionSettingsFactory,
     ISpeckleApplication speckleApplication,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    LinkedModelHandler linkedModelHandler
   )
     : base("sendBinding", bridge)
   {
@@ -82,6 +83,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _revitConversionSettingsFactory = revitConversionSettingsFactory;
     _speckleApplication = speckleApplication;
     _topLevelExceptionHandler = topLevelExceptionHandler;
+    _linkedModelHandler = linkedModelHandler;
 
     Commands = new SendBindingUICommands(bridge);
     // TODO expiry events
@@ -188,70 +190,59 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       viewFilter.SetContext(_revitContext);
     }
 
-    // decomposing into elementsOnMainModel and linkedElements happens after this method call
-    // therefore, RefreshObjectIds was modified to not filter RevitLinkInstances out!
     var selectedObjects = modelCard.SendFilter.NotNull().RefreshObjectIds();
 
-    // all elements is a mix of regular elements and linked models
     var allElements = selectedObjects
       .Select(uid => activeUIDoc.Document.GetElement(uid))
       .Where(el => el is not null)
       .ToList();
 
-    // elementsOnMainModel shouldn't include linked instances otherwise when processing, we're still trying to convert link
+    // split elements between main model and linked models
     var elementsOnMainModel = allElements.Where(el => el is not RevitLinkInstance).ToList();
-
-    // treat linked instances on their own. Collector focuses on decomposing the linked instances
     var linkedModels = allElements.OfType<RevitLinkInstance>().ToList();
+
+    // create context for main document elements
     List<DocumentToConvert> documentElementContexts = [new(null, activeUIDoc.Document, elementsOnMainModel)];
 
-    // TODO: wrap RevitLinkInstance stuff in some helper classes. This is getting long
-    foreach (var linkedModel in linkedModels)
+    // get the linked models setting - this decision belongs at this level
+    bool includeLinkedModels = _toSpeckleSettingsManager.GetLinkedModelsSetting(modelCard);
+
+    // ⚠️ process linked models - RevitSendBinding controls the flow based on settings!
+    // If setting not enabled, we won't unpack (see if-else block)
+    if (linkedModels.Count > 0)
     {
-      // invert transform to convert FROM host model TO linked model coordinate system (reverse of GetTotalTransform)
-      var linkedDoc = linkedModel.GetLinkDocument();
-      var transform = linkedModel.GetTotalTransform().Inverse;
-      if (linkedDoc != null)
+      var linkedDocumentContexts = new List<DocumentToConvert>();
+
+      foreach (var linkedModel in linkedModels)
       {
-        List<Element> linkedElements;
-
-        // sending via 1 of 2 modes (selection / categories) for linked models is very rough atm - poc
-        // send option 1 - categories
-        if (modelCard.SendFilter is RevitCategoriesFilter categoryFilter && categoryFilter.SelectedCategories != null)
+        var linkedDoc = linkedModel.GetLinkDocument();
+        if (linkedDoc == null)
         {
-          var categoryIds = categoryFilter
-            .SelectedCategories.Select(c => ElementIdHelper.GetElementId(c))
-            .Where(id => id != null)
-            .ToList();
-
-          if (categoryIds.Count > 0)
-          {
-            // use the same category filter for linked document(s)
-            using var multicategoryFilter = new ElementMulticategoryFilter(categoryIds);
-            using var collector = new FilteredElementCollector(linkedDoc);
-            linkedElements = collector
-              .WhereElementIsNotElementType()
-              .WhereElementIsViewIndependent()
-              .WherePasses(multicategoryFilter)
-              .ToList();
-          }
-          else
-          {
-            // no categories selected so return empty list
-            linkedElements = new List<Element>();
-          }
+          continue;
         }
-        // send option 2 - selection
+
+        var transform = linkedModel.GetTotalTransform().Inverse;
+
+        // decision about whether to process elements is made here, not in the handler
+        // only collects elements from linked models when the setting is enabled
+        if (includeLinkedModels)
+        {
+          // handler is only responsible for element collection mechanics
+          var linkedElements = _linkedModelHandler.GetLinkedModelElements(modelCard.SendFilter, linkedDoc);
+          linkedDocumentContexts.Add(new(transform, linkedDoc, linkedElements));
+        }
+        // ⚠️ when disabled, still adds empty contexts to maintain warning generation in RevitRootObjectBuilder
+        // this approach (to signal that warnings are needed) relies on empty element lists which smells and is a bit of an implicit mechanism
+        // buuuuut, it works (for now 👀).
         else
         {
-          using var collector = new FilteredElementCollector(linkedDoc);
-          linkedElements = collector.WhereElementIsNotElementType().WhereElementIsViewIndependent().ToList();
+          linkedDocumentContexts.Add(new(transform, linkedDoc, new List<Element>()));
         }
-
-        documentElementContexts.Add(new(transform, linkedDoc, linkedElements));
       }
+      documentElementContexts.AddRange(linkedDocumentContexts);
     }
 
+    // update ID map
     if (modelCard.SendFilter is not null && modelCard.SendFilter.IdMap is not null)
     {
       var newSelectedObjectIds = new List<string>();
