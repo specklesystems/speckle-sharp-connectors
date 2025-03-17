@@ -126,7 +126,7 @@ public sealed class IfcGraph
       else if (inst.Type.Equals("IFCELEMENTQUANTITY"))
       {
         var e = d.GetInstanceWithData(inst);
-        AddNode(new IfcPropSet(this, e, (StepList)e[5]));
+        AddNode(new IfcPropSet(this, e, e[5] as StepList));
       }
       // Aggregate relation
       else if (inst.Type.Equals("IFCRELAGGREGATES"))
