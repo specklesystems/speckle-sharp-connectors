@@ -36,7 +36,7 @@ public class HatchToSpeckleConverter : ITypedConverter<RG.Hatch, SOG.Region>
     ICurve boundary = _curveConverter.Convert(rhinoBoundary);
     List<ICurve> innerLoops = rhinoLoops.Select(x => _curveConverter.Convert(x)).ToList();
 
-    // create display mesh from region loops
+    // create display mesh from region by converting to brep first
     var brep = RG.Brep.TryConvertBrep(target);
     var displayMesh = GetBrepDisplayMesh(brep);
     var displayValue = new List<SOG.Mesh>();
