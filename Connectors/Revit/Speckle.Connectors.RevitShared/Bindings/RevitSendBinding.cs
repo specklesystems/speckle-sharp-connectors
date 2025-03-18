@@ -257,6 +257,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       {
         _toSpeckleSettingsManager.TrackLinkedModelElements(modelCard.ModelCardId.NotNull(), linkedModelElementIds);
       }
+      documentElementContexts.AddRange(linkedDocumentContexts);
     }
 
     // update ID map
