@@ -22,6 +22,13 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
   private readonly Dictionary<string, Transform?> _referencePointCache = new();
   private readonly Dictionary<string, bool?> _sendNullParamsCache = new();
   private readonly Dictionary<string, bool?> _sendLinkedModelsCache = new();
+
+  /// This tracking is necessary because linked model elements exist in separate documents
+  /// and aren't automatically tracked by the main selection mechanism.
+  /// Unlike main model elements, linked elements require special handling to:
+  /// 1. Access them across document boundaries
+  /// 2. Track them for cache invalidation when settings change
+  /// 3. Manage their inclusion/exclusion based on user settings
   private readonly Dictionary<string, HashSet<string>> _linkedModelElementIds = new();
 
   public ToSpeckleSettingsManager(
@@ -107,27 +114,24 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
   // TODO: Evaluate cache invalidation for GetLinkedModelsSetting
   public bool GetLinkedModelsSetting(SenderModelCard modelCard)
   {
-    var value = modelCard.Settings?.First(s => s.Id == "includeLinkedModels").Value as bool?;
-    var returnValue = value != null && value.NotNull();
-
     var modelCardId = modelCard.ModelCardId.NotNull();
+    var value = modelCard.Settings?.First(s => s.Id == "includeLinkedModels").Value as bool?;
+    var newValue = value != null && value.NotNull();
+
     if (_sendLinkedModelsCache.TryGetValue(modelCardId, out bool? previousValue))
     {
-      if (previousValue != returnValue)
+      if (previousValue != newValue)
       {
-        if (_linkedModelElementIds.TryGetValue(modelCardId, out var elementIds) && elementIds.Count > 0)
+        // Handle setting change
+        if (!newValue && _linkedModelElementIds.TryGetValue(modelCardId, out var elementIds))
         {
           _sendConversionCache.EvictObjects(elementIds.ToList());
         }
-        _sendLinkedModelsCache[modelCardId] = returnValue;
       }
     }
-    else
-    {
-      _sendLinkedModelsCache[modelCardId] = returnValue;
-    }
 
-    return returnValue;
+    _sendLinkedModelsCache[modelCardId] = newValue;
+    return newValue;
   }
 
   private void EvictCacheForModelCard(SenderModelCard modelCard)
@@ -196,29 +200,40 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     );
   }
 
+  /// <summary>
+  /// Invalidates caches if the linked models setting has changed.
+  /// </summary>
+  /// <remarks>
+  /// Ensures that when the linked models setting changes, relevant caches are invalidated
+  /// to prevent stale data from being used in subsequent operations.
+  /// </remarks>
   public void InvalidateCacheIfSettingsChanged(SenderModelCard modelCard, bool newLinkedModelValue)
   {
-    var modelCardId = modelCard.ModelCardId.NotNull();
-
     if (
-      _sendLinkedModelsCache.TryGetValue(modelCardId, out bool? previousValue)
+      _sendLinkedModelsCache.TryGetValue(modelCard.ModelCardId.NotNull(), out bool? previousValue)
       && previousValue != newLinkedModelValue
     )
     {
-      // If we're disabling linked models, evict all previously tracked linked model elements
-      if (!newLinkedModelValue && _linkedModelElementIds.TryGetValue(modelCardId, out var linkedElementIds))
-      {
-        _sendConversionCache.EvictObjects(linkedElementIds.ToList());
-      }
-
-      // Always invalidate the direct selection objects when the setting changes
+      // Simple cache invalidation that doesn't depend on converter settings
       var objectIds = modelCard.SendFilter?.SelectedObjectIds ?? new List<string>();
       _sendConversionCache.EvictObjects(objectIds);
     }
 
-    _sendLinkedModelsCache[modelCardId] = newLinkedModelValue;
+    _sendLinkedModelsCache[modelCard.ModelCardId] = newLinkedModelValue;
   }
 
+  /// <summary>
+  /// Tracks linked model element IDs for a specific model card.
+  /// </summary>
+  /// <remarks>
+  /// TODO: 💩 this method arguably belongs in LinkedModelHandler?
+  /// since it's related to linked model management rather than settings management.
+  /// refactor this responsibility to the LinkedModelHandler class in the future.
+  /// main model elements don't need explicit tracking because they're directly
+  /// referenced in the model card's send filter. Linked model elements need
+  /// explicit tracking because they're accessed through the linked document
+  /// context and must be managed separately when settings change.
+  /// </remarks>
   public void TrackLinkedModelElements(string modelCardId, IEnumerable<string> elementIds)
   {
     if (!_linkedModelElementIds.TryGetValue(modelCardId, out var elementSet))
@@ -233,5 +248,16 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     }
   }
 
+  /// <summary>
+  /// Clears tracked linked model element IDs for a specific model card.
+  /// </summary>
+  /// <param name="modelCardId">The ID of the model card to clear tracking for</param>
+  /// <remarks>
+  /// Called when starting a new send operation to ensure fresh tracking of linked
+  /// model elements. This is especially important when switching between send modes
+  /// (category/selection) or toggling the linked models setting.
+  /// TODO: 💩 this method arguably belongs in LinkedModelHandler
+  /// as it's directly related to linked model management rather than settings.
+  /// </remarks>
   public void ClearTrackedLinkedModelElements(string modelCardId) => _linkedModelElementIds.Remove(modelCardId);
 }

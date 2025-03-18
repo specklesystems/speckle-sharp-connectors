@@ -126,14 +126,20 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
       using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
 
-      // Get the linked models setting early and explicitly
+      // TODO: 🤨 this is just poc! we need a more elegant solution here
+      // get the linked models setting early and explicitly
+      // This is needed before clearing tracked elements and initializing the scope
+      // Unlike other settings, the linked models setting affects which elements are collected,
+      // not just how they're converted, requiring this special handling
       bool includeLinkedModels = _toSpeckleSettingsManager.GetLinkedModelsSetting(modelCard);
       _toSpeckleSettingsManager.ClearTrackedLinkedModelElements(modelCard.ModelCardId.NotNull());
 
-      // Explicitly handle cache invalidation
+      // TODO: 🤨 this is just poc! we need a more elegant solution here
+      // explicitly handle cache invalidation
+      // this must happen before creating the conversion scope
       _toSpeckleSettingsManager.InvalidateCacheIfSettingsChanged(modelCard, includeLinkedModels);
 
-      // Initialize settings with the explicitly obtained value
+      // initialize settings with the explicitly obtained value
       using var scope = _serviceProvider.CreateScope();
       scope
         .ServiceProvider.GetRequiredService<IConverterSettingsStore<RevitConversionSettings>>()
