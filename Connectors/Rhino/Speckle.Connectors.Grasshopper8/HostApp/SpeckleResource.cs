@@ -1,4 +1,4 @@
-﻿using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Common;
@@ -9,6 +9,8 @@ namespace Speckle.Connectors.Grasshopper8.HostApp;
 public abstract record SpeckleUrlModelResource(string Server, string ProjectId)
 {
   public abstract Task<ReceiveInfo> GetReceiveInfo(Client client, CancellationToken cancellationToken = default);
+
+  public abstract Task<SendInfo> GetSendInfo(Client client, CancellationToken cancellationToken = default);
 }
 
 public record SpeckleUrlLatestModelVersionResource(string Server, string ProjectId, string ModelId)
@@ -35,6 +37,21 @@ public record SpeckleUrlLatestModelVersionResource(string Server, string Project
 
     return info;
   }
+
+  public override async Task<SendInfo> GetSendInfo(Client client, CancellationToken cancellationToken = default)
+  {
+    // We don't care about the return info, we just want to be sure we have access and everything exists.
+    await client.Project.Get(ProjectId, cancellationToken).ConfigureAwait(false);
+    await client.Model.Get(ModelId, ProjectId, cancellationToken).ConfigureAwait(false);
+
+    return new SendInfo(
+      client.Account.id,
+      new Uri(Server),
+      ProjectId,
+      ModelId,
+      "Grasshopper8" // TODO: Grab from the right place!
+    );
+  }
 }
 
 public record SpeckleUrlModelVersionResource(string Server, string ProjectId, string ModelId, string VersionId)
@@ -59,11 +76,29 @@ public record SpeckleUrlModelVersionResource(string Server, string ProjectId, st
 
     return info;
   }
+
+  public override async Task<SendInfo> GetSendInfo(Client client, CancellationToken cancellationToken = default)
+  {
+    // We don't care about the return info, we just want to be sure we have access and everything exists.
+    await client.Project.Get(ProjectId, cancellationToken).ConfigureAwait(false);
+    await client.Model.Get(ModelId, ProjectId, cancellationToken).ConfigureAwait(false);
+
+    return new SendInfo(
+      client.Account.id,
+      new Uri(Server),
+      ProjectId,
+      ModelId,
+      "Grasshopper8" // TODO: Grab from the right place!
+    );
+  }
 }
 
 public record SpeckleUrlModelObjectResource(string Server, string ProjectId, string ObjectId)
   : SpeckleUrlModelResource(Server, ProjectId)
 {
   public override Task<ReceiveInfo> GetReceiveInfo(Client client, CancellationToken cancellationToken = default) =>
+    throw new NotImplementedException("Object Resources are not supported yet");
+
+  public override Task<SendInfo> GetSendInfo(Client client, CancellationToken cancellationToken = default) =>
     throw new NotImplementedException("Object Resources are not supported yet");
 }
