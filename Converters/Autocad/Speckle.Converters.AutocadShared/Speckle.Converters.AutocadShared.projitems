@@ -33,7 +33,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\EllipseToHostConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\PolycurveToHostConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\RegionToHostConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\RegionHatchToHostRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\RegionToHostRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\ICurveToHostRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\ArcToHostRawConverter.cs" />
@@ -48,7 +47,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\PointToHostRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\PointToHostConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\ArcToSpeckleConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\HatchToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\RegionToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\SurfaceToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\Solid3dToSpeckleConverter.cs" />
