@@ -48,7 +48,7 @@ public class RegionHatchToHostRawConverter : ITypedConverter<SOG.Region, ADB.Hat
     ADB.Hatch acHatch = InitializeHatchObject(acBlkTblRec, acTrans);
 
     // convert and assign boundary loop
-    ConvertAndAssignHatchLoop(acBlkTblRec, acTrans, acHatch, target.boundary, ADB.HatchLoopTypes.Outermost);
+    ConvertAndAssignHatchLoop(acBlkTblRec, acTrans, acHatch, target.boundary, ADB.HatchLoopTypes.External);
     foreach (var _ in target.innerLoops)
     {
       // ConvertAndAssignHatchLoop(acBlkTblRec, acTrans, acHatch, loop, ADB.HatchLoopTypes.Polyline);
