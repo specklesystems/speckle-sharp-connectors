@@ -27,6 +27,7 @@ public class SpeckleObject : Base
       case Mesh m:
         args.Display.DrawMeshShaded(m, isSelected ? args.ShadeMaterial_Selected : args.ShadeMaterial);
         break;
+
       case Brep b:
         args.Display.DrawBrepShaded(b, isSelected ? args.ShadeMaterial_Selected : args.ShadeMaterial);
         args.Display.DrawBrepWires(
@@ -35,12 +36,14 @@ public class SpeckleObject : Base
           args.DefaultCurveThickness
         );
         break;
+
       case Extrusion e:
         args.Display.DrawMeshShaded(
           e.GetMesh(MeshType.Any),
           isSelected ? args.ShadeMaterial_Selected : args.ShadeMaterial
         );
         break;
+
       case SubD d:
         args.Display.DrawSubDShaded(d, isSelected ? args.ShadeMaterial_Selected : args.ShadeMaterial);
         args.Display.DrawSubDWires(
@@ -49,8 +52,25 @@ public class SpeckleObject : Base
           args.DefaultCurveThickness
         );
         break;
+
       case Curve c:
         args.Display.DrawCurve(c, isSelected ? args.WireColour_Selected : args.WireColour, args.DefaultCurveThickness);
+        break;
+
+      case Rhino.Geometry.Point p:
+        args.Display.DrawPoint(p.Location, isSelected ? args.WireColour_Selected : args.WireColour);
+        break;
+
+      case PointCloud pc:
+        args.Display.DrawPointCloud(pc, 1, isSelected ? args.WireColour_Selected : args.WireColour);
+        break;
+
+      case Hatch h:
+        args.Display.DrawHatch(
+          h,
+          isSelected ? args.WireColour_Selected : args.WireColour,
+          isSelected ? args.WireColour_Selected : args.WireColour
+        );
         break;
     }
   }
@@ -75,6 +95,15 @@ public class SpeckleObject : Base
         break;
       case Curve c:
         display.DrawCurve(c, material.Diffuse);
+        break;
+      case Rhino.Geometry.Point p:
+        display.DrawPoint(p.Location, material.Diffuse);
+        break;
+      case PointCloud pc:
+        display.DrawPointCloud(pc, 1, material.Diffuse);
+        break;
+      case Hatch h:
+        display.DrawHatch(h, material.Diffuse, material.Diffuse);
         break;
     }
   }
