@@ -198,17 +198,25 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 
   public void InvalidateCacheIfSettingsChanged(SenderModelCard modelCard, bool newLinkedModelValue)
   {
+    var modelCardId = modelCard.ModelCardId.NotNull();
+
     if (
-      _sendLinkedModelsCache.TryGetValue(modelCard.ModelCardId.NotNull(), out bool? previousValue)
+      _sendLinkedModelsCache.TryGetValue(modelCardId, out bool? previousValue)
       && previousValue != newLinkedModelValue
     )
     {
-      // Simple cache invalidation that doesn't depend on converter settings
+      // If we're disabling linked models, evict all previously tracked linked model elements
+      if (!newLinkedModelValue && _linkedModelElementIds.TryGetValue(modelCardId, out var linkedElementIds))
+      {
+        _sendConversionCache.EvictObjects(linkedElementIds.ToList());
+      }
+
+      // Always invalidate the direct selection objects when the setting changes
       var objectIds = modelCard.SendFilter?.SelectedObjectIds ?? new List<string>();
       _sendConversionCache.EvictObjects(objectIds);
     }
 
-    _sendLinkedModelsCache[modelCard.ModelCardId] = newLinkedModelValue;
+    _sendLinkedModelsCache[modelCardId] = newLinkedModelValue;
   }
 
   public void TrackLinkedModelElements(string modelCardId, IEnumerable<string> elementIds)
@@ -224,4 +232,6 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
       elementSet.Add(id);
     }
   }
+
+  public void ClearTrackedLinkedModelElements(string modelCardId) => _linkedModelElementIds.Remove(modelCardId);
 }
