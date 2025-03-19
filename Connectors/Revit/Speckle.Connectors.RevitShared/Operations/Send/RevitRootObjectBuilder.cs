@@ -179,11 +179,6 @@ public class RevitRootObjectBuilder(
             {
               converted = converter.Convert(revitElement);
               converted.applicationId = applicationId;
-
-              if (isFromLinkedModelWithTransform && value != null)
-              {
-                cacheHitCount++;
-              }
             }
 
             var collection = sendCollectionManager.GetAndCreateObjectHostCollection(
