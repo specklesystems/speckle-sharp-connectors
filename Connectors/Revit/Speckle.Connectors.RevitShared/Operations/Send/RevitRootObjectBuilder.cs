@@ -114,7 +114,9 @@ public class RevitRootObjectBuilder(
         converterSettings.Push(currentSettings => currentSettings with { Document = filteredDocumentToConvert.Doc })
       )
       {
-        var atomicObjects = elementUnpacker.UnpackSelectionForConversion(filteredDocumentToConvert.Elements).ToList();
+        var atomicObjects = elementUnpacker
+          .UnpackSelectionForConversion(filteredDocumentToConvert.Elements, filteredDocumentToConvert.Doc)
+          .ToList();
         atomicObjectsByDocumentAndTransform.Add(filteredDocumentToConvert with { Elements = atomicObjects });
         atomicObjectCount += atomicObjects.Count;
       }
@@ -162,14 +164,35 @@ public class RevitRootObjectBuilder(
             }
 
             Base converted;
-            if (sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value))
+
+            // when you have multiple instances of same linked model placed at different locations caching mechanism doesn't know about this
+            // cache only checks id, not the transformation associated with the object
+            // then, only elements from the first instance of linked model would be converted. others just reuse cached objects
+            // below if-else blocks are just temporary. fix part of scope of below ticket
+            // TODO: CNX-1385. Modify caching mechanism to be transformation-aware.
+            // 1. Modify cache key to include transformation information (only if != null)
+            // 2. Composite key ${transformationKey}_{applicationId}
+            // 3. Cache composite key
+            // 4. If transformation information, take original converted and ApplyTransformation()
+
+            bool isFromLinkedModelWithTransform = atomicObjectByDocumentAndTransform.Transform != null;
+            if (
+              sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value)
+              && !isFromLinkedModelWithTransform
+            ) // TODO: CNX-1385: Remove !isFromLinkedModelWithTransform conditional. Hacky.
             {
               converted = value;
               cacheHitCount++;
+
+              // Psuedo-code below. Idea for avoiding reconverting: apply transformation if needed
+              // if (atomicObjectByDocumentAndTransform.Transform != null)
+              // {
+              //   converted = ApplyTransformation(converted, atomicObjectByDocumentAndTransform.Transform);
+              // }
             }
             else
             {
-              converted = converter.Convert(revitElement);
+              converted = converter.Convert(revitElement); // TODO: CNX-1385. Re-converting objects here from linked models (temp. solution)
               converted.applicationId = applicationId;
             }
 
