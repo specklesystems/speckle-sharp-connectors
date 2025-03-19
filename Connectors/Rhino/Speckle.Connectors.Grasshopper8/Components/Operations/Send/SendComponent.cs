@@ -31,16 +31,14 @@ public class SendComponentOutput(SpeckleUrlModelResource resource)
   public SpeckleUrlModelResource Resource { get; } = resource;
 }
 
-public class SendComponent()
-  : SpeckleScopedTaskCapableComponent<SendComponentInput, SendComponentOutput>(
-    "Send",
-    "SS",
-    "Speckle Send",
-    "Speckle",
-    "Operations"
-  )
+public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInput, SendComponentOutput>
 {
+  public SendComponent()
+    : base("Send from Speckle", "SFS", "Send objects to speckle", "Speckle", "Operations") { }
+
   public override Guid ComponentGuid => new("0CF0D173-BDF0-4AC2-9157-02822B90E9FB");
+
+  protected override Bitmap Icon => BitmapBuilder.CreateSquareIconBitmap("S");
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
@@ -115,7 +113,7 @@ public class SendComponent()
     using var client = clientFactory.Create(account);
     var sendInfo = await input.Resource.GetSendInfo(client, cancellationToken).ConfigureAwait(false);
     var result = await sendOperation
-      .Execute((IReadOnlyList<SpeckleCollectionGoo>)input.Input, sendInfo, progress, cancellationToken)
+      .Execute(new List<SpeckleCollectionGoo>() { input.Input }, sendInfo, progress, cancellationToken)
       .ConfigureAwait(false);
 
     return new SendComponentOutput(

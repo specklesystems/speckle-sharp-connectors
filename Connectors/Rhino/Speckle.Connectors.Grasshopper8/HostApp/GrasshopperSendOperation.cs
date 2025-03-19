@@ -1,6 +1,7 @@
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Grasshopper8.Parameters;
+using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.Grasshopper8.HostApp;
 
@@ -14,17 +15,38 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
   )
   {
     // TODO: Send info is used in other connectors to get the project ID to populate the SendConversionCache
-
     Console.WriteLine($"Send Info {sendInfo}");
 
     // set the input collection name to "Grasshopper Model" and version
     var rootModel = input[0].Value;
     rootModel.name = "Grasshopper Model";
-    rootModel["version"] = 3;
+
+    // reconstruct the input collection by substituting all of the objectgoos with base
+    ReplaceAndRebuild(rootModel);
 
     // TODO: Not getting any conversion results yet
     var result = new RootObjectBuilderResult(rootModel, []);
 
     return Task.FromResult(result);
+  }
+
+  private void ReplaceAndRebuild(Collection c)
+  {
+    // Iterate over the current collection's elements
+    for (int i = 0; i < c.elements.Count; i++)
+    {
+      var element = c.elements[i];
+
+      if (element is Collection collection)
+      {
+        // If it's a Collection, recursively replace its elements
+        ReplaceAndRebuild(collection);
+      }
+      else if (element is SpeckleObject so)
+      {
+        // If it's not a Collection, replace the non-Collection element
+        c.elements[i] = so.Base;
+      }
+    }
   }
 }

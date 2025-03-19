@@ -15,6 +15,8 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
 {
   public override Guid ComponentGuid => new("69BC8CFB-A72F-4A83-9263-F3399DDA2E5E");
 
+  protected override Bitmap Icon => BitmapBuilder.CreateCircleIconBitmap("eC");
+
   public ExpandCollection()
     : base("Expand Collection", "expand", "Expands a new collection", "Speckle", "Collections") { }
 

@@ -4,6 +4,7 @@ using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Connectors.Grasshopper8.Parameters;
 using Speckle.Converters.Rhino;
@@ -39,6 +40,7 @@ public class PriorityLoader : GH_AssemblyPriority
       // send
       services.AddTransient<IRootObjectBuilder<SpeckleCollectionGoo>, GrasshopperRootObjectBuilder>();
       services.AddTransient<SendOperation<SpeckleCollectionGoo>>();
+      services.AddSingleton<IThreadContext>(new DefaultThreadContext());
 
       Container = services.BuildServiceProvider();
       return GH_LoadingInstruction.Proceed;
