@@ -25,18 +25,21 @@ public class ElementUnpacker
   /// This method will also "pack" curtain walls if necessary (ie, if mullions or panels are selected without their parent curtain wall, they are sent independently; if the parent curtain wall is selected, they will be removed out as the curtain wall will include all its children).
   /// </summary>
   /// <param name="selectionElements"></param>
+  /// <param name="doc"> We use the nullable document (happiness level 5/10) for the sake of linked models - bc we use this function in 2 different places <br/>
+  /// 1- RootObjectBuilder with linked model document - otherwise we cannot unpack elements from correct document.<br/>
+  /// 2- Evicting the cache while introducing the settings</param>
   /// <returns></returns>
-  public IEnumerable<Element> UnpackSelectionForConversion(IEnumerable<Element> selectionElements)
+  public IEnumerable<Element> UnpackSelectionForConversion(IEnumerable<Element> selectionElements, Document? doc = null)
   {
     // Note: steps kept separate on purpose.
     // Step 1: unpack groups
-    var atomicObjects = UnpackElements(selectionElements);
+    var atomicObjects = UnpackElements(selectionElements, doc);
 
     // Step 2: pack curtain wall elements, once we know the full extent of our flattened item list.
     // The behaviour we're looking for:
     // If parent wall is part of selection, does not select individual elements out. Otherwise, selects individual elements (Panels, Mullions) as atomic objects.
     // NOTE: this also conditionally "packs" stacked wall elements if their parent is present. See detailed note inside the function.
-    return PackCurtainWallElementsAndStackedWalls(atomicObjects);
+    return PackCurtainWallElementsAndStackedWalls(atomicObjects, doc);
   }
 
   /// <summary>
@@ -54,10 +57,17 @@ public class ElementUnpacker
     return UnpackSelectionForConversion(docElements).Select(o => o.UniqueId).ToList();
   }
 
-  private List<Element> UnpackElements(IEnumerable<Element> elements)
+  // We use the nullable document (happiness level 5/10) for the sake of linked models - bc we use this function in 2 different places
+  // 1- RootObjectBuilder with linked model document - otherwise we cannot unpack elements from correct document.
+  // 2- Evicting the cache while introducing the settings
+  private List<Element> UnpackElements(IEnumerable<Element> elements, Document? doc = null)
   {
     var unpackedElements = new List<Element>(); // note: could be a hashset/map so we prevent duplicates (?)
-    var doc = _converterSettings.Current.Document;
+    if (doc == null)
+    {
+      doc = _revitContext.UIApplication?.ActiveUIDocument.Document!;
+    }
+    // var doc = _converterSettings.Current.Document;
 
     foreach (var element in elements)
     {
@@ -102,10 +112,16 @@ public class ElementUnpacker
     return unpackedElements.GroupBy(el => el.Id).Select(g => g.First()).ToList(); // no disinctBy in here sadly.
   }
 
-  private List<Element> PackCurtainWallElementsAndStackedWalls(List<Element> elements)
+  // We use the nullable document (happiness level 5/10) for the sake of linked models - bc we use this function in 2 different places
+  // 1- RootObjectBuilder with linked model document - otherwise we cannot unpack elements from correct document.
+  // 2- Evicting the cache while introducing the settings
+  private List<Element> PackCurtainWallElementsAndStackedWalls(List<Element> elements, Document? doc = null)
   {
     var ids = elements.Select(el => el.Id).ToArray();
-    var doc = _converterSettings.Current.Document;
+    if (doc == null)
+    {
+      doc = _revitContext.UIApplication?.ActiveUIDocument.Document!;
+    }
     elements.RemoveAll(element =>
       (element is Mullion { Host: not null } m && ids.Contains(m.Host.Id))
       || (element is Panel { Host: not null } p && ids.Contains(p.Host.Id))

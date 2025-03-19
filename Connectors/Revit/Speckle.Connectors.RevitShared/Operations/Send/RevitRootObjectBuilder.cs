@@ -114,7 +114,9 @@ public class RevitRootObjectBuilder(
         converterSettings.Push(currentSettings => currentSettings with { Document = filteredDocumentToConvert.Doc })
       )
       {
-        var atomicObjects = elementUnpacker.UnpackSelectionForConversion(filteredDocumentToConvert.Elements).ToList();
+        var atomicObjects = elementUnpacker
+          .UnpackSelectionForConversion(filteredDocumentToConvert.Elements, filteredDocumentToConvert.Doc)
+          .ToList();
         atomicObjectsByDocumentAndTransform.Add(filteredDocumentToConvert with { Elements = atomicObjects });
         atomicObjectCount += atomicObjects.Count;
       }
