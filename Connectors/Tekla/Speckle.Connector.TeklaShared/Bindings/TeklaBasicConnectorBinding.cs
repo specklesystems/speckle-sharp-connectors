@@ -60,6 +60,8 @@ public class TeklaBasicConnectorBinding : IBasicConnectorBinding
 
   public void RemoveModel(ModelCard model) => _store.RemoveModel(model);
 
+  public void RemoveModels(List<ModelCard> models) => _store.RemoveModels(models);
+
   public async Task HighlightModel(string modelCardId)
   {
     try
