@@ -12,6 +12,7 @@ using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 
@@ -164,35 +165,29 @@ public class RevitRootObjectBuilder(
             }
 
             Base converted;
+            bool hasTransform = atomicObjectByDocumentAndTransform.Transform != null;
 
-            // when you have multiple instances of same linked model placed at different locations caching mechanism doesn't know about this
-            // cache only checks id, not the transformation associated with the object
-            // then, only elements from the first instance of linked model would be converted. others just reuse cached objects
-            // below if-else blocks are just temporary. fix part of scope of below ticket
-            // TODO: CNX-1385. Modify caching mechanism to be transformation-aware.
-            // 1. Modify cache key to include transformation information (only if != null)
-            // 2. Composite key ${transformationKey}_{applicationId}
-            // 3. Cache composite key
-            // 4. If transformation information, take original converted and ApplyTransformation()
-
-            bool isFromLinkedModelWithTransform = atomicObjectByDocumentAndTransform.Transform != null;
+            // non-transformed elements can safely rely on cache
+            // TODO: Potential here to transform cached objects and NOT reconvert
             if (
-              sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value)
-              && !isFromLinkedModelWithTransform
-            ) // TODO: CNX-1385: Remove !isFromLinkedModelWithTransform conditional. Hacky.
+              !hasTransform
+              && sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value)
+            )
             {
               converted = value;
               cacheHitCount++;
-
-              // Psuedo-code below. Idea for avoiding reconverting: apply transformation if needed
-              // if (atomicObjectByDocumentAndTransform.Transform != null)
-              // {
-              //   converted = ApplyTransformation(converted, atomicObjectByDocumentAndTransform.Transform);
-              // }
             }
+            // not in cache means we convert
             else
             {
-              converted = converter.Convert(revitElement); // TODO: CNX-1385. Re-converting objects here from linked models (temp. solution)
+              // if it has a transform we append transform hash to the applicationId to distinguish the elements from other instances
+              if (hasTransform)
+              {
+                string transformHash = GetTransformHash(atomicObjectByDocumentAndTransform.Transform.NotNull());
+                applicationId = $"{applicationId}_t{transformHash}";
+              }
+              // normal conversions
+              converted = converter.Convert(revitElement);
               converted.applicationId = applicationId;
             }
 
@@ -231,5 +226,28 @@ public class RevitRootObjectBuilder(
     // rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;
 
     return new RootObjectBuilderResult(rootObject, results);
+  }
+
+  // Helper method to generate a simple hash for a transform
+  // transformedElement.applicationId = ${applicationId}-t{transformHash}
+  private string GetTransformHash(Transform transform)
+  {
+    // create a simplified representation of the transform
+    string json =
+      $@"{{
+      ""origin"": [{transform.Origin.X:F2}, {transform.Origin.Y:F2}, {transform.Origin.Z:F2}],
+      ""basis"": [{transform.BasisX.X:F1}, {transform.BasisY.Y:F1}, {transform.BasisZ.Z:F1}]
+    }}";
+
+    byte[] jsonBytes = System.Text.Encoding.UTF8.GetBytes(json);
+
+#pragma warning disable CA1850
+    using (var sha256 = System.Security.Cryptography.SHA256.Create())
+    {
+      byte[] hashBytes = sha256.ComputeHash(jsonBytes);
+      // keep only the first 8 characters for a short but unique hash
+      return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant()[..8];
+    }
+#pragma warning restore CA1850
   }
 }
