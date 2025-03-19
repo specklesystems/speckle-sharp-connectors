@@ -246,7 +246,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     if (modelCard.SendFilter is not null && modelCard.SendFilter.IdMap is not null)
     {
       var newSelectedObjectIds = new List<string>();
-      foreach (Element element in elementsOnMainModel)
+      foreach (Element element in allElements)
       {
         modelCard.SendFilter.IdMap[element.Id.ToString()] = element.UniqueId;
         newSelectedObjectIds.Add(element.UniqueId);
