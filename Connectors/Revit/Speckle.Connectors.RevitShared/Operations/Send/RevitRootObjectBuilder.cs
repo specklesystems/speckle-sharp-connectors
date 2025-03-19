@@ -168,7 +168,8 @@ public class RevitRootObjectBuilder(
             bool hasTransform = atomicObjectByDocumentAndTransform.Transform != null;
 
             // non-transformed elements can safely rely on cache
-            // TODO: Potential here to transform cached objects and NOT reconvert
+            // TODO: Potential here to transform cached objects and NOT reconvert,
+            // TODO: we wont do !hasTransform here, and re-set application id before this
             if (
               !hasTransform
               && sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value)
