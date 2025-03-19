@@ -17,7 +17,7 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
     // TODO: Send info is used in other connectors to get the project ID to populate the SendConversionCache
     Console.WriteLine($"Send Info {sendInfo}");
 
-    // set the input collection name to "Grasshopper Model" and version
+    // set the input collection name to "Grasshopper Model"
     var rootModel = input[0].Value;
     rootModel.name = "Grasshopper Model";
 

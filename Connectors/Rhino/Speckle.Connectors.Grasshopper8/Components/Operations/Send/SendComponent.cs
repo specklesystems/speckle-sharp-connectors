@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
 using Rhino;
@@ -37,6 +38,8 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
     : base("Send from Speckle", "SFS", "Send objects to speckle", "Speckle", "Operations") { }
 
   public override Guid ComponentGuid => new("0CF0D173-BDF0-4AC2-9157-02822B90E9FB");
+
+  public string? Url { get; private set; }
 
   protected override Bitmap Icon => BitmapBuilder.CreateSquareIconBitmap("S");
 
@@ -81,6 +84,25 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
     da.SetData(0, result.Resource);
   }
 
+  public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
+  {
+    base.AppendAdditionalMenuItems(menu);
+
+    Menu_AppendSeparator(menu);
+    if (Url != null)
+    {
+      Menu_AppendSeparator(menu);
+
+      Menu_AppendItem(menu, $"View created version online ↗", (s, e) => Open(Url));
+    }
+
+    static void Open(string url)
+    {
+      var psi = new ProcessStartInfo { FileName = url, UseShellExecute = true };
+      Process.Start(psi);
+    }
+  }
+
   protected override async Task<SendComponentOutput> PerformScopedTask(
     SendComponentInput input,
     IServiceScope scope,
@@ -116,13 +138,10 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
       .Execute(new List<SpeckleCollectionGoo>() { input.Input }, sendInfo, progress, cancellationToken)
       .ConfigureAwait(false);
 
-    return new SendComponentOutput(
-      new SpeckleUrlModelVersionResource(
-        sendInfo.ServerUrl.ToString(),
-        sendInfo.ProjectId,
-        sendInfo.ModelId,
-        result.RootObjId
-      )
-    );
+    // TODO: need the created version id here from the send result, not the rootobj id
+    SpeckleUrlModelVersionResource createdVersionResource =
+      new(sendInfo.ServerUrl.ToString(), sendInfo.ProjectId, sendInfo.ModelId, result.RootObjId);
+    Url = $"{createdVersionResource.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}"; // TODO: missing "@VersionId"
+    return new SendComponentOutput(createdVersionResource);
   }
 }
