@@ -30,6 +30,9 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
     return Task.FromResult(result);
   }
 
+  // POC: this send component assumes that the input collection contains SpeckleObjects that `already` have a populated base prop
+  // For new geometry, they should be converted to SpeckleObjects when passed to a `Create Collection` node.
+  // Create DataObject should also output SpeckleObject as a custom grasshopper data object.
   private void ReplaceAndRebuild(Collection c)
   {
     // Iterate over the current collection's elements
