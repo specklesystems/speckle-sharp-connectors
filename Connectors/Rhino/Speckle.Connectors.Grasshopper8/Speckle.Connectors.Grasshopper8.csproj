@@ -23,7 +23,7 @@
 
   <ItemGroup>
     <PackageReference Include="RhinoCommon" IncludeAssets="compile; build" PrivateAssets="all" />
-    <PackageReference Include="Grasshopper" IncludeAssets="compile; build" PrivateAssets="all"/>
+    <PackageReference Include="Grasshopper" IncludeAssets="compile; build" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
