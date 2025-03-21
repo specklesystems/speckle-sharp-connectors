@@ -1,5 +1,6 @@
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Tekla.Structures;
 using Tekla.Structures.Model;
 
 namespace Speckle.Connectors.TeklaShared.Bindings;
@@ -10,6 +11,7 @@ public class TeklaSelectionBinding : ISelectionBinding
   private readonly object _selectionEventHandlerLock = new object();
   private readonly IAppIdleManager _idleManager;
   private readonly Events _events;
+  private readonly Model _model;
   private readonly Tekla.Structures.Model.UI.ModelObjectSelector _selector;
 
   public string Name => "selectionBinding";
@@ -26,6 +28,7 @@ public class TeklaSelectionBinding : ISelectionBinding
     Parent = parent;
     _selector = selector;
     _events = events;
+    _model = new Model();
 
     _events.SelectionChange += OnSelectionChangeEvent;
     _events.Register();
@@ -70,10 +73,15 @@ public class TeklaSelectionBinding : ISelectionBinding
       objectTypes.Add(modelObject.GetType().Name);
     }
 
+    // Filter out the objects that Tekla API ignores (e.g. Construction objects with "000000.." GUID)
+    List<string> filteredObjectIds = objectIds
+      .Where(id => _model.SelectModelObject(new Identifier(new Guid(id))) != null)
+      .ToList();
+
     string typesString = string.Join(", ", objectTypes.Distinct());
     return new SelectionInfo(
-      objectIds,
-      objectIds.Count == 0 ? "No objects selected." : $"{objectIds.Count} objects ({typesString})"
+      filteredObjectIds,
+      filteredObjectIds.Count == 0 ? "No objects selected." : $"{filteredObjectIds.Count} objects ({typesString})"
     );
   }
 }
