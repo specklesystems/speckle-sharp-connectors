@@ -32,7 +32,7 @@ public static class DisplayMeshExtractor
           }
           else
           {
-            throw new ConversionException($"Failed to meshify {subDObject.GetType()}");
+            throw new ConversionException($"Failed to extract geometry from {subDObject.GetType()}");
           }
           break;
         default:
