@@ -42,6 +42,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\PlaneConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\PointConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\PolylineConverterToHost.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\RegionConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\TransformConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\LocalToGlobalToDirectShapeConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\RenderMaterialToHostConverter.cs" />
