@@ -160,10 +160,10 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
     {
       return geometryList;
     }
-    if (result is IEnumerable<(object, Base)> fallbackConversionResult)
+    if (result is List<(GeometryBase, Base)> fallbackConversionResult)
     {
       // note special handling for proxying render materials OR we don't care about revit
-      return fallbackConversionResult.Select(t => t.Item1).Cast<GeometryBase>().ToList();
+      return fallbackConversionResult.Select(t => t.Item1).ToList();
     }
 
     throw new SpeckleException("Failed to convert input to rhino");
