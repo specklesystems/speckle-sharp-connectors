@@ -1,10 +1,10 @@
 using Grasshopper.Kernel;
+using GrasshopperAsyncComponent;
 using Microsoft.Extensions.DependencyInjection;
 using Rhino.Geometry;
 using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
-using Speckle.Connectors.Grasshopper8.Components.BaseComponents;
 using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Connectors.Grasshopper8.Parameters;
 using Speckle.Sdk;
@@ -22,7 +22,7 @@ public class ReceiveComponentOutput
   public SpeckleCollectionGoo RootObject { get; set; }
 }
 
-public class ReceiveComponent : GH_AsyncComponent<HostApp.SpeckleUrlModelResource, ReceiveComponentOutput>
+public class ReceiveComponent : GH_AsyncComponent
 {
   public ReceiveComponent()
     : base("Receive from Speckle", "RFS", "Receive objects from speckle", "Speckle", "Operations")
@@ -34,12 +34,17 @@ public class ReceiveComponent : GH_AsyncComponent<HostApp.SpeckleUrlModelResourc
 
   protected override Bitmap Icon => BitmapBuilder.CreateSquareIconBitmap("R");
 
-  public HostApp.SpeckleUrlModelResource UrlResource { get; set; }
-  public AccountService AccountManager { get; set; }
-  public IClientFactory ClientFactory { get; set; }
-  public GrasshopperReceiveOperation ReceiveOperation { get; set; }
-  public RootObjectUnpacker RootObjectUnpacker { get; set; }
-  public CancellationToken CancellationToken { get; set; }
+  public string CurrentComponentState { get; set; } = "needs_input";
+  public Client ApiClient { get; set; }
+  public HostApp.SpeckleUrlModelResource? UrlModelResource { get; set; }
+  public GrasshopperReceiveOperation ReceiveOperation { get; private set; }
+  public RootObjectUnpacker RootObjectUnpacker { get; private set; }
+
+  public static IServiceScope? Scope { get; set; }
+  public static AccountService AccountManager { get; private set; }
+  public static IClientFactory ClientFactory { get; private set; }
+
+  public static CancellationToken CancellationToken { get; private set; }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
@@ -57,42 +62,87 @@ public class ReceiveComponent : GH_AsyncComponent<HostApp.SpeckleUrlModelResourc
     );
   }
 
-  protected override HostApp.SpeckleUrlModelResource GetInput(IGH_DataAccess da)
+  public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
   {
-    HostApp.SpeckleUrlModelResource? url = null;
-    da.GetData(0, ref url);
-    if (url is null)
+    base.AppendAdditionalMenuItems(menu);
+
+    Menu_AppendSeparator(menu);
+
+    if (CurrentComponentState == "loading")
     {
-      throw new SpeckleException("Speckle url is null");
+      Menu_AppendItem(
+        menu,
+        "Cancel Load",
+        (s, e) =>
+        {
+          CurrentComponentState = "expired";
+          RequestCancellation();
+        }
+      );
+    }
+  }
+
+  protected override void SolveInstance(IGH_DataAccess da)
+  {
+    Scope = PriorityLoader.Container.CreateScope();
+    AccountManager = Scope.ServiceProvider.GetRequiredService<AccountService>();
+    ClientFactory = Scope.ServiceProvider.GetRequiredService<IClientFactory>();
+    CancellationToken = default;
+
+    // We need to call this always in here to be able to react and set events :/
+    ParseInput(da);
+
+    ReceiveOperation = Scope.ServiceProvider.GetRequiredService<GrasshopperReceiveOperation>();
+    RootObjectUnpacker = Scope.ServiceProvider.GetService<RootObjectUnpacker>();
+
+    if (CurrentComponentState == "receiving")
+    {
+      base.SolveInstance(da);
+      return;
     }
 
-    UrlResource = url;
+    // This ensures that we actually do a run. The worker will check and determine if it needs to pull an existing object or not.
+    OnDisplayExpired(true);
 
-    return url;
+    base.SolveInstance(da);
+    return;
   }
 
-  protected override void SetOutput(IGH_DataAccess da, ReceiveComponentOutput result)
+  public override void RemovedFromDocument(GH_Document document)
   {
-    da.SetData(0, result.RootObject);
-    Message = "Done";
+    RequestCancellation();
+    Scope?.Dispose();
+    base.RemovedFromDocument(document);
   }
 
-  protected override Task<ReceiveComponentOutput> PerformScopedTask(
-    HostApp.SpeckleUrlModelResource input,
-    IServiceScope scope,
-    CancellationToken cancellationToken = default
-  )
+  private void ParseInput(IGH_DataAccess da)
   {
-    // TODO: Resolving dependencies here may be overkill in most cases. Must re-evaluate.
-    AccountManager = scope.ServiceProvider.GetRequiredService<AccountService>();
-    ClientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
-    ReceiveOperation = scope.ServiceProvider.GetRequiredService<GrasshopperReceiveOperation>();
-    RootObjectUnpacker = scope.ServiceProvider.GetService<RootObjectUnpacker>();
-    CancellationToken = cancellationToken;
+    HostApp.SpeckleUrlModelResource? dataInput = null;
+    da.GetData(0, ref dataInput);
+    if (dataInput is null)
+    {
+      UrlModelResource = null;
+      TriggerAutoSave();
+      return;
+    }
 
-    // Do the thing 👇🏼
-    var worker = (ReceiveComponentWorker)BaseWorker;
-    return Task.FromResult(new ReceiveComponentOutput { RootObject = worker.Result });
+    UrlModelResource = dataInput;
+    try
+    {
+      // TODO: Get any account for this server, as we don't have a mechanism yet to pass accountIds through
+      Account account = AccountManager.GetAccountWithServerUrlFallback("", new Uri(dataInput.Server));
+      if (account is null)
+      {
+        throw new SpeckleAccountManagerException($"No default account was found");
+      }
+
+      ApiClient?.Dispose();
+      ApiClient = ClientFactory.Create(account);
+    }
+    catch (Exception e) when (!e.IsFatal())
+    {
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.ToFormattedString());
+    }
   }
 }
 
@@ -101,11 +151,7 @@ public class ReceiveComponentWorker : WorkerInstance
   public ReceiveComponentWorker(GH_Component p)
     : base(p) { }
 
-  private AccountService AccountManager { get; set; }
-  private IClientFactory ClientFactory { get; set; }
-  private GrasshopperReceiveOperation ReceiveOperation { get; set; }
-  private RootObjectUnpacker RootObjectUnpacker { get; set; }
-  private HostApp.SpeckleUrlModelResource UrlModelResource { get; set; }
+  private HostApp.SpeckleUrlModelResource? UrlModelResource { get; set; }
 
   public Base Root { get; set; }
 
@@ -120,99 +166,90 @@ public class ReceiveComponentWorker : WorkerInstance
 
   public override void GetData(IGH_DataAccess dataAcess, GH_ComponentParamServer p)
   {
-    HostApp.SpeckleUrlModelResource? url = null;
-    dataAcess.GetData(0, ref url);
-    if (url is null)
-    {
-      throw new SpeckleException("Speckle url is null");
-    }
-
-    UrlModelResource = url;
+    UrlModelResource = ((ReceiveComponent)Parent).UrlModelResource;
   }
 
-  public override void DoWork(Action done)
-  {
-    using var scope = PriorityLoader.Container.CreateScope();
-    var receiveComponent = (ReceiveComponent)Parent;
+#pragma warning disable CA1506
 
-    AccountManager = scope.ServiceProvider.GetRequiredService<AccountService>();
-    ClientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
-    ReceiveOperation = scope.ServiceProvider.GetRequiredService<GrasshopperReceiveOperation>();
-    RootObjectUnpacker = scope.ServiceProvider.GetService<RootObjectUnpacker>();
-    CancellationToken = default;
+  public override void DoWork(Action<string, double> reportProgress, Action done)
+  {
+    var receiveComponent = (ReceiveComponent)Parent;
 
     try
     {
-      // TODO: Get any account for this server, as we don't have a mechanism yet to pass accountIds through
-      var account = AccountManager.GetAccountWithServerUrlFallback("", new Uri(UrlModelResource.Server));
-      if (account is null)
+      if (UrlModelResource is null)
       {
-        throw new SpeckleAccountManagerException($"No default account was found");
+        throw new InvalidOperationException("Url Resource was null");
       }
+
       var t = Task.Run(async () =>
       {
-        using var client = ClientFactory.Create(account);
-        var receiveInfo = await UrlModelResource.GetReceiveInfo(client, CancellationToken).ConfigureAwait(false);
+        // Step 1 - RECIEVE FROM SERVER
+        var receiveInfo = await UrlModelResource
+          .GetReceiveInfo(receiveComponent.ApiClient, CancellationToken)
+          .ConfigureAwait(false);
 
         var progress = new Progress<CardProgress>(_ =>
         {
-          // TODO: Progress only makes sense in non-blocking async receive, which is not supported yet.
+          // TODO: Progress here
           // Message = $"{progress.Status}: {progress.Progress}";
         });
 
-        Root = await ReceiveOperation
-          .ReceiveCommitObject(receiveInfo, progress, CancellationToken)
+        Root = await receiveComponent
+          .ReceiveOperation.ReceiveCommitObject(receiveInfo, progress, CancellationToken)
           .ConfigureAwait(false);
+
+        // Step 2 - CONVERT
+
+        var localToGlobalUnpacker = new LocalToGlobalUnpacker();
+        var traversalContextUnpacker = new TraversalContextUnpacker();
+        var unpackedRoot = receiveComponent.RootObjectUnpacker.Unpack(Root);
+
+        // "flatten" block instances
+        var localToGlobalMaps = localToGlobalUnpacker.Unpack(
+          unpackedRoot.DefinitionProxies,
+          unpackedRoot.ObjectsToConvert.ToList()
+        );
+
+        var collGen = new CollectionRebuilder((Root as Collection) ?? new Collection() { name = "unnamed" });
+
+        foreach (var map in localToGlobalMaps)
+        {
+          try
+          {
+            var converted = Convert(map.AtomicObject);
+            var path = traversalContextUnpacker.GetCollectionPath(map.TraversalContext).ToList();
+
+            foreach (var matrix in map.Matrix)
+            {
+              var mat = GrasshopperHelpers.MatrixToTransform(matrix, "meters");
+              converted.ForEach(res => res.Transform(mat));
+            }
+
+            // note one to many not handled too nice here
+            foreach (var geometryBase in converted)
+            {
+              var gh = new SpeckleObject()
+              {
+                Base = map.AtomicObject,
+                Path = path,
+                GeometryBase = geometryBase
+              };
+              collGen.AppendSpeckleGrasshopperObject(gh);
+            }
+          }
+          catch (ConversionException)
+          {
+            // TODO
+          }
+        }
+
+        Result = new SpeckleCollectionGoo(collGen.RootCollection);
+
+        // DONE
         done();
       });
       t.Wait();
-
-      // We need to rethink these lovely unpackers, there's a bit too many of 'em
-      var localToGlobalUnpacker = new LocalToGlobalUnpacker();
-      var traversalContextUnpacker = new TraversalContextUnpacker();
-
-      var unpackedRoot = RootObjectUnpacker.Unpack(Root);
-
-      // "flatten" block instances
-      var localToGlobalMaps = localToGlobalUnpacker.Unpack(
-        unpackedRoot.DefinitionProxies,
-        unpackedRoot.ObjectsToConvert.ToList()
-      );
-
-      var collGen = new CollectionRebuilder((Root as Collection) ?? new Collection() { name = "unnamed" });
-
-      foreach (var map in localToGlobalMaps)
-      {
-        try
-        {
-          var converted = Convert(map.AtomicObject);
-          var path = traversalContextUnpacker.GetCollectionPath(map.TraversalContext).ToList();
-
-          foreach (var matrix in map.Matrix)
-          {
-            var mat = GrasshopperHelpers.MatrixToTransform(matrix, "meters");
-            converted.ForEach(res => res.Transform(mat));
-          }
-
-          // note one to many not handled too nice here
-          foreach (var geometryBase in converted)
-          {
-            var gh = new SpeckleObject()
-            {
-              Base = map.AtomicObject,
-              Path = path,
-              GeometryBase = geometryBase
-            };
-            collGen.AppendSpeckleGrasshopperObject(gh);
-          }
-        }
-        catch (ConversionException)
-        {
-          // TODO
-        }
-      }
-
-      Result = new SpeckleCollectionGoo(collGen.RootCollection);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
@@ -220,6 +257,8 @@ public class ReceiveComponentWorker : WorkerInstance
       done();
     }
   }
+#pragma warning restore CA1506
+
 
   public override void SetData(IGH_DataAccess dataAccess)
   {
@@ -238,7 +277,7 @@ public class ReceiveComponentWorker : WorkerInstance
     {
       return geometryList;
     }
-    if (result is IEnumerable<(object, Base)> fallbackConversionResult)
+    if (result is IEnumerable<(GeometryBase, Base)> fallbackConversionResult)
     {
       // note special handling for proxying render materials OR we don't care about revit
       return fallbackConversionResult.Select(t => t.Item1).Cast<GeometryBase>().ToList();
