@@ -50,6 +50,8 @@ public class NavisworksBasicConnectorBinding : IBasicConnectorBinding
 
   public void RemoveModel(ModelCard model) => _store.RemoveModel(model);
 
+  public void RemoveModels(List<ModelCard> models) => _store.RemoveModels(models);
+
   public Task HighlightModel(string modelCardId) => Task.CompletedTask;
 
   public async Task HighlightObjects(IReadOnlyList<string> objectIds) =>
