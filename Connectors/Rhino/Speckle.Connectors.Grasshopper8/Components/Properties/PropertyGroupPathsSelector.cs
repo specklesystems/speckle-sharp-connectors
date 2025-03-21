@@ -32,22 +32,30 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
       return;
     }
 
-    var paths = new List<string>();
+    var paths = new HashSet<string>();
     foreach (var propertyGroup in objectPropertyGroups)
     {
-      paths.AddRange(GetPaths(propertyGroup));
+      var objectPropertyPaths = GetPaths(propertyGroup);
+      foreach (string path in GetPaths(propertyGroup))
+      {
+        paths.Add(path);
+      }
     }
     m_data.AppendRange(paths.Select(s => new GH_String(s)));
   }
 
-  private List<string> GetPaths(Dictionary<string, object?> dictionary)
+  private HashSet<string> GetPaths(Dictionary<string, object?> dictionary)
   {
-    var result = new List<string>();
+    var result = new HashSet<string>();
     FlattenDictionaryRecursive(dictionary, string.Empty, result);
     return result;
   }
 
-  private void FlattenDictionaryRecursive(Dictionary<string, object?> dictionary, string parentKey, List<string> result)
+  private void FlattenDictionaryRecursive(
+    Dictionary<string, object?> dictionary,
+    string parentKey,
+    HashSet<string> result
+  )
   {
     foreach (var kvp in dictionary)
     {
