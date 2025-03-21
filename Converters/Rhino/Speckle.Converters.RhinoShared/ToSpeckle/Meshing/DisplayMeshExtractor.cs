@@ -45,6 +45,7 @@ public static class DisplayMeshExtractor
 
   public static RG.Mesh? GetGeometryDisplayMesh(RG.GeometryBase geometry)
   {
+    // declare "renderMeshes" as a separate var, because it needs to be checked for null after each Mesh.Create method
     RG.Mesh[] renderMeshes;
     var joinedMesh = new RG.Mesh();
 
