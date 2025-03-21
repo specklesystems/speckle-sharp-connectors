@@ -30,18 +30,18 @@ public class SpeckleCollectionGoo : GH_Goo<Collection>, ISpeckleGoo //, IGH_Prev
   }
 }
 
-public class SpeckleCollectionWrapperParam : GH_Param<SpeckleCollectionGoo>
+public class SpeckleCollectionParam : GH_Param<SpeckleCollectionGoo>
 {
-  public SpeckleCollectionWrapperParam()
+  public SpeckleCollectionParam()
     : this(GH_ParamAccess.item) { }
 
-  public SpeckleCollectionWrapperParam(IGH_InstanceDescription tag)
+  public SpeckleCollectionParam(IGH_InstanceDescription tag)
     : base(tag) { }
 
-  public SpeckleCollectionWrapperParam(IGH_InstanceDescription tag, GH_ParamAccess access)
+  public SpeckleCollectionParam(IGH_InstanceDescription tag, GH_ParamAccess access)
     : base(tag, access) { }
 
-  public SpeckleCollectionWrapperParam(GH_ParamAccess access)
+  public SpeckleCollectionParam(GH_ParamAccess access)
     : base("Speckle Collection Wrapper", "SCO", "XXXXX", "Speckle", "Params", access) { }
 
   public override Guid ComponentGuid => new("6E871D5B-B221-4992-882A-EFE6796F3010");

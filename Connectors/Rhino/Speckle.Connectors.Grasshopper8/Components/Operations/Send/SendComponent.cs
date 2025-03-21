@@ -47,7 +47,7 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
   {
     pManager.AddParameter(new SpeckleUrlModelResourceParam());
     pManager.AddParameter(
-      new SpeckleCollectionWrapperParam(GH_ParamAccess.item),
+      new SpeckleCollectionParam(GH_ParamAccess.item),
       "Model",
       "model",
       "The collection model object to send",

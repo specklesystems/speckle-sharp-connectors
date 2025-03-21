@@ -23,7 +23,7 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
     pManager.AddParameter(
-      new SpeckleCollectionWrapperParam(GH_ParamAccess.item),
+      new SpeckleCollectionParam(GH_ParamAccess.item),
       "Data",
       "D",
       "The data you want to expand",

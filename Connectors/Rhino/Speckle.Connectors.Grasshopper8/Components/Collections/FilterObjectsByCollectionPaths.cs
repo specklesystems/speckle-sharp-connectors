@@ -13,23 +13,29 @@ namespace Speckle.Connectors.Grasshopper8.Components.Collections;
 ///
 /// To extract those objects out, you should select that specific sub path as well.
 /// </summary>
-public class FilterObjectsByPaths : GH_Component
+public class FilterObjectsByCollectionPaths : GH_Component
 {
   public override Guid ComponentGuid => new("77CAEE94-F0B9-4611-897C-71F2A22BA311");
 
-  public FilterObjectsByPaths()
-    : base("FilterObjectsByPaths", "FP", "todo", "Speckle", "Collections") { }
+  public FilterObjectsByCollectionPaths()
+    : base(
+      "FilterObjectsByCollectionPaths",
+      "ocF",
+      "Filters model objects by their collection path",
+      "Speckle",
+      "Collections"
+    ) { }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
     pManager.AddParameter(
-      new SpeckleCollectionWrapperParam(),
+      new SpeckleCollectionParam(),
       "Collection",
       "C",
       "Collection to filter objects from",
       GH_ParamAccess.item
     );
-    pManager.AddTextParameter("Path", "P", "Path to filter by", GH_ParamAccess.item);
+    pManager.AddTextParameter("Path", "P", "Collection path to filter by", GH_ParamAccess.item);
   }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
