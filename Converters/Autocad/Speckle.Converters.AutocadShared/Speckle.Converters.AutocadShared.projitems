@@ -32,6 +32,9 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\CurveToHostConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\EllipseToHostConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\PolycurveToHostConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\RegionToHostConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\RegionToHostRawConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\ICurveToHostRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\ArcToHostRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\CurveToHostRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\IntervalToHostRawConverter.cs" />
