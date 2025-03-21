@@ -15,7 +15,7 @@ public static class DisplayMeshExtractor
     {
       joinedMesh.Append(renderMeshes);
     }
-    else if (renderMeshes.Length == 0)
+    else
     {
       switch (obj)
       {
@@ -26,7 +26,7 @@ public static class DisplayMeshExtractor
           joinedMesh.Append(GetGeometryDisplayMesh(extrusion.ExtrusionGeometry.ToBrep()));
           break;
         case SubDObject subDObject:
-          if (subDObject.Geometry as RG.SubD is RG.SubD subdGeometry)
+          if (subDObject.Geometry is RG.SubD subdGeometry)
           {
             joinedMesh.Append(GetGeometryDisplayMesh(subdGeometry));
           }
