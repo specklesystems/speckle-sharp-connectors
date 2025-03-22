@@ -1,4 +1,4 @@
-﻿using Speckle.Converters.Common;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Rhino.ToSpeckle.Meshing;
 using Speckle.Objects;
@@ -37,14 +37,9 @@ public class HatchToSpeckleConverter : ITypedConverter<RG.Hatch, SOG.Region>
     List<ICurve> innerLoops = rhinoLoops.Select(x => _curveConverter.Convert(x)).ToList();
 
     // create display mesh from region by converting to brep first
-    var displayValue = new List<SOG.Mesh>();
-
     var brep = RG.Brep.TryConvertBrep(target);
     var displayMesh = DisplayMeshExtractor.GetGeometryDisplayMesh(brep);
-    if (displayMesh != null)
-    {
-      displayValue.Add(_meshConverter.Convert(displayMesh));
-    }
+    List<SOG.Mesh> displayValue = displayMesh is null ? new() : new() { _meshConverter.Convert(displayMesh) };
 
     return new SOG.Region
     {
@@ -53,6 +48,6 @@ public class HatchToSpeckleConverter : ITypedConverter<RG.Hatch, SOG.Region>
       hasHatchPattern = true,
       units = _settingsStore.Current.SpeckleUnits,
       displayValue = displayValue
-    };
+    }
   }
 }
