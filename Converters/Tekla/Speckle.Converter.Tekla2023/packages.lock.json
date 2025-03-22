@@ -176,11 +176,6 @@
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
       },
-      "Speckle.DoubleNumerics": {
-        "type": "Transitive",
-        "resolved": "4.0.1",
-        "contentHash": "MzEQ1Im0zTja+tEsdRIk/WlPiKqb22NmTOJcR1ZKm/mz46pezyyID3/wRz6vJUELMpSLnG7LhsxBL+nxbr7V0w=="
-      },
       "Speckle.Newtonsoft.Json": {
         "type": "Transitive",
         "resolved": "13.0.2",
@@ -291,12 +286,25 @@
         "resolved": "2023.0.1",
         "contentHash": "24KbR++C2WYEIyDymIHX/AVuHYcgwyQrvgExMKDnMobQPNM+AmMNnwdyYxBbw4AvYXd8QHoi+lmmavhTCL8E3w=="
       },
+      "speckle.common.meshtriangulation": {
+        "type": "Project",
+        "dependencies": {
+          "LibTessDotNet": "[1.1.15, )",
+          "Speckle.DoubleNumerics": "[4.1.0, )"
+        }
+      },
       "speckle.converters.common": {
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
           "Speckle.Objects": "[3.1.4, )"
         }
+      },
+      "LibTessDotNet": {
+        "type": "CentralTransitive",
+        "requested": "[1.1.15, )",
+        "resolved": "1.1.15",
+        "contentHash": "KuA7N3Nv/lIeawJdQBQJR6oqWD9KETHLbWzBqapwFs+Tby+R5I4crkKujKMm5bXcSuFZ8LNtflFQVadsWCbBjg=="
       },
       "Microsoft.Extensions.DependencyInjection.Abstractions": {
         "type": "CentralTransitive",
@@ -322,6 +330,12 @@
         "resolved": "2.2.0",
         "contentHash": "B2WqEox8o+4KUOpL7rZPyh6qYjik8tHi2tN8Z9jZkHzED8ElYgZa/h6K+xliB435SqUcWT290Fr2aa8BtZjn8A=="
       },
+      "Speckle.DoubleNumerics": {
+        "type": "CentralTransitive",
+        "requested": "[4.1.0, )",
+        "resolved": "4.1.0",
+        "contentHash": "20DtS+FsDRsOD9+AU3TwNFZ0qrKo5f6f7B5ZR9wStsIHHHC9k7DpjbCvuNtmnSjx54MD+TJC7wV2f5iyGVPj1A=="
+      },
       "Speckle.Objects": {
         "type": "CentralTransitive",
         "requested": "[3.1.4, )",
@@ -343,7 +357,7 @@
           "Microsoft.Data.Sqlite": "7.0.5",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "2.2.0",
           "Microsoft.Extensions.Logging": "2.2.0",
-          "Speckle.DoubleNumerics": "4.0.1",
+          "Speckle.DoubleNumerics": "4.1.0",
           "Speckle.Newtonsoft.Json": "13.0.2",
           "Speckle.Sdk.Dependencies": "3.1.4"
         }
