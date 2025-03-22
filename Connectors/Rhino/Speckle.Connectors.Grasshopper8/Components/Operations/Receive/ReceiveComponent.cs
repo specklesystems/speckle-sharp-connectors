@@ -17,11 +17,6 @@ using Speckle.Sdk.Models.Extensions;
 
 namespace Speckle.Connectors.Grasshopper8.Components.Operations.Receive;
 
-public class ReceiveComponentOutput
-{
-  public SpeckleCollectionGoo RootObject { get; set; }
-}
-
 public class ReceiveComponent : GH_AsyncComponent
 {
   public ReceiveComponent()
@@ -39,12 +34,7 @@ public class ReceiveComponent : GH_AsyncComponent
   public HostApp.SpeckleUrlModelResource? UrlModelResource { get; set; }
   public GrasshopperReceiveOperation ReceiveOperation { get; private set; }
   public RootObjectUnpacker RootObjectUnpacker { get; private set; }
-
   public static IServiceScope? Scope { get; set; }
-  public static AccountService AccountManager { get; private set; }
-  public static IClientFactory ClientFactory { get; private set; }
-
-  public static CancellationToken CancellationToken { get; private set; }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
@@ -84,16 +74,15 @@ public class ReceiveComponent : GH_AsyncComponent
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
+    // Dependency Injection
     Scope = PriorityLoader.Container.CreateScope();
-    AccountManager = Scope.ServiceProvider.GetRequiredService<AccountService>();
-    ClientFactory = Scope.ServiceProvider.GetRequiredService<IClientFactory>();
-    CancellationToken = default;
-
-    // We need to call this always in here to be able to react and set events :/
-    ParseInput(da);
-
     ReceiveOperation = Scope.ServiceProvider.GetRequiredService<GrasshopperReceiveOperation>();
     RootObjectUnpacker = Scope.ServiceProvider.GetService<RootObjectUnpacker>();
+    AccountService accountManager = Scope.ServiceProvider.GetRequiredService<AccountService>();
+    IClientFactory clientFactory = Scope.ServiceProvider.GetRequiredService<IClientFactory>();
+
+    // We need to call this always in here to be able to react and set events :/
+    ParseInput(da, accountManager, clientFactory);
 
     if (CurrentComponentState == "receiving")
     {
@@ -115,7 +104,7 @@ public class ReceiveComponent : GH_AsyncComponent
     base.RemovedFromDocument(document);
   }
 
-  private void ParseInput(IGH_DataAccess da)
+  private void ParseInput(IGH_DataAccess da, AccountService accountManager, IClientFactory clientFactory)
   {
     HostApp.SpeckleUrlModelResource? dataInput = null;
     da.GetData(0, ref dataInput);
@@ -130,14 +119,14 @@ public class ReceiveComponent : GH_AsyncComponent
     try
     {
       // TODO: Get any account for this server, as we don't have a mechanism yet to pass accountIds through
-      Account account = AccountManager.GetAccountWithServerUrlFallback("", new Uri(dataInput.Server));
+      Account account = accountManager.GetAccountWithServerUrlFallback("", new Uri(dataInput.Server));
       if (account is null)
       {
         throw new SpeckleAccountManagerException($"No default account was found");
       }
 
       ApiClient?.Dispose();
-      ApiClient = ClientFactory.Create(account);
+      ApiClient = clientFactory.Create(account);
     }
     catch (Exception e) when (!e.IsFatal())
     {
@@ -151,8 +140,6 @@ public class ReceiveComponentWorker : WorkerInstance
   public ReceiveComponentWorker(GH_Component p)
     : base(p) { }
 
-  private HostApp.SpeckleUrlModelResource? UrlModelResource { get; set; }
-
   public Base Root { get; set; }
 
   public SpeckleCollectionGoo Result { get; set; }
@@ -164,9 +151,11 @@ public class ReceiveComponentWorker : WorkerInstance
     return new ReceiveComponentWorker(Parent);
   }
 
-  public override void GetData(IGH_DataAccess dataAcess, GH_ComponentParamServer p)
+  public override void GetData(IGH_DataAccess dataAcess, GH_ComponentParamServer p) { }
+
+  public override void SetData(IGH_DataAccess dataAccess)
   {
-    UrlModelResource = ((ReceiveComponent)Parent).UrlModelResource;
+    dataAccess.SetData(0, Result);
   }
 
 #pragma warning disable CA1506
@@ -177,7 +166,8 @@ public class ReceiveComponentWorker : WorkerInstance
 
     try
     {
-      if (UrlModelResource is null)
+      SpeckleUrlModelResource? urlModelResource = receiveComponent.UrlModelResource;
+      if (urlModelResource is null)
       {
         throw new InvalidOperationException("Url Resource was null");
       }
@@ -185,7 +175,7 @@ public class ReceiveComponentWorker : WorkerInstance
       var t = Task.Run(async () =>
       {
         // Step 1 - RECIEVE FROM SERVER
-        var receiveInfo = await UrlModelResource
+        var receiveInfo = await urlModelResource
           .GetReceiveInfo(receiveComponent.ApiClient, CancellationToken)
           .ConfigureAwait(false);
 
@@ -258,12 +248,6 @@ public class ReceiveComponentWorker : WorkerInstance
     }
   }
 #pragma warning restore CA1506
-
-
-  public override void SetData(IGH_DataAccess dataAccess)
-  {
-    dataAccess.SetData(0, Result);
-  }
 
   private List<GeometryBase> Convert(Base input)
   {
