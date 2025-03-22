@@ -48,6 +48,6 @@ public class HatchToSpeckleConverter : ITypedConverter<RG.Hatch, SOG.Region>
       hasHatchPattern = true,
       units = _settingsStore.Current.SpeckleUnits,
       displayValue = displayValue
-    }
+    };
   }
 }
