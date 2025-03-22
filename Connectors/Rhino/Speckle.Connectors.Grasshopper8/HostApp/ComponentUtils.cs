@@ -17,5 +17,6 @@ public enum ComponentState
   NeedsInput,
   Receiving,
   Ready,
+  Sending,
   UpToDate
 }
