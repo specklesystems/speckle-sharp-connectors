@@ -116,7 +116,7 @@ public class SpeckleObject : Base
   }
 }
 
-public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckleGoo, IGH_BakeAwareObject
+public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckleGoo
 {
   public override IGH_Goo Duplicate() => throw new NotImplementedException();
 
@@ -191,7 +191,7 @@ public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckle
     Value.DrawPreviewRaw(args.Pipeline, args.Material);
   }
 
-  public void BakeGeometry(RhinoDoc doc, List<Guid> obj_ids)
+  public void Bake(RhinoDoc doc, List<Guid> obj_ids)
   {
     // get or make layers
     int bakeLayerIndex = 0;
@@ -225,17 +225,7 @@ public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckle
     obj_ids.Add(guid);
   }
 
-  public void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids)
-  {
-    // first create collections
-    // create attributes
-
-    // then bake
-  }
-
   public BoundingBox ClippingBox => Value.GeometryBase.GetBoundingBox(false);
-
-  public bool IsBakeCapable => true;
 
   public SpeckleObjectGoo(SpeckleObject value)
   {
@@ -245,7 +235,7 @@ public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckle
   public SpeckleObjectGoo() { }
 }
 
-public class SpeckleObjectParam : GH_Param<SpeckleObjectGoo>
+public class SpeckleObjectParam : GH_Param<SpeckleObjectGoo>, IGH_BakeAwareObject
 {
   public SpeckleObjectParam()
     : this(GH_ParamAccess.item) { }
@@ -262,4 +252,32 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectGoo>
   public override Guid ComponentGuid => new("22FD5510-D5D3-4101-8727-153FFD329E4F");
 
   protected override Bitmap Icon => BitmapBuilder.CreateHexagonalBitmap("SO");
+
+  public bool IsBakeCapable =>
+    // False if no data
+    !VolatileData.IsEmpty;
+
+  public void BakeGeometry(RhinoDoc doc, List<Guid> obj_ids)
+  {
+    // Iterate over all data stored in the parameter
+    foreach (var item in VolatileData.AllData(true))
+    {
+      if (item is SpeckleObjectGoo goo)
+      {
+        goo.Bake(doc, obj_ids);
+      }
+    }
+  }
+
+  public void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids)
+  {
+    // Iterate over all data stored in the parameter
+    foreach (var item in VolatileData.AllData(true))
+    {
+      if (item is SpeckleObjectGoo goo)
+      {
+        goo.Bake(doc, obj_ids);
+      }
+    }
+  }
 }
