@@ -1,7 +1,9 @@
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Grasshopper.Rhinoceros.Model;
+using Rhino;
 using Rhino.Display;
+using Rhino.DocObjects;
 using Rhino.Geometry;
 using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Sdk.Models;
@@ -14,11 +16,11 @@ namespace Speckle.Connectors.Grasshopper8.Parameters;
 /// </summary>
 public class SpeckleObject : Base
 {
-  public Base Base { get; set; }
-  public GeometryBase GeometryBase { get; set; } // note: how will we send intervals and other gh native objects? do we? maybe not for now
+  public required Base Base { get; set; }
+  public required GeometryBase GeometryBase { get; set; } // note: how will we send intervals and other gh native objects? do we? maybe not for now
   public List<Collection> Path { get; set; }
   public Dictionary<string, string> UserStrings { get; set; }
-  public string Name { get; set; }
+  public string Name { get; set; } = "";
   public int? Color { get; set; }
   public string? RenderMaterialName { get; set; }
 
@@ -114,7 +116,7 @@ public class SpeckleObject : Base
   }
 }
 
-public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckleGoo
+public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckleGoo, IGH_BakeAwareObject
 {
   public override IGH_Goo Duplicate() => throw new NotImplementedException();
 
@@ -163,28 +165,28 @@ public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckle
   {
     switch (modelObject.ObjectType)
     {
-      case Rhino.DocObjects.ObjectType.Point:
+      case ObjectType.Point:
         modelObject.CastTo<Rhino.Geometry.Point>(out Rhino.Geometry.Point p);
         return p;
-      case Rhino.DocObjects.ObjectType.Mesh:
+      case ObjectType.Mesh:
         modelObject.CastTo<Rhino.Geometry.Mesh>(out Rhino.Geometry.Mesh m);
         return m;
-      case Rhino.DocObjects.ObjectType.Brep:
+      case ObjectType.Brep:
         modelObject.CastTo<Rhino.Geometry.Brep>(out Rhino.Geometry.Brep b);
         return b;
-      case Rhino.DocObjects.ObjectType.SubD:
+      case ObjectType.SubD:
         modelObject.CastTo<Rhino.Geometry.SubD>(out Rhino.Geometry.SubD s);
         return s;
-      case Rhino.DocObjects.ObjectType.Extrusion:
+      case ObjectType.Extrusion:
         modelObject.CastTo<Rhino.Geometry.Extrusion>(out Rhino.Geometry.Extrusion e);
         return e;
-      case Rhino.DocObjects.ObjectType.Curve:
+      case ObjectType.Curve:
         modelObject.CastTo<Rhino.Geometry.Curve>(out Rhino.Geometry.Curve c);
         return c;
-      case Rhino.DocObjects.ObjectType.Hatch:
+      case ObjectType.Hatch:
         modelObject.CastTo<Rhino.Geometry.Hatch>(out Rhino.Geometry.Hatch h);
         return h;
-      case Rhino.DocObjects.ObjectType.PointSet:
+      case ObjectType.PointSet:
         modelObject.CastTo<Rhino.Geometry.PointCloud>(out Rhino.Geometry.PointCloud pc);
         return pc;
       default:
@@ -216,21 +218,19 @@ public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckle
     Value.DrawPreviewRaw(args.Pipeline, args.Material);
   }
 
-  public void Bake(bool dontBakeGeometry)
+  public void BakeGeometry(RhinoDoc doc, List<Guid> obj_ids) => throw new NotImplementedException();
+
+  public void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids)
   {
-    if (dontBakeGeometry)
-    {
-      return;
-    }
-
     // first create collections
-
     // create attributes
 
     // then bake
   }
 
   public BoundingBox ClippingBox => Value.GeometryBase.GetBoundingBox(false);
+
+  public bool IsBakeCapable => true;
 
   public SpeckleObjectGoo(SpeckleObject value)
   {
