@@ -114,6 +114,41 @@ public class SpeckleObject : Base
         break;
     }
   }
+
+  public void Bake(RhinoDoc doc, List<Guid> obj_ids, int bakeLayerIndex = -1)
+  {
+    // get or make layers
+    if (bakeLayerIndex < 0)
+    {
+      var layerNames = Path.Select(o => o.name).ToList();
+      var fullPath = string.Join("::", layerNames!);
+
+      if (Path.Count > 0)
+      {
+        var layerBaker = new RhinoLayerManager();
+        bakeLayerIndex = layerBaker.CreateLayerByFullPath(doc, fullPath);
+      }
+    }
+
+    // create attributes
+    using ObjectAttributes att = new() { Name = Name };
+
+    if (Color is int argb)
+    {
+      att.ObjectColor = System.Drawing.Color.FromArgb(argb);
+      att.ColorSource = ObjectColorSource.ColorFromObject;
+      att.LayerIndex = bakeLayerIndex;
+    }
+
+    foreach (var kvp in UserStrings)
+    {
+      att.SetUserString(kvp.Key, kvp.Value);
+    }
+
+    // add to doc
+    Guid guid = doc.Objects.Add(GeometryBase, att);
+    obj_ids.Add(guid);
+  }
 }
 
 public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckleGoo
@@ -191,40 +226,6 @@ public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckle
     Value.DrawPreviewRaw(args.Pipeline, args.Material);
   }
 
-  public void Bake(RhinoDoc doc, List<Guid> obj_ids)
-  {
-    // get or make layers
-    int bakeLayerIndex = 0;
-    if (Value.Path.Count > 0)
-    {
-      var layerBaker = new RhinoLayerBaker();
-
-      var firstCollectionName = Value.Path.First().name;
-      Collection[] childCollections = Value.Path.Skip(1).ToArray();
-      layerBaker.CreateAllLayersForReceive(new List<Collection[]> { childCollections }, firstCollectionName);
-      bakeLayerIndex = layerBaker.GetLayerIndex(childCollections, firstCollectionName);
-    }
-
-    // create attributes
-    using ObjectAttributes att = new() { Name = Value.Name };
-
-    if (Value.Color is int argb)
-    {
-      att.ObjectColor = Color.FromArgb(argb);
-      att.ColorSource = ObjectColorSource.ColorFromObject;
-      att.LayerIndex = bakeLayerIndex;
-    }
-
-    foreach (var kvp in Value.UserStrings)
-    {
-      att.SetUserString(kvp.Key, kvp.Value);
-    }
-
-    // add to doc
-    Guid guid = doc.Objects.Add(Value.GeometryBase, att);
-    obj_ids.Add(guid);
-  }
-
   public BoundingBox ClippingBox => Value.GeometryBase.GetBoundingBox(false);
 
   public SpeckleObjectGoo(SpeckleObject value)
@@ -264,7 +265,7 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectGoo>, IGH_BakeAwareObjec
     {
       if (item is SpeckleObjectGoo goo)
       {
-        goo.Bake(doc, obj_ids);
+        goo.Value.Bake(doc, obj_ids);
       }
     }
   }
@@ -276,7 +277,7 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectGoo>, IGH_BakeAwareObjec
     {
       if (item is SpeckleObjectGoo goo)
       {
-        goo.Bake(doc, obj_ids);
+        goo.Value.Bake(doc, obj_ids);
       }
     }
   }
