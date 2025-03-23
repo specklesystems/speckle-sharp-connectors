@@ -18,8 +18,8 @@ public class SpeckleObject : Base
 {
   public required Base Base { get; set; }
   public required GeometryBase GeometryBase { get; set; } // note: how will we send intervals and other gh native objects? do we? maybe not for now
-  public List<Collection> Path { get; set; }
-  public Dictionary<string, string> UserStrings { get; set; }
+  public List<Collection> Path { get; set; } = new();
+  public Dictionary<string, string> UserStrings { get; set; } = new();
   public string Name { get; set; } = "";
   public int? Color { get; set; }
   public string? RenderMaterialName { get; set; }
@@ -145,15 +145,18 @@ public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckle
         if (GetGeometryFromModelObject(modelObject) is GeometryBase modelGB)
         {
           var modelConverted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(modelGB);
-          Value = new SpeckleObject()
-          {
-            GeometryBase = modelGB,
-            Base = modelConverted,
-            Name = modelObject.Name,
-            Color = modelObject.Display.Color?.Color.ToArgb(),
-            RenderMaterialName = modelObject.Render.Material?.Material.Name,
-            UserStrings = modelObject.UserText.ToDictionary(s => s.Key, s => s.Value)
-          };
+          SpeckleObject so =
+            new()
+            {
+              GeometryBase = modelGB,
+              Base = modelConverted,
+              Name = modelObject.Name,
+              Color = modelObject.Display.Color?.Color.ToArgb(),
+              RenderMaterialName = modelObject.Render.Material?.Material?.Name,
+              UserStrings = modelObject.UserText.ToDictionary(s => s.Key, s => s.Value)
+            };
+          Value = so;
+          return true;
         }
         return false;
     }
@@ -161,38 +164,8 @@ public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckle
     return false;
   }
 
-  private GeometryBase? GetGeometryFromModelObject(ModelObject modelObject)
-  {
-    switch (modelObject.ObjectType)
-    {
-      case ObjectType.Point:
-        modelObject.CastTo<Rhino.Geometry.Point>(out Rhino.Geometry.Point p);
-        return p;
-      case ObjectType.Mesh:
-        modelObject.CastTo<Rhino.Geometry.Mesh>(out Rhino.Geometry.Mesh m);
-        return m;
-      case ObjectType.Brep:
-        modelObject.CastTo<Rhino.Geometry.Brep>(out Rhino.Geometry.Brep b);
-        return b;
-      case ObjectType.SubD:
-        modelObject.CastTo<Rhino.Geometry.SubD>(out Rhino.Geometry.SubD s);
-        return s;
-      case ObjectType.Extrusion:
-        modelObject.CastTo<Rhino.Geometry.Extrusion>(out Rhino.Geometry.Extrusion e);
-        return e;
-      case ObjectType.Curve:
-        modelObject.CastTo<Rhino.Geometry.Curve>(out Rhino.Geometry.Curve c);
-        return c;
-      case ObjectType.Hatch:
-        modelObject.CastTo<Rhino.Geometry.Hatch>(out Rhino.Geometry.Hatch h);
-        return h;
-      case ObjectType.PointSet:
-        modelObject.CastTo<Rhino.Geometry.PointCloud>(out Rhino.Geometry.PointCloud pc);
-        return pc;
-      default:
-        return null;
-    }
-  }
+  private GeometryBase? GetGeometryFromModelObject(ModelObject modelObject) =>
+    RhinoDoc.ActiveDoc.Objects.FindId(modelObject.Id ?? Guid.Empty).Geometry;
 
   public override bool CastTo<T>(ref T target)
   {
