@@ -35,7 +35,13 @@ public class SendComponentOutput(SpeckleUrlModelResource resource)
 public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInput, SendComponentOutput>
 {
   public SendComponent()
-    : base("Send from Speckle", "SFS", "Send objects to speckle", "Speckle", "Operations") { }
+    : base(
+      "Send from Speckle",
+      "SFS",
+      "Send objects to speckle",
+      ComponentCategories.PRIMARY_RIBBON,
+      ComponentCategories.OPERATIONS
+    ) { }
 
   public override Guid ComponentGuid => new("0CF0D173-BDF0-4AC2-9157-02822B90E9FB");
 
