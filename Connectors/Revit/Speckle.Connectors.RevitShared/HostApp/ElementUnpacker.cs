@@ -67,28 +67,35 @@ public class ElementUnpacker
     {
       doc = _revitContext.UIApplication?.ActiveUIDocument.Document!;
     }
-    // var doc = _converterSettings.Current.Document;
 
     foreach (var element in elements)
     {
       // UNPACK: Groups
       if (element is Group g)
       {
+        // When a group is from a linked model, GetMemberIds may behave differently
+        // We add null checks to handle cases where elements can't be properly resolved
         // POC: this might screw up generating hosting rel generation here, because nested families in groups get flattened out by GetMemberIds().
-        var groupElements = g.GetMemberIds().Select(doc.GetElement);
+        var groupElements = g.GetMemberIds().Select(doc.GetElement).Where(el => el != null);
         unpackedElements.AddRange(UnpackElements(groupElements));
       }
       else if (element is BaseArray baseArray)
       {
-        var arrayElements = baseArray.GetCopiedMemberIds().Select(doc.GetElement);
-        var originalElements = baseArray.GetOriginalMemberIds().Select(doc.GetElement);
+        // For arrays, collect both copied and original members with null checks
+        // This handles cases where some elements might not resolve in linked contexts
+        var arrayElements = baseArray.GetCopiedMemberIds().Select(doc.GetElement).Where(el => el != null);
+        var originalElements = baseArray.GetOriginalMemberIds().Select(doc.GetElement).Where(el => el != null);
         unpackedElements.AddRange(UnpackElements(arrayElements));
         unpackedElements.AddRange(UnpackElements(originalElements));
       }
       // UNPACK: Family instances (as they potentially have nested families inside)
       else if (element is FamilyInstance familyInstance)
       {
-        var familyElements = familyInstance.GetSubComponentIds().Select(doc.GetElement).ToArray();
+        var familyElements = familyInstance
+          .GetSubComponentIds()
+          .Select(doc.GetElement)
+          .Where(el => el != null)
+          .ToArray();
 
         if (familyElements.Length != 0)
         {
@@ -99,7 +106,7 @@ public class ElementUnpacker
       }
       else if (element is MultistoryStairs multistoryStairs)
       {
-        var stairs = multistoryStairs.GetAllStairsIds().Select(doc.GetElement);
+        var stairs = multistoryStairs.GetAllStairsIds().Select(doc.GetElement).Where(el => el != null);
         unpackedElements.AddRange(UnpackElements(stairs));
       }
       else
@@ -109,7 +116,10 @@ public class ElementUnpacker
     }
     // Why filtering for duplicates? Well, well, well... it's related to the comment above on groups: if a group
     // contains a nested family, GetMemberIds() will return... duplicates of the exploded family components.
-    return unpackedElements.GroupBy(el => el.Id).Select(g => g.First()).ToList(); // no disinctBy in here sadly.
+
+    // Add null check before GroupBy to prevent NullReferenceException when processing linked models with groups
+    // This ensures we don't try to access .Id on any null elements that might have been added during the unpacking process
+    return unpackedElements.Where(el => el != null).GroupBy(el => el.Id).Select(g => g.First()).ToList(); // no disinctBy in here sadly.
   }
 
   // We use the nullable document (happiness level 5/10) for the sake of linked models - bc we use this function in 2 different places
