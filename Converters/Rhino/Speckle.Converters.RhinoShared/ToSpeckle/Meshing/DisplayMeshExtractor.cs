@@ -8,44 +8,68 @@ public static class DisplayMeshExtractor
   public static RG.Mesh GetDisplayMesh(RhinoObject obj)
   {
     // note: unsure this is nice, we get bigger meshes - we should to benchmark (conversion time vs size tradeoffs)
+    var joinedMesh = new RG.Mesh();
     var renderMeshes = obj.GetMeshes(RG.MeshType.Render);
 
-    if (renderMeshes.Length != 0)
+    if (renderMeshes.Length > 0)
     {
-      var joinedMesh = new RG.Mesh();
       joinedMesh.Append(renderMeshes);
-      return joinedMesh;
     }
-    if (renderMeshes == null)
+    else
     {
-      //MeshingParametrs with small minimumEdgeLength often leads to `CreateFromBrep` returning null
-      throw new ConversionException($"Failed to meshify {obj.GetType()} (perhaps the brep is too small?)");
+      switch (obj)
+      {
+        case BrepObject brep:
+          joinedMesh.Append(GetGeometryDisplayMesh(brep.BrepGeometry));
+          break;
+        case ExtrusionObject extrusion:
+          joinedMesh.Append(GetGeometryDisplayMesh(extrusion.ExtrusionGeometry.ToBrep()));
+          break;
+        case SubDObject subDObject:
+          if (subDObject.Geometry is RG.SubD subdGeometry)
+          {
+            joinedMesh.Append(GetGeometryDisplayMesh(subdGeometry));
+          }
+          else
+          {
+            throw new ConversionException($"Failed to extract geometry from {subDObject.GetType()}");
+          }
+          break;
+        default:
+          throw new ConversionException($"Unsupported object for display mesh generation {obj.GetType().FullName}");
+      }
     }
 
-    return GetDisplayMeshFromGeometry(obj.Geometry);
+    return joinedMesh;
   }
 
-  public static RG.Mesh GetDisplayMeshFromGeometry(RG.GeometryBase gb)
+  public static RG.Mesh? GetGeometryDisplayMesh(RG.GeometryBase geometry)
   {
+    // declare "renderMeshes" as a separate var, because it needs to be checked for null after each Mesh.Create method
     RG.Mesh[] renderMeshes;
-    switch (gb)
+    var joinedMesh = new RG.Mesh();
+
+    switch (geometry)
     {
       case RG.Brep brep:
         renderMeshes = RG.Mesh.CreateFromBrep(brep, new(0.05, 0.05));
         break;
-      case RG.Extrusion extrusion:
-        renderMeshes = RG.Mesh.CreateFromBrep(extrusion.ToBrep(), new(0.05, 0.05));
-        break;
-      case RG.SubD subDObject:
+      case RG.SubD subd:
 #pragma warning disable CA2000
-        var mesh = RG.Mesh.CreateFromSubD(subDObject, 0);
+        var subdMesh = RG.Mesh.CreateFromSubD(subd, 0);
 #pragma warning restore CA2000
-        renderMeshes = [mesh];
+        renderMeshes = [subdMesh];
         break;
       default:
-        throw new ConversionException($"Unsupported object for display mesh generation {gb.GetType().FullName}");
+        throw new ConversionException($"Unsupported object for display mesh generation {geometry.GetType().FullName}");
     }
-    var joinedMesh = new RG.Mesh();
+
+    if (renderMeshes == null)
+    {
+      // MeshingParametrs with small minimumEdgeLength often leads to `CreateFromBrep` returning null
+      throw new ConversionException($"Failed to meshify {geometry.GetType()} (perhaps the brep is too small?)");
+    }
+
     joinedMesh.Append(renderMeshes);
     return joinedMesh;
   }

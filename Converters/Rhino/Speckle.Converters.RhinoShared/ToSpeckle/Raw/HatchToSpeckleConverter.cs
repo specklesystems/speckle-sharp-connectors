@@ -1,5 +1,6 @@
-﻿using Speckle.Converters.Common;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Rhino.ToSpeckle.Meshing;
 using Speckle.Objects;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
@@ -7,14 +8,17 @@ namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
 public class HatchToSpeckleConverter : ITypedConverter<RG.Hatch, SOG.Region>
 {
   private readonly ITypedConverter<RG.Curve, ICurve> _curveConverter;
+  private readonly ITypedConverter<RG.Mesh, SOG.Mesh> _meshConverter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   public HatchToSpeckleConverter(
     ITypedConverter<RG.Curve, ICurve> curveConverter,
+    ITypedConverter<RG.Mesh, SOG.Mesh> meshConverter,
     IConverterSettingsStore<RhinoConversionSettings> settingsStore
   )
   {
     _curveConverter = curveConverter;
+    _meshConverter = meshConverter;
     _settingsStore = settingsStore;
   }
 
@@ -32,12 +36,18 @@ public class HatchToSpeckleConverter : ITypedConverter<RG.Hatch, SOG.Region>
     ICurve boundary = _curveConverter.Convert(rhinoBoundary);
     List<ICurve> innerLoops = rhinoLoops.Select(x => _curveConverter.Convert(x)).ToList();
 
+    // create display mesh from region by converting to brep first
+    var brep = RG.Brep.TryConvertBrep(target);
+    var displayMesh = DisplayMeshExtractor.GetGeometryDisplayMesh(brep);
+    List<SOG.Mesh> displayValue = displayMesh is null ? new() : new() { _meshConverter.Convert(displayMesh) };
+
     return new SOG.Region
     {
       boundary = boundary,
       innerLoops = innerLoops,
       hasHatchPattern = true,
       units = _settingsStore.Current.SpeckleUnits,
+      displayValue = displayValue
     };
   }
 }
