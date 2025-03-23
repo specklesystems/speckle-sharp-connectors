@@ -44,8 +44,8 @@ public class BrepObjectToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter,
   {
     var brepEncoding = RawEncodingCreator.Encode(target, _settingsStore.Current.Document);
 
-    var mesh = DisplayMeshExtractor.GetDisplayMeshFromGeometry(target);
-    var displayValue = new List<SOG.Mesh> { _meshConverter.Convert(mesh) };
+    var displayMesh = DisplayMeshExtractor.GetGeometryDisplayMesh(target);
+    List<SOG.Mesh> displayValue = displayMesh is null ? new() : new() { _meshConverter.Convert(displayMesh) };
 
     var bx = new SOG.BrepX()
     {
