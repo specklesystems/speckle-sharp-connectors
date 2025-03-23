@@ -85,7 +85,8 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
 
       foreach (var obj in data)
       {
-        if (obj.CastTo<SpeckleObjectGoo>(out var goo))
+        SpeckleObjectGoo goo = new();
+        if (goo.CastFrom(obj))
         {
           childCollection.elements.Add(goo.Value);
           //TODO: add collection path to goo
