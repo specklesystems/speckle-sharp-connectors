@@ -6,6 +6,7 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.Grasshopper8.Components.BaseComponents;
 using Speckle.Connectors.Grasshopper8.HostApp;
+using Speckle.Connectors.Grasshopper8.Operations.Receive;
 using Speckle.Connectors.Grasshopper8.Parameters;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;

@@ -1,5 +1,6 @@
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
+using Grasshopper.Rhinoceros.Model;
 using Rhino.Display;
 using Rhino.Geometry;
 using Speckle.Connectors.Grasshopper8.HostApp;
@@ -16,6 +17,10 @@ public class SpeckleObject : Base
   public Base Base { get; set; }
   public GeometryBase GeometryBase { get; set; } // note: how will we send intervals and other gh native objects? do we? maybe not for now
   public List<Collection> Path { get; set; }
+  public Dictionary<string, string> UserStrings { get; set; }
+  public string Name { get; set; }
+  public int? Color { get; set; }
+  public string? RenderMaterialName { get; set; }
 
   // RenderMaterial, ColorProxies, Properties (?)
   public override string ToString() => $"Speckle Wrapper [{GeometryBase.GetType().Name}]";
@@ -130,13 +135,61 @@ public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckle
         Value = speckleGrasshopperObjectGoo.Value;
         return true;
       case IGH_GeometricGoo geometricGoo:
-        var gb = geometricGoo.GeometricGooToGeometryBase();
-        var converted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(gb);
-        Value = new SpeckleObject() { GeometryBase = gb, Base = converted };
+        var gooGB = geometricGoo.GeometricGooToGeometryBase();
+        var gooConverted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(gooGB);
+        Value = new SpeckleObject() { GeometryBase = gooGB, Base = gooConverted };
         return true;
+      case ModelObject modelObject:
+        if (GetGeometryFromModelObject(modelObject) is GeometryBase modelGB)
+        {
+          var modelConverted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(modelGB);
+          Value = new SpeckleObject()
+          {
+            GeometryBase = modelGB,
+            Base = modelConverted,
+            Name = modelObject.Name,
+            Color = modelObject.Display.Color?.Color.ToArgb(),
+            RenderMaterialName = modelObject.Render.Material?.Material.Name,
+            UserStrings = modelObject.UserText.ToDictionary(s => s.Key, s => s.Value)
+          };
+        }
+        return false;
     }
 
     return false;
+  }
+
+  private GeometryBase? GetGeometryFromModelObject(ModelObject modelObject)
+  {
+    switch (modelObject.ObjectType)
+    {
+      case Rhino.DocObjects.ObjectType.Point:
+        modelObject.CastTo<Rhino.Geometry.Point>(out Rhino.Geometry.Point p);
+        return p;
+      case Rhino.DocObjects.ObjectType.Mesh:
+        modelObject.CastTo<Rhino.Geometry.Mesh>(out Rhino.Geometry.Mesh m);
+        return m;
+      case Rhino.DocObjects.ObjectType.Brep:
+        modelObject.CastTo<Rhino.Geometry.Brep>(out Rhino.Geometry.Brep b);
+        return b;
+      case Rhino.DocObjects.ObjectType.SubD:
+        modelObject.CastTo<Rhino.Geometry.SubD>(out Rhino.Geometry.SubD s);
+        return s;
+      case Rhino.DocObjects.ObjectType.Extrusion:
+        modelObject.CastTo<Rhino.Geometry.Extrusion>(out Rhino.Geometry.Extrusion e);
+        return e;
+      case Rhino.DocObjects.ObjectType.Curve:
+        modelObject.CastTo<Rhino.Geometry.Curve>(out Rhino.Geometry.Curve c);
+        return c;
+      case Rhino.DocObjects.ObjectType.Hatch:
+        modelObject.CastTo<Rhino.Geometry.Hatch>(out Rhino.Geometry.Hatch h);
+        return h;
+      case Rhino.DocObjects.ObjectType.PointSet:
+        modelObject.CastTo<Rhino.Geometry.PointCloud>(out Rhino.Geometry.PointCloud pc);
+        return pc;
+      default:
+        return null;
+    }
   }
 
   public override bool CastTo<T>(ref T target)
@@ -161,6 +214,20 @@ public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckle
   public void DrawViewportMeshes(GH_PreviewMeshArgs args)
   {
     Value.DrawPreviewRaw(args.Pipeline, args.Material);
+  }
+
+  public void Bake(bool dontBakeGeometry)
+  {
+    if (dontBakeGeometry)
+    {
+      return;
+    }
+
+    // first create collections
+
+    // create attributes
+
+    // then bake
   }
 
   public BoundingBox ClippingBox => Value.GeometryBase.GetBoundingBox(false);

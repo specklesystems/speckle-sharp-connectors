@@ -1,12 +1,8 @@
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
-using Grasshopper.Kernel.Types;
-using Grasshopper.Rhinoceros.Model;
-using Rhino;
 using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Connectors.Grasshopper8.HostApp.Extras;
 using Speckle.Connectors.Grasshopper8.Parameters;
-using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models.Collections;
 
@@ -89,34 +85,10 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
 
       foreach (var obj in data)
       {
-        if (obj is SpeckleObjectGoo objectGoo)
+        if (obj.CastTo<SpeckleObjectGoo>(out var goo))
         {
-          childCollection.elements.Add(objectGoo.Value);
-        }
-        else if (obj is IGH_GeometricGoo geoGeo)
-        {
-          try
-          {
-            var geometryBase = geoGeo.GeometricGooToGeometryBase();
-            var converted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(geometryBase);
-
-            var wrapper = new SpeckleObject() { GeometryBase = geometryBase, Base = converted };
-            childCollection.elements.Add(wrapper);
-          }
-          catch (Exception e) when (!e.IsFatal())
-          {
-            AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Failed to convert object of type {obj.GetType()}");
-            return;
-          }
-        }
-        else if (obj is ModelObject { Id: not null } modelObject)
-        {
-          // TODO remove copy pasta
-          var docObject = RhinoDoc.ActiveDoc.Objects.FindId(modelObject.Id.NotNull());
-          var converted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(docObject.Geometry);
-
-          var wrapper = new SpeckleObject() { GeometryBase = docObject.Geometry, Base = converted };
-          childCollection.elements.Add(wrapper);
+          childCollection.elements.Add(goo.Value);
+          //TODO: add collection path to goo
         }
       }
 

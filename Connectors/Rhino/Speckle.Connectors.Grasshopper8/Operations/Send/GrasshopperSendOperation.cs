@@ -3,7 +3,7 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Grasshopper8.Parameters;
 using Speckle.Sdk.Models.Collections;
 
-namespace Speckle.Connectors.Grasshopper8.HostApp;
+namespace Speckle.Connectors.Grasshopper8.Operations.Send;
 
 public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollectionGoo>
 {

@@ -28,6 +28,15 @@ public class SpeckleCollectionGoo : GH_Goo<Collection>, ISpeckleGoo //, IGH_Prev
   {
     Value = value;
   }
+
+  public void Bake(bool dontBakeGeometry)
+  {
+    // TODO first create collections
+
+    // create attributes
+
+    // then bake
+  }
 }
 
 public class SpeckleCollectionWrapperParam : GH_Param<SpeckleCollectionGoo>

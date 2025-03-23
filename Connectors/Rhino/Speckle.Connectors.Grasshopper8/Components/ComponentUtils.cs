@@ -1,4 +1,4 @@
-namespace Speckle.Connectors.Grasshopper8.HostApp;
+namespace Speckle.Connectors.Grasshopper8.Components;
 
 // NOTE: The number of spaces determines the order in which they display in the ribbon (nice hack)
 public static class ComponentCategories

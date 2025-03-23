@@ -11,6 +11,7 @@ using Rhino;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Connectors.Grasshopper8.Parameters;
+using Speckle.Connectors.Grasshopper8.Registration;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;

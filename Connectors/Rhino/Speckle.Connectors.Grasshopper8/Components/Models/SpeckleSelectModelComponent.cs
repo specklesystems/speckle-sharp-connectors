@@ -4,13 +4,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Connectors.Grasshopper8.Parameters;
+using Speckle.Connectors.Grasshopper8.Registration;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
 using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
-namespace Speckle.Connectors.Grasshopper8.Components;
+namespace Speckle.Connectors.Grasshopper8.Components.Models;
 
 public class SpeckleSelectModelComponent : GH_Component
 {
