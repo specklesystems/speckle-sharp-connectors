@@ -218,7 +218,39 @@ public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckle
     Value.DrawPreviewRaw(args.Pipeline, args.Material);
   }
 
-  public void BakeGeometry(RhinoDoc doc, List<Guid> obj_ids) => throw new NotImplementedException();
+  public void BakeGeometry(RhinoDoc doc, List<Guid> obj_ids)
+  {
+    // get or make layers
+    int bakeLayerIndex = 0;
+    if (Value.Path.Count > 0)
+    {
+      var layerBaker = new RhinoLayerBaker();
+
+      var firstCollectionName = Value.Path.First().name;
+      Collection[] childCollections = Value.Path.Skip(1).ToArray();
+      layerBaker.CreateAllLayersForReceive(new List<Collection[]> { childCollections }, firstCollectionName);
+      bakeLayerIndex = layerBaker.GetLayerIndex(childCollections, firstCollectionName);
+    }
+
+    // create attributes
+    using ObjectAttributes att = new() { Name = Value.Name };
+
+    if (Value.Color is int argb)
+    {
+      att.ObjectColor = Color.FromArgb(argb);
+      att.ColorSource = ObjectColorSource.ColorFromObject;
+      att.LayerIndex = bakeLayerIndex;
+    }
+
+    foreach (var kvp in Value.UserStrings)
+    {
+      att.SetUserString(kvp.Key, kvp.Value);
+    }
+
+    // add to doc
+    Guid guid = doc.Objects.Add(Value.GeometryBase, att);
+    obj_ids.Add(guid);
+  }
 
   public void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids)
   {

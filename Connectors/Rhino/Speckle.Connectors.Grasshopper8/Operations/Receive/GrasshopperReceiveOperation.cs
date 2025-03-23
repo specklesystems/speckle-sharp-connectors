@@ -1,4 +1,4 @@
-﻿using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Logging;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Credentials;
