@@ -32,26 +32,25 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
       return;
     }
 
-    var paths = new HashSet<string>();
-    foreach (var propertyGroup in objectPropertyGroups)
-    {
-      var objectPropertyPaths = GetPaths(propertyGroup);
-      foreach (string path in GetPaths(propertyGroup))
-      {
-        paths.Add(path);
-      }
-    }
+    var paths = GetPropertyPaths(objectPropertyGroups);
     m_data.AppendRange(paths.Select(s => new GH_String(s)));
   }
 
-  private HashSet<string> GetPaths(Dictionary<string, object?> dictionary)
+  private static List<string> GetPropertyPaths(List<Dictionary<string, object?>> objectPropertyGroups)
   {
     var result = new HashSet<string>();
-    FlattenDictionaryRecursive(dictionary, string.Empty, result);
-    return result;
+    foreach (var dict in objectPropertyGroups)
+    {
+      FlattenDictionaryRecursive(dict, string.Empty, result);
+    }
+
+    return result
+      // This starts sucking, just as the frontend. I'm heavily inclined to make things more simple, and back to key value pairs.
+      .Where(path => !(path.Contains(".name") || path.Contains(".units") || path.Contains(".internalDefinitionName")))
+      .ToList();
   }
 
-  private void FlattenDictionaryRecursive(
+  private static void FlattenDictionaryRecursive(
     Dictionary<string, object?> dictionary,
     string parentKey,
     HashSet<string> result
