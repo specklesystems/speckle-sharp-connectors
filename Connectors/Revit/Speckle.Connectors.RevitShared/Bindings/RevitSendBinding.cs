@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Exceptions;
@@ -42,6 +43,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly ISpeckleApplication _speckleApplication;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly LinkedModelHandler _linkedModelHandler;
+  private readonly IThreadContext _threadContext;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -66,7 +68,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     IRevitConversionSettingsFactory revitConversionSettingsFactory,
     ISpeckleApplication speckleApplication,
     ITopLevelExceptionHandler topLevelExceptionHandler,
-    LinkedModelHandler linkedModelHandler
+    LinkedModelHandler linkedModelHandler,
+    IThreadContext threadContext
   )
     : base("sendBinding", bridge)
   {
@@ -84,6 +87,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _speckleApplication = speckleApplication;
     _topLevelExceptionHandler = topLevelExceptionHandler;
     _linkedModelHandler = linkedModelHandler;
+    _threadContext = threadContext;
 
     Commands = new SendBindingUICommands(bridge);
     // TODO expiry events
@@ -185,12 +189,14 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       _revitContext.UIApplication.NotNull().ActiveUIDocument
       ?? throw new SpeckleException("Unable to retrieve active UI document");
 
-    if (modelCard.SendFilter is IRevitSendFilter viewFilter)
+    if (modelCard.SendFilter.NotNull() is IRevitSendFilter viewFilter)
     {
       viewFilter.SetContext(_revitContext);
     }
 
-    var selectedObjects = modelCard.SendFilter.NotNull().RefreshObjectIds();
+    var selectedObjects = await _threadContext.RunOnMainAsync(
+      () => Task.FromResult(modelCard.SendFilter.NotNull().RefreshObjectIds())
+    );
 
     var allElements = selectedObjects
       .Select(uid => activeUIDoc.Document.GetElement(uid))
