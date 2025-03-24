@@ -28,21 +28,18 @@ public class RegionConverterToHost : ITypedConverter<SOG.Region, List<DB.Geometr
   public List<DB.GeometryObject> Convert(SOG.Region target)
   {
     List<DB.GeometryObject> resultList = new();
-
-    List<DB.Curve> outerLoop = _curveConverter.Convert(target.boundary).Cast<DB.Curve>().ToList();
-    List<List<DB.Curve>> innerLoops = target
-      .innerLoops.Select(x => _curveConverter.Convert(x).Cast<DB.Curve>().ToList())
-      .ToList();
-
-    // Collect native loops for the filled region into 1 list
     List<CurveLoop> profileLoops = new();
 
-    // Collect boundary curves into a loop
+    // convert boundary loop and add to profileLoops list
     CurveLoop boundaryLoop = new();
+    List<DB.Curve> outerLoop = _curveConverter.Convert(target.boundary).Cast<DB.Curve>().ToList();
     outerLoop.ForEach(x => boundaryLoop.Append(x));
     profileLoops.Add(boundaryLoop);
 
-    // Collect each of inner curves into a loop
+    // convert inner loops and add to profileLoops list
+    List<List<DB.Curve>> innerLoops = target
+      .innerLoops.Select(x => _curveConverter.Convert(x).Cast<DB.Curve>().ToList())
+      .ToList();
     foreach (var innerLoop in innerLoops)
     {
       CurveLoop voidLoop = new();
@@ -54,6 +51,8 @@ public class RegionConverterToHost : ITypedConverter<SOG.Region, List<DB.Geometr
     using var filledRegionCollector = new FilteredElementCollector(_converterSettings.Current.Document);
     Element filledRegionElementType = filledRegionCollector.OfClass(typeof(DB.FilledRegionType)).FirstElement();
 
+    // follow the pattern of the native CAD import: try to draw native FilledRegion in the Active view,
+    // or draw a linked CAD document, if imported into unsupported View (in our case: default to Mesh converter)
     View activeView = _converterSettings.Current.Document.ActiveView;
     try
     {
@@ -66,8 +65,6 @@ public class RegionConverterToHost : ITypedConverter<SOG.Region, List<DB.Geometr
     }
     catch (Autodesk.Revit.Exceptions.ArgumentException)
     {
-      // follow the pattern of the native CAD import: draw native FilledRegion if imported into 2d View
-      // and draw a linked document, if imported into unsupported View (in our case: default to Mesh converter)
       foreach (var displayMesh in target.displayValue)
       {
         var regionMeshes = _meshConverter.Convert(displayMesh);
@@ -80,7 +77,6 @@ public class RegionConverterToHost : ITypedConverter<SOG.Region, List<DB.Geometr
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      // handle other exceptions
       throw new ConversionException($"Conversion failed for {target}: {ex.Message}");
     }
 
