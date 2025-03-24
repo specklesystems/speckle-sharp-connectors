@@ -44,7 +44,7 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
   {
     pManager.AddParameter(
-      new SpeckleCollectionWrapperParam(GH_ParamAccess.item),
+      new SpeckleCollectionParam(GH_ParamAccess.item),
       "Model",
       "model",
       "The model object for the received version",
