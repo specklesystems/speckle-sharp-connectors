@@ -203,7 +203,7 @@ public class SpeckleCollectionParam : GH_Param<SpeckleCollectionGoo>, IGH_BakeAw
     : base(tag, access) { }
 
   public SpeckleCollectionParam(GH_ParamAccess access)
-    : base("Speckle Collection Wrapper", "SCO", "XXXXX", "Speckle", "Params", access) { }
+    : base("Speckle Collection", "SCO", "XXXXX", "Speckle", "Params", access) { }
 
   public override Guid ComponentGuid => new("6E871D5B-B221-4992-882A-EFE6796F3010");
   protected override Bitmap Icon => BitmapBuilder.CreateHexagonalBitmap("C");
