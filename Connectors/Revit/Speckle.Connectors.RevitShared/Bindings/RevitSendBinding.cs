@@ -189,14 +189,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       _revitContext.UIApplication.NotNull().ActiveUIDocument
       ?? throw new SpeckleException("Unable to retrieve active UI document");
 
-    if (modelCard.SendFilter is IRevitSendFilter viewFilter)
+    if (modelCard.SendFilter.NotNull() is IRevitSendFilter viewFilter)
     {
       viewFilter.SetContext(_revitContext);
-    }
-
-    if (modelCard.SendFilter is null)
-    {
-      throw new SpeckleException("whatever");
     }
 
     var selectedObjects = _threadContext
