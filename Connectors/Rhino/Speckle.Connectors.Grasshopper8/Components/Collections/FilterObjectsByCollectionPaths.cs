@@ -2,7 +2,6 @@ using Grasshopper.Kernel;
 using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Connectors.Grasshopper8.Parameters;
 using Speckle.Sdk;
-using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.Grasshopper8.Components.Collections;
 
@@ -67,29 +66,33 @@ public class FilterObjectsByCollectionPaths : GH_Component
       return;
     }
 
-    var targetCollection = FindCollection(collectionGoo.Value, path);
-    if (targetCollection["topology"] is not string topology)
+    SpeckleCollection targetCollection = FindCollection(collectionGoo.Value, path);
+    if (string.IsNullOrEmpty(targetCollection.Topology))
     {
-      dataAccess.SetDataList(0, targetCollection.elements);
+      dataAccess.SetDataList(0, targetCollection.Collection.elements);
     }
     else
     {
-      var tree = GrasshopperHelpers.CreateDataTreeFromTopologyAndItems(topology, targetCollection.elements);
+      var tree = GrasshopperHelpers.CreateDataTreeFromTopologyAndItems(
+        targetCollection.Topology,
+        targetCollection.Collection.elements
+      );
       dataAccess.SetDataTree(0, tree);
     }
   }
 
-  private Collection FindCollection(Collection root, string unifiedPath)
+  private SpeckleCollection FindCollection(SpeckleCollection root, string unifiedPath)
   {
-    var collectionNames = unifiedPath.Split([" :: "], StringSplitOptions.None).Skip(1).ToList();
-    Collection currentCollection = root;
-    while (collectionNames.Count != 0)
+    // POC: SpeckleCollections now have a full list<string> path prop on them always. Is this easier to use?
+    List<string> paths = unifiedPath.Split([" :: "], StringSplitOptions.None).Skip(1).ToList();
+    SpeckleCollection currentCollection = root;
+    while (paths.Count != 0)
     {
       currentCollection = currentCollection
-        .elements.OfType<Collection>()
-        .First(col => col.name == collectionNames.First());
-      collectionNames.RemoveAt(0);
-      if (collectionNames.Count == 0)
+        .Collection.elements.OfType<SpeckleCollection>()
+        .First(col => col.Collection.name == paths.First());
+      paths.RemoveAt(0);
+      if (paths.Count == 0)
       {
         return currentCollection;
       }

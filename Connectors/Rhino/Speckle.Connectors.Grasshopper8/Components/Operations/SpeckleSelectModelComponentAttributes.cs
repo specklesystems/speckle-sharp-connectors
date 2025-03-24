@@ -2,7 +2,7 @@ using Grasshopper.GUI.Canvas;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Attributes;
 
-namespace Speckle.Connectors.Grasshopper8.Components.Models;
+namespace Speckle.Connectors.Grasshopper8.Components.Operations;
 
 public class SpeckleSelectModelComponentAttributes : GH_ComponentAttributes
 {

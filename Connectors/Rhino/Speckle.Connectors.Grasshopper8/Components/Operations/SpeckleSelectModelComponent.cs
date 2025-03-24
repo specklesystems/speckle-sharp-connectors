@@ -11,7 +11,7 @@ using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
 using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
-namespace Speckle.Connectors.Grasshopper8.Components.Models;
+namespace Speckle.Connectors.Grasshopper8.Components.Operations;
 
 public class SpeckleSelectModelComponent : GH_Component
 {

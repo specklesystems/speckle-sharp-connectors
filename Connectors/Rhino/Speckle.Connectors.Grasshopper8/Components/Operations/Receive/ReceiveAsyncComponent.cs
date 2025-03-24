@@ -449,7 +449,11 @@ public class ReceiveComponentWorker : WorkerInstance
           unpackedRoot.ObjectsToConvert.ToList()
         );
 
-        var collGen = new CollectionRebuilder2((Root as Collection) ?? new Collection() { name = "unnamed" });
+        // TODO: unpack colors and render materials
+
+        var collectionRebuilder = new GrasshopperCollectionRebuilder(
+          (Root as Collection) ?? new Collection() { name = "unnamed" }
+        );
 
         int count = 0;
         int total = localToGlobalMaps.Count;
@@ -457,8 +461,11 @@ public class ReceiveComponentWorker : WorkerInstance
         {
           try
           {
-            var converted = Convert(map.AtomicObject);
-            var path = traversalContextUnpacker.GetCollectionPath(map.TraversalContext).ToList();
+            List<GeometryBase> converted = Convert(map.AtomicObject);
+            List<string> path = traversalContextUnpacker
+              .GetCollectionPath(map.TraversalContext)
+              .Select(o => o.name)
+              .ToList();
 
             foreach (var matrix in map.Matrix)
             {
@@ -469,13 +476,16 @@ public class ReceiveComponentWorker : WorkerInstance
             // note one to many not handled too nice here
             foreach (var geometryBase in converted)
             {
+              SpeckleCollection objectCollection = collectionRebuilder.GetOrCreateSpeckleCollectionFromPath(path);
               var gh = new SpeckleObject()
               {
                 Base = map.AtomicObject,
                 Path = path,
+                Parent = objectCollection,
                 GeometryBase = geometryBase
               };
-              collGen.AppendSpeckleGrasshopperObject(gh);
+
+              collectionRebuilder.AppendSpeckleGrasshopperObject(gh, objectCollection);
             }
           }
           catch (ConversionException)
@@ -486,7 +496,7 @@ public class ReceiveComponentWorker : WorkerInstance
           count++;
         }
 
-        Result = new SpeckleCollectionGoo(collGen.RootCollection);
+        Result = new SpeckleCollectionGoo(collectionRebuilder.RootCollection);
 
         // DONE
         done();
@@ -515,55 +525,65 @@ public class ReceiveComponentWorker : WorkerInstance
     if (result is IEnumerable<(GeometryBase, Base)> fallbackConversionResult)
     {
       // note special handling for proxying render materials OR we don't care about revit
-      return fallbackConversionResult.Select(t => t.Item1).Cast<GeometryBase>().ToList();
+      return fallbackConversionResult.Select(t => t.Item1).ToList();
     }
 
     throw new SpeckleException("Failed to convert input to rhino");
   }
 }
 
-// NOTE: We will need GrasshopperCollections (with an extra path element)
-// these will need to be handled now
-internal sealed class CollectionRebuilder2
+internal sealed class GrasshopperCollectionRebuilder
 {
-  public Collection RootCollection { get; }
+  public SpeckleCollection RootCollection { get; }
 
-  private readonly Dictionary<string, Collection> _cache = new();
+  // a cache of collection path (no delimiter) to the speckle collection
+  private readonly Dictionary<string, SpeckleCollection> _cache = new();
 
-  public CollectionRebuilder2(Collection baseCollection)
+  public GrasshopperCollectionRebuilder(Collection baseCollection)
   {
-    RootCollection = new Collection() { name = baseCollection.name, applicationId = baseCollection.applicationId };
+    Collection newCollection = new() { name = baseCollection.name, applicationId = baseCollection.applicationId };
+    RootCollection = new SpeckleCollection(newCollection, new() { baseCollection.name }, null);
   }
 
-  public void AppendSpeckleGrasshopperObject(SpeckleObject speckleGrasshopperObject)
+  public void AppendSpeckleGrasshopperObject(
+    SpeckleObject speckleGrasshopperObject,
+    SpeckleCollection speckleCollection
+  )
   {
-    var collection = GetOrCreateCollectionFromPath(speckleGrasshopperObject.Path);
-    collection.elements.Add(speckleGrasshopperObject);
+    speckleCollection.Collection.elements.Add(speckleGrasshopperObject);
   }
 
-  private Collection GetOrCreateCollectionFromPath(IEnumerable<Collection> path)
+  public SpeckleCollection GetOrCreateSpeckleCollectionFromPath(List<string> path)
   {
-    // TODO - this flows but it can be optimised (ie, concat path first, check cache, iterate only if not in cache)
-    var currentLayerName = "";
-    Collection previousCollection = RootCollection;
-    foreach (var collection in path)
+    // first check if cache already has this collection
+    string fullPath = string.Concat(path);
+    if (_cache.TryGetValue(fullPath, out SpeckleCollection col))
     {
-      currentLayerName += collection.name;
-      if (_cache.TryGetValue(currentLayerName, out Collection col))
+      return col;
+    }
+
+    // otherwise, iterate through the path and create speckle collections as needed
+    SpeckleCollection previousCollection = RootCollection;
+    List<string> currentLayerPath = new();
+    foreach (string collectionName in path)
+    {
+      currentLayerPath.Add(collectionName);
+      string key = string.Concat(currentLayerPath);
+
+      // check cache
+      if (_cache.TryGetValue(key, out SpeckleCollection currentCol))
       {
-        previousCollection = col;
+        previousCollection = currentCol;
         continue;
       }
 
-      var newCollection = new Collection() { name = collection.name, applicationId = collection.applicationId };
-      if (collection["path"] != null)
-      {
-        newCollection["path"] = collection["path"];
-      }
-      _cache[currentLayerName] = newCollection;
-      previousCollection.elements.Add(newCollection);
+      // create and cache if needed
+      Collection newCollection = new() { name = collectionName };
+      SpeckleCollection newSpeckleCollection = new(newCollection, currentLayerPath, null);
+      _cache[key] = newSpeckleCollection;
+      previousCollection.Collection.elements.Add(newSpeckleCollection);
 
-      previousCollection = newCollection;
+      previousCollection = newSpeckleCollection;
     }
 
     return previousCollection;

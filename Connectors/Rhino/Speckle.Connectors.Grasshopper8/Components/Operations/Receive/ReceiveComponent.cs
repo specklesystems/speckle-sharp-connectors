@@ -117,14 +117,14 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
       unpackedRoot.ObjectsToConvert.ToList()
     );
 
-    var collGen = new CollectionRebuilder((root as Collection) ?? new Collection() { name = "unnamed" });
+    var collGen = new GrasshopperCollectionRebuilderOld((root as Collection) ?? new Collection() { name = "unnamed" });
 
     foreach (var map in localToGlobalMaps)
     {
       try
       {
-        var converted = Convert(map.AtomicObject);
-        var path = traversalContextUnpacker.GetCollectionPath(map.TraversalContext).ToList();
+        List<GeometryBase> converted = Convert(map.AtomicObject);
+        List<Collection> path = traversalContextUnpacker.GetCollectionPath(map.TraversalContext).ToList();
 
         foreach (var matrix in map.Matrix)
         {
@@ -138,7 +138,7 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
           var gh = new SpeckleObject()
           {
             Base = map.AtomicObject,
-            Path = path,
+            Path = path.Select(o => o.name).ToList(),
             GeometryBase = geometryBase
           };
           collGen.AppendSpeckleGrasshopperObject(gh);
@@ -177,48 +177,56 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
   }
 }
 
-// NOTE: We will need GrasshopperCollections (with an extra path element)
-// these will need to be handled now
-internal sealed class CollectionRebuilder
+internal sealed class GrasshopperCollectionRebuilderOld
 {
-  public Collection RootCollection { get; }
+  public SpeckleCollection RootCollection { get; }
 
-  private readonly Dictionary<string, Collection> _cache = new();
+  // a cache of collection path (no delimiter) to the speckle collection
+  private readonly Dictionary<string, SpeckleCollection> _cache = new();
 
-  public CollectionRebuilder(Collection baseCollection)
+  public GrasshopperCollectionRebuilderOld(Collection baseCollection)
   {
-    RootCollection = new Collection() { name = baseCollection.name, applicationId = baseCollection.applicationId };
+    Collection newCollection = new() { name = baseCollection.name, applicationId = baseCollection.applicationId };
+    RootCollection = new SpeckleCollection(newCollection, new() { baseCollection.name }, null);
   }
 
   public void AppendSpeckleGrasshopperObject(SpeckleObject speckleGrasshopperObject)
   {
-    var collection = GetOrCreateCollectionFromPath(speckleGrasshopperObject.Path);
-    collection.elements.Add(speckleGrasshopperObject);
+    var collection = GetOrCreateSpeckleCollectionFromPath(speckleGrasshopperObject.Path);
+    collection.Collection.elements.Add(speckleGrasshopperObject);
   }
 
-  private Collection GetOrCreateCollectionFromPath(IEnumerable<Collection> path)
+  private SpeckleCollection GetOrCreateSpeckleCollectionFromPath(List<string> path)
   {
-    // TODO - this flows but it can be optimised (ie, concat path first, check cache, iterate only if not in cache)
-    var currentLayerName = "";
-    Collection previousCollection = RootCollection;
-    foreach (var collection in path)
+    // first check if cache already has this collection
+    string fullPath = string.Concat(path);
+    if (_cache.TryGetValue(fullPath, out SpeckleCollection col))
     {
-      currentLayerName += collection.name;
-      if (_cache.TryGetValue(currentLayerName, out Collection col))
+      return col;
+    }
+
+    // otherwise, iterate through the path and create speckle collections as needed
+    SpeckleCollection previousCollection = RootCollection;
+    List<string> currentLayerPath = new();
+    foreach (string collectionName in path)
+    {
+      currentLayerPath.Add(collectionName);
+      string key = string.Concat(currentLayerPath);
+
+      // check cache
+      if (_cache.TryGetValue(key, out SpeckleCollection currentCol))
       {
-        previousCollection = col;
+        previousCollection = currentCol;
         continue;
       }
 
-      var newCollection = new Collection() { name = collection.name, applicationId = collection.applicationId };
-      if (collection["path"] != null)
-      {
-        newCollection["path"] = collection["path"];
-      }
-      _cache[currentLayerName] = newCollection;
-      previousCollection.elements.Add(newCollection);
+      // create and cache if needed
+      Collection newCollection = new() { name = collectionName };
+      SpeckleCollection newSpeckleCollection = new(newCollection, currentLayerPath, null);
+      _cache[key] = newSpeckleCollection;
+      previousCollection.Collection.elements.Add(newSpeckleCollection);
 
-      previousCollection = newCollection;
+      previousCollection = newSpeckleCollection;
     }
 
     return previousCollection;

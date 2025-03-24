@@ -7,7 +7,6 @@ using Rhino.DocObjects;
 using Rhino.Geometry;
 using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Sdk.Models;
-using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.Grasshopper8.Parameters;
 
@@ -18,7 +17,10 @@ public class SpeckleObject : Base
 {
   public required Base Base { get; set; }
   public required GeometryBase GeometryBase { get; set; } // note: how will we send intervals and other gh native objects? do we? maybe not for now
-  public List<Collection> Path { get; set; } = new();
+
+  // The list of layer/collection names that forms the full path to this object
+  public List<string> Path { get; set; } = new();
+  public SpeckleCollection? Parent { get; set; }
   public Dictionary<string, string> UserStrings { get; set; } = new();
   public string Name { get; set; } = "";
   public int? Color { get; set; }
@@ -120,13 +122,9 @@ public class SpeckleObject : Base
     // get or make layers
     if (bakeLayerIndex < 0)
     {
-      var layerNames = Path.Select(o => o.name).ToList();
-      var fullPath = string.Join("::", layerNames!);
-
-      if (Path.Count > 0)
+      if (Path.Count > 0 && Parent != null)
       {
-        var layerBaker = new RhinoLayerManager();
-        bakeLayerIndex = layerBaker.CreateLayerByFullPath(doc, fullPath);
+        bakeLayerIndex = Parent.CreateLayerByPath(doc, Path);
       }
     }
 
@@ -211,7 +209,7 @@ public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckle
       return true;
     }
 
-    // TODO: cast to material, etc.
+    // TODO: cast to material, modle object, etc.
 
     return false;
   }

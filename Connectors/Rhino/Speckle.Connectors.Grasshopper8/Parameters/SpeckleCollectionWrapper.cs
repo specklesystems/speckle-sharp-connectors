@@ -1,24 +1,38 @@
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
+using Grasshopper.Rhinoceros;
+using Grasshopper.Rhinoceros.Model;
 using Rhino;
 using Rhino.DocObjects;
 using Speckle.Connectors.Grasshopper8.HostApp;
+using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
+using Layer = Rhino.DocObjects.Layer;
 
 namespace Speckle.Connectors.Grasshopper8.Parameters;
 
-// public class SpeckleCollectionWrapper : Base
-// {
-//   public Collection OriginalObject { get; set; }
-//
-//   public override string ToString() => $"{OriginalObject.name} [{OriginalObject.elements.Count}]";
-// }
-
-public class SpeckleCollectionGoo : GH_Goo<Collection>, ISpeckleGoo //, IGH_PreviewData // can be made previewable later
+#pragma warning disable CA1711 // Identifiers should not have incorrect suffix
+public class SpeckleCollection : Base
+#pragma warning restore CA1711 // Identifiers should not have incorrect suffix
 {
-  public override IGH_Goo Duplicate() => throw new NotImplementedException();
+  // the original collection
+  public Collection Collection { get; set; }
 
-  public override string ToString() => $"{Value.name} ({Value.elements.Count})";
+  // the list of layer names that build up the path to this collection, including this collection name
+  public List<string> Path { get; set; }
+
+  public string Topology { get; set; }
+
+  public int? Color { get; set; }
+
+  public override string ToString() => $"{Collection.name} [{Collection.elements.Count}]";
+
+  public SpeckleCollection(Collection value, List<string> path, int? color)
+  {
+    Collection = value;
+    Path = path;
+    Color = color;
+  }
 
   // TODO: this would be *sooo* much easier if all speckle collections in grasshopper are changed to collection goos.
   // collection goo can even contain a formalized full path string, and a ref to its parent goo.
@@ -27,26 +41,18 @@ public class SpeckleCollectionGoo : GH_Goo<Collection>, ISpeckleGoo //, IGH_Prev
   public void Bake(
     RhinoDoc doc,
     List<Guid> obj_ids,
-    string parentPath,
+    List<string> path,
     bool bakeObjects,
-    string? name = null,
     List<Sdk.Models.Base>? elements = null
   )
   {
-    var layerManager = new RhinoLayerManager();
-
-    string fullPath = $"{parentPath}::{name ?? Value.name}";
-    if (layerManager.LayerExists(doc, fullPath, out int currentLayerIndex))
+    if (!LayerExists(doc, path, out int currentLayerIndex))
     {
-      parentPath = fullPath;
-    }
-    else
-    {
-      currentLayerIndex = layerManager.CreateLayerByFullPath(doc, fullPath);
+      currentLayerIndex = CreateLayerByPath(doc, path);
     }
 
     // then bake elements in this collection
-    List<Sdk.Models.Base> e = elements ?? Value.elements;
+    List<Sdk.Models.Base> e = elements ?? Collection.elements;
     foreach (var obj in e)
     {
       if (obj is SpeckleObject so)
@@ -58,24 +64,113 @@ public class SpeckleCollectionGoo : GH_Goo<Collection>, ISpeckleGoo //, IGH_Prev
       }
       else if (obj is Collection c)
       {
-        Bake(doc, obj_ids, parentPath, bakeObjects, c.name, c.elements);
+        Bake(doc, obj_ids, path, bakeObjects, c.elements);
       }
     }
   }
+
+  private bool LayerExists(RhinoDoc doc, List<string> path, out int layerIndex)
+  {
+    var fullPath = string.Join("::", path);
+    layerIndex = doc.Layers.FindByFullPath(fullPath, -1);
+    return layerIndex != -1;
+  }
+
+  private int CreateLayer(RhinoDoc doc, string name, Guid parentId)
+  {
+    Layer layer = new() { Name = name, ParentLayerId = parentId };
+    return doc.Layers.Add(layer);
+  }
+
+  public int CreateLayerByPath(RhinoDoc doc, List<string> path)
+  {
+    if (path.Count == 0 || doc == null)
+    {
+      return -1;
+    }
+
+    int parentLayerIndex = -1;
+    List<string> currentfullpath = new();
+    foreach (string layerName in path)
+    {
+      currentfullpath.Add(layerName);
+
+      // Find or create the layer at this level
+      Guid currentLayerId = Guid.Empty;
+      if (LayerExists(doc, currentfullpath, out int currentLayerIndex))
+      {
+        currentLayerId = doc.Layers.FindIndex(currentLayerIndex).Id;
+      }
+      else
+      {
+        currentLayerIndex = CreateLayer(doc, layerName, currentLayerId);
+      }
+      parentLayerIndex = currentLayerIndex;
+    }
+
+    return parentLayerIndex;
+  }
+}
+
+public class SpeckleCollectionGoo : GH_Goo<SpeckleCollection>, ISpeckleGoo //, IGH_PreviewData // can be made previewable later
+{
+  public override IGH_Goo Duplicate() => throw new NotImplementedException();
+
+  public override string ToString() =>
+    $@"Speckle Collection Goo [{m_value.Collection?.name} ({Value.Collection.elements.Count})]";
 
   public override bool IsValid => true;
   public override string TypeName => "Speckle collection wrapper";
   public override string TypeDescription => "Speckle collection wrapper";
 
+  public override bool CastFrom(object source)
+  {
+    switch (source)
+    {
+      case SpeckleCollection speckleGrasshopperCollection:
+        Value = speckleGrasshopperCollection;
+        return true;
+      case GH_Goo<SpeckleCollection> speckleGrasshopperCollectionGoo:
+        Value = speckleGrasshopperCollectionGoo.Value;
+        return true;
+      case ModelLayer modelLayer:
+        Collection modelCollection = new() { name = modelLayer.Name, elements = new() };
+        Value = new SpeckleCollection(
+          modelCollection,
+          GetModelLayerPath(modelLayer),
+          modelLayer.DisplayColor?.ToArgb()
+        );
+        return true;
+    }
+
+    return false;
+  }
+
+  private List<string> GetModelLayerPath(ModelLayer modellayer)
+  {
+    ModelContentName currentParent = modellayer.Parent;
+    ModelContentName stem = modellayer.Parent.Stem;
+    List<string> path = new() { modellayer.Name };
+    while (currentParent != stem)
+    {
+      path.Add(currentParent);
+      currentParent = currentParent.Parent;
+    }
+    path.Add(stem);
+
+    path.Reverse();
+    return path;
+  }
+
   public SpeckleCollectionGoo() { }
 
-  public SpeckleCollectionGoo(Collection value)
+  public SpeckleCollectionGoo(SpeckleCollection value)
   {
     Value = value;
   }
 }
 
-public class SpeckleCollectionWrapperParam : GH_Param<SpeckleCollectionGoo>, IGH_BakeAwareObject
+public class SpeckleCollectionParam : GH_Param<SpeckleCollectionGoo>, IGH_BakeAwareObject
 {
   public SpeckleCollectionParam()
     : this(GH_ParamAccess.item) { }
@@ -102,7 +197,7 @@ public class SpeckleCollectionWrapperParam : GH_Param<SpeckleCollectionGoo>, IGH
     {
       if (item is SpeckleCollectionGoo goo)
       {
-        goo.Bake(doc, obj_ids, "", true, null, null);
+        goo.Value.Bake(doc, obj_ids, goo.Value.Path, true, goo.Value.Collection.elements);
       }
     }
   }
@@ -114,7 +209,7 @@ public class SpeckleCollectionWrapperParam : GH_Param<SpeckleCollectionGoo>, IGH
     {
       if (item is SpeckleCollectionGoo goo)
       {
-        goo.Bake(doc, obj_ids, "", true, null, null);
+        goo.Value.Bake(doc, obj_ids, goo.Value.Path, true, goo.Value.Collection.elements);
       }
     }
   }

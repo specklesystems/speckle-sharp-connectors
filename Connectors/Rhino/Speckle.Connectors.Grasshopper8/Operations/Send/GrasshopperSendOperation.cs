@@ -19,13 +19,13 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
 
     // set the input collection name to "Grasshopper Model"
     var rootModel = input[0].Value;
-    rootModel.name = "Grasshopper Model";
+    rootModel.Collection.name = "Grasshopper Model";
 
     // reconstruct the input collection by substituting all of the objectgoos with base
-    ReplaceAndRebuild(rootModel);
+    ReplaceAndRebuild(rootModel.Collection);
 
     // TODO: Not getting any conversion results yet
-    var result = new RootObjectBuilderResult(rootModel, []);
+    var result = new RootObjectBuilderResult(rootModel.Collection, []);
 
     return Task.FromResult(result);
   }
@@ -40,10 +40,11 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
     {
       var element = c.elements[i];
 
-      if (element is Collection collection)
+      if (element is SpeckleCollection collection)
       {
         // If it's a Collection, recursively replace its elements
-        ReplaceAndRebuild(collection);
+        c.elements[i] = collection.Collection;
+        ReplaceAndRebuild(collection.Collection);
       }
       else if (element is SpeckleObject so)
       {

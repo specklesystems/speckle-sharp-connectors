@@ -34,7 +34,10 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
 
   protected override void SolveInstance(IGH_DataAccess dataAccess)
   {
-    var rootCollection = new Collection() { name = "Unnamed", applicationId = InstanceGuid.ToString() };
+    string rootName = "Unnamed";
+    Collection rootCollection = new() { name = rootName, applicationId = InstanceGuid.ToString() };
+    SpeckleCollection rootSpeckleCollection = new(rootCollection, new() { rootName }, null);
+
     foreach (var inputParam in Params.Input)
     {
       var data = inputParam.VolatileData.AllData(true).ToList();
@@ -54,16 +57,28 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
         );
         return;
       }
-      var childCollection = new Collection(inputParam.NickName) { applicationId = inputParam.InstanceGuid.ToString() };
+
+      List<string> childPath = new() { rootName };
+      childPath.Add(inputParam.NickName);
+      Collection childCollection = new(inputParam.NickName) { applicationId = inputParam.InstanceGuid.ToString() };
+      SpeckleCollection childSpeckleCollection =
+        new(childCollection, childPath, null) { Topology = GrasshopperHelpers.GetParamTopology(inputParam) };
 
       // if on this port we're only receiving collections, we should become "pass-through" to not create
       // needless nesting
       if (inputCollections.Count == data.Count)
       {
         var nameTest = new HashSet<string>();
-        foreach (var collection in inputCollections)
+        foreach (SpeckleCollectionGoo collection in inputCollections)
         {
-          foreach (var subCollectionName in collection.Value.elements.OfType<Collection>().Select(v => v.name))
+          // update the speckle collection path
+          collection.Value.Path = childPath;
+
+          foreach (
+            string subCollectionName in collection
+              .Value.Collection.elements.OfType<SpeckleCollection>()
+              .Select(v => v.Collection.name)
+          )
           {
             var hasNotSeenNameBefore = nameTest.Add(subCollectionName);
             if (!hasNotSeenNameBefore)
@@ -75,28 +90,29 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
               return;
             }
           }
-          childCollection.elements.AddRange(collection.Value.elements);
+
+          childSpeckleCollection.Collection.elements.AddRange(collection.Value.Collection.elements);
         }
-        rootCollection.elements.Add(childCollection);
+
+        rootSpeckleCollection.Collection.elements.Add(childSpeckleCollection);
         continue;
       }
-
-      childCollection["topology"] = GrasshopperHelpers.GetParamTopology(inputParam);
 
       foreach (var obj in data)
       {
         SpeckleObjectGoo goo = new();
         if (goo.CastFrom(obj))
         {
-          childCollection.elements.Add(goo.Value);
-          //TODO: add collection path to goo
+          goo.Value.Path = childPath;
+          goo.Value.Parent = childSpeckleCollection;
+          childSpeckleCollection.Collection.elements.Add(goo.Value);
         }
       }
 
-      rootCollection.elements.Add(childCollection);
+      rootSpeckleCollection.Collection.elements.Add(childSpeckleCollection);
     }
 
-    dataAccess.SetData(0, new SpeckleCollectionGoo(rootCollection));
+    dataAccess.SetData(0, new SpeckleCollectionGoo(rootSpeckleCollection));
   }
 
   public bool CanInsertParameter(GH_ParameterSide side, int index)
