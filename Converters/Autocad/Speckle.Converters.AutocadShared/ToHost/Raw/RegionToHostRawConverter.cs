@@ -19,6 +19,7 @@ public class RegionToHostRawConverter : ITypedConverter<SOG.Region, ADB.Region>
     // The objects in curveSegments must be opened for read and not for write. If the objects are opened, calling this function will crash AutoCAD.
 
     // Add converted boundary to the segmentCollection
+    // TODO: check if boundary is a polycurve
     ADB.Curve boundarySegmentCollection = _curveConverter.Convert(target.boundary);
 
     // Add converted loops to the list if segmentCollections
