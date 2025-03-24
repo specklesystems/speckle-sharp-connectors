@@ -5,7 +5,8 @@ using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.Common.Threading;
-using Speckle.Connectors.Grasshopper8.HostApp;
+using Speckle.Connectors.Grasshopper8.Operations.Receive;
+using Speckle.Connectors.Grasshopper8.Operations.Send;
 using Speckle.Connectors.Grasshopper8.Parameters;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
@@ -13,7 +14,7 @@ using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Host;
 using Speckle.Sdk.Models.GraphTraversal;
 
-namespace Speckle.Connectors.Grasshopper8;
+namespace Speckle.Connectors.Grasshopper8.Registration;
 
 public class PriorityLoader : GH_AssemblyPriority
 {

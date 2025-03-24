@@ -6,7 +6,7 @@ using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Transports;
 
-namespace Speckle.Connectors.Grasshopper8.HostApp;
+namespace Speckle.Connectors.Grasshopper8.Operations.Receive;
 
 public class GrasshopperReceiveOperation
 {

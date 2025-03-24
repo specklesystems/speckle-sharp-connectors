@@ -26,7 +26,7 @@ using OS = System.Environment;
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-namespace Speckle.Connectors.Grasshopper8.HostApp.Special;
+namespace Speckle.Connectors.Grasshopper8.Components.BaseComponents;
 
 /// <summary>
 /// <see cref="IEqualityComparer{T}"/> implementation for <see cref="IGH_Goo"/> references.
@@ -47,9 +47,7 @@ struct GooEqualityComparer : IEqualityComparer<IGH_Goo>
       || goo is GH_StructurePath
       || goo is GH_Culture
       || goo is IComparable
-      || (
-        goo?.ScriptVariable() is object obj && (IsEquatable(obj.GetType()) || obj is IComparable || obj is ValueType)
-      );
+      || goo?.ScriptVariable() is object obj && (IsEquatable(obj.GetType()) || obj is IComparable || obj is ValueType);
   }
 
   public readonly bool Equals(IGH_Goo x, IGH_Goo y)
@@ -715,7 +713,7 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
     const int CAPTION_HEIGHT = 20;
     const int FOOTNOTE_HEIGHT = 18;
     const int SCROLLER_WIDTH = 8;
-    int ItemHeight => 2 + (16 * Owner.LayoutLevel);
+    int ItemHeight => 2 + 16 * Owner.LayoutLevel;
     int PaddingLeft => Owner.IconDisplayMode == GH_IconDisplayMode.application ? 0 : 30;
 
     Rectangle AdjustedBounds => GH_Convert.ToRectangle(Bounds);
@@ -756,7 +754,7 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
           if (factor < 1.0)
           {
             var scrollSize = Math.Max(scrollerBounds.Height * factor, ItemHeight);
-            var position = ((scrollerBounds.Height - scrollSize) * _scrollRatio);
+            var position = (scrollerBounds.Height - scrollSize) * _scrollRatio;
             return GH_Convert.ToRectangle(
               new RectangleF(
                 scrollerBounds.Right - SCROLLER_WIDTH - 2,
@@ -906,7 +904,7 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
               var worldTransform = graphics.Transform;
               if (!ScrollerBounds.IsEmpty)
               {
-                var scroll = -((Owner._listItems.Count * ItemHeight) - listBounds.Height) * _scrollRatio;
+                var scroll = -(Owner._listItems.Count * ItemHeight - listBounds.Height) * _scrollRatio;
                 graphics.TranslateTransform(0.0f, scroll);
               }
 
@@ -954,9 +952,9 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
                                   itemBounds.X + 22,
                                   itemBounds.Y + 1,
                                   itemBounds.Width - 22 - ScrollerBounds.Width,
-                                  (itemBounds.Height - 2)
+                                  itemBounds.Height - 2
                                 );
-                                infoBounds.Width -= (layoutLevel * 12) + 4;
+                                infoBounds.Width -= layoutLevel * 12 + 4;
 
                                 if (GH_Canvas.ZoomFadeMedium > 0 && listBounds.Width > 250f)
                                 {
@@ -1024,7 +1022,7 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
                                   Owner.GetItemIcon(item.Value, new Size(iconSize, iconSize)) ?? s_defaultItemIcon;
                                 var rect = new Rectangle(
                                   (int)(itemBounds.X + itemBounds.Width - 2 - iconSize - 2 - ScrollerBounds.Width),
-                                  (int)(itemBounds.Y + (ItemHeight / 2) - (iconSize / 2)),
+                                  (int)(itemBounds.Y + ItemHeight / 2 - iconSize / 2),
                                   iconSize,
                                   iconSize
                                 );
@@ -1204,8 +1202,8 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
             }
           )
           {
-            var startPoint = new PointF(scrollerBounds.X + (scrollerBounds.Width / 2), scrollerBounds.Top + 5);
-            var endPoint = new PointF(scrollerBounds.X + (scrollerBounds.Width / 2), scrollerBounds.Bottom - 5);
+            var startPoint = new PointF(scrollerBounds.X + scrollerBounds.Width / 2, scrollerBounds.Top + 5);
+            var endPoint = new PointF(scrollerBounds.X + scrollerBounds.Width / 2, scrollerBounds.Bottom - 5);
 
             graphics.DrawLine(pen, startPoint, endPoint);
           }
@@ -1247,8 +1245,7 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
                 var scrolledCanvasLocation = e.CanvasLocation;
                 if (!ScrollerBounds.IsEmpty)
                 {
-                  scrolledCanvasLocation.Y +=
-                    ((Owner._listItems.Count * ItemHeight) - ListBounds.Height) * _scrollRatio;
+                  scrolledCanvasLocation.Y += (Owner._listItems.Count * ItemHeight - ListBounds.Height) * _scrollRatio;
                 }
 
                 bool keepSelection = (Control.ModifierKeys & Keys.Control) != Keys.None;
@@ -1329,7 +1326,7 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
           var ty =
             _activeScrollMode == ScrollMode.Scrolling
               ? ListBounds.Height - ScrollerBounds.Height
-              : -((Owner._listItems.Count * ItemHeight) - ListBounds.Height);
+              : -(Owner._listItems.Count * ItemHeight - ListBounds.Height);
           var f = dy / ty;
 
           _scrollRatio = Math.Max(0.0f, Math.Min(_scrolling + f, 1.0f));

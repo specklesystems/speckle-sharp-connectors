@@ -12,7 +12,7 @@ using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
 
-namespace Speckle.Connectors.Grasshopper8.HostApp;
+namespace Speckle.Connectors.Grasshopper8.Operations.Receive;
 
 public sealed class GrasshopperReceiveConversionResult : ReceiveConversionResult
 {

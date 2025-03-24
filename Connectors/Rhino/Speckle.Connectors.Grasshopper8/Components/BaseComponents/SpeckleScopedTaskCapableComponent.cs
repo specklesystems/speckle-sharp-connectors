@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Speckle.Connectors.Grasshopper8.Registration;
 
 namespace Speckle.Connectors.Grasshopper8.Components.BaseComponents;
 

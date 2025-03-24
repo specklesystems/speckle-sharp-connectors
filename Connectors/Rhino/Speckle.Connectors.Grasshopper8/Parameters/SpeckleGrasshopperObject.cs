@@ -1,6 +1,9 @@
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
+using Grasshopper.Rhinoceros.Model;
+using Rhino;
 using Rhino.Display;
+using Rhino.DocObjects;
 using Rhino.Geometry;
 using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Sdk.Models;
@@ -13,9 +16,13 @@ namespace Speckle.Connectors.Grasshopper8.Parameters;
 /// </summary>
 public class SpeckleObject : Base
 {
-  public Base Base { get; set; }
-  public GeometryBase GeometryBase { get; set; } // note: how will we send intervals and other gh native objects? do we? maybe not for now
-  public List<Collection> Path { get; set; }
+  public required Base Base { get; set; }
+  public required GeometryBase GeometryBase { get; set; } // note: how will we send intervals and other gh native objects? do we? maybe not for now
+  public List<Collection> Path { get; set; } = new();
+  public Dictionary<string, string> UserStrings { get; set; } = new();
+  public string Name { get; set; } = "";
+  public int? Color { get; set; }
+  public string? RenderMaterialName { get; set; }
 
   // RenderMaterial, ColorProxies, Properties (?)
   public override string ToString() => $"Speckle Wrapper [{GeometryBase.GetType().Name}]";
@@ -109,7 +116,7 @@ public class SpeckleObject : Base
   }
 }
 
-public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckleGoo
+public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckleGoo, IGH_BakeAwareObject
 {
   public override IGH_Goo Duplicate() => throw new NotImplementedException();
 
@@ -130,14 +137,35 @@ public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckle
         Value = speckleGrasshopperObjectGoo.Value;
         return true;
       case IGH_GeometricGoo geometricGoo:
-        var gb = geometricGoo.GeometricGooToGeometryBase();
-        var converted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(gb);
-        Value = new SpeckleObject() { GeometryBase = gb, Base = converted };
+        var gooGB = geometricGoo.GeometricGooToGeometryBase();
+        var gooConverted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(gooGB);
+        Value = new SpeckleObject() { GeometryBase = gooGB, Base = gooConverted };
         return true;
+      case ModelObject modelObject:
+        if (GetGeometryFromModelObject(modelObject) is GeometryBase modelGB)
+        {
+          var modelConverted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(modelGB);
+          SpeckleObject so =
+            new()
+            {
+              GeometryBase = modelGB,
+              Base = modelConverted,
+              Name = modelObject.Name,
+              Color = modelObject.Display.Color?.Color.ToArgb(),
+              RenderMaterialName = modelObject.Render.Material?.Material?.Name,
+              UserStrings = modelObject.UserText.ToDictionary(s => s.Key, s => s.Value)
+            };
+          Value = so;
+          return true;
+        }
+        return false;
     }
 
     return false;
   }
+
+  private GeometryBase? GetGeometryFromModelObject(ModelObject modelObject) =>
+    RhinoDoc.ActiveDoc.Objects.FindId(modelObject.Id ?? Guid.Empty).Geometry;
 
   public override bool CastTo<T>(ref T target)
   {
@@ -163,7 +191,19 @@ public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckle
     Value.DrawPreviewRaw(args.Pipeline, args.Material);
   }
 
+  public void BakeGeometry(RhinoDoc doc, List<Guid> obj_ids) => throw new NotImplementedException();
+
+  public void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids)
+  {
+    // first create collections
+    // create attributes
+
+    // then bake
+  }
+
   public BoundingBox ClippingBox => Value.GeometryBase.GetBoundingBox(false);
+
+  public bool IsBakeCapable => true;
 
   public SpeckleObjectGoo(SpeckleObject value)
   {

@@ -2,7 +2,7 @@ using Grasshopper.GUI.Canvas;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Attributes;
 
-namespace Speckle.Connectors.Grasshopper8.Components;
+namespace Speckle.Connectors.Grasshopper8.Components.Models;
 
 public class SpeckleSelectModelComponentAttributes : GH_ComponentAttributes
 {
@@ -41,7 +41,7 @@ public class SpeckleSelectModelComponentAttributes : GH_ComponentAttributes
       )
       {
         Parent = this,
-        Pivot = this.Pivot
+        Pivot = Pivot
       };
     }
 
@@ -52,7 +52,7 @@ public class SpeckleSelectModelComponentAttributes : GH_ComponentAttributes
       )
       {
         Parent = this,
-        Pivot = this.Pivot
+        Pivot = Pivot
       };
     }
   }

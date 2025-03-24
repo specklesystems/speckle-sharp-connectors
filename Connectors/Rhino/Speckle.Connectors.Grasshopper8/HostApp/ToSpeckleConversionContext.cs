@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Rhino;
+using Speckle.Connectors.Grasshopper8.Registration;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 

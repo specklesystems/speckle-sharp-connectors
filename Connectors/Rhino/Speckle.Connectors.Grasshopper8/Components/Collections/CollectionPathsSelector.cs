@@ -1,5 +1,5 @@
 using Grasshopper.Kernel.Types;
-using Speckle.Connectors.Grasshopper8.HostApp.Special;
+using Speckle.Connectors.Grasshopper8.Components.BaseComponents;
 using Speckle.Connectors.Grasshopper8.Parameters;
 using Speckle.Sdk.Models.Collections;
 

@@ -42,12 +42,12 @@ public class ExtrusionObjectToSpeckleTopLevelConverter
     return bx;
   }
 
-  public Base ConvertRawExtrusion(RG.Extrusion extrusion) // POC: hate this right now
+  public Base ConvertRawExtrusion(RG.Extrusion target) // POC: hate this right now
   {
-    var extrusionEncoding = RawEncodingCreator.Encode(extrusion, _settingsStore.Current.Document);
+    var extrusionEncoding = RawEncodingCreator.Encode(target, _settingsStore.Current.Document);
 
-    var mesh = DisplayMeshExtractor.GetDisplayMeshFromGeometry(extrusion);
-    var displayValue = new List<SOG.Mesh> { _meshConverter.Convert(mesh) };
+    var displayMesh = DisplayMeshExtractor.GetGeometryDisplayMesh(target);
+    List<SOG.Mesh> displayValue = displayMesh is null ? new() : new() { _meshConverter.Convert(displayMesh) };
 
     var bx = new SOG.ExtrusionX()
     {

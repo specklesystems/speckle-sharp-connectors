@@ -46,6 +46,19 @@ public class AlignmentSubentitySpiralToSpeckleRawConverter
     polylineValue.Add(spiral.EndPoint.Y);
     polylineValue.Add(0);
 
+    // Civil 3D 2022 has a bug with the spiral definition sometimes throwing an InvalidOperation exception
+    // Catch the error here and set direction to null if this occurs
+    string? spiralDirection;
+    try
+    {
+      spiralDirection = spiral.Direction.ToString();
+    }
+    catch (InvalidOperationException)
+    {
+      // Set the spiralDirection as null
+      spiralDirection = null;
+    }
+
     SOG.Polyline polyline =
       new()
       {
@@ -55,7 +68,7 @@ public class AlignmentSubentitySpiralToSpeckleRawConverter
         // add alignment spiral props
         length = spiral.Length,
         ["delta"] = spiral.Delta,
-        ["direction"] = spiral.Direction.ToString(),
+        ["direction"] = spiralDirection,
         ["spiralDefinition"] = spiral.SpiralDefinition.ToString(),
         ["totalX"] = spiral.TotalX,
         ["totalY"] = spiral.TotalY,

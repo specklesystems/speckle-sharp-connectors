@@ -6,6 +6,7 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.Grasshopper8.Components.BaseComponents;
 using Speckle.Connectors.Grasshopper8.HostApp;
+using Speckle.Connectors.Grasshopper8.Operations.Receive;
 using Speckle.Connectors.Grasshopper8.Parameters;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
@@ -24,7 +25,13 @@ public class ReceiveComponentOutput
 public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlModelResource, ReceiveComponentOutput>
 {
   public ReceiveComponent()
-    : base("Receive from Speckle", "RFS", "Receive objects from speckle", "Speckle", "Operations") { }
+    : base(
+      "Receive from Speckle",
+      "RFS",
+      "Receive objects from speckle",
+      ComponentCategories.PRIMARY_RIBBON,
+      ComponentCategories.OPERATIONS
+    ) { }
 
   public override Guid ComponentGuid => new("74954F59-B1B7-41FD-97DE-4C6B005F2801");
   protected override Bitmap Icon => BitmapBuilder.CreateSquareIconBitmap("R");

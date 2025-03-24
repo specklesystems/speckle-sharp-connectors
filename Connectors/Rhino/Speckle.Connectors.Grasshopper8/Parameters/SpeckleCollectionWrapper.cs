@@ -1,5 +1,7 @@
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
+using Rhino;
+using Rhino.DocObjects;
 using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Sdk.Models.Collections;
 
@@ -12,15 +14,28 @@ namespace Speckle.Connectors.Grasshopper8.Parameters;
 //   public override string ToString() => $"{OriginalObject.name} [{OriginalObject.elements.Count}]";
 // }
 
-public class SpeckleCollectionGoo : GH_Goo<Collection>, ISpeckleGoo //, IGH_PreviewData // can be made previewable later
+public class SpeckleCollectionGoo : GH_Goo<Collection>, ISpeckleGoo, IGH_BakeAwareObject //, IGH_PreviewData // can be made previewable later
 {
   public override IGH_Goo Duplicate() => throw new NotImplementedException();
 
   public override string ToString() => $"{Value.name} ({Value.elements.Count})";
 
+  public void BakeGeometry(RhinoDoc doc, List<Guid> obj_ids) => throw new NotImplementedException();
+
+  public void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids)
+  {
+    // TODO first create collections
+
+    // create attributes
+
+    // then bake
+  }
+
   public override bool IsValid => true;
   public override string TypeName => "Speckle collection wrapper";
   public override string TypeDescription => "Speckle collection wrapper";
+
+  public bool IsBakeCapable => true;
 
   public SpeckleCollectionGoo() { }
 

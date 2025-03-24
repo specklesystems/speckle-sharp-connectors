@@ -277,6 +277,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Common.MeshTriangul
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Performance", "Sdk\Speckle.Performance\Speckle.Performance.csproj", "{54C21396-EFCA-446B-BFBA-2139B0D29ED8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Grasshopper8", "Connectors\Rhino\Speckle.Connectors.Grasshopper8\Speckle.Connectors.Grasshopper8.csproj", "{5CE00778-D651-4E58-A1D6-32D15C0E8387}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -722,6 +724,12 @@ Global
 		{54C21396-EFCA-446B-BFBA-2139B0D29ED8}.Local|Any CPU.Build.0 = Debug|Any CPU
 		{54C21396-EFCA-446B-BFBA-2139B0D29ED8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{54C21396-EFCA-446B-BFBA-2139B0D29ED8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5CE00778-D651-4E58-A1D6-32D15C0E8387}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5CE00778-D651-4E58-A1D6-32D15C0E8387}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5CE00778-D651-4E58-A1D6-32D15C0E8387}.Local|Any CPU.ActiveCfg = Local|Any CPU
+		{5CE00778-D651-4E58-A1D6-32D15C0E8387}.Local|Any CPU.Build.0 = Local|Any CPU
+		{5CE00778-D651-4E58-A1D6-32D15C0E8387}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5CE00778-D651-4E58-A1D6-32D15C0E8387}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -849,6 +857,7 @@ Global
 		{C19C3EDF-D95D-4D22-9949-D99F91447AE7} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
 		{20BB9687-2C92-44E9-9E2F-9D2F45641354} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
 		{54C21396-EFCA-446B-BFBA-2139B0D29ED8} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
+		{5CE00778-D651-4E58-A1D6-32D15C0E8387} = {9714467A-AECB-45B5-82D8-3E7BFF6E37C8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}
