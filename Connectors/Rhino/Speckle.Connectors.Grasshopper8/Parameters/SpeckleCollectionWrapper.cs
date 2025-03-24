@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Grasshopper.Rhinoceros;
@@ -19,7 +21,7 @@ public class SpeckleCollection : Base
   public Collection Collection { get; set; }
 
   // the list of layer names that build up the path to this collection, including this collection name
-  public List<string> Path { get; set; }
+  public ObservableCollection<string> Path { get; set; }
 
   public string Topology { get; set; }
 
@@ -30,14 +32,31 @@ public class SpeckleCollection : Base
   public SpeckleCollection(Collection value, List<string> path, int? color)
   {
     Collection = value;
-    Path = path;
+    Path = new ObservableCollection<string>(path);
     Color = color;
+
+    // add listener on path changing.
+    // this can be triggered by a create collection node, that changes the path of this collection.
+    // when this happens, we want to update the paths of all elements downstream
+    Path.CollectionChanged += OnPathChanged;
   }
 
-  // TODO: this would be *sooo* much easier if all speckle collections in grasshopper are changed to collection goos.
-  // collection goo can even contain a formalized full path string, and a ref to its parent goo.
-  // all collection bake methods can now be contained on the collection goo as well, instead of moved out to Rhino layer Manager.
-  // which also means they would be callable from object goo bakes as well.
+  private void OnPathChanged(object sender, NotifyCollectionChangedEventArgs e)
+  {
+    var newPath = e.NewItems.Cast<string>().ToList();
+    foreach (var element in Collection.elements)
+    {
+      if (element is SpeckleObject o)
+      {
+        o.Path = newPath;
+      }
+      else if (element is SpeckleCollection c)
+      {
+        c.Path = new ObservableCollection<string>(newPath);
+      }
+    }
+  }
+
   public void Bake(
     RhinoDoc doc,
     List<Guid> obj_ids,
@@ -46,12 +65,9 @@ public class SpeckleCollection : Base
     List<Sdk.Models.Base>? elements = null
   )
   {
-    // deep copy the input list, since we don't want to mutate the original path
-    var tempPath = path.ToList();
-
-    if (!LayerExists(doc, tempPath, out int currentLayerIndex))
+    if (!LayerExists(doc, path, out int currentLayerIndex))
     {
-      currentLayerIndex = CreateLayerByPath(doc, tempPath);
+      currentLayerIndex = CreateLayerByPath(doc, path);
     }
 
     // then bake elements in this collection
@@ -67,8 +83,8 @@ public class SpeckleCollection : Base
       }
       else if (obj is SpeckleCollection c)
       {
-        tempPath.Add(c.Collection.name);
-        Bake(doc, obj_ids, tempPath, bakeObjects, c.Collection.elements);
+        path.Add(c.Collection.name);
+        Bake(doc, obj_ids, path, bakeObjects, c.Collection.elements);
       }
     }
   }
@@ -88,10 +104,7 @@ public class SpeckleCollection : Base
 
   public int CreateLayerByPath(RhinoDoc doc, List<string> path)
   {
-    // deep copy the input list, since we don't want to mutate the original path
-    var tempPath = path.ToList();
-
-    if (tempPath.Count == 0 || doc == null)
+    if (path.Count == 0 || doc == null)
     {
       return -1;
     }
@@ -99,7 +112,7 @@ public class SpeckleCollection : Base
     int parentLayerIndex = -1;
     List<string> currentfullpath = new();
     Guid currentLayerId = Guid.Empty;
-    foreach (string layerName in tempPath)
+    foreach (string layerName in path)
     {
       currentfullpath.Add(layerName);
 
@@ -205,7 +218,7 @@ public class SpeckleCollectionParam : GH_Param<SpeckleCollectionGoo>, IGH_BakeAw
     {
       if (item is SpeckleCollectionGoo goo)
       {
-        goo.Value.Bake(doc, obj_ids, goo.Value.Path, true, goo.Value.Collection.elements);
+        goo.Value.Bake(doc, obj_ids, goo.Value.Path.ToList(), true, goo.Value.Collection.elements);
       }
     }
   }
@@ -217,7 +230,7 @@ public class SpeckleCollectionParam : GH_Param<SpeckleCollectionGoo>, IGH_BakeAw
     {
       if (item is SpeckleCollectionGoo goo)
       {
-        goo.Value.Bake(doc, obj_ids, goo.Value.Path, true, goo.Value.Collection.elements);
+        goo.Value.Bake(doc, obj_ids, goo.Value.Path.ToList(), true, goo.Value.Collection.elements);
       }
     }
   }

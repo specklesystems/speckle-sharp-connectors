@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
 using Speckle.Connectors.Grasshopper8.HostApp;
@@ -72,7 +73,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
         foreach (SpeckleCollectionGoo collection in inputCollections)
         {
           // update the speckle collection path
-          collection.Value.Path = childPath;
+          collection.Value.Path = new ObservableCollection<string>(childPath);
 
           foreach (
             string subCollectionName in collection

@@ -43,7 +43,7 @@ public class CollectionPathsSelector : ValueSet<IGH_Goo>
     void GetPathsInternal(Collection col)
     {
       currentPath.Add(col.name);
-      var subCols = col.elements.OfType<Collection>().ToList();
+      var subCols = col.elements.OfType<SpeckleCollection>().ToList();
 
       // NOTE: here we're basically outputting only paths that correspond to a collection
       // that has values inside of it.
@@ -54,7 +54,7 @@ public class CollectionPathsSelector : ValueSet<IGH_Goo>
 
       foreach (var subCol in subCols)
       {
-        GetPathsInternal(subCol);
+        GetPathsInternal(subCol.Collection);
       }
       currentPath.RemoveAt(currentPath.Count - 1);
     }
