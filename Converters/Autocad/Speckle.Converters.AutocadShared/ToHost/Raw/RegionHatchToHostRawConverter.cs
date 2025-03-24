@@ -101,9 +101,11 @@ public class RegionHatchToHostRawConverter : ITypedConverter<SOG.Region, ADB.Hat
     acBlkTblRec.AppendEntity(acHatch);
     acTrans.AddNewlyCreatedDBObject(acHatch, true);
 
+    acHatch.SetDatabaseDefaults();
+
     // Set essential properties of the hatch object: Associative must be set after the hatch object is
     // appended to the block table record and before AppendLoop
-    acHatch.SetHatchPattern(ADB.HatchPatternType.PreDefined, "ANSI31");
+    acHatch.SetHatchPattern(ADB.HatchPatternType.PreDefined, "SOLID");
     acHatch.Associative = true;
 
     return acHatch;
