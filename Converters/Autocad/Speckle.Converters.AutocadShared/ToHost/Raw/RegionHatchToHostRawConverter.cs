@@ -69,7 +69,7 @@ public class RegionHatchToHostRawConverter : ITypedConverter<SOG.Region, ADB.Hat
     // convert loop, add to ObjectIdCollection
     var convertedCurve = _curveConverter.Convert(curve);
     CheckForNonPlanarLoops(convertedCurve);
-    var dbCurve = (ADB.Curve)convertedCurve[0].Item1;
+    var dbCurve = (ADB.Curve)convertedCurve[0].Item1; // will fail if Spline
     ADB.ObjectIdCollection tempDBObjColl = CreateTempObjectIdCollection(acBlkTblRec, acTrans, dbCurve);
 
     // append loop: System.AccessViolationException: Attempted to read or write protected memory. This is often an indication that other memory is corrupt.
