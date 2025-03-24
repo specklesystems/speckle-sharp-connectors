@@ -117,10 +117,10 @@ public class SpeckleObject : Base
     }
   }
 
-  public void Bake(RhinoDoc doc, List<Guid> obj_ids, int bakeLayerIndex = -1)
+  public void Bake(RhinoDoc doc, List<Guid> obj_ids, int bakeLayerIndex = -1, bool layersAlreadyCreated = false)
   {
     // get or make layers
-    if (bakeLayerIndex < 0)
+    if (!layersAlreadyCreated && bakeLayerIndex < 0)
     {
       if (Path.Count > 0 && Parent != null)
       {

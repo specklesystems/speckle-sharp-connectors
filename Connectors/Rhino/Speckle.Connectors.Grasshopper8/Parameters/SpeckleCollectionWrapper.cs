@@ -46,9 +46,12 @@ public class SpeckleCollection : Base
     List<Sdk.Models.Base>? elements = null
   )
   {
-    if (!LayerExists(doc, path, out int currentLayerIndex))
+    // deep copy the input list, since we don't want to mutate the original path
+    var tempPath = path.ToList();
+
+    if (!LayerExists(doc, tempPath, out int currentLayerIndex))
     {
-      currentLayerIndex = CreateLayerByPath(doc, path);
+      currentLayerIndex = CreateLayerByPath(doc, tempPath);
     }
 
     // then bake elements in this collection
@@ -59,12 +62,13 @@ public class SpeckleCollection : Base
       {
         if (bakeObjects)
         {
-          so.Bake(doc, obj_ids, currentLayerIndex);
+          so.Bake(doc, obj_ids, currentLayerIndex, true);
         }
       }
-      else if (obj is Collection c)
+      else if (obj is SpeckleCollection c)
       {
-        Bake(doc, obj_ids, path, bakeObjects, c.elements);
+        tempPath.Add(c.Collection.name);
+        Bake(doc, obj_ids, tempPath, bakeObjects, c.Collection.elements);
       }
     }
   }
@@ -84,19 +88,22 @@ public class SpeckleCollection : Base
 
   public int CreateLayerByPath(RhinoDoc doc, List<string> path)
   {
-    if (path.Count == 0 || doc == null)
+    // deep copy the input list, since we don't want to mutate the original path
+    var tempPath = path.ToList();
+
+    if (tempPath.Count == 0 || doc == null)
     {
       return -1;
     }
 
     int parentLayerIndex = -1;
     List<string> currentfullpath = new();
-    foreach (string layerName in path)
+    Guid currentLayerId = Guid.Empty;
+    foreach (string layerName in tempPath)
     {
       currentfullpath.Add(layerName);
 
       // Find or create the layer at this level
-      Guid currentLayerId = Guid.Empty;
       if (LayerExists(doc, currentfullpath, out int currentLayerIndex))
       {
         currentLayerId = doc.Layers.FindIndex(currentLayerIndex).Id;
@@ -104,6 +111,7 @@ public class SpeckleCollection : Base
       else
       {
         currentLayerIndex = CreateLayer(doc, layerName, currentLayerId);
+        currentLayerId = doc.Layers.FindIndex(currentLayerIndex).Id;
       }
       parentLayerIndex = currentLayerIndex;
     }
