@@ -24,7 +24,7 @@ public static class RawEncodingToHost
   {
     var bytes = System.Convert.FromBase64String(target.encodedValue.contents);
     var file = File3dm.FromByteArray(bytes);
-    var brepObject = file.Objects.Select(o => o.Geometry);
+    var brepObject = file.Objects.Where(o => o.Geometry is not null).Select(o => o.Geometry);
     return brepObject.ToList();
   }
 }
