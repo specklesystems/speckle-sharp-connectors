@@ -1,17 +1,18 @@
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
 using Speckle.Sdk.Common.Exceptions;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.AutocadShared.ToHost.Raw;
 
-public class ICurveToHostRawConverter : ITypedConverter<ICurve, ADB.Curve>
+public class ICurveToHostRawConverter : ITypedConverter<ICurve, List<(ADB.Entity, Base)>>
 {
   private readonly ITypedConverter<SOG.Line, ADB.Line> _lineConverter;
   private readonly ITypedConverter<SOG.Arc, ADB.Arc> _arcConverter;
   private readonly ITypedConverter<SOG.Ellipse, ADB.Ellipse> _ellipseConverter;
   private readonly ITypedConverter<SOG.Circle, ADB.Circle> _circleConverter;
   private readonly ITypedConverter<SOG.Polyline, ADB.Polyline3d> _polylineConverter;
-  private readonly ITypedConverter<SOG.Polycurve, ADB.Polyline> _polycurveConverter;
+  private readonly ITypedConverter<SOG.Polycurve, List<(ADB.Entity, Base)>> _polycurveConverter;
   private readonly ITypedConverter<SOG.Curve, ADB.Curve> _curveConverter;
 
   public ICurveToHostRawConverter(
@@ -20,7 +21,7 @@ public class ICurveToHostRawConverter : ITypedConverter<ICurve, ADB.Curve>
     ITypedConverter<SOG.Ellipse, ADB.Ellipse> ellipseConverter,
     ITypedConverter<SOG.Circle, ADB.Circle> circleConverter,
     ITypedConverter<SOG.Polyline, ADB.Polyline3d> polylineConverter,
-    ITypedConverter<SOG.Polycurve, ADB.Polyline> polycurveConverter,
+    ITypedConverter<SOG.Polycurve, List<(ADB.Entity, Base)>> polycurveConverter,
     ITypedConverter<SOG.Curve, ADB.Curve> curveConverter
   )
   {
@@ -40,15 +41,15 @@ public class ICurveToHostRawConverter : ITypedConverter<ICurve, ADB.Curve>
   /// <returns>The converted list of ADB.Curve.</returns>
   /// <exception cref="NotSupportedException">Thrown when the conversion is not supported for the given type of curve.</exception>
   /// <remarks>⚠️ This conversion does NOT perform scaling.</remarks>
-  public ADB.Curve Convert(ICurve target) =>
+  public List<(ADB.Entity, Base)> Convert(ICurve target) =>
     target switch
     {
-      SOG.Line line => _lineConverter.Convert(line),
-      SOG.Arc arc => _arcConverter.Convert(arc),
-      SOG.Circle circle => _circleConverter.Convert(circle),
-      SOG.Ellipse ellipse => _ellipseConverter.Convert(ellipse),
-      SOG.Polyline polyline => _polylineConverter.Convert(polyline),
-      SOG.Curve curve => _curveConverter.Convert(curve),
+      SOG.Line line => new() { (_lineConverter.Convert(line), line) },
+      SOG.Arc arc => new() { (_arcConverter.Convert(arc), arc) },
+      SOG.Circle circle => new() { (_circleConverter.Convert(circle), circle) },
+      SOG.Ellipse ellipse => new() { (_ellipseConverter.Convert(ellipse), ellipse) },
+      SOG.Polyline polyline => new() { (_polylineConverter.Convert(polyline), polyline) },
+      SOG.Curve curve => new() { (_curveConverter.Convert(curve), curve) },
       SOG.Polycurve polycurve => _polycurveConverter.Convert(polycurve),
       _ => throw new ValidationException($"Unable to convert curves of type {target.GetType().Name}")
     };

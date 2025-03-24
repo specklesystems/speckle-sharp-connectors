@@ -10,7 +10,7 @@ namespace Speckle.Converters.AutocadShared.ToHost.Geometry;
 [NameAndRankValue(typeof(DataObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<DataObject, List<(ADB.Entity a, Base b)>>
 {
-  private readonly ITypedConverter<ICurve, ADB.Curve> _curveConverter;
+  private readonly ITypedConverter<ICurve, List<(ADB.Entity, Base)>> _curveConverter;
   private readonly ITypedConverter<SOG.BrepX, List<(ADB.Entity a, Base b)>> _brepXConverter;
   private readonly ITypedConverter<SOG.ExtrusionX, List<(ADB.Entity a, Base b)>> _extrusionXConverter;
   private readonly ITypedConverter<SOG.Mesh, ADB.PolyFaceMesh> _meshConverter;
@@ -19,7 +19,7 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
   private readonly ITypedConverter<SOG.Region, ADB.Entity> _regionConverter;
 
   public DataObjectConverter(
-    ITypedConverter<ICurve, ADB.Curve> curveConverter,
+    ITypedConverter<ICurve, List<(ADB.Entity, Base)>> curveConverter,
     ITypedConverter<SOG.BrepX, List<(ADB.Entity a, Base b)>> brepXConverter,
     ITypedConverter<SOG.ExtrusionX, List<(ADB.Entity a, Base b)>> extrusionXConverter,
     ITypedConverter<SOG.Mesh, ADB.PolyFaceMesh> meshConverter,
@@ -72,7 +72,10 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
         yield return (_pointConverter.Convert(point), point);
         break;
       case ICurve curve:
-        yield return (_curveConverter.Convert(curve), (Base)curve);
+        foreach (var result in _curveConverter.Convert(curve))
+        {
+          yield return result;
+        }
         break;
       case SOG.SubDX subDX:
         foreach (var i in _subDXConverter.Convert(subDX))
