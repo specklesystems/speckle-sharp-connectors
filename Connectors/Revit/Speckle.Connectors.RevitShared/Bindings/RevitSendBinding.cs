@@ -194,11 +194,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       viewFilter.SetContext(_revitContext);
     }
 
-    var selectedObjects = _threadContext
-      .RunOnMainAsync(() => Task.FromResult(modelCard.SendFilter.NotNull().RefreshObjectIds()))
-      .Result;
-
-    // var selectedObjects = modelCard.SendFilter.NotNull().RefreshObjectIds();
+    var selectedObjects = await _threadContext.RunOnMainAsync(
+      () => Task.FromResult(modelCard.SendFilter.NotNull().RefreshObjectIds())
+    );
 
     var allElements = selectedObjects
       .Select(uid => activeUIDoc.Document.GetElement(uid))
