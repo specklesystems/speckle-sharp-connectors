@@ -140,6 +140,6 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
         return _arcConverter.Convert(arc);
     }
 
-    throw new ConversionException("Unsupported curve type for Region conversion");
+    throw new ConversionException($"Unsupported curve type for Region conversion: {curve}");
   }
 }
