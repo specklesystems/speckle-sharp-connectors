@@ -3,6 +3,8 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects;
+using Speckle.Sdk;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.RevitShared.ToHost.TopLevel;
 
@@ -10,14 +12,17 @@ public class RegionConverterToHost : ITypedConverter<SOG.Region, List<DB.Geometr
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<ICurve, DB.CurveArray> _curveConverter;
+  private readonly ITypedConverter<SOG.Mesh, List<DB.GeometryObject>> _meshConverter;
 
   public RegionConverterToHost(
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
-    ITypedConverter<ICurve, DB.CurveArray> curveConverter
+    ITypedConverter<ICurve, DB.CurveArray> curveConverter,
+    ITypedConverter<SOG.Mesh, List<DB.GeometryObject>> meshConverter
   )
   {
     _converterSettings = converterSettings;
     _curveConverter = curveConverter;
+    _meshConverter = meshConverter;
   }
 
   public List<DB.GeometryObject> Convert(SOG.Region target)
@@ -45,47 +50,41 @@ public class RegionConverterToHost : ITypedConverter<SOG.Region, List<DB.Geometr
       profileLoops.Add(voidLoop);
     }
 
-    // find all possible suitable views, starting from the Active view
-    List<View> suitableViews = new();
-    if (_converterSettings.Current.Document.ActiveView.ViewType == ViewType.FloorPlan)
-    {
-      suitableViews.Add(_converterSettings.Current.Document.ActiveView);
-    }
-
-    using var viewCollector = new FilteredElementCollector(_converterSettings.Current.Document);
-    viewCollector.OfClass(typeof(View));
-    foreach (Element viewElement in viewCollector)
-    {
-      View view = (View)viewElement;
-      if (view.ViewType == ViewType.FloorPlan)
-      {
-        suitableViews.Add(view);
-      }
-    }
-
-    // get FilledRegionType from the document, to create a new filled region element
+    // get FilledRegionType from the document to create a new FilledRegion element
     using var filledRegionCollector = new FilteredElementCollector(_converterSettings.Current.Document);
-    Element? filledRegionElementType = filledRegionCollector.OfClass(typeof(DB.FilledRegionType)).FirstElement();
+    Element filledRegionElementType = filledRegionCollector.OfClass(typeof(DB.FilledRegionType)).FirstElement();
 
-    if (filledRegionElementType != null)
+    View activeView = _converterSettings.Current.Document.ActiveView;
+    try
     {
-      foreach (var view in suitableViews)
+      using FilledRegion filledRegion = FilledRegion.Create(
+        _converterSettings.Current.Document,
+        filledRegionElementType.Id,
+        activeView.Id,
+        profileLoops
+      );
+    }
+    catch (Autodesk.Revit.Exceptions.ArgumentException)
+    {
+      // follow the pattern of the native CAD import: draw native FilledRegion if imported into 2d View
+      // and draw a linked document, if imported into unsupported View (in our case: default to Mesh converter)
+      foreach (var displayMesh in target.displayValue)
       {
-        try
+        var regionMeshes = _meshConverter.Convert(displayMesh);
+        if (regionMeshes.Count == 0)
         {
-          using FilledRegion filledRegion = FilledRegion.Create(
-            _converterSettings.Current.Document,
-            filledRegionElementType.Id,
-            view.Id,
-            profileLoops
-          );
-          break;
+          throw new ConversionException($"Conversion failed for {target}: no meshes generated");
         }
-        catch (Autodesk.Revit.Exceptions.ArgumentException) { }
+        resultList.AddRange(regionMeshes);
       }
     }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      // handle other exceptions
+      throw new ConversionException($"Conversion failed for {target}: {ex.Message}");
+    }
 
-    // return empty list, because FilledRegion is not a GeometryObject
+    // return possibly empty list (if FilledRegion generated successfully), because FilledRegion is not a GeometryObject
     return resultList;
   }
 }

@@ -49,8 +49,8 @@ public class BaseToHostGeometryObjectConverter : ITypedConverter<Base, List<DB.G
         result.AddRange(meshes);
         break;
       case SOG.Region region:
-        // do not return anything
-        _regionConverter.Convert(region);
+        var regions = _regionConverter.Convert(region).Cast<DB.GeometryObject>();
+        result.AddRange(regions);
         break;
       case SOG.IRawEncodedObject elon:
         var res = _encodedObjectConverter.Convert(elon);
@@ -70,6 +70,8 @@ public class BaseToHostGeometryObjectConverter : ITypedConverter<Base, List<DB.G
         break;
     }
 
+    // region converter might return empty list if FilledRegion were drawn (all exceptions are handled in the converter)
+    // we cannot return it because it's not a GeometryObject
     if (result.Count == 0 && target is not SOG.Region)
     {
       throw new ConversionException($"No objects could be converted for {target.speckle_type}.");
