@@ -2,23 +2,21 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
 using Speckle.Sdk.Common.Exceptions;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.ToHost.Raw;
 
 public class RegionHatchToHostRawConverter : ITypedConverter<SOG.Region, ADB.Hatch>
 {
-  private readonly ITypedConverter<ICurve, ADB.Curve> _curveConverter;
-  private readonly ITypedConverter<SOG.Region, ADB.Region> _regionConverter;
+  private readonly ITypedConverter<ICurve, List<(ADB.Entity, Base)>> _curveConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public RegionHatchToHostRawConverter(
-    ITypedConverter<ICurve, ADB.Curve> curveConverter,
-    ITypedConverter<SOG.Region, ADB.Region> regionConverter,
+    ITypedConverter<ICurve, List<(ADB.Entity, Base)>> curveConverter,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _curveConverter = curveConverter;
-    _regionConverter = regionConverter;
     _settingsStore = settingsStore;
   }
 
@@ -49,9 +47,9 @@ public class RegionHatchToHostRawConverter : ITypedConverter<SOG.Region, ADB.Hat
 
     // convert and assign boundary loop
     ConvertAndAssignHatchLoop(acBlkTblRec, acTrans, acHatch, target.boundary, ADB.HatchLoopTypes.External);
-    foreach (var _ in target.innerLoops)
+    foreach (var loop in target.innerLoops)
     {
-      // ConvertAndAssignHatchLoop(acBlkTblRec, acTrans, acHatch, loop, ADB.HatchLoopTypes.Polyline);
+      ConvertAndAssignHatchLoop(acBlkTblRec, acTrans, acHatch, loop, ADB.HatchLoopTypes.Outermost);
     }
 
     // Save the new object to the database
@@ -70,21 +68,23 @@ public class RegionHatchToHostRawConverter : ITypedConverter<SOG.Region, ADB.Hat
   {
     // convert loop, add to ObjectIdCollection
     var convertedCurve = _curveConverter.Convert(curve);
-    ADB.ObjectIdCollection tempDBObjColl = CreateTempObjectIdCollection(acBlkTblRec, acTrans, convertedCurve);
+    CheckForNonPlanarLoops(convertedCurve);
+    var dbCurve = (ADB.Curve)convertedCurve[0].Item1;
+    ADB.ObjectIdCollection tempDBObjColl = CreateTempObjectIdCollection(acBlkTblRec, acTrans, dbCurve);
 
-    // append loop
+    // append loop: System.AccessViolationException: Attempted to read or write protected memory. This is often an indication that other memory is corrupt.
     hatch.AppendLoop(loopType, tempDBObjColl);
     hatch.EvaluateHatch(true);
+    dbCurve.Erase();
   }
 
   private ADB.ObjectIdCollection CreateTempObjectIdCollection(
     ADB.BlockTableRecord acBlkTblRec,
     ADB.Transaction acTrans,
-    ADB.Curve curve
+    ADB.Entity loopEntity
   )
   {
     // Add the new curve object to the block table record and the transaction
-    ADB.Entity loopEntity = curve;
     acBlkTblRec.AppendEntity(loopEntity);
     acTrans.AddNewlyCreatedDBObject(loopEntity, true);
 
@@ -107,5 +107,14 @@ public class RegionHatchToHostRawConverter : ITypedConverter<SOG.Region, ADB.Hat
     acHatch.Associative = true;
 
     return acHatch;
+  }
+
+  private void CheckForNonPlanarLoops(List<(ADB.Entity, Base)> convertedResult)
+  {
+    if (convertedResult.Count != 1)
+    {
+      // this will only be the case if it was a non-planar Polycurve: throw error
+      throw new ConversionException($"Non-planar Polycurve cannot be used as a Region loop: {convertedResult}");
+    }
   }
 }
