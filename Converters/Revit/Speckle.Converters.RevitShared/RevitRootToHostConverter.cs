@@ -3,7 +3,6 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk.Common;
-using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared;
@@ -27,11 +26,6 @@ public class RevitRootToHostConverter : IRootToHostConverter
   public object Convert(Base target)
   {
     List<GeometryObject> geometryObjects = _baseToGeometryConverter.Convert(target);
-
-    if (geometryObjects.Count == 0)
-    {
-      throw new ConversionException($"No supported conversion for {target.speckle_type} found.");
-    }
 
     var definitionId = target.applicationId ?? target.id.NotNull();
     DirectShapeLibrary

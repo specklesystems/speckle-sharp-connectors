@@ -1,8 +1,6 @@
 using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects;
 
@@ -12,20 +10,14 @@ public class RegionConverterToHost : ITypedConverter<SOG.Region, List<DB.Geometr
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<ICurve, DB.CurveArray> _curveConverter;
-  private readonly RevitToHostCacheSingleton _revitToHostCacheSingleton;
-  private readonly ScalingServiceToHost _scalingServiceToHost;
 
   public RegionConverterToHost(
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
-    ITypedConverter<ICurve, DB.CurveArray> curveConverter,
-    RevitToHostCacheSingleton revitToHostCacheSingleton,
-    ScalingServiceToHost scalingServiceToHost
+    ITypedConverter<ICurve, DB.CurveArray> curveConverter
   )
   {
     _converterSettings = converterSettings;
     _curveConverter = curveConverter;
-    _revitToHostCacheSingleton = revitToHostCacheSingleton;
-    _scalingServiceToHost = scalingServiceToHost;
   }
 
   public List<DB.GeometryObject> Convert(SOG.Region target)
@@ -53,26 +45,47 @@ public class RegionConverterToHost : ITypedConverter<SOG.Region, List<DB.Geometr
       profileLoops.Add(voidLoop);
     }
 
-    // Seems to be no way to create a brand new FilledRegion, we need to collect the available ones from doc
-    // https://thebuildingcoder.typepad.com/blog/2013/07/create-a-filled-region-to-use-as-a-mask.html
-    // https://learnrevitapi.com/blog/create-filled-region-type
-    using var collector = new FilteredElementCollector(_converterSettings.Current.Document);
-    Element? filledRegionCollector = collector.OfClass(typeof(DB.FilledRegionType)).FirstElement();
-
-    if (filledRegionCollector != null)
-    //if (FilledRegion.IsValidFilledRegionTypeId(_converterSettings.Current.Document, filledRegionElement.Id))
+    // find all possible suitable views, starting from the Active view
+    List<View> suitableViews = new();
+    if (_converterSettings.Current.Document.ActiveView.ViewType == ViewType.FloorPlan)
     {
-      ElementId activeViewId = _converterSettings.Current.Document.ActiveView.Id;
-      using FilledRegion filledRegion = FilledRegion.Create(
-        _converterSettings.Current.Document,
-        filledRegionCollector.Id,
-        activeViewId,
-        profileLoops
-      );
-      //break;
-      //}
+      suitableViews.Add(_converterSettings.Current.Document.ActiveView);
     }
 
+    using var viewCollector = new FilteredElementCollector(_converterSettings.Current.Document);
+    viewCollector.OfClass(typeof(View));
+    foreach (Element viewElement in viewCollector)
+    {
+      View view = (View)viewElement;
+      if (view.ViewType == ViewType.FloorPlan)
+      {
+        suitableViews.Add(view);
+      }
+    }
+
+    // get FilledRegionType from the document, to create a new filled region element
+    using var filledRegionCollector = new FilteredElementCollector(_converterSettings.Current.Document);
+    Element? filledRegionElementType = filledRegionCollector.OfClass(typeof(DB.FilledRegionType)).FirstElement();
+
+    if (filledRegionElementType != null)
+    {
+      foreach (var view in suitableViews)
+      {
+        try
+        {
+          using FilledRegion filledRegion = FilledRegion.Create(
+            _converterSettings.Current.Document,
+            filledRegionElementType.Id,
+            view.Id,
+            profileLoops
+          );
+          break;
+        }
+        catch (Autodesk.Revit.Exceptions.ArgumentException) { }
+      }
+    }
+
+    // return empty list, because FilledRegion is not a GeometryObject
     return resultList;
   }
 }
