@@ -22,6 +22,7 @@ public class DataObjectConverter
   private readonly ITypedConverter<SOG.Point, RG.Point> _pointConverter;
   private readonly ITypedConverter<SOG.Polycurve, RG.PolyCurve> _polycurveConverter;
   private readonly ITypedConverter<SOG.Polyline, RG.PolylineCurve> _polylineConverter;
+  private readonly ITypedConverter<SOG.Region, RG.Hatch> _regionConverter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   public DataObjectConverter(
@@ -35,6 +36,7 @@ public class DataObjectConverter
     ITypedConverter<SOG.Point, RG.Point> pointConverter,
     ITypedConverter<SOG.Polyline, RG.PolylineCurve> polylineConverter,
     ITypedConverter<SOG.Polycurve, RG.PolyCurve> polycurveConverter,
+    ITypedConverter<SOG.Region, RG.Hatch> regionConverter,
     IConverterSettingsStore<RhinoConversionSettings> settingsStore
   )
   {
@@ -48,6 +50,7 @@ public class DataObjectConverter
     _pointConverter = pointConverter;
     _polycurveConverter = polycurveConverter;
     _polylineConverter = polylineConverter;
+    _regionConverter = regionConverter;
     _settingsStore = settingsStore;
   }
 
@@ -70,6 +73,7 @@ public class DataObjectConverter
         SOG.Point point => _pointConverter.Convert(point),
         SOG.Polycurve polycurve => _polycurveConverter.Convert(polycurve),
         SOG.Polyline polyline => _polylineConverter.Convert(polyline),
+        SOG.Region region => _regionConverter.Convert(region),
         _ => throw new ConversionException($"Found unsupported fallback geometry: {item.GetType()}")
       };
       x.Transform(GetUnitsTransform(item));
