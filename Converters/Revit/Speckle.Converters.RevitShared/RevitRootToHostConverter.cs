@@ -76,7 +76,6 @@ public class RevitRootToHostConverter : IRootToHostConverter
         geometryObjects = _baseToGeometryConverter.Convert(target);
         break;
     }
-    // if Region, use (and create) a new _baseToRegion converter (or fallback _baseToRegion)
 
     var definitionId = target.applicationId ?? target.id.NotNull();
     DirectShapeLibrary
