@@ -62,7 +62,7 @@ public class RevitCategoriesFilter : DiscriminatedObject, ISendFilter, IRevitSen
       .ToList();
 
     // combine both sets
-    objectIds = elements.Select(e => e.UniqueId).ToList();
+    var objectIds = elements.Select(e => e.UniqueId).ToList();
     objectIds.AddRange(linkInstanceIds);
 
     SelectedObjectIds = objectIds;
