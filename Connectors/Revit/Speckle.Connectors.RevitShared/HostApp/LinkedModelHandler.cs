@@ -1,3 +1,4 @@
+using System.IO;
 using Autodesk.Revit.DB;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.RevitShared;
@@ -13,6 +14,9 @@ namespace Speckle.Connectors.Revit.HostApp;
 /// </summary>
 public class LinkedModelHandler
 {
+  // Dictionary to track linked model display names
+  public Dictionary<string, string> LinkedModelDisplayNames { get; } = new();
+
   /// <summary>
   /// Gets elements from a linked document based on the provided send filter.
   /// This method handles the specifics of element collection but doesn't make decisions
@@ -39,6 +43,45 @@ public class LinkedModelHandler
   }
 
   /// <summary>
+  /// Prepares display names for linked model documents based on filename
+  /// </summary>
+  public void PrepareLinkedModelNames(IReadOnlyList<DocumentToConvert> documentElementContexts)
+  {
+    LinkedModelDisplayNames.Clear();
+    // Group linked models by filename
+    var linkedModels = documentElementContexts
+      .Where(ctx => ctx.Doc.IsLinked)
+      .GroupBy(ctx => Path.GetFileNameWithoutExtension(ctx.Doc.PathName))
+      .ToDictionary(g => g.Key, g => g.ToList());
+
+    // Create a unique key for each instance
+    foreach (var group in linkedModels)
+    {
+      string baseName = group.Key;
+      var instances = group.Value;
+
+      // Single instance - just use the base name
+      if (instances.Count == 1)
+      {
+        string id = GetIdFromDocumentToConvert(instances[0]);
+        LinkedModelDisplayNames[id] = baseName;
+      }
+      // Multiple instances - add numbering
+      else
+      {
+        for (int i = 0; i < instances.Count; i++)
+        {
+          string id = GetIdFromDocumentToConvert(instances[i]);
+          LinkedModelDisplayNames[id] = $"{baseName}_{i + 1}";
+        }
+      }
+    }
+  }
+
+  public string GetIdFromDocumentToConvert(DocumentToConvert documentToConvert) =>
+    documentToConvert.Doc.GetHashCode() + "-" + (documentToConvert.Transform?.GetHashCode() ?? 0);
+
+  /// <summary>
   /// Gets elements from a document that belong to the specified categories.
   /// </summary>
   private List<Element> GetElementsByCategory(Document linkedDoc, List<ElementId> categoryIds)
@@ -50,6 +93,29 @@ public class LinkedModelHandler
       .WhereElementIsViewIndependent()
       .WherePasses(multicategoryFilter)
       .ToList();
+  }
+
+  // Helper method to generate a simple hash for a transform
+  // transformedElement.applicationId = ${applicationId}-t{transformHash}
+  public string GetTransformHash(Transform transform)
+  {
+    // create a simplified representation of the transform
+    string json =
+      $@"{{
+      ""origin"": [{transform.Origin.X:F2}, {transform.Origin.Y:F2}, {transform.Origin.Z:F2}],
+      ""basis"": [{transform.BasisX.X:F1}, {transform.BasisY.Y:F1}, {transform.BasisZ.Z:F1}]
+    }}";
+
+    byte[] jsonBytes = System.Text.Encoding.UTF8.GetBytes(json);
+
+#pragma warning disable CA1850
+    using (var sha256 = System.Security.Cryptography.SHA256.Create())
+    {
+      byte[] hashBytes = sha256.ComputeHash(jsonBytes);
+      // keep only the first 8 characters for a short but unique hash
+      return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant()[..8];
+    }
+#pragma warning restore CA1850
   }
 
   /// <summary>
