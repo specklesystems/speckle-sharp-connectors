@@ -1,6 +1,5 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.Geometry;
@@ -24,10 +23,6 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
 
   public SOG.Region Convert(ADB.Hatch target)
   {
-    // generate Mesh for displayValue by converting to Regions first
-    List<SOG.Region> regions = new();
-    List<SOG.Mesh> displayValue = new();
-
     ADB.DBObjectCollection objCollection = new();
     // target.Explode method is failing in runtime. e.g. target.Explode(objCollection);
     for (int i = 0; i < target.NumberOfLoops; i++)
@@ -39,34 +34,40 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
 
     using (ADB.DBObjectCollection regionCollection = ADB.Region.CreateFromCurves(objCollection))
     {
-      if (regionCollection.Count != 1)
+      if (regionCollection.Count > 1)
       {
-        throw new ConversionException("Composite Hatches are not supported");
-      }
-
-      foreach (var region in regionCollection)
-      {
-        if (region is ADB.Region adbRegion)
+        for (int i = 1; i < regionCollection.Count; i++)
         {
-          using ABR.Brep brep = new(adbRegion);
-          if (brep.IsNull)
-          {
-            throw new ConversionException("Could not retrieve brep from the hatch.");
-          }
-          // convert and store Meshes
-          SOG.Mesh mesh = _brepConverter.Convert(brep);
-          mesh.area = adbRegion.Area;
-          displayValue.Add(mesh);
-
-          // convert and store Regions
-          SOG.Region convertedRegion = _regionConverter.Convert(adbRegion);
-          convertedRegion.hasHatchPattern = true;
-          regions.Add(convertedRegion);
+          ADB.Region innerRegion = (ADB.Region)regionCollection[i];
+          // substract region from Boundary region
+          ((ADB.Region)regionCollection[0]).BooleanOperation(ADB.BooleanOperationType.BoolSubtract, innerRegion);
+          innerRegion.Dispose();
         }
       }
-    }
 
-    return regions[0];
+      //if (regionCollection.Count != 1)
+      //{
+      //  throw new ConversionException("Composite Hatches are not supported");
+      //}
+      ADB.Region adbRegion = (ADB.Region)regionCollection[0];
+      /*
+      using ABR.Brep brep = new(adbRegion);
+      if (brep.IsNull)
+      {
+        throw new ConversionException("Could not retrieve brep from the hatch.");
+      }
+      // convert and store Meshes
+      SOG.Mesh mesh = _brepConverter.Convert(brep);
+      mesh.area = adbRegion.Area;
+      displayValue.Add(mesh);
+      */
+
+      // convert and store Regions
+      SOG.Region convertedRegion = _regionConverter.Convert(adbRegion);
+      convertedRegion.hasHatchPattern = true;
+
+      return convertedRegion;
+    }
   }
 
   // calculates bulge direction: (-) clockwise, (+) counterclockwise
