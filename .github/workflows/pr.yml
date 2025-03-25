@@ -1,9 +1,7 @@
 name: .NET Build
 
 on:
-  pull_request: # Run build on every pull request that is not to main
-    branches-ignore:
-      - main
+  pull_request
 
 jobs:   
   build:
