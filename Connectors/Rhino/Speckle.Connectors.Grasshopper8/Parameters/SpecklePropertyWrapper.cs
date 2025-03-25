@@ -22,13 +22,15 @@ public class SpecklePropertyGoo : GH_Goo<object>, ISpeckleGoo
 
   public SpecklePropertyGoo(object value)
   {
-    Value = value;
-  }
-
-  public SpecklePropertyGoo(KeyValuePair<string, object> kvp)
-  {
-    Value = kvp.Value;
-    Path = kvp.Key;
+    SpecklePropertyGoo goo = new();
+    if (goo.CastFrom(value))
+    {
+      Value = goo;
+    }
+    else
+    {
+      //TODO: throw
+    }
   }
 
   public override bool CastFrom(object source)
@@ -50,6 +52,12 @@ public class SpecklePropertyGoo : GH_Goo<object>, ISpeckleGoo
         return true;
       case bool b:
         Value = new SpecklePropertyGoo() { Value = b, Path = string.Empty };
+        return true;
+      case KeyValuePair<string, object?> kvp:
+        Value = new SpecklePropertyGoo() { Value = kvp.Value ?? "", Path = kvp.Key };
+        return true;
+      case KeyValuePair<string, string> kvp:
+        Value = new SpecklePropertyGoo() { Value = kvp.Value, Path = kvp.Key };
         return true;
     }
 

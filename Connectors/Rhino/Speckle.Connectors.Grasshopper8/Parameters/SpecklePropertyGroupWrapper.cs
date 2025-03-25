@@ -41,10 +41,14 @@ public class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, SpeckleProperty
         return true;
 
       case ModelUserText userText:
-        Dictionary<string, SpecklePropertyGoo> dictionary = userText.ToDictionary(
-          kvp => kvp.Key,
-          kvp => new SpecklePropertyGoo(kvp)
-        );
+        Dictionary<string, SpecklePropertyGoo> dictionary = new();
+        foreach (var entry in userText)
+        {
+          string key = entry.Key;
+          SpecklePropertyGoo value = new() { Path = key, Value = entry.Value };
+          dictionary.Add(key, value);
+        }
+
         Value = dictionary;
         return true;
 
