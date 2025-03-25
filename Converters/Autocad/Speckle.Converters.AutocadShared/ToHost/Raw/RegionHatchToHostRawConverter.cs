@@ -1,6 +1,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
+using Speckle.Sdk;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
@@ -34,6 +35,7 @@ public class RegionHatchToHostRawConverter : ITypedConverter<SOG.Region, ADB.Hat
     {
       throw new ConversionException();
     }
+
     // Open the Block table record Model space for write
     ADB.BlockTableRecord? acBlkTblRec =
       acTrans.GetObject(acBlkTbl[ADB.BlockTableRecord.ModelSpace], ADB.OpenMode.ForWrite) as ADB.BlockTableRecord;
@@ -46,14 +48,29 @@ public class RegionHatchToHostRawConverter : ITypedConverter<SOG.Region, ADB.Hat
     ADB.Hatch acHatch = InitializeHatchObject(acBlkTblRec, acTrans);
 
     // convert and assign boundary loop
-    ConvertAndAssignHatchLoop(acBlkTblRec, acTrans, acHatch, target.boundary, ADB.HatchLoopTypes.External);
-    foreach (var loop in target.innerLoops)
+    // catch any exception to finish the transaction, throw it later
+    Exception? exception = null;
+    try
     {
-      ConvertAndAssignHatchLoop(acBlkTblRec, acTrans, acHatch, loop, ADB.HatchLoopTypes.Outermost);
+      ConvertAndAssignHatchLoop(acBlkTblRec, acTrans, acHatch, target.boundary, ADB.HatchLoopTypes.External);
+      foreach (var loop in target.innerLoops)
+      {
+        ConvertAndAssignHatchLoop(acBlkTblRec, acTrans, acHatch, loop, ADB.HatchLoopTypes.Outermost);
+      }
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      exception = ex;
     }
 
     // Save the new object to the database
     acTrans.Commit();
+
+    // throw any possible exception after finishing transaction
+    if (exception != null)
+    {
+      throw exception;
+    }
 
     return acHatch;
   }
@@ -69,7 +86,29 @@ public class RegionHatchToHostRawConverter : ITypedConverter<SOG.Region, ADB.Hat
     // convert loop, add to ObjectIdCollection
     var convertedCurve = _curveConverter.Convert(curve);
     CheckForNonPlanarLoops(convertedCurve);
-    var dbCurve = (ADB.Curve)convertedCurve[0].Item1; // will fail if Spline
+    var dbCurve = (ADB.Curve)convertedCurve[0].Item1;
+
+    // If Spline, turn into segmented polyline - this is how AutoCAD imports Hatches with Curve boundaries from Rhino
+
+    if (dbCurve is ADB.Spline)
+    {
+      AG.Point3dCollection vertices = new();
+
+      ADB.DBObjectCollection splineCollection = new();
+      dbCurve.Explode(splineCollection);
+      foreach (ADB.Spline spline in splineCollection)
+      {
+        AG.Point3dCollection ptCollection = new();
+        spline.GetSplitCurves(ptCollection); // this is failing
+
+        foreach (AG.Point3d pt in ptCollection)
+        {
+          vertices.Add(pt);
+        }
+      }
+
+      dbCurve = new ADB.Polyline3d(ADB.Poly3dType.SimplePoly, vertices, true);
+    }
     ADB.ObjectIdCollection tempDBObjColl = CreateTempObjectIdCollection(acBlkTblRec, acTrans, dbCurve);
 
     // append loop: System.AccessViolationException: Attempted to read or write protected memory. This is often an indication that other memory is corrupt.
