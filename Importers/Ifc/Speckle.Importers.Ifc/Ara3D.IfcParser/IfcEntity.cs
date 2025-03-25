@@ -41,13 +41,13 @@ public class IfcEntity
   // Leaving as a comment for now.
   //&& str.Value.Length == 22;
 
-  public string? Guid => IsIfcRoot ? ((StepString)this[0]).Value.ToString() : null;
+  public string Guid => ((StepString)this[0]).Value.ToString();
 
-  public uint OwnerId => IsIfcRoot ? (this[1] as StepId)?.Id ?? 0 : 0;
+  public uint OwnerId => (this[1] as StepId)?.Id ?? 0;
 
-  public string? Name => IsIfcRoot ? (this[2] as StepString)?.AsString() : null;
+  public string? Name => (this[2] as StepString)?.AsString();
 
-  public string? Description => IsIfcRoot ? (this[3] as StepString)?.AsString() : null;
+  public string? Description => (this[3] as StepString)?.AsString();
 
   public int Count => LineData.Count;
 
