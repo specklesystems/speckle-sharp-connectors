@@ -402,7 +402,7 @@ public sealed class DisplayValueExtractor
       // try-catch is not pretty. we need to understand this better.
       try
       {
-        // try to create options with the active view - this will work for the main document
+        // try to create options with the active view - this will work for the main document and will fail with the linked models. Well, we can safely swallow the exception since we do not care DB.Options for linked models.
         return new DB.Options() { View = _converterSettings.Current.Document.NotNull().ActiveView };
       }
       catch (Exception ex) when (!ex.IsFatal())
