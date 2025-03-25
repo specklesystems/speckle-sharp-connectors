@@ -86,18 +86,17 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
   {
     // initialize loop Polyline
     ADB.Polyline polyline = new() { Closed = true };
-
+    int count = 0;
     if (loop.IsPolyline)
     {
-      int count = 0;
       foreach (ADB.BulgeVertex bVertex in loop.Polyline)
       {
         polyline.AddVertexAt(count, bVertex.Vertex, bVertex.Bulge, 0, 0);
+        count++;
       }
     }
     else
     {
-      int count = 0;
       foreach (var loopCurve in loop.Curves)
       {
         switch (loopCurve)
@@ -117,7 +116,9 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
             }
 
             var bulge = Math.Tan(measure / 4) * BulgeDirection(arc.StartPoint, midPoint, arc.EndPoint);
-            polyline.AddVertexAt(count, arc.StartPoint, bulge, 0, 0);
+            polyline.AddVertexAt(count, arc.StartPoint, 0, 0, 0);
+            count++;
+            polyline.AddVertexAt(count, midPoint, bulge, 0, 0);
             count++;
             break;
         }
