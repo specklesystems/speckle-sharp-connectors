@@ -20,7 +20,7 @@ public class SpeckleObjectWrapper : Base
 
   // The list of layer/collection names that forms the full path to this object
   public List<string> Path { get; set; } = new();
-  public SpeckleCollection? Parent { get; set; }
+  public SpeckleCollectionWrapper? Parent { get; set; }
 
   // A dictionary of property path to property
   public SpecklePropertyGroupGoo Properties { get; set; } = new();

@@ -474,7 +474,9 @@ public class ReceiveComponentWorker : WorkerInstance
             // note one to many not handled too nice here
             foreach (var geometryBase in converted)
             {
-              SpeckleCollection objectCollection = collectionRebuilder.GetOrCreateSpeckleCollectionFromPath(path);
+              SpeckleCollectionWrapper objectCollection = collectionRebuilder.GetOrCreateSpeckleCollectionFromPath(
+                path
+              );
 
               // get properties
               SpecklePropertyGroupGoo propertyGroup = new();
@@ -484,10 +486,10 @@ public class ReceiveComponentWorker : WorkerInstance
                   : map.AtomicObject["properties"] as Dictionary<string, object?> ?? new()
               );
 
-              var gh = new SpeckleObject()
+              var gh = new SpeckleObjectWrapper()
               {
                 Base = map.AtomicObject,
-                Path = path,
+                Path = path.Select(p => p.name).ToList(),
                 Parent = objectCollection,
                 GeometryBase = geometryBase,
                 Properties = propertyGroup

@@ -61,7 +61,7 @@ public class FilterPropertiesByPropertyGroupPaths : GH_Component
       return;
     }
 
-    SpecklePropertyGroupGoo properties = objectGoo.Value.Properties;
+    SpecklePropertyGroupGoo properties = objectWrapperGoo.Value.Properties;
     if (properties.Value.Count == 0)
     {
       return;
