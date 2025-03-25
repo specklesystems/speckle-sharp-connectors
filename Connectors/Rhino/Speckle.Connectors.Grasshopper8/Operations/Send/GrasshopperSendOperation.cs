@@ -5,10 +5,10 @@ using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.Grasshopper8.Operations.Send;
 
-public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollectionGoo>
+public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollectionWrapperGoo>
 {
   public Task<RootObjectBuilderResult> Build(
-    IReadOnlyList<SpeckleCollectionGoo> input,
+    IReadOnlyList<SpeckleCollectionWrapperGoo> input,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
@@ -18,39 +18,52 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
     Console.WriteLine($"Send Info {sendInfo}");
 
     // set the input collection name to "Grasshopper Model"
-    var rootModel = input[0].Value;
-    rootModel.Collection.name = "Grasshopper Model";
+    var rootCollection = new Collection { name = "Grasshopper model", elements = input[0].Value.Collection.elements };
 
     // reconstruct the input collection by substituting all of the objectgoos with base
-    ReplaceAndRebuild(rootModel.Collection);
+    var collection = ReplaceAndRebuild(rootCollection);
 
     // TODO: Not getting any conversion results yet
-    var result = new RootObjectBuilderResult(rootModel.Collection, []);
+    var result = new RootObjectBuilderResult(collection, []);
 
     return Task.FromResult(result);
   }
 
-  // POC: this send component assumes that the input collection contains SpeckleObjects that `already` have a populated base prop
-  // For new geometry, they should be converted to SpeckleObjects when passed to a `Create Collection` node.
-  // Create DataObject should also output SpeckleObject as a custom grasshopper data object.
-  private void ReplaceAndRebuild(Collection c)
+  /// <summary>
+  /// Unwraps collection wrappers and object wrapppers.
+  /// </summary>
+  /// <param name="c"></param>
+  /// <returns></returns>
+  private Collection ReplaceAndRebuild(Collection c)
   {
     // Iterate over the current collection's elements
+    var myCollection = new Collection() { name = c.name };
+
+    if (c["topology"] is string topology)
+    {
+      myCollection["topology"] = topology;
+    }
+
     for (int i = 0; i < c.elements.Count; i++)
     {
       var element = c.elements[i];
-
-      if (element is SpeckleCollection collection)
+      if (element is SpeckleCollectionWrapper collectionWrapper)
       {
-        // If it's a Collection, recursively replace its elements
-        c.elements[i] = collection.Collection;
-        ReplaceAndRebuild(collection.Collection);
+        var newCollection = new Collection
+        {
+          name = collectionWrapper.Collection.name,
+          ["topology"] = collectionWrapper.Topology,
+          elements = collectionWrapper.Collection.elements
+        };
+        var unwrapped = ReplaceAndRebuild(newCollection);
+        myCollection.elements.Add(unwrapped);
       }
-      else if (element is SpeckleObject so)
+      else if (element is SpeckleObjectWrapper so)
       {
         // If it's not a Collection, replace the non-Collection element
-        c.elements[i] = so.Base;
+        myCollection.elements.Add(so.Base);
       }
     }
+    return myCollection;
   }
 }

@@ -19,7 +19,7 @@ namespace Speckle.Connectors.Grasshopper8.Components.Operations.Receive;
 
 public class ReceiveComponentOutput
 {
-  public SpeckleCollectionGoo RootObject { get; set; }
+  public SpeckleCollectionWrapperGoo RootObject { get; set; }
 }
 
 public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlModelResource, ReceiveComponentOutput>
@@ -117,7 +117,7 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
       unpackedRoot.ObjectsToConvert.ToList()
     );
 
-    var collGen = new GrasshopperCollectionRebuilderOld((root as Collection) ?? new Collection() { name = "unnamed" });
+    var collGen = new GrasshopperCollectionRebuilder((root as Collection) ?? new Collection() { name = "unnamed" });
 
     foreach (var map in localToGlobalMaps)
     {
@@ -135,13 +135,13 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
         // note one to many not handled too nice here
         foreach (var geometryBase in converted)
         {
-          var gh = new SpeckleObject()
+          var gh = new SpeckleObjectWrapper()
           {
             Base = map.AtomicObject,
             Path = path.Select(o => o.name).ToList(),
             GeometryBase = geometryBase
           };
-          collGen.AppendSpeckleGrasshopperObject(gh);
+          collGen.AppendSpeckleGrasshopperObject(gh, path);
         }
       }
       catch (ConversionException)
@@ -151,7 +151,7 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
     }
 
     // var x = new SpeckleCollectionGoo { Value = collGen.RootCollection };
-    var goo = new SpeckleCollectionGoo(collGen.RootCollection);
+    var goo = new SpeckleCollectionWrapperGoo(collGen.RootCollectionWrapper);
     return new ReceiveComponentOutput { RootObject = goo };
   }
 
@@ -174,61 +174,5 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
     }
 
     throw new SpeckleException("Failed to convert input to rhino");
-  }
-}
-
-internal sealed class GrasshopperCollectionRebuilderOld
-{
-  public SpeckleCollection RootCollection { get; }
-
-  // a cache of collection path (no delimiter) to the speckle collection
-  private readonly Dictionary<string, SpeckleCollection> _cache = new();
-
-  public GrasshopperCollectionRebuilderOld(Collection baseCollection)
-  {
-    Collection newCollection = new() { name = baseCollection.name, applicationId = baseCollection.applicationId };
-    RootCollection = new SpeckleCollection(newCollection, new() { baseCollection.name }, null);
-  }
-
-  public void AppendSpeckleGrasshopperObject(SpeckleObject speckleGrasshopperObject)
-  {
-    var collection = GetOrCreateSpeckleCollectionFromPath(speckleGrasshopperObject.Path);
-    collection.Collection.elements.Add(speckleGrasshopperObject);
-  }
-
-  private SpeckleCollection GetOrCreateSpeckleCollectionFromPath(List<string> path)
-  {
-    // first check if cache already has this collection
-    string fullPath = string.Concat(path);
-    if (_cache.TryGetValue(fullPath, out SpeckleCollection col))
-    {
-      return col;
-    }
-
-    // otherwise, iterate through the path and create speckle collections as needed
-    SpeckleCollection previousCollection = RootCollection;
-    List<string> currentLayerPath = new();
-    foreach (string collectionName in path)
-    {
-      currentLayerPath.Add(collectionName);
-      string key = string.Concat(currentLayerPath);
-
-      // check cache
-      if (_cache.TryGetValue(key, out SpeckleCollection currentCol))
-      {
-        previousCollection = currentCol;
-        continue;
-      }
-
-      // create and cache if needed
-      Collection newCollection = new() { name = collectionName };
-      SpeckleCollection newSpeckleCollection = new(newCollection, currentLayerPath, null);
-      _cache[key] = newSpeckleCollection;
-      previousCollection.Collection.elements.Add(newSpeckleCollection);
-
-      previousCollection = newSpeckleCollection;
-    }
-
-    return previousCollection;
   }
 }

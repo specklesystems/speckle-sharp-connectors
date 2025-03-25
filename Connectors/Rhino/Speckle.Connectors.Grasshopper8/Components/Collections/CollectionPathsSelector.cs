@@ -20,7 +20,11 @@ public class CollectionPathsSelector : ValueSet<IGH_Goo>
 
   protected override void LoadVolatileData()
   {
-    var collections = VolatileData.AllData(true).OfType<SpeckleCollectionGoo>().Select(goo => goo.Value).ToList();
+    var collections = VolatileData
+      .AllData(true)
+      .OfType<SpeckleCollectionWrapperGoo>()
+      .Select(goo => goo.Value)
+      .ToList();
     if (collections.Count == 0)
     {
       return;
@@ -28,7 +32,7 @@ public class CollectionPathsSelector : ValueSet<IGH_Goo>
 
     // NOTE: supporting multiple collections? maybe? not really?
     var paths = new List<string>();
-    foreach (SpeckleCollection col in collections)
+    foreach (SpeckleCollectionWrapper col in collections)
     {
       paths.AddRange(GetPaths(col.Collection));
     }
@@ -43,7 +47,7 @@ public class CollectionPathsSelector : ValueSet<IGH_Goo>
     void GetPathsInternal(Collection col)
     {
       currentPath.Add(col.name);
-      var subCols = col.elements.OfType<SpeckleCollection>().ToList();
+      var subCols = col.elements.OfType<SpeckleCollectionWrapper>().ToList();
 
       // NOTE: here we're basically outputting only paths that correspond to a collection
       // that has values inside of it.

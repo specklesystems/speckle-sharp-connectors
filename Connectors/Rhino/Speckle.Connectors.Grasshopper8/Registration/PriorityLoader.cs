@@ -39,8 +39,8 @@ public class PriorityLoader : GH_AssemblyPriority
       services.AddTransient<AccountManager>();
 
       // send
-      services.AddTransient<IRootObjectBuilder<SpeckleCollectionGoo>, GrasshopperRootObjectBuilder>();
-      services.AddTransient<SendOperation<SpeckleCollectionGoo>>();
+      services.AddTransient<IRootObjectBuilder<SpeckleCollectionWrapperGoo>, GrasshopperRootObjectBuilder>();
+      services.AddTransient<SendOperation<SpeckleCollectionWrapperGoo>>();
       services.AddSingleton<IThreadContext>(new DefaultThreadContext());
 
       Container = services.BuildServiceProvider();

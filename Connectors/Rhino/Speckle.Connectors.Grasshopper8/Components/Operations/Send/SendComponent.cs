@@ -18,9 +18,9 @@ namespace Speckle.Connectors.Grasshopper8.Components.Operations.Send;
 public class SendComponentInput
 {
   public SpeckleUrlModelResource Resource { get; }
-  public SpeckleCollectionGoo Input { get; }
+  public SpeckleCollectionWrapperGoo Input { get; }
 
-  public SendComponentInput(SpeckleUrlModelResource resource, SpeckleCollectionGoo input)
+  public SendComponentInput(SpeckleUrlModelResource resource, SpeckleCollectionWrapperGoo input)
   {
     Resource = resource;
     Input = input;
@@ -79,10 +79,10 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
       throw new SpeckleException("Failed to get resource");
     }
 
-    SpeckleCollectionGoo rootCollection = new();
-    da.GetData(1, ref rootCollection);
+    SpeckleCollectionWrapperGoo rootCollectionWrapper = new();
+    da.GetData(1, ref rootCollectionWrapper);
 
-    return new SendComponentInput(resource.NotNull(), rootCollection);
+    return new SendComponentInput(resource.NotNull(), rootCollectionWrapper);
   }
 
   protected override void SetOutput(IGH_DataAccess da, SendComponentOutput result)
@@ -122,7 +122,7 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
 
     var accountManager = scope.ServiceProvider.GetRequiredService<AccountService>();
     var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
-    var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionGoo>>();
+    var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
 
     // TODO: Get any account for this server, as we don't have a mechanism yet to pass accountIds through
     var account = accountManager.GetAccountWithServerUrlFallback("", new Uri(input.Resource.Server));
@@ -141,13 +141,13 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
     using var client = clientFactory.Create(account);
     var sendInfo = await input.Resource.GetSendInfo(client, cancellationToken).ConfigureAwait(false);
     var result = await sendOperation
-      .Execute(new List<SpeckleCollectionGoo>() { input.Input }, sendInfo, progress, cancellationToken)
+      .Execute(new List<SpeckleCollectionWrapperGoo>() { input.Input }, sendInfo, progress, cancellationToken)
       .ConfigureAwait(false);
 
-    // TODO: need the created version id here from the send result, not the rootobj id
-    SpeckleUrlModelVersionResource createdVersionResource =
-      new(sendInfo.ServerUrl.ToString(), sendInfo.ProjectId, sendInfo.ModelId, result.RootObjId);
+    SpeckleUrlLatestModelVersionResource createdVersionResource =
+      new(sendInfo.ServerUrl.ToString(), sendInfo.ProjectId, sendInfo.ModelId);
     Url = $"{createdVersionResource.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}"; // TODO: missing "@VersionId"
+
     return new SendComponentOutput(createdVersionResource);
   }
 }

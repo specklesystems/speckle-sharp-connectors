@@ -37,7 +37,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
   {
     string rootName = "Unnamed";
     Collection rootCollection = new() { name = rootName, applicationId = InstanceGuid.ToString() };
-    SpeckleCollection rootSpeckleCollection = new(rootCollection, new() { rootName }, null);
+    SpeckleCollectionWrapper rootSpeckleCollectionWrapper = new(rootCollection, new() { rootName }, null);
 
     foreach (var inputParam in Params.Input)
     {
@@ -47,8 +47,8 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
         continue;
       }
 
-      var inputCollections = data.OfType<SpeckleCollectionGoo>().Empty().ToList();
-      var inputNonCollections = data.Where(t => t is not SpeckleCollectionGoo).Empty().ToList();
+      var inputCollections = data.OfType<SpeckleCollectionWrapperGoo>().Empty().ToList();
+      var inputNonCollections = data.Where(t => t is not SpeckleCollectionWrapperGoo).Empty().ToList();
       if (inputCollections.Count != 0 && inputNonCollections.Count != 0)
       {
         // TODO: error out! we want to disallow setting objects and collections in the same parent collection
@@ -62,7 +62,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
       List<string> childPath = new() { rootName };
       childPath.Add(inputParam.NickName);
       Collection childCollection = new(inputParam.NickName) { applicationId = inputParam.InstanceGuid.ToString() };
-      SpeckleCollection childSpeckleCollection =
+      SpeckleCollectionWrapper childSpeckleCollectionWrapper =
         new(childCollection, childPath, null) { Topology = GrasshopperHelpers.GetParamTopology(inputParam) };
 
       // if on this port we're only receiving collections, we should become "pass-through" to not create
@@ -70,14 +70,14 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
       if (inputCollections.Count == data.Count)
       {
         var nameTest = new HashSet<string>();
-        foreach (SpeckleCollectionGoo collection in inputCollections)
+        foreach (SpeckleCollectionWrapperGoo collection in inputCollections)
         {
           // update the speckle collection path
           collection.Value.Path = new ObservableCollection<string>(childPath);
 
           foreach (
             string subCollectionName in collection
-              .Value.Collection.elements.OfType<SpeckleCollection>()
+              .Value.Collection.elements.OfType<SpeckleCollectionWrapper>()
               .Select(v => v.Collection.name)
           )
           {
@@ -92,28 +92,28 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
             }
           }
 
-          childSpeckleCollection.Collection.elements.AddRange(collection.Value.Collection.elements);
+          childSpeckleCollectionWrapper.Collection.elements.AddRange(collection.Value.Collection.elements);
         }
 
-        rootSpeckleCollection.Collection.elements.Add(childSpeckleCollection);
+        rootSpeckleCollectionWrapper.Collection.elements.Add(childSpeckleCollectionWrapper);
         continue;
       }
 
       foreach (var obj in data)
       {
-        SpeckleObjectGoo goo = new();
-        if (goo.CastFrom(obj))
+        SpeckleObjectWrapperGoo wrapperGoo = new();
+        if (wrapperGoo.CastFrom(obj))
         {
-          goo.Value.Path = childPath;
-          goo.Value.Parent = childSpeckleCollection;
-          childSpeckleCollection.Collection.elements.Add(goo.Value);
+          wrapperGoo.Value.Path = childPath;
+          wrapperGoo.Value.Parent = childSpeckleCollectionWrapper;
+          childSpeckleCollectionWrapper.Collection.elements.Add(wrapperGoo.Value);
         }
       }
 
-      rootSpeckleCollection.Collection.elements.Add(childSpeckleCollection);
+      rootSpeckleCollectionWrapper.Collection.elements.Add(childSpeckleCollectionWrapper);
     }
 
-    dataAccess.SetData(0, new SpeckleCollectionGoo(rootSpeckleCollection));
+    dataAccess.SetData(0, new SpeckleCollectionWrapperGoo(rootSpeckleCollectionWrapper));
   }
 
   public bool CanInsertParameter(GH_ParameterSide side, int index)

@@ -58,43 +58,43 @@ public class FilterObjectsByCollectionPaths : GH_Component
       return;
     }
 
-    SpeckleCollectionGoo collectionGoo = new();
-    dataAccess.GetData(0, ref collectionGoo);
+    SpeckleCollectionWrapperGoo collectionWrapperGoo = new();
+    dataAccess.GetData(0, ref collectionWrapperGoo);
 
-    if (collectionGoo.Value == null)
+    if (collectionWrapperGoo.Value == null)
     {
       return;
     }
 
-    SpeckleCollection targetCollection = FindCollection(collectionGoo.Value, path);
-    if (string.IsNullOrEmpty(targetCollection.Topology))
+    SpeckleCollectionWrapper targetCollectionWrapper = FindCollection(collectionWrapperGoo.Value, path);
+    if (string.IsNullOrEmpty(targetCollectionWrapper.Topology))
     {
-      dataAccess.SetDataList(0, targetCollection.Collection.elements);
+      dataAccess.SetDataList(0, targetCollectionWrapper.Collection.elements);
     }
     else
     {
       var tree = GrasshopperHelpers.CreateDataTreeFromTopologyAndItems(
-        targetCollection.Topology,
-        targetCollection.Collection.elements
+        targetCollectionWrapper.Topology,
+        targetCollectionWrapper.Collection.elements
       );
       dataAccess.SetDataTree(0, tree);
     }
   }
 
-  private SpeckleCollection FindCollection(SpeckleCollection root, string unifiedPath)
+  private SpeckleCollectionWrapper FindCollection(SpeckleCollectionWrapper root, string unifiedPath)
   {
     // POC: SpeckleCollections now have a full list<string> path prop on them always. Is this easier to use?
     List<string> paths = unifiedPath.Split([" :: "], StringSplitOptions.None).Skip(1).ToList();
-    SpeckleCollection currentCollection = root;
+    SpeckleCollectionWrapper currentCollectionWrapper = root;
     while (paths.Count != 0)
     {
-      currentCollection = currentCollection
-        .Collection.elements.OfType<SpeckleCollection>()
+      currentCollectionWrapper = currentCollectionWrapper
+        .Collection.elements.OfType<SpeckleCollectionWrapper>()
         .First(col => col.Collection.name == paths.First());
       paths.RemoveAt(0);
       if (paths.Count == 0)
       {
-        return currentCollection;
+        return currentCollectionWrapper;
       }
     }
 

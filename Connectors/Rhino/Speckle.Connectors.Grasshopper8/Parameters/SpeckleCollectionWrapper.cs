@@ -14,7 +14,7 @@ using Layer = Rhino.DocObjects.Layer;
 namespace Speckle.Connectors.Grasshopper8.Parameters;
 
 #pragma warning disable CA1711 // Identifiers should not have incorrect suffix
-public class SpeckleCollection : Base
+public class SpeckleCollectionWrapper : Base
 #pragma warning restore CA1711 // Identifiers should not have incorrect suffix
 {
   // the original collection
@@ -29,7 +29,7 @@ public class SpeckleCollection : Base
 
   public override string ToString() => $"{Collection.name} [{Collection.elements.Count}]";
 
-  public SpeckleCollection(Collection value, List<string> path, int? color)
+  public SpeckleCollectionWrapper(Collection value, List<string> path, int? color)
   {
     Collection = value;
     Path = new ObservableCollection<string>(path);
@@ -46,11 +46,11 @@ public class SpeckleCollection : Base
     var newPath = e.NewItems.Cast<string>().ToList();
     foreach (var element in Collection.elements)
     {
-      if (element is SpeckleObject o)
+      if (element is SpeckleObjectWrapper o)
       {
         o.Path = newPath;
       }
-      else if (element is SpeckleCollection c)
+      else if (element is SpeckleCollectionWrapper c)
       {
         c.Path = new ObservableCollection<string>(newPath);
       }
@@ -74,14 +74,14 @@ public class SpeckleCollection : Base
     List<Sdk.Models.Base> e = elements ?? Collection.elements;
     foreach (var obj in e)
     {
-      if (obj is SpeckleObject so)
+      if (obj is SpeckleObjectWrapper so)
       {
         if (bakeObjects)
         {
           so.Bake(doc, obj_ids, currentLayerIndex, true);
         }
       }
-      else if (obj is SpeckleCollection c)
+      else if (obj is SpeckleCollectionWrapper c)
       {
         path.Add(c.Collection.name);
         Bake(doc, obj_ids, path, bakeObjects, c.Collection.elements);
@@ -133,7 +133,7 @@ public class SpeckleCollection : Base
   }
 }
 
-public class SpeckleCollectionGoo : GH_Goo<SpeckleCollection>, ISpeckleGoo //, IGH_PreviewData // can be made previewable later
+public class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapper>, ISpeckleGoo //, IGH_PreviewData // can be made previewable later
 {
   public override IGH_Goo Duplicate() => throw new NotImplementedException();
 
@@ -148,15 +148,15 @@ public class SpeckleCollectionGoo : GH_Goo<SpeckleCollection>, ISpeckleGoo //, I
   {
     switch (source)
     {
-      case SpeckleCollection speckleGrasshopperCollection:
+      case SpeckleCollectionWrapper speckleGrasshopperCollection:
         Value = speckleGrasshopperCollection;
         return true;
-      case GH_Goo<SpeckleCollection> speckleGrasshopperCollectionGoo:
+      case GH_Goo<SpeckleCollectionWrapper> speckleGrasshopperCollectionGoo:
         Value = speckleGrasshopperCollectionGoo.Value;
         return true;
       case ModelLayer modelLayer:
         Collection modelCollection = new() { name = modelLayer.Name, elements = new() };
-        Value = new SpeckleCollection(
+        Value = new SpeckleCollectionWrapper(
           modelCollection,
           GetModelLayerPath(modelLayer),
           modelLayer.DisplayColor?.ToArgb()
@@ -183,15 +183,15 @@ public class SpeckleCollectionGoo : GH_Goo<SpeckleCollection>, ISpeckleGoo //, I
     return path;
   }
 
-  public SpeckleCollectionGoo() { }
+  public SpeckleCollectionWrapperGoo() { }
 
-  public SpeckleCollectionGoo(SpeckleCollection value)
+  public SpeckleCollectionWrapperGoo(SpeckleCollectionWrapper value)
   {
     Value = value;
   }
 }
 
-public class SpeckleCollectionParam : GH_Param<SpeckleCollectionGoo>, IGH_BakeAwareObject
+public class SpeckleCollectionParam : GH_Param<SpeckleCollectionWrapperGoo>, IGH_BakeAwareObject
 {
   public SpeckleCollectionParam()
     : this(GH_ParamAccess.item) { }
@@ -216,7 +216,7 @@ public class SpeckleCollectionParam : GH_Param<SpeckleCollectionGoo>, IGH_BakeAw
     // Iterate over all data stored in the parameter
     foreach (var item in VolatileData.AllData(true))
     {
-      if (item is SpeckleCollectionGoo goo)
+      if (item is SpeckleCollectionWrapperGoo goo)
       {
         goo.Value.Bake(doc, obj_ids, goo.Value.Path.ToList(), true, goo.Value.Collection.elements);
       }
@@ -228,7 +228,7 @@ public class SpeckleCollectionParam : GH_Param<SpeckleCollectionGoo>, IGH_BakeAw
     // Iterate over all data stored in the parameter
     foreach (var item in VolatileData.AllData(true))
     {
-      if (item is SpeckleCollectionGoo goo)
+      if (item is SpeckleCollectionWrapperGoo goo)
       {
         goo.Value.Bake(doc, obj_ids, goo.Value.Path.ToList(), true, goo.Value.Collection.elements);
       }

@@ -13,14 +13,14 @@ namespace Speckle.Connectors.Grasshopper8.Parameters;
 /// <summary>
 /// Wrapper around a geometry base object and its converted speckle equivalent.
 /// </summary>
-public class SpeckleObject : Base
+public class SpeckleObjectWrapper : Base
 {
   public required Base Base { get; set; }
   public required GeometryBase GeometryBase { get; set; } // note: how will we send intervals and other gh native objects? do we? maybe not for now
 
   // The list of layer/collection names that forms the full path to this object
   public List<string> Path { get; set; } = new();
-  public SpeckleCollection? Parent { get; set; }
+  public SpeckleCollectionWrapper? Parent { get; set; }
   public Dictionary<string, string> UserStrings { get; set; } = new();
   public string Name { get; set; } = "";
   public int? Color { get; set; }
@@ -149,7 +149,7 @@ public class SpeckleObject : Base
   }
 }
 
-public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckleGoo
+public class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_PreviewData, ISpeckleGoo
 {
   public override IGH_Goo Duplicate() => throw new NotImplementedException();
 
@@ -163,22 +163,22 @@ public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckle
   {
     switch (source)
     {
-      case SpeckleObject speckleGrasshopperObject:
+      case SpeckleObjectWrapper speckleGrasshopperObject:
         Value = speckleGrasshopperObject;
         return true;
-      case GH_Goo<SpeckleObject> speckleGrasshopperObjectGoo:
+      case GH_Goo<SpeckleObjectWrapper> speckleGrasshopperObjectGoo:
         Value = speckleGrasshopperObjectGoo.Value;
         return true;
       case IGH_GeometricGoo geometricGoo:
         var gooGB = geometricGoo.GeometricGooToGeometryBase();
         var gooConverted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(gooGB);
-        Value = new SpeckleObject() { GeometryBase = gooGB, Base = gooConverted };
+        Value = new SpeckleObjectWrapper() { GeometryBase = gooGB, Base = gooConverted };
         return true;
       case ModelObject modelObject:
         if (GetGeometryFromModelObject(modelObject) is GeometryBase modelGB)
         {
           var modelConverted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(modelGB);
-          SpeckleObject so =
+          SpeckleObjectWrapper so =
             new()
             {
               GeometryBase = modelGB,
@@ -226,15 +226,15 @@ public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckle
 
   public BoundingBox ClippingBox => Value.GeometryBase.GetBoundingBox(false);
 
-  public SpeckleObjectGoo(SpeckleObject value)
+  public SpeckleObjectWrapperGoo(SpeckleObjectWrapper value)
   {
     Value = value;
   }
 
-  public SpeckleObjectGoo() { }
+  public SpeckleObjectWrapperGoo() { }
 }
 
-public class SpeckleObjectParam : GH_Param<SpeckleObjectGoo>, IGH_BakeAwareObject
+public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwareObject
 {
   public SpeckleObjectParam()
     : this(GH_ParamAccess.item) { }
@@ -261,7 +261,7 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectGoo>, IGH_BakeAwareObjec
     // Iterate over all data stored in the parameter
     foreach (var item in VolatileData.AllData(true))
     {
-      if (item is SpeckleObjectGoo goo)
+      if (item is SpeckleObjectWrapperGoo goo)
       {
         goo.Value.Bake(doc, obj_ids);
       }
@@ -273,7 +273,7 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectGoo>, IGH_BakeAwareObjec
     // Iterate over all data stored in the parameter
     foreach (var item in VolatileData.AllData(true))
     {
-      if (item is SpeckleObjectGoo goo)
+      if (item is SpeckleObjectWrapperGoo goo)
       {
         goo.Value.Bake(doc, obj_ids);
       }
