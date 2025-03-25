@@ -374,6 +374,7 @@ public class ReceiveComponentWorker : WorkerInstance
     da.SetData(0, Result);
   }
 
+#pragma warning disable CA1506
   public override void DoWork(Action<string, double> reportProgress, Action done)
   {
     var receiveComponent = (ReceiveAsyncComponent)Parent;
@@ -519,6 +520,7 @@ public class ReceiveComponentWorker : WorkerInstance
       done();
     }
   }
+#pragma warning restore CA1506
 
   private List<GeometryBase> Convert(Base input)
   {

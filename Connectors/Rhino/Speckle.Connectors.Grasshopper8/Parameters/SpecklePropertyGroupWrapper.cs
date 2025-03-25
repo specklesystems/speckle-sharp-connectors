@@ -72,13 +72,17 @@ public class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, SpeckleProperty
   {
     foreach (var kvp in dict)
     {
+      string newKey = string.IsNullOrEmpty(keyPrefix)
+        ? kvp.Key
+        : $"{keyPrefix}{Constants.PROPERTY_PATH_DELIMITER}{kvp.Key}";
+
       if (kvp.Value is Dictionary<string, object?> childDict)
       {
-        FlattenDictionary(childDict, flattenedDict, kvp.Key);
+        FlattenDictionary(childDict, flattenedDict, newKey);
       }
       else
       {
-        flattenedDict.Add($"{keyPrefix}{Constants.PROPERTY_PATH_DELIMITER}{kvp.Key}", kvp.Value ?? "");
+        flattenedDict.Add(newKey, kvp.Value ?? "");
       }
     }
   }
