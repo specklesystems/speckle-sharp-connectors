@@ -140,10 +140,7 @@ public class RevitRootObjectBuilder(
       string? modelDisplayName = null;
       if (atomicObjectByDocumentAndTransform.Doc.IsLinked)
       {
-        string id =
-          atomicObjectByDocumentAndTransform.Doc.GetHashCode()
-          + "-"
-          + (atomicObjectByDocumentAndTransform.Transform?.GetHashCode() ?? 0);
+        string id = GetIdFromDocumentToConvert(atomicObjectByDocumentAndTransform);
         _linkedModelDisplayNames.TryGetValue(id, out modelDisplayName);
       }
 
@@ -293,7 +290,7 @@ public class RevitRootObjectBuilder(
       // Single instance - just use the base name
       if (instances.Count == 1)
       {
-        string id = instances[0].Doc.GetHashCode() + "-" + (instances[0].Transform?.GetHashCode() ?? 0);
+        string id = GetIdFromDocumentToConvert(instances[0]);
         _linkedModelDisplayNames[id] = baseName;
       }
       // Multiple instances - add numbering
@@ -301,10 +298,13 @@ public class RevitRootObjectBuilder(
       {
         for (int i = 0; i < instances.Count; i++)
         {
-          string id = instances[i].Doc.GetHashCode() + "-" + (instances[i].Transform?.GetHashCode() ?? 0);
+          string id = GetIdFromDocumentToConvert(instances[i]);
           _linkedModelDisplayNames[id] = $"{baseName}_{i + 1}";
         }
       }
     }
   }
+
+  private string GetIdFromDocumentToConvert(DocumentToConvert documentToConvert) =>
+    documentToConvert.Doc.GetHashCode() + "-" + (documentToConvert.Transform?.GetHashCode() ?? 0);
 }
