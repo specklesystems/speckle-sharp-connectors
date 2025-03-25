@@ -20,8 +20,10 @@ public class SpeckleObjectWrapper : Base
 
   // The list of layer/collection names that forms the full path to this object
   public List<string> Path { get; set; } = new();
-  public SpeckleCollectionWrapper? Parent { get; set; }
-  public Dictionary<string, string> UserStrings { get; set; } = new();
+  public SpeckleCollection? Parent { get; set; }
+
+  // A dictionary of property path to property
+  public Dictionary<string, SpecklePropertyGoo> Properties { get; set; } = new();
   public string Name { get; set; } = "";
   public int? Color { get; set; }
   public string? RenderMaterialName { get; set; }
@@ -138,9 +140,9 @@ public class SpeckleObjectWrapper : Base
       att.LayerIndex = bakeLayerIndex;
     }
 
-    foreach (var kvp in UserStrings)
+    foreach (var kvp in Properties)
     {
-      att.SetUserString(kvp.Key, kvp.Value);
+      att.SetUserString(kvp.Key, kvp.Value.Value.ToString());
     }
 
     // add to doc
@@ -178,7 +180,13 @@ public class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_Preview
         if (GetGeometryFromModelObject(modelObject) is GeometryBase modelGB)
         {
           var modelConverted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(modelGB);
-          SpeckleObjectWrapper so =
+          Dictionary<string, SpecklePropertyGoo> properties = new();
+          foreach (var userText in modelObject.UserText.ToList())
+          {
+            properties.Add(userText.Key, new(userText.Value, new() { userText.Key }));
+          }
+
+          SpeckleObject so =
             new()
             {
               GeometryBase = modelGB,
@@ -186,8 +194,9 @@ public class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_Preview
               Name = modelObject.Name,
               Color = modelObject.Display.Color?.Color.ToArgb(),
               RenderMaterialName = modelObject.Render.Material?.Material?.Name,
-              UserStrings = modelObject.UserText.ToDictionary(s => s.Key, s => s.Value)
+              Properties = properties
             };
+
           Value = so;
           return true;
         }

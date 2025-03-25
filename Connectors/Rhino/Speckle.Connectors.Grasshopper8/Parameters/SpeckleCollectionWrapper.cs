@@ -91,7 +91,7 @@ public class SpeckleCollectionWrapper : Base
 
   private bool LayerExists(RhinoDoc doc, List<string> path, out int layerIndex)
   {
-    var fullPath = string.Join("::", path);
+    var fullPath = string.Join(Constants.LAYER_PATH_DELIMITER, path);
     layerIndex = doc.Layers.FindByFullPath(fullPath, -1);
     return layerIndex != -1;
   }

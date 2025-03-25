@@ -61,47 +61,23 @@ public class FilterPropertiesByPropertyGroupPaths : GH_Component
       return;
     }
 
-    if (objectWrapperGoo.Value.Base["properties"] is not Dictionary<string, object?> propertyDict)
+    Dictionary<string, SpecklePropertyGoo> properties = objectGoo.Value.Properties;
+    if (properties.Count == 0)
     {
       return;
     }
 
-    KeyValuePair<string, object?> targetProperty = FindProperty(propertyDict, path);
-    SpecklePropertyGoo result = new(targetProperty);
+    SpecklePropertyGoo result = FindProperty(properties, path);
     dataAccess.SetData(0, result);
   }
 
-  private KeyValuePair<string, object?> FindProperty(Dictionary<string, object?> root, string unifiedPath)
+  private SpecklePropertyGoo FindProperty(Dictionary<string, SpecklePropertyGoo> root, string unifiedPath)
   {
-    List<string> propertyKeyNames = unifiedPath.Split(["."], StringSplitOptions.None).ToList();
-    Dictionary<string, object?> currentPropertyGroup = root;
-    while (propertyKeyNames.Count != 0)
+    if (!root.TryGetValue(unifiedPath, out SpecklePropertyGoo currentGoo))
     {
-      string currentKey = propertyKeyNames.First();
-
-      if (!currentPropertyGroup.TryGetValue(currentKey, out object? currentValue))
-      {
-        throw new SpeckleException($"Did not find property group key: {propertyKeyNames.First()}");
-      }
-
-      propertyKeyNames.RemoveAt(0);
-      if (currentValue is Dictionary<string, object?> childGroup)
-      {
-        currentPropertyGroup = childGroup;
-      }
-      else
-      {
-        if (propertyKeyNames.Count == 0)
-        {
-          return new(currentKey, currentValue);
-        }
-        else
-        {
-          throw new SpeckleException($"Property group key: {currentKey} did not yield another property group.");
-        }
-      }
+      throw new SpeckleException($"Did not find property from path: {unifiedPath}");
     }
 
-    throw new SpeckleException("Did not find property");
+    return currentGoo;
   }
 }
