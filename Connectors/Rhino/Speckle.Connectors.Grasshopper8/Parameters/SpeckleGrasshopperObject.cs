@@ -183,7 +183,7 @@ public class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_Preview
           SpecklePropertyGroupGoo propertyGroup = new();
           propertyGroup.CastFrom(modelObject.UserText);
 
-          SpeckleObject so =
+          SpeckleObjectWrapper so =
             new()
             {
               GeometryBase = modelGB,
