@@ -8,8 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Speckle.AutoCAD.API" />
-    <PackageReference Include="Speckle.Civil3D.API" />
+    <PackageReference Include="Speckle.AutoCAD.API" VersionOverride="2022.0.2" ExcludeAssets="runtime"/>
+    <PackageReference Include="Speckle.Civil3D.API" VersionOverride="2022.0.2" ExcludeAssets="runtime"/>
   </ItemGroup>
 
   <ItemGroup>

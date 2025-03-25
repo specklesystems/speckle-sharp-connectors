@@ -13,8 +13,7 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="Speckle.AutoCAD.API" VersionOverride="2025.0.0" />
-    <FrameworkReference Include="Microsoft.WindowsDesktop.App"/>
+    <PackageReference Include="Speckle.AutoCAD.API" VersionOverride="2025.0.0" ExcludeAssets="runtime"/>
   </ItemGroup>  
   
   <ItemGroup>   
