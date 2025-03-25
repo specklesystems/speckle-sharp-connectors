@@ -32,13 +32,19 @@ public class SendCollectionManager
   /// <param name="element"></param>
   /// <param name="rootObject"></param>
   /// <returns></returns>
-  public Collection GetAndCreateObjectHostCollection(Element element, Collection rootObject, bool sendWithLinkedModels)
+  public Collection GetAndCreateObjectHostCollection(
+    Element element,
+    Collection rootObject,
+    bool sendWithLinkedModels,
+    string? modelDisplayName = null
+  )
   {
     var doc = _converterSettings.Current.Document;
     var path = new List<string>();
 
-    // Get model name (filename without extension)
-    string modelName = Path.GetFileNameWithoutExtension(doc.PathName);
+    // Get model path and name
+    string modelPath = doc.PathName;
+    string modelName = Path.GetFileNameWithoutExtension(modelPath);
     bool isLinkedModel = doc.IsLinked;
 
     // Set up the correct hierarchy based on whether we have linked models or not
@@ -62,12 +68,16 @@ public class SendCollectionManager
       // for linked models
       else
       {
-        // get or create a collection for this linked model
-        if (!_linkedModelCollections.TryGetValue(modelName, out Collection? linkedModelCollection))
+        // Use display name from settings if available, otherwise use original name
+        string displayName = modelDisplayName ?? modelName;
+
+        // Check if we already have a collection for this model display name
+        if (!_linkedModelCollections.TryGetValue(displayName, out Collection? linkedModelCollection))
         {
-          linkedModelCollection = new Collection(modelName);
+          // First time seeing this model with this display name
+          linkedModelCollection = new Collection(displayName);
           rootObject.elements.Add(linkedModelCollection);
-          _linkedModelCollections[modelName] = linkedModelCollection;
+          _linkedModelCollections[displayName] = linkedModelCollection;
         }
 
         startingCollection = linkedModelCollection;
@@ -122,14 +132,17 @@ public class SendCollectionManager
       path.Add("No type");
     }
 
+    // Use the collection's name for cache keys to ensure proper separation
+    string modelIdentifier = startingCollection.name;
+
     // create a model-specific key for the collection cache
-    string fullPathName = $"{modelName}:{string.Join(":", path)}";
+    string fullPathName = $"{modelIdentifier}:{string.Join(":", path)}";
     if (_collectionCache.TryGetValue(fullPathName, out Collection? value))
     {
       return value;
     }
 
-    string flatPathName = modelName;
+    string flatPathName = modelIdentifier;
     Collection previousCollection = startingCollection;
 
     for (int i = 0; i < path.Count; i++)

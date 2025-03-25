@@ -1,3 +1,4 @@
+using System.IO;
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Builders;
@@ -29,7 +30,8 @@ public class RevitRootObjectBuilder(
   RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton
 ) : IRootObjectBuilder<DocumentToConvert>
 {
-  // POC: SendSelection and RevitConversionContextStack should be interfaces, former needs interfaces
+  // Dictionary to track linked model display names
+  private readonly Dictionary<string, string> _linkedModelDisplayNames = new();
 
   public Task<RootObjectBuilderResult> Build(
     IReadOnlyList<DocumentToConvert> documentElementContexts,
@@ -63,6 +65,12 @@ public class RevitRootObjectBuilder(
     var filteredDocumentsToConvert = new List<DocumentToConvert>();
     bool sendWithLinkedModels = converterSettings.Current.SendLinkedModels;
     List<SendConversionResult> results = new();
+
+    // Prepare linked model display names if needed
+    if (sendWithLinkedModels)
+    {
+      PrepareLinkedModelNames(documentElementContexts);
+    }
 
     foreach (var documentElementContext in documentElementContexts)
     {
@@ -129,13 +137,20 @@ public class RevitRootObjectBuilder(
 
     foreach (var atomicObjectByDocumentAndTransform in atomicObjectsByDocumentAndTransform)
     {
+      string? modelDisplayName = null;
+      if (atomicObjectByDocumentAndTransform.Doc.IsLinked)
+      {
+        string id = GetIdFromDocumentToConvert(atomicObjectByDocumentAndTransform);
+        _linkedModelDisplayNames.TryGetValue(id, out modelDisplayName);
+      }
+
       // here we do magic for changing the transform and the related document according to model. first one is always the main model.
       using (
         converterSettings.Push(currentSettings =>
           currentSettings with
           {
             ReferencePointTransform = atomicObjectByDocumentAndTransform.Transform,
-            Document = atomicObjectByDocumentAndTransform.Doc
+            Document = atomicObjectByDocumentAndTransform.Doc,
           }
         )
       )
@@ -195,7 +210,8 @@ public class RevitRootObjectBuilder(
             var collection = sendCollectionManager.GetAndCreateObjectHostCollection(
               revitElement,
               rootObject,
-              sendWithLinkedModels
+              sendWithLinkedModels,
+              modelDisplayName
             );
 
             collection.elements.Add(converted);
@@ -251,4 +267,44 @@ public class RevitRootObjectBuilder(
     }
 #pragma warning restore CA1850
   }
+
+  /// <summary>
+  /// Prepares display names for linked model documents based on filename
+  /// </summary>
+  private void PrepareLinkedModelNames(IReadOnlyList<DocumentToConvert> documentElementContexts)
+  {
+    _linkedModelDisplayNames.Clear();
+
+    // Group linked models by filename
+    var linkedModels = documentElementContexts
+      .Where(ctx => ctx.Doc.IsLinked)
+      .GroupBy(ctx => Path.GetFileNameWithoutExtension(ctx.Doc.PathName))
+      .ToDictionary(g => g.Key, g => g.ToList());
+
+    // Create a unique key for each instance
+    foreach (var group in linkedModels)
+    {
+      string baseName = group.Key;
+      var instances = group.Value;
+
+      // Single instance - just use the base name
+      if (instances.Count == 1)
+      {
+        string id = GetIdFromDocumentToConvert(instances[0]);
+        _linkedModelDisplayNames[id] = baseName;
+      }
+      // Multiple instances - add numbering
+      else
+      {
+        for (int i = 0; i < instances.Count; i++)
+        {
+          string id = GetIdFromDocumentToConvert(instances[i]);
+          _linkedModelDisplayNames[id] = $"{baseName}_{i + 1}";
+        }
+      }
+    }
+  }
+
+  private string GetIdFromDocumentToConvert(DocumentToConvert documentToConvert) =>
+    documentToConvert.Doc.GetHashCode() + "-" + (documentToConvert.Transform?.GetHashCode() ?? 0);
 }
