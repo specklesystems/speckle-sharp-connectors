@@ -1,5 +1,8 @@
+using Speckle.InterfaceGenerator;
+
 namespace Speckle.Converters.Common;
 
+[GenerateAutoInterface]
 public sealed class ConverterSettingsStore<T> : IConverterSettingsStore<T>
   where T : class
 {
